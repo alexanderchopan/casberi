@@ -103,6 +103,75 @@ else
 fi
 
 hr
+print -P "%BGnosis Pay%b  (card spends still settling, and the range ceiling holding)"
+# Settlement Safe + spendable tokens from GnosisPayBridge. Both Transfer topics
+# are indexed, so this is the app's own filter shape minus the wallet.
+GNO="https://rpc.gnosischain.com"
+TTOPIC="0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+SETTLE="0x0000000000000000000000004822521e6135cd2599199c83ea35179229a172ee"
+GTOKENS='"0x420ca0f9b9b604ce0fd9c18ef134c705e5fa3430","0x5cb9073902f2035222b9749f8fb0c9bfe5527108","0x2a22f9c3b484c3629090feed35f17ff8f88f76f0"'
+# $1 fromBlock hex  $2 toBlock hex  $3 wallet topic ("" = any) → raw response.
+gnosis_raw() {
+  local from_topic="null"
+  [[ -n "$3" ]] && from_topic="\"$3\""
+  raw "$GNO" "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"eth_getLogs\",\"params\":[{\"fromBlock\":\"$1\",\"toBlock\":\"$2\",\"address\":[$GTOKENS],\"topics\":[\"$TTOPIC\",$from_topic,\"$SETTLE\"]}]}"
+}
+# Same arguments → the transfer count, or "ERR".
+gnosis_logs() {
+  local r; r=$(gnosis_raw "$1" "$2" "${3:-}")
+  if [[ -z "$r" || "$r" == *'"error"'* ]]; then print -r -- "ERR"; return; fi
+  print -r -- "$r" | grep -o '"transactionHash"' | wc -l | tr -d ' '
+}
+ghead=$(raw "$GNO" '{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[]}' \
+          | sed -E 's/.*"result":"([^"]*)".*/\1/')
+if [[ -z "$ghead" || "$ghead" != 0x* ]]; then
+  fail "Gnosis Pay — Gnosis Chain head unreadable (host down?)"
+else
+  gresp_sample=$(gnosis_raw "$(printf '0x%x' $(( $((ghead)) - 1500 )))" "$ghead" "")   # ~2h
+  if [[ -z "$gresp_sample" || "$gresp_sample" == *'"error"'* ]]; then
+    gnear=ERR
+  else
+    gnear=$(print -r -- "$gresp_sample" | grep -o '"transactionHash"' | wc -l | tr -d ' ')
+  fi
+  if [[ "$gnear" == ERR ]]; then
+    fail "Gnosis Pay — getLogs rejected on a 1500-block window"
+  elif (( gnear >= 1 )); then
+    pass "Gnosis Pay — $gnear card spends in the last ~2h (settlement Safe + tokens live)"
+  else
+    warn "Gnosis Pay — reachable but 0 spends in ~2h (settlement Safe may have moved)"
+  fi
+  # THE drift check that matters (prd §222). These hosts answer a too-expensive
+  # scan with an EMPTY ARRAY rather than an error, so if the budget ever
+  # tightens below our 250k chunk the bridge goes silent with nothing in the
+  # logs to explain it. The invariant: one full-size chunk must return exactly
+  # what the same range returns split into fifths. Run against a REAL card Safe
+  # discovered from the window above (the app always filters by wallet, and an
+  # unfiltered read truncates by design — comparing those two shapes would be
+  # meaningless), so no stranger's address is baked into this file.
+  gwallet=$(print -r -- "$gresp_sample" | grep -oE '0x0{24}[0-9a-f]{40}' \
+              | grep -vi '4822521e6135cd2599199c83ea35179229a172ee' | head -1)
+  if [[ -z "$gwallet" ]]; then
+    warn "Gnosis Pay — no card Safe in the sample window; skipped the chunk-size check"
+  else
+    gsingle=$(gnosis_logs "$(printf '0x%x' $(( $((ghead)) - 250000 )))" "$ghead" "$gwallet")
+    gsum=0; gbad=""
+    for i in 0 1 2 3 4; do
+      lo=$(( $((ghead)) - 250000 + i * 50000 ))
+      part=$(gnosis_logs "$(printf '0x%x' $lo)" "$(printf '0x%x' $(( lo + 50000 )))" "$gwallet")
+      [[ "$part" == ERR ]] && { gbad=1; break; }
+      gsum=$(( gsum + part ))
+    done
+    if [[ "$gsingle" == ERR || -n "$gbad" ]]; then
+      fail "Gnosis Pay — getLogs rejected on the chunk-size check"
+    elif (( gsingle == gsum )); then
+      pass "Gnosis Pay — 250k chunk is exact ($gsingle = 5×50k sum) — maxRange still safe"
+    else
+      fail "Gnosis Pay — 250k chunk returned $gsingle but 5×50k found $gsum — SCAN BUDGET TIGHTENED, drop GnosisPayBridge.maxRange"
+    fi
+  fi
+fi
+
+hr
 print -P "%BKeyless discovery APIs%b  (used across bridges — no key, no credits)"
 http_ping() {   # $1 label  $2 url
   local code; code=$(curl -s -o /dev/null -w '%{http_code}' --max-time "$TIMEOUT" \

@@ -8953,3 +8953,98 @@ gates (`catalog-sync.sh`, the SwiftData liveness audit) pass, but `verify.sh`
 has not run and the Snapchain node is unreachable from this host (port 3381
 blocked by egress), so the reaction envelope's `data.timestamp` parse is
 carried over from the existing code rather than re-measured.
+## 222. Gnosis Pay: the card that settles onchain, read the Peer way (user: "does gnosis pay have an api or some way we can read it like we do peer and 0xbow", then "lets do it, we have users who want to watch their transactions", then "lets do the layer 1 version b/c that's great enough", 2026-07-26) — VERIFIED BY BUILD + AUDITS + LIVE PROBE, NOT YET SEEN ON SCREEN
+
+A Gnosis Pay account is a Safe on Gnosis Chain carrying a Roles Module, and
+every card purchase settles as a real ERC-20 transfer out of that Safe to Gnosis
+Pay's settlement Safe. So the seat rides the watched wallets exactly like Peer
+and 0xBow (§207): no account, no key, no connect switch — watching the wallet is
+the consent, and the read is public chain data.
+
+**Ruling 1 — Layer 1 only; the API is deliberately not built.** Gnosis Pay's
+own API is richer than anything on the chain: merchant name, city, country, MCC,
+billing *and* original transaction currency, refunds and reversals, plus the
+settlement tx hash to join on. It authenticates with SIWE, and the JWT it
+returns is capped at **24 hours with no refresh mechanism** — re-auth needs a
+fresh nonce and a fresh wallet signature. A bridge that must be re-authorised
+daily is a chore, not a feature. The chain layer is worth shipping alone; a
+future enrichment pass could join on the tx hash and heal merchant names onto
+already-landed rows (the social-enrichment heal-on-dedupe-hit shape), and that
+door is left open on purpose.
+
+**Ruling 2 — SIWE is refused by US, not by them.** Worth stating plainly
+because the question will come back. Gnosis Pay permits SIWE fine, including
+EIP-1271 smart-account signatures; they only require the signing domain be
+registered. Casberi forbids it in five independent places: `readOnlyNamespaces()`
+proposing `methods: [] events: []`, the `preconditionFailure` in
+`UnusedCryptoProvider` whose doc comment names SIWE explicitly, the wallet-side
+handshake test (`scripts/wc-wallet/wallet.js`) which exits 1 on any non-empty
+methods array and counts optional namespaces too, the read→teardown→return
+ordering that destroys the session before handing back an address, and ten
+in-app strings plus the live App Store description saying "never signs." The
+reason is §112: Guideline 3.1.5(b) judges the in-app experience, and a solo
+individual account cannot ship something that reads as a wallet. **If merchant
+names are ever wanted, the §112-sanctioned shape is signing on casberi.app —
+not relaxing the session.**
+
+**Ruling 3 — Wallet group, not Shopping.** Privacy.com sits in Shopping as
+card *receipts* (§ the 2026-07-22 note). Gnosis Pay is the *account*: a Safe
+holding your own balance, which belongs beside the wallets whose total it joins
+— the same reasoning that put Coinbase and Kraken in Wallet on 2026-07-21.
+
+**Ruling 4 — the seat is gated on a spend, not on a watch.** Peer and 0xBow
+light their seat for any watched wallet, because their read is meaningful for
+any address. Most wallets hold no Gnosis Pay card, so a seat reading "Gnosis
+Pay · watching 3 wallets" for someone who has never held one is fake status,
+which the honesty rule forbids. The seat appears only once a card spend has
+actually been seen, and `clearState` takes the mark with the wallet on unwatch.
+Both its Connect and its Open route to the wallet manager: the generic
+`BridgeDetailScreen` carries a Remove button, and on a seat that is a mirror of
+observed state, Remove would silently re-register on the next foreground —
+exactly the dead control the honesty rule bans.
+
+**Two ceilings the copy must name, because a card feed implies a statement.**
+The merchant's name never reaches the chain (it exists only behind the
+authenticated API), so rows carry the amount and the moment but not where you
+were. And refunds and reversals settle off-chain — measured: zero outbound
+transfers from the settlement Safe across 40k blocks — so this records what was
+*spent*, not a balanced ledger. The catalog summary states both.
+
+**MEASURED 2026-07-26 (live; re-measure before "fixing" any of it).** One
+settlement Safe `0x4822521e6135cd2599199c83ea35179229a172ee` serves every
+cardholder — 417 distinct user Safes spending in a ~2h window — and both `from`
+and `to` are indexed on ERC-20 `Transfer`, so one filtered `eth_getLogs` per
+wallet finds every spend in every token with zero false positives. Do not split
+it per token. All spends route through one Spender Modifier
+(`0x5f07734e…3f8a`, selector `0x8a320255`). Spendable tokens and their
+decimals: EURe 18, GBPe 18, **USDCe 6** — the divergence is a trap, and
+hardcoding 18 renders every dollar spend as ~$0.000000000001, the SOL-decimals
+bug in a new coin. Hosts: `rpc.gnosischain.com` and `rpc.gnosis.gateway.fm`
+both answer, including batched JSON-RPC (20 blocks in 0.64s);
+`gnosis-rpc.publicnode.com` 403s and `rpc.ankr.com/gnosis` demands auth.
+
+**The load-bearing trap: a ~25 second scan budget that returns `[]`, not an
+error.** It is a scan budget, not a block-range cap — the trigger is how much
+work the node does, and the failure is indistinguishable from "this card was
+never used." Per-wallet, twice per size: 250k blocks → 74 spends (2.0s), 500k →
+91 (3.5s), **750k → 0 (25.5s)** — except one gateway.fm attempt that returned
+**111** in 18.4s, which is what proves the zero is a lie rather than an answer.
+1M and 1.5M → 0 every time, always ~25s. Hence `maxRange` at 250k, less than
+half the last reliable size. Do not raise it because "500k worked": 500k worked
+at 3.5s on an unloaded node, and the budget is spent in seconds, not blocks.
+Separately, any UNFILTERED read truncates by design — `fromBlock: 0` with no
+wallet topic returned 321 logs spanning only the last ~1000 blocks, and a 250k
+unfiltered window returns ~303 of the ~82,000 really there. With the wallet
+topic set, single calls are EXACT and match a chunked sum at 100k/250k/500k.
+The `from` filter is what makes this read honest, not merely fast.
+`scripts/live-integrations.sh` now asserts that invariant nightly against a
+card Safe it discovers at runtime — one 250k chunk must equal the same range
+split into fifths — because if the budget tightens, the bridge goes silent with
+nothing in the logs to explain it.
+
+**One divergence from the sibling wallet paths: no `suffix(N)` landing cap.**
+Peer and Privacy Pools cap to the newest 10 and advance the cursor past the
+rest, which is fine when the event is rare. Card spends are not rare (91 in 29
+days on the measured wallet), so a cap would silently discard most of a
+person's history the cursor then skips forever. The ~6-day (100k block) first
+-sight backfill window is what bounds the first landing instead.

@@ -54,6 +54,10 @@ final class WalletStore {
                 // plus a stale pending entry would alert for a wallet no
                 // longer watched.
                 PrivacyPoolsBridge.clearState(address: old.address)
+                // Gnosis Pay's cursor and its card-account mark leave too
+                // (prd §222) — same back-fill reason, plus a stale mark would
+                // keep the seat lit for a card whose wallet is gone.
+                GnosisPayBridge.clearState(address: old.address)
                 // Morpho's activity cursor and risk buckets leave too
                 // (2026-07-21) — same back-fill reason, plus a stale
                 // "at-risk" bucket would suppress a real alert on re-watch.

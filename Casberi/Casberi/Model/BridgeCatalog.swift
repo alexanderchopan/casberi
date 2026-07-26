@@ -118,6 +118,17 @@ enum BridgeCatalog {
         Offer(name: "0xBow Privacy Pools", tagline: "Know when your deposit clears",       group: "Wallet",    connectable: true,
               summary: "Privacy Pools (by 0xBow) lets you move crypto with privacy and a compliance screen: you deposit, their screening reviews it, and once cleared you can withdraw to a fresh address privately. Connect and your deposits land in your feed — and Casberi tells you the moment a deposit clears review and is ready to withdraw privately, or if it's declined.\n\nRead from Ethereum's public chain and 0xBow's public API for the wallets you already watch.\n\nNo account, no key, read-only: nothing here deposits, withdraws, or moves funds.",
               needsSetup: true, added: day(2026, 7, 21)),
+        // Wallet group by ruling (prd §222, 2026-07-26): a Gnosis Pay account
+        // IS a Safe holding your own balance, so it belongs beside the wallets
+        // whose total it joins — not Shopping, where Privacy.com's card
+        // receipts live, because this is the account and not just the receipt.
+        // Honesty note: the summary names BOTH ceilings plainly — no merchant
+        // names (they never reach the chain) and no refunds (they settle off
+        // it) — because the obvious expectation of a card feed is that it
+        // reads like a statement, and this one can't.
+        Offer(name: "Gnosis Pay",  tagline: "Card spending, straight off the chain", group: "Wallet",    connectable: true,
+              summary: "Gnosis Pay is a Visa card that settles onchain: every purchase moves stablecoin out of your own Safe in real time. Watch that wallet and each purchase lands in your feed — what you spent, when, and a link to the transaction itself.\n\nRead from Gnosis Chain's public chain for the wallets you already watch. No account, no key.\n\nTwo honest limits: the merchant's name never reaches the chain, so rows show the amount and the moment but not where you were; and refunds settle off-chain, so this records what you spent, not a balanced statement.",
+              needsSetup: true, added: day(2026, 7, 26)),
         // Wallet group by ruling (user, 2026-07-21): the balances MERGE into
         // the combined portfolio, so an exchange belongs beside the wallets
         // whose total it joins — not in Markets, which is where things you

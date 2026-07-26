@@ -92,7 +92,9 @@ final class BridgeStore {
     /// Idempotent (registerConnected reconnects an existing seat).
     func reconcileWalletSeats() {
         let n = WalletStore.shared.addresses.count
-        guard n > 0 else { remove("peer"); remove("privacypools"); return }
+        guard n > 0 else {
+            remove("peer"); remove("privacypools"); remove("gnosispay"); return
+        }
         let watching = "Watching \(n) wallet\(n == 1 ? "" : "s")"
         registerConnected(id: "peer", name: "Peer", proof: watching,
             can: ["Reads Peer fills for the wallets you watch, from the public chain.",
@@ -100,6 +102,17 @@ final class BridgeStore {
         registerConnected(id: "privacypools", name: "0xBow Privacy Pools", proof: watching,
             can: ["Reads Privacy Pools deposits and their screening status for the wallets you watch, from public sources.",
                   "Read-only — never deposits, withdraws, or moves funds."])
+        // Gnosis Pay DIVERGES from its two siblings above (prd §222): its
+        // seat is gated on a card spend actually having been seen, not on a
+        // wallet merely being watched. Most wallets hold no Gnosis Pay card,
+        // and a seat claiming to watch one that doesn't exist is fake status.
+        let cards = GnosisPayBridge.accounts().count
+        guard cards > 0 else { remove("gnosispay"); return }
+        registerConnected(id: "gnosispay", name: "Gnosis Pay",
+            proof: "Watching \(cards) card\(cards == 1 ? "" : "s")",
+            can: ["Reads your Gnosis Pay card spending from Gnosis Chain, for the wallets you watch.",
+                  "Amounts and timing only — the merchant never reaches the chain.",
+                  "Read-only — never spends, tops up, or freezes a card."])
     }
 
     func togglePause(_ id: String) {

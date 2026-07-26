@@ -394,6 +394,14 @@ enum WalletIngest {
                                                               addresses: evmAddresses,
                                                               existing: existing)
         added += privacyPoolsAdded ?? 0
+        // Gnosis Pay card spends ride the same pass (prd §222) — one filtered
+        // settlement-transfer read per wallet on Gnosis Chain, landing "Spent
+        // €42.50 with Gnosis Pay" things. Inside the running guard like
+        // everything above; no-ops for a wallet that holds no card.
+        let gnosisPayAdded = await GnosisPayBridge.sync(context: context,
+                                                        addresses: evmAddresses,
+                                                        existing: existing)
+        added += gnosisPayAdded ?? 0
         // ENS names expire (2026-07-21) — keyless, one GET per readable name,
         // landing a dated row the "What's coming up?" chip sorts on. Inside the
         // running guard like everything above.

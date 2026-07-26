@@ -787,6 +787,24 @@ enum ProbeHooks {
                       PrivacyPoolsBridge.pendingSummary())
             }
         },
+        // `-gnosisPayProbe <blocksBack|YES>` runs the Gnosis Pay card-spend
+        // sweep over the watched wallets, NSLogging the landed count and
+        // which watched wallets turned out to be card accounts. A numeric
+        // spec rewinds every cursor that many blocks below the Gnosis Chain
+        // head first, so real past spends land instead of waiting for someone
+        // to buy something. Pair with `-walletAddress <a card Safe>`.
+        // NOTE the measured ceiling (prd §222): an `eth_getLogs` range much
+        // over 500k blocks comes back EMPTY rather than erroring, so a spec
+        // far past that reads as "no spends" — the sweep chunks internally,
+        // but a probe asking for millions is testing the wrong thing.
+        Hook(key: "gnosisPayProbe") { spec, context in
+            Task { @MainActor in
+                let n = await GnosisPayBridge.probe(context: context, blocksBack: Int(spec))
+                NSLog("Gnosis Pay probe: %@ landed; %@",
+                      n.map(String.init) ?? "FAILED",
+                      GnosisPayBridge.accountSummary())
+            }
+        },
         // `-solNameProbe <name.sol>` resolves a Solana name through SNS and
         // NSLogs the address (or the honest miss) — the fastest check that the
         // resolver still answers, without touching the corpus.

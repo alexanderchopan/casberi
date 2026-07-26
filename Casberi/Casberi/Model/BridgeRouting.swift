@@ -154,6 +154,15 @@ enum BridgeRouter {
         Row(offer: "Tokens",    id: "tokens", destination: .tokens),
         Row(offer: "Peer",      id: "peer",   destination: .peer),
         Row(offer: "0xBow Privacy Pools", id: "privacypools", destination: .privacyPools),
+        // Gnosis Pay has no screen of its own, and routes BOTH ways to the
+        // wallet manager (prd §222). Connect, because watching the wallet is
+        // the only real action — the §209 reasoning. Open, because the
+        // generic BridgeDetailScreen carries a Remove button, and this seat
+        // is a MIRROR of "has a watched wallet spent on a card": removing it
+        // would silently re-register on the next foreground, which is exactly
+        // the dead control the honesty rule forbids. The spends themselves
+        // live in the feed, where every other landed thing lives.
+        Row(offer: "Gnosis Pay", id: "gnosispay", destination: .wallet),
         // Read-only exchange seats (prd §163) — Wallet group by ruling: their
         // balances merge into the combined total, so they belong beside the
         // wallets they join.

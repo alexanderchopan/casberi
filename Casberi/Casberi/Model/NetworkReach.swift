@@ -96,6 +96,14 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Peer"),
                  purpose: "Reads your settled Peer trades off Base's public chain, for the wallets you watch.",
                  hosts: ["mainnet.base.org"]),
+        // Reach is WALLET, not "Gnosis Pay" — the seat only appears once a
+        // card spend has been seen, but the read that discovers one runs for
+        // every watched wallet. Declaring it under its own seat would say
+        // this host is only reached after connecting, which is false.
+        Endpoint(service: "Gnosis Pay",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "Reads your Gnosis Pay card spending off Gnosis Chain's public chain, for the wallets you watch — the amount and the moment, which is all the chain carries.",
+                 hosts: ["rpc.gnosischain.com", "rpc.gnosis.gateway.fm"]),
         Endpoint(service: "Exchange rates",
                  reach: .whenConnected(bridge: "Tokens"),
                  purpose: "Fetches public reference prices to show token and wallet values in your currency. Carries only the pair being priced.",
