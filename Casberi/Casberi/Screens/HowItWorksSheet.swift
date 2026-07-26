@@ -31,8 +31,20 @@ import SwiftUI
 /// surface — it's "the catalog" ("store" reads as a place you pay).
 /// Text literals auto-localize (LocalizedStringKey).
 struct HowItWorksSheet: View {
-    /// Set by the onboarding tail: the CTA that dismisses onboarding INTO    /// the catalog. Nil from Settings — the toolbar Done is the exit there.
-    var onOpenCatalog: (() -> Void)? = nil
+    /// Set by the onboarding tail; nil from Settings, where the toolbar Done
+    /// is the exit and there is no rain. Non-nil means "this is someone's first
+    /// run", which is what gates the rain, the CTA, and the fork below.
+    ///
+    /// The CTA used to be "Browse the catalog" and land in a wall of ~40 apps
+    /// (prd §217, 2026-07-25). It is "Try it" now, and it lands on
+    /// `StartHereScreen` — the fork. The word matters as much as the
+    /// destination: "Continue" says more setup is ahead, "Try it" says the next
+    /// tap does something. The catalog is still one tap away from there, so
+    /// nothing is taken from someone who came to browse.
+    ///
+    /// A non-nil node is where to land after the cover lifts; nil means the
+    /// feed, which is right whenever the tap already produced something to see.
+    var onStart: ((HomeRoute.Node?) -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -42,6 +54,10 @@ struct HowItWorksSheet: View {
     /// True once the last tile is past the bottom — the overlay unmounts, so
     /// 31 offscreen icon views don't stay composited under the cover forever.
     @State private var rainDone = false
+    /// Pushes the fork. Kept as local navigation inside this sheet's own stack
+    /// so the greeting stays on the back chevron — a first run should be
+    /// reversible.
+    @State private var showStart = false
 
     private struct Point: Identifiable {
         let glyph: String
@@ -172,20 +188,23 @@ struct HowItWorksSheet: View {
                 // From Settings the sheet keeps its plain exit; in the
                 // onboarding tail the catalog CTA below is the only door
                 // forward (one door, the connect screen's rule).
-                if onOpenCatalog == nil {
+                if onStart == nil {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Done") { dismiss() }
                             .tint(DS.tint)
                     }
                 }
             }
+            .navigationDestination(isPresented: $showStart) {
+                if let onStart { StartHereScreen(onStart: onStart) }
+            }
             .safeAreaInset(edge: .bottom) {
-                if let onOpenCatalog {
+                if onStart != nil {
                     Button {
                         DSHaptic.success()
-                        onOpenCatalog()
+                        showStart = true
                     } label: {
-                        Text("Browse the catalog")
+                        Text("Try it")
                             .dsText(.body17)
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
@@ -210,12 +229,12 @@ struct HowItWorksSheet: View {
         }
         // The rain falls only in the onboarding tail — from Settings this is
         // a reference page, and a second rain would be a fake first time.
-        .overlay { if onOpenCatalog != nil && !rainDone { rain } }
+        .overlay { if onStart != nil && !rainDone { rain } }
         .tint(DS.tint)
         .onAppear {
             if reduceMotion { arrived = true }
             else { withAnimation(DS.Motion.standard) { arrived = true } }
-            guard onOpenCatalog != nil else { return }
+            guard onStart != nil else { return }
             rainFell = true
             // Last tile: 0.7 base + 30 × 0.055 stagger + 0.75 fall ≈ 3.1s.
             Task { @MainActor in
@@ -224,15 +243,16 @@ struct HowItWorksSheet: View {
             }
         }
         #if DEBUG
-        // `-howItWorksCTA <s>` fires the onboarding-tail CTA after a delay —
-        // the catalog landing verifies headlessly (the `-demoPick` pattern).
+        // `-howItWorksCTA <s>` fires the onboarding-tail CTA after a delay.
+        // It now pushes the FORK rather than landing in the catalog (§217) —
+        // pair with `-startPick <arm>` to walk a whole first run headlessly.
         .onAppear {
             let delay = UserDefaults.standard.double(forKey: "howItWorksCTA")
-            guard delay > 0, let onOpenCatalog else { return }
+            guard delay > 0, onStart != nil else { return }
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(delay))
                 NSLog("howItWorksCTA: fired")
-                onOpenCatalog()
+                showStart = true
             }
         }
         #endif

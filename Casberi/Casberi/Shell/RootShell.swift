@@ -34,7 +34,10 @@ struct RootShell: View {
     /// drops a navigationDestination push made under a presented cover — the
     /// same drop class as `-openSettings` at launch (audit 2026-07-13); the
     /// user saw it as "Browse the catalog sometimes doesn't work" (2026-07-17).
-    @State private var landInCatalog = false
+    /// Where the onboarding cover said to land once it lifts (§217). Nil means
+    /// the feed — right whenever the fork's tap already produced something to
+    /// look at, which is the whole point of the fork.
+    @State private var landingNode: HomeRoute.Node?
     @AppStorage("privacy.hidePreviews") private var hidePreviews = true
     @AppStorage("firstThingSaved") private var firstThingSaved = false
     @Environment(\.scenePhase) private var scenePhase
@@ -890,20 +893,23 @@ struct RootShell: View {
         .fullScreenCover(isPresented: Binding(
             get: { !onboarded }, set: { if !$0 { onboarded = true } }
         ), onDismiss: {
-            guard landInCatalog else { return }
-            landInCatalog = false
             FeedFilter.shared.source = "All"
-            HomeRoute.shared.present(.apps)
+            FeedFilter.shared.tag = "All"
+            guard let node = landingNode else { return }   // nil = the feed itself
+            landingNode = nil
+            HomeRoute.shared.present(node)
         }) {
-            // Onboarding is ONE screen (re-ruled 2026-07-16 — the connect
-            // screen died): the "How it works" greeting, wearing the rain
-            // itself. Its one door forward lands IN the catalog, which is
-            // where connecting actually happens now — the arc is apps rain
-            // down → the four steps → the catalog where those apps live, so
-            // step 1 is fulfilled the moment the cover lifts. The record
-            // ("All" chip) waits one back-swipe beneath it.
-            rootPresented(HowItWorksSheet(onOpenCatalog: {
-                landInCatalog = true
+            // Onboarding is TWO screens since §217 (2026-07-25), and the
+            // second one is the point. The greeting is unchanged — the rain,
+            // the three steps, the same words — but its CTA is "Try it" and it
+            // leads to the fork, where one tap produces real rows from the
+            // person's own life. Before this it landed in a catalog of ~40
+            // apps, so first value cost a choice, a connect and a sync; the
+            // brief, the themes map and the wallet hero all stayed invisible
+            // until a corpus existed. The fork's own escape hatch still opens
+            // the catalog, so nothing is taken from someone who came to browse.
+            rootPresented(HowItWorksSheet(onStart: { node in
+                landingNode = node
                 onboarded = true
             }))
         }

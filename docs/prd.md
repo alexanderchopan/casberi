@@ -8550,3 +8550,56 @@ window — a probe that asks differently than the real read proves nothing.
 Not built: an adaptive window (shorter while the Wallet screen is open). The existing stale
 card ("as of Xh ago") already owns anything genuinely old, and a value that twitches costs
 quota to say nothing.
+
+## 217. Onboarding forks — "Try it", then three verbs instead of forty apps (user: "would a user pick a few screenshots or just connect", "lets ship it", 2026-07-25) — VERIFIED
+
+Onboarding was one greeting straight into a catalog of ~40 apps. A new person had to PICK
+something, CONNECT it, and WAIT for a sync before the app did anything — three steps and a wait
+before any evidence it was worth having, while the brief, the themes map, the wallet hero and
+the continuity memory all stayed invisible until a corpus existed.
+
+**The greeting is untouched** (user: "i still really like the 'how it works' we have today, so
+i'd still want that to be first"). The rain, the three steps, the same words. One string
+changed: the CTA is **"Try it"**, not "Browse the catalog". That word does most of the work —
+"Continue" says more setup is ahead, "Try it" says the next tap does something.
+
+**The fork covers three audiences, because the app has three** (user: "we have users that are
+here for crypto wallets, what if they don't care about photos... an option to pick one of
+three"). Memory, money, reading: show me my screenshots / watch a wallet / follow someone I
+read. Three is a fork you answer in a second; forty is a wall you survey. Pick-ONE, not do-any —
+a screen where you can do three things is a screen you can get stuck on.
+
+**Why this is not the connect screen §96 deleted.** That was a LIST of sources with toggles:
+four simultaneous standing asks, all abstract, none showing you anything — which is exactly why
+it read as invasive. These are VERBS in the first person with visible outcomes, and one tap
+produces real rows from your own life. The old screen asked for a relationship; this asks for an
+outcome. Recorded as a tripwire in the file itself: **the moment a card grows a toggle it is
+that screen again and should be deleted a second time.**
+
+The escape hatch is "Browse the catalog instead", not "Skip" — skip lands you nowhere, this
+lands where the old CTA went, so nothing is taken from someone who came to browse.
+
+**Copy ruling that changed the build** (user: "why do we say pick a few, makes it seem like
+it'll be manual"). The screenshots card said "Pick a few. I'll read and file them" — which
+describes iOS's LIMITED access, a mode this app supports but never wants. `ScreenshotIngest` is
+a standing connection that re-scans every foreground, so the promise is now "New ones land here
+on their own." Describe what the bridge does, not its degraded mode. The wallet card takes the
+user's own words: "Enter an ENS, paste an address, or connect your wallet app" — which is
+literally what the wallet manager's field and button already say, so the card promises exactly
+what the next screen delivers.
+
+**Each arm reuses a ruled surface rather than growing a new one.** Screenshots acts in place
+(the real connect, then straight to the feed). Wallet hands off to the §202 manager, which is
+already all three doors. Follow pushes a small segmented Bluesky/Farcaster/Feed form — a picker
+over one field rather than a network sniffer, because `alice.bsky.social`, `dwr` and an RSS URL
+are genuinely ambiguous and guessing wrong on the first thing someone types is a worse first
+impression than asking (§186 already blesses a connect screen being a form). All three follow
+paths are keyless: no account, no key, no permission.
+
+Failure is never a dead end: a denied photo grant or an unreachable network still ends
+onboarding and says what happened, because stranding someone on a form is worse than an honest
+miss.
+
+Verified end to end on sim, all three arms: greeting → Try it → fork → screenshots landed 4 real
+screenshots and the cover lifted onto the All feed showing them grouped by day; wallet landed on
+the manager; follow landed 23 things from a real Bluesky handle. `-startPick` / `-startFollow`.
