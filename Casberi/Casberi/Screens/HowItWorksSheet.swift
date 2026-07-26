@@ -83,15 +83,15 @@ struct HowItWorksSheet: View {
     private let points: [Point] = [
         Point(glyph: "square.grid.2x2.fill", hue: .blue,
               title: "Connect your apps",
-              line: "Open the catalog, top left of your feed. Everything you connect lands in your feed, automatically."),
+              line: "The catalog is top left. Everything you connect lands here on its own."),
         Point(glyph: "line.3.horizontal.decrease.circle.fill", hue: .pink,
               title: "One feed, or one app",
-              line: "Everything lands in one feed. The chips up top narrow it to a single app."),
+              line: "The chips up top narrow it to a single app."),
         // Wears the agent bar's own seat — the ask bar sits at the bottom of
         // every feed, the same reason step 1 wears the catalog's grid.
         Point(glyph: "sparkles", hue: .purple,
               title: "Ask anything",
-              line: "Tap “Ask your things” at the bottom and ask about anything you've saved."),
+              line: "The bar at the bottom answers questions about anything you've saved."),
     ]
 
     // MARK: - The onboarding rain (moved here 2026-07-16 when the connect
@@ -153,7 +153,7 @@ struct HowItWorksSheet: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: DS.Space.s4) {
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
                     // The header is the display tier — 34-heavy SF Rounded,
                     // the Home cover's voice; this is the first screen a
                     // new person meets.
@@ -173,11 +173,11 @@ struct HowItWorksSheet: View {
 
                     ForEach(Array(points.enumerated()), id: \.element.id) { i, point in
                         stepCard(i, point)
-                            .arrive(arrived, delay: 0.25 + Double(i) * 0.12)
+                            .arrive(arrived, delay: 0.25 + Double(i) * 0.1)
                     }
                 }
                 .padding(.horizontal, DS.Space.s4)
-                .padding(.bottom, DS.Space.s8)
+                .padding(.bottom, DS.Space.s4)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .scrollIndicators(.hidden)
@@ -265,36 +265,65 @@ struct HowItWorksSheet: View {
     /// title at heading-22. The numeral duplicates the reading order for
     /// sighted users only, so it hides from accessibility.
     private func stepCard(_ index: Int, _ point: Point) -> some View {
-        ZStack(alignment: .topTrailing) {
-            Text(verbatim: "\(index + 1)")
-                .dsText(.flourish148)
-                .foregroundStyle(point.hue.opacity(0.16))
-                .offset(x: DS.Space.s3, y: -DS.Space.s8 - DS.Space.s3)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: DS.Space.s4) {
-                Image(systemName: point.glyph)
-                    .font(.system(size: 25, weight: .semibold))
-                    .foregroundStyle(point.hue)
-                    .frame(width: 58, height: 58)
-                    .background(point.hue.opacity(0.16),
-                                in: RoundedRectangle(cornerRadius: DS.Radius.control,
-                                                     style: .continuous))
-                VStack(alignment: .leading, spacing: DS.Space.s1) {
-                    Text(point.title)
-                        .dsText(.heading22)
-                        .foregroundStyle(DS.textPrimary)
-                    Text(point.line)
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
+        // The numeral is an OVERLAY, not a ZStack sibling (2026-07-25). At
+        // `flourish148` it is 148pt tall, so as a sibling it set a FLOOR on
+        // every card's height — invisible while the cards were tall, but the
+        // moment the glyph moved beside the words (below) cards 2 and 3 had
+        // less content than the numeral and got padded out with ~200pt of dead
+        // space each. An overlay sizes to its parent and never expands it, so
+        // the numeral can stay huge while each card hugs its own words.
+        contentStack(index, point)
+            .overlay(alignment: .topTrailing) {
+                Text(verbatim: "\(index + 1)")
+                    .dsText(.flourish148)
+                    .foregroundStyle(point.hue.opacity(0.16))
+                    .offset(x: DS.Space.s3, y: -DS.Space.s8 - DS.Space.s3)
+                    .accessibilityHidden(true)
+                    .allowsHitTesting(false)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+            .dsWidgetSurface()
+    }
+
+    /// The card's words and glyph — split out so the numeral above can overlay
+    /// it without either one sizing the other.
+    private func contentStack(_ index: Int, _ point: Point) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+                // Glyph BESIDE the words, not stacked above them (2026-07-25).
+                // Stacked, three cards plus the header ran ~200pt past the fold
+                // on a 17 Pro — step 3's title sat behind the CTA and its line
+                // ran off the bottom (user: "user doesn't have to scroll to see
+                // all the content"). Going horizontal reclaims the glyph's own
+                // height on every card. Type is UNTOUCHED: §206 raised the
+                // reading scale on purpose, and shrinking it back here to win
+                // space would undo a ruling to fix a layout problem.
+                HStack(alignment: .top, spacing: DS.Space.s3) {
+                    Image(systemName: point.glyph)
+                        .font(.system(size: 23, weight: .semibold))
+                        .foregroundStyle(point.hue)
+                        .frame(width: 50, height: 50)
+                        .background(point.hue.opacity(0.16),
+                                    in: RoundedRectangle(cornerRadius: DS.Radius.control,
+                                                         style: .continuous))
+                    VStack(alignment: .leading, spacing: DS.Space.s1) {
+                        Text(point.title)
+                            .dsText(.heading22)
+                            .foregroundStyle(DS.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text(point.line)
+                            .dsText(.body17)
+                            .foregroundStyle(DS.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    // Clears the giant numeral in the corner — without this the
+                    // title's last word collides with it on the narrower column.
+                    .padding(.trailing, DS.Space.s6)
                 }
                 if index == 0 { catalogStrip }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(DS.Space.s6)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-        .dsWidgetSurface()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DS.Space.s4)
     }
 
     /// The onboarding rain, settled: a row of the same real brands, each
@@ -307,7 +336,7 @@ struct HowItWorksSheet: View {
     private var catalogStrip: some View {
         HStack(spacing: DS.Space.s2) {
             ForEach(Array(Self.stripApps.enumerated()), id: \.element) { i, name in
-                BridgeIcon(name: name, size: 40)
+                BridgeIcon(name: name, size: 34)
                     .rotationEffect(.degrees(Self.stripTilt[i % Self.stripTilt.count]))
             }
         }
