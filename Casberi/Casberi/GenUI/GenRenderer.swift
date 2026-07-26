@@ -1174,29 +1174,52 @@ struct DistributionHero: View {
 /// the grid self-sizes; RemoteThumb handles caching and dead-image fallback.
 struct ImageMosaicHero: View {
     let mosaic: FeedInsight.Mosaic
+    /// The medium's own color, averaged from the newest piece of art, spent as
+    /// a soft wash behind the shelf (prd §219). nil until it resolves — and it
+    /// stays nil for a near-colorless average, because a grey wash is just
+    /// dirt on the card. Media sources only: an OpenSea or Shopify shelf is
+    /// whatever the seller uploaded, so those cards stay neutral.
+    @State private var wash: Color?
+
+    /// How this medium lays out: how many across, how many rows, and the tile
+    /// aspect. A source with no declared medium keeps the square 4-across grid
+    /// this card has always drawn.
+    private var layout: (columns: Int, maxRows: Int, aspect: CGFloat) {
+        guard let art = mosaic.art else { return (4, 2, 1) }
+        return (art.shelf.columns, art.shelf.maxRows, art.aspect)
+    }
 
     var body: some View {
-        let urls = Array(mosaic.urls.prefix(8))
-        let rows = urls.count > 4 ? 2 : 1
-        let shown = Array(urls.prefix(rows * 4))
+        let l = layout
+        let shown = Array(mosaic.tiles.prefix(l.columns * l.maxRows))
+        let rows = max(1, Int(ceil(Double(shown.count) / Double(l.columns))))
+        // The block's own aspect derives the height from the width: with
+        // `columns` tiles of aspect `a` across and `rows` down, the whole
+        // block is (columns · a / rows) wide-to-tall.
+        let blockAspect = CGFloat(l.columns) * l.aspect / CGFloat(rows)
         InsightCard {
             InsightHeader(title: mosaic.title, subtitle: mosaic.subtitle)
             Color.clear
-                .aspectRatio(4.0 / CGFloat(rows), contentMode: .fit)
+                .aspectRatio(blockAspect, contentMode: .fit)
                 .overlay {
                     GeometryReader { geo in
                         let gap: CGFloat = 4
-                        let tile = (geo.size.width - gap * 3) / 4
+                        let tileW = (geo.size.width - gap * CGFloat(l.columns - 1)) / CGFloat(l.columns)
+                        let tileH = tileW / l.aspect
+                        let radius = min(DS.Radius.control, min(tileW, tileH) * 0.22)
                         VStack(spacing: gap) {
                             ForEach(0..<rows, id: \.self) { r in
                                 HStack(spacing: gap) {
-                                    ForEach(0..<4, id: \.self) { c in
-                                        let idx = r * 4 + c
+                                    ForEach(0..<l.columns, id: \.self) { c in
+                                        let idx = r * l.columns + c
                                         if idx < shown.count {
-                                            RemoteThumb(urlString: shown[idx], size: tile,
-                                                        fallback: mosaic.fallback)
+                                            RemoteArt(urlString: shown[idx].url,
+                                                      width: tileW, height: tileH,
+                                                      fallback: mosaic.fallback,
+                                                      freshness: shown[idx].freshness,
+                                                      cornerRadius: radius)
                                         } else {
-                                            Color.clear.frame(width: tile, height: tile)
+                                            Color.clear.frame(width: tileW, height: tileH)
                                         }
                                     }
                                 }
@@ -1204,7 +1227,107 @@ struct ImageMosaicHero: View {
                         }
                     }
                 }
+                // The wash sits BEHIND the art and bleeds past its edges, so
+                // the card glows in the medium's color rather than tinting the
+                // words — the header stays plain ink, which keeps the type
+                // ramp doing the hierarchy.
+                .background {
+                    if let wash {
+                        RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
+                            .fill(LinearGradient(colors: [wash.opacity(0.38), wash.opacity(0.05)],
+                                                 startPoint: .top, endPoint: .bottom))
+                            .padding(-DS.Space.s3)
+                            .blur(radius: 18)
+                            .allowsHitTesting(false)
+                    }
+                }
         }
+        .task(id: mosaic.tiles.first?.url) { await loadWash() }
+    }
+
+    /// Reads the color off the newest art — an image the shelf is downloading
+    /// anyway, so the wash costs no extra request.
+    private func loadWash() async {
+        guard mosaic.art != nil, let first = mosaic.tiles.first?.url else { return }
+        guard case .image(let img, _) = await RemoteImageLoader.load(
+            urlString: first, targetSide: 96) else { return }
+        guard let color = RemoteImageLoader.averageColor(of: img) else { return }
+        withAnimation(DS.Motion.standard) { wash = Color(uiColor: color) }
+    }
+}
+
+
+/// A stream that is ON RIGHT NOW, at frame size (prd §219, 2026-07-25).
+///
+/// §164 already carved out the exception this cashes in: "a single item may
+/// claim the head only while it is a LIVE STATE rather than a landed thing",
+/// and until now Twitch spent that grant on nothing but sort order — its feed
+/// led with no head at all, because a mosaic of expired stream frames would
+/// claim broadcasts that ended. A stream that IS on has no such problem: the
+/// frame is true for exactly as long as it's shown.
+///
+/// Honest by construction, twice over. The caller derives this row from
+/// `TwitchIngest.liveRefs` (the source's own current-live set, never the row's
+/// age), so when the broadcast ends the card doesn't fade or go stale — it
+/// stops existing. And the frame loads `perishable`, so a second broadcast can
+/// never wear the first one's picture out of the cache.
+struct LiveStreamHero: View {
+    let thing: Thing
+    var onOpen: () -> Void
+
+    var body: some View {
+        Button(action: onOpen) {
+            Color.clear
+                .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                .overlay {
+                    GeometryReader { geo in
+                        if let url = thing.previewImageURL, !url.isEmpty {
+                            RemoteArt(urlString: url,
+                                      width: geo.size.width, height: geo.size.height,
+                                      fallback: "Twitch", perishable: true,
+                                      cornerRadius: DS.Radius.widget)
+                        } else {
+                            ZStack {
+                                DS.fillFaint
+                                BridgeIcon(name: "Twitch", size: 44)
+                            }
+                        }
+                    }
+                }
+                // A scrim only where the words are — the frame is the point,
+                // and a full-surface dim would mute the one image on screen
+                // that's actually happening right now.
+                .overlay(alignment: .bottom) {
+                    LinearGradient(colors: [.clear, .black.opacity(0.75)],
+                                   startPoint: .top, endPoint: .bottom)
+                        .frame(height: 96)
+                        .allowsHitTesting(false)
+                }
+                .overlay(alignment: .bottomLeading) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 5) {
+                            Circle().fill(DS.confirm).frame(width: 7, height: 7)
+                            Text("Live").dsText(.label12).foregroundStyle(.white)
+                        }
+                        Text(thing.title)
+                            .dsText(.body17)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.white)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                    }
+                    .shadow(color: .black.opacity(0.5), radius: 4, y: 1)
+                    .padding(DS.Space.s3)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+                .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s2)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Live now, \(thing.title)"))
+        .accessibilityAddTraits(.isButton)
     }
 }
 

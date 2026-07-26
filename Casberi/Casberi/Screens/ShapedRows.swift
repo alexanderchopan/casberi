@@ -697,6 +697,36 @@ enum RemoteImageLoader {
         cache.object(forKey: key(urlString, targetSide))
     }
 
+    /// The average color of an already-loaded image — what a media head's
+    /// wash is drawn from (prd §219). Costs one 1×1 redraw of a thumbnail
+    /// this view already downloaded, so the tint never adds a request.
+    ///
+    /// Deliberately the AVERAGE, not a "dominant"/quantized pick: a k-means
+    /// palette pass would be a real cost per card and, for the muddy composite
+    /// of a video still, lands somewhere close to this anyway. Saturation is
+    /// pushed up and lightness pulled toward the middle before it's returned,
+    /// because a raw average trends grey — a wash of grey is just dirt on the
+    /// card. Returns nil for an image with no drawable bitmap.
+    static func averageColor(of image: UIImage) -> UIColor? {
+        guard let cg = image.cgImage else { return nil }
+        var pixel = [UInt8](repeating: 0, count: 4)
+        guard let space = CGColorSpace(name: CGColorSpace.sRGB),
+              let ctx = CGContext(data: &pixel, width: 1, height: 1,
+                                  bitsPerComponent: 8, bytesPerRow: 4, space: space,
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return nil }
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: 1, height: 1))
+        let raw = UIColor(red: CGFloat(pixel[0]) / 255, green: CGFloat(pixel[1]) / 255,
+                          blue: CGFloat(pixel[2]) / 255, alpha: 1)
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        guard raw.getHue(&h, saturation: &s, brightness: &b, alpha: &a) else { return raw }
+        // A nearly colorless average has no hue worth trusting — let the caller
+        // fall back to no wash rather than smearing grey over the card.
+        guard s > 0.08 else { return nil }
+        return UIColor(hue: h, saturation: min(1, s * 1.6),
+                       brightness: min(0.85, max(0.4, b * 1.1)), alpha: 1)
+    }
+
     /// Fetch → decode → downsample to `targetSide` pixels. `cached: false`
     /// is the perishable rule (a live-stream frame changes behind its URL):
     /// skip the decoded cache both ways so a second broadcast can't wear the
@@ -815,6 +845,170 @@ struct RemoteThumb: View {
         case .dead:
             failed = true
         }
+    }
+}
+
+
+/// A remote image drawn at the MEDIUM's own proportions (prd §219, 2026-07-25)
+/// rather than squeezed into `RemoteThumb`'s square. Same loader, same cache,
+/// same dead-URL fallback — the only difference is that width and height are
+/// given separately, so a 16:9 frame arrives as a frame.
+///
+/// `freshness` is the decay wash (`MediaShape.freshness`): art drains of color
+/// as it ages down the feed. 1 is a no-op, so a caller that doesn't opt in
+/// pays nothing.
+struct RemoteArt: View {
+    let urlString: String
+    let width: CGFloat
+    let height: CGFloat
+    /// The bridge whose glyph stands in when the URL turns out dead.
+    var fallback: String? = nil
+    /// A perishable image (a live-stream frame) changes behind its URL.
+    var perishable = false
+    var freshness: Double = 1
+    var cornerRadius: CGFloat = DS.Radius.control
+    @State private var image: UIImage?
+    @State private var failed = false
+
+    /// Downsample target — the LONG side, so a wide frame isn't decoded to
+    /// its height and then upscaled across.
+    private var targetSide: CGFloat { max(width, height) * 3 }
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image).resizable().scaledToFill()
+            } else if failed || RemoteImageLoader.isDead(urlString), let fallback {
+                ZStack {
+                    DS.fillFaint
+                    BridgeIcon(name: fallback, size: min(width, height) * 0.62)
+                }
+            } else {
+                ZStack {
+                    DS.fillFaint
+                    Image(systemName: "photo")
+                        .accessibilityHidden(true)
+                        .font(.system(size: min(width, height) * 0.34, weight: .medium))
+                        .foregroundStyle(DS.textTertiary)
+                }
+            }
+        }
+        .frame(width: width, height: height)
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .saturation(freshness)
+        .task(id: urlString) { await load() }
+    }
+
+    private func load() async {
+        if RemoteImageLoader.isDead(urlString) { failed = true; return }
+        if !perishable,
+           let hit = RemoteImageLoader.cachedImage(urlString: urlString, targetSide: targetSide) {
+            image = hit; return
+        }
+        image = nil
+        failed = false
+        switch await RemoteImageLoader.load(urlString: urlString, targetSide: targetSide,
+                                            cached: !perishable) {
+        case .image(let art, let fresh):
+            if fresh { withAnimation(DS.Motion.standard) { image = art } }
+            else { image = art }
+        case .transientFailure:
+            failed = !Task.isCancelled
+        case .dead:
+            failed = true
+        }
+    }
+}
+
+
+/// The media row (prd §219, 2026-07-25) — a media source's native anatomy, the
+/// same permission `MusicRow` has had since 2026-07-11: in its own room the art
+/// leads at the medium's real proportions instead of the All feed's 26pt
+/// square. A YouTube still arrives 85×48, a Steam header 103×48, a podcast
+/// cover 48×48, a Pinterest pin 32×48 — one row height, so the feed keeps a
+/// single rhythm while each medium keeps its shape.
+///
+/// The art also carries the AGE, as saturation (`MediaShape.freshness`): the
+/// top of the feed is in full color and drains as you scroll back. That's the
+/// "am I behind?" read with no digit in it, and it claims nothing the record
+/// can't support — it charts the item's own age, which the timestamp beside it
+/// already says out loud. A live row never decays.
+struct MediaRow: View {
+    let thing: Thing
+    let art: MediaShape.Art
+    /// Live RIGHT NOW, from the source's own live set — same honesty contract
+    /// as `BandRow.live`: derived from the source, never from the row's age.
+    var live: Bool = false
+
+    private var done: Bool { thing.mark == .done }
+
+    /// The channel, show, or publication — stamped into `authorHandle` at
+    /// ingest by every feed-follow bridge. Nil on a source that names nothing
+    /// there (Steam: the game IS the title), and then the row simply has no
+    /// subtitle rather than inventing one.
+    private var byline: String? {
+        guard let handle = thing.authorHandle?.trimmingCharacters(in: .whitespaces),
+              !handle.isEmpty, handle != thing.title else { return nil }
+        return handle
+    }
+
+    private var freshness: Double {
+        live ? 1 : MediaShape.freshness(of: thing.capturedAt)
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: DS.Space.s3) {
+            Group {
+                if let url = thing.previewImageURL, !url.isEmpty,
+                   // A Twitch frame is perishable: it renders only while the
+                   // live set says the stream is on, or a dead frame would
+                   // claim a broadcast that ended (the same rule BandRow
+                   // applies to its 26pt slot).
+                   thing.source != "Twitch" || live {
+                    RemoteArt(urlString: url,
+                              width: MediaShape.rowArtWidth(art),
+                              height: MediaShape.rowArtHeight,
+                              fallback: thing.source,
+                              perishable: thing.source == "Twitch",
+                              freshness: freshness)
+                } else {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous)
+                            .fill(DS.fillFaint)
+                        BridgeIcon(name: thing.source, size: 26)
+                    }
+                    .frame(width: MediaShape.rowArtWidth(art), height: MediaShape.rowArtHeight)
+                }
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(thing.title)
+                    .dsText(.body17)
+                    .foregroundStyle(done ? DS.textTertiary : DS.textPrimary)
+                    .strikethrough(done, color: DS.textTertiary)
+                    .lineLimit(2)
+                if let byline {
+                    Text(byline)
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .trailing, spacing: 1) {
+                if live {
+                    HStack(spacing: 4) {
+                        Circle().fill(DS.confirm).frame(width: 6, height: 6)
+                        Text("Live").dsText(.label12).foregroundStyle(DS.confirm)
+                    }
+                } else {
+                    LiveTimeText(date: thing.capturedAt)
+                }
+            }
+        }
+        .padding(.vertical, DS.Space.s2)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(ThingVoice.rowLabel(for: thing, title: thing.title,
+                                                project: byline, live: live))
     }
 }
 

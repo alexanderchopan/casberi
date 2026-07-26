@@ -160,7 +160,7 @@ struct FeedScreen: View {
 
     /// The shape a source takes when its chip is in force.
     private enum Shape {
-        case all, photos, wallet, calendar, gmail, chat, social, reminders, safari, notes, you, music, tokens, bitrefill, oneclaw, plain
+        case all, photos, wallet, calendar, gmail, chat, social, reminders, safari, notes, you, music, media, tokens, bitrefill, oneclaw, plain
         init(source: String) {
             switch source {
             case "All":                 self = .all
@@ -178,6 +178,11 @@ struct FeedScreen: View {
             case "Notes", "Day One", "Apple Journal", "Obsidian": self = .notes
             case "You", "Voice":        self = .you
             case "Apple Music", "Spotify": self = .music
+            // The media room (prd §219, 2026-07-25): art at the medium's own
+            // proportions instead of the All feed's 26pt square. Music is NOT
+            // here — `MusicRow` has led with the cover since 2026-07-11 and is
+            // already this shape by another name.
+            case _ where MediaShape.isMediaFeed(source): self = .media
             case "Tokens":              self = .tokens
             case "Bitrefill":           self = .bitrefill
             case "1Claw":               self = .oneclaw
@@ -197,6 +202,9 @@ struct FeedScreen: View {
         case .wallet, .tokens: .init(dx: 0, dy: 16, scale: 1, step: 0.04)
         case .photos:   .init(dx: 0, dy: 0, scale: 0.92, step: 0.03)
         case .music:    .init(dx: 0, dy: 10, scale: 1, step: 0.035)
+        // Frames settle in like the music room's covers — a touch of scale so
+        // the art reads as arriving, not sliding.
+        case .media:    .init(dx: 0, dy: 10, scale: 0.97, step: 0.035)
         case .social:   .init(dx: 0, dy: 12, scale: 0.98, step: 0.035)
         default:        .init(dx: 0, dy: 8, scale: 1, step: 0.028)
         }
@@ -957,14 +965,26 @@ struct FeedScreen: View {
         // Derived once and reused: `heroShown` lets a shape's own recap lede
         // (music's "today", Gmail's "waiting") yield so a feed never stacks two
         // overview cards — the lede's records still ride the rows below.
-        let heatmapLabel = FeedHeatmap.label(for: source)
-        let leaderboard = heatmapLabel == nil ? FeedInsight.leaderboard(source: source, things: visible) : nil
-        let distribution = heatmapLabel == nil && leaderboard == nil
+        //
+        // Live outranks every aggregate (§164's one exception, cashed in by
+        // prd §219): a stream that is ON RIGHT NOW takes the head at frame
+        // size. `thing.isLive` here is the SwiftData liveness guard (COROLLARY
+        // 2 — the hero holds this reference across renders and a heal pass can
+        // delete under it); `isLive(_:)` is the Twitch broadcast set. Both,
+        // in that order.
+        let liveStream = visible.first { $0.isLive && isLive($0) }
+        let heatmapLabel = liveStream == nil ? FeedHeatmap.label(for: source) : nil
+        let leaderboard = liveStream == nil && heatmapLabel == nil
+            ? FeedInsight.leaderboard(source: source, things: visible) : nil
+        let distribution = liveStream == nil && heatmapLabel == nil && leaderboard == nil
             ? FeedInsight.distribution(source: source, things: visible) : nil
-        let mosaic = heatmapLabel == nil && leaderboard == nil && distribution == nil
+        let mosaic = liveStream == nil && heatmapLabel == nil && leaderboard == nil && distribution == nil
             ? FeedInsight.mosaic(source: source, things: visible) : nil
-        let heroShown = heatmapLabel != nil || leaderboard != nil || distribution != nil || mosaic != nil
-        if let heatmapLabel {
+        let heroShown = liveStream != nil || heatmapLabel != nil || leaderboard != nil
+            || distribution != nil || mosaic != nil
+        if let liveStream {
+            insightSection { LiveStreamHero(thing: liveStream) { openThing(liveStream) } }
+        } else if let heatmapLabel {
             calendarHeatmapSection(visible, label: heatmapLabel)
         } else if let leaderboard {
             insightSection { LeaderboardHero(board: leaderboard) }
@@ -2256,6 +2276,13 @@ struct FeedScreen: View {
             case .calendar:  BandRow(thing: thing, emphasized: thing.id == nextEventID)
             case .reminders: BandRow(thing: thing)
             case .music:     MusicRow(thing: thing)
+            // The medium's own proportions (prd §219) — a still arrives as a
+            // still, a Steam header as a capsule, a pin as a pin. One row
+            // height across all of them, so the feed keeps a single rhythm.
+            case .media where MediaShape.art(for: thing.source) != nil:
+                MediaRow(thing: thing,
+                         art: MediaShape.art(for: thing.source) ?? .cover,
+                         live: isLive(thing))
             case .chat where thing.mark == .doing:
                 TakeawayCard(thing: thing)
             // Native anatomies (2026-07-13): in its own room a note leads

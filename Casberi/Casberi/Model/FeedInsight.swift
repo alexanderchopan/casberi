@@ -186,11 +186,27 @@ enum FeedInsight {
     // MARK: Mosaic (thumbnail wall)
 
     struct Mosaic {
+        /// One piece of art on the shelf, carrying the same age wash its ROW
+        /// wears below (prd §219). Without this the head painted the newest
+        /// items at full color while the rows beneath showed those identical
+        /// images drained — one screen telling two stories about the same
+        /// picture, which reads as a bug rather than a design (caught on the
+        /// sim, 2026-07-25, against a Pinterest feed of 2012 pins).
+        struct Tile {
+            let url: String
+            let freshness: Double
+        }
         let title: String
         let subtitle: String
-        let urls: [String]
+        let tiles: [Tile]
         /// The bridge glyph that stands in for a dead image.
         let fallback: String
+        /// The medium's own proportions (prd §219), or nil for a source whose
+        /// art has no inherent shape — the shelf then stays the square grid.
+        /// The renderer reads the tile aspect and the across-count from here,
+        /// so "texture of what's arriving" is told in the medium's language
+        /// instead of five media flattened into one grid of squares.
+        let art: MediaShape.Art?
     }
 
     static func mosaic(source: String, things: [Thing]) -> Mosaic? {
@@ -219,16 +235,27 @@ enum FeedInsight {
         case "RSS":         title = "Latest stories"; unit = ("story", "stories")
         default: return nil
         }
-        var urls: [String] = []
+        let art = MediaShape.art(for: source)
+        var tiles: [Mosaic.Tile] = []
         var seen = Set<String>()
         for thing in things {
             guard let url = thing.previewImageURL, !url.isEmpty, seen.insert(url).inserted else { continue }
-            urls.append(url)
-            if urls.count >= 8 { break }
+            // Only a declared medium decays — a source with no inherent art
+            // shape keeps the neutral square grid it has always drawn, at
+            // full color.
+            tiles.append(Mosaic.Tile(
+                url: url,
+                freshness: art == nil ? 1 : MediaShape.freshness(of: thing.capturedAt)))
+            if tiles.count >= 8 { break }
         }
-        guard urls.count >= 4 else { return nil }
+        // A wide medium fills its shelf with fewer, larger tiles (two 16:9
+        // frames, not eight), so it qualifies on fewer images than the square
+        // grid needs — the bar is "enough to fill the shelf", which differs
+        // per medium, not a fixed four.
+        let needed = art.map { min(4, $0.shelf.columns * $0.shelf.maxRows) } ?? 4
+        guard tiles.count >= needed else { return nil }
         let subtitle = "\(things.count.formatted()) \(things.count == 1 ? unit.one : unit.many)"
-        return Mosaic(title: title, subtitle: subtitle, urls: urls, fallback: source)
+        return Mosaic(title: title, subtitle: subtitle, tiles: tiles, fallback: source, art: art)
     }
 
     // MARK: - Grouping keys (each reads a field the bridge really stores)
