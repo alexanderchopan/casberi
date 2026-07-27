@@ -90,6 +90,10 @@ struct FeedScreen: View {
     @State private var showTranslate = false
     @State private var translateText = ""
     @State private var staleExpanded = false
+    /// The Calendar room hides what's already happened (user, 2026-07-27) —
+    /// this is the disclosure that brings it back. Collapsed by default; see
+    /// `calendarSections`.
+    @State private var pastEventsExpanded = false
     @State private var blockStream = GenStream()
     // GitHub's contribution graph rides the TOP of its own source feed (moved
     // off Home, 2026-07-18): the green-squares year is a GitHub thing, so it
@@ -805,8 +809,13 @@ struct FeedScreen: View {
                     // previews five and hands off to the history page, so
                     // "that's everything · 131 transactions" under five rows was
                     // a flat lie. Its own "See all transactions · 131" row is
-                    // the honest close.
-                    if shape != .reminders && shape != .wallet {
+                    // the honest close. Calendar joined them conditionally
+                    // (2026-07-27): with past events collapsed the room shows
+                    // a subset too, and its disclosure row ("Show 12 past
+                    // events") is that subset's honest close — expanded, the
+                    // room is whole again and the line comes back.
+                    if shape != .reminders && shape != .wallet
+                        && !hidesPastEvents(visible) {
                         caughtUpFooter(visible)
                     }
                 }
@@ -1013,7 +1022,7 @@ struct FeedScreen: View {
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
             walletSeeAllSection(total: all.count)
         case .calendar:
-            groupedSections(agendaGroups(visible), nextEventID: nextEventID)
+            calendarSections(visible, nextEventID: nextEventID)
         case .gmail:
             if !heroShown { waitingSection(visible, nextEventID: nextEventID) }
             let days = chronoGroups(visible)
@@ -1961,19 +1970,118 @@ struct FeedScreen: View {
         }
     }
 
-    /// Calendar reads forward: Today and upcoming days ascending, then the
-    /// past, event-time order within each day (mock C2).
-    private func agendaGroups(_ visible: [Thing]) -> [(String, [Thing])] {
-        let cal = Calendar.current
+    /// Calendar reads forward: Today and upcoming days ascending, event-time
+    /// order within each day (mock C2) — and, separately, what's already
+    /// happened, newest day first.
+    ///
+    /// Two lists, not one, since 2026-07-27 (user: "this calendar display feed
+    /// with dates and different orders is awkward, can we hide past events?").
+    /// The old shape concatenated them, so a single scroll ran forward then
+    /// backward — Monday, Wednesday, then last Friday — and the reversal at
+    /// the seam was invisible. An agenda is what's AHEAD; history is the All
+    /// feed's job (a past event still sits in its own day there). So the room
+    /// shows the upcoming days and keeps the past behind one disclosure at the
+    /// foot, the way Reminders already keeps its stale to-dos.
+    ///
+    /// LIVE ONLY at the top of the derivation (COROLLARY 2, build 150): every
+    /// caller below reads `capturedAt` — the split itself, the toggle's count,
+    /// the day headers — and a heal pass can delete a row out from under any
+    /// of them mid-update.
+    private func agendaSplit(_ visible: [Thing]) -> (upcoming: [(String, [Thing])],
+                                                     past: [(String, [Thing])]) {
+        let cal = Self.groupingCalendar
         let today = cal.startOfDay(for: .now)
         var buckets: [Date: [Thing]] = [:]
-        for thing in visible {
+        for thing in visible where thing.isLive {
             buckets[cal.startOfDay(for: thing.capturedAt), default: []].append(thing)
         }
-        let futureDays = buckets.keys.filter { $0 >= today }.sorted()
-        let pastDays = buckets.keys.filter { $0 < today }.sorted(by: >)
-        return (futureDays + pastDays).map { day in
-            (dayLabel(day), (buckets[day] ?? []).sorted { $0.capturedAt < $1.capturedAt })
+        func groups(_ days: [Date]) -> [(String, [Thing])] {
+            days.map { day in
+                (dayLabel(day), (buckets[day] ?? []).sorted { $0.capturedAt < $1.capturedAt })
+            }
+        }
+        return (groups(buckets.keys.filter { $0 >= today }.sorted()),
+                groups(buckets.keys.filter { $0 < today }.sorted(by: >)))
+    }
+
+    /// True while the Calendar room is holding past events back — the closing
+    /// "that's everything" line has to sit out then, the way it already does
+    /// for Reminders and Wallet (both render a subset of `visible`). The
+    /// disclosure row names the hidden count instead.
+    private func hidesPastEvents(_ visible: [Thing]) -> Bool {
+        guard shape == .calendar, !pastEventsExpanded else { return false }
+        let today = Self.groupingCalendar.startOfDay(for: .now)
+        return visible.contains {
+            $0.isLive && Self.groupingCalendar.startOfDay(for: $0.capturedAt) < today
+        }
+    }
+
+    /// The Calendar room: the agenda ahead, then — only when asked for — what
+    /// already happened, newest first. The disclosure sits in one place
+    /// whichever way it's pointing, so expanding doesn't move the control out
+    /// from under the finger that tapped it.
+    @ViewBuilder
+    private func calendarSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
+        let split = agendaSplit(visible)
+        let pastCount = split.past.reduce(0) { $0 + $1.1.count }
+        groupedSections(split.upcoming, nextEventID: nextEventID)
+        if split.upcoming.isEmpty { nothingAheadSection }
+        if pastCount > 0 {
+            pastEventsToggle(count: pastCount)
+            if pastEventsExpanded {
+                groupedSections(split.past, nextEventID: nextEventID)
+            }
+        }
+    }
+
+    /// An agenda with nothing on it says so, rather than leaving the room
+    /// looking like a load that never finished. Not `filteredEmptyState` —
+    /// nothing is filtered out and there IS a corpus here; the past sits one
+    /// tap below.
+    private var nothingAheadSection: some View {
+        Section {
+            Text("Nothing coming up.")
+                .dsText(.body17)
+                .foregroundStyle(DS.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, DS.Space.s4)
+                .padding(.top, DS.Space.s6)
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets())
+        }
+    }
+
+    /// The past-events disclosure — a quiet inline door on the page itself,
+    /// not a card (the same voice as the wallet's "See all transactions"):
+    /// the agenda above is the content, this is where the record continues.
+    private func pastEventsToggle(count: Int) -> some View {
+        Section {
+            Button {
+                DSHaptic.selection()
+                withAnimation(DS.Motion.standard) { pastEventsExpanded.toggle() }
+            } label: {
+                HStack(spacing: 5) {
+                    Text(pastEventsExpanded
+                         ? String(localized: "Hide past events")
+                         : (count == 1 ? String(localized: "Show 1 past event")
+                                       : String(localized: "Show \(count) past events")))
+                        .dsText(.callout15).fontWeight(.semibold)
+                        .monospacedDigit()
+                    Image(systemName: pastEventsExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 11, weight: .semibold))
+                        .accessibilityHidden(true)
+                }
+                .foregroundStyle(DS.tint)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, DS.Space.s1)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(.top, DS.Space.s6)
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets())
         }
     }
 
@@ -2827,12 +2935,17 @@ struct FeedScreen: View {
 
     /// One calendar for the per-thing day grouping — `Calendar.current` copies
     /// the user's calendar on every access, and `dayLabel` runs once per thing
-    /// inside `dayGroups`/`agendaGroups`, which the feed re-derives per paint.
+    /// inside `dayGroups`/`agendaSplit`, which the feed re-derives per paint.
     private static let groupingCalendar = Calendar.current
 
     private func dayLabel(_ date: Date) -> String {
         if Self.groupingCalendar.isDateInToday(date) { return String(localized: "Today") }
         if Self.groupingCalendar.isDateInYesterday(date) { return String(localized: "Yesterday") }
+        // Only the agenda ever labels a day ahead (every other feed drops
+        // future-dated rows in `dayGroups`), and there "Tomorrow" is how the
+        // next day is actually named — a dated weekday header for it read as
+        // history sitting at the top of the list.
+        if Self.groupingCalendar.isDateInTomorrow(date) { return String(localized: "Tomorrow") }
         return date.formatted(.dateTime.weekday(.wide).month().day())
     }
 }
