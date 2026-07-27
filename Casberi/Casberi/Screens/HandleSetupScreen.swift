@@ -445,6 +445,11 @@ struct HandleSetupScreen: View {
                 showHomeHint = false
                 FeedFilter.shared.source = bridge.rawValue
                 FeedFilter.shared.tag = "All"
+                // This screen can be RAISED as the connect sheet (prd §219),
+                // and `path` is the stack behind it — so close the sheet too,
+                // or the feed we just navigated to sits under a form that's
+                // still on top of it.
+                HomeRoute.shared.closeConnectForm()
                 HomeRoute.shared.path = []
                 DSHaptic.tap()
             } label: {

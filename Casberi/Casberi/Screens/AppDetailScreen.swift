@@ -167,7 +167,13 @@ struct AppDetailScreen: View {
     /// decision (and the sheet) live on `HomeRoute`, shared with every other
     /// Connect in the app.
     private func openSetup() {
-        raisedForm = true
+        // Only a sheet that LEAVES on its own hands the payoff back to this
+        // page. A watch list keeps its sheet up and reports its own proof
+        // there ("3 posts in", with its own success haptic) — firing a toast
+        // and a bloom underneath it would be the same news told twice, once
+        // where it can't be seen.
+        let dest = BridgeRouter.destination(forOffer: offer.name)
+        raisedForm = dest?.raisedByConnect == true && dest?.finishesOnConnect == true
         HomeRoute.shared.openSetup(forOffer: offer.name)
     }
 

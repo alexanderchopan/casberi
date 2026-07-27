@@ -65,17 +65,42 @@ enum BridgeRouter {
         /// Calendar, …) — the generic detail page, never EmptyView.
         case detail(id: String)
 
-        /// True when this screen is a FORM you finish, not a manager you live
-        /// in (prd §218, 2026-07-25). The distinction decides how Connect
-        /// presents it: a form rises as a sheet over the product page you were
-        /// reading — you never leave, and finishing drops you back where the
-        /// promise was made — while a manager is pushed, because you'll return
-        /// to it next month to add another feed.
+        /// **Connect raises; Open pushes** (prd §219, 2026-07-25, correcting
+        /// §218's split). Connecting is one act, wherever it lands — paste a
+        /// key, type a handle, pick a file — so it rises as a sheet over the
+        /// page that sold it to you, and you never walk a door to do it.
+        /// Coming BACK to a connection later is navigation, and that still
+        /// pushes, through `destination(forID:)`.
         ///
-        /// The test is whether there's anything left to do on the screen once
-        /// it's connected. A pasted key, a signed-in account, a picked file:
-        /// nothing. A watch list (§184's roster, §202's stars): everything.
-        var isForm: Bool {
+        /// §218 split this by screen KIND instead — forms rose, watch-list
+        /// managers pushed — on the theory that a manager is a place you
+        /// return to. True, but it answered the wrong question: returning is
+        /// Open's job, not Connect's. And since the catalog leads with Wallet,
+        /// Markets and Social, nearly every app a person actually taps was on
+        /// the pushing side, so the change was invisible where it mattered
+        /// (user: "i don't see the form rising").
+        ///
+        /// One exception, and it's about mechanics, not taxonomy: **the wallet
+        /// room pushes its own screens** (`.walletConnection`, `.walletHistory`)
+        /// through `HomeRoute`, which is the stack BEHIND a sheet — so opening
+        /// it in one would send its doors somewhere the person can't see. It's
+        /// also where Peer/0xBow's Connect lands (§209).
+        var raisedByConnect: Bool {
+            switch self {
+            case .wallet, .walletHistory, .walletConnection, .detail:
+                false
+            default:
+                true
+            }
+        }
+
+        /// Whether the raised sheet leaves ON ITS OWN once the connection goes
+        /// live. A one-shot credential is FINISHED at that moment — staying
+        /// would leave someone staring at a manager they reached by pasting a
+        /// key. A watch list is not: the first handle usually wants a second
+        /// and a third, and dropping the sheet after one would be the app
+        /// deciding you were done. Those stay up until they're closed.
+        var finishesOnConnect: Bool {
             switch self {
             case .token, .steam, .obsidian, .twitch, .spotify,
                  .icloudMail, .gmail, .exchange,
@@ -83,10 +108,6 @@ enum BridgeRouter {
                  .chatgpt, .claude, .gemini,
                  .kindle, .dayOne, .appleJournal, .appleNotes:
                 true
-            // Managers, every one: a roster or a ledger you come back to.
-            // `.wallet` covers Peer/0xBow's Connect too (§209) — routing a
-            // person into another app's manager inside a sheet would strand
-            // them there, which is exactly what pushing avoids.
             default:
                 false
             }
@@ -282,14 +303,15 @@ struct BridgeDestinationView: View {
 /// The connect form as a RAISED sheet (prd §218, 2026-07-25) — the bridge's
 /// own setup screen, unedited, over the page that sold it to you.
 ///
-/// It owns one rule the pushed route doesn't need: **a form leaves when it's
-/// done.** The moment this bridge's seat reads `.connected`, the sheet
-/// dismisses itself, so nobody is left staring at a manager they arrived at by
-/// pasting a key. The seat is watched rather than a per-screen callback
-/// because there are ~18 of these screens and not one of them had to change to
-/// gain this behaviour — `BridgeStore` already records the exact moment a
-/// connection becomes real, and it's the same record the product page's proof
-/// pill and `BridgeDetailScreen` read.
+/// It owns one rule the pushed route doesn't need: **a one-shot form leaves
+/// when it's done.** The moment such a bridge's seat reads `.connected`, the
+/// sheet dismisses itself, so nobody is left staring at a manager they arrived
+/// at by pasting a key. A watch list stays up — see `finishesOnConnect`. The
+/// seat is watched rather than a per-screen callback because there are ~35 of
+/// these screens and not one of them had to change to gain this behaviour:
+/// `BridgeStore` already records the exact moment a connection becomes real,
+/// and it's the same record the product page's proof pill and
+/// `BridgeDetailScreen` read.
 struct ConnectFormSheet: View {
     let destination: BridgeRouter.Destination
     @Environment(BridgeStore.self) private var store
@@ -317,7 +339,7 @@ struct ConnectFormSheet: View {
             // A beat, so the screen's own success moment (the icon's coin
             // flip, the proof line counting up) is seen rather than cut off
             // by the dismissal it triggers.
-            guard isLive else { return }
+            guard isLive, destination.finishesOnConnect else { return }
             Task { @MainActor in
                 try? await Task.sleep(for: .milliseconds(700))
                 dismiss()

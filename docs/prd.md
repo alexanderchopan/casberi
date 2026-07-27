@@ -9088,3 +9088,46 @@ is a view, not the corpus.
 Also: `dayLabel` learned "Tomorrow". Only the agenda ever labels a day ahead
 (every other feed drops future-dated rows in `dayGroups`), and a dated weekday
 header for tomorrow read as history sitting at the top of the list.
+
+## 219. Connect raises, Open pushes — §218's split was the wrong axis (user: "i thought we were going to make that second page be a tray or sheet so user didn't feel like there were so many doors. did we decide against that? i don't see the form rising", 2026-07-25)
+
+§218 shipped the sheet and then hid it. It split by screen KIND — one-shot
+FORMS (paste a key, sign in, pick a file) rose, watch-list MANAGERS still
+pushed — reasoning that a manager is a place you return to. That's true, and
+it answered the wrong question: **returning is Open's job, not Connect's.**
+
+The split was also invisible where it mattered. The catalog leads Wallet,
+Markets, Social (§201), and every offer in those bands routes to a manager —
+Wallet, Tokens, Peer, 0xBow, Kalshi, Stocktwits, OpenSea, GeckoTerminal,
+Shopify, Bluesky, Farcaster, Pinterest, RSS, Substack, Reddit, YouTube,
+Podcasts, Deals, Open Food Facts. A person had to reach Notion or Readwise
+before a single sheet appeared. The feature was real, on `main`, and unseeable.
+
+**The rule, restated on the verb:** connecting is ONE act wherever it lands —
+paste a key, type a handle, pick a file — so Connect raises the screen over the
+page that sold it to you. Coming back later is navigation, so Open still
+pushes, through `destination(forID:)`. `isForm` becomes `raisedByConnect`, and
+it's now true by default with one exception.
+
+**The exception is mechanics, not taxonomy: `.wallet`.** The wallet room pushes
+its own screens (`.walletConnection`, `.walletHistory`) through `HomeRoute` —
+which is the stack BEHIND a sheet — so raising it would send its own doors
+somewhere the person can't see. It's also where Peer/0xBow's Connect lands
+(§209). Every other setup destination is self-contained and safe to raise;
+this was checked by grepping `HomeRoute.shared` across the screens rather than
+assumed, and Handle setup's "See in Feed" was the one other hit — it resets
+`path`, so it now calls `closeConnectForm()` first or the feed it navigates to
+would sit under a form still on top of it.
+
+**A second property, because the exit rule really does differ:**
+`finishesOnConnect`. A one-shot credential is DONE the moment it verifies, so
+its sheet leaves. A watch list is not — the first handle usually wants a second
+and a third, and dropping the sheet after one would be the app deciding you
+were finished. Those stay up until closed. The same distinction gates the
+product page's payoff: a manager's sheet reports its own proof ("3 posts in",
+own success haptic) right where you're looking, so firing a toast and a bloom
+underneath it would be the same news told twice, once where it can't be seen.
+
+Build green, both static audits green. NOT simulator-verified, per the standing
+direction — what still hasn't been seen on screen is the raise itself, the
+self-dismissal, and a watch-list sheet staying up across two adds.
