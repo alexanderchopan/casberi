@@ -47,11 +47,6 @@ struct SourceChips: View {
     @Environment(BridgeStore.self) private var bridges
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    // Faces resolve on every foreground refresh (BridgeRefresh) regardless of
-    // whether the Wallet screen was ever opened — read directly here so the
-    // single-watched-wallet chip below (`walletChipMark`) picks up a real ENS
-    // avatar without needing its own fetch.
-    @Bindable private var wallet = WalletStore.shared
     /// The active chip's ink ring glides between chips instead of blinking
     /// (the old tab lozenge's grammar, motion pass 2026-07-11).
     @Namespace private var chipRingNS
@@ -252,7 +247,7 @@ struct SourceChips: View {
                         .clipShape(Circle())
                         .dsGlass(cornerRadius: 23)
                 default:
-                    walletChipMark(label)
+                    BridgeIcon(name: label, size: 46, circular: true)
                 }
             }
             .frame(width: 46, height: 46)
@@ -323,22 +318,6 @@ struct SourceChips: View {
         .id(label)
         .accessibilityLabel(chipAccessibilityLabel(label, broken: broken))
         .accessibilityAddTraits(isActive ? .isSelected : [])
-    }
-
-    /// The Wallet chip's own mark: with exactly one wallet watched, that
-    /// wallet's face (its ENS avatar, or the deterministic identicon while
-    /// none resolved) leads instead of the generic brand icon — "watch a
-    /// wallet" during onboarding is often "follow this person's wallet", and
-    /// the brand icon carried no trace of who. Two-plus wallets keep the
-    /// brand icon: the switcher bar inside the Wallet room is where a
-    /// multi-wallet identity already lives, and one chip can't wear two faces.
-    @ViewBuilder
-    private func walletChipMark(_ label: String) -> some View {
-        if label == "Wallet", let only = wallet.addresses.first, wallet.addresses.count == 1 {
-            WalletFace(address: only.address, size: 46, circular: true)
-        } else {
-            BridgeIcon(name: label, size: 46, circular: true)
-        }
     }
 
     private func chipAccessibilityLabel(_ label: String, broken: Bool) -> String {

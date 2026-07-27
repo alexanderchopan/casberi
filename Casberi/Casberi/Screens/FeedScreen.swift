@@ -590,6 +590,34 @@ struct FeedScreen: View {
             }
     }
 
+    /// The capsule's leading mark — a status glyph for every source, except
+    /// Wallet with exactly one watched: that reads as its ENS face instead
+    /// (avatar, or the deterministic identicon while none resolved), the
+    /// same identity the multi-wallet switcher bar already wears above this
+    /// capsule when there's more than one. "Connected" stops being a color
+    /// and becomes a face — the wallet you're watching is a person, and this
+    /// is the one spot the single-wallet feed says whose. Two-plus wallets
+    /// keep the plain status glyph here (the switcher bar carries identity
+    /// then), since the capsule still speaks for the WHOLE source, not one
+    /// wallet in particular.
+    @ViewBuilder
+    private func sourceStatusMark(_ bridge: BridgeApp) -> some View {
+        if bridge.name == "Wallet", wallet.addresses.count == 1, let only = wallet.addresses.first {
+            WalletFace(address: only.address, size: 16, circular: true)
+                .accessibilityLabel(Text("\(bridge.status.spoken). \(wallet.displayName(for: only))"))
+        } else {
+            // A glyph, not a bare dot: the three states were one shape
+            // in three hues (2026-07-21). Sized to the old 6pt dot's
+            // footprint so the header's rhythm is unchanged.
+            Image(systemName: bridge.status.glyph)
+                .font(.system(size: 8, weight: .bold))
+                .foregroundStyle(bridge.status == .connected ? DS.confirm
+                                                             : bridge.status.color)
+                .frame(width: 8, height: 8)
+                .accessibilityLabel(Text(bridge.status.spoken))
+        }
+    }
+
     /// A slim, tappable strip above a single source's shaped feed: the app, its
     /// live status. Tapping opens the app's control panel through the router —
     /// the dedicated screen when the bridge has one (Tokens' watchlist,
@@ -615,15 +643,7 @@ struct FeedScreen: View {
             HomeRoute.shared.pushBridge(BridgeRouter.destination(forID: bridge.id))
         } label: {
             HStack(spacing: DS.Space.s2) {
-                // A glyph, not a bare dot: the three states were one shape
-                // in three hues (2026-07-21). Sized to the old 6pt dot's
-                // footprint so the header's rhythm is unchanged.
-                Image(systemName: bridge.status.glyph)
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundStyle(bridge.status == .connected ? DS.confirm
-                                                                 : bridge.status.color)
-                    .frame(width: 8, height: 8)
-                    .accessibilityLabel(Text(bridge.status.spoken))
+                sourceStatusMark(bridge)
                 HStack(spacing: 4) {
                     Text(bridge.name).fontWeight(.semibold).foregroundStyle(DS.textPrimary)
                     Text(bridge.statusLine)
