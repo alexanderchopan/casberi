@@ -39,6 +39,7 @@ enum BridgeRouter {
         case pinterest
         case steam
         case obsidian
+        case files
         case twitch
         case spotify
         case substack
@@ -102,7 +103,7 @@ enum BridgeRouter {
         /// deciding you were done. Those stay up until they're closed.
         var finishesOnConnect: Bool {
             switch self {
-            case .token, .steam, .obsidian, .twitch, .spotify,
+            case .token, .steam, .obsidian, .files, .twitch, .spotify,
                  .icloudMail, .gmail, .exchange,
                  .venice, .bankr, .openRouter,
                  .chatgpt, .claude, .gemini,
@@ -143,6 +144,7 @@ enum BridgeRouter {
             case .pinterest:      "pinterest"
             case .steam:          "steam"
             case .obsidian:       "obsidian"
+            case .files:          "files"
             case .twitch:         "twitch"
             case .spotify:        "spotify"
             case .substack:       "substack"
@@ -210,6 +212,7 @@ enum BridgeRouter {
         Row(offer: "Pinterest", id: "pinterest", destination: .pinterest),
         Row(offer: "Steam",     id: "steam",  destination: .steam),
         Row(offer: "Obsidian",  id: "obsidian", destination: .obsidian),
+        Row(offer: "Files",     id: "files",  destination: .files),
         Row(offer: "Twitch",    id: "twitch", destination: .twitch),
         Row(offer: "Spotify",   id: "spotify", destination: .spotify),
         Row(offer: "Substack",  id: "substack", destination: .substack),
@@ -282,6 +285,7 @@ struct BridgeDestinationView: View {
         case .pinterest:      HandleSetupScreen(bridge: .pinterest)
         case .steam:          SteamScreen()
         case .obsidian:       ObsidianScreen()
+        case .files:          FilesScreen()
         case .twitch:         TwitchScreen()
         case .spotify:        SpotifyScreen()
         case .substack:       HandleSetupScreen(bridge: .substack)

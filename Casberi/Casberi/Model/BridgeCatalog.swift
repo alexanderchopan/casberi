@@ -296,6 +296,18 @@ enum BridgeCatalog {
         Offer(name: "Obsidian",    tagline: "Your vault, beside your things",        group: "Notes",     connectable: true,
               summary: "Point at your vault folder and your notes land as things — findable next to everything else. Fully local: the vault is read in place, never modified, and nothing leaves this iPhone.",
               needsSetup: true),
+        // Any folder, not just an Obsidian vault (2026-07-27) — Files
+        // generalizes the same "point at a folder" mechanism past Markdown to
+        // whatever's inside: receipts, scans, a Downloads folder redirected to
+        // iCloud Drive. NOT the Notes group (user ruling, 2026-07-27): Notes'
+        // other three members are all genuinely writing/journaling tools, and
+        // a picked folder's contents are unpredictable — it fits the Life
+        // category's personal-life miscellany better (the same reasoning that
+        // put HomeKit there). Own "Storage" group so its detail-page eyebrow
+        // reads honestly ("Storage · Files", not "Notes · Files").
+        Offer(name: "Files",       tagline: "Any folder, findable",                  group: "Storage",   connectable: true,
+              summary: "Point at any folder and what's inside lands in your feed, findable next to everything else. Fully local: the folder is read in place, never modified, and nothing leaves this iPhone.",
+              needsSetup: true, added: day(2026, 7, 27)),
         Offer(name: "Twitch",      tagline: "Live follows land in your feed",        group: "Watching",  connectable: true,
               summary: "When a channel you follow goes live, the stream lands in your feed as a link — catch it while it's on. Sign-in happens on Twitch's own page with a short code; read-only, no password in the app.",
               needsSetup: true),
@@ -348,8 +360,11 @@ enum BridgeCatalog {
         // Life absorbs Home (user ruling 2026-07-23): HomeKit was the lone app
         // in its own category, and a one-app band wastes a whole 4-wide row —
         // "one option would be we could put HomeKit in Life." "People"
-        // (Contacts) already lives here (2026-07-20).
-        ("Life",    "Photos",      ["Photos", "Schedule", "Fitness", "People", "Home"]),
+        // (Contacts) already lives here (2026-07-20). Storage joins for the
+        // same reason (user ruling 2026-07-27): Files' folder contents are
+        // unpredictable, so it reads as personal-life miscellany, not a
+        // dedicated content type.
+        ("Life",    "Photos",      ["Photos", "Schedule", "Fitness", "People", "Home", "Storage"]),
         ("Notes",   "Apple Notes", ["Notes"]),
         ("Work",    "GitHub",      ["Work"]),
         // Reading and Shopping settle LAST (user ruling 2026-07-23): they

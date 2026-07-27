@@ -164,6 +164,7 @@ enum BridgeGlyph {
         case "cal.com", "calendly": return "calendar"
         case "steam":     return "gamecontroller"
         case "obsidian":  return "text.book.closed"
+        case "files":     return "icloud"
         case "twitch":    return "tv"
         case "shopify":   return "bag"
         case "deals":     return "tag.fill"

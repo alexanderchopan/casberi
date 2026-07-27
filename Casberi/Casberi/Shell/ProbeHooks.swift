@@ -1314,6 +1314,17 @@ enum ProbeHooks {
                 NSLog("Obsidian probe: %@ new", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-filesFolder <path>` points the Files bridge at a folder headlessly
+        // (an in-sandbox path needs no security scope — sim testing only).
+        Hook(key: "filesFolder") { path, context in
+            guard FilesStore.shared.setFolder(url: URL(fileURLWithPath: path)) else {
+                NSLog("Files probe: bookmark FAILED"); return
+            }
+            Task { @MainActor in
+                let n = await FilesIngest.refresh(context: context)
+                NSLog("Files probe: %@ new", n.map(String.init) ?? "FAILED")
+            }
+        },
         // `-steamBridge "<key>:<profile>"` connects Steam headlessly.
         Hook(key: "steamBridge") { spec, context in
             let parts = spec.split(separator: ":", maxSplits: 1).map(String.init)

@@ -293,6 +293,12 @@ enum BridgeRefresh {
                 _ = await ObsidianIngest.refresh(context: context)
             }
         }
+        if FilesStore.shared.connected {
+            let s = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await FilesIngest.refresh(context: context)
+            }
+        }
         if TwitchAuth.connected {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)

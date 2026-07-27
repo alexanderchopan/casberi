@@ -403,6 +403,11 @@ enum PlaceWords {
         if thing.kind == .chat, ["Bluesky", "Farcaster"].contains(thing.source) {
             return "on \(thing.source)"
         }
+        // A folder-picked file didn't arrive by mail — "in your inbox" was
+        // written for that case; a Files thing names the folder it lives in.
+        if thing.kind == .file, thing.source == "Files" {
+            return "in your folder"
+        }
         switch thing.kind {
         case .mail, .file: return "in your inbox"
         case .event:       return "on your calendar"

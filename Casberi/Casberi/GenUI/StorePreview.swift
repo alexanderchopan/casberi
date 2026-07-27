@@ -251,6 +251,12 @@ enum StorePreview {
             "r1 = Row(\"Sync layer — design notes\", \"Note\", \"Obsidian\", \"1d\")",
             "r2 = Row(\"Books to read in 2026\", \"Note\", \"Obsidian\", \"4d\")",
         ]
+        case "Files": [
+            "root = Stack([w])",
+            "w = Widget(\"From your folder\", null, [r1, r2])",
+            "r1 = Row(\"TAP-1147-confirmation.pdf\", \"File\", \"Files\", \"1d\")",
+            "r2 = Row(\"receipt-lyft-0630.png\", \"File\", \"Files\", \"4d\")",
+        ]
         case "Shopify": [
             "root = Stack([w])",
             "w = Widget(\"New drops\", null, [r1, r2])",

@@ -78,6 +78,7 @@ extension DS {
         case "calendly":            return Color.fixed("#006bff")
         case "steam":               return Color.fixed("#1b2838")   // their dark navy
         case "obsidian":            return Color.fixed("#7c3aed")   // vault purple
+        case "files":               return Color.fixed("#4aa8f0")   // iCloud blue — any iCloud-reachable folder
         case "twitch":              return Color.fixed("#9146ff")
         case "reddit":              return Color.fixed("#ff4500")
         case "youtube":             return Color.fixed("#ff0000")
