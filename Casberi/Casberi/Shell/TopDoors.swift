@@ -19,12 +19,15 @@ struct AvatarChip: View {
     var zoomNS: Namespace.ID? = nil
     /// Taps bounce the door (Telegram grammar, same as the tab icons).
     @State private var avatarBounce = 0
+    /// Last time the door actually opened — see `openSettings()` below.
+    @State private var lastOpen: TimeInterval = 0
 
     var body: some View {
         Button {
-            // No-op — `.highPriorityGesture` below owns the tap, same fix
-            // and reason as `SourceChips.catalogueChip`: this door shares
-            // its safeAreaInset-over-paged-TabView placement.
+            // A real action again (2026-07-26), not a no-op: whichever
+            // recognizer wins the press, the door opens. Same shape as
+            // `SourceChips.catalogueChip`, which this door sits beside.
+            open()
         } label: {
             ZStack {
                 Circle().fill(DS.gray100)
@@ -40,19 +43,31 @@ struct AvatarChip: View {
                 }
             }
             .frame(width: 46, height: 46)
+            // The door is the circle. This one was never as bad as the
+            // catalogue's — its `Circle().fill` renders across the whole
+            // 46pt, so the region was already whole — but stating it means
+            // the two doors beside each other can't drift on what a press
+            // has to hit.
+            .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Settings")
         // See `SourceChips.catalogueChip`'s comment: a plain Button here
         // competes with the paged feed TabView's pan recognizer for the
         // first touch (Apple forums thread 725366) and can need several
-        // taps to win. `highPriorityGesture` wins immediately.
-        .highPriorityGesture(
-            TapGesture().onEnded {
-                avatarBounce += 1
-                onSettings()
-            }
-        )
+        // taps to win. `highPriorityGesture` wins immediately — kept as the
+        // belt beside the Button's own braces above.
+        .highPriorityGesture(TapGesture().onEnded { open() })
+    }
+
+    /// One entry point for the door's two possible tap deliveries, coalesced
+    /// so the fallback can never double-bounce or double-push.
+    private func open() {
+        let now = Date().timeIntervalSinceReferenceDate
+        guard now - lastOpen > 0.4 else { return }
+        lastOpen = now
+        avatarBounce += 1
+        onSettings()
     }
 }
 

@@ -50,6 +50,8 @@ struct SourceChips: View {
     /// The active chip's ink ring glides between chips instead of blinking
     /// (the old tab lozenge's grammar, motion pass 2026-07-11).
     @Namespace private var chipRingNS
+    /// Last time the catalogue door actually opened — see `openApps()`.
+    @State private var lastAppsOpen: TimeInterval = 0
 
     // Leading-dissolve geometry (user, 2026-07-19; widened 2026-07-20 when
     // the avatar joined as a SECOND fixed leading icon ahead of the
@@ -178,9 +180,11 @@ struct SourceChips: View {
     /// the neutral circle Pinned/All share. The store still zooms out of it.
     @ViewBuilder private var catalogueChip: some View {
         Button {
-            // No-op — `.highPriorityGesture` below owns the tap (see its
-            // comment); the empty action just keeps Button's own press
-            // feedback/accessibility affordance.
+            // A REAL action again (2026-07-26), not the no-op the
+            // highPriorityGesture below was given sole ownership of: whichever
+            // recognizer wins the press, the door opens. `openApps()`
+            // coalesces, so the belt and the braces can never both fire.
+            openApps()
         } label: {
             ZStack {
                 if let zoomNS {
@@ -196,6 +200,20 @@ struct SourceChips: View {
             // icon — an icon IS content, and frosting one would only muddy a
             // mark the person recognizes.
             .dsGlass(cornerRadius: 23)
+            // THE DOOR IS THE CIRCLE, not the glyph inside it (user, "you
+            // press it and it doesn't respond, have to press it several
+            // times", 2026-07-26 — the third report on this button). A
+            // `.frame()` does not make its empty space hit-testable: the only
+            // rendered content in here is a 21pt SF Symbol, so the press had
+            // to land in roughly a 24×21pt box in the middle of a 46pt circle
+            // that looks tappable everywhere. Near-center taps worked,
+            // everything else fell through to the feed — which reads exactly
+            // like a flaky button. A source chip never had this because
+            // `BridgeIcon` fills its whole 46pt with a real image. Gesture
+            // hit-testing reads the same shape, which is why last round's
+            // `highPriorityGesture` couldn't fix it: the region was the bug,
+            // not the arbitration.
+            .contentShape(Circle())
         }
         .buttonStyle(.plain)
         // The door's glyph fills, colors and pulses when a bridge breaks —
@@ -210,12 +228,22 @@ struct SourceChips: View {
         // thread 725366) and can take several presses to win the
         // arbitration (reported 2026-07-24: "requires pressing several
         // times before opening"). `highPriorityGesture` wins immediately.
-        .highPriorityGesture(
-            TapGesture().onEnded {
-                DSHaptic.selection()
-                onApps()
-            }
-        )
+        // Kept as the belt beside the Button's own braces above — it was
+        // never the whole story, but it costs nothing to keep winning.
+        .highPriorityGesture(TapGesture().onEnded { openApps() })
+    }
+
+    /// One entry point for the door's two possible tap deliveries (the
+    /// Button's action and the high-priority tap). `highPriorityGesture`
+    /// failing the Button's own gesture is the documented behaviour, so in
+    /// practice only one arrives — the 0.4s coalesce is what makes relying on
+    /// that unnecessary, and keeps a double haptic impossible either way.
+    private func openApps() {
+        let now = Date().timeIntervalSinceReferenceDate
+        guard now - lastAppsOpen > 0.4 else { return }
+        lastAppsOpen = now
+        DSHaptic.selection()
+        onApps()
     }
 
     @ViewBuilder
@@ -304,6 +332,11 @@ struct SourceChips: View {
                     }
                 }
             }
+            // Same law as the catalogue door above: the chip is the circle.
+            // A source chip was already whole (`BridgeIcon` fills its 46pt
+            // with a real image), but "All" is a 12pt word inside a 56pt
+            // frame — without this its press had to land on the letters.
+            .contentShape(Circle())
         }
         .buttonStyle(.plain)
         // Finger-driven, never idle: chips ease down as they leave the viewport
