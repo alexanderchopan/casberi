@@ -113,6 +113,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-rss       { background: #f26522; font-size: 24px; }
 .ai-bluesky   { background: #0085ff; }
 .ai-farcaster { background: #855dcd; }
+.ai-nostr     { background: #9543dc; }
 .ai-strava    { background: #fc4c02; font-size: 18px; }
 .ai-steam     { background: #1b2838; }
 .ai-obsidian  { background: #7c3aed; }

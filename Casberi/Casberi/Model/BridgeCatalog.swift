@@ -73,7 +73,7 @@ enum BridgeCatalog {
             if connectable && !needsSetup { return "One tap" }
             let keyless: Set<String> = ["Wallet", "Tokens", "Peer", "0xBow Privacy Pools", "Reddit", "YouTube",
                 "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster",
-                "Bluesky", "OpenSea", "Kalshi", "Shopify", "GeckoTerminal", "Deals",
+                "Bluesky", "Nostr", "OpenSea", "Kalshi", "Shopify", "GeckoTerminal", "Deals",
                 "Open Food Facts", "Stocktwits"]
             if keyless.contains(name) { return "No account" }
             let imports: Set<String> = ["ChatGPT", "Claude", "Gemini",
@@ -290,6 +290,14 @@ enum BridgeCatalog {
         Offer(name: "Bluesky",     tagline: "Track any Bluesky account",             group: "Network",   connectable: true,
               summary: "Built on an open protocol — posts are public, so this connects with just a handle: your own or anyone's, and mentions of them can land too.\n\nNo password, nothing stored but the name.\n\nLikes arrive with sign-in, later.",
               needsSetup: true),
+        // Network, beside Farcaster/Bluesky (2026-07-27): a third open,
+        // keyless protocol — public relays serve reads with no account and
+        // no key. Connects by npub, raw hex pubkey, or a NIP-05 identifier
+        // ("name@domain.com") instead of a username, since Nostr has no
+        // global directory to search.
+        Offer(name: "Nostr",       tagline: "Track any Nostr account",               group: "Network",   connectable: true,
+              summary: "An open, relay-based protocol — notes are public, so this connects with an npub, a raw pubkey, or a name@domain identifier: your own or anyone's, plus #hashtags by name. An account's reactions and mentions can land too.\n\nNo password, nothing stored but the identity — read from whichever public relays answer.",
+              needsSetup: true, added: day(2026, 7, 27)),
         Offer(name: "Steam",       tagline: "What you play, in your feed",           group: "Games",     connectable: true,
               summary: "Recently played games land in your feed, linking to their store pages.\n\nConnects with a free Steam Web API key and your public profile name — the key stays in this iPhone's Keychain.\n\nRead-only.",
               needsSetup: true),

@@ -198,6 +198,19 @@ enum BridgeRefresh {
                 _ = await FarcasterIngest.heal(context: context)
             }
         }
+        if NostrStore.shared.connected {
+            let s = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await NostrIngest.refresh(context: context)
+                SocialMoments.checkNostrReturns(context: context)
+            }
+            // Delete-sync: own network round trip and its own hourly
+            // throttle, same shape as Farcaster/Bluesky's heals above.
+            let s2 = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s2)
+                _ = await NostrIngest.heal(context: context)
+            }
+        }
         if !PinterestStore.shared.username.isEmpty {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)

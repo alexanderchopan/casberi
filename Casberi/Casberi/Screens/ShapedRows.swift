@@ -93,11 +93,13 @@ struct BandRow: View {
         // the word that differentiates is "Liked", "/design", "Mentions you",
         // not the handle a second time. A post with no such reason (an account
         // you watch simply posted) falls through to the handle rule, unchanged.
-        case "Bluesky", "Farcaster":
+        case "Bluesky", "Farcaster", "Nostr":
             if let why = SocialThread.contextLabel(for: thing) { return why }
-            return thing.source == "Bluesky"
-                ? BlueskyStore.shared.rowLabel(for: thing.authorHandle)
-                : FarcasterStore.shared.rowLabel(for: thing.authorHandle)
+            switch thing.source {
+            case "Bluesky":   return BlueskyStore.shared.rowLabel(for: thing.authorHandle)
+            case "Farcaster": return FarcasterStore.shared.rowLabel(for: thing.authorHandle)
+            default:          return NostrStore.shared.rowLabel(for: thing.authorHandle)
+            }
         // The publisher names itself in the trailing slot — BBC News,
         // TechCrunch — the icon's word twin, the way a social row names its
         // account. Empty on rows that landed before the name was captured.
@@ -1537,10 +1539,14 @@ struct PostCard: View {
     let thing: Thing
 
     /// Empty-string handles exist (an unmigrated Farcaster row) — fall back
-    /// to the source name, same guard the avatar line already carries.
+    /// to the source name, same guard the avatar line already carries. A
+    /// Nostr `authorHandle` is the raw hex pubkey (the stable matching key,
+    /// not a display string — see `NostrIngest.land`), so it alone routes
+    /// through `shortHandle` for a short npub; Farcaster/Bluesky already
+    /// store a real handle and stay exactly as they render today.
     private var author: String {
-        if let handle = thing.authorHandle, !handle.isEmpty { return handle }
-        return thing.source
+        guard let handle = thing.authorHandle, !handle.isEmpty else { return thing.source }
+        return thing.source == "Nostr" ? SocialThread.shortHandle(handle) : handle
     }
 
     /// The words themselves (2026-07-27, the room's own catch-up with the
@@ -1779,9 +1785,10 @@ struct SocialThreadCard: View {
     /// between the fold and this body evaluating (`ThingRowKeying`'s rule).
     let replies: [Thing]
 
+    /// Same Nostr-hex-vs-real-handle split as `PostCard.author` above.
     private var author: String {
-        if let handle = head.authorHandle, !handle.isEmpty { return handle }
-        return head.source
+        guard let handle = head.authorHandle, !handle.isEmpty else { return head.source }
+        return head.source == "Nostr" ? SocialThread.shortHandle(handle) : handle
     }
 
     /// Same catch-up as `PostCard.words` (2026-07-27) — the full post, not

@@ -74,6 +74,7 @@ enum SocialFollows {
         switch source {
         case "Bluesky":   return await bluesky(handle, onProgress: onProgress)
         case "Farcaster": return await farcaster(handle, onProgress: onProgress)
+        case "Nostr":     return await nostr(handle, onProgress: onProgress)
         default:          return .unreachable
         }
     }
@@ -197,6 +198,50 @@ enum SocialFollows {
         } while cursor != nil && pages < pageCeiling && !Task.isCancelled
 
         return Graph(people: people, truncated: cursor != nil, reachable: pages > 0)
+    }
+
+    // MARK: - Nostr
+
+    /// `NostrIngest.contactList` — a kind:3 event, the WHOLE follow graph in
+    /// one relay round trip, unlike the other two networks' paginated walks:
+    /// Nostr's contact list is a single replaceable event carrying every "p"
+    /// tag inline, so there's no cursor to page through and `truncated` stays
+    /// false for the follow list itself. Hydrating each pubkey's face/name
+    /// (kind:0) is the one part that scales with graph size — batched via
+    /// Nostr's array-of-authors filter, a guessed 100-per-request chunk
+    /// (no measured relay cap on filter-array size; re-measure before
+    /// hardening a bigger batch). `pageCeiling`-style truncation applies only
+    /// to that hydration walk, never to the follow list read itself.
+    private static func nostr(_ rawInput: String,
+                             onProgress: @MainActor (Int) -> Void) async -> Graph {
+        let input = NostrStore.normalize(rawInput)
+        guard !input.isEmpty, let hex = await NostrIngest.pubkeyHex(for: input) else { return .unreachable }
+        let (pubkeys, reached) = await NostrIngest.contactList(pubkeyHex: hex)
+        guard reached else { return .unreachable }
+        guard !pubkeys.isEmpty else { return Graph(people: [], truncated: false, reachable: true) }
+
+        let capped = Array(pubkeys.prefix(pageCeiling * 50))   // the same runaway guard, in people not pages
+        var hydrated: [String: NostrIngest.Profile] = [:]
+        var pages = 0
+        for start in stride(from: 0, to: capped.count, by: 100) {
+            let chunk = Array(capped[start..<min(start + 100, capped.count)])
+            let result = await NostrRelay.requestAll(filter: ["authors": chunk, "kinds": [0]])
+            for event in result.events {
+                guard let pk = event["pubkey"] as? String, let parsed = NostrIngest.parseProfile(event)
+                else { continue }
+                hydrated[pk] = parsed
+            }
+            pages += 1
+            await onProgress(hydrated.count)
+        }
+
+        let people = capped.map { pk -> Hit in
+            let profile = hydrated[pk]
+            return Hit(handle: pk,
+                      displayName: profile?.displayName ?? SocialThread.shortHandle(pk),
+                      avatarURL: profile?.avatarURL, fid: nil)
+        }
+        return Graph(people: people, truncated: capped.count < pubkeys.count, reachable: true)
     }
 
     private typealias Hit = UserSearch.Hit

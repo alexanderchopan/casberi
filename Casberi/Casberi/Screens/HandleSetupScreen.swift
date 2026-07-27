@@ -11,6 +11,7 @@ import SwiftData
 enum HandleBridge: String {
     case bluesky   = "Bluesky"
     case farcaster = "Farcaster"
+    case nostr     = "Nostr"
     case pinterest = "Pinterest"
     case substack  = "Substack"
     case reddit    = "Reddit"
@@ -26,6 +27,7 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:   "bsky"
         case .farcaster: "fc"
+        case .nostr:     "nostr"
         case .pinterest: "pinterest"
         default:         feedKind?.bridgeID ?? ""
         }
@@ -36,6 +38,7 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:   "handle"
         case .farcaster, .pinterest: "username"
+        case .nostr:     "npub"
         default:         feedKind?.nameNoun ?? "name"
         }
     }
@@ -44,6 +47,7 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:   "you"
         case .farcaster, .pinterest: "yourname"
+        case .nostr:     "npub1… or name@domain"
         default:         feedKind?.placeholder ?? ""
         }
     }
@@ -110,6 +114,8 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:   return BlueskyStore.shared.handles
         case .farcaster: return FarcasterStore.shared.usernames
+        case .nostr:
+            return NostrStore.shared.accounts.map { $0.pubkeyHex.isEmpty ? $0.input : $0.pubkeyHex }
         case .pinterest:
             let u = PinterestStore.shared.username
             return u.isEmpty ? [] : [u]
@@ -123,6 +129,8 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:
             name.hasSuffix(".bsky.social") ? String(name.dropLast(".bsky.social".count)) : name
+        case .nostr:
+            SocialThread.shortHandle(name)
         case .farcaster, .pinterest:
             name
         default:
@@ -134,6 +142,7 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:   BlueskyStore.shared.add(raw)
         case .farcaster: FarcasterStore.shared.add(raw)
+        case .nostr:     NostrStore.shared.add(raw)
         case .pinterest: PinterestStore.shared.username = PinterestStore.normalize(raw)
         default:         feedKind?.store.add(FeedFollowEntry(input: raw))
         }
@@ -143,6 +152,7 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:   BlueskyStore.shared.remove(name)
         case .farcaster: FarcasterStore.shared.remove(name)
+        case .nostr:     NostrStore.shared.remove(name)
         case .pinterest: PinterestStore.shared.username = ""
         default:         feedKind?.store.remove(input: name)
         }
@@ -163,6 +173,7 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:   "posts"
         case .farcaster: "casts"
+        case .nostr:     "notes"
         case .pinterest: "pins"
         default:         feedKind?.noun ?? "things"
         }
@@ -174,6 +185,8 @@ enum HandleBridge: String {
             "Type a few letters to find someone, or the full handle — posts are public, so there's no password to give."
         case .farcaster:
             "Type a few letters to find someone, or the exact username — casts are public on the open protocol, so there's no password to give."
+        case .nostr:
+            "Paste an npub, a raw hex pubkey, or a name@domain identifier — notes are public on the open protocol, so there's no password to give and nothing to search (Nostr has no directory)."
         case .pinterest:
             "Just the username — your public pins arrive through Pinterest's own feed, so there's no password to give."
         default:
@@ -185,6 +198,7 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:   "Posts"
         case .farcaster: "Casts"
+        case .nostr:     "Notes"
         case .pinterest: "Pins"
         default:         feedKind?.recentHeader ?? "Recent"
         }
@@ -196,6 +210,8 @@ enum HandleBridge: String {
             "Read-only, public data only. Likes arrive with sign-in, later."
         case .farcaster:
             "Read-only, public data only — served by the Farcaster team's own public node."
+        case .nostr:
+            "Read-only, public data only — served by whichever public relays you happen to reach."
         case .pinterest:
             "Read-only, public boards only — secret boards never appear in the public feed."
         default:
@@ -207,17 +223,18 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:   "Reads public posts — accounts, feeds, mentions."
         case .farcaster: "Reads public casts — accounts, channels, likes."
+        case .nostr:     "Reads public notes — accounts, hashtags, reactions."
         case .pinterest: "Reads your public pins."
         default:         feedKind?.canLine ?? ""
         }
     }
 
-    /// The social bridges (Bluesky, Farcaster) whose account rows carry a
-    /// face, a bio, and watch toggles — the rich shared row. Others show the
-    /// plain name row.
+    /// The social bridges (Bluesky, Farcaster, Nostr) whose account rows
+    /// carry a face, a bio, and watch toggles — the rich shared row. Others
+    /// show the plain name row.
     var isRichSocial: Bool {
         switch self {
-        case .bluesky, .farcaster: true
+        case .bluesky, .farcaster, .nostr: true
         default: false
         }
     }
@@ -225,10 +242,12 @@ enum HandleBridge: String {
     /// The watched accounts as the shared row renders them — read straight
     /// off each @Observable store, so a toggle or a landed profile updates
     /// the rows with nothing to snapshot.
+    @MainActor
     var socialAccounts: [SocialAccount] {
         switch self {
         case .bluesky:   BlueskyStore.shared.socialAccounts
         case .farcaster: FarcasterStore.shared.socialAccounts
+        case .nostr:     NostrStore.shared.socialAccounts
         default:         []
         }
     }
@@ -242,6 +261,11 @@ enum HandleBridge: String {
             case .likes:    FarcasterStore.shared.setLikes(on, for: name)
             case .mentions: FarcasterStore.shared.setMentions(on, for: name)
             }
+        case .nostr:
+            switch kind {
+            case .likes:    NostrStore.shared.setLikes(on, for: name)
+            case .mentions: NostrStore.shared.setMentions(on, for: name)
+            }
         case .bluesky:
             if kind == .mentions { BlueskyStore.shared.setMentions(on, for: name) }
         default: break
@@ -253,6 +277,7 @@ enum HandleBridge: String {
         switch self {
         case .farcaster: "Likes — also saves the casts an account has liked. Mentions — also saves casts that name them."
         case .bluesky:   "Mentions — also saves posts that name them, replies and quotes included."
+        case .nostr:     "Likes — also saves notes an account has reacted to. Mentions — also saves notes that name them."
         default:         nil
         }
     }
@@ -269,6 +294,7 @@ enum HandleBridge: String {
         switch self {
         case .farcaster: FarcasterStore.shared.connected
         case .bluesky:   BlueskyStore.shared.connected
+        case .nostr:     NostrStore.shared.connected
         default:         !names.isEmpty
         }
     }
@@ -281,6 +307,8 @@ enum HandleBridge: String {
             if name.isEmpty { BlueskyStore.shared.removeAll() } else { BlueskyStore.shared.add(name) }
         case .farcaster:
             if name.isEmpty { FarcasterStore.shared.removeAll() } else { FarcasterStore.shared.add(name) }
+        case .nostr:
+            if name.isEmpty { NostrStore.shared.removeAll() } else { NostrStore.shared.add(name) }
         case .pinterest:
             PinterestStore.shared.username = name
         default:
@@ -294,6 +322,7 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:   BlueskyStore.normalize(raw)
         case .farcaster: FarcasterStore.normalize(raw)
+        case .nostr:     NostrStore.normalize(raw)
         case .pinterest: PinterestStore.normalize(raw)
         default:         feedKind?.normalize(raw) ?? raw
         }
@@ -304,6 +333,7 @@ enum HandleBridge: String {
         switch self {
         case .bluesky:   return await BlueskyIngest.refresh(context: context)
         case .farcaster: return await FarcasterIngest.refresh(context: context)
+        case .nostr:     return await NostrIngest.refresh(context: context)
         case .pinterest: return await PinterestIngest.refresh(context: context)
         default:
             guard let feedKind else { return nil }
@@ -639,6 +669,20 @@ struct HandleSetupScreen: View {
             }
             .listRowSeparator(.hidden)
         }
+        if bridge == .nostr, !NostrStore.shared.hashtags.isEmpty {
+            Section {
+                ForEach(NostrStore.shared.hashtags) { hashtag in
+                    topicRow(imageURL: nil, title: "#\(hashtag.tag)",
+                            kind: String(localized: "Hashtag")) {
+                        NostrStore.shared.removeHashtag(hashtag.tag)
+                        DSHaptic.tap()
+                    }
+                }
+            } header: {
+                Text("Topics").dsText(.label12).foregroundStyle(DS.textTertiary)
+            }
+            .listRowSeparator(.hidden)
+        }
     }
 
     /// One topic ledger row — a SQUARE mark (an image when there is one, else
@@ -703,6 +747,7 @@ struct HandleSetupScreen: View {
     private var fieldPlaceholder: String {
         if bridge == .farcaster { return String(localized: "@name, or /channel") }
         if bridge == .bluesky { return String(localized: "Handle, or search a feed") }
+        if bridge == .nostr { return String(localized: "npub, hex, name@domain, or #hashtag") }
         if let prefix = bridge.fieldPrefix { return prefix + bridge.placeholder }
         if let suffix = bridge.fieldSuffix { return bridge.placeholder + suffix }
         return bridge.placeholder
@@ -713,7 +758,7 @@ struct HandleSetupScreen: View {
     /// arrived from, which already carries this bridge's full promise.
     private var omniNote: String {
         switch bridge {
-        case .bluesky, .farcaster:
+        case .bluesky, .farcaster, .nostr:
             return String(localized: "Public posts only — no password, ever.")
         case .pinterest:
             return String(localized: "Public pins only — no password, ever.")
@@ -756,6 +801,7 @@ struct HandleSetupScreen: View {
 
     private var omniHits: [OmniHit] {
         if bridge == .farcaster, query.hasPrefix("/") { return [] }
+        if bridge == .nostr, query.hasPrefix("#") { return [] }
         return hits.map(OmniHit.person) + feedHits.map(OmniHit.feed)
     }
 
@@ -765,6 +811,7 @@ struct HandleSetupScreen: View {
     /// about.
     private var omniButtonLabel: String {
         if bridge == .farcaster, query.hasPrefix("/") { return "FOLLOW" }
+        if bridge == .nostr, query.hasPrefix("#") { return "FOLLOW" }
         if bridge.supportsMultiple { return "ADD" }
         return bridge.currentName.isEmpty ? "CONNECT" : "UPDATE"
     }
@@ -773,12 +820,17 @@ struct HandleSetupScreen: View {
         if bridge == .farcaster, query.hasPrefix("/") {
             return String(localized: "Finding the channel…")
         }
+        if bridge == .nostr, query.hasPrefix("#") {
+            return String(localized: "Following the hashtag…")
+        }
         return String(localized: "Fetching \(bridge.noun)…")
     }
 
     private func omniSubmit() {
         if bridge == .farcaster, query.hasPrefix("/") {
             followChannel()
+        } else if bridge == .nostr, query.hasPrefix("#") {
+            followHashtag()
         } else {
             connect()
         }
@@ -844,6 +896,19 @@ struct HandleSetupScreen: View {
         BlueskyStore.shared.addFeed(feed)
         feedHits = []
         hits = []
+        query = ""
+        DSHaptic.tap()
+        Task { await sync() }
+    }
+
+    /// A leading "#" follows a Nostr hashtag instead of watching a person —
+    /// no resolve step needed (unlike a Farcaster channel name, a hashtag is
+    /// just itself), so this only ever normalizes and adds.
+    private func followHashtag() {
+        let raw = query.hasPrefix("#") ? String(query.dropFirst()) : query
+        let tag = NostrStore.normalizeHashtag(raw)
+        guard !tag.isEmpty else { return }
+        NostrIngest.followHashtag(tag)
         query = ""
         DSHaptic.tap()
         Task { await sync() }

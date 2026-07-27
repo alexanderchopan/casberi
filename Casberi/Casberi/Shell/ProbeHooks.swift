@@ -377,6 +377,79 @@ enum ProbeHooks {
                       replies.first.map { " — @\($0.handle): \(String($0.text.prefix(60)))" } ?? "")
             }
         },
+        // `-nostrPubkey <npub|hex|name@domain[,...]>` connects Nostr headlessly
+        // (appends, so a comma-separated list watches several — dedupes, safe
+        // to re-fire).
+        Hook(key: "nostrPubkey") { spec, context in
+            for n in spec.split(separator: ",") { NostrStore.shared.add(String(n)) }
+            Task { @MainActor in
+                let n = await NostrIngest.refresh(context: context)
+                NSLog("Nostr probe: %@ new things", n.map(String.init) ?? "FAILED")
+            }
+        },
+        // `-nostrHashtag <tag[,tag]>` follows Nostr hashtags headlessly (no
+        // resolve step, unlike a Farcaster channel — a hashtag is just
+        // itself) and syncs.
+        Hook(key: "nostrHashtag") { tags, context in
+            Task { @MainActor in
+                var followed = 0
+                for t in tags.split(separator: ",") {
+                    if NostrIngest.followHashtag(String(t)) != nil { followed += 1 }
+                }
+                let n = await NostrIngest.refresh(context: context)
+                NSLog("Nostr hashtag probe: %d followed, %@ new things",
+                      followed, n.map(String.init) ?? "FAILED")
+            }
+        },
+        // `-nostrLikes <npub|hex|name@domain>` watches an account's
+        // REACTIONS (adding the account if new) and syncs — reacted-to notes
+        // land as things.
+        Hook(key: "nostrLikes") { name, context in
+            let n = NostrStore.normalize(name)
+            NostrStore.shared.add(n)
+            NostrStore.shared.setLikes(true, for: n)
+            Task { @MainActor in
+                let added = await NostrIngest.refresh(context: context)
+                // Resurfaced beside landed on purpose — see the Farcaster
+                // likes probe's own comment: a reaction to a note the corpus
+                // already holds lands NOTHING new, so "0 new things" is what
+                // a working pass says when the whole job was a resurface.
+                NSLog("Nostr likes probe: %@ new things, %d resurfaced",
+                      added.map(String.init) ?? "FAILED", NostrIngest.resurfaced)
+            }
+        },
+        // `-nostrMentions <npub|hex|name@domain>` watches MENTIONS of an
+        // account (`#p` tag) and syncs.
+        Hook(key: "nostrMentions") { name, context in
+            let n = NostrStore.normalize(name)
+            NostrStore.shared.add(n)
+            NostrStore.shared.setMentions(true, for: n)
+            Task { @MainActor in
+                let added = await NostrIngest.refresh(context: context)
+                NSLog("Nostr mentions probe: %@ new things",
+                      added.map(String.init) ?? "FAILED")
+            }
+        },
+        // `-nostrHealProbe YES` runs the delete-sync reconcile headlessly
+        // over already-watched accounts and NSLogs how many stale notes it
+        // removed. `force: true` bypasses heal's own hourly throttle.
+        Hook(key: "nostrHealProbe") { _, context in
+            Task { @MainActor in
+                let n = await NostrIngest.heal(context: context, force: true)
+                NSLog("Nostr heal probe: %d removed", n)
+            }
+        },
+        // `-nostrReplies <0xeventid>` fetches a note's thread by its raw
+        // event id (a Nostr thing's sourceRef is "nostr:<event-id>"; no
+        // author needed, unlike Farcaster's fid-keyed lookup) and NSLogs the
+        // count + first line, headless.
+        Hook(key: "nostrReplies") { eventID, _ in
+            Task { @MainActor in
+                let replies = await NostrIngest.replies(eventID: eventID)
+                NSLog("Nostr replies probe: %d replies%@", replies.count,
+                      replies.first.map { " — @\(SocialThread.shortHandle($0.handle)): \(String($0.text.prefix(60)))" } ?? "")
+            }
+        },
         // `-openSeaKey <key>` seeds a known-good OpenSea API key, so a headless
         // run can verify the feed without waiting on the mint endpoint's
         // 1-key-per-hour limit (the IP the sim shares is easily exhausted).

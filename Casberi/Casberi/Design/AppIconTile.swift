@@ -74,6 +74,7 @@ extension DS {
         case "farcaster":           return Color.fixed("#855dcd")
         case "pinterest":           return Color.fixed("#e60023")
         case "bluesky":             return Color.fixed("#0285ff")
+        case "nostr":               return Color.fixed("#9543dc")   // their purple (icon-sampled from the bundled mark)
         case "cal.com":             return Color.fixed("#292929")
         case "calendly":            return Color.fixed("#006bff")
         case "steam":               return Color.fixed("#1b2838")   // their dark navy

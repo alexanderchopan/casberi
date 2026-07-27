@@ -30,7 +30,18 @@ enum SocialMoments {
         checkReturns(source: "Bluesky", handles: BlueskyStore.shared.handles, context: context)
     }
 
-    private static func checkReturns(source: String, handles: [String], context: ModelContext) {
+    /// `authorHandle` stores a raw hex pubkey for Nostr (the stable matching
+    /// key — see `NostrIngest.land`), so the fire message needs its own
+    /// display resolve rather than the bare handle Farcaster/Bluesky wear.
+    static func checkNostrReturns(context: ModelContext) {
+        let handles = NostrStore.shared.accounts.map { $0.pubkeyHex.isEmpty ? $0.input : $0.pubkeyHex }
+        checkReturns(source: "Nostr", handles: handles, context: context) {
+            NostrStore.shared.displayHandle(for: $0)
+        }
+    }
+
+    private static func checkReturns(source: String, handles: [String], context: ModelContext,
+                                     display: (String) -> String = { $0 }) {
         guard !handles.isEmpty else { return }
         let descriptor = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == source })
         guard let things = try? context.fetch(descriptor) else { return }
@@ -49,8 +60,10 @@ enum SocialMoments {
             guard newest.capturedAt.timeIntervalSinceNow > -freshWindow else { continue }
             let gapDays = sorted[1].capturedAt.distance(to: newest.capturedAt) / 86400
             guard gapDays >= quietDays else { continue }
+            let label = display(handle)
+            let prefixed = label.contains("@") ? label : "@\(label)"
             SourceMoments.shared.fire(
-                String(localized: "@\(handle) is back after \(Int(gapDays)) days"), source: source)
+                String(localized: "\(prefixed) is back after \(Int(gapDays)) days"), source: source)
         }
     }
 }
