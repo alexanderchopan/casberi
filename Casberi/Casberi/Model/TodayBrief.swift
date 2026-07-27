@@ -454,7 +454,7 @@ enum TodayBrief {
             // Count each word ONCE per title — a headline repeating a word
             // must not out-vote three separate articles sharing it.
             var seen = Set<String>()
-            for word in words(of: read.title) {
+            for word in words(of: topicText(read)) {
                 let key = word.lowercased()
                 guard key.count >= 4, !stopwords.contains(key), seen.insert(key).inserted
                 else { continue }
@@ -466,6 +466,24 @@ enum TodayBrief {
         else { return nil }
         let outlier = reads.first { !$0.title.lowercased().contains(key) }
         return (display[key] ?? key, outlier)
+    }
+
+    /// A read's title, stripped of an "owner/repo" token when the read is
+    /// FROM GITHUB — `notifications`/`stars`/`following` bake the full repo
+    /// path into the title (`GitHubFeedFetch.thing`), so a person's own
+    /// account name (or repo name) wins "dominant topic" purely because
+    /// GitHub repeats its own path in some feeds' titles and not others
+    /// (an `.involved` issue/PR title never carries it). That isn't a topic,
+    /// it's the source's own formatting — and the "one that doesn't" outlier
+    /// it produced was really just another item from the SAME repo whose
+    /// title shape happens not to spell the path out (caught on-device
+    /// 2026-07-27: "keeps circling <username>" flagged a same-repo GitHub
+    /// issue as the exception). Scoped to GitHub only, so a genuine
+    /// "Apple/Google" in an article headline elsewhere is untouched.
+    private static func topicText(_ read: Thing) -> String {
+        guard read.source == "GitHub" else { return read.title }
+        return read.title.replacingOccurrences(
+            of: #"\b[\w.-]+/[\w.-]+\b"#, with: " ", options: .regularExpression)
     }
 
     /// Words that carry no topic — common English plus the vocabulary every
