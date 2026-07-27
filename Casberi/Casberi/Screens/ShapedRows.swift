@@ -375,8 +375,18 @@ struct LiveTimeText: View {
         }
     }
 
+    /// A stamp AHEAD is not an age (2026-07-27, the calendar-room pass): an
+    /// event two days out ran the same arithmetic on a negative interval, hit
+    /// the `max(1, …)` clamp and rendered "1m" — a row that hadn't happened
+    /// yet wearing "a minute ago". Anything in the future says when it IS.
+    /// Only the perishable kinds (events, dated reminders) ever carry a future
+    /// `capturedAt`, so this branch is unreachable for a landed capture.
     static func short(_ date: Date) -> String {
         let s = Date.now.timeIntervalSince(date)
+        return s < 0 ? String(localized: "in \(units(-s))") : units(s)
+    }
+
+    private static func units(_ s: TimeInterval) -> String {
         if s < 3600 { return "\(max(1, Int(s / 60)))m" }
         if s < 86_400 { return "\(Int(s / 3600))h" }
         return "\(Int(s / 86_400))d"
@@ -386,19 +396,21 @@ struct LiveTimeText: View {
     /// abbreviation as a bare letter, so the spoken form spells the unit.
     static func spoken(_ date: Date) -> String {
         let s = Date.now.timeIntervalSince(date)
+        guard s >= 0 else { return String(localized: "in \(spokenUnits(-s))") }
+        return String(localized: "\(spokenUnits(s)) ago")
+    }
+
+    private static func spokenUnits(_ s: TimeInterval) -> String {
         if s < 3600 {
             let m = max(1, Int(s / 60))
-            return m == 1 ? String(localized: "1 minute ago")
-                          : String(localized: "\(m) minutes ago")
+            return m == 1 ? String(localized: "1 minute") : String(localized: "\(m) minutes")
         }
         if s < 86_400 {
             let h = Int(s / 3600)
-            return h == 1 ? String(localized: "1 hour ago")
-                          : String(localized: "\(h) hours ago")
+            return h == 1 ? String(localized: "1 hour") : String(localized: "\(h) hours")
         }
         let d = Int(s / 86_400)
-        return d == 1 ? String(localized: "1 day ago")
-                      : String(localized: "\(d) days ago")
+        return d == 1 ? String(localized: "1 day") : String(localized: "\(d) days")
     }
 }
 

@@ -9048,3 +9048,43 @@ rest, which is fine when the event is rare. Card spends are not rare (91 in 29
 days on the measured wallet), so a cap would silently discard most of a
 person's history the cursor then skips forever. The ~6-day (100k block) first
 -sight backfill window is what bounds the first landing instead.
+
+## 223. The calendar room reads one direction (user: "this calendar display feed with dates and different orders is awkward, can we hide past events?", 2026-07-27)
+
+**What was on screen.** The Calendar chip's room ran `agendaGroups`: upcoming
+days ascending, then past days descending, concatenated into one list. On the
+reported screen that read *Monday, Jul 27 → Wednesday, Jul 29 → Friday, Jul
+24* — a single scroll that goes forward, then turns around, with nothing at
+the seam saying so. The reversal is invisible because both halves use the same
+day header; you only notice the dates stopped making sense.
+
+**The ruling.** An agenda is what's AHEAD. The room now shows upcoming days
+only — Today, Tomorrow, then dated weekdays, ascending — and what already
+happened sits behind one disclosure at the foot ("Show 12 past events"),
+expanding into the past days newest-first. One direction at a time. This is
+the shape the Reminders room already uses for its stale to-dos, so it isn't a
+new mechanic.
+
+Nothing is deleted or hidden from the record: a past event still sits in its
+own day in the All feed, in search, and in the answer path. The Calendar room
+is a view, not the corpus.
+
+**Two corollaries that fell out of it.**
+
+1. *The closing line yields.* `caughtUpFooter` ("That's everything from
+   Calendar · 3 events") cannot run while the room is holding events back —
+   that is the same overclaim Reminders and Wallet already sit out for. With
+   the past collapsed the disclosure row IS the honest close, and it names the
+   exact count. Expand it and the line comes back.
+
+2. *A future stamp is not an age.* `LiveTimeText.short` ran
+   `Date.now.timeIntervalSince(date)` and clamped with `max(1, …)`, so an event
+   two days OUT rendered as "1m" — a thing that hasn't happened wearing "a
+   minute ago". Rounding produced fake status (§83). Anything ahead now says
+   when it is ("in 2d"), and VoiceOver says it out loud the same way. Only
+   perishables (events, dated reminders) ever carry a future `capturedAt`, so
+   no landed capture changes.
+
+Also: `dayLabel` learned "Tomorrow". Only the agenda ever labels a day ahead
+(every other feed drops future-dated rows in `dayGroups`), and a dated weekday
+header for tomorrow read as history sitting at the top of the list.
