@@ -1569,7 +1569,188 @@ struct PostCard: View {
             Text(thing.title)
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
-            if let media = thing.previewImageURL, !media.isEmpty {
+            // Every attached image shows, not just the first (item 7 of the
+            // 2026-07-27 social pass) — `imageURLs` has held all of them
+            // since 2026-07-16, but this row used to draw the row thumbnail
+            // (`previewImageURL`) alone. A single image keeps `PostMedia`'s
+            // dead-URL collapse; two or more switch to the grid.
+            if thing.imageURLs.count > 1 {
+                PostImageGrid(urls: thing.imageURLs)
+            } else if let media = thing.previewImageURL, !media.isEmpty {
+                PostMedia(urlString: media)
+            }
+        }
+        .padding(.vertical, DS.Space.s2)
+    }
+}
+
+/// A post's attached images at card width, when there's more than one —
+/// `PostMedia` above handles the single-image case. A 2×2 grid, capped
+/// visually at four cells with a "+N" overlay on the last one when there
+/// are more (mirrors `ImageMosaicHero`'s tiling, at post-card scale).
+struct PostImageGrid: View {
+    let urls: [String]
+    var height: CGFloat = 160
+
+    private var shown: [String] { Array(urls.prefix(4)) }
+    private var overflow: Int { max(0, urls.count - 4) }
+
+    var body: some View {
+        let columns = shown.count == 1 ? 1 : 2
+        let rows = max(1, Int(ceil(Double(shown.count) / Double(columns))))
+        GeometryReader { geo in
+            let gap: CGFloat = 4
+            let cellW = (geo.size.width - gap * CGFloat(columns - 1)) / CGFloat(columns)
+            let cellH = (geo.size.height - gap * CGFloat(rows - 1)) / CGFloat(rows)
+            VStack(spacing: gap) {
+                ForEach(0..<rows, id: \.self) { r in
+                    HStack(spacing: gap) {
+                        ForEach(0..<columns, id: \.self) { c in
+                            let idx = r * columns + c
+                            if idx < shown.count {
+                                ZStack {
+                                    RemoteArt(urlString: shown[idx], width: cellW, height: cellH,
+                                              cornerRadius: DS.Radius.card)
+                                    if idx == 3, overflow > 0 {
+                                        RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                                            .fill(.black.opacity(0.45))
+                                        Text("+\(overflow)")
+                                            .dsText(.heading17).fontWeight(.bold)
+                                            .foregroundStyle(.white)
+                                    }
+                                }
+                            } else {
+                                Color.clear.frame(width: cellW, height: cellH)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .frame(height: height)
+    }
+}
+
+/// The social room's head (item 5, 2026-07-27) — the room's own roster, the
+/// same manager-pattern anatomy `HandleSetupScreen`'s roster wears (prd
+/// §184), with one addition: a ring on anyone who posted since this room was
+/// last opened. Every other shaped feed already earns a head off
+/// `FeedHeatmap`/`FeedInsight`; the social room never has, because none of
+/// those aggregate reads (a habit grid, a leaderboard, a distribution bar)
+/// says anything worth knowing about a chat-shaped list of posts. Faces do.
+struct SocialRosterHero: View {
+    let source: String
+    let accounts: [SocialAccount]
+    /// Watched-account keys with a post landed after this room's own
+    /// last-visit stamp — the ring criterion.
+    let freshHandles: Set<String>
+    let onTap: (SocialAccount) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: DS.Space.s3) {
+                    ForEach(accounts) { account in
+                        faceSlot(account)
+                    }
+                }
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.vertical, DS.Space.s1)
+            }
+            Text(accounts.count == 1
+                 ? String(localized: "Watching 1 · tap a face for their room")
+                 : String(localized: "Watching \(accounts.count) · tap a face for their room"))
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
+                .padding(.horizontal, DS.Space.s4)
+        }
+        .padding(.top, DS.Space.s1)
+    }
+
+    private func faceSlot(_ account: SocialAccount) -> some View {
+        let fresh = freshHandles.contains(account.key)
+        return VStack(spacing: 6) {
+            Group {
+                if let avatar = account.avatarURL, !avatar.isEmpty {
+                    RemoteThumb(urlString: avatar, size: 52, fallback: source, circular: true)
+                } else {
+                    BridgeIcon(name: source, size: 52, circular: true)
+                }
+            }
+            .overlay(
+                Circle().strokeBorder(DS.tint, lineWidth: fresh ? 2 : 0)
+                    .padding(-3)
+            )
+            Text(account.title)
+                .dsText(.label12).fontWeight(.semibold)
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(1)
+        }
+        .frame(width: 60)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            DSHaptic.tap()
+            onTap(account)
+        }
+    }
+}
+
+/// A person's own consecutive replies, read top-to-bottom as one thought
+/// (item 6 of the 2026-07-27 social pass) — `ThreadFold.replies` groups a
+/// chain of self-replies under its root `Thing`; this is that chain's card.
+/// The header (face, name, time) is the root's, same anatomy as `PostCard`;
+/// each reply is a plain line under a connecting rule, oldest to newest —
+/// the order the person actually wrote it in, not the feed's newest-first.
+struct SocialThreadCard: View {
+    let head: Thing
+    /// Handed down plain from `FeedScreen`'s fold, same render pass — wrapped
+    /// into `.keyed` right below for the `ForEach`, so identity diffing never
+    /// re-reads a stored property off a model a heal might have deleted
+    /// between the fold and this body evaluating (`ThingRowKeying`'s rule).
+    let replies: [Thing]
+
+    private var author: String {
+        if let handle = head.authorHandle, !handle.isEmpty { return handle }
+        return head.source
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(spacing: DS.Space.s2) {
+                if let avatar = head.authorAvatarURL, !avatar.isEmpty {
+                    RemoteThumb(urlString: avatar, size: 26, fallback: head.source,
+                                circular: true)
+                } else {
+                    BridgeIcon(name: head.source, size: 26)
+                }
+                Text(author)
+                    .dsText(.subhead13).fontWeight(.medium)
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
+                Spacer()
+                LiveTimeText(date: head.capturedAt)
+            }
+            HStack(alignment: .top, spacing: DS.Space.s3) {
+                Rectangle()
+                    .fill(DS.fillFaint)
+                    .frame(width: 2)
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    Text(head.title)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    ForEach(replies.keyed) { item in
+                        if item.thing.isLive {
+                            Text(item.thing.title)
+                                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+            // The root's own images only — folding every reply's pictures
+            // into the same grid would misattribute whose picture is whose.
+            if head.imageURLs.count > 1 {
+                PostImageGrid(urls: head.imageURLs)
+            } else if let media = head.previewImageURL, !media.isEmpty {
                 PostMedia(urlString: media)
             }
         }

@@ -275,6 +275,30 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-starterPackProbe "<query>"` searches Bluesky starter packs and
+        // reads the first hit's members (item 4, 2026-07-27) — the read
+        // behind `StarterPackImportSheet`, headless. Both
+        // `app.bsky.graph.searchStarterPacks` and `.getList` are keyless;
+        // this is the live re-measure the standing discipline calls for
+        // before leaning on a new keyless endpoint in a release build.
+        Hook(key: "starterPackProbe") { query, _ in
+            Task { @MainActor in
+                let packs = await BlueskyStarterPacks.search(query)
+                NSLog("starterPackProbe %@: %d packs", query, packs.count)
+                for pack in packs.prefix(3) {
+                    NSLog("starterPackProbe · %@ (by @%@)", pack.name, pack.creatorHandle)
+                }
+                guard let first = packs.first else { return }
+                let members = await BlueskyStarterPacks.members(of: first)
+                let faces = members.filter { $0.avatarURL != nil }.count
+                NSLog("starterPackProbe first pack \"%@\": %d members, %d with a face",
+                      first.name, members.count, faces)
+                for m in members.prefix(3) {
+                    NSLog("starterPackProbe member · %@ (@%@)",
+                          m.displayName ?? m.handle, m.handle)
+                }
+            }
+        },
         // `-socialProbe <Bluesky|Farcaster>` reports what the enrichment
         // actually landed across that source's corpus (2026-07-16) — how many
         // posts carry their full text, pictures, a quote, a parent, a context

@@ -377,6 +377,20 @@ struct HandleSetupScreen: View {
             } else if bridge.supportsMultiple, !accountNames.isEmpty {
                 accountsSection.listRowSeparator(.hidden)
             }
+            // Starter packs (item 4, 2026-07-27) — Bluesky's own curated-list
+            // discovery, the honest fix to `FollowImportSheet`'s problem: a
+            // real follow graph runs to thousands, too many to picker through
+            // one checkbox at a time. Its own child view owns its `.sheet`
+            // (not chained onto this screen's body) — a SECOND `.sheet`
+            // modifier stacked on the same view is exactly what broke
+            // `FeedScreen`'s first tap once (see its `FeedSheetRoute` doc
+            // comment); isolating it in a subview sidesteps that class
+            // entirely rather than re-risking it here.
+            if bridge == .bluesky {
+                StarterPacksDoor(onImport: { _ in Task { await sync() } })
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+            }
             topicsSection
             if showHomeHint {
                 seeInFeedSection.listRowSeparator(.hidden)

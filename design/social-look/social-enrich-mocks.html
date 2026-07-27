@@ -1,0 +1,457 @@
+<title>Farcaster &amp; Bluesky — enriched room</title>
+<style>
+  /* Review page for dark app screens — matches design/all-feed-look and
+     design/wallet-cashapp's series: same reviewer, same phone chrome. */
+  :root {
+    --page: #0a0b0f;
+    --ink: #f2f4f8;
+    --muted: #99a1b4;
+    --faint: #626b80;
+    --tint: #2461ff;
+    --tint-wash: #3a76ff;
+    --confirm: #32d74b;
+    --attention: #ff9f0a;
+    --card: #16181f;
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body {
+    font-family: var(--text); color: var(--ink);
+    background:
+      radial-gradient(900px 420px at 18% -8%, rgba(36, 97, 255, .10), transparent 62%),
+      var(--page);
+    padding: 48px 28px 72px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  header { max-width: 760px; margin-bottom: 40px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: var(--tint-wash); margin-bottom: 10px; }
+  h1 {
+    font-size: clamp(26px, 3.6vw, 38px); font-weight: 800;
+    letter-spacing: -.02em; line-height: 1.08; text-wrap: balance; margin-bottom: 14px;
+  }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 66ch; }
+  header p b { color: var(--ink); font-weight: 600; }
+  header ul { margin: 14px 0 0 0; padding: 0; list-style: none; }
+  header li {
+    font-size: 13px; line-height: 1.5; color: var(--muted); margin-bottom: 5px;
+    padding-left: 16px; position: relative;
+  }
+  header li::before { content: "—"; position: absolute; left: 0; color: var(--faint); }
+  header li b { color: var(--ink); font-weight: 600; }
+
+  .row {
+    display: flex; flex-wrap: wrap; gap: 34px;
+    align-items: flex-start; justify-content: center; margin-bottom: 56px;
+  }
+  .option { width: 316px; }
+  .phone {
+    width: 316px; border-radius: 44px; padding: 9px; background: #16181d;
+    box-shadow: 0 30px 70px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.4);
+  }
+  .screen {
+    border-radius: 36px; overflow: hidden; background: #000;
+    position: relative; padding: 18px 16px 22px; min-height: 560px;
+  }
+  .caption { margin-top: 20px; padding: 0 6px; }
+  .caption h2 { font-size: 17px; font-weight: 700; letter-spacing: -.01em; margin-bottom: 6px; }
+  .caption h2 span { color: var(--faint); font-weight: 600; }
+  .caption p { font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+  .caption .tag {
+    display: inline-block; margin-top: 8px; font-size: 11px; font-weight: 700;
+    color: var(--tint-wash); background: rgba(58,118,255,.14);
+    padding: 3px 9px; border-radius: 999px;
+  }
+
+  /* ---------- shared bits ---------- */
+  .navBar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .navBar .back { font-size: 18px; color: var(--muted); }
+  .navBar .ttl { font-size: 15px; font-weight: 700; }
+  .navBar .sub { font-size: 11px; color: var(--faint); }
+
+  .dayCaption { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 10px; }
+  .dayCaption span { color: var(--faint); }
+
+  /* roster shelf (item 5) */
+  .roster { display: flex; gap: 14px; overflow: hidden; margin-bottom: 16px; padding-bottom: 2px; }
+  .slot { width: 56px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .avatar {
+    width: 44px; height: 44px; border-radius: 50%; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 700; color: #fff;
+  }
+  .avatar.ring::after {
+    content: ""; position: absolute; inset: -3px; border-radius: 50%;
+    border: 2px solid var(--tint-wash);
+  }
+  .av1 { background: linear-gradient(135deg, #ff6482, #c23a5c); }
+  .av2 { background: linear-gradient(135deg, #4d8f43, #2e5c28); }
+  .av3 { background: linear-gradient(135deg, #5e9eff, #2461ff); }
+  .av4 { background: linear-gradient(135deg, #f5a623, #c9781a); }
+  .av5 { background: linear-gradient(135deg, #9b7bff, #6448c9); }
+  .slot .nm { font-size: 10.5px; color: var(--muted); font-weight: 600; }
+
+  /* post cards */
+  .posts { display: flex; flex-direction: column; gap: 14px; }
+  .post { background: var(--card); border-radius: 14px; padding: 12px 13px; }
+  .phead { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .pav {
+    width: 24px; height: 24px; border-radius: 50%; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: #fff;
+  }
+  .pname { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+  .ptime { margin-left: auto; font-size: 11px; color: var(--faint); }
+  .ptext { font-size: 13.5px; line-height: 1.42; margin-bottom: 8px; }
+
+  /* item 1: link posts land the link */
+  .linkcard {
+    display: flex; gap: 9px; background: rgba(255,255,255,.04);
+    border-radius: 11px; padding: 8px; align-items: center;
+  }
+  .linkart {
+    width: 48px; height: 48px; border-radius: 8px; flex: none;
+    background: linear-gradient(150deg, #24343c, #3f5e6b 65%, #1e2b31);
+  }
+  .linkbody { min-width: 0; }
+  .linkbody .lt { font-size: 12.5px; font-weight: 600; line-height: 1.3; margin-bottom: 2px; }
+  .linkbody .ld { font-size: 10.5px; color: var(--faint); }
+
+  /* item 7: multi-image grid */
+  .imggrid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px; border-radius: 11px; overflow: hidden;
+  }
+  .imggrid .cell { height: 62px; position: relative; }
+  .imggrid .cell.i1 { background: linear-gradient(140deg,#3a2f4d,#5c4a7a 60%,#241d33); }
+  .imggrid .cell.i2 { background: linear-gradient(140deg,#4d3b2a,#7a5c38 60%,#3d2f22); }
+  .imggrid .cell.i3 { background: linear-gradient(140deg,#2a4d3a,#3f8a5f 60%,#1e3627); }
+  .imggrid .cell.i4 { background: linear-gradient(140deg,#2a3a4d,#3f6b8a 60%,#1e2a36); }
+  .imggrid .cell.i4 .more {
+    position: absolute; inset: 0; background: rgba(0,0,0,.5);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; color: #fff;
+  }
+
+  /* item 6: collapsed thread */
+  .thread { position: relative; padding-left: 14px; }
+  .thread::before {
+    content: ""; position: absolute; left: 0; top: 4px; bottom: 4px; width: 2px;
+    background: rgba(255,255,255,.08); border-radius: 2px;
+  }
+  .tline { font-size: 13px; line-height: 1.45; margin-bottom: 7px; color: var(--ink); }
+  .tline:last-child { margin-bottom: 0; }
+  .tline .n { color: var(--faint); font-size: 11px; margin-right: 5px; font-weight: 700; }
+
+  .metaLine { display: flex; align-items: center; gap: 10px; margin-top: 9px; font-size: 11px; color: var(--faint); }
+  .metaLine .liked { display: flex; align-items: center; gap: -6px; }
+  .likeFaces { display: flex; }
+  .likeFaces div {
+    width: 16px; height: 16px; border-radius: 50%; margin-left: -5px;
+    border: 1.5px solid var(--card); font-size: 8px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700;
+  }
+  .likeFaces div:first-child { margin-left: 0; }
+
+  /* ---------- person room (item 2) ---------- */
+  .personHead { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+  .bigav {
+    width: 56px; height: 56px; border-radius: 50%; flex: none;
+    background: linear-gradient(135deg, #5e9eff, #2461ff);
+    display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: #fff;
+  }
+  .personName { font-size: 17px; font-weight: 700; }
+  .personHandle { font-size: 12px; color: var(--faint); }
+  .personBio { font-size: 12.5px; color: var(--muted); line-height: 1.4; margin: 10px 0 14px; }
+  .segTabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  .segTab {
+    font-size: 11.5px; font-weight: 600; padding: 5px 11px; border-radius: 999px;
+    background: rgba(255,255,255,.06); color: var(--muted);
+  }
+  .segTab.on { background: var(--tint); color: #fff; }
+  .chainRow {
+    display: flex; align-items: center; gap: 9px; background: rgba(36,97,255,.10);
+    border-radius: 11px; padding: 8px 10px; margin-bottom: 10px;
+  }
+  .chainRow .g {
+    width: 22px; height: 22px; border-radius: 7px; background: #2461ff; flex: none;
+    display: flex; align-items: center; justify-content: center; font-size: 10px; color: #fff;
+  }
+  .chainRow .t { font-size: 12px; line-height: 1.3; }
+  .chainRow .t span { display: block; font-size: 10px; color: var(--faint); }
+  .chainRow .amt {
+    margin-left: auto; font-family: var(--money); font-size: 12px; font-weight: 700; color: var(--muted);
+  }
+
+  /* ---------- starter pack import (item 4) ---------- */
+  .packCard {
+    background: var(--card); border-radius: 16px; padding: 14px; margin-bottom: 14px;
+  }
+  .packHead { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
+  .packIcon {
+    width: 34px; height: 34px; border-radius: 10px; flex: none;
+    background: linear-gradient(135deg, #ff6482, #6448c9);
+    display: flex; align-items: center; justify-content: center; font-size: 15px;
+  }
+  .packHead .pt { font-size: 13.5px; font-weight: 700; }
+  .packHead .ps { font-size: 11px; color: var(--faint); }
+  .packFaces { display: flex; margin-bottom: 8px; }
+  .packFaces div {
+    width: 26px; height: 26px; border-radius: 50%; margin-left: -7px;
+    border: 2px solid var(--card);
+  }
+  .packFaces div:first-child { margin-left: 0; }
+  .packDesc { font-size: 12px; color: var(--muted); line-height: 1.45; margin-bottom: 10px; }
+  .packBtn {
+    text-align: center; font-size: 13px; font-weight: 700; color: #fff;
+    background: var(--tint); border-radius: 999px; padding: 9px 0;
+  }
+  .searchBar {
+    background: rgba(255,255,255,.06); border-radius: 11px; padding: 9px 12px;
+    font-size: 12.5px; color: var(--faint); margin-bottom: 14px;
+  }
+
+  /* ---------- shared moves + law ---------- */
+  .shared { max-width: 900px; margin: 0 auto; }
+  .shared h3 { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+  .moves {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px; margin-bottom: 30px;
+  }
+  .move { background: rgba(255,255,255,.035); border-radius: 16px; padding: 14px 16px; }
+  .move b { display: block; font-size: 13.5px; font-weight: 700; margin-bottom: 4px; }
+  .move p { font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+  .law { font-size: 12.5px; line-height: 1.6; color: var(--faint); max-width: 74ch; }
+  .law b { color: var(--muted); font-weight: 600; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .option { animation: rise .5s ease-out backwards; }
+    .option:nth-child(2) { animation-delay: .08s; }
+    .option:nth-child(3) { animation-delay: .16s; }
+    @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+  }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · Farcaster &amp; Bluesky</div>
+  <h1>The social room, drastically enriched</h1>
+  <p>Today the room is a chat-shaped list of bubbles. These three screens are one pass, scoped to what you picked:</p>
+  <ul>
+    <li><b>1 — link posts land the link.</b> An article inside a post becomes a reading row, not a permalink.</li>
+    <li><b>5 — the room gets a head.</b> The roster of faces you watch, ringed if they posted since your last visit.</li>
+    <li><b>6 — threads collapse.</b> Consecutive self-replies read top-to-bottom as one card.</li>
+    <li><b>7 — every image shows.</b> A four-image post isn't a one-image post anymore.</li>
+    <li><b>2 — a person is a room.</b> Their posts and their onchain moves, one chronology, not a 560pt tray.</li>
+    <li><b>4 — starter packs.</b> Bluesky's curated lists as the follow-import entry gesture.</li>
+  </ul>
+</header>
+
+<div class="row">
+
+  <!-- ============ SCREEN 1: THE FEED — 1, 5, 6, 7 ============ -->
+  <div class="option">
+    <div class="phone"><div class="screen">
+      <div class="dayCaption">Farcaster <span>· 12 people, 3 channels</span></div>
+
+      <div class="roster">
+        <div class="slot"><div class="avatar av1 ring">JM</div><div class="nm">jesse</div></div>
+        <div class="slot"><div class="avatar av2">dwr</div><div class="nm">dwr</div></div>
+        <div class="slot"><div class="avatar av3 ring">VB</div><div class="nm">vitalik</div></div>
+        <div class="slot"><div class="avatar av4">LP</div><div class="nm">linda</div></div>
+        <div class="slot"><div class="avatar av5">+8</div><div class="nm">more</div></div>
+      </div>
+
+      <div class="posts">
+
+        <!-- item 1: link post lands the link -->
+        <div class="post">
+          <div class="phead">
+            <div class="pav" style="background:#5e9eff">VB</div>
+            <div class="pname">vitalik</div>
+            <div class="ptime">2h</div>
+          </div>
+          <div class="ptext">this is the clearest writeup on rollup fees I've read all year</div>
+          <div class="linkcard">
+            <div class="linkart"></div>
+            <div class="linkbody">
+              <div class="lt">Why L2 fees dropped 90% in a year</div>
+              <div class="ld">paradigm.xyz</div>
+            </div>
+          </div>
+          <div class="metaLine">
+            <div class="likeFaces"><div style="background:#ff6482">J</div><div style="background:#4d8f43">D</div></div>
+            <span>jesse and dwr liked this</span>
+          </div>
+        </div>
+
+        <!-- item 6: collapsed thread -->
+        <div class="post">
+          <div class="phead">
+            <div class="pav" style="background:#ff6482">JM</div>
+            <div class="pname">jesse</div>
+            <div class="ptime">5h</div>
+          </div>
+          <div class="thread">
+            <div class="tline"><span class="n">1</span>shipping a base account update today</div>
+            <div class="tline"><span class="n">2</span>the big one: passkey recovery without a seed phrase</div>
+            <div class="tline"><span class="n">3</span>docs drop tomorrow, rolling out this week</div>
+          </div>
+        </div>
+
+        <!-- item 7: multi-image post -->
+        <div class="post">
+          <div class="phead">
+            <div class="pav" style="background:#f5a623">LP</div>
+            <div class="pname">linda</div>
+            <div class="ptime">1d</div>
+          </div>
+          <div class="ptext" style="margin-bottom:8px">devconnect recap — four days, way too many cortados</div>
+          <div class="imggrid">
+            <div class="cell i1"></div>
+            <div class="cell i2"></div>
+            <div class="cell i3"></div>
+            <div class="cell i4"><div class="more">+3</div></div>
+          </div>
+        </div>
+
+      </div>
+    </div></div>
+    <div class="caption">
+      <h2>The feed <span>— four items, one room</span></h2>
+      <p>The roster replaces the aggregate card no other room has: faces, not a leaderboard. A shared article renders as a reading row inside the post. Three replies in a row read as one thought. Four photos show as four, not one.</p>
+      <span class="tag">items 1 · 5 · 6 · 7</span>
+    </div>
+  </div>
+
+  <!-- ============ SCREEN 2: THE PERSON ROOM — item 2 ============ -->
+  <div class="option">
+    <div class="phone"><div class="screen">
+      <div class="navBar"><span class="back">‹</span></div>
+      <div class="personHead">
+        <div class="bigav">VB</div>
+        <div>
+          <div class="personName">vitalik.eth</div>
+          <div class="personHandle">@vitalik.eth · Farcaster + Bluesky</div>
+        </div>
+      </div>
+      <div class="personBio">building and writing about ethereum, cryptoeconomics, and mechanism design.</div>
+
+      <div class="segTabs">
+        <div class="segTab on">Everything</div>
+        <div class="segTab">Posts</div>
+        <div class="segTab">Onchain</div>
+      </div>
+
+      <div class="posts">
+        <div class="chainRow">
+          <div class="g">◧</div>
+          <div class="t">Sent 2.4 ETH<span>to 0x9f2…c81 · Base</span></div>
+          <div class="amt">3h ago</div>
+        </div>
+        <div class="post">
+          <div class="phead"><div class="ptime" style="margin-left:0">4h ago</div></div>
+          <div class="ptext">this is the clearest writeup on rollup fees I've read all year</div>
+          <div class="linkcard">
+            <div class="linkart"></div>
+            <div class="linkbody"><div class="lt">Why L2 fees dropped 90%</div><div class="ld">paradigm.xyz</div></div>
+          </div>
+        </div>
+        <div class="chainRow">
+          <div class="g" style="background:#4d8f43">◨</div>
+          <div class="t">Deposited 0.4 ETH<span>Privacy Pools</span></div>
+          <div class="amt">yesterday</div>
+        </div>
+        <div class="post">
+          <div class="phead"><div class="ptime" style="margin-left:0">yesterday</div></div>
+          <div class="ptext">rereading the DAO postmortem. still the best case study we have.</div>
+        </div>
+      </div>
+    </div></div>
+    <div class="caption">
+      <h2>The person room <span>— not a tray anymore</span></h2>
+      <p>Everything you hold about this one person, in one chronology: casts, Bluesky posts, and — when they've verified an address — their onchain moves threaded in place. Nowhere else can join a person's words to their wallet.</p>
+      <span class="tag">item 2</span>
+    </div>
+  </div>
+
+  <!-- ============ SCREEN 3: STARTER PACKS — item 4 ============ -->
+  <div class="option">
+    <div class="phone"><div class="screen">
+      <div class="navBar"><span class="back">‹</span><span class="ttl">Follow people</span></div>
+      <div class="searchBar">Search a starter pack, or a person…</div>
+      <div class="dayCaption" style="margin-bottom:12px">Suggested for you</div>
+
+      <div class="packCard">
+        <div class="packHead">
+          <div class="packIcon">🧑‍💻</div>
+          <div>
+            <div class="pt">Onchain builders</div>
+            <div class="ps">by jesse.eth · 34 people</div>
+          </div>
+        </div>
+        <div class="packFaces">
+          <div style="background:#ff6482"></div><div style="background:#4d8f43"></div>
+          <div style="background:#5e9eff"></div><div style="background:#f5a623"></div>
+          <div style="background:#9b7bff"></div>
+        </div>
+        <div class="packDesc">Founders and engineers shipping in public — the people jesse actually reads.</div>
+        <div class="packBtn">Follow all 34</div>
+      </div>
+
+      <div class="packCard">
+        <div class="packHead">
+          <div class="packIcon" style="background:linear-gradient(135deg,#4d8f43,#2e5c28)">🎨</div>
+          <div>
+            <div class="pt">Design &amp; product</div>
+            <div class="ps">by linda.bsky.social · 21 people</div>
+          </div>
+        </div>
+        <div class="packFaces">
+          <div style="background:#ff8a5c"></div><div style="background:#2461ff"></div>
+          <div style="background:#4cd964"></div>
+        </div>
+        <div class="packDesc">Product thinkers and designers worth a slow morning scroll.</div>
+        <div class="packBtn">Follow all 21</div>
+      </div>
+    </div></div>
+    <div class="caption">
+      <h2>Starter packs <span>— curated, not 1,848 checkboxes</span></h2>
+      <p>The honest fix to §87's measured problem: nobody wants to picker through a follow graph that size. A starter pack is someone else's taste, already sorted — one tap follows the whole set.</p>
+      <span class="tag">item 4</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="shared">
+  <h3>What each one costs</h3>
+  <div class="moves">
+    <div class="move">
+      <b>1 · Link posts land the link</b>
+      <p>New: the embed's URL becomes a real <code>.link</code> thing, joined to the post as its why. Reuses Safari's reading anatomy — no new row type.</p>
+    </div>
+    <div class="move">
+      <b>5 · The roster head</b>
+      <p>New shared component, but it's <code>AssetRosterShelf</code> under different data — round marks (people), same shelf the wallet and tokens already use.</p>
+    </div>
+    <div class="move">
+      <b>6 · Threads collapse</b>
+      <p>Consecutive same-author replies group at render time — no ingest change, no new field, a feed-side fold over what's already landed.</p>
+    </div>
+    <div class="move">
+      <b>7 · Every image shows</b>
+      <p>One-line fix: <code>PostCard</code> reads <code>imageURLs</code> instead of <code>previewImageURL</code> alone. The data has been captured since 2026-07-16.</p>
+    </div>
+    <div class="move">
+      <b>2 · The person room</b>
+      <p>The biggest of the six — a new pushed screen replacing the 560pt tray, querying a person's things plus their verified-address transactions in one fetch.</p>
+    </div>
+    <div class="move">
+      <b>4 · Starter packs</b>
+      <p>New keyless read (<code>app.bsky.graph.getStarterPack</code>) — <b>unmeasured</b>, needs a probe against the live AppView before it's built on.</p>
+    </div>
+  </div>
+  <p class="law"><b>Sequencing:</b> 7 and 1 are the cheapest — land them first, they change what's already on screen with no new surface. 6 is a pure feed-side fold. 5 needs the roster wired to watched-people data (face + ring). 2 is the real project — a new screen, a new joined query. 4 waits on a measuring probe, same discipline as every other keyless endpoint in this codebase.</p>
+</div>
+</div>

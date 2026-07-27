@@ -147,6 +147,7 @@ struct FeedScreen: View {
     /// A tapped Themes cell (2026-07-18, the All feed's own treemap) — the
     /// same project detail door Home's map already opened.
     @State private var openProject: ProjectRoute?
+    @State private var openPerson: SocialProfile?
     /// Themes stays expanded for the rest of THIS session once tapped open
     /// (2026-07-20) — session-only by design; a fresh mount re-checks the
     /// digest and may collapse again.
@@ -470,6 +471,58 @@ struct FeedScreen: View {
         init(_ t: Thing) { id = t.id.uuidString; thing = t }
     }
     private func keyed(_ things: [Thing]) -> [KeyedThing] { things.map(KeyedThing.init) }
+
+    /// Consecutive self-replies fold into one thread (item 6 of the
+    /// 2026-07-27 social enrichment pass) — a person's own reply chain reads
+    /// top-to-bottom as one card in their room, instead of N separate rows a
+    /// chronological feed would otherwise interleave with everything else.
+    /// Pure over whatever `[Thing]` the caller hands it; called only for
+    /// `shape == .social`, so the mixed All feed is never touched.
+    ///
+    /// `heads` is `things` with every swallowed reply removed — safe to feed
+    /// straight into the existing day-grouped `ForEach` pipeline (same array
+    /// shape, just fewer rows). `byHeadID` maps a head's `id.uuidString` to
+    /// its ordered replies (oldest first, the order a thread was written
+    /// in) — plain `[Thing]`, re-wrapped into a `KeyedThing` only at the
+    /// point `SocialThreadCard` renders them, since these ride a side
+    /// dictionary rather than a `ForEach`'s own diffed array.
+    private func foldThreadReplies(_ things: [Thing]) -> (heads: [Thing], byHeadID: [String: [Thing]]) {
+        var bySourceRef: [String: Thing] = [:]
+        for t in things {
+            if let ref = t.sourceRef { bySourceRef[ref] = t }
+        }
+        var childrenOfRoot: [String: [Thing]] = [:]
+        var swallowed: Set<UUID> = []
+        for t in things {
+            guard let handle = t.authorHandle, !handle.isEmpty,
+                  let parentRef = t.parent?.ref,
+                  let parent = bySourceRef[parentRef],
+                  parent.authorHandle == handle
+            else { continue }
+            // Walk to the chain's ROOT so a three-deep thread groups under
+            // its first post rather than nesting a thread of threads. Capped
+            // defensively — a real reply chain is never this deep, but
+            // nothing here guarantees the data can't cycle.
+            var root = parent
+            var hops = 0
+            while hops < 32,
+                  let grandparentRef = root.parent?.ref,
+                  let grandparent = bySourceRef[grandparentRef],
+                  grandparent.authorHandle == handle {
+                root = grandparent
+                hops += 1
+            }
+            childrenOfRoot[root.id.uuidString, default: []].append(t)
+            swallowed.insert(t.id)
+        }
+        guard !swallowed.isEmpty else { return (things, [:]) }
+        let heads = things.filter { !swallowed.contains($0.id) }
+        var byHeadID: [String: [Thing]] = [:]
+        for (rootID, kids) in childrenOfRoot {
+            byHeadID[rootID] = kids.sorted { $0.capturedAt < $1.capturedAt }
+        }
+        return (heads, byHeadID)
+    }
 
     /// Machine bulk bundles; human captures never do. A screenshot, a voice
     /// note, or anything typed/pasted is one deliberate act each — an RSS
@@ -939,6 +992,12 @@ struct FeedScreen: View {
             ProjectDetailScreen(projectName: route.name)
                 .navigationTransition(.zoom(sourceID: route.name, in: zoomNS))
         }
+        // The social roster's own door (item 2, 2026-07-27) — a face pushes
+        // the person room, not the quick-glance tray `SocialProfileCard`
+        // still serves everywhere else.
+        .navigationDestination(item: $openPerson) { profile in
+            PersonRoomScreen(profile: profile)
+        }
         // One `.sheet(item:)` for every sheet this screen presents — see
         // `FeedSheetRoute`'s doc comment for why five separate `.sheet`
         // modifiers here caused the first tap to silently self-dismiss.
@@ -1013,8 +1072,15 @@ struct FeedScreen: View {
             ? FeedInsight.distribution(source: source, things: visible) : nil
         let mosaic = liveStream == nil && heatmapLabel == nil && leaderboard == nil && distribution == nil
             ? FeedInsight.mosaic(source: source, things: visible) : nil
+        // The social room's own head (item 5, 2026-07-27) — none of the
+        // aggregate reads above ever fire for Farcaster/Bluesky (no case
+        // names them), so this only ever competes with a live stream, which
+        // a person's own account row can't produce either.
+        let rosterAccounts: [SocialAccount] = shape == .social
+            ? (source == "Farcaster" ? FarcasterStore.shared.socialAccounts : BlueskyStore.shared.socialAccounts)
+            : []
         let heroShown = liveStream != nil || heatmapLabel != nil || leaderboard != nil
-            || distribution != nil || mosaic != nil
+            || distribution != nil || mosaic != nil || !rosterAccounts.isEmpty
         if let liveStream {
             insightSection { LiveStreamHero(thing: liveStream) { openThing(liveStream) } }
         } else if let heatmapLabel {
@@ -1025,6 +1091,20 @@ struct FeedScreen: View {
             insightSection { DistributionHero(dist: distribution) }
         } else if let mosaic {
             insightSection { ImageMosaicHero(mosaic: mosaic) }
+        } else if !rosterAccounts.isEmpty {
+            // Fresh = a post landed after this room's own last-visit stamp
+            // (`newSince`, the same one the new-since divider rides).
+            let freshHandles: Set<String> = newSince.map { since in
+                Set(visible.compactMap { $0.capturedAt > since ? $0.authorHandle : nil })
+            } ?? []
+            insightSection {
+                SocialRosterHero(source: source, accounts: rosterAccounts, freshHandles: freshHandles) { account in
+                    DSHaptic.tap()
+                    openPerson = SocialProfile(source: source, handle: account.key,
+                                               displayName: account.title, bio: nil,
+                                               avatarURL: account.avatarURL)
+                }
+            }
         }
         switch shape {
         case .photos:
@@ -1093,12 +1173,22 @@ struct FeedScreen: View {
                 bundledSections(visible, nextEventID: nextEventID)
                 corpusFloorSection(visible)
             } else {
+                // Threads fold BEFORE day-grouping (item 6, 2026-07-27): a
+                // person's own consecutive replies collapse into one card in
+                // their room, so `roomThings` (fewer rows than `visible`)
+                // feeds the existing day/ForEach pipeline unchanged, and
+                // `threadReplies` rides beside it for `shapedRow` to render
+                // inline. Scoped to `.social` — every other shape's `visible`
+                // passes through untouched.
+                let (roomThings, threadReplies): ([Thing], [String: [Thing]]) =
+                    shape == .social ? foldThreadReplies(visible) : (visible, [:])
                 // Live-first in a source's own room (2026-07-21): a stream
                 // that's on RIGHT NOW is the one row whose relevance isn't
                 // chronological, so it leads its group. No-op for sources
                 // with no live set.
-                let days = liveFirst(chronoGroups(visible))
-                groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+                let days = liveFirst(chronoGroups(roomThings))
+                groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
+                                replies: threadReplies)
             }
         }
     }
@@ -1432,9 +1522,10 @@ struct FeedScreen: View {
     @ViewBuilder
     private func groupedSections(_ groups: [(String, [Thing])],
                                  nextEventID: UUID?,
-                                 boundary: UUID? = nil) -> some View {
+                                 boundary: UUID? = nil,
+                                 replies: [String: [Thing]] = [:]) -> some View {
         ForEach(groups, id: \.0) { label, rows in
-            daySection(label, rows, nextEventID: nextEventID, boundary: boundary)
+            daySection(label, rows, nextEventID: nextEventID, boundary: boundary, replies: replies)
         }
     }
 
@@ -2345,10 +2436,11 @@ struct FeedScreen: View {
     /// The row inside a list section, with the standard list plumbing attached.
     private func shapedListRow(_ thing: Thing, index: Int = 0, nextEventID: UUID?,
                                position: RunPosition = .only,
-                               imageOnly: Bool = false) -> some View {
+                               imageOnly: Bool = false,
+                               replies: [String: [Thing]] = [:]) -> some View {
         // AnyView: same metadata-depth insurance as GenRender (crash fix).
         return AnyView(shapedRow(thing, nextEventID: nextEventID, index: index,
-                                 imageOnly: imageOnly))
+                                 imageOnly: imageOnly, replies: replies))
             .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
             .contentShape(Rectangle())
             .matchedTransitionSource(id: thing.id, in: zoomNS)
@@ -2391,7 +2483,8 @@ struct FeedScreen: View {
 
     @ViewBuilder
     private func shapedRow(_ thing: Thing, nextEventID: UUID?, index: Int = 0,
-                           imageOnly: Bool = false) -> some View {
+                           imageOnly: Bool = false,
+                           replies: [String: [Thing]] = [:]) -> some View {
         // Approval is the one rhythm-breaker everywhere: the consent card.
         if thing.kind == .approval, thing.mark != .done {
             ApprovalCard(thing: thing,
@@ -2427,7 +2520,19 @@ struct FeedScreen: View {
             case .wallet: BandRow(thing: thing, moneyColumn: true, rippleIndex: index)
             case .notes:  ExcerptRow(thing: thing, lines: 3)
             case .chat:   ExcerptRow(thing: thing, lines: 2)
-            case .social: PostCard(thing: thing)
+            case .social:
+                if thing.kind == .link {
+                    // Item 1 (2026-07-27): an article a post shared lands as
+                    // its own thing now — it reads like the reading list it
+                    // actually is, not a post with no author of its own.
+                    ReadingRow(thing: thing)
+                } else if let kids = replies[thing.id.uuidString], !kids.isEmpty {
+                    // Item 6 (2026-07-27): a head with folded-in self-replies
+                    // reads as one thread card; everything else is a plain post.
+                    SocialThreadCard(head: thing, replies: kids)
+                } else {
+                    PostCard(thing: thing)
+                }
             case .safari: ReadingRow(thing: thing)
             default:
                 // Perishables show their clock everywhere (ruling 2026-07-09):
@@ -2707,7 +2812,8 @@ struct FeedScreen: View {
     @ViewBuilder
     private func daySection(_ label: String, _ rows: [Thing],
                             nextEventID: UUID?,
-                            boundary: UUID? = nil) -> some View {
+                            boundary: UUID? = nil,
+                            replies: [String: [Thing]] = [:]) -> some View {
         // LIVE ONLY, before anything reads a stored property (build 150 crash,
         // 2026-07-25 — pull-to-refresh, symbolicated to `countLabel` inside
         // this section's own header). `rows` is a DERIVED array (the day
@@ -2737,7 +2843,7 @@ struct FeedScreen: View {
                     let thing = item.thing
                     if thing.id == boundary { newSinceDivider }
                     shapedListRow(thing, index: i, nextEventID: nextEventID,
-                                  position: positions[i])
+                                  position: positions[i], replies: replies)
                 }
             } header: {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {

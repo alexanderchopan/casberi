@@ -424,6 +424,14 @@ enum BlueskyIngest {
         context.insert(thing)
         SpotlightIndex.index([thing])
         existing.insert(ref)
+        // Item 1 of the 2026-07-27 social pass: a post sharing an article
+        // used to keep only the permalink — the article itself never entered
+        // the corpus, invisible to Find/Retriever/the themes map. Landed as
+        // its own `.link` thing, deduped through the same `existing` set.
+        if let link = linkEmbed(post) {
+            landLinkedArticle(link, sharedBy: authorHandle, capturedAt: date ?? .now,
+                              existing: &existing, context: context)
+        }
         return true
     }
 
@@ -628,6 +636,52 @@ enum BlueskyIngest {
         if let external = media["external"] as? [String: Any],
            let thumb = external["thumb"] as? String { return [thumb] }
         return []
+    }
+
+    /// The post's external-link card, when it has one — Bluesky's AppView
+    /// fully hydrates a shared article's title, description, and thumbnail
+    /// (unlike Farcaster's bare embedded URL), so landing it costs no extra
+    /// fetch. A post whose external embed carries an image thumb but no
+    /// article (rare) still qualifies — `title` simply comes back nil and
+    /// `landLinkedArticle` falls back to a live title fetch.
+    private static func linkEmbed(_ post: [String: Any]) -> (url: String, title: String?, thumb: String?)? {
+        guard let embed = post["embed"] as? [String: Any] else { return nil }
+        let media = (embed["media"] as? [String: Any]) ?? embed
+        guard let external = media["external"] as? [String: Any],
+              let uri = external["uri"] as? String, !uri.isEmpty else { return nil }
+        return (uri, external["title"] as? String, external["thumb"] as? String)
+    }
+
+    /// Lands a post's shared article as its own `.link` thing — a real,
+    /// separately retrievable record, not just a URL sitting inside the
+    /// post's `postText`. Dedupes through the SAME `existing` set posts use,
+    /// keyed on the URL, so the same article shared twice never lands twice.
+    @MainActor
+    private static func landLinkedArticle(_ link: (url: String, title: String?, thumb: String?),
+                                          sharedBy handle: String, capturedAt: Date,
+                                          existing: inout Set<String>, context: ModelContext) {
+        let ref = "link:\(link.url)"
+        guard !existing.contains(ref) else { return }
+        existing.insert(ref)
+        let hasTitle = (link.title?.isEmpty == false)
+        let thing = Thing(
+            kind: .link,
+            title: hasTitle ? link.title! : link.url,
+            content: link.url,
+            source: "Bluesky",
+            capturedAt: capturedAt,
+            sourceRef: ref
+        )
+        thing.authorHandle = handle
+        thing.previewImageURL = IngestSupport.imageURL(link.thumb)
+        context.insert(thing)
+        SpotlightIndex.index([thing])
+        // Bluesky hydrates the title already; only fall back to a live fetch
+        // (the established detached pattern, `RootShell`'s paste-a-link path)
+        // when the AppView's own card carried none.
+        if !hasTitle {
+            Task { @MainActor in await LinkTitle.enrich(thing, context: context) }
+        }
     }
 
     // MARK: - Quotes and parents (2026-07-16)

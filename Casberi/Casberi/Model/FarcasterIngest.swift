@@ -681,6 +681,14 @@ enum FarcasterIngest {
         context.insert(thing)
         SpotlightIndex.index([thing])
         existing.insert(ref)
+        // Item 1 of the 2026-07-27 social pass: a cast sharing an article
+        // used to keep only the permalink — the article itself never entered
+        // the corpus, invisible to Find/Retriever/the themes map. Landed as
+        // its own `.link` thing, deduped through the same `existing` set.
+        if let linkURL = linkEmbed(body) {
+            landLinkedArticle(linkURL, sharedBy: username, capturedAt: when ?? .now,
+                              existing: &existing, context: context)
+        }
         return true
     }
 
@@ -968,6 +976,50 @@ enum FarcasterIngest {
             }
         }
         return out
+    }
+
+    /// The first embedded URL that ISN'T a picture (item 1 of the
+    /// 2026-07-27 social pass) — a cast sharing an article, not just images.
+    /// Reuses `imageEmbeds`' own filter, inverted.
+    private static func linkEmbed(_ body: [String: Any]) -> String? {
+        let images = Set(imageEmbeds(body))
+        for embed in (body["embeds"] as? [[String: Any]]) ?? [] {
+            guard let url = embed["url"] as? String, !images.contains(url),
+                  url.lowercased().hasPrefix("http") else { continue }
+            return url
+        }
+        return nil
+    }
+
+    /// Lands a cast's shared article as its own `.link` thing — a real,
+    /// separately retrievable record, not just a URL sitting inside the
+    /// cast's `postText`. Dedupes through the SAME `existing` set casts
+    /// use, keyed on the URL, so the same article shared twice (by this
+    /// account or another) never lands twice. The title starts as the bare
+    /// URL and renames itself once `LinkTitle.enrich` fetches the real
+    /// `<title>` — fired detached (the established pattern, `RootShell`'s
+    /// own paste-a-link path) so an 8-second page fetch never serializes the
+    /// cast-landing loop behind it.
+    @MainActor
+    private static func landLinkedArticle(_ url: String, sharedBy username: String,
+                                          capturedAt: Date,
+                                          existing: inout Set<String>,
+                                          context: ModelContext) {
+        let ref = "link:\(url)"
+        guard !existing.contains(ref) else { return }
+        existing.insert(ref)
+        let thing = Thing(
+            kind: .link,
+            title: url,
+            content: url,
+            source: "Farcaster",
+            capturedAt: capturedAt,
+            sourceRef: ref
+        )
+        thing.authorHandle = username
+        context.insert(thing)
+        SpotlightIndex.index([thing])
+        Task { @MainActor in await LinkTitle.enrich(thing, context: context) }
     }
 
     // MARK: - Quotes and parents (2026-07-16)
