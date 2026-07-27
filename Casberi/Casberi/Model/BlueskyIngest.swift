@@ -432,7 +432,39 @@ enum BlueskyIngest {
             landLinkedArticle(link, sharedBy: authorHandle, capturedAt: date ?? .now,
                               existing: &existing, context: context)
         }
+        // Item 5 of the 2026-07-27 polish pass: a mention is the highest-
+        // signal event social has, and it used to land silently. Fires the
+        // same delight bus a wallet high or a quiet-account return already
+        // rides. NEWS ONLY (the Privacy Pools/§221 doctrine): a mention
+        // older than a day heals in silently — connecting an account for
+        // the first time shouldn't rain 40 toasts for months of old @s.
+        if why == "mention", (date ?? .now).timeIntervalSinceNow > -86400 {
+            SourceMoments.shared.fire(
+                String(localized: "@\(authorHandle) mentioned you"), source: "Bluesky")
+        }
+        // "The crossing" (item 6 of the 2026-07-27 polish pass): two watched
+        // accounts replying to or quoting each other. Detected purely from
+        // data already on the landed thing — `parent`/`quote` both carry the
+        // referenced post's author — so this is a pure corpus join, not a
+        // network read, and nothing else on the phone can see it.
+        fireCrossingIfWatched(author: authorHandle, other: thing.parent?.handle ?? thing.quote?.handle,
+                              when: date)
         return true
+    }
+
+    /// Fires the crossing moment when BOTH sides of a reply/quote are
+    /// accounts this account watches — never when only one is (that's an
+    /// ordinary mention or an ordinary post). NEWS ONLY, the mention
+    /// moment's own discipline: an old crossing heals in silently, so
+    /// connecting an account doesn't rain for months of history.
+    @MainActor
+    private static func fireCrossingIfWatched(author: String, other: String?, when: Date?) {
+        guard let other, other != author,
+              (when ?? .now).timeIntervalSinceNow > -86400 else { return }
+        let watched = Set(BlueskyStore.shared.accounts.map(\.handle))
+        guard watched.contains(author), watched.contains(other) else { return }
+        SourceMoments.shared.fire(
+            String(localized: "@\(author) and @\(other) are talking"), source: "Bluesky")
     }
 
     /// at://did:…/app.bsky.feed.post/<rkey> → the web permalink.

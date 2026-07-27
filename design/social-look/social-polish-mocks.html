@@ -1,0 +1,506 @@
+<title>Farcaster &amp; Bluesky — polish &amp; delight</title>
+<style>
+  :root {
+    --page: #0a0b0f;
+    --ink: #f2f4f8;
+    --muted: #99a1b4;
+    --faint: #626b80;
+    --tint: #2461ff;
+    --tint-wash: #3a76ff;
+    --fc: #855dcd;          /* Farcaster's real brandHue */
+    --bsky: #0285ff;        /* Bluesky's real brandHue */
+    --confirm: #32d74b;
+    --attention: #ff9f0a;
+    --card: #16181f;
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body {
+    font-family: var(--text); color: var(--ink);
+    background:
+      radial-gradient(900px 420px at 18% -8%, rgba(133, 93, 205, .12), transparent 62%),
+      var(--page);
+    padding: 48px 28px 72px;
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; }
+
+  header { max-width: 800px; margin-bottom: 14px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: var(--fc); margin-bottom: 10px; }
+  h1 {
+    font-size: clamp(26px, 3.6vw, 38px); font-weight: 800;
+    letter-spacing: -.02em; line-height: 1.08; text-wrap: balance; margin-bottom: 14px;
+  }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 68ch; }
+  header p b { color: var(--ink); font-weight: 600; }
+  header p + p { margin-top: 10px; }
+
+  .sectionTitle {
+    font-size: 20px; font-weight: 800; letter-spacing: -.01em;
+    margin: 48px 0 6px; padding-top: 26px;
+  }
+  .sectionSub { font-size: 13.5px; color: var(--muted); margin-bottom: 26px; max-width: 70ch; line-height: 1.55; }
+
+  .row {
+    display: flex; flex-wrap: wrap; gap: 34px;
+    align-items: flex-start; justify-content: center; margin-bottom: 20px;
+  }
+  .option { width: 316px; }
+  .phone {
+    width: 316px; border-radius: 44px; padding: 9px; background: #16181d;
+    box-shadow: 0 30px 70px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.4);
+  }
+  .screen {
+    border-radius: 36px; overflow: hidden; background: #000;
+    position: relative; padding: 18px 16px 22px; min-height: 580px;
+  }
+  .screen.washFC {
+    background: linear-gradient(180deg, rgba(133,93,205,.28) 0%, rgba(133,93,205,.06) 22%, #000 42%), #000;
+  }
+  .screen.washBsky {
+    background: linear-gradient(180deg, rgba(2,133,255,.26) 0%, rgba(2,133,255,.06) 22%, #000 42%), #000;
+  }
+  .caption { margin-top: 20px; padding: 0 6px; }
+  .caption h2 { font-size: 17px; font-weight: 700; letter-spacing: -.01em; margin-bottom: 6px; }
+  .caption h2 span { color: var(--faint); font-weight: 600; }
+  .caption p { font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+  .badge {
+    display: inline-block; margin-top: 9px; font-size: 11px; font-weight: 700;
+    padding: 3px 9px; border-radius: 999px;
+  }
+  .badge.bad { color: #ff8080; background: rgba(255,80,80,.14); }
+  .badge.good { color: var(--confirm); background: rgba(50,215,75,.14); }
+
+  /* ---------- room chrome ---------- */
+  .roomCap { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 10px; }
+  .roomCap span { color: var(--faint); }
+
+  .roster { display: flex; gap: 13px; overflow: hidden; margin-bottom: 16px; padding: 3px 0 2px; }
+  .slot { width: 54px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .avatar {
+    width: 44px; height: 44px; border-radius: 50%; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: #fff;
+  }
+  .avatar.ring::after {
+    content: ""; position: absolute; inset: -3px; border-radius: 50%;
+    border: 2px solid var(--fc);
+  }
+  .avatar.ring.breathe::after { animation: breathe 2.6s ease-in-out infinite; }
+  @keyframes breathe {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50%     { opacity: .55; transform: scale(1.06); }
+  }
+  .av1 { background: linear-gradient(135deg, #ff6482, #c23a5c); }
+  .av2 { background: linear-gradient(135deg, #4d8f43, #2e5c28); }
+  .av3 { background: linear-gradient(135deg, #5e9eff, #2461ff); }
+  .av4 { background: linear-gradient(135deg, #f5a623, #c9781a); }
+  .av5 { background: linear-gradient(135deg, #9b7bff, #6448c9); }
+  .slot .nm { font-size: 10px; color: var(--muted); font-weight: 600; }
+
+  .posts { display: flex; flex-direction: column; gap: 13px; }
+  .post { background: var(--card); border-radius: 14px; padding: 12px 13px; }
+  .phead { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .pav {
+    width: 24px; height: 24px; border-radius: 50%; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9.5px; font-weight: 700; color: #fff;
+  }
+  .pname { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+  .ptime { margin-left: auto; font-size: 11px; color: var(--faint); }
+  .ptext { font-size: 13.5px; line-height: 1.45; }
+  .ptext.clamped { color: var(--ink); }
+  .why {
+    font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 999px;
+    background: rgba(133,93,205,.18); color: #b79aef;
+  }
+  .why.bsky { background: rgba(2,133,255,.18); color: #7abaff; }
+  .why.like { background: rgba(255,100,130,.16); color: #ff8fa6; }
+
+  /* replying-to + quote inside a card */
+  .replyTo {
+    font-size: 11px; color: var(--faint); margin-bottom: 5px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .quoteIn {
+    margin-top: 9px; padding: 9px 10px; border-radius: 11px;
+    background: rgba(255,255,255,.045);
+  }
+  .quoteIn .qh { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .quoteIn .qav { width: 16px; height: 16px; border-radius: 50%; flex: none; }
+  .quoteIn .qn { font-size: 10.5px; font-weight: 600; color: var(--muted); }
+  .quoteIn .qt { font-size: 12px; line-height: 1.4; color: var(--muted); }
+
+  .imggrid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; border-radius: 11px; overflow: hidden; margin-top: 9px; }
+  .imggrid .cell { height: 58px; }
+  .i1 { background: linear-gradient(140deg,#3a2f4d,#5c4a7a 60%,#241d33); }
+  .i2 { background: linear-gradient(140deg,#4d3b2a,#7a5c38 60%,#3d2f22); }
+  .i3 { background: linear-gradient(140deg,#2a4d3a,#3f8a5f 60%,#1e3627); }
+  .i4 { background: linear-gradient(140deg,#2a3a4d,#3f6b8a 60%,#1e2a36); }
+
+  .more { font-size: 11.5px; font-weight: 600; color: var(--fc); margin-top: 6px; }
+
+  /* ---------- delight ---------- */
+  .toast {
+    position: absolute; left: 16px; right: 16px; bottom: 78px;
+    background: rgba(28,30,38,.94); border-radius: 16px; padding: 11px 13px;
+    display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 12px 34px rgba(0,0,0,.6);
+    animation: toastIn .5s cubic-bezier(.32,.72,0,1) backwards;
+  }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(16px) scale(.97); } }
+  .toast .tIcon {
+    width: 30px; height: 30px; border-radius: 50%; flex: none;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+  .toast .tTxt { font-size: 12.5px; line-height: 1.35; }
+  .toast .tTxt b { font-weight: 700; }
+  .toast .tTxt span { display: block; font-size: 10.5px; color: var(--faint); margin-top: 1px; }
+
+  .berries { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .berry {
+    position: absolute; width: 9px; height: 9px; border-radius: 50%;
+    animation: fall 3.4s linear infinite;
+  }
+  @keyframes fall {
+    from { transform: translateY(-24px) rotate(0deg); opacity: 0; }
+    12%  { opacity: 1; }
+    to   { transform: translateY(560px) rotate(300deg); opacity: 0; }
+  }
+
+  .crossCard {
+    background: linear-gradient(135deg, rgba(133,93,205,.30), rgba(133,93,205,.10));
+    border-radius: 14px; padding: 13px; margin-bottom: 13px;
+  }
+  .crossCard .cc1 { font-size: 12.5px; font-weight: 700; margin-bottom: 7px; }
+  .crossFaces { display: flex; align-items: center; gap: 6px; }
+  .crossFaces .cf {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: #fff;
+  }
+  .crossFaces .arrow { font-size: 13px; color: var(--muted); }
+  .crossCard .cc2 { font-size: 11.5px; color: var(--muted); margin-top: 8px; line-height: 1.4; }
+
+  /* ---------- moves ---------- */
+  .shared { max-width: 980px; margin: 40px auto 0; }
+  .shared h3 { font-size: 16px; font-weight: 800; margin-bottom: 6px; }
+  .shared .h3sub { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
+  .moves {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px; margin-bottom: 26px;
+  }
+  .move { background: rgba(255,255,255,.035); border-radius: 16px; padding: 14px 16px; }
+  .move b { display: block; font-size: 13.5px; font-weight: 700; margin-bottom: 5px; }
+  .move p { font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+  .move code { font-family: ui-monospace, monospace; font-size: 11.5px; color: #b79aef; }
+  .move .cost { display: block; margin-top: 7px; font-size: 11.5px; color: var(--faint); }
+  .law { font-size: 12.5px; line-height: 1.6; color: var(--faint); max-width: 78ch; }
+  .law b { color: var(--muted); font-weight: 600; }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · Farcaster &amp; Bluesky</div>
+  <h1>The room reads 80 characters of every post</h1>
+  <p>Two real findings from the code, before any taste is involved. <b>One:</b> <code>PostCard</code> renders <code>thing.title</code> — which is <code>titleLine()</code>'s hard 80-character clamp — while <code>postText</code>, the full post captured since §81, sits on the model unused. Every post longer than a tweet ends in an ellipsis you can only escape by opening a sheet.</p>
+  <p><b>Two:</b> the room drops the WHY. <code>contextLabel</code> ("Liked", "/design", "Mentions you") renders in <code>BandRow</code> — the <b>All</b> feed — but not in <code>PostCard</code>. So All is more informative about a post than the post's own room, and a quote-post reads there as the bare contextless line §81 already fixed once for the sheet.</p>
+</header>
+
+<div class="sectionTitle">The room</div>
+<div class="sectionSub">Same data, same components. Left is what ships today; right is what the record already supports.</div>
+
+<div class="row">
+
+  <!-- ============ TODAY ============ -->
+  <div class="option">
+    <div class="phone"><div class="screen">
+      <div class="roomCap">Farcaster <span>· 12 people, 3 channels</span></div>
+      <div class="roster">
+        <div class="slot"><div class="avatar av1 ring">JM</div><div class="nm">jesse</div></div>
+        <div class="slot"><div class="avatar av2">dwr</div><div class="nm">dwr</div></div>
+        <div class="slot"><div class="avatar av3 ring">VB</div><div class="nm">vitalik</div></div>
+        <div class="slot"><div class="avatar av4">LP</div><div class="nm">linda</div></div>
+        <div class="slot"><div class="avatar av5">+8</div><div class="nm">more</div></div>
+      </div>
+      <div class="posts">
+        <div class="post">
+          <div class="phead"><div class="pav" style="background:#5e9eff">VB</div><div class="pname">vitalik</div><div class="ptime">2h</div></div>
+          <div class="ptext">the thing people keep missing about rollup fee markets is that the data cost and the proof cost move on comple…</div>
+        </div>
+        <div class="post">
+          <div class="phead"><div class="pav" style="background:#ff6482">JM</div><div class="pname">jesse</div><div class="ptime">5h</div></div>
+          <div class="ptext">completely agree with this — we've been saying the same thing internally for months and it's finally starti…</div>
+        </div>
+        <div class="post">
+          <div class="phead"><div class="pav" style="background:#f5a623">LP</div><div class="pname">linda</div><div class="ptime">1d</div></div>
+          <div class="ptext">devconnect recap — four days, way too many cortados, and a genuinely good hallway track. writing up the lon…</div>
+          <div class="imggrid"><div class="cell i1"></div><div class="cell i2"></div><div class="cell i3"></div><div class="cell i4"></div></div>
+        </div>
+      </div>
+    </div></div>
+    <div class="caption">
+      <h2>Today <span>— three ellipses, no context</span></h2>
+      <p>Every post cut at 80 characters. Jesse's post is a reply — you can't tell to whom. Vitalik's came from /ethereum. Linda's is the only one you can actually read, because it's mostly pictures.</p>
+      <span class="badge bad">the words are the content</span>
+    </div>
+  </div>
+
+  <!-- ============ IMPROVED ============ -->
+  <div class="option">
+    <div class="phone"><div class="screen washFC">
+      <div class="roomCap">Farcaster <span>· 12 people, 3 channels</span></div>
+      <div class="roster">
+        <div class="slot"><div class="avatar av1 ring breathe">JM</div><div class="nm">jesse</div></div>
+        <div class="slot"><div class="avatar av2">dwr</div><div class="nm">dwr</div></div>
+        <div class="slot"><div class="avatar av3 ring breathe">VB</div><div class="nm">vitalik</div></div>
+        <div class="slot"><div class="avatar av4">LP</div><div class="nm">linda</div></div>
+        <div class="slot"><div class="avatar av5">+8</div><div class="nm">more</div></div>
+      </div>
+      <div class="posts">
+        <div class="post">
+          <div class="phead">
+            <div class="pav" style="background:#5e9eff">VB</div><div class="pname">vitalik</div>
+            <div class="why">/ethereum</div>
+            <div class="ptime">2h</div>
+          </div>
+          <div class="ptext">the thing people keep missing about rollup fee markets is that the data cost and the proof cost move on completely different curves. one is a commodity auction, the other is amortized R&amp;D.</div>
+        </div>
+        <div class="post">
+          <div class="phead">
+            <div class="pav" style="background:#ff6482">JM</div><div class="pname">jesse</div>
+            <div class="ptime">5h</div>
+          </div>
+          <div class="replyTo">↩ Replying to @vitalik</div>
+          <div class="ptext">completely agree — we've been saying this internally for months and it's finally starting to show up in the numbers.</div>
+          <div class="quoteIn">
+            <div class="qh"><div class="qav" style="background:#5e9eff"></div><div class="qn">vitalik</div></div>
+            <div class="qt">the thing people keep missing about rollup fee markets is that the data cost…</div>
+          </div>
+        </div>
+        <div class="post">
+          <div class="phead">
+            <div class="pav" style="background:#f5a623">LP</div><div class="pname">linda</div>
+            <div class="why like">Liked</div>
+            <div class="ptime">1d</div>
+          </div>
+          <div class="ptext">devconnect recap — four days, way too many cortados, and a genuinely good hallway track. writing up the long version this weekend.</div>
+          <div class="imggrid"><div class="cell i1"></div><div class="cell i2"></div><div class="cell i3"></div><div class="cell i4"></div></div>
+        </div>
+      </div>
+    </div></div>
+    <div class="caption">
+      <h2>Improved <span>— the post, and why it's here</span></h2>
+      <p>Full <code>postText</code> at 6 lines with a "more" tap. The <code>contextLabel</code> the All feed already shows moves into the card. A quote renders inline; a reply says who it answers. The room wears Farcaster's own <code>brandHue</code>.</p>
+      <span class="badge good">all four fields already on the model</span>
+    </div>
+  </div>
+
+  <!-- ============ BLUESKY, SAME GRAMMAR ============ -->
+  <div class="option">
+    <div class="phone"><div class="screen washBsky">
+      <div class="roomCap">Bluesky <span>· 24 people, 2 feeds</span></div>
+      <div class="roster">
+        <div class="slot"><div class="avatar av3 ring breathe" style="--fc:#0285ff">SF</div><div class="nm">saskia</div></div>
+        <div class="slot"><div class="avatar av1">OW</div><div class="nm">olivia</div></div>
+        <div class="slot"><div class="avatar av2">CJ</div><div class="nm">cj</div></div>
+        <div class="slot"><div class="avatar av4">DL</div><div class="nm">darrin</div></div>
+        <div class="slot"><div class="avatar av5">+20</div><div class="nm">more</div></div>
+      </div>
+      <div class="posts">
+        <div class="post">
+          <div class="phead">
+            <div class="pav" style="background:#5e9eff">SF</div><div class="pname">saskia</div>
+            <div class="why bsky">Science</div>
+            <div class="ptime">40m</div>
+          </div>
+          <div class="ptext">spent the morning rebuilding the particle sim in pure canvas and it runs 4× faster than the WebGL version did. sometimes the boring tool wins.</div>
+        </div>
+        <div class="post">
+          <div class="phead">
+            <div class="pav" style="background:#ff6482">OW</div><div class="pname">olivia</div>
+            <div class="why bsky" style="background:rgba(255,159,10,.16);color:#ffc06a">Mentions you</div>
+            <div class="ptime">3h</div>
+          </div>
+          <div class="ptext">@you this is the piece I mentioned — the section on perceptual color is worth the whole read.</div>
+        </div>
+      </div>
+      <div class="toast">
+        <div class="tIcon" style="background:rgba(2,133,255,.2)">🔵</div>
+        <div class="tTxt"><b>Olivia mentioned you</b><span>Bluesky · just now</span></div>
+      </div>
+      <div class="berries">
+        <div class="berry" style="left:12%;background:#0285ff;animation-delay:0s"></div>
+        <div class="berry" style="left:34%;background:#5eb0ff;animation-delay:.5s"></div>
+        <div class="berry" style="left:58%;background:#0285ff;animation-delay:1.1s"></div>
+        <div class="berry" style="left:79%;background:#8ccaff;animation-delay:1.7s"></div>
+      </div>
+    </div></div>
+    <div class="caption">
+      <h2>One grammar, two networks <span>— plus a moment</span></h2>
+      <p>Same card, Bluesky's blue. A mention is the highest-signal social event there is and today it lands silently — this fires <code>SourceMoments</code>, which already deals the berry rain and a tinted toast for wallet highs and quiet returns.</p>
+      <span class="badge good">reuses the existing delight bus</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="sectionTitle">Delight the corpus can uniquely earn</div>
+<div class="sectionSub">Casberi holds both networks and both graphs at once. These are moments no single-network client can notice.</div>
+
+<div class="row">
+
+  <div class="option">
+    <div class="phone"><div class="screen washFC">
+      <div class="roomCap">Farcaster <span>· 12 people</span></div>
+      <div class="crossCard">
+        <div class="cc1">Two people you watch are talking</div>
+        <div class="crossFaces">
+          <div class="cf" style="background:linear-gradient(135deg,#ff6482,#c23a5c)">JM</div>
+          <div class="arrow">↔</div>
+          <div class="cf" style="background:linear-gradient(135deg,#5e9eff,#2461ff)">VB</div>
+        </div>
+        <div class="cc2">jesse replied to vitalik about rollup fees.</div>
+      </div>
+      <div class="posts">
+        <div class="post">
+          <div class="phead"><div class="pav" style="background:#ff6482">JM</div><div class="pname">jesse</div><div class="ptime">5h</div></div>
+          <div class="replyTo">↩ Replying to @vitalik</div>
+          <div class="ptext">completely agree — we've been saying this internally for months and it's finally showing up in the numbers.</div>
+        </div>
+        <div class="post">
+          <div class="phead"><div class="pav" style="background:#5e9eff">VB</div><div class="pname">vitalik</div><div class="why">/ethereum</div><div class="ptime">2h</div></div>
+          <div class="ptext">the thing people keep missing about rollup fee markets is that the data cost and the proof cost move on completely different curves.</div>
+        </div>
+      </div>
+    </div></div>
+    <div class="caption">
+      <h2>The crossing <span>— only a corpus sees this</span></h2>
+      <p>Two accounts you watch, in conversation with each other. Detectable entirely offline: a landed post's <code>parent.ref</code> or <code>quote.ref</code> resolving to another watched handle. No new network read at all.</p>
+      <span class="badge good">zero requests — pure corpus join</span>
+    </div>
+  </div>
+
+  <div class="option">
+    <div class="phone"><div class="screen washBsky">
+      <div class="roomCap">Bluesky <span>· following 34 new people</span></div>
+      <div class="roster">
+        <div class="slot"><div class="avatar av1">SF</div><div class="nm">saskia</div></div>
+        <div class="slot"><div class="avatar av2">OW</div><div class="nm">olivia</div></div>
+        <div class="slot"><div class="avatar av3">CJ</div><div class="nm">cj</div></div>
+        <div class="slot"><div class="avatar av4">DL</div><div class="nm">darrin</div></div>
+        <div class="slot"><div class="avatar av5">+30</div><div class="nm">more</div></div>
+      </div>
+      <div class="posts">
+        <div class="post" style="opacity:.35"><div class="phead"><div class="pav" style="background:#333"></div><div class="pname">&nbsp;</div></div><div class="ptext" style="color:#333">▂▂▂▂▂▂▂▂▂▂▂▂▂▂</div></div>
+        <div class="post" style="opacity:.25"><div class="phead"><div class="pav" style="background:#333"></div><div class="pname">&nbsp;</div></div><div class="ptext" style="color:#333">▂▂▂▂▂▂▂▂▂</div></div>
+      </div>
+      <div class="toast">
+        <div class="tIcon" style="background:rgba(2,133,255,.2)">🎉</div>
+        <div class="tTxt"><b>34 people just landed</b><span>Design and Art Folk · reading their posts now</span></div>
+      </div>
+      <div class="berries">
+        <div class="berry" style="left:8%;background:#0285ff;animation-delay:0s"></div>
+        <div class="berry" style="left:22%;background:#8ccaff;animation-delay:.3s"></div>
+        <div class="berry" style="left:41%;background:#0285ff;animation-delay:.7s"></div>
+        <div class="berry" style="left:57%;background:#5eb0ff;animation-delay:1s"></div>
+        <div class="berry" style="left:71%;background:#0285ff;animation-delay:1.4s"></div>
+        <div class="berry" style="left:88%;background:#8ccaff;animation-delay:1.8s"></div>
+      </div>
+    </div></div>
+    <div class="caption">
+      <h2>The pack landing <span>— 34 at once</span></h2>
+      <p>Following a starter pack is the biggest single act in the whole social flow and today it returns a silent count. The roster fills in, the rain falls in Bluesky's blue, and the first sync paints in behind it.</p>
+      <span class="badge good">the moment already exists, unspent</span>
+    </div>
+  </div>
+
+  <div class="option">
+    <div class="phone"><div class="screen washFC">
+      <div class="roomCap">vitalik.eth <span>· their room</span></div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <div class="avatar av3" style="width:56px;height:56px;font-size:18px">VB</div>
+        <div>
+          <div style="font-size:17px;font-weight:700">vitalik.eth</div>
+          <div style="font-size:11.5px;color:var(--faint)">Farcaster · watched 8 months</div>
+        </div>
+      </div>
+      <div class="crossCard" style="background:linear-gradient(135deg,rgba(133,93,205,.26),rgba(133,93,205,.08))">
+        <div class="cc1">Eight months of vitalik</div>
+        <div style="display:flex;gap:3px;align-items:flex-end;height:38px;margin-top:8px">
+          <div style="flex:1;height:40%;background:var(--fc);border-radius:2px;opacity:.5"></div>
+          <div style="flex:1;height:65%;background:var(--fc);border-radius:2px;opacity:.6"></div>
+          <div style="flex:1;height:30%;background:var(--fc);border-radius:2px;opacity:.5"></div>
+          <div style="flex:1;height:85%;background:var(--fc);border-radius:2px;opacity:.8"></div>
+          <div style="flex:1;height:50%;background:var(--fc);border-radius:2px;opacity:.6"></div>
+          <div style="flex:1;height:100%;background:var(--fc);border-radius:2px"></div>
+          <div style="flex:1;height:45%;background:var(--fc);border-radius:2px;opacity:.6"></div>
+          <div style="flex:1;height:70%;background:var(--fc);border-radius:2px;opacity:.7"></div>
+        </div>
+        <div class="cc2">Busiest in March. 4 onchain moves alongside.</div>
+      </div>
+      <div class="posts">
+        <div class="post">
+          <div class="phead"><div class="pav" style="background:#5e9eff">VB</div><div class="pname">vitalik</div><div class="ptime">2h</div></div>
+          <div class="ptext">the thing people keep missing about rollup fee markets…</div>
+        </div>
+      </div>
+    </div></div>
+    <div class="caption">
+      <h2>The person room earns a head <span>— their rhythm</span></h2>
+      <p>The room I just built opens straight into rows. A person you've watched for months has a shape — when they post, when they went quiet — drawn from <code>capturedAt</code> alone, the same read the GitHub heatmap already does.</p>
+      <span class="badge good">no new data, just a read</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="shared">
+  <h3>What I'd build</h3>
+  <div class="h3sub">Ordered by payoff per unit of risk. The first three are corrections, not additions — the record already holds what they show.</div>
+  <div class="moves">
+    <div class="move">
+      <b>1 · The post, in full</b>
+      <p><code>PostCard</code> reads <code>postText</code> instead of the 80-char <code>title</code>, clamped to ~6 lines with a "more" affordance. The single biggest change to how the room reads.</p>
+      <span class="cost">One field swap + a line clamp.</span>
+    </div>
+    <div class="move">
+      <b>2 · The card says why it's here</b>
+      <p><code>SocialThread.contextLabel</code> — already written, already rendering in the All feed — moves into the card as a tinted pill: <code>/design</code>, <code>Liked</code>, <code>Mentions you</code>.</p>
+      <span class="cost">Reuses an existing function verbatim.</span>
+    </div>
+    <div class="move">
+      <b>3 · Quotes and replies render in the room</b>
+      <p><code>SocialQuoteCard</code> exists and renders in the sheet; the room shows nothing. A quote-post is currently a contextless line — the exact bug §81 fixed once already, still live one surface over.</p>
+      <span class="cost">Existing component, new call site.</span>
+    </div>
+    <div class="move">
+      <b>4 · The network wears its own color</b>
+      <p><code>brandHue</code> already knows Farcaster is <code>#855dcd</code> and Bluesky <code>#0285ff</code>. The room takes the §219 media wash treatment so the two rooms stop being interchangeable grey.</p>
+      <span class="cost">Existing modifier, two sources.</span>
+    </div>
+    <div class="move">
+      <b>5 · A mention is a moment</b>
+      <p>Someone talking to you is the highest-signal event in social and it lands silently. Fires <code>SourceMoments</code> — the same bus that already rains for wallet highs and quiet returns.</p>
+      <span class="cost">One <code>fire()</code> call at the mention path.</span>
+    </div>
+    <div class="move">
+      <b>6 · The crossing</b>
+      <p>Two watched accounts in conversation. Detected offline from a landed post's <code>parent.ref</code>/<code>quote.ref</code> resolving to another watched handle — zero network reads. Nothing else on the phone can see this.</p>
+      <span class="cost">New detector; pure corpus join.</span>
+    </div>
+    <div class="move">
+      <b>7 · The pack landing</b>
+      <p>Following 34 people at once returns a silent number today. Rain in the network's hue, name the pack, let the roster fill in.</p>
+      <span class="cost">One <code>fire()</code> at the import.</span>
+    </div>
+    <div class="move">
+      <b>8 · The person room's rhythm</b>
+      <p>A posting-cadence bar row at the head of the room I just built — drawn from <code>capturedAt</code>, the same read <code>FeedHeatmap</code> already performs for GitHub.</p>
+      <span class="cost">Existing read, new head.</span>
+    </div>
+  </div>
+  <p class="law"><b>Two things I'd deliberately not do.</b> No engagement counts on the card — §219 ruled "numbers are annoyances," and a stored count is a snapshot of a moving number that would sit there going stale (the honesty rule's own example). And no unread badges or "N new since" tallies: the roster's ring already says who's new without counting at you.</p>
+</div>
+</div>

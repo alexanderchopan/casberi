@@ -1065,20 +1065,24 @@ struct FeedScreen: View {
         // delete under it); `isLive(_:)` is the Twitch broadcast set. Both,
         // in that order.
         let liveStream = visible.first { $0.isLive && isLive($0) }
-        let heatmapLabel = liveStream == nil ? FeedHeatmap.label(for: source) : nil
-        let leaderboard = liveStream == nil && heatmapLabel == nil
-            ? FeedInsight.leaderboard(source: source, things: visible) : nil
-        let distribution = liveStream == nil && heatmapLabel == nil && leaderboard == nil
-            ? FeedInsight.distribution(source: source, things: visible) : nil
-        let mosaic = liveStream == nil && heatmapLabel == nil && leaderboard == nil && distribution == nil
-            ? FeedInsight.mosaic(source: source, things: visible) : nil
-        // The social room's own head (item 5, 2026-07-27) — none of the
-        // aggregate reads above ever fire for Farcaster/Bluesky (no case
-        // names them), so this only ever competes with a live stream, which
-        // a person's own account row can't produce either.
-        let rosterAccounts: [SocialAccount] = shape == .social
+        // The social room's own head (item 5, 2026-07-27) — faces, ringed on
+        // fresh activity, beat `FeedHeatmap`'s pre-existing "Casting
+        // activity"/"Posting activity" density grid for Farcaster/Bluesky
+        // (corrected 2026-07-27: the grid was winning this exact priority
+        // chain silently, so the roster built for item 5 had never actually
+        // rendered — a density grid says nothing a face with a ring doesn't
+        // already say better).
+        let rosterAccounts: [SocialAccount] = liveStream == nil && shape == .social
             ? (source == "Farcaster" ? FarcasterStore.shared.socialAccounts : BlueskyStore.shared.socialAccounts)
             : []
+        let heatmapLabel = liveStream == nil && rosterAccounts.isEmpty ? FeedHeatmap.label(for: source) : nil
+        let leaderboard = liveStream == nil && heatmapLabel == nil && rosterAccounts.isEmpty
+            ? FeedInsight.leaderboard(source: source, things: visible) : nil
+        let distribution = liveStream == nil && heatmapLabel == nil && leaderboard == nil && rosterAccounts.isEmpty
+            ? FeedInsight.distribution(source: source, things: visible) : nil
+        let mosaic = liveStream == nil && heatmapLabel == nil && leaderboard == nil && distribution == nil
+            && rosterAccounts.isEmpty
+            ? FeedInsight.mosaic(source: source, things: visible) : nil
         let heroShown = liveStream != nil || heatmapLabel != nil || leaderboard != nil
             || distribution != nil || mosaic != nil || !rosterAccounts.isEmpty
         if let liveStream {

@@ -1543,6 +1543,17 @@ struct PostCard: View {
         return thing.source
     }
 
+    /// The words themselves (2026-07-27, the room's own catch-up with the
+    /// sheet's 2026-07-16 ruling): `postText` is the FULL post; `title` is
+    /// only ever `titleLine()`'s 80-character clamp, built for a row that
+    /// has no room, in a room whose entire content IS the words. Falls back
+    /// to `title` for a post landed before `postText` existed (a heal fills
+    /// it in on the next sync) — never a permalink.
+    private var words: String {
+        let full = (thing.postText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return full.isEmpty ? thing.title : full
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(spacing: DS.Space.s2) {
@@ -1556,6 +1567,18 @@ struct PostCard: View {
                     .dsText(.subhead13).fontWeight(.medium)
                     .foregroundStyle(DS.textSecondary)
                     .lineLimit(1)
+                // WHY it's here (2026-07-27) — the same `contextLabel` the
+                // All feed's `BandRow` already wears in its trailing slot,
+                // finally reaching the post's own room: "Liked", "/design",
+                // "Mentions you". Tinted the network's own `brandHue` — color
+                // lives in the tag, same place V3b already put a project's
+                // hue, never in the card itself.
+                if let why = SocialThread.contextLabel(for: thing) {
+                    Text(why)
+                        .dsText(.label12).fontWeight(.semibold)
+                        .foregroundStyle(DS.washHue(for: thing.source) ?? DS.tint)
+                        .lineLimit(1)
+                }
                 Spacer()
                 // Rows carry status (principle 6): the mark survived the
                 // .chat → .social split as a header label — the takeaway
@@ -1566,9 +1589,26 @@ struct PostCard: View {
                 }
                 LiveTimeText(date: thing.capturedAt)
             }
-            Text(thing.title)
+            // The post this one answers, above the words, where every client
+            // puts it (2026-07-27) — `ThingSheetView`'s own `replyingToRow`
+            // already earned this line in the sheet; the room never had it,
+            // so a reply to someone else read as a contextless non sequitur.
+            if let parent = thing.parent {
+                ReplyingToRow(parent: parent, source: thing.source)
+            }
+            Text(words)
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
+                // A row still has a floor: six lines reads as prose, not a
+                // wall — the tap already opens the sheet for the rest, the
+                // same convention `ExcerptRow`'s clamp keeps.
+                .lineLimit(6)
                 .fixedSize(horizontal: false, vertical: true)
+            // The post this one QUOTES (2026-07-27) — `SocialQuoteCard`
+            // already rendered in the sheet since 2026-07-16; a quote-post in
+            // the room itself read as a bare, contextless line until now.
+            if let quote = thing.quote {
+                SocialQuoteCard(card: quote, source: thing.source)
+            }
             // Every attached image shows, not just the first (item 7 of the
             // 2026-07-27 social pass) — `imageURLs` has held all of them
             // since 2026-07-16, but this row used to draw the row thumbnail
@@ -1581,6 +1621,37 @@ struct PostCard: View {
             }
         }
         .padding(.vertical, DS.Space.s2)
+    }
+}
+
+/// The post THIS one answers — "Replying to @alice", above the words
+/// (2026-07-27). The room's own copy of `ThingSheetView`'s private
+/// `replyingToRow`: same anatomy, same tap-to-walk-in-app behavior, kept
+/// separate rather than shared across the two files' different sheet-
+/// presentation contexts (the sheet already works; this doesn't touch it).
+struct ReplyingToRow: View {
+    let parent: SocialCard
+    let source: String
+    @State private var walking = false
+
+    var body: some View {
+        Button {
+            walking = true
+        } label: {
+            HStack(spacing: DS.Space.s1) {
+                Image(systemName: "arrowshape.turn.up.left")
+                    .accessibilityHidden(true)
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                Text("Replying to @\(SocialThread.shortHandle(parent.handle))")
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $walking) {
+            SocialPostSheet(post: parent, source: source)
+        }
     }
 }
 
@@ -1713,6 +1784,13 @@ struct SocialThreadCard: View {
         return head.source
     }
 
+    /// Same catch-up as `PostCard.words` (2026-07-27) — the full post, not
+    /// the row's 80-char `title`.
+    private func words(_ thing: Thing) -> String {
+        let full = (thing.postText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return full.isEmpty ? thing.title : full
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(spacing: DS.Space.s2) {
@@ -1726,21 +1804,32 @@ struct SocialThreadCard: View {
                     .dsText(.subhead13).fontWeight(.medium)
                     .foregroundStyle(DS.textSecondary)
                     .lineLimit(1)
+                if let why = SocialThread.contextLabel(for: head) {
+                    Text(why)
+                        .dsText(.label12).fontWeight(.semibold)
+                        .foregroundStyle(DS.washHue(for: head.source) ?? DS.tint)
+                        .lineLimit(1)
+                }
                 Spacer()
                 LiveTimeText(date: head.capturedAt)
+            }
+            if let parent = head.parent {
+                ReplyingToRow(parent: parent, source: head.source)
             }
             HStack(alignment: .top, spacing: DS.Space.s3) {
                 Rectangle()
                     .fill(DS.fillFaint)
                     .frame(width: 2)
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    Text(head.title)
+                    Text(words(head))
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .lineLimit(6)
                         .fixedSize(horizontal: false, vertical: true)
                     ForEach(replies.keyed) { item in
                         if item.thing.isLive {
-                            Text(item.thing.title)
+                            Text(words(item.thing))
                                 .dsText(.body17).foregroundStyle(DS.textPrimary)
+                                .lineLimit(6)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }

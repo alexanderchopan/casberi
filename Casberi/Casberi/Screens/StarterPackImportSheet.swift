@@ -177,7 +177,7 @@ struct StarterPackImportSheet: View {
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         } else {
             faceGrid
-            followButton
+            followButton(pack)
         }
     }
 
@@ -205,10 +205,10 @@ struct StarterPackImportSheet: View {
         .frame(maxHeight: .infinity)
     }
 
-    private var followButton: some View {
+    private func followButton(_ pack: BlueskyStarterPacks.Pack) -> some View {
         Button {
             DSHaptic.tap()
-            let n = BlueskyStarterPacks.followAll(members)
+            let n = BlueskyStarterPacks.followAll(members, from: pack)
             followed = n
             onImport(n)
         } label: {
