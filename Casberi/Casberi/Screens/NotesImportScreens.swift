@@ -209,6 +209,115 @@ struct NotesShareScreen: View {
     }
 }
 
+/// Bookmarks, connected — by import of the SAME file Safari and Chrome both
+/// write (prd §224). Reading List rides along as a folder inside a Safari
+/// export, so once a file's parsed, a real Reading List folder earns its
+/// own scoped button beside "All bookmarks" — a Chrome export simply never
+/// shows one, no dead promise. Two phases on purpose (unlike Day One/
+/// Journal's one-shot run): parsing never writes, so picking a scope after
+/// the fact costs nothing extra, and picking the other scope later (dedupe
+/// on URL) never doubles a row.
+struct BookmarksImportScreen: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(BridgeStore.self) private var store
+    @State private var importing = false
+    @State private var parsed: BookmarksImport.Parsed?
+    @State private var result: String?
+    @State private var resultIsError = false
+
+    @Query(bookmarksRecentDescriptor) private var recent: [Thing]
+
+    var body: some View {
+        List {
+            BridgeSetupHeader(name: "Bookmarks")
+            ImportStepsCard("Get your export", [
+                "Chrome: chrome://bookmarks → ⋮ → Export bookmarks.",
+                "Safari (Mac): File → Export Bookmarks…",
+                "Save it to Files, then pick it below.",
+            ])
+            Section {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    pickRows
+                    BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
+                    DSSlabNote(text: "One-time import — bookmarks become findable links, folders become tags. Re-importing adds only what's new.")
+                }
+            }
+            .dsSlabSection()
+            if !recent.isEmpty {
+                RecentThingsSection(header: "Imported", things: Array(recent))
+                    .listRowSeparator(.hidden)
+            }
+        }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: "Bookmarks")
+        .dsAdaptiveContentWidth()
+        .dsPageBackground()
+        .dsSoftScrollEdges()
+        .dsScreenTitle("Bookmarks")
+        .fileImporter(isPresented: $importing,
+                      allowedContentTypes: [.html]) { outcome in
+            guard case .success(let url) = outcome else { return }
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            guard let data = try? Data(contentsOf: url),
+                  let p = BookmarksImport.parse(data: data), !p.entries.isEmpty else {
+                result = String(localized: "That file isn't a bookmarks export. Pick the exported .html file.")
+                resultIsError = true
+                return
+            }
+            resultIsError = false
+            result = nil
+            parsed = p
+        }
+    }
+
+    @ViewBuilder
+    private var pickRows: some View {
+        if let parsed, parsed.readingListCount > 0 {
+            ImportPickRow(label: "Reading List only (\(parsed.readingListCount))") {
+                importScope(parsed.entries.filter(\.isReadingList))
+            }
+            ImportPickRow(label: "All bookmarks (\(parsed.entries.count))") {
+                importScope(parsed.entries)
+            }
+        } else if let parsed {
+            ImportPickRow(label: "Import \(parsed.entries.count) bookmarks") {
+                importScope(parsed.entries)
+            }
+        } else {
+            ImportPickRow(label: "Choose your bookmarks export") { importing = true }
+        }
+    }
+
+    private func importScope(_ entries: [BookmarksImport.Entry]) {
+        let summary = BookmarksImport.land(entries, context: modelContext)
+        if summary.failed {
+            resultIsError = true
+            result = String(localized: "Couldn't save those bookmarks.")
+            return
+        }
+        resultIsError = false
+        DSHaptic.success()
+        result = summary.imported > 0
+            ? "\(summary.imported) bookmarks in\(summary.skipped > 0 ? " · \(summary.skipped) already here" : "")"
+            : "Nothing new — all \(summary.skipped) bookmarks were already here."
+        let proof = summary.imported > 0 ? "\(summary.imported) bookmarks in" : "Synced just now"
+        store.registerConnected(id: "bookmarks", name: "Bookmarks", proof: proof,
+                                can: ["Imports the bookmarks you export.",
+                                      "Read-only — nothing leaves this iPhone."])
+    }
+}
+
+private let bookmarksRecentDescriptor: FetchDescriptor<Thing> = {
+    var d = FetchDescriptor<Thing>(
+        predicate: #Predicate { $0.source == "Bookmarks" },
+        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+    )
+    d.fetchLimit = 12
+    return d
+}()
+
 // MARK: - Shared rows (the import-screen grammar, extracted from ChatGPT's)
 
 struct ImportStepRow: View {

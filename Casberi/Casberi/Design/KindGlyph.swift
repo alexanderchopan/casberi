@@ -126,6 +126,7 @@ enum BridgeGlyph {
         case "notes", "apple notes": return "note.text"
         case "apple journal": return "book.closed"
         case "day one":   return "1.circle"
+        case "bookmarks": return "bookmark.fill"
         case "safari":    return "globe"
         case "github":    return "curlybraces"
         case "linear":    return "list.bullet.rectangle"

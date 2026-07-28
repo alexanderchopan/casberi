@@ -51,6 +51,7 @@ enum BridgeRouter {
         case dayOne
         case appleJournal
         case appleNotes
+        case bookmarks
         case token(TokenBridge)
         /// Every wallet transaction, day by day (2026-07-20) — the page behind
         /// the Wallet feed's "See all". Carries the feed's wallet scope so the
@@ -108,7 +109,7 @@ enum BridgeRouter {
                  .icloudMail, .gmail, .exchange,
                  .venice, .bankr, .openRouter,
                  .chatgpt, .claude, .gemini,
-                 .kindle, .dayOne, .appleJournal, .appleNotes:
+                 .kindle, .dayOne, .appleJournal, .appleNotes, .bookmarks:
                 true
             default:
                 false
@@ -157,6 +158,7 @@ enum BridgeRouter {
             case .dayOne:         "dayone"
             case .appleJournal:   "journal"
             case .appleNotes:     "notes"
+            case .bookmarks:      "bookmarks"
             case .token(let b):   b.bridgeID
             case .walletHistory(let scope): "wallethistory:\(scope ?? "all")"
             case .walletConnection: "walletconnection"
@@ -228,6 +230,7 @@ enum BridgeRouter {
         // Apple Notes never registers a seat (nothing to connect) — the row
         // exists so Connect routes to the share-path explainer (prd 55).
         Row(offer: "Apple Notes", id: "notes", destination: .appleNotes),
+        Row(offer: "Bookmarks", id: "bookmarks", destination: .bookmarks),
     ] + TokenBridge.allCases.map {
         Row(offer: $0.rawValue, id: $0.bridgeID, destination: .token($0))
     }
@@ -300,6 +303,7 @@ struct BridgeDestinationView: View {
         case .dayOne:         DayOneImportScreen()
         case .appleJournal:   JournalImportScreen()
         case .appleNotes:     NotesShareScreen()
+        case .bookmarks:      BookmarksImportScreen()
         case .token(let b):   TokenSetupScreen(bridge: b)
         case .walletHistory(let scope): WalletHistoryScreen(scope: scope)
         case .walletConnection: WalletConnectionScreen()

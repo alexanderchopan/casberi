@@ -9131,3 +9131,52 @@ underneath it would be the same news told twice, once where it can't be seen.
 Build green, both static audits green. NOT simulator-verified, per the standing
 direction — what still hasn't been seen on screen is the raise itself, the
 self-dismissal, and a watch-list sheet staying up across two adds.
+
+## 224. Bookmarks — one importer for Safari and Chrome, Reading List folded in (user, 2026-07-28)
+
+**Research first, same as §55.** Neither browser offers a live read: Safari
+has no bookmarks API at all, and Chrome's own "Export bookmarks" never
+includes its separate Reading List store (confirmed against Chrome's own
+support threads — people ask for this and are told to use Takeout or a
+third-party extension instead). So the sanctioned way in is each browser's
+own export — the §55 shape (Day One/Apple Journal/Kindle) again.
+
+**The one fact that makes this one offer, not two:** Safari's "Export
+Bookmarks…" (Mac) and Chrome's "Export bookmarks" write the SAME file —
+the Netscape Bookmark File Format. One parser, one catalog offer,
+`BookmarksImport.swift` — no per-browser screen, no per-browser source
+label. Considered and rejected: a standalone "Reading List" catalog tile,
+so a reading-list-minded Safari user finds exactly what they meant faster.
+Rejected because Reading List isn't a separate store on Safari's side
+either — it's a special `com.apple.ReadingList` folder inside the same
+Bookmarks.plist Safari exports from, so it rides along in the same file
+for free, as a folder. A standalone tile would be dead-ended the moment
+anyone picked it after a Chrome export, which has no such folder at all —
+exactly the "offer that doesn't do what it claims" the honesty rule
+elsewhere polices (§83).
+
+**The fold-in, instead:** one screen, `BookmarksImportScreen`. Parsing
+never writes (`BookmarksImport.parse`, in-memory only), so once a file's
+picked, a real "Reading List" folder earns its own scoped button —
+"Reading List only (12)" beside "All bookmarks (340)" — and a Chrome
+export, which never has one, just shows the single "Import N bookmarks"
+button. The choice is discovered from the file, never asserted by the
+screen. Dedupe is on the URL itself (`bookmark:<url>`), so importing both
+scopes across two visits, or re-importing later, never doubles a row —
+picking "Reading List" first doesn't foreclose "All bookmarks" second.
+
+Landing shape matches Day One/Journal: `.link` Things, title from the
+anchor text (falling back to the URL), `capturedAt` from `ADD_DATE`
+(epoch seconds; `Date()` when absent), tags from the live folder path —
+except the browsers' own structural containers ("Bookmarks bar", "Other
+bookmarks", "Bookmarks Menu", …), which are real folders in the file but
+never meaningful user taxonomy. "Reading List" is deliberately NOT on
+that exclusion list — it stays a real tag even on an item landed via "All
+bookmarks", so it's still findable as such either way.
+
+No brand hue: `AppIconTile.brandHue` gives Bookmarks its own neutral
+brown (`#8d6e63`), not Safari's or Chrome's color — there is no honest
+single brand here, the same reasoning that leaves X/Cal.com/ChatGPT
+without a wash. Debug: `-bookmarksImport <path>` (lands everything
+headlessly, logs `readingList=N` too — the UI's scope choice is a
+person's call, not a probe's).

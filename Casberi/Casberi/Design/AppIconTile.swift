@@ -51,6 +51,7 @@ extension DS {
         case "notes", "apple notes": return Color.fixed("#ffcc00")
         case "apple journal":       return Color.fixed("#a06ee1")   // Journal's lavender
         case "day one":             return Color.fixed("#44c0ff")   // Day One blue
+        case "bookmarks":           return Color.fixed("#8d6e63")   // a neutral bookmark-ribbon brown — no single brand here (Safari + Chrome, one file format)
         case "safari":              return Color.fixed("#1d9bf6")
         case "wallet":              return Color.fixed("#2461ff")
         case "peer":                return Color.fixed("#4b47f6")   // an indigo in their family — approximate; re-sample when bundling the official mark

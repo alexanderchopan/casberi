@@ -113,6 +113,16 @@ enum ProbeHooks {
             NSLog("Journal probe: %d imported, %d skipped, failed=%d",
                   summary.imported, summary.skipped, summary.failed ? 1 : 0)
         },
+        // `-bookmarksImport <path>` imports a Netscape Bookmark File Format
+        // export (.html) from Safari or Chrome — lands ALL entries headlessly
+        // (the UI's Reading-List-only split is a person's choice, not a probe's).
+        Hook(key: "bookmarksImport") { path, context in
+            guard let data = FileManager.default.contents(atPath: path),
+                  let parsed = BookmarksImport.parse(data: data) else { return }
+            let summary = BookmarksImport.land(parsed.entries, context: context)
+            NSLog("Bookmarks probe: %d imported, %d skipped, failed=%d, readingList=%d",
+                  summary.imported, summary.skipped, summary.failed ? 1 : 0, parsed.readingListCount)
+        },
         // `-tokenBridge "<Name>:<token>"` connects a token bridge headlessly.
         Hook(key: "tokenBridge") { spec, context in
             guard let colon = spec.firstIndex(of: ":"),
