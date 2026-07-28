@@ -16,9 +16,16 @@
 				<true/>
 				<key>NSExtensionActivationSupportsWebURLWithMaxCount</key>
 				<integer>1</integer>
+				<key>NSExtensionActivationSupportsWebPageWithMaxCount</key>
+				<integer>1</integer>
 				<key>NSExtensionActivationSupportsImageWithMaxCount</key>
 				<integer>1</integer>
 			</dict>
+			<!-- Runs SharePreprocessor.js in the page when the share comes
+			     from Safari, so the extension gets the article's own title
+			     and readable text at share time — see that file's header. -->
+			<key>NSExtensionJavaScriptPreprocessingFile</key>
+			<string>SharePreprocessor</string>
 		</dict>
 	</dict>
 </dict>

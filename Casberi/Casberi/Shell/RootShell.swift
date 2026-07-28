@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 import CoreSpotlight
 import WidgetKit
+import UIKit
 
 /// The shell (2026-07-13, drastic restructure: no tabs). `MainSurface` is the
 /// one destination — a fixed chip header over a body that swaps between the
@@ -471,6 +472,15 @@ struct RootShell: View {
             // of silently showing an empty/unsynced corpus.
             if let reason = SharedStore.degradeReason {
                 chrome.flash(reason, tone: .failure, seconds: 4)
+            }
+            // Sync freshness (2026-07-28): CloudKit mirroring otherwise only
+            // catches up on foreground — its silent push has nowhere to land
+            // without a device token. This just asks for one; no alert/sound/
+            // badge is requested and nothing is ever shown to the person
+            // (Casberi never interrupts, by ruling) — it only lets a save on
+            // another device reach this one sooner than the next launch.
+            if SharedStore.cloudSyncActive {
+                UIApplication.shared.registerForRemoteNotifications()
             }
             #if DEBUG
             // Perf pass: log init→ready (first content appearance) once per

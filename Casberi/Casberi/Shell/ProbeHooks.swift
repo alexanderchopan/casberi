@@ -1358,12 +1358,26 @@ enum ProbeHooks {
         // anywhere). On the sim the store is empty: expect "0 in".
         Hook(key: "connectStrava") { _, context in
             Task { @MainActor in
-                guard let n = await HealthIngest.connectAndIngest(
+                guard let r = await HealthIngest.connectAndIngest(
                     context: context, healthOn: false, stravaOn: true,
                     counting: "Strava") else {
                     NSLog("Strava probe: FAILED (Health unavailable)"); return
                 }
-                NSLog("Strava probe: connected, %d in", n)
+                NSLog("Strava probe: connected, %d in%@", r.added,
+                      r.likelyBlocked ? " (access may be off)" : "")
+            }
+        },
+        // `-connectHealth YES` runs the plain Apple Health connect — workouts,
+        // sleep, and (iOS 18+) State of Mind reflections, the same read
+        // `-connectStrava` shares filtered the other way. On the sim the
+        // store is usually empty: expect "0 in".
+        Hook(key: "connectHealth") { _, context in
+            Task { @MainActor in
+                guard let r = await HealthIngest.connectAndIngest(context: context) else {
+                    NSLog("Health probe: FAILED (Health unavailable)"); return
+                }
+                NSLog("Health probe: connected, %d in%@", r.added,
+                      r.likelyBlocked ? " (access may be off)" : "")
             }
         },
         // `-ghFeeds "stars,releases,gists"` sets which GitHub feeds are on

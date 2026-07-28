@@ -31,15 +31,16 @@ final class ShareViewController: UIViewController {
             let providers = item.attachments
         else { return false }
 
+        // Safari's JS preprocessing result (`SharePreprocessor.js`), when the
+        // share came from a web page — a separate attachment alongside the
+        // URL one, so it's read up front rather than inside the URL branch.
+        let pageInfo = await loadPageInfo(from: providers)
+
         for provider in providers {
             // URL first — the richer capture.
             if provider.hasItemConformingToTypeIdentifier(UTType.url.identifier),
                let url = try? await provider.loadItem(forTypeIdentifier: UTType.url.identifier) as? URL {
-                let title = (item.attributedContentText?.string).flatMap {
-                    $0.isEmpty ? nil : $0
-                } ?? url.host()?.replacingOccurrences(of: "www.", with: "") ?? url.absoluteString
-                return insert(Thing(kind: .link, title: title,
-                                    content: url.absoluteString, source: "You"))
+                return insert(linkThing(for: url, item: item, pageInfo: pageInfo))
             }
             if provider.hasItemConformingToTypeIdentifier(UTType.plainText.identifier),
                let text = try? await provider.loadItem(forTypeIdentifier: UTType.plainText.identifier) as? String,
@@ -52,6 +53,47 @@ final class ShareViewController: UIViewController {
             }
         }
         return false
+    }
+
+    /// The saved URL, named the way the original path always was
+    /// (`attributedContentText` → the page's own title → the bare host), now
+    /// also carrying the page's readable text when Safari ran our
+    /// preprocessing script — nil `enrichedText` when it didn't (another
+    /// app's share, or a non-web source), same as any other link.
+    private func linkThing(for url: URL, item: NSExtensionItem, pageInfo: [String: Any]?) -> Thing {
+        let selectedText = (item.attributedContentText?.string).flatMap { $0.isEmpty ? nil : $0 }
+        let pageTitle = (pageInfo?["title"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let title = selectedText
+            ?? (pageTitle?.isEmpty == false ? pageTitle : nil)
+            ?? url.host()?.replacingOccurrences(of: "www.", with: "")
+            ?? url.absoluteString
+        let thing = Thing(kind: .link, title: title, content: url.absoluteString, source: "You")
+        let article = (pageInfo?["articleText"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let excerpt = (pageInfo?["excerpt"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let body = [excerpt, article].compactMap { $0 }.first { !$0.isEmpty } ?? ""
+        if body.count >= 40 {
+            thing.enrichedText = String(body.prefix(1200))
+        }
+        return thing
+    }
+
+    /// Reads `SharePreprocessor.js`'s completion payload — a `public
+    /// property list` attachment Safari adds alongside the URL/text one when
+    /// the share came from a web page. nil when it didn't run (a share from
+    /// another app, or from a source with no page context).
+    private func loadPageInfo(from providers: [NSItemProvider]) async -> [String: Any]? {
+        for provider in providers {
+            guard provider.hasItemConformingToTypeIdentifier(UTType.propertyList.identifier),
+                  let wrapper = try? await provider.loadItem(
+                      forTypeIdentifier: UTType.propertyList.identifier) as? NSDictionary,
+                  // Hardcoded rather than the SDK constant: it lives in a
+                  // framework this target doesn't otherwise need to import,
+                  // and the string is stable, documented Apple API.
+                  let results = wrapper["NSExtensionJavaScriptPreprocessingResultsKey"] as? [String: Any]
+            else { continue }
+            return results
+        }
+        return nil
     }
 
     private func insert(_ thing: Thing) -> Bool {
