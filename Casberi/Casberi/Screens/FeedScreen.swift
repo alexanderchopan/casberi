@@ -227,12 +227,33 @@ struct FeedScreen: View {
     /// One rule (`Corpus.surfaced`), shared with Home's synthesis.
     private var feedThings: [Thing] { Corpus.surfaced(things) }
 
-    private var visible: [Thing] {
+    private func liveVisible() -> [Thing] {
         feedThings.filter { thing in
             (source == "All" || thing.source == source)
                 && (filter.tag == "All" || thing.tags.contains(filter.tag))
                 && walletScopeAllows(thing)
         }
+    }
+
+    /// Debounced snapshot for the unfiltered All room only (perf, 2026-07-28).
+    /// A foreground refresh fires ~30 independent bridge saves (`BridgeRefresh`),
+    /// each re-firing every `@Query` whose predicate could match — every
+    /// per-source page is shielded from an unrelated bridge's save by its own
+    /// `source ==` predicate (2026-07-21 perf audit, see `things`' doc above),
+    /// but the All room's `@Query` is unfiltered by design (it genuinely shows
+    /// everything), so it alone re-runs the WHOLE render chain — bundling,
+    /// day-grouping, the corpus treemap — once per save instead of once per
+    /// pull. Every downstream reader already re-filters `.isLive` before
+    /// touching a stored property (`daySection`'s COROLLARY 2 guard), so a
+    /// snapshot that's briefly behind the live corpus is safe: a thing deleted
+    /// in the gap just doesn't repaint until the next settle, same as it
+    /// wouldn't mid-transaction today. The FIRST population is instant (no
+    /// debounce) so opening the All room never shows a blank beat.
+    @State private var debouncedAllSnapshot: [Thing]?
+    private var visible: [Thing] {
+        let live = liveVisible()
+        guard source == "All", filter.tag == "All" else { return live }
+        return debouncedAllSnapshot ?? live
     }
 
     /// The Wallet feed's per-wallet scope (prd §128) — everything passes in
@@ -584,16 +605,21 @@ struct FeedScreen: View {
     /// totals too, instead of rebuilding the whole chain here a second time.
     private func bundle(_ days: [(String, [Thing])]) -> [(String, [FeedRow])] {
         days.map { label, dayThings in
-            var counts: [String: Int] = [:]
-            for t in dayThings where bundleable(t) { counts[t.source, default: 0] += 1 }
-            let bundledSources = Set(counts.filter { $0.value >= 3 }.keys)
+            // Grouped ONCE per day (perf, 2026-07-28): the old version
+            // re-filtered the whole day for every bundled source it found
+            // (O(day size²) — a heavy sync day with several bundled sources
+            // multiplied its own count against itself). Same membership,
+            // built with one pass instead of one pass per source.
+            var bySource: [String: [Thing]] = [:]
+            for t in dayThings where bundleable(t) { bySource[t.source, default: []].append(t) }
+            let bundledSources = Set(bySource.filter { $0.value.count >= 3 }.keys)
             var rows: [FeedRow] = []
             var seen: Set<String> = []
             for t in dayThings {
                 if bundleable(t), bundledSources.contains(t.source) {
                     guard !seen.contains(t.source) else { continue }
                     seen.insert(t.source)
-                    let members = dayThings.filter { bundleable($0) && $0.source == t.source }
+                    let members = bySource[t.source] ?? []
                     let kinds = Set(members.map(\.kind))
                     let word = kinds.count == 1
                         ? kinds.first!.typeTagPlural.lowercased() : "things"
@@ -930,6 +956,27 @@ struct FeedScreen: View {
         // lands — chicken-and-egg). `source` is fixed per feed instance, so this
         // runs once when the GitHub feed appears; `refreshIfStale` self-guards.
         .task { if source == "GitHub" { await githubGraph.refreshIfStale() } }
+        // Drives `debouncedAllSnapshot` (see its doc above) — `.task(id:)`
+        // cancels and restarts on every `@Query` emission, so only the LAST
+        // save in a refresh burst survives its sleep and actually publishes;
+        // every emission in between is superseded before its sleep completes.
+        // `things.count` alone (not a full signature) is a deliberate choice:
+        // a pure in-place heal patch (a decoded title, a backfilled icon)
+        // doesn't change count and so won't repaint instantly here — an
+        // acceptable lag for a cosmetic fixup, and it repaints on the very
+        // next count-changing emission regardless.
+        .task(id: things.count) {
+            guard source == "All", filter.tag == "All" else { return }
+            guard debouncedAllSnapshot != nil else {
+                debouncedAllSnapshot = liveVisible()   // first paint: no delay
+                return
+            }
+            do {
+                try await Task.sleep(for: .milliseconds(250))
+            } catch { return }   // superseded by a newer emission
+            guard !Task.isCancelled else { return }
+            debouncedAllSnapshot = liveVisible()
+        }
         // The page coat moved UP to the shell (prd §159, 2026-07-21): the crown
         // pour lives in MainSurface's background so it can run behind the chip
         // strip, and painting the opaque themed coat again HERE would slide

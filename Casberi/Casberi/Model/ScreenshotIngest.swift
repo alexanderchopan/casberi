@@ -358,12 +358,40 @@ enum ScreenshotIngest {
     ///      LIMITED access nothing is removed — an unselected asset is
     ///      indistinguishable from a deleted one, and re-granting would have
     ///      brought it back.
+    ///
+    /// Single-flight, same as every other bridge's `running` guard (Bluesky/
+    /// Farcaster) — and load-bearing here for a reason those don't share:
+    /// this loop AWAITS (thumbnail/OCR) in between fetching `things` and
+    /// possibly `context.delete`-ing one of them. A second overlapping call
+    /// (an automatic scenePhase sweep landing mid pull-to-refresh, or two
+    /// quick pulls while a slow iCloud-backed thumbnail is still loading)
+    /// fetches its OWN `things` snapshot before the first call's delete
+    /// lands, then reads/deletes that same now-gone `Thing` after its own
+    /// await resumes — the exact "never touch a dead Thing" crash class
+    /// (see CLAUDE.md), just reached from Model code instead of a View.
+    @MainActor private static var healing = false
+
     @MainActor
     static func heal(context: ModelContext) async -> (thumbed: Int, ocred: Int, removed: Int) {
+        guard !healing else { return (0, 0, 0) }
+        healing = true
+        defer { healing = false }
+
         let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == "Photos" })
         // Kind filters run in memory — #Predicate can't compare Codable enums.
+        // A row with a thumbnail, an OCR attempt, and a real (non-placeholder)
+        // title can't match any branch below (each is guarded on exactly one
+        // of these being missing) — filtering it out here, before the PHAsset
+        // walk, is behavior-preserving (perf, 2026-07-28). Without this, a
+        // deliberate pull re-fetched the FULL screenshot history's PHAssets
+        // from the Photos DB every time, on the main thread, growing forever
+        // with library size even though almost every row is already healed.
         let things = ((try? context.fetch(descriptor)) ?? [])
-            .filter { $0.kind == .screenshot && $0.sourceRef != nil }
+            .filter {
+                $0.kind == .screenshot && $0.sourceRef != nil
+                    && ($0.previewImageData == nil || $0.ocrAt == nil
+                        || $0.title == ScreenshotTitle.placeholder)
+            }
         guard !things.isEmpty else { return (0, 0, 0) }
 
         let ids = things.map { $0.sourceRef!.replacingOccurrences(of: "phasset:", with: "") }

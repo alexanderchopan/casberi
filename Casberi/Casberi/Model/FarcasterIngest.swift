@@ -357,8 +357,12 @@ enum FarcasterIngest {
         resurfaced = 0
         defer { running = false }
 
-        var existing = IngestSupport.existingSourceRefs(context, source: "Farcaster")
+        // `landed`'s keys already ARE every existing ref for this source — a
+        // separate `existingSourceRefs` call used to re-fetch the exact same
+        // rows a second time just for their sourceRef column (perf,
+        // 2026-07-28), doubling the DB round trip for no new information.
         let landed = IngestSupport.thingsByRef(context, source: "Farcaster")
+        var existing = Set(landed.keys)
         let backfill = ArtlessBackfill(context, source: "Farcaster")
         var added = 0
         var touched = false
