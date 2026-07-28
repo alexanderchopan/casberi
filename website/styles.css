@@ -95,6 +95,11 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
    all (checked in the browser). */
 .ai-coinbase  { background: #0052ff; }
 .ai-kraken    { background: #fff; }
+.ai-binance   { background: #0b0e11; }   /* their near-black, own SVG carries the yellow mark */
+.ai-ethvalidators { background: #627eea; }   /* Ethereum's own brand blue-purple */
+/* Gemini Exchange's tile is .tilefull (full-bleed official app icon), so no
+   background class is needed here — see .ai-geminiexchange in AppIconTile.swift
+   for the in-app equivalent, a different rendering system with no CSS to share. */
 .ai-geckoterminal { background: #272053; }
 .ai-venice    { background: #18181b; }
 .ai-bankr     { background: #a78bfa; }

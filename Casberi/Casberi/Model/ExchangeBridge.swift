@@ -41,8 +41,21 @@ import CryptoKit
 enum ExchangeBridge {
 
     enum Venue: String, CaseIterable {
-        case kraken, coinbase
-        var display: String { self == .kraken ? "Kraken" : "Coinbase" }
+        case kraken, coinbase, binance
+        // `geminiExchange`, not `gemini` — the catalog already has an offer
+        // named "Gemini" (the Google AI chat importer, `BridgeRouting.swift`),
+        // and this is an unrelated company that happens to share the word.
+        // Disambiguated everywhere: this rawValue, the catalog offer name
+        // ("Gemini Exchange"), the seat id, and the website tile all agree.
+        case geminiExchange
+        var display: String {
+            switch self {
+            case .kraken:   "Kraken"
+            case .coinbase: "Coinbase"
+            case .binance:  "Binance"
+            case .geminiExchange: "Gemini Exchange"
+            }
+        }
         /// Where the person's key is stored (TokenVault, Keychain-backed).
         var vaultKey: String { "exchange.\(rawValue)" }
     }
@@ -290,6 +303,189 @@ enum ExchangeBridge {
             .replacingOccurrences(of: "=", with: "")
     }
 
+    // MARK: - Binance
+
+    /// Binance splits into two independent deployments — `api.binance.com`
+    /// (global) and `api.binance.us` (US persons only, its own account) —
+    /// and blocks the wrong one at the EDGE, before auth is even checked:
+    /// measured live 2026-07-27, a request to `.com` from this build host
+    /// got HTTP 451 with a Terms-of-Service message, and the identical
+    /// request to `.us` answered 200. Rather than ask which one — every
+    /// other venue here has zero picker — the host is DETECTED: try `.com`
+    /// first, fall back to `.us` on anything but 200, and remember which one
+    /// worked (`UserDefaults`, not secret, so a later launch skips the
+    /// probe).
+    ///
+    /// One endpoint does both jobs Kraken/Coinbase split into two calls:
+    /// `GET /api/v3/account` returns `canTrade`/`canWithdraw`/`canDeposit`
+    /// AND `balances` in the same signed response — confirmed byte-identical
+    /// in shape on both hosts (developers.binance.com + docs.binance.us,
+    /// 2026-07-27; the `.com`-only `/sapi/v1/account/apiRestrictions` 404s on
+    /// `.us`, which is why THIS is the check, not that one). `verifyBinance`
+    /// calls it once and discards `balances`, matching Kraken/Coinbase's
+    /// verify-before-store shape; `binanceBalances` calls it again to read.
+    private static let binanceHostKey = "exchange.binance.host"
+
+    private static func binanceHost() async -> String {
+        if let cached = UserDefaults.standard.string(forKey: binanceHostKey) { return cached }
+        let host: String
+        if let url = URL(string: "https://api.binance.com/api/v3/ping"),
+           let (_, response) = try? await URLSession.shared.data(from: url),
+           (response as? HTTPURLResponse)?.statusCode == 200 {
+            host = "https://api.binance.com"
+        } else {
+            host = "https://api.binance.us"
+        }
+        UserDefaults.standard.set(host, forKey: binanceHostKey)
+        return host
+    }
+
+    /// Binance wants a HEX HMAC-SHA256 over the exact query string sent —
+    /// Kraken's own signature is base64 over a different construction, so
+    /// this is its own function rather than a shared one.
+    private static func binanceSignature(query: String, secret: String) -> String {
+        let mac = HMAC<SHA256>.authenticationCode(
+            for: Data(query.utf8), using: SymmetricKey(data: Data(secret.utf8)))
+        return Data(mac).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func binanceAccount(key: String, secret: String) async -> [String: Any]? {
+        let host = await binanceHost()
+        let timestamp = String(Int(Date().timeIntervalSince1970 * 1000))
+        let query = "timestamp=\(timestamp)"
+        let signature = binanceSignature(query: query, secret: secret)
+        guard let url = URL(string: "\(host)/api/v3/account?\(query)&signature=\(signature)")
+        else { return nil }
+        var request = URLRequest(url: url)
+        request.setValue(key, forHTTPHeaderField: "X-MBX-APIKEY")
+        guard let (data, _) = try? await URLSession.shared.data(for: request),
+              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return nil }
+        return root
+    }
+
+    /// `canTrade`/`canWithdraw` disqualify — the two powers that can move
+    /// money out. `canDeposit` does NOT, mirroring Coinbase's `can_receive`
+    /// reasoning above: inbound can't lose anyone money, so refusing it would
+    /// only reject safe keys for no gain.
+    static func verifyBinance(key: String, secret: String) async -> KeyVerdict {
+        guard let root = await binanceAccount(key: key, secret: secret)
+        else { return .unverifiable(String(localized: "Couldn't reach Binance to check this key.")) }
+        if let code = root["code"] as? Int, code != 0 {
+            let msg = (root["msg"] as? String) ?? "Binance rejected the key check."
+            return .unverifiable(String(localized: "Binance rejected the key check: \(msg)"))
+        }
+        guard let canTrade = root["canTrade"] as? Bool,
+              let canWithdraw = root["canWithdraw"] as? Bool else {
+            return .unverifiable(String(localized: "Binance didn't say what this key can do."))
+        }
+        var disqualifying: [String] = []
+        if canTrade { disqualifying.append("trade") }
+        if canWithdraw { disqualifying.append("withdraw") }
+        return disqualifying.isEmpty ? .readOnly : .tooPowerful(disqualifying)
+    }
+
+    /// Balances, once the key has been verified. `free + locked` — a locked
+    /// balance (reserved by an open order) is still the account's own money,
+    /// the same total-holdings semantics Kraken's `Balance` endpoint already
+    /// carries here (Coinbase's `available_balance` differs because Coinbase
+    /// answers per-account rather than per-asset-with-orders).
+    static func binanceBalances(key: String, secret: String) async -> [Holding]? {
+        guard let root = await binanceAccount(key: key, secret: secret),
+              (root["code"] as? Int ?? 0) == 0,
+              let balances = root["balances"] as? [[String: Any]] else { return nil }
+        return balances.compactMap { row in
+            guard let symbol = row["asset"] as? String,
+                  let free = Double((row["free"] as? String) ?? ""),
+                  let locked = Double((row["locked"] as? String) ?? "")
+            else { return nil }
+            let amount = free + locked
+            guard amount > 0 else { return nil }
+            return Holding(symbol: symbol, amount: amount, venue: .binance)
+        }
+    }
+
+    // MARK: - Gemini Exchange
+
+    /// Gemini has a native "Auditor" API-key role — read-only by the
+    /// exchange's own design, not something this app has to reconstruct from
+    /// a bundle of booleans the way Kraken/Coinbase/Binance's checks do.
+    /// `POST /v1/roles` reports which roles the calling key holds
+    /// (`isAuditor`/`isTrader`/`isFundManager`, plus master-only fields) —
+    /// the exchange's own docs state Auditor CANNOT be combined with any
+    /// other role, so refusing on `isTrader`/`isFundManager` and admitting
+    /// otherwise is equivalent to requiring Auditor, and matches the shape
+    /// every other venue here already uses (disqualify on a detected power,
+    /// don't require a specific safe flag). Field names cross-confirmed from
+    /// developer.gemini.com's docs 2026-07-27 (no test key on hand to call
+    /// it live — like `ZerionAPI`/`PrivacyBridge`, spec-derived and due a
+    /// live re-check before this ships).
+    ///
+    /// Signing: `X-GEMINI-SIGNATURE` is a HEX HMAC-SHA384 of
+    /// `X-GEMINI-PAYLOAD`, itself the base64 of a JSON object carrying the
+    /// request path and a nonce — unlike Kraken/Binance, the params travel
+    /// ONLY in that header, so the request body stays empty
+    /// (`Content-Type: text/plain`, no query string, no JSON body).
+    private static func geminiSignature(payload: String, secret: String) -> String {
+        let mac = HMAC<SHA384>.authenticationCode(
+            for: Data(payload.utf8), using: SymmetricKey(data: Data(secret.utf8)))
+        return Data(mac).map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// Untyped on purpose: `/v1/roles` answers with a JSON OBJECT but
+    /// `/v1/balances` answers with a top-level JSON ARRAY — a typed
+    /// `[String: Any]?` return would silently fail to parse the array shape,
+    /// so each caller casts to what its own endpoint actually returns.
+    private static func geminiPost(_ path: String, key: String, secret: String) async -> Any? {
+        let nonce = String(Int(Date().timeIntervalSince1970 * 1000))
+        let payloadJSON: [String: Any] = ["request": path, "nonce": nonce]
+        guard let payloadData = try? JSONSerialization.data(withJSONObject: payloadJSON),
+              let url = URL(string: "https://api.gemini.com" + path)
+        else { return nil }
+        let payload = payloadData.base64EncodedString()
+        let signature = geminiSignature(payload: payload, secret: secret)
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("text/plain", forHTTPHeaderField: "Content-Type")
+        request.setValue(key, forHTTPHeaderField: "X-GEMINI-APIKEY")
+        request.setValue(payload, forHTTPHeaderField: "X-GEMINI-PAYLOAD")
+        request.setValue(signature, forHTTPHeaderField: "X-GEMINI-SIGNATURE")
+        request.setValue("0", forHTTPHeaderField: "Content-Length")
+        guard let (data, _) = try? await URLSession.shared.data(for: request),
+              let root = try? JSONSerialization.jsonObject(with: data)
+        else { return nil }
+        return root
+    }
+
+    static func verifyGemini(key: String, secret: String) async -> KeyVerdict {
+        guard let raw = await geminiPost("/v1/roles", key: key, secret: secret),
+              let root = raw as? [String: Any]
+        else { return .unverifiable(String(localized: "Couldn't reach Gemini to check this key.")) }
+        if let result = root["result"] as? String, result == "error" {
+            let msg = (root["message"] as? String) ?? "Gemini rejected the key check."
+            return .unverifiable(String(localized: "Gemini rejected the key check: \(msg)"))
+        }
+        guard let isTrader = root["isTrader"] as? Bool,
+              let isFundManager = root["isFundManager"] as? Bool else {
+            return .unverifiable(String(localized: "Gemini didn't say what this key can do."))
+        }
+        var disqualifying: [String] = []
+        if isTrader { disqualifying.append("trade") }
+        if isFundManager { disqualifying.append("move funds") }
+        return disqualifying.isEmpty ? .readOnly : .tooPowerful(disqualifying)
+    }
+
+    static func geminiBalances(key: String, secret: String) async -> [Holding]? {
+        guard let raw = await geminiPost("/v1/balances", key: key, secret: secret),
+              let rows = raw as? [[String: Any]] else { return nil }
+        return rows.compactMap { row in
+            guard let symbol = row["currency"] as? String,
+                  let amount = Double((row["amount"] as? String) ?? ""), amount > 0
+            else { return nil }
+            return Holding(symbol: symbol.uppercased(), amount: amount, venue: .geminiExchange)
+        }
+    }
+
     // MARK: - Pricing
 
     /// USD for a set of symbols, from Kraken's KEYLESS public ticker — one
@@ -375,11 +571,22 @@ enum ExchangeBridge {
         switch venue {
         case .kraken:   verdict = await verifyKraken(key: key, secret: secret)
         case .coinbase: verdict = await verifyCoinbase(keyName: key, privateKey: secret)
+        case .binance:  verdict = await verifyBinance(key: key, secret: secret)
+        case .geminiExchange: verdict = await verifyGemini(key: key, secret: secret)
         }
         if verdict == .readOnly {
             TokenVault.set("\(key)\n\(secret)", for: venue.vaultKey)
         }
         return verdict
+    }
+
+    /// Clears a venue's stored key. Matches every OAuth sibling's
+    /// `disconnect()` (`SpotifyAuth`, `DropboxAuth`, `RedditBridge`) — the
+    /// credential leaves the Keychain, so `allBalances()` stops seeing it on
+    /// the very next read. Without this, removing the catalog seat alone left
+    /// the key behind and the venue kept merging into the combined total.
+    static func disconnect(_ venue: Venue) {
+        TokenVault.delete(venue.vaultKey)
     }
 
     /// The stored credential pair, or nil when that venue isn't connected.
@@ -401,6 +608,8 @@ enum ExchangeBridge {
             switch venue {
             case .kraken:   held = await krakenBalances(key: key, secret: secret)
             case .coinbase: held = await coinbaseBalances(keyName: key, privateKey: secret)
+            case .binance:  held = await binanceBalances(key: key, secret: secret)
+            case .geminiExchange: held = await geminiBalances(key: key, secret: secret)
             }
             out.append(contentsOf: held ?? [])
         }

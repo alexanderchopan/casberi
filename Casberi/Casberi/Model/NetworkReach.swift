@@ -108,6 +108,29 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Tokens"),
                  purpose: "Fetches public reference prices to show token and wallet values in your currency. Carries only the pair being priced.",
                  hosts: ["api.coinbase.com", "api.kraken.com"]),
+        // Binance/Gemini's own hosts, separate from the pricing entry above —
+        // neither prices anything (Kraken's public book still does that for
+        // every venue); these are reached only for the read-only key check
+        // and the balance read, and only once that venue is connected.
+        Endpoint(service: "Binance",
+                 reach: .whenConnected(bridge: "binance"),
+                 purpose: "Reads your Binance balance for the combined total. View-only key, checked before it's stored.",
+                 hosts: ["api.binance.com", "api.binance.us"]),
+        Endpoint(service: "Gemini Exchange",
+                 reach: .whenConnected(bridge: "geminiExchange"),
+                 purpose: "Reads your Gemini balance for the combined total. Auditor-role key, checked before it's stored.",
+                 hosts: ["api.gemini.com"]),
+        Endpoint(service: "ETH Validators",
+                 reach: .whenConnected(bridge: "ethvalidators"),
+                 purpose: "Reads the balance and status of the validator indices you watch, off a public beacon-chain API. No account, no key.",
+                 hosts: ["ethereum-beacon-api.publicnode.com"]),
+        // Reach is WALLET, not a Bitcoin-specific seat — Bitcoin has no
+        // connect switch of its own, it rides watched wallet addresses the
+        // same way Gnosis Pay's entry above does.
+        Endpoint(service: "Bitcoin",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "Reads balance, sends/receives, and confirmation status for the Bitcoin addresses you watch, off two public Esplora APIs. No account, no key.",
+                 hosts: ["mempool.space", "blockstream.info"]),
 
         // MARK: Markets
 

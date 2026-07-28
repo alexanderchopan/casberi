@@ -1,8 +1,10 @@
 import SwiftUI
 import SwiftData
 
-/// Connecting an exchange, read-only (2026-07-21, prd §163). One screen, both
-/// venues — the steps differ only in what the venue calls its permissions.
+/// Connecting an exchange, read-only (2026-07-21, prd §163). One screen,
+/// every venue (Kraken/Coinbase, then Binance/Gemini Exchange added
+/// 2026-07-27) — the steps differ only in what the venue calls its
+/// permissions.
 ///
 /// The verdict is the whole design. `ExchangeBridge.connect` asks the exchange
 /// what the key may do BEFORE storing it, so a key that can move money is
@@ -26,12 +28,12 @@ struct ExchangeSetupScreen: View {
     @State private var checking = false
     @State private var result: String?
     @State private var resultIsError = false
-    @State private var connected: Bool
 
-    init(venue: ExchangeBridge.Venue) {
-        self.venue = venue
-        _connected = State(initialValue: ExchangeBridge.credentials(venue) != nil)
-    }
+    /// Read straight from the Keychain, like `SpotifyAuth.connected` /
+    /// `DropboxAuth.connected` — so a disconnect (which only ever touches
+    /// `TokenVault`) is reflected the moment anything else on this screen
+    /// triggers a re-render, with no state var of our own to fall out of sync.
+    private var connected: Bool { ExchangeBridge.credentials(venue) != nil }
 
     /// The credentials door, open (prd §186).
     @State private var showConnection = false
@@ -69,6 +71,7 @@ struct ExchangeSetupScreen: View {
         .sheet(isPresented: $showConnection) {
             BridgeConnectionSheet(title: venue.display) {
                 connectForm
+                if connected { removeSection.listRowSeparator(.hidden) }
             }
         }
     }
@@ -77,6 +80,23 @@ struct ExchangeSetupScreen: View {
     @ViewBuilder private var connectForm: some View {
         BridgeSetupHeader(name: venue.display)
         setupSection
+    }
+
+    private var removeSection: some View {
+        Section {
+            Button("Disconnect", role: .destructive) {
+                ExchangeBridge.disconnect(venue)
+                store.bridges.removeAll { $0.id == venue.rawValue }
+                result = String(localized: "Disconnected — your things stay.")
+                resultIsError = false
+                DSHaptic.tap()
+            }
+            .dsText(.callout15)
+            .dsListCardRow()
+        } footer: {
+            Text("Disconnecting stops syncing. Its balance leaves your combined total. What already landed stays yours.")
+                .dsText(.callout15).foregroundStyle(DS.textTertiary)
+        }
     }
 
     private var setupSection: some View {
@@ -90,9 +110,9 @@ struct ExchangeSetupScreen: View {
                     }
                 }
                 BridgeStepLines(steps: steps, numbered: false)
-                DSSlabField(placeholder: venue == .kraken ? "API key" : "Key name",
+                DSSlabField(placeholder: keyPlaceholder,
                             text: $keyDraft, actionLabel: "", action: connect)
-                DSSlabField(placeholder: venue == .kraken ? "Private key" : "Private key (PEM)",
+                DSSlabField(placeholder: secretPlaceholder,
                             text: $secretDraft,
                             actionLabel: checking ? "CHECKING…" : (connected ? "UPDATE" : "CONNECT"),
                             secure: true, isArmed: armed, action: connect)
@@ -108,11 +128,14 @@ struct ExchangeSetupScreen: View {
         .dsSlabSection()
     }
 
-    /// The key page, per venue — checked live 2026-07-25.
+    /// The key page, per venue — checked live 2026-07-25 (Binance/Gemini
+    /// added 2026-07-27, docs-verified, not click-walked live).
     private var setupURL: URL? {
         switch venue {
         case .kraken:   URL(string: "https://www.kraken.com/u/security/api")
         case .coinbase: URL(string: "https://portal.cdp.coinbase.com/access/api")
+        case .binance:  URL(string: "https://www.binance.com/en/my/settings/api-management")
+        case .geminiExchange: URL(string: "https://exchange.gemini.com/settings/api")
         }
     }
 
@@ -120,6 +143,24 @@ struct ExchangeSetupScreen: View {
         switch venue {
         case .kraken:   "kraken.com → API"
         case .coinbase: "Coinbase developer portal"
+        case .binance:  "binance.com → API Management"
+        case .geminiExchange: "gemini.com → API settings"
+        }
+    }
+
+    /// Kraken/Binance/Gemini all call the identifier an "API key"; only
+    /// Coinbase's CDP scheme names it instead of keying it.
+    private var keyPlaceholder: String {
+        switch venue {
+        case .kraken, .binance, .geminiExchange: "API key"
+        case .coinbase: "Key name"
+        }
+    }
+
+    private var secretPlaceholder: String {
+        switch venue {
+        case .kraken, .binance, .geminiExchange: "Private key"
+        case .coinbase: "Private key (PEM)"
         }
     }
 
@@ -144,6 +185,10 @@ struct ExchangeSetupScreen: View {
             return ["Create a key with only the Query permissions ticked — Query Funds, plus Query Ledger Entries for deposits and withdrawals. Leave everything else unticked."]
         case .coinbase:
             return ["Create an API key with View permission only — not Trade, not Transfer."]
+        case .binance:
+            return ["Create an API key with only \"Enable Reading\" ticked — leave Spot & Margin Trading, Withdrawals, and everything else off."]
+        case .geminiExchange:
+            return ["Create an API key with the Auditor role — not Trader, not Fund Manager."]
         }
     }
 
@@ -169,7 +214,6 @@ struct ExchangeSetupScreen: View {
             checking = false
             switch verdict {
             case .readOnly:
-                connected = true
                 keyDraft = ""
                 secretDraft = ""
                 DSHaptic.success()

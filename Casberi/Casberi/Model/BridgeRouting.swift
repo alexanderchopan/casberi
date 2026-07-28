@@ -18,6 +18,7 @@ enum BridgeRouter {
         case peer
         case privacyPools
         case exchange(ExchangeBridge.Venue)
+        case ethValidators
         case kalshi
         case stocktwits
         case openSea
@@ -125,6 +126,7 @@ enum BridgeRouter {
             // The venue's own raw value IS the seat id ("kraken", "coinbase"),
             // so the Row above and this can't drift apart.
             case .exchange(let venue): venue.rawValue
+            case .ethValidators:  "ethvalidators"
             case .kalshi:         "kalshi"
             case .stocktwits:     "stocktwits"
             case .openSea:        "opensea"
@@ -195,6 +197,9 @@ enum BridgeRouter {
         // wallets they join.
         Row(offer: "Coinbase",  id: "coinbase", destination: .exchange(.coinbase)),
         Row(offer: "Kraken",    id: "kraken",   destination: .exchange(.kraken)),
+        Row(offer: "Binance",   id: "binance",  destination: .exchange(.binance)),
+        Row(offer: "Gemini Exchange", id: "geminiExchange", destination: .exchange(.geminiExchange)),
+        Row(offer: "ETH Validators", id: "ethvalidators", destination: .ethValidators),
         Row(offer: "Kalshi",     id: "kalshi",     destination: .kalshi),
         Row(offer: "Stocktwits", id: "stocktwits", destination: .stocktwits),
         Row(offer: "OpenSea",    id: "opensea",    destination: .openSea),
@@ -269,6 +274,7 @@ struct BridgeDestinationView: View {
         case .tokens:         TokenWatchScreen()
         case .peer:           PeerScreen()
         case .privacyPools:   PrivacyPoolsScreen()
+        case .ethValidators:  EthValidatorScreen()
         case .kalshi:         KalshiScreen()
         case .stocktwits:     StocktwitsScreen()
         case .openSea:        OpenSeaScreen()

@@ -80,8 +80,14 @@ struct WalletPortfolio: Equatable {
     /// "in M wallets", and an exchange is not a wallet. Saying otherwise would
     /// be the honesty rule's own failure mode — a true-sounding number that
     /// isn't counting what it says.
+    /// `validatorsUSD` is ETH held in watched beacon-chain validators
+    /// (`EthValidatorRead.totalUSD()`) — folded in the same shape `exchange`
+    /// is: a `Holder` with no real address (there isn't one to name), under
+    /// the plain `ETH` symbol, since it's the same asset as everything else
+    /// counted there, just sitting in a different kind of account.
     static func from(groups: [WalletIngest.HoldingsGroup],
-                     exchange: [(symbol: String, usd: Double, venue: ExchangeBridge.Venue)] = [])
+                     exchange: [(symbol: String, usd: Double, venue: ExchangeBridge.Venue)] = [],
+                     validatorsUSD: Double = 0)
     -> WalletPortfolio {
         var usdBySymbol: [String: Double] = [:]
         var holdersBySymbol: [String: [Holder]] = [:]
@@ -95,6 +101,12 @@ struct WalletPortfolio: Equatable {
             holdersBySymbol[holding.symbol, default: []]
                 .append(Holder(address: holding.venue.rawValue,
                                label: holding.venue.display, usd: holding.usd))
+        }
+
+        if validatorsUSD > 0 {
+            usdBySymbol["ETH", default: 0] += validatorsUSD
+            holdersBySymbol["ETH", default: []]
+                .append(Holder(address: "ethvalidators", label: "ETH Validators", usd: validatorsUSD))
         }
 
         for group in groups {

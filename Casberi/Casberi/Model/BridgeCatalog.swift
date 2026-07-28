@@ -139,6 +139,25 @@ enum BridgeCatalog {
         Offer(name: "Kraken",      tagline: "Your exchange balance, in your total",  group: "Wallet",    connectable: true,
               summary: "Most people's crypto isn't all onchain. Connect Kraken and your balances there join your watched wallets in one combined total and one map, so the number finally covers everything you hold.\n\nConnecting takes an API key with query permissions only — and Casberi asks Kraken what that key is allowed to do before storing it, handing it back if it can trade, withdraw, or manage withdrawal addresses.\n\nRead-only: no order, withdrawal or transfer is reachable from the app at all.",
               needsSetup: true, added: day(2026, 7, 21)),
+        Offer(name: "Binance",     tagline: "Your exchange balance, in your total",  group: "Wallet",    connectable: true,
+              summary: "Most people's crypto isn't all onchain. Connect Binance and your balances there join your watched wallets in one combined total and one map, so the number finally covers everything you hold.\n\nConnecting takes an API key with reading enabled only — and Casberi asks Binance what that key is allowed to do before storing it, handing it back if it can trade or withdraw.\n\nRead-only: no order, withdrawal or transfer is reachable from the app at all.",
+              needsSetup: true, added: day(2026, 7, 27)),
+        // "Gemini Exchange", not "Gemini" — the catalog already has an offer
+        // named "Gemini" (the Google AI chat importer), an unrelated company
+        // that happens to share the word. Named fully everywhere it's
+        // user-facing (this tile, the venue's display name, the website) so
+        // the two are never confused for one another.
+        Offer(name: "Gemini Exchange", tagline: "Your exchange balance, in your total", group: "Wallet", connectable: true,
+              summary: "Most people's crypto isn't all onchain. Connect Gemini and your balances there join your watched wallets in one combined total and one map, so the number finally covers everything you hold.\n\nConnecting takes an API key with the Auditor role — Gemini's own read-only designation — and Casberi asks Gemini what that key is allowed to do before storing it, handing it back if it can trade or move funds.\n\nRead-only: no order, withdrawal or transfer is reachable from the app at all.",
+              needsSetup: true, added: day(2026, 7, 27)),
+        // A validator can't be FOUND from a wallet address the way a Solana
+        // stake account can (see EthValidatorWatch.swift) — the only free
+        // path is asking for the index directly, which is why this is a
+        // named watch-list like Tokens/Kalshi rather than something that
+        // rides a watched wallet automatically.
+        Offer(name: "ETH Validators", tagline: "Your validator balance, in your total", group: "Wallet", connectable: true,
+              summary: "A validator's balance lives on the beacon chain, not in your wallet — so it's invisible to every ordinary wallet read. Watch a validator by its index (your staking client shows it) and its balance joins your combined total, staying current every time you open the app.\n\nKeyless — a public beacon-chain read, no account.\n\nRead-only: watching a validator can never stake, exit, or move its balance.",
+              needsSetup: true, added: day(2026, 7, 27)),
         Offer(name: "Gmail",       tagline: "Your inbox, findable",                  group: "Mail",      connectable: true,
               summary: "Your recent mail becomes findable things.\n\nConnects over IMAP with a Google app password — your real password is never shared, and it's read-only.\n\nNeeds 2-Step Verification on your Google account.",
               needsSetup: true),

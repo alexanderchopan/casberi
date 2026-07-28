@@ -54,6 +54,7 @@ extension DS {
         case "bookmarks":           return Color.fixed("#8d6e63")   // a neutral bookmark-ribbon brown — no single brand here (Safari + Chrome, one file format)
         case "safari":              return Color.fixed("#1d9bf6")
         case "wallet":              return Color.fixed("#2461ff")
+        case "bitcoin":             return Color.fixed("#f7931a")   // the same orange `TokenHue` already gives the BTC/WBTC treemap cells — taught here too so a Bitcoin row, its icon and its moment rain all agree
         case "peer":                return Color.fixed("#4b47f6")   // an indigo in their family — approximate; re-sample when bundling the official mark
         case "gnosis pay":          return Color.fixed("#4830c0")   // the owl's indigo (icon-sampled from the bundled mark)
         case "privacy pools", "0xbow privacy pools":
@@ -97,6 +98,9 @@ extension DS {
         case "privacy":             return Color.fixed("#232320")   // their near-black (icon-sampled)
         case "coinbase":            return Color.fixed("#0052ff")   // their official brand blue
         case "kraken":              return Color.fixed("#773bf5")   // their mascot's purple (icon-sampled)
+        case "binance":             return Color.fixed("#0b0e11")   // their near-black app-icon field
+        case "geminiexchange":      return Color.fixed("#ff6511")   // their orange (sampled from the official app icon)
+        case "ethvalidators":       return Color.fixed("#627eea")   // Ethereum's own brand blue-purple
         case "1claw":               return Color.fixed("#990029")   // their crimson (docs-sampled)
         case "homekit":             return Color.fixed("#8e8e93")   // the accessory kind's own gray (KindGlyph.swift)
         default:                    return nil

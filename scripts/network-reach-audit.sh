@@ -36,6 +36,7 @@ KNOWN_NON_REACH=(
   # that mints the key you then paste, opened in your browser.
   app.privacy.com app.raindrop.io calendly.com linear.app www.notion.so
   venice.ai bankr.bot www.kraken.com portal.cdp.coinbase.com
+  www.binance.com exchange.gemini.com
   # Mail app-password pages, and the Google Takeout page you download your
   # own Gemini export from — all opened in the browser, none read by us.
   appleid.apple.com myaccount.google.com takeout.google.com
