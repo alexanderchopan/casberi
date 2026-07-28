@@ -205,6 +205,11 @@ enum TwitchIngest {
                 sourceRef: ref
             )
             thing.previewImageURL = IngestSupport.imageURL(frame)
+            // The channel, for MediaMoments' quiet-return check (a followed
+            // streamer live again after a real gap) — the same authorHandle
+            // slot RSS/feed-follow already stamp with their own source's
+            // "who/what published this" name.
+            thing.authorHandle = name
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
@@ -212,5 +217,15 @@ enum TwitchIngest {
         UserDefaults.standard.set(liveNow, forKey: liveKey)
         if added > 0 || backfill.any { context.saveHonestly() }
         return added
+    }
+
+    /// The game a live-stream title names, parsed back out of the exact
+    /// format built above (`"<name> live — <game>"`) — the one place that
+    /// format is defined, so MediaMoments' Twitch×Steam crossing can never
+    /// drift from what actually landed. nil when the stream named no game.
+    static func game(fromTitle title: String) -> String? {
+        guard let range = title.range(of: " live — ") else { return nil }
+        let game = String(title[range.upperBound...])
+        return game.isEmpty ? nil : game
     }
 }

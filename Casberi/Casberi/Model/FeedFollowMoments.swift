@@ -8,6 +8,10 @@ import SwiftData
 /// read-only pass over what `FeedFollowIngest` already landed, or a small
 /// bit of persisted state (UserDefaults) alongside it — nothing here
 /// changes what lands, only what gets announced.
+///
+/// `checkReturns` also covers Podcasts (added alongside `MediaMoments`,
+/// same day) — a show off hiatus is exactly this shape, and it already
+/// takes `FeedFollowKind` generically; only the verb needed a third case.
 @MainActor
 enum FeedFollowMoments {
     /// A gap this long or more, ending just now, reads as "was away" — same
@@ -36,16 +40,22 @@ enum FeedFollowMoments {
             guard let name = thing.authorHandle, watched.contains(name) else { continue }
             byName[name, default: []].append(thing)
         }
-        let verb = kind == .youtube ? "uploaded" : "posted"
         for (name, items) in byName {
             let sorted = items.sorted { $0.capturedAt > $1.capturedAt }
             guard sorted.count >= 2 else { continue }
             let newest = sorted[0]
             guard newest.capturedAt.timeIntervalSinceNow > -freshWindow else { continue }
-            let gapDays = sorted[1].capturedAt.distance(to: newest.capturedAt) / 86400
-            guard gapDays >= quietDays else { continue }
-            SourceMoments.shared.fire(
-                String(localized: "\(name) \(verb) again after \(Int(gapDays)) days"), source: kind.source)
+            let gapDays = Int(sorted[1].capturedAt.distance(to: newest.capturedAt) / 86400)
+            guard gapDays >= Int(quietDays) else { continue }
+            // "released a new episode" doesn't fit the other two kinds'
+            // "<verb> again" template, so each kind gets its own full line.
+            let line: String
+            switch kind {
+            case .youtube:  line = String(localized: "\(name) uploaded again after \(gapDays) days")
+            case .podcasts: line = String(localized: "\(name) released a new episode after \(gapDays) days quiet")
+            default:        line = String(localized: "\(name) posted again after \(gapDays) days")
+            }
+            SourceMoments.shared.fire(line, source: kind.source)
         }
     }
 

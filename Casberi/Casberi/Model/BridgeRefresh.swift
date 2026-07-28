@@ -229,12 +229,22 @@ enum BridgeRefresh {
                 // doubling and retitle checks already ran inside the ingest
                 // itself (they need the per-item feed data, not just the
                 // landed corpus), so only the corpus-wide checks live here.
-                if kind == .youtube || kind == .reddit {
+                // Podcasts joined YouTube/Reddit here 2026-07-28 (a show off
+                // hiatus is the exact same shape).
+                if kind == .youtube || kind == .reddit || kind == .podcasts {
                     FeedFollowMoments.checkReturns(kind, context: context)
                 }
                 if kind == .reddit {
                     FeedFollowMoments.checkRedditLinkCrossings(context: context)
                     FeedFollowMoments.checkRedditCrossPosters(context: context)
+                }
+                // A new upload/episode naming an artist you've liked/played
+                // elsewhere in Media — a pure local join, so it's harmless
+                // to re-run once per feed-follow kind (self-throttled by
+                // the freshWindow filter on the YouTube/Podcasts side, same
+                // as every other crossing here).
+                if kind == .youtube || kind == .podcasts {
+                    MediaMoments.checkArtistCrossing(context: context)
                 }
             }
         }
@@ -311,6 +321,11 @@ enum BridgeRefresh {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await SteamIngest.refresh(context: context)
+                // A followed streamer playing a game already in this
+                // library — a pure local join (delight pass 2026-07-28).
+                // Runs after Steam too, not just Twitch, since either
+                // bridge's refresh can be the one that makes the join true.
+                MediaMoments.checkTwitchSteamCrossing(context: context)
             }
         }
         if ObsidianStore.shared.connected {
@@ -347,6 +362,11 @@ enum BridgeRefresh {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await TwitchIngest.refresh(context: context)
+                // Read-only passes over what just landed, touching nothing
+                // in the ingest above — same shape as the social bridges'
+                // own return-check (delight pass 2026-07-28).
+                MediaMoments.checkTwitchReturns(context: context)
+                MediaMoments.checkTwitchSteamCrossing(context: context)
             }
         }
         if OpenSeaStore.shared.connected {

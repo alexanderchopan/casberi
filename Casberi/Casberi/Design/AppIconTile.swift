@@ -74,6 +74,8 @@ extension DS {
         case "rss":                 return Color.fixed("#f26522")
         case "farcaster":           return Color.fixed("#855dcd")
         case "pinterest":           return Color.fixed("#e60023")
+        case "spotify":             return Color.fixed("#1db954")   // their brand green — missing until now, so Spotify's icon tile and rain wash both fell back to gray/default blue
+        case "apple music":         return Color.fixed("#fc3c44")   // Apple Music's coral-red mark
         case "bluesky":             return Color.fixed("#0285ff")
         case "nostr":               return Color.fixed("#9543dc")   // their purple (icon-sampled from the bundled mark)
         case "cal.com":             return Color.fixed("#292929")

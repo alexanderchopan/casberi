@@ -186,6 +186,11 @@ enum SpotifyIngest {
                 capturedAt: when ?? .now,
                 sourceRef: ref
             )
+            // The join key MediaMoments' artist crossing reads (a podcast or
+            // YouTube video mentioning an artist you've liked here) — no UI
+            // reads this for Spotify (ShapedRows' trailing slot has no
+            // "Spotify" case), it's purely a backend field.
+            if !artists.isEmpty { thing.authorHandle = artists }
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1

@@ -73,4 +73,20 @@ final class SourceMoments {
         defaults.set(value, forKey: key)
         return true
     }
+
+    /// The high-water mark's sibling for a source with no "landed thing" to
+    /// compare gaps between (Steam: a game dedupes to ONE thing forever, so
+    /// there's no second landing to diff a quiet stretch against — only the
+    /// live API's own per-pass signal proves a return). Records "last seen
+    /// active" for a scope and reports true exactly when a PRIOR stamp exists
+    /// and the gap since it is at least `quietDays` — same doctrine as
+    /// `notedNewHigh`: the first sighting seeds silently, never fires.
+    func notedReturn(scope: String, quietDays: Double) -> Bool {
+        let key = "moment.seen.\(scope)"
+        let defaults = UserDefaults.standard
+        let now = Date()
+        defer { defaults.set(now, forKey: key) }
+        guard let prev = defaults.object(forKey: key) as? Date else { return false }
+        return now.timeIntervalSince(prev) >= quietDays * 86400
+    }
 }

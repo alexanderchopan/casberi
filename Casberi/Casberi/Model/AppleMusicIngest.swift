@@ -230,6 +230,10 @@ enum AppleMusicIngest {
                 sourceRef: ref
             )
             thing.previewImageURL = artByRef[ref]
+            // The join key MediaMoments' artist crossing reads (a podcast or
+            // YouTube video mentioning an artist you've played here) — no UI
+            // reads this for Apple Music, purely a backend field.
+            if !artist.isEmpty { thing.authorHandle = artist }
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
