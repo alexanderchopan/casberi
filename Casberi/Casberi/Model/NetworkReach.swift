@@ -131,6 +131,13 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Reads balance, sends/receives, and confirmation status for the Bitcoin addresses you watch, off two public Esplora APIs. No account, no key.",
                  hosts: ["mempool.space", "blockstream.info"]),
+        // Host is user-configurable (self-hosted PostHog exists) — the
+        // default cloud host is what's disclosed; a self-hosted host is
+        // one the person named themselves in setup, not an undisclosed one.
+        Endpoint(service: "PostHog",
+                 reach: .whenConnected(bridge: "posthog"),
+                 purpose: "Reads the metrics, annotations, and event counts you watch on your own PostHog project. Read-only scoped key.",
+                 hosts: ["us.posthog.com"]),
 
         // MARK: Markets
 
