@@ -9180,3 +9180,54 @@ single brand here, the same reasoning that leaves X/Cal.com/ChatGPT
 without a wash. Debug: `-bookmarksImport <path>` (lands everything
 headlessly, logs `readingList=N` too — the UI's scope choice is a
 person's call, not a probe's).
+
+## 225. Two dead controls in the brief — a watchlist row, and a themes cell that ejected nowhere (user: "how would you improve the daily brief even more now... in terms of UI and UX and capacity", then "ok", 2026-07-27) — VERIFIED
+
+Asked how to improve the brief's capacity. The brief had been substantially
+rebuilt since an earlier pass in this session (§207–224, concurrent work):
+`sourceMix`/`hourStrip` — the two modules an earlier proposal was built
+around — were cut outright under §213's "volume is not news" ruling, replaced
+by a themes map, and §214 already gave the brief a real continuity system
+(`BriefLedger`). The stale proposal was corrected in conversation before any
+code was touched, against the CURRENT module set: two real dead controls,
+narrower in scope than first pitched.
+
+**1. Watchlist rows had no tap at all.** `TodayBrief.moversTile` now appends a
+4th pipe field — the watched token's own `Thing` id — to each `MoversTile` row
+(`SYM|value|closes|thingID`). `GenMoversTile`'s row parser tolerates a 2, 3, or
+4-field prefix (mid-stream, the tail is still arriving — the same "any prefix
+renders" law the closes field itself already leaned on), and each row is now a
+`Button { thingOpen?(m.thingID) }`, the same wrapper `GenLeadRow`/`GenLeadPost`/
+`GenNextTile` already use.
+
+**2. The themes map's cells looked tappable but weren't — not by ejecting,
+by doing NOTHING.** The original diagnosis (mid-session) guessed the cell tap
+ejected to the Feed; checking `genProjectTap`'s actual default (`nil`, only
+ever SET on the Home board — never in the agent's answer column) showed the
+tap was calling a nil closure, a silent no-op. `GenTagMap`'s cell tap gained
+`else if inAgentAnswer, let askRequest { askRequest(item.tag) }` ahead of the
+existing `projectTap` fallback — bare name, the same convention
+`readingCard`'s own "See the rest" `AskMore` residual link already
+established for a computed topic word, so whatever answers a real tag also
+answers a theme cluster. Ordered strictly after the `iconMode == "token"`
+branch, so a holdings-style cell (if one is ever composed inside an agent
+answer) keeps its existing sentinel-route behavior untouched.
+
+Cleanup review (reuse/simplification/efficiency/altitude, one pass): all four
+angles came back clean, no changes.
+
+VERIFIED 2026-07-27 (iPhone 17 Pro sim, pinned UDID), two different ways:
+- **Fix 2, live and conclusive.** A tap during testing landed on the themes
+  map's "Home" cell and it pushed a real synthesis answer — title, a prose
+  line, a bar chart, "Found 2" things (Kitchen paint colors, Measure the
+  hallway) — staying in the agent with a Keep pill offered, never touching
+  the Feed.
+- **Fix 1, verified by doc format + code-pattern equivalence, not a clean
+  interactive tap.** `-todayProbe` confirmed the composed line carries a real
+  id (`WIF|-0.2%|0.7779,…|232AE422-3A7D-4AAF-B0F7-6DCA13C5614C`), and the
+  `Button`/`thingOpen` wiring is the same pattern proven live for Fix 2 in the
+  same render pass. An interactive tap on the row itself was blocked by an
+  unrelated Springboard system dialog ("Apple Account Verification") that
+  outlived an app relaunch, a Home-button press, and a full simulator
+  shutdown/boot — not touched further, since it asks for a real Apple ID
+  password. Build green.

@@ -2114,6 +2114,10 @@ private struct GenTagMap: View {
     /// True inside the agent's own answer column (2026-07-20) — tightens
     /// `boardHeight` below; see `genAgentAnswerContext`'s own doc comment.
     @Environment(\.genAgentAnswerContext) private var inAgentAnswer
+    /// A cell's tap stays in the agent (§225) rather than a no-op — see the
+    /// cell button's own comment. nil off the board, exactly like
+    /// `genProjectTap` outside it.
+    @Environment(\.genAskRequest) private var askRequest
     /// The entrance plays once per screen appearance (§3); filter and theme
     /// re-renders never replay it.
     @State private var settled = false
@@ -2344,6 +2348,17 @@ private struct GenTagMap: View {
                                 projectTap?(item.route.map { r in
                                     sym.isEmpty ? "@token:\(r)" : "@token:\(r):\(sym)"
                                 } ?? "@wallet")
+                            } else if inAgentAnswer, let askRequest {
+                                // Stay in the agent (ruling 8/9) rather than a
+                                // no-op (§225): `genProjectTap` is nil inside
+                                // the agent's answer column (a Home-board-only
+                                // route), so the brief's themes map cell did
+                                // nothing at all when tapped. Bare name, the
+                                // same convention `readingCard`'s own "See the
+                                // rest" residual link already uses for a
+                                // computed topic word — whatever answers a
+                                // real tag also answers a theme cluster.
+                                askRequest(item.tag)
                             } else {
                                 projectTap?(item.tag)
                             }
@@ -3758,22 +3773,25 @@ private struct GenTilePair: View {
 private struct GenMoversTile: View {
     let el: GenEl
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.genThingOpen) private var thingOpen
 
-    private struct Move { let symbol: String; let value: String; let closes: [Double] }
-    /// Tolerant on purpose: the composer always finishes a row with a third
-    /// (closes) field, but mid-STREAM a row's closes are still arriving
-    /// character by character — requiring all three up front would hold the
-    /// symbol and value off-screen until the whole sparkline lands, instead
-    /// of the row popping in immediately and the curve drawing a moment
-    /// later (GenParser's "any prefix of any document renders" law).
+    private struct Move { let symbol: String; let value: String; let closes: [Double]; let thingID: String }
+    /// Tolerant on purpose: the composer always finishes a row with its third
+    /// and fourth (closes, thing id) fields, but mid-STREAM a row's tail is
+    /// still arriving character by character — requiring all four up front
+    /// would hold the symbol and value off-screen until the whole line
+    /// lands, instead of the row popping in immediately and the curve/tap
+    /// completing a moment later (GenParser's "any prefix of any document
+    /// renders" law).
     private var moves: [Move] {
         el.str(1).split(separator: ";").compactMap { part in
-            let f = part.split(separator: "|", maxSplits: 2, omittingEmptySubsequences: false)
+            let f = part.split(separator: "|", maxSplits: 3, omittingEmptySubsequences: false)
             guard f.count >= 2 else { return nil }
-            let closes = f.count == 3 ? genCSVDoubles(String(f[2])) : []
+            let closes = f.count >= 3 ? genCSVDoubles(String(f[2])) : []
+            let thingID = f.count == 4 ? String(f[3]) : ""
             return Move(symbol: f[0].trimmingCharacters(in: .whitespaces),
                         value: f[1].trimmingCharacters(in: .whitespaces),
-                        closes: closes)
+                        closes: closes, thingID: thingID)
         }
     }
 
@@ -3836,15 +3854,23 @@ private struct GenMoversTile: View {
                         .dsText(.subhead13)
                         .foregroundStyle(DS.textTertiary)
                     ForEach(Array(moves.enumerated()), id: \.offset) { _, m in
-                        // All three parts, or the two that are the facts
-                        // (2026-07-25). A flexible curve squeezed to a few
-                        // points draws a vertical tick that reads as a
-                        // rendering fault; ViewThatFits gives it its real 44
-                        // or drops it, and nothing in between.
-                        ViewThatFits(in: .horizontal) {
-                            row(m, curve: true)
-                            row(m, curve: false)
+                        // A row opens its own watched token (§225) — the one
+                        // module in the brief with no tap at all, until now;
+                        // every other module already opens something.
+                        Button { thingOpen?(m.thingID) } label: {
+                            // All three parts, or the two that are the facts
+                            // (2026-07-25). A flexible curve squeezed to a few
+                            // points draws a vertical tick that reads as a
+                            // rendering fault; ViewThatFits gives it its real
+                            // 44 or drops it, and nothing in between.
+                            ViewThatFits(in: .horizontal) {
+                                row(m, curve: true)
+                                row(m, curve: false)
+                            }
+                            .contentShape(Rectangle())
                         }
+                        .buttonStyle(.plain)
+                        .disabled(m.thingID.isEmpty)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)

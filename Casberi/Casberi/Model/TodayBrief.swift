@@ -878,7 +878,11 @@ enum TodayBrief {
                 // moments ago) rather than `Move` carrying a second copy.
                 let closes = (TokenPulse.shared.pulse(for: m.thing)?.closes ?? [])
                     .suffix(20).map { String(format: "%.4g", $0) }.joined(separator: ",")
-                return "\(tileSafe(m.symbol))|\(value)|\(closes)"
+                // The thing's own id, so the row can open it (§225, user: "how
+                // would you improve the daily brief... in terms of UI and UX
+                // and capacity" — a watchlist row was the one module in the
+                // brief with no tap at all).
+                return "\(tileSafe(m.symbol))|\(value)|\(closes)|\(m.thing.id.uuidString)"
             }
         return "tmov = MoversTile(\"\(String(localized: "Watchlist"))\", \"\(rows.joined(separator: ";"))\")"
     }
