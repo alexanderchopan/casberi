@@ -9470,3 +9470,16 @@ one of them (stating the version) already lives on Updates, so the honest
 shape here is a single tap that does the one real thing it promises.
 Re-using privacy@ rather than minting a new address: one monitored inbox
 beats a second one nobody's forwarded yet.
+
+## §228 — Landing reverts to "always All" (2026-07-28)
+
+Reverses the persisted-landing half of the ruling above §131 (2026-07-21,
+"content-first, wherever you left it") per direct user feedback: a user
+wished the app opened to "All" by default. `FeedFilter.source` no longer
+persists across launches or reads a stored value back in `init()` — it's a
+plain `= "All"` default again, and the `-landingChip`/`seedLandingFromLaunchArgs`
+debug hook is gone (nothing left to seed). The strip-learns half of that
+ruling (`Model/ChipMemory.swift`, tap-learning chip ORDER) is untouched —
+this only reverts which chip you land on, not how the strip sorts. Deep
+links, `-openThing`, and other same-launch overrides still work exactly as
+before; only the cross-launch memory is gone.

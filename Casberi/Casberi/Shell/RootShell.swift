@@ -461,13 +461,11 @@ struct RootShell: View {
         .onOpenURL { route($0) }
         .onAppear {
             // Landing (2026-07-13, simplified 2026-07-20 — the Pinned board
-            // retired, docs/agent-brief.md rulings 11-12; amended 2026-07-21):
-            // content-first was "always All" until here — now the app opens
-            // wherever you were last standing (`FeedFilter.source` persists
-            // on every write, read back in its own `init`), so this no
-            // longer resets it. A fresh install has nothing persisted yet
-            // and still opens on "All". Deep links and debug hooks below can
-            // still override this within the same launch.
+            // retired, docs/agent-brief.md rulings 11-12; reverted to
+            // "always All" 2026-07-28 per user feedback — the §131 amendment
+            // that persisted "wherever you left it" is undone). Deep links
+            // and debug hooks below can still override this within the same
+            // launch.
             // Honesty rule: if CasberiApp had to degrade the store open this
             // launch (SharedStore.containerWithFallback), say so once instead
             // of silently showing an empty/unsynced corpus.
@@ -595,12 +593,6 @@ struct RootShell: View {
             // UserDefaults; routes without the system open-in dialog.
             #if DEBUG
             NSLog("[Casberi] On-device model: %@", OnDeviceModel.availabilityLine)
-            // `-landingChip <source>` (or `clear`) seeds the persisted
-            // landing directly, without navigating this launch — a
-            // two-launch probe (seed here, relaunch plain) verifies the
-            // next-launch landing headlessly via MainSurface's `chipLabels:`
-            // / the active chip on mount.
-            FeedFilter.seedLandingFromLaunchArgs()
             if let raw = UserDefaults.standard.string(forKey: "deeplink"),
                let url = URL(string: raw) {
                 UserDefaults.standard.removeObject(forKey: "deeplink")
