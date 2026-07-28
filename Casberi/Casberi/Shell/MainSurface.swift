@@ -473,13 +473,28 @@ struct MainSurface: View {
             // names the moment.
             .onChange(of: sourceMoments.pulse) {
                 let moments = sourceMoments.drain()
-                guard let latest = moments.last else { return }
-                // Rain once for the batch; name the most recent moment. A queue
-                // (not a single slot) means a moment fired while backgrounded
-                // survives here until this drain runs on foreground.
-                chrome.refreshHue = latest.source.flatMap { DS.washHue(for: $0) }
+                guard !moments.isEmpty else { return }
+                // Rain once for the whole batch (repeating the berry shower
+                // per moment would read as spam, not delight); tinted to the
+                // newest moment's hue. A queue (not a single slot) means a
+                // moment fired while backgrounded survives here until this
+                // drain runs on foreground.
+                chrome.refreshHue = moments.last?.source.flatMap { DS.washHue(for: $0) }
                 chrome.refreshPulse += 1
-                chrome.flash(latest.text)
+                // Toasts are one slot (ShellChrome.flash crossfades, never
+                // stacks) — showing only `moments.last` silently dropped
+                // every other moment in a busy pass (a widening blind spot
+                // as more bridges gained moments, 2026-07-28). Walk the
+                // batch oldest-first instead, each getting its own toast
+                // window before the next replaces it, so a validator
+                // proposing a block and a mention landing in the same
+                // sweep both get said, not just whichever fired last.
+                Task { @MainActor in
+                    for (index, moment) in moments.enumerated() {
+                        if index > 0 { try? await Task.sleep(for: .seconds(2.2)) }
+                        chrome.flash(moment.text)
+                    }
+                }
             }
             // The agent bar moved OFF MainSurface entirely (docs/agent-brief.md
             // ruling 6): it now rides RootShell's own ZStack, above EVERY

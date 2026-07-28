@@ -101,6 +101,24 @@ enum HealthIngest {
             SpotlightIndex.index([thing])
             inserted += 1
             if source == seat { added += 1 }
+            // A longer distance than ever recorded for this activity — a
+            // real personal best (delight pass 2026-07-28), unified across
+            // Health and Strava (a run is a run regardless of which app
+            // logged it, so the scope key carries no source). Gated on the
+            // workout having happened in roughly the last day: `workouts` is
+            // fetched NEWEST-FIRST over a 90-day window, so evaluating every
+            // backfilled workout in that order would misfire "PB" on old
+            // long runs processed after short recent ones — a fresh connect
+            // must stay silent, matching every other moment in this app.
+            if source == seat, workout.startDate.timeIntervalSinceNow > -86400,
+               let meters = workout.totalDistance?.doubleValue(for: .meter()), meters > 100 {
+                let activity = activityName(workout.workoutActivityType)
+                if SourceMoments.shared.notedNewHigh(scope: "health.pb.\(activity)", value: meters) {
+                    SourceMoments.shared.fire(
+                        String(localized: "Longest \(activity.lowercased()) yet — \(String(format: "%.1f", meters / 1000)) km"),
+                        source: seat)
+                }
+            }
         }
 
         for night in sleepNights where night.asleep > 300 {
