@@ -617,6 +617,7 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 .ai-applenotes { background: #fff; }
 .ai-journal   { background: #a06ee1; }
 .ai-dayone    { background: #fff; color: #44c0ff; font-size: 26px; font-weight: 800; }
+.ai-bookmarks { background: #8d6e63; }
 
 
 /* ===== The tour (below the fold, shipped 2026-07-13) ===== */

@@ -77,7 +77,7 @@ enum BridgeCatalog {
                 "Open Food Facts", "Stocktwits"]
             if keyless.contains(name) { return "No account" }
             let imports: Set<String> = ["ChatGPT", "Claude", "Gemini",
-                "Day One", "Apple Journal", "Kindle"]
+                "Day One", "Apple Journal", "Kindle", "Bookmarks"]
             if imports.contains(name) { return "Import" }
             return nil
         }
@@ -275,6 +275,16 @@ enum BridgeCatalog {
         Offer(name: "Day One",     tagline: "Import your journal",                   group: "Notes",     connectable: true,
               summary: "A one-time import of your Day One export — every entry becomes a findable note, dated as you wrote it, tags kept.\n\nExport JSON in Day One, unzip in Files, pick the file here.\n\nRe-imports add only what's new.",
               needsSetup: true),
+        // Notes group, beside Day One/Apple Journal (2026-07-28, prd §224):
+        // same "no live read, sanctioned import" shape — Safari has no
+        // bookmarks API at all, and Chrome's own export never includes its
+        // separate Reading List store. Both browsers write the SAME file
+        // format though (Netscape Bookmark File Format), so one offer, one
+        // parser, one screen covers both — Safari's Reading List rides
+        // along as a folder inside that same file, for free.
+        Offer(name: "Bookmarks",   tagline: "Import your bookmarks",                 group: "Notes",     connectable: true,
+              summary: "A one-time import of your bookmarks — from Safari or Chrome's own export — lands as findable links, with folders kept as tags.\n\nSafari's Reading List rides along as its own folder, so you can import just that or everything.\n\nExport from Chrome's bookmark manager, or Safari's File menu on a Mac, then pick the file here. Re-imports add only what's new.",
+              needsSetup: true, added: day(2026, 7, 28)),
         Offer(name: "Apple Notes", tagline: "Share notes in",                        group: "Notes",     connectable: true,
               summary: "Share any note straight into Casberi — open it in Notes, tap share, choose Casberi. Apple offers no export or live read for Notes, so they arrive one at a time, as you share them.",
               needsSetup: true),
