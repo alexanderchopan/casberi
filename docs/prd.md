@@ -9302,3 +9302,112 @@ Debug: `-bitcoinProbe <address>` runs the sweep for one address directly and
 NSLogs balance, tx count, landed things, pending confirmations, and both
 insights' verdicts; pair with `-walletAddress <a BTC address>` to also
 exercise the watched-wallet path (holdings fold, per-wallet card).
+
+## 227. Bitcoin's surprise and delight — the facts only Bitcoin can state (user: "how would you add surprise and delight to our bitcoin experience", then "do all", then "wait we can't make Bitcoin be a source chip, it's part of wallet! isn't it", 2026-07-27)
+
+Five additions to §226, held to the test §218's floor entry already set:
+**delight that is a FACT, not a compliment — it can't fire wrongly, it can't
+fire twice, and it does structural work.** Each one is deliberately something
+the app structurally CANNOT say about any other asset it reads; that's where
+the surprise lives.
+
+**1. Coin vintage — "0.176 BTC · oldest piece from February 2018".** Bitcoin
+is the only asset here whose balance is made of individually dated pieces: an
+ETH balance is one number with no history inside it, a Bitcoin balance is a
+pile of UTXOs each stamped with the block that made it. So "how long have you
+held this" is answerable here and unanswerable everywhere else. Costs ZERO
+extra requests — `/utxo`, already fetched for the consolidation nudge, carries
+`status.block_time` per entry. A STANDING line on the address card, never a
+moment: it moves DOWN when a spend consumes the oldest piece, and celebrating
+that would be exactly the congratulation the floor ruling forbids. The `/utxo`
+fetch is skipped in the steady state (re-read only when something landed, when
+nothing is cached, or while the nudge is unanswered), so a quiet address costs
+nothing.
+
+**2. The halving — the only scheduled event everyone shares.** Every other
+forward deadline in the corpus is personal (your calendar, your ENS expiry,
+your card). This one is identical for every human alive, which is why a
+personal-corpus app knowing it is a surprise. Free off the tip height the
+sweep already fetches. Built on the `ENSExpiry` shape exactly: ref is the
+TARGET HEIGHT (stable for the whole epoch), `dueAt` carries the date
+structurally so the "What's coming up?" chip and the brief's what's-next
+module both read it with no new surface, and the row is RECONCILED in place
+each pass as the estimate sharpens rather than re-landed. No "in N days" in
+the title — ENSExpiry's recorded reason: a stored title starts lying the next
+morning.
+
+**600s per block, NOT the live average — deliberately the less precise-looking
+number.** mempool.space's `/v1/difficulty-adjustment` reports a real `timeAvg`
+(617.6s measured, blocks running ~3% slow) and using it would look sharper
+while being wronger: difficulty retargets every 2,016 blocks specifically to
+pull block time back to 600s, and a halving is up to 210,000 blocks — a
+hundred retargets — out, so extrapolating a two-week sample projects a
+transient. 600s is what the protocol actively steers toward. It also keeps the
+computation host-independent: that endpoint is mempool.space-only
+(blockstream.info 404s it, measured), and the halving must not go dark because
+one host is down.
+
+**3. Sats, and it isn't decoration.** "0.00042 BTC" reads as nothing;
+"42,000 sats" reads as an amount. Above 0.01 BTC the relationship inverts
+(100,000,000 sats is a wall of digits where "1 BTC" is a fact), so the switch
+is about which unit tells the truth more plainly at that magnitude. Verified
+at the boundary: 999,999 → "999,999 sats", 1,000,000 → "0.01 BTC", and
+Bitcoin's own 546-sat dust limit finally reads as an amount instead of
+"0.00000546 BTC".
+
+**4. The block as provenance.** A block is a NAMED moment on Bitcoin —
+numbered, ~10 minutes wide, permanent — where on a 2-second Base chain a
+height is noise. Rides `transferVenue`, the same un-renameable "where it
+happened" slot Solana's program name uses, so `ThingStage` renders
+"Bitcoin · Block 959,701" with no new UI. An unconfirmed tx says "In the
+mempool" rather than showing a guess. `WalletIngest.chainName(forContent:)`
+learned Bitcoin's explorer prefix to supply that first half — named there, NOT
+by joining `allChains`, which drives the Zerion/Alchemy pipelines Bitcoin
+rides none of.
+
+**5. The orange — CUT, because the source fix made it dead code.** The
+proposal included teaching `AppIconTile.brandHue` Bitcoin's `#f7931a`. Once
+ruling 1 below landed, Bitcoin things carry `source: "Wallet"` and that lookup
+is never reached with "bitcoin"; `brandHue` is only ever called with a source
+or an offer name, never a chain name. Shipping it would have been a dead entry
+wearing a rationale. BTC's orange already reaches the only place it was ever
+visible — the treemap cell, via `TokenHue`.
+
+### Two corrections, both caught after the code was written
+
+**Ruling 1 — Bitcoin is not a source (user).** §226 called Bitcoin "a third
+address family the Wallet seat reads" and then the code contradicted it with
+`source: "Bitcoin"`, minting a real chip in the strip: the logs read
+`chipLabels: All, Calendar, Bitcoin, Tokens, Files, Wallet, …` — Bitcoin
+sitting beside Wallet as though it were a separate account. EVM and Solana
+transfers both land as `source: "Wallet"`; the CHAIN is named by the explorer
+link, never by a source. Only distinct PRODUCTS riding the wallet (Peer,
+Gnosis Pay, Privacy Pools) earn their own source. Corrected to `"Wallet"`
+throughout, which also simplified dedupe: the pass's own `existing` set is now
+exactly the right one, so this arm takes it like every sibling instead of
+fetching a second.
+
+**Ruling 2 — `.event` claimed a calendar it isn't on (found on screen).** The
+halving first shipped as `kind: .event` on the reasoning that it IS an event.
+The screenshot showed the calendar sheet rendering: the block URL stuffed into
+a "When" row, and the caption **"From: on your calendar"** under something
+that is on nobody's calendar — a fake status. `ENSExpiry`, the pattern being
+copied, uses `.link` with a `dueAt` for exactly this reason: the kind
+describes what the thing IS, and this one is a pointer to a block not yet
+mined. Fixed to `.link`, which also earned a free win — mempool.space serves
+an OG image for a block URL, so the row now carries a real orange block
+graphic from the link preview.
+
+VERIFIED 2026-07-27 (iPhone 17 Pro sim, pinned UDID, binary confirmed by
+`strings` after `ls -dt` served the OTHER concurrent session's build once):
+halving arithmetic live (`tip 959929 → block 1050000 in 90071 blocks, est Apr
+13, 2028`; 1,050,000 = 5 × 210,000 and 90,071 × 600s ≈ 625 days ✓); vintage
+live (`February 2018 · balance 0.17635544 BTC`, matching the address's oldest
+UTXO in the raw API); the halving row landing once and RECONCILING (not
+re-landing) on rerun; the sats boundary by standalone test; the chip strip
+carrying NO Bitcoin chip with 52 Bitcoin things in the corpus
+(`All, Calendar, Wallet, ChatGPT, …`); and the halving sheet on screen as a
+Link with the mempool.space preview. Debug: `-bitcoinHalvingHorizon <days>`
+widens the 180-day landing window (the real halving is ~90,000 blocks out, so
+the branch would otherwise be unrunnable until 2028); `-bitcoinProbe` logs the
+halving arithmetic and the vintage every run regardless.

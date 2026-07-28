@@ -209,6 +209,7 @@ struct AddressCard: View {
                         .multilineTextAlignment(.center)
                     Text(kindLine)
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    bitcoinVintageLine
 
                     addressRow
                     historySection
@@ -275,6 +276,34 @@ struct AddressCard: View {
         switch current.kind {
         case .wallet, .unknown: return WalletFace.tint(for: current.address)
         case .contract, .safe:  return DS.tint
+        }
+    }
+
+    /// A Bitcoin address's balance and the age of its oldest unspent piece
+    /// (2026-07-27) — the one fact this app can state about a Bitcoin
+    /// holding that it structurally cannot state about any other asset it
+    /// reads. An ETH balance is a single number with no history inside it; a
+    /// Bitcoin balance is a pile of individually dated UTXOs, so "how long
+    /// have you held this" is answerable here and nowhere else.
+    ///
+    /// A standing line, never a moment: it moves DOWN when a spend consumes
+    /// the oldest piece, and celebrating that would be exactly the kind of
+    /// congratulation §218's floor ruling forbids. Renders nothing at all
+    /// until the sweep has actually cached both facts — an address card that
+    /// has never synced says nothing rather than guessing.
+    @ViewBuilder
+    private var bitcoinVintageLine: some View {
+        if BitcoinAddress.isAddress(current.address),
+           let sats = BitcoinBridge.cachedBalanceSats(for: current.address), sats > 0 {
+            let amount = BitcoinBridge.formatAmount(sats: sats)
+            if let since = BitcoinBridge.vintage(for: current.address) {
+                Text("\(amount) · oldest piece from \(since.formatted(.dateTime.month(.wide).year()))")
+                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .multilineTextAlignment(.center)
+            } else {
+                Text(verbatim: amount)
+                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+            }
         }
     }
 

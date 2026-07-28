@@ -58,7 +58,14 @@ enum WalletIngest {
     /// kept HERE so a new chain can't reach transfers without also naming
     /// itself (the catalog-drift class).
     static func chainName(forContent content: String) -> String? {
-        allChains.first { content.hasPrefix($0.explorer) }?.displayName
+        // Bitcoin names itself here rather than joining `allChains` — that
+        // table drives the Zerion/Alchemy pipelines (networks, transfer
+        // chains, holdings routing) that Bitcoin rides none of, so an entry
+        // there would leak a phantom network into every one of them. This
+        // keeps the anti-drift property the doc above states: a chain still
+        // can't reach the feed without naming itself in this one function.
+        if content.hasPrefix(BitcoinBridge.explorer) { return "Bitcoin" }
+        return allChains.first { content.hasPrefix($0.explorer) }?.displayName
     }
 
     /// The chain's native coin symbol ("ETH", "MATIC", "SOL") — the prepare
@@ -420,14 +427,17 @@ enum WalletIngest {
                                       existing: existing, heldPriced: heldPriced)
         added += solana.added
         // …and Bitcoin (2026-07-27) — its own address family, its own read
-        // (Esplora, not RPC), landing sends/receives, settlement alerts, and
-        // the two one-shot insights. `bitcoinAdded` is nil exactly when
-        // BOTH Esplora hosts were unreachable for every watched BTC address —
-        // no `existing` to thread through: it dedupes off its own
-        // "Bitcoin"-scoped refs internally (see its own doc comment for why
-        // the Wallet-scoped set this pass built wouldn't do).
+        // (Esplora, not RPC), landing sends/receives, settlement alerts, the
+        // halving deadline, and the two one-shot insights. Things land under
+        // `source: "Wallet"` like the EVM and Solana arms: Bitcoin is a
+        // CHAIN, not a product, and the chain is named by the explorer link
+        // (`chainName(forContent:)`), never by a source of its own — a
+        // "Bitcoin" source would mint a phantom chip beside Wallet for what
+        // is the same wallet. `bitcoinAdded` is nil exactly when BOTH
+        // Esplora hosts were unreachable for every watched BTC address.
         let bitcoinAdded = await BitcoinBridge.sync(context: context,
-                                                    addresses: bitcoinOnly(addresses))
+                                                    addresses: bitcoinOnly(addresses),
+                                                    existing: existing)
         added += bitcoinAdded ?? 0
         // EIP-7702 delegation watch (2026-07-20) rides the same pass — one
         // eth_getCode per wallet per active EVM chain, landing a thing only

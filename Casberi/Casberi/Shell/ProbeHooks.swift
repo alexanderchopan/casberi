@@ -913,6 +913,16 @@ enum ProbeHooks {
                       GnosisPayBridge.accountSummary())
             }
         },
+        // `-bitcoinHalvingHorizon <days>` widens the window in which the
+        // halving row is allowed to land. The real next halving is ~90,000
+        // blocks out — well past the shipped 180-day horizon — so without
+        // this the landing branch could not be exercised until 2028. The
+        // probe logs the arithmetic either way; this makes the ROW testable.
+        // Declared BEFORE `-bitcoinProbe` so list order applies it first.
+        Hook(key: "bitcoinHalvingHorizon") { spec, _ in
+            BitcoinBridge.halvingHorizonOverrideDays = Int(spec)
+            NSLog("[Casberi] bitcoinHalvingHorizon: %@ days", spec)
+        },
         // `-bitcoinProbe <address>` runs the Bitcoin sweep for one address
         // directly (bypassing the watch list) and NSLogs balance, tx count,
         // landed things, pending confirmations, and the two one-shot

@@ -54,7 +54,6 @@ extension DS {
         case "bookmarks":           return Color.fixed("#8d6e63")   // a neutral bookmark-ribbon brown — no single brand here (Safari + Chrome, one file format)
         case "safari":              return Color.fixed("#1d9bf6")
         case "wallet":              return Color.fixed("#2461ff")
-        case "bitcoin":             return Color.fixed("#f7931a")   // the same orange `TokenHue` already gives the BTC/WBTC treemap cells — taught here too so a Bitcoin row, its icon and its moment rain all agree
         case "peer":                return Color.fixed("#4b47f6")   // an indigo in their family — approximate; re-sample when bundling the official mark
         case "gnosis pay":          return Color.fixed("#4830c0")   // the owl's indigo (icon-sampled from the bundled mark)
         case "privacy pools", "0xbow privacy pools":

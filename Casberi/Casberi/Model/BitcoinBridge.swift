@@ -48,8 +48,12 @@ enum BitcoinBridge {
 
     private static let hosts = ["https://mempool.space/api", "https://blockstream.info/api"]
     /// The public web explorer a landed thing's content links to — same host
-    /// as the primary API, a plain `/tx/<txid>` permalink.
-    private static let explorer = "https://mempool.space/tx/"
+    /// as the primary API, a plain `/tx/<txid>` permalink. Internal (not
+    /// private) because `WalletIngest.chainName(forContent:)` matches on it
+    /// to name the chain a landed transfer belongs to — kept as ONE constant
+    /// so a chain can't reach the feed without also naming itself, the same
+    /// anti-drift rule that function's own doc states.
+    static let explorer = "https://mempool.space/tx/"
 
     /// The confirmation depth a receipt counts as SETTLED, not just seen —
     /// the number miners and exchanges both treat as final for a sizeable
@@ -127,30 +131,29 @@ enum BitcoinBridge {
     /// any that just crossed into settled. Returns the landed count, nil
     /// when nothing could be reached at all.
     ///
-    /// Deliberately does NOT take an `existing` refs set from the caller the
-    /// way the EVM-side sibling bridges do — those dedupe cross-pass through
-    /// their own persistent block/timestamp CURSORS (a fresh scan only ever
-    /// asks about blocks it hasn't seen), and treat the caller's set as a
-    /// same-pass safety net that happens to be scoped to `source ==
-    /// "Wallet"`, which their own differently-sourced refs ("peer:…",
-    /// "gnosispay:…") could never match anyway (see `PeerBridge.sync`'s own
-    /// doc comment). This bridge has no cursor — it re-reads the same
-    /// bounded recent page every pass BY DESIGN (see the header) — so its
-    /// ref-dedupe has to be the real thing, not a same-pass nicety, which
-    /// means it has to be scoped to its OWN source ("Bitcoin"), fetched here.
+    /// Takes the pass's `existing` refs set like every sibling arm — and
+    /// unlike them, actually DEPENDS on it. Peer/Gnosis Pay/Privacy Pools
+    /// dedupe cross-pass through their own persistent block cursors and
+    /// treat that set as a same-pass safety net their differently-sourced
+    /// refs could never match anyway (see `PeerBridge.sync`'s doc). This arm
+    /// has no cursor — it re-reads the same bounded recent page every pass
+    /// BY DESIGN (see the header) — so ref-dedupe is the real mechanism. It
+    /// works because Bitcoin things land under `source: "Wallet"`, the same
+    /// source the caller scoped that set to.
     @MainActor
-    static func sync(context: ModelContext, addresses: [String]) async -> Int? {
+    static func sync(context: ModelContext, addresses: [String],
+                     existing: Set<String>) async -> Int? {
         guard !addresses.isEmpty else { return 0 }
         guard !running else { return 0 }
         running = true
         defer { running = false }
-        return await syncLocked(context: context, addresses: addresses)
+        return await syncLocked(context: context, addresses: addresses, existing: existing)
     }
 
     @MainActor
-    private static func syncLocked(context: ModelContext, addresses: [String]) async -> Int? {
+    private static func syncLocked(context: ModelContext, addresses: [String],
+                                   existing: Set<String>) async -> Int? {
         guard let tip = await tipHeight() else { return nil }
-        let existing = IngestSupport.existingSourceRefs(context, source: "Bitcoin")
         let price = await priceUSD()   // nil is fine — things still land, just unpriced
         var added = 0
         var reachedAny = false
@@ -172,17 +175,28 @@ enum BitcoinBridge {
                 let blockHeight = status?["block_height"] as? Int
                 let when: Date = (status?["block_time"] as? Double)
                     .map { Date(timeIntervalSince1970: $0) } ?? .now
-                let amount = formatSats(abs(net))
+                let amount = formatAmount(sats: abs(net))
                 let received = net > 0
                 let title = received
-                    ? String(localized: "Received \(amount) BTC")
-                    : String(localized: "Sent \(amount) BTC")
+                    ? String(localized: "Received \(amount)")
+                    : String(localized: "Sent \(amount)")
                 let thing = Thing(kind: .transaction, title: title,
-                                  content: explorer + txid, source: "Bitcoin",
+                                  content: explorer + txid, source: "Wallet",
                                   capturedAt: when, sourceRef: ref)
                 thing.walletAddress = address
                 thing.transferDirection = received ? "received" : "sent"
-                thing.transferAmount = "\(amount) BTC"
+                thing.transferAmount = amount
+                // The block as provenance (2026-07-27). A block is a NAMED
+                // moment on Bitcoin — numbered, ~10 minutes wide, permanent —
+                // in a way it simply isn't on a 2-second Base chain, where a
+                // height is noise. It rides `transferVenue`, the same
+                // un-renameable "where it happened" slot Solana's program
+                // name uses, so `ThingStage` renders it with no new UI:
+                // "Bitcoin · Block 959,701". An unconfirmed tx has no block
+                // yet and honestly says so rather than showing a guess.
+                thing.transferVenue = blockHeight.map {
+                    String(localized: "Block \($0.formatted(.number.grouping(.automatic)))")
+                } ?? String(localized: "In the mempool")
                 if let price {
                     thing.priceValue = Double(abs(net)) / 100_000_000 * price
                     thing.priceCurrency = "USD"
@@ -210,14 +224,28 @@ enum BitcoinBridge {
             }
             if !freshlyPending.isEmpty { addPending(address: address, txids: freshlyPending) }
 
-            // One-shot insights (items 3 and 5) — never re-landed once seen,
-            // so this only ever does real work the first time a fact becomes
-            // true for this address.
+            // The UTXO set — ONE fetch serving both the standing vintage and
+            // the one-shot consolidation nudge. Skipped entirely in the
+            // steady state: the pile of pieces can only change when a
+            // transaction moves, so it's re-read when something landed this
+            // pass, when nothing is cached yet, or while the nudge is still
+            // unanswered. A quiet address costs zero requests here.
+            let needsUTXOs = !landed.isEmpty
+                || vintage(for: address) == nil
+                || !existing.contains(consolidationRef(address))
+            let utxoSet = needsUTXOs ? await utxos(address) : nil
+            if let utxoSet { cacheVintage(address: address, utxos: utxoSet) }
+            if let stats = await addressStats(address) {
+                UserDefaults.standard.set(stats.balanceSats,
+                                          forKey: "bitcoin.balance.\(address.lowercased())")
+            }
+
             added += await landInsights(context: context, address: address,
-                                        txs: txs, existing: existing)
+                                        txs: txs, utxos: utxoSet, existing: existing)
         }
 
         added += await settlePending(context: context, tip: tip)
+        added += await landHalving(context: context, tip: tip)
         return reachedAny ? added : nil
     }
 
@@ -259,10 +287,35 @@ enum BitcoinBridge {
         "bitcoin:\(address.lowercased()):\(txid)"
     }
 
-    /// Trimmed, full satoshi precision — `WalletIngest.format`'s 4-decimal
-    /// cap would round a typical sub-0.0001 BTC receipt to "0.0000" and read
-    /// as nothing arriving, so this is its own formatter, not a shared one.
-    private static func formatSats(_ sats: Int) -> String {
+    /// Below this, an amount reads in SATS instead of BTC (2026-07-27).
+    ///
+    /// Not decoration — the denomination is doing legibility work, which is
+    /// the §218 test for delight ("does structural work"). "0.00042 BTC"
+    /// reads as nothing; "42,000 sats" reads as an amount. Above 0.01 the
+    /// relationship inverts (100,000,000 sats is a wall of digits where
+    /// "1 BTC" is a fact), so the switch is genuinely about which unit tells
+    /// the truth more plainly at that magnitude, not about which is cuter.
+    static let satsThreshold = 1_000_000   // 0.01 BTC
+
+    /// "0.05 BTC" or "42,000 sats" — the unit that reads as an amount at
+    /// this magnitude. Its own formatter, never `WalletIngest.format`, whose
+    /// 4-decimal cap would round a typical sub-0.0001 BTC receipt to
+    /// "0.0000" and read as nothing arriving at all.
+    static func formatAmount(sats: Int) -> String {
+        guard abs(sats) >= satsThreshold else {
+            let f = NumberFormatter()
+            f.numberStyle = .decimal
+            f.maximumFractionDigits = 0
+            let grouped = f.string(from: NSNumber(value: sats)) ?? String(sats)
+            return String(localized: "\(grouped) sats")
+        }
+        return "\(formatBTC(sats)) BTC"
+    }
+
+    /// Trimmed, full satoshi precision, no unit — for the callers that need
+    /// the bare BTC number (`transferAmount`'s structured field, which the
+    /// stage re-renders itself).
+    private static func formatBTC(_ sats: Int) -> String {
         var s = String(format: "%.8f", Double(sats) / 100_000_000)
         while s.hasSuffix("0") { s.removeLast() }
         if s.hasSuffix(".") { s.removeLast() }
@@ -309,10 +362,10 @@ enum BitcoinBridge {
                     continue
                 }
                 let ref = "bitcoin:settled:\(address.lowercased()):\(txid)"
-                guard !IngestSupport.hasSourceRef(context, source: "Bitcoin", ref: ref) else { continue }
+                guard !IngestSupport.hasSourceRef(context, source: "Wallet", ref: ref) else { continue }
                 let thing = Thing(kind: .transaction,
                                   title: String(localized: "Your Bitcoin transfer settled (\(settledConfirmations)+ confirmations)"),
-                                  content: explorer + txid, source: "Bitcoin",
+                                  content: explorer + txid, source: "Wallet",
                                   capturedAt: .now, sourceRef: ref)
                 thing.walletAddress = address
                 context.insert(thing)
@@ -324,16 +377,177 @@ enum BitcoinBridge {
         return added
     }
 
-    // MARK: - One-shot insights (items 3 and 5)
+    // MARK: - The halving (the one scheduled event everyone shares)
 
-    /// The consolidation nudge (item 3) and the dormancy note (item 5) —
-    /// each lands AT MOST ONCE per address, ever (ref-deduped like
-    /// everything else): a true fact worth stating once, not a live status
-    /// worth restating every refresh. `txs` is the same recent page the
-    /// caller already fetched for activity — the dormancy read is free.
+    /// Blocks per halving epoch — consensus, not a tunable.
+    private static let halvingInterval = 210_000
+
+    /// How far ahead the halving becomes a row.
+    ///
+    /// Wider than `ENSExpiry`'s 90 days, deliberately. That horizon exists
+    /// because "a deadline is news when it is near, and noise when it isn't"
+    /// — and an admin deadline you can act on is news for about a quarter.
+    /// The halving is a different animal: nobody can act on it, it is
+    /// genuinely anticipated further out, and it recurs only every ~4 years,
+    /// so even a 180-day window shows it for roughly 12% of the cycle rather
+    /// than parking a row in the feed forever.
+    private static let halvingHorizonDays = 180
+
+    /// DEBUG override for the horizon (`-bitcoinHalvingHorizon <days>`), so
+    /// the landing branch is verifiable today — the real next halving is
+    /// ~90,000 blocks out, well past any shippable horizon, which would
+    /// otherwise make this code unrunnable until 2028.
+    static var halvingHorizonOverrideDays: Int?
+
+    struct Halving {
+        let height: Int
+        let blocksRemaining: Int
+        let estimated: Date
+    }
+
+    /// The next halving, computed off the tip this pass already fetched.
+    ///
+    /// **600 seconds per block, NOT the live average — a deliberate choice
+    /// against the more precise-looking number.** mempool.space's
+    /// `/v1/difficulty-adjustment` reports a real `timeAvg` (617.6s when
+    /// measured 2026-07-27, i.e. blocks running ~3% slow), and using it
+    /// would look more accurate while being less so: difficulty retargets
+    /// every 2,016 blocks specifically to pull block time back to 600s, and
+    /// a halving is up to 210,000 blocks — a hundred retargets — away.
+    /// Extrapolating a two-week sample across that span projects a
+    /// transient. 600s is what the protocol actively steers toward, so it is
+    /// the honest long-horizon estimator. It also keeps this computation
+    /// host-independent: `/v1/difficulty-adjustment` is mempool.space-only
+    /// (blockstream.info 404s it, measured), and the halving must not go
+    /// dark just because one host is down.
+    static func nextHalving(tip: Int) -> Halving {
+        let height = ((tip / halvingInterval) + 1) * halvingInterval
+        let remaining = height - tip
+        return Halving(height: height, blocksRemaining: remaining,
+                       estimated: Date.now.addingTimeInterval(Double(remaining) * 600))
+    }
+
+    /// Lands — or reconciles — the halving row.
+    ///
+    /// The ENSExpiry shape exactly (prd §168's forward-deadline chip): the
+    /// ref is the TARGET HEIGHT, stable for the whole epoch, and `dueAt`
+    /// carries the date structurally so the "What's coming up?" chip and the
+    /// brief's what's-next module both pick it up with no new surface. The
+    /// estimate drifts as real blocks come in, so the row is reconciled in
+    /// place every pass rather than re-landed — it quietly sharpens as the
+    /// date approaches.
+    ///
+    /// No "in N days" in the title, for ENSExpiry's own recorded reason: a
+    /// stored title would start lying the next morning.
+    @MainActor
+    private static func landHalving(context: ModelContext, tip: Int) async -> Int {
+        let halving = nextHalving(tip: tip)
+        let ref = "bitcoin:halving:\(halving.height)"
+        let fresh = halvingTitle(halving)
+        if let landed = try? context.fetch(
+            FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == ref })).first {
+            if landed.dueAt != halving.estimated || landed.title != fresh {
+                landed.dueAt = halving.estimated
+                landed.title = fresh
+                context.saveHonestly()
+            }
+            return 0
+        }
+        let horizonDays = halvingHorizonOverrideDays ?? halvingHorizonDays
+        guard let horizon = Calendar.current.date(byAdding: .day, value: horizonDays, to: .now),
+              halving.estimated <= horizon else { return 0 }
+        // `.link`, NOT `.event` — the ENSExpiry precedent, and the reason is
+        // an honesty one found on screen (2026-07-27): `.event` renders the
+        // calendar sheet, which put the block URL in a "When" row and
+        // captioned the halving "on your calendar". It is not on anyone's
+        // calendar. A deadline-bearing row is a `.link` whose `dueAt` carries
+        // the date structurally; the kind describes what the thing IS, and
+        // this one is a pointer to a block that hasn't been mined yet.
+        let thing = Thing(
+            kind: .link,
+            title: fresh,
+            content: "https://mempool.space/block/\(halving.height)",
+            source: "Wallet",
+            capturedAt: .now,
+            sourceRef: ref)
+        thing.dueAt = halving.estimated
+        context.insert(thing)
+        SpotlightIndex.index([thing])
+        return context.saveHonestly() ? 1 : 0
+    }
+
+    /// "The Bitcoin halving lands around March 2028, at block 1,050,000" —
+    /// the date and the height are the facts. Past tense once it's happened,
+    /// so a row can never sit in the feed claiming the future about
+    /// something already done (the ENSExpiry lesson).
+    private static func halvingTitle(_ h: Halving) -> String {
+        let when = h.estimated.formatted(.dateTime.month(.wide).year())
+        let height = h.height.formatted(.number.grouping(.automatic))
+        return h.estimated < .now
+            ? String(localized: "The Bitcoin halving has happened, at block \(height)")
+            : String(localized: "The Bitcoin halving lands around \(when), at block \(height)")
+    }
+
+    // MARK: - Coin vintage (the oldest unspent piece)
+
+    private static func vintageKey(_ address: String) -> String {
+        "bitcoin.vintage.\(address.lowercased())"
+    }
+
+    /// The date of the OLDEST unspent piece of this address's balance, or nil
+    /// when nothing is cached yet.
+    ///
+    /// Bitcoin is the only asset in this app whose balance is made of
+    /// individually dated pieces: an ETH balance is one number with no
+    /// history inside it, while a Bitcoin balance is a pile of UTXOs each
+    /// stamped with the block that created it. So "how long have you held
+    /// this" is a fact here and an unanswerable question everywhere else —
+    /// which is exactly the kind of thing worth showing, and it costs ZERO
+    /// extra requests: `/utxo` (already fetched for the consolidation
+    /// nudge) carries `status.block_time` per entry.
+    ///
+    /// A standing line, not a moment: it changes honestly as coins are spent
+    /// and received, so it must never fire a toast (a spend that consumes
+    /// your oldest UTXO would "celebrate" your vintage going DOWN).
+    static func vintage(for address: String) -> Date? {
+        let t = UserDefaults.standard.double(forKey: vintageKey(address))
+        return t > 0 ? Date(timeIntervalSince1970: t) : nil
+    }
+
+    /// The cached balance in sats, for the address card's own line — written
+    /// by the same sweep that writes the vintage so the two always agree.
+    static func cachedBalanceSats(for address: String) -> Int? {
+        let key = "bitcoin.balance.\(address.lowercased())"
+        guard UserDefaults.standard.object(forKey: key) != nil else { return nil }
+        return UserDefaults.standard.integer(forKey: key)
+    }
+
+    private static func cacheVintage(address: String, utxos: [[String: Any]]) {
+        let times = utxos.compactMap { utxo -> Double? in
+            guard let status = utxo["status"] as? [String: Any],
+                  (status["confirmed"] as? Bool) == true,
+                  let t = status["block_time"] as? Double, t > 0 else { return nil }
+            return t
+        }
+        guard let oldest = times.min() else { return }
+        UserDefaults.standard.set(oldest, forKey: vintageKey(address))
+    }
+
+    // MARK: - One-shot insights (the consolidation nudge and dormancy note)
+
+    /// The consolidation nudge and the dormancy note — each lands AT MOST
+    /// ONCE per address, ever (ref-deduped like everything else): a true
+    /// fact worth stating once, not a live status worth restating every
+    /// refresh. `txs` is the same recent page the caller already fetched for
+    /// activity — the dormancy read is free.
+    private static func consolidationRef(_ address: String) -> String {
+        "bitcoin:utxo:\(address.lowercased())"
+    }
+
     @MainActor
     private static func landInsights(context: ModelContext, address: String,
                                      txs: [[String: Any]],
+                                     utxos: [[String: Any]]?,
                                      existing: Set<String>) async -> Int {
         var added = 0
 
@@ -351,7 +565,7 @@ enum BitcoinBridge {
                 let thing = Thing(
                     kind: .transaction,
                     title: String(localized: "Nothing has moved from this address since \(last.formatted(.dateTime.month(.wide).year()))"),
-                    content: explorer, source: "Bitcoin", capturedAt: .now, sourceRef: dormantRef)
+                    content: explorer, source: "Wallet", capturedAt: .now, sourceRef: dormantRef)
                 thing.walletAddress = address
                 context.insert(thing)
                 SpotlightIndex.index([thing])
@@ -359,12 +573,12 @@ enum BitcoinBridge {
             }
         }
 
-        // Consolidation: only when the UTXO read actually succeeds (a busy
+        // Consolidation: only when the UTXO read actually succeeded (a busy
         // address's own /utxo call 400s past 500 pieces — see the header) and
         // the fragmentation is real enough to be worth a nudge.
-        let consolidateRef = "bitcoin:utxo:\(address.lowercased())"
+        let consolidateRef = consolidationRef(address)
         if !existing.contains(consolidateRef),
-           let utxos = await utxos(address), utxos.count >= 15,
+           let utxos, utxos.count >= 15,
            let rate = await feeRateSatPerVByte(), let price = await priceUSD() {
             // A rough mixed-input estimate (43 vbytes overhead + one output,
             // 68 vbytes per input — native SegWit's own weight, the median
@@ -378,7 +592,7 @@ enum BitcoinBridge {
             let thing = Thing(
                 kind: .transaction,
                 title: String(localized: "Your bitcoin balance sits in \(utxos.count) pieces — consolidating costs about \(PriceFormat.string(feeUSD, currency: "USD") ?? String(format: "$%.2f", feeUSD)) today"),
-                content: explorer, source: "Bitcoin", capturedAt: .now, sourceRef: consolidateRef)
+                content: explorer, source: "Wallet", capturedAt: .now, sourceRef: consolidateRef)
             thing.walletAddress = address
             context.insert(thing)
             SpotlightIndex.index([thing])
@@ -482,16 +696,34 @@ enum BitcoinBridge {
               stats.map { String($0.txCount) } ?? "UNREAD",
               stats.map { String($0.balanceSats) } ?? "UNREAD",
               price.map { String(format: "%.2f", $0) } ?? "UNREAD")
+        // The halving math, logged EVERY run whether or not the row is
+        // inside its horizon — otherwise this branch is unverifiable until
+        // 2028 and the arithmetic would ship unchecked. Pair with
+        // `-bitcoinHalvingHorizon 9999` to exercise the landing itself.
+        if let tip = await tipHeight() {
+            let h = nextHalving(tip: tip)
+            NSLog("[Casberi] bitcoinHalving: tip %d → block %d in %d blocks, est %@ (horizon %d days)",
+                  tip, h.height, h.blocksRemaining,
+                  h.estimated.formatted(.dateTime.year().month().day()),
+                  halvingHorizonOverrideDays ?? halvingHorizonDays)
+        }
         for _ in 0..<60 where running {
             try? await Task.sleep(nanoseconds: 500_000_000)
         }
         guard !running else { return 0 }
         running = true
         defer { running = false }
-        let n = await syncLocked(context: context, addresses: [address])
+        let n = await syncLocked(
+            context: context, addresses: [address],
+            existing: IngestSupport.existingSourceRefs(context, source: "Wallet"))
         let pending = (UserDefaults.standard.array(forKey: pendingKey(address)) as? [String]) ?? []
         NSLog("[Casberi] bitcoinProbe: %@ landed; %d pending confirmation",
               n.map(String.init) ?? "FAILED", pending.count)
+        NSLog("[Casberi] bitcoinVintage: %@ · balance %@",
+              vintage(for: address).map {
+                  $0.formatted(.dateTime.month(.wide).year())
+              } ?? "UNREAD",
+              cachedBalanceSats(for: address).map { formatAmount(sats: $0) } ?? "UNREAD")
         return n
     }
 }
