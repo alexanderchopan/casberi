@@ -83,6 +83,9 @@ struct ThingSheetView: View {
     /// earned it. A short record opens `.medium` instead of one card of
     /// content over a screen of black. Both detents stay a drag away.
     @State private var detent: PresentationDetent
+    /// Stamped at construction, before the zoom-in transition starts — the
+    /// clock `dismissWhenSettled` reads to tell a fast tap from a settled one.
+    private let presentedAt = Date()
 
     init(thing: Thing, onBack: (() -> Void)? = nil) {
         self.thing = thing
@@ -594,9 +597,10 @@ struct ThingSheetView: View {
                 // Verified live via `-agentThingProbe` (2026-07-21).
                 Button {
                     DSHaptic.tap()
-                    dismiss()
-                    if let url = URL(string: "casberi://feed/source/\(sourcePathComponent)") {
-                        openURL(url)
+                    dismissWhenSettled {
+                        if let url = URL(string: "casberi://feed/source/\(sourcePathComponent)") {
+                            openURL(url)
+                        }
                     }
                 } label: {
                     HStack(spacing: DS.Space.s2) {
@@ -619,6 +623,28 @@ struct ThingSheetView: View {
     /// this before handing it to `casberi://feed/source/…`.
     private var sourcePathComponent: String {
         thing.source.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? thing.source
+    }
+
+    /// A `dismiss()` fired while the sheet's own zoom-in transition is still
+    /// running races `UIPresentationController` the same way the delete-guard
+    /// above does, and trips the same `_UIZoomTransitionController` nil-
+    /// unwrap (live TestFlight crash, build 167: the eyebrow's "leave for
+    /// source feed" button below, tapped fast enough to still be inside the
+    /// present transition). Most taps land well after the transition has
+    /// settled and dismiss immediately, same as before; only a fast tap pays
+    /// the wait, and only for the remainder of the 500ms window.
+    private func dismissWhenSettled(then after: @escaping () -> Void = {}) {
+        let remaining = 0.5 - Date().timeIntervalSince(presentedAt)
+        guard remaining > 0 else {
+            dismiss()
+            after()
+            return
+        }
+        Task {
+            try? await Task.sleep(for: .milliseconds(Int(remaining * 1000)))
+            dismiss()
+            after()
+        }
     }
 
     /// A social post with a known author — the eyebrow and thread treatment
