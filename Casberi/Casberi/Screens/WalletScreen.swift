@@ -869,7 +869,12 @@ struct WalletScreen: View {
                 addWatched(address: hex, label: input)
             }
         } else {
-            if SNS.isAddress(input) { WalletChainStore.shared.ensureEnabled("solana-mainnet") }
+            // A legacy/P2SH Bitcoin address is base58-shaped too, the same
+            // band Solana pubkeys occupy — check the checksum-verified kind
+            // FIRST, or a pasted BTC address flips Solana on by mistake.
+            if SNS.isAddress(input), !BitcoinAddress.isAddress(input) {
+                WalletChainStore.shared.ensureEnabled("solana-mainnet")
+            }
             addWatched(address: input, label: "")
         }
     }

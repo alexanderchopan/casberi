@@ -119,6 +119,12 @@ enum WalletIngest {
     /// wrong pair rather than 400ing — but paying for a guaranteed-empty read on
     /// every address every foreground is waste, not safety.)
     private static func networks(for address: String) -> [String] {
+        // Bitcoin rides none of this — it isn't part of the Zerion/Alchemy
+        // Portfolio call at all (see `BitcoinBridge`), and without this check
+        // a legacy/P2SH address (base58, the same 25–34-char band Solana
+        // pubkeys occupy) would fall into `SNS.isAddress`'s shape-only test
+        // below and get routed to Solana's networks by mistake.
+        guard !BitcoinAddress.isAddress(address) else { return [] }
         let wantsSolana = SNS.isAddress(address)
         return chains.filter { ($0.kind == .solana) == wantsSolana }.map(\.network)
     }
@@ -413,6 +419,16 @@ enum WalletIngest {
         let solana = await solanaSync(context: context, addresses: solanaOnly(addresses),
                                       existing: existing, heldPriced: heldPriced)
         added += solana.added
+        // …and Bitcoin (2026-07-27) — its own address family, its own read
+        // (Esplora, not RPC), landing sends/receives, settlement alerts, and
+        // the two one-shot insights. `bitcoinAdded` is nil exactly when
+        // BOTH Esplora hosts were unreachable for every watched BTC address —
+        // no `existing` to thread through: it dedupes off its own
+        // "Bitcoin"-scoped refs internally (see its own doc comment for why
+        // the Wallet-scoped set this pass built wouldn't do).
+        let bitcoinAdded = await BitcoinBridge.sync(context: context,
+                                                    addresses: bitcoinOnly(addresses))
+        added += bitcoinAdded ?? 0
         // EIP-7702 delegation watch (2026-07-20) rides the same pass — one
         // eth_getCode per wallet per active EVM chain, landing a thing only
         // when the delegate CHANGES. Inside the running guard like everything
@@ -463,7 +479,7 @@ enum WalletIngest {
         // are proof of reach in their own right (review 2026-07-16: without
         // this, a partial Alchemy outage could paint "couldn't reach" over
         // approvals that just landed).
-        let reached = reachedAny || solana.reached || approvalsAdded > 0
+        let reached = reachedAny || solana.reached || bitcoinAdded != nil || approvalsAdded > 0
             || (peerAdded ?? 0) > 0 || (privacyPoolsAdded ?? 0) > 0
             || delegationAdded > 0 || defiAdded > 0 || safeAdded > 0
             || morphoRiskAdded > 0 || (morphoActivityAdded ?? 0) > 0
@@ -650,7 +666,7 @@ enum WalletIngest {
     static func resolvedAddresses(_ raw: [String]) async -> [String] {
         var out: [String] = []
         for a in raw {
-            if ENS.isHexAddress(a) || SNS.isAddress(a) { out.append(a) }
+            if ENS.isHexAddress(a) || BitcoinAddress.isAddress(a) || SNS.isAddress(a) { out.append(a) }
             else if SNS.looksLikeName(a) {
                 if let sol = await SNS.resolve(a) {
                     out.append(sol)
@@ -676,8 +692,16 @@ enum WalletIngest {
     }
 
     /// The base58 addresses among a resolved set — the Solana arm's input.
+    /// Excludes anything that checksum-verifies as Bitcoin FIRST — a legacy/
+    /// P2SH address is base58-shaped too, and `SNS.isAddress` alone can't
+    /// tell the two apart (see `BitcoinAddress`'s header).
     private static func solanaOnly(_ addresses: [String]) -> [String] {
-        addresses.filter { SNS.isAddress($0) }
+        addresses.filter { SNS.isAddress($0) && !BitcoinAddress.isAddress($0) }
+    }
+
+    /// The Bitcoin addresses among a resolved set — `BitcoinBridge`'s input.
+    private static func bitcoinOnly(_ addresses: [String]) -> [String] {
+        addresses.filter { BitcoinAddress.isAddress($0) }
     }
 
     /// Lands the Solana half of a pass (prd §86) — the non-EVM ingest. Sits
@@ -1031,15 +1055,23 @@ enum WalletIngest {
         // feed scoped to one wallet is answering "what does THIS address hold",
         // and folding a Kraken balance into that would make the scope a lie.
         let exchange = address == nil ? await ExchangeBridge.pricedBalances() : []
+        // Watched validators merge into the COMBINED read only, same reasoning
+        // as exchanges above — they aren't scoped to any one address.
+        let validatorsUSD = address == nil ? (await EthValidatorRead.totalUSD() ?? 0) : 0
         // Either source alone is a real portfolio — someone whose crypto is all
         // on an exchange still has one, and returning nil would paint the empty
         // state over a balance we successfully read.
-        guard !groups.isEmpty || !exchange.isEmpty else { return nil }
-        let portfolio = WalletPortfolio.from(groups: groups, exchange: exchange)
+        guard !groups.isEmpty || !exchange.isEmpty || validatorsUSD > 0 else { return nil }
+        let portfolio = WalletPortfolio.from(groups: groups, exchange: exchange, validatorsUSD: validatorsUSD)
 
         // More than one PLACE, not more than one wallet — a single wallet plus
         // a connected exchange is exactly the case this feature exists for.
-        if address == nil, groups.count + (exchange.isEmpty ? 0 : 1) > 1, !portfolio.isEmpty {
+        // `groups.isEmpty` also routes here even with only one other source
+        // (exchange-only, or validators-only): the per-wallet branch below
+        // builds its doc by indexing INTO `groups`, so with none to index a
+        // portfolio that's real (exchange/validator balances) would otherwise
+        // fall through to an empty, broken `root = Stack([])` document.
+        if address == nil, groups.count + (exchange.isEmpty ? 0 : 1) > 1 || groups.isEmpty, !portfolio.isEmpty {
             // "What you hold", not "Across your wallets" — the balance headline
             // directly above already owns that phrase (verified on screen
             // 2026-07-21: the two stacked read as one thing said twice). The
@@ -1181,8 +1213,32 @@ enum WalletIngest {
         case unreachable            // couldn't reach the chain (offline / rate-limited / unresolved)
     }
 
+    /// WBTC's Ethereum contract, reused as BTC's own treemap chart route
+    /// (2026-07-27) — Bitcoin has no "token" of its own for `TokenChart` to
+    /// open, but WBTC is a 1:1-custodied wrapper of the same asset, and its
+    /// Dexscreener pool tracks BTC's price closely enough that tapping the
+    /// cell opens a real, relevant chart rather than nothing. Same reasoning
+    /// `wrappedNativeContract` already uses for ETH/MATIC/SOL's own cells.
+    private static let bitcoinChartRoute = "ethereum:0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
+
     private static func walletGroupOutcome(_ entry: WalletStore.WatchedAddress) async -> WalletHoldingsOutcome {
         guard let address = await resolvedAddresses([entry.address]).first else { return .unreachable }
+        // Bitcoin rides none of the Portfolio/Zerion machinery below — its
+        // own read, folded in here so the per-wallet card (and, through
+        // `topHoldingsByWallet`, the combined "What you hold" merge) counts
+        // it exactly like every other family's holding.
+        if BitcoinAddress.isAddress(address) {
+            guard let usd = await BitcoinBridge.balanceUSD(addresses: [address]) else { return .unreachable }
+            guard usd >= holdingFloor else { return .empty }
+            let bySymbol = ["BTC": usd]
+            let routes = ["BTC": bitcoinChartRoute]
+            return .group(HoldingsGroup(label: entry.label.isEmpty ? entry.short : entry.label,
+                                        address: entry.address,
+                                        cells: treemapCells(bySymbol: bySymbol, routes: routes),
+                                        totalUSD: usd, tokenCount: 1,
+                                        topBySymbol: bySymbol, bySymbolAll: bySymbol,
+                                        routeBySymbol: routes))
+        }
         // A wallet with every chain switched off has nothing to ask — that's a
         // deliberate empty, not a chain we failed to reach. Classify it .empty
         // so Home shows no card rather than crying "couldn't reach the chain"
@@ -1236,6 +1292,21 @@ enum WalletIngest {
                 routeBySymbol[token.symbol] = (token.usd, "\(slug):\(wrapped)")
             }
         }
+        // Delegated SOL sits in its own stake account, never in the wallet's
+        // token balance the Portfolio endpoint just read — so it folds in
+        // here, under the plain SOL symbol, the same way a Kraken `.S`
+        // balance folds into its base asset. Solana-only (SNS.isAddress);
+        // an EVM wallet has no stake account to ask about. A staking read
+        // failure is silent — SOL priced from tokens still counts, and a
+        // liquid-only wallet must not lose its whole total to one RPC hiccup.
+        for address in addresses where SNS.isAddress(address) && !BitcoinAddress.isAddress(address) {
+            guard let solPrice = await SolanaActivity.solPrice(key: IngestSupport.alchemyKey),
+                  let staked = await SolanaStaking.stakedUSD(
+                    address: address, key: IngestSupport.alchemyKey, solPrice: solPrice),
+                  staked.isFinite, staked >= holdingFloor, staked < holdingCeiling else { continue }
+            bySymbol["SOL", default: 0] += staked
+        }
+
         guard !bySymbol.isEmpty else { return (true, nil) }
 
         let routes = routeBySymbol.mapValues(\.route)

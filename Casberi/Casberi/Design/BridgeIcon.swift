@@ -75,8 +75,14 @@ struct TokenIcon: View {
     let symbol: String
     var size: CGFloat = 20
 
+    /// "btc" borrows WBTC's bundled mark — same Bitcoin logo, and there's no
+    /// separate `brand-btc` asset to ship (2026-07-27).
+    private var lookupSymbol: String {
+        symbol.lowercased() == "btc" ? "wbtc" : symbol.lowercased()
+    }
+
     var body: some View {
-        if let ui = UIImage(named: "brand-" + symbol.lowercased()) {
+        if let ui = UIImage(named: "brand-" + lookupSymbol) {
             Image(uiImage: ui)
                 .resizable()
                 .scaledToFit()

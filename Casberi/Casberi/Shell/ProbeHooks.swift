@@ -665,7 +665,8 @@ enum ProbeHooks {
         Hook(key: "walletAddress") { spec, context in
             let parts = spec.split(separator: "|", maxSplits: 1).map(String.init)
             guard let address = parts.first else { return }   // "" crashed on parts[0]
-            if SNS.isAddress(address) || SNS.looksLikeName(address) {
+            if !BitcoinAddress.isAddress(address),
+               SNS.isAddress(address) || SNS.looksLikeName(address) {
                 WalletChainStore.shared.ensureEnabled("solana-mainnet")
             }
             WalletStore.shared.add(address, label: parts.count > 1 ? parts[1] : "")
@@ -912,6 +913,17 @@ enum ProbeHooks {
                       GnosisPayBridge.accountSummary())
             }
         },
+        // `-bitcoinProbe <address>` runs the Bitcoin sweep for one address
+        // directly (bypassing the watch list) and NSLogs balance, tx count,
+        // landed things, pending confirmations, and the two one-shot
+        // insights' verdicts. Pair with `-walletAddress <a BTC address>` to
+        // also exercise the watched-wallet path (holdings fold, per-wallet
+        // card) rather than just the sweep itself.
+        Hook(key: "bitcoinProbe") { address, context in
+            Task { @MainActor in
+                _ = await BitcoinBridge.probe(context: context, address: address)
+            }
+        },
         // `-solNameProbe <name.sol>` resolves a Solana name through SNS and
         // NSLogs the address (or the honest miss) — the fastest check that the
         // resolver still answers, without touching the corpus.
@@ -964,6 +976,32 @@ enum ProbeHooks {
                           news ? "NEWS " : "drop ", m.signed ? "Y" : "n", m.legs.count,
                           news ? (title ?? "UNNAMEABLE (dropped)") : "—")
                 }
+            }
+        },
+        // `-solStakeProbe <base58>` reads one address's Solana stake accounts
+        // headlessly and NSLogs each one's amount and status — the
+        // getProgramAccounts memcmp-on-withdrawer read `SolanaStaking`
+        // folds into the combined total (rotki-comparison gap, 2026-07-27).
+        Hook(key: "solStakeProbe") { address, _ in
+            Task { @MainActor in
+                NSLog("SOL stake probe: %@", await SolanaStaking.probe(address: address))
+            }
+        },
+        // `-ethValidatorWatch "<index[,index]>"` — watches each index headlessly
+        // (no ingest to run — a validator has no "new posts", just live state)
+        // and NSLogs the read. `-ethValidatorProbe "<index[,index]>"` reads
+        // without watching, for checking the beacon API alone.
+        Hook(key: "ethValidatorWatch") { spec, _ in
+            Task { @MainActor in
+                let indices = spec.split(separator: ",").compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+                for index in indices { EthValidatorStore.shared.add(index: index) }
+                NSLog("ETH validator watch: %@", await EthValidatorRead.probe(indices: indices))
+            }
+        },
+        Hook(key: "ethValidatorProbe") { spec, _ in
+            Task { @MainActor in
+                let indices = spec.split(separator: ",").compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+                NSLog("ETH validator probe: %@", await EthValidatorRead.probe(indices: indices))
             }
         },
         // `-holdingsProbe YES` runs the Diagnostics sheet's holdings walk

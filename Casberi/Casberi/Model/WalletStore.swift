@@ -74,6 +74,10 @@ final class WalletStore {
                 // the only way to recover from a negative result still
                 // inside its TTL.
                 SafeBridge.clearCache(address: old.address)
+                // Bitcoin's pending-confirmation watchlist leaves too
+                // (2026-07-27) — same back-fill reason; a no-op for any
+                // non-Bitcoin address, like every sibling clear above.
+                BitcoinBridge.clearState(address: old.address)
             }
         }
     }

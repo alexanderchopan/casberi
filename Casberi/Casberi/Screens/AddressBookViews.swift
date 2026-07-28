@@ -13,7 +13,13 @@ extension AddressBook.Entry {
     /// on every row that differentiates none of them.
     var subline: String {
         var parts = [short]
+        // A Bitcoin address's "kind" is its script type (Legacy/P2SH/Native
+        // SegWit/Taproot) — a different axis than `kind.label`'s who-vs-
+        // machinery question, read straight off the encoding, free
+        // (2026-07-27). `kind.label` stays nil for a Bitcoin address (there's
+        // no `eth_getCode` to ask), so the two never collide.
         if let label = kind.label { parts.append(label) }
+        else if let script = BitcoinAddress.scriptKind(address) { parts.append(script) }
         if let provenance { parts.append(provenance) }
         return parts.joined(separator: " · ")
     }
@@ -273,7 +279,10 @@ struct AddressCard: View {
     }
 
     private var kindLine: String {
-        var parts: [String] = [current.kind.label ?? String(localized: "Wallet")]
+        let kindWord = current.kind.label
+            ?? BitcoinAddress.scriptKind(current.address)
+            ?? String(localized: "Wallet")
+        var parts: [String] = [kindWord]
         if let provenance = current.provenance { parts.append(provenance) }
         parts.append(String(localized: "named \(current.addedAt.formatted(.dateTime.month(.abbreviated).day()))"))
         return parts.joined(separator: " · ")

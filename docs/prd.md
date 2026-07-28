@@ -9231,3 +9231,74 @@ VERIFIED 2026-07-27 (iPhone 17 Pro sim, pinned UDID), two different ways:
   outlived an app relaunch, a Home-button press, and a full simulator
   shutdown/boot — not touched further, since it asks for a real Apple ID
   password. Build green.
+
+## 226. Bitcoin — a third address family, read keyless (user: "what more could we do with bitcoin addresses", then "lets do 1-5", 2026-07-27)
+
+Casberi read EVM and Solana wallets; a pasted Bitcoin address was silently
+accepted as a WATCH (`WalletStore.outcome(ofAdding:)`'s validation is
+`count >= 6`, chain-agnostic on purpose) and then did nothing forever — worse,
+a legacy/P2SH address (base58, the same 25–34-char band Solana pubkeys
+occupy) satisfied `SNS.isAddress`'s shape-only test and got routed to Solana:
+`solana-mainnet` flipped on, an RPC asked about a Bitcoin address, silence
+mistaken for "nothing happened" rather than "wrong chain entirely." Fixed
+first, independent of anything below: `BitcoinAddress.isAddress` (new file)
+checksum-verifies the real thing — Base58Check for legacy/P2SH, bech32/
+bech32m (BIP173/350) for native SegWit/Taproot — and now gates every call
+site that used to branch on `SNS.isAddress` alone (`WalletIngest.networks`/
+`solanaOnly`/`resolvedAddresses`, `WalletScreen.watch`, the `-walletAddress`
+probe hook, `AddressBook.looksLikeAddress`).
+
+Built as its own arm (`BitcoinBridge.swift`), riding the SAME watch flow as
+every other family (the `WalletScreen` paste field, no separate catalog
+entry — Bitcoin isn't a "connectable app", it's a third address shape) but
+its own read: Bitcoin has no EVM-style RPC, no account model, only UTXOs and
+Esplora's public REST API (mempool.space first, blockstream.info second,
+both keyless). Five things landed:
+
+1. **Watch an address, keyless.** Balance folds into the combined USD total
+   under the plain `BTC` symbol (`WalletIngest.walletGroupOutcome`'s own
+   special case, bypassing the Zerion/Alchemy Portfolio pipeline entirely —
+   Bitcoin was never part of it). Sends/receives land as things, net satoshi
+   change read straight off each tx's vin/vout, full 8-decimal precision (the
+   wallet's shared 4-decimal `format()` would round a typical sub-0.0001 BTC
+   receipt to "0.0000"). Deliberately reads only the bounded ~50-tx recent
+   page every pass and dedupes by ref rather than a block-style cursor —
+   Esplora has no cheap "since" filter to walk forward from, and a personal
+   wallet's real gap between refreshes is a handful of transactions.
+2. **Confirmations as news.** The one event class no other chain here has:
+   "arrived" and "settled" are genuinely different moments, a block or more
+   apart. A receipt that ISN'T already at 6 confirmations when first seen
+   joins a pending watchlist; crossing 6 lands a separate settlement-alert
+   thing. Deep history (thousands of confirmations at first sight) never
+   joins the watchlist, so a backfilled old transaction can't fake a
+   "cleared!" moment — the same rule §162 (Privacy Pools) already established
+   for its ASP status alert.
+3. **The consolidation nudge.** "Your bitcoin balance sits in N pieces —
+   consolidating costs about $X today", landed once (ever) per address once
+   UTXO count crosses 15. Fails open, honestly: a busy address's own `/utxo`
+   call 400s past 500 pieces ("contact support to raise limits", measured
+   live) and the nudge simply doesn't land rather than lying about a count it
+   can't read.
+4. **Script type as the free kind.** `BitcoinAddress.scriptKind` reads
+   Legacy/P2SH/Native SegWit/Taproot straight off the address encoding, zero
+   network calls — the address book's `subline`/`kindLine` show it exactly
+   where a Contract/Safe mark would go for an EVM entry (same slot, different
+   axis: a script kind isn't a who-vs-machinery answer, and `AddressBook.Kind`
+   stays untouched).
+5. **The cold-storage note.** "Nothing has moved from this address since
+   <month year>", landed once when the newest tx (Esplora returns newest-
+   first, so this is free off the same page item 1 already fetched) is 180+
+   days old.
+
+Explicitly NOT built, stated as fact rather than a missing feature: no
+merchant names (a UTXO carries no counterparty identity at all — nothing to
+read), no Lightning (an LNURL-pay address's payments aren't publicly
+readable — nothing to watch), no approvals/DeFi surface (Bitcoin has neither).
+`BTC`'s treemap cell routes its chart tap through WBTC's Ethereum contract
+(1:1-custodied, same asset) rather than nothing — same reasoning ETH/SOL's
+cells already use their own wrapped-native contract.
+
+Debug: `-bitcoinProbe <address>` runs the sweep for one address directly and
+NSLogs balance, tx count, landed things, pending confirmations, and both
+insights' verdicts; pair with `-walletAddress <a BTC address>` to also
+exercise the watched-wallet path (holdings fold, per-wallet card).

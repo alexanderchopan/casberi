@@ -324,6 +324,7 @@ final class AddressBook {
     func looksLikeAddress(_ token: String) -> Bool {
         ENS.isHexAddress(token) || ENS.looksLikeName(token)
             || SNS.looksLikeName(token) || SNS.isAddress(token)
+            || BitcoinAddress.isAddress(token)
     }
 
     // MARK: - Migration
