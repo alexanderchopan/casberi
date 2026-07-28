@@ -11,6 +11,7 @@ import PhotosUI
 struct SettingsScreen: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openURL) private var openURL
     /// Drives the Data tile's badge: a green lock on device, a blue cloud once
     /// the person turns iCloud sync on.
     @AppStorage("icloud.sync") private var icloudSync = false
@@ -192,6 +193,20 @@ struct SettingsScreen: View {
                     // Feed tab's glyph (ruled 2026-07-10: Feed keeps it).
                     badge: ("stethoscope", DS.textSecondary),
                     action: { diagnosticsOpen = true }),
+            // Support returns (2026-07-28) now that a real channel exists
+            // behind it — privacy@casberi.app is a monitored inbox, not the
+            // unread mailbox the 2026-07-05 removal ruling objected to. One
+            // tap, one honest action: it opens Mail, nothing more (no sheet,
+            // no version restated — that's Updates' job).
+            RowSpec(title: "Support",
+                    value: String(localized: "Email us"),
+                    badge: ("envelope", DS.textSecondary),
+                    action: {
+                        DSHaptic.tap()
+                        if let url = URL(string: "mailto:privacy@casberi.app?subject=Casberi%20feedback") {
+                            openURL(url)
+                        }
+                    }),
         ].sorted { $0.title < $1.title }
     }
 

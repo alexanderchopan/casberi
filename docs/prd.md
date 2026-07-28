@@ -9454,3 +9454,19 @@ copy says so.
 live result, so landing it once is a stale link), session replays, and any
 per-person read. The query endpoint's rate limit is documented as both
 120/hour and 2400/hour — measure before setting a real cadence.
+
+## §227 — Support returns: privacy@casberi.app is now a real channel (2026-07-28)
+
+Reverses the 2026-07-05 removal (the "Support (Balance/Support precedent)"
+ruling above): that cut stated plainly that Support returns "when a real
+channel exists (a monitored inbox, or an in-app report that files
+somewhere)." privacy@casberi.app is that channel now — a real forwarding
+address someone reads, not the unread mailbox the removal objected to.
+
+One row, in Settings, A–Z sorted with everything else: "Support" / "Email
+us", opening `mailto:privacy@casberi.app?subject=Casberi%20feedback` via
+`openURL`. No sheet, no restated version — the old tile did two things and
+one of them (stating the version) already lives on Updates, so the honest
+shape here is a single tap that does the one real thing it promises.
+Re-using privacy@ rather than minting a new address: one monitored inbox
+beats a second one nobody's forwarded yet.
