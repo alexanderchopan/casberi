@@ -508,7 +508,7 @@ struct RootShell: View {
                 // One-time migrations run once per install (bump the version
                 // when adding one) — steady-state launches skip the scans.
                 let migrationsKey = "migrations.version"
-                let migrationsCurrent = 3
+                let migrationsCurrent = 4
                 let migrationsStored = UserDefaults.standard.integer(forKey: migrationsKey)
                 if migrationsStored < migrationsCurrent {
                     if migrationsStored < 1 {
@@ -570,6 +570,12 @@ struct RootShell: View {
                                 thing.sourceRef = "tokens:" + String(ref.dropFirst("dexscreener:".count))
                             }
                         }
+                    }
+                    if migrationsStored < 4 {
+                        // One-time heal (2026-07-28): Day One backslash-escapes
+                        // markdown-special punctuation ("4\.8"); the import never
+                        // undid that until now. Re-clean what's already landed.
+                        _ = DayOneImport.healEscapedText(context: modelContext)
                     }
                     modelContext.saveHonestly()
                     UserDefaults.standard.set(migrationsCurrent, forKey: migrationsKey)

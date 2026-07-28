@@ -85,15 +85,45 @@ enum DayOneImport {
     /// Day One embeds media as `![](dayone-moment://…)` placeholders — the
     /// media itself stays in the export (said on the screen), so the
     /// placeholders leave the text rather than reading as broken links.
+    /// Day One also backslash-escapes markdown-special punctuation (e.g. a
+    /// period after a number, so "4.8" doesn't read as an ordered-list
+    /// marker) — left alone, those backslashes show up literally ("4\.8").
     private static func cleanMarkdown(_ text: String) -> String {
         let stripped = text.replacingOccurrences(
             of: #"!\[[^\]]*\]\(dayone-moment:[^)]*\)"#,
             with: "", options: .regularExpression)
-        let lines = stripped.components(separatedBy: .newlines)
+        let unescaped = unescapeMarkdown(stripped)
+        let lines = unescaped.components(separatedBy: .newlines)
             .map { $0.trimmingCharacters(in: .whitespaces) }
         let joined = lines.joined(separator: "\n")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return joined.count > 4000 ? String(joined.prefix(4000)) + "…" : joined
+    }
+
+    static func unescapeMarkdown(_ text: String) -> String {
+        text.replacingOccurrences(
+            of: ##"\\([!"#$%&'()*+,\-./:;<=>?@\[\]^_`{|}~])"##,
+            with: "$1", options: .regularExpression)
+    }
+
+    /// One-time heal for entries landed before the unescape fix above
+    /// (2026-07-28): Day One's dedupe is keyed on `sourceRef`, so a plain
+    /// re-import of an unchanged export silently skips every entry already
+    /// in the corpus — without this, already-landed titles/content would
+    /// carry the literal escaping backslashes ("4\.8") forever.
+    @MainActor
+    static func healEscapedText(context: ModelContext) -> Int {
+        let things = (try? context.fetch(FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == "Day One" }))) ?? []
+        var healed = 0
+        for t in things {
+            let cleaned = unescapeMarkdown(t.content)
+            guard cleaned != t.content else { continue }
+            t.content = cleaned
+            t.title = title(from: cleaned)
+            healed += 1
+        }
+        return healed
     }
 
     /// The first real line, unburdened of markdown heading marks. The clamp
