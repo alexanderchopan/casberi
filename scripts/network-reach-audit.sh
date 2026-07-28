@@ -28,7 +28,7 @@ KNOWN_NON_REACH=(
   # Block explorers & app permalinks — opened in the browser on tap
   etherscan.io basescan.org arbiscan.io optimistic.etherscan.io
   polygonscan.com solscan.io revoke.cash robinhoodchain.blockscout.com
-  gnosisscan.io
+  gnosisscan.io njump.me
   app.0xbow.io app.cal.com app.todoist.com kalshi.com opensea.io
   dexscreener.com twitch.tv reddit.com stocktwits.com farcaster.xyz
   privacy.com

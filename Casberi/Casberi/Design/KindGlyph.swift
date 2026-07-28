@@ -166,6 +166,7 @@ enum BridgeGlyph {
         case "steam":     return "gamecontroller"
         case "obsidian":  return "text.book.closed"
         case "files":     return "icloud"
+        case "dropbox":   return "folder"
         case "twitch":    return "tv"
         case "shopify":   return "bag"
         case "deals":     return "tag.fill"

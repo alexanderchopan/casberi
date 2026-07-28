@@ -316,6 +316,17 @@ enum BridgeCatalog {
         Offer(name: "Files",       tagline: "Any folder, findable",                  group: "Storage",   connectable: true,
               summary: "Point at any folder and what's inside lands in your feed, findable next to everything else. Fully local: the folder is read in place, never modified, and nothing leaves this iPhone.",
               needsSetup: true, added: day(2026, 7, 27)),
+        // Storage, beside Files (2026-07-27): the same "point at a folder"
+        // idea, reading Dropbox's own API instead of a local bookmark — so it
+        // works without the Dropbox app installed, and Dropbox's own delta
+        // cursor makes a delete arrive as news instead of something a re-walk
+        // has to infer. Scoped to the folder you name ONLY — never a shared
+        // link, never "shared with me" — the reasoning the user gave for
+        // building this at all: a stranger sharing something with you can
+        // never make it appear here.
+        Offer(name: "Dropbox",     tagline: "Your Dropbox, without the notifications", group: "Storage", connectable: true,
+              summary: "Name a folder and what's inside lands in your feed, findable next to everything else — synced with Dropbox's own change feed, so it's cheap and catches deletes too.\n\nNever shared links, never \u{201c}shared with me\u{201d} — only the folder you name.\n\nRead-only key — Casberi can't write to your Dropbox.",
+              needsSetup: true, added: day(2026, 7, 27)),
         Offer(name: "Twitch",      tagline: "Live follows land in your feed",        group: "Watching",  connectable: true,
               summary: "When a channel you follow goes live, the stream lands in your feed as a link — catch it while it's on. Sign-in happens on Twitch's own page with a short code; read-only, no password in the app.",
               needsSetup: true),

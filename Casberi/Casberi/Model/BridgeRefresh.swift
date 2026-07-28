@@ -312,6 +312,12 @@ enum BridgeRefresh {
                 _ = await FilesIngest.refresh(context: context)
             }
         }
+        if DropboxStore.shared.connected {
+            let s = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await DropboxIngest.refresh(context: context)
+            }
+        }
         if TwitchAuth.connected {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)

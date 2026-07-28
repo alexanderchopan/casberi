@@ -203,6 +203,13 @@ enum NetworkReach {
                  purpose: "Reads your scheduled events with a token you provide.",
                  hosts: ["api.calendly.com"]),
 
+        // MARK: Storage
+
+        Endpoint(service: "Dropbox",
+                 reach: .whenConnected(bridge: "Dropbox"),
+                 purpose: "Reads the folder you name, with a read-only key. Connects through Dropbox's own sign-in.",
+                 hosts: ["api.dropboxapi.com", "content.dropboxapi.com", "www.dropbox.com"]),
+
         // MARK: Reading & feeds
 
         Endpoint(service: "RSS",

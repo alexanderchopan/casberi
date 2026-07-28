@@ -1422,6 +1422,31 @@ enum ProbeHooks {
                 NSLog("Files probe: %@ new", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-dropboxFolder <path>` points the Dropbox bridge at a folder
+        // headlessly and syncs it — but only once the OAuth token is already
+        // in the Keychain (PKCE needs a real browser hop, so unlike
+        // `-filesFolder` this can't complete a fresh connect on its own:
+        // connect once by hand in the simulator, then this probe can drive
+        // that same connection on every later headless run). Blank ("") means
+        // Dropbox's own root path.
+        Hook(key: "dropboxFolder") { path, context in
+            DropboxStore.shared.setFolder(path == "root" ? "" : path)
+            Task { @MainActor in
+                let n = await DropboxIngest.refresh(context: context)
+                NSLog("Dropbox probe: %@ new (folder=%@)", n.map(String.init) ?? "FAILED",
+                      DropboxStore.shared.folderPath.isEmpty ? "root" : DropboxStore.shared.folderPath)
+            }
+        },
+        // `-dropboxProbe YES` re-syncs the ALREADY-connected, already-scoped
+        // folder — the repeat-run form, exercising the delta cursor
+        // (`list_folder/continue`) instead of `-dropboxFolder`'s fresh
+        // `list_folder` reset.
+        Hook(key: "dropboxProbe") { _, context in
+            Task { @MainActor in
+                let n = await DropboxIngest.refresh(context: context)
+                NSLog("Dropbox probe: %@ new", n.map(String.init) ?? "FAILED")
+            }
+        },
         // `-steamBridge "<key>:<profile>"` connects Steam headlessly.
         Hook(key: "steamBridge") { spec, context in
             let parts = spec.split(separator: ":", maxSplits: 1).map(String.init)

@@ -80,6 +80,7 @@ extension DS {
         case "steam":               return Color.fixed("#1b2838")   // their dark navy
         case "obsidian":            return Color.fixed("#7c3aed")   // vault purple
         case "files":               return Color.fixed("#4aa8f0")   // iCloud blue — any iCloud-reachable folder
+        case "dropbox":             return Color.fixed("#0061ff")   // their brand blue
         case "twitch":              return Color.fixed("#9146ff")
         case "reddit":              return Color.fixed("#ff4500")
         case "youtube":             return Color.fixed("#ff0000")

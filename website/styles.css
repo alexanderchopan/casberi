@@ -118,6 +118,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-steam     { background: #1b2838; }
 .ai-obsidian  { background: #7c3aed; }
 .ai-files     { background: #4aa8f0; }
+.ai-dropbox   { background: #0061ff; }
 .ai-twitch    { background: #9146ff; }
 .ai-pinterest { background: #e60023; }
 .ai-substack  { background: #ff6719; }
