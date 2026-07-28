@@ -3039,19 +3039,31 @@ struct FeedScreen: View {
     /// things, then RECOMPOSES the feed the way a source switch does — the
     /// shaped rows re-cascade (shapeWave replays their entrance) and the
     /// synthesis block re-streams. The Feed's take on Home's pull re-compose:
-    /// records paint, so the delight is the cascade, not a typewriter. A short
-    /// beat lets the pull read before it lands with a soft thud.
+    /// records paint, so the delight is the cascade, not a typewriter — which
+    /// is why this returns as soon as the work is handed off (2026-07-28): the
+    /// cascade IS the beat, and holding the refresh control's spinner open for
+    /// an extra 450ms afterwards only made the gesture feel slow.
     private func refreshFeed() async {
+        // ONE pull, ONE shower (2026-07-28). The `.refreshable` closure above
+        // already bumped `refreshPulse`; bumping it again here dealt a SECOND
+        // shower a few milliseconds behind the first, over the same drop
+        // identities — so the first shower's drops were re-dealt mid-fall and
+        // the pour read as a stutter every time. The pulse belongs to the
+        // gesture, and the gesture happens once.
+        shapeWave += 1
+        // The haptic lands with the gesture, not after it (user, 2026-07-28:
+        // "need pull to refresh snappy"). It sat behind a deliberate 450ms
+        // beat — "a short beat lets the pull read before it lands with a soft
+        // thud" (2026-07-12) — which also held the refresh control's spinner
+        // open for that long after the work was already handed off. The
+        // cascade below IS the beat; the thud shouldn't wait for it.
+        DSHaptic.success()
         // A deliberate pull re-fetches live — clear the holdings cache so the
         // Wallet feed's treemap isn't served a TTL-cached read (same contract as
         // Home's pull; the cache is for the automatic fan-out, not the gesture).
         await WalletIngest.invalidateHoldingsCache()
         BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges, force: true)
-        chrome.refreshPulse += 1   // spins the avatar door, deals the berry rain
-        shapeWave += 1
         streamBlock()
-        try? await Task.sleep(for: .milliseconds(450))
-        DSHaptic.success()
     }
 
     /// Reads the Wallet feed's live state for the current scope. Off the Wallet
