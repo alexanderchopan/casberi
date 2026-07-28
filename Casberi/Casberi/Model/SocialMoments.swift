@@ -66,4 +66,84 @@ enum SocialMoments {
                 String(localized: "\(prefixed) is back after \(Int(gapDays)) days"), source: source)
         }
     }
+
+    // MARK: - Slack (2026-07-28)
+
+    /// Slack's "quiet return", the sibling of `checkReturns` above with one
+    /// twist: there's no watched-account roster to check against (the bridge
+    /// searches mentions of YOU, not a followed list) — every landed Slack
+    /// thing already IS a mention, so the author of one is implicitly
+    /// "watched" the moment they first mention you. Same self-throttle as
+    /// every other moment here: it only fires when the newest mention from
+    /// that person landed within THIS pass, so a re-scan can't re-fire it.
+    static func checkSlackReturns(context: ModelContext) {
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == "Slack" })
+        guard let things = try? context.fetch(descriptor) else { return }
+        var byHandle: [String: [Thing]] = [:]
+        for thing in things {
+            guard let handle = thing.authorHandle else { continue }
+            byHandle[handle, default: []].append(thing)
+        }
+        for (handle, mentions) in byHandle {
+            let sorted = mentions.sorted { $0.capturedAt > $1.capturedAt }
+            guard sorted.count >= 2 else { continue }
+            let newest = sorted[0]
+            guard newest.capturedAt.timeIntervalSinceNow > -freshWindow else { continue }
+            let gapDays = sorted[1].capturedAt.distance(to: newest.capturedAt) / 86400
+            guard gapDays >= quietDays else { continue }
+            SourceMoments.shared.fire(
+                String(localized: "@\(handle) mentioned you again after \(Int(gapDays)) days"),
+                source: "Slack")
+        }
+    }
+
+    /// The crossing Slack alone can never see: someone @-mentions you sharing
+    /// a link you've ALREADY saved from somewhere else. A pure corpus join —
+    /// comparing a URL already in the mention's text against every OTHER
+    /// thing's `content` — no extra network call, and nothing outside this
+    /// phone holds both halves. NEWS ONLY, self-throttled the same way as
+    /// every other moment here: only a mention that landed within THIS pass
+    /// is checked, so a rescan can't fire the same crossing twice.
+    static func checkSlackCrossings(context: ModelContext) {
+        let mentionsDescriptor = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == "Slack" })
+        guard let mentions = try? context.fetch(mentionsDescriptor) else { return }
+        let fresh = mentions.filter { $0.capturedAt.timeIntervalSinceNow > -freshWindow }
+        guard !fresh.isEmpty else { return }
+
+        let othersDescriptor = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source != "Slack" })
+        guard let others = try? context.fetch(othersDescriptor) else { return }
+        var savedByURL: [String: Thing] = [:]
+        for candidate in others {
+            guard let key = normalizedURL(candidate.content) else { continue }
+            savedByURL[key] = candidate
+        }
+        guard !savedByURL.isEmpty else { return }
+
+        for mention in fresh {
+            guard let text = mention.postText, let url = Capture.detectURL(in: text),
+                  let key = normalizedURL(url.absoluteString),
+                  let saved = savedByURL[key],
+                  saved.capturedAt < mention.capturedAt else { continue }
+            let who = mention.authorHandle.map { "@\($0)" } ?? String(localized: "Someone")
+            SourceMoments.shared.fire(
+                String(localized: "\(who) just shared \u{201c}\(saved.title)\u{201d} — you already saved it"),
+                source: "Slack")
+        }
+    }
+
+    /// Loose equality for a link across sources — strips scheme, a leading
+    /// "www.", and a trailing slash, so the same article posted via RSS and
+    /// pasted into Slack still matches. Deliberately does NOT touch the query
+    /// string or attempt tracking-param cleanup: a missed match is honest,
+    /// an over-eager one that pairs two different pages isn't.
+    private static func normalizedURL(_ raw: String) -> String? {
+        var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !s.isEmpty else { return nil }
+        for prefix in ["https://www.", "http://www.", "https://", "http://"] {
+            if s.hasPrefix(prefix) { s = String(s.dropFirst(prefix.count)); break }
+        }
+        if let hash = s.firstIndex(of: "#") { s = String(s[..<hash]) }
+        while s.hasSuffix("/") { s.removeLast() }
+        return s.isEmpty ? nil : s.lowercased()
+    }
 }

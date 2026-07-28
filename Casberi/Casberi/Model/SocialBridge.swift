@@ -59,6 +59,16 @@ enum SocialThread {
     static let sources: Set<String> = ["Bluesky", "Farcaster", "Nostr"]
     static func isSocial(_ source: String) -> Bool { sources.contains(source) }
 
+    /// Sources that earn a CONTEXT LABEL ("Mentions you", a channel name) in
+    /// a row's trailing slot or a sheet's eyebrow — without the rest of the
+    /// social treatment `isSocial` gates (thread reader, profile card, live
+    /// engagement counts). Slack's mentions bridge (2026-07-28) has an author
+    /// and a channel but no thread API and no profile lookup to back those,
+    /// so it earns only this half — `isSocial`/`sources` above stay the
+    /// thread-capable set, untouched.
+    static let contextSources: Set<String> = sources.union(["Slack"])
+    static func hasContext(_ source: String) -> Bool { contextSources.contains(source) }
+
     /// How many replies a thread fetch returns — the sheet shows this many at
     /// most, so a thread AT this count may have more (the header says "N+").
     static let replyCap = 8
@@ -144,7 +154,7 @@ enum SocialThread {
     /// channel is more usefully "/design" than "Mentions you" — the channel is
     /// the lane, and the sheet's eyebrow still carries both.
     static func contextLabel(for thing: Thing) -> String? {
-        guard isSocial(thing.source) else { return nil }
+        guard hasContext(thing.source) else { return nil }
         if let channel = thing.channelName, !channel.isEmpty {
             // Farcaster channels ARE "/design" to the person, a followed
             // Nostr hashtag is "#design", and a Bluesky feed is a proper
@@ -167,7 +177,7 @@ enum SocialThread {
     /// slot. Same source of truth, different grammar: a row has room for a
     /// word, a sentence wants a phrase.
     static func contextPhrase(for thing: Thing) -> String? {
-        guard isSocial(thing.source) else { return nil }
+        guard hasContext(thing.source) else { return nil }
         if let channel = thing.channelName, !channel.isEmpty {
             switch thing.source {
             case "Farcaster": return String(localized: "in /\(channel)")

@@ -100,6 +100,13 @@ struct BandRow: View {
             case "Farcaster": return FarcasterStore.shared.rowLabel(for: thing.authorHandle)
             default:          return NostrStore.shared.rowLabel(for: thing.authorHandle)
             }
+        // Slack carries a context label too (every landed thing IS a mention,
+        // so this always resolves) but stays out of the `isSocial` set above —
+        // no watched-account roster to fall back to, no thread reader, no
+        // profile card. Just the one line `contextLabel` already knows how to
+        // say (`Model/SocialBridge.swift`).
+        case "Slack":
+            return SocialThread.contextLabel(for: thing)
         // The publisher names itself in the trailing slot — BBC News,
         // TechCrunch — the icon's word twin, the way a social row names its
         // account. Empty on rows that landed before the name was captured.

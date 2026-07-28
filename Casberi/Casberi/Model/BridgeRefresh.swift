@@ -322,6 +322,12 @@ enum BridgeRefresh {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await SlackIngest.refresh(context: context)
+                // Read-only passes over what just landed, touching nothing in
+                // the ingest above — same shape as the other networks' own
+                // return-check, plus the corpus join only Slack can offer
+                // (a mention sharing a link you already saved elsewhere).
+                SocialMoments.checkSlackReturns(context: context)
+                SocialMoments.checkSlackCrossings(context: context)
             }
         }
         if TwitchAuth.connected {
