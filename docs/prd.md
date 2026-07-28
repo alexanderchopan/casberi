@@ -9515,3 +9515,41 @@ March 2026, no more contacting Slack support) and its Client ID — not a
 secret — is pasted in. Catalog offer lands in Work beside GitHub/Linear/
 Notion/PostHog (`BridgeCatalog.swift`); website catalog entry added to keep
 `catalog-sync.sh` green.
+
+## §230 — The Apple Notes tile that could never fill (audit fix, 2026-07-28)
+
+`NotesShareScreen` carried a `@Query(filter: #Predicate<Thing> { $0.source
+== "Apple Notes" })` and a comment about "only then is there a tile to pin
+to Home" — permanently dead. `ShareViewController.save()` routes plain-text
+shares through `Capture.thing(from:)` with no source override, so every
+shared note lands with `source == "You"`, never `"Apple Notes"`; the query
+could never return a row. (The "pin to Home" half was doubly dead — the
+Home board it referred to retired at §131, 2026-07-20 — but the query
+wasn't even read in the view body by then, board or no board.)
+
+Investigated whether this is fixable rather than just deleted: iOS share
+extensions have no public API to identify the calling app.
+`NSExtensionContext`/`NSExtensionItem` expose only the attachments
+themselves (`NSItemProvider`s keyed by UTI) and, for a web share,
+Safari's own JS-preprocessing payload (`ShareViewController.loadPageInfo`)
+— nothing names the host app. A private `_hostBundleID`-style KVC read
+exists in the wild but is undocumented, unstable across iOS versions, and
+not the kind of thing a real App Store submission should lean on — ruled
+out, consistent with §55's original "Apple offers no export and no read
+API for Notes" finding.
+
+A same-shape heuristic (treat any recent `.note`-kind `Thing` with
+`source == "You"` as "probably from Notes") was considered and rejected:
+`Capture.thing(from:)` is the ONE path for all plain-text capture — pasted
+text in the composer and a share from Notes, Reminders, a plain-text
+editor, or anywhere else all produce the identical shape (`kind: .note,
+source: "You"`). There is no field to key a heuristic on without
+false-positiving on every other plain-text capture, which is the more
+common case.
+
+Fix: deleted the dead `@Query` and its comment. Nothing else was reading
+`notes` in the view body. The screen's real job — the share-path
+explainer + "Open Notes" button — is untouched; a shared note still lands
+fine as a `.note` thing and is still found via search/Spotlight like any
+other capture, it just isn't specially labeled "Apple Notes" (accurate,
+since nothing can tell it apart).
