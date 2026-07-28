@@ -158,12 +158,45 @@ struct AccountDetailSheet: View {
     private var sheetHeight: CGFloat {
         switch detail {
         // Now the one privacy home: + the "What this app reaches" row always,
-        // and the ADP nudge (~3 lines) only when sync is on (prd §205). DSTray
-        // clips at a fixed detent, so the taller state must be sized for.
-        case .data: icloudSync ? 660 : 600
+        // the ADP nudge (~3 lines) when sync is on (prd §205), and the sync
+        // error detail line (2026-07-27) on top of that when the mirror is
+        // actually failing. DSTray clips at a fixed detent, so the tallest
+        // reachable state must be sized for.
+        case .data: icloudSync ? (syncHasLiveError ? 700 : 660) : 600
         case .key: 500   // +40 for the per-agent capability line (2026-07-21)
         case .color: 400   // aliveRow + one swatch row + a footnote (prd §204)
         }
+    }
+
+    // MARK: - iCloud sync status (2026-07-27)
+    //
+    // The toggle's own state is INTENT, not a fact — `CloudSyncStatus` is the
+    // mirror's real last outcome. These three read it into the row above.
+
+    private var syncHasLiveError: Bool { CloudSyncStatus.hasLiveError }
+
+    private var syncGlyph: String {
+        icloudSync && syncHasLiveError ? "exclamationmark.icloud.fill"
+            : icloudSync ? "icloud.fill" : "lock.iphone"
+    }
+
+    private var syncTone: Color {
+        icloudSync && syncHasLiveError ? DS.destructive
+            : icloudSync ? DS.tint : DS.confirm
+    }
+
+    private var syncStatusLine: String {
+        guard icloudSync else {
+            return SharedStore.cloudSyncActive ? "Stops syncing from your next launch" : "Stays on this iPhone"
+        }
+        guard SharedStore.cloudSyncActive else { return "Syncs from your next launch" }
+        if syncHasLiveError { return "Couldn't sync — will keep retrying" }
+        if let success = CloudSyncStatus.lastSuccessDate {
+            return "Synced \(success.formatted(.relative(presentation: .named)))"
+        }
+        // Sync is on and engaged, but no event has landed yet this launch
+        // (e.g. the very first launch after flipping it on).
+        return "Synced to your iCloud"
     }
 
     // MARK: - Pieces
@@ -180,17 +213,24 @@ struct AccountDetailSheet: View {
             // One plain line for the whole on-device story.
             aliveRow("sparkles", DS.confirm, "Private", "Answers run on this iPhone")
             // iCloud sync: the badge shows where things live — green lock here,
-            // blue cloud when synced. The container binds at launch, so a
-            // fresh flip says WHEN it goes live instead of pretending it is.
-            toggleRow(icloudSync ? "icloud.fill" : "lock.iphone",
-                      icloudSync ? DS.tint : DS.confirm,
-                      "iCloud sync",
-                      icloudSync
-                        ? (SharedStore.cloudSyncActive ? "Synced to your iCloud"
-                                                       : "Syncs from your next launch")
-                        : (SharedStore.cloudSyncActive ? "Stops syncing from your next launch"
-                                                       : "Stays on this iPhone"),
+            // blue cloud when synced, red when the mirror itself is failing.
+            // The container binds at launch, so a fresh flip says WHEN it
+            // goes live instead of pretending it is. RULE (2026-07-27): this
+            // used to read the toggle's own INTENT ("Synced to your iCloud"
+            // the instant sync was on, whether or not anything had actually
+            // synced) — found honestly wrong diagnosing an outage where the
+            // production CloudKit schema had never been deployed, so every
+            // write had been silently failing since M1 and nothing here said
+            // so. `CloudSyncStatus` now carries the mirror's real last
+            // outcome; this reads that instead of guessing from the toggle.
+            toggleRow(syncGlyph, syncTone, "iCloud sync", syncStatusLine,
                       Binding(get: { icloudSync }, set: { icloudSync = $0; DSHaptic.tap() }))
+            if icloudSync, syncHasLiveError, let detail = CloudSyncStatus.lastError {
+                Text(detail)
+                    .dsText(.subhead13).foregroundStyle(DS.destructive)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, 38 + DS.Space.s3)
+            }
             // ADP nudge — only meaningful while sync is ON (with sync off
             // there's no iCloud copy to encrypt). Points the person at the
             // one thing that upgrades their sync to true end-to-end, which
@@ -614,6 +654,10 @@ struct AccountDetailSheet: View {
                         deleteResult = "Deleted here. The iCloud copy couldn't be cleared — check your connection and try again."
                     } else {
                         deleteResult = "Things deleted — this iPhone and iCloud. Your connections and keys stayed."
+                        // A remembered sync error/success now describes a
+                        // corpus that no longer exists — clear it with the
+                        // zone rather than let it read as current.
+                        CloudSyncStatus.reset()
                     }
                 }
             }

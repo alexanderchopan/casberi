@@ -30,6 +30,13 @@ enum SharedStore {
     /// out-of-band marker is the only way to break the crash-loop.
     static let cloudAttemptMarkerKey = "icloud.cloudAttemptInFlight"
 
+    /// Consecutive-trap counter (RULE, 2026-07-27) — how many launches in a
+    /// row stamped the marker above and never cleared it. `CloudSyncGuard`
+    /// resets this to 0 the moment a launch actually survives, so it only
+    /// ever counts an unbroken streak. Read alongside `cloudAttemptMarkerKey`
+    /// in `containerWithFallback`.
+    static let cloudTrapStreakKey = "icloud.cloudTrapStreak"
+
     /// The build's CloudKit readiness — the ship gate. CloudKit mirroring sets
     /// up on a background queue and *traps* (doesn't throw) when the iCloud
     /// container entitlement is absent, so `try?` can't guard it, and iOS has no
@@ -96,17 +103,35 @@ enum SharedStore {
     /// left untouched on disk for a future fixed build to recover.
     static func containerWithFallback() -> ModelContainer {
         // If the last launch stamped the CloudKit attempt marker and never
-        // cleared it, the mirror trapped mid-setup. Auto-flip sync off THIS
-        // launch so the app comes up local-only instead of crash-looping —
-        // the person still has their things, and the toggle is theirs to
-        // turn back on when the underlying cause is addressed (schema
-        // deployment, entitlement, capacity). Written to `UserDefaults`
-        // directly so the AppStorage-backed toggle picks it up on next read.
+        // cleared it, the mirror trapped mid-setup. RULE (2026-07-27, was a
+        // single-launch trip before this): only auto-flip sync off after
+        // TWO CONSECUTIVE trapped launches — an ordinary force-quit, or any
+        // of the unrelated SwiftData `ForEach` crashes (CLAUDE.md's "never
+        // key a ForEach on a derived array" class, builds 137/142/150) also
+        // leaves this marker set with the mirror never at fault, and a
+        // one-strike rule was silently disabling sync for users who hit
+        // those, with no way to know it wasn't their choice. Two in a row
+        // is still fast (worst case: the very next launch), but rules out a
+        // single unrelated crash. `CloudSyncGuard` resets the streak to 0
+        // the moment any later launch actually survives. Written to
+        // `UserDefaults` directly so the AppStorage-backed toggle picks it
+        // up on next read.
         let defaults = UserDefaults.standard
-        if defaults.bool(forKey: cloudAttemptMarkerKey), defaults.bool(forKey: "icloud.sync") {
-            NSLog("[Casberi] previous launch trapped in CloudKit setup — turning sync off")
-            defaults.set(false, forKey: "icloud.sync")
-            degradeReason = "iCloud sync couldn't set up and was turned off. Your things are safe here — you can turn it back on in Data."
+        if defaults.bool(forKey: cloudAttemptMarkerKey) {
+            let streak = defaults.integer(forKey: cloudTrapStreakKey) + 1
+            defaults.set(streak, forKey: cloudTrapStreakKey)
+            NSLog("[Casberi] previous launch trapped in CloudKit setup (streak \(streak))")
+            if streak >= 2, defaults.bool(forKey: "icloud.sync") {
+                NSLog("[Casberi] two consecutive trapped launches — turning sync off")
+                defaults.set(false, forKey: "icloud.sync")
+                degradeReason = "iCloud sync couldn't set up twice in a row and was turned off. Your things are safe here — you can turn it back on in Data."
+            }
+        } else {
+            // A launch that never even attempted CloudKit (sync off, or the
+            // marker already clear) can't be part of a trap streak — reset
+            // so a stale count from long ago doesn't disable sync the very
+            // next time it's turned back on.
+            defaults.set(0, forKey: cloudTrapStreakKey)
         }
         defaults.removeObject(forKey: cloudAttemptMarkerKey)
         do {

@@ -36,6 +36,10 @@ struct CasberiApp: App {
         // this launch survived setup — either CoreData's mirror event or a
         // clean background handoff. See `CloudSyncGuard`.
         CloudSyncGuard.begin()
+        // The Data tray's honest read on whether sync is ACTUALLY working,
+        // not just switched on — remembers the mirror's real last outcome
+        // for the whole session, not just at launch. See `CloudSyncStatus`.
+        CloudSyncStatus.begin()
         // The demo corpus seeds only in debug, never for a fresh user (real
         // users start empty — the empty states are the product too).
         if DemoState.seedsDemoData {

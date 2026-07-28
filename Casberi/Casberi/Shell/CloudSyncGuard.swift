@@ -25,7 +25,11 @@ enum CloudSyncGuard {
         var tokens: [NSObjectProtocol] = []
         let clear: @Sendable () -> Void = {
             DispatchQueue.main.async {
-                UserDefaults.standard.removeObject(forKey: SharedStore.cloudAttemptMarkerKey)
+                let defaults = UserDefaults.standard
+                defaults.removeObject(forKey: SharedStore.cloudAttemptMarkerKey)
+                // Proof of survival breaks any trap streak in progress — see
+                // `SharedStore.containerWithFallback`'s two-in-a-row rule.
+                defaults.set(0, forKey: SharedStore.cloudTrapStreakKey)
                 tokens.forEach(center.removeObserver)
                 tokens.removeAll()
             }
