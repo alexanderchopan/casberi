@@ -443,6 +443,28 @@ final class Thing {
     /// HTML. nil when the post carries none, or for every non-Reddit thing.
     var externalLink: String? = nil
 
+    // MARK: - Notes delight (2026-07-28, NoteLinks.swift)
+
+    /// An Obsidian note's own `[[wikilink]]` targets, captured at ingest
+    /// against the FULL markdown body — before `ObsidianIngest`'s 300-char
+    /// `content` clamp, so a link past that point isn't lost. Plain target
+    /// titles, exactly as the vault spells them (an alias after `|` and a
+    /// heading after `#` are both stripped — see `NoteLinks.extract`).
+    /// Resolved against other landed notes at SHEET-OPEN time, never
+    /// persisted as a Thing reference: a target may not have synced yet, or
+    /// may never exist, and the vault is the only source of truth for
+    /// whether it does. Empty for every non-Obsidian thing.
+    var wikilinks: [String] = []
+
+    /// A watched prediction market's settled answer (2026-07-28) — nil while
+    /// the market is live, true/false once it resolved. Distinct from
+    /// `dueAt` passing: a market can close without resolving (arbitration),
+    /// and only an explicit settlement signal from the exchange sets this.
+    /// Once set the row is a RECORD, not a watch — `PredictionPulse` stops
+    /// refetching it and the watchlist stops counting it as live, so a
+    /// year-old list isn't mostly dead markets. nil for everything else.
+    var marketResolvedYes: Bool? = nil
+
     init(
         id: UUID = UUID(),
         kind: ThingKind,

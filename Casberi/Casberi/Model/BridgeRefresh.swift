@@ -296,6 +296,14 @@ enum BridgeRefresh {
             await BridgeRefresh.stagger(s)
             await TokenPulse.shared.refresh(context: context)
         }
+        // Same shape for watched prediction markets (Kalshi/Polymarket) —
+        // without this a watched market goes dead the moment its own screen
+        // closes, since nothing else ever refetches its odds. It is also
+        // what stamps a settled market and fires its resolution moment.
+        let sp = slot(); Task { @MainActor in
+            await BridgeRefresh.stagger(sp)
+            await PredictionPulse.shared.refresh(context: context)
+        }
         for provider in MailProvider.allCases where provider.connected {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)

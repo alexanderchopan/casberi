@@ -19,6 +19,7 @@ enum ThingChart {
     case kalshi(series: String, event: String)
     case stock(ticker: String)
     case postHogMetric(event: String)
+    case polymarket(conditionId: String)
 
     /// Charts are a `.link` affordance only — a `.product` previews its page
     /// even when the URL would otherwise parse.
@@ -38,6 +39,13 @@ enum ThingChart {
         // silence things — the ref is what separates them.
         if thing.source == "PostHog", let event = PostHogWatch.event(from: thing) {
             return .postHogMetric(event: event)
+        }
+        // Same reasoning as PostHog above: a Polymarket event's URL alone
+        // can't identify which of its outcome-markets this row watches
+        // (a multi-candidate event shares one page across many markets), so
+        // the condition id comes off the sourceRef instead.
+        if thing.source == "Polymarket", let id = PolymarketBridge.conditionId(from: thing) {
+            return .polymarket(conditionId: id)
         }
         return nil
     }
@@ -123,6 +131,8 @@ struct ThingContentView: View {
                     // project's annotations land on it as marks, so a spike
                     // sits beside the deploy that caused it.
                     PostHogMetricContent(thing: thing, event: event)
+                case .polymarket(let conditionId):
+                    PolymarketMarketContent(conditionId: conditionId, url: thing.content)
                 }
             } else if thing.source == "GitHub", thing.sourceRef?.hasPrefix("gh:release:") == true {
                 // A release leads with its preview, then its own notes —
@@ -1339,6 +1349,24 @@ private struct KalshiMarketContent: View {
     var body: some View {
         KalshiMarketView(series: series, event: event) {
             if let url = URL(string: "https://kalshi.com/markets/\(series)/\(event)") {
+                LinkPreviewCard(url: url)
+            }
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s3)
+    }
+}
+
+/// A Polymarket market's odds and real price curve, drawn natively — see
+/// `PolymarketMarketView`. A market Polymarket's Gamma API no longer
+/// resolves (rare) falls back to the plain link, never a blank read.
+private struct PolymarketMarketContent: View {
+    let conditionId: String
+    let url: String
+
+    var body: some View {
+        PolymarketMarketView(conditionId: conditionId) {
+            if let url = URL(string: url) {
                 LinkPreviewCard(url: url)
             }
         }

@@ -1,11 +1,12 @@
 import SwiftUI
 import SwiftData
 
-/// Kalshi, connected — the prediction-market watch screen. Search a team or
-/// event; the busiest matching market resolves through Kalshi's public open
-/// events (no key) and joins your watchlist as a thing whose sheet shows its
-/// live odds. Read-only public price data — no account, no trading.
-struct KalshiScreen: View {
+/// Polymarket, connected — the onchain prediction-market watch screen.
+/// Search any question; the busiest matching market resolves through
+/// Polymarket's public Gamma API (no key, no wallet) and joins your
+/// watchlist as a thing whose sheet shows its live odds and real price
+/// curve. Read-only public price data — no account, no trading.
+struct PolymarketScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
     @State private var queryField = ""
@@ -14,21 +15,19 @@ struct KalshiScreen: View {
     @State private var resultIsError = false
     @State private var watched: [Thing] = []
 
-    /// Markets matching what's typed so far, busiest first, UNFILTERED — the
-    /// field doubles as a finder. Kept unfiltered (not just the not-yet-
-    /// watched ones) so the Watch button can reuse `hits.first` as the exact
-    /// answer a fresh resolve() would give. Cleared on watch and on emptying.
-    @State private var hits: [KalshiWatch.Resolved] = []
+    /// Matching what's typed so far, busiest first, UNFILTERED — the field
+    /// doubles as a finder. Kept unfiltered so the Watch button can reuse
+    /// `hits.first` as the exact answer a fresh resolve() would give.
+    @State private var hits: [PolymarketBridge.Resolved] = []
 
     /// What the search rows actually show — already-watched markets are in
     /// the watchlist below, so they drop out here for display only.
-    private var displayHits: [KalshiWatch.Resolved] {
+    private var displayHits: [PolymarketBridge.Resolved] {
         let refs = Set(watched.compactMap(\.sourceRef))
-        return hits.filter { !refs.contains("kalshi:\($0.ticker)") }
+        return hits.filter { !refs.contains("polymarket:\($0.conditionId)") }
     }
 
-    /// The same question on Polymarket, found after a watch (prd: the twin
-    /// offer). nil most of the time — most markets have no counterpart.
+    /// The same question on Kalshi, found after a watch — the twin offer.
     @State private var twin: PredictionTwin.Offer?
 
     @AppStorage("coach.swipe.done") private var swipeCoachDone = false
@@ -38,19 +37,18 @@ struct KalshiScreen: View {
         return liveWatched.first?.id
     }
 
-    private func loadWatched() {
-        watched = recentBridgeThings(source: "Kalshi", context: modelContext)
-    }
-
-    /// A settled market can never move again, so it stops being a WATCH and
-    /// becomes a record — split here so the watchlist reads as what you're
-    /// actually following, not a graveyard of finished questions.
+    /// A settled market can never move again — it stops being a WATCH and
+    /// becomes a record, so the watchlist reads as what you're following.
     private var liveWatched: [Thing] { watched.filter { $0.isLive && $0.marketResolvedYes == nil } }
     private var settledWatched: [Thing] { watched.filter { $0.isLive && $0.marketResolvedYes != nil } }
 
+    private func loadWatched() {
+        watched = recentBridgeThings(source: "Polymarket", context: modelContext)
+    }
+
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Kalshi")
+            BridgeSetupHeader(name: "Polymarket")
             addSection.listRowSeparator(.hidden)
             if !liveWatched.isEmpty {
                 watchlistSection.listRowSeparator(.hidden)
@@ -61,7 +59,7 @@ struct KalshiScreen: View {
             if !watched.isEmpty {
                 // A watched market IS its thing, so there's no separate store
                 // to clear — "Remove its things too" is what drops the watchlist.
-                BridgeDisconnectSection(bridgeID: "kalshi", name: "Kalshi",
+                BridgeDisconnectSection(bridgeID: "polymarket", name: "Polymarket",
                                         teardown: {})
                     .listRowSeparator(.hidden)
             }
@@ -69,19 +67,17 @@ struct KalshiScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .bridgeSetupWash(name: "Kalshi")
+        .bridgeSetupWash(name: "Polymarket")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .dsScreenTitle("Kalshi")
+        .dsScreenTitle("Polymarket")
         .onAppear { loadWatched() }
-        // minLength: 0 — unlike every other bridge's finder, an empty query
-        // isn't "nothing to show": KalshiWatch.search("") already returns the
-        // busiest open markets (no text filter applied), so the screen leads
-        // with live odds to browse, not a blank field waiting for input.
+        // minLength: 0 — an empty query still shows the busiest open
+        // markets to browse, the same dose as Kalshi's own finder.
         .task(id: queryField) {
             let q = queryField.trimmingCharacters(in: .whitespacesAndNewlines)
-            if let found = await debouncedSearch(q, minLength: 0, fetch: { await KalshiWatch.search(q) }) {
+            if let found = await debouncedSearch(q, minLength: 0, fetch: { await PolymarketBridge.search(q) }) {
                 hits = found
             }
         }
@@ -90,26 +86,24 @@ struct KalshiScreen: View {
     private var addSection: some View {
         // Field + search hits + status in ONE list row (a VStack) — a headed
         // Section of stacked rows leaks a hairline between them that row-level
-        // .listRowSeparator(.hidden) won't suppress (SwiftUI first-post-header
-        // separator). Design law: no hairlines, zero exceptions.
+        // .listRowSeparator(.hidden) won't suppress. Design law: no
+        // hairlines, zero exceptions.
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSSlabField(placeholder: String(localized: "Team, player, or event"),
+                DSSlabField(placeholder: String(localized: "Any question or topic"),
                             text: $queryField, actionLabel: String(localized: "WATCH"),
                             action: watch)
                 ForEach(displayHits) { market in
                     BridgeSearchResultRow(
-                        imageURL: nil, fallbackIcon: "Kalshi",
+                        imageURL: nil, fallbackIcon: "Polymarket",
                         title: market.title,
-                        subtitle: "\(Int((market.probability * 100).rounded()))% · \(market.subtitle)",
+                        subtitle: "\(Int((market.probability * 100).rounded()))%" + (market.subtitle.isEmpty ? "" : " · \(market.subtitle)"),
                         action: { watchHit(market) })
                 }
                 BridgeSyncStatusRows(syncing: working,
                                      syncingLine: String(localized: "Finding the market…"),
                                      result: result, resultIsError: resultIsError)
                 if let twin {
-                    // The other exchange prices the same question. Watching
-                    // both is what makes the disagreement visible at all.
                     BridgeSearchResultRow(
                         imageURL: nil, fallbackIcon: twin.source.rawValue,
                         title: twin.line,
@@ -122,12 +116,8 @@ struct KalshiScreen: View {
         .dsSlabSection()
     }
 
-    /// Same swipe grammar as every watchlist screen (Tokens, Wallet):
-    /// full trailing swipe pins, the explicit group carries Unwatch.
-    /// Unwatching deletes the thing — the thing IS the watch.
     /// Finished questions, kept but set apart — the record of what you were
-    /// watching and how it turned out. Not swipeable-to-unwatch by accident:
-    /// same gesture, but these are history, so the list leads with the answer.
+    /// watching and how it turned out.
     private var settledSection: some View {
         Section {
             ForEach(settledWatched.keyed) { row in
@@ -137,8 +127,8 @@ struct KalshiScreen: View {
                         Text(thing.title)
                             .dsText(.body17).foregroundStyle(DS.textSecondary)
                             .lineLimit(2)
-                        if let watched = thing.watchPriceUsd {
-                            Text("You watched at \(Int((watched * 100).rounded()))%")
+                        if let at = thing.watchPriceUsd {
+                            Text("You watched at \(Int((at * 100).rounded()))%")
                                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         }
                     }
@@ -162,11 +152,14 @@ struct KalshiScreen: View {
             Text("Resolved").dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
         } footer: {
-            Text("These can't move again — they're a record of what you were watching.")
+            Text("These can\u{2019}t move again — they\u{2019}re a record of what you were watching.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }
 
+    /// Same swipe grammar as every watchlist screen (Tokens, Kalshi, Wallet):
+    /// full trailing swipe pins, the explicit group carries Unwatch.
+    /// Unwatching deletes the thing — the thing IS the watch.
     private var watchlistSection: some View {
         Section {
             ForEach(liveWatched.keyed) { row in
@@ -202,7 +195,7 @@ struct KalshiScreen: View {
 
     private var footerSection: some View {
         Section {
-            Text("Public odds from Kalshi, a CFTC-regulated exchange — nothing about you leaves your iPhone.\n\nRead-only: nothing here places a trade. Opens on Kalshi.")
+            Text("Public odds from Polymarket's onchain order book — nothing about you leaves your iPhone.\n\nRead-only: nothing here places a trade. Opens on Polymarket.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .listRowBackground(Color.clear)
         }
@@ -228,10 +221,10 @@ struct KalshiScreen: View {
         }
         working = true
         Task {
-            let market = await KalshiWatch.resolve(q)
+            let market = await PolymarketBridge.resolve(q)
             working = false
             guard let market else {
-                result = String(localized: "Couldn't find an open market for that — try a team name.")
+                result = String(localized: "Couldn't find an open market for that — try another word.")
                 resultIsError = true
                 return
             }
@@ -239,29 +232,23 @@ struct KalshiScreen: View {
         }
     }
 
-    private func watchHit(_ market: KalshiWatch.Resolved) {
+    private func watchHit(_ market: PolymarketBridge.Resolved) {
         guard !working else { return }
         DSHaptic.tap()
         add(market)
     }
 
-    private func add(_ market: KalshiWatch.Resolved) {
+    private func add(_ market: PolymarketBridge.Resolved) {
         resultIsError = false
-        if let thing = KalshiWatch.add(market, context: modelContext) {
+        if let thing = PolymarketBridge.add(market, context: modelContext) {
             result = String(localized: "Watching \(thing.title)")
             queryField = ""
             hits = []
             loadWatched()
             register()
-            // …and ask Polymarket whether it prices the same question.
-            // Fire-and-forget: no twin is the common case and says nothing.
+            // …and ask Kalshi whether it prices the same question.
             twin = nil
-            let prediction = PredictionMarket(
-                source: .kalshi, id: market.ticker, title: market.title,
-                subtitle: market.subtitle, url: thing.content,
-                probability: market.probability, volume: market.volume,
-                resolved: false, yesWon: nil, closeTime: market.closeTime)
-            Task { twin = await PredictionTwin.find(for: prediction, context: modelContext) }
+            Task { twin = await PredictionTwin.find(for: market.prediction, context: modelContext) }
         } else {
             result = String(localized: "\(market.title) is already on your watchlist.")
         }
@@ -276,11 +263,11 @@ struct KalshiScreen: View {
 
     private func register() {
         let proof = "\(watched.count) market\(watched.count == 1 ? "" : "s") watched"
-        if let existing = store.bridges.first(where: { $0.name == "Kalshi" }) {
+        if let existing = store.bridges.first(where: { $0.name == "Polymarket" }) {
             store.reconnect(existing.id, proof: proof)
         } else {
             store.bridges.append(BridgeApp(
-                id: "kalshi", name: "Kalshi", status: .connected,
+                id: "polymarket", name: "Polymarket", status: .connected,
                 statusLine: proof,
                 can: ["Watches the markets you add.", "Read-only — public odds, no trading."]
             ))

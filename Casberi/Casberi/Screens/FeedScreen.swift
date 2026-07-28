@@ -2440,6 +2440,7 @@ struct FeedScreen: View {
         if shape == .social { return true }                                // PostCard, media at width
         if shape == .chat && thing.mark == .doing { return true }          // TakeawayCard
         if TokenPulse.shared.pulse(for: thing) != nil { return true }      // TokenRow fat anatomy
+        if PredictionPulse.shared.pulse(for: thing) != nil { return true } // PredictionRow, same
         return false
     }
 
@@ -2594,6 +2595,11 @@ struct FeedScreen: View {
                 // plain band + timestamp — never a faked price.
                 if let pulse = TokenPulse.shared.pulse(for: thing) {
                     TokenRow(thing: thing, pulse: pulse)
+                } else if let odds = PredictionPulse.shared.pulse(for: thing) {
+                    // A watched market wears its odds the same way — and the
+                    // same rule holds: until the pulse lands, the plain band,
+                    // never a faked probability.
+                    PredictionRow(thing: thing, pulse: odds)
                 } else {
                     BandRow(thing: thing,
                             emphasized: thing.id == nextEventID,

@@ -534,6 +534,90 @@ struct TokenRow: View {
 }
 
 
+/// The fat prediction-market row (2026-07-28) — TokenRow's sibling for a
+/// watched Kalshi/Polymarket market, and the fix for a real gap: the pulse
+/// was being fetched every foreground and rendered NOWHERE, so a market row
+/// was a title and a timestamp until you opened its sheet.
+///
+/// The right stack is the odds, then what's happened to them. Which delta it
+/// shows is deliberate: NOT a 24h change (a market's day is meaningless — it
+/// moves when the world does) but the move since YOU started watching, the
+/// anchor no market site can show you (`watchPriceUsd`, set at watch time).
+/// In POINTS, never percent — see `TokenDeltaPill.points`.
+///
+/// Three states, and the row never bluffs past what it knows: a SETTLED
+/// market shows its answer instead of a stale probability; a THIN book says
+/// so rather than printing a confident number it can't stand behind (prd §83
+/// ②); everything else shows the odds and the delta. Mounted only when a
+/// pulse EXISTS, so it can never invent one.
+struct PredictionRow: View {
+    let thing: Thing
+    let pulse: PredictionPulse.Pulse
+
+    var body: some View {
+        HStack(spacing: DS.Space.s3) {
+            BridgeIcon(name: thing.source, size: 38)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(thing.title)
+                    .dsText(.body17).fontWeight(.semibold)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(2)
+                if let sub = subtitle {
+                    Text(sub)
+                        .dsText(.label12).foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: DS.Space.s2)
+            VStack(alignment: .trailing, spacing: 3) {
+                if let won = resolvedYes {
+                    // Settled: the answer IS the number now.
+                    Text(won ? "Yes" : "No")
+                        .dsText(.price16).fontWeight(.bold)
+                        .foregroundStyle(DS.textPrimary)
+                    Text("Resolved")
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
+                } else {
+                    Text("\(Int((pulse.probability * 100).rounded()))%")
+                        .dsText(.price16)
+                        .foregroundStyle(DS.textPrimary)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                    if let move = pulse.sinceWatched {
+                        TokenDeltaPill(change: move, label: "", compact: true,
+                                       solid: true, points: true)
+                    }
+                }
+            }
+        }
+        .padding(.vertical, DS.Space.s2)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(spokenLabel))
+    }
+
+    /// A settled market reads its answer off the thing itself (stamped once
+    /// by `PredictionPulse`), not off the pulse — the stamp survives a
+    /// relaunch that empties the in-memory cache.
+    private var resolvedYes: Bool? { thing.marketResolvedYes ?? (pulse.resolved ? pulse.yesWon : nil) }
+
+    /// The market's own side ("Kansas City") when it has one, and the thin-
+    /// book caveat when it applies — the one line that says what the number
+    /// on the right is worth.
+    private var subtitle: String? {
+        if resolvedYes != nil { return nil }
+        if pulse.thin { return String(localized: "Thinly traded — odds move easily") }
+        return nil
+    }
+
+    private var spokenLabel: String {
+        if let won = resolvedYes {
+            return String(localized: "\(thing.title), resolved \(won ? "yes" : "no")")
+        }
+        return String(localized: "\(thing.title), \(Int((pulse.probability * 100).rounded())) percent")
+    }
+}
+
+
 /// The 24h price line (Option A, 2026-07-10): 2pt round stroke, no axes, no
 /// dots — the signed percent beneath carries the number, the line carries
 /// the shape. Green up / red down is state (the color law's third permitted

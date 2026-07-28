@@ -1454,18 +1454,25 @@ struct RootShell: View {
         if TokensAsk.matches(query) {
             lastAnswerHits = []
             let moves = await TokensAsk.moves(context: modelContext)
-            guard !moves.isEmpty else {
+            // Watched prediction markets are a watchlist too (2026-07-28) —
+            // read from PredictionPulse's existing cache, so this costs no
+            // request and can't disagree with the feed rows.
+            let markets = MarketsAsk.moves(context: modelContext)
+            guard !moves.isEmpty || !markets.isEmpty else {
                 // Empty MOVES isn't an empty WATCHLIST — offline, every pulse
                 // fetch fails and a "nothing watched" line would be a fake
                 // status (honesty rule). Say which nothing this is.
-                return proseDoc(TokensAsk.watched(modelContext).isEmpty
-                    ? "Nothing on your watchlist yet — watch a token from Apps → Tokens."
+                let watchesNothing = TokensAsk.watched(modelContext).isEmpty
+                    && MarketsAsk.watched(modelContext).isEmpty
+                return proseDoc(watchesNothing
+                    ? "Nothing on your watchlist yet — watch a token from Apps → Tokens, or a market from Kalshi or Polymarket."
                     : "Couldn't read your watchlist's prices right now — check your connection.")
             }
             // TokenChip rows alongside the summary — `KeptAskComposers.watchlistDoc`
             // so a typed ask and the kept "How's my watchlist?" chip can never
             // disagree about what's shown.
-            return KeptAskComposers.watchlistDoc(line: TokensAsk.line(moves), moves: moves)
+            let line = moves.isEmpty ? MarketsAsk.line(markets) : TokensAsk.line(moves)
+            return KeptAskComposers.watchlistDoc(line: line, moves: moves, markets: markets)
         }
         // A wallet ask ("how's my wallet") is answered from the live holdings
         // and the forward-only value line — computed, no model (2026-07-15).

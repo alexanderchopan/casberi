@@ -83,6 +83,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-claude    { background: #d97757; font-size: 18px; }
 .ai-tokens    { background: #0b0b0b; }
 .ai-kalshi    { background: #4fae7b; }
+.ai-polymarket { background: #1652f0; }
 .ai-stocktwits { background: #008fff; }
 .ai-opensea   { background: #2081e2; }
 /* Read-only exchange seats (prd 163). Coinbase's downloaded app icon carried

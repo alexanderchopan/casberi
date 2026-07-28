@@ -197,6 +197,13 @@ enum TodayBrief {
             ids.append("pair")
             lines.append("pair = TilePair([\(tiles.joined(separator: ", "))])")
         }
+        // A watched market that resolved — an EVENT, so it follows the pair
+        // rather than joining it (a tile pair is state at a glance; this is
+        // news). Silent on every day nothing settled, like every module here.
+        if let resolved = marketResolvedToday(MarketsAsk.moves(context: context), now: now) {
+            ids.append("tmkt")
+            lines.append(resolved)
+        }
 
         // 4. The themes map — the second whole-day summary, and the one that
         // replaced "what landed" and "when it landed" outright (2026-07-25,
@@ -331,6 +338,18 @@ enum TodayBrief {
             out.append(Note(glyph: "moon.zzz",
                             text: String(localized:
                                 "Nothing from \(gone.source) today — the first quiet day since \(since).")))
+        }
+
+        // On this day (2026-07-28) — the corpus's own anniversary, promoted
+        // from a card that only ever rendered beside a habit source's own
+        // heatmap (`OnThisDay`/`FeedScreen.calendarHeatmapSection`) — so
+        // someone who never opens the Day One/Obsidian feed directly still
+        // gets the reach-back. Same rule as everywhere else `OnThisDay` is
+        // read: a real match only, never invented.
+        if let echo = OnThisDay.find(in: things) {
+            out.append(Note(glyph: "clock.arrow.circlepath",
+                            text: String(localized: "\(echo.label): \(clamp(echo.thing.title, max: 60))"),
+                            thingID: echo.thing.id.uuidString))
         }
 
         // A mention that's gathering a conversation — the reply count is the
@@ -895,6 +914,28 @@ enum TodayBrief {
     /// day-planner lane §101 cut ("a person who sees their whole day in
     /// Casberi stops opening their calendar"). Same scoping the `upcoming`
     /// composer already holds to.
+    /// A watched market that BECAME A FACT today (2026-07-28) — the one
+    /// prediction-market shape that belongs in this brief without arguing
+    /// with the module doctrine. A market's odds are a STATE (the feed row
+    /// carries those, §216); a market RESOLVING is an EVENT, and the only
+    /// thing in the corpus that turns a probability into an answer. It also
+    /// carries what nothing else can: the odds the day you started watching.
+    ///
+    /// Never a count of markets, never "3 markets moved" — that's the tally
+    /// this file's header forbids. One resolution, or nothing.
+    private static func marketResolvedToday(_ markets: [MarketsAsk.Move], now: Date) -> String? {
+        let cal = Calendar.current
+        guard let just = markets.first(where: { m in
+            m.resolved && m.yesWon != nil && cal.isDate(m.thing.capturedAt, inSameDayAs: now) == false
+                && (m.thing.dueAt.map { cal.isDate($0, inSameDayAs: now) } ?? false)
+        }) ?? markets.first(where: { $0.resolved && $0.yesWon != nil }) else { return nil }
+        // A Row, not a tile: this IS the thing itself (one of the four shapes
+        // the doctrine allows), so it opens to the market it names. The
+        // trailing slot carries the answer — the whole point of the module.
+        let answer = just.yesWon == true ? String(localized: "Yes") : String(localized: "No")
+        return "tmkt = Row(\"\(tileSafe(just.thing.title))\", \"\(just.thing.kind.typeTag)\", \"\(just.thing.source)\", \"\(answer)\", \"\(just.thing.id.uuidString)\")"
+    }
+
     private static func nextTile(_ things: [Thing]) -> String? {
         let open = things.filter { $0.mark != .done && $0.dueAt != nil }
         let ahead = open.filter { ($0.dueAt ?? .distantPast) >= .now }

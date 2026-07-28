@@ -13,6 +13,37 @@ struct KalshiMarket {
     let previousProbability: Double?
     let status: String             // "active", "closed", "settled", …
     let closeTime: Date?
+    /// Kalshi's own settlement field on a market object: "" while live, else
+    /// "yes"/"no" — read directly rather than inferred from price, since a
+    /// near-0/near-1 LIVE market can still flip (prd §83 ②'s reasoning
+    /// extended to resolution: a probability is never treated as a verdict).
+    let result: String?
+    /// The kalshi.com market page — carried here (not just built ad hoc at
+    /// each call site) so `prediction` below can hand it to the shared
+    /// PredictionMarket shape.
+    let url: String
+
+    var resolved: Bool { status == "settled" || status == "finalized" }
+    var yesWon: Bool? {
+        switch result?.lowercased() {
+        case "yes": return true
+        case "no": return false
+        default: return nil
+        }
+    }
+
+    /// Contracts traded — `volume_fp`, a STRING (`volume` itself is always
+    /// null on this API; measured 2026-07-28, and sorting on the null field
+    /// silently ordered every search result at zero).
+    let volume: Double
+
+    /// This market, in the shape PredictionPulse/PredictionMoments share
+    /// with Polymarket.
+    var prediction: PredictionMarket {
+        PredictionMarket(source: .kalshi, id: ticker, title: title, subtitle: subtitle,
+                          url: url, probability: probability, volume: volume,
+                          resolved: resolved, yesWon: yesWon, closeTime: closeTime)
+    }
 
     /// Pulls a market's series+event tickers out of a kalshi.com market URL
     /// (`https://kalshi.com/markets/kxnflgame/kxnflgame-26sep14denkc`).
@@ -49,7 +80,10 @@ struct KalshiMarket {
             probability: prob,
             previousProbability: KalshiWatch.previousProbability(market),
             status: (market["status"] as? String) ?? "active",
-            closeTime: IngestSupport.isoDate(market["close_time"]))
+            closeTime: IngestSupport.isoDate(market["close_time"]),
+            result: market["result"] as? String,
+            url: "https://kalshi.com/markets/\(series.lowercased())/\(event.lowercased())",
+            volume: num(market["volume_fp"]) ?? 0)
     }
 
     private static func num(_ any: Any?) -> Double? {

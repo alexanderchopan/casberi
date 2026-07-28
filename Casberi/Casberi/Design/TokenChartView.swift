@@ -66,15 +66,23 @@ struct TokenDeltaPill: View {
     /// The Home row's smaller dose.
     var compact: Bool = false
     var solid: Bool = false
+    /// Render the delta in POINTS rather than percent (2026-07-28, the
+    /// prediction-market rows). A probability moving 34% → 61% has gone up
+    /// 27 POINTS; calling that "+79%" is a true statement about a different
+    /// quantity, and the one people read off a market is points. Lives here
+    /// rather than in a second pill so the capsule grammar stays in one file.
+    var points: Bool = false
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         let ink = TokenChartStyle.accent(change: change, scheme: scheme)
-        let flat = TokenChartStyle.isFlat(change)
+        // Half a point is the smallest move worth a direction, the same job
+        // `isFlat`'s 0.05% does for a price.
+        let flat = points ? abs(change * 100) < 0.5 : TokenChartStyle.isFlat(change)
         let loud = solid && !flat
-        let text = label.isEmpty
-            ? TokenChartStyle.changeText(change)
-            : "\(TokenChartStyle.changeText(change)) · \(label)"
+        let value = points ? Self.pointsText(change, flat: flat)
+                           : TokenChartStyle.changeText(change)
+        let text = label.isEmpty ? value : "\(value) · \(label)"
         Text(text)
             .dsText(compact ? .label12 : .subhead13)
             .fontWeight(solid ? .bold : .regular)
@@ -91,6 +99,14 @@ struct TokenDeltaPill: View {
                         : solid ? DS.fillStrong
                         : ink.opacity(scheme == .light ? 0.12 : 0.15),
                         in: Capsule(style: .continuous))
+    }
+
+    /// "+27 pts" — a probability delta in its own unit. A move that rounds
+    /// away has no direction, exactly as with a price (prd §83 ③).
+    private static func pointsText(_ change: Double, flat: Bool) -> String {
+        let pts = change * 100
+        if flat { return String(localized: "0 pts") }
+        return String(format: "%@%.0f pts", pts > 0 ? "+" : "", pts)
     }
 }
 

@@ -19,86 +19,145 @@ enum KalshiWatch {
         let probability: Double     // 0...1 — the YES price, i.e. the market's odds
         let previousProbability: Double?
         let volume: Double
+        /// The event's own category ("Politics", "Sports", "Economics") —
+        /// Kalshi labels every event, and once search stopped being
+        /// sports-only this is what tells a result apart from its neighbours.
+        let category: String
+        let closeTime: Date?
         var id: String { ticker }
     }
 
-    /// The series Casberi searches — Kalshi's unfiltered event listing buries
-    /// real games under its long tail of novelty/futures markets (award
-    /// winners, division odds, "will X be named host"), so search goes
-    /// straight to each league's own game series instead. NBA and NCAAB return
-    /// nothing out of season — that's Kalshi's own open-market list, not a bug
-    /// here. Any series that doesn't resolve is silently skipped by Cache.get(),
-    /// so a stale or seasonal ticker costs nothing but the request.
+    /// Search is TWO PHASES (rebuilt 2026-07-28), and the split is a measured
+    /// one, not a preference. Kalshi still has no keyword-search endpoint, so
+    /// the whole open book has to be pulled and filtered on device — but
+    /// pulling it WITH nested markets costs **2.9 MB and 2.2s per page**,
+    /// while the same page WITHOUT them costs **157 KB and 0.8s** (19× less).
+    /// So discovery reads the cheap unnested listing (titles + categories),
+    /// and only the events that actually MATCH get their markets hydrated.
     ///
-    /// FIFA World Cup 2026 is the one curated future that earns a place beside
-    /// the game series: Kalshi is the tournament's official market partner, and
-    /// "who wins the World Cup" is the headline market people search for — not
-    /// the novelty long-tail the rule above guards against. KXMENWORLDCUP (the
-    /// winner future) is confirmed from the live market URL; KXWORLDCUPGAME is
-    /// the per-match series, best-effort until verified on-device against the
-    /// live API (unreachable from CI) — harmless if the ticker's off.
-    private static let searchSeries = [
-        "KXNFLGAME", "KXNCAAFGAME", "KXMLBGAME", "KXNBAGAME", "KXNCAABGAME",
-        "KXMENWORLDCUP", "KXWORLDCUPGAME",
-    ]
+    /// This replaces the previous design — seven hardcoded sports series —
+    /// which was written when the unfiltered listing looked like an
+    /// unsortable novelty dump. It wasn't: `volume` is always null on this
+    /// API and the real field is `volume_fp` (a STRING), so the old sort
+    /// ordered every market at zero and the long tail looked inseparable
+    /// from the real book. Sorted on the right field, the general listing
+    /// leads with the presidential election and Greenland — and it carries
+    /// all **13 categories** (Politics, Economics, Financials, Climate,
+    /// Entertainment, …) that sports-only search could never reach.
+    ///
+    /// `category=` is NOT a server-side filter — measured 2026-07-28,
+    /// `?category=Economics`, `=Financials` and `=Politics` returned
+    /// byte-identical pages. It's a label on the payload, nothing more.
+    private static let discoveryPages = 3
 
-    /// The open games across those series, fetched once and reused for two
-    /// minutes — Kalshi has no keyword search, so one batch backs every
-    /// keystroke's client-side filter instead of a round trip per character.
+    /// The open events, titles only, fetched once and reused for two minutes.
+    /// Bounded at `discoveryPages` × 200 on purpose: the full walk is 2400+
+    /// events across 12+ pages and still not done (measured), and 1,300 of
+    /// those are the state-by-state election long tail. `truncated` says so
+    /// out loud rather than letting a bounded read read as a complete one.
     private actor Cache {
         var events: [[String: Any]] = []
+        var truncated = false
         var fetchedAt: Date?
 
-        func get() async -> [[String: Any]] {
+        func get() async -> (events: [[String: Any]], truncated: Bool) {
             if let fetchedAt, Date().timeIntervalSince(fetchedAt) < 120, !events.isEmpty {
-                return events
+                return (events, truncated)
             }
             var fetched: [[String: Any]] = []
-            for series in searchSeries {
+            var cursor = ""
+            var more = false
+            for _ in 0..<discoveryPages {
+                let paged = cursor.isEmpty ? "" : "&cursor=\(cursor)"
                 guard let root = await IngestSupport.getJSON(
-                    "https://api.elections.kalshi.com/trade-api/v2/events?series_ticker=\(series)&status=open&with_nested_markets=true&limit=200")
+                    "https://api.elections.kalshi.com/trade-api/v2/events?status=open&limit=200&with_nested_markets=false\(paged)")
                     as? [String: Any],
-                    let batch = root["events"] as? [[String: Any]]
-                else { continue }
+                    let batch = root["events"] as? [[String: Any]], !batch.isEmpty
+                else { break }
                 fetched.append(contentsOf: batch)
+                cursor = (root["cursor"] as? String) ?? ""
+                more = !cursor.isEmpty
+                if cursor.isEmpty { break }
             }
-            guard !fetched.isEmpty else { return events }   // keep the stale batch over nothing
+            guard !fetched.isEmpty else { return (events, truncated) }  // keep the stale batch over nothing
             events = fetched
+            truncated = more
             fetchedAt = Date()
-            return events
+            return (events, truncated)
         }
     }
     private static let cache = Cache()
 
-    /// Markets whose event or team name contains the query, most-traded
-    /// first — one row per market (a two-team game is two markets, each
-    /// naming its own side, so both are real, distinct watches). An empty
-    /// query lists the busiest markets open right now.
+    /// Markets matching the query, most-traded first — one row per market (a
+    /// two-outcome event is two markets, each naming its own side, so both
+    /// are real, distinct watches). An empty query lists the busiest markets
+    /// open right now, across every category rather than sports alone.
     static func search(_ query: String, limit: Int = 8) async -> [Resolved] {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        var rows: [Resolved] = []
-        for event in await cache.get() {
-            guard let eventTicker = event["event_ticker"] as? String,
-                  let seriesTicker = event["series_ticker"] as? String,
-                  let markets = event["markets"] as? [[String: Any]] else { continue }
-            let eventTitle = (event["title"] as? String) ?? ""
-            for market in markets {
-                guard let ticker = market["ticker"] as? String,
-                      let title = market["title"] as? String,
-                      let prob = liveProbability(market) else { continue }
-                let subtitle = (market["yes_sub_title"] as? String) ?? ""
-                if !q.isEmpty {
-                    let hay = "\(eventTitle) \(title) \(subtitle)".lowercased()
-                    guard hay.contains(q) else { continue }
-                }
-                rows.append(Resolved(
-                    ticker: ticker, eventTicker: eventTicker, seriesTicker: seriesTicker,
-                    title: title, subtitle: subtitle, probability: prob,
-                    previousProbability: previousProbability(market),
-                    volume: num(market["volume_fp"]) ?? 0))
+        let (events, _) = await cache.get()
+
+        // Phase 1 — match on the cheap listing (title + subtitle + category).
+        var candidates: [[String: Any]] = []
+        for event in events {
+            guard event["event_ticker"] is String else { continue }
+            if q.isEmpty {
+                candidates.append(event)
+            } else {
+                let hay = [event["title"] as? String, event["sub_title"] as? String,
+                           event["category"] as? String]
+                    .compactMap(\.self).joined(separator: " ").lowercased()
+                if hay.contains(q) { candidates.append(event) }
             }
         }
-        return Array(rows.sorted { $0.volume > $1.volume }.prefix(limit))
+        // Phase 2 — hydrate only the matches, and only a handful of them: one
+        // small per-event fetch each, bounded so a broad query ("the") can't
+        // turn into hundreds of requests. Over-fetch past `limit` because an
+        // event can hold many markets and the volume sort happens after.
+        let hydrate = Array(candidates.prefix(max(limit, 12)))
+        let hydrated = await IngestSupport.boundedGather(hydrate, maxConcurrent: 4) { event -> [Resolved] in
+            guard let ticker = event["event_ticker"] as? String else { return [] }
+            return await markets(inEvent: ticker,
+                                 category: (event["category"] as? String) ?? "",
+                                 query: q)
+        }
+        return Array(hydrated.flatMap(\.self).sorted { $0.volume > $1.volume }.prefix(limit))
+    }
+
+    /// One event's open markets, as watchable rows. The query is re-applied
+    /// against each market's OWN title/side — an event matched on its
+    /// category alone shouldn't hand back every candidate in the race.
+    private static func markets(inEvent eventTicker: String, category: String,
+                                query q: String) async -> [Resolved] {
+        guard let root = await IngestSupport.getJSON(
+            "https://api.elections.kalshi.com/trade-api/v2/events/\(eventTicker.uppercased())?with_nested_markets=true")
+            as? [String: Any] else { return [] }
+        let event = (root["event"] as? [String: Any]) ?? root
+        let seriesTicker = (event["series_ticker"] as? String) ?? ""
+        let eventTitle = (event["title"] as? String) ?? ""
+        let markets = (root["markets"] as? [[String: Any]])
+            ?? (event["markets"] as? [[String: Any]]) ?? []
+        var rows: [Resolved] = []
+        for market in markets {
+            guard let ticker = market["ticker"] as? String,
+                  let title = market["title"] as? String,
+                  (market["status"] as? String) != "settled",
+                  let prob = liveProbability(market) else { continue }
+            let subtitle = (market["yes_sub_title"] as? String) ?? ""
+            rows.append(Resolved(
+                ticker: ticker, eventTicker: eventTicker, seriesTicker: seriesTicker,
+                title: title.isEmpty ? eventTitle : title, subtitle: subtitle,
+                probability: prob,
+                previousProbability: previousProbability(market),
+                volume: num(market["volume_fp"]) ?? 0,
+                category: category,
+                closeTime: IngestSupport.isoDate(market["close_time"])))
+        }
+        // A query that named a SIDE ("Chiefs") keeps only that side; one that
+        // named the race keeps the field. Applied after the fetch because the
+        // side's name lives on the market, not on the listing.
+        guard !q.isEmpty else { return rows }
+        let sideMatches = rows.filter { "\($0.title) \($0.subtitle)".lowercased().contains(q) }
+        return sideMatches.isEmpty ? rows : sideMatches
     }
 
     /// Resolves a query to its busiest matching market — the Watch button's path.
@@ -152,6 +211,16 @@ enum KalshiWatch {
             tags: ["Watchlist"],
             sourceRef: ref
         )
+        // The since-you-watched anchor (2026-07-28) — reusing Tokens'
+        // watchPriceUsd field for a 0...1 probability instead of a dollar
+        // price (same anchor shape, different unit): PredictionMoments'
+        // resolution receipt reads this back the day the market settles.
+        thing.watchPriceUsd = market.probability
+        // A market's close IS a real deadline, so it rides `dueAt` like a
+        // reminder's or a 1Claw grant's expiry — which puts it in "What's
+        // coming up?" for free: that composer takes any bridge that lands a
+        // real deadline, by its own ruling (KeptAskComposers.upcoming).
+        thing.dueAt = market.closeTime
         context.insert(thing)
         context.saveHonestly()
         SpotlightIndex.index([thing])

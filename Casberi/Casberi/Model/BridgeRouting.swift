@@ -20,6 +20,7 @@ enum BridgeRouter {
         case exchange(ExchangeBridge.Venue)
         case ethValidators
         case kalshi
+        case polymarket
         case stocktwits
         case openSea
         case geckoTerminal
@@ -135,6 +136,7 @@ enum BridgeRouter {
             case .exchange(let venue): venue.rawValue
             case .ethValidators:  "ethvalidators"
             case .kalshi:         "kalshi"
+            case .polymarket:     "polymarket"
             case .stocktwits:     "stocktwits"
             case .openSea:        "opensea"
             case .geckoTerminal:  "geckoterminal"
@@ -210,6 +212,7 @@ enum BridgeRouter {
         Row(offer: "Gemini Exchange", id: "geminiExchange", destination: .exchange(.geminiExchange)),
         Row(offer: "ETH Validators", id: "ethvalidators", destination: .ethValidators),
         Row(offer: "Kalshi",     id: "kalshi",     destination: .kalshi),
+        Row(offer: "Polymarket", id: "polymarket", destination: .polymarket),
         Row(offer: "Stocktwits", id: "stocktwits", destination: .stocktwits),
         Row(offer: "OpenSea",    id: "opensea",    destination: .openSea),
         Row(offer: "GeckoTerminal", id: "geckoterminal", destination: .geckoTerminal),
@@ -287,6 +290,7 @@ struct BridgeDestinationView: View {
         case .privacyPools:   PrivacyPoolsScreen()
         case .ethValidators:  EthValidatorScreen()
         case .kalshi:         KalshiScreen()
+        case .polymarket:     PolymarketScreen()
         case .stocktwits:     StocktwitsScreen()
         case .openSea:        OpenSeaScreen()
         case .geckoTerminal:  GeckoTerminalScreen()
