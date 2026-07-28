@@ -4,6 +4,45 @@ import Photos
 import LinkPresentation
 import AVFoundation
 
+/// Which chart a thing LEADS with, decided once (2026-07-27).
+///
+/// Three places needed this answer — `ThingContentView.kindContent` (what to
+/// draw), `ThingContentView.showsLinkPreview` (whether the sheet's Site row
+/// would be a duplicate), and `ThingSheetView`'s detent (a chart is tall, so
+/// it opens full-height) — and each had hand-written its own chain of
+/// `route(from:)` calls. They had already drifted: the detent check listed
+/// Token and Stock but not Kalshi, so a Kalshi market opened half-height with
+/// its verbs below the fold. Adding PostHog would have been a fourth clause in
+/// three places; it's one case here instead.
+enum ThingChart {
+    case token(chain: String, address: String)
+    case kalshi(series: String, event: String)
+    case stock(ticker: String)
+    case postHogMetric(event: String)
+
+    /// Charts are a `.link` affordance only — a `.product` previews its page
+    /// even when the URL would otherwise parse.
+    static func kind(for thing: Thing) -> ThingChart? {
+        guard thing.kind == .link else { return nil }
+        if let route = TokenChart.route(from: thing.content) {
+            return .token(chain: route.chain, address: route.address)
+        }
+        if let route = KalshiMarket.route(from: thing.content) {
+            return .kalshi(series: route.series, event: route.event)
+        }
+        if let ticker = StockChart.route(from: thing.content) {
+            return .stock(ticker: ticker)
+        }
+        // PostHog can't ride `route(from:)`: a watched metric's content is a
+        // plain project URL, shared verbatim by its annotation, milestone and
+        // silence things — the ref is what separates them.
+        if thing.source == "PostHog", let event = PostHogWatch.event(from: thing) {
+            return .postHogMetric(event: event)
+        }
+        return nil
+    }
+}
+
 /// Content by kind (S19) — the thing shows AS what it is: a screenshot is the
 /// image, a link is its preview, a chat reads as a conversation, voice leads
 /// with its waveform. Everything here renders only what the record actually
@@ -20,9 +59,7 @@ struct ThingContentView: View {
         // A product previews its page the same way a link does, so it dedups
         // the Site row identically — else the host shows twice.
         (thing.kind == .link || thing.kind == .product)
-            && TokenChart.route(from: thing.content) == nil
-            && KalshiMarket.route(from: thing.content) == nil
-            && StockChart.route(from: thing.content) == nil
+            && ThingChart.kind(for: thing) == nil
             && Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) != nil
     }
 
@@ -70,14 +107,23 @@ struct ThingContentView: View {
         case .screenshot:
             ScreenshotContent(assetID: thing.sourceRef)
         case .link:
-            // A token link leads with its price chart (the token's "media",
-            // like a screenshot leads with its image); everything else previews.
-            if let route = TokenChart.route(from: thing.content) {
-                TokenChartContent(thing: thing, chain: route.chain, address: route.address)
-            } else if let route = KalshiMarket.route(from: thing.content) {
-                KalshiMarketContent(series: route.series, event: route.event)
-            } else if let ticker = StockChart.route(from: thing.content) {
-                StockChartContent(thing: thing, ticker: ticker)
+            // A charted link leads with its curve (the chart is the link's
+            // "media", like a screenshot leads with its image); everything
+            // else previews.
+            if let chart = ThingChart.kind(for: thing) {
+                switch chart {
+                case .token(let chain, let address):
+                    TokenChartContent(thing: thing, chain: chain, address: address)
+                case .kalshi(let series, let event):
+                    KalshiMarketContent(series: series, event: event)
+                case .stock(let ticker):
+                    StockChartContent(thing: thing, ticker: ticker)
+                case .postHogMetric(let event):
+                    // A watched metric leads with its own curve, and the
+                    // project's annotations land on it as marks, so a spike
+                    // sits beside the deploy that caused it.
+                    PostHogMetricContent(thing: thing, event: event)
+                }
             } else if thing.source == "GitHub", thing.sourceRef?.hasPrefix("gh:release:") == true {
                 // A release leads with its preview, then its own notes —
                 // read live, since `enrichedText` is retrieval-only.
@@ -996,6 +1042,147 @@ private struct StockChartContent: View {
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
+    }
+}
+
+/// A watched PostHog metric: its 30-day curve with the project's annotations
+/// marked on it, the milestone it's chasing, and the ring's own progress.
+///
+/// The milestone line is the one place this bridge lets a COUNT be the
+/// headline, and it earns it by being a moment rather than a tally — so it
+/// rolls (`CountUpText`) instead of just appearing, the same acknowledgement
+/// the app gives every other number that took work to reach. Tapping a mark
+/// names the annotation it belongs to; nothing is drawn that isn't read.
+private struct PostHogMetricContent: View {
+    let thing: Thing
+    let event: String
+
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.colorScheme) private var scheme
+    @State private var reading = PostHogState.Metric()
+    /// The annotations already in the corpus — the refresh landed them as
+    /// Things minutes ago, so re-fetching them over the network on every sheet
+    /// open bought a round trip and a chance to disagree with the feed.
+    @State private var annotations: [(date: Date, title: String)] = []
+    @State private var tappedMark: String?
+
+    /// The series as a chart. Counts are not prices, but the shape is the
+    /// same fact — one value per sample — so it draws through the plot every
+    /// other curve in the app uses rather than growing a second chart stack.
+    /// A counts series legitimately starts at zero, which `TokenChart.from`
+    /// rejects (a price that starts at 0 has no meaningful change), so the
+    /// zero-start case falls back to a flat change rather than no chart.
+    private var chart: TokenChart? {
+        let closes = reading.series.map(Double.init)
+        guard closes.count >= 2, let last = closes.last else { return nil }
+        return TokenChart.from(closes: closes)
+            ?? TokenChart(closes: closes, price: last, change: 0)
+    }
+
+    /// Annotations that fall inside the drawn window, placed at their own day.
+    /// Ids are STABLE across body evaluations — a fresh `UUID()` each time made
+    /// `TokenChartPlot`'s `ForEach` tear down and replay every mark's landing
+    /// animation on each re-render (review, 2026-07-27). Capped like the
+    /// wallet's own mark set, so a busy timeline can't stipple the curve.
+    private var marks: [TokenChartMark] {
+        let days = reading.series.count
+        guard days >= 2 else { return [] }
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: .now)
+        return annotations.prefix(10).compactMap { note in
+            let back = calendar.dateComponents(
+                [.day], from: calendar.startOfDay(for: note.date), to: today).day ?? 0
+            guard back >= 0, back < days else { return nil }
+            return TokenChartMark(id: markID(note.title, back), x: Double(days - 1 - back),
+                                  label: note.title)
+        }
+    }
+
+    /// A stable id per (note, day) pair — derived, not minted.
+    private func markID(_ title: String, _ back: Int) -> UUID {
+        var hasher = Hasher()
+        hasher.combine(title)
+        hasher.combine(back)
+        let value = UInt64(bitPattern: Int64(hasher.finalize()))
+        return UUID(uuid: (UInt8(truncatingIfNeeded: value), UInt8(truncatingIfNeeded: value >> 8),
+                           UInt8(truncatingIfNeeded: value >> 16), UInt8(truncatingIfNeeded: value >> 24),
+                           UInt8(truncatingIfNeeded: value >> 32), UInt8(truncatingIfNeeded: value >> 40),
+                           UInt8(truncatingIfNeeded: value >> 48), UInt8(truncatingIfNeeded: value >> 56),
+                           0, 0, 0, 0, 0, 0, 0, 0))
+    }
+
+    private var accent: Color {
+        TokenChartStyle.accent(change: chart?.change ?? 0, scheme: scheme)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            header
+            if let chart {
+                TokenChartPlot(chart: chart, accent: accent, marks: marks,
+                               onTapMark: { tappedMark = $0.label })
+            }
+            if let tappedMark {
+                Text(tappedMark)
+                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+            }
+            milestoneLine
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s3)
+        .onAppear(perform: load)
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            // The window's own total, not the all-time one — the number the
+            // curve above it actually draws.
+            Text(PostHogIngest.formatted(reading.series.suffix(7).reduce(0, +)))
+                .dsText(.stat24).monospacedDigit()
+                .foregroundStyle(DS.textPrimary)
+            Text("\(event) · last 7 days")
+                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+        }
+    }
+
+    /// "728 of 1,000" — where this metric stands on the ladder. Absent until a
+    /// total is read: an unread total is a fact we don't have, and a ring at
+    /// zero would claim one.
+    @ViewBuilder private var milestoneLine: some View {
+        if reading.total > 0 {
+            let next = PostHogMilestone.next(after: reading.total)
+            HStack(spacing: DS.Space.s2) {
+                MetricDisc(series: reading.series,
+                           progress: PostHogMilestone.progress(reading.total),
+                           change: chart?.change, size: 34)
+                VStack(alignment: .leading, spacing: 1) {
+                    CountUpText(text: PostHogIngest.formatted(reading.total))
+                        .dsText(.body17).monospacedDigit()
+                        .foregroundStyle(DS.textPrimary)
+                    Text("all time · next \(PostHogIngest.formatted(next))")
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
+                }
+                Spacer(minLength: 0)
+            }
+        }
+    }
+
+    /// Everything here is already on device — the reading from the bridge's
+    /// own state, the annotations from the corpus the refresh landed them in.
+    /// No network, so the sheet paints immediately and can never show a
+    /// different timeline than the feed behind it.
+    private func load() {
+        reading = PostHogState.get(event)
+        let prefix = "posthog:annotation:"
+        var descriptor = FetchDescriptor<Thing>(
+            predicate: #Predicate {
+                $0.source == "PostHog" && ($0.sourceRef?.starts(with: prefix) ?? false)
+            },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        descriptor.fetchLimit = 25
+        annotations = ((try? modelContext.fetch(descriptor)) ?? [])
+            .filter(\.isLive)
+            .map { (date: $0.capturedAt, title: $0.title) }
     }
 }
 

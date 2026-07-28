@@ -9411,3 +9411,46 @@ Link with the mempool.space preview. Debug: `-bitcoinHalvingHorizon <days>`
 widens the 180-day landing window (the real halving is ~90,000 blocks out, so
 the branch would otherwise be unrunnable until 2028); `-bitcoinProbe` logs the
 halving arithmetic and the vintage every run regardless.
+
+## §223 — PostHog: a count is not a thing (2026-07-27)
+
+PostHog joins the catalog as a Work seat beside GitHub. The audience question
+was settled by GitHub's own presence — nobody connects GitHub who isn't
+building something — and by the fact that the two COMPOSE: a PostHog
+annotation is almost always "we shipped X", the same event a GitHub release
+describes from the other side, so landing both puts the deploy and the metric
+that moved after it next to each other with no correlation feature written.
+
+**Ruling 1 — a watched metric never lands a tally.** PostHog's natural output
+is counts, and the module doctrine (§ Today brief) already forbids a module
+from being one. A watched metric therefore updates IN PLACE and re-lands
+nothing. Three shapes, and only three, are news:
+
+- **Annotations** — the project's own timeline notes. Already an event,
+  already dated, already written by a person.
+- **Milestones** — the money-moving exception: a count may be a thing exactly
+  when the count IS the event. "signed_up crossed 1,000" is news once.
+- **Silence** — a watched event that stops firing. Gated on a real baseline
+  (it must have fired most of the preceding week) so a rare event can't cry
+  wolf, and cleared the moment it fires again so one outage is one alert.
+
+**Ruling 2 — the read-only promise is structural here, and the copy may say
+so.** §222 and the Privacy.com bridge keep "can't spend" by CONDUCT, because
+those credentials aren't scoped. PostHog's personal API keys are scoped, so
+the setup screen names the three read scopes to tick and the promise holds
+independently of what the app does. This is the first bridge that can make
+that claim; do not weaken the copy to match the others.
+
+**Ruling 3 — the mark is the data.** A metric has no logo, and a generic glyph
+would name nothing (the `TickerDisc` reasoning, §185). Its disc is its own
+seven-day curve, ringed by progress toward the next milestone — two facts, no
+text, and no two metrics look alike because no two datasets do.
+
+**Ruling 4 — aggregates only.** Nothing here reads an individual person's
+profile. Someone else's users do not belong in your corpus, and the catalog
+copy says so.
+
+**Held, not built:** saved insights as bookmarks (an insight's value is its
+live result, so landing it once is a stale link), session replays, and any
+per-person read. The query endpoint's rate limit is documented as both
+120/hour and 2400/hour — measure before setting a real cadence.

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PostHog — connect flow (mockup)</title>
+<style>
+  :root {
+    --page: #000000;
+    --sheet: #111113;
+    --well: #080809;
+    --text1: #ffffff;
+    --text2: rgba(235,235,245,0.60);
+    --text3: rgba(235,235,245,0.30);
+    --tint: #1673e6;
+    --attention: #ff9f0a;
+    --confirm: #30d158;
+    --danger: #ff453a;
+    --r-sheet: 16px;
+    --r-card: 10px;
+    --r-control: 12px;
+    --s1: 4px; --s2: 10px; --s3: 14px; --s4: 18px;
+    --shadow: 0 10px 30px rgba(0,0,0,0.55);
+    --posthog: #f54e00;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0a0a0c; color: var(--text1);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    letter-spacing: 0;
+    padding: 40px 24px 100px;
+  }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .intro { color: var(--text2); font-size: 14px; line-height: 1.5; max-width: 900px; margin-bottom: 36px; }
+  .intro b { color: var(--text1); font-weight: 600; }
+  .rail { display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start; }
+  .col { width: 393px; }
+  .step-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; display:flex; align-items:center; gap:8px; }
+  .step-num {
+    width:20px; height:20px; border-radius:50%; background:var(--tint); color:#fff;
+    font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; flex:none;
+  }
+  .step-note { color: var(--text2); font-size: 12.5px; line-height: 1.5; margin-bottom: 14px; min-height: 72px; }
+
+  .phone {
+    width: 393px; height: 852px;
+    background: var(--page); border-radius: 44px;
+    padding: 18px 16px 0;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.07), 0 24px 60px rgba(0,0,0,0.6);
+    overflow: hidden; position: relative;
+  }
+  .fold {
+    position:absolute; left:0; right:0; bottom:0; height:64px;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.9) 80%);
+    pointer-events:none;
+  }
+  .statusbar { display:flex; justify-content:space-between; padding: 2px 14px 10px; font-size:13px; font-weight:600; }
+  .navbar { display:flex; align-items:center; gap:8px; padding: 4px 4px 10px; }
+  .back { color: var(--tint); font-size: 17px; font-weight:400; }
+  .navtitle-inline { font-size: 17px; font-weight: 600; flex:1; text-align:center; margin-right:20px; }
+  .navtitle { font-size: 28px; font-weight: 700; padding: 4px 4px 12px; }
+
+  .scroll { height: calc(100% - 50px); overflow: hidden; }
+
+  /* App detail screen */
+  .detail-hero { display:flex; gap: 14px; align-items:center; padding: 8px 4px 18px; }
+  .app-icon {
+    width:60px; height:60px; border-radius: 13.4px; /* 22.37% squircle-ish */
+    background: linear-gradient(135deg, var(--posthog), #ff8145);
+    display:flex; align-items:center; justify-content:center;
+    font-size:26px; font-weight:800; color:#fff; flex:none;
+  }
+  .detail-name { font-size: 20px; font-weight: 700; }
+  .detail-tag { font-size: 13px; color: var(--text2); margin-top: 2px; }
+  .connect-btn {
+    background: var(--tint); color:#fff; font-size:15px; font-weight:700;
+    padding: 9px 20px; border-radius: 9999px; display:inline-block; margin-top:8px;
+  }
+  .summary-block { padding: 4px 4px 18px; }
+  .summary-block p { font-size: 15px; line-height: 1.5; color: var(--text1); margin-bottom: 12px; }
+  .summary-block p.dim { color: var(--text2); }
+  .feat-list { display:flex; flex-direction:column; gap:10px; padding: 4px 4px 4px; }
+  .feat-row { display:flex; gap:10px; align-items:flex-start; font-size:14px; line-height:1.4; color: var(--text1); }
+  .feat-row .check { color: var(--confirm); font-size:15px; flex:none; margin-top:1px; }
+  .group-label { font-size:12px; color:var(--text3); padding: 18px 4px 8px; font-weight:600; }
+
+  /* Setup screen */
+  .slab {
+    background: var(--sheet); border-radius: var(--r-sheet);
+    padding: var(--s3); box-shadow: var(--shadow); margin-bottom: var(--s3);
+  }
+  .field-row { display:flex; align-items:center; gap: var(--s2); background: var(--well);
+    border-radius: var(--r-control); padding: 10px 12px; margin-bottom: var(--s2); }
+  .field-row input-mock { flex:1; }
+  .field-ph { color: var(--text3); font-size:15px; flex:1; }
+  .field-val { color: var(--text1); font-size:15px; flex:1; font-variant-numeric: tabular-nums; }
+  .field-affix { color: var(--text3); font-size:15px; }
+  .field-btn { color: var(--tint); font-size:13px; font-weight:700; letter-spacing:0.2px; }
+  .field-btn.dim { color: var(--text3); }
+  .slab-note { font-size:12.5px; color: var(--text2); line-height:1.45; padding: 2px 2px 0; }
+  .slab-note b { color: var(--text1); font-weight:600; }
+  .scope-pills { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .scope-pill {
+    font-size:11.5px; font-weight:600; color: var(--tint);
+    background: rgba(22,115,230,0.14); border-radius:9999px; padding:4px 9px;
+    font-family: ui-monospace, "SF Mono", monospace;
+  }
+  .result-row { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text2); padding: 6px 2px 0; }
+  .spinner { width:13px; height:13px; border-radius:50%; border:2px solid var(--text3); border-top-color:var(--tint); }
+  .project-row {
+    display:flex; align-items:center; gap:12px; background: var(--well);
+    border-radius: var(--r-control); padding: 10px 12px; margin-bottom:8px;
+  }
+  .project-row .icon { width:34px; height:34px; border-radius:9px; background: var(--posthog);
+    display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:#fff; flex:none; }
+  .project-row .t { font-size:15px; font-weight:600; }
+  .project-row .s { font-size:12.5px; color:var(--text2); }
+  .project-row.selected { outline: 1.5px solid var(--tint); }
+  .chev-r { margin-left:auto; color:var(--text3); font-size:13px; }
+
+  /* Watch / omnibox */
+  .search-slab { background: var(--sheet); border-radius: var(--r-sheet); box-shadow: var(--shadow);
+    padding: var(--s3); margin-bottom: var(--s3); }
+  .omnifield { display:flex; align-items:center; background: var(--well); border-radius: var(--r-control);
+    padding: 12px 14px; gap:10px; }
+  .omnifield .ph { color: var(--text1); font-size:15px; flex:1; }
+  .omnifield .watch-cta { color: var(--tint); font-size:13px; font-weight:800; letter-spacing:0.3px; }
+  .hit-row { display:flex; align-items:center; gap:10px; padding: 10px 2px; }
+  .hit-row .dot { width:8px; height:8px; border-radius:50%; background: var(--confirm); flex:none; }
+  .hit-row .t { font-size:15px; font-weight:600; flex:1; }
+  .hit-row .s { font-size:12.5px; color: var(--text3); }
+
+  /* Roster */
+  .roster-wrap { background: var(--sheet); border-radius: var(--r-sheet); box-shadow: var(--shadow);
+    padding: var(--s3); margin-bottom: var(--s3); }
+  .roster-note { font-size:12.5px; color:var(--text2); padding: 0 2px 12px; }
+  .roster-row { display:flex; gap:12px; overflow-x:hidden; }
+  .roster-slot { display:flex; flex-direction:column; align-items:center; gap:6px; width:74px; flex:none; }
+  .disc { width:52px; height:52px; border-radius:50%; background: linear-gradient(135deg,#2c2c2e,#1c1c1e);
+    display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:800; color: var(--posthog);
+    border: 1.5px solid rgba(245,78,0,0.35); }
+  .roster-slot .lbl { font-size:11.5px; font-weight:600; text-align:center; line-height:1.2; }
+  .roster-slot .pct { font-size:11px; font-weight:700; }
+  .pct.up { color: var(--confirm); }
+  .pct.flat { color: var(--text3); }
+  .add-slot { width:52px; height:52px; border-radius:50%; border:1.5px dashed var(--text3);
+    display:flex; align-items:center; justify-content:center; color:var(--text3); font-size:20px; }
+
+  /* Feed rows */
+  .feed-card { background: var(--sheet); border-radius: var(--r-sheet); box-shadow: var(--shadow);
+    padding: var(--s3); margin-bottom: var(--s2); display:flex; gap: 12px; align-items:flex-start; }
+  .feed-icon { width:36px; height:36px; border-radius:9px; flex:none; display:flex; align-items:center; justify-content:center;
+    font-size:15px; font-weight:800; color:#fff; }
+  .feed-icon.ph { background: var(--posthog); }
+  .feed-icon.gh { background: #24292f; }
+  .feed-body { flex:1; min-width:0; }
+  .feed-title { font-size:15px; font-weight:600; line-height:1.3; }
+  .feed-sub { font-size:12.5px; color:var(--text2); margin-top:2px; }
+  .feed-trail { font-size:11.5px; color:var(--text3); margin-top:6px; }
+  svg.spark { display:block; width:100%; height:28px; margin-top:6px; }
+  .badge-first { font-size:10.5px; font-weight:700; color:var(--attention);
+    background: rgba(255,159,10,0.14); border-radius:9999px; padding:2px 8px; margin-top:6px; display:inline-block; }
+  .day-label { font-size:12px; color:var(--text2); padding: 4px 4px 8px; font-weight:600; }
+
+  /* Sheet screen */
+  .chart-card { background: var(--sheet); border-radius: var(--r-sheet); box-shadow: var(--shadow);
+    padding: var(--s4); margin-bottom: var(--s3); }
+  .chart-stat { font-size: 30px; font-weight:700; font-variant-numeric: tabular-nums; }
+  .chart-delta { font-size:14px; font-weight:600; color: var(--confirm); margin-top:2px; }
+  .chart-range { font-size:12px; color:var(--text3); margin-top:2px; }
+  svg.bigchart { display:block; width:100%; margin-top:14px; }
+  .annot-item { display:flex; gap:10px; padding: 9px 2px; align-items:flex-start; }
+  .annot-item .m { width:6px; height:6px; border-radius:50%; background: var(--text3); margin-top:7px; flex:none; }
+  .annot-item .t { font-size:13.5px; }
+  .annot-item .d { font-size:11.5px; color:var(--text3); margin-top:1px; }
+
+  .caption { text-align:center; font-size:12px; color: var(--text3); margin-top:10px; }
+</style>
+</head>
+<body>
+
+<h1>PostHog — proposed connect flow</h1>
+<p class="intro">Six screens: discover → connect (host/key/project) → watch a metric → the roster →
+what lands in the feed → the chart sheet. <b>All copy and numbers are placeholder</b> — for shape and rhythm only.</p>
+
+<div class="rail">
+
+  <!-- STEP 1: App detail -->
+  <div class="col">
+    <div class="step-title"><span class="step-num">1</span>Discover — Work shelf</div>
+    <div class="step-note">Tapping the tile pushes the detail screen. Tagline leads, three-beat summary under it, then the scannable capability list (the Wallet §192 pattern) since the hook alone can't carry "annotations + a watched metric + crossings."</div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+      <div class="navbar"><span class="back">‹ Work</span></div>
+      <div class="scroll">
+        <div class="detail-hero">
+          <div class="app-icon">PH</div>
+          <div>
+            <div class="detail-name">PostHog</div>
+            <div class="detail-tag">The numbers behind what you ship</div>
+            <div class="connect-btn">Connect</div>
+          </div>
+        </div>
+        <div class="summary-block">
+          <p>Watch the numbers behind whatever you're building — name a metric and its curve draws in your feed, on this iPhone.</p>
+          <p>The notes on your PostHog timeline — a deploy, a launch, an experiment starting — land as things, beside the GitHub release that caused them.</p>
+          <p class="dim">Connect with a personal key you mint read-only. It can query and read; it cannot ship a flag, edit a dashboard, or write anything back.</p>
+        </div>
+        <div class="group-label">WHAT YOU GET</div>
+        <div class="feat-list">
+          <div class="feat-row"><span class="check">✓</span>Watch any metric or event — its curve draws on this iPhone</div>
+          <div class="feat-row"><span class="check">✓</span>Deploys and launches you annotate land as things</div>
+          <div class="feat-row"><span class="check">✓</span>A round-number crossing alerts once, never every count</div>
+          <div class="feat-row"><span class="check">✓</span>Read-only — the key can query, never write</div>
+        </div>
+      </div>
+      <div class="fold"></div>
+    </div>
+  </div>
+
+  <!-- STEP 2: Connect / setup -->
+  <div class="col">
+    <div class="step-title"><span class="step-num">2</span>Connect — host, key, project</div>
+    <div class="step-note">Three fields, each unlocking the next. The scope pills under the key field are the honest ask: mint it read-only, here's exactly which scopes. Project resolves from the key itself via <span style="font-family:ui-monospace,monospace">/users/@me/</span> — never a typed integer.</div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+      <div class="navbar"><span class="back">‹</span><span class="navtitle-inline">PostHog</span></div>
+      <div class="scroll">
+        <div class="slab">
+          <div class="field-row"><span class="field-affix">https://</span><span class="field-val">us.posthog.com</span></div>
+          <div class="field-row"><span class="field-val">phx_•••••••••••••••2f91</span><span class="field-btn">PASTE</span></div>
+          <div class="slab-note">Mint a <b>personal API key</b> in PostHog with these scopes only:</div>
+          <div class="scope-pills">
+            <span class="scope-pill">query:read</span>
+            <span class="scope-pill">annotation:read</span>
+            <span class="scope-pill">event_definition:read</span>
+          </div>
+        </div>
+        <div class="slab">
+          <div class="result-row"><span class="spinner"></span>Reading your projects…</div>
+        </div>
+        <div class="slab">
+          <div class="project-row selected">
+            <div class="icon">PH</div>
+            <div><div class="t">Casberi</div><div class="s">alexanderchopan's Project · us.posthog.com</div></div>
+            <span class="chev-r">✓</span>
+          </div>
+          <div class="project-row">
+            <div class="icon">PH</div>
+            <div><div class="t">Casberi Website</div><div class="s">alexanderchopan's Project</div></div>
+          </div>
+        </div>
+        <div class="slab-note" style="padding-top:2px;">Read-only — nothing here trades, ships a flag, or edits a dashboard.</div>
+      </div>
+      <div class="fold"></div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Watch a metric -->
+  <div class="col">
+    <div class="step-title"><span class="step-num">3</span>Watch — the omnibox</div>
+    <div class="step-note">Same shape as Stocktwits/Tokens: a debounced search, but against <span style="font-family:ui-monospace,monospace">event_definitions</span> — you're picking from what your project actually emits, ordered by last seen, never guessing a string.</div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+      <div class="navtitle">PostHog</div>
+      <div class="scroll">
+        <div class="search-slab">
+          <div class="omnifield"><span class="ph">signed_up</span><span class="watch-cta">WATCH</span></div>
+          <div class="hit-row"><span class="dot"></span><span class="t">signed_up</span><span class="s">seen 3 min ago</span></div>
+          <div class="hit-row"><span class="dot"></span><span class="t">sign_in_failed</span><span class="s">seen yesterday</span></div>
+          <div class="hit-row"><span class="dot" style="background:var(--text3)"></span><span class="t">signup_abandoned</span><span class="s">seen 4 days ago</span></div>
+          <div class="slab-note" style="padding-top:8px;">Read-only — nothing here trades or writes back to PostHog.</div>
+        </div>
+      </div>
+      <div class="fold"></div>
+    </div>
+  </div>
+
+  <!-- STEP 4: Roster -->
+  <div class="col">
+    <div class="step-title"><span class="step-num">4</span>Manage — the roster</div>
+    <div class="step-note">The AssetRosterShelf shape, reused: one disc per watched metric (no logo exists for an event name, so the disc carries the glyph, never a faked brand mark). Tap opens the chart; hold unwatches.</div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+      <div class="navtitle">PostHog</div>
+      <div class="scroll">
+        <div class="search-slab">
+          <div class="omnifield"><span class="ph" style="color:var(--text3)">Event or metric name</span><span class="watch-cta">WATCH</span></div>
+        </div>
+        <div class="roster-wrap">
+          <div class="roster-note">Watching 3 · tap for its chart, hold to unwatch</div>
+          <div class="roster-row">
+            <div class="roster-slot"><div class="disc">▲</div><div class="lbl">signed_up</div><div class="pct up">+18%</div></div>
+            <div class="roster-slot"><div class="disc">◆</div><div class="lbl">checkout_completed</div><div class="pct up">+4%</div></div>
+            <div class="roster-slot"><div class="disc">●</div><div class="lbl">app_opened</div><div class="pct flat">±0%</div></div>
+            <div class="add-slot">+</div>
+          </div>
+        </div>
+        <div class="slab-note" style="padding: 0 6px;">Annotations from your PostHog timeline land in the feed automatically — deploys, launches, experiments.</div>
+      </div>
+      <div class="fold"></div>
+    </div>
+  </div>
+
+  <!-- STEP 5: Feed -->
+  <div class="col">
+    <div class="step-title"><span class="step-num">5</span>What lands — the feed</div>
+    <div class="step-note">Three row types only: the annotation, the crossing (the one place a count is allowed to <i>be</i> the thing), and the watch's own sparkline card. Shown here next to the GitHub release that likely caused the annotation — the payoff of having both bridges.</div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+      <div class="navtitle">All</div>
+      <div class="scroll">
+        <div class="day-label">TODAY</div>
+
+        <div class="feed-card">
+          <div class="feed-icon gh">gh</div>
+          <div class="feed-body">
+            <div class="feed-title">Released casberi v2.4.0</div>
+            <div class="feed-sub">alexanderchopan/casberi · 14 min ago</div>
+          </div>
+        </div>
+
+        <div class="feed-card">
+          <div class="feed-icon ph">PH</div>
+          <div class="feed-body">
+            <div class="feed-title">Shipped 2.4.0 to production</div>
+            <div class="feed-sub">Annotation · alexanderchopan · 9 min ago</div>
+          </div>
+        </div>
+
+        <div class="day-label">YESTERDAY</div>
+
+        <div class="feed-card">
+          <div class="feed-icon ph">PH</div>
+          <div class="feed-body">
+            <div class="feed-title">signed_up crossed 1,000</div>
+            <div class="feed-sub">PostHog · this week</div>
+            <div class="badge-first">First time</div>
+          </div>
+        </div>
+
+        <div class="feed-card">
+          <div class="feed-icon ph">PH</div>
+          <div class="feed-body">
+            <div class="feed-title">signed_up · 1,204 this week</div>
+            <div class="feed-sub">+18% vs last week</div>
+            <svg class="spark" viewBox="0 0 200 28" preserveAspectRatio="none">
+              <polyline points="0,22 20,20 40,21 60,15 80,16 100,10 120,12 140,7 160,8 180,3 200,4"
+                fill="none" stroke="#30d158" stroke-width="2"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="fold"></div>
+    </div>
+  </div>
+
+  <!-- STEP 6: Sheet -->
+  <div class="col">
+    <div class="step-title"><span class="step-num">6</span>The sheet — chart + annotations</div>
+    <div class="step-note">Tapping the watch card opens ThingSheetView: one HogQL query drawn on-device (the same treatment TokenChart/StockChart give a coin or ticker), with the window's own annotations listed underneath — so a spike sits next to the deploy that caused it.</div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span>●●● 5G 100%</span></div>
+      <div class="navbar"><span class="back">‹</span><span class="navtitle-inline">signed_up</span></div>
+      <div class="scroll">
+        <div class="chart-card">
+          <div class="chart-stat">1,204</div>
+          <div class="chart-delta">▲ 18% vs last week</div>
+          <div class="chart-range">Last 30 days · casberi project</div>
+          <svg class="bigchart" viewBox="0 0 340 100" preserveAspectRatio="none">
+            <polyline points="0,80 30,78 60,75 90,70 120,74 150,60 180,55 210,50 230,30 250,35 280,20 310,15 340,10"
+              fill="none" stroke="#30d158" stroke-width="2.5"/>
+            <line x1="230" y1="0" x2="230" y2="100" stroke="rgba(245,78,0,0.4)" stroke-width="1.5" stroke-dasharray="3,3"/>
+          </svg>
+        </div>
+        <div class="group-label" style="padding-top:2px;">ANNOTATIONS IN THIS WINDOW</div>
+        <div class="slab" style="padding: 6px 14px;">
+          <div class="annot-item"><span class="m" style="background:var(--posthog)"></span>
+            <div><div class="t">Shipped 2.4.0 to production</div><div class="d">9 days ago · alexanderchopan</div></div>
+          </div>
+          <div class="annot-item"><span class="m"></span>
+            <div><div class="t">Started onboarding A/B test</div><div class="d">21 days ago · alexanderchopan</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="fold"></div>
+    </div>
+  </div>
+
+</div>
+
+<p class="caption">prototype/posthog-flow-v1.html — mockup only, no live data</p>
+
+</body>
+</html>

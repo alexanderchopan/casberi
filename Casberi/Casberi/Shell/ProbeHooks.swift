@@ -148,6 +148,58 @@ enum ProbeHooks {
         Hook(key: "privacyProbe") { _, _ in
             Task { await PrivacyFetch.probe() }
         },
+        // `-posthogHost <host>` / `-posthogProject <id>` — the two settings a
+        // fresh connect would pick by hand, so a headless run can reach the
+        // scoped reads. Declared BEFORE `-posthogProbe`: hooks run in list
+        // order, and the probe must read a configured account.
+        Hook(key: "posthogHost") { host, _ in
+            PostHogAccount.host = host
+            NSLog("[Casberi] posthogHost: %@", host)
+        },
+        Hook(key: "posthogProject") { id, _ in
+            PostHogAccount.projectID = id
+            NSLog("[Casberi] posthogProject: %@", id)
+        },
+        // `-posthogWatch "<event[,event]>"` — watch metrics headlessly, so a
+        // probe run has something to read (the watch IS the thing, so this is
+        // the same act the omnibox performs).
+        Hook(key: "posthogWatch") { spec, context in
+            for name in spec.split(separator: ",") {
+                PostHogWatch.add(String(name).trimmingCharacters(in: .whitespaces),
+                                 context: context)
+            }
+            NSLog("[Casberi] posthogWatch: %@",
+                  PostHogWatch.watchedEvents(context: context).joined(separator: ","))
+        },
+        // `-posthogProbe YES` reads the STORED PostHog key (connect first via
+        // `-tokenBridge "PostHog:<key>"` plus `-posthogProject`) and NSLogs
+        // the RAW shapes — per-endpoint status, resolved projects, annotation
+        // count, and each watched metric's series/total/next-rung — the
+        // measure tool for an UNMEASURED API. Reads only.
+        Hook(key: "posthogProbe") { _, context in
+            Task { await PostHogIngest.probe(context: context) }
+        },
+        // `-posthogSeed "<event>:<c,c,c>[|total]"` — plant a metric's reading
+        // without a live project, so the roster disc, the milestone ring, the
+        // crossing and the SILENCE branch all verify headlessly. Silence
+        // otherwise needs a real event to really stop firing for two days,
+        // which no probe can wait for.
+        Hook(key: "posthogSeed") { spec, _ in
+            let parts = spec.split(separator: "|", maxSplits: 1)
+            guard let head = parts.first, let colon = head.lastIndex(of: ":") else { return }
+            let event = String(head[head.startIndex..<colon])
+            let series = head[head.index(after: colon)...]
+                .split(separator: ",").map { Int($0.trimmingCharacters(in: .whitespaces)) ?? 0 }
+            var metric = PostHogState.get(event)
+            metric.series = series
+            metric.total = parts.count > 1 ? (Int(parts[1]) ?? series.reduce(0, +))
+                                           : series.reduce(0, +)
+            metric.fetchedAt = .now
+            PostHogState.set(event, metric)
+            NSLog("[Casberi] posthogSeed: %@ days=%d total=%d next=%@",
+                  event, series.count, metric.total,
+                  PostHogIngest.formatted(PostHogMilestone.next(after: metric.total)))
+        },
         // `-fcName <username>` connects Farcaster headlessly (appends, so a
         // comma-separated list watches several — dedupes, safe to re-fire).
         Hook(key: "fcName") { name, context in

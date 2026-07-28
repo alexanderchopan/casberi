@@ -54,6 +54,12 @@ enum BridgeRouter {
         case appleNotes
         case bookmarks
         case token(TokenBridge)
+        /// PostHog is a TokenBridge for its key and seat id, but a WATCH LIST
+        /// on screen — so it needs its own Destination rather than riding
+        /// `.token`. As `.token` it inherited `finishesOnConnect == true` and
+        /// the raised sheet dismissed itself the moment the first watched
+        /// metric registered the seat (review, 2026-07-27).
+        case posthog
         /// Every wallet transaction, day by day (2026-07-20) — the page behind
         /// the Wallet feed's "See all". Carries the feed's wallet scope so the
         /// door doesn't silently widen it; nil is every watched wallet.
@@ -162,6 +168,7 @@ enum BridgeRouter {
             case .appleNotes:     "notes"
             case .bookmarks:      "bookmarks"
             case .token(let b):   b.bridgeID
+            case .posthog:        TokenBridge.posthog.bridgeID
             case .walletHistory(let scope): "wallethistory:\(scope ?? "all")"
             case .walletConnection: "walletconnection"
             case .detail(let id): "detail:\(id)"
@@ -236,7 +243,8 @@ enum BridgeRouter {
         // exists so Connect routes to the share-path explainer (prd 55).
         Row(offer: "Apple Notes", id: "notes", destination: .appleNotes),
         Row(offer: "Bookmarks", id: "bookmarks", destination: .bookmarks),
-    ] + TokenBridge.allCases.map {
+        Row(offer: "PostHog", id: "posthog", destination: .posthog),
+    ] + TokenBridge.allCases.filter { $0 != .posthog }.map {
         Row(offer: $0.rawValue, id: $0.bridgeID, destination: .token($0))
     }
 
@@ -311,6 +319,7 @@ struct BridgeDestinationView: View {
         case .appleNotes:     NotesShareScreen()
         case .bookmarks:      BookmarksImportScreen()
         case .token(let b):   TokenSetupScreen(bridge: b)
+        case .posthog:        PostHogScreen()
         case .walletHistory(let scope): WalletHistoryScreen(scope: scope)
         case .walletConnection: WalletConnectionScreen()
         case .detail(let id): BridgeDetailScreen(bridgeID: id)

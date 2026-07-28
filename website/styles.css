@@ -107,6 +107,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-openrouter { background: #0b0f11; }
 .ai-github    { background: #24292f; font-size: 16px; }
 .ai-linear    { background: #5e6ad2; }
+.ai-posthog   { background: #f54e00; }
 .ai-notion    { background: #fff; color: #111; }
 .ai-reddit    { background: #ff4500; }
 .ai-youtube   { background: #ff0000; font-size: 17px; }
