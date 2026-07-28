@@ -171,9 +171,6 @@ private let journalRecentDescriptor: FetchDescriptor<Thing> = {
 /// your captures.
 struct NotesShareScreen: View {
     @Environment(\.openURL) private var openURL
-    /// Whether any note has been shared in yet — only then is there a tile to
-    /// pin to Home (pinning doesn't invent content).
-    @Query(filter: #Predicate<Thing> { $0.source == "Apple Notes" }) private var notes: [Thing]
 
     var body: some View {
         List {
