@@ -67,7 +67,16 @@ enum SafeBridge {
             let checkedAt = UserDefaults.standard.double(forKey: isSafeCheckedAtKey(chain.seg, address))
             if Date.now.timeIntervalSince1970 - checkedAt < negativeCacheTTL { return false }
         }
-        let (_, status) = await IngestSupport.getJSONStatus("\(baseURL(chain.seg))/safes/\(address)/")
+        // api.safe.global requires a strict EIP-55 checksum, not just any
+        // hex casing — measured 2026-07-28: a lowercased AND an all-caps
+        // WETH address both 422 as "Checksum address validation failed";
+        // only the mixed-case checksum form gets an honest 200/404. Every
+        // address this bridge ever sees arrives lowercased (AddressBook's
+        // own comparison form), so without this every Safe watched via a
+        // pasted or ENS-resolved address failed silently, forever (a 422
+        // reads as "unreachable" below, never cached, retried every pass).
+        let (_, status) = await IngestSupport.getJSONStatus(
+            "\(baseURL(chain.seg))/safes/\(EIP55.checksum(address))/")
         guard status == 200 || status == 404 else { return nil }
         let result = status == 200
         UserDefaults.standard.set(result, forKey: key)
@@ -128,7 +137,7 @@ enum SafeBridge {
 
     private static func fetchPendingQueue(chain: Chain, address: String) async -> [[String: Any]]? {
         guard let root = await IngestSupport.getJSON(
-                "\(baseURL(chain.seg))/safes/\(address)/multisig-transactions/?executed=false")
+                "\(baseURL(chain.seg))/safes/\(EIP55.checksum(address))/multisig-transactions/?executed=false")
                 as? [String: Any],
               let results = root["results"] as? [[String: Any]]
         else { return nil }
