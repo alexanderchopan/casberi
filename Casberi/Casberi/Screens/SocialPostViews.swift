@@ -134,46 +134,63 @@ struct SocialPhoto: View {
 
 /// The post this post QUOTES — both networks' signature form, dropped at ingest
 /// until 2026-07-16, so a quote-post read as a bare, contextless line. A
-/// recessed card inside the body: a smaller face, the handle, the words. A tap
-/// walks into it in-app (its own thread, its own quote); the face opens the
-/// person.
+/// recessed card inside the body: a smaller face, the handle, the words. In
+/// the SHEET a tap walks into it in-app (its own thread, its own quote); in a
+/// feed row it is a read with no door of its own — see `walkable`.
 struct SocialQuoteCard: View {
     let card: SocialCard
     let source: String
+    /// Whether the card is a DOOR (the sheet) or just context (a feed row).
+    ///
+    /// A walkable card carries its own `.sheet` presentation. That is correct
+    /// inside `ThingSheetView`, which is already a presented sheet with its
+    /// own presentation context — and wrong inside a `List` row, where the
+    /// modifier competes with `FeedScreen`'s single `.sheet(item: $feedSheet)`
+    /// for the same presenting controller and tears the thing sheet back down
+    /// mid-transition (see `ReplyingToRow` for the whole diagnosis; the same
+    /// 2026-07-27 pass grew both). In a row the quote stays a read: the row's
+    /// one tap opens the thing, and the walk is a tap away inside it.
+    var walkable = true
     @State private var walking = false
 
-    var body: some View {
-        Button {
-            walking = true
-        } label: {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                HStack(spacing: DS.Space.s2) {
-                    if let avatar = card.avatarURL {
-                        RemoteThumb(urlString: avatar, size: 20, fallback: source, circular: true)
-                    } else {
-                        BridgeIcon(name: source, size: 20, circular: true)
-                    }
-                    Text("@\(SocialThread.shortHandle(card.handle))")
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    Spacer(minLength: 0)
+    private var cardBody: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(spacing: DS.Space.s2) {
+                if let avatar = card.avatarURL {
+                    RemoteThumb(urlString: avatar, size: 20, fallback: source, circular: true)
+                } else {
+                    BridgeIcon(name: source, size: 20, circular: true)
                 }
-                Text(card.text)
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                    // A quote is context, not the point — it shows enough to
-                    // know what's being answered and stops. The tap has the rest.
-                    .lineLimit(6)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
+                Text("@\(SocialThread.shortHandle(card.handle))")
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(DS.Space.s3)
-            .background(DS.fillFaint,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-            .contentShape(Rectangle())
+            Text(card.text)
+                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                // A quote is context, not the point — it shows enough to
+                // know what's being answered and stops. The tap has the rest.
+                .lineLimit(6)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .buttonStyle(.plain)
-        .sheet(isPresented: $walking) {
-            SocialPostSheet(post: card, source: source)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DS.Space.s3)
+        .background(DS.fillFaint,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        .contentShape(Rectangle())
+    }
+
+    @ViewBuilder
+    var body: some View {
+        if walkable {
+            Button { walking = true } label: { cardBody }
+                .buttonStyle(.plain)
+                .sheet(isPresented: $walking) {
+                    SocialPostSheet(post: card, source: source)
+                }
+        } else {
+            // No tap target of its own — the row's tap owns the whole card.
+            cardBody.allowsHitTesting(false)
         }
     }
 }

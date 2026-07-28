@@ -1,10 +1,23 @@
 import SwiftUI
+import UIKit
 
 /// Pull-to-refresh delight (user, 2026-07-14): the logo's berry circles
 /// rain briefly over the surface while a refresh runs — the app's own mark
 /// doing the work, sibling to the avatar door's spin (TopDoors.DoorSpin;
 /// both ride ShellChrome.refreshPulse). Purely decorative: hit-testing off,
 /// gone in under two seconds, skipped entirely under Reduce Motion.
+///
+/// The fall runs on CORE ANIMATION, not SwiftUI (2026-07-28, user: "the rain
+/// pour always lags on pages"). It was 16 SwiftUI views animating `.offset`
+/// and `.opacity` — properties SwiftUI interpolates per frame on the MAIN
+/// actor. The one moment this rain exists is the one moment the main actor is
+/// busiest: a pull runs `BridgeRefresh.refreshAllConnected`, and every ingest
+/// in this app is `@MainActor` (inserts and deletes on the main context, each
+/// one re-emitting the feed's `@Query`). So the shower stuttered every single
+/// time, by construction — the delight fired exactly when nothing could draw
+/// it smoothly. Handed to the render server as `CAAnimation`s it is immune to
+/// that: the drops keep falling at 120Hz while the main thread is blocked
+/// solid, which is the whole reason CoreAnimation runs out of process.
 struct BerryRain: View {
     /// ShellChrome.refreshPulse — each bump deals one shower.
     let trigger: Int
@@ -15,29 +28,13 @@ struct BerryRain: View {
     var hue: Color? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// The pulse currently falling (0 = idle, nothing in the tree).
-    @State private var shower = 0
-    @State private var showerHue: Color?
 
     var body: some View {
-        GeometryReader { geo in
-            if shower > 0 {
-                ForEach(Self.deal(seed: shower, hue: showerHue)) { drop in
-                    FallingBerry(drop: drop, size: geo.size)
-                }
-            }
-        }
-        .allowsHitTesting(false)
-        .onChange(of: trigger) {
-            guard !reduceMotion, trigger > 0 else { return }
-            shower = trigger
-            showerHue = hue
-            // Clear after the slowest drop lands — the tree goes back to empty.
-            Task { @MainActor in
-                try? await Task.sleep(for: .seconds(1.9))
-                if shower == trigger { shower = 0 }
-            }
-        }
+        // Reduce Motion never reaches the view as a pour: the trigger it sees
+        // stays 0, so no shower is ever dealt (and flipping the setting off
+        // mid-session simply lets the next real bump through).
+        BerryRainLayer(pour: reduceMotion ? 0 : trigger, hue: hue)
+            .allowsHitTesting(false)
     }
 
     // MARK: - The deal
@@ -49,11 +46,11 @@ struct BerryRain: View {
         Color.fixed("#0a84ff"), Color.fixed("#1266c4"),
     ]
 
-    /// Deterministic per shower (a seeded LCG, never system randomness) so a
-    /// mid-fall body re-evaluation deals the SAME drops — SwiftUI identity
-    /// holds and nothing teleports. A source hue swaps in for the default
-    /// berry blues, mixed full/dim the same way so the shape of the shower
-    /// never changes, only its color.
+    /// Deterministic per shower (a seeded LCG, never system randomness) — two
+    /// runs of the same pulse deal the same drops, so a recording or a screen
+    /// sweep reproduces. A source hue swaps in for the default berry blues,
+    /// mixed full/dim the same way so the shape of the shower never changes,
+    /// only its color.
     fileprivate static func deal(seed: Int, hue: Color? = nil) -> [Drop] {
         let palette = hue.map { [$0, $0.opacity(0.8), $0.opacity(0.6), $0.opacity(0.9)] } ?? berry
         var state = UInt64(bitPattern: Int64(seed)) &* 2654435761 | 1
@@ -84,24 +81,111 @@ fileprivate struct Drop: Identifiable {
     let color: Color
 }
 
-/// A drop's fall: eased in from above the top edge to past the bottom,
-/// swaying a touch, fading as it goes.
-fileprivate struct FallingBerry: View {
-    let drop: Drop
-    let size: CGSize
-    @State private var fell = false
+/// The shower's host — an empty, untouchable view that owns nothing between
+/// pours and hands each one straight to the render server.
+fileprivate struct BerryRainLayer: UIViewRepresentable {
+    /// The pulse to deal. 0 means "never pour" (idle, or Reduce Motion).
+    let pour: Int
+    let hue: Color?
 
-    var body: some View {
-        Circle()
-            .fill(drop.color)
-            .frame(width: drop.diameter, height: drop.diameter)
-            .opacity(fell ? 0 : 0.95)
-            .offset(x: drop.x * size.width + (fell ? drop.sway : 0),
-                    y: fell ? size.height + 30 : -30)
-            .onAppear {
-                withAnimation(.easeIn(duration: drop.duration).delay(drop.delay)) {
-                    fell = true
-                }
-            }
+    func makeUIView(context: Context) -> BerryRainView { BerryRainView() }
+
+    func updateUIView(_ view: BerryRainView, context: Context) {
+        view.pour(pour, hue: hue)
+    }
+}
+
+/// Deals one shower of `CALayer` circles per pulse and forgets them when they
+/// land. Nothing is retained between showers: idle, this is an empty view.
+fileprivate final class BerryRainView: UIView {
+    /// The last pulse actually dealt — a pulse is poured exactly once, however
+    /// many times SwiftUI re-runs `updateUIView` for the same value.
+    private var dealt = 0
+    /// A pulse that arrived before the view had a size (see `layoutSubviews`).
+    private var waiting: (pulse: Int, hue: Color?)?
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        isUserInteractionEnabled = false
+        backgroundColor = .clear
+        // A drop starts above the top edge and ends below the bottom one —
+        // clipping is what keeps it from painting over neighbouring chrome.
+        layer.masksToBounds = true
+    }
+
+    required init?(coder: NSCoder) { fatalError("BerryRainView is code-only") }
+
+    func pour(_ pulse: Int, hue: Color?) {
+        guard pulse > 0, pulse != dealt else { return }
+        dealt = pulse
+        // A pulse can land before the first layout pass (the overlay mounts and
+        // a refresh fires in the same beat) — hold it rather than dropping it
+        // on the floor, since `dealt` has already claimed the pulse.
+        guard bounds.width > 0, bounds.height > 0 else {
+            waiting = (pulse, hue)
+            return
+        }
+        deal(pulse, hue: hue)
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard let held = waiting, bounds.width > 0, bounds.height > 0 else { return }
+        waiting = nil
+        deal(held.pulse, hue: held.hue)
+    }
+
+    private func deal(_ pulse: Int, hue: Color?) {
+        let drops = BerryRain.deal(seed: pulse, hue: hue)
+        let start = CACurrentMediaTime()
+        var batch: [CALayer] = []
+        var lands: Double = 0
+        // No implicit animations on the model values below — every drop's
+        // motion is the explicit group, and nothing else should tween.
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        for drop in drops {
+            let dot = CALayer()
+            dot.bounds = CGRect(x: 0, y: 0, width: drop.diameter, height: drop.diameter)
+            dot.cornerRadius = drop.diameter / 2
+            dot.backgroundColor = UIColor(drop.color).cgColor
+            let x = drop.x * bounds.width
+            let from = CGPoint(x: x, y: -30)
+            let to = CGPoint(x: x + drop.sway, y: bounds.height + 30)
+            // The layer RESTS in its landed state — off the bottom edge, fully
+            // faded. So when the animation is removed on completion there is
+            // nothing to see and nothing to clean up urgently; `.backwards`
+            // fill covers the delay before it begins, where the drop is still
+            // above the top edge and clipped away regardless.
+            dot.position = to
+            dot.opacity = 0
+
+            let fall = CABasicAnimation(keyPath: "position")
+            fall.fromValue = NSValue(cgPoint: from)
+            fall.toValue = NSValue(cgPoint: to)
+            let fade = CABasicAnimation(keyPath: "opacity")
+            fade.fromValue = 0.95
+            fade.toValue = 0
+
+            let group = CAAnimationGroup()
+            group.animations = [fall, fade]
+            group.duration = drop.duration
+            group.beginTime = start + drop.delay
+            group.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            group.fillMode = .backwards
+            dot.add(group, forKey: "pour")
+
+            layer.addSublayer(dot)
+            batch.append(dot)
+            lands = max(lands, drop.delay + drop.duration)
+        }
+        CATransaction.commit()
+        // Each shower reaps its OWN layers — a later pour can never be cleared
+        // by an earlier one's timer, which is what the old SwiftUI version's
+        // `if shower == trigger` check was guarding by hand.
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(lands + 0.1))
+            batch.forEach { $0.removeFromSuperlayer() }
+        }
     }
 }

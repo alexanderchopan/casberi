@@ -1600,7 +1600,7 @@ struct PostCard: View {
             // already earned this line in the sheet; the room never had it,
             // so a reply to someone else read as a contextless non sequitur.
             if let parent = thing.parent {
-                ReplyingToRow(parent: parent, source: thing.source)
+                ReplyingToRow(parent: parent)
             }
             Text(words)
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
@@ -1613,7 +1613,10 @@ struct PostCard: View {
             // already rendered in the sheet since 2026-07-16; a quote-post in
             // the room itself read as a bare, contextless line until now.
             if let quote = thing.quote {
-                SocialQuoteCard(card: quote, source: thing.source)
+                // Context in a row, a door in the sheet — see
+                // `SocialQuoteCard.walkable`. A row must not carry a
+                // presentation of its own.
+                SocialQuoteCard(card: quote, source: thing.source, walkable: false)
             }
             // Every attached image shows, not just the first (item 7 of the
             // 2026-07-27 social pass) — `imageURLs` has held all of them
@@ -1632,32 +1635,41 @@ struct PostCard: View {
 
 /// The post THIS one answers — "Replying to @alice", above the words
 /// (2026-07-27). The room's own copy of `ThingSheetView`'s private
-/// `replyingToRow`: same anatomy, same tap-to-walk-in-app behavior, kept
-/// separate rather than shared across the two files' different sheet-
-/// presentation contexts (the sheet already works; this doesn't touch it).
+/// `replyingToRow`, with one deliberate difference: **in a row it is a
+/// LABEL, not a door.**
+///
+/// It shipped as a `Button` carrying its own `.sheet(isPresented:)` — a
+/// second presentation anchored INSIDE a `List` row, competing with
+/// `FeedScreen`'s single `.sheet(item: $feedSheet)` for the same presenting
+/// controller. Tapping the row then started the thing sheet and the row's
+/// own sheet modifier tore it back down mid-transition: the sheet rose part
+/// way and closed again ("opening fc feed items doesn't work — it opens half
+/// way and closes", 2026-07-28). Farcaster wore it worst because nearly every
+/// cast it lands has a parent (channel casts, mentions, and likes are mostly
+/// replies), so nearly every fc row grew the extra sheet.
+///
+/// `FeedSheetRoute`'s doc comment already recorded this exact failure once —
+/// five sibling `.sheet` modifiers on this screen made the first tap silently
+/// self-dismiss, which is why the screen has exactly ONE. A row is not the
+/// place to reopen that: rows keep one gesture with one meaning (ruling
+/// 2026-07-16) — TAP opens the thing sheet — and walking into the parent
+/// lives in that sheet, where `ThingSheetView.replyingToRow` routes through
+/// the sheet's own single `walkingTo` presentation and works today.
 struct ReplyingToRow: View {
     let parent: SocialCard
-    let source: String
-    @State private var walking = false
 
     var body: some View {
-        Button {
-            walking = true
-        } label: {
-            HStack(spacing: DS.Space.s1) {
-                Image(systemName: "arrowshape.turn.up.left")
-                    .accessibilityHidden(true)
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
-                Text("Replying to @\(SocialThread.shortHandle(parent.handle))")
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
-                Spacer(minLength: 0)
-            }
-            .contentShape(Rectangle())
+        HStack(spacing: DS.Space.s1) {
+            Image(systemName: "arrowshape.turn.up.left")
+                .accessibilityHidden(true)
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
+            Text("Replying to @\(SocialThread.shortHandle(parent.handle))")
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
+            Spacer(minLength: 0)
         }
-        .buttonStyle(.plain)
-        .sheet(isPresented: $walking) {
-            SocialPostSheet(post: parent, source: source)
-        }
+        // Context, not a control: the row's own tap owns the whole card, and
+        // a nested tap target here would beat it on the line it covers.
+        .allowsHitTesting(false)
     }
 }
 
@@ -1821,7 +1833,7 @@ struct SocialThreadCard: View {
                 LiveTimeText(date: head.capturedAt)
             }
             if let parent = head.parent {
-                ReplyingToRow(parent: parent, source: head.source)
+                ReplyingToRow(parent: parent)
             }
             HStack(alignment: .top, spacing: DS.Space.s3) {
                 Rectangle()
