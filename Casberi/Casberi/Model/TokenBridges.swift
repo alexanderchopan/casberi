@@ -251,6 +251,14 @@ enum TokenIngest {
         // as open in the feed. Runs before the dedupe below, which by design
         // never revisits a known ref.
         if bridge == .linear { reconcileLinear(incoming, context: context) }
+        // Same shape for GitHub's involved issues/PRs (delight pass
+        // 2026-07-28) — the loop-closer moment.
+        if bridge == .github { GitHubFeedFetch.reconcileGitHubIssues(incoming, context: context) }
+        // Todoist has no state field to reconcile — `/tasks` above only ever
+        // returns OPEN tasks, so a completed one simply stops appearing
+        // rather than arriving marked done. A separate completed-tasks read,
+        // same loop-closer shape (delight pass 2026-07-28).
+        if bridge == .todoist { await todoistCompletions(token, context: context) }
 
         var existing = IngestSupport.existingSourceRefs(context)
         // One backfill per source string the items actually carry — no
@@ -404,6 +412,52 @@ enum TokenIngest {
             }
             return thing
         }
+    }
+
+    /// A task you were carrying, completed elsewhere — the loop-closer
+    /// moment (delight pass 2026-07-28). `/tasks` above only ever returns
+    /// OPEN tasks (confirmed by the `todoist()` doc comment: "open tasks"),
+    /// so a completed one doesn't arrive marked done, it just stops arriving
+    /// — this is a SEPARATE read against Todoist's completed-tasks endpoint,
+    /// scoped to a rolling window (the timestamp of the last successful
+    /// check, defaulting to 24h back on first run) so a busy list doesn't
+    /// need a full historical walk every refresh.
+    ///
+    /// UNMEASURED against the live API — built from Todoist's documented v1
+    /// `tasks/completed/by_completion_date` shape, matching the same-file
+    /// precedent set by `todoist()`'s own v1 migration note. Fails CLOSED:
+    /// any shape mismatch (a wrong field name, an unexpected type) simply
+    /// finds nothing rather than guessing — same honesty rule as every other
+    /// unmeasured bridge in this app (PostHog, 1Claw, Privacy).
+    @MainActor
+    private static func todoistCompletions(_ token: String, context: ModelContext) async {
+        let sinceKey = "todoist.completions.since"
+        let since = UserDefaults.standard.string(forKey: sinceKey)
+            ?? ISO8601DateFormatter().string(from: Date.now.addingTimeInterval(-86400))
+        let until = ISO8601DateFormatter().string(from: .now)
+        guard let root = await IngestSupport.getJSON(
+            "https://api.todoist.com/api/v1/tasks/completed/by_completion_date?since=\(since)&until=\(until)",
+            auth: "Bearer \(token)") as? [String: Any],
+              let items = root["items"] as? [[String: Any]]
+        else { return }   // unreachable or the shape didn't match — try again next pass, since stays put
+        UserDefaults.standard.set(until, forKey: sinceKey)
+        guard !items.isEmpty else { return }
+
+        let existing = IngestSupport.thingsByRef(context, source: "Todoist")
+        var changed = false
+        for item in items {
+            // The task reference can arrive as either a JSON string or number
+            // depending on which field the shape actually carries — accept
+            // both rather than assume.
+            let rawID = item["task_id"] ?? item["id"]
+            let taskID = (rawID as? String) ?? (rawID as? Int).map(String.init)
+            guard let taskID, let thing = existing["todoist:\(taskID)"], thing.mark != .done
+            else { continue }
+            thing.mark = .done
+            changed = true
+            SourceMoments.shared.fire(String(localized: "Done: \(thing.title)"), source: "Todoist")
+        }
+        if changed { context.saveHonestly() }
     }
 
     /// Cal.com — your bookings, newest first. The v2 API dates its schema
@@ -623,8 +677,17 @@ enum TokenIngest {
         for thing in existing {
             guard let ref = thing.sourceRef, let now = byRef[ref],
                   now.mark != thing.mark else { continue }
+            // The loop-closer moment (delight pass 2026-07-28) — an issue
+            // you were carrying resolving is real news; a plain state EDIT
+            // (todo → doing) isn't, so this only fires on the genuine
+            // transition INTO done, never on every mark change.
+            let justClosed = now.mark == .done && thing.mark != .done
             thing.mark = now.mark
             changed = true
+            if justClosed {
+                SourceMoments.shared.fire(
+                    String(localized: "Done: \(thing.title)"), source: "Linear")
+            }
         }
         if changed { context.saveHonestly() }
     }

@@ -212,6 +212,11 @@ enum GitHubFeedFetch {
                   let link = item["html_url"] as? String else { continue }
             let t = thing(.link, title: title, content: link, ref: "gh:\(id)",
                          feed: .involved, at: IngestSupport.isoDate(item["updated_at"]))
+            // Open/closed, same `.mark` vocabulary Linear's issues already
+            // wear — what makes `reconcileGitHubIssues` below possible: a
+            // re-sync can now tell "still open" from "closed since we last
+            // looked" instead of freezing the state from first sight.
+            t.mark = (item["state"] as? String) == "closed" ? .done : .todo
             things.append(t)
             if item["pull_request"] != nil, (item["state"] as? String) == "open",
                let repoURL = item["repository_url"] as? String,
@@ -614,6 +619,41 @@ enum GitHubFeedFetch {
             if l.hasPrefix("- ") || l.hasPrefix("* ") { l = "• " + l.dropFirst(2) }
             return l
         }.joined(separator: "\n")
+    }
+
+    // MARK: - Loop closer (an issue/PR you're involved in gets closed)
+
+    /// Re-marks GitHub issue/PR things already in the corpus on every sync,
+    /// same shape as `TokenBridges.reconcileLinear` — an issue closed since
+    /// we last looked has to stop reading as open, and a genuine open→closed
+    /// flip is a real moment (delight pass 2026-07-28: "the bug you saved in
+    /// April is fixed"). Scoped to the `.involved` feed only via its bare
+    /// `"gh:<numeric id>"` ref — every OTHER GitHub feed sub-prefixes its ref
+    /// (`gh:star:`, `gh:release:`, …), so this can't misfire on a star or a
+    /// release, which carry no open/closed state at all.
+    @MainActor
+    static func reconcileGitHubIssues(_ fresh: [Thing], context: ModelContext) {
+        func isInvolvedRef(_ ref: String) -> Bool {
+            ref.hasPrefix("gh:") && Int(ref.dropFirst(3)) != nil
+        }
+        let byRef = Dictionary(fresh.filter { isInvolvedRef($0.sourceRef ?? "") }
+            .map { ($0.sourceRef ?? "", $0) }, uniquingKeysWith: { a, _ in a })
+        guard !byRef.isEmpty else { return }
+        let existing = (try? context.fetch(FetchDescriptor<Thing>(
+            predicate: #Predicate<Thing> { $0.source == "GitHub" }))) ?? []
+        var changed = false
+        for thing in existing {
+            guard let ref = thing.sourceRef, isInvolvedRef(ref), let now = byRef[ref],
+                  now.mark != thing.mark else { continue }
+            let justClosed = now.mark == .done && thing.mark != .done
+            thing.mark = now.mark
+            changed = true
+            if justClosed {
+                SourceMoments.shared.fire(
+                    String(localized: "Closed: \(thing.title)"), source: "GitHub")
+            }
+        }
+        if changed { context.saveHonestly() }
     }
 
     // MARK: - Shared
