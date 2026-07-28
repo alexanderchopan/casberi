@@ -67,7 +67,7 @@ struct AccountDetailSheet: View {
         // The export's other half — the file comes back in whole (dedupe by id).
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.json]) { result in
-            if case .success(let url) = result { importThings(from: url) }
+            if case .success(let url) = result { Task { await importThings(from: url) } }
         }
         // Two wipes, two verbs (user ruling 2026-07-13): THINGS is your data;
         // ACCESS is the credentials Casberi holds. Each confirm states exactly
@@ -573,10 +573,10 @@ struct AccountDetailSheet: View {
 
     /// Reads a Casberi export back in. Things already present (same id) stay
     /// untouched; everything else lands as it was.
-    private func importThings(from url: URL) {
+    private func importThings(from url: URL) async {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        guard let data = try? Data(contentsOf: url),
+        guard let data = await SecurityScopedFileReader.readData(at: url),
               let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let items = root["things"] as? [[String: Any]] else {
             importResult = "That file isn't a Casberi export."

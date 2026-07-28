@@ -45,29 +45,33 @@ struct KindleImportScreen: View {
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.plainText, .text]) { outcome in
             guard case .success(let url) = outcome else { return }
-            let scoped = url.startAccessingSecurityScopedResource()
-            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-            guard let data = try? Data(contentsOf: url) else {
-                result = String(localized: "Couldn't read that file. Pick My Clippings.txt from your Kindle.")
-                resultIsError = true
-                return
-            }
-            let summary = KindleImport.run(data: data, context: modelContext)
-            if summary.failed {
-                result = String(localized: "That file isn't a Kindle export. Pick My Clippings.txt from the Kindle's documents folder.")
-                resultIsError = true
-                return
-            }
-            resultIsError = false
-            DSHaptic.success()
-            result = summary.imported > 0
-                ? "\(summary.imported) highlights in\(summary.skipped > 0 ? " · \(summary.skipped) already here" : "")"
-                : "Nothing new — all \(summary.skipped) highlights were already here."
-            let proof = summary.imported > 0 ? "\(summary.imported) highlights in" : "Synced just now"
-            store.registerConnected(id: "kindle", name: "Kindle", proof: proof,
-                                    can: ["Imports the highlights you export.",
-                                          "Read-only — nothing leaves this iPhone."])
+            Task { await runImport(url) }
         }
+    }
+
+    private func runImport(_ url: URL) async {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        guard let data = await SecurityScopedFileReader.readData(at: url) else {
+            result = String(localized: "Couldn't read that file. Pick My Clippings.txt from your Kindle.")
+            resultIsError = true
+            return
+        }
+        let summary = KindleImport.run(data: data, context: modelContext)
+        if summary.failed {
+            result = String(localized: "That file isn't a Kindle export. Pick My Clippings.txt from the Kindle's documents folder.")
+            resultIsError = true
+            return
+        }
+        resultIsError = false
+        DSHaptic.success()
+        result = summary.imported > 0
+            ? "\(summary.imported) highlights in\(summary.skipped > 0 ? " · \(summary.skipped) already here" : "")"
+            : "Nothing new — all \(summary.skipped) highlights were already here."
+        let proof = summary.imported > 0 ? "\(summary.imported) highlights in" : "Synced just now"
+        store.registerConnected(id: "kindle", name: "Kindle", proof: proof,
+                                can: ["Imports the highlights you export.",
+                                      "Read-only — nothing leaves this iPhone."])
     }
 }
 

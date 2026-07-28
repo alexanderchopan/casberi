@@ -109,9 +109,11 @@ enum ProbeHooks {
         },
         // `-journalImport <path>` imports an unzipped Apple Journal export folder.
         Hook(key: "journalImport") { path, context in
-            let summary = JournalImport.run(folder: URL(fileURLWithPath: path), context: context)
-            NSLog("Journal probe: %d imported, %d skipped, failed=%d",
-                  summary.imported, summary.skipped, summary.failed ? 1 : 0)
+            Task { @MainActor in
+                let summary = await JournalImport.run(folder: URL(fileURLWithPath: path), context: context)
+                NSLog("Journal probe: %d imported, %d skipped, failed=%d",
+                      summary.imported, summary.skipped, summary.failed ? 1 : 0)
+            }
         },
         // `-bookmarksImport <path>` imports a Netscape Bookmark File Format
         // export (.html) from Safari or Chrome — lands ALL entries headlessly

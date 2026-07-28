@@ -119,56 +119,75 @@ enum JournalImport {
     /// Walks a picked folder (the unzipped export) for entry HTML files.
     /// Call within the folder's security scope.
     @MainActor
-    static func run(folder: URL, context: ModelContext) -> Summary {
-        let fm = FileManager.default
-        guard let walker = fm.enumerator(at: folder, includingPropertiesForKeys: nil) else {
-            return Summary(failed: true)
-        }
-        var files: [URL] = []
-        for case let url as URL in walker where url.pathExtension.lowercased() == "html" {
-            files.append(url)
-        }
-        guard !files.isEmpty else { return Summary(failed: true) }
+    static func run(folder: URL, context: ModelContext) async -> Summary {
+        let existing = IngestSupport.existingSourceRefs(context, source: "Apple Journal")
 
-        var existing = IngestSupport.existingSourceRefs(context, source: "Apple Journal")
+        // The folder walk + per-entry HTML read happen off the main
+        // thread: the export folder often still lives in iCloud Drive, and
+        // FileManager/Data(contentsOf:) silently block on the iCloud
+        // download for any file they touch, synchronously on the calling
+        // thread. Left on @MainActor, a large export freezes the UI and can
+        // trip the main-thread watchdog.
+        let outcome: (processed: Int, items: [(ref: String, date: Date, title: String, body: String)])? =
+            await Task.detached(priority: .userInitiated) { () -> (Int, [(ref: String, date: Date, title: String, body: String)])? in
+                let fm = FileManager.default
+                guard let walker = fm.enumerator(at: folder, includingPropertiesForKeys: nil) else {
+                    return nil
+                }
+                var files: [URL] = []
+                for case let url as URL in walker where url.pathExtension.lowercased() == "html" {
+                    files.append(url)
+                }
+                guard !files.isEmpty else { return nil }
+
+                let dated: [(date: Date, title: String, url: URL)] = files.compactMap { url in
+                    guard let (date, title) = parseName(url.deletingPathExtension().lastPathComponent)
+                    else { return nil }
+                    return (date, title, url)
+                }.sorted { $0.date > $1.date }
+                // HTML files exist but no filename parsed: the export's
+                // shape isn't what we assumed — that's a FAILED read the
+                // person should see, not "Nothing new" plus a connected
+                // seat (honesty rule, review 2026-07-11).
+                guard !dated.isEmpty else { return nil }
+
+                var seen = existing
+                let processed = dated.prefix(500)
+                var result: [(ref: String, date: Date, title: String, body: String)] = []
+                for (date, nameTitle, url) in processed {
+                    let ref = "journal:\(url.lastPathComponent)"
+                    guard !seen.contains(ref) else { continue }
+                    guard let data = try? Data(contentsOf: url),
+                          let html = String(data: data, encoding: .utf8) else { continue }
+                    let body = plainText(fromHTML: html)
+                    let title = nameTitle.isEmpty
+                        ? (body.isEmpty ? "Journal entry" : DayOneImport.title(from: body))
+                        : nameTitle
+                    result.append((ref, date, title, body))
+                    // Two same-named files in one walk (a Resources/ backup
+                    // copy) must not both land under one ref — the set
+                    // grows as RSSIngest's does (review 2026-07-11).
+                    seen.insert(ref)
+                }
+                return (processed.count, result)
+            }.value
+
+        guard let outcome else { return Summary(failed: true) }
+
         var summary = Summary()
-
-        let dated: [(date: Date, title: String, url: URL)] = files.compactMap { url in
-            guard let (date, title) = parseName(url.deletingPathExtension().lastPathComponent)
-            else { return nil }
-            return (date, title, url)
-        }.sorted { $0.date > $1.date }
-        // HTML files exist but no filename parsed: the export's shape isn't
-        // what we assumed — that's a FAILED read the person should see, not
-        // "Nothing new" plus a connected seat (honesty rule, review 2026-07-11).
-        guard !dated.isEmpty else { return Summary(failed: true) }
-
+        summary.skipped = outcome.processed - outcome.items.count
         var landed: [Thing] = []
-        for (date, nameTitle, url) in dated.prefix(500) {
-            let ref = "journal:\(url.lastPathComponent)"
-            guard !existing.contains(ref) else { summary.skipped += 1; continue }
-            guard let data = try? Data(contentsOf: url),
-                  let html = String(data: data, encoding: .utf8) else {
-                summary.skipped += 1; continue
-            }
-            let body = plainText(fromHTML: html)
-            let title = nameTitle.isEmpty
-                ? (body.isEmpty ? "Journal entry" : DayOneImport.title(from: body))
-                : nameTitle
+        for item in outcome.items {
             let thing = Thing(
                 kind: .note,
-                title: title,
-                content: body,
+                title: item.title,
+                content: item.body,
                 source: "Apple Journal",
-                capturedAt: date,
-                sourceRef: ref
+                capturedAt: item.date,
+                sourceRef: item.ref
             )
             context.insert(thing)
             landed.append(thing)
-            // Two same-named files in one walk (a Resources/ backup copy)
-            // must not both land under one ref — the set grows as RSSIngest's
-            // does (review 2026-07-11).
-            existing.insert(ref)
             summary.imported += 1
         }
         DayOneImport.finish(&summary, landed: landed, context: context)

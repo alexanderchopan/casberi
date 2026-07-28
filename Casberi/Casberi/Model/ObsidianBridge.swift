@@ -70,44 +70,63 @@ enum ObsidianIngest {
         defer { running = false }
 
         guard let vault = store.vaultURL() else { return nil }
-        // False just means the URL wasn't security-scoped (an in-sandbox
-        // vault) — reading still works; only balance the stop when it began.
-        let scoped = vault.startAccessingSecurityScopedResource()
-        defer { if scoped { vault.stopAccessingSecurityScopedResource() } }
-
-        let fm = FileManager.default
-        let keys: [URLResourceKey] = [.contentModificationDateKey, .isRegularFileKey]
-        guard let walker = fm.enumerator(at: vault, includingPropertiesForKeys: keys,
-                                         options: [.skipsHiddenFiles]) else { return nil }
-
-        // Collect (url, modified) for every .md outside dot-directories.
-        // `allObjects` materializes the walk synchronously — iterating the
-        // NSEnumerator directly is unavailable from async contexts in Swift 6.
-        var notes: [(url: URL, modified: Date)] = []
-        for case let url as URL in walker.allObjects {
-            guard url.pathExtension.lowercased() == "md" else { continue }
-            let values = try? url.resourceValues(forKeys: Set(keys))
-            guard values?.isRegularFile == true else { continue }
-            notes.append((url, values?.contentModificationDate ?? .distantPast))
-        }
-        notes.sort { $0.modified > $1.modified }
-
         let existing = IngestSupport.existingSourceRefs(context, source: "Obsidian")
         let base = vault.standardizedFileURL.path
-        var added = 0
 
-        for note in notes.prefix(100) {
-            let rel = String(note.url.standardizedFileURL.path.dropFirst(base.count))
-            let ref = "obsidian:\(rel)"
-            guard !existing.contains(ref) else { continue }
-            let body = (try? String(contentsOf: note.url, encoding: .utf8)) ?? ""
+        // The walk + per-note read happen off the main thread: the vault
+        // can be iCloud Drive, and FileManager/String(contentsOf:) silently
+        // block on the iCloud download for any file they touch,
+        // synchronously on the calling thread. Left on @MainActor, a large
+        // or not-yet-downloaded vault freezes the UI and can trip the
+        // main-thread watchdog.
+        let landed: [(ref: String, title: String, modified: Date, body: String)]? =
+            await Task.detached(priority: .userInitiated) { () -> [(ref: String, title: String, modified: Date, body: String)]? in
+                // False just means the URL wasn't security-scoped (an
+                // in-sandbox vault) — reading still works; only balance
+                // the stop when it began.
+                let scoped = vault.startAccessingSecurityScopedResource()
+                defer { if scoped { vault.stopAccessingSecurityScopedResource() } }
+
+                let fm = FileManager.default
+                let keys: [URLResourceKey] = [.contentModificationDateKey, .isRegularFileKey]
+                guard let walker = fm.enumerator(at: vault, includingPropertiesForKeys: keys,
+                                                 options: [.skipsHiddenFiles]) else { return nil }
+
+                // Collect (url, modified) for every .md outside
+                // dot-directories. `allObjects` materializes the walk
+                // synchronously — iterating the NSEnumerator directly is
+                // unavailable from async contexts in Swift 6.
+                var notes: [(url: URL, modified: Date)] = []
+                for case let url as URL in walker.allObjects {
+                    guard url.pathExtension.lowercased() == "md" else { continue }
+                    let values = try? url.resourceValues(forKeys: Set(keys))
+                    guard values?.isRegularFile == true else { continue }
+                    notes.append((url, values?.contentModificationDate ?? .distantPast))
+                }
+                notes.sort { $0.modified > $1.modified }
+
+                var result: [(ref: String, title: String, modified: Date, body: String)] = []
+                for note in notes.prefix(100) {
+                    let rel = String(note.url.standardizedFileURL.path.dropFirst(base.count))
+                    let ref = "obsidian:\(rel)"
+                    guard !existing.contains(ref) else { continue }
+                    let body = (try? String(contentsOf: note.url, encoding: .utf8)) ?? ""
+                    result.append((ref, note.url.deletingPathExtension().lastPathComponent,
+                                    note.modified, String(body.prefix(300))))
+                }
+                return result
+            }.value
+
+        guard let landed else { return nil }
+        var added = 0
+        for note in landed {
             let thing = Thing(
                 kind: .note,
-                title: note.url.deletingPathExtension().lastPathComponent,
-                content: String(body.prefix(300)),
+                title: note.title,
+                content: note.body,
                 source: "Obsidian",
                 capturedAt: note.modified,
-                sourceRef: ref
+                sourceRef: note.ref
             )
             context.insert(thing)
             SpotlightIndex.index([thing])

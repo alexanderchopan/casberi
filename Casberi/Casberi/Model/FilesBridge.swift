@@ -81,44 +81,62 @@ enum FilesIngest {
         defer { running = false }
 
         guard let folder = store.folderURL() else { return nil }
-        // False just means the URL wasn't security-scoped (an in-sandbox
-        // folder) — reading still works; only balance the stop when it began.
-        let scoped = folder.startAccessingSecurityScopedResource()
-        defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
-
-        let fm = FileManager.default
-        let keys: [URLResourceKey] = [.contentModificationDateKey, .isRegularFileKey, .fileSizeKey]
-        guard let walker = fm.enumerator(at: folder, includingPropertiesForKeys: keys,
-                                         options: [.skipsHiddenFiles]) else { return nil }
-
-        // Collect (url, modified, size) for every regular file outside
-        // dot-directories. `allObjects` materializes the walk synchronously —
-        // iterating the NSEnumerator directly is unavailable from async
-        // contexts in Swift 6.
-        var files: [(url: URL, modified: Date, size: Int64)] = []
-        for case let url as URL in walker.allObjects {
-            let values = try? url.resourceValues(forKeys: Set(keys))
-            guard values?.isRegularFile == true else { continue }
-            files.append((url, values?.contentModificationDate ?? .distantPast,
-                          Int64(values?.fileSize ?? 0)))
-        }
-        files.sort { $0.modified > $1.modified }
-
         let existing = IngestSupport.existingSourceRefs(context, source: "Files")
         let base = folder.standardizedFileURL.path
-        var added = 0
 
-        for file in files.prefix(100) {
-            let rel = String(file.url.standardizedFileURL.path.dropFirst(base.count))
-            let ref = "files:\(rel)"
-            guard !existing.contains(ref) else { continue }
+        // The walk + per-file preview read happen off the main thread: the
+        // folder can be iCloud Drive, and FileManager/String(contentsOf:)
+        // silently block on the iCloud download for any file they touch,
+        // synchronously on the calling thread. Left on @MainActor, a large
+        // or not-yet-downloaded folder freezes the UI and can trip the
+        // main-thread watchdog.
+        let landed: [(ref: String, name: String, modified: Date, preview: String)]? =
+            await Task.detached(priority: .userInitiated) { () -> [(ref: String, name: String, modified: Date, preview: String)]? in
+                // False just means the URL wasn't security-scoped (an
+                // in-sandbox folder) — reading still works; only balance
+                // the stop when it began.
+                let scoped = folder.startAccessingSecurityScopedResource()
+                defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+
+                let fm = FileManager.default
+                let keys: [URLResourceKey] = [.contentModificationDateKey, .isRegularFileKey, .fileSizeKey]
+                guard let walker = fm.enumerator(at: folder, includingPropertiesForKeys: keys,
+                                                 options: [.skipsHiddenFiles]) else { return nil }
+
+                // Collect (url, modified, size) for every regular file
+                // outside dot-directories. `allObjects` materializes the
+                // walk synchronously — iterating the NSEnumerator directly
+                // is unavailable from async contexts in Swift 6.
+                var files: [(url: URL, modified: Date, size: Int64)] = []
+                for case let url as URL in walker.allObjects {
+                    let values = try? url.resourceValues(forKeys: Set(keys))
+                    guard values?.isRegularFile == true else { continue }
+                    files.append((url, values?.contentModificationDate ?? .distantPast,
+                                  Int64(values?.fileSize ?? 0)))
+                }
+                files.sort { $0.modified > $1.modified }
+
+                var result: [(ref: String, name: String, modified: Date, preview: String)] = []
+                for file in files.prefix(100) {
+                    let rel = String(file.url.standardizedFileURL.path.dropFirst(base.count))
+                    let ref = "files:\(rel)"
+                    guard !existing.contains(ref) else { continue }
+                    result.append((ref, file.url.lastPathComponent, file.modified,
+                                    Self.preview(of: file.url, size: file.size)))
+                }
+                return result
+            }.value
+
+        guard let landed else { return nil }
+        var added = 0
+        for file in landed {
             let thing = Thing(
                 kind: .file,
-                title: file.url.lastPathComponent,
-                content: preview(of: file.url, size: file.size),
+                title: file.name,
+                content: file.preview,
                 source: "Files",
                 capturedAt: file.modified,
-                sourceRef: ref
+                sourceRef: file.ref
             )
             context.insert(thing)
             SpotlightIndex.index([thing])

@@ -44,7 +44,7 @@ struct ClaudeImportScreen: View {
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.json]) { outcome in
             guard case .success(let url) = outcome else { return }
-            runImport(url)
+            Task { await runImport(url) }
         }
     }
 
@@ -91,10 +91,10 @@ struct ClaudeImportScreen: View {
 
     // MARK: - Run
 
-    private func runImport(_ url: URL) {
+    private func runImport(_ url: URL) async {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        guard let data = try? Data(contentsOf: url) else {
+        guard let data = await SecurityScopedFileReader.readData(at: url) else {
             result = String(localized: "Couldn't read that file. Pick conversations.json from the unzipped export.")
             resultIsError = true
             return

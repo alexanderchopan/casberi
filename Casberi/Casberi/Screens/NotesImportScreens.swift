@@ -49,29 +49,33 @@ struct DayOneImportScreen: View {
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.json]) { outcome in
             guard case .success(let url) = outcome else { return }
-            let scoped = url.startAccessingSecurityScopedResource()
-            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-            guard let data = try? Data(contentsOf: url) else {
-                result = String(localized: "Couldn't read that file. Pick the .json from the unzipped export.")
-                resultIsError = true
-                return
-            }
-            let summary = DayOneImport.run(data: data, context: modelContext)
-            if summary.failed {
-                result = String(localized: "That file isn't a Day One export. Pick the .json inside the unzipped folder.")
-                resultIsError = true
-                return
-            }
-            resultIsError = false
-            DSHaptic.success()
-            result = summary.imported > 0
-                ? "\(summary.imported) entries in\(summary.skipped > 0 ? " · \(summary.skipped) already here" : "")"
-                : "Nothing new — all \(summary.skipped) entries were already here."
-            let proof = summary.imported > 0 ? "\(summary.imported) entries in" : "Synced just now"
-            store.registerConnected(id: "dayone", name: "Day One", proof: proof,
-                                    can: ["Imports the journal you export.",
-                                          "Read-only — nothing leaves this iPhone."])
+            Task { await runImport(url) }
         }
+    }
+
+    private func runImport(_ url: URL) async {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        guard let data = await SecurityScopedFileReader.readData(at: url) else {
+            result = String(localized: "Couldn't read that file. Pick the .json from the unzipped export.")
+            resultIsError = true
+            return
+        }
+        let summary = DayOneImport.run(data: data, context: modelContext)
+        if summary.failed {
+            result = String(localized: "That file isn't a Day One export. Pick the .json inside the unzipped folder.")
+            resultIsError = true
+            return
+        }
+        resultIsError = false
+        DSHaptic.success()
+        result = summary.imported > 0
+            ? "\(summary.imported) entries in\(summary.skipped > 0 ? " · \(summary.skipped) already here" : "")"
+            : "Nothing new — all \(summary.skipped) entries were already here."
+        let proof = summary.imported > 0 ? "\(summary.imported) entries in" : "Synced just now"
+        store.registerConnected(id: "dayone", name: "Day One", proof: proof,
+                                can: ["Imports the journal you export.",
+                                      "Read-only — nothing leaves this iPhone."])
     }
 }
 
@@ -126,24 +130,28 @@ struct JournalImportScreen: View {
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.folder]) { outcome in
             guard case .success(let url) = outcome else { return }
-            let scoped = url.startAccessingSecurityScopedResource()
-            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-            let summary = JournalImport.run(folder: url, context: modelContext)
-            if summary.failed {
-                result = String(localized: "No journal pages in that folder — pick the unzipped export (it holds an Entries folder).")
-                resultIsError = true
-                return
-            }
-            resultIsError = false
-            DSHaptic.success()
-            result = summary.imported > 0
-                ? "\(summary.imported) entries in\(summary.skipped > 0 ? " · \(summary.skipped) already here" : "")"
-                : "Nothing new — all \(summary.skipped) entries were already here."
-            let proof = summary.imported > 0 ? "\(summary.imported) entries in" : "Synced just now"
-            store.registerConnected(id: "journal", name: "Apple Journal", proof: proof,
-                                    can: ["Imports the journal you export.",
-                                          "Read-only — nothing leaves this iPhone."])
+            Task { await runImport(url) }
         }
+    }
+
+    private func runImport(_ url: URL) async {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        let summary = await JournalImport.run(folder: url, context: modelContext)
+        if summary.failed {
+            result = String(localized: "No journal pages in that folder — pick the unzipped export (it holds an Entries folder).")
+            resultIsError = true
+            return
+        }
+        resultIsError = false
+        DSHaptic.success()
+        result = summary.imported > 0
+            ? "\(summary.imported) entries in\(summary.skipped > 0 ? " · \(summary.skipped) already here" : "")"
+            : "Nothing new — all \(summary.skipped) entries were already here."
+        let proof = summary.imported > 0 ? "\(summary.imported) entries in" : "Synced just now"
+        store.registerConnected(id: "journal", name: "Apple Journal", proof: proof,
+                                can: ["Imports the journal you export.",
+                                      "Read-only — nothing leaves this iPhone."])
     }
 }
 
@@ -258,18 +266,22 @@ struct BookmarksImportScreen: View {
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.html]) { outcome in
             guard case .success(let url) = outcome else { return }
-            let scoped = url.startAccessingSecurityScopedResource()
-            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-            guard let data = try? Data(contentsOf: url),
-                  let p = BookmarksImport.parse(data: data), !p.entries.isEmpty else {
-                result = String(localized: "That file isn't a bookmarks export. Pick the exported .html file.")
-                resultIsError = true
-                return
-            }
-            resultIsError = false
-            result = nil
-            parsed = p
+            Task { await runParse(url) }
         }
+    }
+
+    private func runParse(_ url: URL) async {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        guard let data = await SecurityScopedFileReader.readData(at: url),
+              let p = BookmarksImport.parse(data: data), !p.entries.isEmpty else {
+            result = String(localized: "That file isn't a bookmarks export. Pick the exported .html file.")
+            resultIsError = true
+            return
+        }
+        resultIsError = false
+        result = nil
+        parsed = p
     }
 
     @ViewBuilder
