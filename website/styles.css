@@ -130,6 +130,13 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-obsidian  { background: #7c3aed; }
 .ai-files     { background: #4aa8f0; }
 .ai-dropbox   { background: #0061ff; }
+/* Unlike the monochrome-glyph brands above, this Slack mark is full-bleed
+   square artwork carrying its own white field baked in (the real app icon,
+   same shape as PostHog's) — so it fills its tile edge-to-edge instead of
+   floating at the 52% the glyph icons use, matching how BridgeIcon renders
+   it in the app. */
+.ai-slack     { background: #fff; }
+.ai-slack img { width: 100%; height: 100%; border-radius: inherit; }
 .ai-twitch    { background: #9146ff; }
 .ai-pinterest { background: #e60023; }
 .ai-substack  { background: #ff6719; }

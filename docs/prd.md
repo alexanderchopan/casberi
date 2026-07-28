@@ -9483,3 +9483,35 @@ ruling (`Model/ChipMemory.swift`, tap-learning chip ORDER) is untouched —
 this only reverts which chip you land on, not how the strip sorts. Deep
 links, `-openThing`, and other same-launch overrides still work exactly as
 before; only the cross-launch memory is gone.
+
+## §229 — Slack un-parked: mentions of you (2026-07-28)
+
+Reverses the 2026-07-08 "PARKED by user" note above (§413 in the ledger,
+Strava + Slack — "need the $5-20/mo OAuth-secret server"): that blocker was
+true when written and is stale now. Slack made PKCE generally available
+(secretless OAuth for public/native clients) in March 2026 — verified live
+against Slack's current developer docs before writing any code — so Slack
+runs the exact no-server pattern Dropbox/Spotify already use, no server ever
+in the loop.
+
+The originally-imagined MVP, Saved Items, was ruled out before building
+anything: Slack's replacement for Stars ("Later") ships with no API at all,
+and `stars.list` no longer reflects anything saved since that rollout. The
+user chose **mentions of you** instead (over the alternative, channel
+bookmarks) — landed the same shape a Farcaster/Bluesky mention already is
+(`.chat` kind, full text in `postText`, `socialContext = "mention"`), via
+`search.messages` (legacy but alive, user-token scoped `search:read`, Tier
+2). That endpoint was chosen specifically because it never touches
+`conversations.history`/`conversations.replies` — the endpoints Slack
+throttled hard in 2025 (1 req/min) for apps not approved for the Slack
+Marketplace — so this bridge stays fast regardless of how widely it's ever
+distributed.
+
+Shipped code-complete but GATED the way Dropbox originally was: `SlackAuth
+.clientID` (`Model/SlackBridge.swift`) is empty until a Slack App is
+registered at api.slack.com/apps (free, user scope `search:read`, redirect
+`casberi://slack-auth`, PKCE enabled in app settings — self-service since
+March 2026, no more contacting Slack support) and its Client ID — not a
+secret — is pasted in. Catalog offer lands in Work beside GitHub/Linear/
+Notion/PostHog (`BridgeCatalog.swift`); website catalog entry added to keep
+`catalog-sync.sh` green.

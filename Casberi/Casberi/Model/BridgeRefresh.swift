@@ -318,6 +318,12 @@ enum BridgeRefresh {
                 _ = await DropboxIngest.refresh(context: context)
             }
         }
+        if SlackAuth.connected {
+            let s = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await SlackIngest.refresh(context: context)
+            }
+        }
         if TwitchAuth.connected {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)

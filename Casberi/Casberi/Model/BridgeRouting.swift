@@ -44,6 +44,7 @@ enum BridgeRouter {
         case dropbox
         case twitch
         case spotify
+        case slack
         case substack
         case reddit
         case youtube
@@ -112,7 +113,7 @@ enum BridgeRouter {
         /// deciding you were done. Those stay up until they're closed.
         var finishesOnConnect: Bool {
             switch self {
-            case .token, .steam, .obsidian, .files, .dropbox, .twitch, .spotify,
+            case .token, .steam, .obsidian, .files, .dropbox, .twitch, .spotify, .slack,
                  .icloudMail, .gmail, .exchange,
                  .venice, .bankr, .openRouter,
                  .chatgpt, .claude, .gemini,
@@ -158,6 +159,7 @@ enum BridgeRouter {
             case .dropbox:        "dropbox"
             case .twitch:         "twitch"
             case .spotify:        "spotify"
+            case .slack:          "slack"
             case .substack:       "substack"
             case .reddit:         "reddit"
             case .youtube:        "youtube"
@@ -232,6 +234,7 @@ enum BridgeRouter {
         Row(offer: "Dropbox",   id: "dropbox", destination: .dropbox),
         Row(offer: "Twitch",    id: "twitch", destination: .twitch),
         Row(offer: "Spotify",   id: "spotify", destination: .spotify),
+        Row(offer: "Slack",    id: "slack",   destination: .slack),
         Row(offer: "Substack",  id: "substack", destination: .substack),
         Row(offer: "Reddit",    id: "reddit",   destination: .reddit),
         Row(offer: "YouTube",   id: "youtube",  destination: .youtube),
@@ -309,6 +312,7 @@ struct BridgeDestinationView: View {
         case .dropbox:        DropboxScreen()
         case .twitch:         TwitchScreen()
         case .spotify:        SpotifyScreen()
+        case .slack:          SlackScreen()
         case .substack:       HandleSetupScreen(bridge: .substack)
         case .reddit:         HandleSetupScreen(bridge: .reddit)
         case .youtube:        HandleSetupScreen(bridge: .youtube)

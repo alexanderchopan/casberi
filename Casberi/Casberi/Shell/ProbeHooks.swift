@@ -1573,6 +1573,17 @@ enum ProbeHooks {
                 NSLog("Dropbox probe: %@ new", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-slackProbe YES` re-syncs the ALREADY-connected session (mentions
+        // of you via `search.messages`) — a connect can't be scripted, since
+        // PKCE needs a live human tap through Slack's real consent screen;
+        // connect once by hand in the simulator, then this probe re-syncs on
+        // every later headless run.
+        Hook(key: "slackProbe") { _, context in
+            Task { @MainActor in
+                let n = await SlackIngest.refresh(context: context)
+                NSLog("Slack probe: %@ new", n.map(String.init) ?? "FAILED")
+            }
+        },
         // `-steamBridge "<key>:<profile>"` connects Steam headlessly.
         Hook(key: "steamBridge") { spec, context in
             let parts = spec.split(separator: ":", maxSplits: 1).map(String.init)

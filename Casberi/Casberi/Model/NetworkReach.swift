@@ -138,6 +138,10 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "posthog"),
                  purpose: "Reads the metrics, annotations, and event counts you watch on your own PostHog project. Read-only scoped key.",
                  hosts: ["us.posthog.com"]),
+        Endpoint(service: "Slack",
+                 reach: .whenConnected(bridge: "slack"),
+                 purpose: "Looks up mentions of you across Slack. Search-only user token — can't post, read files, or browse channels.",
+                 hosts: ["slack.com"]),
 
         // MARK: Markets
 
