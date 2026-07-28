@@ -353,6 +353,21 @@ enum FeedParser {
         /// feed reader shows under the headline. Empty when the feed carries
         /// none (or carries only markup, e.g. an image-only Pinterest item).
         var summary = ""
+        /// A YouTube entry's `<media:community><media:statistics views="…">`
+        /// (2026-07-28) — a per-VIDEO view count, not carried by any other
+        /// feed this app follows. nil when the feed doesn't report one.
+        var viewCount: Int?
+        /// The entry's Atom `<author><name>` — a channel's own name on
+        /// YouTube (redundant with the feed title, unused), a poster's
+        /// `/u/name` on Reddit (the one thing FeedFollowKind's generic
+        /// authorHandle-as-feed-identity can't carry). Empty when absent.
+        var author = ""
+        /// Every `<a href>` found in the item's own body HTML, in document
+        /// order, capped at 5 — Reddit's crossing check reads this for the
+        /// post's first OUTBOUND (non-reddit.com) link; every other bridge
+        /// ignores it. Captured alongside `summary` so the raw HTML doesn't
+        /// need re-fetching later.
+        var links: [String] = []
     }
 
     struct Parsed {
@@ -425,6 +440,13 @@ enum FeedParser {
                 if current == nil, result.iconURL.isEmpty, let href = attributes["href"] {
                     result.iconURL = Self.normalizeImage(href)
                 }
+            // A YouTube entry's view count (2026-07-28) — only meaningful on
+            // an item, so the channel-level guard matches every other
+            // per-item attribute case above.
+            case "media:statistics":
+                if current != nil, let v = attributes["views"], let n = Int(v) {
+                    current?.viewCount = n
+                }
             default:
                 break
             }
@@ -476,6 +498,15 @@ enum FeedParser {
                 if current?.date == nil {
                     current?.date = Self.rfc822.date(from: value) ?? Self.iso.date(from: value)
                 }
+            case "name":
+                // The Atom <author><name> — only when nested directly under
+                // <author> (elementPath still holds "name" itself here, the
+                // pop happens in the caller's defer), so a channel-level or
+                // differently-nested <name> never gets mistaken for one.
+                if current != nil, current?.author.isEmpty == true,
+                   elementPath.dropLast().last == "author" {
+                    current?.author = value
+                }
             case "description", "content:encoded", "summary", "content":
                 // No attribute image yet — pull the first <img> out of the
                 // (usually CDATA) description HTML. This is Pinterest's path.
@@ -483,6 +514,13 @@ enum FeedParser {
                    let src = Self.firstImageSrc(in: value),
                    !Self.looksLikeTracker(src) {
                     current?.imageURL = Self.normalizeImage(src)
+                }
+                // Every outbound <a href> in the raw body — Reddit's link-
+                // crossing check reads it later; every other bridge ignores
+                // it. Extracted here (once, from the same raw HTML the image
+                // pull already sees) rather than re-fetched at check time.
+                if current?.links.isEmpty == true {
+                    current?.links = Self.extractLinks(in: value)
                 }
                 // …and keep the WORDS too (2026-07-22). Until now this blob
                 // was mined for an image and thrown away, so every RSS,
@@ -539,6 +577,22 @@ enum FeedParser {
                   m.numberOfRanges > 1,
                   let r = Range(m.range(at: 1), in: html) else { return nil }
             return String(html[r])
+        }
+
+        /// Every `<a href>` in a blob of feed HTML, in document order,
+        /// capped at 5 — a post body rarely needs more than a handful
+        /// checked for Reddit's crossing pass.
+        private static let linkRegex = try? NSRegularExpression(
+            pattern: #"<a\s+[^>]*href=["']([^"']+)["']"#, options: [.caseInsensitive])
+
+        private static func extractLinks(in html: String) -> [String] {
+            guard let linkRegex else { return [] }
+            let ns = html as NSString
+            let matches = linkRegex.matches(in: html, range: NSRange(location: 0, length: ns.length))
+            return matches.prefix(5).compactMap { m in
+                guard m.numberOfRanges > 1 else { return nil }
+                return ns.substring(with: m.range(at: 1))
+            }
         }
 
         /// Protocol-relative URLs (`//host/…`) become https so AsyncImage loads.

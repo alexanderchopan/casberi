@@ -426,6 +426,23 @@ final class Thing {
     /// them. Empty for a text-only post and for everything non-social.
     var imageURLs: [String] = []
 
+    // MARK: - Feed-follow delight (2026-07-28, FeedFollowMoments.swift)
+
+    /// A Reddit post's actual human author (`/u/name`, decoded) — distinct
+    /// from `authorHandle`, which every feed-follow bridge (Substack/Reddit/
+    /// YouTube/Podcasts) already uses for the FEED's own identity (the
+    /// subreddit/channel/publication `FeedLeaderboard` groups by). Lets a
+    /// later corpus-wide pass notice the same person posting across two
+    /// subreddits you follow. nil for every non-Reddit thing, and for posts
+    /// landed before this field.
+    var postAuthor: String? = nil
+
+    /// The first non-Reddit link found inside a Reddit post's own body,
+    /// captured at landing so a later pass can notice a subreddit discussing
+    /// something already saved from elsewhere without re-parsing the post's
+    /// HTML. nil when the post carries none, or for every non-Reddit thing.
+    var externalLink: String? = nil
+
     init(
         id: UUID = UUID(),
         kind: ThingKind,

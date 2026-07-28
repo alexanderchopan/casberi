@@ -223,6 +223,19 @@ enum BridgeRefresh {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await FeedFollowIngest.refresh(kind, context: context)
+                // Read-only passes over what just landed, touching nothing in
+                // the ingest above — same shape as the social bridges' own
+                // return-check (delight pass 2026-07-28). YouTube's view
+                // doubling and retitle checks already ran inside the ingest
+                // itself (they need the per-item feed data, not just the
+                // landed corpus), so only the corpus-wide checks live here.
+                if kind == .youtube || kind == .reddit {
+                    FeedFollowMoments.checkReturns(kind, context: context)
+                }
+                if kind == .reddit {
+                    FeedFollowMoments.checkRedditLinkCrossings(context: context)
+                    FeedFollowMoments.checkRedditCrossPosters(context: context)
+                }
             }
         }
         if connected("contacts") {

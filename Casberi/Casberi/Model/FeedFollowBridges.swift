@@ -399,6 +399,23 @@ enum FeedFollowIngest {
             }
         }
 
+        // YouTube retitle detection + Reddit postAuthor backfill (2026-07-28,
+        // FeedFollowMoments.swift) — both need the STORED row for an already-
+        // landed ref, lazily fetched once per refresh the same way
+        // `handleless` above is.
+        var byRef: [String: Thing]?
+        var extraPatched = false
+        func storedThing(_ ref: String) -> Thing? {
+            if byRef == nil {
+                let src = kind.source
+                let all = (try? context.fetch(FetchDescriptor<Thing>(
+                    predicate: #Predicate { $0.source == src }))) ?? []
+                byRef = Dictionary(all.compactMap { t in t.sourceRef.map { ($0, t) } },
+                    uniquingKeysWith: { first, _ in first })
+            }
+            return byRef?[ref]
+        }
+
         // Concurrent fetch, then processed back in the entries' own order
         // (the same ref landing from two entries should resolve the same
         // way it always did — first-in-list wins). Capped at 4 in flight —
@@ -435,9 +452,32 @@ enum FeedFollowIngest {
                 let stableKey = item.guid.isEmpty ? item.link : item.guid
                 guard !stableKey.isEmpty else { continue }
                 let ref = "\(kind.refPrefix):\(stableKey)"
+
+                // A video's views doubling since last checked — self-relative,
+                // so it's checked on EVERY sighting (new or already-landed),
+                // not gated behind the dedupe branch below.
+                if kind == .youtube, let views = item.viewCount {
+                    FeedFollowMoments.checkYouTubeBreakout(
+                        ref: ref, title: IngestSupport.decodeHTMLEntities(item.title),
+                        channel: feedName, views: views)
+                }
+
                 if existing.contains(ref) {
                     backfill.patch(ref, image: item.imageURL)
                     patchHandle(ref, feedName)
+                    if kind == .youtube, let thing = storedThing(ref) {
+                        let decoded = IngestSupport.decodeHTMLEntities(item.title)
+                        if !decoded.isEmpty, !thing.title.isEmpty, thing.title != decoded {
+                            FeedFollowMoments.fireRetitle(from: thing.title, to: decoded, channel: feedName)
+                            thing.title = decoded
+                            extraPatched = true
+                        }
+                    }
+                    if kind == .reddit, !item.author.isEmpty, let thing = storedThing(ref),
+                       thing.postAuthor == nil {
+                        thing.postAuthor = FeedFollowMoments.normalizedRedditAuthor(item.author)
+                        extraPatched = true
+                    }
                     continue
                 }
                 guard !item.title.isEmpty else { continue }
@@ -455,13 +495,22 @@ enum FeedFollowIngest {
                 // the parser now keeps (2026-07-22).
                 if !item.summary.isEmpty { thing.summary = item.summary }
                 if !feedName.isEmpty { thing.authorHandle = feedName }
+                // Reddit-only (2026-07-28): the actual poster, and the post's
+                // own first outbound link — FeedFollowMoments' corpus-join
+                // and cross-poster passes read these on a later refresh.
+                if kind == .reddit {
+                    if !item.author.isEmpty {
+                        thing.postAuthor = FeedFollowMoments.normalizedRedditAuthor(item.author)
+                    }
+                    thing.externalLink = FeedFollowMoments.firstExternalLink(item.links)
+                }
                 context.insert(thing)
                 existing.insert(ref)
                 SpotlightIndex.index([thing])
                 added += 1
             }
         }
-        if added > 0 || backfill.any || patchedHandle { context.saveHonestly() }
+        if added > 0 || backfill.any || patchedHandle || extraPatched { context.saveHonestly() }
         return reachedAny ? added : nil
     }
 }
