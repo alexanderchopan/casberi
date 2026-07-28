@@ -73,6 +73,18 @@ struct ThingSheetView: View {
     /// per sheet open, like `replies`/`approvalCheck` below, is the honest
     /// place to pay that cost.
     @State private var crossSourceEcho: String?
+    /// An Obsidian note's own `[[wikilink]]` targets, resolved against notes
+    /// already landed (2026-07-28) — fetched once on open, like `replies`
+    /// above. Held as `KeyedThing` (see `ThingRowKeying.swift`) rather than
+    /// raw `Thing`s: this is a snapshot taken at `onAppear`, not a live
+    /// `@Query`, so a delete-sync heal landing while the sheet is open could
+    /// otherwise leave a stale row that traps on read — `liveLinkedNotes`
+    /// filters to `.isLive` at render time before anything reads through it.
+    @State private var linkedNotes: [KeyedThing] = []
+    /// Walking into a linked note (2026-07-28) — a plain re-presentation of
+    /// this same sheet over the target, the recursive shape already used
+    /// elsewhere in this app (e.g. `-agentThingProbe`'s Stack push).
+    @State private var walkingToNote: KeyedThing?
     /// Translate verb (2026-07-17): the system Translation sheet, shown over
     /// the thing's own words — no custom UI, Apple's picker does the rest.
     @State private var showTranslate = false
@@ -318,6 +330,11 @@ struct ThingSheetView: View {
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s4)
                 }
+                if !liveLinkedNotes.isEmpty {
+                    noteLinksSection
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s4)
+                }
                 relatedShelf
                     .padding(.top, DS.Space.s4)
             }
@@ -357,6 +374,9 @@ struct ThingSheetView: View {
             // constructing the Task for the common non-link case.
             if thing.kind == .link {
                 crossSourceEcho = CrossSourceEcho.find(for: thing, context: modelContext)
+            }
+            if thing.source == "Obsidian", !thing.wikilinks.isEmpty {
+                linkedNotes = NoteLinks.resolve(thing.wikilinks, context: modelContext).keyed
             }
             // The gate is a string check — non-approval things spend nothing.
             if WalletPrepare.applies(to: thing) {
@@ -398,6 +418,11 @@ struct ThingSheetView: View {
         // The person behind a tapped face — theirs to watch from here.
         .sheet(item: $profileTarget) { p in
             SocialProfileCard(profile: p)
+        }
+        // Walking a vault's own wikilink graph (2026-07-28) — a plain
+        // re-presentation of this same sheet over the linked note.
+        .sheet(item: $walkingToNote) { note in
+            ThingSheetView(thing: note.thing)
         }
         // Translate: the system sheet, over the thing's own words.
         .translationPresentation(isPresented: $showTranslate, text: translateText)
@@ -915,6 +940,43 @@ struct ThingSheetView: View {
         verbOutcome
             .frame(maxWidth: .infinity)
             .padding(.top, DS.Space.s2)
+    }
+
+    // MARK: - Note links (a vault's own wikilink graph, 2026-07-28)
+
+    /// `linkedNotes` filtered to still-live models, read ONCE at the top —
+    /// the corollary-2 guard (see `ThingRowKeying.swift`): a delete-sync
+    /// heal landing while this sheet is open must not leave the `ForEach`
+    /// below reading a stored property off a tombstoned model.
+    private var liveLinkedNotes: [KeyedThing] {
+        linkedNotes.filter { $0.thing.isLive }
+    }
+
+    private var noteLinksSection: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            Text("Links to")
+                .dsText(.label12)
+                .foregroundStyle(DS.textTertiary)
+            ForEach(liveLinkedNotes) { note in
+                Button {
+                    walkingToNote = note
+                } label: {
+                    HStack(spacing: DS.Space.s2) {
+                        Image(systemName: "arrow.up.right")
+                            .accessibilityHidden(true)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(DS.textTertiary)
+                        Text(note.thing.title)
+                            .dsText(.callout15)
+                            .foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
 
     // MARK: - Related shelf (streams last)

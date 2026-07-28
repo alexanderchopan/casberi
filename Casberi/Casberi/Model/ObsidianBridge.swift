@@ -79,8 +79,8 @@ enum ObsidianIngest {
         // synchronously on the calling thread. Left on @MainActor, a large
         // or not-yet-downloaded vault freezes the UI and can trip the
         // main-thread watchdog.
-        let landed: [(ref: String, title: String, modified: Date, body: String)]? =
-            await Task.detached(priority: .userInitiated) { () -> [(ref: String, title: String, modified: Date, body: String)]? in
+        let landed: [(ref: String, title: String, modified: Date, body: String, wikilinks: [String])]? =
+            await Task.detached(priority: .userInitiated) { () -> [(ref: String, title: String, modified: Date, body: String, wikilinks: [String])]? in
                 // False just means the URL wasn't security-scoped (an
                 // in-sandbox vault) — reading still works; only balance
                 // the stop when it began.
@@ -105,14 +105,18 @@ enum ObsidianIngest {
                 }
                 notes.sort { $0.modified > $1.modified }
 
-                var result: [(ref: String, title: String, modified: Date, body: String)] = []
+                var result: [(ref: String, title: String, modified: Date, body: String, wikilinks: [String])] = []
                 for note in notes.prefix(100) {
                     let rel = String(note.url.standardizedFileURL.path.dropFirst(base.count))
                     let ref = "obsidian:\(rel)"
                     guard !existing.contains(ref) else { continue }
                     let body = (try? String(contentsOf: note.url, encoding: .utf8)) ?? ""
+                    // Extracted against the FULL body, before the 300-char
+                    // clamp below — a wikilink past that point would
+                    // otherwise be lost the moment it's parsed (2026-07-28).
+                    let wikilinks = NoteLinks.extract(from: body)
                     result.append((ref, note.url.deletingPathExtension().lastPathComponent,
-                                    note.modified, String(body.prefix(300))))
+                                    note.modified, String(body.prefix(300)), wikilinks))
                 }
                 return result
             }.value
@@ -128,6 +132,7 @@ enum ObsidianIngest {
                 capturedAt: note.modified,
                 sourceRef: note.ref
             )
+            thing.wikilinks = note.wikilinks
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1

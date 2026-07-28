@@ -26,6 +26,9 @@ enum DayOneImport {
         }
 
         let existing = IngestSupport.existingSourceRefs(context, source: "Day One")
+        // Read BEFORE anything lands (delight, 2026-07-28) — the corpus's
+        // own reach, for `NoteMoments.checkFloorPushedBack` below.
+        let priorFloor = NoteMoments.corpusFloor(context)
 
         // IngestSupport.isoDate, not a bare ISO8601DateFormatter — Day One
         // stamps both plain and fractional-second forms, and the bare
@@ -64,6 +67,9 @@ enum DayOneImport {
             summary.imported += 1
         }
         finish(&summary, landed: landed, context: context)
+        if summary.imported > 0 {
+            NoteMoments.checkFloorPushedBack(priorFloor: priorFloor, landed: landed, source: "Day One")
+        }
         return summary
     }
 
@@ -151,6 +157,9 @@ enum JournalImport {
     @MainActor
     static func run(folder: URL, context: ModelContext) async -> Summary {
         let existing = IngestSupport.existingSourceRefs(context, source: "Apple Journal")
+        // Read BEFORE anything lands (delight, 2026-07-28) — the corpus's
+        // own reach, for `NoteMoments.checkFloorPushedBack` below.
+        let priorFloor = NoteMoments.corpusFloor(context)
 
         // The folder walk + per-entry HTML read happen off the main
         // thread: the export folder often still lives in iCloud Drive, and
@@ -221,6 +230,9 @@ enum JournalImport {
             summary.imported += 1
         }
         DayOneImport.finish(&summary, landed: landed, context: context)
+        if summary.imported > 0 {
+            NoteMoments.checkFloorPushedBack(priorFloor: priorFloor, landed: landed, source: "Apple Journal")
+        }
         return summary
     }
 

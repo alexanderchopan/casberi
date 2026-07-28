@@ -9553,3 +9553,60 @@ explainer + "Open Notes" button — is untouched; a shared note still lands
 fine as a `.note` thing and is still found via search/Spotlight like any
 other capture, it just isn't specially labeled "Apple Notes" (accurate,
 since nothing can tell it apart).
+
+## §231 — Notes group gains surprise & delight (2026-07-28)
+
+The Notes group (Obsidian, Day One, Apple Journal) had zero entries on the
+delight bus (`SourceMoments`) before this — every other bridge group had
+already earned one. Four additions, all read-only passes over what's
+already landed:
+
+1. **The wikilink walk (Obsidian only, the biggest piece).** A vault is a
+   graph, and Casberi was throwing that away — `ObsidianIngest` clamped
+   `content` to 300 chars and never looked at `[[wikilinks]]` at all.
+   `Thing.wikilinks: [String]` now carries a note's link targets, extracted
+   by `NoteLinks.extract` against the FULL body (before the clamp, so a
+   link past 300 chars isn't lost) and resolved against other landed notes
+   at sheet-open time by `NoteLinks.resolve` (never persisted as a Thing
+   reference — a target may not have synced yet, or may never exist).
+   `ThingSheetView` renders a "Links to" section and walks into a linked
+   note via a plain recursive re-presentation of itself
+   (`.sheet(item: $walkingToNote)`), the same shape `-agentThingProbe`
+   already uses elsewhere. The vault's own graph becomes walkable inside
+   Casberi — nothing an Obsidian sync client shows on a phone.
+
+2. **The crossing** (`NoteMoments.checkLinkCrossings`, mirroring
+   `SocialMoments.checkSlackCrossings`/`FeedFollowMoments
+   .checkRedditLinkCrossings` exactly): a freshly-modified Obsidian note
+   whose own body carries a URL already saved from somewhere else — a pure
+   corpus join, no extra network call.
+
+3. **The reach-back** (`NoteMoments.checkWikilinkReachBack`, Obsidian
+   only): a fresh note's `[[wikilink]]` reaching into another note that's
+   sat untouched for 180+ days — a real structural fact only this vault's
+   own graph can produce, never invented.
+
+4. **The floor** (`NoteMoments.checkFloorPushedBack`, Day One + Apple
+   Journal): an import that pushes the corpus's oldest thing further into
+   the past than it's ever gone — "Casberi now remembers back to March
+   2019." The honest, un-tally-able fact a 500-entry import can produce
+   (a count like "imported 480 entries" is exactly what the module
+   doctrine bans). Compares the corpus-wide floor read BEFORE the import
+   against the landed batch's earliest date; fires only when it moved back
+   30+ days, so a re-import of an unchanged export (which lands nothing)
+   or a handful of slightly-older stragglers can't retrigger it.
+
+**Apple Notes was deliberately left out of all four.** A shared-in note
+lands with `source == "You"`, the same as any other capture — iOS share
+extensions have no public API to identify the host app, so nothing ever
+tags a shared note `"Apple Notes"`. (§230 above is the fix for the dead
+`@Query` this same finding produced.) Building delight for a source string
+nothing ever writes would be exactly the fake-status the honesty rule
+forbids.
+
+**On this day, promoted into the Today brief** (`TodayBrief.observations`):
+`OnThisDay.find` used to render only beside a habit source's own calendar
+heatmap (`FeedScreen.calendarHeatmapSection`) — invisible to someone who
+never opens the Day One/Obsidian feed directly. Added as a fifth synthesis
+observation, same rule as everywhere else `OnThisDay` is read: a real
+anniversary match only, never invented, never padded when there isn't one.
