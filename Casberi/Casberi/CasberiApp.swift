@@ -92,6 +92,7 @@ struct CasberiApp: App {
     /// (see `ShellChromeFocusedKey`) — commands live at the Scene level,
     /// outside the view hierarchy `chrome` is injected into.
     @FocusedValue(\.shellChrome) private var focusedChrome: ShellChrome?
+    @Environment(\.openURL) private var openURL
 
     var body: some Scene {
         WindowGroup {
@@ -161,6 +162,41 @@ struct CasberiApp: App {
                     HomeRoute.shared.present(.settings)
                 }
                 .keyboardShortcut(",", modifiers: .command)
+            }
+            // ⌘[ back (2026-07-28) — the native chevron's own pop. See
+            // `HomeRoute.goBack()` for why there's no ⌘] forward.
+            CommandGroup(after: .toolbar) {
+                Button("Back") {
+                    HomeRoute.shared.goBack()
+                }
+                .keyboardShortcut("[", modifiers: .command)
+            }
+            // ⌘1–⌘9 switch the source chip in that position (2026-07-28) —
+            // Safari/Chrome's numbered-tab grammar. Position-based against
+            // `focusedChrome?.chipOrder` (mirrored live from MainSurface's
+            // own chip order, see `ShellChrome.chipOrder`), so a re-sort
+            // never strands the shortcut on a chip that moved. "All" is
+            // always first, so ⌘1 is always valid regardless of what's
+            // connected; later numbers disable themselves once there's no
+            // chip in that position rather than doing nothing silently.
+            CommandGroup(after: .toolbar) {
+                ForEach(1...9, id: \.self) { n in
+                    let order = focusedChrome?.chipOrder ?? ["All"]
+                    Button(n <= order.count ? "Switch to \(order[n - 1])" : "Switch to Chip \(n)") {
+                        guard n <= order.count else { return }
+                        FeedFilter.shared.source = order[n - 1]
+                    }
+                    .keyboardShortcut(KeyEquivalent(Character("\(n)")), modifiers: .command)
+                    .disabled(n > order.count)
+                }
+            }
+            // Help → the real docs, Mac convention (2026-07-28) — replaces
+            // the system's default "Casberi Help" item, which without this
+            // opens nothing (no .help bookshelf is bundled).
+            CommandGroup(replacing: .help) {
+                Button("Casberi Help") {
+                    openURL(URL(string: "https://casberi.app/docs.html")!)
+                }
             }
         }
     }

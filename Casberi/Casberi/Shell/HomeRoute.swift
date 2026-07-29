@@ -60,6 +60,18 @@ final class HomeRoute {
     /// product page all nest correctly. One shared entry point for every
     /// trigger (Feed's Manage, Apps' tile capsules, a product page's
     /// Connect/Open).
+    /// Mac's ⌘[ (2026-07-28) — the native back chevron's own move, exposed
+    /// as a shortcut. No ⌘] twin: `path` is reset directly from several
+    /// other files (a fresh landing after naming a counterparty, closing a
+    /// handle setup screen, …) and popped by the NavigationStack's own
+    /// binding on a native swipe-back, so there's no single point to
+    /// capture an honest forward-history from — a fake or unreliable
+    /// "forward" would be worse than none.
+    @MainActor func goBack() {
+        guard !path.isEmpty else { return }
+        path.removeLast()
+    }
+
     @MainActor func pushBridge(_ dest: BridgeRouter.Destination?) {
         guard let dest else { return }
         path.append(.bridge(dest))

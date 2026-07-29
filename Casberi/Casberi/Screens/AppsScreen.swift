@@ -1076,6 +1076,7 @@ struct AppsScreen: View {
             }
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
+            .dsHover()
         }
         .buttonStyle(PressSpring())
         .modifier(PeekPreview(

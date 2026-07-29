@@ -90,6 +90,16 @@ final class ShellChrome {
     var refreshRequest = 0
     func requestRefresh() { refreshRequest += 1 }
 
+    /// The chip strip's CURRENT order, mirrored here so Mac's ⌘1–⌘9 can read
+    /// it (2026-07-28) — `MainSurface.chipLabels` depends on the live corpus
+    /// (`@Query`) and `ChipMemory`'s tap-learning, neither of which the
+    /// Commands layer (outside the view hierarchy) can reach directly.
+    /// Position-based like Safari/Chrome's numbered tabs, not identity-based:
+    /// ⌘3 is "whatever's third right now", so a re-sort doesn't strand the
+    /// shortcut on a chip that moved. "All" is always first, so ⌘1 is always
+    /// valid; MainSurface keeps this in sync via `.onChange(of: chipLabels)`.
+    var chipOrder: [String] = ["All"]
+
     /// A thing ARRIVED while the person watched (a bridge sync, a pull, a
     /// share landing) — the source's chip does one catch bob: the capture
     /// flight's landing beat, generalized to everything that lands (delight

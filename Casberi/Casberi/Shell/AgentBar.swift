@@ -41,6 +41,7 @@ struct AgentBar: View {
             .padding(.horizontal, DS.Space.s4)
             .padding(.vertical, DS.Space.s3)
             .contentShape(Capsule())
+            .dsHover()
         }
         .buttonStyle(.plain)
         .dsGlass(cornerRadius: DS.Radius.pill)

@@ -2035,6 +2035,7 @@ private struct GenProjectTile: View {
         .frame(maxWidth: .infinity, minHeight: el.str(0) == "2" ? 132 : 120, alignment: .topLeading)
         .dsWidgetSurface()
         .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .dsHover()
         .onTapGesture {
             let name = el.str(1)
             if !name.isEmpty { projectTap?(name) }

@@ -179,8 +179,17 @@ struct RootShell: View {
         // from its `.lproj` live, no relaunch (LanguageStore).
         .environment(\.locale, LanguageStore.shared.locale)
         // Mode is the person's; a chosen photo implies the dark treatment.
+        // Mac follows the SYSTEM'S appearance instead (2026-07-28, user
+        // ruling): forcing a mode is right on iOS, where there's no system
+        // convention pulling the other way, but a light-mode Mac opening to
+        // a forced-dark window is exactly the jarring "doesn't feel native"
+        // gap Mac users notice first. `nil` means "inherit" — every
+        // `Color.adaptive` call reads the ACTUAL rendered
+        // `userInterfaceStyle` trait already (not this flag directly), so
+        // the whole app's color system follows along with no other change.
         .preferredColorScheme(
-            ThemeStore.shared.isLight && ThemeStore.shared.backgroundPhoto == nil ? .light : .dark
+            ProcessInfo.processInfo.isMacCatalystApp ? nil
+                : (ThemeStore.shared.isLight && ThemeStore.shared.backgroundPhoto == nil ? .light : .dark)
         )
         // casberi:// deep links — widgets and App Intents route through these.
         // casberi://home|feed|account switch tabs; casberi://thing/latest opens

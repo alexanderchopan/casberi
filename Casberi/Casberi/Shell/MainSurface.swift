@@ -319,6 +319,10 @@ struct MainSurface: View {
                 detail.thing = nil
             }
         }
+        // Mac's ⌘1–⌘9 (2026-07-28) reads this mirror — see `ShellChrome.chipOrder`.
+        .onChange(of: chipLabels, initial: true) { _, labels in
+            chrome.chipOrder = labels
+        }
     }
 
     private var surface: some View {

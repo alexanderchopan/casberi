@@ -2966,6 +2966,16 @@ struct FeedScreen: View {
                 // silhouette say "new day" without drawing a line.
                 .padding(.top, DS.Space.s6)
                 .padding(.bottom, DS.Space.s1)
+                // The system pins whichever header currently sits at the
+                // scroll position and gives IT — and only it — a material
+                // backdrop for legibility over scrolling content (Mac
+                // polish, 2026-07-28): the first day group reads with an
+                // unwanted gray box the later ones never get, since they're
+                // never the pinned one at rest. More visible under Mac
+                // Catalyst than iOS; explicit clear wins over the implicit
+                // material either way.
+                .listRowBackground(Color.clear)
+                .background(Color.clear)
             }
         }
     }

@@ -51,14 +51,26 @@ struct BerryRain: View {
     /// sweep reproduces. A source hue swaps in for the default berry blues,
     /// mixed full/dim the same way so the shape of the shower never changes,
     /// only its color.
-    fileprivate static func deal(seed: Int, hue: Color? = nil) -> [Drop] {
+    /// 16 was tuned against an iPhone's ~390pt width. Drop x-positions
+    /// already scale to `bounds.width` at render time, so the same 16 drops
+    /// spread across a wide Mac window (up to 3-4x that width) read as
+    /// visibly sparser — the shower thinning out exactly where there's most
+    /// room for it (Mac polish, 2026-07-28). `dropCount(for:)` scales the
+    /// COUNT to match, floored at the original 16 (never thinner than the
+    /// tuned iPhone shower) and capped at 48 (3x) so an ultra-wide display
+    /// doesn't deal hundreds of drops.
+    static func dropCount(for width: CGFloat) -> Int {
+        min(48, max(16, Int((width / 390) * 16)))
+    }
+
+    fileprivate static func deal(seed: Int, hue: Color? = nil, count: Int = 16) -> [Drop] {
         let palette = hue.map { [$0, $0.opacity(0.8), $0.opacity(0.6), $0.opacity(0.9)] } ?? berry
         var state = UInt64(bitPattern: Int64(seed)) &* 2654435761 | 1
         func next() -> Double {
             state = state &* 6364136223846793005 &+ 1442695040888963407
             return Double(state >> 33) / Double(UInt32.max)
         }
-        return (0..<16).map { i in
+        return (0..<count).map { i in
             Drop(id: i,
                  x: CGFloat(next()),
                  diameter: 8 + CGFloat(next()) * 12,
@@ -136,7 +148,7 @@ fileprivate final class BerryRainView: UIView {
     }
 
     private func deal(_ pulse: Int, hue: Color?) {
-        let drops = BerryRain.deal(seed: pulse, hue: hue)
+        let drops = BerryRain.deal(seed: pulse, hue: hue, count: BerryRain.dropCount(for: bounds.width))
         let start = CACurrentMediaTime()
         var batch: [CALayer] = []
         var lands: Double = 0
