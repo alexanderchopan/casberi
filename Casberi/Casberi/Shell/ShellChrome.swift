@@ -82,6 +82,14 @@ final class ShellChrome {
     /// app's default berry blue (delight pass 2026-07-21).
     var refreshHue: Color? = nil
 
+    /// Mac's ⌘R (Mac polish, 2026-07-28): a trackpad's overscroll gesture is
+    /// the only trigger `.refreshable` gives Catalyst, and unlike a real
+    /// finger pull it isn't reliably discoverable with a mouse — this is the
+    /// guaranteed-reachable twin. FeedScreen observes it and runs the exact
+    /// same refresh `.refreshable` runs (not just the delight half of it).
+    var refreshRequest = 0
+    func requestRefresh() { refreshRequest += 1 }
+
     /// A thing ARRIVED while the person watched (a bridge sync, a pull, a
     /// share landing) — the source's chip does one catch bob: the capture
     /// flight's landing beat, generalized to everything that lands (delight

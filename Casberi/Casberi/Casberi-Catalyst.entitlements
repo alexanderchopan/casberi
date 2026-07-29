@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Mac Catalyst's own entitlements. The iOS file (Casberi.entitlements)
+	     is deliberately NOT shared and NOT edited: on iOS an app group used as
+	     a keychain access group is UNPREFIXED (`group.com.casberi.app`) because
+	     app groups are already globally unique, while on macOS the same group
+	     must carry the team prefix. One file can't say both, and changing the
+	     iOS value would move TokenVault's DEFAULT access group (it passes no
+	     kSecAttrAccessGroup, so it lands in the first keychain-access-groups
+	     entry) — i.e. every already-shipped install would lose its stored keys.
+	     Hence: two files, iOS untouched, selected by
+	     CODE_SIGN_ENTITLEMENTS[sdk=macosx*] in the pbxproj. -->
+
+	<!-- Catalyst apps are always sandboxed. -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<!-- Every bridge is an outbound HTTP read. -->
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<!-- The Files/Obsidian security-scoped bookmarks. -->
+	<key>com.apple.security.files.user-selected.read-only</key>
+	<true/>
+	<key>com.apple.security.files.bookmarks.app-scope</key>
+	<true/>
+	<!-- Screenshot ingest. -->
+	<key>com.apple.security.personal-information.photos-library</key>
+	<true/>
+	<!-- Calendar + Contacts ingest. -->
+	<key>com.apple.security.personal-information.calendars</key>
+	<true/>
+	<key>com.apple.security.personal-information.addressbook</key>
+	<true/>
+
+	<key>com.apple.developer.weatherkit</key>
+	<true/>
+	<key>aps-environment</key>
+	<string>development</string>
+	<key>com.apple.developer.icloud-container-identifiers</key>
+	<array>
+		<string>iCloud.com.casberi.app</string>
+	</array>
+	<key>com.apple.developer.icloud-services</key>
+	<array>
+		<string>CloudKit</string>
+	</array>
+
+	<!-- Team-prefixed, the macOS rule. HealthKit/HomeKit are absent on
+	     purpose — both frameworks are unavailable under Mac Catalyst. -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>$(TeamIdentifierPrefix)group.com.casberi.app</string>
+	</array>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(TeamIdentifierPrefix)group.com.casberi.app</string>
+	</array>
+</dict>
+</plist>

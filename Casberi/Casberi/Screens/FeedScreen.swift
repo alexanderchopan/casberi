@@ -933,20 +933,14 @@ struct FeedScreen: View {
         // ONE pull, both outcomes. This List carried TWO `.refreshable` until
         // 2026-07-16 — SwiftUI keeps the outermost, so the real bridge sync
         // never ran on a pull; only the 600ms pulse stub did.
-        .refreshable {
-            // A pull inside one source's own feed rains in ITS hue instead
-            // of the app's default berry blue — "All" keeps the default
-            // (delight pass 2026-07-21). Set once; both this bump and
-            // refreshFeed()'s own read the same stored hue.
-            // Scoped to one wallet, the rain falls in THAT wallet's colour
-            // (prd §171, 2026-07-22) — the crown already retints on a scope
-            // switch (§159), so the refresh that follows should agree. Every
-            // other room keeps the source's hue; "All" keeps the default berry.
-            chrome.refreshHue = source == "Wallet"
-                ? (selectedWallet.map(WalletFace.tint) ?? DS.washHue(for: source))
-                : (source == "All" ? nil : DS.washHue(for: source))
-            chrome.refreshPulse += 1   // spins the avatar door, deals the berry rain
-            await refreshFeed()
+        .refreshable { await performPull() }
+        // Mac's ⌘R (2026-07-28): a trackpad overscroll gesture is the only
+        // trigger `.refreshable` gives Catalyst, and it isn't reliably
+        // discoverable with a mouse — this runs the identical pull, just
+        // triggered from the menu bar instead of a gesture.
+        .onChange(of: chrome.refreshRequest) { _, _ in
+            guard isActive else { return }
+            Task { await performPull() }
         }
         .animation(DS.Motion.standard, value: things.count)   // new things rise in
         .scrollContentBackground(.hidden)
@@ -3051,6 +3045,26 @@ struct FeedScreen: View {
     /// is why this returns as soon as the work is handed off (2026-07-28): the
     /// cascade IS the beat, and holding the refresh control's spinner open for
     /// an extra 450ms afterwards only made the gesture feel slow.
+    /// The one pull, however it's triggered — a real gesture (`.refreshable`)
+    /// or Mac's ⌘R (`chrome.refreshRequest`, see the `.onChange` above). Kept
+    /// as one function so the two triggers can never drift into dealing the
+    /// hue/pulse/sync sequence differently.
+    private func performPull() async {
+        // A pull inside one source's own feed rains in ITS hue instead
+        // of the app's default berry blue — "All" keeps the default
+        // (delight pass 2026-07-21). Set once; both this bump and
+        // refreshFeed()'s own read the same stored hue.
+        // Scoped to one wallet, the rain falls in THAT wallet's colour
+        // (prd §171, 2026-07-22) — the crown already retints on a scope
+        // switch (§159), so the refresh that follows should agree. Every
+        // other room keeps the source's hue; "All" keeps the default berry.
+        chrome.refreshHue = source == "Wallet"
+            ? (selectedWallet.map(WalletFace.tint) ?? DS.washHue(for: source))
+            : (source == "All" ? nil : DS.washHue(for: source))
+        chrome.refreshPulse += 1   // spins the avatar door, deals the berry rain
+        await refreshFeed()
+    }
+
     private func refreshFeed() async {
         // ONE pull, ONE shower (2026-07-28). The `.refreshable` closure above
         // already bumped `refreshPulse`; bumping it again here dealt a SECOND

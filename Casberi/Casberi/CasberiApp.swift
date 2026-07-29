@@ -57,10 +57,62 @@ struct CasberiApp: App {
         WalletBackgroundRefresh.register()
     }
 
+    /// Reads RootShell's per-window `chrome` back through `FocusedValues`
+    /// (see `ShellChromeFocusedKey`) — commands live at the Scene level,
+    /// outside the view hierarchy `chrome` is injected into.
+    @FocusedValue(\.shellChrome) private var focusedChrome: ShellChrome?
+
     var body: some Scene {
         WindowGroup {
             RootShell()
         }
         .modelContainer(container)
+        // Mac menu bar commands (2026-07-28, Mac polish): the app is
+        // otherwise chromeless by design (no nav bar, no tab bar — the chip
+        // strip owns the top of the screen), which reads as an unfinished
+        // Mac app if the menu bar carries only the system defaults. These
+        // mirror the FAB/composer, the pull-to-refresh gesture, and Settings
+        // — the same three doors the phone already has, just also reachable
+        // without a touchscreen.
+        .commands {
+            CommandGroup(replacing: .newItem) {
+                Button("New Thing…") {
+                    focusedChrome?.openComposer()
+                }
+                .keyboardShortcut("n", modifiers: .command)
+            }
+            // NOTE (verified live, 2026-07-28): Mac Catalyst's default
+            // document-menu scaffolding (Duplicate/Move/Rename/Export As —
+            // this app has no document model, so all four are dead
+            // controls, the honesty rule) is NOT reachable through
+            // SwiftUI's `CommandGroup` — `.saveItem`/`.importExport`
+            // replacements compile but do nothing, confirmed by rebuilding
+            // and checking the live File menu. UIKit synthesizes these
+            // outside the placements Commands can address; removing them
+            // needs a `UIApplicationDelegate.buildMenu(with:)` override
+            // (`builder.remove(menu:)` on the relevant identifiers) — a
+            // separate, untried change, not attempted here.
+            // NOTE (verified live, 2026-07-28): a custom ⌘F "Find…" here
+            // does NOT work — it's absorbed into Mac Catalyst's own
+            // default "Find" submenu (Find…/Find & Replace/Find Next/
+            // Find Previous), which the system keeps permanently DISABLED
+            // in an app with no NSTextFinder-compatible text view. The
+            // button silently never fires; ⌘F does nothing rather than
+            // opening the composer. Dropped rather than ship a menu item
+            // that reads as broken. Reaching the composer without a mouse
+            // still works via ⌘N.
+            CommandGroup(after: .toolbar) {
+                Button("Refresh") {
+                    focusedChrome?.requestRefresh()
+                }
+                .keyboardShortcut("r", modifiers: .command)
+            }
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings…") {
+                    HomeRoute.shared.present(.settings)
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
+        }
     }
 }

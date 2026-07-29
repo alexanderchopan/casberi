@@ -55,6 +55,13 @@ struct MainSurface: View {
 
     private var isRegular: Bool { horizontalSizeClass == .regular }
     private var showsPane: Bool { isRegular && surfaceWidth >= PadLayout.minWidthForPane }
+    /// The rail is an iPad-regular-width answer specifically — a Mac window
+    /// also reports `.regular` (Catalyst has no compact width in practice),
+    /// but the horizontal strip is the one built for a wide/landscape-shaped
+    /// surface (user ruling 2026-07-28), so Mac keeps it rather than
+    /// silently inheriting the iPad rail rule. The detail pane (`showsPane`)
+    /// is untouched — that's a width question, not an axis one.
+    private var showsRail: Bool { isRegular && !ProcessInfo.processInfo.isMacCatalystApp }
 
     /// The corpus MINUS search-only sources (Contacts) — the same rule Home and
     /// Feed already share (`Corpus.surfaced`), so the chip row lists exactly the
@@ -260,7 +267,7 @@ struct MainSurface: View {
         // and the pour is the same top-anchored 500pt gradient on both sides,
         // so the two line up with no seam.
         HStack(spacing: 0) {
-            if isRegular {
+            if showsRail {
                 sourceStrip(axis: .vertical)
                     .background {
                         ZStack(alignment: .top) {
@@ -288,8 +295,8 @@ struct MainSurface: View {
             // the feed alone — so the shell says which one it computed. Logs
             // on every rotation, which is exactly when it changes.
             NSLog("[Casberi] padLayout: width=%.0f regular=%@ rail=%.0f pane=%@",
-                  width, isRegular ? "YES" : "NO",
-                  isRegular ? PadLayout.railWidth : 0,
+                  width, showsRail ? "YES" : "NO",
+                  showsRail ? PadLayout.railWidth : 0,
                   showsPane ? String(format: "%.0f", PadLayout.paneWidth(for: width))
                             : "none (sheet)")
             #endif
@@ -346,7 +353,7 @@ struct MainSurface: View {
             // rows start beside it rather than under it, and the crown pour
             // painted by this surface's own background still runs behind it.
             .safeAreaInset(edge: .top, spacing: 0) {
-                if !isRegular {
+                if !showsRail {
                     sourceStrip(axis: .horizontal)
                         .padding(.top, DS.Space.s6)
                         .padding(.bottom, DS.Space.s2)

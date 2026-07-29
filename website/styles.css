@@ -518,6 +518,7 @@ p.lede strong { color: var(--ink); font-weight: 600; }
   text-wrap: balance;
 }
 .hero .hero-chips { margin-top: 18px; max-width: 720px; margin-left: auto; margin-right: auto; }
+.hero .platform-note { margin-top: 14px; font-size: 13.5px; color: var(--muted); text-align: center; }
 
 /* ---------- FAQ ---------- */
 .faq { max-width: 720px; margin: 28px auto 0; display: grid; gap: 10px; }

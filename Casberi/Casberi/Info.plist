@@ -75,6 +75,15 @@
 			</dict>
 		</dict>
 	</array>
+	<!-- ITMS-90737 (Apple, build 175): declaring CFBundleDocumentTypes makes
+	     this a document-based app, so one of UISupportsDocumentBrowser /
+	     LSSupportsOpeningDocumentsInPlace MUST be declared. Casberi has no
+	     UIDocumentBrowserViewController, and it reads a handed-in .opml
+	     security-scoped IN PLACE (RSSScreen.parseOPML) rather than needing the
+	     system to stage a copy in Documents/Inbox — so YES (Apple's own
+	     recommendation) is the honest value here. -->
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
