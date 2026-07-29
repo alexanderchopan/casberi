@@ -9854,3 +9854,50 @@ Accepting it registers that exchange's seat as well as landing the
 market, since a followed market with no seat would have no source chip to
 sit under. Still one tap, still refusable, still silent when there's no
 twin — the auto-follow refusal above is untouched.
+
+## §235 — Follow becomes an explicit target; the bar carries the move (2026-07-29)
+
+Three defects in §234's room, found by asking how a user actually follows
+something ("is there a swipe?").
+
+**1. Tap-to-follow was a silent write on the read gesture.** Every outcome
+row was one `Button` that followed on tap — but a row is a read with ONE
+gesture everywhere else in this app (ruling 2026-07-16: tap opens the
+thing sheet). Same gesture, opposite meaning, no confirmation, and no way
+to inspect a market at all: the only affordance available committed you.
+Swipe was NOT the fix (design law: swipe verbs are reads; writes live in
+the sheet with consent). Now **two targets**: the row opens
+`PredictionPreviewSheet`, and a trailing capsule follows. The capsule
+becomes a state, not a hole, once followed.
+
+The preview is routed through `FeedScreen`'s existing single
+`.sheet(item: $feedSheet)` as a new `.market` case, NOT presented by the
+browse section — that section renders inside List rows, and a `.sheet` on
+a row resolves to the same presenting controller as the screen's own,
+which is the half-open-then-close bug (ruling 2026-07-28). It carries a
+`PredictionPreview`, which has no `Thing` yet (nothing is landed until you
+follow) and so can't ride `.thing`. `PredictionFollow.follow` is the one
+place following happens, so the preview button and the row capsule can't
+drift.
+
+**2. A followed market vanished from the book.** `loadIfNeeded` filtered
+out anything already in the corpus, so the list silently shrank as you
+used it and there was nowhere to return to what you'd just followed. Rows
+now STAY and mark themselves followed (`followedRefs`, one set read per
+load across both venues).
+
+**3. The bar carried nothing but length.** Every outcome, every venue,
+the same tint. `PredictionOddsBar` (new, shared by the cards and the
+preview) marks the PRIOR level on the same bar — data both bridges already
+parse — so a market at 68% that was 59% last week reads as a move rather
+than a quantity. Omitted under half a point, where there is no direction
+to claim (§83 ③); race also-rans drop to `textTertiary` so a field of four
+scans by weight.
+
+**Also fixed, both found while in the file:** `loaded` was written twice
+and never read, so the room painted blank through Kalshi's per-event
+hydration and then popped — it now drives three skeleton cards and a
+`emptyLine` that names WHICH read came back empty (a too-narrow category
+shouldn't read as a dead exchange). And the big probability now softens to
+`textSecondary` on a thin book, matching what §233's own mockup showed and
+what §83 ② requires everywhere else.

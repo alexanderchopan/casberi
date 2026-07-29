@@ -24,6 +24,8 @@ import SwiftData
 struct PredictionRoomBook: View {
     /// "Kalshi" or "Polymarket" — the room this is heading.
     let source: String
+    /// Raised to `FeedScreen`, which owns the screen's one presentation.
+    let onPreview: (PredictionPreview) -> Void
 
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
@@ -60,7 +62,8 @@ struct PredictionRoomBook: View {
             PredictionBrowseSection(
                 scope: bothConnected ? scope : ownScope,
                 onWatchedKalshi: { _ in registerIfNeeded(name: "Kalshi", id: "kalshi") },
-                onWatchedPolymarket: { _ in registerIfNeeded(name: "Polymarket", id: "polymarket") })
+                onWatchedPolymarket: { _ in registerIfNeeded(name: "Polymarket", id: "polymarket") },
+                onPreview: onPreview)
             // Names the boundary: everything above is the live book (nothing
             // saved), everything the feed renders below is what you actually
             // follow. Shown only when there IS something below — an empty

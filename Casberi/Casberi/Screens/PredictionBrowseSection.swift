@@ -81,7 +81,13 @@ private struct BrowseOutcome: Identifiable {
     let id: String
     let name: String
     let probability: Double
-    let watch: () -> Void
+    let previousProbability: Double?
+    /// Already in the corpus — the row says so and offers no Follow, rather
+    /// than disappearing from the book. A book that silently shrinks as you
+    /// use it loses your place and gives you nowhere to go back to.
+    let isFollowed: Bool
+    /// Everything the preview sheet and the Follow capsule both need.
+    let preview: PredictionPreview
 }
 
 /// One browse card, venue-neutral. A race has several `outcomes`
@@ -131,6 +137,12 @@ struct PredictionBrowseSection: View {
     let scope: PredictionVenueScope
     let onWatchedKalshi: (Thing) -> Void
     let onWatchedPolymarket: (Thing) -> Void
+    /// Hands the preview UP to whoever owns a presentation — this view lives
+    /// inside `FeedScreen`'s List rows, and a `.sheet` on a row resolves to
+    /// the same presenting controller as the screen's own, which is the
+    /// half-open-then-close bug (ruling 2026-07-28). So the room routes it
+    /// through `FeedSheetRoute` instead of presenting here.
+    var onPreview: (PredictionPreview) -> Void = { _ in }
 
     @Environment(\.modelContext) private var modelContext
     /// Needed by `acceptTwin` — taking the twin offer registers the other
@@ -149,6 +161,9 @@ struct PredictionBrowseSection: View {
     @State private var kalshiRows: [KalshiWatch.Resolved] = []
     @State private var polymarketRows: [PolymarketBridge.Resolved] = []
     @State private var disagreements: [PredictionDisagreement.Pair] = []
+    /// sourceRefs already in the corpus, across BOTH venues — read once per
+    /// load so each row can mark itself followed without its own fetch.
+    @State private var followedRefs: Set<String> = []
     @State private var loaded = false
 
     /// The other exchange's price for the market just followed (prd §234) —
@@ -248,8 +263,21 @@ struct PredictionBrowseSection: View {
                 }
             }
 
-            ForEach(cards) { card in
-                browseCard(card)
+            // The book takes real time to arrive — Kalshi hydrates one small
+            // fetch PER matching event (see `KalshiWatch.search`'s two-phase
+            // note), so a blank room that suddenly pops full is the normal
+            // case, not the edge one. `loaded` was tracked and never read
+            // until 2026-07-29; this is what it's for.
+            if !loaded && cards.isEmpty {
+                ForEach(0..<3, id: \.self) { _ in bookSkeleton }
+            } else if loaded && cards.isEmpty {
+                Text(emptyLine)
+                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                    .padding(.vertical, DS.Space.s3)
+            } else {
+                ForEach(cards) { card in
+                    browseCard(card)
+                }
             }
         }
         // Re-runs on scope, category AND query — each is a different read of
@@ -294,14 +322,13 @@ struct PredictionBrowseSection: View {
             ? PolymarketBridge.search(q, limit: 24, category: category) : []
         async let kc: [String] = (scope == .kalshi || scope == .all) ? KalshiWatch.categories() : []
         async let pc: [String] = (scope == .polymarket || scope == .all) ? PolymarketBridge.categories() : []
-        // Already-watched markets drop out of browse the same way a search
-        // hit does (`displayHits`' own rule, both screens) — otherwise a
-        // watched market sits in the list forever, tappable, doing nothing
-        // (`add`'s own dedupe guard just returns nil on a repeat tap).
-        let watchedKalshi = IngestSupport.existingSourceRefs(modelContext, source: "Kalshi")
-        let watchedPolymarket = IngestSupport.existingSourceRefs(modelContext, source: "Polymarket")
-        kalshiRows = await k.filter { !watchedKalshi.contains("kalshi:\($0.ticker)") }
-        polymarketRows = await p.filter { !watchedPolymarket.contains("\(PolymarketBridge.refPrefix)\($0.conditionId)") }
+        // A followed market STAYS in the book, marked (2026-07-29) — it used
+        // to be filtered out, which quietly shrank the list under you and
+        // left nowhere to go back to the thing you'd just followed.
+        followedRefs = IngestSupport.existingSourceRefs(modelContext, source: "Kalshi")
+            .union(IngestSupport.existingSourceRefs(modelContext, source: "Polymarket"))
+        kalshiRows = await k
+        polymarketRows = await p
         kalshiCategories = await kc
         polymarketCategories = await pc
         if scope == .all {
@@ -317,7 +344,10 @@ struct PredictionBrowseSection: View {
     private func kalshiCard(_ race: KalshiWatch.Race) -> BrowseCard {
         let outcomes = race.outcomes.map { m in
             BrowseOutcome(id: m.ticker, name: m.subtitle.isEmpty ? m.title : m.subtitle,
-                         probability: m.probability) { watchKalshi(m) }
+                          probability: m.probability,
+                          previousProbability: m.previousProbability,
+                          isFollowed: followedRefs.contains("kalshi:\(m.ticker)"),
+                          preview: PredictionPreview(kalshi: m))
         }
         return BrowseCard(id: "kalshi:\(race.eventTicker)",
                           venueBadge: scope == .all ? "Kalshi" : nil,
@@ -331,7 +361,10 @@ struct PredictionBrowseSection: View {
     private func polymarketCard(_ race: PolymarketBridge.Race) -> BrowseCard {
         let outcomes = race.outcomes.map { m in
             BrowseOutcome(id: m.conditionId, name: m.subtitle.isEmpty ? m.title : m.subtitle,
-                         probability: m.probability) { watchPolymarket(m) }
+                          probability: m.probability,
+                          previousProbability: m.previousProbability,
+                          isFollowed: followedRefs.contains("\(PolymarketBridge.refPrefix)\(m.conditionId)"),
+                          preview: PredictionPreview(polymarket: m))
         }
         return BrowseCard(id: "polymarket:\(race.slug)",
                           venueBadge: scope == .all ? "Polymarket" : nil,
@@ -342,26 +375,35 @@ struct PredictionBrowseSection: View {
                           isThin: race.outcomes.first?.isThin ?? false)
     }
 
-    private func watchKalshi(_ market: KalshiWatch.Resolved) {
+    /// The one write in this whole view. Reached from a row's explicit
+    /// Follow capsule and from the preview sheet's own button — never from a
+    /// plain row tap, which reads (opens the preview) like every other row
+    /// in the app.
+    private func follow(_ preview: PredictionPreview) {
         DSHaptic.tap()
-        if let thing = KalshiWatch.add(market, context: modelContext) {
-            kalshiRows.removeAll { $0.ticker == market.ticker }
+        guard let thing = PredictionFollow.follow(preview, store: store, context: modelContext)
+        else { return }
+        followedRefs.insert("\(preview.source.refPrefix):\(preview.marketID)")
+        switch preview.source {
+        case .kalshi:
             onWatchedKalshi(thing)
             askTwin(for: PredictionMarket(
-                source: .kalshi, id: market.ticker, title: market.title,
-                subtitle: market.subtitle, url: thing.content,
-                probability: market.probability, volume: market.volume,
-                resolved: false, yesWon: nil, closeTime: market.closeTime))
+                source: .kalshi, id: preview.marketID, title: preview.title,
+                subtitle: preview.outcome, url: thing.content,
+                probability: preview.probability, volume: preview.kalshi?.volume ?? 0,
+                resolved: false, yesWon: nil, closeTime: preview.closeTime))
+        case .polymarket:
+            onWatchedPolymarket(thing)
+            if let m = preview.polymarket { askTwin(for: m.prediction) }
         }
     }
 
+    private func watchKalshi(_ market: KalshiWatch.Resolved) {
+        follow(PredictionPreview(kalshi: market))
+    }
+
     private func watchPolymarket(_ market: PolymarketBridge.Resolved) {
-        DSHaptic.tap()
-        if let thing = PolymarketBridge.add(market, context: modelContext) {
-            polymarketRows.removeAll { $0.conditionId == market.conditionId }
-            onWatchedPolymarket(thing)
-            askTwin(for: market.prediction)
-        }
+        follow(PredictionPreview(polymarket: market))
     }
 
     /// Fire-and-forget: no twin is the common case and says nothing, so a
@@ -400,47 +442,11 @@ struct PredictionBrowseSection: View {
             }
 
             if card.outcomes.count > 1 {
-                ForEach(card.outcomes) { outcome in
-                    Button(action: outcome.watch) {
-                        HStack(spacing: DS.Space.s3) {
-                            Text(outcome.name).dsText(.callout15).foregroundStyle(DS.textSecondary)
-                                .lineLimit(1).frame(width: 104, alignment: .leading)
-                            GeometryReader { geo in
-                                Capsule().fill(DS.fillFaint)
-                                    .overlay(alignment: .leading) {
-                                        Capsule().fill(DS.tint)
-                                            .frame(width: geo.size.width * outcome.probability)
-                                    }
-                            }
-                            .frame(height: 8)
-                            Text("\(Int((outcome.probability * 100).rounded()))%")
-                                .dsText(.body17).fontWeight(.semibold).monospacedDigit()
-                                .frame(width: 42, alignment: .trailing)
-                        }
-                    }
-                    .buttonStyle(.plain)
+                ForEach(Array(card.outcomes.enumerated()), id: \.element.id) { index, outcome in
+                    outcomeRow(outcome, isLead: index == 0, thin: card.isThin)
                 }
             } else if let only = card.outcomes.first {
-                Button(action: only.watch) {
-                    VStack(alignment: .leading, spacing: DS.Space.s2) {
-                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                            Text("\(Int((only.probability * 100).rounded()))%")
-                                .dsText(.heading22).fontWeight(.bold).monospacedDigit()
-                            if let previous = card.previousProbability {
-                                TokenDeltaPill(change: only.probability - previous, label: card.deltaLabel, points: true)
-                            }
-                        }
-                        GeometryReader { geo in
-                            Capsule().fill(DS.fillFaint)
-                                .overlay(alignment: .leading) {
-                                    Capsule().fill(DS.tint)
-                                        .frame(width: geo.size.width * only.probability)
-                                }
-                        }
-                        .frame(height: 8)
-                    }
-                }
-                .buttonStyle(.plain)
+                binaryRow(only, card: card)
             }
 
             HStack(spacing: DS.Space.s2) {
@@ -459,6 +465,115 @@ struct PredictionBrowseSection: View {
             }
         }
         .dsListCardRow()
+    }
+
+    /// One outcome in a race. TWO tap targets, deliberately separated: the
+    /// row reads (opens the preview), the trailing capsule writes (follows).
+    /// A single whole-row Button that followed on tap was the first build's
+    /// mistake — it made the app's read gesture perform a silent write, and
+    /// left no way to inspect a market without committing to it.
+    private func outcomeRow(_ outcome: BrowseOutcome, isLead: Bool, thin: Bool) -> some View {
+        HStack(spacing: DS.Space.s3) {
+            Button { preview(outcome) } label: {
+                HStack(spacing: DS.Space.s3) {
+                    Text(outcome.name).dsText(.callout15)
+                        .foregroundStyle(isLead ? DS.textPrimary : DS.textSecondary)
+                        .fontWeight(isLead ? .semibold : .regular)
+                        .lineLimit(1).frame(width: 96, alignment: .leading)
+                    PredictionOddsBar(probability: outcome.probability,
+                                      previous: outcome.previousProbability,
+                                      isLead: isLead)
+                        .frame(height: 8)
+                    Text("\(Int((outcome.probability * 100).rounded()))%")
+                        .dsText(.body17).fontWeight(.semibold).monospacedDigit()
+                        // A thin book's number is treated gently wherever it
+                        // renders (§83 ②).
+                        .foregroundStyle(thin ? DS.textSecondary : DS.textPrimary)
+                        .frame(width: 42, alignment: .trailing)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            followCapsule(outcome)
+        }
+    }
+
+    private func binaryRow(_ only: BrowseOutcome, card: BrowseCard) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Button { preview(only) } label: {
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        Text("\(Int((only.probability * 100).rounded()))%")
+                            .dsText(.heading22).fontWeight(.bold).monospacedDigit()
+                            .foregroundStyle(card.isThin ? DS.textSecondary : DS.textPrimary)
+                        if let previous = card.previousProbability {
+                            TokenDeltaPill(change: only.probability - previous,
+                                           label: card.deltaLabel, points: true)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                Spacer(minLength: DS.Space.s2)
+                followCapsule(only)
+            }
+            PredictionOddsBar(probability: only.probability,
+                              previous: only.previousProbability)
+                .frame(height: 8)
+        }
+    }
+
+    /// The write target. Reads as a state once followed rather than
+    /// disappearing — the book keeps its shape as you use it.
+    @ViewBuilder
+    private func followCapsule(_ outcome: BrowseOutcome) -> some View {
+        if outcome.isFollowed {
+            Label("Following", systemImage: "checkmark")
+                .labelStyle(.iconOnly)
+                .dsText(.subhead13)
+                .foregroundStyle(DS.confirm)
+                .frame(width: 30, height: 30)
+                .background(Circle().fill(DS.fillFaint))
+                .accessibilityLabel("Following")
+        } else {
+            Button { follow(outcome.preview) } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(DS.tint)
+                    .frame(width: 30, height: 30)
+                    .background(Circle().fill(DS.fillFaint))
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Follow \(outcome.name)")
+        }
+    }
+
+    private func preview(_ outcome: BrowseOutcome) {
+        DSHaptic.selection()
+        onPreview(outcome.preview)
+    }
+
+    /// Says WHICH read came back empty, so a too-narrow filter doesn't read
+    /// as a dead exchange.
+    private var emptyLine: String {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !q.isEmpty, let category {
+            return String(localized: "No open \(category) market matches “\(q)”.")
+        }
+        if !q.isEmpty { return String(localized: "No open market matches “\(q)”.") }
+        if let category { return String(localized: "Nothing open in \(category) right now.") }
+        return String(localized: "Couldn't reach the market book just now.")
+    }
+
+    private var bookSkeleton: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            Capsule().fill(DS.fillFaint).frame(width: 220, height: 14)
+            Capsule().fill(DS.fillFaint).frame(height: 8)
+            Capsule().fill(DS.fillFaint).frame(width: 120, height: 8)
+        }
+        .dsListCardRow()
+        .redacted(reason: .placeholder)
     }
 
     /// "Polymarket prices this at 71% — 9 points apart." The line comes from

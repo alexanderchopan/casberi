@@ -74,6 +74,13 @@ struct FeedScreen: View {
         case token(TokenQuickRoute)
         case allocation
         case worthALook
+        /// A market from the live book, previewed BEFORE it's followed
+        /// (prd §234) — so it has no `Thing` yet and can't ride `.thing`.
+        /// Routed here rather than presented by the browse section itself
+        /// because that section lives inside this List's rows, and a `.sheet`
+        /// on a row resolves to the same presenting controller as this one —
+        /// the half-open-then-close bug (ruling 2026-07-28).
+        case market(PredictionPreview)
 
         var id: String {
             switch self {
@@ -81,6 +88,7 @@ struct FeedScreen: View {
             case .token(let r): "token:\(r.id)"
             case .allocation: "allocation"
             case .worthALook: "worthALook"
+            case .market(let p): "market:\(p.id)"
             }
         }
     }
@@ -834,7 +842,7 @@ struct FeedScreen: View {
     /// reaches the All feed) only on an explicit Follow.
     @ViewBuilder private var predictionBook: some View {
         if LiveRoomSources.has(source) {
-            PredictionRoomBook(source: source)
+            PredictionRoomBook(source: source) { feedSheet = .market($0) }
         }
     }
 
@@ -1085,6 +1093,8 @@ struct FeedScreen: View {
                     warnings: walletLive.warnings,
                     flagged: walletLive.flagged,
                     activeApprovals: walletLive.activeApprovals)
+            case .market(let preview):
+                PredictionPreviewSheet(preview: preview)
             }
         }
         #if !targetEnvironment(macCatalyst)
