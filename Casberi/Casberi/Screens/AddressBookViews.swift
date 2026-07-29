@@ -346,21 +346,23 @@ struct AddressCard: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 ForEach(Array(Array(things.prefix(6)).keyed.enumerated()), id: \.element.id) { i, row in
-                    let thing = row.thing
-                    HStack(spacing: DS.Space.s3) {
-                        KindGlyph(kind: thing.kind, size: 26)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(thing.title).dsText(.subhead13)
-                                .foregroundStyle(DS.textPrimary).lineLimit(1)
-                            Text(thing.capturedAt.formatted(.dateTime.month(.abbreviated).day()))
-                                .dsText(.label12).foregroundStyle(DS.textTertiary)
+                    // Corollary 3 (build 176) — see `ThingRowKeying`.
+                    if let thing = row.live {
+                        HStack(spacing: DS.Space.s3) {
+                            KindGlyph(kind: thing.kind, size: 26)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(thing.title).dsText(.subhead13)
+                                    .foregroundStyle(DS.textPrimary).lineLimit(1)
+                                Text(thing.capturedAt.formatted(.dateTime.month(.abbreviated).day()))
+                                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                            }
+                            Spacer(minLength: 0)
                         }
-                        Spacer(minLength: 0)
+                        // The cascade (prd §171) — the app's own sheet grammar,
+                        // which this card was missing: your history with someone
+                        // arrives a beat at a time rather than as a slab.
+                        .settleIn(delay: 0.05 + Double(i) * 0.04)
                     }
-                    // The cascade (prd §171) — the app's own sheet grammar,
-                    // which this card was missing: your history with someone
-                    // arrives a beat at a time rather than as a slab.
-                    .settleIn(delay: 0.05 + Double(i) * 0.04)
                 }
                 if things.count > 6 {
                     NavigationLink {
@@ -460,16 +462,18 @@ struct AddressHistoryScreen: View {
             // `.keyed` per the CLAUDE.md rule against keying a ForEach on a
             // derived array of raw `Thing` refs — see `ThingRowKeying.swift`.
             ForEach(history.keyed) { row in
-                let thing = row.thing
-                HStack(spacing: DS.Space.s3) {
-                    KindGlyph(kind: thing.kind, size: 26)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(thing.title).dsText(.subhead13)
-                            .foregroundStyle(DS.textPrimary).lineLimit(1)
-                        Text(thing.capturedAt.formatted(.dateTime.month(.abbreviated).day().year()))
-                            .dsText(.label12).foregroundStyle(DS.textTertiary)
+                // Corollary 3 (build 176) — see `ThingRowKeying`.
+                if let thing = row.live {
+                    HStack(spacing: DS.Space.s3) {
+                        KindGlyph(kind: thing.kind, size: 26)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(thing.title).dsText(.subhead13)
+                                .foregroundStyle(DS.textPrimary).lineLimit(1)
+                            Text(thing.capturedAt.formatted(.dateTime.month(.abbreviated).day().year()))
+                                .dsText(.label12).foregroundStyle(DS.textTertiary)
+                        }
+                        Spacer(minLength: 0)
                     }
-                    Spacer(minLength: 0)
                 }
             }
             .listRowSeparator(.hidden)

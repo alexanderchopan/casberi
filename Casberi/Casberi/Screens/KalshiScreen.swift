@@ -131,41 +131,43 @@ struct KalshiScreen: View {
     private var settledSection: some View {
         Section {
             ForEach(settledWatched.keyed) { row in
-                let thing = row.thing
-                HStack(spacing: DS.Space.s3) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(thing.title)
-                            .dsText(.body17).foregroundStyle(DS.textSecondary)
-                            .lineLimit(2)
-                        if let watched = thing.watchPriceUsd {
-                            Text("You watched at \(Int((watched * 100).rounded()))%")
-                                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                // Corollary 3 (build 176) — see `ThingRowKeying`.
+                if let thing = row.live {
+                    HStack(spacing: DS.Space.s3) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(thing.title)
+                                .dsText(.body17).foregroundStyle(DS.textSecondary)
+                                .lineLimit(2)
+                            if let watched = thing.watchPriceUsd {
+                                Text("You watched at \(Int((watched * 100).rounded()))%")
+                                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                            }
+                        }
+                        Spacer(minLength: DS.Space.s2)
+                        Text(thing.marketResolvedYes == true ? "Yes" : "No")
+                            .dsText(.body17).fontWeight(.bold)
+                            .foregroundStyle(DS.textPrimary)
+                    }
+                    .dsListCardRow()
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            if let i = watched.firstIndex(where: { $0.id == thing.id }) {
+                                unwatch(at: IndexSet(integer: i))
+                            }
+                        } label: {
+                            Label("Remove", systemImage: "trash")
                         }
                     }
-                    Spacer(minLength: DS.Space.s2)
-                    Text(thing.marketResolvedYes == true ? "Yes" : "No")
-                        .dsText(.body17).fontWeight(.bold)
-                        .foregroundStyle(DS.textPrimary)
-                }
-                .dsListCardRow()
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(role: .destructive) {
-                        if let i = watched.firstIndex(where: { $0.id == thing.id }) {
-                            unwatch(at: IndexSet(integer: i))
+                    // A swipe has no Mac-mouse equivalent — right-click mirrors it
+                    // (Mac polish, 2026-07-28).
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            if let i = watched.firstIndex(where: { $0.id == thing.id }) {
+                                unwatch(at: IndexSet(integer: i))
+                            }
+                        } label: {
+                            Label("Remove", systemImage: "trash")
                         }
-                    } label: {
-                        Label("Remove", systemImage: "trash")
-                    }
-                }
-                // A swipe has no Mac-mouse equivalent — right-click mirrors it
-                // (Mac polish, 2026-07-28).
-                .contextMenu {
-                    Button(role: .destructive) {
-                        if let i = watched.firstIndex(where: { $0.id == thing.id }) {
-                            unwatch(at: IndexSet(integer: i))
-                        }
-                    } label: {
-                        Label("Remove", systemImage: "trash")
                     }
                 }
             }
@@ -181,34 +183,36 @@ struct KalshiScreen: View {
     private var watchlistSection: some View {
         Section {
             ForEach(liveWatched.keyed) { row in
-                let thing = row.thing
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(thing.title)
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .lineLimit(2)
-                    Text(LiveTimeText.short(thing.capturedAt))
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                }
-                .dsListCardRow()
-                .modifier(SwipeHintNudge(active: thing.id == hintTokenID) { swipeCoachDone = true })
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(role: .destructive) {
-                        if let i = watched.firstIndex(where: { $0.id == thing.id }) {
-                            unwatch(at: IndexSet(integer: i))
-                        }
-                    } label: {
-                        Label("Unwatch", systemImage: "trash")
+                // Corollary 3 (build 176) — see `ThingRowKeying`.
+                if let thing = row.live {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(thing.title)
+                            .dsText(.body17).foregroundStyle(DS.textPrimary)
+                            .lineLimit(2)
+                        Text(LiveTimeText.short(thing.capturedAt))
+                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     }
-                }
-                // A swipe has no Mac-mouse equivalent — right-click mirrors it
-                // (Mac polish, 2026-07-28).
-                .contextMenu {
-                    Button(role: .destructive) {
-                        if let i = watched.firstIndex(where: { $0.id == thing.id }) {
-                            unwatch(at: IndexSet(integer: i))
+                    .dsListCardRow()
+                    .modifier(SwipeHintNudge(active: thing.id == hintTokenID) { swipeCoachDone = true })
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            if let i = watched.firstIndex(where: { $0.id == thing.id }) {
+                                unwatch(at: IndexSet(integer: i))
+                            }
+                        } label: {
+                            Label("Unwatch", systemImage: "trash")
                         }
-                    } label: {
-                        Label("Unwatch", systemImage: "trash")
+                    }
+                    // A swipe has no Mac-mouse equivalent — right-click mirrors it
+                    // (Mac polish, 2026-07-28).
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            if let i = watched.firstIndex(where: { $0.id == thing.id }) {
+                                unwatch(at: IndexSet(integer: i))
+                            }
+                        } label: {
+                            Label("Unwatch", systemImage: "trash")
+                        }
                     }
                 }
             }

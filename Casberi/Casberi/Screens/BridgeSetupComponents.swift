@@ -430,18 +430,20 @@ struct RecentThingsSection: View {
             // first separator after a section header). Design law: no hairlines.
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 ForEach(Array(rows.keyed.enumerated()), id: \.element.id) { i, row in
-                    let thing = row.thing
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(thing.title)
-                            .dsText(.body17).foregroundStyle(DS.textPrimary)
-                            .lineLimit(titleLines)
-                        Text(LiveTimeText.short(thing.capturedAt))
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    // Corollary 3 (build 176) — see `ThingRowKeying`.
+                    if let thing = row.live {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(thing.title)
+                                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                                .lineLimit(titleLines)
+                            Text(LiveTimeText.short(thing.capturedAt))
+                                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        // What landed ARRIVES — the feed's stagger, capped so a long
+                        // list doesn't drag the tail, and only on first entrance.
+                        .staggerIn(index: entered ? 0 : min(i, 8))
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    // What landed ARRIVES — the feed's stagger, capped so a long
-                    // list doesn't drag the tail, and only on first entrance.
-                    .staggerIn(index: entered ? 0 : min(i, 8))
                 }
             }
             .dsListCardRow()

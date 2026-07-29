@@ -459,14 +459,19 @@ struct FeedScreen: View {
         let date: Date
         let kind: Kind
         enum Kind {
-            case single(Thing)
+            /// `KeyedThing`, not a raw `Thing` — so every read of the model
+            /// goes through `.thing`/`.live` and the liveness audit's check 3
+            /// can SEE it. Build 176 trapped right here, in a row body that
+            /// bound its `Thing` straight out of this payload: correct by the
+            /// rules as written, invisible to the lint that enforces them.
+            case single(KeyedThing)
             /// `art`: up to three member preview-image URLs, newest first — the
             /// bundle's own pictures (2026-07-21), so "Shopify · 100 products"
             /// can show what actually arrived instead of one brand glyph.
             case bundle(source: String, word: String, count: Int, newest: Date, art: [String])
         }
         static func single(_ t: Thing) -> FeedRow {
-            FeedRow(id: t.id.uuidString, date: t.capturedAt, kind: .single(t))
+            FeedRow(id: t.id.uuidString, date: t.capturedAt, kind: .single(KeyedThing(t)))
         }
         static func bundle(source: String, word: String, count: Int,
                            newest: Date, art: [String]) -> FeedRow {
@@ -476,22 +481,12 @@ struct FeedScreen: View {
         }
     }
 
-    /// A `Thing` paired with its identity captured as a plain `String` — so a
-    /// `ForEach` over a DERIVED thing array (a shaped feed, the photo grid)
-    /// keys on a value, never reaching into the SwiftData model during
-    /// identity diffing (`ForEachChild.updateValue()`). Same 2026-07-24 crash
-    /// class as `FeedRow`: when a launch-time dedupe or a CloudKit merge
-    /// deletes/invalidates a `Thing` mid-render, reading its `id` off the model
-    /// while `ForEach` reconciles the OLD (now-stale) children traps inside
-    /// SwiftData — only on an updated install, never a fresh one. The row body
-    /// still uses `.thing`, but bodies only ever render the post-delete
-    /// `@Query` snapshot, which already excludes the deleted row.
-    private struct KeyedThing: Identifiable {
-        let id: String
-        let thing: Thing
-        init(_ t: Thing) { id = t.id.uuidString; thing = t }
-    }
-    private func keyed(_ things: [Thing]) -> [KeyedThing] { things.map(KeyedThing.init) }
+    /// `Screens/ThingRowKeying.swift`'s `KeyedThing` — this screen used to
+    /// carry a PRIVATE copy of it, which shadowed the shared type here and let
+    /// the two drift: the copy never gained `live`, the corollary-3 guard, and
+    /// its doc still claimed row bodies "only ever render the post-delete
+    /// `@Query` snapshot" (the assumption build 176 disproved). One type now.
+    private func keyed(_ things: [Thing]) -> [KeyedThing] { things.keyed }
 
     /// Consecutive self-replies fold into one thread (item 6 of the
     /// 2026-07-27 social enrichment pass) — a person's own reply chain reads
@@ -1326,8 +1321,11 @@ struct FeedScreen: View {
                                          isBreaker: { standsAlone(ordered[$0]) })
         Section {
             ForEach(Array(keyed(ordered).enumerated()), id: \.element.id) { i, item in
-                shapedListRow(item.thing, index: i, nextEventID: nextEventID,
-                              position: positions[i])
+                // Corollary 3 (build 176) — see `ThingRowKeying`.
+                if let thing = item.live {
+                    shapedListRow(thing, index: i, nextEventID: nextEventID,
+                                  position: positions[i])
+                }
             }
         }
     }
@@ -1370,7 +1368,8 @@ struct FeedScreen: View {
             let positions = cardRunPositions(
                 count: rows.count,
                 isBreaker: { i in
-                    if case .single(let thing) = rows[i].kind { return standsAlone(thing) }
+                    if case .single(let item) = rows[i].kind,
+                       let thing = item.live { return standsAlone(thing) }
                     return false
                 },
                 isBoundary: { rows[$0].id == boundary })
@@ -1378,10 +1377,18 @@ struct FeedScreen: View {
                 ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
                     if row.id == boundary { newSinceDivider }
                     switch row.kind {
-                    case .single(let thing):
-                        shapedListRow(thing, index: i, nextEventID: nextEventID,
-                                      position: positions[i],
-                                      imageOnly: imageOnly.contains(thing.id))
+                    case .single(let item):
+                        // `live` before ANY read (corollary 3, build 176 —
+                        // see `ThingRowKeying`): this closure is re-evaluated
+                        // against the array it already holds when a heal's
+                        // delete lands, and `imageOnly.contains(thing.id)`
+                        // below is an argument, evaluated here, ahead of any
+                        // guard inside the builder.
+                        if let thing = item.live {
+                            shapedListRow(thing, index: i, nextEventID: nextEventID,
+                                          position: positions[i],
+                                          imageOnly: imageOnly.contains(thing.id))
+                        }
                     case .bundle(let source, let word, let count, let newest, let art):
                         bundleListRow(source: source, word: word, count: count,
                                       newest: newest, art: art, index: i, position: positions[i])
@@ -2074,7 +2081,13 @@ struct FeedScreen: View {
     /// photo of each day, never section breaks (mock P1).
     private func photoGridSection(_ visible: [Thing]) -> some View {
         Section {
-            let items = visible
+            let items = visible.live
+            // Day pills computed HERE, while every model is still valid, so
+            // the cell closure below compares plain strings instead of
+            // reaching back into `items[i - 1]` for a `capturedAt` a heal may
+            // have tombstoned by the time SwiftUI re-runs it (corollary 3,
+            // build 176 — see `ThingRowKeying`).
+            let dayLabels = items.map { dayLabel($0.capturedAt) }
             // Hand-rolled row-chunking, NOT LazyVGrid: on iOS 26,
             // `GridItem.spacing` and even `.padding()`'s horizontal
             // component are silently ignored on a `.flexible()` column's
@@ -2097,19 +2110,20 @@ struct FeedScreen: View {
                 ForEach(Array(rows.enumerated()), id: \.offset) { rowIndex, row in
                     HStack(spacing: DS.Space.s3) {
                         ForEach(Array(keyed(row).enumerated()), id: \.element.id) { colIndex, item in
-                            let thing = item.thing
-                            let i = rowIndex * perRow + colIndex
-                            let firstOfDay = i == 0
-                                || dayLabel(items[i - 1].capturedAt) != dayLabel(thing.capturedAt)
-                            Button {
-                                openThing(thing)
-                            } label: {
-                                PhotoCell(thing: thing, dayPill: firstOfDay ? dayLabel(thing.capturedAt) : nil)
+                            // Corollary 3 (build 176) — see `ThingRowKeying`.
+                            if let thing = item.live {
+                                let i = rowIndex * perRow + colIndex
+                                let firstOfDay = i == 0 || dayLabels[i - 1] != dayLabels[i]
+                                Button {
+                                    openThing(thing)
+                                } label: {
+                                    PhotoCell(thing: thing, dayPill: firstOfDay ? dayLabels[i] : nil)
+                                }
+                                // The tiles press like tiles (2026-07-10) — the same
+                                // settle the Settings tiles and treemap cells wear.
+                                .buttonStyle(DSTileButtonStyle())
+                                .matchedTransitionSource(id: thing.id, in: zoomNS)
                             }
-                            // The tiles press like tiles (2026-07-10) — the same
-                            // settle the Settings tiles and treemap cells wear.
-                            .buttonStyle(DSTileButtonStyle())
-                            .matchedTransitionSource(id: thing.id, in: zoomNS)
                         }
                         // An incomplete last row keeps its tiles at the same
                         // width as full rows rather than stretching to fill.
@@ -2339,14 +2353,20 @@ struct FeedScreen: View {
             let positions = cardRunPositions(count: slots)
             Section {
                 ForEach(Array(keyed(fresh).enumerated()), id: \.element.id) { i, item in
-                    shapedListRow(item.thing, index: i, nextEventID: nextEventID,
-                                  position: positions[i])
+                    // Corollary 3 (build 176) — see `ThingRowKeying`.
+                    if let thing = item.live {
+                        shapedListRow(thing, index: i, nextEventID: nextEventID,
+                                      position: positions[i])
+                    }
                 }
                 if !stale.isEmpty {
                     if staleExpanded {
                         ForEach(Array(keyed(stale).enumerated()), id: \.element.id) { i, item in
-                            shapedListRow(item.thing, index: i, nextEventID: nextEventID,
-                                          position: positions[fresh.count + i])
+                            // Corollary 3 (build 176) — see `ThingRowKeying`.
+                            if let thing = item.live {
+                                shapedListRow(thing, index: i, nextEventID: nextEventID,
+                                              position: positions[fresh.count + i])
+                            }
                         }
                     } else {
                         HStack {
@@ -2533,8 +2553,19 @@ struct FeedScreen: View {
     private func shapedRow(_ thing: Thing, nextEventID: UUID?, index: Int = 0,
                            imageOnly: Bool = false,
                            replies: [String: [Thing]] = [:]) -> some View {
+        // Dead-model guard first (corollary 3, build 176 — see
+        // `ThingRowKeying`). This is where build 176 trapped: `thing.kind`,
+        // one frame after a heal deleted the row, reached from a correctly
+        // KEYED `ForEach` whose content closure SwiftUI re-ran against the
+        // array it still held. Callers guard too — reads in their argument
+        // lists happen before this line — but the funnel guards itself so a
+        // future caller can't reintroduce the same crash. Costs no view-tree
+        // depth: it is another arm of a `@ViewBuilder` chain that already
+        // branches here.
+        if !thing.isLive {
+            EmptyView()
         // Approval is the one rhythm-breaker everywhere: the consent card.
-        if thing.kind == .approval, thing.mark != .done {
+        } else if thing.kind == .approval, thing.mark != .done {
             ApprovalCard(thing: thing,
                          onApprove: { perform(Verb(label: "Approve", icon: "checkmark.circle", action: .approve), on: thing) },
                          onDeny: { perform(Verb(label: "Deny", icon: "xmark.circle", action: .deny), on: thing) })
@@ -2893,10 +2924,15 @@ struct FeedScreen: View {
                 // Rows dispatch by shape (shaped feeds); the swipe stays triage —
                 // reads only, writes live in the sheet (ruling), Copy sheet-only.
                 ForEach(Array(keyed(rows).enumerated()), id: \.element.id) { i, item in
-                    let thing = item.thing
-                    if thing.id == boundary { newSinceDivider }
-                    shapedListRow(thing, index: i, nextEventID: nextEventID,
-                                  position: positions[i], replies: replies)
+                    // The `rows.filter(\.isLive)` above runs when this view
+                    // VALUE is made; this runs again each time the closure is
+                    // re-evaluated, which is when the delete actually lands
+                    // (corollary 3, build 176 — see `ThingRowKeying`).
+                    if let thing = item.live {
+                        if thing.id == boundary { newSinceDivider }
+                        shapedListRow(thing, index: i, nextEventID: nextEventID,
+                                      position: positions[i], replies: replies)
+                    }
                 }
             } header: {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {

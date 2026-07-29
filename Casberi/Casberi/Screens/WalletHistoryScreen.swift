@@ -82,31 +82,33 @@ struct WalletHistoryScreen: View {
                 ForEach(groups, id: \.0) { label, rows in
                     Section {
                         ForEach(rows.keyed) { row in
-                            let thing = row.thing
-                            Button { sheetThing = thing } label: {
-                                WalletHistoryRow(thing: thing,
-                                                 walletLabel: walletLabel(thing))
+                            // Corollary 3 (build 176) — see `ThingRowKeying`.
+                            if let thing = row.live {
+                                Button { sheetThing = thing } label: {
+                                    WalletHistoryRow(thing: thing,
+                                                     walletLabel: walletLabel(thing))
+                                }
+                                .buttonStyle(.plain)
+                                // Nothing draws a line (design law, zero
+                                // exceptions) — a List hands out separators by
+                                // default, so every row here opts out explicitly.
+                                .listRowSeparator(.hidden)
+                                // No card per row (prd §212, 2026-07-25). This page
+                                // is the room's longest list, and `dsListCardRow`
+                                // gave all 128 transactions an opaque surface and a
+                                // shadow each — a stack of parcels where the day
+                                // header is already doing the grouping. The rows sit
+                                // on the page now; the header separates them.
+                                .listRowBackground(Color.clear)
+                                // The insets go WITH the cards. A List sizes its
+                                // default row insets for a card's own body, so
+                                // keeping them over a bare row left ~95pt of air
+                                // per transaction and the page read as a list of
+                                // ghosts. `WalletRow`'s own vertical padding is the
+                                // rhythm now.
+                                .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
+                                                          bottom: 0, trailing: DS.Space.s4))
                             }
-                            .buttonStyle(.plain)
-                            // Nothing draws a line (design law, zero
-                            // exceptions) — a List hands out separators by
-                            // default, so every row here opts out explicitly.
-                            .listRowSeparator(.hidden)
-                            // No card per row (prd §212, 2026-07-25). This page
-                            // is the room's longest list, and `dsListCardRow`
-                            // gave all 128 transactions an opaque surface and a
-                            // shadow each — a stack of parcels where the day
-                            // header is already doing the grouping. The rows sit
-                            // on the page now; the header separates them.
-                            .listRowBackground(Color.clear)
-                            // The insets go WITH the cards. A List sizes its
-                            // default row insets for a card's own body, so
-                            // keeping them over a bare row left ~95pt of air
-                            // per transaction and the page read as a list of
-                            // ghosts. `WalletRow`'s own vertical padding is the
-                            // rhythm now.
-                            .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
-                                                      bottom: 0, trailing: DS.Space.s4))
                         }
                     } header: {
                         WalletSectionLabel(title: label)

@@ -156,7 +156,8 @@ struct StocktwitsScreen: View {
     private var watchlistSection: some View {
         AssetRosterShelf(note: rosterNote) {
             ForEach(watched.keyed) { row in
-                rosterSlot(row.thing)
+                // Corollary 3 (build 176) — see `ThingRowKeying`.
+                if let thing = row.live { rosterSlot(thing) }
             }
             AssetRosterAddSlot { fieldFocused = true }
         }

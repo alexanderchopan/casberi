@@ -1052,7 +1052,10 @@ struct WalletWorthALookTray: View {
 
             if awareExpanded {
                 VStack(spacing: 0) {
-                    ForEach(flagged.keyed) { flaggedRow($0.thing) }
+                    // Corollary 3 (build 176) — see `ThingRowKeying`.
+                    ForEach(flagged.keyed) { row in
+                        if let thing = row.live { flaggedRow(thing) }
+                    }
                 }
                 Button {
                     DSHaptic.tap()

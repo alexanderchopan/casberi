@@ -35,11 +35,31 @@ CHECK 2 — HELD REFERENCES.
   property set is read out of Shared/Thing.swift at audit time, so a new
   @Model field is covered the day it is added.
 
+CHECK 3 — KEYED FOREACH, UNGUARDED BODY.
+  Keying fixes IDENTITY DIFFING and nothing else. `ForEachChild.updateValue()`
+  re-evaluates the CONTENT closure against the array the ForEach value already
+  holds, under its own observation callback, when a tracked model changes —
+  the parent body has not re-run, so the array still holds the row that was
+  just deleted, and the closure's first stored-property read traps. Upstream
+  filtering (`rows.filter(\\.isLive)`, a `liveXs` computed property) does NOT
+  count: it ran when the view value was made, which is before the delete.
+  So a ForEach content closure that reaches `.thing` must re-check liveness
+  INSIDE the closure — `if let thing = row.live { … }`.
+
 Corollary 2 (build 150) is why check 1 is not only about the ForEach line: a
 correctly-keyed ForEach still crashed because the SECTION HEADER beside it did
 `Set(rows.map(\\.kind))` over the same raw derived array. The fix there is
 `filter(\\.isLive)` once at the top of the view that owns the array — which
 check 2's file-level `isLive` requirement also nudges toward.
+
+Corollary 3 (build 176) is why check 3 exists at all: the feed's day rows were
+correctly keyed, the header was correctly filtered, check 1 and check 2 both
+passed — and it crashed on first open anyway, on `thing.kind` in the row
+builder. Every rule the audit knew was being followed. Note the deliberate
+limit: check 3 triggers on `.thing`, so a Thing bound out of some other
+wrapper is invisible to it. That is why `FeedScreen.FeedRow.single` carries a
+`KeyedThing` rather than a raw `Thing` — the crash site is kept in the shape
+the lint can see. Keep new wrappers that way too.
 
 Runs in verify.sh (pure static text check, no build needed).
 Exit non-zero on any unguarded site.  --self-test proves the checks can fail.
@@ -110,6 +130,101 @@ def foreach_argument(line: str, start: int) -> str:
     return "".join(out)
 
 
+def _strip_noncode(s: str) -> str:
+    """Blank comments and string literals, PRESERVING length and newlines.
+
+    Length-preserving because check 3 slices the original text by offsets
+    computed here. A one-pass scanner rather than two regex passes: this
+    codebase has `//` inside string literals (every API host) and `"` inside
+    comments (every quoted ruling), so whichever of the two you strip first
+    with a regex, the other one corrupts it.
+    """
+    out = list(s)
+    i, n = 0, len(s)
+    in_str = in_line_comment = in_block_comment = False
+    while i < n:
+        c = s[i]
+        nxt = s[i + 1] if i + 1 < n else ""
+        if in_line_comment:
+            if c == "\n":
+                in_line_comment = False
+            else:
+                out[i] = " "
+        elif in_block_comment:
+            if c == "*" and nxt == "/":
+                out[i] = out[i + 1] = " "
+                i += 2
+                in_block_comment = False
+                continue
+            if c != "\n":
+                out[i] = " "
+        elif in_str:
+            out[i] = " "
+            if c == "\\":
+                if i + 1 < n and nxt != "\n":
+                    out[i + 1] = " "
+                i += 2
+                continue
+            if c == '"' or c == "\n":   # an unterminated literal ends at EOL
+                in_str = False
+        elif c == "/" and nxt == "/":
+            out[i] = out[i + 1] = " "
+            i += 2
+            in_line_comment = True
+            continue
+        elif c == "/" and nxt == "*":
+            out[i] = out[i + 1] = " "
+            i += 2
+            in_block_comment = True
+            continue
+        elif c == '"':
+            out[i] = " "
+            in_str = True
+        i += 1
+    return "".join(out)
+
+
+def foreach_content_closures(text: str):
+    """Yield (line number, body text) for every `ForEach(…) { … }` closure.
+
+    The body is the trailing view-builder closure — the thing check 3 cares
+    about. Brace-matched over the whole file rather than per line, since a row
+    body spans dozens of lines.
+    """
+    code = _strip_noncode(text)
+    for m in re.finditer(r"\bForEach\s*\(", code):
+        # Walk the ForEach's own parenthesised argument to its close.
+        depth, i = 0, m.end() - 1
+        while i < len(code):
+            if code[i] in "([{":
+                depth += 1
+            elif code[i] in ")]}":
+                depth -= 1
+                if depth == 0:
+                    break
+            i += 1
+        if i >= len(code):
+            continue
+        j = i + 1
+        while j < len(code) and code[j] in " \t\n":
+            j += 1
+        if j >= len(code) or code[j] != "{":
+            continue  # `ForEach(…)` with the content passed some other way
+        depth, k = 0, j
+        while k < len(code):
+            if code[k] == "{":
+                depth += 1
+            elif code[k] == "}":
+                depth -= 1
+                if depth == 0:
+                    break
+            k += 1
+        if k >= len(code):
+            continue
+        # Report against the ORIGINAL text so comments/strings are readable.
+        yield code.count("\n", 0, m.start()) + 1, text[j + 1:k]
+
+
 STORED: set[str] = set()
 
 
@@ -145,6 +260,28 @@ def audit_file(path: pathlib.Path, findings: list[str]) -> None:
                 f"✗ {rel}:{lineno} — ForEach over a {why} without .keyed\n"
                 f"      {line.strip()[:120]}"
             )
+
+    # ── Check 3: keyed ForEach whose CONTENT closure reads a model ───
+    # Corollary 3 (build 176, 2026-07-28). `keyed` protects identity diffing
+    # and nothing else. `ForEachChild.updateValue()` re-evaluates the CONTENT
+    # closure against the array the ForEach value already holds, under its own
+    # observation callback, when a tracked model changes — the parent body has
+    # not re-run, so the array still holds the row that was just deleted, and
+    # the first stored-property read in the closure traps. Filtering upstream
+    # (`rows.filter(\.isLive)`, a `liveXs` computed property) does NOT count:
+    # that ran when the view value was made, which is before the delete.
+    # So: any ForEach content closure that reaches `.thing` must re-check
+    # liveness INSIDE the closure.
+    for lineno, body in foreach_content_closures(text):
+        if ".thing" not in body:
+            continue
+        if "isLive" in body or ".live" in body:
+            continue
+        findings.append(
+            f"✗ {rel}:{lineno} — ForEach content closure reads .thing with no "
+            f"isLive guard inside the closure\n"
+            f"      {body.strip().splitlines()[0][:110] if body.strip() else ''}"
+        )
 
     # ── Check 2: held Thing refs read without an isLive guard ────────
     if path.name in KNOWN_UNGUARDED or "isLive" in text or ".live" in text:
@@ -203,10 +340,36 @@ def self_test() -> int:
         ),
         "clean-bare-query": ("@Query private var things: [Thing]\n"
                             "var body: some View { ForEach(things) { t in Text(t.title) } }\n", None),
-        "clean-keyed": (
+        # Corollary 3: keyed, so check 1 passes — and it still crashed in the
+        # field (build 176), because the CONTENT closure reads the model.
+        "keyed-but-body-unguarded": (
             "@Query private var things: [Thing]\n"
             "var recent: [Thing] { things.filter { $0.pinned } }\n"
             "var body: some View { ForEach(recent.keyed) { i in Text(i.thing.title) } }\n",
+            "content closure reads .thing with no isLive guard",
+        ),
+        # Filtering upstream is NOT the guard — that ran before the delete.
+        "prefiltered-body-unguarded": (
+            "@State private var rows: [KeyedThing] = []\n"
+            "var liveRows: [KeyedThing] { rows.filter { $0.thing.isLive } }\n"
+            "var body: some View { ForEach(liveRows) { r in Text(r.thing.title) } }\n",
+            "content closure reads .thing with no isLive guard",
+        ),
+        "clean-keyed": (
+            "@Query private var things: [Thing]\n"
+            "var recent: [Thing] { things.filter { $0.pinned } }\n"
+            "var body: some View { ForEach(recent.keyed) { i in\n"
+            "    if let t = i.live { Text(t.title) } } }\n",
+            None,
+        ),
+        # A URL's `//` inside a literal, and a quote inside a comment, must not
+        # derail the closure scanner (both are everywhere in this codebase).
+        "clean-keyed-with-url-and-quoted-comment": (
+            "@Query private var things: [Thing]\n"
+            "var recent: [Thing] { things.filter { $0.pinned } }\n"
+            "var body: some View { ForEach(recent.keyed) { i in\n"
+            "    // the row's \"own\" title { not a brace }\n"
+            "    if let t = i.live { Text(t.title + \"https://api.example.com/{x}\") } } }\n",
             None,
         ),
     }

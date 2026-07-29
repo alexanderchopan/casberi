@@ -961,23 +961,29 @@ struct ThingSheetView: View {
                 .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
             ForEach(liveLinkedNotes) { note in
-                Button {
-                    walkingToNote = note
-                } label: {
-                    HStack(spacing: DS.Space.s2) {
-                        Image(systemName: "arrow.up.right")
-                            .accessibilityHidden(true)
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(DS.textTertiary)
-                        Text(note.thing.title)
-                            .dsText(.callout15)
-                            .foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                        Spacer(minLength: 0)
+                // `liveLinkedNotes` filters when this view VALUE is made; this
+                // runs again each time the closure is re-evaluated, which is
+                // when the delete actually lands (corollary 3, build 176 —
+                // see `ThingRowKeying`).
+                if let linked = note.live {
+                    Button {
+                        walkingToNote = note
+                    } label: {
+                        HStack(spacing: DS.Space.s2) {
+                            Image(systemName: "arrow.up.right")
+                                .accessibilityHidden(true)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(DS.textTertiary)
+                            Text(linked.title)
+                                .dsText(.callout15)
+                                .foregroundStyle(DS.textPrimary)
+                                .lineLimit(1)
+                            Spacer(minLength: 0)
+                        }
+                        .contentShape(Rectangle())
                     }
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
     }

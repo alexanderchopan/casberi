@@ -25,6 +25,21 @@ import SwiftData
 /// property from a derived array. Iterate `things.keyed` and read `$0.thing`
 /// in the body — identity is then a plain `String` captured while the model
 /// was still valid, so diffing never touches the model.
+///
+/// COROLLARY 3 (build 176, 2026-07-28) — **keying does not make the row body
+/// safe**, and the note that used to sit here ("bodies only ever render the
+/// post-delete `@Query` snapshot, which already excludes the deleted row") was
+/// simply false. `ForEachChild.updateValue()` re-evaluates the CONTENT closure
+/// against the array the `ForEach` value already holds, under its own
+/// observation callback, when a tracked model changes — the parent body has
+/// not re-run yet, so the array still contains the row that was just deleted.
+/// Build 176 crashed on first open exactly there: the id was a captured
+/// `String` (safe), and the trap came one frame later from `thing.kind` inside
+/// the row builder. So a derived `ForEach` needs BOTH: `keyed` for identity,
+/// and a `live` check inside the closure before the first stored-property
+/// read — including reads in the ARGUMENTS of a row builder call
+/// (`imageOnly.contains(thing.id)`), which are evaluated at the call site and
+/// therefore beat any guard the builder does internally.
 struct KeyedThing: Identifiable {
     let id: String
     let thing: Thing
@@ -34,6 +49,12 @@ struct KeyedThing: Identifiable {
         self.id = thing.id.uuidString
         self.thing = thing
     }
+
+    /// The row's model, or nil if it has been deleted/invalidated since this
+    /// row was derived — the corollary-3 guard for a `ForEach` content
+    /// closure: `if let thing = row.live { … }`, so nothing in the body (or in
+    /// a row builder's argument list) can touch a tombstoned model.
+    var live: Thing? { thing.isLive ? thing : nil }
 }
 
 extension Array where Element == Thing {

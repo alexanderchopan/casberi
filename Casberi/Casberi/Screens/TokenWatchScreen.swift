@@ -150,7 +150,8 @@ struct TokenWatchScreen: View {
         let items = orderedWatched
         return AssetRosterShelf(note: rosterNote) {
             ForEach(items.keyed) { row in
-                rosterSlot(row.thing, in: items)
+                // Corollary 3 (build 176) — see `ThingRowKeying`.
+                if let thing = row.live { rosterSlot(thing, in: items) }
             }
             AssetRosterAddSlot { fieldFocused = true }
         }
