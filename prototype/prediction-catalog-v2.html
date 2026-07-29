@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalshi &amp; Polymarket — the connect page is a yes/no</title>
+<style>
+  :root {
+    --page: #000000;
+    --sheet: #111113;
+    --well: #080809;
+    --text1: #ffffff;
+    --text2: rgba(235,235,245,0.60);
+    --text3: rgba(235,235,245,0.30);
+    --faint: rgba(255,255,255,0.04);
+    --strong: rgba(255,255,255,0.16);
+    --tint: #1673e6;
+    --attention: #ff9f0a;
+    --confirm: #30d158;
+    --down: #ff453a;
+    --kalshi: #4fae7b;
+    --poly: #1652f0;
+    --r-card: 10px;
+    --r-sheet: 16px;
+    --s1: 4px; --s2: 10px; --s3: 14px; --s4: 18px;
+    --shadow: 0 10px 30px rgba(0,0,0,0.55);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0a0a0c; color: var(--text1);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    letter-spacing: 0; padding: 40px 24px 80px;
+  }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .intro { color: var(--text2); font-size: 14px; line-height: 1.55; max-width: 980px; margin-bottom: 12px; }
+  .intro b { color: var(--text1); font-weight: 600; }
+  .intro code { font-size: 13px; color: var(--text1); background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 4px; }
+  .scopebar { display:inline-block; font-size:13px; color:var(--text2); background:rgba(48,209,88,0.12);
+    border-radius:8px; padding:9px 13px; margin: 14px 0 28px; line-height:1.5; max-width:900px; }
+  .scopebar b { color:var(--text1); }
+
+  .rail { display: flex; gap: 34px; flex-wrap: wrap; align-items: flex-start; }
+  .col { width: 393px; }
+  .dir-title { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .dir-title .tag { font-size:11px; font-weight:700; border-radius:5px; padding:2px 6px; margin-left:6px; vertical-align:2px; }
+  .tag.rec { background:rgba(48,209,88,0.16); color:var(--confirm); }
+  .tag.alt { background:rgba(255,255,255,0.10); color:var(--text2); }
+  .tag.gone { background:rgba(255,69,58,0.16); color:var(--down); }
+  .dir-note { color: var(--text2); font-size: 13px; line-height: 1.55; margin-bottom: 14px; min-height: 150px; }
+  .dir-note b { color: var(--text1); font-weight: 600; }
+  .dir-note code { font-size:12px; background:rgba(255,255,255,0.07); padding:1px 4px; border-radius:4px; color:var(--text1); }
+
+  .phone {
+    width: 393px; height: 852px; background: var(--page); border-radius: 44px;
+    padding: 18px 0 0;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.07), 0 24px 60px rgba(0,0,0,0.6);
+    overflow: hidden; position: relative;
+  }
+  .scroll { height: 100%; overflow: hidden; padding: 0 16px; position: relative; z-index: 1; }
+  .fold { position:absolute; left:0; right:0; bottom:0; height:70px; z-index:3;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.94) 80%); pointer-events:none; }
+  .statusbar { display:flex; justify-content:space-between; padding: 2px 10px 8px; font-size:13px; font-weight:600; }
+  .navbar { display:flex; align-items:center; gap:8px; padding: 0 2px 14px; font-size:15px; }
+  .navbar .back { color:var(--tint); font-size:17px; }
+  .navbar .title { font-weight:600; margin:0 auto; }
+  .navbar .spacer { width:24px; }
+  .navtitle { font-size: 30px; font-weight: 700; padding: 2px 2px 14px; }
+
+  .wash { position:absolute; left:0; right:0; top:0; height:360px; z-index:0; }
+  .wash.k { background: linear-gradient(180deg, var(--kalshi) 0%, var(--kalshi) 30%, rgba(79,174,123,0) 100%); opacity:.85; }
+  .wash.p { background: linear-gradient(180deg, var(--poly) 0%, var(--poly) 30%, rgba(22,82,240,0) 100%); opacity:.85; }
+
+  /* setup header */
+  .setuphead { display:flex; align-items:center; gap:var(--s3); padding:var(--s3);
+    border-radius:var(--r-sheet); margin-bottom:var(--s3); }
+  .setuphead.lit.k { background:linear-gradient(135deg, rgba(79,174,123,0.18), rgba(79,174,123,0.02)); }
+  .setuphead.lit.p { background:linear-gradient(135deg, rgba(22,82,240,0.18), rgba(22,82,240,0.02)); }
+  .icon60 { width:60px; height:60px; border-radius:14px; flex:none; display:grid; place-items:center;
+    font-size:25px; font-weight:800; }
+  .icon60.k { background:var(--kalshi); color:#04120e; }
+  .icon60.p { background:var(--poly); color:#fff; }
+  .setuphead .line { font-size:16px; }
+
+  /* product page header */
+  .phead { display:flex; align-items:flex-start; gap:var(--s4); margin-bottom:26px; }
+  .icon72 { width:72px; height:72px; border-radius:17px; flex:none; display:grid; place-items:center;
+    font-size:30px; font-weight:800; }
+  .icon72.k { background:var(--kalshi); color:#04120e; }
+  .icon72.p { background:var(--poly); color:#fff; }
+  .pgroup { font-size:12px; color:rgba(255,255,255,0.55); }
+  .pname { font-size:22px; font-weight:700; line-height:1.2; margin-top:1px; }
+  .ptag { font-size:13px; color:rgba(255,255,255,0.75); margin-top:1px; }
+  .verb { display:inline-block; font-size:14px; font-weight:600; border-radius:9999px;
+    padding:6px 18px; margin-top:12px; background:rgba(255,255,255,0.22); color:#fff; }
+
+  .seclabel { font-size:12px; color:var(--text3); margin-bottom:8px; }
+  .body17 { font-size:16px; line-height:1.42; }
+  .sec { margin-bottom:26px; }
+  .checks { margin-top:12px; display:flex; flex-direction:column; gap:9px; }
+  .checkrow { display:flex; gap:10px; align-items:flex-start; font-size:15px; line-height:1.35; }
+  .checkrow .tick { color:var(--confirm); font-size:13px; flex:none; margin-top:2px; }
+
+  /* ── the yes/no rows ─────────────────────────────── */
+  .slab { background:var(--sheet); border-radius:var(--r-sheet); padding:var(--s2) var(--s3) var(--s3);
+    box-shadow:var(--shadow); margin-bottom:var(--s3); }
+  .qrow { display:flex; align-items:center; gap:var(--s3); padding:var(--s3) 0; }
+  .qrow + .qrow { }
+  .mark { width:34px; height:34px; border-radius:9px; flex:none; display:grid; place-items:center;
+    font-size:15px; font-weight:800; }
+  .mark.k { background:var(--kalshi); color:#04120e; }
+  .mark.p { background:var(--poly); color:#fff; }
+  .qtext { flex:1; min-width:0; }
+  .qtext .q { font-size:16px; line-height:1.3; }
+  .qtext .s { font-size:13px; color:var(--text3); margin-top:3px; line-height:1.35; }
+
+  /* iOS switch */
+  .sw { width:51px; height:31px; border-radius:9999px; flex:none; position:relative; background:var(--strong); }
+  .sw.on { background:var(--confirm); }
+  .sw i { position:absolute; top:2px; left:2px; width:27px; height:27px; border-radius:50%;
+    background:#fff; box-shadow:0 2px 5px rgba(0,0,0,.4); }
+  .sw.on i { left:22px; }
+
+  /* yes/no pair (direction B) */
+  .yn { display:flex; gap:8px; flex:none; }
+  .yn span { font-size:14px; font-weight:600; border-radius:9999px; padding:7px 16px;
+    background:var(--faint); color:var(--text2); }
+  .yn span.on { background:var(--confirm); color:#04140a; }
+  .yn span.onno { background:var(--strong); color:var(--text1); }
+
+  .slabnote { font-size:13px; color:var(--text3); text-align:center; line-height:1.5; margin-top:12px; }
+  .footnote { font-size:13px; color:var(--text3); line-height:1.55; padding:10px 4px 0; }
+  .footnote b { color:var(--text2); }
+
+  /* chip teaching */
+  .teach { margin-top:var(--s3); padding:12px; background:var(--well); border-radius:var(--r-card); }
+  .ministrip { display:flex; gap:5px; margin-bottom:9px; }
+  .ministrip .c { font-size:11px; font-weight:600; color:var(--text3); background:var(--sheet);
+    border-radius:9999px; padding:5px 10px; display:flex; align-items:center; gap:5px; }
+  .ministrip .c.on { color:#fff; background:var(--tint); }
+  .ministrip .d { width:11px; height:11px; border-radius:50%; }
+  .ministrip .d.k { background:var(--kalshi); } .ministrip .d.p { background:var(--poly); }
+  .teach .tx { font-size:13px; color:var(--text2); line-height:1.45; }
+
+  /* deleted-section illustration */
+  .dead { background:rgba(255,69,58,0.06); border-radius:var(--r-sheet); padding:var(--s3); margin-bottom:var(--s2); }
+  .dead .lbl { font-size:11px; font-weight:700; color:var(--down); margin-bottom:8px; }
+  .deadrow { font-size:15px; color:var(--text3); text-decoration:line-through; padding:5px 0; }
+
+  /* inert store preview */
+  .prev { background:var(--sheet); border-radius:var(--r-sheet); padding:var(--s3); box-shadow:var(--shadow); }
+  .prev .q { font-size:16px; font-weight:600; line-height:1.28; margin-bottom:10px; }
+  .orow { display:flex; align-items:center; gap:var(--s3); padding:4px 0; }
+  .oname { font-size:14px; color:var(--text2); width:92px; flex:none; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .oname.lead { color:var(--text1); font-weight:600; }
+  .bar { flex:1; height:8px; border-radius:9999px; background:var(--faint); position:relative; overflow:hidden; min-width:0; }
+  .bar i { position:absolute; left:0; top:0; bottom:0; border-radius:9999px; background:var(--tint); }
+  .bar i.quiet { background:var(--text3); }
+  .pct { font-size:16px; font-weight:600; width:40px; text-align:right; flex:none; font-variant-numeric:tabular-nums; }
+
+  .cap-note { font-size:12px; color:var(--text3); text-align:center; margin-top:10px; line-height:1.5; }
+  .cap-note b { color:var(--text2); }
+  .flag { position:absolute; z-index:4; font-size:11px; font-weight:700; color:#04140a;
+    background:var(--attention); border-radius:5px; padding:2px 6px; }
+
+  .verdict { max-width:980px; margin-top:44px; color:var(--text2); font-size:14px; line-height:1.6; }
+  .verdict h2 { color:var(--text1); font-size:17px; margin: 26px 0 10px; }
+  .verdict h2:first-child { margin-top:0; }
+  .verdict li { margin:0 0 8px 18px; }
+  .verdict b { color:var(--text1); font-weight:600; }
+  .verdict code { font-size:13px; background:rgba(255,255,255,0.07); padding:1px 5px; border-radius:4px; color:var(--text1); }
+</style>
+</head>
+<body>
+
+<h1>The connect page is a yes/no</h1>
+<div class="intro">
+  <p><b>The ruling:</b> the connect page in the catalog is only about connecting. No markets, no book, no live odds — that's what the room is for. Two questions, and <b>both appear on both pages</b>: do you want to follow Kalshi's prediction markets, and do you want to follow Polymarket's.</p>
+</div>
+<div class="intro">
+  <p>This replaces <code>prediction-catalog-v1.html</code>. The live proof line is <b>out</b> — of the connect page and of the product page. Everything that showed a market on a catalog surface is gone.</p>
+</div>
+<div class="scopebar">
+  <b>What that costs, stated up front:</b> the Following and Resolved lists have to leave the connect page too — they are markets. They already exist in the room's own feed. The one thing that genuinely lived only here was <b>Remove its things too</b> on disconnect; column 4 shows where that goes.
+</div>
+
+<div class="rail">
+
+  <!-- 1 — direction A: two switches -->
+  <div class="col">
+    <div class="dir-title">Kalshi's page — switches<span class="tag rec">recommended</span></div>
+    <div class="dir-note">
+      The whole page. Two questions, one switch each, and the honesty line. Kalshi's own question sits first because it's Kalshi's page; Polymarket's sits right under it, which is the <b>only</b> place in the catalog a Kalshi user learns the other venue exists. A switch <i>is</i> a yes/no and it shows current state at a glance — you can see you already said yes to Kalshi and no to Polymarket without reading a word.
+    </div>
+    <div class="phone"><div class="scroll">
+      <div class="statusbar"><span>9:41</span><span>▮▮▮</span></div>
+      <div class="navbar"><span class="back">‹</span><span class="title">Kalshi</span><span class="spacer"></span></div>
+      <div class="navtitle">Kalshi</div>
+
+      <div class="setuphead lit k">
+        <div class="icon60 k">K</div>
+        <div class="line">Watch real-event odds</div>
+      </div>
+
+      <div class="slab">
+        <div class="qrow">
+          <div class="mark k">K</div>
+          <div class="qtext">
+            <div class="q">Follow Kalshi prediction markets</div>
+            <div class="s">CFTC-regulated event exchange</div>
+          </div>
+          <div class="sw on"><i></i></div>
+        </div>
+        <div class="qrow">
+          <div class="mark p">P</div>
+          <div class="qtext">
+            <div class="q">Follow Polymarket prediction markets</div>
+            <div class="s">Onchain prediction markets — two crowds, two prices</div>
+          </div>
+          <div class="sw"><i></i></div>
+        </div>
+        <div class="slabnote">No account, no key — both exchanges' odds are public.<br>Read-only: nothing here places a trade.</div>
+      </div>
+
+      <div class="teach">
+        <div class="ministrip">
+          <span class="c">All</span>
+          <span class="c on"><span class="d" style="background:#04120e"></span>Kalshi</span>
+          <span class="c">Wallet</span>
+        </div>
+        <div class="tx">Kalshi is in your feed strip — tap its chip to browse every open market and follow the ones you want.</div>
+      </div>
+
+      <div class="footnote">Say yes to both and you'll see where the two crowds price the same question differently.</div>
+
+      <div class="fold"></div>
+    </div></div>
+    <div class="cap-note">One screen. Two questions. Nothing to scroll past.</div>
+  </div>
+
+  <!-- 2 — direction B: literal Yes / No -->
+  <div class="col">
+    <div class="dir-title">Kalshi's page — literal Yes/No<span class="tag alt">alternative</span></div>
+    <div class="dir-note">
+      The same two questions asked as questions, with a <b>Yes</b> and a <b>No</b> to press. More literally what you asked for, and it reads more like being asked than like configuring something. Two costs: an unanswered pair has no honest resting state (neither pressed reads as broken, and pre-selecting No answers for the user), and it's a control shape that exists nowhere else in the app. I'd take column 1 unless you want the interrogative tone specifically.
+    </div>
+    <div class="phone"><div class="scroll">
+      <div class="statusbar"><span>9:41</span><span>▮▮▮</span></div>
+      <div class="navbar"><span class="back">‹</span><span class="title">Kalshi</span><span class="spacer"></span></div>
+      <div class="navtitle">Kalshi</div>
+
+      <div class="setuphead lit k">
+        <div class="icon60 k">K</div>
+        <div class="line">Watch real-event odds</div>
+      </div>
+
+      <div class="slab">
+        <div class="qrow" style="align-items:flex-start;">
+          <div class="mark k">K</div>
+          <div class="qtext">
+            <div class="q">Follow Kalshi prediction markets?</div>
+            <div class="s" style="margin-bottom:12px;">CFTC-regulated event exchange</div>
+            <div class="yn"><span class="on">Yes</span><span>No</span></div>
+          </div>
+        </div>
+        <div class="qrow" style="align-items:flex-start;">
+          <div class="mark p">P</div>
+          <div class="qtext">
+            <div class="q">Follow Polymarket prediction markets?</div>
+            <div class="s" style="margin-bottom:12px;">Onchain prediction markets — two crowds, two prices</div>
+            <div class="yn"><span>Yes</span><span class="onno">No</span></div>
+          </div>
+        </div>
+        <div class="slabnote">No account, no key — both exchanges' odds are public.<br>Read-only: nothing here places a trade.</div>
+      </div>
+
+      <div class="teach">
+        <div class="ministrip">
+          <span class="c">All</span>
+          <span class="c on"><span class="d" style="background:#04120e"></span>Kalshi</span>
+          <span class="c">Wallet</span>
+        </div>
+        <div class="tx">Kalshi is in your feed strip — tap its chip to browse every open market and follow the ones you want.</div>
+      </div>
+
+      <div class="fold"></div>
+    </div></div>
+    <div class="cap-note">Same content, asked rather than set</div>
+  </div>
+
+  <!-- 3 — Polymarket's page, mirrored -->
+  <div class="col">
+    <div class="dir-title">Polymarket's page — mirrored</div>
+    <div class="dir-note">
+      &ldquo;Also on both their pages.&rdquo; Identical construction, its own venue first. One shared component takes an <b>own venue</b> and orders the pair — so the two screens can't drift, and there's exactly one place to edit the copy.
+      <br><br>Here both are on, so the strip shows both chips and the footnote turns into the confirmation: the comparison is live.
+    </div>
+    <div class="phone"><div class="scroll">
+      <div class="statusbar"><span>9:41</span><span>▮▮▮</span></div>
+      <div class="navbar"><span class="back">‹</span><span class="title">Polymarket</span><span class="spacer"></span></div>
+      <div class="navtitle">Polymarket</div>
+
+      <div class="setuphead lit p">
+        <div class="icon60 p">P</div>
+        <div class="line">Watch any prediction market</div>
+      </div>
+
+      <div class="slab">
+        <div class="qrow">
+          <div class="mark p">P</div>
+          <div class="qtext">
+            <div class="q">Follow Polymarket prediction markets</div>
+            <div class="s">Onchain prediction markets, with real price history</div>
+          </div>
+          <div class="sw on"><i></i></div>
+        </div>
+        <div class="qrow">
+          <div class="mark k">K</div>
+          <div class="qtext">
+            <div class="q">Follow Kalshi prediction markets</div>
+            <div class="s">CFTC-regulated event exchange — two crowds, two prices</div>
+          </div>
+          <div class="sw on"><i></i></div>
+        </div>
+        <div class="slabnote">No account, no key — both exchanges' odds are public.<br>Read-only: nothing here places a trade.</div>
+      </div>
+
+      <div class="teach">
+        <div class="ministrip">
+          <span class="c">All</span>
+          <span class="c on"><span class="d" style="background:#fff"></span>Polymarket</span>
+          <span class="c"><span class="d k"></span>Kalshi</span>
+        </div>
+        <div class="tx">Both are in your feed strip — tap a chip to browse every open market and follow the ones you want.</div>
+      </div>
+
+      <div class="footnote">When the two crowds price the same question differently, you'll see the gap.</div>
+
+      <div class="fold"></div>
+    </div></div>
+    <div class="cap-note">One component, two screens, no drift</div>
+  </div>
+
+  <!-- 4 — what leaves, and where it goes -->
+  <div class="col">
+    <div class="dir-title">What leaves the page<span class="tag gone">deleted</span></div>
+    <div class="dir-note">
+      Everything below the questions today is markets, so it all goes. <b>Following</b> and <b>Resolved</b> are already in the room — the feed under the book is exactly that list, and &ldquo;How they turned out&rdquo; already holds the receipts.
+      <br><br>The one real loss is disconnect. Today it's a section with <b>Remove its things too</b>. A switch flipped to No has to ask the same question — so it raises the existing confirm, rather than silently dropping markets you followed.
+    </div>
+    <div class="phone"><div class="scroll">
+      <div class="statusbar"><span>9:41</span><span>▮▮▮</span></div>
+      <div class="navbar"><span class="back">‹</span><span class="title">Kalshi</span><span class="spacer"></span></div>
+      <div class="navtitle">Kalshi</div>
+
+      <div class="dead">
+        <div class="lbl">GONE — these are markets</div>
+        <div class="deadrow">Following · Fed cuts rates at the March meeting?</div>
+        <div class="deadrow">Following · Government shutdown before April 1?</div>
+        <div class="deadrow">Resolved · Fed holds rates in January — Yes</div>
+        <div class="deadrow">Open the Kalshi room →</div>
+        <div class="deadrow">Biggest move · +9 pts</div>
+      </div>
+      <div class="footnote" style="padding-bottom:18px;">All of it already lives in the room: the feed under the book <b>is</b> what you follow, and &ldquo;How they turned out&rdquo; holds the receipts.</div>
+
+      <div class="seclabel" style="padding:8px 4px 8px;">What replaces disconnect</div>
+      <div class="slab">
+        <div class="qrow">
+          <div class="mark k">K</div>
+          <div class="qtext">
+            <div class="q">Follow Kalshi prediction markets</div>
+            <div class="s">CFTC-regulated event exchange</div>
+          </div>
+          <div class="sw"><i></i></div>
+        </div>
+      </div>
+
+      <div style="background:var(--sheet); border-radius:var(--r-sheet); padding:var(--s4); box-shadow:var(--shadow); text-align:center;">
+        <div style="font-size:17px; font-weight:600; margin-bottom:7px;">Stop following Kalshi?</div>
+        <div style="font-size:14px; color:var(--text2); line-height:1.45; margin-bottom:18px;">
+          Its chip leaves your feed. The 3 markets you followed stay unless you remove them.</div>
+        <div style="font-size:16px; color:var(--down); font-weight:600; padding:11px 0;">Remove its things too</div>
+        <div style="font-size:16px; color:var(--tint); padding:11px 0;">Keep them</div>
+      </div>
+
+      <div class="flag" style="top:112px; left:236px;">already in the room</div>
+      <div class="fold"></div>
+    </div></div>
+    <div class="cap-note">A No is a disconnect — so it asks what disconnect asks</div>
+  </div>
+
+  <!-- 5 — product page -->
+  <div class="col">
+    <div class="dir-title">Product page — no live data</div>
+    <div class="dir-note">
+      Same ruling applied one screen up. The summary is rewritten to the <b>browse-then-follow</b> model that actually shipped (it still describes the pre-§233 search-only one), and it gains the <code>features</code> check list neither offer has — including the comparison, which appears nowhere in the catalog today.
+      <br><br>&ldquo;What lands in your feed&rdquo; stops being a dead sentence and becomes an <b>inert authored preview</b>, the same <code>StorePreview</code> convention 20-odd other offers already use. Illustrative, clearly labelled, never live.
+    </div>
+    <div class="phone">
+      <div class="wash k"></div>
+      <div class="scroll">
+        <div class="statusbar"><span>9:41</span><span>▮▮▮</span></div>
+        <div class="navbar"><span class="back">‹</span><span class="title">Kalshi</span><span class="spacer"></span></div>
+
+        <div class="phead">
+          <div class="icon72 k">K</div>
+          <div>
+            <div class="pgroup">Markets</div>
+            <div class="pname">Kalshi</div>
+            <div class="ptag">Watch real-event odds</div>
+            <div class="verb">Connect</div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="seclabel">What it does</div>
+          <div class="body17">Every open market on Kalshi, the CFTC-regulated event exchange — browse the whole book, and follow just the questions you want to keep.</div>
+          <div class="checks">
+            <div class="checkrow"><span class="tick">✓</span><span>Browse every open market — by category, or by what closes soonest</span></div>
+            <div class="checkrow"><span class="tick">✓</span><span>Follow a question and its odds land in your feed</span></div>
+            <div class="checkrow"><span class="tick">✓</span><span>See where Polymarket's crowd prices the same question differently</span></div>
+            <div class="checkrow"><span class="tick">✓</span><span>No account, no key — public odds, read-only</span></div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="seclabel">What lands in your feed</div>
+          <div class="prev">
+            <div class="q">Who wins the 2028 Democratic nomination?</div>
+            <div class="orow"><div class="oname lead">Newsom</div><div class="bar"><i style="width:31%"></i></div><div class="pct">31%</div></div>
+            <div class="orow"><div class="oname">Shapiro</div><div class="bar"><i class="quiet" style="width:18%"></i></div><div class="pct">18%</div></div>
+            <div class="orow"><div class="oname">Whitmer</div><div class="bar"><i class="quiet" style="width:12%"></i></div><div class="pct">12%</div></div>
+          </div>
+          <div class="footnote">A preview — your real things replace it when you connect.</div>
+        </div>
+
+        <div class="fold"></div>
+      </div>
+    </div>
+    <div class="cap-note">Authored and inert — the catalog's own convention</div>
+  </div>
+
+</div>
+
+<div class="verdict">
+  <h2>The one naming collision, and how I'd settle it</h2>
+  <p>&ldquo;Follow&rdquo; is already spent: it's the verb for following a single market, and the room's section header is literally <b>Following</b>. So &ldquo;Follow Kalshi prediction markets&rdquo; and &ldquo;Follow this market&rdquo; are two different acts wearing one word. I'd <b>keep your wording</b> — the object disambiguates, an exchange and a question don't get confused in practice, and inventing a second verb for the catalog would cost more than the collision does. Flagging it because if it ever does read wrong, this is the sentence to change, and the alternative is to make the exchange row say <b>Show</b> and leave <b>Follow</b> to markets.</p>
+
+  <h2>Why both questions go on both pages</h2>
+  <ul>
+    <li>It's the <b>only</b> place a single-venue user learns the other exists. The disagreement between two crowds is the one thing neither exchange's own app can show, and today nothing in the catalog mentions it.</li>
+    <li>It makes the pair symmetric — one component, an <code>ownVenue</code> parameter, two screens that can't drift.</li>
+    <li>It replaces the transient twin offer as the <b>discovery</b> path. The per-market twin can stay where it belongs — in the room, after a follow — instead of being the only way anyone ever finds out.</li>
+  </ul>
+
+  <h2>Held</h2>
+  <ul>
+    <li><b>No market data on any catalog surface</b> — connect page or product page. The inert preview in column 5 is authored copy, not a read.</li>
+    <li><b>No auto-follow</b> of anything. Saying yes to an exchange follows <i>zero</i> markets; it adds the chip and the room.</li>
+    <li><b>A No is a disconnect</b>, so it asks what disconnect asks. It never silently drops markets you followed.</li>
+  </ul>
+
+  <h2>Still out of scope, still true</h2>
+  <ul>
+    <li>With both connected, the disagreement cards render only in <code>.all</code> scope while <code>PredictionRoomBook</code> defaults every room to its own venue — so the comparison these questions sell is currently behind a segment tap. If you say yes to this design, that room fix stops being optional: the catalog would be promising something the room hides.</li>
+  </ul>
+</div>
+
+</body>
+</html>

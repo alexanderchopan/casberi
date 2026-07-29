@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prediction markets in the catalog — product page &amp; connect</title>
+<style>
+  :root {
+    --page: #000000;
+    --sheet: #111113;
+    --well: #080809;
+    --text1: #ffffff;
+    --text2: rgba(235,235,245,0.60);
+    --text3: rgba(235,235,245,0.30);
+    --faint: rgba(255,255,255,0.04);
+    --strong: rgba(255,255,255,0.16);
+    --tint: #1673e6;
+    --attention: #ff9f0a;
+    --confirm: #30d158;
+    --down: #ff453a;
+    --kalshi: #4fae7b;
+    --poly: #1652f0;
+    --r-card: 10px;
+    --r-sheet: 16px;
+    --s1: 4px; --s2: 10px; --s3: 14px; --s4: 18px;
+    --shadow: 0 10px 30px rgba(0,0,0,0.55);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0a0a0c; color: var(--text1);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    letter-spacing: 0; padding: 40px 24px 80px;
+  }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .intro { color: var(--text2); font-size: 14px; line-height: 1.55; max-width: 980px; margin-bottom: 12px; }
+  .intro + .intro { margin-bottom: 32px; }
+  .intro b { color: var(--text1); font-weight: 600; }
+  .intro code { font-size: 13px; color: var(--text1); background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 4px; }
+  .scopebar { display:inline-block; font-size:13px; color:var(--text2); background:rgba(22,115,230,0.14);
+    border-radius:8px; padding:8px 12px; margin-bottom:26px; }
+  .scopebar b { color:var(--text1); }
+
+  .rail { display: flex; gap: 34px; flex-wrap: wrap; align-items: flex-start; }
+  .col { width: 393px; }
+  .dir-title { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .dir-title .tag { font-size:11px; font-weight:700; border-radius:5px; padding:2px 6px; margin-left:6px;
+    vertical-align:2px; }
+  .tag.now { background:rgba(255,159,10,0.18); color:var(--attention); }
+  .tag.new { background:rgba(48,209,88,0.16); color:var(--confirm); }
+  .dir-note { color: var(--text2); font-size: 13px; line-height: 1.55; margin-bottom: 14px; min-height: 132px; }
+  .dir-note b { color: var(--text1); font-weight: 600; }
+  .dir-note code { font-size:12px; background:rgba(255,255,255,0.07); padding:1px 4px; border-radius:4px; color:var(--text1); }
+
+  .phone {
+    width: 393px; height: 852px; background: var(--page); border-radius: 44px;
+    padding: 18px 0 0;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.07), 0 24px 60px rgba(0,0,0,0.6);
+    overflow: hidden; position: relative;
+  }
+  .scroll { height: 100%; overflow: hidden; padding: 0 16px; position: relative; z-index: 1; }
+  .fold { position:absolute; left:0; right:0; bottom:0; height:70px; z-index:3;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.94) 80%); pointer-events:none; }
+  .statusbar { display:flex; justify-content:space-between; padding: 2px 10px 8px; font-size:13px; font-weight:600; }
+  .navbar { display:flex; align-items:center; gap:8px; padding: 0 2px 14px; font-size:15px; }
+  .navbar .back { color:var(--tint); font-size:17px; }
+  .navbar .title { font-weight:600; margin:0 auto; }
+  .navbar .spacer { width:24px; }
+  .navtitle { font-size: 30px; font-weight: 700; padding: 2px 2px 14px; }
+
+  /* product page brand wash */
+  .wash { position:absolute; left:0; right:0; top:0; height:360px; z-index:0; }
+  .wash.k { background: linear-gradient(180deg, var(--kalshi) 0%, var(--kalshi) 30%, rgba(79,174,123,0) 100%); opacity:.85; }
+  .wash.p { background: linear-gradient(180deg, var(--poly) 0%, var(--poly) 30%, rgba(22,82,240,0) 100%); opacity:.85; }
+
+  .phead { display:flex; align-items:flex-start; gap:var(--s4); margin-bottom:26px; }
+  .icon72 { width:72px; height:72px; border-radius:17px; flex:none; display:grid; place-items:center;
+    font-size:30px; font-weight:800; }
+  .icon72.k { background:var(--kalshi); color:#04120e; }
+  .icon72.p { background:var(--poly); color:#fff; }
+  .pgroup { font-size:12px; color:rgba(255,255,255,0.55); }
+  .pname { font-size:22px; font-weight:700; line-height:1.2; margin-top:1px; }
+  .ptag { font-size:13px; color:rgba(255,255,255,0.75); margin-top:1px; }
+  .verb { display:inline-block; font-size:14px; font-weight:600; border-radius:9999px;
+    padding:6px 18px; margin-top:12px; background:rgba(255,255,255,0.22); color:#fff; }
+  .verb.open { background:rgba(255,255,255,0.16); }
+
+  .seclabel { font-size:12px; color:var(--text3); margin-bottom:8px; }
+  .body17 { font-size:16px; line-height:1.42; }
+  .body17.dim { color:var(--text2); }
+  .sec { margin-bottom:26px; }
+
+  /* check list */
+  .checks { margin-top:12px; display:flex; flex-direction:column; gap:9px; }
+  .checkrow { display:flex; gap:10px; align-items:flex-start; font-size:15px; line-height:1.35; }
+  .checkrow .tick { color:var(--confirm); font-size:13px; flex:none; margin-top:2px; }
+
+  /* the live proof line — the one piece of live book allowed on a catalog page */
+  .proof { display:flex; align-items:center; gap:var(--s2); padding:12px 14px; background:var(--well);
+    border-radius:var(--r-card); }
+  .proof .lbl { font-size:12px; color:var(--text3); flex:none; }
+  .proof .lq { font-size:13px; color:var(--text2); flex:1; min-width:0;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .delta { font-size:12px; font-weight:700; padding:2px 6px; border-radius:9999px; font-variant-numeric:tabular-nums; flex:none; }
+  .delta.up { color:#04140a; background:var(--confirm); }
+  .delta.dn { color:#fff; background:var(--down); }
+  .delta.sm { font-size:11px; padding:1px 5px; }
+  .proofnote { font-size:13px; color:var(--text3); margin-top:8px; line-height:1.45; }
+
+  /* connect screen — setup header */
+  .setuphead { display:flex; align-items:center; gap:var(--s3); padding:var(--s3);
+    border-radius:var(--r-sheet); margin-bottom:var(--s2); }
+  .setuphead.lit.k { background:linear-gradient(135deg, rgba(79,174,123,0.18), rgba(79,174,123,0.02)); }
+  .setuphead.lit.p { background:linear-gradient(135deg, rgba(22,82,240,0.18), rgba(22,82,240,0.02)); }
+  .icon60 { width:60px; height:60px; border-radius:14px; flex:none; display:grid; place-items:center;
+    font-size:25px; font-weight:800; }
+  .icon60.k { background:var(--kalshi); color:#04120e; }
+  .icon60.p { background:var(--poly); color:#fff; }
+  .setuphead .line { font-size:16px; }
+
+  /* slab */
+  .slab { background:var(--sheet); border-radius:var(--r-sheet); padding:var(--s3); box-shadow:var(--shadow);
+    margin-bottom:var(--s3); }
+  .slabbtn { display:flex; align-items:center; justify-content:center; gap:8px;
+    background:var(--tint); color:#fff; border-radius:var(--r-card); padding:14px;
+    font-size:16px; font-weight:600; }
+  .slabbtn.quiet { background:var(--strong); }
+  .slabnote { font-size:13px; color:var(--text3); text-align:center; line-height:1.45; margin-top:10px; }
+
+  /* the chip, taught inline */
+  .teach { display:flex; align-items:center; gap:10px; margin-top:12px; padding:10px 12px;
+    background:var(--well); border-radius:var(--r-card); }
+  .schip { font-size:13px; font-weight:600; color:#fff; background:var(--tint);
+    border-radius:9999px; padding:6px 11px; white-space:nowrap; display:flex; align-items:center; gap:5px; flex:none; }
+  .sdot { width:14px; height:14px; border-radius:50%; flex:none; }
+  .sdot.k { background:var(--kalshi); } .sdot.p { background:var(--poly); }
+  .teach .tx { font-size:13px; color:var(--text2); line-height:1.4; }
+
+  /* strip illustration inside the teach box */
+  .ministrip { display:flex; gap:5px; margin-bottom:8px; }
+  .ministrip .c { font-size:11px; font-weight:600; color:var(--text3); background:var(--sheet);
+    border-radius:9999px; padding:4px 9px; display:flex; align-items:center; gap:4px; }
+  .ministrip .c.on { color:#fff; background:var(--tint); }
+  .ministrip .d { width:11px; height:11px; border-radius:50%; }
+
+  /* compare ask */
+  .ask { background:var(--sheet); border-radius:var(--r-sheet); padding:var(--s3); box-shadow:var(--shadow);
+    margin-bottom:var(--s3); }
+  .askhead { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .mark { width:22px; height:22px; border-radius:50%; flex:none; display:grid; place-items:center;
+    font-size:11px; font-weight:800; }
+  .mark.k { background:var(--kalshi); color:#04120e; }
+  .mark.p { background:var(--poly); color:#fff; }
+  .askq { font-size:16px; font-weight:600; line-height:1.3; }
+  .askbody { font-size:14px; color:var(--text2); line-height:1.45; }
+  .askact { font-size:14px; font-weight:600; color:var(--tint); margin-top:12px; }
+  .askline { display:flex; align-items:center; gap:9px; font-size:13px; color:var(--text3);
+    line-height:1.45; padding:2px 4px 14px; }
+  .pair { display:flex; gap:-4px; flex:none; }
+  .pair .mark:last-child { margin-left:-7px; }
+
+  /* following rows */
+  .row { display:flex; align-items:center; gap:var(--s3); background:var(--sheet);
+    border-radius:var(--r-sheet); padding:12px var(--s3); box-shadow:var(--shadow); margin-bottom:var(--s2); }
+  .row .t { font-size:16px; line-height:1.3; }
+  .row .sub { font-size:13px; color:var(--text3); margin-top:3px; }
+  .row .sub .up { color:var(--confirm); font-weight:600; }
+  .row .sub .dn { color:var(--down); font-weight:600; }
+  .row .pct { font-size:17px; font-weight:700; font-variant-numeric:tabular-nums; margin-left:auto; flex:none; }
+  .row .ans { font-size:17px; font-weight:700; margin-left:auto; flex:none; }
+  .cmp { width:30px; height:30px; border-radius:50%; background:var(--faint); flex:none;
+    display:grid; place-items:center; font-size:11px; font-weight:800; color:var(--poly); }
+  .cmp.k { color:var(--kalshi); }
+  .rowgrp { }
+  .twin { background:var(--well); border-radius:var(--r-card); padding:12px; margin-top:10px; }
+  .twinline { display:flex; align-items:center; gap:9px; font-size:14px; line-height:1.35; }
+  .twinact { font-size:13px; font-weight:600; color:var(--tint); margin-top:9px; }
+
+  .footnote { font-size:13px; color:var(--text3); line-height:1.5; padding:8px 4px 0; }
+  .cap-note { font-size:12px; color:var(--text3); text-align:center; margin-top:10px; line-height:1.5; }
+  .cap-note b { color:var(--text2); }
+
+  .flag { position:absolute; z-index:4; font-size:11px; font-weight:700; color:#04140a;
+    background:var(--attention); border-radius:5px; padding:2px 6px; }
+
+  .verdict { max-width:980px; margin-top:44px; color:var(--text2); font-size:14px; line-height:1.6; }
+  .verdict h2 { color:var(--text1); font-size:17px; margin-bottom:10px; }
+  .verdict li { margin:0 0 8px 18px; }
+  .verdict b { color:var(--text1); font-weight:600; }
+</style>
+</head>
+<body>
+
+<h1>Kalshi &amp; Polymarket in the catalog</h1>
+<div class="intro">
+  <p>Scope is the <b>catalog</b> only — the product page and the connect screen. The room, the book and the browse section are untouched.</p>
+</div>
+<div class="intro">
+  <p>Three problems, in order of how badly they read: the connect screen sends you to a <b>&ldquo;room&rdquo;</b>, a word that exists nowhere else a user can see; <b>connecting produces no visible outcome</b> on the page it happened on; and the <b>comparison between the two venues</b> — the only reason to have both — is never mentioned anywhere in the catalog.</p>
+</div>
+<div class="scopebar">
+  <b>&ldquo;Room&rdquo; stays in the PRD and in code.</b> It dies in every string a user can read. Odds here are illustrative; the arrangement is what's real.
+</div>
+
+<div class="rail">
+
+  <!-- 1 — product page today -->
+  <div class="col">
+    <div class="dir-title">Product page<span class="tag now">today</span></div>
+    <div class="dir-note">
+      Neither offer has a <code>features</code> list or a <code>StorePreview</code> doc, so the page is a stale paragraph and one dead sentence. The summary still describes the <b>pre-§233 model</b> — &ldquo;search a team or event&rdquo; — which is exactly the search-only discovery failure §233 diagnosed and fixed. Nothing here says the two venues can be compared.
+    </div>
+    <div class="phone">
+      <div class="wash k"></div>
+      <div class="scroll">
+        <div class="statusbar"><span>9:41</span><span>▮▮▮</span></div>
+        <div class="navbar"><span class="back">‹</span><span class="title">Kalshi</span><span class="spacer"></span></div>
+
+        <div class="phead">
+          <div class="icon72 k">K</div>
+          <div>
+            <div class="pgroup">Markets</div>
+            <div class="pname">Kalshi</div>
+            <div class="ptag">Watch real-event odds</div>
+            <div class="verb">Connect</div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="seclabel">What it does</div>
+          <div class="body17">Watch any market on Kalshi, the CFTC-regulated event exchange — search a team or event and its live odds land in your feed. Public price data only, read-only: nothing here places a trade.</div>
+        </div>
+
+        <div class="sec">
+          <div class="seclabel">What lands in your feed</div>
+          <div class="body17 dim">Lands in your feed the moment you connect.</div>
+        </div>
+
+        <div class="flag" style="top:452px; left:150px;">no check list</div>
+        <div class="flag" style="top:560px; left:120px;">no preview — dead line</div>
+        <div class="fold"></div>
+      </div>
+    </div>
+    <div class="cap-note">The catalog's <b>most novel</b> offer, on its <b>thinnest</b> page</div>
+  </div>
+
+  <!-- 2 — connect screen today -->
+  <div class="col">
+    <div class="dir-title">Connect screen<span class="tag now">today</span></div>
+    <div class="dir-note">
+      <b>&ldquo;Open the Kalshi room.&rdquo;</b> The word appears in two strings and nowhere else in the app. The header's <code>connected:</code> wash exists and is never passed, so the page looks identical after connecting. The Following rows — the only place your markets are listed here — carry a title and a <b>timestamp</b>, no odds at all.
+    </div>
+    <div class="phone"><div class="scroll">
+      <div class="statusbar"><span>9:41</span><span>▮▮▮</span></div>
+      <div class="navbar"><span class="back">‹</span><span class="title">Kalshi</span><span class="spacer"></span></div>
+      <div class="navtitle">Kalshi</div>
+
+      <div class="setuphead">
+        <div class="icon60 k">K</div>
+        <div class="line">Watch real-event odds</div>
+      </div>
+
+      <div class="slab">
+        <div class="slabbtn">→&nbsp; Open the Kalshi room</div>
+        <div class="slabnote">Browse every open market in the room, and follow the ones you want to keep.</div>
+        <div class="slabnote">Public odds only — nothing here places a trade.</div>
+      </div>
+
+      <div class="seclabel" style="padding:6px 4px 8px;">Following</div>
+      <div class="row"><div><div class="t">Fed cuts rates at the March meeting?</div><div class="sub">2 days ago</div></div></div>
+      <div class="row"><div><div class="t">Government shutdown before April 1?</div><div class="sub">5 days ago</div></div></div>
+      <div class="row"><div><div class="t">Chiefs win the AFC Championship?</div><div class="sub">last week</div></div></div>
+      <div class="footnote">Swipe a market to stop following it.</div>
+
+      <div class="flag" style="top:296px; left:112px;">what room?</div>
+      <div class="flag" style="top:206px; left:196px;">no lit state</div>
+      <div class="flag" style="top:534px; left:180px;">a timestamp, not odds</div>
+      <div class="fold"></div>
+    </div></div>
+    <div class="cap-note">Connect happened. Nothing on this page says so.</div>
+  </div>
+
+  <!-- 3 — product page reworked -->
+  <div class="col">
+    <div class="dir-title">Product page<span class="tag new">proposed</span></div>
+    <div class="dir-note">
+      Summary rewritten to the <b>browse-then-follow</b> model that actually shipped. A <code>features</code> check list carries the differentiated facts — including, for the first time in the catalog, the <b>comparison</b>. And &ldquo;What lands in your feed&rdquo; stops promising and shows: one <b>live proof line</b> off the public book, which needs no account to read. Not tappable here — you haven't connected yet, so it's a taste, not a door.
+    </div>
+    <div class="phone">
+      <div class="wash k"></div>
+      <div class="scroll">
+        <div class="statusbar"><span>9:41</span><span>▮▮▮</span></div>
+        <div class="navbar"><span class="back">‹</span><span class="title">Kalshi</span><span class="spacer"></span></div>
+
+        <div class="phead">
+          <div class="icon72 k">K</div>
+          <div>
+            <div class="pgroup">Markets</div>
+            <div class="pname">Kalshi</div>
+            <div class="ptag">Watch real-event odds</div>
+            <div class="verb">Connect</div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="seclabel">What it does</div>
+          <div class="body17">Every open market on Kalshi, the CFTC-regulated event exchange — browse the whole book, and follow just the questions you want to keep.</div>
+          <div class="checks">
+            <div class="checkrow"><span class="tick">✓</span><span>Browse every open market — by category, or by what closes soonest</span></div>
+            <div class="checkrow"><span class="tick">✓</span><span>Follow a question and its odds land in your feed</span></div>
+            <div class="checkrow"><span class="tick">✓</span><span>See where Polymarket's crowd prices the same question differently</span></div>
+            <div class="checkrow"><span class="tick">✓</span><span>No account, no key — public odds, read-only</span></div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="seclabel">What lands in your feed</div>
+          <div class="proof">
+            <span class="lbl">Biggest move</span>
+            <span class="lq">Fed cuts rates at the March meeting?</span>
+            <span class="delta up sm">+9 pts</span>
+          </div>
+          <div class="proofnote">Live from Kalshi's public book right now. Follow a question and it lands in your feed like this.</div>
+        </div>
+
+        <div class="fold"></div>
+      </div>
+    </div>
+    <div class="cap-note">The App&nbsp;Store screenshot slot, holding something <b>true</b></div>
+  </div>
+
+  <!-- 4 — connect screen reworked -->
+  <div class="col">
+    <div class="dir-title">Connect screen<span class="tag new">proposed</span></div>
+    <div class="dir-note">
+      &ldquo;Room&rdquo; is gone. The button names the verb — <b>Browse Kalshi markets</b> — and underneath, the destination is <b>shown, not named</b>: the actual chip, in the actual strip, with one line saying tap it any time. The header wears its hue, so connecting visibly did something. The proof line repeats here as the reason to go. Following rows carry <b>live odds and the move since you followed</b> — free, off <code>PredictionPulse</code>'s cache.
+    </div>
+    <div class="phone"><div class="scroll">
+      <div class="statusbar"><span>9:41</span><span>▮▮▮</span></div>
+      <div class="navbar"><span class="back">‹</span><span class="title">Kalshi</span><span class="spacer"></span></div>
+      <div class="navtitle">Kalshi</div>
+
+      <div class="setuphead lit k">
+        <div class="icon60 k">K</div>
+        <div class="line">Watch real-event odds</div>
+      </div>
+
+      <div class="slab">
+        <div class="proof" style="margin-bottom:12px;">
+          <span class="lbl">Biggest move</span>
+          <span class="lq">Fed cuts rates at the March meeting?</span>
+          <span class="delta up sm">+9 pts</span>
+        </div>
+        <div class="slabbtn">Browse Kalshi markets</div>
+        <div class="teach">
+          <div>
+            <div class="ministrip">
+              <span class="c">All</span>
+              <span class="c on"><span class="d" style="background:#04120e"></span>Kalshi</span>
+              <span class="c">Wallet</span>
+            </div>
+            <div class="tx">Kalshi is in your feed strip now — tap its chip any time.</div>
+          </div>
+        </div>
+        <div class="slabnote">Public odds only — nothing here places a trade.</div>
+      </div>
+
+      <div class="ask">
+        <div class="askhead"><div class="mark p">P</div><div class="askq">Follow the same questions on Polymarket?</div></div>
+        <div class="askbody">Two independent crowds price many of the same events. With both connected, you'll see where they disagree.</div>
+        <div class="askact">Add Polymarket</div>
+      </div>
+
+      <div class="seclabel" style="padding:6px 4px 8px;">Following</div>
+      <div class="row">
+        <div><div class="t">Fed cuts rates at the March meeting?</div>
+             <div class="sub">68% · <span class="up">up 9</span> since you followed</div></div>
+        <div class="cmp">P</div>
+      </div>
+      <div class="row">
+        <div><div class="t">Government shutdown before April 1?</div>
+             <div class="sub">23% · <span class="dn">down 14</span> since you followed</div></div>
+        <div class="cmp">P</div>
+      </div>
+
+      <div class="fold"></div>
+    </div></div>
+    <div class="cap-note">Connect ends in <b>proof</b>, on the page that made the promise</div>
+  </div>
+
+  <!-- 5 — the compare ask, three states -->
+  <div class="col">
+    <div class="dir-title">The compare ask<span class="tag new">proposed</span></div>
+    <div class="dir-note">
+      Today the twin offer fires for about three seconds after a follow, then the next load clears it — scroll and it's gone forever. Here it's a <b>property of a market</b>, asked when you want it: the <b>P</b> capsule on a followed row checks Polymarket on demand and answers in place. One tap to follow it there too. Nothing is ever auto-followed (§234's refusal stands). Below: what the venue ask becomes once both are in.
+    </div>
+    <div class="phone"><div class="scroll">
+      <div class="statusbar"><span>9:41</span><span>▮▮▮</span></div>
+      <div class="navbar"><span class="back">‹</span><span class="title">Kalshi</span><span class="spacer"></span></div>
+      <div class="navtitle">Kalshi</div>
+
+      <div class="askline">
+        <span class="pair"><span class="mark k">K</span><span class="mark p">P</span></span>
+        <span>Polymarket is in too — when the two crowds price the same question differently, you'll see the gap.</span>
+      </div>
+
+      <div class="seclabel" style="padding:2px 4px 8px;">Following</div>
+
+      <div class="row" style="display:block;">
+        <div style="display:flex; align-items:center; gap:var(--s3);">
+          <div><div class="t">Fed cuts rates at the March meeting?</div>
+               <div class="sub">68% · <span class="up">up 9</span> since you followed</div></div>
+          <div class="cmp" style="margin-left:auto;">P</div>
+        </div>
+        <div class="twin">
+          <div class="twinline"><span class="mark p">P</span>
+            <span>Polymarket prices this at 77% — 9 points apart.</span></div>
+          <div class="twinact">Follow it there too</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div><div class="t">Government shutdown before April 1?</div>
+             <div class="sub">23% · <span class="dn">down 14</span> since you followed</div></div>
+        <div class="cmp">P</div>
+      </div>
+
+      <div class="row">
+        <div><div class="t">Chiefs win the AFC Championship?</div>
+             <div class="sub">41% · unchanged since you followed</div></div>
+        <div class="cmp" style="color:var(--text3);">P</div>
+      </div>
+      <div class="footnote">Tap <b style="color:var(--text2)">P</b> to see whether Polymarket prices the same question. Nothing is followed until you say so.</div>
+
+      <div class="seclabel" style="padding:20px 4px 8px;">Resolved</div>
+      <div class="row">
+        <div><div class="t" style="color:var(--text2)">Fed holds rates at the January meeting?</div>
+             <div class="sub">You followed at 34%</div></div>
+        <div class="ans">Yes</div>
+      </div>
+
+      <div class="fold"></div>
+    </div></div>
+    <div class="cap-note">An ask you can answer <b>later</b> — not a flash you had to catch</div>
+  </div>
+
+</div>
+
+<div class="verdict">
+  <h2>What changes, and why</h2>
+  <ul>
+    <li><b>&ldquo;Room&rdquo; leaves user-visible copy entirely.</b> Two button strings and two notes. It's a PRD word; the user's model is the chip, so the page shows the chip rather than naming a place.</li>
+    <li><b>Connect ends in proof, on the page that made the promise.</b> The header's existing <code>connected:</code> wash gets passed (it's built and unused on both screens), and the live proof line gives the page something true to say the moment you connect.</li>
+    <li><b>The comparison enters the catalog.</b> Right now nothing in the catalog — tile, product page, or connect screen — mentions that the two venues can be compared. It becomes a check-list line on the product page and a direct ask on the connect screen, gated so it's absent once both are connected.</li>
+    <li><b>The twin ask becomes durable.</b> Reachable from any followed market, any time, one request on demand — instead of a transient offer cleared by the next load.</li>
+    <li><b>Following rows say something.</b> Live odds and the move since you followed, read free off <code>PredictionPulse</code>'s cache — the same numbers <code>MarketsAsk</code> already reads, so they can never disagree with the feed.</li>
+  </ul>
+  <h2>Held back deliberately</h2>
+  <ul>
+    <li><b>No book on the catalog pages.</b> One line, no list, no field, no chips — §234 stands. The line is the §235 lede, which already exists.</li>
+    <li><b>No auto-follow of the twin</b>, and no &ldquo;follow both&rdquo; single tap — §234 refused both with reasons that still hold.</li>
+    <li><b>No payout, no stake, no &ldquo;you'd have won.&rdquo;</b> The resolved receipt reports attention only.</li>
+  </ul>
+  <h2>Out of scope here, but worth knowing</h2>
+  <ul>
+    <li>With both exchanges connected, the disagreement cards render only in <code>.all</code> scope — and <code>PredictionRoomBook</code> defaults every room to its own venue. So the crown feature currently sits behind a segment tap. That's a room fix, not a catalog one; flagging it, not doing it.</li>
+  </ul>
+</div>
+
+</body>
+</html>

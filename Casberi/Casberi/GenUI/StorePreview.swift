@@ -167,9 +167,15 @@ enum StorePreview {
         ]
         case "Kalshi": [
             "root = Stack([w])",
-            "w = Widget(\"Live odds\", null, [r1, r2])",
-            "r1 = Row(\"Fed holds rates in March · 68%\", \"Link\", \"Kalshi\", \"now\")",
-            "r2 = Row(\"Lakers make the playoffs · 74%\", \"Link\", \"Kalshi\", \"2h\")",
+            "w = Widget(\"Following\", null, [r1, r2])",
+            "r1 = Row(\"Fed cuts rates at the March meeting? · 68%\", \"Link\", \"Kalshi\", \"now\")",
+            "r2 = Row(\"Lakers make the playoffs? · 74%\", \"Link\", \"Kalshi\", \"2h\")",
+        ]
+        case "Polymarket": [
+            "root = Stack([w])",
+            "w = Widget(\"Following\", null, [r1, r2])",
+            "r1 = Row(\"Bitcoin above $150k this year? · 52%\", \"Link\", \"Polymarket\", \"now\")",
+            "r2 = Row(\"Fed cuts rates at the March meeting? · 77%\", \"Link\", \"Polymarket\", \"1h\")",
         ]
         case "Stocktwits": [
             "root = Stack([w])",
