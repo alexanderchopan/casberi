@@ -635,6 +635,14 @@ struct RootShell: View {
                 deepLinkThing = thing
             }
         }
+        // Mac window resize (2026-07-28): the detail pane hands off a thing
+        // it can no longer render instead of discarding it — see
+        // `PadDetailSelection.displaced`.
+        .onChange(of: PadDetailSelection.shared.displaced) { _, thing in
+            guard let thing else { return }
+            deepLinkThing = thing
+            PadDetailSelection.shared.displaced = nil
+        }
         .sheet(item: $deepLinkThing) { thing in
             rootPresented(ThingSheetView(thing: thing))
         }

@@ -199,7 +199,7 @@ struct AppDetailScreen: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             Text("What it does")
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
-            Text(LocalizedStringKey(offer.summary))
+            Text(LocalizedStringKey(offer.effectiveSummary))
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
             // The differentiated extras, scannable rather than crammed into

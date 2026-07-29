@@ -89,6 +89,13 @@ struct ThingContentView: View {
             kindContent
             summaryBlock
         }
+        // Mac polish (2026-07-28): `.textSelection` is an environment value,
+        // so ONE modifier here covers every kind's prose — the summary
+        // block and every `Text` inside `kindContent`'s nested views,
+        // however deep — without touching each call site. Selecting and
+        // copying a passage is reflex on Mac; SwiftUI `Text` isn't
+        // selectable by default.
+        .textSelection(.enabled)
     }
 
     /// The source's own abstract — a feed item's summary, a task's notes, a

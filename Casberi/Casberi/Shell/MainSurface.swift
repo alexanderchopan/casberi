@@ -306,8 +306,18 @@ struct MainSurface: View {
         .onChange(of: showsPane, initial: true) { _, now in
             detail.paneActive = now
             // Rotating a mini into a shape that can't hold a pane must
-            // not strand a selection nothing renders.
-            if !now { detail.thing = nil }
+            // not strand a selection nothing renders. On Mac this same
+            // transition fires on an ordinary window drag rather than a
+            // deliberate rotation, so hand the open thing to RootShell's
+            // sheet fallback instead of silently discarding it (see
+            // `PadDetailSelection.displaced`).
+            if !now {
+                if ProcessInfo.processInfo.isMacCatalystApp,
+                   let thing = detail.thing, thing.isLive {
+                    detail.displaced = thing
+                }
+                detail.thing = nil
+            }
         }
     }
 

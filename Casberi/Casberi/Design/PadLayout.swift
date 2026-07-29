@@ -116,6 +116,17 @@ final class PadDetailSelection {
     /// measured yet" and take the sheet on a device that has a pane.
     var layoutSettled = false
 
+    /// Handoff when the pane disappears out from under an open thing (Mac
+    /// polish, 2026-07-28): on iPad, losing the pane means a ROTATION — a
+    /// deliberate act that changes the whole layout at once, so clearing
+    /// `thing` outright reads fine. On Mac the same `showsPane` transition
+    /// fires on a plain, continuous window drag past `minWidthForPane`, so
+    /// silently discarding whatever was open reads as the app randomly
+    /// closing what you were reading. `MainSurface` sets this instead of
+    /// clearing `thing` directly; `RootShell` observes it and opens the
+    /// same thing as a real sheet instead of dropping it.
+    var displaced: Thing?
+
     /// Suspends until the shell has measured itself, so a launch-time route
     /// asks a question that has an answer. Bounded — a shell that never lays
     /// out (nothing on screen to route into) must not hang the caller, it

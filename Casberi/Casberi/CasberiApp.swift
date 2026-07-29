@@ -13,12 +13,43 @@ enum LaunchClock {
 }
 #endif
 
+/// A Home Screen quick action (long-press the icon on iOS/iPadOS) IS a Mac
+/// Dock menu under Catalyst — Apple surfaces the same `UIApplicationShortcutItem`
+/// list both ways, so this one registration reaches both platforms (Mac
+/// polish, 2026-07-28). Reuses the exact "open the composer next foreground"
+/// flag the widget's Control Center button already writes — RootShell's
+/// existing foreground check (`compose.request` in the app group) picks it
+/// up with no new consumer code.
+final class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        application.shortcutItems = [
+            UIApplicationShortcutItem(
+                type: "com.casberi.app.newThing",
+                localizedTitle: "New Thing",
+                localizedSubtitle: nil,
+                icon: UIApplicationShortcutIcon(systemImageName: "plus.circle"))
+        ]
+        return true
+    }
+
+    func application(_ application: UIApplication,
+                     performActionFor shortcutItem: UIApplicationShortcutItem,
+                     completionHandler: @escaping (Bool) -> Void) {
+        if shortcutItem.type == "com.casberi.app.newThing" {
+            UserDefaults(suiteName: SharedStore.appGroup)?.set(true, forKey: "compose.request")
+        }
+        completionHandler(true)
+    }
+}
+
 /// Casberi — one home for a person's things.
 ///
 /// M0: project scaffold, token layer, glass tab shell + composer, demo corpus.
 /// SwiftData stays on-device for M0; CloudKit sync joins in M1 (brief §11).
 @main
 struct CasberiApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     let container: ModelContainer
 
     init() {

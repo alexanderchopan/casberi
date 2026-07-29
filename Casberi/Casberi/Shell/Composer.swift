@@ -1209,6 +1209,18 @@ struct Composer: View {
                                         GenRender(id: "root", els: turn.els)
                                             .environment(\.genAgentAnswerContext, true)
                                             .environment(\.genAskRequest, askFromAnswer)
+                                            // Mac polish (2026-07-28): applied
+                                            // ONCE at the root rather than
+                                            // inside GenRenderer's own
+                                            // recursive component switch —
+                                            // .textSelection is an environment
+                                            // value, so it cascades to every
+                                            // Text the whole document tree
+                                            // renders without adding any new
+                                            // nesting depth to a view already
+                                            // erased via AnyView for exactly
+                                            // that stack-depth reason.
+                                            .textSelection(.enabled)
                                         if !turn.failed {
                                             provenanceBadge(keyed: turn.keyed,
                                                             searchedWeb: turn.searchedWeb,
@@ -1239,6 +1251,7 @@ struct Composer: View {
                                                 .accessibilityLabel("Thinking")
                                         }
                                         GenRender(id: "root", els: answerStream.els)
+                                            .textSelection(.enabled)
                                             .environment(\.genProseStreaming, proseStreaming)
                                             // Cited rows glint once as they
                                             // mount — "I went and found

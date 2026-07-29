@@ -240,6 +240,7 @@ struct ThingSheetView: View {
                     Text(thing.title)
                         .dsText(.heading22).foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s2)
                         .settleIn(delay: 0.1)

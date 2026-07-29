@@ -73,6 +73,23 @@ enum BridgeCatalog {
             return now.timeIntervalSince(added) < 7 * 24 * 60 * 60
         }
 
+        /// The Mac-accurate summary, for the one offer whose iOS wording
+        /// makes a promise Mac can't keep (Mac polish, 2026-07-28). "The
+        /// screenshots you take flow into your feed" is true on iPhone/iPad;
+        /// on Mac a screenshot goes to the Desktop, not the Photos library,
+        /// so this seat only ever sees ones that arrive via iCloud Photos
+        /// from another device — a real, still-useful seat, just not what
+        /// the iOS sentence describes. Falls back to `summary` everywhere
+        /// else, including Photos on iOS/iPadOS.
+        var effectiveSummary: String {
+            #if targetEnvironment(macCatalyst)
+            if name == "Photos" {
+                return "Screenshots that land in your Photos library — the ones your iPhone or iPad takes, synced over iCloud — flow into your feed, searchable by what's in them. A Mac screenshot goes to the Desktop rather than Photos, so this seat sees the ones that arrive from another device, not ones taken here."
+            }
+            #endif
+            return summary
+        }
+
         /// A one-word honest hook for the row badge and the story eyebrow —
         /// derived from HOW the bridge connects, never marketing. "One tap"
         /// (a system-permission bridge — a single grant, no fields), "No
