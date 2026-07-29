@@ -9901,3 +9901,45 @@ hydration and then popped — it now drives three skeleton cards and a
 shouldn't read as a dead exchange). And the big probability now softens to
 `textSecondary` on a thin book, matching what §233's own mockup showed and
 what §83 ② requires everywhere else.
+
+**§235 addendum — the remaining four, same day.**
+
+**Resolution got a home.** It was the payoff of the whole feature and
+rendered nowhere except a section on a connect page. `PredictionRow`'s
+settled case now carries the RECEIPT ("You followed at 34%") wherever a
+resolved market appears — All feed, room, search — and
+`PredictionRoomBook` gained a "How they turned out" section holding the
+last three. Attention only, never a payout: no stake, no "you'd have won",
+per the 5.3 line.
+
+**The room got a lede and lost a control row.** Three stacked controls
+(search, chips, segmented order) filled most of a phone before any
+content, with nothing orienting you. The order picker became a chip-shaped
+Menu inside the category row — "Busiest" and "Politics" are both just ways
+of narrowing what you're looking at — and above them sits the **biggest
+move** in the book. A THING, not a tally: the module doctrine bans a count
+as a module, so "14 markets moved 10+ points" is exactly what this must
+not be; one market that moved nine points is an event. Silent under five
+points, and suppressed entirely under `.biggestMove` ordering where it
+would restate the first card an inch above itself. The QUESTION leads the
+card, with the outcome beneath — "Biggest move: Newsom" says nothing
+without the race.
+
+**The disagreement card became a different SHAPE**, not the browse card in
+another colour. The GAP is the headline now — the fact that exists only
+because both books are being read at once — with the two venue bars
+beneath it wearing their own brand hues (`DS.washHue`), so which crowd is
+which reads without parsing a label. Same read/write split as an outcome
+row.
+
+**Time is weighted.** "Closes in 3 days" and "closes in 40 minutes" were
+the same tertiary grey, but 62% on a market closing tonight is a different
+claim from 62% on one closing next November — imminence is the single fact
+that most changes what the number means. Inside 48 hours it reads as
+state (`DS.attention`, semibold); outside, it stays quiet, so urgency
+keeps meaning something.
+
+One perf note worth keeping: `cards` groups and sorts the whole book, and
+this view renders inside a List row — the body computes it ONCE and
+threads it into both the lede and the list, rather than each reaching for
+the property independently.

@@ -600,11 +600,20 @@ struct PredictionRow: View {
     /// relaunch that empties the in-memory cache.
     private var resolvedYes: Bool? { thing.marketResolvedYes ?? (pulse.resolved ? pulse.yesWon : nil) }
 
-    /// The market's own side ("Kansas City") when it has one, and the thin-
-    /// book caveat when it applies — the one line that says what the number
-    /// on the right is worth.
+    /// The market's own side ("Kansas City") when it has one, the thin-book
+    /// caveat when it applies, and — once settled — the RECEIPT: the odds
+    /// the day you followed it (prd §235).
+    ///
+    /// The receipt is the payoff of the whole feature and it used to render
+    /// nowhere except a section on a connect page. It reports your
+    /// ATTENTION and nothing else: no payout, no stake, no "you'd have
+    /// won" — that sentence belongs to a betting app, not this one (the 5.3
+    /// line, `PredictionMoments`' own header).
     private var subtitle: String? {
-        if resolvedYes != nil { return nil }
+        if resolvedYes != nil {
+            guard let at = thing.watchPriceUsd else { return nil }
+            return String(localized: "You followed at \(Int((at * 100).rounded()))%")
+        }
         if pulse.thin { return String(localized: "Thinly traded — odds move easily") }
         return nil
     }

@@ -54,6 +54,26 @@ struct PredictionRoomBook: View {
             predicate: #Predicate<Thing> { $0.source == source }))) ?? 0
     }
 
+    /// Settled markets, newest first (prd §235). A resolution is the payoff
+    /// of this whole feature — a question you were following became a FACT —
+    /// and until now it lived only as a moment that scrolled past the feed
+    /// once, plus a section on a connect page nobody opens. Capped at three:
+    /// this is the recent record, not an archive, and the full history is
+    /// the room's own feed below.
+    ///
+    /// Fetched rather than `@Query`'d because the predicate needs `source`,
+    /// which is a property of this view, and filtered to `.live` at the
+    /// boundary (build 177 corollary 4) so nothing downstream reads a
+    /// tombstoned model.
+    private var resolved: [Thing] {
+        let s = source
+        var d = FetchDescriptor<Thing>(
+            predicate: #Predicate<Thing> { $0.source == s && $0.marketResolvedYes != nil },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        d.fetchLimit = 3
+        return ((try? modelContext.fetch(d)) ?? []).live
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             if bothConnected {
@@ -64,6 +84,22 @@ struct PredictionRoomBook: View {
                 onWatchedKalshi: { _ in registerIfNeeded(name: "Kalshi", id: "kalshi") },
                 onWatchedPolymarket: { _ in registerIfNeeded(name: "Polymarket", id: "polymarket") },
                 onPreview: onPreview)
+            // The payoff, given a home (prd §235) — questions you followed
+            // that have become facts.
+            let settled = resolved
+            if !settled.isEmpty {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    Text("How they turned out")
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
+                    ForEach(settled.keyed) { row in
+                        // Corollary 3 (build 176) — re-check inside the
+                        // closure, not just at the boundary above.
+                        if let thing = row.live { resolvedRow(thing) }
+                    }
+                }
+                .padding(.top, DS.Space.s2)
+            }
+
             // Names the boundary: everything above is the live book (nothing
             // saved), everything the feed renders below is what you actually
             // follow. Shown only when there IS something below — an empty
@@ -84,6 +120,27 @@ struct PredictionRoomBook: View {
             didSetScope = true
             scope = ownScope
         }
+    }
+
+    /// The receipt, as a row: the question, how it ended, and the odds the
+    /// day you started following. Attention only — never a payout.
+    private func resolvedRow(_ thing: Thing) -> some View {
+        HStack(spacing: DS.Space.s3) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(thing.title)
+                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    .lineLimit(2)
+                if let at = thing.watchPriceUsd {
+                    Text("You followed at \(Int((at * 100).rounded()))%")
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                }
+            }
+            Spacer(minLength: DS.Space.s2)
+            Text(thing.marketResolvedYes == true ? "Yes" : "No")
+                .dsText(.body17).fontWeight(.bold)
+                .foregroundStyle(DS.textPrimary)
+        }
+        .dsListCardRow()
     }
 
     /// Following a market from the OTHER venue's rows (possible in `.all`
