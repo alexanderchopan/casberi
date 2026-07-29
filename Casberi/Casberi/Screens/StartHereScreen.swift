@@ -14,9 +14,19 @@ import SwiftData
 /// forcing a single first source means half of new users get a demo of
 /// something they didn't come for (user, 2026-07-25: "we have users that are
 /// here for crypto wallets, what if they don't care about photos"). So the fork
-/// covers the three real ones: memory (screenshots), money (a wallet), reading
-/// (someone to follow). Three is a fork you answer in a second; forty is a wall
-/// you have to survey.
+/// covers the three real ones: your own files (a folder), money (a wallet),
+/// reading (someone to follow). Three is a fork you answer in a second; forty
+/// is a wall you have to survey.
+///
+/// **Why a folder, not screenshots (2026-07-28).** The first card used to be
+/// "Show me my screenshots" (Photos permission → the screenshot library).
+/// Swapped for "Show me my files" — the system folder picker (`Model/
+/// FilesBridge.swift`) — because it's a stronger first proof: one tap on a
+/// folder like Downloads or an iCloud Drive folder lands real, personally
+/// meaningful files (PDFs, docs, whatever's actually in there) rather than
+/// just screenshots, and it reads as evidence the app can hold ANYTHING, not
+/// one narrow category. Screenshots ingest is unchanged and still reachable
+/// from the catalog — this only changes which door onboarding opens first.
 ///
 /// **Why this is not the connect screen that died (prd §96).** That screen was
 /// a LIST of sources with toggles — four simultaneous standing asks, all
@@ -33,11 +43,6 @@ import SwiftData
 /// than "Skip" — skip lands you nowhere, this lands you where the old CTA went,
 /// so nothing is lost for someone who came to browse.
 ///
-/// Copy ruling (user, 2026-07-25): the screenshots card says "New ones land
-/// here on their own", NOT "pick a few" — "pick a few" describes iOS's LIMITED
-/// access, which this app supports but never wants; `ScreenshotIngest` is a
-/// standing connection that re-scans every foreground, and the promise should
-/// describe what the bridge does rather than its degraded mode.
 struct StartHereScreen: View {
     /// Ends onboarding. A non-nil node is where to land afterwards (the wallet
     /// manager, the catalog); nil means the feed, which is the right answer
@@ -46,13 +51,15 @@ struct StartHereScreen: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(ShellChrome.self) private var chrome
+    @Environment(BridgeStore.self) private var store
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var arrived = false
-    /// The screenshots card is the one option that does its work HERE rather
-    /// than handing off to a screen, so it needs its own in-place state — a
-    /// permission sheet plus a library walk is seconds, not instant, and a card
-    /// that looked inert while working would read as a dead control.
-    @State private var connectingPhotos = false
+    /// The files card is the one option that does its work HERE rather than
+    /// handing off to a screen, so it needs its own in-place state — the
+    /// picker plus a folder walk is seconds, not instant, and a card that
+    /// looked inert while working would read as a dead control.
+    @State private var pickingFolder = false
+    @State private var connectingFolder = false
     @State private var showFollow = false
 
     var body: some View {
@@ -74,11 +81,12 @@ struct StartHereScreen: View {
                 .padding(.top, DS.Space.s2)
                 .startArrive(arrived, delay: 0.05)
 
-                card(glyph: "photo.on.rectangle.angled", hue: .blue,
-                     title: "Show me my screenshots",
-                     line: "New ones land here on their own.",
-                     busy: connectingPhotos) {
-                    connectPhotos()
+                card(glyph: "folder.badge.plus", hue: .blue,
+                     title: "Show me my files",
+                     line: "Pick any folder — Downloads, iCloud Drive, anywhere.",
+                     busy: connectingFolder) {
+                    DSHaptic.tap()
+                    pickingFolder = true
                 }
                 .startArrive(arrived, delay: 0.15)
 
@@ -112,6 +120,17 @@ struct StartHereScreen: View {
         .navigationDestination(isPresented: $showFollow) {
             StartFollowScreen(onStart: onStart)
         }
+        .fileImporter(isPresented: $pickingFolder, allowedContentTypes: [.folder]) { outcome in
+            guard case .success(let url) = outcome else { return }
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            if FilesStore.shared.setFolder(url: url) {
+                connectFolder()
+            } else {
+                chrome.flash("Couldn't keep access to that folder — try again from the catalog")
+                onStart(nil)
+            }
+        }
         .safeAreaInset(edge: .bottom) {
             // Not "Skip": this lands where the old CTA went, so someone who
             // came to browse loses nothing.
@@ -136,8 +155,12 @@ struct StartHereScreen: View {
             else { withAnimation(DS.Motion.standard) { arrived = true } }
         }
         #if DEBUG
-        // `-startPick screenshots|wallet|follow|catalog` fires one card after a
-        // beat, so each arm of the fork verifies headlessly.
+        // `-startPick folder|wallet|follow|catalog` fires one card after a
+        // beat, so each arm of the fork verifies headlessly. The folder arm
+        // can only OPEN the system picker (`fileImporter`, like every other
+        // document-picker/sign-in hop in this app, can't be driven headless)
+        // — pair with `-startFolder <path>` below to land files without
+        // touching the picker at all.
         .onAppear {
             guard let pick = UserDefaults.standard.string(forKey: "startPick"),
                   !pick.isEmpty else { return }
@@ -145,30 +168,53 @@ struct StartHereScreen: View {
                 try? await Task.sleep(for: .seconds(1))
                 NSLog("[Casberi] startPick: %@", pick)
                 switch pick {
-                case "screenshots": connectPhotos()
-                case "wallet":      onStart(.bridge(.wallet))
-                case "follow":      showFollow = true
-                default:            onStart(.apps)
+                case "folder":  pickingFolder = true
+                case "wallet":  onStart(.bridge(.wallet))
+                case "follow":  showFollow = true
+                default:        onStart(.apps)
+                }
+            }
+        }
+        // `-startFolder <path>` connects a folder by path directly, bypassing
+        // the picker entirely — the only way to exercise the landing path
+        // (setFolder → FilesIngest.refresh → registerConnected) headlessly.
+        .onAppear {
+            guard let path = UserDefaults.standard.string(forKey: "startFolder"),
+                  !path.isEmpty else { return }
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                NSLog("[Casberi] startFolderProbe: %@", path)
+                if FilesStore.shared.setFolder(url: URL(fileURLWithPath: path)) {
+                    connectFolder()
+                } else {
+                    NSLog("[Casberi] startFolderProbe: couldn't bookmark %@", path)
                 }
             }
         }
         #endif
     }
 
-    /// The one card that acts in place. A denial is NOT a dead end — the person
-    /// still leaves onboarding (into the feed, where the catalog door is), and
-    /// the flash says what happened rather than leaving the tap unexplained.
-    private func connectPhotos() {
-        guard !connectingPhotos else { return }
-        connectingPhotos = true
-        DSHaptic.tap()
+    /// The one card that acts in place. A folder that can't be read is NOT a
+    /// dead end — the person still leaves onboarding (into the feed, where
+    /// the catalog door is), and the flash says what happened rather than
+    /// leaving the tap unexplained.
+    private func connectFolder() {
+        guard !connectingFolder else { return }
+        connectingFolder = true
         Task { @MainActor in
-            let landed = await ScreenshotIngest.connectAndIngest(context: modelContext)
-            connectingPhotos = false
-            NSLog("[Casberi] startPhotos: %@", landed.map { "\($0) in" } ?? "no access")
-            if landed == nil {
-                chrome.flash("No photo access — connect it any time from the catalog")
+            let added = await FilesIngest.refresh(context: modelContext)
+            connectingFolder = false
+            NSLog("[Casberi] startFolder: %@", added.map { "\($0) in" } ?? "unreadable")
+            guard let added else {
+                FilesStore.shared.disconnect()
+                chrome.flash("Couldn't read that folder — try again from the catalog")
+                onStart(nil)
+                return
             }
+            let proof = added > 0 ? "\(added) files in" : "Synced just now"
+            _ = store.registerConnected(id: "files", name: "Files", proof: proof,
+                                        can: ["Reads the folder you picked.",
+                                              "Read-only — never edits a file."])
             onStart(nil)
         }
     }
