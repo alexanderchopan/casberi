@@ -46,10 +46,15 @@ struct PredictionVenueConnect: View {
     /// header didn't already say (the header's blurb IS this screen's own
     /// venue's tagline, so repeating it on the own-venue row would be the
     /// exact redundancy `BridgeSetupHeader` was built to avoid).
+    ///
+    /// It says WHAT the other exchange is and stops there — the reason to
+    /// keep both is the companion block's one job, and carrying a second
+    /// half here ("— see where its odds differ") both duplicated it and
+    /// wrapped this row to three lines.
     private func hint(_ v: PredictionSource) -> String {
         switch v {
-        case .kalshi: String(localized: "CFTC-regulated event exchange — see where its odds differ")
-        case .polymarket: String(localized: "Onchain, with real price history — see where its odds differ")
+        case .kalshi: String(localized: "CFTC-regulated event exchange")
+        case .polymarket: String(localized: "Onchain, with real price history")
         }
     }
 
@@ -60,6 +65,7 @@ struct PredictionVenueConnect: View {
                 venueRow(otherVenue, subtitle: hint(otherVenue))
             }
             .dsListCardRow()
+            .listRowSeparator(.hidden)
             .confirmationDialog(confirmTitle, isPresented: Binding(
                 get: { confirming != nil }, set: { if !$0 { confirming = nil } }
             ), titleVisibility: .visible) {
@@ -73,9 +79,7 @@ struct PredictionVenueConnect: View {
                     Text(confirmMessage(v))
                 }
             }
-            if connected(ownVenue) || connected(otherVenue) {
-                teach
-            }
+            companion
         } footer: {
             // One gray sentence for the whole screen (DSSlab's companion
             // rule) — the two venues' honesty notes collapsed into one,
@@ -121,22 +125,31 @@ struct PredictionVenueConnect: View {
         .padding(.vertical, DS.Space.s2)
     }
 
-    /// Taught only once at least one venue is live — pointing at the actual
-    /// chip(s) in the actual strip, rather than naming a destination with a
-    /// word ("room") that exists nowhere else a person can read.
-    private var teach: some View {
+    /// The card's ONE companion block, and the answer to *why both* — which
+    /// nothing on this screen said until 2026-07-29 (the other venue's row
+    /// carried "see where its odds differ" as a 13pt fragment, which reads
+    /// as a description of that exchange, not as a reason to keep two).
+    ///
+    /// One slot, not two stacked wells: before you say yes it's the pitch,
+    /// after it's the direction. The pitch is stated the way the room's own
+    /// disagreement card behaves (prd §235) — the GAP is the fact, and it's
+    /// never judged: no side called right, nothing suggesting a trade.
+    private var companion: some View {
         let live = [ownVenue, otherVenue].filter(connected)
-        let names = live.map(\.rawValue).joined(separator: " and ")
+        // Both icons ONLY in the nothing-connected pitch, where the line
+        // claims no strip and the pair is pure illustration. The moment one
+        // venue is live these icons mean "this is in your feed strip", so
+        // showing the OFF venue's icon beside that sentence would be status
+        // it hasn't earned.
+        let icons = live.isEmpty ? [ownVenue, otherVenue] : live
         return HStack(alignment: .top, spacing: DS.Space.s3) {
             HStack(spacing: -6) {
-                ForEach(live, id: \.self) { v in
+                ForEach(icons, id: \.self) { v in
                     BridgeIcon(name: v.rawValue, size: 22, circular: true)
                         .overlay(Circle().strokeBorder(DS.gray100, lineWidth: 1.5))
                 }
             }
-            Text(live.count > 1
-                 ? "\(names) are both in your feed strip — tap a chip to browse every open market and follow the ones you want."
-                 : "\(names) is in your feed strip — tap its chip to browse every open market and follow the ones you want.")
+            Text(companionLine(live))
                 .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -144,6 +157,31 @@ struct PredictionVenueConnect: View {
         .background(DS.surfaceWell, in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
         .padding(.top, DS.Space.s1)
         .dsListCardRow()
+        // Design law: no hairlines, zero exceptions — a second row in this
+        // Section otherwise draws the List's own separator above it.
+        .listRowSeparator(.hidden)
+    }
+
+    /// Plain by ruling (user, 2026-07-29: *"clear and direct and eli5"* —
+    /// the first draft was five wrapped lines of argument, the second still
+    /// too flowery). Short sentences, full stops instead of em-dashes, and
+    /// the reason stated as the concrete thing you GET ("two prices for the
+    /// same question"), never as a claim about crowds or reads.
+    ///
+    /// That one phrase is repeated verbatim across the two unfinished
+    /// states on purpose: it's the whole answer to *why both*, and a person
+    /// meets it in whichever state they land in.
+    private func companionLine(_ live: [PredictionSource]) -> String {
+        switch live.count {
+        case 2:
+            let names = live.map(\.rawValue).joined(separator: " and ")
+            return String(localized: "\(names) are both in your feed strip. Tap a chip to browse markets. When the two prices differ, you'll see by how much.")
+        case 1:
+            let missing = live[0] == ownVenue ? otherVenue : ownVenue
+            return String(localized: "\(live[0].rawValue) is in your feed strip. Tap its chip to browse markets. Add \(missing.rawValue) to see two prices for the same question.")
+        default:
+            return String(localized: "Follow both to see two prices for the same question.")
+        }
     }
 
     private func follow(_ v: PredictionSource) {
