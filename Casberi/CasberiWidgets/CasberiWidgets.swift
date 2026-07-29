@@ -2,7 +2,9 @@ import WidgetKit
 import SwiftUI
 import SwiftData
 import AppIntents
+#if !targetEnvironment(macCatalyst)
 import ActivityKit
+#endif
 
 /// The hero widget — one synthesis line on the home screen (P8: awareness
 /// lands; the corpus speaks without being asked). Reads the shared store
@@ -12,13 +14,17 @@ struct CasberiWidgets: WidgetBundle {
     var body: some Widget {
         HeroWidget()
         ComposeControl()
+        #if !targetEnvironment(macCatalyst)
         VoiceRecordingActivity()
+        #endif
     }
 }
 
 /// While a voice note records, the lock screen and Dynamic Island show the
 /// recording state — waveform, elapsed time — and tapping returns to the
 /// composer. Recording state only; the words stay in the app (goal 6).
+/// Unavailable on Mac Catalyst (no Live Activities/Dynamic Island there).
+#if !targetEnvironment(macCatalyst)
 struct VoiceRecordingActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: VoiceRecordingAttributes.self) { context in
@@ -77,6 +83,7 @@ struct VoiceRecordingActivity: Widget {
         }
     }
 }
+#endif
 
 /// Control Center's capture button — one press anywhere, the composer opens.
 /// The intent leaves a flag in the app group; the shell reads it on activation.

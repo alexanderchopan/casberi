@@ -1066,7 +1066,9 @@ struct FeedScreen: View {
                     activeApprovals: walletLive.activeApprovals)
             }
         }
+        #if !targetEnvironment(macCatalyst)
         .translationPresentation(isPresented: $showTranslate, text: translateText)
+        #endif
         .confirmationDialog(
             // Guard the held `Thing` with `isLive` (2026-07-24 crash class):
             // a background heal can delete this exact thing while the dialog

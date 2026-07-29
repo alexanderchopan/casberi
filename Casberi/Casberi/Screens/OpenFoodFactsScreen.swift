@@ -26,10 +26,15 @@ struct OpenFoodFactsScreen: View {
 
     @Query(offRecentDescriptor) private var recent: [Thing]
 
-    /// The live scanner only runs where the camera can (a real device); the sim
-    /// and older hardware fall back to entering the number.
+    /// The live scanner only runs where the camera can (a real device); the sim,
+    /// older hardware, and Mac Catalyst (DataScannerViewController is unavailable
+    /// there entirely) fall back to entering the number.
     private var canScan: Bool {
+        #if targetEnvironment(macCatalyst)
+        false
+        #else
         DataScannerViewController.isSupported && DataScannerViewController.isAvailable
+        #endif
     }
 
     var body: some View {
@@ -53,12 +58,14 @@ struct OpenFoodFactsScreen: View {
         .dsPageBackground()
         .dsSoftScrollEdges()
         .dsScreenTitle("Open Food Facts")
+        #if !targetEnvironment(macCatalyst)
         .fullScreenCover(isPresented: $scanning) {
             BarcodeScannerSheet { scanned in
                 scanning = false
                 Task { await lookUp(scanned) }
             }
         }
+        #endif
     }
 
     private var scanSection: some View {
@@ -135,7 +142,10 @@ struct OpenFoodFactsScreen: View {
 }
 
 /// The live barcode scanner (VisionKit), shown full-screen with a Cancel bar.
-/// Reports the first barcode it reads, once.
+/// Reports the first barcode it reads, once. Unavailable on Mac Catalyst
+/// (DataScannerViewController below), so this whole sheet is too — canScan
+/// is forced false there and the fullScreenCover site is guarded to match.
+#if !targetEnvironment(macCatalyst)
 private struct BarcodeScannerSheet: View {
     let onScan: (String) -> Void
     @Environment(\.dismiss) private var dismiss
@@ -208,3 +218,4 @@ private struct BarcodeScanner: UIViewControllerRepresentable {
         }
     }
 }
+#endif

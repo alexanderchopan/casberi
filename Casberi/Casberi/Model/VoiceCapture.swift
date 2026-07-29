@@ -2,7 +2,9 @@ import Foundation
 import AVFoundation
 import Speech
 import Observation
+#if !targetEnvironment(macCatalyst)
 import ActivityKit
+#endif
 
 /// Voice capture (M6, local half) — the mic records to a file, speech
 /// recognition writes the transcript live, and Save lands a voice thing whose
@@ -36,7 +38,9 @@ final class VoiceCapture: NSObject {
     private var audioEngine: AVAudioEngine?
     private var timer: Timer?
     private var fileID = UUID()
+    #if !targetEnvironment(macCatalyst)
     private var activity: Activity<VoiceRecordingAttributes>?
+    #endif
     /// The iOS 26 SpeechAnalyzer path, boxed untyped: `VoiceCapture` itself
     /// must compile and run below iOS 26 (deployment target 18), so it can't
     /// carry a directly-typed `ModernSpeechSession?` stored property — that
@@ -141,12 +145,15 @@ final class VoiceCapture: NSObject {
         }
 
         // The Live Activity (§15): recording state only — the lock screen
-        // and Dynamic Island get the timer, never the words.
+        // and Dynamic Island get the timer, never the words. Unavailable on
+        // Mac Catalyst (no Dynamic Island/lock screen there).
+        #if !targetEnvironment(macCatalyst)
         if ActivityAuthorizationInfo().areActivitiesEnabled {
             activity = try? Activity.request(
                 attributes: VoiceRecordingAttributes(),
                 content: .init(state: .init(startedAt: .now), staleDate: nil))
         }
+        #endif
     }
 
     /// Stops and returns the finished piece: transcript + the audio file ref.
@@ -154,11 +161,13 @@ final class VoiceCapture: NSObject {
     @discardableResult
     func stop(keep: Bool = true) -> (transcript: String, sourceRef: String)? {
         timer?.invalidate(); timer = nil
+        #if !targetEnvironment(macCatalyst)
         if let activity {
             let done = activity
             Task { await done.end(nil, dismissalPolicy: .immediate) }
             self.activity = nil
         }
+        #endif
         recorder?.stop()
         audioEngine?.stop()
         audioEngine?.inputNode.removeTap(onBus: 0)

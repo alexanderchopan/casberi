@@ -424,8 +424,11 @@ struct ThingSheetView: View {
         .sheet(item: $walkingToNote) { note in
             ThingSheetView(thing: note.thing)
         }
-        // Translate: the system sheet, over the thing's own words.
+        // Translate: the system sheet, over the thing's own words. Unavailable
+        // on Mac Catalyst (no Translation UI presentation there).
+        #if !targetEnvironment(macCatalyst)
         .translationPresentation(isPresented: $showTranslate, text: translateText)
+        #endif
         }
     }
 
