@@ -87,9 +87,16 @@ GROUP_ID=$(api GET "/apps/$APP_ID/betaGroups?fields%5BbetaGroups%5D=name" \
 echo "  group id: $GROUP_ID"
 
 echo "-- Waiting for build $VERSION to finish processing..."
+# filter[preReleaseVersion.platform]=IOS is load-bearing now that Mac
+# Catalyst ships from this same pbxproj's build-number counter: two
+# platforms can legitimately claim the same version number (a race, same
+# as the historical same-number iOS collisions), and an unfiltered lookup
+# silently picked the Mac build once already -- setting release notes,
+# beta-group assignment, and review submission all onto the wrong platform's
+# build (2026-07-29). Do not drop this filter.
 BUILD_ID=""
 for i in $(seq 1 20); do
-  RESP=$(api GET "/builds?filter%5Bapp%5D=$APP_ID&filter%5Bversion%5D=$VERSION&fields%5Bbuilds%5D=version,processingState")
+  RESP=$(api GET "/builds?filter%5Bapp%5D=$APP_ID&filter%5Bversion%5D=$VERSION&filter%5BpreReleaseVersion.platform%5D=IOS&fields%5Bbuilds%5D=version,processingState")
   STATE=$(echo "$RESP" | jq -r '.data[0].attributes.processingState // "NOT_FOUND"')
   BUILD_ID=$(echo "$RESP" | jq -r '.data[0].id // empty')
   echo "  [$i/20] state: $STATE"
