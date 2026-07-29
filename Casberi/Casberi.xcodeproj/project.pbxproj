@@ -543,6 +543,7 @@
 				INFOPLIST_FILE = Casberi/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Casberi;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "Casberi reads what you've recently played so it lands in your feed.";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Casberi reads your events so your day lands as things.";
 				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "Casberi adds events to your calendar when you ask.";
@@ -595,6 +596,7 @@
 				INFOPLIST_FILE = Casberi/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Casberi;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "Casberi reads what you've recently played so it lands in your feed.";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Casberi reads your events so your day lands as things.";
 				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "Casberi adds events to your calendar when you ask.";
