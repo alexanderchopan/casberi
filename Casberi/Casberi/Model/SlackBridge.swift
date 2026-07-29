@@ -24,6 +24,12 @@ import SwiftData
 /// PKCE in the app's settings (self-service since March 2026 — no more
 /// contacting Slack support), then paste the Client ID below. A Slack Client
 /// ID is not a secret — PKCE needs nothing else.
+///
+/// AND: **Manage Distribution → Activate Public Distribution** must be on.
+/// A Slack app is otherwise installable only in the workspace that created
+/// it; anyone else's sign-in dies on Slack's own authorize page with
+/// `invalid_team_for_non_distributed_app` before a callback is ever minted.
+/// That's a dashboard switch, not something this code can carry.
 enum SlackAuth {
 
     /// From api.slack.com/apps → Basic Information — empty means the bridge is off.
@@ -32,10 +38,18 @@ enum SlackAuth {
     static var ready: Bool { !clientID.isEmpty }
 
     private static let tokenKey = "token.slack"          // user access token
+    private static let refreshKey = "token.slack.refresh"
+    private static let expiryKey = "slack.token.expiry"
     private static let teamNameKey = "slack.team.name"
     private static let userIDKey = "slack.user.id"
 
-    static var connected: Bool { TokenVault.get(tokenKey) != nil }
+    /// The REFRESH token is the connection, not the access token — a Slack
+    /// access token minted through a custom-URI-scheme redirect lives 12
+    /// hours (see `accessToken()`), so keying "connected" off it would make
+    /// the bridge disconnect itself overnight.
+    static var connected: Bool {
+        TokenVault.get(refreshKey) != nil || TokenVault.get(tokenKey) != nil
+    }
 
     /// The connected workspace's name — Slack's OAuth response hands this
     /// over honestly (unlike Spotify's identity-less PKCE token), so the
@@ -54,6 +68,8 @@ enum SlackAuth {
 
     static func disconnect() {
         TokenVault.delete(tokenKey)
+        TokenVault.delete(refreshKey)
+        UserDefaults.standard.removeObject(forKey: expiryKey)
         UserDefaults.standard.removeObject(forKey: teamNameKey)
         UserDefaults.standard.removeObject(forKey: userIDKey)
     }
@@ -85,20 +101,44 @@ enum SlackAuth {
               let code = comps.queryItems?.first(where: { $0.name == "code" })?.value
         else { return false }
 
-        return await exchange(code: code, verifier: verifier)
-    }
-
-    /// Slack's default user tokens don't expire (token rotation is an
-    /// opt-in app setting Slack ships off) — so unlike Dropbox/Spotify,
-    /// there's no refresh-token cycle to run here. If token rotation is ever
-    /// turned on for this app, this is where a refresh arm would go.
-    private static func exchange(code: String, verifier: String) async -> Bool {
-        let form: [String: String] = [
+        return await exchange(form: [
             "client_id": clientID,
             "code": code,
             "redirect_uri": redirectURI,
             "code_verifier": verifier,
-        ]
+        ])
+    }
+
+    /// A live access token — refreshed through the stored refresh token when
+    /// the current one is spent.
+    ///
+    /// Slack ships token rotation OFF by default, which is why this used to
+    /// be a plain vault read — but an install that redirects to a CUSTOM URI
+    /// SCHEME (`casberi://slack-auth`, the only kind a serverless iPhone app
+    /// can use) **always** gets a rotating token regardless of that setting.
+    /// So the access token here lives 12 hours, not forever, and without this
+    /// arm the bridge would go quiet the same day it connected. The refresh
+    /// token itself expires 30 days after issue for a PKCE app — a normal
+    /// foreground refresh renews it long before that, and a phone left alone
+    /// for a month lands on the dead-grant branch below.
+    static func accessToken() async -> String? {
+        let expiry = UserDefaults.standard.double(forKey: expiryKey)
+        if let token = TokenVault.get(tokenKey),
+           Date.now.timeIntervalSince1970 < expiry - 60 {
+            return token
+        }
+        guard let refresh = TokenVault.get(refreshKey) else { return nil }
+        let ok = await exchange(form: [
+            "client_id": clientID,
+            "grant_type": "refresh_token",
+            "refresh_token": refresh,
+        ])
+        return ok ? TokenVault.get(tokenKey) : nil
+    }
+
+    /// One door for both grants — the authorization code and the refresh —
+    /// because Slack answers them with the same envelope.
+    private static func exchange(form: [String: String]) async -> Bool {
         var request = URLRequest(url: URL(string: "https://slack.com/api/oauth.v2.access")!)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
@@ -108,17 +148,37 @@ enum SlackAuth {
             .data(using: .utf8)
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200,
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              (json["ok"] as? Bool) == true,
-              // A user-scope-only request carries the token under
-              // `authed_user`, not the top-level `access_token` (that slot
-              // is for a bot install, which never happens here).
-              let authedUser = json["authed_user"] as? [String: Any],
-              let token = authedUser["access_token"] as? String,
-              let userID = authedUser["id"] as? String
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { return false }
+        guard (json["ok"] as? Bool) == true else {
+            // A refresh Slack refuses outright (the 30-day ceiling, or the
+            // person revoked us in Slack) is a DEAD connection, not a hiccup
+            // — clear it so the screen offers Connect again instead of
+            // reporting a network wobble forever.
+            if let error = json["error"] as? String,
+               error.contains("invalid_refresh_token") || error.contains("invalid_grant") {
+                disconnect()
+            }
+            return false
+        }
+        // A user-scope-only code exchange carries the token under
+        // `authed_user` (the top-level `access_token` slot is for a bot
+        // install, which never happens here); a user-token REFRESH answers
+        // with those same fields at the top level. Read either shape.
+        let user = (json["authed_user"] as? [String: Any]) ?? json
+        guard let token = user["access_token"] as? String else { return false }
         TokenVault.set(token, for: tokenKey)
-        UserDefaults.standard.set(userID, forKey: userIDKey)
+        if let refresh = user["refresh_token"] as? String {
+            TokenVault.set(refresh, for: refreshKey)
+        }
+        // No `expires_in` means a non-rotating token (what a non-custom-scheme
+        // install gets) — park the expiry far out rather than treating an
+        // eternal token as already expired.
+        let lifetime = (user["expires_in"] as? Double) ?? (3600 * 24 * 3650)
+        UserDefaults.standard.set(Date.now.timeIntervalSince1970 + lifetime, forKey: expiryKey)
+        if let userID = user["id"] as? String {
+            UserDefaults.standard.set(userID, forKey: userIDKey)
+        }
         if let team = json["team"] as? [String: Any], let name = team["name"] as? String {
             UserDefaults.standard.set(name, forKey: teamNameKey)
         }
@@ -181,7 +241,9 @@ enum SlackIngest {
         running = true
         defer { running = false }
 
-        guard let token = TokenVault.get("token.slack"),
+        // Not a vault read — a Slack token minted through a custom-scheme
+        // redirect rotates every 12 hours, so this refreshes when spent.
+        guard let token = await SlackAuth.accessToken(),
               let userID = SlackAuth.userID else { return nil }
 
         var comps = URLComponents(string: "https://slack.com/api/search.messages")!

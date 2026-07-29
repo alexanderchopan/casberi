@@ -9610,3 +9610,43 @@ heatmap (`FeedScreen.calendarHeatmapSection`) — invisible to someone who
 never opens the Day One/Obsidian feed directly. Added as a fifth synthesis
 observation, same rule as everywhere else `OnThisDay` is read: a real
 anniversary match only, never invented, never padded when there isn't one.
+
+## §232 — Slack, two things the first pass got wrong (2026-07-28)
+
+Connecting Slack failed on Slack's own authorize page with
+`invalid_team_for_non_distributed_app` — before any callback is minted, so
+no app-side code runs at all. Cause: a Slack app is installable ONLY in the
+workspace that created it until **Manage Distribution → Activate Public
+Distribution** is switched on. Nothing in `SlackBridge.swift` can carry
+this; it's a dashboard state, now named in the file's header comment beside
+the client-id gate so the next reader doesn't re-diagnose it. (Two ways to
+see the same error: signing in from any OTHER workspace, or signing in from
+the RIGHT workspace while the auth sheet's Slack session is a different
+one — `ASWebAuthenticationSession` inherits Safari's cookies, so whichever
+workspace Safari is signed into is the one Slack tries.)
+
+The second, found while reading Slack's PKCE docs for the first: **the
+bridge would have gone quiet the same day it connected.** The original code
+asserted "Slack's default user tokens don't expire (token rotation is an
+opt-in setting Slack ships off)" and stored the access token as if it were
+permanent. True for a normal install, false for ours — Slack's PKCE docs
+state that an install redirecting to a CUSTOM URI SCHEME always issues a
+ROTATING token *even if* the rotation setting is off, and `casberi://
+slack-auth` is the only redirect shape a serverless iPhone app can use. So
+the token lives 12 hours (`expires_in: 43200`) and the refresh token
+expires 30 days after issue. `SlackAuth.accessToken()` now runs the same
+refresh arm `DropboxAuth` does, and `SlackIngest` reads through it instead
+of the vault. Three shapes it has to survive, all handled in one
+`exchange(form:)`: a code exchange answers under `authed_user`, a user
+token REFRESH answers with those same fields at the TOP level, and a
+non-rotating token carries no `expires_in` at all (parked far out rather
+than read as already-expired). `connected` keys off the REFRESH token, not
+the access token, or the bridge would disconnect itself overnight; a
+refresh Slack refuses outright (`invalid_refresh_token`/`invalid_grant` —
+the 30-day ceiling, or a revoke from Slack's side) clears the connection so
+the screen offers Connect again, instead of reporting a network wobble
+forever over a grant that is never coming back.
+
+Still UNVERIFIED end-to-end: no successful sign-in has happened yet, so the
+refresh arm's live shapes are read off Slack's docs, not measured. Measure
+on the first real connect.
