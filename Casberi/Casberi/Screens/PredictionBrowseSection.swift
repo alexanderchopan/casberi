@@ -95,8 +95,14 @@ private struct BrowseCard: Identifiable {
 /// Registers (or reconnects) a prediction-market bridge's catalog entry —
 /// shared because the venue switcher makes it possible to watch a
 /// Polymarket market from inside `KalshiScreen` (or vice versa), where the
-/// screen's own `register()` only knows its own venue. Same shape both
-/// screens' own `register()` already used before this existed.
+/// screen's own connect toggle only knows its own venue. Same shape both
+/// screens' `PredictionVenueConnect` already uses.
+///
+/// "Room" stays out of every string here on purpose (prd §234, amended
+/// 2026-07-29) — these lines surface as the Apps-catalog subline and the
+/// bridge detail screen's capability list, both places a user reads, and
+/// the word exists nowhere else they can see it. The chip is what's real to
+/// them; the room is the word for what's behind it.
 @MainActor
 func registerPredictionBridge(source: String, id: String, store: BridgeStore, context: ModelContext) {
     let count = recentBridgeThings(source: source, context: context).count
@@ -104,14 +110,14 @@ func registerPredictionBridge(source: String, id: String, store: BridgeStore, co
     // a real, ordinary state — and "0 markets followed" would read as a
     // failed sync rather than an exchange you've just opened the door to.
     let proof = count == 0
-        ? String(localized: "Browse the open markets in the \(source) room")
+        ? String(localized: "Its chip is in your feed — browse every open \(source) market there")
         : String(localized: "\(count) market\(count == 1 ? "" : "s") followed")
     if let existing = store.bridges.first(where: { $0.name == source }) {
         store.reconnect(existing.id, proof: proof)
     } else {
         store.bridges.append(BridgeApp(
             id: id, name: source, status: .connected, statusLine: proof,
-            can: ["Browse every open market in its room.",
+            can: ["Its chip opens every open market to browse.",
                   "Follows only the markets you pick.",
                   "Read-only — public odds, no trading."]))
         DSHaptic.success()
@@ -142,6 +148,15 @@ func registerPredictionBridge(source: String, id: String, store: BridgeStore, co
 /// it (§234).
 struct PredictionBrowseSection: View {
     let scope: PredictionVenueScope
+    /// Both exchanges connected? Independent of `scope` — the room defaults
+    /// to browsing its OWN venue even once both are connected (you tapped
+    /// the Kalshi chip, not "All"), but the disagreement join only needs
+    /// BOTH venues connected, never the `.all` segment being selected. Fixed
+    /// 2026-07-29: before this, "They disagree" rendered only in `.all`
+    /// scope while every room defaulted to its own venue — so with both
+    /// exchanges connected, the one comparison neither app can show sat
+    /// behind a segment tap nobody made.
+    var bothConnected: Bool = false
     let onWatchedKalshi: (Thing) -> Void
     let onWatchedPolymarket: (Thing) -> Void
     /// Hands the preview UP to whoever owns a presentation — this view lives
@@ -296,7 +311,7 @@ struct PredictionBrowseSection: View {
             // it's transient — the next load clears it.
             if let twin { twinOfferCard(twin) }
 
-            if scope == .all, !disagreements.isEmpty {
+            if bothConnected, !disagreements.isEmpty {
                 Text("They disagree").dsText(.label12).foregroundStyle(DS.textTertiary)
                     .padding(.top, DS.Space.s1)
                 ForEach(disagreements) { pair in
@@ -357,8 +372,19 @@ struct PredictionBrowseSection: View {
         // event's own `category` inside its cached listing, Polymarket
         // matches event tags; both narrow BEFORE the per-event hydration,
         // which is what keeps a category browse the same cost as a plain one.
+        //
+        // Kalshi is also fetched when it's NOT the visible scope, as long as
+        // both exchanges are connected — it's the disagreement join's own
+        // anchor set (`PredictionDisagreement.find` walks Kalshi rows against
+        // a live Polymarket search), and that join no longer waits on `.all`
+        // being the selected segment (fixed 2026-07-29, see `bothConnected`).
+        // Uncategorized in that silent case: `category` belongs to whichever
+        // scope IS visible, and Kalshi's own category vocabulary doesn't
+        // necessarily mean the same thing.
+        let needsKalshiForJoin = bothConnected && scope == .polymarket
         async let k: [KalshiWatch.Resolved] = (scope == .kalshi || scope == .all)
-            ? KalshiWatch.search(q, limit: 24, category: category) : []
+            ? KalshiWatch.search(q, limit: 24, category: category)
+            : (needsKalshiForJoin ? KalshiWatch.search(q, limit: 24, category: nil) : [])
         async let p: [PolymarketBridge.Resolved] = (scope == .polymarket || scope == .all)
             ? PolymarketBridge.search(q, limit: 24, category: category) : []
         async let kc: [String] = (scope == .kalshi || scope == .all) ? KalshiWatch.categories() : []
@@ -372,7 +398,7 @@ struct PredictionBrowseSection: View {
         polymarketRows = await p
         kalshiCategories = await kc
         polymarketCategories = await pc
-        if scope == .all {
+        if bothConnected {
             disagreements = await PredictionDisagreement.find(among: kalshiRows)
         } else {
             disagreements = []

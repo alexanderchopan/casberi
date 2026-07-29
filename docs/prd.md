@@ -9954,3 +9954,73 @@ same preview. The odds and the bar belong to the card directly underneath;
 saying them twice was the redundancy. What precedes the first market is
 now a line plus two rows, where §233 shipped three rows and the first
 §235 pass shipped three rows and a card.
+
+## §236 — The connect page is a yes/no; both venues, both pages (2026-07-29)
+
+§234 put the book, the browse, and every receipt in the ROOM
+(`PredictionRoomBook`) and left the connect page a single `DSSlabButton` —
+"Connect Kalshi" before, "Open the Kalshi room" after. That still wasn't
+connect-only: "Open the Kalshi room" is a destination the setup screen
+had no business naming (a user reads "room" nowhere else in the app), and
+the screen still carried Following/Resolved lists — markets, sitting on
+what was supposed to be a connect page. User ruling, verbatim: *"the app
+connect page needs to be only about connecting. It's like yes or no. Do
+you wanna follow Kalshi prediction markets, or yes or no do you wanna
+follow Polymarket prediction markets — also on both their pages."*
+
+**The build (`Screens/PredictionVenueConnect.swift`, new; `KalshiScreen`/
+`PolymarketScreen`, gutted; `PredictionBrowseSection.swift`,
+`BridgeCatalog.swift`, `GenUI/StorePreview.swift`):**
+
+- One shared component, `PredictionVenueConnect(ownVenue:)`, renders BOTH
+  questions on BOTH screens — own venue's row first, the other's second —
+  so the two screens can't drift from each other. Each row is a `Toggle`
+  in the `AccountDetailSheet.toggleRow` grammar (mark + title/subtitle +
+  switch), not a button: saying yes calls the already-shared
+  `registerPredictionBridge`; saying no raises the SAME keep-or-purge
+  confirmation `BridgeDisconnectSection` already established elsewhere,
+  scoped to that one venue, and deliberately does NOT dismiss the screen
+  — there's a second, still-live question sitting right beside it.
+- `KalshiScreen`/`PolymarketScreen` are now just `BridgeSetupHeader` (which
+  finally passes `connected:`, wiring up the hue wash that existed and was
+  never passed by either screen) plus the one shared component. No field,
+  no list, no button naming a destination. Both screens are ~25 lines.
+- A chip is TAUGHT, not named: once at least one venue is live, a small
+  well shows the connected venue's mark(s) and says "Kalshi is in your
+  feed strip — tap its chip to browse every open market," pointing at
+  something the person can actually see rather than a word for something
+  they can't.
+- `registerPredictionBridge`'s own proof line and capability list — surface
+  as the Apps-catalog subline and the bridge detail screen's capability
+  list, both places a person reads — also lost "room" (fixed alongside,
+  since fixing it only on the connect screen while leaving it on the Apps
+  tile would be the same defect one tap over).
+- The product page gained the `features` check list neither offer had
+  (including, for the first time in the catalog, the cross-venue
+  comparison as a line item) and a real `StorePreview` doc for Polymarket
+  (Kalshi already had one; both were re-worded to the browse-then-follow
+  model `PredictionRoomBook`/`PredictionBrowseSection` actually ship,
+  replacing copy that still described the pre-§233 search-only screen).
+
+**Why both questions go on both pages**, restated because it's the load-
+bearing decision: it's the only place in the catalog a single-venue user
+learns the other exists at all. Nothing before this — not the tile, not
+the product page, not either connect screen — ever mentioned that the two
+venues can be compared.
+
+**The room defect flagged in review got fixed too, once approved as
+in-scope.** With both exchanges connected, `PredictionBrowseSection`
+rendered "They disagree" only in `.all` scope, while `PredictionRoomBook`
+defaults every room to its OWN venue on appear — so the one comparison
+neither exchange's own app can show sat behind a segment tap nobody made.
+`bothConnected` is now threaded through independently of `scope`: the
+visible book stays scope-filtered exactly as before, but the disagreement
+join fires (and renders) the moment both venues are connected, regardless
+of which segment is selected. Kalshi rows are fetched silently (no
+category filter, since category belongs to whichever scope IS visible) as
+the join's anchor set when the visible scope is Polymarket-only.
+
+**Held from the §234/§235 refusals, untouched:** no auto-follow of a
+twin market, no single "follow both" tap, no payout/stake language on a
+resolved receipt. Saying yes to a venue on the connect page follows
+*zero* markets by itself — it only adds the chip and lights the room.
