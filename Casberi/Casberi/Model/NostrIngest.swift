@@ -178,14 +178,16 @@ final class NostrStore {
 
     func removeHashtag(_ tag: String) { hashtags.removeAll { $0.tag == tag } }
 
-    /// The trailing-slot label a Nostr row shows — nil when it's the sole
-    /// watched account (redundant, the same Farcaster/Bluesky rule), else
-    /// "@" plus the best display form, unless that form already carries its
-    /// own "@" (a NIP-05 identifier reads oddly double-prefixed otherwise).
+    /// The trailing-slot label a Nostr row shows — ALWAYS names the author
+    /// (2026-07-29, the Farcaster/Bluesky parity fix: a single watched
+    /// account is almost always someone you follow, not a mirror of
+    /// yourself, so suppressing it just as often hides real attribution as
+    /// it avoids redundant noise). "@" plus the best display form, unless
+    /// that form already carries its own "@" (a NIP-05 identifier reads
+    /// oddly double-prefixed otherwise).
     @MainActor
     func rowLabel(for pubkeyHex: String?) -> String? {
         guard let pubkeyHex, !pubkeyHex.isEmpty else { return nil }
-        if accounts.count == 1, accounts[0].pubkeyHex == pubkeyHex { return nil }
         let label = displayHandle(for: pubkeyHex)
         return label.contains("@") ? label : "@\(label)"
     }

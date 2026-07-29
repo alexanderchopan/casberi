@@ -9650,3 +9650,28 @@ forever over a grant that is never coming back.
 Still UNVERIFIED end-to-end: no successful sign-in has happened yet, so the
 refresh arm's live shapes are read off Slack's docs, not measured. Measure
 on the first real connect.
+
+## 228. The "one watched mirror stays unlabeled" rule reversed — attribution now always shows (user: "in the all feed we show who it's from for Bluesky, but not Farcaster look here at Vitalic and P Frazee", 2026-07-29)
+
+§74/§75's `rowLabel` rule (Farcaster, then joined by Bluesky and Nostr) said
+a single watched account's posts stay unlabeled in the feed row — "your ONE
+watched mirror, redundant to name." That framing assumed the common case was
+mirroring YOUR OWN account into the corpus. It isn't: watching an account is
+mainly how you FOLLOW SOMEONE ELSE (`SocialProfileCard`'s "Watch @x" verb,
+`FollowImportSheet`, the whole point of the setup screen's account field) —
+so a single watched account is far more often a person you follow than a
+mirror of yourself, and the rule was silently dropping real attribution on
+exactly those rows. Screenshot proof: the user watches several Bluesky
+accounts (so pfrazee.com's posts carry "@pfrazee.com") but only one Farcaster
+account, vitalik.eth — whose casts rendered with NO attribution at all,
+reading as if they were the user's own words.
+
+Ruled: `rowLabel` in `BlueskyIngest.swift`/`FarcasterIngest.swift`/
+`NostrIngest.swift` no longer special-cases `accounts.count == 1` — every
+row from a watched account always names its author. The app has no concept
+of "this watched account is me" to gate the old exception correctly, and
+given the Watch verb is built for other people, showing attribution
+unconditionally is the honest default. `BandRow.project`'s dispatch (which
+tries `SocialThread.contextLabel` first — "Liked"/"Mentions you"/a channel —
+then falls back to `rowLabel`) is unchanged; only the fallback's suppression
+went away.

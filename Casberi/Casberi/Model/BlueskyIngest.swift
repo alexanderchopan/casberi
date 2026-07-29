@@ -158,14 +158,14 @@ final class BlueskyStore {
         accounts[i].mentions = on
     }
 
-    /// The name a post's row shows. Your ONE watched mirror stays unlabeled
-    /// (redundant); everything else — several accounts, or a mentioner who
-    /// isn't watched — names itself, so attribution never gets lost (the
-    /// Farcaster/Wallet rule). ".bsky.social" comes off — the name is what
-    /// the person knows.
+    /// The name a post's row shows. ALWAYS names the author (2026-07-29,
+    /// user: "in the all feed we show who it's from for Bluesky, but not
+    /// Farcaster") — a single watched account is almost always someone you
+    /// follow, not a mirror of yourself, so silence there just as often hides
+    /// real attribution as it avoids redundant noise. ".bsky.social" comes
+    /// off — the name is what the person knows.
     func rowLabel(for handle: String?) -> String? {
         guard let handle, !handle.isEmpty else { return nil }
-        if accounts.count == 1, accounts[0].handle == handle { return nil }
         return "@\(Self.short(handle))"
     }
 

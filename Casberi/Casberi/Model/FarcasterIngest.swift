@@ -208,12 +208,13 @@ final class FarcasterStore {
 
     func removeChannel(_ name: String) { channels.removeAll { $0.name == name } }
 
-    /// The name a cast's row shows. Your ONE watched mirror stays unlabeled
-    /// (redundant); everything else — several accounts, a liked cast's
-    /// author, a channel's caster — names itself, the Bluesky/Wallet voice.
+    /// The name a cast's row shows. ALWAYS names the author (2026-07-29,
+    /// user: "in the all feed we show who it's from for Bluesky, but not
+    /// Farcaster") — a single watched account is almost always someone you
+    /// follow, not a mirror of yourself, so silence there just as often hides
+    /// real attribution as it avoids redundant noise.
     func rowLabel(for username: String?) -> String? {
         guard let username, !username.isEmpty else { return nil }
-        if accounts.count == 1, accounts[0].username == username { return nil }
         return "@\(username)"
     }
 
