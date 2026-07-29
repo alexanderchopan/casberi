@@ -1,16 +1,6 @@
 import SwiftUI
 import SwiftData
 
-/// The Privacy Pools things already in the corpus — newest first.
-private let privacyPoolsRecentDescriptor: FetchDescriptor<Thing> = {
-    var d = FetchDescriptor<Thing>(
-        predicate: #Predicate { $0.source == "Privacy Pools" },
-        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-    )
-    d.fetchLimit = 12
-    return d
-}()
-
 /// Privacy Pools (0xBow), connected — your deposits and their screening
 /// status (prd §162). Depositing happens from the person's own wallet on
 /// 0xBow's app, so there is no account, no key, no OAuth — the seat rides
@@ -26,8 +16,6 @@ struct PrivacyPoolsScreen: View {
     @State private var syncing = false
     @State private var lastResult: String?
 
-    @Query(privacyPoolsRecentDescriptor) private var recent: [Thing]
-
     private var hasWallets: Bool { !WalletStore.shared.addresses.isEmpty }
     private var walletCount: Int { WalletStore.shared.addresses.count }
 
@@ -35,15 +23,9 @@ struct PrivacyPoolsScreen: View {
         List {
             BridgeSetupHeader(name: "0xBow Privacy Pools", connected: hasWallets)
             connectSection.listRowSeparator(.hidden)
-            if recent.isEmpty {
-                if !hasWallets {
-                    GhostPreviewSection(name: "0xBow Privacy Pools",
-                                        replaceLine: "Your real deposits replace this once you watch a wallet.")
-                        .listRowSeparator(.hidden)
-                }
-            } else {
-                RecentThingsSection(header: String(localized: "Recent activity"),
-                                    things: recent, titleLines: 1)
+            if hasWallets {
+                ChipLiveNote(name: "0xBow Privacy Pools",
+                            verb: "for your deposits and their screening status.")
                     .listRowSeparator(.hidden)
             }
             footerSection.listRowSeparator(.hidden)

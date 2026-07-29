@@ -16,13 +16,8 @@ struct DropboxScreen: View {
     @State private var syncing = false
     @State private var result: String?
     @State private var resultIsError = false
-    @State private var recent: [Thing] = []
     @State private var flow: Task<Void, Never>?
     @State private var folderField = ""
-
-    private func loadRecent() {
-        recent = recentBridgeThings(source: "Dropbox", context: modelContext)
-    }
 
     private var folderIdentity: String {
         dropbox.folderPath.isEmpty ? String(localized: "All of Dropbox") : dropbox.folderPath
@@ -64,7 +59,6 @@ struct DropboxScreen: View {
             }
         }
         .onAppear {
-            loadRecent()
             folderField = dropbox.folderPath
             if DropboxAuth.connected { Task { await sync() } }
         }
@@ -160,7 +154,6 @@ struct DropboxScreen: View {
         syncing = true
         let added = await DropboxIngest.refresh(context: modelContext)
         syncing = false
-        loadRecent()
         guard let added else {
             result = String(localized: "Couldn't reach that folder — try again in a moment.")
             resultIsError = true

@@ -13,11 +13,6 @@ struct FilesScreen: View {
     @State private var syncing = false
     @State private var result: String?
     @State private var resultIsError = false
-    @State private var recent: [Thing] = []
-
-    private func loadRecent() {
-        recent = recentBridgeThings(source: "Files", context: modelContext)
-    }
 
     /// The connection door, open (prd §186).
     @State private var showConnection = false
@@ -68,7 +63,6 @@ struct FilesScreen: View {
             }
         }
         .onAppear {
-            loadRecent()
             if files.connected { Task { await sync() } }
         }
     }
@@ -127,7 +121,6 @@ struct FilesScreen: View {
         syncing = true
         let added = await FilesIngest.refresh(context: modelContext)
         syncing = false
-        loadRecent()
         guard let added else {
             if justConnected { files.disconnect() }
             result = String(localized: "Couldn't read that folder — pick it again.")

@@ -14,14 +14,9 @@ struct TwitchScreen: View {
     @State private var syncing = false
     @State private var result: String?
     @State private var resultIsError = false
-    @State private var recent: [Thing] = []
     /// The in-flight device flow — one at a time, cancelled when the screen
     /// goes away (review 2026-07-08: double-taps raced two flows).
     @State private var flow: Task<Void, Never>?
-
-    private func loadRecent() {
-        recent = recentBridgeThings(source: "Twitch", context: modelContext)
-    }
 
     /// The connection door, open (prd §186).
     @State private var showConnection = false
@@ -62,7 +57,6 @@ struct TwitchScreen: View {
             }
         }
         .onAppear {
-            loadRecent()
             if TwitchAuth.connected { Task { await sync() } }
         }
         .onDisappear { flow?.cancel() }
@@ -183,7 +177,6 @@ struct TwitchScreen: View {
         syncing = true
         let added = await TwitchIngest.refresh(context: modelContext)
         syncing = false
-        loadRecent()
         guard let added else {
             result = String(localized: "Couldn't read your follows — try again in a moment.")
             resultIsError = true

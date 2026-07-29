@@ -1,17 +1,6 @@
 import SwiftUI
 import SwiftData
 
-/// The GeckoTerminal things already in the corpus — newest first, a @Query so
-/// the list grows live as a sync lands trending tokens.
-private let geckoRecentDescriptor: FetchDescriptor<Thing> = {
-    var d = FetchDescriptor<Thing>(
-        predicate: #Predicate { $0.source == "GeckoTerminal" },
-        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-    )
-    d.fetchLimit = 12
-    return d
-}()
-
 /// GeckoTerminal, connected — the tokens trending now on the chains you watch.
 /// You pick the chains; their current top movers land as link things on every
 /// visit and app foreground. No account, no key — GeckoTerminal's trending
@@ -29,26 +18,13 @@ struct GeckoTerminalScreen: View {
     @State private var syncPending = false
     @State private var lastResult: String?
 
-    @Query(geckoRecentDescriptor) private var recent: [Thing]
-
     var body: some View {
         List {
             BridgeSetupHeader(name: "GeckoTerminal", connected: gecko.connected)
             chainsSection.listRowSeparator(.hidden)
-            if recent.isEmpty {
-                // Only before the first chain: a ghost captioned "when you
-                // switch a chain on" under an ON toggle would be fake status
-                // (honesty rule; review 2026-07-16).
-                if !gecko.connected {
-                    GhostPreviewSection(name: "GeckoTerminal",
-                                        replaceLine: "The real movers replace this when you switch a chain on.")
-                        .listRowSeparator(.hidden)
-                }
-            } else {
-                RecentThingsSection(header: gecko.trendingHeader, things: recent, titleLines: 1)
-                    .listRowSeparator(.hidden)
-            }
             if gecko.connected {
+                ChipLiveNote(name: "GeckoTerminal", verb: "for what's trending.")
+                    .listRowSeparator(.hidden)
                 BridgeDisconnectSection(
                     bridgeID: "geckoterminal", name: "GeckoTerminal",
                     teardown: {

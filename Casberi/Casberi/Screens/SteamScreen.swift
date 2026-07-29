@@ -13,11 +13,6 @@ struct SteamScreen: View {
     @State private var syncing = false
     @State private var result: String?
     @State private var resultIsError = false
-    @State private var recent: [Thing] = []
-
-    private func loadRecent() {
-        recent = recentBridgeThings(source: "Steam", context: modelContext)
-    }
 
     /// The credentials door, open (prd §186).
     @State private var showConnection = false
@@ -58,7 +53,6 @@ struct SteamScreen: View {
             }
         }
         .onAppear {
-            loadRecent()
             profileField = SteamBridge.profile
             if SteamBridge.connected { Task { await sync() } }
         }
@@ -143,7 +137,6 @@ struct SteamScreen: View {
         syncing = true
         let added = await SteamIngest.refresh(context: modelContext)
         syncing = false
-        loadRecent()
         guard let added else {
             // A fresh key that fails doesn't stay (same rule as the token
             // bridges) — no dead connection retrying on every foreground.

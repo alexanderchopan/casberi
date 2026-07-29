@@ -1,17 +1,6 @@
 import SwiftUI
 import SwiftData
 
-/// The Peer things already in the corpus — newest first, a @Query so the list
-/// grows live as a sync lands fills.
-private let peerRecentDescriptor: FetchDescriptor<Thing> = {
-    var d = FetchDescriptor<Thing>(
-        predicate: #Predicate { $0.source == "Peer" },
-        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-    )
-    d.fetchLimit = 12
-    return d
-}()
-
 /// Peer, connected — your fiat↔crypto trades, as they settle (prd §113).
 /// Peer is non-custodial: every trade settles onchain into the person's OWN
 /// wallet, so there is no account, no key, no OAuth — the seat rides the
@@ -27,8 +16,6 @@ struct PeerScreen: View {
     @State private var syncing = false
     @State private var lastResult: String?
 
-    @Query(peerRecentDescriptor) private var recent: [Thing]
-
     private var hasWallets: Bool { !WalletStore.shared.addresses.isEmpty }
     private var walletCount: Int { WalletStore.shared.addresses.count }
 
@@ -36,15 +23,8 @@ struct PeerScreen: View {
         List {
             BridgeSetupHeader(name: "Peer", connected: hasWallets)
             connectSection.listRowSeparator(.hidden)
-            if recent.isEmpty {
-                if !hasWallets {
-                    GhostPreviewSection(name: "Peer",
-                                        replaceLine: "Your real fills replace this once you watch a wallet.")
-                        .listRowSeparator(.hidden)
-                }
-            } else {
-                RecentThingsSection(header: String(localized: "Recent fills"),
-                                    things: recent, titleLines: 1)
+            if hasWallets {
+                ChipLiveNote(name: "Peer", verb: "for your fills.")
                     .listRowSeparator(.hidden)
             }
             footerSection.listRowSeparator(.hidden)

@@ -96,64 +96,6 @@ extension View {
     }
 }
 
-/// What lands, before anything has — the product page's preview doc rendered
-/// on the setup screen too, so the payoff stays in view while the person does
-/// the connecting instead of dead space below the fold (mock review
-/// 2026-07-16). Ghosted and inert — dimmed, untappable, clearly not yet real —
-/// and the caller drops it once real things land, so the first sync visibly
-/// upgrades the screen. Offers without a preview doc render nothing.
-struct GhostPreviewSection: View {
-    /// The caption's verb — "connect" by default; a screen whose connect verb
-    /// differs says its own ("follow a feed", "switch a chain on"). Callers
-    /// must gate this section on NOT-connected as well as nothing-landed: a
-    /// connected bridge whose sync landed nothing would otherwise wear a
-    /// caption telling the person to do the thing they already did (honesty
-    /// rule — the product page gates its preview on `!connected` the same way).
-    let replaceLine: String
-    /// Resolved once — `doc(for:)` builds a fresh array per call, and body
-    /// re-evaluates every stream tick, so looking it up in body would pay
-    /// that allocation ~30ms apart for the whole entrance.
-    private let doc: [String]?
-    @State private var stream = GenStream()
-
-    init(name: String, replaceLine: String = "Your real things replace this when you connect.") {
-        self.replaceLine = replaceLine
-        self.doc = StorePreview.doc(for: name)
-    }
-
-    var body: some View {
-        if let doc {
-            Section {
-                // The VStack wrapper is load-bearing: before the stream lands
-                // its first element, GenRender is an EmptyView — and onAppear
-                // never fires on an EmptyView, so a bare GenRender would wait
-                // forever for a stream nothing starts.
-                VStack(alignment: .leading, spacing: 0) {
-                    GenRender(id: "root", els: stream.els)
-                }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .allowsHitTesting(false)
-                    .opacity(0.55)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
-                    .listRowSeparator(.hidden)
-                    .onAppear {
-                        // Stream once; a scroll-back re-appear keeps the
-                        // finished render instead of replaying the entrance.
-                        guard stream.els.isEmpty else { return }
-                        stream.stream(doc)
-                    }
-            } header: {
-                Text("What lands — a preview")
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
-            } footer: {
-                Text(LocalizedStringKey(replaceLine))
-                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
-            }
-        }
-    }
-}
-
 /// The steps that remain after the door (prd §218, 2026-07-25).
 ///
 /// Every keyed bridge's setup used to open with "Open &lt;url&gt;…" set in body
@@ -466,6 +408,39 @@ struct RecentThingsSection: View {
             }
             .dsText(.label12)
             .foregroundStyle(DS.textTertiary)
+        }
+    }
+}
+
+/// The chip is the only pointer a connect page gives to "where did my stuff
+/// go" once it's live — never a destination word that exists nowhere else a
+/// person can read (prd §236: "Open the Kalshi room" named a room the rest
+/// of the app never mentions, and drifted right back in as a real
+/// `RecentThingsSection` on six other screens — the same defect, caught in
+/// the §236 follow-up audit, 2026-07-29).
+///
+/// Gated on the bridge's own connected/watching state, never on whether
+/// anything has landed yet — same as `PredictionVenueConnect`'s teach well:
+/// the chip is genuinely tappable the moment the seat is live, and the room
+/// or feed it opens onto already has its own honest empty state.
+struct ChipLiveNote: View {
+    let name: String
+    /// The rest of the sentence after "Tap its chip" — e.g. "for your fills."
+    let verb: String
+
+    var body: some View {
+        Section {
+            HStack(alignment: .top, spacing: DS.Space.s3) {
+                BridgeIcon(name: name, size: 22, circular: true)
+                    .overlay(Circle().strokeBorder(DS.gray100, lineWidth: 1.5))
+                Text("\(name) is in your feed strip. Tap its chip \(verb)")
+                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(DS.Space.s3)
+            .background(DS.surfaceWell, in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
         }
     }
 }

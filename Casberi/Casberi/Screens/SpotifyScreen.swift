@@ -11,12 +11,7 @@ struct SpotifyScreen: View {
     @State private var syncing = false
     @State private var result: String?
     @State private var resultIsError = false
-    @State private var recent: [Thing] = []
     @State private var flow: Task<Void, Never>?
-
-    private func loadRecent() {
-        recent = recentBridgeThings(source: "Spotify", context: modelContext)
-    }
 
     /// The connection door, open (prd §186).
     @State private var showConnection = false
@@ -59,7 +54,6 @@ struct SpotifyScreen: View {
             }
         }
         .onAppear {
-            loadRecent()
             if SpotifyAuth.connected { Task { await sync() } }
         }
         .onDisappear { flow?.cancel() }
@@ -144,7 +138,6 @@ struct SpotifyScreen: View {
         syncing = true
         let added = await SpotifyIngest.refresh(context: modelContext)
         syncing = false
-        loadRecent()
         guard let added else {
             result = String(localized: "Couldn't read your liked songs — try again in a moment.")
             resultIsError = true

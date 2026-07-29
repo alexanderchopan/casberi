@@ -1,17 +1,6 @@
 import SwiftUI
 import SwiftData
 
-/// The Deals things already in the corpus — newest first, a @Query so the list
-/// grows live as a sync lands deals.
-private let dealsRecentDescriptor: FetchDescriptor<Thing> = {
-    var d = FetchDescriptor<Thing>(
-        predicate: #Predicate { $0.source == "Deals" },
-        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-    )
-    d.fetchLimit = 12
-    return d
-}()
-
 /// Deals, connected — the aggregators' feeds in Casberi. You pick which sources
 /// to follow; their newest deals land as product things on every visit and app
 /// foreground. No account, read-only public feeds — nothing here buys anything.
@@ -22,17 +11,13 @@ struct DealsScreen: View {
     @State private var syncing = false
     @State private var lastResult: String?
 
-    @Query(dealsRecentDescriptor) private var recent: [Thing]
-
     var body: some View {
         List {
             BridgeSetupHeader(name: "Deals")
             sourcesSection.listRowSeparator(.hidden)
-            if !recent.isEmpty {
-                RecentThingsSection(header: "Latest deals", things: recent, titleLines: 1)
-                    .listRowSeparator(.hidden)
-            }
             if deals.connected {
+                ChipLiveNote(name: "Deals", verb: "for the latest.")
+                    .listRowSeparator(.hidden)
                 BridgeDisconnectSection(
                     bridgeID: "deals", name: "Deals",
                     teardown: {

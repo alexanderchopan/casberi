@@ -12,11 +12,6 @@ struct ObsidianScreen: View {
     @State private var syncing = false
     @State private var result: String?
     @State private var resultIsError = false
-    @State private var recent: [Thing] = []
-
-    private func loadRecent() {
-        recent = recentBridgeThings(source: "Obsidian", context: modelContext)
-    }
 
     /// The connection door, open (prd §186).
     @State private var showConnection = false
@@ -70,7 +65,6 @@ struct ObsidianScreen: View {
             }
         }
         .onAppear {
-            loadRecent()
             if obsidian.connected { Task { await sync() } }
         }
     }
@@ -132,7 +126,6 @@ struct ObsidianScreen: View {
         syncing = true
         let added = await ObsidianIngest.refresh(context: modelContext)
         syncing = false
-        loadRecent()
         guard let added else {
             if justConnected { obsidian.disconnect() }
             result = String(localized: "Couldn't read that folder — pick your vault again.")

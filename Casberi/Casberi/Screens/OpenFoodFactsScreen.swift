@@ -42,10 +42,8 @@ struct OpenFoodFactsScreen: View {
             BridgeSetupHeader(name: "Open Food Facts")
             scanSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
-                RecentThingsSection(header: "Recent", things: recent, titleLines: 1)
+                ChipLiveNote(name: "Open Food Facts", verb: "for what you've scanned.")
                     .listRowSeparator(.hidden)
-            }
-            if !recent.isEmpty {
                 BridgeDisconnectSection(bridgeID: "off", name: "Open Food Facts", teardown: {})
                     .listRowSeparator(.hidden)
             }

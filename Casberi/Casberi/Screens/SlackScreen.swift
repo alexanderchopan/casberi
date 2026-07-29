@@ -14,12 +14,7 @@ struct SlackScreen: View {
     @State private var syncing = false
     @State private var result: String?
     @State private var resultIsError = false
-    @State private var recent: [Thing] = []
     @State private var flow: Task<Void, Never>?
-
-    private func loadRecent() {
-        recent = recentBridgeThings(source: "Slack", context: modelContext)
-    }
 
     /// The connection door, open (prd §186).
     @State private var showConnection = false
@@ -56,7 +51,6 @@ struct SlackScreen: View {
             }
         }
         .onAppear {
-            loadRecent()
             if SlackAuth.connected { Task { await sync() } }
         }
         .onDisappear { flow?.cancel() }
@@ -130,7 +124,6 @@ struct SlackScreen: View {
         syncing = true
         let added = await SlackIngest.refresh(context: modelContext)
         syncing = false
-        loadRecent()
         guard let added else {
             result = String(localized: "Couldn't check your mentions — try again in a moment.")
             resultIsError = true

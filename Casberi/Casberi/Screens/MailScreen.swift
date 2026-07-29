@@ -2,8 +2,8 @@ import SwiftUI
 import SwiftData
 
 /// One screen for both mail bridges — the steps to make an app-specific
-/// password, an address field and a password field, then the recent inbox.
-/// Read-only over IMAP; the real account password never enters the app.
+/// password, an address field and a password field. Read-only over IMAP;
+/// the real account password never enters the app.
 struct MailScreen: View {
     let provider: MailProvider
 
@@ -15,11 +15,6 @@ struct MailScreen: View {
     @State private var syncing = false
     @State private var result: String?
     @State private var resultIsError = false
-    @State private var recent: [Thing] = []
-
-    private func loadRecent() {
-        recent = recentBridgeThings(source: provider.source, context: modelContext)
-    }
 
     /// The credentials door, open (prd §186).
     @State private var showConnection = false
@@ -60,7 +55,6 @@ struct MailScreen: View {
             }
         }
         .onAppear {
-            loadRecent()
             addressField = provider.address
             if provider.connected { Task { await sync() } }
         }
@@ -119,7 +113,6 @@ struct MailScreen: View {
         syncing = true
         let added = await MailIngest.refresh(provider, context: modelContext)
         syncing = false
-        loadRecent()
         guard let added else {
             if justConnected { TokenVault.delete(provider.passwordKey) }
             switch MailIngest.lastError {
