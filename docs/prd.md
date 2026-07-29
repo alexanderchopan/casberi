@@ -9760,3 +9760,81 @@ row across a typical busiest-40 window hasn't been observed live).
 `PredictionDisagreement`'s live re-fetch-every-visit is a deliberate v1
 simplification, not the persisted twin-join a durable "All" scope
 disagreement feature would eventually want.
+
+## §234 — Connect is connect; the book lives in the room (user, 2026-07-29)
+
+§233 above put the market book in `KalshiScreen`/`PolymarketScreen` — the
+CONNECT pages. Wrong place, ruled same day: *"the app connect page should
+ONLY be connect, not showing all the polymarket and kalshi markets
+themselves… if I as a user go 'connect' it should show me a kalshi or
+polymarket chip in my source chips that shows all the markets."*
+
+**The root defect §233 papered over.** Kalshi and Polymarket have no
+account, no key, and no sync — the book is public and identical for
+everyone. So there was never anything to *connect*, and the screens had
+quietly redefined connecting as "watched your first market"
+(`register()` ran off the watch path, and `BridgeDisconnectSection` was
+gated on `!watched.isEmpty`). That is why a browser grew onto a setup
+page: the setup page had no other job, and the room had no content of its
+own. Two bad consequences fell out of it — a user was forced to pick a
+single market before the exchange counted as connected at all, and the
+room of a connected exchange was empty, so there was nowhere to browse
+*from*.
+
+**The fix, three moves:**
+
+1. **Connect is a real standalone action.** Both screens' `addSection` is
+   now one `DSSlabButton` — "Connect Kalshi" before, "Open the Kalshi
+   room" after — plus the honesty notes and the Following/Resolved
+   management lists. No field, no hits, no browse. `BridgeDisconnectSection`
+   gates on `connected`, not on having followed something.
+2. **A LIVE-room source earns a chip by being connected**
+   (`Model/LiveRoomSources.swift`, read by `MainSurface.chipLabels`).
+   Every other bridge is corpus-shaped — its chip exists because things
+   with that source exist — which left a connected-but-empty exchange with
+   no chip and therefore no room. Deliberately a short explicit list
+   (`Kalshi`, `Polymarket`) rather than "any connected bridge": a
+   sync-shaped seat like Gmail or Photos whose room WOULD be empty without
+   landed things must never get a chip that opens onto nothing.
+3. **The room leads with the book** (`Screens/PredictionRoomBook.swift`,
+   mounted from `FeedScreen` beside `githubGraphHero` — the established
+   shape for a source room's own non-corpus content). `FeedScreen`'s
+   `emptyState` is suppressed for a live-room source, since "Let's fill
+   this feed" over a full market book is nonsense.
+
+**Following is the only write, and that's the whole point.** Browsing
+reads the live API and lands nothing, so the All feed stays exactly what
+it always was — things you chose. This is the answer to "perhaps we don't
+show them in the 'all' feed unless they swipe one to follow": it isn't a
+filter rule, it falls out of the architecture. A room can show more than
+the corpus; the corpus never grows without an explicit act.
+
+**Search moved with the book**, into `PredictionBrowseSection` — finding
+"Chiefs" is a way of moving through the room's content, not a step in
+connecting. It carries no verb (`DSSlabField`'s own supported empty-
+`actionLabel` case): typing narrows the book in place, committing nothing.
+Category now rides each bridge's own `search(category:)` rather than a
+post-filter, so a narrowed browse costs the same as a plain one (it cuts
+candidates BEFORE Kalshi's per-event hydration).
+
+**The venue switcher survives §233 unchanged and lands where the user
+originally described it** — inside each room, not on the setup page:
+"polymarket and kalshi should have their own chips but inside each you
+have the toggle like wallets. just like we do w/ peer and 0xbow… they
+still have a chip even tho on wallet you see them together." Same
+`walletSwitcherBar` gate: absent until both exchanges are connected,
+defaulting to the room's own venue.
+
+**Auto-following the twin was proposed and REFUSED** (2026-07-29). Making
+a follow on one venue auto-follow its counterpart would guarantee the
+disagreement card had data, but: `PredictionMoments.titlesMatch` is 60%
+word overlap, deliberately loose — a wrong OFFER costs nothing, a wrong
+auto-follow permanently lands a Thing with a feed row, a `dueAt` in
+"What's coming up?" and a resolution receipt; and that receipt's "you
+followed at 34%" would be false about the user's own attention, which
+`PredictionMoments`' own header (the 5.3 line — this reports ATTENTION)
+forbids. A follow-up idea to make the disagreement card a single
+"follow both" tap was also dropped after tracing it: the two rows must
+stay individually tappable, so the card would carry three overlapping tap
+targets with no visible boundary, plus an ambiguous already-followed state
+and a split undo across two rooms. Two taps, each unambiguous, is better.

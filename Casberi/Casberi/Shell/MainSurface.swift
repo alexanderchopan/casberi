@@ -31,6 +31,10 @@ struct MainSurface: View {
         return d
     }
     @Environment(ShellChrome.self) private var chrome
+    /// Read for the LIVE-room chips only (prd §234) — a connected Kalshi or
+    /// Polymarket earns a chip with nothing landed yet, since its room's
+    /// content is the live book rather than the corpus.
+    @Environment(BridgeStore.self) private var store
     @Bindable private var filter = FeedFilter.shared
     @Bindable private var route = HomeRoute.shared
     /// Source moments (wallet new highs, token new highs, a Bitrefill refill,
@@ -92,6 +96,16 @@ struct MainSurface: View {
         var ordered: [String] = []
         for thing in feedThings where seen.insert(thing.source).inserted {
             ordered.append(thing.source)
+        }
+        // A LIVE-room source earns its chip by being CONNECTED, not by having
+        // landed anything (prd §234, `LiveRoomSources`): Kalshi and Polymarket
+        // have no sync, so a corpus-only rule left a connected exchange with
+        // no chip — and therefore no room to browse the book from, which is
+        // the entire point of connecting one. Appended after the corpus
+        // sources so the learned sort below still decides real order.
+        for bridge in store.bridges where bridge.status == .connected
+            && LiveRoomSources.has(bridge.name) && seen.insert(bridge.name).inserted {
+            ordered.append(bridge.name)
         }
         let (counts, lastVisit) = ChipMemory.snapshot()
         let learned = ordered.sorted {

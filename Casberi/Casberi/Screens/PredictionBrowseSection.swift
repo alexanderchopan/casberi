@@ -109,13 +109,20 @@ private struct BrowseCard: Identifiable {
 @MainActor
 func registerPredictionBridge(source: String, id: String, store: BridgeStore, context: ModelContext) {
     let count = recentBridgeThings(source: source, context: context).count
-    let proof = "\(count) market\(count == 1 ? "" : "s") watched"
+    // Connecting no longer implies following anything (prd §234), so zero is
+    // a real, ordinary state — and "0 markets followed" would read as a
+    // failed sync rather than an exchange you've just opened the door to.
+    let proof = count == 0
+        ? String(localized: "Browse the open markets in the \(source) room")
+        : String(localized: "\(count) market\(count == 1 ? "" : "s") followed")
     if let existing = store.bridges.first(where: { $0.name == source }) {
         store.reconnect(existing.id, proof: proof)
     } else {
         store.bridges.append(BridgeApp(
             id: id, name: source, status: .connected, statusLine: proof,
-            can: ["Watches the markets you add.", "Read-only — public odds, no trading."]))
+            can: ["Browse every open market in its room.",
+                  "Follows only the markets you pick.",
+                  "Read-only — public odds, no trading."]))
         DSHaptic.success()
     }
 }
@@ -126,6 +133,12 @@ struct PredictionBrowseSection: View {
     let onWatchedPolymarket: (Thing) -> Void
 
     @Environment(\.modelContext) private var modelContext
+    /// The book is browsable, but a specific question still has to be
+    /// findable — "Chiefs" shouldn't require scrolling Sports. Search lives
+    /// HERE, with the book, rather than on the connect page where it used to
+    /// sit (prd §234): it's a way of moving through the room's own content,
+    /// not a step in connecting.
+    @State private var query = ""
     @State private var category: String? = nil
     @State private var order: PredictionOrder = .busiest
     @State private var kalshiCategories: [String] = []
@@ -151,14 +164,14 @@ struct PredictionBrowseSection: View {
     }
 
     private var cards: [BrowseCard] {
+        // Rows arrive already category-filtered (`loadIfNeeded` passes it to
+        // each bridge's own search) — nothing to re-filter here.
         var out: [BrowseCard] = []
         if scope == .kalshi || scope == .all {
-            let filtered = category.map { cat in kalshiRows.filter { $0.category.caseInsensitiveCompare(cat) == .orderedSame } } ?? kalshiRows
-            out += KalshiWatch.grouped(order.sorted(filtered)).map(kalshiCard)
+            out += KalshiWatch.grouped(order.sorted(kalshiRows)).map(kalshiCard)
         }
         if scope == .polymarket || scope == .all {
-            let filtered = category.map { cat in polymarketRows.filter { $0.tags.contains(cat.lowercased()) } } ?? polymarketRows
-            out += PolymarketBridge.grouped(order.sorted(filtered)).map(polymarketCard)
+            out += PolymarketBridge.grouped(order.sorted(polymarketRows)).map(polymarketCard)
         }
         // Busiest deliberately does NOT cross-merge — Kalshi counts
         // contracts, Polymarket counts dollars, and ranking one against the
@@ -186,6 +199,13 @@ struct PredictionBrowseSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
+            // No verb — searching here narrows the book in place as you type
+            // (the `.task(id:)` below re-reads), it doesn't commit anything.
+            // An empty `actionLabel` is DSSlabField's own supported no-verb
+            // case, so this stays the shared control rather than a hand-rolled
+            // field.
+            DSSlabField(placeholder: String(localized: "Find a team, player, or question"),
+                        text: $query, actionLabel: "", action: {})
             if !categoryOptions.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: DS.Space.s2) {
@@ -213,7 +233,10 @@ struct PredictionBrowseSection: View {
                 browseCard(card)
             }
         }
-        .task(id: "\(scope.rawValue)") { await loadIfNeeded() }
+        // Re-runs on scope, category AND query — each is a different read of
+        // the book, and both bridges' `search` already takes all three
+        // (`query`'s own debounce lives in `debouncedSearch`).
+        .task(id: "\(scope.rawValue)|\(category ?? "")|\(query)") { await loadIfNeeded() }
     }
 
     private func categoryChip(_ value: String?, label: String) -> some View {
@@ -235,8 +258,21 @@ struct PredictionBrowseSection: View {
 
     private func loadIfNeeded() async {
         loaded = false
-        async let k: [KalshiWatch.Resolved] = (scope == .kalshi || scope == .all) ? KalshiWatch.search("", limit: 24) : []
-        async let p: [PolymarketBridge.Resolved] = (scope == .polymarket || scope == .all) ? PolymarketBridge.search("", limit: 24) : []
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Typing debounces; a scope or category tap doesn't (it's one
+        // deliberate tap, and waiting 300ms after it just feels broken).
+        if !q.isEmpty {
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+        }
+        // Category rides the API call, not a post-filter — Kalshi matches an
+        // event's own `category` inside its cached listing, Polymarket
+        // matches event tags; both narrow BEFORE the per-event hydration,
+        // which is what keeps a category browse the same cost as a plain one.
+        async let k: [KalshiWatch.Resolved] = (scope == .kalshi || scope == .all)
+            ? KalshiWatch.search(q, limit: 24, category: category) : []
+        async let p: [PolymarketBridge.Resolved] = (scope == .polymarket || scope == .all)
+            ? PolymarketBridge.search(q, limit: 24, category: category) : []
         async let kc: [String] = (scope == .kalshi || scope == .all) ? KalshiWatch.categories() : []
         async let pc: [String] = (scope == .polymarket || scope == .all) ? PolymarketBridge.categories() : []
         // Already-watched markets drop out of browse the same way a search

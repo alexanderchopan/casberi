@@ -825,6 +825,19 @@ struct FeedScreen: View {
         }
     }
 
+    /// The prediction-market rooms lead with the live BOOK (prd §234) — the
+    /// `githubGraphHero` shape (a source room's own non-corpus content, gated
+    /// on the source string), but load-bearing rather than decorative: Kalshi
+    /// and Polymarket have no sync, so without this the room of a freshly
+    /// connected exchange is empty and there is nowhere to find a market to
+    /// follow. Browsing here never writes — a market becomes a Thing (and so
+    /// reaches the All feed) only on an explicit Follow.
+    @ViewBuilder private var predictionBook: some View {
+        if LiveRoomSources.has(source) {
+            PredictionRoomBook(source: source)
+        }
+    }
+
     private var feedList: some View {
         List {
             Group {
@@ -884,17 +897,21 @@ struct FeedScreen: View {
                 // GitHub feed whenever it's the filter; the hero self-checks for
                 // a landed year and takes no room otherwise.
                 if source == "GitHub" { githubGraphHero }
+                predictionBook
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets())
 
-            if feedThings.isEmpty {
+            // A live-room source paints its book above, so the corpus being
+            // empty is NOT an empty room — "Let's fill this feed" over a
+            // full market book would be nonsense (prd §234).
+            if feedThings.isEmpty && !LiveRoomSources.has(source) {
                 Group { emptyState }
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets())
-            } else {
+            } else if !feedThings.isEmpty {
                 // Derived ONCE per render and threaded into everything below
                 // — the day groups, ledes, and per-row hint/next-event ids
                 // all share this one filter pass instead of each re-deriving
