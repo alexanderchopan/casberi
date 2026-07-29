@@ -41,15 +41,18 @@ final class RSSStore {
     }
 
     /// Adds a pasted URL. Scheme-forgiving — people paste bare domains.
+    /// `title` carries a name already known at add time (an OPML file's own
+    /// `text`/`title` attribute) so a row reads right away instead of
+    /// waiting on the first fetch to learn the feed's name.
     @discardableResult
-    func add(_ raw: String) -> Bool {
+    func add(_ raw: String, title: String = "") -> Bool {
         var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return false }
         if !text.contains("://") { text = "https://" + text }
         guard URL(string: text) != nil,
               !feeds.contains(where: { $0.url.lowercased() == text.lowercased() })
         else { return false }
-        feeds.append(Feed(url: text))
+        feeds.append(Feed(url: text, title: title.trimmingCharacters(in: .whitespacesAndNewlines)))
         return true
     }
 

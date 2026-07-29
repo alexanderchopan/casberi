@@ -49,5 +49,46 @@
 		<string>googlegmail</string>
 		<string>wc</string>
 	</array>
+	<!-- Claims the org.opml.opml UTI (the de facto identifier every OPML-
+	     capable reader, e.g. NetNewsWire, declares — there is no Apple-owned
+	     one) so AirDrop / Share Sheet "Open in Casberi" offers this app for a
+	     .opml file, routed by RootShell's onOpenURL to the RSS bulk-import
+	     preview (Model/OPMLImport.swift). Viewer + Alternate: Casberi reads
+	     the file to follow feeds, never claims to be the default OPML app. -->
+	<key>UTImportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>org.opml.opml</string>
+			<key>UTTypeDescription</key>
+			<string>OPML feed list</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.xml</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>opml</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>OPML feed list</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>org.opml.opml</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

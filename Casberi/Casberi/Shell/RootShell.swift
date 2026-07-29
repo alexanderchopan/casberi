@@ -448,6 +448,9 @@ struct RootShell: View {
         .dsSensoryFeedback()
         .environment(bridges)
         .environment(chrome)
+        // Mac menu bar commands (2026-07-28) read `chrome` back through this
+        // — see ShellChromeFocusedKey.
+        .focusedSceneValue(\.shellChrome, chrome)
         // The app-language override, applied to the whole tree: reading the
         // observable store here means picking a language repaints every `Text`
         // from its `.lproj` live, no relaunch (LanguageStore).
@@ -940,11 +943,21 @@ struct RootShell: View {
     }
 
     /// casberi:// routing — one place, used by onOpenURL and the debug hook.
+    /// Also the landing spot for a FILE handed in via AirDrop / Share Sheet
+    /// ("Open in Casberi") — `.onOpenURL` fires for both, and the app only
+    /// registers one document type (`.opml`, Info.plist), so a file URL here
+    /// is always that.
     private func route(_ url: URL) {
         // A deep link lands you AT a destination, not back in a store the route
         // singleton still holds from an earlier visit. apps/settings re-set it
         // below.
         HomeRoute.shared.path = []
+        if url.isFileURL {
+            guard url.pathExtension.lowercased() == "opml" else { return }
+            PendingOPMLFile.shared.url = url
+            HomeRoute.shared.openSetup(forOffer: "RSS")
+            return
+        }
         switch url.host() {
         // casberi://home is back-compat (the app was a Home tab, then a
         // board) — it now lands on the All feed, ruling 11.
