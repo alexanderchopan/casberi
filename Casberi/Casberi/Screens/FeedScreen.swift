@@ -2257,7 +2257,7 @@ struct FeedScreen: View {
     /// Events only: in the All shape other kinds share the list, and only
     /// an event's capture time means "starts at".
     private func nextEventID(_ visible: [Thing]) -> UUID? {
-        visible.filter { $0.kind == .event && $0.capturedAt > .now }
+        visible.filter { $0.isLive && $0.kind == .event && $0.capturedAt > .now }
             .min { $0.capturedAt < $1.capturedAt }?.id
     }
 
