@@ -532,6 +532,15 @@ struct HandleSetupScreen: View {
                         DSHaptic.tap()
                     } label: { Label("Remove", systemImage: "minus.circle") }
                 }
+                // A swipe has no Mac-mouse equivalent — right-click mirrors it
+                // (Mac polish, 2026-07-28).
+                .contextMenu {
+                    Button(role: .destructive) {
+                        bridge.removeName(name)
+                        accountNames = bridge.names
+                        DSHaptic.tap()
+                    } label: { Label("Remove", systemImage: "minus.circle") }
+                }
                 .dsListCardRow()
                 .listRowSeparator(.hidden)
             }
@@ -704,6 +713,13 @@ struct HandleSetupScreen: View {
         }
         .dsListCardRow()
         .swipeActions(edge: .trailing) {
+            Button(role: .destructive, action: remove) {
+                Label("Remove", systemImage: "minus.circle")
+            }
+        }
+        // A swipe has no Mac-mouse equivalent — right-click mirrors it
+        // (Mac polish, 2026-07-28).
+        .contextMenu {
             Button(role: .destructive, action: remove) {
                 Label("Remove", systemImage: "minus.circle")
             }

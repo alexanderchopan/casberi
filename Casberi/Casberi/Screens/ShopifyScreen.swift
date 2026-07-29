@@ -89,6 +89,17 @@ struct ShopifyScreen: View {
                         Label("Remove", systemImage: "trash")
                     }
                 }
+                // A swipe has no Mac-mouse equivalent — right-click mirrors it
+                // (Mac polish, 2026-07-28).
+                .contextMenu {
+                    Button(role: .destructive) {
+                        if let i = shopify.shops.firstIndex(where: { $0.id == shop.id }) {
+                            shopify.remove(at: IndexSet(integer: i))
+                        }
+                    } label: {
+                        Label("Remove", systemImage: "trash")
+                    }
+                }
             }
         } header: {
             Text(shopify.shops.count == 1 ? "Following" : "Following \(shopify.shops.count)")

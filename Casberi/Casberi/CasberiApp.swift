@@ -65,6 +65,24 @@ struct CasberiApp: App {
     var body: some Scene {
         WindowGroup {
             RootShell()
+                #if targetEnvironment(macCatalyst)
+                // Mac window sizing (2026-07-28): with no explicit frame,
+                // Catalyst launches the window at the iPhone's simulated
+                // point size — tall and narrow, reading as a phone screen
+                // in a Mac frame rather than an app that was actually sized
+                // for a desktop window. `idealWidth`/`idealHeight` set a
+                // Mac-appropriate default; `minWidth` keeps the horizontal
+                // chip strip (SourceChips, Mac-forced by `showsRail`) and
+                // the composer field from collapsing into each other —
+                // `PadLayout.readingMaxWidth` (700) is the app's own
+                // "one comfortable reading column" number, so the floor is
+                // a fraction under it rather than an arbitrary guess.
+                // `minHeight` leaves room for the strip plus a handful of
+                // feed rows above the composer.
+                .frame(
+                    minWidth: 560, idealWidth: 980, maxWidth: .infinity,
+                    minHeight: 480, idealHeight: 760, maxHeight: .infinity)
+                #endif
         }
         .modelContainer(container)
         // Mac menu bar commands (2026-07-28, Mac polish): the app is

@@ -90,6 +90,17 @@ struct EthValidatorScreen: View {
                 Label("Unwatch", systemImage: "trash")
             }
         }
+        // A swipe has no Mac-mouse equivalent — right-click mirrors it
+        // (Mac polish, 2026-07-28).
+        .contextMenu {
+            Button(role: .destructive) {
+                validatorStore.remove(index: row.index)
+                EthValidatorRead.registerBridge(store: store)
+                DSHaptic.tap()
+            } label: {
+                Label("Unwatch", systemImage: "trash")
+            }
+        }
     }
 
     private func statusLine(_ position: EthValidatorRead.Position?) -> String {

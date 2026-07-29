@@ -195,6 +195,23 @@ struct RootShell: View {
             if SharedStore.cloudSyncActive {
                 UIApplication.shared.registerForRemoteNotifications()
             }
+            #if targetEnvironment(macCatalyst)
+            // Mac window sizing (2026-07-28): SwiftUI's `.frame(minWidth:…)`
+            // on the WindowGroup's root view does NOT constrain the actual
+            // NSWindow under Catalyst — verified live: the window drags
+            // straight past it, the chip strip overlapping the title bar
+            // well before the intended floor. `UIWindowScene.sizeRestrictions`
+            // is the real Catalyst API for this (AppKit-native apps use the
+            // SwiftUI modifier; a Catalyst window is still fundamentally a
+            // UIWindowScene). Matches CasberiApp's `.frame(idealWidth:980,
+            // idealHeight:760…)` default-size hint, which — unlike the min —
+            // Catalyst does honor for the FIRST launch (a saved window frame
+            // from a prior run wins after that, same as any Mac app).
+            if let scene = UIApplication.shared.connectedScenes
+                .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+                scene.sizeRestrictions?.minimumSize = CGSize(width: 560, height: 480)
+            }
+            #endif
             #if DEBUG
             // Perf pass: log init→ready (first content appearance) once per
             // process. `ready` = this onAppear, i.e. the first frame's view tree

@@ -53,6 +53,18 @@ enum BridgeCatalog {
         /// stamp an offer the day it actually lands.
         var added: Date? = nil
 
+        /// True for a bridge whose framework is genuinely unavailable under
+        /// Mac Catalyst — HealthKit and HomeKit don't exist there at all
+        /// (compile-time unavailable, not just runtime-unsupported; see
+        /// CLAUDE.md's Catalyst notes). An offer a Mac user can never
+        /// connect is a dead seat, which the honesty rule (docs/build-brief
+        /// §8, "no dead controls") forbids — so `BridgeCatalog.offers`
+        /// filters these out on Mac (see below) rather than showing a
+        /// Connect button that can only ever fail. `allOffers` (the literal
+        /// array `scripts/catalog-sync.sh` greps) is untouched either way —
+        /// this only ever narrows what a MAC session's `offers` returns.
+        var unavailableOnMac: Bool = false
+
         /// True when this offer joined within the last week — the window the
         /// Discover deck reads for a "Just added" seat. Time-relative on
         /// purpose: a stamped offer stops being new on its own, no cleanup.
@@ -93,7 +105,12 @@ enum BridgeCatalog {
     }
 
     /// Grouped by what they're worth, verb taglines (S25).
-    static let offers: [Offer] = [
+    /// The full literal catalog — `scripts/catalog-sync.sh` greps THIS
+    /// array's source text (every `Offer(name: "…"` line) to check parity
+    /// with the website/onboarding, so it must keep every offer that has
+    /// ever existed, unfiltered by platform. `offers` (below) is what every
+    /// screen actually reads.
+    static let allOffers: [Offer] = [
         Offer(name: "Photos",      tagline: "Screenshots, straight to your feed",            group: "Photos",    connectable: true,
               summary: "The screenshots you take flow into your feed, searchable by what's in them — no album to dig through."),
         Offer(name: "Calendar",    tagline: "Events join your things",               group: "Schedule",  connectable: true,
@@ -281,9 +298,11 @@ enum BridgeCatalog {
               summary: "Your liked songs become things you can find and revisit alongside everything else. Connects with Spotify's own sign-in — PKCE, entirely on this iPhone, no server holds a secret.",
               needsSetup: true),
         Offer(name: "Apple Health", tagline: "Workouts land in your feed",           group: "Fitness",   connectable: true,
-              summary: "Your workouts join your things — a run shows up next to the plan that inspired it. Everything stays on this iPhone: HealthKit never touches a server."),
+              summary: "Your workouts join your things — a run shows up next to the plan that inspired it. Everything stays on this iPhone: HealthKit never touches a server.",
+              unavailableOnMac: true),
         Offer(name: "Strava",      tagline: "Every activity, one record",            group: "Fitness",   connectable: true,
-              summary: "Rides and runs land in your feed with distance and time — read from Apple Health, where Strava saves them. Turn on Strava's Health sync and everything stays on this iPhone; no Strava account is asked for."),
+              summary: "Rides and runs land in your feed with distance and time — read from Apple Health, where Strava saves them. Turn on Strava's Health sync and everything stays on this iPhone; no Strava account is asked for.",
+              unavailableOnMac: true),
         Offer(name: "Cal.com",     tagline: "Bookings land in your feed",            group: "Schedule",  connectable: true,
               summary: "The meetings people book with you join your things as events, next to your calendar. Connects with an API key from Cal.com settings — it stays in this iPhone's Keychain.",
               needsSetup: true),
@@ -386,8 +405,22 @@ enum BridgeCatalog {
         Offer(name: "Contacts",    tagline: "The people you know, findable",         group: "People",    connectable: true,
               summary: "Your contacts become findable people — a name you're looking for turns up with everything it connects to. Search-only: they never crowd your feed.\n\nEverything stays on this iPhone — Contacts never touches a server.\n\nRead-only."),
         Offer(name: "HomeKit",     tagline: "Your home's accessories, at a glance",  group: "Home",      connectable: true,
-              summary: "Your HomeKit accessories — locks, doors, sensors — land as things you can find, kept current while the app is open.\n\nSearch-only: they never crowd your feed.\n\nRead-only — Casberi never controls anything."),
+              summary: "Your HomeKit accessories — locks, doors, sensors — land as things you can find, kept current while the app is open.\n\nSearch-only: they never crowd your feed.\n\nRead-only — Casberi never controls anything.",
+              unavailableOnMac: true),
     ]
+
+    /// What every screen actually reads (Apps page, Home tile count, the
+    /// onboarding mini store, `available(besides:)` below) — `allOffers`
+    /// minus the seats that are dead on Mac. Filtering happens HERE, once,
+    /// rather than at each of the ten-odd call sites, so nothing can add a
+    /// new consumer that forgets the platform check.
+    static var offers: [Offer] {
+        #if targetEnvironment(macCatalyst)
+        allOffers.filter { !$0.unavailableOnMac }
+        #else
+        allOffers
+        #endif
+    }
 
     /// Group order for the catalog screen (insertion order of first member).
     static var groups: [(String, [Offer])] {

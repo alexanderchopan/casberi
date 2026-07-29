@@ -157,6 +157,17 @@ struct KalshiScreen: View {
                         Label("Remove", systemImage: "trash")
                     }
                 }
+                // A swipe has no Mac-mouse equivalent — right-click mirrors it
+                // (Mac polish, 2026-07-28).
+                .contextMenu {
+                    Button(role: .destructive) {
+                        if let i = watched.firstIndex(where: { $0.id == thing.id }) {
+                            unwatch(at: IndexSet(integer: i))
+                        }
+                    } label: {
+                        Label("Remove", systemImage: "trash")
+                    }
+                }
             }
         } header: {
             Text("Resolved").dsText(.label12)
@@ -181,6 +192,17 @@ struct KalshiScreen: View {
                 .dsListCardRow()
                 .modifier(SwipeHintNudge(active: thing.id == hintTokenID) { swipeCoachDone = true })
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        if let i = watched.firstIndex(where: { $0.id == thing.id }) {
+                            unwatch(at: IndexSet(integer: i))
+                        }
+                    } label: {
+                        Label("Unwatch", systemImage: "trash")
+                    }
+                }
+                // A swipe has no Mac-mouse equivalent — right-click mirrors it
+                // (Mac polish, 2026-07-28).
+                .contextMenu {
                     Button(role: .destructive) {
                         if let i = watched.firstIndex(where: { $0.id == thing.id }) {
                             unwatch(at: IndexSet(integer: i))

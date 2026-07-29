@@ -206,6 +206,17 @@ struct RSSScreen: View {
                         Label("Remove", systemImage: "trash")
                     }
                 }
+                // A swipe has no Mac-mouse equivalent — right-click mirrors it
+                // (Mac polish, 2026-07-28).
+                .contextMenu {
+                    Button(role: .destructive) {
+                        if let i = rss.feeds.firstIndex(where: { $0.id == feed.id }) {
+                            rss.remove(at: IndexSet(integer: i))
+                        }
+                    } label: {
+                        Label("Remove", systemImage: "trash")
+                    }
+                }
             }
         } header: {
             Text(rss.feeds.count == 1 ? "Following" : "Following \(rss.feeds.count)")
