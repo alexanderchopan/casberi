@@ -9650,3 +9650,113 @@ forever over a grant that is never coming back.
 Still UNVERIFIED end-to-end: no successful sign-in has happened yet, so the
 refresh arm's live shapes are read off Slack's docs, not measured. Measure
 on the first real connect.
+
+## §233 — Prediction markets get a browse room; venues become a wallet-style switcher, not a third chip (2026-07-29)
+
+Kalshi and Polymarket shipped as pure finders — `KalshiScreen`/
+`PolymarketScreen`'s `addSection` was a field plus up to 8 flat search-hit
+rows. Both bridges already answer an EMPTY query with the busiest open
+markets (`minLength: 0` in the old `.task(id: queryField)`), but the
+field's own placeholder ("Team, player, or event") tells you to type, so
+nobody discovered the browse that was already there. Four losses, all
+fixed with data each bridge was already fetching and throwing away:
+Kalshi parses every open event's `category` and only ever used it as a
+search haystack; `previousProbability` was parsed onto `Resolved` and never
+shown in a row; a multi-outcome race (a nomination, a championship)
+exploded into one row per candidate, eating the whole 8-row budget and
+reading as unrelated questions; and Polymarket's browse arm hit the bare
+`/markets` list, which never carries an event's `tags` — category browse
+was structurally impossible there until browse switched to `/events`.
+
+**The build (`Model/KalshiWatch.swift`, `Model/PolymarketBridge.swift`,
+`Model/PredictionMarket.swift`, `Model/PredictionDisagreement.swift`,
+`Screens/PredictionBrowseSection.swift`):**
+
+- `KalshiWatch.search` gained a `category:` filter (an event's own
+  `category` field, exact match case-insensitive — the field was already
+  parsed, just never filtered on) and `KalshiWatch.categories()` reads the
+  categories present in the already-cached open-events listing, no new
+  request. `KalshiWatch.grouped(_:)` folds a race's outcomes back into one
+  `Race` (leader + up to 3 more + an honest `others` count — never a
+  silent drop).
+- Polymarket's empty-query AND category browse now hit `/events` instead
+  of `/markets` (measured 2026-07-29: nested markets under `/events` carry
+  every field `/markets` does, plus the event's own `tags` and `slug` —
+  nothing is lost switching, category browse and event grouping both
+  become free). `PolymarketBridge.categories()` matches a small curated
+  set of real top-level categories (`Politics, Elections, Economy, Crypto,
+  Sports, Entertainment, Science, Business, World`) against events' tag
+  labels — Polymarket's actual tag vocabulary is a hundreds-deep
+  folksonomy ("virgins", "redbull", "Jerome Powell") with no
+  category-of-record, so this curation is a judgment call, not a server
+  fact, unlike Kalshi's 13 real API categories. `Resolved` gained
+  `eventTitle` (the race's shared headline, vs. `title`'s own per-outcome
+  phrasing), `previousProbability` (read off `oneWeekPriceChange` —
+  Gamma's markets response has no 1-day figure, so the browse card's delta
+  pill is honestly labeled "vs last week", never "vs yesterday" — a
+  DIFFERENT window than Kalshi's previous-CLOSE read, and the two are
+  never captioned the same), and `tags`.
+- `PredictionOdds` (`Model/PredictionMarket.swift`) names the four fields
+  both `Resolved` types already carried (`probability`,
+  `previousProbability`, `volume`, `closeTime`) so `PredictionOrder`
+  (Busiest / Closing soon / Biggest move) sorts either venue with one
+  generic function instead of a duplicated switch per screen. Busiest
+  deliberately never cross-merges the two venues in `.all` scope — Kalshi
+  counts contracts, Polymarket counts dollars, and ranking one against the
+  other would be the exact decimals-bug `PredictionMarket.isThin` already
+  refuses to commit (comparing incomparable units); Closing soon and
+  Biggest move ARE comparable across venues (a date, a probability-point
+  delta) and do cross-merge.
+- `PredictionDisagreement.find` (new) is the BROWSE-time sibling of
+  `PredictionTwin.find` — same `PredictionMoments.titlesMatch` word-overlap
+  test, reused rather than re-invented, but run over a browse list's top 6
+  Kalshi markets against a live Polymarket search, deliberately NOT
+  persisted (the busiest markets change daily; a stale stored join would
+  be worse than a slower re-fetch each visit).
+
+**The venue question.** The obvious risk of "one room, both venues" was a
+third `Markets` chip merging Kalshi and Polymarket into the shelf — refused
+twice over: once because a group chip breaks `MainSurface.chipLabels`'
+one-chip-per-`thing.source` contract for no gain or the source strip is
+corpus-derived (a chip exists because things with that source exist;
+browse is PRE-corpus — markets you may never watch, which has no business
+in a strip built from your own saved things), and a second time because
+the user pointed at the wrong-but-useful precedent: "we have many things
+in Markets" (Tokens, Stocktwits, Peer, OpenSea, GeckoTerminal all share
+that catalog GROUP) — a `Markets` chip would combine things that aren't
+comparable, the same objection the busiest-ordering non-merge above
+already encodes structurally.
+
+**Ruling: two source chips, unchanged, plus a wallet-style scope switcher
+inside each screen — no new destination, no new chip.** The precedent is
+`FeedScreen.walletSwitcherBar` (`source == "Wallet", wallet.addresses.count
+> 1`): Kalshi and Polymarket keep their own chips exactly as
+`MainSurface.chipLabels` already derives them (automatic, one per distinct
+`thing.source`, zero code changed); `PredictionVenueSwitcher` — `All ·
+Kalshi · Polymarket`, floating glass, a selection fill that travels on
+matched geometry and retints, the wallet switcher's own shape applied to
+venues — lives INSIDE `KalshiScreen`'s and `PolymarketScreen`'s
+`addSection`, each defaulting to its own venue. Picking the other venue's
+segment renders that venue's browse content inline via the shared
+`PredictionBrowseSection`, reused by both screens rather than duplicated.
+Gated the wallet way: `polymarketConnected`/`kalshiConnected` (checked
+against `store.bridges`, not a hardcoded assumption) — the switcher is
+ABSENT, not disabled, until the other venue is actually connected, so
+nobody who has only ever used one exchange is ever asked to pick a mode
+they don't have. `.all` scope leads with "They disagree" (when any survive
+`PredictionDisagreement.find`) — the one comparison neither exchange's own
+app can ever show, surfaced at browse time instead of waiting on the
+coincidence of having independently watched the same question on both
+sides. Watching a market of the OTHER venue from inside a screen (e.g.
+tapping a Polymarket card from within `KalshiScreen`'s `.all` scope) is
+handled by the new shared `registerPredictionBridge` — each screen's own
+`register()` only knew its own venue before this existed.
+
+**Left for a follow-up, not blocking this ship:** Polymarket's tag-based
+category matching is UNMEASURED against real usage patterns (the API
+itself is measured — nested markets under `/events` do carry `tags` — but
+whether the curated 9-category whitelist actually surfaces a useful chip
+row across a typical busiest-40 window hasn't been observed live).
+`PredictionDisagreement`'s live re-fetch-every-visit is a deliberate v1
+simplification, not the persisted twin-join a durable "All" scope
+disagreement feature would eventually want.

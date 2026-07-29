@@ -21,16 +21,33 @@ import SwiftData
 /// empty search or a dead sheet fallback — rather than crashing.
 enum PolymarketBridge {
 
-    struct Resolved: Identifiable {
+    struct Resolved: Identifiable, PredictionOdds {
         let conditionId: String
         let slug: String            // event slug, for the polymarket.com URL
+        /// The event's own headline ("Who wins the 2028 Democratic
+        /// nomination?") — distinct from `title`, which is this OUTCOME's own
+        /// phrasing ("Will Gavin Newsom win the 2028 Democratic presidential
+        /// nomination?"). A single-outcome market has no event to differ
+        /// from, so the two are the same string. `grouped(_:)` groups on
+        /// `slug` and displays `eventTitle`, not `title`.
+        let eventTitle: String
         let title: String
         let subtitle: String        // the outcome's own label within a multi-outcome event
         let probability: Double     // 0...1, the YES price
+        /// The price a week ago (`oneWeekPriceChange` is the only delta
+        /// field Gamma's markets response carries — there's no 1-day
+        /// figure). Measured 2026-07-29. Genuinely a different window than
+        /// Kalshi's previous-CLOSE read, so the two are never captioned with
+        /// the same label — see the browse card's "vs last week".
+        let previousProbability: Double?
         let volume: Double
         let closed: Bool
         let yesWon: Bool?
         let closeTime: Date?
+        /// The event's own tag labels, lowercased — what `category`
+        /// filtering and `categories()` match against. Empty for a market
+        /// re-read outside an event context (`fetchMarket`).
+        let tags: [String]
         /// The CLOB token id for the YES outcome — what the price-history
         /// read is keyed on, distinct from `conditionId` (Gamma's market
         /// identity) the way a Kalshi ticker differs from its event ticker.
@@ -38,6 +55,10 @@ enum PolymarketBridge {
         var id: String { conditionId }
 
         var url: String { "https://polymarket.com/event/\(slug)" }
+
+        /// Same floor as `PredictionMarket.isThin` (24h dollars, not
+        /// contracts) — see `KalshiWatch.Resolved.isThin`'s own note.
+        var isThin: Bool { volume < 5_000 }
 
         var prediction: PredictionMarket {
             PredictionMarket(source: .polymarket, id: conditionId, title: title, subtitle: subtitle,
@@ -50,28 +71,49 @@ enum PolymarketBridge {
     /// endpoint, unlike Kalshi's client-side filter over a hardcoded series
     /// list, so this genuinely improves on parity rather than matching it
     /// for its own sake. An empty query lists the busiest open markets.
-    static func search(_ query: String, limit: Int = 8) async -> [Resolved] {
+    ///
+    /// Both arms now go through the EVENT-wrapped endpoints (`/events` for
+    /// browse, `public-search` for text — it already returned events)
+    /// instead of the bare `/markets` list the empty-query arm used before
+    /// 2026-07-29: an event carries `tags`, which `/markets` alone never
+    /// exposes, and every nested market carries the exact same fields
+    /// `/markets` does (measured) — so nothing is lost switching, and
+    /// category browse and event grouping both become possible for free.
+    ///
+    /// `category`, when given, matches against the PARENT EVENT's tag
+    /// labels, case-insensitive — combines with a query the way Kalshi's
+    /// does.
+    static func search(_ query: String, limit: Int = 8, category: String? = nil) async -> [Resolved] {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         let path: String
         if q.isEmpty {
-            path = "https://gamma-api.polymarket.com/markets?active=true&closed=false&order=volume24hr&ascending=false&limit=\(limit)"
+            path = "https://gamma-api.polymarket.com/events?active=true&closed=false&order=volume24hr&ascending=false&limit=\(max(limit, 20))"
         } else {
             let encoded = q.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? q
             path = "https://gamma-api.polymarket.com/public-search?q=\(encoded)&events_status=active&limit_per_type=\(limit)"
         }
         guard let root = await IngestSupport.getJSON(path) else { return [] }
 
-        var marketDicts: [[String: Any]] = []
+        var events: [[String: Any]] = []
         if q.isEmpty {
-            marketDicts = (root as? [[String: Any]]) ?? []
+            events = (root as? [[String: Any]]) ?? []
         } else if let dict = root as? [String: Any] {
-            let events = (dict["events"] as? [[String: Any]]) ?? []
-            for event in events {
-                marketDicts.append(contentsOf: (event["markets"] as? [[String: Any]]) ?? [])
-            }
-            marketDicts.append(contentsOf: (dict["markets"] as? [[String: Any]]) ?? [])
+            events = (dict["events"] as? [[String: Any]]) ?? []
         }
-        let resolved = marketDicts.compactMap(resolve(from:))
+
+        let cat = category?.lowercased()
+        var resolved: [Resolved] = []
+        for event in events {
+            let tags = eventTags(event)
+            if let cat, !tags.contains(cat) { continue }
+            let slug = (event["slug"] as? String) ?? ""
+            let eventTitle = (event["title"] as? String) ?? ""
+            for market in (event["markets"] as? [[String: Any]]) ?? [] {
+                if let row = resolve(from: market, parentSlug: slug, eventTitle: eventTitle, tags: tags) {
+                    resolved.append(row)
+                }
+            }
+        }
         return Array(resolved.sorted { $0.volume > $1.volume }.prefix(limit))
     }
 
@@ -80,8 +122,71 @@ enum PolymarketBridge {
         await search(query, limit: 1).first
     }
 
+    /// The categories actually present in the busiest ~40 open events right
+    /// now — no dedicated tag-list endpoint is worth calling for this (the
+    /// site-wide `/tags` list is a folksonomy of hundreds, dominated by
+    /// noise like "virgins"/"redbull"); reading them off events already
+    /// being fetched for browse keeps the list short and grounded in what's
+    /// actually open. Narrowed to a curated set of real top-level categories
+    /// (Kalshi's own 13 are real API categories; Polymarket's tags aren't
+    /// categorized that way, so this curation is a judgment call, not a
+    /// server fact) so the strip doesn't surface a stray granular tag like
+    /// "Jerome Powell" as if it were a section of the book.
+    private static let knownCategories = [
+        "Politics", "Elections", "Economy", "Crypto", "Sports",
+        "Entertainment", "Science", "Business", "World"
+    ]
+
+    static func categories() async -> [String] {
+        guard let root = await IngestSupport.getJSON(
+            "https://gamma-api.polymarket.com/events?active=true&closed=false&order=volume24hr&ascending=false&limit=40")
+            as? [[String: Any]]
+        else { return [] }
+        var counts: [String: Int] = [:]
+        for event in root {
+            let tags = Set(eventTags(event))
+            for known in knownCategories where tags.contains(known.lowercased()) {
+                counts[known, default: 0] += 1
+            }
+        }
+        return counts.sorted { $0.value > $1.value }.map(\.key)
+    }
+
+    /// A multi-outcome event grouped back into one row — the
+    /// `KalshiWatch.Race` shape, applied here for the same reason (a browse
+    /// list reading each candidate in a race as an unrelated question is
+    /// what makes it look thin).
+    struct Race: Identifiable {
+        let slug: String
+        let title: String
+        let outcomes: [Resolved]
+        let others: Int
+        let closeTime: Date?
+        var id: String { slug }
+    }
+
+    static func grouped(_ rows: [Resolved], maxOutcomes: Int = 4) -> [Race] {
+        var order: [String] = []
+        var bySlug: [String: [Resolved]] = [:]
+        for row in rows {
+            if bySlug[row.slug] == nil { order.append(row.slug) }
+            bySlug[row.slug, default: []].append(row)
+        }
+        return order.map { slug in
+            let outcomes = (bySlug[slug] ?? []).sorted { $0.probability > $1.probability }
+            return Race(slug: slug,
+                        title: outcomes.first?.eventTitle ?? "",
+                        outcomes: Array(outcomes.prefix(maxOutcomes)),
+                        others: max(0, outcomes.count - maxOutcomes),
+                        closeTime: outcomes.first?.closeTime)
+        }
+    }
+
     /// Re-reads one market by its condition id — the Pulse refresh's path,
-    /// and the only call a watched market needs after it's landed.
+    /// and the only call a watched market needs after it's landed. Outside
+    /// an event context, so `eventTitle` falls back to the market's own
+    /// question and `tags` is empty — neither is read again once a market
+    /// is already watched.
     static func fetchMarket(conditionId: String) async -> Resolved? {
         guard let root = await IngestSupport.getJSON(
             "https://gamma-api.polymarket.com/markets?condition_ids=\(conditionId)") as? [[String: Any]],
@@ -109,17 +214,21 @@ enum PolymarketBridge {
         return points.compactMap { num($0["p"]) }
     }
 
-    private static func resolve(from market: [String: Any]) -> Resolved? {
+    private static func resolve(from market: [String: Any], parentSlug: String? = nil,
+                                eventTitle: String? = nil, tags: [String] = []) -> Resolved? {
         guard let conditionId = market["conditionId"] as? String,
               let question = market["question"] as? String,
-              let slug = eventSlug(market),
+              let slug = parentSlug ?? eventSlug(market),
               let probability = yesPrice(market)
         else { return nil }
         let closed = (market["closed"] as? Bool) ?? false
         return Resolved(
-            conditionId: conditionId, slug: slug, title: question,
+            conditionId: conditionId, slug: slug,
+            eventTitle: eventTitle?.isEmpty == false ? eventTitle! : question,
+            title: question,
             subtitle: (market["groupItemTitle"] as? String) ?? "",
             probability: probability,
+            previousProbability: num(market["oneWeekPriceChange"]).map { probability - $0 },
             volume: num(market["volume24hr"]) ?? num(market["volume"]) ?? 0,
             closed: closed,
             // Only an unambiguous, thoroughly settled price collapse counts —
@@ -127,15 +236,25 @@ enum PolymarketBridge {
             // pending) reports `yesWon: nil`, so no receipt fires on a guess.
             yesWon: closed ? (probability > 0.98 ? true : (probability < 0.02 ? false : nil)) : nil,
             closeTime: IngestSupport.isoDate(market["endDate"]),
+            tags: tags,
             yesTokenId: clobYesTokenId(market))
     }
 
     /// Gamma nests the parent event for its slug on a multi-outcome market's
     /// read; a single-market event's own `slug` resolves the same page too.
+    /// Only consulted when the caller has no parent event of its own
+    /// (`fetchMarket`'s bare re-read) — every browse path already knows its
+    /// event and passes `parentSlug` directly.
     private static func eventSlug(_ market: [String: Any]) -> String? {
         if let events = market["events"] as? [[String: Any]],
            let slug = events.first?["slug"] as? String { return slug }
         return market["slug"] as? String
+    }
+
+    /// An event's own tag labels, lowercased — `search`/`categories()`'s
+    /// shared read of the one field `/markets` alone never exposes.
+    private static func eventTags(_ event: [String: Any]) -> [String] {
+        ((event["tags"] as? [[String: Any]]) ?? []).compactMap { ($0["label"] as? String)?.lowercased() }
     }
 
     /// `outcomePrices` arrives as a JSON-ENCODED STRING (`"[\"0.34\", \"0.66\"]"`),

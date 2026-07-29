@@ -30,6 +30,13 @@ struct PolymarketScreen: View {
     /// The same question on Kalshi, found after a watch — the twin offer.
     @State private var twin: PredictionTwin.Offer?
 
+    /// Own venue by default — see `KalshiScreen.venueScope`'s own note.
+    @State private var venueScope: PredictionVenueScope = .polymarket
+
+    private var kalshiConnected: Bool {
+        store.bridges.contains(where: { $0.id == "kalshi" })
+    }
+
     @AppStorage("coach.swipe.done") private var swipeCoachDone = false
 
     private var hintTokenID: UUID? {
@@ -73,11 +80,13 @@ struct PolymarketScreen: View {
         .dsSoftScrollEdges()
         .dsScreenTitle("Polymarket")
         .onAppear { loadWatched() }
-        // minLength: 0 — an empty query still shows the busiest open
-        // markets to browse, the same dose as Kalshi's own finder.
+        // Runs only once there's actually a query to search — an empty
+        // field's browse is the dedicated section below now, not this flat
+        // hit list (prd §233).
         .task(id: queryField) {
             let q = queryField.trimmingCharacters(in: .whitespacesAndNewlines)
-            if let found = await debouncedSearch(q, minLength: 0, fetch: { await PolymarketBridge.search(q) }) {
+            guard !q.isEmpty else { hits = []; return }
+            if let found = await debouncedSearch(q, fetch: { await PolymarketBridge.search(q) }) {
                 hits = found
             }
         }
@@ -93,22 +102,43 @@ struct PolymarketScreen: View {
                 DSSlabField(placeholder: String(localized: "Any question or topic"),
                             text: $queryField, actionLabel: String(localized: "WATCH"),
                             action: watch)
-                ForEach(displayHits) { market in
-                    BridgeSearchResultRow(
-                        imageURL: nil, fallbackIcon: "Polymarket",
-                        title: market.title,
-                        subtitle: "\(Int((market.probability * 100).rounded()))%" + (market.subtitle.isEmpty ? "" : " · \(market.subtitle)"),
-                        action: { watchHit(market) })
-                }
-                BridgeSyncStatusRows(syncing: working,
-                                     syncingLine: String(localized: "Finding the market…"),
-                                     result: result, resultIsError: resultIsError)
-                if let twin {
-                    BridgeSearchResultRow(
-                        imageURL: nil, fallbackIcon: twin.source.rawValue,
-                        title: twin.line,
-                        subtitle: String(localized: "Watch it on \(twin.source.rawValue) too"),
-                        action: { acceptTwin(twin) })
+                if !queryField.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    ForEach(displayHits) { market in
+                        BridgeSearchResultRow(
+                            imageURL: nil, fallbackIcon: "Polymarket",
+                            title: market.title,
+                            subtitle: "\(Int((market.probability * 100).rounded()))%" + (market.subtitle.isEmpty ? "" : " · \(market.subtitle)"),
+                            action: { watchHit(market) })
+                    }
+                    BridgeSyncStatusRows(syncing: working,
+                                         syncingLine: String(localized: "Finding the market…"),
+                                         result: result, resultIsError: resultIsError)
+                    if let twin {
+                        BridgeSearchResultRow(
+                            imageURL: nil, fallbackIcon: twin.source.rawValue,
+                            title: twin.line,
+                            subtitle: String(localized: "Watch it on \(twin.source.rawValue) too"),
+                            action: { acceptTwin(twin) })
+                    }
+                } else {
+                    if kalshiConnected {
+                        PredictionVenueSwitcher(scope: $venueScope)
+                            .padding(.bottom, DS.Space.s1)
+                    }
+                    PredictionBrowseSection(
+                        scope: venueScope,
+                        onWatchedKalshi: { thing in
+                            result = String(localized: "Watching \(thing.title) on Kalshi")
+                            resultIsError = false
+                            registerPredictionBridge(source: "Kalshi", id: "kalshi",
+                                                     store: store, context: modelContext)
+                        },
+                        onWatchedPolymarket: { thing in
+                            result = String(localized: "Watching \(thing.title)")
+                            resultIsError = false
+                            loadWatched()
+                            register()
+                        })
                 }
                 DSSlabNote(text: "Public odds only — nothing here places a trade.")
             }

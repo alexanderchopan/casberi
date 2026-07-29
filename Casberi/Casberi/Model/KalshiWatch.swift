@@ -10,7 +10,7 @@ import SwiftData
 /// cached briefly, and matches the query against their titles client-side.
 enum KalshiWatch {
 
-    struct Resolved: Identifiable {
+    struct Resolved: Identifiable, PredictionOdds {
         let ticker: String          // the leaf market ticker — one per outcome, e.g. "…-KC"
         let eventTicker: String     // the game/event ticker — the kalshi.com URL's second path piece
         let seriesTicker: String    // the league/series ticker — the URL's first path piece
@@ -25,6 +25,12 @@ enum KalshiWatch {
         let category: String
         let closeTime: Date?
         var id: String { ticker }
+
+        /// Same floor as `PredictionMarket.isThin` (contracts, not dollars) —
+        /// duplicated rather than routed through a constructed
+        /// `PredictionMarket` because a browse row has no settlement state
+        /// to fill in for one.
+        var isThin: Bool { volume < 1_000 }
     }
 
     /// Search is TWO PHASES (rebuilt 2026-07-28), and the split is a measured
@@ -92,14 +98,21 @@ enum KalshiWatch {
     /// two-outcome event is two markets, each naming its own side, so both
     /// are real, distinct watches). An empty query lists the busiest markets
     /// open right now, across every category rather than sports alone.
-    static func search(_ query: String, limit: Int = 8) async -> [Resolved] {
+    ///
+    /// `category`, when given, is applied to phase 1 the same way the text
+    /// query is — an event's own `category` field, exact match, case-
+    /// insensitive. Combines with a query (a category AND a search term both
+    /// narrow the same candidate list) rather than replacing it.
+    static func search(_ query: String, limit: Int = 8, category: String? = nil) async -> [Resolved] {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let cat = category?.lowercased()
         let (events, _) = await cache.get()
 
         // Phase 1 — match on the cheap listing (title + subtitle + category).
         var candidates: [[String: Any]] = []
         for event in events {
             guard event["event_ticker"] is String else { continue }
+            if let cat, (event["category"] as? String)?.lowercased() != cat { continue }
             if q.isEmpty {
                 candidates.append(event)
             } else {
@@ -163,6 +176,59 @@ enum KalshiWatch {
     /// Resolves a query to its busiest matching market — the Watch button's path.
     static func resolve(_ query: String) async -> Resolved? {
         await search(query, limit: 1).first
+    }
+
+    /// The categories actually present in the open-events cache right now,
+    /// busiest first (by event COUNT, not volume — the raw listing carries
+    /// no volume, only the hydrated markets do). Free: the cache is already
+    /// in memory for every browse, and `category` was already being parsed
+    /// per event and used only as a search haystack (see the file header) —
+    /// this is that same field, finally read for its own sake. Bounded to
+    /// the cache's own truncation (prd: `discoveryPages` × 200), so a
+    /// category present only in the untouched tail won't appear — an honest
+    /// side effect of the same bound the browse list already lives with.
+    static func categories() async -> [String] {
+        let (events, _) = await cache.get()
+        var counts: [String: Int] = [:]
+        for event in events {
+            guard let cat = event["category"] as? String, !cat.isEmpty else { continue }
+            counts[cat, default: 0] += 1
+        }
+        return counts.sorted { $0.value > $1.value }.map(\.key)
+    }
+
+    /// A multi-outcome event (a race, a nomination) grouped back into ONE
+    /// row instead of one row per candidate — `search`/`markets(inEvent:)`
+    /// deliberately return every outcome as its own `Resolved` (each is a
+    /// real, separately watchable market), but a browse LIST reading eight
+    /// siblings from the same race as unrelated questions is the reason it
+    /// looks thin (prd: the event explosion). Outcomes sort busiest-first;
+    /// `others` is the count left off after `maxOutcomes`, never silently
+    /// dropped from the field's own true size.
+    struct Race: Identifiable {
+        let eventTicker: String
+        let title: String
+        let outcomes: [Resolved]
+        let others: Int
+        let closeTime: Date?
+        var id: String { eventTicker }
+    }
+
+    static func grouped(_ rows: [Resolved], maxOutcomes: Int = 4) -> [Race] {
+        var order: [String] = []
+        var byEvent: [String: [Resolved]] = [:]
+        for row in rows {
+            if byEvent[row.eventTicker] == nil { order.append(row.eventTicker) }
+            byEvent[row.eventTicker, default: []].append(row)
+        }
+        return order.map { ticker in
+            let outcomes = (byEvent[ticker] ?? []).sorted { $0.probability > $1.probability }
+            return Race(eventTicker: ticker,
+                        title: outcomes.first?.title ?? "",
+                        outcomes: Array(outcomes.prefix(maxOutcomes)),
+                        others: max(0, outcomes.count - maxOutcomes),
+                        closeTime: outcomes.first?.closeTime)
+        }
     }
 
     /// The book brackets the market's own answer: yes trades somewhere in

@@ -31,6 +31,17 @@ struct KalshiScreen: View {
     /// offer). nil most of the time — most markets have no counterpart.
     @State private var twin: PredictionTwin.Offer?
 
+    /// Own venue by default — picking "Polymarket" or "All" shows that
+    /// scope's browse content inline, without leaving this screen (prd §233,
+    /// the wallet-switcher analogy: two chips stay two chips, the toggle
+    /// lives inside each). Only ever offered once Polymarket is actually
+    /// connected — see `polymarketConnected` below.
+    @State private var venueScope: PredictionVenueScope = .kalshi
+
+    private var polymarketConnected: Bool {
+        store.bridges.contains(where: { $0.id == "polymarket" })
+    }
+
     @AppStorage("coach.swipe.done") private var swipeCoachDone = false
 
     private var hintTokenID: UUID? {
@@ -75,13 +86,13 @@ struct KalshiScreen: View {
         .dsSoftScrollEdges()
         .dsScreenTitle("Kalshi")
         .onAppear { loadWatched() }
-        // minLength: 0 — unlike every other bridge's finder, an empty query
-        // isn't "nothing to show": KalshiWatch.search("") already returns the
-        // busiest open markets (no text filter applied), so the screen leads
-        // with live odds to browse, not a blank field waiting for input.
+        // Runs only once there's actually a query to search — an empty
+        // field's browse is the dedicated section below now, not this flat
+        // hit list (prd §233).
         .task(id: queryField) {
             let q = queryField.trimmingCharacters(in: .whitespacesAndNewlines)
-            if let found = await debouncedSearch(q, minLength: 0, fetch: { await KalshiWatch.search(q) }) {
+            guard !q.isEmpty else { hits = []; return }
+            if let found = await debouncedSearch(q, fetch: { await KalshiWatch.search(q) }) {
                 hits = found
             }
         }
@@ -97,24 +108,45 @@ struct KalshiScreen: View {
                 DSSlabField(placeholder: String(localized: "Team, player, or event"),
                             text: $queryField, actionLabel: String(localized: "WATCH"),
                             action: watch)
-                ForEach(displayHits) { market in
-                    BridgeSearchResultRow(
-                        imageURL: nil, fallbackIcon: "Kalshi",
-                        title: market.title,
-                        subtitle: "\(Int((market.probability * 100).rounded()))% · \(market.subtitle)",
-                        action: { watchHit(market) })
-                }
-                BridgeSyncStatusRows(syncing: working,
-                                     syncingLine: String(localized: "Finding the market…"),
-                                     result: result, resultIsError: resultIsError)
-                if let twin {
-                    // The other exchange prices the same question. Watching
-                    // both is what makes the disagreement visible at all.
-                    BridgeSearchResultRow(
-                        imageURL: nil, fallbackIcon: twin.source.rawValue,
-                        title: twin.line,
-                        subtitle: String(localized: "Watch it on \(twin.source.rawValue) too"),
-                        action: { acceptTwin(twin) })
+                if !queryField.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    ForEach(displayHits) { market in
+                        BridgeSearchResultRow(
+                            imageURL: nil, fallbackIcon: "Kalshi",
+                            title: market.title,
+                            subtitle: "\(Int((market.probability * 100).rounded()))% · \(market.subtitle)",
+                            action: { watchHit(market) })
+                    }
+                    BridgeSyncStatusRows(syncing: working,
+                                         syncingLine: String(localized: "Finding the market…"),
+                                         result: result, resultIsError: resultIsError)
+                    if let twin {
+                        // The other exchange prices the same question. Watching
+                        // both is what makes the disagreement visible at all.
+                        BridgeSearchResultRow(
+                            imageURL: nil, fallbackIcon: twin.source.rawValue,
+                            title: twin.line,
+                            subtitle: String(localized: "Watch it on \(twin.source.rawValue) too"),
+                            action: { acceptTwin(twin) })
+                    }
+                } else {
+                    if polymarketConnected {
+                        PredictionVenueSwitcher(scope: $venueScope)
+                            .padding(.bottom, DS.Space.s1)
+                    }
+                    PredictionBrowseSection(
+                        scope: venueScope,
+                        onWatchedKalshi: { thing in
+                            result = String(localized: "Watching \(thing.title)")
+                            resultIsError = false
+                            loadWatched()
+                            register()
+                        },
+                        onWatchedPolymarket: { thing in
+                            result = String(localized: "Watching \(thing.title) on Polymarket")
+                            resultIsError = false
+                            registerPredictionBridge(source: "Polymarket", id: "polymarket",
+                                                     store: store, context: modelContext)
+                        })
                 }
                 DSSlabNote(text: "Public odds only — nothing here places a trade.")
             }

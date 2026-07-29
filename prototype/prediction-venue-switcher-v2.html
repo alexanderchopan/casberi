@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prediction markets — venues as the wallet switcher</title>
+<style>
+  :root {
+    --page: #000000;
+    --sheet: #111113;
+    --well: #080809;
+    --text1: #ffffff;
+    --text2: rgba(235,235,245,0.60);
+    --text3: rgba(235,235,245,0.30);
+    --faint: rgba(255,255,255,0.04);
+    --tint: #1673e6;
+    --attention: #ff9f0a;
+    --confirm: #30d158;
+    --down: #ff453a;
+    --kalshi: #00d09c;
+    --poly: #2d9cdb;
+    --r-card: 10px;
+    --r-sheet: 16px;
+    --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px;
+    --shadow: 0 10px 30px rgba(0,0,0,0.55);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0a0a0c; color: var(--text1);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    letter-spacing: 0;
+    padding: 40px 24px 80px;
+  }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .intro { color: var(--text2); font-size: 14px; line-height: 1.55; max-width: 880px; margin-bottom: 36px; }
+  .intro b { color: var(--text1); font-weight: 600; }
+  .intro code { font-size: 13px; color: var(--text1); background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 4px; }
+  .intro p + p { margin-top: 10px; }
+  .rail { display: flex; gap: 40px; flex-wrap: wrap; align-items: flex-start; justify-content: center; }
+  .col { width: 393px; }
+  .dir-title { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .dir-note { color: var(--text2); font-size: 13px; line-height: 1.55; margin-bottom: 14px; min-height: 148px; }
+  .dir-note b { color: var(--text1); font-weight: 600; }
+
+  .phone {
+    width: 393px; height: 852px;
+    background: var(--page); border-radius: 44px;
+    padding: 18px 14px 0;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.07), 0 24px 60px rgba(0,0,0,0.6);
+    overflow: hidden; position: relative;
+  }
+  .fold {
+    position:absolute; left:0; right:0; bottom:0; height:64px;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.92) 80%);
+    pointer-events:none;
+  }
+  .statusbar { display:flex; justify-content:space-between; padding: 2px 12px 10px; font-size:13px; font-weight:600; }
+  .navtitle { font-size: 28px; font-weight: 700; padding: 4px 4px 10px; }
+  .navtitle .sub { display:block; font-size:13px; font-weight:400; color: var(--text3); margin-top:3px; }
+
+  /* ---- category chips (the room's own filter row) ---- */
+  .chips { display:flex; gap: var(--s2); padding: 2px 2px 10px; overflow:hidden; }
+  .chip {
+    display:flex; align-items:center; gap:6px; white-space:nowrap;
+    font-size:13px; font-weight:600; color: var(--text2);
+    background: var(--sheet); border-radius: 9999px; padding: 7px 12px;
+  }
+  .chip.on { color:#fff; background: var(--tint); }
+
+  /* ---- the venue switcher: walletSwitcherBar, one level down ---- */
+  .switcher {
+    display:inline-flex; gap: 2px; padding: 4px;
+    background: rgba(255,255,255,0.07);
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    border-radius: 9999px; margin: 0 2px 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  }
+  .vchip {
+    display:flex; align-items:center; gap:6px; white-space:nowrap;
+    font-size:13px; color: var(--text2);
+    background: var(--faint); border-radius: 9999px; padding: 7px 13px;
+  }
+  .vchip.on { color: var(--text1); font-weight:600; }
+  .vchip.on.all { background: rgba(22,115,230,0.20); }
+  .vchip.on.k   { background: rgba(0,208,156,0.20); }
+  .vchip.on.p   { background: rgba(45,156,219,0.20); }
+  .vdot { width:16px; height:16px; border-radius:5px; flex:none; display:grid; place-items:center; font-size:9px; font-weight:800; color:#04120e; }
+  .vdot.k { background: var(--kalshi); }
+  .vdot.p { background: var(--poly); color:#04141f; }
+
+  .absent {
+    margin: 0 2px 12px; padding: 9px 12px;
+    font-size:12px; color: var(--text3); line-height:1.45;
+    background: rgba(255,255,255,0.03); border-radius: var(--r-card);
+  }
+
+  /* ---- market cards ---- */
+  .card {
+    background: var(--sheet); border-radius: var(--r-sheet);
+    padding: var(--s3) var(--s3) 11px; box-shadow: var(--shadow);
+    margin-bottom: var(--s2);
+  }
+  .qhead { display:flex; align-items:flex-start; gap: var(--s2); margin-bottom: 10px; }
+  .q { font-size:16px; font-weight:600; line-height:1.28; }
+  .venue { width:18px; height:18px; border-radius:5px; flex:none; margin-top:2px; display:grid; place-items:center; font-size:10px; font-weight:800; color:#04120e; }
+  .venue.k { background: var(--kalshi); }
+  .venue.p { background: var(--poly); color:#04141f; }
+
+  .outcome { display:flex; align-items:center; gap: var(--s3); padding: 4px 0; }
+  .oname { font-size:14px; color: var(--text2); width:104px; flex:none; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .oname.lead { color: var(--text1); font-weight:600; }
+  .bar { flex:1; height:8px; border-radius:9999px; background: var(--well); overflow:hidden; }
+  .bar i { display:block; height:100%; border-radius:9999px; background: var(--text2); }
+  .bar i.lead { background: var(--tint); }
+  .bar i.k { background: var(--kalshi); }
+  .bar i.p { background: var(--poly); }
+  .pct { font-size:15px; font-weight:600; width:42px; text-align:right; flex:none; font-variant-numeric: tabular-nums; }
+  .pct.mute { color: var(--text2); font-weight:500; }
+
+  .delta { font-size:12px; font-weight:700; padding:2px 6px; border-radius:9999px; font-variant-numeric: tabular-nums; }
+  .delta.up { color: var(--confirm); background: rgba(48,209,88,0.14); }
+  .delta.down { color: var(--down); background: rgba(255,69,58,0.14); }
+  .delta.flat { color: var(--text3); background: rgba(235,235,245,0.08); }
+
+  .foot { display:flex; align-items:center; gap:8px; margin-top:9px; font-size:13px; color: var(--text3); }
+  .foot .warn { color: var(--attention); }
+
+  .bigrow { display:flex; align-items:baseline; gap: var(--s2); margin-bottom: 8px; }
+  .big { font-size:34px; font-weight:700; line-height:1; font-variant-numeric: tabular-nums; }
+
+  .secthead { font-size:13px; color: var(--text3); padding: 12px 4px 8px; }
+</style>
+</head>
+<body>
+
+<h1>Venues are wallets — the switcher, not a toggle</h1>
+<div class="intro">
+  <p><code>walletSwitcherBar</code> already solves this: <code>All</code> plus one chip per wallet, floating glass under the chip strip, selection fill travelling on matched geometry and retinting to the landing wallet's hue — and gated on <code>wallet.addresses.count&nbsp;&gt;&nbsp;1</code>, so with one wallet the control is <b>absent</b>, not disabled.</p>
+  <p>Same bar, one level down, venues instead of addresses. No <code>Markets</code> chip in the source strip — Kalshi and Polymarket stay separate source chips like every other source, and this room is a <b>destination</b> reached from either bridge screen, exactly as the wallet manager sits behind the Wallet feed. Odds are illustrative.</p>
+</div>
+
+<div class="rail">
+
+  <!-- ============ 1 — ALL (combined) ============ -->
+  <div class="col">
+    <div class="dir-title">All — both connected</div>
+    <div class="dir-note">
+      The default when you follow both. Disagreement leads, because it only exists here — no single exchange's app can draw these two bars. Below it, the merged book with a venue badge per card. The switcher's selected fill is tinted <b>blue</b> for All, the same way the wallet switcher tints to the scope you're standing in.
+    </div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span>▮▮▮</span></div>
+      <div class="navtitle">Prediction markets
+        <span class="sub">Busiest open questions — public odds only</span>
+      </div>
+
+      <div class="switcher">
+        <div class="vchip on all">All</div>
+        <div class="vchip"><span class="vdot k">K</span>Kalshi</div>
+        <div class="vchip"><span class="vdot p">P</span>Polymarket</div>
+      </div>
+
+      <div class="chips">
+        <div class="chip on">All</div>
+        <div class="chip">Politics</div>
+        <div class="chip">Crypto</div>
+        <div class="chip">Sports</div>
+      </div>
+
+      <div class="secthead">They disagree</div>
+
+      <div class="card">
+        <div class="qhead"><div class="q">Fed cuts rates at the March meeting?</div></div>
+        <div class="outcome">
+          <div class="oname"><span style="color:var(--kalshi)">●</span> Kalshi</div>
+          <div class="bar"><i class="k" style="width:68%"></i></div>
+          <div class="pct">68%</div>
+        </div>
+        <div class="outcome">
+          <div class="oname"><span style="color:var(--poly)">●</span> Polymarket</div>
+          <div class="bar"><i class="p" style="width:77%"></i></div>
+          <div class="pct">77%</div>
+        </div>
+        <div class="foot"><span>9 points apart</span><span>·</span><span>closes in 3 days</span></div>
+      </div>
+
+      <div class="card">
+        <div class="qhead"><div class="q">Bitcoin above $150k this year?</div></div>
+        <div class="outcome">
+          <div class="oname"><span style="color:var(--kalshi)">●</span> Kalshi</div>
+          <div class="bar"><i class="k" style="width:41%"></i></div>
+          <div class="pct">41%</div>
+        </div>
+        <div class="outcome">
+          <div class="oname"><span style="color:var(--poly)">●</span> Polymarket</div>
+          <div class="bar"><i class="p" style="width:52%"></i></div>
+          <div class="pct">52%</div>
+        </div>
+        <div class="foot"><span>11 points apart</span><span>·</span><span>you watch BTC too</span></div>
+      </div>
+
+      <div class="secthead">Busiest</div>
+
+      <div class="card">
+        <div class="qhead">
+          <div class="venue p">P</div>
+          <div class="q">Government shutdown before April 1?</div>
+        </div>
+        <div class="bigrow">
+          <div class="big">23%</div>
+          <div class="delta down">−14</div>
+          <div style="font-size:13px;color:var(--text3);">since yesterday</div>
+        </div>
+        <div class="bar"><i class="p" style="width:23%"></i></div>
+        <div class="foot"><span>Closes Friday</span></div>
+      </div>
+
+      <div class="fold"></div>
+    </div>
+  </div>
+
+  <!-- ============ 2 — SCOPED TO KALSHI ============ -->
+  <div class="col">
+    <div class="dir-title">Kalshi — scoped</div>
+    <div class="dir-note">
+      One tap. The fill travels to the Kalshi chip and takes its brand hue with it; the disagreement section doesn't hide, it <b>stops applying</b> — there is no second opinion inside one venue. Badges drop off the cards, since every card is Kalshi now. This is the per-venue browse room, reached without ever leaving the screen.
+    </div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span>▮▮▮</span></div>
+      <div class="navtitle">Prediction markets
+        <span class="sub">Kalshi · busiest open markets, not the whole book</span>
+      </div>
+
+      <div class="switcher">
+        <div class="vchip">All</div>
+        <div class="vchip on k"><span class="vdot k">K</span>Kalshi</div>
+        <div class="vchip"><span class="vdot p">P</span>Polymarket</div>
+      </div>
+
+      <div class="chips">
+        <div class="chip on">All</div>
+        <div class="chip">Politics</div>
+        <div class="chip">Economics</div>
+        <div class="chip">Sports</div>
+      </div>
+
+      <div class="card">
+        <div class="qhead"><div class="q">Who wins the 2028 Democratic nomination?</div></div>
+        <div class="outcome">
+          <div class="oname lead">Newsom</div>
+          <div class="bar"><i class="k" style="width:31%"></i></div>
+          <div class="pct">31%</div>
+        </div>
+        <div class="outcome">
+          <div class="oname">Shapiro</div>
+          <div class="bar"><i style="width:18%"></i></div>
+          <div class="pct mute">18%</div>
+        </div>
+        <div class="outcome">
+          <div class="oname">Whitmer</div>
+          <div class="bar"><i style="width:12%"></i></div>
+          <div class="pct mute">12%</div>
+        </div>
+        <div class="foot"><span>11 more candidates</span><span>·</span><span>Closes Aug 2028</span></div>
+      </div>
+
+      <div class="card">
+        <div class="qhead"><div class="q">Fed cuts rates at the March meeting?</div></div>
+        <div class="bigrow">
+          <div class="big">68%</div>
+          <div class="delta up">+9</div>
+          <div style="font-size:13px;color:var(--text3);">since yesterday</div>
+        </div>
+        <div class="bar"><i class="k" style="width:68%"></i></div>
+        <div class="foot"><span>Closes in 3 days</span></div>
+      </div>
+
+      <div class="card">
+        <div class="qhead"><div class="q">Greenland becomes a US territory in 2026?</div></div>
+        <div class="bigrow">
+          <div class="big" style="color:var(--text2)">4%</div>
+          <div class="delta flat">0</div>
+        </div>
+        <div class="bar"><i style="width:4%"></i></div>
+        <div class="foot"><span class="warn">Thin book</span><span>·</span><span>few orders either side</span></div>
+      </div>
+
+      <div class="fold"></div>
+    </div>
+  </div>
+
+  <!-- ============ 3 — ONE VENUE CONNECTED ============ -->
+  <div class="col">
+    <div class="dir-title">Only Kalshi connected</div>
+    <div class="dir-note">
+      <b>No switcher at all</b> — the wallet rule (<code>count&nbsp;&gt;&nbsp;1</code>) applied verbatim. Not a disabled bar, not a lone "All" chip, not an empty disagreement section promising something that can't arrive. The room is simply the Kalshi browse room, and the day you connect Polymarket the bar appears and the room widens. Nobody is ever asked to pick a mode.
+      <br><br>The one honest exception: a single quiet line where the second opinion <b>would</b> be.
+    </div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span>▮▮▮</span></div>
+      <div class="navtitle">Prediction markets
+        <span class="sub">Kalshi · busiest open markets, not the whole book</span>
+      </div>
+
+      <div class="chips">
+        <div class="chip on">All</div>
+        <div class="chip">Politics</div>
+        <div class="chip">Economics</div>
+        <div class="chip">Sports</div>
+      </div>
+
+      <div class="card">
+        <div class="qhead"><div class="q">Who wins the 2028 Democratic nomination?</div></div>
+        <div class="outcome">
+          <div class="oname lead">Newsom</div>
+          <div class="bar"><i class="k" style="width:31%"></i></div>
+          <div class="pct">31%</div>
+        </div>
+        <div class="outcome">
+          <div class="oname">Shapiro</div>
+          <div class="bar"><i style="width:18%"></i></div>
+          <div class="pct mute">18%</div>
+        </div>
+        <div class="outcome">
+          <div class="oname">Whitmer</div>
+          <div class="bar"><i style="width:12%"></i></div>
+          <div class="pct mute">12%</div>
+        </div>
+        <div class="foot"><span>11 more candidates</span><span>·</span><span>Closes Aug 2028</span></div>
+      </div>
+
+      <div class="card">
+        <div class="qhead"><div class="q">Fed cuts rates at the March meeting?</div></div>
+        <div class="bigrow">
+          <div class="big">68%</div>
+          <div class="delta up">+9</div>
+          <div style="font-size:13px;color:var(--text3);">since yesterday</div>
+        </div>
+        <div class="bar"><i class="k" style="width:68%"></i></div>
+        <div class="foot"><span>Closes in 3 days</span></div>
+      </div>
+
+      <div class="absent">
+        Polymarket prices this question too. Connect it to see where the two disagree.
+      </div>
+
+      <div class="card">
+        <div class="qhead"><div class="q">Greenland becomes a US territory in 2026?</div></div>
+        <div class="bigrow">
+          <div class="big" style="color:var(--text2)">4%</div>
+          <div class="delta flat">0</div>
+        </div>
+        <div class="bar"><i style="width:4%"></i></div>
+        <div class="foot"><span class="warn">Thin book</span><span>·</span><span>few orders either side</span></div>
+      </div>
+
+      <div class="fold"></div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

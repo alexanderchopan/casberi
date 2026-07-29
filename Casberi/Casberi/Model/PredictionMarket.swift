@@ -77,3 +77,42 @@ struct PredictionMarket {
         }
     }
 }
+
+/// Both bridges' `Resolved` rows already carry exactly these four fields —
+/// this just names them once so the browse room's three orderings (2026-07-29,
+/// prd §233) sort either venue without a duplicate switch statement per
+/// screen. Not a persistence shape, not shared with `PredictionMarket` (that
+/// one carries settlement state neither `Resolved` type has yet at browse
+/// time) — purely the sort key.
+protocol PredictionOdds {
+    var probability: Double { get }
+    var previousProbability: Double? { get }
+    var volume: Double { get }
+    var closeTime: Date? { get }
+}
+
+enum PredictionOrder: String, CaseIterable, Identifiable {
+    case busiest = "Busiest"
+    case closingSoon = "Closing soon"
+    case biggestMove = "Biggest move"
+    var id: String { rawValue }
+
+    func sorted<Row: PredictionOdds>(_ rows: [Row]) -> [Row] {
+        switch self {
+        case .busiest:
+            return rows.sorted { $0.volume > $1.volume }
+        case .closingSoon:
+            // No close time reads as "not closing soon" — sorts last rather
+            // than first, so a market with an unknown close doesn't crowd
+            // out the ones that actually are closing.
+            return rows.sorted { ($0.closeTime ?? .distantFuture) < ($1.closeTime ?? .distantFuture) }
+        case .biggestMove:
+            return rows.sorted { moveSize($0) > moveSize($1) }
+        }
+    }
+
+    private func moveSize<Row: PredictionOdds>(_ row: Row) -> Double {
+        guard let previous = row.previousProbability else { return 0 }
+        return abs(row.probability - previous)
+    }
+}
