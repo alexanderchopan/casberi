@@ -249,11 +249,26 @@ struct FeedScreen: View {
     /// in the gap just doesn't repaint until the next settle, same as it
     /// wouldn't mid-transaction today. The FIRST population is instant (no
     /// debounce) so opening the All room never shows a blank beat.
+    ///
+    /// CORRECTION (2026-07-28, builds 176 + 177): "every downstream reader
+    /// already re-filters" was NOT true, and holding raw `Thing` refs in
+    /// `@State` on the promise that someone else guards is how both crashes
+    /// happened. `visible` filters `.live` itself now — see below.
     @State private var debouncedAllSnapshot: [Thing]?
     private var visible: [Thing] {
         let live = liveVisible()
         guard source == "All", filter.tag == "All" else { return live }
-        return debouncedAllSnapshot ?? live
+        // `.live` HERE, at the boundary — not left to "every downstream
+        // reader", which is what the note above used to claim and what builds
+        // 176 and 177 both disproved (2026-07-28). This snapshot holds raw
+        // model refs and is DELIBERATELY behind the live corpus, so it is not
+        // a narrow race: for the whole debounce window after any delete it
+        // hands out refs that are already tombstoned. 176 trapped on the
+        // ForEach path, 177 on `HomeComposition.projectClusters` reading
+        // `thing.tags` for the themes treemap — two readers, one stale array.
+        // Filtering once here is what makes the claim true for every reader,
+        // including the next one nobody remembers to guard.
+        return (debouncedAllSnapshot ?? live).live
     }
 
     /// The Wallet feed's per-wallet scope (prd §128) — everything passes in

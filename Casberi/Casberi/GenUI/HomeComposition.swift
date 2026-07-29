@@ -25,7 +25,13 @@ enum HomeComposition {
     /// things arrive untagged, and a real user's Home earned no map at all.
     static func sourceClusters(things: [Thing]) -> [Cluster] {
         var buckets: [String: [Thing]] = [:]
-        for thing in things { buckets[thing.source, default: []].append(thing) }
+        // `where thing.isLive` — this is called from a view body with a
+        // caller-derived array, so a delete can land between the derive and
+        // this loop. Guarding the SHARED helper covers every caller, which is
+        // the half of corollary 2 that was written down and never enforced.
+        for thing in things where thing.isLive {
+            buckets[thing.source, default: []].append(thing)
+        }
         return buckets
             .filter { $0.value.count >= 2 }
             .map { Cluster(name: $0.key, things: $0.value) }
@@ -40,7 +46,9 @@ enum HomeComposition {
     static func projectClusters(things: [Thing]) -> [Cluster] {
         let typeTags = Set(ThingKind.allCases.map { $0.typeTag.lowercased() })
         var buckets: [String: [Thing]] = [:]
-        for thing in things {
+        // `where thing.isLive` — build 177's crash site exactly: the themes
+        // treemap's lede read `thing.tags` off the All room's stale snapshot.
+        for thing in things where thing.isLive {
             for tag in thing.tags where !typeTags.contains(tag.lowercased()) {
                 buckets[tag, default: []].append(thing)
             }

@@ -36,10 +36,17 @@ struct PersonRoomScreen: View {
     /// Newest first, whichever slice the segmented picker asks for. Merging
     /// happens here (not at fetch time) so switching tabs never re-queries.
     private var merged: [Thing] {
+        // `.live` at the boundary (build 177's lesson): `posts` and
+        // `transactions` are @State-held raw refs from a manual fetch, so a
+        // delete-sync heal can tombstone one while this room is open — and
+        // `.all` reads `capturedAt` off them right here, to sort. Spelled out
+        // per branch rather than shadowed once above: a shadowing rebind hides
+        // the guard from the liveness audit, which reads these lines.
         switch filter {
-        case .all:   return (posts + transactions).sorted { $0.capturedAt > $1.capturedAt }
-        case .posts: return posts
-        case .chain: return transactions
+        case .all:   return (posts.live + transactions.live)
+                        .sorted { $0.capturedAt > $1.capturedAt }
+        case .posts: return posts.live
+        case .chain: return transactions.live
         }
     }
 

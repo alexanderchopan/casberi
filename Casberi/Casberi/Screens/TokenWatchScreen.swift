@@ -42,7 +42,9 @@ struct TokenWatchScreen: View {
     /// property, not cached, so a mode switch or a fresh pulse repaints it
     /// immediately (an @Observable read inside `body` tracks both).
     private var orderedWatched: [Thing] {
-        TokenWatchOrder.shared.apply(watched, sourceRef: \.sourceRef,
+        // `.live` at the boundary (build 177's lesson) — `apply` reads
+        // `sourceRef` off every element of this @State-held array.
+        TokenWatchOrder.shared.apply(watched.live, sourceRef: \.sourceRef,
                                       change24h: { TokenPulse.shared.pulse(for: $0)?.change24h })
     }
 
@@ -250,7 +252,14 @@ struct TokenWatchScreen: View {
     /// reorders the list, so an offset only ever means something against the
     /// array it came from.
     private func unwatch(displayed items: [Thing], at offsets: IndexSet) {
-        let dropped = offsets.map { items[$0] }
+        // Liveness filtered on the DROPPED rows, not on `items`: `offsets`
+        // index the array the caller displayed (resolved via `firstIndex` at
+        // the tap), so filtering the source would misalign them. Build 177's
+        // lesson applied where it doesn't break the indices — and a row a
+        // heal already deleted needs no unwatching.
+        let dropped = offsets
+            .compactMap { items.indices.contains($0) ? items[$0] : nil }
+            .filter(\.isLive)
         for thing in dropped {
             if let ref = thing.sourceRef { TokenWatchOrder.shared.remove(ref) }
         }

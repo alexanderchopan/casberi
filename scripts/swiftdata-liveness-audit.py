@@ -74,12 +74,25 @@ SOURCES = [
     "Casberi/Casberi/Screens",
     "Casberi/Casberi/Shell",
     "Casberi/Casberi/Design",
+    # GenUI renders Things too — it was outside the audit until 2026-07-28.
+    "Casberi/Casberi/GenUI",
 ]
 
 # Files that legitimately hold Things in @State with no isLive guard. Adding
 # one is a conscious "no stored property of a held Thing is ever read here" —
 # e.g. the ref is only passed onward by identity, or re-fetched on every read.
 KNOWN_UNGUARDED: set[str] = set()
+
+# Check 4's escape hatch, keyed on (file, exact line). Adding one is a
+# conscious "filtering HERE would be wrong, and the read is guarded where it
+# actually happens" — never "the lint is in my way". The reason is required
+# because the whole crash class comes from unwritten promises.
+HANDOFF_OK: dict[tuple[str, str], str] = {
+    ("TokenWatchScreen.swift", "unwatch(displayed: watched, at: offsets)"):
+        "`offsets` index the array the caller displayed (resolved via "
+        "firstIndex at the tap), so filtering the source would misalign them. "
+        "unwatch(displayed:) filters the DROPPED rows instead.",
+}
 
 # `@Query … var name: [Thing]` / `@Query(descriptor) private var name: [Thing]`
 QUERY_DECL = re.compile(r"@Query\b[^\n]*?\bvar\s+([A-Za-z_]\w*)")
@@ -88,6 +101,9 @@ THING_DECL = re.compile(r"\b(?:var|let)\s+([A-Za-z_]\w*)\s*:\s*\[Thing\]")
 # A held single/array Thing in @State — captures the NAME so check 2 can look
 # for stored-property reads off exactly that identifier.
 HELD_DECL = re.compile(r"@State[^\n]*?\bvar\s+([A-Za-z_]\w*)\s*:\s*(?:\[Thing\]|Thing\?)")
+# Check 4's narrower target: a held ARRAY of Things (optional or not). Arrays
+# are what get handed onward wholesale into helpers that then iterate them.
+HELD_ARRAY_DECL = re.compile(r"@State[^\n]*?\bvar\s+([A-Za-z_]\w*)\s*:\s*\[Thing\]\??")
 # Collection ops that turn a coordinated @Query array into a plain Array.
 DERIVING_OP = re.compile(r"\.(?:filter|map|compactMap|flatMap|sorted|prefix|suffix|reversed|dropFirst|dropLast|shuffled)\s*[({]")
 
@@ -273,7 +289,10 @@ def audit_file(path: pathlib.Path, findings: list[str]) -> None:
     # So: any ForEach content closure that reaches `.thing` must re-check
     # liveness INSIDE the closure.
     for lineno, body in foreach_content_closures(text):
-        if ".thing" not in body:
+        # `\b` matters: `.thingID` is a plain String on a brief's move row, and
+        # a substring match reported it as a dead-model read (false positive
+        # caught 2026-07-28, the first time this check was pointed at GenUI).
+        if not re.search(r"\.thing\b", body):
             continue
         if "isLive" in body or ".live" in body:
             continue
@@ -282,6 +301,52 @@ def audit_file(path: pathlib.Path, findings: list[str]) -> None:
             f"isLive guard inside the closure\n"
             f"      {body.strip().splitlines()[0][:110] if body.strip() else ''}"
         )
+
+    # ── Check 4: a held [Thing] handed onward without .live ──────────
+    # Build 177. `@State private var debouncedAllSnapshot: [Thing]?` — the All
+    # room's perf snapshot, raw model refs held across a debounce window, so
+    # DELIBERATELY behind the live corpus. Nothing read a stored property off
+    # that name directly (check 2's shape), so check 2 saw nothing; the refs
+    # FLOWED OUT through `visible` into `HomeComposition.projectClusters`,
+    # which read `thing.tags` and trapped. The rule that would have caught it:
+    # a held Thing array must be `.live`-filtered where it is READ, not on a
+    # promise that every downstream reader guards. (That promise was written
+    # in the comment above the property, and it was false.)
+    # Deliberately narrow, so it stays believable: only the array HANDED ONWARD
+    # WHOLE — `return held`, or `held` passed as a call argument — and only the
+    # first such site per name. Direct `held.property` reads stay check 2's job.
+    # Comments are stripped and re-bindings (`if let watched = …`) skipped;
+    # without those two, this fired 15 times on one screen in its first run.
+    code_lines = _strip_noncode(text).splitlines()
+    for lineno, line in enumerate(code_lines, 1):
+        m = HELD_ARRAY_DECL.search(line)
+        if not m:
+            continue
+        name = m.group(1)
+        esc = re.escape(name)
+        for n, l in enumerate(code_lines, 1):
+            if n == lineno or not re.search(rf"\b{esc}\b", l):
+                continue
+            if re.search(rf"\b(?:let|var)\s+{esc}\b", l):
+                continue                              # a DIFFERENT, shadowing binding
+            if re.match(rf"\s*{esc}\s*=", l):
+                continue                              # populating the snapshot
+            if re.search(r"\.live\b", l) or "isLive" in l:
+                continue                              # guarded
+            handed_on = (
+                re.search(rf"\breturn\s+{esc}\b", l)          # return held
+                or re.search(rf"[(,:]\s*{esc}\s*[,)]", l)     # f(held) / label: held
+            )
+            if not handed_on:
+                continue
+            if (path.name, l.strip()) in HANDOFF_OK:
+                continue
+            findings.append(
+                f"✗ {rel}:{n} — '{name}' is a held [Thing] (declared line "
+                f"{lineno}), handed onward without .live\n"
+                f"      {l.strip()[:110]}"
+            )
+            break                                     # one finding per held array
 
     # ── Check 2: held Thing refs read without an isLive guard ────────
     if path.name in KNOWN_UNGUARDED or "isLive" in text or ".live" in text:
@@ -328,10 +393,29 @@ def self_test() -> int:
             "var body: some View { Text(openThing?.title ?? \"\") }\n",
             "is a held Thing, read unguarded",
         ),
-        "clean-held-passed-on": (
+        # DOCTRINE CHANGE (build 177). This case used to assert "handed to a
+        # renderer which guards is fine". That is exactly the promise build 177
+        # died on — `debouncedAllSnapshot` was handed onward on the written
+        # promise that "every downstream reader already re-filters", and one
+        # reader didn't. A promise that lives in another file cannot be checked
+        # here, and `.live` at the hand-off costs one filter, so the hand-off
+        # is now where the guard belongs.
+        "held-passed-on-unfiltered": (
             "@State private var recent: [Thing] = []\n"
             "var body: some View { RecentThingsSection(header: \"x\", things: recent) }\n",
+            "handed onward without .live",
+        ),
+        "clean-held-passed-on-live": (
+            "@State private var recent: [Thing] = []\n"
+            "var body: some View { RecentThingsSection(header: \"x\", things: recent.live) }\n",
             None,
+        ),
+        # Build 177's own shape: a held array returned out of a computed
+        # property, into helpers that then read stored properties off it.
+        "held-returned-unfiltered": (
+            "@State private var snapshot: [Thing]?\n"
+            "private var visible: [Thing] { return snapshot ?? [] }\n",
+            "handed onward without .live",
         ),
         "clean-held-guarded": (
             "@State private var openThing: Thing?\n"
