@@ -49,6 +49,7 @@ struct AvatarChip: View {
             // the two doors beside each other can't drift on what a press
             // has to hit.
             .contentShape(Circle())
+            .dsHover()
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Settings")

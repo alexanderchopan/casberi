@@ -107,10 +107,26 @@ extension View {
     /// the rows are gapless, so a row's shadow falls on the adjacent same-color
     /// row and vanishes — only the section's outer silhouette casts, reading as
     /// one lifted card rather than a stack of shadowed rows (ladder 2026-07-12).
+    /// Cursor-aware everywhere for free (Mac polish, 2026-07-28) — every row
+    /// was designed for a finger, which has no concept of hover, and on Mac
+    /// that reads as a dead app the instant the cursor moves without
+    /// anything responding. `.hoverEffect` is folded in HERE rather than
+    /// added at each of this modifier's 27 call sites, so a screen that
+    /// adopts `dsListCardRow()` gets Mac hover with no separate decision.
+    /// It's the same pointer API iPad has carried since Catalyst's
+    /// inception (a physical pointer on iPad and a Mac cursor are the same
+    /// UIKit interaction underneath), so it's a no-op on touch.
     func dsListCardRow() -> some View {
         listRowBackground(
             DS.surfaceSheet.shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
         )
+        .hoverEffect(.automatic)
+    }
+
+    /// The same cursor-aware treatment for anything that ISN'T a List row —
+    /// the source chips, the avatar/catalogue doors, a card grid tile.
+    func dsHover(_ effect: HoverEffect = .automatic) -> some View {
+        hoverEffect(effect)
     }
 
     /// A modal sheet / tray surface with the overlay shadow.

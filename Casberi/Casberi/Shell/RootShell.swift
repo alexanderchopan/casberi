@@ -14,6 +14,9 @@ struct RootShell: View {
     @Environment(\.modelContext) private var modelContext
     @State private var bridges = BridgeStore()
     @State private var chrome = ShellChrome()
+    /// Read-only, for the Mac window title (see the `onChange` below) — the
+    /// feed's own scope, the same value the chip strip is bound to.
+    @Bindable private var filter = FeedFilter.shared
     @State private var draft = ""
     @State private var composerOpen = false
     /// Session-scoped only, never persisted — the bar's pulse (ruling 6)
@@ -155,6 +158,16 @@ struct RootShell: View {
             guard request != nil else { return }
             composerOpen = true
         }
+        #if targetEnvironment(macCatalyst)
+        // The window title says where you are (Mac polish, 2026-07-28) — it
+        // said "Casberi" always, which wastes the one piece of Mac chrome
+        // that iPhone has no equivalent of. `filter.source` is the exact
+        // value the chip strip is already bound to, so this can't drift
+        // from what the feed is actually showing.
+        .onChange(of: filter.source, initial: true) { _, _ in
+            updateMacWindowTitle()
+        }
+        #endif
         .dsSensoryFeedback()
         .environment(bridges)
         .environment(chrome)
@@ -789,7 +802,11 @@ struct RootShell: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .dropDestination(for: URL.self) { urls, _ in
                     guard let url = urls.first else { return false }
-                    saveDropped(url.absoluteString)
+                    if url.isFileURL {
+                        saveDroppedFile(url)
+                    } else {
+                        saveDropped(url.absoluteString)
+                    }
                     return true
                 }
                 .dropDestination(for: String.self) { strings, _ in
@@ -1135,6 +1152,53 @@ struct RootShell: View {
         // A pasted URL saves instantly with its address as its face; the real
         // page title arrives a beat later (best-effort, never blocks the save).
         Task { @MainActor in await LinkTitle.enrich(thing, context: modelContext) }
+    }
+
+    /// A local file dropped in from Finder/Safari/Mail — genuinely a Mac-only
+    /// path (2026-07-28): iOS has nowhere to drag a file FROM into this app
+    /// except Files itself, which already rides its own connected bridge.
+    /// `Capture.thing(from:)` would otherwise run the file:// path through
+    /// its URL/text detector and most likely miss (NSDataDetector targets
+    /// web links), saving a `.note` whose body is a bare filesystem path —
+    /// the same wrong answer FilesBridge exists to avoid for a WATCHED
+    /// folder. One-shot, like a paste or a screenshot: this reads what's
+    /// here at drop time; there's no folder bookmark to re-sync from later,
+    /// because Finder handed us one file, not a folder to watch.
+    private func saveDroppedFile(_ url: URL) {
+        let imageExtensions: Set<String> = ["png", "jpg", "jpeg", "heic", "gif", "webp", "tiff", "bmp"]
+        let textExtensions: Set<String> = [
+            "txt", "md", "markdown", "csv", "tsv", "json", "log", "yaml", "yml",
+            "xml", "html", "htm", "rtf", "swift", "py", "js", "ts", "css",
+        ]
+        let ext = url.pathExtension.lowercased()
+        let size = Int64((try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0)
+        let byteLine = ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
+
+        let thing = Thing(kind: .file, title: url.lastPathComponent, content: byteLine,
+                          source: "You", sourceRef: "dropped:\(UUID().uuidString)")
+
+        if imageExtensions.contains(ext), let data = try? Data(contentsOf: url),
+           let image = UIImage(data: data) {
+            // Same target ScreenshotIngest's own thumbnail uses (~480pt,
+            // q0.7) — one size, so every previewImageData reader
+            // (ThingContent, the Home tray) already knows how to draw it.
+            let maxSide: CGFloat = 480
+            let scale = min(1, maxSide / max(image.size.width, image.size.height))
+            let target = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+            let format = UIGraphicsImageRendererFormat()
+            format.scale = 1   // downscale render — device scale would triple the byte count for nothing
+            let resized = UIGraphicsImageRenderer(size: target, format: format).image { _ in
+                image.draw(in: CGRect(origin: .zero, size: target))
+            }
+            thing.previewImageData = resized.jpegData(compressionQuality: 0.7)
+        } else if textExtensions.contains(ext), let body = try? String(contentsOf: url, encoding: .utf8) {
+            thing.content = String(body.prefix(300))
+        }
+
+        modelContext.insert(thing)
+        modelContext.saveHonestly()
+        SpotlightIndex.index([thing])
+        land(thing, undoable: true)
     }
 
     /// Dropped text or a link — same path as the composer, same proof. The
@@ -2130,6 +2194,18 @@ struct RootShell: View {
         if s < 86_400 { return "\(Int(s / 3600))h" }
         return "\(Int(s / 86_400))d"
     }
+
+    #if targetEnvironment(macCatalyst)
+    /// `nil` reverts the title bar to the app's own display name (Info.plist
+    /// `CFBundleDisplayName`) — the "All" case, so an unscoped feed reads as
+    /// plain "Casberi" exactly as it always has.
+    private func updateMacWindowTitle() {
+        guard let scene = UIApplication.shared.connectedScenes
+            .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene
+        else { return }
+        scene.title = filter.source == "All" ? nil : filter.source
+    }
+    #endif
 
     // MARK: - Toast (commit feedback — state lives in ShellChrome.flash)
 

@@ -214,6 +214,7 @@ struct SourceChips: View {
             // `highPriorityGesture` couldn't fix it: the region was the bug,
             // not the arbitration.
             .contentShape(Circle())
+            .dsHover()
         }
         .buttonStyle(.plain)
         // The door's glyph fills, colors and pulses when a bridge breaks —
@@ -337,6 +338,7 @@ struct SourceChips: View {
             // with a real image), but "All" is a 12pt word inside a 56pt
             // frame — without this its press had to land on the letters.
             .contentShape(Circle())
+            .dsHover()
         }
         .buttonStyle(.plain)
         // Finger-driven, never idle: chips ease down as they leave the viewport
