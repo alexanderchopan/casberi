@@ -101,8 +101,8 @@ extension DS {
         case "coinbase":            return Color.fixed("#0052ff")   // their official brand blue
         case "kraken":              return Color.fixed("#773bf5")   // their mascot's purple (icon-sampled)
         case "binance":             return Color.fixed("#0b0e11")   // their near-black app-icon field
-        case "geminiexchange":      return Color.fixed("#ff6511")   // their orange (sampled from the official app icon)
-        case "ethvalidators":       return Color.fixed("#627eea")   // Ethereum's own brand blue-purple
+        case "gemini exchange":     return Color.fixed("#ff6511")   // their orange (sampled from the official app icon)
+        case "eth validators":      return Color.fixed("#627eea")   // Ethereum's own brand blue-purple
         case "1claw":               return Color.fixed("#990029")   // their crimson (docs-sampled)
         case "homekit":             return Color.fixed("#8e8e93")   // the accessory kind's own gray (KindGlyph.swift)
         default:                    return nil
