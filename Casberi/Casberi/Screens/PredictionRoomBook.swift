@@ -81,7 +81,6 @@ struct PredictionRoomBook: View {
             }
             PredictionBrowseSection(
                 scope: bothConnected ? scope : ownScope,
-                bothConnected: bothConnected,
                 onWatchedKalshi: { _ in registerIfNeeded(name: "Kalshi", id: "kalshi") },
                 onWatchedPolymarket: { _ in registerIfNeeded(name: "Polymarket", id: "polymarket") },
                 onPreview: onPreview)

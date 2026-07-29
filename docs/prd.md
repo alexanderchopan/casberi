@@ -10008,17 +10008,17 @@ learns the other exists at all. Nothing before this — not the tile, not
 the product page, not either connect screen — ever mentioned that the two
 venues can be compared.
 
-**The room defect flagged in review got fixed too, once approved as
-in-scope.** With both exchanges connected, `PredictionBrowseSection`
-rendered "They disagree" only in `.all` scope, while `PredictionRoomBook`
-defaults every room to its OWN venue on appear — so the one comparison
-neither exchange's own app can show sat behind a segment tap nobody made.
-`bothConnected` is now threaded through independently of `scope`: the
-visible book stays scope-filtered exactly as before, but the disagreement
-join fires (and renders) the moment both venues are connected, regardless
-of which segment is selected. Kalshi rows are fetched silently (no
-category filter, since category belongs to whichever scope IS visible) as
-the join's anchor set when the visible scope is Polymarket-only.
+**The "room defect" flagged in review turned out not to be one.** A
+review pass this session read `PredictionBrowseSection` rendering "They
+disagree" only in `.all` scope, against `PredictionRoomBook` defaulting
+every room to its own venue on appear, as a bug — the comparison sitting
+behind a segment tap nobody makes. A same-day attempt to fix it (threading
+`bothConnected` through independently of `scope`) was reverted: the
+switcher existing specifically so a person can widen to "All" IS the
+design, not an accident it papers over — user, 2026-07-29: *"if you wanna
+compare both you'd go into all."* `PredictionBrowseSection` is unchanged
+from §235 on this point; the two questions this section adds are what
+make "All" worth tapping, not a reason to stop gating on it.
 
 **Held from the §234/§235 refusals, untouched:** no auto-follow of a
 twin market, no single "follow both" tap, no payout/stake language on a
