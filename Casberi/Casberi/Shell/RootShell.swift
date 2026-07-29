@@ -128,297 +128,7 @@ struct RootShell: View {
     }
 
     private var shell: some View {
-        ZStack(alignment: .bottom) {
-            // The themed page — the same field each screen paints for itself
-            // (NavigationStack's backing is opaque, so photo rendering lives
-            // inside the screens via dsPageBackground; this is the base coat).
-            DSPageBackground()
-
-            // Content — records paint, generated surfaces stream (brief §5).
-            // Anything dropped on the shell lands as a thing (capture: drop).
-            MainSurface()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .dropDestination(for: URL.self) { urls, _ in
-                    guard let url = urls.first else { return false }
-                    saveDropped(url.absoluteString)
-                    return true
-                }
-                .dropDestination(for: String.self) { strings, _ in
-                    guard let text = strings.first else { return false }
-                    saveDropped(text)
-                    return true
-                }
-
-            if let toast = chrome.toast { toastView(toast) }
-
-            // The capture flight (§1): a proxy card glides from the capture
-            // point to the "All" chip, then it pulses once.
-            if let flight = chrome.flight {
-                CaptureFlight(flight: flight, target: chrome.feedTabFrame) {
-                    chrome.flight = nil
-                    // The landing beat — the All chip catches the capture
-                    // (the old landedPulse reader died with the tab bar;
-                    // the catch bob is the same promise, kept again).
-                    chrome.chipCaught("All")
-                }
-                .zIndex(2)
-            }
-
-            // The agent's bar (docs/agent-brief.md ruling 6) — hosted HERE,
-            // not on MainSurface, so it rides every screen this app can push
-            // (Apps, Settings, a bridge setup form), not just MainSurface's
-            // own root the way the FAB it replaces used to. The berry
-            // breathes while some kept ask changed and the agent hasn't been
-            // raised yet THIS LAUNCH (a plain, session-scoped flag — distinct
-            // from `KeptAskStore`'s own PER-ASK persisted "seen" dot, which
-            // renders on the pills once risen, not here).
-            // Hidden entirely once risen (2026-07-20) — `agentMorph` needs
-            // exactly one side of the matched pair present at a time, and a
-            // bar sitting inert under the risen sheet was dead weight anyway.
-            if !composerOpen {
-                // The floating cluster (whisper + bar) renders as one
-                // coordinated glass system (2026-07-23) — the container gives
-                // both elements a SHARED backdrop sample, so as feed content
-                // scrolls behind the pair they lens the same field consistently
-                // instead of each sampling on its own. Spacing is 0 ON PURPOSE:
-                // a non-zero spacing would let the two shapes MERGE into a
-                // liquid bridge, and the whisper is deliberately inset a step
-                // narrower to read as SEPARATE from the bar (2026-07-22, the
-                // double-bar ruling) — coordinated, not fused.
-                DSGlassContainer(spacing: 0) {
-                VStack(spacing: DS.Space.s2) {
-                    // The whisper rides ABOVE the bar (prd §165) — the day
-                    // brief's headline, first open of the day only. Tap
-                    // raises the agent, same move as the bar's own.
-                    if let whisper {
-                        WhisperCapsule(title: whisper.title, lead: whisper.lead,
-                                       walletPct: whisper.walletPct,
-                                       morphNS: agentMorph) {
-                            DSHaptic.tap()
-                            // The capsule's promise kept (prd §166): the tap
-                            // lands on the Today brief itself, not the rest
-                            // state — the headline it teased, opened. Routed
-                            // through `chrome.askRequest` (the same door the
-                            // weekend cover already uses), so the whisper, a
-                            // typed "how's my day", and a kept pill all reach
-                            // the one composer.
-                            chrome.askRequest = TodayBrief.title
-                            // The title travels (prd §167a): set BEFORE
-                            // `composerOpen` flips, so the proxy title below
-                            // mounts in the SAME `composerOpen`-driven
-                            // transaction as the capsule vanishing — the real
-                            // masthead doesn't exist for another 400ms+ (it
-                            // waits on `consumeAskRequest`'s settle delay,
-                            // then commit()), well past this rise animation's
-                            // own duration, so without a proxy there'd be
-                            // nothing on the OTHER side of the pairing for the
-                            // morph to animate into.
-                            let title = whisper.title
-                            chrome.risingBriefTitle = title
-                            composerOpen = true
-                            Task { @MainActor in
-                                try? await Task.sleep(for: .milliseconds(700))
-                                // Only clear OUR OWN word — a fast re-tap that
-                                // set a newer title must not be stomped by an
-                                // older timer firing late.
-                                guard chrome.risingBriefTitle == title else { return }
-                                withAnimation(DS.Motion.standard) { chrome.risingBriefTitle = nil }
-                            }
-                        }
-                        // Inset a step narrower than the bar (2026-07-22) —
-                        // see WhisperCapsule's own note: stacked full-width
-                        // glass read as a double-bar.
-                        .padding(.horizontal, DS.Space.s3)
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
-                    }
-                    AgentBar(hasUnseenSignal: KeptAskStore.shared.anyChanged && !agentEverOpened,
-                             morphNS: agentMorph) {
-                        DSHaptic.tap()
-                        // Open onto the Today brief, not the empty chips (prd
-                        // §181, user: "make daily brief be the default when a
-                        // user opens the agent"). Routed through the SAME
-                        // `askRequest` door the whisper tap and a typed "how's
-                        // my day" already use — so all three reach the one
-                        // composer and none can drift (the §132 principle).
-                        // Guarded on nil so a surface that seeded a specific
-                        // ask before the bar rose still wins; the masthead
-                        // title-travel stays whisper-only (no `risingBriefTitle`
-                        // here — a bare tap has no capsule to morph from).
-                        if chrome.askRequest == nil { chrome.askRequest = TodayBrief.title }
-                        composerOpen = true
-                    }
-                }
-                }
-                // iPad (2026-07-25): the cluster is a capsule holding one
-                // line, and at 1376pt wide it read as a mile-long bar with a
-                // placeholder floating in it. Capped, and inset past BOTH
-                // shell columns so it floats over the feed it belongs to
-                // rather than straddling the source rail on one side and the
-                // detail pane's content on the other. This ZStack sits
-                // OUTSIDE MainSurface's safe-area insets, so the rail and
-                // pane widths have to be restated here — that is what
-                // `PadLayout` exists to keep in one place.
-                .frame(maxWidth: padShell.isRegular ? PadLayout.agentBarMaxWidth : .infinity)
-                .frame(maxWidth: .infinity)
-                .padding(.leading, padShell.railInset)
-                .padding(.trailing, padShell.paneInset)
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.bottom, DS.Space.s2)
-                .transition(.opacity)
-            }
-
-            // The agent, full screen (ruling 3 — never a sheet/tray). Grows
-            // out of the bar's own frame (2026-07-20, `agentMorph` — the
-            // "now-playing bar" morph the design is named after): the outer
-            // shape is `matchedGeometryEffect`-paired with `AgentBar`'s via
-            // `Composer`'s `glassNamespace`, so the sheet's bounds visibly
-            // interpolate from the small capsule to full screen instead of
-            // sliding up as an unrelated sheet. Content still needs its own
-            // fade-in since the frame match alone doesn't animate opacity.
-            if composerOpen {
-                ZStack {
-                    DS.page.ignoresSafeArea()
-                    agentSurface
-                }
-                .transition(.opacity)
-                // The proxy title (prd §167a) — mounts in this SAME
-                // transaction as the surface itself appearing, so its
-                // `matchedGeometryEffect` has a live pair to interpolate from
-                // (the whisper capsule's own title, vanishing in the SAME
-                // transaction one layer down). Purely cosmetic scaffolding:
-                // Composer's real masthead carries the identical id, so once
-                // it mounts the two simply crossfade in place — this view
-                // never does anything but sit still and then fade.
-                .overlay(alignment: .top) {
-                    if let title = chrome.risingBriefTitle {
-                        Text(title)
-                            .dsText(.heading22)
-                            .foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                            .modifier(WhisperTitleMorph(ns: agentMorph))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, DS.Space.s4)
-                            .padding(.top, 68)
-                            .allowsHitTesting(false)
-                            .transition(.opacity)
-                    }
-                }
-                .zIndex(3)
-            }
-        }
-        .animation(DS.Motion.standard, value: composerOpen)
-        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { shellWidth = $0 }
-        // The bar rides RootShell's OWN ZStack now (2026-07-19 — it replaced
-        // the FAB, which used to live on MainSurface's root content
-        // specifically so pushed rooms could slide over it; the bar
-        // deliberately does the opposite, per ruling 6).
-        .onChange(of: chrome.composerRequest) { _, _ in
-            composerOpen = true
-        }
-        // Privacy as the default (goal 6): leaving the app redacts the
-        // corpus — the app-switcher snapshot shows choreography, not content.
-        // The person can turn it off in Privacy (Hide previews). Never before
-        // first activation: apps LAUNCH inactive, and the nav bar caches a
-        // title configured under redaction.
-        .redacted(reason: redactNow ? .placeholder : [])
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active {
-                let firstActivation = !hasBeenActive
-                hasBeenActive = true
-                // Freeze the away window (librarian, prd §67 ⑥) — "while you
-                // were away" grounds on it; things landing from here on are
-                // arriving while you're present.
-                AppVisit.markOpened()
-                // Returning crossfades from placeholder to content (§14);
-                // leaving redacts instantly — the snapshot must already hide.
-                withAnimation(.easeOut(duration: 0.2)) { redactNow = false }
-                // Warm the model on foreground so the first Ask is fast; the
-                // call is idempotent and returns immediately.
-                if !skipPrewarm { OnDeviceModel.prewarm() }
-                // The heavier foreground work — polling every connected bridge
-                // (`refreshAllConnected` includes a SYNCHRONOUS Photos fetch),
-                // the embedding backfill, and the insight/kept-ask/whisper
-                // recompute — is deferred past the launch ANIMATION on the
-                // FIRST activation (2026-07-24 perf, user report "loading
-                // hangs / the coins-flip stutters"): running it as the opening
-                // frames paint stalled the main thread mid-animation. A later
-                // foreground has no launch animation to protect, so it runs
-                // immediately.
-                let runForegroundWork: @MainActor () -> Void = {
-                    // Connected bridges are cheap to poll — every foreground
-                    // refreshes them all (one place, reusable from screens).
-                    BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges)
-                    // Build the on-device semantic index for anything new or
-                    // not yet embedded — a bounded background sweep, so Ask can
-                    // retrieve by meaning, not just shared words.
-                    EmbeddingIndex.backfill(context: modelContext)
-                    // The "Noticed" line's real trigger (docs/agent-brief.md
-                    // ruling 10). Also refreshes the kept-ask digest cache
-                    // (`KeptAskStore.anyChanged`) the bar's pulse reads from.
-                    Task { @MainActor in
-                        // Bounded (2026-07-24): insight/kept-ask/whisper read
-                        // only recent activity, so this needn't materialize the
-                        // whole corpus on the main actor at launch.
-                        var d = FetchDescriptor<Thing>(
-                            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
-                        d.fetchLimit = 600
-                        let surfaced = Corpus.surfaced((try? modelContext.fetch(d)) ?? [])
-                        HomeInsightStore.shared.refresh(from: surfaced)
-                        await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
-                        // The whisper's compose rides the same corpus walk this
-                        // Task already paid for — never its own fetch.
-                        refreshWhisper(things: surfaced)
-                    }
-                }
-                if firstActivation {
-                    Task { @MainActor in
-                        try? await Task.sleep(for: .milliseconds(800))
-                        runForegroundWork()
-                    }
-                } else {
-                    runForegroundWork()
-                }
-                // Resnapshot hand-off state so the thing sheet's "Add to <app>"
-                // verbs only show apps the person connected AND has installed.
-                HandOffState.refresh(connected: Set(
-                    bridges.bridges.filter { $0.status == .connected }
-                        .map { $0.name.lowercased() }))
-                // Control Center's button left a flag — open the composer.
-                let group = UserDefaults(suiteName: SharedStore.appGroup)
-                if group?.bool(forKey: "compose.request") == true {
-                    group?.removeObject(forKey: "compose.request")
-                    composerOpen = true
-                }
-                // A share-extension capture landed while we were away. Its
-                // write IS in the store file, but @Query never hears a
-                // foreign process's save (SwiftData; Apple's pattern is a
-                // foreground reconcile — forums thread 764290), so shared
-                // things stayed invisible until relaunch (2026-07-11).
-                if group?.bool(forKey: "capture.landed") == true {
-                    group?.removeObject(forKey: "capture.landed")
-                    nudgeAfterExternalCapture()
-                }
-            } else {
-                if hasBeenActive && hidePreviews { redactNow = true }
-                if phase == .background {
-                    // The away clock starts — the next foreground reads it.
-                    AppVisit.markClosed()
-                    // Ask iOS to sample wallet holdings while we're away, so
-                    // the value line densifies between opens (no-op without a
-                    // watched wallet; the OS decides if it ever runs).
-                    WalletBackgroundRefresh.schedule()
-                    // The widget's new-ring boundary: everything after this
-                    // stamp is "new since you left" on the home screen too
-                    // (delight 2026-07-13). Reload so the widget re-reads.
-                    UserDefaults(suiteName: SharedStore.appGroup)?
-                        .set(Date.now.timeIntervalSince1970, forKey: "widget.lastSeen")
-                    WidgetCenter.shared.reloadTimelines(ofKind: "casberi.hero")
-                    // Give the model's memory back when we're not in use; the
-                    // next foreground reloads it.
-                    OnDeviceModel.teardown()
-                }
-            }
-        }
+        shellPhaseAware
         // The agent is a full-screen ZStack layer now (docs/agent-brief.md
         // ruling 3), rendered above in `shell`'s own ZStack — no more sheet.
         // A fresh composer open is a fresh answer conversation — drop the prior
@@ -923,6 +633,310 @@ struct RootShell: View {
                 landingNode = node
                 onboarded = true
             }))
+        }
+    }
+
+    /// Split from `shell` (2026-07-28): the scene-phase / redaction / geometry
+    /// handlers are their own stage so the type-checker isn't asked to unify one
+    /// 800-line modifier chain in a single expression — a cold, uncached build
+    /// (a clean checkout, or a TestFlight archive) timed out here every time,
+    /// even though a warm incremental build never re-typechecks an unchanged
+    /// file and so never showed it. Same view, same order, just staged.
+    private var shellPhaseAware: some View {
+        shellBase
+        .animation(DS.Motion.standard, value: composerOpen)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { shellWidth = $0 }
+        // The bar rides RootShell's OWN ZStack now (2026-07-19 — it replaced
+        // the FAB, which used to live on MainSurface's root content
+        // specifically so pushed rooms could slide over it; the bar
+        // deliberately does the opposite, per ruling 6).
+        .onChange(of: chrome.composerRequest) { _, _ in
+            composerOpen = true
+        }
+        // Privacy as the default (goal 6): leaving the app redacts the
+        // corpus — the app-switcher snapshot shows choreography, not content.
+        // The person can turn it off in Privacy (Hide previews). Never before
+        // first activation: apps LAUNCH inactive, and the nav bar caches a
+        // title configured under redaction.
+        .redacted(reason: redactNow ? .placeholder : [])
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                let firstActivation = !hasBeenActive
+                hasBeenActive = true
+                // Freeze the away window (librarian, prd §67 ⑥) — "while you
+                // were away" grounds on it; things landing from here on are
+                // arriving while you're present.
+                AppVisit.markOpened()
+                // Returning crossfades from placeholder to content (§14);
+                // leaving redacts instantly — the snapshot must already hide.
+                withAnimation(.easeOut(duration: 0.2)) { redactNow = false }
+                // Warm the model on foreground so the first Ask is fast; the
+                // call is idempotent and returns immediately.
+                if !skipPrewarm { OnDeviceModel.prewarm() }
+                // The heavier foreground work — polling every connected bridge
+                // (`refreshAllConnected` includes a SYNCHRONOUS Photos fetch),
+                // the embedding backfill, and the insight/kept-ask/whisper
+                // recompute — is deferred past the launch ANIMATION on the
+                // FIRST activation (2026-07-24 perf, user report "loading
+                // hangs / the coins-flip stutters"): running it as the opening
+                // frames paint stalled the main thread mid-animation. A later
+                // foreground has no launch animation to protect, so it runs
+                // immediately.
+                let runForegroundWork: @MainActor () -> Void = {
+                    // Connected bridges are cheap to poll — every foreground
+                    // refreshes them all (one place, reusable from screens).
+                    BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges)
+                    // Build the on-device semantic index for anything new or
+                    // not yet embedded — a bounded background sweep, so Ask can
+                    // retrieve by meaning, not just shared words.
+                    EmbeddingIndex.backfill(context: modelContext)
+                    // The "Noticed" line's real trigger (docs/agent-brief.md
+                    // ruling 10). Also refreshes the kept-ask digest cache
+                    // (`KeptAskStore.anyChanged`) the bar's pulse reads from.
+                    Task { @MainActor in
+                        // Bounded (2026-07-24): insight/kept-ask/whisper read
+                        // only recent activity, so this needn't materialize the
+                        // whole corpus on the main actor at launch.
+                        var d = FetchDescriptor<Thing>(
+                            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+                        d.fetchLimit = 600
+                        let surfaced = Corpus.surfaced((try? modelContext.fetch(d)) ?? [])
+                        HomeInsightStore.shared.refresh(from: surfaced)
+                        await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
+                        // The whisper's compose rides the same corpus walk this
+                        // Task already paid for — never its own fetch.
+                        refreshWhisper(things: surfaced)
+                    }
+                }
+                if firstActivation {
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(800))
+                        runForegroundWork()
+                    }
+                } else {
+                    runForegroundWork()
+                }
+                // Resnapshot hand-off state so the thing sheet's "Add to <app>"
+                // verbs only show apps the person connected AND has installed.
+                HandOffState.refresh(connected: Set(
+                    bridges.bridges.filter { $0.status == .connected }
+                        .map { $0.name.lowercased() }))
+                // Control Center's button left a flag — open the composer.
+                let group = UserDefaults(suiteName: SharedStore.appGroup)
+                if group?.bool(forKey: "compose.request") == true {
+                    group?.removeObject(forKey: "compose.request")
+                    composerOpen = true
+                }
+                // A share-extension capture landed while we were away. Its
+                // write IS in the store file, but @Query never hears a
+                // foreign process's save (SwiftData; Apple's pattern is a
+                // foreground reconcile — forums thread 764290), so shared
+                // things stayed invisible until relaunch (2026-07-11).
+                if group?.bool(forKey: "capture.landed") == true {
+                    group?.removeObject(forKey: "capture.landed")
+                    nudgeAfterExternalCapture()
+                }
+            } else {
+                if hasBeenActive && hidePreviews { redactNow = true }
+                if phase == .background {
+                    // The away clock starts — the next foreground reads it.
+                    AppVisit.markClosed()
+                    // Ask iOS to sample wallet holdings while we're away, so
+                    // the value line densifies between opens (no-op without a
+                    // watched wallet; the OS decides if it ever runs).
+                    WalletBackgroundRefresh.schedule()
+                    // The widget's new-ring boundary: everything after this
+                    // stamp is "new since you left" on the home screen too
+                    // (delight 2026-07-13). Reload so the widget re-reads.
+                    UserDefaults(suiteName: SharedStore.appGroup)?
+                        .set(Date.now.timeIntervalSince1970, forKey: "widget.lastSeen")
+                    WidgetCenter.shared.reloadTimelines(ofKind: "casberi.hero")
+                    // Give the model's memory back when we're not in use; the
+                    // next foreground reloads it.
+                    OnDeviceModel.teardown()
+                }
+            }
+        }
+    }
+
+    private var shellBase: some View {
+        ZStack(alignment: .bottom) {
+            // The themed page — the same field each screen paints for itself
+            // (NavigationStack's backing is opaque, so photo rendering lives
+            // inside the screens via dsPageBackground; this is the base coat).
+            DSPageBackground()
+
+            // Content — records paint, generated surfaces stream (brief §5).
+            // Anything dropped on the shell lands as a thing (capture: drop).
+            MainSurface()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .dropDestination(for: URL.self) { urls, _ in
+                    guard let url = urls.first else { return false }
+                    saveDropped(url.absoluteString)
+                    return true
+                }
+                .dropDestination(for: String.self) { strings, _ in
+                    guard let text = strings.first else { return false }
+                    saveDropped(text)
+                    return true
+                }
+
+            if let toast = chrome.toast { toastView(toast) }
+
+            // The capture flight (§1): a proxy card glides from the capture
+            // point to the "All" chip, then it pulses once.
+            if let flight = chrome.flight {
+                CaptureFlight(flight: flight, target: chrome.feedTabFrame) {
+                    chrome.flight = nil
+                    // The landing beat — the All chip catches the capture
+                    // (the old landedPulse reader died with the tab bar;
+                    // the catch bob is the same promise, kept again).
+                    chrome.chipCaught("All")
+                }
+                .zIndex(2)
+            }
+
+            // The agent's bar (docs/agent-brief.md ruling 6) — hosted HERE,
+            // not on MainSurface, so it rides every screen this app can push
+            // (Apps, Settings, a bridge setup form), not just MainSurface's
+            // own root the way the FAB it replaces used to. The berry
+            // breathes while some kept ask changed and the agent hasn't been
+            // raised yet THIS LAUNCH (a plain, session-scoped flag — distinct
+            // from `KeptAskStore`'s own PER-ASK persisted "seen" dot, which
+            // renders on the pills once risen, not here).
+            // Hidden entirely once risen (2026-07-20) — `agentMorph` needs
+            // exactly one side of the matched pair present at a time, and a
+            // bar sitting inert under the risen sheet was dead weight anyway.
+            if !composerOpen {
+                // The floating cluster (whisper + bar) renders as one
+                // coordinated glass system (2026-07-23) — the container gives
+                // both elements a SHARED backdrop sample, so as feed content
+                // scrolls behind the pair they lens the same field consistently
+                // instead of each sampling on its own. Spacing is 0 ON PURPOSE:
+                // a non-zero spacing would let the two shapes MERGE into a
+                // liquid bridge, and the whisper is deliberately inset a step
+                // narrower to read as SEPARATE from the bar (2026-07-22, the
+                // double-bar ruling) — coordinated, not fused.
+                DSGlassContainer(spacing: 0) {
+                VStack(spacing: DS.Space.s2) {
+                    // The whisper rides ABOVE the bar (prd §165) — the day
+                    // brief's headline, first open of the day only. Tap
+                    // raises the agent, same move as the bar's own.
+                    if let whisper {
+                        WhisperCapsule(title: whisper.title, lead: whisper.lead,
+                                       walletPct: whisper.walletPct,
+                                       morphNS: agentMorph) {
+                            DSHaptic.tap()
+                            // The capsule's promise kept (prd §166): the tap
+                            // lands on the Today brief itself, not the rest
+                            // state — the headline it teased, opened. Routed
+                            // through `chrome.askRequest` (the same door the
+                            // weekend cover already uses), so the whisper, a
+                            // typed "how's my day", and a kept pill all reach
+                            // the one composer.
+                            chrome.askRequest = TodayBrief.title
+                            // The title travels (prd §167a): set BEFORE
+                            // `composerOpen` flips, so the proxy title below
+                            // mounts in the SAME `composerOpen`-driven
+                            // transaction as the capsule vanishing — the real
+                            // masthead doesn't exist for another 400ms+ (it
+                            // waits on `consumeAskRequest`'s settle delay,
+                            // then commit()), well past this rise animation's
+                            // own duration, so without a proxy there'd be
+                            // nothing on the OTHER side of the pairing for the
+                            // morph to animate into.
+                            let title = whisper.title
+                            chrome.risingBriefTitle = title
+                            composerOpen = true
+                            Task { @MainActor in
+                                try? await Task.sleep(for: .milliseconds(700))
+                                // Only clear OUR OWN word — a fast re-tap that
+                                // set a newer title must not be stomped by an
+                                // older timer firing late.
+                                guard chrome.risingBriefTitle == title else { return }
+                                withAnimation(DS.Motion.standard) { chrome.risingBriefTitle = nil }
+                            }
+                        }
+                        // Inset a step narrower than the bar (2026-07-22) —
+                        // see WhisperCapsule's own note: stacked full-width
+                        // glass read as a double-bar.
+                        .padding(.horizontal, DS.Space.s3)
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    }
+                    AgentBar(hasUnseenSignal: KeptAskStore.shared.anyChanged && !agentEverOpened,
+                             morphNS: agentMorph) {
+                        DSHaptic.tap()
+                        // Open onto the Today brief, not the empty chips (prd
+                        // §181, user: "make daily brief be the default when a
+                        // user opens the agent"). Routed through the SAME
+                        // `askRequest` door the whisper tap and a typed "how's
+                        // my day" already use — so all three reach the one
+                        // composer and none can drift (the §132 principle).
+                        // Guarded on nil so a surface that seeded a specific
+                        // ask before the bar rose still wins; the masthead
+                        // title-travel stays whisper-only (no `risingBriefTitle`
+                        // here — a bare tap has no capsule to morph from).
+                        if chrome.askRequest == nil { chrome.askRequest = TodayBrief.title }
+                        composerOpen = true
+                    }
+                }
+                }
+                // iPad (2026-07-25): the cluster is a capsule holding one
+                // line, and at 1376pt wide it read as a mile-long bar with a
+                // placeholder floating in it. Capped, and inset past BOTH
+                // shell columns so it floats over the feed it belongs to
+                // rather than straddling the source rail on one side and the
+                // detail pane's content on the other. This ZStack sits
+                // OUTSIDE MainSurface's safe-area insets, so the rail and
+                // pane widths have to be restated here — that is what
+                // `PadLayout` exists to keep in one place.
+                .frame(maxWidth: padShell.isRegular ? PadLayout.agentBarMaxWidth : .infinity)
+                .frame(maxWidth: .infinity)
+                .padding(.leading, padShell.railInset)
+                .padding(.trailing, padShell.paneInset)
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.bottom, DS.Space.s2)
+                .transition(.opacity)
+            }
+
+            // The agent, full screen (ruling 3 — never a sheet/tray). Grows
+            // out of the bar's own frame (2026-07-20, `agentMorph` — the
+            // "now-playing bar" morph the design is named after): the outer
+            // shape is `matchedGeometryEffect`-paired with `AgentBar`'s via
+            // `Composer`'s `glassNamespace`, so the sheet's bounds visibly
+            // interpolate from the small capsule to full screen instead of
+            // sliding up as an unrelated sheet. Content still needs its own
+            // fade-in since the frame match alone doesn't animate opacity.
+            if composerOpen {
+                ZStack {
+                    DS.page.ignoresSafeArea()
+                    agentSurface
+                }
+                .transition(.opacity)
+                // The proxy title (prd §167a) — mounts in this SAME
+                // transaction as the surface itself appearing, so its
+                // `matchedGeometryEffect` has a live pair to interpolate from
+                // (the whisper capsule's own title, vanishing in the SAME
+                // transaction one layer down). Purely cosmetic scaffolding:
+                // Composer's real masthead carries the identical id, so once
+                // it mounts the two simply crossfade in place — this view
+                // never does anything but sit still and then fade.
+                .overlay(alignment: .top) {
+                    if let title = chrome.risingBriefTitle {
+                        Text(title)
+                            .dsText(.heading22)
+                            .foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                            .modifier(WhisperTitleMorph(ns: agentMorph))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, DS.Space.s4)
+                            .padding(.top, 68)
+                            .allowsHitTesting(false)
+                            .transition(.opacity)
+                    }
+                }
+                .zIndex(3)
+            }
         }
     }
 

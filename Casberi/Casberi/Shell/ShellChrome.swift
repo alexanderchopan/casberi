@@ -133,6 +133,21 @@ final class ShellChrome {
     }
 }
 
+/// Mac menu bar commands (2026-07-28) live at the App/Scene level, outside
+/// the view hierarchy RootShell's `chrome` (a per-window `@State`, not a
+/// `.shared` singleton like `HomeRoute`/`FeedFilter`) is injected into — a
+/// `FocusedValue` is the correct bridge back down to it, rather than making
+/// transient UI state a global singleton just for this.
+private struct ShellChromeFocusedKey: FocusedValueKey {
+    typealias Value = ShellChrome
+}
+extension FocusedValues {
+    var shellChrome: ShellChrome? {
+        get { self[ShellChromeFocusedKey.self] }
+        set { self[ShellChromeFocusedKey.self] = newValue }
+    }
+}
+
 extension View {
     /// Attach to a screen's ScrollView: reports scroll direction to the shell.
     /// `active: false` mutes the observer without unmounting it — the feed
