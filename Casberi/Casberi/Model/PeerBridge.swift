@@ -26,13 +26,46 @@ import SwiftData
 /// was verified against it (keccak256("USD") reproduces their USD constant)
 /// before any of this was written.
 ///
+/// Three more reads round out the picture (prd §237, "what else can we do
+/// with Peer", 2026-07-29), all still capture-only:
+///  1. SELLS — the maker/offramp side, landed as "Sold X with Venmo on Peer".
+///     A buy is easy (the recipient is INDEXED on IntentFulfilled); a sell
+///     has no such shortcut — the maker's address only ever appears as the
+///     DEPOSITOR of the liquidity a buyer later draws from, which is a
+///     different event on the escrow contract entirely. So the read walks:
+///     escrow `DepositReceived`-equivalent (depositor indexed → depositId) →
+///     `IntentSignaled` scoped to (escrow, depositId) (all three indexed,
+///     cheap) → `IntentFulfilled` batched by the resulting intentHash set.
+///     An open deposit is tracked in a small persisted watchlist (the
+///     Privacy Pools pending-list shape) so a maker's liquidity that sits
+///     for days before being taken is never missed.
+///  2. STUCK INTENTS — the same watchlist's other branch. Peer's own
+///     INTENT_EXPIRATION releases a signaled-but-unfulfilled intent back to
+///     the deposit after ~6h; today that reclaim is invisible. Once an
+///     intent against a WATCHED deposit is old enough with no matching
+///     IntentFulfilled, it lands once: "A buyer's payment fell through —
+///     your money's available again on Peer." This only works from the
+///     MAKER's side — a BUYER's own stuck intent can't be found this way,
+///     because (unlike depositId) the buyer's address is never an indexed
+///     topic on either event; the §113 ruling below ("a signaled-but-
+///     unfulfilled intent … never lands") still holds for buys.
+///  3. RATE CONTEXT — every fill already decodes `conversionRate` and
+///     `fiatCurrency` and then threw them away. Now, when the currency is
+///     USD, the fiat paid and the live market price (keyless, via
+///     `DefiLlamaPrices`) turn into one `enrichedText` line: "You paid
+///     $30.00 for 34.13 USDC — about 0.3% above market." Non-USD currencies
+///     still show the fiat amount, never a spread (no FX cross-rate on
+///     hand — inventing one would be a guess, and this app doesn't guess).
+///
 /// Honesty boundaries, by ruling (prd §113):
 /// - CAPTURE ONLY. Nothing here (or anywhere) starts a trade — same line as
 ///   Bankr's "answer only" and the Wallet screen's "watching can never trade
 ///   or move funds".
 /// - A thing lands when a trade SETTLES, and not before. A signaled-but-
-///   unfulfilled intent is a limbo the app would have to poll and could
-///   mis-report; it never lands.
+///   unfulfilled BUY intent is a limbo the app would have to poll and could
+///   mis-report; it never lands. (A SELL-side stuck intent is different —
+///   prd §237 — because there the "limbo resolved to reclaim" fact is itself
+///   the news, not a guess about an outcome still pending.)
 /// - The ZK design keeps the fiat leg private — the chain shows platform,
 ///   token, amount, and rate, never the counterparty or the person's Venmo
 ///   side. Titles state only what the events carry; an unknown payment-method
@@ -113,6 +146,34 @@ enum PeerBridge {
         "0x2dd272ddce846149d92496b4c3e677504aec8d5e6aab5908b25c9fe0a797e25f": "RON",
     ]
 
+    /// The one escrow every OrchestratorV2 intent settles against — MEASURED
+    /// live 2026-07-29 (1,021 real `IntentSignaled` events swept across
+    /// ~135k recent Base blocks, one escrow every single time). The legacy
+    /// "Orchestrator" (V1) address above carries zero traffic in that same
+    /// window — its escrow is unconfirmed and deliberately out of scope for
+    /// the sell-side read below; don't extend it there without re-measuring.
+    private static let escrow = "0x777777779d229cdf3110e9de47943791c26300ef"
+
+    /// Escrow deposit-creation event — topic0 MEASURED live (matched by
+    /// scanning the escrow's own logs for one already known depositor, not
+    /// derived from a signature string). `topics[1]` = depositId, `topics[2]`
+    /// = depositor, `topics[3]` = token — all three indexed, cross-checked
+    /// against `getDeposit(depositId)`'s own depositor/token words for six
+    /// independent deposits. NOTE: Peer's public GitHub `main` branch shows a
+    /// DIFFERENT (non-indexed-token) shape for this event — that's a newer or
+    /// otherwise undeployed version; what's live at the address above is what
+    /// this bridge reads, and this topic0 is proof of that, not a guess.
+    private static let depositCreatedTopic =
+        "0x1236dbdc184b6c8721974cce53dabb6018679bca9a43784ab2ad71bcdb1d7dd1"
+
+    /// How long a signaled-but-unfulfilled SELL-side intent is given before
+    /// Casberi calls it stuck (prd §237). Peer's own INTENT_EXPIRATION is the
+    /// ~6h window `signalStory`'s own backward search already banks on
+    /// (`floor = fill.block - 12_000`, ≈6h of Base blocks); this adds a
+    /// 30-minute buffer against clock/finality skew before landing the alert
+    /// — a false "fell through" would be worse than a slightly late one.
+    private static let intentExpirySeconds: TimeInterval = 6.5 * 3600
+
     // MARK: - The seat (automatic — rides the watched wallets)
 
     /// There is no connect switch anymore (2026-07-25, prd §207, user:
@@ -130,9 +191,39 @@ enum PeerBridge {
     }
 
     /// Wallet unwatch takes this seat's cursor for that address with it —
-    /// called beside WalletApprovals.clearCursors from WalletStore.
+    /// called beside WalletApprovals.clearCursors from WalletStore. Also
+    /// drops that wallet's open-deposits watchlist entries (prd §237) — a
+    /// stale entry would keep polling (and could alert "funds available
+    /// again") for a deposit belonging to a wallet no longer watched.
     static func clearCursor(address: String) {
         UserDefaults.standard.removeObject(forKey: cursorKey(address))
+        let wallet = address.lowercased()
+        setOpenDeposits(openDeposits().filter { $0["wallet"] != wallet })
+    }
+
+    // MARK: - Open deposits watchlist (maker/sell side, prd §237)
+
+    private static let openDepositsKey = "peer.openDeposits"
+
+    /// Each entry: depositId (decimal string), wallet (lowercased hex),
+    /// lastBlock (string int — how far this deposit's own IntentSignaled
+    /// range has been scanned). No per-intent state is kept here: once an
+    /// intentHash resolves (sold or expired), the global `existing` sourceRef
+    /// dedup is what stops it landing twice, the same as every other bridge
+    /// in this app — so a deposit that accumulates hundreds of intents over
+    /// its life costs this list nothing extra.
+    private static func openDeposits() -> [[String: String]] {
+        (UserDefaults.standard.array(forKey: openDepositsKey) as? [[String: String]]) ?? []
+    }
+
+    private static func setOpenDeposits(_ entries: [[String: String]]) {
+        UserDefaults.standard.set(entries, forKey: openDepositsKey)
+    }
+
+    static func openDepositsSummary() -> String {
+        let entries = openDeposits()
+        guard !entries.isEmpty else { return "0 open deposits" }
+        return "\(entries.count) open: " + entries.map { "#\($0["depositId"] ?? "?")" }.joined(separator: ", ")
     }
 
     // MARK: - Sync
@@ -204,12 +295,21 @@ enum PeerBridge {
             // the last DURABLE point so the remainder retries next pass.
             var scanned = from - 1
             var logs: [[String: Any]] = []
+            var depositLogs: [[String: Any]] = []
             while scanned < latest {
                 let to = min(scanned + maxRange, latest)
                 guard let chunk = await fetchFulfills(wallet: address,
                                                       from: scanned + 1, to: to)
                 else { break }
                 logs += chunk
+                // Sell-side discovery rides the SAME chunk range (prd §237):
+                // a wallet's own deposit-creation events, one extra filtered
+                // call per chunk. A failure here shouldn't strand the buy
+                // side, so it's best-effort, not a `break`.
+                if let dep = await fetchDepositsCreated(wallet: address,
+                                                        from: scanned + 1, to: to) {
+                    depositLogs += dep
+                }
                 scanned = to
             }
             guard scanned > cursor else { continue }   // nothing read — transient
@@ -225,8 +325,15 @@ enum PeerBridge {
                 guard context.saveHonestly() else { continue }
                 added += landed.count
             }
+            registerNewDeposits(from: depositLogs, wallet: address)
             defaults.set(scanned, forKey: key)
         }
+
+        // One poll over the whole open-deposits watchlist, restricted to
+        // this pass's wallets (an entry for an unwatched wallet was already
+        // dropped by `clearCursor` — this filter is belt-and-suspenders).
+        added += await pollOpenDeposits(context: context, addresses: Set(addresses.map { $0.lowercased() }),
+                                        existing: existing)
         return added
     }
 
@@ -257,6 +364,29 @@ enum PeerBridge {
         }
         return await syncLocked(context: context, addresses: addresses,
                                 existing: IngestSupport.existingSourceRefs(context, source: "Peer"))
+    }
+
+    /// `-peerSeedDeposit "<depositId>[|wallet]"` — plants an open-deposits
+    /// watchlist entry for a REAL depositId directly, skipping the "wait for
+    /// a fresh deposit-creation event" step, so the next `-peerProbe`
+    /// exercises the sell/expired landing paths against a real deposit's
+    /// actual signal history instead of waiting for a fresh one to be made
+    /// (the `-privacyPoolsSeedPending` idiom). `lastBlock` seeds at 0 so the
+    /// scan walks the deposit's ENTIRE signaled-intent history (still
+    /// budget-capped like every other chunked scan here). Pair `wallet` with
+    /// whatever address is ALSO passed to `-walletAddress` — a seeded entry
+    /// only gets polled for wallets this pass actually resolved. Declared
+    /// BEFORE `-peerProbe` (hooks run in list order). DEBUG-only by
+    /// construction — nothing else in the app writes this state.
+    static func seedDeposit(spec: String) {
+        let parts = spec.split(separator: "|", maxSplits: 1).map(String.init)
+        guard let idText = parts.first, let idDecimal = UInt64(idText) else { return }
+        let idHex = String(idDecimal, radix: 16)
+        let hexTopic = "0x" + String(repeating: "0", count: 64 - idHex.count) + idHex
+        let wallet = (parts.count > 1 ? parts[1] : "").lowercased()
+        var entries = openDeposits().filter { $0["depositId"] != hexTopic }
+        entries.append(["depositId": hexTopic, "wallet": wallet, "lastBlock": "0"])
+        setOpenDeposits(entries)
     }
 
     // MARK: - Landing
@@ -301,7 +431,7 @@ enum PeerBridge {
         // memoizes per (escrow, deposit) — one maker serves many takers, so
         // ten fills usually mean ONE deposit, not ten reads.
         let times = await blockTimes(blocks: fills.map(\.block))
-        var tokenCache: [String: (symbol: String?, decimals: Int?)?] = [:]
+        var tokenCache: [String: (address: String, symbol: String?, decimals: Int?)?] = [:]
 
         var out: [Thing] = []
         var seen = Set<String>()
@@ -319,6 +449,8 @@ enum PeerBridge {
                     story.token = token
                 }
             }
+            let decimals = story.token?.decimals ?? 0
+            let tokenAmount = fill.rawAmount / pow(10, Double(decimals))
             let thing = Thing(
                 kind: .transaction,
                 title: title(for: fill, story: story),
@@ -327,6 +459,11 @@ enum PeerBridge {
                 capturedAt: times[fill.block] ?? .now,
                 sourceRef: ref)
             thing.walletAddress = wallet
+            // Rate context (prd §237): a decimals-less token can't honestly
+            // scale rawAmount into a real-units figure, so the line stays off.
+            if story.token?.decimals != nil {
+                thing.enrichedText = await rateLine(story: story, tokenAmount: tokenAmount)
+            }
             out.append(thing)
         }
         return out
@@ -337,7 +474,12 @@ enum PeerBridge {
         var currency: String?    // "USD" — nil when unknown
         var escrow: String?      // the fill's escrow contract, for the token read
         var depositId: String?   // raw 32-byte topic hex
-        var token: (symbol: String?, decimals: Int?)?
+        var token: (address: String, symbol: String?, decimals: Int?)?
+        /// `conversionRate`, fiat units per one whole token, ×1e18 — the raw
+        /// word straight off IntentSignaled's data (word 5). Real-units fiat
+        /// paid is `tokenAmount * conversionRateRaw / 1e18` (prd §237's rate
+        /// line); nil when the signal itself couldn't be found.
+        var conversionRateRaw: Double?
     }
 
     /// Joins a fill to its IntentSignaled event (same orchestrator, indexed by
@@ -370,11 +512,65 @@ enum PeerBridge {
         // conversionRate, timestamp
         if let m = word(data, 0) { story.method = paymentMethods["0x" + m] }
         if let c = word(data, 4) { story.currency = currencies["0x" + c] }
+        if let r = word(data, 5) { story.conversionRateRaw = WalletIngest.hexToDouble("0x" + r) }
         if let topics = signal["topics"] as? [String], topics.count == 4 {
             story.escrow = "0x" + topics[2].suffix(40)
             story.depositId = topics[3]
         }
         return story
+    }
+
+    /// "You paid $30.00 for 34.13 USDC — about 0.3% above market" (prd §237).
+    /// USD only: a spread claim needs a market price on the same footing as
+    /// the fiat, and the keyless price read (`DefiLlamaPrices`) is USD-
+    /// denominated — a non-USD currency would need an FX cross-rate this app
+    /// doesn't have, and inventing one would be a guess. Non-USD currencies
+    /// still show the fiat amount, just without the spread clause. Silent
+    /// (nil) when the currency, rate, or token isn't honestly known.
+    private static func rateLine(story: Story, tokenAmount: Double) async -> String? {
+        guard let currency = story.currency, let rate = story.conversionRateRaw,
+              tokenAmount > 0 else { return nil }
+        let fiatPaid = tokenAmount * rate / 1e18
+        guard fiatPaid > 0 else { return nil }
+        let fiatText = "\(currencySymbol(currency))\(WalletIngest.format(fiatPaid))"
+        let whatText = story.token?.symbol.map { "\(WalletIngest.format(tokenAmount)) \($0)" }
+            ?? WalletIngest.format(tokenAmount)
+        guard currency == "USD", let token = story.token else {
+            return String(localized: "You paid \(fiatText) for \(whatText) on Peer.")
+        }
+        let priced = await DefiLlamaPrices.prices(
+            for: [(network: PeerBridge.network, contract: token.address)])
+        guard let market = priced["\(PeerBridge.network)|\(token.address)"],
+              market.confidence >= DefiLlamaPrices.confidenceFloor, market.price > 0
+        else {
+            return String(localized: "You paid \(fiatText) for \(whatText) on Peer.")
+        }
+        let paidPerToken = fiatPaid / tokenAmount
+        let spreadPct = (paidPerToken - market.price) / market.price * 100
+        if abs(spreadPct) < 0.5 {
+            return String(localized: "You paid \(fiatText) for \(whatText) on Peer — right at market price.")
+        }
+        let direction = spreadPct > 0
+            ? String(localized: "above market")
+            : String(localized: "below market")
+        let pctText = WalletIngest.format(abs(spreadPct))
+        return String(localized: "You paid \(fiatText) for \(whatText) on Peer — about \(pctText)% \(direction).")
+    }
+
+    /// Only symbols that are UNAMBIGUOUS on their own — "$" alone could mean
+    /// USD, AUD, CAD, MXN, … (all in §113's `currencies` map), and showing it
+    /// for the wrong one would misstate the amount, not just its styling. So
+    /// this covers only the four that don't collide within that table; every
+    /// other code falls back to "CODE " (space-suffixed: "SGD 30.00", never
+    /// "SGD30.00") rather than guess at a shared glyph.
+    private static func currencySymbol(_ code: String) -> String {
+        switch code {
+        case "USD": return "$"
+        case "EUR": return "€"
+        case "GBP": return "£"
+        case "JPY": return "¥"
+        default: return "\(code) "
+        }
     }
 
     /// "Bought 25 USDC with Venmo on Peer" — each clause only when honestly
@@ -396,6 +592,206 @@ enum PeerBridge {
             return String(localized: "Bought \(what) with \(method) on Peer")
         }
         return String(localized: "Bought \(what) on Peer")
+    }
+
+    // MARK: - Sell-side (maker) landing (prd §237)
+
+    /// A newly-seen deposit-creation log — one per depositId, added to the
+    /// open-deposits watchlist if not already tracked. Doesn't land anything
+    /// itself (making a deposit isn't news; a deposit being TAKEN is).
+    private static func registerNewDeposits(from logs: [[String: Any]], wallet: String) {
+        guard !logs.isEmpty else { return }
+        var entries = openDeposits()
+        let known = Set(entries.compactMap { $0["depositId"] })
+        var added = false
+        for log in logs {
+            guard (log["removed"] as? Bool) != true,
+                  let topics = log["topics"] as? [String], topics.count == 4,
+                  let blockHex = log["blockNumber"] as? String
+            else { continue }
+            let depositId = topics[1]   // full 32-byte hex topic — reused verbatim as the topic filter later
+            guard !known.contains(depositId) else { continue }
+            entries.append([
+                "depositId": depositId, "wallet": wallet.lowercased(),
+                "lastBlock": String(WalletIngest.hexToInt(blockHex) - 1),
+            ])
+            added = true
+        }
+        if added { setOpenDeposits(entries) }
+    }
+
+    private struct Signal {
+        let intentHash: String
+        let block: Int
+        let timestamp: Double
+        let rawAmount: Double
+        let method: String?
+        let currency: String?
+        let conversionRateRaw: Double?
+    }
+
+    /// Walks every watched maker deposit forward: new `IntentSignaled`s
+    /// against it since `lastBlock`, resolved against a batched
+    /// `IntentFulfilled` lookup over the same range. A resolved intent lands
+    /// (sold, or — past `intentExpirySeconds` with no fulfillment — expired);
+    /// an unresolved one holds the cursor back to just before its own block,
+    /// so it's re-checked next pass instead of silently skipped. Once
+    /// everything known is resolved, a closed deposit (`acceptingIntents ==
+    /// false`) is dropped from the watchlist — bounding it for a maker who
+    /// stopped using Peer instead of polling them forever.
+    @MainActor
+    private static func pollOpenDeposits(context: ModelContext, addresses: Set<String>,
+                                         existing: Set<String>) async -> Int {
+        let all = openDeposits()
+        guard !all.isEmpty else { return 0 }
+        guard let latest = await blockNumber() else { return 0 }
+        var added = 0
+        var kept: [[String: String]] = []
+
+        for var entry in all {
+            guard let wallet = entry["wallet"], addresses.contains(wallet) else {
+                kept.append(entry)   // out of this pass's scope — untouched
+                continue
+            }
+            guard let depositId = entry["depositId"] else { continue }   // malformed, drop
+            let lastBlock = Int(entry["lastBlock"] ?? "") ?? (latest - 1)
+            guard latest > lastBlock else { kept.append(entry); continue }
+
+            var from = lastBlock + 1
+            let budget = maxRange * maxChunks
+            if latest - from >= budget { from = latest - budget + 1 }
+            var scanned = from - 1
+            var signalLogs: [[String: Any]] = []
+            while scanned < latest {
+                let to = min(scanned + maxRange, latest)
+                guard let chunk = await fetchSignalsForDeposit(depositId: depositId,
+                                                               from: scanned + 1, to: to)
+                else { break }
+                signalLogs += chunk
+                scanned = to
+            }
+            guard scanned > lastBlock else { kept.append(entry); continue }   // nothing read — transient
+
+            var signals: [Signal] = []
+            for log in signalLogs {
+                guard (log["removed"] as? Bool) != true,
+                      let topics = log["topics"] as? [String], topics.count == 4,
+                      let data = log["data"] as? String,
+                      let blockHex = log["blockNumber"] as? String,
+                      let amountWord = word(data, 3),
+                      let tsWord = word(data, 6)
+                else { continue }
+                signals.append(Signal(
+                    intentHash: topics[1],
+                    block: WalletIngest.hexToInt(blockHex),
+                    timestamp: WalletIngest.hexToDouble("0x" + tsWord),
+                    rawAmount: WalletIngest.hexToDouble("0x" + amountWord),
+                    method: word(data, 0).flatMap { paymentMethods["0x" + $0] },
+                    currency: word(data, 4).flatMap { currencies["0x" + $0] },
+                    conversionRateRaw: word(data, 5).map { WalletIngest.hexToDouble("0x" + $0) }))
+            }
+
+            var fulfilled: [String: [String: Any]] = [:]   // intentHash → its IntentFulfilled log
+            if !signals.isEmpty,
+               let fLogs = await fetchFulfilledBatch(
+                   intentHashes: signals.map(\.intentHash), from: from, to: scanned) {
+                for log in fLogs {
+                    guard let topics = log["topics"] as? [String], topics.count == 3 else { continue }
+                    fulfilled[topics[1]] = log
+                }
+            }
+
+            let landed = await sellThings(signals: signals, fulfilled: fulfilled,
+                                          wallet: wallet, depositId: depositId, existing: existing)
+            if !landed.isEmpty {
+                for thing in landed {
+                    context.insert(thing)
+                    SpotlightIndex.index([thing])
+                }
+                if context.saveHonestly() { added += landed.count }
+            }
+
+            let now = Date.now.timeIntervalSince1970
+            let unresolvedBlocks = signals.compactMap { s -> Int? in
+                guard fulfilled[s.intentHash] == nil,
+                      now - s.timestamp <= intentExpirySeconds
+                else { return nil }
+                return s.block
+            }
+            if let holdAt = unresolvedBlocks.min() {
+                entry["lastBlock"] = String(holdAt - 1)
+                kept.append(entry)
+                continue
+            }
+            entry["lastBlock"] = String(scanned)
+            if let accepting = await depositAcceptingIntents(escrow: escrow, depositId: depositId),
+               !accepting {
+                continue   // closed and nothing left pending — retire
+            }
+            kept.append(entry)
+        }
+        setOpenDeposits(kept)
+        return added
+    }
+
+    /// Turns resolved signals into things: a fulfillment → "Sold …", an
+    /// expiry with no fulfillment → the stuck-funds alert. A still-pending
+    /// signal (not yet fulfilled, not yet past `intentExpirySeconds`) lands
+    /// nothing — it isn't news yet.
+    @MainActor
+    private static func sellThings(signals: [Signal], fulfilled: [String: [String: Any]],
+                                   wallet: String, depositId: String,
+                                   existing: Set<String>) async -> [Thing] {
+        guard !signals.isEmpty else { return [] }
+        let token = await depositToken(escrow: escrow, depositId: depositId)
+        let now = Date.now.timeIntervalSince1970
+        var out: [Thing] = []
+        var seen = Set<String>()
+
+        for signal in signals {
+            let decimals = token?.decimals ?? 0
+            let tokenAmount = signal.rawAmount / pow(10, Double(decimals))
+            let what: String = {
+                guard let symbol = token?.symbol else { return "crypto" }
+                guard token?.decimals != nil else { return symbol }
+                return "\(WalletIngest.format(tokenAmount)) \(symbol)"
+            }()
+
+            if let fLog = fulfilled[signal.intentHash] {
+                let ref = "peer:sell:\(signal.intentHash)"
+                guard !existing.contains(ref), seen.insert(ref).inserted else { continue }
+                let txHash = (fLog["transactionHash"] as? String) ?? ""
+                let title = signal.method.map { String(localized: "Sold \(what) with \($0) on Peer") }
+                    ?? String(localized: "Sold \(what) on Peer")
+                let thing = Thing(
+                    kind: .transaction, title: title,
+                    content: "https://basescan.org/tx/\(txHash)",
+                    source: "Peer",
+                    capturedAt: Date(timeIntervalSince1970: signal.timestamp),
+                    sourceRef: ref)
+                thing.walletAddress = wallet
+                if token?.decimals != nil {
+                    let story = Story(method: signal.method, currency: signal.currency,
+                                      escrow: nil, depositId: nil, token: token,
+                                      conversionRateRaw: signal.conversionRateRaw)
+                    thing.enrichedText = await rateLine(story: story, tokenAmount: tokenAmount)
+                }
+                out.append(thing)
+            } else if now - signal.timestamp > intentExpirySeconds {
+                let ref = "peer:expired:\(signal.intentHash)"
+                guard !existing.contains(ref), seen.insert(ref).inserted else { continue }
+                let title = signal.method.map {
+                    String(localized: "A buyer's \($0) payment fell through — your \(what) is available again on Peer")
+                } ?? String(localized: "A buyer's payment fell through — your \(what) is available again on Peer")
+                let thing = Thing(
+                    kind: .transaction, title: title,
+                    content: "https://basescan.org/address/\(escrow)",
+                    source: "Peer", capturedAt: .now, sourceRef: ref)
+                thing.walletAddress = wallet
+                out.append(thing)
+            }
+        }
+        return out
     }
 
     // MARK: - RPC reads (Base public host, the wallet bridge's measured one)
@@ -432,6 +828,51 @@ enum PeerBridge {
         return await call(method: "eth_getLogs", params: [params]) as? [[String: Any]]
     }
 
+    /// Deposit-creation logs where this wallet is the depositor — the
+    /// sell-side entry point (prd §237), server-side filtered on the escrow's
+    /// own indexed depositor topic exactly like `fetchFulfills` filters on
+    /// the recipient.
+    private static func fetchDepositsCreated(wallet: String, from: Int,
+                                             to: Int) async -> [[String: Any]]? {
+        let walletTopic = "0x000000000000000000000000" + wallet.dropFirst(2).lowercased()
+        let params: [String: Any] = [
+            "fromBlock": hex(from), "toBlock": hex(to),
+            "address": escrow,
+            "topics": [depositCreatedTopic, nil, walletTopic],
+        ]
+        return await call(method: "eth_getLogs", params: [params]) as? [[String: Any]]
+    }
+
+    /// Every `IntentSignaled` against one specific deposit — escrow AND
+    /// depositId are both indexed on this event, so this is a cheap,
+    /// server-side-exact join, not a firehose scan (measured live 2026-07-29:
+    /// 16 signals found against one real deposit this way, in one call).
+    private static func fetchSignalsForDeposit(depositId: String, from: Int,
+                                               to: Int) async -> [[String: Any]]? {
+        let escrowTopic = "0x" + String(repeating: "0", count: 24) + escrow.dropFirst(2)
+        let params: [String: Any] = [
+            "fromBlock": hex(from), "toBlock": hex(to),
+            "address": orchestrators,
+            "topics": [signaledTopic, nil, escrowTopic, depositId],
+        ]
+        return await call(method: "eth_getLogs", params: [params]) as? [[String: Any]]
+    }
+
+    /// `IntentFulfilled` for a whole batch of intent hashes in ONE call —
+    /// `topics` accepts an array at a position for OR-matching, the same way
+    /// `orchestrators` already does for the `address` field. Measured live
+    /// 2026-07-29 against 16 real hashes: found exactly the 2 that had
+    /// actually settled, none of the other 14.
+    private static func fetchFulfilledBatch(intentHashes: [String], from: Int,
+                                            to: Int) async -> [[String: Any]]? {
+        let params: [String: Any] = [
+            "fromBlock": hex(from), "toBlock": hex(to),
+            "address": orchestrators,
+            "topics": [fulfilledTopic, intentHashes],
+        ]
+        return await call(method: "eth_getLogs", params: [params]) as? [[String: Any]]
+    }
+
     /// The settled token: `getDeposit(depositId)` on the fill's own escrow
     /// (the deposit tuple's third word), then symbol + decimals read straight
     /// off the token contract via keyless `eth_call` (2026-07-19, replacing
@@ -440,7 +881,7 @@ enum PeerBridge {
     /// `mainnet.base.org` host every other Peer read already rides. In
     /// practice this is USDC nearly always — but read, never assumed.
     private static func depositToken(escrow: String, depositId: String)
-        async -> (symbol: String?, decimals: Int?)? {
+        async -> (address: String, symbol: String?, decimals: Int?)? {
         let selector = "0x9f9fb968"   // keccak256("getDeposit(uint256)")[:4]
         let data = selector + depositId.dropFirst(2)
         guard let ret = await call(method: "eth_call",
@@ -462,7 +903,40 @@ enum PeerBridge {
         }
         let decimals = (await decimalsRet as? String).map(WalletIngest.hexToInt)
         guard symbol != nil || decimals != nil else { return nil }
-        return (symbol, decimals)
+        return (token, symbol, decimals)
+    }
+
+    /// The depositor of a given deposit — `getDeposit(depositId)`'s own first
+    /// word (measured against six live deposits, cross-checked against the
+    /// deposit-creation event's own indexed depositor topic every time).
+    /// Used only to confirm a freshly-discovered depositId still belongs to
+    /// the wallet the creation event named (defense against a future escrow
+    /// upgrade quietly reusing depositIds) — not on the hot path.
+    private static func depositor(escrow: String, depositId: String) async -> String? {
+        let selector = "0x9f9fb968"
+        let data = selector + depositId.dropFirst(2)
+        guard let ret = await call(method: "eth_call",
+                                   params: [["to": escrow, "data": data],
+                                            "latest"]) as? String,
+              let ownerWord = word(ret, 0)
+        else { return nil }
+        return "0x" + ownerWord.suffix(40)
+    }
+
+    /// `getDeposit(depositId)`'s own `acceptingIntents` flag (word 5) — used
+    /// to retire a closed/emptied deposit from the open-deposits watchlist so
+    /// a maker who stops using Peer doesn't get polled forever. `nil` on an
+    /// unreachable read (keep watching; a network hiccup shouldn't retire a
+    /// live deposit).
+    private static func depositAcceptingIntents(escrow: String, depositId: String) async -> Bool? {
+        let selector = "0x9f9fb968"
+        let data = selector + depositId.dropFirst(2)
+        guard let ret = await call(method: "eth_call",
+                                   params: [["to": escrow, "data": data],
+                                            "latest"]) as? String,
+              let flagWord = word(ret, 5)
+        else { return nil }
+        return flagWord != String(repeating: "0", count: 64)
     }
 
     /// Real timestamps for the fills' blocks (deduped, capped — the

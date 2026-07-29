@@ -239,7 +239,10 @@ struct ThingContentView: View {
             // retrieval-only, but here it IS the payoff — how much privacy the
             // deposit has — so this one source shows it, above the receipt URL.
             // Only deposits set it; alerts and ragequits leave it nil.
-            if thing.source == "Privacy Pools",
+            // Peer fills carry the same idea (prd §237): what you actually
+            // paid vs. market, decoded off the fill's own IntentSignaled event
+            // and otherwise thrown away. Same exception, same reasoning.
+            if (thing.source == "Privacy Pools" || thing.source == "Peer"),
                let cover = thing.enrichedText?.trimmingCharacters(in: .whitespacesAndNewlines),
                !cover.isEmpty {
                 Text(cover)

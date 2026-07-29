@@ -907,11 +907,22 @@ enum ProbeHooks {
                 NSLog("Safe probe: %@", line)
             }
         },
+        // `-peerSeedDeposit "<depositId>[|wallet]"` plants an open-deposits
+        // watchlist entry for a real depositId, so the next `-peerProbe`
+        // exercises the sell/stuck-intent paths (prd §237) against a
+        // deposit's real signal history instead of waiting for a fresh
+        // deposit to be made. Declared BEFORE `-peerProbe` (list order).
+        Hook(key: "peerSeedDeposit") { spec, _ in
+            PeerBridge.seedDeposit(spec: spec)
+            NSLog("Peer seed: %@", PeerBridge.openDepositsSummary())
+        },
         // `-peerProbe <blocksBack|YES>` switches the Peer seat on and runs the
         // fill sweep over the watched wallets, NSLogging the landed count. A
         // numeric spec rewinds every Peer cursor that many blocks below the
         // Base head first, so real past fills land and the whole path (logs →
         // signal join → deposit token → titles → things) verifies headlessly.
+        // Also runs the sell-side deposit-discovery scan and polls the
+        // open-deposits watchlist (prd §237), logged alongside the count.
         // Pairs with `-walletAddress`.
         Hook(key: "peerProbe") { spec, context in
             // No seat to switch on anymore (automatic, prd §207) — `probe`
@@ -919,7 +930,8 @@ enum ProbeHooks {
             // directly, so pair this with `-walletAddress`.
             Task { @MainActor in
                 let n = await PeerBridge.probe(context: context, blocksBack: Int(spec))
-                NSLog("Peer probe: %@ landed", n.map(String.init) ?? "FAILED")
+                NSLog("Peer probe: %@ landed; %@",
+                      n.map(String.init) ?? "FAILED", PeerBridge.openDepositsSummary())
             }
         },
         // `-privacyPoolsProbe <blocksBack|YES>` switches the Privacy Pools

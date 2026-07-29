@@ -10081,3 +10081,93 @@ withdrawal (unlinkable by design), or deposit/withdraw/prove/sign anything
 (capture-only — that's becoming a wallet). L2 coverage (Optimism/Arbitrum,
 which share a different Entrypoint) stays deferred until someone actually
 deposits there — untested surface for little gain.
+
+## §237 — Peer, the other half of the trade (user: "we are adding some new
+features for 0xbow that seem like we could do more with Peer. What else
+could we do with Peer" → "lets do 1,2,3", 2026-07-29)
+
+§113 shipped one half of Peer: the onramp. A buy lands the moment it
+settles because the recipient is INDEXED on `IntentFulfilled` — one filtered
+`eth_getLogs` per wallet answers "did Peer pay this wallet." Three more
+reads round it out, all still capture-only:
+
+**1. Sells — the maker/offramp side.** No shortcut exists for this one: the
+maker's address is never indexed on either `IntentSignaled` or
+`IntentFulfilled` (measured live, not assumed — see below). It only ever
+appears as the DEPOSITOR on the escrow's own deposit-creation event, a
+different contract, a different indexed field entirely. So the read walks
+three hops: escrow deposit-creation (depositor indexed → depositId) →
+`IntentSignaled` scoped to (escrow, depositId) — both indexed, so this is a
+cheap, exact join, not a firehose — → `IntentFulfilled` batched by the
+resulting intentHash set (`topics` takes an array for OR-matching, same
+trick `orchestrators` already uses on `address`). An open deposit is tracked
+in a small persisted watchlist (`peer.openDeposits`, the Privacy Pools
+pending-list shape) — one entry per depositId, holding only a wallet and a
+block cursor, since the global sourceRef dedup already stops any resolved
+intent landing twice no matter how many times its block range gets
+re-scanned. A fulfilled sell lands "Sold 34.13 USDC with Revolut on Peer."
+
+**2. Stuck intents — the same watchlist's other branch.** Peer's own
+INTENT_EXPIRATION releases a signaled-but-unfulfilled intent back to the
+deposit after ~6h (the window `signalStory`'s own backward search already
+banked on); that reclaim was invisible. Now, once a signal against a WATCHED
+deposit is older than 6.5h (a 30-minute buffer over the measured window)
+with no matching fulfillment, it lands once: "A buyer's Cash App payment
+fell through — your 25 USDC is available again on Peer." **This only works
+from the maker's side.** A buyer's own stuck buy can't be found the same
+way — unlike depositId, the buyer's address is never an indexed topic on
+either event, so there's no cheap filter to find "my signals" at all. The
+§113 ruling ("a signaled-but-unfulfilled intent … never lands") still holds
+for buys; it's the sell side where the reclaim itself, not a guess about a
+pending outcome, is the news.
+
+**3. Rate context.** Every fill already decoded `conversionRate` and
+`fiatCurrency` and threw them away. Now, when the currency is USD, the fiat
+paid and a live market price (keyless, `DefiLlamaPrices` — already shipped
+for the wallet treemap, reused here for a new purpose) turn into one
+`enrichedText` line: "You paid $30.00 for 34.13 USDC — about 0.3% above
+market." A non-USD currency still shows the fiat amount, never a spread —
+no FX cross-rate is on hand, and inventing one would be a guess. Only four
+currency symbols are used ($/€/£/¥ for USD/EUR/GBP/JPY); every other code in
+§113's `currencies` table falls back to "CODE " rather than reuse a glyph
+that collides (AUD/CAD/MXN/… all use "$" too — showing it for the wrong one
+would misstate the amount, not just its styling). `enrichedText` is
+retrieval-only everywhere by rule; Peer joins Privacy Pools as the one other
+named exception in `ThingContent`'s default branch, since here it's the
+payoff, not backing text.
+
+**MEASURED live 2026-07-29, against real Base data, before any of this was
+written — the GitHub `zkp2p-contracts` `main` branch was checked first and
+found to describe a DIFFERENT deployed shape (its `DepositReceived` doesn't
+index the token; the live one does), so nothing below was taken from source
+text without cross-checking a real log:**
+- The escrow is a SINGLE canonical contract (`0x7777…00ef`) — 1,021 real
+  `IntentSignaled` events swept across ~135k recent Base blocks, one escrow
+  every time. The legacy V1 "Orchestrator" address carries zero traffic in
+  the same window; its escrow is unconfirmed and deliberately out of scope.
+- The deposit-creation event's topic0 was found by grepping the escrow's own
+  logs for an already-known depositor address, not derived from a signature
+  string — `topics[1]`=depositId, `topics[2]`=depositor, `topics[3]`=token,
+  cross-checked against `getDeposit(depositId)`'s own words for six
+  independent deposits.
+- `IntentSignaled`'s `owner`/`to` fields are NOT the deposit's maker (a real
+  trap this session almost fell into) — `owner` is the buyer's own intent
+  identity and `to` is the payout address (usually the same, sometimes not:
+  one address signaled two intents that paid out to two DIFFERENT `to`
+  addresses). The actual depositor only ever comes from the escrow's own
+  event or `getDeposit`'s first word.
+- A real maker deposit (depositId 3409) had 16 signals against it and only 2
+  ever fulfilled — real proof the "stuck intent" case isn't a corner case.
+  In-app probe (`-peerSeedDeposit "3409|0x...ded52ded" -peerProbe YES`) over
+  that exact deposit landed all 16 as things (2 sold, 14 expired) in one
+  pass, then a clean re-run landed only the one genuinely new signal that
+  had appeared since — dedup and cursor advancement both verified live, not
+  just by code reading.
+- `coins.llama.fi` prices Base USDC correctly keyless (confirmed inline
+  before wiring `DefiLlamaPrices` into a second call site).
+
+**What we still won't do:** anything that signals, fulfills, deposits, or
+withdraws — same capture-only line as every wallet-adjacent bridge in this
+app. A buyer's own stuck intent stays unbuildable without an indexed
+recipient field Peer's contracts don't have; this isn't a "later" — it's a
+structural dead end unless Peer's own event shapes change.
