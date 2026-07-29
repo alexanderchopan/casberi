@@ -9838,3 +9838,19 @@ forbids. A follow-up idea to make the disagreement card a single
 stay individually tappable, so the card would carry three overlapping tap
 targets with no visible boundary, plus an ambiguous already-followed state
 and a split undo across two rooms. Two taps, each unambiguous, is better.
+
+**The twin offer moved into the room, and it is the single-venue ON-RAMP.**
+Stripping the setup screens deleted the two `add()` methods that called
+`PredictionTwin.find`, leaving it unreferenced — a real hole, because
+`PredictionDisagreement` (the "They disagree" cards) only runs in `.all`
+scope, which requires BOTH exchanges connected. A Kalshi-only user
+therefore had no path whatsoever to discovering that Polymarket prices
+the same question. `PredictionBrowseSection` now fires `PredictionTwin
+.find` after any successful follow and renders the offer above the book.
+It deliberately does NOT require the other exchange to be connected —
+that book is public either way — so the offer doubles as the honest
+argument for the second venue, made exactly where its value lands.
+Accepting it registers that exchange's seat as well as landing the
+market, since a followed market with no seat would have no source chip to
+sit under. Still one tap, still refusable, still silent when there's no
+twin — the auto-follow refusal above is untouched.

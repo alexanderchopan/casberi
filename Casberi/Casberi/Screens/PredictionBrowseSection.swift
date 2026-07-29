@@ -133,6 +133,9 @@ struct PredictionBrowseSection: View {
     let onWatchedPolymarket: (Thing) -> Void
 
     @Environment(\.modelContext) private var modelContext
+    /// Needed by `acceptTwin` — taking the twin offer registers the other
+    /// exchange's seat, which may not exist yet.
+    @Environment(BridgeStore.self) private var store
     /// The book is browsable, but a specific question still has to be
     /// findable — "Chiefs" shouldn't require scrolling Sports. Search lives
     /// HERE, with the book, rather than on the connect page where it used to
@@ -147,6 +150,17 @@ struct PredictionBrowseSection: View {
     @State private var polymarketRows: [PolymarketBridge.Resolved] = []
     @State private var disagreements: [PredictionDisagreement.Pair] = []
     @State private var loaded = false
+
+    /// The other exchange's price for the market just followed (prd §234) —
+    /// the ON-RAMP to the comparison, and the only path to it for someone
+    /// who has connected ONE venue. `disagreements` above needs `.all`
+    /// scope, which needs both venues connected; this needs neither, because
+    /// the other exchange's book is public whether or not it's a seat here.
+    /// So a Kalshi-only user follows a market and finds out, right there,
+    /// that Polymarket prices the same question differently — which is the
+    /// most honest possible argument for the second venue, made exactly
+    /// where the value lands.
+    @State private var twin: PredictionTwin.Offer?
 
     /// The categories on offer for the CURRENT scope — each venue keeps its
     /// own real vocabulary (Kalshi's 13 API categories, Polymarket's curated
@@ -220,6 +234,11 @@ struct PredictionBrowseSection: View {
                 ForEach(PredictionOrder.allCases) { o in Text(o.rawValue).tag(o) }
             }
             .pickerStyle(.segmented)
+
+            // The just-followed market's counterpart on the other exchange.
+            // Sits ABOVE the book because it's about what you just did, and
+            // it's transient — the next load clears it.
+            if let twin { twinOfferCard(twin) }
 
             if scope == .all, !disagreements.isEmpty {
                 Text("They disagree").dsText(.label12).foregroundStyle(DS.textTertiary)
@@ -328,6 +347,11 @@ struct PredictionBrowseSection: View {
         if let thing = KalshiWatch.add(market, context: modelContext) {
             kalshiRows.removeAll { $0.ticker == market.ticker }
             onWatchedKalshi(thing)
+            askTwin(for: PredictionMarket(
+                source: .kalshi, id: market.ticker, title: market.title,
+                subtitle: market.subtitle, url: thing.content,
+                probability: market.probability, volume: market.volume,
+                resolved: false, yesWon: nil, closeTime: market.closeTime))
         }
     }
 
@@ -336,7 +360,31 @@ struct PredictionBrowseSection: View {
         if let thing = PolymarketBridge.add(market, context: modelContext) {
             polymarketRows.removeAll { $0.conditionId == market.conditionId }
             onWatchedPolymarket(thing)
+            askTwin(for: market.prediction)
         }
+    }
+
+    /// Fire-and-forget: no twin is the common case and says nothing, so a
+    /// nil result is silent rather than an empty state.
+    private func askTwin(for market: PredictionMarket) {
+        twin = nil
+        Task { twin = await PredictionTwin.find(for: market, context: modelContext) }
+    }
+
+    /// Accepting lands the twin AND registers its exchange — following a
+    /// Polymarket market is exactly as good a reason for Polymarket to hold
+    /// a seat as tapping Connect was, and without this the thing would land
+    /// with no catalog seat and no source chip to sit under.
+    private func acceptTwin(_ offer: PredictionTwin.Offer) {
+        DSHaptic.tap()
+        PredictionTwin.accept(offer, context: modelContext)
+        switch offer.source {
+        case .kalshi:
+            registerPredictionBridge(source: "Kalshi", id: "kalshi", store: store, context: modelContext)
+        case .polymarket:
+            registerPredictionBridge(source: "Polymarket", id: "polymarket", store: store, context: modelContext)
+        }
+        twin = nil
     }
 
     // MARK: - Rendering
@@ -410,6 +458,28 @@ struct PredictionBrowseSection: View {
                 }
             }
         }
+        .dsListCardRow()
+    }
+
+    /// "Polymarket prices this at 71% — 9 points apart." The line comes from
+    /// `PredictionTwin.Offer.line`, which states the gap and never judges it
+    /// (no spread computed, neither side called right, nothing suggesting an
+    /// action) — the same restraint every other surface in this pair holds.
+    @ViewBuilder
+    private func twinOfferCard(_ offer: PredictionTwin.Offer) -> some View {
+        Button { acceptTwin(offer) } label: {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                HStack(spacing: DS.Space.s2) {
+                    BridgeIcon(name: offer.source.rawValue, size: 18, circular: true)
+                    Text(offer.line).dsText(.callout15).foregroundStyle(DS.textPrimary)
+                        .multilineTextAlignment(.leading)
+                }
+                Text("Follow it on \(offer.source.rawValue) too")
+                    .dsText(.subhead13).foregroundStyle(DS.tint)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .buttonStyle(.plain)
         .dsListCardRow()
     }
 
