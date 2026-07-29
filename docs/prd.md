@@ -10024,3 +10024,60 @@ make "All" worth tapping, not a reason to stop gating on it.
 twin market, no single "follow both" tap, no payout/stake language on a
 resolved receipt. Saying yes to a venue on the connect page follows
 *zero* markets by itself — it only adds the chip and lights the room.
+
+## 228. 0xBow Privacy Pools, the rest of the lifecycle — the exit, the ask, and the cover (user: "what else can we do with 0xbow", then "ok lets do all", 2026-07-29)
+
+The seat read only half the story: the deposit going in, and the clear-to-
+withdraw flip. Three reads round it out, all still capture-only, all off
+public sources. `Model/PrivacyPoolsBridge.swift`.
+
+**1. Ragequit — the exit, landed.** A normal Privacy Pools withdrawal lands
+at a fresh, unlinkable address BY DESIGN — that's the product, and Casberi
+never sees it. But a *ragequit* (the escape hatch after a decline, or a
+depositor pulling out) returns to the ORIGINAL depositor, indexed in the
+event, so it's honestly ours to land: "Reclaimed 0.07 ETH from Privacy
+Pools." It closes a loop the deposit opened. `Ragequit(address indexed
+_ragequitter, uint256 _commitment, uint256 _label, uint256 _value)`, topic0
+`0xd2b3e868…`, emitted on the POOL contracts (not the Entrypoint) — one
+filtered `eth_getLogs` over all 14 pools, same depositor-topic filter and
+same cursor as the deposit read. topic0 keccak-derived and VALIDATED against
+the two Deposited topics already in the code (same method reproduced both);
+spec-derived pending a live ragequit, which is rare (most deposits get
+approved) — the deposit path was measured, the exit wasn't.
+
+**2. poi_required — the one status you must act on.** The ASP review enum has
+a `poi_required` state (0xBow needs proof-of-innocence before it can clear
+your deposit). We polled it but swallowed it silently. Now a watched deposit
+flipping pending→poi ALERTS once ("open 0xBow to respond"), then keeps
+watching for its eventual clear/decline (which alert through the existing
+approved/declined branch). It's the only status that's actionable, so it's
+the only one besides approved/declined worth a thing. UNMEASURED live —
+built to the documented enum; re-measure before trusting the copy.
+
+**3. Anonymity-set cover — how private is this deposit, really.** Nobody
+tells a depositor whether their privacy is any good. The `pools-stats`
+endpoint gives per-pool `acceptedDepositsCount` — the real anonymity set (only
+approved deposits sit in the merkle tree a withdrawal proof draws from). Each
+landed deposit now carries "Privacy Pools' ETH pool holds about 3,900
+accepted deposits — that's the anonymity set your deposit hides in. The
+bigger it is, the stronger your privacy." Rounded to two significant figures
+(the order of magnitude is the fact; the exact count is noise). Context, not
+a tally-thing (module doctrine) — it rides `enrichedText`, which is normally
+retrieval-only, so a narrow source-gated exception in `ThingContent`'s
+default branch renders it VISIBLY for Privacy Pools deposits (above the
+receipt URL), while every other source keeps enrichedText invisible. One
+`pools-stats` GET per pass, memoized, and only bought when a deposit actually
+lands (a status-only pass never calls it).
+
+**Measured 2026-07-29:** `api.0xbow.io/1/public/pools-stats` is keyless and
+reachable; per-pool `acceptedDepositsCount` live (ETH ~3,948, USDC ~727, USDT
+~302). In-app probe against a real depositor (`0xB180…CFef0`) landed its 2
+deposits with the cover line attached and rendered, seeded silent (old, so no
+fake "cleared" alert), deduped to 0 on rerun. `-privacyPoolsProbe` now logs
+the cover snapshot alongside the landed count and pending watchlist.
+
+**What we still won't do** (unchanged from §162): see or help with the
+withdrawal (unlinkable by design), or deposit/withdraw/prove/sign anything
+(capture-only — that's becoming a wallet). L2 coverage (Optimism/Arbitrum,
+which share a different Entrypoint) stays deferred until someone actually
+deposits there — untested surface for little gain.

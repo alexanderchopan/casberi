@@ -18,6 +18,18 @@ import SwiftData
 ///     the moment a watched pending deposit clears ("ready to withdraw
 ///     privately") or is declined.
 ///
+/// Three more reads round out the lifecycle (prd §228), all still capture-only:
+///  3. RAGEQUIT — the exit, landed as "Reclaimed X from Privacy Pools". A
+///     normal withdrawal is unlinkable by design (fresh address) so we never
+///     see it; a ragequit returns to the ORIGINAL depositor, indexed, so it's
+///     honestly ours to close the loop on.
+///  4. POI_REQUIRED — the one status the person must act on. When a watched
+///     deposit flips into proof-of-innocence-required, alert once ("open 0xBow
+///     to respond"), then keep watching for its eventual clear/decline.
+///  5. ANONYMITY-SET COVER — each deposit carries, on `enrichedText`, how many
+///     accepted deposits share its pool: the honest measure of how strong its
+///     privacy is. Context, never a tally-thing (module doctrine).
+///
 /// Honesty boundaries, by ruling (prd §162):
 /// - CAPTURE ONLY. Nothing here deposits, withdraws, proves, or signs — the
 ///   same line as Peer's "lands settled fills, never a path that trades".
@@ -72,6 +84,22 @@ enum PrivacyPoolsBridge {
     /// read that carries the LABEL the ASP is keyed by.
     private static let poolDepositedTopic =
         "0xe3b53cd1a44fbf11535e145d80b8ef1ed6d57a73bf5daa7e939b6b01657d6549"
+    /// Pool-level `Ragequit(address indexed _ragequitter, uint256 _commitment,
+    /// uint256 _label, uint256 _value)` — the EXIT that's linkable to the
+    /// watched wallet (prd §228). A normal withdrawal lands at a fresh,
+    /// unlinkable address by design, so Casberi never sees it; a ragequit —
+    /// the escape hatch after a decline, or a depositor pulling out — returns
+    /// to the ORIGINAL depositor, indexed here, so it's honestly ours to land.
+    /// topic0 keccak-derived and validated against the two Deposited topics
+    /// above (same method, both matched); a real ragequit is rare, so this is
+    /// spec-derived pending a live one, like the deposit path was measured but
+    /// the exit wasn't. Emitted on the POOL contracts, not the Entrypoint.
+    private static let ragequitTopic =
+        "0xd2b3e868ae101106371f2bd93abc8d5a4de488b9fe47ed122c23625aa7172f13"
+
+    /// Every pool address, for the ragequit `eth_getLogs` (one call, address
+    /// array) and the same server-side depositor-topic filter deposits use.
+    private static var poolAddresses: [String] { Array(pools.keys) }
 
     private static let aspBase = "https://api.0xbow.io/1/public"
 
@@ -155,6 +183,54 @@ enum PrivacyPoolsBridge {
         UserDefaults.standard.set(entries, forKey: pendingKey)
     }
 
+    // MARK: - Anonymity-set cover (prd §228)
+
+    /// Per-pass memo of each pool's accepted-deposit count — the anonymity set
+    /// a deposit hides in. `nil` until first read this pass (reset at the top
+    /// of `syncLocked`), so a status-only pass with nothing landing never buys
+    /// the call. Keyed by `scope` (matching `Pool.scope`).
+    @MainActor private static var coverThisPass: [String: (count: Int, symbol: String)]?
+
+    /// Reads 0xBow's public `pools-stats` once per pass and returns per-pool
+    /// accepted-deposit counts. `acceptedDepositsCount` (not total, not
+    /// pending) is the real set: only ASP-approved deposits sit in the merkle
+    /// tree a withdrawal proof draws from, so it's the honest measure of how
+    /// much cover a deposit has. Empty when unreachable — enrichment then just
+    /// doesn't attach, the deposit lands bare (never a guessed number).
+    @MainActor
+    private static func cover() async -> [String: (count: Int, symbol: String)] {
+        if let c = coverThisPass { return c }
+        var out: [String: (count: Int, symbol: String)] = [:]
+        if let root = await IngestSupport.getJSON("\(aspBase)/pools-stats") as? [String: Any],
+           let list = root["pools"] as? [[String: Any]] {
+            for p in list {
+                guard let scope = p["scope"] as? String,
+                      let count = p["acceptedDepositsCount"] as? Int else { continue }
+                out[scope] = (count, (p["tokenSymbol"] as? String) ?? "")
+            }
+        }
+        coverThisPass = out
+        return out
+    }
+
+    /// The set-size line stored on a deposit's `enrichedText` — shown in the
+    /// thing sheet and fed to search. Rounded to two significant figures: the
+    /// exact count is noise, the ORDER OF MAGNITUDE is the privacy fact.
+    private static func coverLine(symbol: String, count: Int) -> String {
+        let approx = roundedSet(count)
+        return String(localized: "Privacy Pools' \(symbol) pool holds about \(approx) accepted deposits — that's the anonymity set your deposit hides in. The bigger it is, the stronger your privacy.")
+    }
+
+    /// "3,900" from 3,947, "12" from 12 — two significant figures, grouped.
+    private static func roundedSet(_ n: Int) -> String {
+        guard n >= 100 else { return "\(n)" }
+        let digits = String(n).count
+        let unit = Int(pow(10.0, Double(digits - 2)))
+        let rounded = (n / unit) * unit
+        let f = NumberFormatter(); f.numberStyle = .decimal
+        return f.string(from: NSNumber(value: rounded)) ?? "\(rounded)"
+    }
+
     // MARK: - Sync
 
     @MainActor private static var running = false
@@ -195,6 +271,7 @@ enum PrivacyPoolsBridge {
         guard !addresses.isEmpty else { return 0 }
         guard let latest = await blockNumber() else { return nil }
         let defaults = UserDefaults.standard
+        coverThisPass = nil   // fresh per pass; filled lazily only if something lands
         var added = 0
 
         for address in addresses {
@@ -210,17 +287,27 @@ enum PrivacyPoolsBridge {
             let budget = maxRange * maxChunks
             if latest - from >= budget { from = latest - budget + 1 }
             var scanned = from - 1
-            var logs: [[String: Any]] = []
+            var depositLogs: [[String: Any]] = []
+            var ragequitLogs: [[String: Any]] = []
             while scanned < latest {
                 let to = min(scanned + maxRange, latest)
                 guard let chunk = await fetchDeposits(wallet: address,
                                                       from: scanned + 1, to: to)
                 else { break }
-                logs += chunk
+                depositLogs += chunk
+                // Ragequits ride the SAME range/cursor (prd §228) — the exit
+                // can only follow the deposit, so it's inside this window. A
+                // ragequit read failing shouldn't strand deposits, so it's a
+                // best-effort add, not a `break`.
+                if let rq = await fetchRagequits(wallet: address,
+                                                 from: scanned + 1, to: to) {
+                    ragequitLogs += rq
+                }
                 scanned = to
             }
             guard scanned > cursor else { continue }   // nothing read — transient
-            let landed = await things(from: logs, wallet: address, existing: existing)
+            var landed = await things(from: depositLogs, wallet: address, existing: existing)
+            landed += await ragequitThings(from: ragequitLogs, wallet: address, existing: existing)
             if !landed.isEmpty {
                 for thing in landed {
                     context.insert(thing)
@@ -287,6 +374,20 @@ enum PrivacyPoolsBridge {
             "status": "pending",
         ])
         setPending(entries)
+    }
+
+    /// Probe-only (prd §228): a one-line snapshot of the largest pools'
+    /// accepted-set sizes, so the anonymity-set read verifies headlessly.
+    /// Clears the per-pass memo so it can't leak a stale cover into a real
+    /// sweep that runs after the probe.
+    @MainActor
+    static func coverSummary() async -> String {
+        let c = await cover()
+        coverThisPass = nil
+        guard !c.isEmpty else { return "cover: unreachable" }
+        let top = c.values.sorted { $0.count > $1.count }.prefix(3)
+            .map { "\($0.symbol) ~\($0.count)" }
+        return "cover: " + top.joined(separator: ", ")
     }
 
     /// The probe's status line — what the pending watchlist holds right now.
@@ -360,6 +461,13 @@ enum PrivacyPoolsBridge {
                 capturedAt: capturedAt,
                 sourceRef: ref)
             thing.walletAddress = wallet
+            // Anonymity-set context (prd §228): how much cover this deposit
+            // has, on `enrichedText` (the thing sheet's body + search), never
+            // the title — it's context, not a tally-thing. Snapshot at landing;
+            // reads bare when pools-stats is unreachable.
+            if let pool, let c = (await cover())[pool.scope], c.count > 0 {
+                thing.enrichedText = coverLine(symbol: pool.symbol, count: c.count)
+            }
             out.append(thing)
 
             // Watch the label for its ASP flip. Baseline rule (alerts are
@@ -400,6 +508,65 @@ enum PrivacyPoolsBridge {
             return decimalString(hexWord: labelHex)
         }
         return nil
+    }
+
+    // MARK: - Ragequit exits (prd §228)
+
+    /// Turns a wallet's ragequit logs into "came back out" things — the honest
+    /// closing bookend a normal (unlinkable) withdrawal can never be. Data
+    /// words: commitment, label, value. Keyed on the label so it can't collide
+    /// with the deposit's own ref, and pruned from the pending watchlist (a
+    /// ragequit resolves it — it's out of the pool now). Newest 10, like every
+    /// wallet landing path.
+    @MainActor
+    private static func ragequitThings(from logs: [[String: Any]], wallet: String,
+                                       existing: Set<String>) async -> [Thing] {
+        struct Exit { let label: String; let pool: String; let raw: Double
+                      let block: Int; let txHash: String }
+        var exits: [Exit] = []
+        for log in logs {
+            guard (log["removed"] as? Bool) != true,
+                  let contract = (log["address"] as? String)?.lowercased(),
+                  let txHash = log["transactionHash"] as? String,
+                  let blockHex = log["blockNumber"] as? String,
+                  let data = log["data"] as? String,
+                  let labelHex = word(data, 1),
+                  let valueHex = word(data, 2)
+            else { continue }
+            exits.append(Exit(label: decimalString(hexWord: labelHex),
+                              pool: contract,
+                              raw: WalletIngest.hexToDouble("0x" + valueHex),
+                              block: WalletIngest.hexToInt(blockHex),
+                              txHash: txHash))
+        }
+        exits = Array(exits.suffix(10))
+        guard !exits.isEmpty else { return [] }
+
+        let times = await blockTimes(blocks: exits.map(\.block))
+        var out: [Thing] = []
+        var seen = Set<String>()
+        var watchlist = pending()
+        for exit in exits {
+            let ref = "privacypools:ragequit:\(exit.label)"
+            guard !existing.contains(ref), seen.insert(ref).inserted else { continue }
+            let pool = pools[exit.pool]
+            let what = pool.map {
+                "\(WalletIngest.format(exit.raw / pow(10, Double($0.decimals)))) \($0.symbol)"
+            } ?? "crypto"
+            let thing = Thing(
+                kind: .transaction,
+                title: String(localized: "Reclaimed \(what) from Privacy Pools"),
+                content: "https://etherscan.io/tx/\(exit.txHash)",
+                source: "Privacy Pools",
+                capturedAt: times[exit.block] ?? .now,
+                sourceRef: ref)
+            thing.walletAddress = wallet
+            out.append(thing)
+            // Out of the pool — stop watching its screening status.
+            watchlist.removeAll { $0["label"] == exit.label }
+        }
+        setPending(watchlist)
+        return out
     }
 
     // MARK: - ASP status poll
@@ -474,9 +641,41 @@ enum PrivacyPoolsBridge {
                 // Resolved either way — done watching this label.
             case "exited", "spent":
                 break   // terminal, the person acted elsewhere — drop silently
+            case "poi_required":
+                // The one status the person must ACT on (prd §228): 0xBow
+                // needs proof-of-innocence before it can clear this deposit.
+                // Alert once, on the transition INTO poi from a watched
+                // pending — not on a "" backfill baseline (that's news that
+                // already happened) and not every pass (the ref guards it).
+                // Then keep watching: poi can still resolve to approved or
+                // declined, which alerts through the case above. UNMEASURED
+                // live — built to the documented enum, re-measure before
+                // trusting the copy.
+                if watching, stored == "pending" {
+                    let what = "\(e["amount"] ?? "") \(e["symbol"] ?? "")"
+                        .trimmingCharacters(in: .whitespaces)
+                    let ref = "privacypools:poi:\(label)"
+                    if !existing.contains(ref) {
+                        let thing = Thing(
+                            kind: .transaction,
+                            title: String(localized: "Privacy Pools needs proof before it can clear your \(what) deposit — open 0xBow to respond"),
+                            content: "https://app.0xbow.io",
+                            source: "Privacy Pools",
+                            capturedAt: .now, sourceRef: ref)
+                        thing.walletAddress = e["wallet"]
+                        context.insert(thing)
+                        SpotlightIndex.index([thing])
+                        if context.saveHonestly() {
+                            alerts += 1
+                            SourceMoments.shared.fire(thing.title, source: "Privacy Pools")
+                        }
+                    }
+                }
+                e["status"] = status
+                kept.append(e)
             default:
-                // pending / poi_required / anything new: keep watching. A ""
-                // baseline records the first-seen status silently here.
+                // pending / anything new: keep watching. A "" baseline records
+                // the first-seen status silently here.
                 e["status"] = status
                 kept.append(e)
             }
@@ -514,6 +713,20 @@ enum PrivacyPoolsBridge {
             "fromBlock": hex(from), "toBlock": hex(to),
             "address": entrypoint,
             "topics": [depositedTopic, walletTopic],
+        ]
+        return await call(method: "eth_getLogs", params: [params]) as? [[String: Any]]
+    }
+
+    /// Ragequit logs where the ragequitter is this wallet — every pool in one
+    /// call (address array), filtered server-side by the indexed depositor
+    /// topic, exactly like the deposit read. nil = host refused/errored.
+    private static func fetchRagequits(wallet: String, from: Int,
+                                       to: Int) async -> [[String: Any]]? {
+        let walletTopic = "0x000000000000000000000000" + wallet.dropFirst(2).lowercased()
+        let params: [String: Any] = [
+            "fromBlock": hex(from), "toBlock": hex(to),
+            "address": poolAddresses,
+            "topics": [ragequitTopic, walletTopic],
         ]
         return await call(method: "eth_getLogs", params: [params]) as? [[String: Any]]
     }

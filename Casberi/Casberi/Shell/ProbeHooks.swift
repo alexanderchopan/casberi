@@ -944,9 +944,10 @@ enum ProbeHooks {
             // pair with `-walletAddress <a depositor wallet>`.
             Task { @MainActor in
                 let n = await PrivacyPoolsBridge.probe(context: context, blocksBack: Int(spec))
-                NSLog("Privacy Pools probe: %@ landed; %@",
+                let cover = await PrivacyPoolsBridge.coverSummary()
+                NSLog("Privacy Pools probe: %@ landed; %@; %@",
                       n.map(String.init) ?? "FAILED",
-                      PrivacyPoolsBridge.pendingSummary())
+                      PrivacyPoolsBridge.pendingSummary(), cover)
             }
         },
         // `-gnosisPayProbe <blocksBack|YES>` runs the Gnosis Pay card-spend

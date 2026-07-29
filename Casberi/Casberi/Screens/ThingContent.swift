@@ -234,6 +234,21 @@ struct ThingContentView: View {
         case .approval:
             if !thing.content.isEmpty { CommandCard(text: thing.content) }
         default:
+            // Privacy Pools deposits carry their anonymity-set cover on
+            // `enrichedText` (prd §228). The global rule keeps `enrichedText`
+            // retrieval-only, but here it IS the payoff — how much privacy the
+            // deposit has — so this one source shows it, above the receipt URL.
+            // Only deposits set it; alerts and ragequits leave it nil.
+            if thing.source == "Privacy Pools",
+               let cover = thing.enrichedText?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !cover.isEmpty {
+                Text(cover)
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.bottom, DS.Space.s3)
+            }
             if !thing.content.isEmpty {
                 Text(thing.content)
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
