@@ -165,9 +165,24 @@ enum DS {
     // ramp uses ("names read as intent, not pixel counts").
     enum Space {
         static let s1: CGFloat = 4    // atomic — deliberately unchanged
+        /// Mac density (2026-07-28): rows and cards were sized for a
+        /// fingertip, and next to a system whose own text starts at 13pt
+        /// that reads as the biggest "this is a stretched iPad app" tell —
+        /// bigger than any single component fix, because it's every row at
+        /// once. Scoped to s2–s4 (the values already tuned once, "was X"
+        /// below) — s1 and s6 stay fixed on both platforms on purpose, and
+        /// the type ramp and chip sizing rulings are untouched; this only
+        /// changes the AIR between things, ~15–20% tighter, so the
+        /// proportions survive intact rather than the components shrinking.
+        #if targetEnvironment(macCatalyst)
+        static let s2: CGFloat = 8    // was 10 (iOS), was 8 before that
+        static let s3: CGFloat = 12   // was 14 (iOS), was 12 before that
+        static let s4: CGFloat = 15   // was 18 (iOS), was 16 before that
+        #else
         static let s2: CGFloat = 10   // was 8
         static let s3: CGFloat = 14   // was 12
         static let s4: CGFloat = 18   // was 16
+        #endif
         static let s6: CGFloat = 24   // macro — unchanged
         static let s8: CGFloat = 32   // macro — unchanged
     }

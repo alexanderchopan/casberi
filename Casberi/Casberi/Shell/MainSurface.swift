@@ -365,7 +365,14 @@ struct MainSurface: View {
             .safeAreaInset(edge: .top, spacing: 0) {
                 if !showsRail {
                     sourceStrip(axis: .horizontal)
-                        .padding(.top, DS.Space.s6)
+                        // The s6 top padding replaces iPhone's hidden system
+                        // nav bar with air. A Mac window already has a REAL
+                        // title bar there — stacking a second s6 on top of
+                        // it read as ~65pt of dead chrome before the strip
+                        // even starts (Mac polish, 2026-07-28), so Mac gets
+                        // only a small breathing gap instead.
+                        .padding(.top, ProcessInfo.processInfo.isMacCatalystApp
+                                 ? DS.Space.s2 : DS.Space.s6)
                         .padding(.bottom, DS.Space.s2)
                 }
             }

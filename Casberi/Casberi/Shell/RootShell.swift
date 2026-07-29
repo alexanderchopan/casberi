@@ -2315,6 +2315,15 @@ private struct CaptureFlight: View {
 
 /// The safe-area inset the scrolling screens leave for the floating stack.
 enum ShellMetrics {
-    static let bottomInset: CGFloat = 120
+    /// 120 was tuned for iPhone, where the gap is real space taken from a
+    /// screen that has none to spare. Mac has no such scarcity, and at a
+    /// window near its 480pt minimum height that same 120 read as content
+    /// crowding right up against the bar (Mac polish, 2026-07-28) — more
+    /// clearance costs Mac nothing, so it gets some. The bar stays floating
+    /// glass either way (docs/build-brief.md §8: "the whole point of
+    /// dropping the tab bar") — this widens its margin, not its design.
+    static var bottomInset: CGFloat {
+        ProcessInfo.processInfo.isMacCatalystApp ? 160 : 120
+    }
     static let topInset: CGFloat = DS.Space.s2
 }
