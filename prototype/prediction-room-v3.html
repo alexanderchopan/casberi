@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prediction room — as built</title>
+<style>
+  :root {
+    --page: #000000;
+    --sheet: #111113;
+    --well: #080809;
+    --text1: #ffffff;
+    --text2: rgba(235,235,245,0.60);
+    --text3: rgba(235,235,245,0.30);
+    --faint: rgba(255,255,255,0.04);
+    --strong: rgba(255,255,255,0.16);
+    --tint: #1673e6;
+    --attention: #ff9f0a;
+    --confirm: #30d158;
+    --down: #ff453a;
+    --kalshi: #4fae7b;
+    --poly: #1652f0;
+    --r-card: 10px;
+    --r-sheet: 16px;
+    --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px;
+    --shadow: 0 10px 30px rgba(0,0,0,0.55);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0a0a0c; color: var(--text1);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    letter-spacing: 0; padding: 40px 24px 80px;
+  }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .intro { color: var(--text2); font-size: 14px; line-height: 1.55; max-width: 900px; margin-bottom: 32px; }
+  .intro b { color: var(--text1); font-weight: 600; }
+  .intro code { font-size: 13px; color: var(--text1); background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 4px; }
+  .rail { display: flex; gap: 36px; flex-wrap: wrap; align-items: flex-start; justify-content: center; }
+  .col { width: 393px; }
+  .dir-title { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .dir-note { color: var(--text2); font-size: 13px; line-height: 1.55; margin-bottom: 14px; min-height: 120px; }
+  .dir-note b { color: var(--text1); font-weight: 600; }
+
+  .phone {
+    width: 393px; height: 852px; background: var(--page); border-radius: 44px;
+    padding: 18px 0 0;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.07), 0 24px 60px rgba(0,0,0,0.6);
+    overflow: hidden; position: relative;
+  }
+  .scroll { height: 100%; overflow: hidden; padding: 0 14px; }
+  .fold { position:absolute; left:0; right:0; bottom:0; height:70px;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.94) 80%); pointer-events:none; }
+  .statusbar { display:flex; justify-content:space-between; padding: 2px 12px 8px; font-size:13px; font-weight:600; }
+
+  /* chip strip (shell) */
+  .strip { display:flex; gap:6px; padding: 2px 2px 12px; overflow:hidden; }
+  .schip { font-size:13px; font-weight:600; color:var(--text2); background:var(--sheet);
+    border-radius:9999px; padding:6px 12px; white-space:nowrap; display:flex; align-items:center; gap:5px; }
+  .schip.on { color:#fff; background:var(--tint); }
+  .sdot { width:14px; height:14px; border-radius:50%; flex:none; }
+  .sdot.k { background:var(--kalshi); } .sdot.p { background:var(--poly); }
+
+  .navtitle { font-size: 26px; font-weight: 700; padding: 0 4px 10px; }
+
+  /* venue switcher (glass) */
+  .switcher { display:inline-flex; gap:2px; padding:4px; background:rgba(255,255,255,0.07);
+    backdrop-filter:blur(24px); border-radius:9999px; margin:0 2px 12px; box-shadow:0 8px 24px rgba(0,0,0,0.5); }
+  .vchip { display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text2);
+    background:var(--faint); border-radius:9999px; padding:6px 12px; white-space:nowrap; }
+  .vchip.on { color:var(--text1); font-weight:600; background:rgba(22,115,230,0.20); }
+  .vdot { width:14px;height:14px;border-radius:50%;flex:none; }
+  .vdot.k{background:var(--kalshi);} .vdot.p{background:var(--poly);}
+
+  /* field */
+  .field { display:flex; align-items:center; background:var(--well); border-radius:var(--r-card);
+    padding:12px var(--s4); font-size:15px; color:var(--text3); margin-bottom:var(--s2); }
+
+  /* one control row: order menu + categories */
+  .ctrls { display:flex; gap:var(--s2); padding-bottom:12px; overflow:hidden; }
+  .omenu { display:flex; align-items:center; gap:4px; font-size:13px; font-weight:600; color:var(--text1);
+    background:var(--strong); border-radius:9999px; padding:7px 12px; white-space:nowrap; }
+  .omenu .cv { font-size:9px; opacity:.7; }
+  .cchip { font-size:13px; font-weight:600; color:var(--text2); background:var(--faint);
+    border-radius:9999px; padding:7px 12px; white-space:nowrap; }
+  .cchip.on { color:#fff; background:var(--tint); }
+
+  /* cards */
+  .card { background:var(--sheet); border-radius:var(--r-sheet); padding:var(--s3);
+    box-shadow:var(--shadow); margin-bottom:var(--s2); }
+  .eyebrow { font-size:12px; color:var(--text3); margin-bottom:6px; }
+  .q { font-size:16px; font-weight:600; line-height:1.28; }
+  .qhead { display:flex; align-items:flex-start; gap:var(--s2); margin-bottom:10px; }
+  .venue { width:18px;height:18px;border-radius:5px;flex:none;margin-top:2px;display:grid;place-items:center;
+    font-size:10px;font-weight:800;color:#04120e; }
+  .venue.k{background:var(--kalshi);} .venue.p{background:var(--poly);color:#fff;}
+
+  /* outcome row: read target + write capsule */
+  .orow { display:flex; align-items:center; gap:var(--s3); padding:4px 0; }
+  .oread { display:flex; align-items:center; gap:var(--s3); flex:1; min-width:0; }
+  .oname { font-size:14px; color:var(--text2); width:96px; flex:none; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .oname.lead { color:var(--text1); font-weight:600; }
+  .pct { font-size:16px; font-weight:600; width:42px; text-align:right; flex:none; font-variant-numeric:tabular-nums; }
+  .pct.thin { color:var(--text2); }
+  .cap { width:30px;height:30px;border-radius:50%;background:var(--faint);flex:none;
+    display:grid;place-items:center;font-size:14px;font-weight:800;color:var(--tint); }
+  .cap.done { color:var(--confirm); font-size:13px; }
+
+  /* the odds bar with the prior-level notch */
+  .bar { flex:1; height:8px; border-radius:9999px; background:var(--faint); position:relative; overflow:hidden; min-width:0; }
+  .bar i { position:absolute; left:0; top:0; bottom:0; border-radius:9999px; background:var(--tint); }
+  .bar i.quiet { background:var(--text3); }
+  .bar i.k { background:var(--kalshi); } .bar i.p { background:var(--poly); }
+  .bar u { position:absolute; top:0; bottom:0; width:2px; border-radius:2px; }
+  .bar u.up { background:var(--confirm); } .bar u.dn { background:var(--down); }
+  .bar.tall { height:10px; }
+
+  .delta { font-size:12px; font-weight:700; padding:2px 6px; border-radius:9999px; font-variant-numeric:tabular-nums; }
+  .delta.up { color:#04140a; background:var(--confirm); }
+  .delta.dn { color:#fff; background:var(--down); }
+
+  .foot { display:flex; align-items:center; gap:7px; margin-top:9px; font-size:13px; color:var(--text3); flex-wrap:wrap; }
+  .foot .soon { color:var(--attention); font-weight:600; }
+  .foot .warn { color:var(--attention); }
+
+  .big { font-size:32px; font-weight:700; line-height:1; font-variant-numeric:tabular-nums; }
+  .big.thin { color:var(--text2); }
+  .bigrow { display:flex; align-items:center; gap:var(--s2); margin-bottom:8px; }
+  .bigrow .cap { margin-left:auto; }
+
+  .secthead { font-size:12px; color:var(--text3); padding:14px 4px 8px; }
+
+  /* the lede, as a LINE (2026-07-29 second pass — it was a full card) */
+  .ledeline { display:flex; align-items:center; gap:var(--s2); padding:0 var(--s1) var(--s1); }
+  .ledeline .lbl { font-size:12px; color:var(--text3); flex:none; }
+  .ledeline .lq { font-size:13px; color:var(--text2); white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0; }
+  .delta.sm { font-size:11px; padding:1px 5px; flex:none; }
+
+  /* resolved receipt */
+  .res { display:flex; align-items:center; gap:var(--s3); }
+  .res .t { font-size:15px; line-height:1.3; }
+  .res .r { font-size:12px; color:var(--text3); margin-top:2px; }
+  .res .ans { font-size:17px; font-weight:700; margin-left:auto; flex:none; }
+
+  /* skeleton */
+  .sk { background:var(--sheet); border-radius:var(--r-sheet); padding:var(--s3); margin-bottom:var(--s2); }
+  .sk b { display:block; background:var(--faint); border-radius:9999px; }
+  .sk .l1 { width:220px; height:14px; margin-bottom:10px; }
+  .sk .l2 { width:100%; height:8px; margin-bottom:8px; }
+  .sk .l3 { width:120px; height:8px; }
+
+  .cap-note { font-size:12px; color:var(--text3); text-align:center; margin-top:10px; line-height:1.5; }
+</style>
+</head>
+<body>
+
+<h1>The prediction room, as built</h1>
+<div class="intro">
+  <p>Kalshi and Polymarket keep their own source chips; the room holds the live book. Brand hues are the real ones (<code>#4fae7b</code>, <code>#1652f0</code>). Odds are illustrative — the arrangement is what's real.</p>
+  <p>Second pass: the lede is a <b>line</b>, not a card — so column 1 now shows a market above the fold instead of chrome. Note the <b>two tap targets per row</b>: the row itself reads (opens the preview), the <b>+</b> capsule writes (follows). And the <b>notch on every bar</b> is where the market was — the one change that turns a quantity into a story.</p>
+</div>
+
+<div class="rail">
+
+  <!-- 1 — the room -->
+  <div class="col">
+    <div class="dir-title">The room</div>
+    <div class="dir-note">
+      Chip strip → room. <b>Biggest move</b> leads as a single LINE — it was a full card, which bought orientation at the price of a fourth block before the first market and restated a market the list shows again. Then search, then <b>one</b> control row. A followed market <b>stays</b>, wearing a check.
+    </div>
+    <div class="phone"><div class="scroll">
+      <div class="statusbar"><span>9:41</span><span>▮▮▮</span></div>
+      <div class="strip">
+        <div class="schip">All</div>
+        <div class="schip on"><span class="sdot k"></span>Kalshi</div>
+        <div class="schip"><span class="sdot p"></span>Polymarket</div>
+        <div class="schip">Wallet</div>
+      </div>
+
+      <div class="ledeline">
+        <span class="lbl">Biggest move</span>
+        <span class="lq">Fed cuts rates at the March meeting?</span>
+        <span class="delta up sm">+9 pts</span>
+      </div>
+
+      <div class="field">Find a team, player, or question</div>
+
+      <div class="ctrls">
+        <div class="omenu">Busiest <span class="cv">▼</span></div>
+        <div class="cchip on">All</div>
+        <div class="cchip">Politics</div>
+        <div class="cchip">Economics</div>
+      </div>
+
+      <div class="card">
+        <div class="qhead"><div class="q">Who wins the 2028 Democratic nomination?</div></div>
+        <div class="orow">
+          <div class="oread">
+            <div class="oname lead">Newsom</div>
+            <div class="bar"><i style="width:31%"></i><u class="up" style="left:26%"></u></div>
+            <div class="pct">31%</div>
+          </div>
+          <div class="cap">+</div>
+        </div>
+        <div class="orow">
+          <div class="oread">
+            <div class="oname">Shapiro</div>
+            <div class="bar"><i class="quiet" style="width:18%"></i></div>
+            <div class="pct">18%</div>
+          </div>
+          <div class="cap done">✓</div>
+        </div>
+        <div class="orow">
+          <div class="oread">
+            <div class="oname">Whitmer</div>
+            <div class="bar"><i class="quiet" style="width:12%"></i><u class="dn" style="left:16%"></u></div>
+            <div class="pct">12%</div>
+          </div>
+          <div class="cap">+</div>
+        </div>
+        <div class="foot"><span>11 more</span><span>·</span><span>Closes Aug 2028</span></div>
+      </div>
+
+      <div class="card">
+        <div class="qhead"><div class="q">Government shutdown before April 1?</div></div>
+        <div class="bigrow">
+          <div class="big">23%</div>
+          <span class="delta dn">−14 pts</span>
+          <div class="cap">+</div>
+        </div>
+        <div class="bar tall"><i style="width:23%"></i><u class="dn" style="left:37%"></u></div>
+        <div class="foot"><span class="soon">Closes in 2 hours</span></div>
+      </div>
+
+      <div class="card">
+        <div class="qhead"><div class="q">Greenland becomes a US territory in 2026?</div></div>
+        <div class="bigrow">
+          <div class="big thin">4%</div>
+          <div class="cap">+</div>
+        </div>
+        <div class="bar tall"><i style="width:4%"></i></div>
+        <div class="foot"><span class="warn">Thin book</span></div>
+      </div>
+
+      <div class="fold"></div>
+    </div></div>
+    <div class="cap-note">Row taps preview · <b>+</b> follows · ✓ = already following</div>
+  </div>
+
+  <!-- 2 — All scope: disagreement + resolved -->
+  <div class="col">
+    <div class="dir-title">All scope — disagreement &amp; resolution</div>
+    <div class="dir-note">
+      With both connected, the switcher appears. The disagreement card is a <b>different shape</b>: the gap is the headline, the two bars wear real brand hues. At the bottom, the payoff that used to live nowhere — <b>How they turned out</b>, with the receipt.
+    </div>
+    <div class="phone"><div class="scroll">
+      <div class="statusbar"><span>9:41</span><span>▮▮▮</span></div>
+      <div class="strip">
+        <div class="schip">All</div>
+        <div class="schip on"><span class="sdot k"></span>Kalshi</div>
+        <div class="schip"><span class="sdot p"></span>Polymarket</div>
+      </div>
+
+      <div class="switcher">
+        <div class="vchip on">All</div>
+        <div class="vchip"><span class="vdot k"></span>Kalshi</div>
+        <div class="vchip"><span class="vdot p"></span>Polymarket</div>
+      </div>
+
+      <div class="field">Find a team, player, or question</div>
+      <div class="ctrls">
+        <div class="omenu">Closing soon <span class="cv">▼</span></div>
+        <div class="cchip on">All</div>
+        <div class="cchip">Politics</div>
+        <div class="cchip">Crypto</div>
+      </div>
+
+      <div class="secthead">They disagree</div>
+
+      <div class="card">
+        <div style="font-size:21px;font-weight:700;line-height:1.15;">9 points apart</div>
+        <div style="font-size:14px;color:var(--text2);line-height:1.35;margin:3px 0 12px;">Fed cuts rates at the March meeting?</div>
+        <div class="orow">
+          <div class="oread">
+            <div class="venue k" style="border-radius:50%;">K</div>
+            <div class="bar tall"><i class="k" style="width:68%"></i></div>
+            <div class="pct">68%</div>
+          </div>
+          <div class="cap">+</div>
+        </div>
+        <div class="orow">
+          <div class="oread">
+            <div class="venue p" style="border-radius:50%;">P</div>
+            <div class="bar tall"><i class="p" style="width:77%"></i></div>
+            <div class="pct">77%</div>
+          </div>
+          <div class="cap">+</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="font-size:21px;font-weight:700;line-height:1.15;">11 points apart</div>
+        <div style="font-size:14px;color:var(--text2);line-height:1.35;margin:3px 0 12px;">Bitcoin above $150k this year?</div>
+        <div class="orow">
+          <div class="oread">
+            <div class="venue k" style="border-radius:50%;">K</div>
+            <div class="bar tall"><i class="k" style="width:41%"></i></div>
+            <div class="pct">41%</div>
+          </div>
+          <div class="cap">+</div>
+        </div>
+        <div class="orow">
+          <div class="oread">
+            <div class="venue p" style="border-radius:50%;">P</div>
+            <div class="bar tall"><i class="p" style="width:52%"></i></div>
+            <div class="pct">52%</div>
+          </div>
+          <div class="cap">+</div>
+        </div>
+      </div>
+
+      <div class="secthead">How they turned out</div>
+
+      <div class="card">
+        <div class="res">
+          <div>
+            <div class="t">Fed holds rates at the January meeting?</div>
+            <div class="r">You followed at 34%</div>
+          </div>
+          <div class="ans">Yes</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="res">
+          <div>
+            <div class="t">Will the shutdown end before Jan 15?</div>
+            <div class="r">You followed at 71%</div>
+          </div>
+          <div class="ans">No</div>
+        </div>
+      </div>
+
+      <div class="secthead">Following</div>
+
+      <div class="fold"></div>
+    </div></div>
+    <div class="cap-note">The receipt reports <b>attention</b> — never a payout</div>
+  </div>
+
+  <!-- 3 — preview sheet + loading -->
+  <div class="col">
+    <div class="dir-title">Preview sheet &amp; loading</div>
+    <div class="dir-note">
+      Tapping a row opens this (routed through FeedScreen's single sheet — a <code>.sheet</code> on a List row self-dismisses). Polymarket carries the real price curve Kalshi can't. Behind it: the skeleton the room shows while Kalshi hydrates per-event, instead of painting blank then popping.
+    </div>
+    <div class="phone"><div class="scroll" style="padding:0;">
+      <div class="statusbar" style="padding:2px 26px 8px;"><span>9:41</span><span>▮▮▮</span></div>
+
+      <!-- dimmed room behind -->
+      <div style="padding:0 14px; opacity:.28; filter:blur(1px);">
+        <div class="sk"><b class="l1"></b><b class="l2"></b><b class="l3"></b></div>
+        <div class="sk"><b class="l1"></b><b class="l2"></b><b class="l3"></b></div>
+        <div class="sk"><b class="l1"></b><b class="l2"></b><b class="l3"></b></div>
+      </div>
+
+      <!-- tray -->
+      <div style="position:absolute;left:0;right:0;bottom:0;height:560px;background:var(--sheet);
+                  border-radius:var(--r-sheet) var(--r-sheet) 0 0;padding:10px 20px 24px;
+                  box-shadow:0 -20px 60px rgba(0,0,0,.7);display:flex;flex-direction:column;">
+        <div style="width:36px;height:5px;border-radius:9999px;background:var(--strong);margin:0 auto 14px;"></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+          <div class="venue p" style="border-radius:50%;width:20px;height:20px;">P</div>
+          <span style="font-size:15px;font-weight:600;">Polymarket</span>
+        </div>
+
+        <div style="font-size:21px;font-weight:700;line-height:1.25;margin-bottom:16px;">
+          Fed cuts rates at the March meeting?</div>
+
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <span style="font-size:38px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;">77%</span>
+          <span class="delta up">+6 pts · vs last week</span>
+        </div>
+
+        <div class="bar tall" style="margin-bottom:18px;"><i class="p" style="width:77%"></i><u class="up" style="left:71%"></u></div>
+
+        <svg viewBox="0 0 340 56" style="width:100%;height:56px;margin-bottom:18px;" preserveAspectRatio="none">
+          <polyline points="0,44 34,41 68,45 102,36 136,33 170,35 204,26 238,22 272,25 306,14 340,10"
+            fill="none" stroke="#30d158" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+
+        <div style="font-size:13px;color:var(--text3);margin-bottom:4px;">Closes in 3 days</div>
+
+        <div style="flex:1;"></div>
+
+        <div style="background:var(--tint);border-radius:var(--r-card);padding:14px;text-align:center;
+                    font-size:16px;font-weight:600;margin-bottom:10px;">Follow this market</div>
+        <div style="font-size:12px;color:var(--text3);text-align:center;">
+          Public odds only — nothing here places a trade.</div>
+      </div>
+    </div></div>
+    <div class="cap-note">Kalshi's sheet is identical <b>minus the curve</b> — its data is too thin to draw honestly (§51)</div>
+  </div>
+
+</div>
+
+</body>
+</html>

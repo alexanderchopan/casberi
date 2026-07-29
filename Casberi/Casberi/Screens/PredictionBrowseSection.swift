@@ -1,28 +1,8 @@
 import SwiftUI
 import SwiftData
 
-/// The live market book (prd §233, moved into the ROOM by §234, refined by
-/// §235) — every open market on an exchange, browsable without following
-/// anything.
-///
-/// Reads off data each bridge was already fetching and discarding: Kalshi's
-/// per-event `category` (parsed, then used only as a search haystack) and
-/// `previousProbability`; Polymarket's event `tags`, free once browse reads
-/// `/events` instead of the bare `/markets` list. Races group into one card
-/// rather than exploding into a row per candidate, which is what used to
-/// make the list look thin.
-///
-/// **The gesture contract (§235), the thing most likely to get broken by a
-/// later edit:** a row TAP reads — it raises the preview through
-/// `onPreview` — and the trailing capsule WRITES. They are two targets on
-/// purpose. Making the whole row follow-on-tap was the first build's
-/// mistake: it turned the app's read gesture into a silent write (a row is
-/// a read with one gesture, ruling 2026-07-16) and left no way to inspect a
-/// market without committing to it.
-///
-/// Mounted by `PredictionRoomBook` at the head of a Kalshi or Polymarket
-/// room, never by a setup screen — connecting an exchange is not browsing
-/// it (§234).
+/// Which venue's book the room is showing — `.all` merges both, and only
+/// exists once both exchanges are connected (`PredictionVenueSwitcher`).
 enum PredictionVenueScope: String, Identifiable {
     case all = "All"
     case kalshi = "Kalshi"
@@ -138,6 +118,28 @@ func registerPredictionBridge(source: String, id: String, store: BridgeStore, co
     }
 }
 
+/// The live market book (prd §233, moved into the ROOM by §234, refined by
+/// §235) — every open market on an exchange, browsable without following
+/// anything.
+///
+/// Reads off data each bridge was already fetching and discarding: Kalshi's
+/// per-event `category` (parsed, then used only as a search haystack) and
+/// `previousProbability`; Polymarket's event `tags`, free once browse reads
+/// `/events` instead of the bare `/markets` list. Races group into one card
+/// rather than exploding into a row per candidate, which is what used to
+/// make the list look thin.
+///
+/// **The gesture contract (§235), the thing most likely to get broken by a
+/// later edit:** a row TAP reads — it raises the preview through
+/// `onPreview` — and the trailing capsule WRITES. They are two targets on
+/// purpose. Making the whole row follow-on-tap was the first build's
+/// mistake: it turned the app's read gesture into a silent write (a row is
+/// a read with one gesture, ruling 2026-07-16) and left no way to inspect a
+/// market without committing to it.
+///
+/// Mounted by `PredictionRoomBook` at the head of a Kalshi or Polymarket
+/// room, never by a setup screen — connecting an exchange is not browsing
+/// it (§234).
 struct PredictionBrowseSection: View {
     let scope: PredictionVenueScope
     let onWatchedKalshi: (Thing) -> Void
@@ -251,13 +253,14 @@ struct PredictionBrowseSection: View {
             // An empty `actionLabel` is DSSlabField's own supported no-verb
             // case, so this stays the shared control rather than a hand-rolled
             // field.
-            // The lede (prd §235). Three stacked controls used to open this
-            // room with no orientation at all — a search field, a chip row
-            // and a segmented picker filled most of a phone screen before
-            // any content. This says what's actually happening in the book
-            // first, and the ordering control moved INTO the chip row below,
-            // so the chrome is two rows rather than three.
-            if let lede = lede(in: visible) { ledeCard(lede.card, lede.outcome) }
+            // The lede (prd §235). This room used to open with three stacked
+            // controls and no orientation at all — search field, chip row,
+            // segmented picker — filling most of a phone before any content.
+            // Now: one LINE saying what actually moved, and the ordering
+            // control folded into the chip row below, so what precedes the
+            // first market is a line plus two rows rather than three rows
+            // and a card.
+            if let lede = lede(in: visible) { ledeLine(lede.card, lede.outcome) }
 
             DSSlabField(placeholder: String(localized: "Find a team, player, or question"),
                         text: $query, actionLabel: "", action: {})
@@ -632,40 +635,40 @@ struct PredictionBrowseSection: View {
         return (best.0, best.1)
     }
 
-    /// The QUESTION leads, with the outcome beneath it — "Newsom" alone says
-    /// nothing without the race it belongs to, and a binary market's own
-    /// title already is the question (its outcome name is empty).
-    private func ledeCard(_ card: BrowseCard, _ outcome: BrowseOutcome) -> some View {
+    /// A LINE, not a card (2026-07-29, second pass). The first build made
+    /// this the biggest object on screen — a full card with its own headline,
+    /// number and bar — which bought orientation at the price of a fourth
+    /// stacked block before the first market, and restated a market the list
+    /// below almost always shows again. A line orients just as well: it
+    /// names what moved and by how much, and taps through to the same
+    /// preview. The odds and the bar belong to the card, which is right
+    /// underneath.
+    ///
+    /// The QUESTION carries it — "Newsom" alone says nothing without the
+    /// race, and a binary market's title already IS the question — with the
+    /// outcome appended only where a race needs it to make sense.
+    private func ledeLine(_ card: BrowseCard, _ outcome: BrowseOutcome) -> some View {
         Button { preview(outcome) } label: {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Text("Biggest move").dsText(.label12).foregroundStyle(DS.textTertiary)
-                Text(card.title)
-                    .dsText(.heading22).fontWeight(.bold)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(2).multilineTextAlignment(.leading)
-                HStack(spacing: DS.Space.s2) {
-                    if card.outcomes.count > 1, !outcome.name.isEmpty {
-                        Text(outcome.name)
-                            .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                            .lineLimit(1)
-                    }
-                    Text("\(Int((outcome.probability * 100).rounded()))%")
-                        .dsText(.body17).fontWeight(.semibold).monospacedDigit()
-                        .foregroundStyle(DS.textPrimary)
-                    if let prev = outcome.previousProbability {
-                        TokenDeltaPill(change: outcome.probability - prev,
-                                       label: "", solid: true, points: true)
-                    }
+            HStack(spacing: DS.Space.s2) {
+                Text("Biggest move")
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                    .layoutPriority(1)
+                Text(card.outcomes.count > 1 && !outcome.name.isEmpty
+                     ? "\(card.title) · \(outcome.name)" : card.title)
+                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .lineLimit(1).truncationMode(.tail)
+                Spacer(minLength: DS.Space.s1)
+                if let prev = outcome.previousProbability {
+                    TokenDeltaPill(change: outcome.probability - prev,
+                                   label: "", compact: true, points: true)
+                        .layoutPriority(1)
                 }
-                PredictionOddsBar(probability: outcome.probability,
-                                  previous: outcome.previousProbability)
-                    .frame(height: 10)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .dsListCardRow()
+        .padding(.horizontal, DS.Space.s1)
+        .padding(.bottom, DS.Space.s1)
     }
 
     /// Says WHICH read came back empty, so a too-narrow filter doesn't read

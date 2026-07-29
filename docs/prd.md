@@ -9943,3 +9943,14 @@ One perf note worth keeping: `cards` groups and sorts the whole book, and
 this view renders inside a List row — the body computes it ONCE and
 threads it into both the lede and the list, rather than each reaching for
 the property independently.
+
+**§235 second pass — the lede is a LINE, not a card (2026-07-29).** Seen
+rendered, the biggest-move card was the largest object in the room: it
+bought orientation at the price of a FOURTH stacked block before the first
+market (lede card, field, control row, then cards), and it restated a
+market the list below almost always shows again a moment later. Now one
+line — the label, the question, the delta pill — tapping through to the
+same preview. The odds and the bar belong to the card directly underneath;
+saying them twice was the redundancy. What precedes the first market is
+now a line plus two rows, where §233 shipped three rows and the first
+§235 pass shipped three rows and a card.
