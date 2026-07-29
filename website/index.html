@@ -10,8 +10,8 @@
 <meta property="og:description" content="Add any app and its things land in one private feed on your iPhone. Free, on-device.">
 <meta property="og:type" content="website">
 <!-- og:image needs a hosted PNG (1200x630) — add when the domain is live -->
-<link rel="stylesheet" href="styles.css?v=202607282300">
-<script src="app.js?v=202607282300" defer></script>
+<link rel="stylesheet" href="styles.css?v=202607290010">
+<script src="app.js?v=202607290010" defer></script>
 </head>
 <body>
 
@@ -93,14 +93,20 @@
       <span>No account</span>
       <span>No server</span>
       <span>All on device</span>
-      <span>Works on iPad</span>
     </div>
     <!-- Paste your real TestFlight invite URL into every "cta" link -->
     <div class="cta-row">
       <a class="cta" href="https://testflight.apple.com/join/xBD4tYZh">Get it on TestFlight</a>
       <a class="cta ghost" href="#connect">See how it works</a>
     </div>
-    <p class="platform-note">Mac app available soon.</p>
+    <!-- Platform row: iPhone/iPad ship today, Mac is the roadmap beat. The
+         "Soon" pill pulses and sweeps so the third platform reads as coming,
+         not as a footnote — it's the breadth signal the hero has to carry. -->
+    <div class="platforms">
+      <span class="plat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2.6"/><path d="M11 18.6h2"/></svg>iPhone</span>
+      <span class="plat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2.5" width="16" height="19" rx="2.2"/><path d="M11 18.8h2"/></svg>iPad</span>
+      <span class="plat next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="12" rx="1.8"/><path d="M1.5 20h21"/></svg>Mac<em>Soon</em></span>
+    </div>
   </header>
 </div>
 
