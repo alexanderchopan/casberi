@@ -717,9 +717,25 @@ struct RootShell: View {
                 // Returning crossfades from placeholder to content (§14);
                 // leaving redacts instantly — the snapshot must already hide.
                 withAnimation(.easeOut(duration: 0.2)) { redactNow = false }
-                // Warm the model on foreground so the first Ask is fast; the
-                // call is idempotent and returns immediately.
-                if !skipPrewarm { OnDeviceModel.prewarm() }
+                // Warm the model so the first Ask is fast — but OFF the launch
+                // window (PERF 2026-07-29, user: "first open is many seconds
+                // and in slow motion, then fine"). `WarmModel.prewarm()` does
+                // two synchronous @MainActor calls — `LanguageModelSession()`
+                // and `session.prewarm()`, which loads the on-device LLM — and
+                // running them the instant the scene activates blocked the main
+                // thread as the opening frames painted, so the feed hung and
+                // the chip strip wouldn't swipe until the model finished
+                // loading ("then fine"). Deferred well past the first
+                // interactive frame on cold launch; the only cost is an Ask
+                // fired in the opening couple of seconds paying the same
+                // one-time load itself, which prewarm merely front-runs.
+                if !skipPrewarm {
+                    let coldLaunch = firstActivation
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(coldLaunch ? 2500 : 300))
+                        OnDeviceModel.prewarm()
+                    }
+                }
                 // The heavier foreground work — polling every connected bridge
                 // (`refreshAllConnected` includes a SYNCHRONOUS Photos fetch),
                 // the embedding backfill, and the insight/kept-ask/whisper
