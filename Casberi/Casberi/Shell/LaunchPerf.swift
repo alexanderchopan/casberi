@@ -12,31 +12,20 @@ import Foundation
 /// 'eventMessage CONTAINS "launchPerf"'` during a cold launch. Zero cost in
 /// release (whole file is `#if DEBUG`).
 enum LaunchPerf {
-    nonisolated(unsafe) static var bodyEvals: [String: Int] = [:]
-    nonisolated(unsafe) static var derivations = 0
-    nonisolated(unsafe) static var lastLog = Date()
+    nonisolated(unsafe) static var heavyBuilds: [String: Int] = [:]
 
-    /// Call at the top of a screen `body`. Logs a running per-source count and
-    /// the ms since launch, so a flood of rebuilds during the launch window is
-    /// visible as a burst of ticks in the first few seconds.
+    /// Call at the top of the HEAVY tree (`feedList`), so this counts actual
+    /// deep feed-tree assembly. The 2026-07-30 finding: `TabView(.page)` built
+    /// this for ALL ~10 source pages on every render pass (≈110 assemblies in
+    /// the first second of a cold launch); the `nearActive` gate cut it to the
+    /// active page plus its neighbour (≈24). Re-measure with `xcrun simctl
+    /// spawn booted log stream --predicate 'eventMessage CONTAINS "HEAVYBUILD"'`.
     @MainActor
-    static func bodyTick(_ source: String, active: Bool) {
-        bodyEvals[source, default: 0] += 1
-        let n = bodyEvals[source] ?? 0
-        // Log every eval for the first 40, then every 10th — enough to see the
-        // burst without drowning the stream on a long-lived page.
-        guard n <= 40 || n % 10 == 0 else { return }
+    static func buildTick(_ source: String) {
+        heavyBuilds[source, default: 0] += 1
+        let n = heavyBuilds[source] ?? 0
         let ms = Int(Date().timeIntervalSince(LaunchClock.start) * 1000)
-        NSLog("[Casberi] launchPerf body source=%@ active=%d eval#%d at=%dms", source, active ? 1 : 0, n, ms)
-    }
-
-    /// Call when an expensive corpus derivation runs (bundling, treemap), to
-    /// count how many fire during launch.
-    @MainActor
-    static func derivationTick(_ label: String, count: Int) {
-        derivations += 1
-        let ms = Int(Date().timeIntervalSince(LaunchClock.start) * 1000)
-        NSLog("[Casberi] launchPerf derive=%@ n=%d over=%d at=%dms", label, derivations, count, ms)
+        NSLog("[Casberi] launchPerf HEAVYBUILD source=%@ build#%d at=%dms", source, n, ms)
     }
 
     /// Times a synchronous block and logs it (for the container load / first

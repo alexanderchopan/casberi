@@ -348,9 +348,16 @@ struct MainSurface: View {
             // truth to reconcile. Uniformly the feed now (the board's own
             // non-swiping page retired 2026-07-20).
             TabView(selection: $filter.source) {
-                ForEach(feedLabels, id: \.self) { label in
+                // `nearActive` builds only the active page and its immediate
+                // neighbours up front (PERF 2026-07-30, see `FeedScreen`); the
+                // rest stay clear placeholders until reached. `activeIdx` is
+                // read once per render off the same ordered labels the TabView
+                // pages, so a one-swipe-away page is always already assembled.
+                let activeIdx = feedLabels.firstIndex(of: filter.source) ?? 0
+                ForEach(Array(feedLabels.enumerated()), id: \.element) { i, label in
                     FeedScreen(source: label,
-                               isActive: label == filter.source)
+                               isActive: label == filter.source,
+                               nearActive: abs(i - activeIdx) <= 1)
                         .tag(label)
                 }
             }

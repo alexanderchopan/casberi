@@ -33,6 +33,23 @@ struct FeedScreen: View {
     /// its own "New since" line away.
     let isActive: Bool
 
+    /// Whether this page is the active one OR an immediate neighbour of it
+    /// (PERF 2026-07-30). `TabView(.page)` EAGERLY builds every page in its
+    /// `ForEach` and rebuilds ALL of them on every render pass — measured on a
+    /// cold launch as ~10 full feed-tree builds per pass, 6+ passes in the
+    /// first second, which is what made the first open crawl and the chip strip
+    /// unswipeable while it settled (the `launchPerf` body-tick stream). An
+    /// off-screen page the person hasn't reached builds nothing heavy until it
+    /// becomes active or a neighbour (so a one-swipe-away page is ready and the
+    /// swipe stays instant); once built it LATCHES (`everBuilt`) so a revisit
+    /// never pays again. Passed by `MainSurface`, which knows the chip order.
+    let nearActive: Bool
+
+    /// Latches true the first time this page is active/near, so a page already
+    /// assembled once stays assembled — the built set only ever grows, spread
+    /// across the person's own swipes instead of all at once on launch.
+    @State private var everBuilt = false
+
     /// Source-scoped since 2026-07-21 (perf audit): the pager keeps every
     /// neighbor page MOUNTED (doc above), so an unfiltered `@Query` here used
     /// to mean N+1 live full-corpus queries (one per source chip, plus
@@ -45,9 +62,10 @@ struct FeedScreen: View {
     @Environment(BridgeStore.self) private var bridges
     @Environment(\.modelContext) private var modelContext
 
-    init(source: String, isActive: Bool) {
+    init(source: String, isActive: Bool, nearActive: Bool = true) {
         self.source = source
         self.isActive = isActive
+        self.nearActive = nearActive
         if source == "All" {
             _things = Query(sort: \Thing.capturedAt, order: .reverse)
         } else {
@@ -709,13 +727,32 @@ struct FeedScreen: View {
     // MARK: - Body
 
     var body: some View {
+        // Build the heavy feed tree only for the pages that need it (PERF
+        // 2026-07-30 — see `nearActive`). An unreached off-screen page renders
+        // a clear placeholder; the shell (`MainSurface`) paints the themed page
+        // field + crown pour BEHIND the pager, so a not-yet-built page shows
+        // that field, not a hole. `everBuilt` latches so a page assembled once
+        // never drops back to the placeholder on a later pass.
+        return Group {
+            if isActive || nearActive || everBuilt {
+                builtBody
+            } else {
+                Color.clear
+            }
+        }
+        .onChange(of: isActive || nearActive, initial: true) { _, want in
+            if want && !everBuilt { everBuilt = true }
+        }
+    }
+
+    /// The single surface owns the NavigationStack, the chip header, and the
+    /// shared doors now (MainSurface) — this is just the feed's body, hosted
+    /// inside that one stack. Its own inner push (a bridge control panel) stays
+    /// here; Apps/Settings moved up to the shell.
+    private var builtBody: some View {
         #if DEBUG
-        let _ = LaunchPerf.bodyTick(source, active: isActive)
+        let _ = LaunchPerf.buildTick(source)
         #endif
-        // The single surface owns the NavigationStack, the chip header, and the
-        // shared doors now (MainSurface) — this is just the feed's body, hosted
-        // inside that one stack. Its own inner push (a bridge control panel)
-        // stays here; Apps/Settings moved up to the shell.
         return feedList
             // Re-tapping the active chip pops this surface's own pushed
             // screens and sheets back to root (the old per-tab pop habit).
