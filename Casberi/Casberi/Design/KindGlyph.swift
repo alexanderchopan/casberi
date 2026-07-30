@@ -144,6 +144,10 @@ enum BridgeGlyph {
         case "peer":      return "arrow.left.arrow.right"
         case "privacy pools", "0xbow privacy pools": return "shield.lefthalf.filled"
         case "gnosis pay": return "creditcard"
+        // A multisig is a signature queue — the same mark `WalletWarning.Kind`
+        // already uses for a pending Safe signature, so the catalog tile and
+        // the Worth-a-look row can't pick different glyphs for one thing.
+        case "safe":      return "signature"
         case "kalshi":    return "percent"
         case "opensea":   return "sailboat.fill"
         case "geckoterminal": return "flame.fill"
