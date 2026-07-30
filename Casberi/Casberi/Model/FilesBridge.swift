@@ -71,10 +71,62 @@ enum FilesIngest {
         "xml", "html", "htm", "rtf", "swift", "py", "js", "ts", "css",
     ]
 
-    /// Walks the folder for regular files and lands new ones as file things —
+    /// One regular file from a folder walk, with its ref (`Thing.sourceRef`
+    /// form) and a FRESH `url` resolved in THIS walk — never reconstructed
+    /// from a path string later. Shared by `refresh` and `heal`: a real bug,
+    /// caught live 2026-07-29 ("still not showing images" after two prior
+    /// fixes), was `heal` rebuilding each file's URL via
+    /// `URL(fileURLWithPath: base + rel)` from a SEPARATE later resolution of
+    /// the same bookmark — any standardization/symlink difference between
+    /// the two resolutions silently points at the wrong path, which reads as
+    /// "never enriches" with no error anywhere. One walk, one set of URLs,
+    /// used immediately.
+    private struct WalkedFile {
+        let ref: String
+        let url: URL
+        let name: String
+        let modified: Date
+        let size: Int64
+    }
+
+    /// Walks the folder for every regular file outside dot-directories. Must
+    /// run inside an active `startAccessingSecurityScopedResource` window on
+    /// `folder` and off the main actor — the walk itself, and any resource
+    /// read it does, can silently block on an iCloud download.
+    /// nil means the walk itself couldn't start (folder moved/permission
+    /// lost) — distinct from an empty array, a folder that's genuinely just
+    /// empty right now. Callers rely on that distinction (`refresh` disconnects
+    /// on nil, but a legitimately empty folder is not a failure).
+    private static func walk(_ folder: URL) -> [WalkedFile]? {
+        let fm = FileManager.default
+        let base = folder.standardizedFileURL.path
+        let keys: [URLResourceKey] = [.contentModificationDateKey, .isRegularFileKey, .fileSizeKey]
+        guard let walker = fm.enumerator(at: folder, includingPropertiesForKeys: keys,
+                                         options: [.skipsHiddenFiles]) else { return nil }
+        // `allObjects` materializes the walk synchronously — iterating the
+        // NSEnumerator directly is unavailable from async contexts in Swift 6.
+        var result: [WalkedFile] = []
+        for case let url as URL in walker.allObjects {
+            let values = try? url.resourceValues(forKeys: Set(keys))
+            guard values?.isRegularFile == true else { continue }
+            let std = url.standardizedFileURL
+            let rel = String(std.path.dropFirst(base.count))
+            result.append(WalkedFile(
+                ref: "files:\(rel)", url: std, name: std.lastPathComponent,
+                modified: values?.contentModificationDate ?? .distantPast,
+                size: Int64(values?.fileSize ?? 0)))
+        }
+        return result
+    }
+
+    /// Walks the folder for regular files, lands new ones as file things —
     /// newest 100 by modification date per sync, so a giant folder arrives in
-    /// waves instead of flooding the feed. Returns nil when the folder can't
-    /// be reached (moved/permission lost).
+    /// waves instead of flooding the feed — and PRUNES things whose file is
+    /// no longer in the folder (deleted since the last sync; bug report,
+    /// 2026-07-29: a removed file kept showing forever, since this only ever
+    /// added). Pruning reads the SAME walk, so it can never disagree with
+    /// what just landed. Returns nil when the folder can't be reached
+    /// (moved/permission lost).
     @MainActor
     static func refresh(context: ModelContext) async -> Int? {
         let store = FilesStore.shared
@@ -84,7 +136,6 @@ enum FilesIngest {
 
         guard let folder = store.folderURL() else { return nil }
         let existing = IngestSupport.existingSourceRefs(context, source: "Files")
-        let base = folder.standardizedFileURL.path
 
         // The walk + per-file preview read happen off the main thread: the
         // folder can be iCloud Drive, and FileManager/String(contentsOf:)
@@ -92,50 +143,32 @@ enum FilesIngest {
         // synchronously on the calling thread. Left on @MainActor, a large
         // or not-yet-downloaded folder freezes the UI and can trip the
         // main-thread watchdog.
-        let landed: [(ref: String, name: String, modified: Date, preview: String)]? =
-            await Task.detached(priority: .userInitiated) { () -> [(ref: String, name: String, modified: Date, preview: String)]? in
+        let outcome: (new: [(file: WalkedFile, preview: String)], allRefs: Set<String>)? =
+            await Task.detached(priority: .userInitiated) {
+                () -> (new: [(file: WalkedFile, preview: String)], allRefs: Set<String>)? in
                 // False just means the URL wasn't security-scoped (an
                 // in-sandbox folder) — reading still works; only balance
                 // the stop when it began.
                 let scoped = folder.startAccessingSecurityScopedResource()
                 defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
 
-                let fm = FileManager.default
-                let keys: [URLResourceKey] = [.contentModificationDateKey, .isRegularFileKey, .fileSizeKey]
-                guard let walker = fm.enumerator(at: folder, includingPropertiesForKeys: keys,
-                                                 options: [.skipsHiddenFiles]) else { return nil }
+                guard let files = walk(folder) else { return nil }
+                let sorted = files.sorted { $0.modified > $1.modified }
 
-                // Collect (url, modified, size) for every regular file
-                // outside dot-directories. `allObjects` materializes the
-                // walk synchronously — iterating the NSEnumerator directly
-                // is unavailable from async contexts in Swift 6.
-                var files: [(url: URL, modified: Date, size: Int64)] = []
-                for case let url as URL in walker.allObjects {
-                    let values = try? url.resourceValues(forKeys: Set(keys))
-                    guard values?.isRegularFile == true else { continue }
-                    files.append((url, values?.contentModificationDate ?? .distantPast,
-                                  Int64(values?.fileSize ?? 0)))
+                var new: [(file: WalkedFile, preview: String)] = []
+                for file in sorted.prefix(100) where !existing.contains(file.ref) {
+                    new.append((file, Self.preview(of: file.url, size: file.size)))
                 }
-                files.sort { $0.modified > $1.modified }
-
-                var result: [(ref: String, name: String, modified: Date, preview: String)] = []
-                for file in files.prefix(100) {
-                    let rel = String(file.url.standardizedFileURL.path.dropFirst(base.count))
-                    let ref = "files:\(rel)"
-                    guard !existing.contains(ref) else { continue }
-                    result.append((ref, file.url.lastPathComponent, file.modified,
-                                    Self.preview(of: file.url, size: file.size)))
-                }
-                return result
+                return (new, Set(files.map(\.ref)))
             }.value
 
-        guard let landed else { return nil }
+        guard let outcome else { return nil }
         var added = 0
-        for file in landed {
+        for (file, preview) in outcome.new {
             let thing = Thing(
                 kind: .file,
                 title: file.name,
-                content: file.preview,
+                content: preview,
                 source: "Files",
                 capturedAt: file.modified,
                 sourceRef: file.ref
@@ -144,7 +177,30 @@ enum FilesIngest {
             SpotlightIndex.index([thing])
             added += 1
         }
-        if added > 0 { context.saveHonestly() }
+
+        // Prune — any landed Files thing whose ref the walk didn't see this
+        // time is gone from the folder. `existing` (fetched before the walk)
+        // is the full prior set; anything in it but not in `outcome.allRefs`
+        // was deleted since the last sync.
+        var removed = 0
+        var removedIDs: [UUID] = []
+        if !existing.isEmpty {
+            let goneRefs = existing.subtracting(outcome.allRefs)
+            if !goneRefs.isEmpty {
+                let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == "Files" })
+                for thing in (try? context.fetch(descriptor)) ?? [] {
+                    guard let ref = thing.sourceRef, goneRefs.contains(ref) else { continue }
+                    removedIDs.append(thing.id)
+                    context.delete(thing)
+                    removed += 1
+                }
+            }
+        }
+
+        if added > 0 || removed > 0 {
+            context.saveHonestly()
+            SpotlightIndex.remove(ids: removedIDs)
+        }
         return added
     }
 
@@ -203,7 +259,6 @@ enum FilesIngest {
         defer { healing = false }
 
         guard let folder = FilesStore.shared.folderURL() else { return (0, 0) }
-        let base = folder.standardizedFileURL.path
 
         let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == "Files" })
         // Kind/extension filters run in memory — #Predicate can't compare a
@@ -219,30 +274,24 @@ enum FilesIngest {
             }
         guard !things.isEmpty else { return (0, 0) }
 
-        // False just means the URL wasn't security-scoped (an in-sandbox
-        // folder) — reading still works; only balance the stop when it began.
-        let scoped = folder.startAccessingSecurityScopedResource()
-        defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+        // A FRESH walk, matched to `things` by ref — see `WalkedFile`'s doc
+        // for why this replaced reconstructing each path from a string.
+        let byRef: [String: URL] = await Task.detached(priority: .utility) { () -> [String: URL] in
+            let scoped = folder.startAccessingSecurityScopedResource()
+            defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+            var map: [String: URL] = [:]
+            for f in walk(folder) ?? [] { map[f.ref] = f.url }
+            return map
+        }.value
 
         var thumbed = 0, ocred = 0
         var reindex: [Thing] = []
         for thing in things {
-            guard let ref = thing.sourceRef else { continue }
-            let rel = String(ref.dropFirst("files:".count))
-            let fileURL = URL(fileURLWithPath: base + rel)
-            let originalName = (rel as NSString).lastPathComponent
-
-            // Checked ONCE, up front, and skips the WHOLE file (both
-            // thumbnail and OCR) rather than just declining to read pixels —
-            // real bug, caught live 2026-07-29: with the check only inside
-            // `thumbnail`/`ocrText`, an undownloaded iCloud file still fell
-            // through to `thing.ocrAt = .now` below (OCR wasn't skipped, its
-            // RESULT was just nil) — permanently recording "read, found
-            // nothing" for a file that was never actually read, so it could
-            // never enrich once it DID download. `continue` here leaves both
-            // `previewImageData` and `ocrAt` untouched, so this file is a
-            // fresh candidate again on the very next heal pass.
-            guard isReady(fileURL) else { continue }
+            // Not in the current walk — moved or deleted since this Thing
+            // landed; `refresh` prunes it on its own next pass. Nothing to
+            // read here.
+            guard let ref = thing.sourceRef, let fileURL = byRef[ref] else { continue }
+            let originalName = fileURL.lastPathComponent
 
             // Bound the per-pass work — the rest heal on later passes, same
             // as Photos.
@@ -254,28 +303,39 @@ enum FilesIngest {
             // OCR is heavier than a thumbnail — a tighter bound; `ocrAt`
             // marks the attempt so a text-less image is never re-read.
             if thing.ocrAt == nil, ocred < 12 {
-                if let text = await ocrText(url: fileURL) {
-                    thing.content = text
-                    thing.embedding = nil   // re-embed with the new words
-                    reindex.append(thing)   // Spotlight learns them too
-                    // Only ever overwrites a filename the camera/screenshot
-                    // path gave it — a name someone in Files actually typed
-                    // is never clobbered by machine-read text.
-                    if thing.title == originalName, isMachineGeneratedName(originalName),
-                       let read = ScreenshotTitle.from(text) {
-                        thing.title = read
+                let result = await ocrRead(url: fileURL)
+                // `attempted == false` means the pixels couldn't be loaded at
+                // all this pass (an iCloud file not yet downloaded, most
+                // likely) — NOT the same as "read fine, found no words".
+                // Leaving `ocrAt` nil here is load-bearing: a real bug, caught
+                // live 2026-07-29, set `ocrAt = .now` regardless of whether
+                // OCR actually ran, permanently recording "done" for a file
+                // that was never read and could then never be retried once
+                // its bytes WERE available.
+                if result.attempted {
+                    if let text = result.text {
+                        thing.content = text
+                        thing.embedding = nil   // re-embed with the new words
+                        reindex.append(thing)   // Spotlight learns them too
+                        // Only ever overwrites a filename the camera/screenshot
+                        // path gave it — a name someone in Files actually typed
+                        // is never clobbered by machine-read text.
+                        if thing.title == originalName, isMachineGeneratedName(originalName),
+                           let read = ScreenshotTitle.from(text) {
+                            thing.title = read
+                        }
+                    } else {
+                        // Read fine, genuinely no words — clear the byte-size
+                        // line `preview()` landed it with, so an OCR'd-and-
+                        // wordless image reads as genuinely empty, the same
+                        // signal `FeedScreen.isWordless` reads off a Photos
+                        // screenshot. Once there's a thumbnail the picture
+                        // carries the row; the size was never the point.
+                        thing.content = ""
                     }
-                } else {
-                    // No words found — clear the byte-size line `preview()`
-                    // landed it with, so an OCR'd-and-wordless image reads as
-                    // genuinely empty, the same signal `FeedScreen.isWordless`
-                    // reads off a Photos screenshot. Once there's a thumbnail
-                    // the picture carries the row; the size was never the
-                    // point.
-                    thing.content = ""
+                    thing.ocrAt = .now
+                    ocred += 1
                 }
-                thing.ocrAt = .now
-                ocred += 1
             }
         }
         if thumbed > 0 || ocred > 0 {
@@ -285,41 +345,18 @@ enum FilesIngest {
         return (thumbed, ocred)
     }
 
-    /// Whether a file's bytes are actually here to read — a genuine iCloud
-    /// Drive PLACEHOLDER (`.notDownloaded`) would otherwise trigger an
-    /// implicit, blocking download the moment ImageIO opens it (the same
-    /// risk `refresh`'s off-main walk exists to avoid). A plain local file
-    /// (not a ubiquitous item at all) always passes.
-    ///
-    /// REAL BUG, caught live 2026-07-29 ("still don't see screenshots" after
-    /// the previous fix): this originally required `.current` — but
-    /// `URLUbiquitousItemDownloadingStatus` has THREE states, and `.current`
-    /// is the strictest ("downloaded AND confirmed to be the latest cloud
-    /// version"), not merely "readable." `.downloaded` (bytes are here, no
-    /// fresher version has been CHECKED for) is completely safe to read —
-    /// pixels don't go stale — and is the status a folder full of recently
-    /// captured, never-since-modified screenshots realistically sits in
-    /// indefinitely. Requiring `.current` meant every image in a real
-    /// iCloud-Drive-backed folder failed this gate on EVERY heal pass,
-    /// forever — `refresh`'s own landing (byte size, filename) doesn't check
-    /// this at all, so 100 files landed clean while zero ever got a
-    /// thumbnail, exactly what was reported.
-    private static func isReady(_ url: URL) -> Bool {
-        guard let values = try? url.resourceValues(
-            forKeys: [.isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey])
-        else { return true }
-        guard values.isUbiquitousItem == true else { return true }
-        guard let status = values.ubiquitousItemDownloadingStatus else { return true }
-        return status != .notDownloaded
-    }
-
     /// One small JPEG for the corpus — 480pt longest side, the same target
     /// `ScreenshotIngest.thumbnail` uses, so every `previewImageData` reader
-    /// (`PhotoWell`, the sheet) already knows how to size it.
+    /// (`PhotoWell`, the sheet) already knows how to size it. No pre-flight
+    /// readiness check — `CGImageSourceCreateWithURL` fails safely (nil) if
+    /// it can't get bytes, and this already runs detached, so an iCloud
+    /// download it has to wait through costs this background task, never the
+    /// UI thread. Guessing at readiness from iCloud metadata cost two
+    /// separate live bugs (2026-07-29); just attempting the read is simpler
+    /// and can't disagree with reality the way a heuristic can.
     private static func thumbnail(url: URL) async -> Data? {
         await Task.detached(priority: .utility) { () -> Data? in
-            guard isReady(url), let src = CGImageSourceCreateWithURL(url as CFURL, nil)
-            else { return nil }
+            guard let src = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
             let opts: [CFString: Any] = [
                 kCGImageSourceCreateThumbnailFromImageAlways: true,
                 kCGImageSourceThumbnailMaxPixelSize: 480,
@@ -333,10 +370,13 @@ enum FilesIngest {
 
     /// The pixels OCR reads — bigger than the row thumbnail (small text needs
     /// the resolution), still bounded, mirroring `ScreenshotOCR`'s own load.
-    private static func ocrText(url: URL) async -> String? {
-        let cg: CGImage? = await Task.detached(priority: .utility) {
-            guard isReady(url), let src = CGImageSourceCreateWithURL(url as CFURL, nil)
-            else { return nil }
+    /// `attempted == false` means the image couldn't be loaded at all (see
+    /// `thumbnail`'s doc on why there's no readiness pre-check) — the caller
+    /// must not treat that as "read, no text", or it can never retry once
+    /// the bytes really are available.
+    private static func ocrRead(url: URL) async -> (attempted: Bool, text: String?) {
+        let cg: CGImage? = await Task.detached(priority: .utility) { () -> CGImage? in
+            guard let src = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
             let opts: [CFString: Any] = [
                 kCGImageSourceCreateThumbnailFromImageAlways: true,
                 kCGImageSourceThumbnailMaxPixelSize: 1600,
@@ -344,7 +384,7 @@ enum FilesIngest {
             ]
             return CGImageSourceCreateThumbnailAtIndex(src, 0, opts as CFDictionary)
         }.value
-        guard let cg else { return nil }
-        return await ScreenshotOCR.text(for: cg)
+        guard let cg else { return (false, nil) }
+        return (true, await ScreenshotOCR.text(for: cg))
     }
 }
