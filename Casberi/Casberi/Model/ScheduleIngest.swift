@@ -8,27 +8,27 @@ import SwiftData
 /// ends in proof — things land. Dedupe rides sourceRef.
 enum ScheduleIngest {
 
-    /// How far ahead calendar events are pulled. Re-ruling 2026-07-14: the feed
-    /// used to stop at the end of today ("the calendar owns the future"); it
-    /// now reaches a week ahead so imminent events can surface as things. Past
-    /// events still start a week back, so the window is a rolling ±7 days.
+    /// How far ahead calendar events are pulled. The window reaches a week
+    /// ahead so imminent events can surface as things (re-ruling 2026-07-14).
     static let forwardWindow: TimeInterval = 7 * 86_400
 
-    /// Events from a week back through a week ahead — the past feeds the
-    /// record, the next seven days feed imminent-event things (re-ruling
-    /// 2026-07-14). BridgeRefresh re-runs this each foreground, so the
-    /// forward window rolls.
+    /// Events from the start of today through a week ahead — the calendar shows
+    /// what's AHEAD, not a record of what passed (re-ruling 2026-07-29,
+    /// superseding the 2026-07-14 rolling ±7-day window that kept the past week
+    /// "for the record"). Only events that haven't finished land; an event that
+    /// has slipped into the past is pruned. BridgeRefresh re-runs this each
+    /// foreground, so the window rolls forward.
     ///
     /// Recurring events (2026-07-14): EventKit hands every occurrence of a
     /// recurring event the SAME `eventIdentifier`, so a daily meeting arrives as
     /// N EKEvents sharing one id. We represent each series by ONE thing, keyed
     /// on that id, whose date is the series' NEXT upcoming occurrence (or, when
-    /// the whole series is behind, its most recent past one, so it still shows
-    /// in the record). Each foreground refreshes that thing forward as
-    /// occurrences pass. A one-off event is just a series of one, handled the
-    /// same way. Before this, dedupe on the shared id kept only the first
-    /// occurrence seen — usually already past — so recurring meetings never
-    /// reached "Coming up".
+    /// the whole series is behind but one occurrence is still under way, that
+    /// ongoing one). A series entirely in the past drops off. Each foreground
+    /// refreshes that thing forward as occurrences pass. A one-off event is just
+    /// a series of one, handled the same way. Before this, dedupe on the shared
+    /// id kept only the first occurrence seen — usually already past — so
+    /// recurring meetings never reached "Coming up".
     /// `@MainActor` on every context-touching path here is load bearing, not
     /// decoration (2026-07-21). These are `async`, and an EventKit await —
     /// `requestFullAccess…`, or the `fetchReminders` continuation — resumes a
@@ -59,7 +59,11 @@ enum ScheduleIngest {
 
     @MainActor
     private static func ingestEvents(store: EKEventStore, context: ModelContext) async -> Int? {
-        let start = Date.now.addingTimeInterval(-7 * 86_400)
+        // Start at the beginning of today so an all-day event happening today
+        // (its start is midnight) is caught, then the upcoming filter below
+        // drops timed events that already passed. Nothing before today is
+        // fetched — the calendar shows what's ahead (re-ruling 2026-07-29).
+        let start = Calendar.current.startOfDay(for: .now)
         let end = Date.now.addingTimeInterval(forwardWindow)
         let predicate = store.predicateForEvents(withStart: start, end: end, calendars: nil)
         let events = store.events(matching: predicate)
@@ -84,10 +88,21 @@ enum ScheduleIngest {
             }
         }
 
+        // Keep only what hasn't finished: the calendar shows what's ahead, not
+        // a record of what passed (re-ruling 2026-07-29). An event counts while
+        // its end is still in the future — an all-day event through the end of
+        // its day, an ongoing multi-day event until it wraps; a timed event that
+        // already passed today, and a series entirely behind, drop off.
+        let upcoming = representative.filter { _, event in
+            (event.endDate ?? event.startDate ?? .distantPast) >= now
+        }
+
         let existing = IngestSupport.thingsByRef(context, source: "Calendar")
+        var seen = Set<String>()
         var added = 0
-        for (id, event) in representative {
+        for (id, event) in upcoming {
             let ref = "ekevent:\(id)"
+            seen.insert(ref)
             let when = event.startDate ?? now
             if let thing = existing[ref] {
                 // Refresh the stored row forward as the series' representative
@@ -110,7 +125,17 @@ enum ScheduleIngest {
             context.insert(thing)
             added += 1
         }
+        // Prune what's no longer ahead: a landed event that has slipped into the
+        // past (or aged out of the forward window) is removed so the feed never
+        // shows a stale past date. `healCalendar` still handles events deleted
+        // outright from EventKit; this handles the ones that merely passed.
+        var removedIDs: [UUID] = []
+        for (ref, thing) in existing where !seen.contains(ref) {
+            removedIDs.append(thing.id)
+            context.delete(thing)
+        }
         context.saveHonestly()
+        if !removedIDs.isEmpty { SpotlightIndex.remove(ids: removedIDs) }
         return added
     }
 

@@ -2898,10 +2898,15 @@ soonest first, an overdue reminder leading:
 
 - **Upcoming events** (Calendar/Cal.com/Calendly) — their start rides
   `capturedAt`. Cal.com/Calendly already carried future starts; the EventKit
-  calendar ingest, which used to stop at the end of today, now reaches a week
-  ahead (`ScheduleIngest.forwardWindow`, re-run each foreground so the window
-  rolls). A timed event that already passed today drops off; an all-day event
-  today stays (its midnight start is inferred as all-day).
+  calendar ingest reaches from the start of today through a week ahead
+  (`ScheduleIngest.forwardWindow`, re-run each foreground so the window rolls).
+  **Future-only (re-ruling 2026-07-29, user, superseding the 2026-07-14 rolling
+  ±7-day window): the calendar shows what's AHEAD, not a record of what passed.**
+  Only events that haven't finished land — a timed event that already passed
+  today drops off, an all-day event today stays through the end of its day, an
+  ongoing multi-day event stays until it wraps, and a landed event that slips
+  into the past is pruned each refresh. The 2026-07-14 rationale (keep the past
+  week "for the record") is explicitly reversed.
 - **Due reminders** — a reminder's `capturedAt` is its CREATION time, so its
   deadline rides a new structured field `Thing.dueAt` (CloudKit-safe optional,
   set from `dueDateComponents` at ingest). A reminder past due leads as
