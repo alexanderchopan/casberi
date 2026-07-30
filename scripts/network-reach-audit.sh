@@ -32,6 +32,7 @@ KNOWN_NON_REACH=(
   app.0xbow.io app.cal.com app.todoist.com kalshi.com opensea.io
   dexscreener.com twitch.tv reddit.com stocktwits.com farcaster.xyz
   privacy.com polymarket.com app.safe.global app.uniswap.org
+  aerodrome.finance app.hyperliquid.xyz
   # Setup doors — `setupURL`/`openURL` only, never fetched. Each is the page
   # that mints the key you then paste, opened in your browser.
   app.privacy.com app.raindrop.io calendly.com linear.app www.notion.so
