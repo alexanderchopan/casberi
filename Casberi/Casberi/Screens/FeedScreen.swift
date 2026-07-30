@@ -709,11 +709,14 @@ struct FeedScreen: View {
     // MARK: - Body
 
     var body: some View {
+        #if DEBUG
+        let _ = LaunchPerf.bodyTick(source, active: isActive)
+        #endif
         // The single surface owns the NavigationStack, the chip header, and the
         // shared doors now (MainSurface) — this is just the feed's body, hosted
         // inside that one stack. Its own inner push (a bridge control panel)
         // stays here; Apps/Settings moved up to the shell.
-        feedList
+        return feedList
             // Re-tapping the active chip pops this surface's own pushed
             // screens and sheets back to root (the old per-tab pop habit).
             .onChange(of: chrome.popHome) {

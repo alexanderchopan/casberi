@@ -62,7 +62,11 @@ struct CasberiApp: App {
         // rather than crash-looping if the on-disk store can't open — S0:
         // the app must always launch. `SharedStore.degradeReason` is non-nil
         // when that happened; RootShell flashes it once at first appearance.
+        #if DEBUG
+        container = LaunchPerf.time("containerWithFallback") { SharedStore.containerWithFallback() }
+        #else
         container = SharedStore.containerWithFallback()
+        #endif
         // Clear the CloudKit "attempt in flight" marker on the first proof
         // this launch survived setup — either CoreData's mirror event or a
         // clean background handoff. See `CloudSyncGuard`.
