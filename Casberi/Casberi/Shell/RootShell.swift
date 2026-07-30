@@ -748,7 +748,13 @@ struct RootShell: View {
                 let runForegroundWork: @MainActor () -> Void = {
                     // Connected bridges are cheap to poll — every foreground
                     // refreshes them all (one place, reusable from screens).
+                    #if DEBUG
+                    LaunchPerf.time("refreshAllConnected") {
+                        BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges)
+                    }
+                    #else
                     BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges)
+                    #endif
                     // Build the on-device semantic index for anything new or
                     // not yet embedded — a bounded background sweep, so Ask can
                     // retrieve by meaning, not just shared words.
@@ -763,12 +769,21 @@ struct RootShell: View {
                         var d = FetchDescriptor<Thing>(
                             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
                         d.fetchLimit = 600
+                        #if DEBUG
+                        let surfaced = LaunchPerf.time("insightFetch600") {
+                            Corpus.surfaced((try? modelContext.fetch(d)) ?? [])
+                        }
+                        LaunchPerf.time("HomeInsight.refresh") { HomeInsightStore.shared.refresh(from: surfaced) }
+                        await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
+                        LaunchPerf.time("refreshWhisper") { refreshWhisper(things: surfaced) }
+                        #else
                         let surfaced = Corpus.surfaced((try? modelContext.fetch(d)) ?? [])
                         HomeInsightStore.shared.refresh(from: surfaced)
                         await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
                         // The whisper's compose rides the same corpus walk this
                         // Task already paid for — never its own fetch.
                         refreshWhisper(things: surfaced)
+                        #endif
                     }
                 }
                 if firstActivation {

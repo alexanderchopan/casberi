@@ -67,7 +67,33 @@ struct FeedScreen: View {
         self.isActive = isActive
         self.nearActive = nearActive
         if source == "All" {
-            _things = Query(sort: \Thing.capturedAt, order: .reverse)
+            // The All feed's @Query is unfiltered, so it re-fetches on EVERY
+            // context save from any bridge — and a cold-launch foreground fires
+            // a burst of them as ~every connected network bridge's sync returns
+            // over several seconds (PERF 2026-07-30, user: "frozen ~5s, snappy
+            // in airplane mode" — the burst is network-driven). Without
+            // `propertiesToFetch` each of those re-fetches re-materialized the
+            // WHOLE corpus WITH its heavy inline text (`content`/`enrichedText`/
+            // `postText`) on the main thread — the exact cost MainSurface's own
+            // query fixed the same way. The derivations that run per save
+            // (bundling, day-grouping, the themes treemap) read only light
+            // columns, so the heavy text is pure overhead here; the few visible
+            // rows that DO show `content`/`postText` fault it on appearance
+            // (a cheap local read, once, not per re-fetch). The `.externalStorage`
+            // columns (audio/image/embedding) are already lazy and omitted.
+            var d = FetchDescriptor<Thing>(sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+            d.propertiesToFetch = [
+                \.id, \.kind, \.title, \.source, \.createdAt, \.capturedAt, \.mark,
+                \.tags, \.provenance, \.sourceRef, \.previewImageURL, \.walletAddress,
+                \.counterpartyAddress, \.transferDirection, \.transferAmount, \.transferVenue,
+                \.transferCounterparty, \.securityFlag, \.spoofedSymbol, \.authorHandle,
+                \.authorAvatarURL, \.summary, \.dueAt, \.ocrAt, \.ocrTopics, \.topicsAt,
+                \.watchPriceUsd, \.starCount, \.repoLanguage, \.priceValue, \.priceCurrency,
+                \.socialContext, \.channelName, \.likeCount, \.repostCount, \.replyCount,
+                \.quote, \.parent, \.imageURLs, \.postAuthor, \.externalLink, \.wikilinks,
+                \.marketResolvedYes,
+            ]
+            _things = Query(d)
         } else {
             _things = Query(filter: #Predicate<Thing> { $0.source == source },
                             sort: \Thing.capturedAt, order: .reverse)
