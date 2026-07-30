@@ -20,11 +20,7 @@ struct ProjectDetailScreen: View {
     /// original shape — is the correct, safe form; don't reintroduce the
     /// predicate without verifying against a real on-device fetch first.
     @Query(sort: \Thing.capturedAt, order: .reverse) private var things: [Thing]
-    @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
     @State private var stream = GenStream()
-    @State private var renaming = false
-    @State private var newName = ""
 
     private var members: [Thing] {
         things.filter { $0.tags.contains(projectName) }
@@ -84,42 +80,6 @@ struct ProjectDetailScreen: View {
         .onAppear { stream.paint(compose()) }
         // The corpus changed under it — repaint whole.
         .onChange(of: things.count) { stream.paint(compose()) }
-        // The person renames; the person never files. (The project PIN died
-        // 2026-07-07 — every project already sits on Home's map, so a pin
-        // that only re-sorted it was a second pin system. Thing pins remain.)
-        .toolbar {
-            Button("Rename tag") {
-                newName = projectName
-                renaming = true
-            }
-            .tint(DS.tint)
-        }
-        .alert("Rename \(projectName)", isPresented: $renaming) {
-            TextField("New name", text: $newName)
-            Button("Rename") { rename() }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("The name changes on every thing that carries it.")
-        }
-    }
-
-    /// Rename = rewrite the tag across the corpus. The cluster IS the tag, so
-    /// the project follows its things (S21). The screen closes because its
-    /// route is the old name.
-    private func rename() {
-        let name = newName.trimmingCharacters(in: .whitespaces)
-        guard !name.isEmpty, name != projectName else { return }
-        for thing in members {
-            // Map, then dedupe: renaming onto a tag the thing already carries
-            // must merge, not double.
-            var seen = Set<String>()
-            thing.tags = thing.tags
-                .map { $0 == projectName ? name : $0 }
-                .filter { seen.insert($0.lowercased()).inserted }
-        }
-        modelContext.saveHonestly()
-        DSHaptic.success()
-        dismiss()
     }
 
     /// Authors the project composition locally (server /compose swaps in at M2's
