@@ -76,6 +76,17 @@ enum Corpus {
     static func surfaced(_ things: [Thing]) -> [Thing] {
         things.filter { !searchOnlySources.contains($0.source) }
     }
+
+    /// Is there ANY surfaced thing — without building the surfaced array.
+    /// `surfaced(...).isEmpty` allocates a full filtered copy of the whole
+    /// corpus just to ask a yes/no; the feed body did that twice per eval for
+    /// its empty-state branch, on every one of the hundreds of context merges
+    /// a cold CloudKit import fires (PERF 2026-07-29). `contains` short-
+    /// circuits on the first surfaced thing — which, since search-only sources
+    /// are rare, is almost always the very first element.
+    static func hasSurfaced(_ things: [Thing]) -> Bool {
+        things.contains { !searchOnlySources.contains($0.source) }
+    }
 }
 
 /// A mark on a thing. Things enter unmarked (`none`); inference proposes through

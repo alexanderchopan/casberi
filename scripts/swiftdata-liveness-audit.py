@@ -387,9 +387,19 @@ def audit_file(path: pathlib.Path, findings: list[str]) -> None:
                 continue                              # populating the snapshot
             if re.search(r"\.live\b", l) or "isLive" in l:
                 continue                              # guarded
+            # "Handed onward WHOLE" means the array itself is passed as a
+            # value — `return held`, `f(held)`, `label: held`. A member access
+            # off it (`held.count`, `held?.count`, `held.isEmpty`, `held[0]`)
+            # is NOT the array handed on: `.count`/`.isEmpty` read array
+            # metadata, never a `Thing`, and an element read like `held.first`
+            # is check 2's job, not this one. The `(?![\w.?\[])` lookahead
+            # keeps this from firing on `debouncedAllSnapshot?.count` — a false
+            # positive caught 2026-07-29 the first time a held array was read
+            # for its length rather than its contents.
+            tail = r"(?![\w.?\[])"
             handed_on = (
-                re.search(rf"\breturn\s+{esc}\b", l)          # return held
-                or re.search(rf"[(,:]\s*{esc}\s*[,)]", l)     # f(held) / label: held
+                re.search(rf"\breturn\s+{esc}{tail}", l)          # return held
+                or re.search(rf"[(,:]\s*{esc}{tail}\s*[,)]", l)   # f(held) / label: held
             )
             if not handed_on:
                 continue
@@ -470,6 +480,13 @@ def self_test() -> int:
             "@State private var snapshot: [Thing]?\n"
             "private var visible: [Thing] { return snapshot ?? [] }\n",
             "handed onward without .live",
+        ),
+        # Reading a held array for its LENGTH is not handing it onward — `.count`
+        # touches no `Thing` (false positive fixed 2026-07-29).
+        "clean-held-count-read": (
+            "@State private var snapshot: [Thing]?\n"
+            "private var revision: Int { return snapshot?.count ?? 0 }\n",
+            None,
         ),
         # Build 188's shape: the LEAF. Keying and every container guard were in
         # place; the row already in the tree re-ran its own body and trapped.

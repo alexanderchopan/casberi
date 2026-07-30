@@ -264,19 +264,41 @@ struct FeedScreen: View {
     /// happened. `visible` filters `.live` itself now — see below.
     @State private var debouncedAllSnapshot: [Thing]?
     private var visible: [Thing] {
-        let live = liveVisible()
-        guard source == "All", filter.tag == "All" else { return live }
-        // `.live` HERE, at the boundary — not left to "every downstream
-        // reader", which is what the note above used to claim and what builds
-        // 176 and 177 both disproved (2026-07-28). This snapshot holds raw
-        // model refs and is DELIBERATELY behind the live corpus, so it is not
-        // a narrow race: for the whole debounce window after any delete it
-        // hands out refs that are already tombstoned. 176 trapped on the
-        // ForEach path, 177 on `HomeComposition.projectClusters` reading
-        // `thing.tags` for the themes treemap — two readers, one stale array.
-        // Filtering once here is what makes the claim true for every reader,
-        // including the next one nobody remembers to guard.
-        return (debouncedAllSnapshot ?? live).live
+        // Non-All rooms read their own source-filtered @Query directly — that
+        // array is SwiftData-coordinated (its elements are live), so no
+        // snapshot and no `.live` pass.
+        guard source == "All", filter.tag == "All" else { return liveVisible() }
+        // All room. `.live` HERE, at the boundary — not left to "every
+        // downstream reader", which is what the note above used to claim and
+        // what builds 176 and 177 both disproved (2026-07-28). The snapshot
+        // holds raw model refs and is DELIBERATELY behind the live corpus, so
+        // for the whole debounce window after any delete it hands out refs
+        // that are already tombstoned; 176 trapped on the ForEach path, 177 on
+        // `HomeComposition.projectClusters` reading `thing.tags`. Filtering
+        // once here makes the claim true for every reader.
+        //
+        // PERF (2026-07-29): compute `liveVisible()` ONLY when the snapshot
+        // isn't populated yet (the first cold paint). The old form bound
+        // `let live = liveVisible()` unconditionally and threw it away on
+        // every steady-state body eval — a full `Corpus.surfaced` + filter
+        // pass over the whole corpus, wasted, and this body re-evaluates on
+        // every one of the hundreds of context merges a cold CloudKit import
+        // fires. Snapshot present → ONE `.live` pass; absent → one live compute.
+        if let snap = debouncedAllSnapshot { return snap.live }
+        return liveVisible().live
+    }
+
+    /// The value the feed List animates its insertions against. For the All
+    /// room this is the DEBOUNCED snapshot's count, not the raw `@Query` count
+    /// (PERF 2026-07-29): a cold CloudKit import merges hundreds of records in
+    /// a burst on first launch, each bumping `things.count`, and keying the
+    /// list's `.animation` on the raw count re-ran a full List insertion
+    /// animation on every merge while the main thread was already saturated —
+    /// the "slow-motion" first load. The debounced snapshot changes at most
+    /// once per 250ms, so the list settles into place instead of thrashing.
+    private var listRevision: Int {
+        guard source == "All", filter.tag == "All" else { return things.count }
+        return debouncedAllSnapshot?.count ?? things.count
     }
 
     /// The Wallet feed's per-wallet scope (prd §128) — everything passes in
@@ -924,12 +946,16 @@ struct FeedScreen: View {
             // A live-room source paints its book above, so the corpus being
             // empty is NOT an empty room — "Let's fill this feed" over a
             // full market book would be nonsense (prd §234).
-            if feedThings.isEmpty && !LiveRoomSources.has(source) {
+            // `hasSurfaced` short-circuits — no full `Corpus.surfaced` alloc
+            // just to test emptiness (PERF 2026-07-29), and it was allocated
+            // twice here per body eval.
+            let roomHasContent = Corpus.hasSurfaced(things)
+            if !roomHasContent && !LiveRoomSources.has(source) {
                 Group { emptyState }
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets())
-            } else if !feedThings.isEmpty {
+            } else if roomHasContent {
                 // Derived ONCE per render and threaded into everything below
                 // — the day groups, ledes, and per-row hint/next-event ids
                 // all share this one filter pass instead of each re-deriving
@@ -987,7 +1013,7 @@ struct FeedScreen: View {
             guard isActive else { return }
             Task { await performPull() }
         }
-        .animation(DS.Motion.standard, value: things.count)   // new things rise in
+        .animation(DS.Motion.standard, value: listRevision)   // new things rise in (debounced for All)
         .scrollContentBackground(.hidden)
         .dsAdaptiveContentWidth()
         // Seed/refresh the contribution year from a RELIABLE always-present spot
