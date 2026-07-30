@@ -178,6 +178,11 @@ enum FilesIngest {
             || lower.hasPrefix("screenshot") || lower.hasPrefix("screen shot")
             || lower.hasPrefix("pxl_") || lower.hasPrefix("dsc")
             || lower.hasPrefix("photo_") || lower.hasPrefix("photo-")
+            // Third-party capture tools whose default names are just as
+            // machine-generated as the OS's own — CleanShot X is the popular
+            // one (2026-07-29, seen live: "CleanShot 2026-07-29 at
+            // 20.48.52@2x.png").
+            || lower.hasPrefix("cleanshot")
     }
 
     /// Single-flight, same reason as `running` above and as
@@ -227,10 +232,20 @@ enum FilesIngest {
             let fileURL = URL(fileURLWithPath: base + rel)
             let originalName = (rel as NSString).lastPathComponent
 
+            // Checked ONCE, up front, and skips the WHOLE file (both
+            // thumbnail and OCR) rather than just declining to read pixels —
+            // real bug, caught live 2026-07-29: with the check only inside
+            // `thumbnail`/`ocrText`, an undownloaded iCloud file still fell
+            // through to `thing.ocrAt = .now` below (OCR wasn't skipped, its
+            // RESULT was just nil) — permanently recording "read, found
+            // nothing" for a file that was never actually read, so it could
+            // never enrich once it DID download. `continue` here leaves both
+            // `previewImageData` and `ocrAt` untouched, so this file is a
+            // fresh candidate again on the very next heal pass.
+            guard isReady(fileURL) else { continue }
+
             // Bound the per-pass work — the rest heal on later passes, same
-            // as Photos. Each of these skips (returns nil) rather than
-            // blocking when the file lives on iCloud Drive and hasn't
-            // downloaded yet — `isReady` checks before ever touching pixels.
+            // as Photos.
             if thing.previewImageData == nil, thumbed < 40,
                let data = await thumbnail(url: fileURL) {
                 thing.previewImageData = data
@@ -270,17 +285,32 @@ enum FilesIngest {
         return (thumbed, ocred)
     }
 
-    /// Whether a file's bytes are actually here to read — an iCloud Drive
-    /// placeholder that hasn't downloaded yet would otherwise trigger an
+    /// Whether a file's bytes are actually here to read — a genuine iCloud
+    /// Drive PLACEHOLDER (`.notDownloaded`) would otherwise trigger an
     /// implicit, blocking download the moment ImageIO opens it (the same
     /// risk `refresh`'s off-main walk exists to avoid). A plain local file
     /// (not a ubiquitous item at all) always passes.
+    ///
+    /// REAL BUG, caught live 2026-07-29 ("still don't see screenshots" after
+    /// the previous fix): this originally required `.current` — but
+    /// `URLUbiquitousItemDownloadingStatus` has THREE states, and `.current`
+    /// is the strictest ("downloaded AND confirmed to be the latest cloud
+    /// version"), not merely "readable." `.downloaded` (bytes are here, no
+    /// fresher version has been CHECKED for) is completely safe to read —
+    /// pixels don't go stale — and is the status a folder full of recently
+    /// captured, never-since-modified screenshots realistically sits in
+    /// indefinitely. Requiring `.current` meant every image in a real
+    /// iCloud-Drive-backed folder failed this gate on EVERY heal pass,
+    /// forever — `refresh`'s own landing (byte size, filename) doesn't check
+    /// this at all, so 100 files landed clean while zero ever got a
+    /// thumbnail, exactly what was reported.
     private static func isReady(_ url: URL) -> Bool {
         guard let values = try? url.resourceValues(
             forKeys: [.isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey])
         else { return true }
         guard values.isUbiquitousItem == true else { return true }
-        return values.ubiquitousItemDownloadingStatus == .current
+        guard let status = values.ubiquitousItemDownloadingStatus else { return true }
+        return status != .notDownloaded
     }
 
     /// One small JPEG for the corpus — 480pt longest side, the same target
