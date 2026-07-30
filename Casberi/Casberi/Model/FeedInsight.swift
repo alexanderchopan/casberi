@@ -258,6 +258,48 @@ enum FeedInsight {
         return Mosaic(title: title, subtitle: subtitle, tiles: tiles, fallback: source, art: art)
     }
 
+    // MARK: Topic map (OCR treemap)
+
+    struct TopicMap {
+        struct Cell: Identifiable {
+            let id = UUID()
+            let label: String
+            let count: Int
+        }
+        let title: String
+        let subtitle: String
+        /// Largest first, capped at 6.
+        let cells: [Cell]
+    }
+
+    /// The Photos feed's hero: a treemap of what the screenshots are ABOUT,
+    /// built from the terms OCR already lifted onto each shot's `ocrTopics`
+    /// (2026-07-30). It leads the Photos feed AHEAD of the calendar heatmap —
+    /// `FeedHeatmap` still registers "Your capture year" for Photos, so when
+    /// there isn't enough OCR text to say anything (a wordless library, or too
+    /// few shots), this returns nil and the feed falls back to that heatmap
+    /// gracefully rather than leading with nothing.
+    ///
+    /// A pure count over stored fields — no NLTagger here (that ran once at
+    /// heal time); this is the same cheap arithmetic shape as `leaderboard`.
+    static func topicMap(source: String, things: [Thing]) -> TopicMap? {
+        guard source == "Photos" else { return nil }
+        var perShot: [[String]] = []
+        var totalScreens = 0
+        for thing in things where thing.kind == .screenshot {
+            totalScreens += 1
+            if !thing.ocrTopics.isEmpty { perShot.append(thing.ocrTopics) }
+        }
+        // Needs a real spread of screenshots that read as SOMETHING — a couple
+        // of shots across one recurring term isn't a portrait.
+        guard perShot.count >= 6 else { return nil }
+        let ranked = ScreenshotTopics.cells(perShot: perShot)
+        guard ranked.count >= 2 else { return nil }
+        let subtitle = "\(totalScreens.formatted()) \(totalScreens == 1 ? "screenshot" : "screenshots")"
+        return TopicMap(title: "What you screenshot", subtitle: subtitle,
+                        cells: ranked.map { TopicMap.Cell(label: $0.label, count: $0.count) })
+    }
+
     // MARK: - Grouping keys (each reads a field the bridge really stores)
 
     /// A feed-follow item names its channel/subreddit/publication in

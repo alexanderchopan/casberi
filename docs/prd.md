@@ -10209,3 +10209,49 @@ NOT BUILT, NOT SEEN — authored in a Linux session with no Xcode. The change
 is a pure deletion (no new surface, no new state to misrender), but build
 and open a project from Home before trusting the toolbar is actually
 empty.
+
+## 230. The screenshots feed leads with an OCR treemap, not a capture-year heatmap (user: "for screenshots today on the source feed we have a visualization for your photo shooting history. seems kinda lame. could we do a treemap based on ocr?", then chose the deterministic terms/entities method, 2026-07-30)
+
+The Photos feed led with `FeedHeatmap`'s "Your capture year" — the same
+GitHub-contributions grid every habit source (journaling, training, notes)
+shares. For screenshots that's the least interesting axis: a screenshot's
+whole value is the TEXT in its pixels, and the heatmap answered only *when*
+you shot, never *what about*. OCR already reads that text (§67 goal ⑤,
+`ScreenshotOCR`), so the honest portrait is the terms that recur across the
+library.
+
+The new hero (`TopicMapHero`) is a treemap of `Thing.ocrTopics` — the
+salient terms `ScreenshotTopics.terms` lifts off each shot's OCR:
+DETERMINISTICALLY, off the model, so every cell label is a phrase that
+LITERALLY appears in a screenshot (a domain the shot shows, an
+organization/place/person NLTagger names). This is the method the user
+chose over a model-labeled-themes version — cleanest against `FeedInsight`'s
+"no invented groupings" rule, ships without a per-shot LLM pass, and is
+harness-testable. Cells are sized by how many screenshots each term covers
+(§145 wash: one hue, opacity by share, biggest brightest — the wallet/themes
+map's own language), and it is DISPLAY-ONLY like `LeaderboardHero` /
+`DistributionHero`: no cell is a door (the honesty rule bars a half-wired
+scope filter — a topic isn't a stored tag). A tap-to-scope filter is the
+obvious next step but was deliberately not faked in v1.
+
+Two-stage so the render path never touches NLTagger: extraction runs once at
+heal time (`ScreenshotTopics.healTopics`, a lightweight `topicsAt == nil`
+sweep that reads the OCR `content` already on each shot — no PHAsset walk,
+self-terminating) and stores `ocrTopics`; the feed just counts
+(`FeedInsight.topicMap`, the same cheap arithmetic shape as `leaderboard`).
+Two additive optional fields on `Thing` (`ocrTopics: [String]`, `topicsAt:
+Date?`) — SwiftData infers them, no migration stage.
+
+`FeedHeatmap` STILL registers Photos on purpose: when there's too little OCR
+text to say anything (a wordless library, or too few shots), `topicMap`
+returns nil and the feed falls back to the capture-year heatmap gracefully
+rather than leading with nothing. Verified: build + liveness audit green;
+`ScreenshotTopics.terms`/`.cells` harness-tested against realistic OCR
+(domains vs version strings, UI-chrome drop, recurrence gate,
+single-assignment tie-break, determinism) — all passing. Headless probe
+`-topicMapProbe YES`.
+
+NOT SEEN ON DEVICE — the treemap's look was validated against an HTML mockup
+built from the real DS values (per the no-sim working preference), not a
+screenshot. Open the Photos feed on a real screenshot library before
+trusting the cell layout and the wash.

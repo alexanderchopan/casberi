@@ -119,6 +119,11 @@ enum BridgeRefresh {
                     let s = slot(); Task { @MainActor in
                         await BridgeRefresh.stagger(s)
                         _ = await ScreenshotIngest.heal(context: context)
+                        // Then lift the treemap terms off whatever OCR text the
+                        // heal (and prior passes) have written — no PHAsset walk,
+                        // just `content`, so it's cheap and self-terminating once
+                        // the library is fully topic'd (2026-07-30).
+                        _ = await ScreenshotTopics.healTopics(context: context)
                     }
                 }
             } else if photoBridge.status != .attention {

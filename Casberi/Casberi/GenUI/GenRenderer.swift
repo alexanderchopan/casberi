@@ -1257,6 +1257,78 @@ struct ImageMosaicHero: View {
 }
 
 
+/// A treemap of what a screenshot library is ABOUT — the terms and names OCR
+/// lifts off the pixels (`Thing.ocrTopics`), sized by how many screenshots each
+/// covers (2026-07-30, the Photos feed's hero, ahead of the capture-year
+/// heatmap). §145 wash: one hue, opacity by share, the biggest cell brightest —
+/// magnitude is the only thing the fill says, exactly as the wallet holdings
+/// map and the All feed's themes map read.
+///
+/// Display-only, like `LeaderboardHero` and `DistributionHero`: every cell is a
+/// fact the pixels state, and none is a door — the honesty rule bars a
+/// half-wired scope filter, so the map presents rather than pretends to
+/// navigate. The 4×3 unit-grid `frames` are the same tiling `GenTagMap` uses,
+/// so a 2- to 6-cell map always fills the card with no holes.
+struct TopicMapHero: View {
+    let map: FeedInsight.TopicMap
+
+    private var frames: [(Int, Int, Int, Int)] {
+        switch map.cells.count {
+        case 0, 1: return [(0, 0, 4, 3)]
+        case 2:    return [(0, 0, 2, 3), (2, 0, 2, 3)]
+        case 3:    return [(0, 0, 2, 2), (2, 0, 2, 2), (0, 2, 4, 1)]
+        case 4:    return [(0, 0, 2, 2), (2, 0, 2, 2), (0, 2, 2, 1), (2, 2, 2, 1)]
+        case 5:    return [(0, 0, 2, 2), (2, 0, 2, 2), (0, 2, 2, 1), (2, 2, 1, 1), (3, 2, 1, 1)]
+        default:   return [(0, 0, 2, 2), (2, 0, 2, 1), (2, 1, 1, 1), (3, 1, 1, 2), (0, 2, 2, 1), (2, 2, 1, 1)]
+        }
+    }
+
+    var body: some View {
+        let cells = Array(map.cells.prefix(6))
+        let maxCount = max(cells.first?.count ?? 1, 1)
+        InsightCard {
+            InsightHeader(title: map.title, subtitle: map.subtitle)
+            GeometryReader { geo in
+                let gap = DS.Space.s2
+                let uw = (geo.size.width - gap * 3) / 4
+                let uh = (Self.boardHeight - gap * 2) / 3
+                ZStack(alignment: .topLeading) {
+                    ForEach(Array(cells.enumerated()), id: \.offset) { i, cell in
+                        let f = frames[i]
+                        let w = uw * CGFloat(f.2) + gap * CGFloat(f.2 - 1)
+                        let h = uh * CGFloat(f.3) + gap * CGFloat(f.3 - 1)
+                        let share = Double(cell.count) / Double(maxCount)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(cell.label)
+                                .dsText(.callout15).fontWeight(.semibold)
+                                .foregroundStyle(DS.textPrimary)
+                                .lineLimit(2).minimumScaleFactor(0.82)
+                            Text("\(cell.count)")
+                                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                                .monospacedDigit()
+                            Spacer(minLength: 0)
+                        }
+                        .padding(DS.Space.s3)
+                        .frame(width: w, height: h, alignment: .topLeading)
+                        .background {
+                            ZStack {
+                                DS.surfaceSheet
+                                DS.tint(magnitude: share)
+                            }
+                            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                        }
+                        .offset(x: CGFloat(f.0) * (uw + gap), y: CGFloat(f.1) * (uh + gap))
+                    }
+                }
+            }
+            .frame(height: Self.boardHeight)
+        }
+    }
+
+    private static let boardHeight: CGFloat = 200
+}
+
+
 /// A stream that is ON RIGHT NOW, at frame size (prd §219, 2026-07-25).
 ///
 /// §164 already carved out the exception this cashes in: "a single item may

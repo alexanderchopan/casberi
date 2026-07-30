@@ -355,6 +355,26 @@ final class Thing {
     /// Optional + default nil keeps CloudKit mirroring happy.
     var ocrAt: Date? = nil
 
+    /// The salient terms/names OCR lifted off a screenshot (2026-07-30) — the
+    /// cells the Photos feed's "What you screenshot" treemap counts, replacing
+    /// the generic capture-year heatmap. Each is a phrase that LITERALLY
+    /// appears in the pixels (the honesty rule — a domain the shot shows, an
+    /// organization/place/person NLTagger names), never an invented category;
+    /// `ScreenshotTopics.terms` derives them from `content`, deterministically,
+    /// off the model. The whole point of a screenshot is its text, so this
+    /// answers "what are my screenshots ABOUT" where `ocrAt`'s heatmap only
+    /// answered "when did I take them". Empty for every non-screenshot thing,
+    /// for a text-less shot, and until `topicsAt` is stamped. An additive
+    /// array field like `wikilinks`/`imageURLs` — SwiftData infers it, no
+    /// migration stage (see `ThingSchemaVersioning`).
+    var ocrTopics: [String] = []
+
+    /// When `ocrTopics` was last extracted — set even when extraction found
+    /// nothing (a text-less or term-less shot), so the backfill sweep never
+    /// re-reads it, exactly the way `ocrAt` guards the OCR pass. nil = not yet
+    /// tried. Optional + default nil keeps CloudKit mirroring happy.
+    var topicsAt: Date? = nil
+
     /// A watched token's USD price the moment it was watched (2026-07-14) —
     /// the anchor for "since you watched": a number no market site can show,
     /// known locally and never back-filled. Set only by TokenWatch.add;

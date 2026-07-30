@@ -1347,6 +1347,40 @@ enum ProbeHooks {
             let n = ScreenshotIngest.ingest(context: context)
             NSLog("Photos re-ingest probe: %d new", n)
         },
+        // `-topicMapProbe YES` — the Photos feed's OCR treemap (2026-07-30),
+        // headless. Runs the `ocrTopics` backfill first (reads the OCR text
+        // already on each shot — no PHAsset walk), then composes
+        // `FeedInsight.topicMap` over the corpus and logs every ranked cell
+        // plus a sample of per-shot extracted terms — the one view that
+        // separates "extraction found nothing" from "the ranking dropped it".
+        // One NSLog per line (a joined multi-line message gets truncated by
+        // the log reader — the `-todayProbe` lesson). Pair with a real
+        // screenshot library (or `-connectPhotos`/`-photoHealProbe` to land OCR
+        // first); the sim's seeds carry text, so it reports honestly there.
+        Hook(key: "topicMapProbe") { _, context in
+            Task { @MainActor in
+                let filled = await ScreenshotTopics.healTopics(context: context, limit: 500)
+                let shots = (try? context.fetch(FetchDescriptor<Thing>(
+                    predicate: #Predicate { $0.source == "Photos" },
+                    sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []
+                let screens = shots.filter { $0.kind == .screenshot }
+                let withTerms = screens.filter { !$0.ocrTopics.isEmpty }.count
+                NSLog("[Casberi] topicMap: backfilled=%d · screenshots=%d · withTerms=%d",
+                      filled, screens.count, withTerms)
+                if let map = FeedInsight.topicMap(source: "Photos", things: screens) {
+                    NSLog("[Casberi] topicMapCard| %@ · %@", map.title, map.subtitle)
+                    for cell in map.cells {
+                        NSLog("[Casberi] topicMapCell| %@ = %d", cell.label, cell.count)
+                    }
+                } else {
+                    NSLog("[Casberi] topicMap: no card (too little OCR text or spread)")
+                }
+                for t in screens.prefix(8) where !t.ocrTopics.isEmpty {
+                    NSLog("[Casberi] topicMapTerms| %@ → %@",
+                          t.title, t.ocrTopics.joined(separator: ", "))
+                }
+            }
+        },
         // `-photoBackfill YES|reset` walks one batch BACKWARDS through the
         // library — the 2026-07-25 fix for "older screenshots never show".
         // `reset` restarts the walk first, so a second run re-lands from the

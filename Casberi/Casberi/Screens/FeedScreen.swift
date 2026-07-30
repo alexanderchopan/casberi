@@ -1191,18 +1191,27 @@ struct FeedScreen: View {
         let rosterAccounts: [SocialAccount] = liveStream == nil && shape == .social
             ? (source == "Farcaster" ? FarcasterStore.shared.socialAccounts : BlueskyStore.shared.socialAccounts)
             : []
-        let heatmapLabel = liveStream == nil && rosterAccounts.isEmpty ? FeedHeatmap.label(for: source) : nil
-        let leaderboard = liveStream == nil && heatmapLabel == nil && rosterAccounts.isEmpty
+        // The Photos feed's OCR treemap (2026-07-30) — what the screenshots are
+        // ABOUT, ahead of the capture-year heatmap. When there's too little OCR
+        // text to say anything it returns nil, and `heatmapLabel` (which still
+        // registers Photos) takes the head as a graceful fallback.
+        let topicMap = liveStream == nil && rosterAccounts.isEmpty
+            ? FeedInsight.topicMap(source: source, things: visible) : nil
+        let heatmapLabel = liveStream == nil && rosterAccounts.isEmpty && topicMap == nil
+            ? FeedHeatmap.label(for: source) : nil
+        let leaderboard = liveStream == nil && topicMap == nil && heatmapLabel == nil && rosterAccounts.isEmpty
             ? FeedInsight.leaderboard(source: source, things: visible) : nil
-        let distribution = liveStream == nil && heatmapLabel == nil && leaderboard == nil && rosterAccounts.isEmpty
+        let distribution = liveStream == nil && topicMap == nil && heatmapLabel == nil && leaderboard == nil && rosterAccounts.isEmpty
             ? FeedInsight.distribution(source: source, things: visible) : nil
-        let mosaic = liveStream == nil && heatmapLabel == nil && leaderboard == nil && distribution == nil
+        let mosaic = liveStream == nil && topicMap == nil && heatmapLabel == nil && leaderboard == nil && distribution == nil
             && rosterAccounts.isEmpty
             ? FeedInsight.mosaic(source: source, things: visible) : nil
-        let heroShown = liveStream != nil || heatmapLabel != nil || leaderboard != nil
+        let heroShown = liveStream != nil || topicMap != nil || heatmapLabel != nil || leaderboard != nil
             || distribution != nil || mosaic != nil || !rosterAccounts.isEmpty
         if let liveStream {
             insightSection { LiveStreamHero(thing: liveStream) { openThing(liveStream) } }
+        } else if let topicMap {
+            insightSection { TopicMapHero(map: topicMap) }
         } else if let heatmapLabel {
             calendarHeatmapSection(visible, label: heatmapLabel)
         } else if let leaderboard {
