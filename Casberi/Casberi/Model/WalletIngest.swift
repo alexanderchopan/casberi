@@ -477,6 +477,29 @@ enum WalletIngest {
                                                                  addresses: evmAddresses,
                                                                  existing: existing)
         added += morphoVaultAdded
+        // Hyperliquid (2026-07-30) rides the same pass — position-transition
+        // events (opened/closed, never individual fills — see the file's own
+        // design-constraint doc) plus a liquidation-proximity risk crossing,
+        // then the staked-HYPE unlock's reconciling dueAt row. Both keyless
+        // via Hyperliquid's own public info endpoint; inside the running
+        // guard like everything above.
+        let hyperliquidAdded = await HyperliquidDeFi.sync(context: context,
+                                                          addresses: evmAddresses,
+                                                          existing: existing)
+        added += hyperliquidAdded ?? 0
+        let hyperliquidUnlockAdded = await HyperliquidDeFi.syncUnlocks(context: context,
+                                                                       addresses: evmAddresses,
+                                                                       existing: existing)
+        added += hyperliquidUnlockAdded ?? 0
+        // Aerodrome (2026-07-30) rides the same pass — the weekly vote-
+        // deadline row and the lock-expiry row for any watched wallet's
+        // veAERO locks on Base, both reconciling dueAt (the ENSExpiry
+        // shape). Keyless via public Base RPC (WalletApprovals' shared host
+        // pool); inside the running guard like everything above.
+        let aerodromeAdded = await AerodromeDeFi.syncEvents(context: context,
+                                                            addresses: evmAddresses,
+                                                            existing: existing)
+        added += aerodromeAdded ?? 0
         // Uniswap V3 liquidity positions (2026-07-30) ride the same pass —
         // the range-crossing alert (both directions, unlike a liquidation
         // alert) plus the settled-activity sweep (Increase/Decrease/Collect,
@@ -516,6 +539,8 @@ enum WalletIngest {
             || (peerAdded ?? 0) > 0 || (privacyPoolsAdded ?? 0) > 0
             || delegationAdded > 0 || defiAdded > 0 || safeAdded > 0
             || morphoRiskAdded > 0 || (morphoActivityAdded ?? 0) > 0
+            || hyperliquidAdded != nil || hyperliquidUnlockAdded != nil
+            || aerodromeAdded != nil
             || (evmAddresses.isEmpty && heldPriced != nil)
         return reached ? added : nil
     }

@@ -932,6 +932,27 @@ enum ProbeHooks {
                 NSLog("Uniswap delight probe: %@", line)
             }
         },
+        // `-hyperliquidProbe YES` NSLogs each watched wallet's Hyperliquid
+        // book (perp positions with leverage/entry/liq price, spot
+        // holdings, staked HYPE) or the honest miss, then runs the
+        // position-transition + risk sync and the unlock sync once,
+        // reporting what landed. Pairs with `-walletAddress`.
+        Hook(key: "hyperliquidProbe") { _, context in
+            Task { @MainActor in
+                let lines = await HyperliquidDeFi.probe(context: context)
+                for line in lines { NSLog("hyperliquidProbe| %@", line) }
+            }
+        },
+        // `-aerodromeProbe YES` NSLogs each watched wallet's veAERO locks
+        // (amount, decayed voting power, permanent?, lock end, last voted)
+        // or the honest miss, plus the live epoch window, then runs the
+        // vote-deadline + lock-expiry sync once. Pairs with `-walletAddress`.
+        Hook(key: "aerodromeProbe") { _, context in
+            Task { @MainActor in
+                let lines = await AerodromeDeFi.probe(context: context)
+                for line in lines { NSLog("aerodromeProbe| %@", line) }
+            }
+        },
         // `-safeProbe YES` NSLogs which watched wallets are detected Safes
         // per chain and their pending queue counts (or the honest
         // unreachable/none). Pairs with `-walletAddress` (a Safe address, to
