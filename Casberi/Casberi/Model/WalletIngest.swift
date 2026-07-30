@@ -477,6 +477,20 @@ enum WalletIngest {
                                                                  addresses: evmAddresses,
                                                                  existing: existing)
         added += morphoVaultAdded
+        // Uniswap V3 liquidity positions (2026-07-30) ride the same pass —
+        // the range-crossing alert (both directions, unlike a liquidation
+        // alert) plus the settled-activity sweep (Increase/Decrease/Collect,
+        // the WalletApprovals cursor shape — blocks, not Morpho's
+        // timestamps, since this rides raw RPC not a timestamp-filtered
+        // API). Inside the running guard like everything above.
+        let uniswapRangeAdded = await UniswapLiquidity.sync(context: context,
+                                                            addresses: evmAddresses,
+                                                            existing: existing)
+        added += uniswapRangeAdded
+        let uniswapActivityAdded = await UniswapLiquidity.syncActivity(context: context,
+                                                                       addresses: evmAddresses,
+                                                                       existing: existing)
+        added += uniswapActivityAdded ?? 0
         // Safe multisig pending-queue watch (2026-07-20) rides the same
         // pass — detection + queue read per wallet per active EVM chain,
         // landing a thing for every newly seen pending transaction. Inside

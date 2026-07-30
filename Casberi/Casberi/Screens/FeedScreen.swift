@@ -1319,6 +1319,7 @@ struct FeedScreen: View {
             walletTilesSection(visible)
             holdingsBlockSection
             walletDeFiSection
+            walletLiquiditySection
             let all = visible
             let preview = Array(all.prefix(Self.walletPreviewRows))
             let days = dayGroups(preview)
@@ -2071,6 +2072,25 @@ struct FeedScreen: View {
                     // lending is usually the last of the live reads to land, so
                     // it gets the deepest stagger.
                     .modifier(RowEntrance(index: 2, wave: shapeWave, style: entranceStyle))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
+                                              bottom: 0, trailing: DS.Space.s4))
+            }
+        }
+    }
+
+    /// Liquidity — Uniswap V3 positions for the wallets in scope (2026-07-30),
+    /// a SIBLING to `walletDeFiSection`, not a third row inside it: lending
+    /// asks "is it safe", a liquidity position asks "is it working" — a
+    /// different subject earns a different card (see `WalletLiquidityCard`'s
+    /// own doc comment). Nothing renders without a position.
+    @ViewBuilder
+    private var walletLiquiditySection: some View {
+        if !walletLive.uniswap.isEmpty {
+            Section {
+                WalletLiquidityCard(book: walletLive.uniswap)
+                    .modifier(RowEntrance(index: 3, wave: shapeWave, style: entranceStyle))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,

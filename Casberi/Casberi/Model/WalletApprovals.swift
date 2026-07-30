@@ -180,6 +180,15 @@ enum WalletApprovals {
         allChains.first { $0.network == network }?.chainId
     }
 
+    /// The widest `eth_getLogs` block range this chain's measured hosts take
+    /// — exposed so another file needing log pagination on these same
+    /// public hosts (`UniswapLiquidity`'s activity sweep) reuses the
+    /// measured number instead of re-guessing it (the `DeFiRisk` lesson: a
+    /// threshold must not be able to disagree with itself across files).
+    static func maxLogRange(forNetwork network: String) -> Int? {
+        allChains.first { $0.network == network }?.maxRange
+    }
+
     private static func cursorKey(_ network: String, _ address: String) -> String {
         "wallet.approvals.cursor.\(network).\(address.lowercased())"
     }

@@ -275,6 +275,8 @@ struct Composer: View {
             kind = "wallet"
         } else if WalletDeFiAsk.matches(question) {
             kind = "walletdefi"
+        } else if UniswapAsk.matches(question) {
+            kind = "walletuniswap"
         } else if WalletGasAsk.matches(question) {
             kind = "walletgas"
         } else if SafeAsk.matches(question) {

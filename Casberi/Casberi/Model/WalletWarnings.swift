@@ -102,6 +102,9 @@ struct WalletLiveState: Equatable {
     /// The Morpho book (2026-07-21) — market positions + vault deposits,
     /// read beside Aave's in the same parallel pass.
     var morpho: MorphoDeFi.Book = MorphoDeFi.Book()
+    /// The Uniswap V3 liquidity book (2026-07-30) — read beside Aave/
+    /// Morpho's in the same parallel pass.
+    var uniswap: UniswapLiquidity.Book = UniswapLiquidity.Book()
     var warnings: [WalletWarning] = []
     /// The address-poisoning things behind the poisoning warning — carried so
     /// the Worth-a-look tray can list each flagged transfer as its own row
@@ -120,6 +123,7 @@ struct WalletLiveState: Equatable {
             && a.flagged.map(\.id) == b.flagged.map(\.id)
             && a.activeApprovals.map(\.id) == b.activeApprovals.map(\.id)
             && a.morpho == b.morpho
+            && a.uniswap == b.uniswap
             && a.positions.count == b.positions.count
             && zip(a.positions, b.positions).allSatisfy {
                 $0.address == $1.address && $0.network == $1.network
@@ -195,12 +199,14 @@ enum WalletWatch {
 
         async let defi = WalletDeFi.positions(addresses: resolved)
         async let morphoBook = MorphoDeFi.book(addresses: resolved)
+        async let uniswapBook = UniswapLiquidity.book(addresses: resolved)
         async let safe = SafeBridge.pendingCounts(addresses: resolved)
         async let delegs = WalletSafety.currentDelegations(addresses: resolved)
         async let approvalsRead = WalletApprovals.activeApprovals(hexAddresses: resolved, context: context)
 
         let positions = await defi
         let morpho = await morphoBook ?? MorphoDeFi.Book()
+        let uniswap = await uniswapBook ?? UniswapLiquidity.Book()
         let safePending = await safe
         let delegations = await delegs
         let activeApprovals = await approvalsRead
@@ -234,6 +240,7 @@ enum WalletWatch {
         return WalletLiveState(
             positions: positions,
             morpho: morpho,
+            uniswap: uniswap,
             warnings: warnings(positions: positions, morpho: morpho,
                                safePending: safePending,
                                delegations: delegations, poisoningCount: poisoningCount,

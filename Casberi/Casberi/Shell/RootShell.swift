@@ -1675,6 +1675,17 @@ struct RootShell: View {
             }
             return proseDoc(line)
         }
+        // A Uniswap LP ask ("how's my uniswap position", "am I in range") —
+        // live read, no model (2026-07-30). Same slot as the DeFi ask, right
+        // after it: `UniswapAsk` is a sibling to `WalletDeFiAsk`, not folded
+        // into it, since a liquidity position isn't a loan.
+        if UniswapAsk.matches(query) {
+            lastAnswerHits = []
+            guard let line = await UniswapAsk.answer() else {
+                return proseDoc(String(localized: "Nothing to read yet — watch an address from Apps → Wallet."))
+            }
+            return proseDoc(line)
+        }
         // A gas ask ("what have I spent on gas") — live read, no model.
         if WalletGasAsk.matches(query) {
             lastAnswerHits = []

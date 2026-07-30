@@ -62,6 +62,11 @@ final class WalletStore {
                 // (2026-07-21) — same back-fill reason, plus a stale
                 // "at-risk" bucket would suppress a real alert on re-watch.
                 MorphoDeFi.clearState(address: old.address)
+                // Uniswap's activity cursor and range buckets leave too
+                // (2026-07-30) — same back-fill reason, plus a stale
+                // "out-of-range" bucket would suppress a real re-entry alert
+                // on re-watch.
+                UniswapLiquidity.clearState(address: old.address)
                 // The EIP-7702 delegation baseline leaves too (2026-07-20) —
                 // a re-watch should seed fresh, not compare against a
                 // delegate state from a prior, unrelated watch period.

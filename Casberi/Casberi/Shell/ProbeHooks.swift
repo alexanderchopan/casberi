@@ -909,6 +909,29 @@ enum ProbeHooks {
                 NSLog("Morpho delight probe: %@", line)
             }
         },
+        // `-uniswapProbe <blocksBack|YES>` NSLogs each watched wallet's
+        // Uniswap V3 book (pair, range status, uncollected fees, or the
+        // honest miss). A numeric spec ALSO rewinds every activity cursor
+        // that many BLOCKS (not Morpho's days — this rides raw RPC) and
+        // runs the settled-activity sweep. Pairs with `-walletAddress` —
+        // `0x7516d4e35a369fc18ddfeec0d69c28112fe13bf0` is a real,
+        // live-verified out-of-range position on Ethereum (2026-07-30).
+        Hook(key: "uniswapProbe") { spec, context in
+            Task { @MainActor in
+                let line = await UniswapLiquidity.probe(context: context, blocksBack: Int(spec))
+                NSLog("Uniswap probe: %@", line)
+            }
+        },
+        // `-uniswapDelightProbe YES` — flips a real held position's stored
+        // range bucket to the opposite of its live state, so the
+        // range-crossing thing fires deterministically without waiting for
+        // a real tick move. NSLogs what landed.
+        Hook(key: "uniswapDelightProbe") { _, context in
+            Task { @MainActor in
+                let line = await UniswapLiquidity.probeDelight(context: context)
+                NSLog("Uniswap delight probe: %@", line)
+            }
+        },
         // `-safeProbe YES` NSLogs which watched wallets are detected Safes
         // per chain and their pending queue counts (or the honest
         // unreachable/none). Pairs with `-walletAddress` (a Safe address, to

@@ -42,6 +42,7 @@ enum KeptAskComposers {
         if kind == "away" { return away(things) }
         if kind == "wallet" { return await wallet(things) }
         if kind == "walletdefi" { return await walletDeFi() }
+        if kind == "walletuniswap" { return await walletUniswap() }
         if kind == "walletgas" { return await walletGas() }
         if kind == "walletsafe" { return await walletSafe() }
         if kind == "watchlist" { return await watchlist(context: context) }
@@ -231,6 +232,12 @@ enum KeptAskComposers {
     /// `rows()`/`TokenChip` idioms below both key off a real `Thing.id`).
     private static func walletDeFi() async -> Result? {
         guard let line = await WalletDeFiAsk.answer() else { return nil }
+        return Result(delta: line, digest: line,
+                      doc: ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"])
+    }
+
+    private static func walletUniswap() async -> Result? {
+        guard let line = await UniswapAsk.answer() else { return nil }
         return Result(delta: line, digest: line,
                       doc: ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"])
     }
