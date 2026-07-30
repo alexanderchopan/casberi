@@ -458,6 +458,13 @@ struct WalletLendingCard: View {
     /// The riskiest market — Morpho markets are isolated, so the worst one is
     /// the one that liquidates first; nil when nothing is borrowed.
     private var morphoHealth: Double? { morpho.positions.compactMap(\.healthFactor).min() }
+    /// The position BEHIND `morphoHealth` — needed to key the trajectory
+    /// lookup (per market, not per chain), since two isolated positions on
+    /// the same chain can be drifting in different directions.
+    private var worstMorphoPosition: MorphoDeFi.Position? {
+        morpho.positions.filter { $0.healthFactor != nil }
+            .min { $0.healthFactor! < $1.healthFactor! }
+    }
 
     private var morphoRow: some View {
         let atRisk = (morphoHealth ?? .infinity) < Self.riskMargin
@@ -466,9 +473,12 @@ struct WalletLendingCard: View {
         // BORROWING states its health, EARNING states how many places the
         // money sits (isolated markets and vaults are Morpho's whole shape,
         // and "2 vaults" is the fact a single Deposits number can't carry).
+        let trend = worstMorphoPosition.flatMap {
+            MorphoDeFi.hfTrend(network: $0.network, address: $0.address, marketLabel: $0.marketLabel)
+        }
         let subtitle = borrowing
             ? Self.line(health: morphoHealth, atRisk: atRisk,
-                        chains: morpho.positions.map(\.network))
+                        chains: morpho.positions.map(\.network), trend: trend)
             : Self.earning(vaults: morpho.vaults.count, markets: morpho.positions.count)
         return WalletRow(mark: .monogram("MO", tint: atRisk ? DS.attention : DS.tint),
                          title: "Morpho", subtitle: subtitle) {
@@ -480,10 +490,15 @@ struct WalletLendingCard: View {
 
     // MARK: - Sublines
 
-    /// "Health 1.82 · Base" — the reading, then where it lives. A position
-    /// with no debt says so instead of printing a sentinel, and a book spread
-    /// across chains names none rather than picking one arbitrarily.
-    private static func line(health: Double?, atRisk: Bool, chains: [String]) -> String {
+    /// "Health 1.82 · Base · drifting down for 4 days" — the reading, then
+    /// where it lives, then which way it's moving. A position with no debt
+    /// says so instead of printing a sentinel, a book spread across chains
+    /// names none rather than picking one arbitrarily, and `trend` (Morpho
+    /// only — Aave/Spark are one account-wide number, not per-market, so
+    /// there's no single position to trend) is silent until there's a real
+    /// day of history to read a direction from.
+    private static func line(health: Double?, atRisk: Bool, chains: [String],
+                             trend: String? = nil) -> String {
         var parts: [String] = []
         if let health {
             parts.append(atRisk
@@ -497,6 +512,7 @@ struct WalletLendingCard: View {
            let chain = WalletIngest.displayName(forNetwork: network) {
             parts.append(chain)
         }
+        if let trend { parts.append(trend) }
         return parts.joined(separator: " · ")
     }
 

@@ -898,6 +898,17 @@ enum ProbeHooks {
                 NSLog("Morpho probe: %@", line)
             }
         },
+        // `-morphoDelightProbe YES` — forces a real reallocation-alert
+        // firing (2026-07-30) by seeding a deliberately-different fake
+        // "last seen" allocation snapshot for a held vault, then running
+        // the vault-delight sync once. NSLogs the fake baseline, what
+        // landed, and any rate-comparison moment that also fired.
+        Hook(key: "morphoDelightProbe") { _, context in
+            Task { @MainActor in
+                let line = await MorphoDeFi.probeDelight(context: context)
+                NSLog("Morpho delight probe: %@", line)
+            }
+        },
         // `-safeProbe YES` NSLogs which watched wallets are detected Safes
         // per chain and their pending queue counts (or the honest
         // unreachable/none). Pairs with `-walletAddress` (a Safe address, to

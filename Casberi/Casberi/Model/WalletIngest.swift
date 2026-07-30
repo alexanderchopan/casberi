@@ -468,6 +468,15 @@ enum WalletIngest {
                                                                 addresses: evmAddresses,
                                                                 existing: existing)
         added += morphoActivityAdded ?? 0
+        // Vault delight (2026-07-30) rides the same pass — a reallocation
+        // alert when a held vault's collateral mix shifts materially, plus
+        // a one-time toast when the vault's own rate falls meaningfully
+        // behind Aave's for the same asset. Shares `sync()`'s own `book`
+        // read rather than fetching a third time.
+        let morphoVaultAdded = await MorphoDeFi.syncVaultDelight(context: context,
+                                                                 addresses: evmAddresses,
+                                                                 existing: existing)
+        added += morphoVaultAdded
         // Safe multisig pending-queue watch (2026-07-20) rides the same
         // pass — detection + queue read per wallet per active EVM chain,
         // landing a thing for every newly seen pending transaction. Inside
