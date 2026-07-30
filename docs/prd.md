@@ -10255,3 +10255,83 @@ NOT SEEN ON DEVICE — the treemap's look was validated against an HTML mockup
 built from the real DS values (per the no-sim working preference), not a
 screenshot. Open the Photos feed on a real screenshot library before
 trusting the cell layout and the wash.
+
+## §238 — Safe becomes about people, not a fraction (user: "how if at all would you improve the safe experience and add surprise and delight", 2026-07-30)
+
+Safe shipped earlier the same day as a queue reader (§ the 2026-07-30 batch:
+reverse owner lookup, "your signature is needed", config-change alerts, Gnosis
+Chain, its own catalog seat). This is the pass that makes it *good*, and it
+starts with a defect the first pass shipped.
+
+**The defect: `multiSend` is not an edge case.** Measured against a real Safe's
+last 100 transactions, **96 were `multiSend`** — because every Safe web-app
+action touching more than one thing bundles that way. So the shipped
+`humanize()` rendered the overwhelmingly common row as *"3 of 5 signatures
+collected on a multi send"*: honest, and useless. The nested calls are fully
+decoded on the parameter's own `valueDecoded` (measured: one batch carried
+**114** entries, each with its own `dataDecoded`), so `describe` now recurses —
+one call describes itself, a uniform batch names its verb ("a batch of 12
+transfers"), a mixed one stays honestly generic ("a batch of 5 actions") rather
+than naming whichever call happened to be first. Verified by replaying the
+decision tree over all 100 real transactions: **0 still say "multi send"**, and
+the output spreads across real shapes ("a batch of 3 transfers" ×16, "a batch of
+148 transfers" ×3, …).
+
+**The idea: a Safe is the only object in this app where other people act on your
+behalf and you wait on them.** Every other bridge is solo — your wallet, your
+photos, your feed. Rendering that as the integer "2 of 3" throws away the only
+thing a person actually needs, which is *who to go ask*. So the sheet card is
+now the ROSTER: every owner's own `WalletFace`, lit when they've signed (with
+when) and dim when they haven't, yours marked "(you)". Names ride
+`WalletIngest.knownLabel`'s existing chain (address book → Farcaster handle →
+short hex) — exactly what it was built for — so someone who has named their
+co-signers sees people, not hex. The headline spends its words on what a
+fraction can't say: "Yours is the last signature needed" / "Waiting on
+alice.eth and 2 others" / "Fully signed — ready to execute".
+
+**`SafeSignatureDisc` applies `MetricDisc`'s doctrine** (§223: a generic glyph
+names nothing): a ring segmented by the Safe's OWN required-signature count,
+filling per signature, so a 2-of-3 and a 4-of-7 draw visibly different marks
+because they are different. The count sits inside, so the disc states the whole
+fact alone.
+
+**Two facts almost no interface surfaces**, both cheap because the data was
+already fetched:
+- **Same-nonce conflicts.** A Safe executes exactly one transaction per nonce,
+  so two live at one position means a signature spent on the loser is spent for
+  nothing. Stated plainly, not as an alarm — it's how Safes work, not a sign
+  anything is wrong.
+- **Stranded transactions.** A pending transaction below the Safe's current
+  nonce can never execute. These are now filtered out of BOTH the landing path
+  and `pendingCounts`, because a feed row (or a Worth-a-look tally) asking for a
+  signature that cannot possibly help is a dead control wearing a number.
+
+**The door, finally.** The original bridge deliberately omitted "Open in Safe"
+because it couldn't verify the web app's per-chain prefix and refused to guess —
+correctly. Read now from Safe's own config service
+(`safe-config.safe.global/api/v1/chains/`, authoritative), and the caution was
+justified: **Polygon's tx-service segment is `pol` while the web app's shortName
+is `matic`.** They are separate fields on `Chain` for that reason. A 200 from
+`app.safe.global` proves nothing on its own (it's a SPA), which is why the
+shortName comes from the config service rather than a page load.
+
+**Delight, spent where it's earned.** Two moments on the existing
+`SourceMoments` bus (berry rain + toast), both fired once and both on a
+transition, per the seed-the-baseline-silently rule every sibling cursor obeys:
+*threshold met* ("Fully signed — a batch of 3 transfers is ready to execute"),
+which is the release of real suspense and rarer than a pull-to-refresh; and
+*discovery* ("You're a signer on 2 Safes"), framed as an invitation because
+finding something FOR someone is good news — the same fact worded as a warning
+would read as an accusation.
+
+**Deliberately NOT built.** Safe messages (`/messages/` — measured empty on
+every Safe checked; unproven demand), the creation date (a static fact, not
+news — the module doctrine's "a thing is an event"), executed-transaction
+history (the wallet transfer sweep already lands these; duplicate risk), and
+anything gamified (signing streaks, speed leaderboards — this is other people's
+money, wrong register entirely).
+
+Verified: build green, liveness audit green (incl. self-test), catalog-sync
+green. NOT SEEN ON DEVICE — the roster and disc were reasoned against the DS
+tokens per the no-sim working preference; open a real Safe's queue before
+trusting the layout.

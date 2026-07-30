@@ -73,6 +73,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-peer      { background: #4b47f6; }
 .ai-gnosispay { background: #4830c0; }   /* their indigo (icon-sampled) */
 .ai-privacypools { background: #fff; }
+.ai-safe      { background: #12ff80; }   /* Safe{Wallet}'s green (icon-sampled) */
 .ai-gmail     { background: #fff; color: #ea4335; }
 .ai-icloud    { background: #3693f3; font-size: 18px; }
 .ai-chatgpt   { background: #fff; }

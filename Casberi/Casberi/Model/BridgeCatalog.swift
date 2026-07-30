@@ -100,7 +100,7 @@ enum BridgeCatalog {
         /// already carries live status).
         var qualifier: String? {
             if connectable && !needsSetup { return "One tap" }
-            let keyless: Set<String> = ["Wallet", "Tokens", "Peer", "0xBow Privacy Pools", "Reddit", "YouTube",
+            let keyless: Set<String> = ["Wallet", "Tokens", "Peer", "0xBow Privacy Pools", "Safe", "Reddit", "YouTube",
                 "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster",
                 "Bluesky", "Nostr", "OpenSea", "Kalshi", "Shopify", "GeckoTerminal", "Deals",
                 "Open Food Facts", "Stocktwits"]
@@ -142,7 +142,6 @@ enum BridgeCatalog {
                 "Catches transfers that look like address-poisoning scams.",
                 "Tracks what you've paid in gas.",
                 "Shows your Aave and Morpho positions.",
-                "Surfaces any Safe signatures that need attention.",
               ],
               needsSetup: true),
         // Wallet group by ruling (user, 2026-07-21, prd §162). Privacy Pools
@@ -243,6 +242,22 @@ enum BridgeCatalog {
         Offer(name: "Peer",        tagline: "Your Peer trades, as they settle",      group: "Wallet",    connectable: true,
               summary: "Peer trades settle onchain into your own wallet — connect and each fill lands in your feed as it settles: which token, how much, and the payment app that paid for it (\"Bought 25 USDC with Venmo on Peer\").\n\nRead from the public chain for the wallets you already watch; Peer's zero-knowledge design keeps your Venmo or PayPal side private, so the chain never shows it and neither does Casberi.\n\nNo account, no key, read-only: nothing here ever starts a trade.",
               needsSetup: true, added: day(2026, 7, 17)),
+        // Wallet group, beside Peer/Privacy Pools/Gnosis Pay (2026-07-30): a
+        // Safe multisig is your own account too, and the seat rides the
+        // watched wallets the same way — no account, no key, watching is
+        // consent (§207). Split from a generic Wallet feature into its own
+        // tile once it grew a second detection path (a watched EOA that's a
+        // SIGNER on a Safe, not just a directly-watched Safe address) and its
+        // own alert class (owner/threshold/module changes) — too much to
+        // fold into one bullet under Wallet's summary honestly.
+        Offer(name: "Safe",        tagline: "Your Safe's signature queue, live",     group: "Wallet",    connectable: true,
+              summary: "Watch a Safe directly, or just your own wallet if it's one of a Safe's signers — either way, its pending signature queue lands in your feed (\"2 of 3 signatures collected on a transfer to vitalik.eth\"), and it says plainly when it's your signature that's missing.\n\nRead from Safe's own public Transaction Service for the wallets you already watch, across Ethereum, Base, Arbitrum, Optimism, Polygon and Gnosis Chain.\n\nNo account, no key, read-only: nothing here ever signs — that always happens in your own Safe app.",
+              features: [
+                "Finds every Safe you're a signer on, not just ones you watch directly.",
+                "Says whether it's your signature that's still missing.",
+                "Alerts on a new/removed owner, a changed threshold, or a newly enabled module.",
+              ],
+              needsSetup: true, added: day(2026, 7, 30)),
         Offer(name: "GeckoTerminal", tagline: "Trending tokens, per chain",          group: "Markets",   connectable: true,
               summary: "Pick the chains you care about and the tokens trending on each — GeckoTerminal's own ranking, by 24-hour volume and price move — land in your feed as links.\n\nNo account, no key: fetched straight from GeckoTerminal's public API by this iPhone.\n\nRead-only public price data; nothing here buys, sells, or trades.\n\nEach trending row opens to its live on-device chart.",
               needsSetup: true),

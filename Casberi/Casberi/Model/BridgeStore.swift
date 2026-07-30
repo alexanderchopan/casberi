@@ -113,6 +113,17 @@ final class BridgeStore {
             can: ["Reads your Gnosis Pay card spending from Gnosis Chain, for the wallets you watch.",
                   "Amounts and timing only — the merchant never reaches the chain.",
                   "Read-only — never spends, tops up, or freezes a card."])
+        // Safe DIVERGES the same way Gnosis Pay does: gated on an actual
+        // detected Safe, not on a wallet merely being watched — most wallets
+        // are neither a Safe nor a Safe signer, and a seat claiming
+        // otherwise would be fake status.
+        let safes = SafeBridge.detectedCount()
+        guard safes > 0 else { remove("safe"); return }
+        registerConnected(id: "safe", name: "Safe",
+            proof: "Watching \(safes) Safe\(safes == 1 ? "" : "s")",
+            can: ["Reads the pending signature queue for any Safe you watch, or that watches you as a signer.",
+                  "Alerts on a change to a Safe's owners, threshold, or modules.",
+                  "Read-only — signing always happens in your own Safe app."])
     }
 
     func togglePause(_ id: String) {
