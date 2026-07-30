@@ -93,7 +93,17 @@ struct TransferStageView: View {
     let thing: Thing
     let stage: TransferStage
 
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
+    /// re-evaluates a LEAF view's body on the model's own observation,
+    /// independent of the parent that made it, so a guard in the parent's
+    /// `ForEach` closure cannot protect a row already in the tree. The
+    /// original body moved to `liveBody`; everything it reads now sits behind
+    /// this check.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         VStack(spacing: 0) {
             if hasCounterparty {
                 HStack(alignment: .top, spacing: DS.Space.s4) {
@@ -349,7 +359,17 @@ struct MovedStageView: View {
     let thing: Thing
     let stage: MovedStage
 
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
+    /// re-evaluates a LEAF view's body on the model's own observation,
+    /// independent of the parent that made it, so a guard in the parent's
+    /// `ForEach` closure cannot protect a row already in the tree. The
+    /// original body moved to `liveBody`; everything it reads now sits behind
+    /// this check.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         VStack(spacing: 0) {
             HStack(alignment: .top, spacing: DS.Space.s4) {
                 party(address: stage.fromAddress, label: stage.fromLabel)
@@ -403,7 +423,17 @@ struct SwapStageView: View {
     let thing: Thing
     let stage: SwapStage
 
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
+    /// re-evaluates a LEAF view's body on the model's own observation,
+    /// independent of the parent that made it, so a guard in the parent's
+    /// `ForEach` closure cannot protect a row already in the tree. The
+    /// original body moved to `liveBody`; everything it reads now sits behind
+    /// this check.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         VStack(spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 Text(verbatim: stage.outAmount)
@@ -443,7 +473,17 @@ struct VerbDial: View {
     /// The Name disc — present only when there's an address to name.
     var onName: (() -> Void)?
 
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
+    /// re-evaluates a LEAF view's body on the model's own observation,
+    /// independent of the parent that made it, so a guard in the parent's
+    /// `ForEach` closure cannot protect a row already in the tree. The
+    /// original body moved to `liveBody`; everything it reads now sits behind
+    /// this check.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         HStack(alignment: .top, spacing: DS.Space.s4 + 2) {
             ForEach(verbs) { verb in
                 Button { onVerb(verb) } label: {

@@ -81,7 +81,17 @@ struct ThingContentView: View {
         return formatter.string(from: NSNumber(value: value))
     }
 
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
+    /// re-evaluates a LEAF view's body on the model's own observation,
+    /// independent of the parent that made it, so a guard in the parent's
+    /// `ForEach` closure cannot protect a row already in the tree. The
+    /// original body moved to `liveBody`; everything it reads now sits behind
+    /// this check.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         // The kind's own media, then the source's own words (2026-07-22).
         // spacing 0 — every branch below already pads its own bottom, and the
         // summary block pads its own top.
@@ -341,7 +351,17 @@ struct ThingShareLink<Label: View>: View {
         thing.content.isEmpty ? thing.title : thing.content
     }
 
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
+    /// re-evaluates a LEAF view's body on the model's own observation,
+    /// independent of the parent that made it, so a guard in the parent's
+    /// `ForEach` closure cannot protect a row already in the tree. The
+    /// original body moved to `liveBody`; everything it reads now sits behind
+    /// this check.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         Group {
             if thing.kind == .screenshot, let screenshotImage {
                 ShareLink(item: Image(uiImage: screenshotImage),
@@ -777,7 +797,17 @@ private struct MailContentView: View {
 
     private var isFromLine: Bool { thing.content.hasPrefix("From ") }
 
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
+    /// re-evaluates a LEAF view's body on the model's own observation,
+    /// independent of the parent that made it, so a guard in the parent's
+    /// `ForEach` closure cannot protect a row already in the tree. The
+    /// original body moved to `liveBody`; everything it reads now sits behind
+    /// this check.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if let sender {
                 HStack(spacing: DS.Space.s2) {
@@ -914,7 +944,17 @@ private struct TokenChartContent: View {
     /// dead control on the one place it can never apply.
     private var offersWatch: Bool { thing.source != "Tokens" }
 
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
+    /// re-evaluates a LEAF view's body on the model's own observation,
+    /// independent of the parent that made it, so a guard in the parent's
+    /// `ForEach` closure cannot protect a row already in the tree. The
+    /// original body moved to `liveBody`; everything it reads now sits behind
+    /// this check.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
             TokenChartView(chain: chain, address: address, since: since, hero: true) {
                 // No pool (dead/illiquid) — the plain link, honestly.
@@ -1065,7 +1105,17 @@ private struct StockChartContent: View {
         return (p, thing.capturedAt)
     }
 
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
+    /// re-evaluates a LEAF view's body on the model's own observation,
+    /// independent of the parent that made it, so a guard in the parent's
+    /// `ForEach` closure cannot protect a row already in the tree. The
+    /// original body moved to `liveBody`; everything it reads now sits behind
+    /// this check.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         TokenChartView(memoryKey: "stock.range.\(ticker)",
                        fetch: { (range: StockRange) in
                            await StockChart.fetch(ticker: ticker, range: range)
@@ -1244,7 +1294,17 @@ struct GitHubStarContent: View {
         GitHubFeedFetch.repoPath(fromWebURL: thing.content)
     }
 
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
+    /// re-evaluates a LEAF view's body on the model's own observation,
+    /// independent of the parent that made it, so a guard in the parent's
+    /// `ForEach` closure cannot protect a row already in the tree. The
+    /// original body moved to `liveBody`; everything it reads now sits behind
+    /// this check.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             if let url = URL(string: thing.content) {
                 LinkPreviewCard(url: url, storedImageURL: thing.previewImageURL)
@@ -1340,7 +1400,17 @@ private struct GitHubReleaseContent: View {
     let thing: Thing
     @State private var notes: String?
 
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
+    /// re-evaluates a LEAF view's body on the model's own observation,
+    /// independent of the parent that made it, so a guard in the parent's
+    /// `ForEach` closure cannot protect a row already in the tree. The
+    /// original body moved to `liveBody`; everything it reads now sits behind
+    /// this check.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             if let url = URL(string: thing.content) {
                 LinkPreviewCard(url: url, storedImageURL: thing.previewImageURL)

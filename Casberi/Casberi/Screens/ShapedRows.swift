@@ -217,7 +217,17 @@ struct BandRow: View {
         return mins < 60 ? "in \(max(1, mins)) min" : "in \(mins / 60)h"
     }
 
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
+    /// re-evaluates a LEAF view's body on the model's own observation,
+    /// independent of the parent that made it, so a guard in the parent's
+    /// `ForEach` closure cannot protect a row already in the tree. The
+    /// original body moved to `liveBody`; everything it reads now sits behind
+    /// this check.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         // Top-aligned so a wrapping title grows DOWNWARD from the first
         // line — the icon and the time/project stack stay pinned beside
         // that line, not floated to the row's vertical center (ruling
@@ -473,7 +483,17 @@ struct TokenRow: View {
     let thing: Thing
     let pulse: TokenPulse.Pulse
 
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
+    /// re-evaluates a LEAF view's body on the model's own observation,
+    /// independent of the parent that made it, so a guard in the parent's
+    /// `ForEach` closure cannot protect a row already in the tree. The
+    /// original body moved to `liveBody`; everything it reads now sits behind
+    /// this check.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         HStack(spacing: DS.Space.s3) {
             if let image = thing.previewImageURL, !image.isEmpty {
                 RemoteThumb(urlString: image, size: 38, fallback: thing.source,
@@ -554,7 +574,17 @@ struct PredictionRow: View {
     let thing: Thing
     let pulse: PredictionPulse.Pulse
 
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
+    /// re-evaluates a LEAF view's body on the model's own observation,
+    /// independent of the parent that made it, so a guard in the parent's
+    /// `ForEach` closure cannot protect a row already in the tree. The
+    /// original body moved to `liveBody`; everything it reads now sits behind
+    /// this check.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         HStack(spacing: DS.Space.s3) {
             BridgeIcon(name: thing.source, size: 38)
             VStack(alignment: .leading, spacing: 1) {
@@ -1150,7 +1180,17 @@ struct MusicRow: View {
 
     private var done: Bool { thing.mark == .done }
 
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
+    /// re-evaluates a LEAF view's body on the model's own observation,
+    /// independent of the parent that made it, so a guard in the parent's
+    /// `ForEach` closure cannot protect a row already in the tree. The
+    /// original body moved to `liveBody`; everything it reads now sits behind
+    /// this check.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         let parts = self.parts   // one split per render, read twice below
         HStack(spacing: DS.Space.s3) {
             if let art = thing.previewImageURL, !art.isEmpty {
@@ -1366,7 +1406,17 @@ struct ApprovalCard: View {
         return joined.isEmpty ? joined : joined.prefix(1).uppercased() + joined.dropFirst()
     }
 
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
+    /// re-evaluates a LEAF view's body on the model's own observation,
+    /// independent of the parent that made it, so a guard in the parent's
+    /// `ForEach` closure cannot protect a row already in the tree. The
+    /// original body moved to `liveBody`; everything it reads now sits behind
+    /// this check.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             Text(eyebrow)
                 .dsText(.label12)
@@ -1413,7 +1463,17 @@ struct PhotoCell: View {
     let thing: Thing
     var dayPill: String?
 
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
+    /// re-evaluates a LEAF view's body on the model's own observation,
+    /// independent of the parent that made it, so a guard in the parent's
+    /// `ForEach` closure cannot protect a row already in the tree. The
+    /// original body moved to `liveBody`; everything it reads now sits behind
+    /// this check.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         PhotoWell(thing: thing, size: nil)
             .frame(maxWidth: .infinity)
             .frame(height: 148)
@@ -1458,7 +1518,17 @@ struct PhotoWell: View {
     /// holds (a bank balance, a private message), so it opts out by hand.
     @Environment(\.redactionReasons) private var redaction
 
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
+    /// re-evaluates a LEAF view's body on the model's own observation,
+    /// independent of the parent that made it, so a guard in the parent's
+    /// `ForEach` closure cannot protect a row already in the tree. The
+    /// original body moved to `liveBody`; everything it reads now sits behind
+    /// this check.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         Group {
             if !redaction.isEmpty {
                 // A plain well, the same shape and size the image would be —
@@ -1555,7 +1625,17 @@ struct PhotoWell: View {
 struct TakeawayCard: View {
     let thing: Thing
 
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
+    /// re-evaluates a LEAF view's body on the model's own observation,
+    /// independent of the parent that made it, so a guard in the parent's
+    /// `ForEach` closure cannot protect a row already in the tree. The
+    /// original body moved to `liveBody`; everything it reads now sits behind
+    /// this check.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(spacing: DS.Space.s2) {
                 Text(thing.source)
@@ -1608,7 +1688,17 @@ struct ExcerptRow: View {
         return text
     }
 
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
+    /// re-evaluates a LEAF view's body on the model's own observation,
+    /// independent of the parent that made it, so a guard in the parent's
+    /// `ForEach` closure cannot protect a row already in the tree. The
+    /// original body moved to `liveBody`; everything it reads now sits behind
+    /// this check.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         HStack(alignment: .top, spacing: DS.Space.s3) {
             BridgeIcon(name: thing.source, size: 26)
             VStack(alignment: .leading, spacing: 2) {
@@ -1660,7 +1750,17 @@ struct PostCard: View {
         return full.isEmpty ? thing.title : full
     }
 
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
+    /// re-evaluates a LEAF view's body on the model's own observation,
+    /// independent of the parent that made it, so a guard in the parent's
+    /// `ForEach` closure cannot protect a row already in the tree. The
+    /// original body moved to `liveBody`; everything it reads now sits behind
+    /// this check.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(spacing: DS.Space.s2) {
                 if let avatar = thing.authorAvatarURL, !avatar.isEmpty {
@@ -2044,7 +2144,17 @@ struct ReadingRow: View {
         return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
     }
 
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
+    /// re-evaluates a LEAF view's body on the model's own observation,
+    /// independent of the parent that made it, so a guard in the parent's
+    /// `ForEach` closure cannot protect a row already in the tree. The
+    /// original body moved to `liveBody`; everything it reads now sits behind
+    /// this check.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         HStack(alignment: .top, spacing: DS.Space.s3) {
             if let art = thing.previewImageURL, !art.isEmpty {
                 RemoteThumb(urlString: art, size: 56, fallback: thing.source)

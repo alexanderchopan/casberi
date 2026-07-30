@@ -61,6 +61,25 @@ wrapper is invisible to it. That is why `FeedScreen.FeedRow.single` carries a
 `KeyedThing` rather than a raw `Thing` — the crash site is kept in the shape
 the lint can see. Keep new wrappers that way too.
 
+CHECK 5 — THE LEAF (build 188, and the deepest form of the class).
+  Checks 1/3/4 are all about the CONTAINER, and a container guard only stops a
+  dead row being CREATED. SwiftUI re-evaluates a leaf view's body on the
+  MODEL'S OWN observation, through that leaf's own attribute node
+  (`DynamicBody.updateValue` → `ViewBodyAccessor.updateBody`), with no
+  involvement from the parent — so a row ALREADY in the tree is untouched by
+  anything the parent does. 188 crashed on exactly that: `BandRow.body` →
+  `mailSender` → `thing.kind`, re-run inside a UICollectionView batch update
+  while the source pager animated. Keying was right, the ForEach closure guard
+  was right, the boundary filter was right, and none of them were in the path.
+  A View struct storing a `Thing` guards its own body:
+      var body: some View { if thing.isLive { liveBody } }
+      @ViewBuilder private var liveBody: some View { …original… }
+  This was already CLAUDE.md's build-142 lesson ("guard the sheet's CHILD
+  views … the parent's guard doesn't cover a child SwiftUI re-renders on the
+  model's own observation") — scoped to two sheet views and never generalised
+  to the 25 row/content views with the identical shape. This check is that
+  generalisation.
+
 Runs in verify.sh (pure static text check, no build needed).
 Exit non-zero on any unguarded site.  --self-test proves the checks can fail.
 """
@@ -101,6 +120,12 @@ THING_DECL = re.compile(r"\b(?:var|let)\s+([A-Za-z_]\w*)\s*:\s*\[Thing\]")
 # A held single/array Thing in @State — captures the NAME so check 2 can look
 # for stored-property reads off exactly that identifier.
 HELD_DECL = re.compile(r"@State[^\n]*?\bvar\s+([A-Za-z_]\w*)\s*:\s*(?:\[Thing\]|Thing\?)")
+# Check 5: `struct X: View {` (possibly with other conformances/generics), and
+# a STORED `Thing` property on it. The struct extent is found by scanning to the
+# next top-level declaration — crude, but these are all file-scope value types.
+VIEW_STRUCT = re.compile(r"^(?:private |public )?struct (\w+)[^\n{]*:\s*[^\n{]*\bView\b[^\n{]*\{", re.M)
+STORED_THING_PROP = re.compile(r"^\s{0,8}(?:let|var)\s+(\w*[Tt]hing\w*)\s*:\s*Thing\b", re.M)
+
 # Check 4's narrower target: a held ARRAY of Things (optional or not). Arrays
 # are what get handed onward wholesale into helpers that then iterate them.
 HELD_ARRAY_DECL = re.compile(r"@State[^\n]*?\bvar\s+([A-Za-z_]\w*)\s*:\s*\[Thing\]\??")
@@ -302,6 +327,35 @@ def audit_file(path: pathlib.Path, findings: list[str]) -> None:
             f"      {body.strip().splitlines()[0][:110] if body.strip() else ''}"
         )
 
+    # ── Check 5: a LEAF View holding a Thing, body unguarded ─────────
+    # Build 188, and the deepest form of this class. SwiftUI re-evaluates a
+    # leaf view's body on the MODEL'S OWN observation, through its own
+    # attribute node (`DynamicBody.updateValue` → `ViewBodyAccessor`), with no
+    # involvement from the parent that built it. So checks 1/3/4 — all about
+    # the container — cannot protect a row that is ALREADY in the tree: they
+    # stop a dead row being created, and 188 crashed on one that already
+    # existed (`BandRow.body` → `mailSender` → `thing.kind`, re-run inside a
+    # UICollectionView batch update while the pager animated).
+    # The lesson was already in CLAUDE.md from build 142, scoped to sheet
+    # CHILD views, and never generalised to the 25 row/content views that had
+    # the identical shape. THE RULE: a View struct storing a `Thing` guards its
+    # own body.
+    for m in VIEW_STRUCT.finditer(text):
+        name, start = m.group(1), m.end()
+        nxt = re.search(r"^(?:private |public )?(?:struct|extension|final class) ",
+                        text[start:], re.M)
+        extent = text[start:start + (nxt.start() if nxt else len(text) - start)]
+        if not STORED_THING_PROP.search(extent):
+            continue
+        if "isLive" in extent or ".live" in extent:
+            continue
+        findings.append(
+            f"✗ {rel}:{text[:m.start()].count(chr(10)) + 1} — View '{name}' stores a "
+            f"Thing but its body has no isLive guard\n"
+            f"      a leaf body re-evaluates on the model's own observation — "
+            f"guard it, don't rely on the parent"
+        )
+
     # ── Check 4: a held [Thing] handed onward without .live ──────────
     # Build 177. `@State private var debouncedAllSnapshot: [Thing]?` — the All
     # room's perf snapshot, raw model refs held across a debounce window, so
@@ -416,6 +470,23 @@ def self_test() -> int:
             "@State private var snapshot: [Thing]?\n"
             "private var visible: [Thing] { return snapshot ?? [] }\n",
             "handed onward without .live",
+        ),
+        # Build 188's shape: the LEAF. Keying and every container guard were in
+        # place; the row already in the tree re-ran its own body and trapped.
+        "leaf-view-unguarded": (
+            "struct BandRow: View {\n"
+            "    let thing: Thing\n"
+            "    var body: some View { Text(thing.title) }\n"
+            "}\n",
+            "stores a Thing but its body has no isLive guard",
+        ),
+        "clean-leaf-view-guarded": (
+            "struct BandRow: View {\n"
+            "    let thing: Thing\n"
+            "    var body: some View { if thing.isLive { liveBody } }\n"
+            "    @ViewBuilder private var liveBody: some View { Text(thing.title) }\n"
+            "}\n",
+            None,
         ),
         "clean-held-guarded": (
             "@State private var openThing: Thing?\n"

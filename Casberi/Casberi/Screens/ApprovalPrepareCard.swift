@@ -13,7 +13,17 @@ struct ApprovalPrepareCard: View {
     @Environment(\.openURL) private var openURL
     @State private var copied = false
 
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
+    /// re-evaluates a LEAF view's body on the model's own observation,
+    /// independent of the parent that made it, so a guard in the parent's
+    /// `ForEach` closure cannot protect a row already in the tree. The
+    /// original body moved to `liveBody`; everything it reads now sits behind
+    /// this check.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             if check.active {
                 Text(verbatim: statusLine)
