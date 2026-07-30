@@ -351,29 +351,28 @@ enum ScreenshotIngest {
     ///      attempt either way), so search, the semantic index, Spotlight, and
     ///      answers see what the screenshot SAYS. The embedding clears so the
     ///      foreground sweep re-embeds with the new words.
-    ///   2. RECONCILE — a thing whose asset is CONFIRMED gone (full library
-    ///      access, the fetch finds nothing, and no thumbnail was ever saved)
-    ///      is removed: it could only ever render as its hue-field fallback
-    ///      (the "green square"), which reads as a bug, not a record. Under
-    ///      LIMITED access nothing is removed — an unselected asset is
-    ///      indistinguishable from a deleted one, and re-granting would have
-    ///      brought it back.
+    /// Deletion sync used to live here as a third RECONCILE pass; it moved to
+    /// `pruneDeleted` (prd §231, 2026-07-30) when "delete from Photos → remove
+    /// from Casberi" replaced the old "keep our own copy forever" archive rule.
+    /// heal is now purely ADDITIVE — it never deletes a thing, so its own perf
+    /// filter (which skips fully-healed rows) can't hide a deleted screenshot
+    /// from the reconcile the way it did while reconcile lived in this loop.
     ///
     /// Single-flight, same as every other bridge's `running` guard (Bluesky/
     /// Farcaster) — and load-bearing here for a reason those don't share:
     /// this loop AWAITS (thumbnail/OCR) in between fetching `things` and
-    /// possibly `context.delete`-ing one of them. A second overlapping call
-    /// (an automatic scenePhase sweep landing mid pull-to-refresh, or two
-    /// quick pulls while a slow iCloud-backed thumbnail is still loading)
-    /// fetches its OWN `things` snapshot before the first call's delete
-    /// lands, then reads/deletes that same now-gone `Thing` after its own
-    /// await resumes — the exact "never touch a dead Thing" crash class
-    /// (see CLAUDE.md), just reached from Model code instead of a View.
+    /// mutating one of them. A second overlapping call (an automatic
+    /// scenePhase sweep landing mid pull-to-refresh, or two quick pulls while
+    /// a slow iCloud-backed thumbnail is still loading) fetches its OWN
+    /// `things` snapshot and then writes stored properties on those same
+    /// `Thing`s after its await resumes — near the "never touch a dead Thing"
+    /// crash class (see CLAUDE.md), just reached from Model code, so the guard
+    /// stays even now that heal no longer deletes.
     @MainActor private static var healing = false
 
     @MainActor
-    static func heal(context: ModelContext) async -> (thumbed: Int, ocred: Int, removed: Int) {
-        guard !healing else { return (0, 0, 0) }
+    static func heal(context: ModelContext) async -> (thumbed: Int, ocred: Int) {
+        guard !healing else { return (0, 0) }
         healing = true
         defer { healing = false }
 
@@ -392,20 +391,14 @@ enum ScreenshotIngest {
                     && ($0.previewImageData == nil || $0.ocrAt == nil
                         || $0.title == ScreenshotTitle.placeholder)
             }
-        guard !things.isEmpty else { return (0, 0, 0) }
+        guard !things.isEmpty else { return (0, 0) }
 
         let ids = things.map { $0.sourceRef!.replacingOccurrences(of: "phasset:", with: "") }
-        var found: Set<String> = []
         var assets: [String: PHAsset] = [:]
         PHAsset.fetchAssets(withLocalIdentifiers: ids, options: nil)
-            .enumerateObjects { asset, _, _ in
-                found.insert(asset.localIdentifier)
-                assets[asset.localIdentifier] = asset
-            }
-        let fullAccess = PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized
+            .enumerateObjects { asset, _, _ in assets[asset.localIdentifier] = asset }
 
-        var thumbed = 0, ocred = 0, removed = 0
-        var removedIDs: [UUID] = []
+        var thumbed = 0, ocred = 0
         var reindex: [Thing] = []
         var retitled = 0
         for (thing, id) in zip(things, ids) {
@@ -450,18 +443,66 @@ enum ScreenshotIngest {
                     retitled += 1
                     reindex.append(thing)
                 }
-            } else if fullAccess, thing.previewImageData == nil, !found.contains(id) {
-                removedIDs.append(thing.id)
-                context.delete(thing)
-                removed += 1
             }
+            // A gone asset (assets[id] == nil) is left to `pruneDeleted`
+            // (prd §231) — heal is additive and never deletes.
         }
-        if thumbed > 0 || ocred > 0 || removed > 0 || retitled > 0 {
+        if thumbed > 0 || ocred > 0 || retitled > 0 {
             context.saveHonestly()
-            SpotlightIndex.remove(ids: removedIDs)
             SpotlightIndex.index(reindex)
         }
-        return (thumbed, ocred, removed)
+        return (thumbed, ocred)
+    }
+
+    /// Mirror the person's Photos deletions into the corpus (prd §231,
+    /// 2026-07-30): a screenshot removed from the photo library is removed from
+    /// Casberi on the next heal. This REVERSES the 2026-07-10 "keep our own
+    /// copy forever" archive rule at the user's call — a saved
+    /// `previewImageData` no longer keeps a deleted screenshot alive, and a
+    /// CloudKit delete propagates to the person's other devices.
+    ///
+    /// Deliberately SEPARATE from `heal`, and cheap enough to run every heal
+    /// even though heal's own perf filter skips fully-healed rows: ONE batched
+    /// existence check over every screenshot id (`fetchAssets(withLocalIdentifiers:)`)
+    /// with NO per-asset await — so it sees the healed-then-deleted rows heal
+    /// never walks, without re-introducing the 2026-07-28 full-history PHAsset
+    /// scan the filter removed (that regression was the per-asset thumbnail/OCR
+    /// AWAIT loop, not the id lookup, which is a targeted index read).
+    ///
+    /// Two guards, both load-bearing:
+    ///   • Full access ONLY — under LIMITED access an asset we can't see is
+    ///     "not shared with the app", not "deleted", so pruning it would delete
+    ///     rows the person still has.
+    ///   • Never prune when the library read comes back EMPTY (`found.isEmpty`):
+    ///     a transient Photos hiccup returning nothing is indistinguishable from
+    ///     "you deleted every screenshot", and erring toward KEEP can only ever
+    ///     leave a stale row (the pre-§231 behavior), never destroy one that
+    ///     still exists. The corner it cedes — a genuine delete-them-all never
+    ///     mirrors — is the safe direction to be wrong in.
+    @MainActor
+    static func pruneDeleted(context: ModelContext) -> Int {
+        guard PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized else { return 0 }
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == "Photos" })
+        let things = ((try? context.fetch(descriptor)) ?? [])
+            .filter { $0.kind == .screenshot && $0.sourceRef != nil }
+        guard !things.isEmpty else { return 0 }
+
+        let ids = things.map { $0.sourceRef!.replacingOccurrences(of: "phasset:", with: "") }
+        var found = Set<String>()
+        PHAsset.fetchAssets(withLocalIdentifiers: ids, options: nil)
+            .enumerateObjects { asset, _, _ in found.insert(asset.localIdentifier) }
+        guard !found.isEmpty else { return 0 }
+
+        var removedIDs: [UUID] = []
+        for (thing, id) in zip(things, ids) where !found.contains(id) && thing.isLive {
+            removedIDs.append(thing.id)
+            context.delete(thing)
+        }
+        if !removedIDs.isEmpty {
+            _ = context.saveHonestly()
+            SpotlightIndex.remove(ids: removedIDs)
+        }
+        return removedIDs.count
     }
 
     /// One small JPEG for the corpus — 480pt longest side is retina-sharp at

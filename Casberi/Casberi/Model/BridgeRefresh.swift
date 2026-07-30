@@ -119,6 +119,13 @@ enum BridgeRefresh {
                     let s = slot(); Task { @MainActor in
                         await BridgeRefresh.stagger(s)
                         _ = await ScreenshotIngest.heal(context: context)
+                        // Mirror Photos deletions (prd §231): a screenshot
+                        // deleted from the library leaves Casberi too. One
+                        // batched existence check, no per-asset await — so it
+                        // catches the fully-healed rows heal's perf filter
+                        // skips, which is exactly why deletion never synced
+                        // before (2026-07-30).
+                        _ = ScreenshotIngest.pruneDeleted(context: context)
                         // Then lift the treemap terms off whatever OCR text the
                         // heal (and prior passes) have written — no PHAsset walk,
                         // just `content`, so it's cheap and self-terminating once

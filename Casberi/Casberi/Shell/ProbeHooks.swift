@@ -1334,8 +1334,9 @@ enum ProbeHooks {
         // `-reingestPhotos YES` calls the bare re-scan BridgeRefresh now
         // uses (no permission request) — headless test that a photo added
         // AFTER connect is picked up on the next pass (report 2026-07-09).
-        // `-photoHealProbe YES` runs the Photos HEAL directly — the pass that
-        // OCRs, thumbnails, retitles (§218) and prunes. `-reingestPhotos` only
+        // `-photoHealProbe YES` runs the Photos HEAL directly — the additive
+        // pass that OCRs, thumbnails and retitles (§218) — then `pruneDeleted`,
+        // the deletion-sync pass (prd §231, 2026-07-30). `-reingestPhotos` only
         // LANDS assets; OCR has always lived here, which is why a landing probe
         // alone leaves every row still saying "Screenshot". Logs what the pass
         // did, then every screenshot's title and how many OCR characters back
@@ -1344,8 +1345,9 @@ enum ProbeHooks {
         Hook(key: "photoHealProbe") { _, context in
             Task { @MainActor in
                 let r = await ScreenshotIngest.heal(context: context)
-                NSLog("[Casberi] photoHeal: thumbed=%d ocred=%d removed=%d",
-                      r.thumbed, r.ocred, r.removed)
+                let pruned = ScreenshotIngest.pruneDeleted(context: context)
+                NSLog("[Casberi] photoHeal: thumbed=%d ocred=%d pruned=%d",
+                      r.thumbed, r.ocred, pruned)
                 let shots = (try? context.fetch(FetchDescriptor<Thing>(
                     predicate: #Predicate { $0.source == "Photos" },
                     sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []
@@ -1545,10 +1547,14 @@ enum ProbeHooks {
             context.saveHonestly()
             NSLog("Seed-thing cleanup probe: deleted %d", litter.count)
         },
-        // `-healPhotos YES` runs the screenshot heal sweep (thumbnails +
-        // confirmed-gone removal) and logs both counts. `-healPhotos
-        // seed-dangling` first plants a screenshot thing with a ref no
-        // asset will ever match — the removal path, end to end.
+        // `-healPhotos YES` runs the screenshot heal sweep (thumbnails + OCR)
+        // then `pruneDeleted` (prd §231 deletion sync) and logs the counts.
+        // `-healPhotos seed-dangling` first plants a screenshot thing with a
+        // ref no asset will ever match — the removal path, end to end. NOTE
+        // pruneDeleted's `found.isEmpty` safety guard: on a sim with no REAL
+        // screenshot assets the library read is empty, so the dangling seed
+        // only prunes when at least one live asset also exists (the guard
+        // treats a wholly-empty read as a Photos hiccup, not a mass delete).
         Hook(key: "healPhotos") { spec, context in
             Task { @MainActor in
                 if spec == "seed-dangling" {
@@ -1561,11 +1567,12 @@ enum ProbeHooks {
                 }
                 let auth = PHPhotoLibrary.authorizationStatus(for: .readWrite)
                 let r = await ScreenshotIngest.heal(context: context)
+                let pruned = ScreenshotIngest.pruneDeleted(context: context)
                 let all = ((try? context.fetch(FetchDescriptor<Thing>(
                     predicate: #Predicate { $0.source == "Photos" }))) ?? [])
                     .filter { $0.kind == .screenshot }
-                NSLog("Photos heal probe: auth=%d, %d thumbed, %d OCRed, %d removed, %d/%d have stored thumbs, %d carry text",
-                      auth.rawValue, r.thumbed, r.ocred, r.removed,
+                NSLog("Photos heal probe: auth=%d, %d thumbed, %d OCRed, %d pruned, %d/%d have stored thumbs, %d carry text",
+                      auth.rawValue, r.thumbed, r.ocred, pruned,
                       all.filter { $0.previewImageData != nil }.count, all.count,
                       all.filter { !$0.content.isEmpty }.count)
             }

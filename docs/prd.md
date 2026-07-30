@@ -10256,6 +10256,46 @@ built from the real DS values (per the no-sim working preference), not a
 screenshot. Open the Photos feed on a real screenshot library before
 trusting the cell layout and the wash.
 
+## 231. Deleting a screenshot from Photos removes it from Casberi (user reported screenshots "don't refresh"; the real symptom was "the old images that are deleted from my phone still stay", then chose "Remove it here too", 2026-07-30)
+
+The user spent multiple sessions convinced screenshots had a broken REFRESH.
+They didn't — the ingest path lands new screenshots every foreground, and a
+pull forces the heal. The actual symptom was the opposite of "not
+refreshing": screenshots DELETED from the phone stayed in Casberi forever.
+That's not a bug — it was the 2026-07-10 ruling working exactly as written:
+each screenshot saves its own `previewImageData` copy into the corpus
+"so the row survives the original later leaving Photos," a permanent
+archive. Every "refresh" fix missed because the target was wrong. Recording
+this so the next person doesn't re-chase the refresh machinery.
+
+The user reversed the archive rule: **delete from Photos → remove from
+Casberi.** The old prune (heal's RECONCILE pass) only ever removed rows with
+NO saved thumbnail, AND heal's 2026-07-28 perf filter excluded fully-healed
+rows from the walk entirely — two layers both keeping a deleted screenshot
+alive. Deletion sync now lives in its own pass, `ScreenshotIngest.pruneDeleted`:
+one batched `fetchAssets(withLocalIdentifiers:)` existence check over every
+screenshot id, no per-asset await, so it catches the healed rows heal skips
+without re-introducing the full-history PHAsset scan the filter removed (that
+regression was the await loop, not the id lookup). heal is now purely
+ADDITIVE — it never deletes. Wired after heal in `BridgeRefresh` (throttled
+with it; a manual pull forces both). It also clears the accumulated BACKLOG,
+not just future deletes — the first refresh on the new build sweeps out every
+already-deleted screenshot.
+
+Two guards, both load-bearing: full access ONLY (under limited access an
+unseen asset is "not shared," not "deleted"); and never prune on an EMPTY
+library read (`found.isEmpty`) — a transient Photos hiccup returning nothing
+is indistinguishable from "you deleted them all," and erring toward keep can
+only leave a stale row, never destroy a live one. The corner it cedes (a
+genuine delete-everything never mirrors) is the safe direction.
+
+REQUIRES A NEW TESTFLIGHT BUILD — this is why "existing builds" was a real
+part of the problem: no repo change mirrors deletions on a binary that
+predates `pruneDeleted`. Verified: build + liveness audit green. Not
+sim-verified end to end (needs real deleted assets); probes `-photoHealProbe`
+/`-healPhotos` now report `pruned`, and pruneDeleted's `found.isEmpty` guard
+means a sim's dangling seed only prunes when a real asset also exists.
+
 ## §238 — Safe becomes about people, not a fraction (user: "how if at all would you improve the safe experience and add surprise and delight", 2026-07-30)
 
 Safe shipped earlier the same day as a queue reader (§ the 2026-07-30 batch:
