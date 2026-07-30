@@ -165,7 +165,9 @@ enum PolymarketBridge {
         var id: String { slug }
     }
 
-    static func grouped(_ rows: [Resolved], maxOutcomes: Int = 4) -> [Race] {
+    /// 3, matching `KalshiWatch.grouped`'s own density-pass reduction
+    /// (2026-07-29) — leader + two challengers before "N more" takes over.
+    static func grouped(_ rows: [Resolved], maxOutcomes: Int = 3) -> [Race] {
         var order: [String] = []
         var bySlug: [String: [Resolved]] = [:]
         for row in rows {

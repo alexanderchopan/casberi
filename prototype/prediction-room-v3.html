@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Prediction room — as built</title>
+<title>Prediction room — density pass</title>
 <style>
   :root {
     --page: #000000;
@@ -85,8 +85,8 @@
   .cchip.on { color:#fff; background:var(--tint); }
 
   /* cards */
-  .card { background:var(--sheet); border-radius:var(--r-sheet); padding:var(--s3);
-    box-shadow:var(--shadow); margin-bottom:var(--s2); }
+  .card { background:var(--sheet); border-radius:20px; padding:16px;
+    box-shadow:var(--shadow); margin-bottom:16px; }
   .eyebrow { font-size:12px; color:var(--text3); margin-bottom:6px; }
   .q { font-size:16px; font-weight:600; line-height:1.28; }
   .qhead { display:flex; align-items:flex-start; gap:var(--s2); margin-bottom:10px; }
@@ -97,6 +97,8 @@
   /* outcome row: read target + write capsule */
   .orow { display:flex; align-items:center; gap:var(--s3); padding:4px 0; }
   .oread { display:flex; align-items:center; gap:var(--s3); flex:1; min-width:0; }
+  .oread.full { width:100%; }
+  .check { width:16px; font-size:12px; font-weight:800; color:var(--confirm); text-align:center; flex:none; }
   .oname { font-size:14px; color:var(--text2); width:96px; flex:none; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .oname.lead { color:var(--text1); font-weight:600; }
   .pct { font-size:16px; font-weight:600; width:42px; text-align:right; flex:none; font-variant-numeric:tabular-nums; }
@@ -157,7 +159,7 @@
 <h1>The prediction room, as built</h1>
 <div class="intro">
   <p>Kalshi and Polymarket keep their own source chips; the room holds the live book. Brand hues are the real ones (<code>#4fae7b</code>, <code>#1652f0</code>). Odds are illustrative — the arrangement is what's real.</p>
-  <p>Second pass: the lede is a <b>line</b>, not a card — so column 1 now shows a market above the fold instead of chrome. Note the <b>two tap targets per row</b>: the row itself reads (opens the preview), the <b>+</b> capsule writes (follows). And the <b>notch on every bar</b> is where the market was — the one change that turns a quantity into a story.</p>
+  <p><b>Third pass — density.</b> Cards are now real elevated surfaces (they were a no-op before: <code>.dsListCardRow()</code> only works as a direct List row, and these render inside a VStack inside one row — so nothing was drawing a fill or a shadow). Follow capsules dropped from every row with MORE than one followable thing (a race, a disagreement pair) — tap through to the preview and follow there instead; a binary market still keeps its single capsule, since there's exactly one thing to follow. Races show 3 outcomes, not 4. A close date only appears inside 30 days.</p>
 </div>
 
 <div class="rail">
@@ -195,30 +197,28 @@
       <div class="card">
         <div class="qhead"><div class="q">Who wins the 2028 Democratic nomination?</div></div>
         <div class="orow">
-          <div class="oread">
+          <div class="oread full">
             <div class="oname lead">Newsom</div>
             <div class="bar"><i style="width:31%"></i><u class="up" style="left:26%"></u></div>
             <div class="pct">31%</div>
           </div>
-          <div class="cap">+</div>
         </div>
         <div class="orow">
-          <div class="oread">
+          <div class="oread full">
             <div class="oname">Shapiro</div>
             <div class="bar"><i class="quiet" style="width:18%"></i></div>
             <div class="pct">18%</div>
+            <div class="check">✓</div>
           </div>
-          <div class="cap done">✓</div>
         </div>
         <div class="orow">
-          <div class="oread">
+          <div class="oread full">
             <div class="oname">Whitmer</div>
             <div class="bar"><i class="quiet" style="width:12%"></i><u class="dn" style="left:16%"></u></div>
             <div class="pct">12%</div>
           </div>
-          <div class="cap">+</div>
         </div>
-        <div class="foot"><span>11 more</span><span>·</span><span>Closes Aug 2028</span></div>
+        <div class="foot"><span>12 more</span></div>
       </div>
 
       <div class="card">
@@ -281,20 +281,18 @@
         <div style="font-size:21px;font-weight:700;line-height:1.15;">9 points apart</div>
         <div style="font-size:14px;color:var(--text2);line-height:1.35;margin:3px 0 12px;">Fed cuts rates at the March meeting?</div>
         <div class="orow">
-          <div class="oread">
+          <div class="oread full">
             <div class="venue k" style="border-radius:50%;">K</div>
             <div class="bar tall"><i class="k" style="width:68%"></i></div>
             <div class="pct">68%</div>
           </div>
-          <div class="cap">+</div>
         </div>
         <div class="orow">
-          <div class="oread">
+          <div class="oread full">
             <div class="venue p" style="border-radius:50%;">P</div>
             <div class="bar tall"><i class="p" style="width:77%"></i></div>
             <div class="pct">77%</div>
           </div>
-          <div class="cap">+</div>
         </div>
       </div>
 
@@ -302,20 +300,18 @@
         <div style="font-size:21px;font-weight:700;line-height:1.15;">11 points apart</div>
         <div style="font-size:14px;color:var(--text2);line-height:1.35;margin:3px 0 12px;">Bitcoin above $150k this year?</div>
         <div class="orow">
-          <div class="oread">
+          <div class="oread full">
             <div class="venue k" style="border-radius:50%;">K</div>
             <div class="bar tall"><i class="k" style="width:41%"></i></div>
             <div class="pct">41%</div>
           </div>
-          <div class="cap">+</div>
         </div>
         <div class="orow">
-          <div class="oread">
+          <div class="oread full">
             <div class="venue p" style="border-radius:50%;">P</div>
             <div class="bar tall"><i class="p" style="width:52%"></i></div>
             <div class="pct">52%</div>
           </div>
-          <div class="cap">+</div>
         </div>
       </div>
 

@@ -214,7 +214,10 @@ enum KalshiWatch {
         var id: String { eventTicker }
     }
 
-    static func grouped(_ rows: [Resolved], maxOutcomes: Int = 4) -> [Race] {
+    /// 3, not 4 (density pass, 2026-07-29) — one fewer row on every race card
+    /// in the book, still leader + two challengers before "N more" takes
+    /// over; `others` keeps the field's true size honest either way.
+    static func grouped(_ rows: [Resolved], maxOutcomes: Int = 3) -> [Race] {
         var order: [String] = []
         var byEvent: [String: [Resolved]] = [:]
         for row in rows {

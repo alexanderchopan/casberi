@@ -88,7 +88,7 @@ struct PredictionRoomBook: View {
             // that have become facts.
             let settled = resolved
             if !settled.isEmpty {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
                     Text("How they turned out")
                         .dsText(.label12).foregroundStyle(DS.textTertiary)
                     ForEach(settled.keyed) { row in
@@ -140,7 +140,8 @@ struct PredictionRoomBook: View {
                 .dsText(.body17).fontWeight(.bold)
                 .foregroundStyle(DS.textPrimary)
         }
-        .dsListCardRow()
+        .padding(DS.Space.s4)
+        .dsWidgetSurface()
     }
 
     /// Following a market from the OTHER venue's rows (possible in `.all`

@@ -10375,3 +10375,52 @@ Verified: build green, liveness audit green (incl. self-test), catalog-sync
 green. NOT SEEN ON DEVICE — the roster and disc were reasoned against the DS
 tokens per the no-sim working preference; open a real Safe's queue before
 trusting the layout.
+
+## §236 — Density pass: cards get a real surface, one capsule per card (2026-07-29)
+
+User: "our prediction market feeds are a bit busy... there is little space
+between entries." The room's actual bug, not a spacing tune: every card
+called `.dsListCardRow()`, which is `listRowBackground(...)` and ONLY works
+as a direct child of a `List` — these cards render inside a `VStack` inside
+ONE list row (the room is mounted as a single row via `FeedScreen`'s
+`predictionBook`), so the call was a silent no-op. No sheet fill, no
+shadow, no internal padding — unstyled text stacked on a flat background,
+separation coming entirely from an 8pt VStack gap. That reads as busy by
+construction, independent of any spacing choice.
+
+Five fixes:
+
+1. **Every card gets `.padding(DS.Space.s4).dsWidgetSurface()`** —
+   `browseCard`, `twinOfferCard`, `disagreementCard`, `bookSkeleton`,
+   `PredictionRoomBook.resolvedRow`. The actual elevation-ladder treatment
+   (sheet fill + ambient shadow, `DS.Radius.widget` = 20), same pattern
+   `WalletBalanceHeadline` and every other non-List-row card in the app
+   already uses. This is what separation was supposed to come from.
+2. **Each card adds `.padding(.top, DS.Space.s2)`** on top of its own
+   surface — a real gap between elevated cards, distinct from the tighter
+   8pt spacing between chrome rows (lede line, field, category/order row),
+   which stays tight on purpose since those are one control cluster, not
+   separate entries.
+3. **One follow capsule per card, maximum.** A four-outcome race stacked
+   four identical blue "+" circles down the trailing edge — the single
+   busiest thing in the view, and ambiguous (follow WHICH one, at a
+   glance?). Rule adopted: a capsule exists only where there's exactly ONE
+   followable thing. Race outcome rows (`outcomeRow`) and disagreement
+   venue bars (`venueBar`) are now READ-ONLY — the whole row taps through
+   to the preview, and following happens there, on the specific market you
+   opened. Already-followed still says so, as a quiet inline checkmark, not
+   a button. A binary market (`binaryRow`) keeps its single capsule — it IS
+   the one-followable-thing case. `watchKalshi`/`watchPolymarket` (the
+   direct-follow helpers those removed capsules called) are now dead code,
+   deleted.
+4. **Close time is gated to 30 days**, not shown unconditionally. "Closes
+   Aug 2028" cost a footer line on most of the book (the presidential race,
+   every multi-year market) while saying nothing a reader could act on.
+   Past 30 days it's simply omitted; inside it, `isImminent`'s existing
+   48-hour styling still applies. A market already past its own close
+   still shows (same reasoning as `isImminent`) — that's the one closing
+   *now*.
+5. **Races show 3 outcomes, not 4** (`KalshiWatch.grouped`/
+   `PolymarketBridge.grouped`, `maxOutcomes` default 4→3) — leader plus two
+   challengers before "N more" takes over, one fewer row on every
+   multi-candidate card in the book.

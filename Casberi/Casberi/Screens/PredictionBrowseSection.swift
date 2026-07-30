@@ -242,6 +242,17 @@ struct PredictionBrowseSection: View {
         closeTime.timeIntervalSinceNow < 48 * 3600
     }
 
+    /// Worth a footer line at all (2026-07-29, the density pass). "Closes
+    /// Aug 2028" told a reader nothing but still cost a line on most of the
+    /// cards in the book — the presidential race and every other multi-year
+    /// market. Thirty days out is where a close date starts being something
+    /// you'd actually plan around; past that it's noise dressed as fact. A
+    /// market already past its own close stays worth showing (same as
+    /// `isImminent`) — that's the one closing NOW.
+    private func isNearTerm(_ closeTime: Date) -> Bool {
+        closeTime.timeIntervalSinceNow < 30 * 24 * 3600
+    }
+
     private func moveSize(_ card: BrowseCard) -> Double {
         guard let previous = card.previousProbability, let lead = card.outcomes.first?.probability else { return 0 }
         return abs(lead - previous)
@@ -445,14 +456,6 @@ struct PredictionBrowseSection: View {
         }
     }
 
-    private func watchKalshi(_ market: KalshiWatch.Resolved) {
-        follow(PredictionPreview(kalshi: market))
-    }
-
-    private func watchPolymarket(_ market: PolymarketBridge.Resolved) {
-        follow(PredictionPreview(polymarket: market))
-    }
-
     /// Fire-and-forget: no twin is the common case and says nothing, so a
     /// nil result is silent rather than an empty state.
     private func askTwin(for market: PredictionMarket) {
@@ -496,62 +499,73 @@ struct PredictionBrowseSection: View {
                 binaryRow(only, card: card)
             }
 
-            HStack(spacing: DS.Space.s2) {
-                if card.others > 0 {
-                    Text("\(card.others) more").dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                }
-                if let closeTime = card.closeTime {
-                    if card.others > 0 { Text("·").foregroundStyle(DS.textTertiary) }
-                    // Time is WEIGHTED (prd §235). "Closes in 3 days" and
-                    // "closes in 40 minutes" were the same tertiary grey, but
-                    // 62% on a market closing tonight is a different claim
-                    // from 62% on one closing next November — imminence is
-                    // the single fact that most changes what the number
-                    // means. Inside the window it reads as state; outside it
-                    // stays quiet, so urgency keeps meaning something.
-                    Text("Closes \(closeTime.formatted(.relative(presentation: .named)))")
-                        .dsText(.subhead13)
-                        .fontWeight(isImminent(closeTime) ? .semibold : .regular)
-                        .foregroundStyle(isImminent(closeTime) ? DS.attention : DS.textTertiary)
-                }
-                if card.isThin {
-                    if card.others > 0 || card.closeTime != nil { Text("·").foregroundStyle(DS.textTertiary) }
-                    Text("Thin book").dsText(.subhead13).foregroundStyle(DS.attention)
+            if card.others > 0 || card.isThin || (card.closeTime.map(isNearTerm) ?? false) {
+                HStack(spacing: DS.Space.s2) {
+                    if card.others > 0 {
+                        Text("\(card.others) more").dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    }
+                    // Time is WEIGHTED (prd §235) and now GATED (density
+                    // pass, 2026-07-29): "Closes Aug 2028" cost a line on
+                    // most of the book and told a reader nothing. Under 30
+                    // days it's worth a line; inside 48h that line reads as
+                    // state, since 62% closing tonight is a different claim
+                    // than 62% closing next month.
+                    if let closeTime = card.closeTime, isNearTerm(closeTime) {
+                        if card.others > 0 { Text("·").foregroundStyle(DS.textTertiary) }
+                        Text("Closes \(closeTime.formatted(.relative(presentation: .named)))")
+                            .dsText(.subhead13)
+                            .fontWeight(isImminent(closeTime) ? .semibold : .regular)
+                            .foregroundStyle(isImminent(closeTime) ? DS.attention : DS.textTertiary)
+                    }
+                    if card.isThin {
+                        if card.others > 0 || card.closeTime != nil { Text("·").foregroundStyle(DS.textTertiary) }
+                        Text("Thin book").dsText(.subhead13).foregroundStyle(DS.attention)
+                    }
                 }
             }
         }
-        .dsListCardRow()
+        .padding(DS.Space.s4)
+        .dsWidgetSurface()
+        .padding(.top, DS.Space.s2)
     }
 
-    /// One outcome in a race. TWO tap targets, deliberately separated: the
-    /// row reads (opens the preview), the trailing capsule writes (follows).
-    /// A single whole-row Button that followed on tap was the first build's
-    /// mistake — it made the app's read gesture perform a silent write, and
-    /// left no way to inspect a market without committing to it.
+    /// One outcome in a race — a READ target only (2026-07-29, the density
+    /// pass). A race's several candidates used to each carry their own
+    /// follow capsule, which meant a four-way race stacked four identical
+    /// blue circles down the trailing edge — the single busiest thing in the
+    /// view, and ambiguous besides (which one does "follow" mean here?). The
+    /// rule adopted: a capsule exists where there's exactly ONE thing to
+    /// follow. A race has several, so the whole row taps through to the
+    /// preview, and following happens there, on the specific outcome you
+    /// opened. Already-followed still says so — a quiet checkmark, not a
+    /// button — so the row keeps reporting state without adding a target.
     private func outcomeRow(_ outcome: BrowseOutcome, isLead: Bool, thin: Bool) -> some View {
-        HStack(spacing: DS.Space.s3) {
-            Button { preview(outcome) } label: {
-                HStack(spacing: DS.Space.s3) {
-                    Text(outcome.name).dsText(.callout15)
-                        .foregroundStyle(isLead ? DS.textPrimary : DS.textSecondary)
-                        .fontWeight(isLead ? .semibold : .regular)
-                        .lineLimit(1).frame(width: 96, alignment: .leading)
-                    PredictionOddsBar(probability: outcome.probability,
-                                      previous: outcome.previousProbability,
-                                      isLead: isLead)
-                        .frame(height: 8)
-                    Text("\(Int((outcome.probability * 100).rounded()))%")
-                        .dsText(.body17).fontWeight(.semibold).monospacedDigit()
-                        // A thin book's number is treated gently wherever it
-                        // renders (§83 ②).
-                        .foregroundStyle(thin ? DS.textSecondary : DS.textPrimary)
-                        .frame(width: 42, alignment: .trailing)
+        Button { preview(outcome) } label: {
+            HStack(spacing: DS.Space.s3) {
+                Text(outcome.name).dsText(.callout15)
+                    .foregroundStyle(isLead ? DS.textPrimary : DS.textSecondary)
+                    .fontWeight(isLead ? .semibold : .regular)
+                    .lineLimit(1).frame(width: 96, alignment: .leading)
+                PredictionOddsBar(probability: outcome.probability,
+                                  previous: outcome.previousProbability,
+                                  isLead: isLead)
+                    .frame(height: 8)
+                Text("\(Int((outcome.probability * 100).rounded()))%")
+                    .dsText(.body17).fontWeight(.semibold).monospacedDigit()
+                    // A thin book's number is treated gently wherever it
+                    // renders (§83 ②).
+                    .foregroundStyle(thin ? DS.textSecondary : DS.textPrimary)
+                    .frame(width: 42, alignment: .trailing)
+                if outcome.isFollowed {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(DS.confirm)
+                        .frame(width: 16)
                 }
-                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
-            followCapsule(outcome)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
     }
 
     private func binaryRow(_ only: BrowseOutcome, card: BrowseCard) -> some View {
@@ -695,7 +709,9 @@ struct PredictionBrowseSection: View {
             Capsule().fill(DS.fillFaint).frame(height: 8)
             Capsule().fill(DS.fillFaint).frame(width: 120, height: 8)
         }
-        .dsListCardRow()
+        .padding(DS.Space.s4)
+        .dsWidgetSurface()
+        .padding(.top, DS.Space.s2)
         .redacted(reason: .placeholder)
     }
 
@@ -716,9 +732,12 @@ struct PredictionBrowseSection: View {
                     .dsText(.subhead13).foregroundStyle(DS.tint)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .dsListCardRow()
+        .padding(DS.Space.s4)
+        .dsWidgetSurface()
+        .padding(.top, DS.Space.s2)
     }
 
     /// The disagreement card is a DIFFERENT SHAPE, not the browse card in a
@@ -732,6 +751,12 @@ struct PredictionBrowseSection: View {
     /// The gap is stated, never judged: no spread computed, neither side
     /// called right, nothing suggesting an action (`PredictionTwin`'s own
     /// restraint, held here too).
+    ///
+    /// Both venue bars are READ targets now (2026-07-29, the density pass) —
+    /// two capsules stacked on one card was the same clutter the race rows
+    /// carried, and just as ambiguous (follow WHICH one, at a glance). Tap
+    /// either bar to preview that venue's market; follow from there, same as
+    /// a race outcome.
     @ViewBuilder
     private func disagreementCard(_ pair: PredictionDisagreement.Pair) -> some View {
         let gap = Int((abs(pair.kalshi.probability - pair.polymarket.probability) * 100).rounded())
@@ -744,52 +769,39 @@ struct PredictionBrowseSection: View {
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
                     .lineLimit(2)
             }
-            venueBar(name: "Kalshi", probability: pair.kalshi.probability,
-                     follow: { watchKalshi(pair.kalshi) },
-                     preview: { onPreview(PredictionPreview(kalshi: pair.kalshi)) })
-            venueBar(name: "Polymarket", probability: pair.polymarket.probability,
-                     follow: { watchPolymarket(pair.polymarket) },
-                     preview: { onPreview(PredictionPreview(polymarket: pair.polymarket)) })
+            venueBar(name: "Kalshi", probability: pair.kalshi.probability) {
+                onPreview(PredictionPreview(kalshi: pair.kalshi))
+            }
+            venueBar(name: "Polymarket", probability: pair.polymarket.probability) {
+                onPreview(PredictionPreview(polymarket: pair.polymarket))
+            }
         }
-        .dsListCardRow()
+        .padding(DS.Space.s4)
+        .dsWidgetSurface()
+        .padding(.top, DS.Space.s2)
     }
 
-    /// One venue's price inside a disagreement card — same read/write split
-    /// as an outcome row (tap the bar to preview, capsule to follow), tinted
-    /// to the exchange's own hue.
-    private func venueBar(name: String, probability: Double,
-                          follow: @escaping () -> Void,
-                          preview: @escaping () -> Void) -> some View {
-        HStack(spacing: DS.Space.s3) {
-            Button { DSHaptic.selection(); preview() } label: {
-                HStack(spacing: DS.Space.s3) {
-                    BridgeIcon(name: name, size: 18, circular: true)
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            Capsule().fill(DS.fillFaint)
-                            Capsule().fill(DS.washHue(for: name) ?? DS.tint)
-                                .frame(width: max(0, min(1, probability)) * geo.size.width)
-                        }
+    /// One venue's price inside a disagreement card — tinted to the
+    /// exchange's own hue, tapping through to that market's preview.
+    private func venueBar(name: String, probability: Double, preview: @escaping () -> Void) -> some View {
+        Button { DSHaptic.selection(); preview() } label: {
+            HStack(spacing: DS.Space.s3) {
+                BridgeIcon(name: name, size: 18, circular: true)
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(DS.fillFaint)
+                        Capsule().fill(DS.washHue(for: name) ?? DS.tint)
+                            .frame(width: max(0, min(1, probability)) * geo.size.width)
                     }
-                    .frame(height: 10)
-                    Text("\(Int((probability * 100).rounded()))%")
-                        .dsText(.body17).fontWeight(.semibold).monospacedDigit()
-                        .foregroundStyle(DS.textPrimary)
-                        .frame(width: 42, alignment: .trailing)
                 }
-                .contentShape(Rectangle())
+                .frame(height: 10)
+                Text("\(Int((probability * 100).rounded()))%")
+                    .dsText(.body17).fontWeight(.semibold).monospacedDigit()
+                    .foregroundStyle(DS.textPrimary)
+                    .frame(width: 42, alignment: .trailing)
             }
-            .buttonStyle(.plain)
-            Button { follow() } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(DS.tint)
-                    .frame(width: 30, height: 30)
-                    .background(Circle().fill(DS.fillFaint))
-                    .contentShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Follow on \(name)")
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
     }
 }
