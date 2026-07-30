@@ -570,17 +570,27 @@ struct FeedScreen: View {
     /// happened) with nothing to show for it. Distinct from "not read yet",
     /// which still wears the placeholder and is about to be retitled.
     private func isWordless(_ t: Thing) -> Bool {
-        t.kind == .screenshot && t.ocrAt != nil && t.content.isEmpty
+        if t.kind == .screenshot { return t.ocrAt != nil && t.content.isEmpty }
+        // A folder-picked image reads the same way (2026-07-27) — OCR ran,
+        // found nothing, and the picture already carries the row; gated on
+        // `previewImageData` too so a not-yet-thumbnailed image (still
+        // showing its byte size as `content`, `ocrAt` untouched) never
+        // qualifies before there's actually a picture to show.
+        if t.kind == .file, t.source == "Files" {
+            return t.ocrAt != nil && t.content.isEmpty && t.previewImageData != nil
+        }
+        return false
     }
 
     /// Which rows render as a picture with no title (prd §218) — the wordless
-    /// screenshots of each day, but ONLY while they're a MINORITY of that day.
+    /// screenshots (and, since 2026-07-27, wordless Files images) of each
+    /// day, but ONLY while they're a MINORITY of that day.
     ///
     /// The gate is the whole design. One wordless shot among five rows is a
     /// picture worth looking at; a day that's mostly wordless shots would
     /// become a column of 58pt tiles — which is the Photos grid, a shape that
     /// already exists behind its own chip. Past half a day, they fall back to
-    /// the ordinary band and keep the honest "Screenshot" label.
+    /// the ordinary band and keep the honest filename as the title.
     private func imageOnlyIDs(_ days: [(String, [Thing])]) -> Set<UUID> {
         var ids: Set<UUID> = []
         for (_, dayThings) in days {

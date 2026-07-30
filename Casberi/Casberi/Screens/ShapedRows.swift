@@ -265,6 +265,12 @@ struct BandRow: View {
                                 circular: thing.source == "Tokens")
                 } else if thing.kind == .screenshot, thing.sourceRef != nil {
                     PhotoWell(thing: thing, size: 26)
+                } else if thing.previewImageData != nil {
+                    // A folder-picked image (Files, 2026-07-27) carries its
+                    // own bytes with no PHAsset behind it — PhotoWell already
+                    // reads `previewImageData` before ever touching Photos,
+                    // so this just needs the gate widened past `.screenshot`.
+                    PhotoWell(thing: thing, size: 26)
                 } else {
                     BridgeIcon(name: thing.source, size: 26)
                 }

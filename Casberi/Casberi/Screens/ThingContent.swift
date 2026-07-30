@@ -215,7 +215,15 @@ struct ThingContentView: View {
             VoiceContent(transcript: thing.content, sourceRef: thing.sourceRef,
                          audio: thing.audio)
         case .file, .output:
-            FileChip(name: thing.title, note: thing.content)
+            // A folder-picked image carries its own bytes (2026-07-27, the
+            // Files heal pass) — lead with the picture, the same way a
+            // screenshot leads with ScreenshotContent, instead of a chip
+            // naming a file whose whole point IS what's in it.
+            if let data = thing.previewImageData, let image = UIImage(data: data) {
+                FilePictureContent(image: image)
+            } else {
+                FileChip(name: thing.title, note: thing.content)
+            }
         case .event:
             if !thing.content.isEmpty { ScheduleCard(text: thing.content) }
         case .mail:
@@ -337,6 +345,24 @@ private struct ScreenshotContent: View {
     }
 }
 
+/// A folder-picked image's own picture (2026-07-27) — Files things carry
+/// their bytes directly on the model (no PHAsset to fetch), so this just
+/// draws what's already there; same framing as `ScreenshotContent`'s image
+/// branch, minus the load — there's nothing to load.
+private struct FilePictureContent: View {
+    let image: UIImage
+    var body: some View {
+        Image(uiImage: image)
+            .resizable()
+            .scaledToFit()
+            .frame(maxHeight: 280)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.bottom, DS.Space.s3)
+    }
+}
+
 /// The universal Share entry (2026-07-13) — text/URL for most kinds, but a
 /// screenshot's whole point IS the image, so sharing it as bare title text
 /// read as hollow. Loads the same PHAsset ScreenshotContent already shows and
@@ -363,7 +389,7 @@ struct ThingShareLink<Label: View>: View {
 
     @ViewBuilder private var liveBody: some View {
         Group {
-            if thing.kind == .screenshot, let screenshotImage {
+            if (thing.kind == .screenshot || thing.kind == .file), let screenshotImage {
                 ShareLink(item: Image(uiImage: screenshotImage),
                           preview: SharePreview(thing.title, image: Image(uiImage: screenshotImage))) {
                     label()
@@ -383,7 +409,7 @@ struct ThingShareLink<Label: View>: View {
     /// degraded placeholder callback so Share never hands out a blurry
     /// stand-in (same fix as GenCover/PhotoWell).
     private func loadScreenshotIfNeeded() {
-        guard thing.kind == .screenshot, screenshotImage == nil,
+        guard thing.kind == .screenshot || thing.kind == .file, screenshotImage == nil,
               let ref = thing.sourceRef else { return }
         if ref.hasPrefix("sample:") {
             screenshotImage = UIImage.demoSample(for: ref)

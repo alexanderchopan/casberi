@@ -347,6 +347,14 @@ enum BridgeRefresh {
                 await BridgeRefresh.stagger(s)
                 _ = await FilesIngest.refresh(context: context)
             }
+            // Thumbnails + OCR for the image files a sync already landed —
+            // same throttle contract as Photos' heal above.
+            if force || BridgeRefresh.dueForHeal("files") {
+                let s2 = slot(); Task { @MainActor in
+                    await BridgeRefresh.stagger(s2)
+                    _ = await FilesIngest.heal(context: context)
+                }
+            }
         }
         if DropboxStore.shared.connected {
             let s = slot(); Task { @MainActor in

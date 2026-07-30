@@ -49,21 +49,34 @@ struct FilesScreen: View {
                 folderSection.listRowSeparator(.hidden)
                 removeSection.listRowSeparator(.hidden)
             }
+            // A SECOND `.fileImporter`, not a stray duplicate (bug report,
+            // 2026-07-29: "the button to choose a folder isn't interacting").
+            // "Change" lives inside this sheet's own content, and a system
+            // document picker presents from whichever view controller is
+            // FRONTMOST — with the sheet up, that's this one, not the base
+            // List underneath it. The importer attached down there (below)
+            // still owns the FIRST connect, before any sheet exists to cover
+            // it; this one owns every reconnect afterward. Same binding, same
+            // handler — only the presenting context differs.
+            .fileImporter(isPresented: $picking, allowedContentTypes: [.folder],
+                          onCompletion: handlePick)
         }
-        .fileImporter(isPresented: $picking, allowedContentTypes: [.folder]) { outcome in
-            guard case .success(let url) = outcome else { return }
-            let scoped = url.startAccessingSecurityScopedResource()
-            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-            if files.setFolder(url: url) {
-                DSHaptic.tap()
-                Task { await sync(justConnected: true) }
-            } else {
-                result = String(localized: "Couldn't keep access to that folder — try picking it again.")
-                resultIsError = true
-            }
-        }
+        .fileImporter(isPresented: $picking, allowedContentTypes: [.folder], onCompletion: handlePick)
         .onAppear {
             if files.connected { Task { await sync() } }
+        }
+    }
+
+    private func handlePick(_ outcome: Result<URL, Error>) {
+        guard case .success(let url) = outcome else { return }
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        if files.setFolder(url: url) {
+            DSHaptic.tap()
+            Task { await sync(justConnected: true) }
+        } else {
+            result = String(localized: "Couldn't keep access to that folder — try picking it again.")
+            resultIsError = true
         }
     }
 

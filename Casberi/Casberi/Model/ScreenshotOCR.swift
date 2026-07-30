@@ -15,6 +15,15 @@ enum ScreenshotOCR {
     /// takes real milliseconds.
     static func text(for asset: PHAsset) async -> String? {
         guard let cg = await load(asset) else { return nil }
+        return await text(for: cg)
+    }
+
+    /// The same read over pixels that DIDN'T come from the photo library
+    /// (2026-07-27) — the Files bridge hands in a folder image decoded from
+    /// its URL. Extracted so the two paths can never drift on the parts that
+    /// matter (accurate level, language correction, the 4000-char corpus cap);
+    /// only where the pixels come from differs.
+    static func text(for cg: CGImage) async -> String? {
         let recognized: String? = await Task.detached(priority: .utility) {
             let request = VNRecognizeTextRequest()
             request.recognitionLevel = .accurate

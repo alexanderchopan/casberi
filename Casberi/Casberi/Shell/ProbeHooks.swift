@@ -1561,6 +1561,26 @@ enum ProbeHooks {
                 NSLog("Files probe: %@ new", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-filesHealProbe YES` runs the Files HEAL directly — the pass that
+        // thumbnails and OCRs the image files a sync already landed (2026-07-27,
+        // the same split `-photoHealProbe` exercises for Photos: landing alone
+        // leaves every image row saying just its byte size). Logs what the pass
+        // did, then each image's OCR character count and current title — the
+        // same pairing that separates "OCR found nothing" from "the retitle
+        // didn't fire".
+        Hook(key: "filesHealProbe") { _, context in
+            Task { @MainActor in
+                let r = await FilesIngest.heal(context: context)
+                NSLog("[Casberi] filesHeal: thumbed=%d ocred=%d", r.thumbed, r.ocred)
+                let files = (try? context.fetch(FetchDescriptor<Thing>(
+                    predicate: #Predicate { $0.source == "Files" },
+                    sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []
+                for t in files.prefix(12) {
+                    NSLog("[Casberi] filesHealRow| ocr=%d thumb=%@ title=%@",
+                          t.content.count, t.previewImageData != nil ? "yes" : "no", t.title)
+                }
+            }
+        },
         // `-dropboxFolder <path>` points the Dropbox bridge at a folder
         // headlessly and syncs it — but only once the OAuth token is already
         // in the Keychain (PKCE needs a real browser hop, so unlike
