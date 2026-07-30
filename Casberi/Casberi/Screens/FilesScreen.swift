@@ -148,5 +148,18 @@ struct FilesScreen: View {
                                          "Read-only — never edits a file."]) {
             DSHaptic.success()
         }
+        // Thumbnails/OCR right away, not on the next app foreground — the
+        // ONLY other caller (BridgeRefresh) runs off a scenePhase change, so
+        // without this a person who connects and stays in the app sees every
+        // image sit there as a bare filename indefinitely (bug report,
+        // 2026-07-29: "it's still not showing images" — the enrichment code
+        // was correct, nothing ever called it in this flow). Unconditional,
+        // not gated on `added` — reopening this screen re-syncs an
+        // already-connected folder (`onAppear` below) and should still catch
+        // up a backlog `heal` didn't finish last time, even when nothing NEW
+        // landed. `heal` itself no-ops fast when there's nothing to do.
+        // Fire-and-forget: this screen's own `result` line already reported
+        // the sync; heal updates rows in place as it lands.
+        Task { _ = await FilesIngest.heal(context: modelContext) }
     }
 }
