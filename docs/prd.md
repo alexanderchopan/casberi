@@ -334,7 +334,7 @@ Verbs card: Open in {source} / Open shortcut / type verb — rung 2 lives here. 
 
 ## 20. Tags
 
-Three sources. Type tags: assigned at ingestion. Project tags: assigned through clustering; the person renames (in project detail). User tags: land via `#hashtag` in captured text only — §178 retired the thing-sheet editor and the composer's tag/rename commands as hand-filing surfaces the app was never meant to have. Tags act as Feed filters and search terms. Project membership rides a tag. No tag management screen; a tag with zero things dies.
+Three sources. Type tags: assigned at ingestion. Project tags: assigned through clustering, entirely computed — no rename door either (§229 retired the last one). User tags: land via `#hashtag` in captured text only — §178 retired the thing-sheet editor and the composer's tag/rename commands, and §229 retired project detail's "Rename tag" on top, as hand-filing surfaces the app was never meant to have. Tags act as Feed filters and search terms. Project membership rides a tag. No tag management screen; a tag with zero things dies.
 
 RULING — WHAT TAGS ARE FOR (2026-07-10, user): tags are a RETRIEVAL
 VOCABULARY, not a management surface. The app assigns (type tags at
@@ -354,7 +354,7 @@ derived organize chip (36aa), never by new tag surfaces. Every future
 
 ## 21. Projects
 
-A project is a computed cluster. The system groups things by theme across sources and names the group. The person renames or pins; the person never files. A project carries: name, sources, synthesis line, thing count, tint fill at opacity scaled by count, stable across sessions. Project detail: header paints from the tile, doc streams under.
+A project is a computed cluster. The system groups things by theme across sources and names the group; the person never files, never pins (pin died 2026-07-07), never renames (§229). A project carries: name, sources, synthesis line, thing count, tint fill at opacity scaled by count, stable across sessions. Project detail: header paints from the tile, doc streams under.
 
 ## 22. Marks
 
@@ -6663,11 +6663,12 @@ files:**
 
 - Kept: the `tags` field itself; type tags; bridge/import auto-labels
   (Watchlist, Trending, NFT, Day One's own tags, RSS categories); project
-  clustering (a project IS a shared tag, §21 unchanged) and its one write —
-  renaming a cluster in project detail; the retriever's 2× tag boost;
-  Spotlight keywords; `showtag:` kept pills; `#hashtag` extraction on
-  capture (Capture.swift — zero UI, a property of the text itself, not a
-  filing act).
+  clustering (a project IS a shared tag, §21 unchanged); the retriever's 2×
+  tag boost; Spotlight keywords; `showtag:` kept pills; `#hashtag`
+  extraction on capture (Capture.swift — zero UI, a property of the text
+  itself, not a filing act). Its one write — renaming a cluster in project
+  detail — was kept here but retired later, §229: the person mistook it for
+  a leftover of this very ruling, and on reflection it was one.
 - **Retired:** the thing sheet's tag editor (`ThingSheetView` — add/remove
   chips, rename-everywhere, delete-everywhere, all behind the TAGS row's
   tap). The row is now read-only provenance: your own tags keep their hue,
@@ -10171,3 +10172,35 @@ withdraws — same capture-only line as every wallet-adjacent bridge in this
 app. A buyer's own stuck intent stays unbuildable without an indexed
 recipient field Peer's contracts don't have; this isn't a "later" — it's a
 structural dead end unless Peer's own event shapes change.
+
+## 229. Project detail's "Rename tag" retires — the last write door on tags closes (user: opened a project from the Home treemap, "it says rename tag, but we got rid of that feature" → "i want to retire this one too", 2026-07-30)
+
+§178 (2026-07-22) killed the thing sheet's tag editor and the composer's
+`tag X as Y`/`rename A to B` commands, and explicitly *kept* one write —
+renaming a cluster in `ProjectDetailScreen` — reasoning the project's own
+name is a different kind of write than hand-filing a thing. Looking at it
+again from a real project screen (a treemap tile named "AAPL", another
+"Contributions"), that distinction didn't hold up: a rename button is a
+filing affordance no matter which screen it's bolted to, and §339's own
+framing ("tags are a RETRIEVAL VOCABULARY, not a management surface... the
+person NAMES, and only at the moment they care") reads as an argument
+against this door too, not for it. So it goes.
+
+`ProjectDetailScreen.swift`: removed the toolbar's "Rename tag" button, its
+confirmation alert, `newName`/`renaming` state, and `rename()` (which
+rewrote the tag across every member thing). `@Environment(\.modelContext)`
+and `@Environment(\.dismiss)` dropped with it — nothing else in the screen
+wrote or dismissed. The screen is now pure read: header paints from the
+tile, `compose()` groups members, nothing on it can be tapped to change the
+corpus. §20 and §21 updated to state plainly that project tags are
+entirely computed with no rename door; §178's "kept" list amended to point
+here instead of describing a write that no longer exists.
+
+A project (and any other tag) that needs a different name now has none —
+consistent with §337/§357: the system names, the person never files, full
+stop.
+
+NOT BUILT, NOT SEEN — authored in a Linux session with no Xcode. The change
+is a pure deletion (no new surface, no new state to misrender), but build
+and open a project from Home before trusting the toolbar is actually
+empty.
