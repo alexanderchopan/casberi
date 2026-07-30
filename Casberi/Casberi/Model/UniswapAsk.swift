@@ -30,7 +30,7 @@ enum UniswapAsk {
         if let worst = outOfRange.first {
             let pair = "\(worst.token0Symbol)/\(worst.token1Symbol)"
             let status = UniswapLiquidity.timeOutOfRange(address: worst.address, network: worst.network,
-                                                         tokenId: worst.tokenId)
+                                                         version: worst.version, tokenId: worst.tokenId)
                 ?? String(localized: "out of range")
             let tail = outOfRange.count > 1
                 ? String(localized: " (\(outOfRange.count) positions out of range)") : ""

@@ -1,15 +1,39 @@
 import Foundation
 import SwiftData
 
-/// Uniswap V3 concentrated-liquidity positions (2026-07-30) — parity with
-/// `WalletDeFi`/`MorphoDeFi`: a wallet's LP positions read straight off the
-/// NonfungiblePositionManager + pool contracts, the same measured-keyless-
-/// public-RPC shape `WalletDeFi` uses — NOT Morpho's own free GraphQL API,
-/// which is a lucky exception its own docstring calls out. Uniswap Labs has
-/// no equivalent free public position API (its subgraph needs a paid Graph
-/// Gateway key), so this rides raw RPC on `WalletApprovals`'s own measured
-/// chain table instead, on the SAME five chains Aave/Morpho already read —
-/// Uniswap V3 is deployed on all five, no new chain-support decision needed.
+/// Uniswap concentrated-liquidity positions, **V3 and V4** (2026-07-30) —
+/// parity with `WalletDeFi`/`MorphoDeFi`. Ticks are read straight off the
+/// position/pool contracts over the same measured-keyless-public-RPC shape
+/// `WalletDeFi` uses, on the SAME five chains Aave/Morpho already read
+/// (both versions are deployed on all five, so no new chain-support
+/// decision was needed).
+///
+/// The two versions diverge on ENUMERATION ONLY, and the reason is
+/// measured, not assumed:
+/// - **V3** is fully keyless. `NonfungiblePositionManager` is
+///   ERC721Enumerable, so `balanceOf` → `tokenOfOwnerByIndex` lists a
+///   wallet's positions with no key and no indexer.
+/// - **V4 cannot be.** Its PositionManager is ERC721 but **NOT**
+///   ERC721Enumerable (MEASURED 2026-07-30: `supportsInterface(0x780e9d63)`
+///   → false, and `tokenOfOwnerByIndex` reverts), so no on-chain call can
+///   list a wallet's positions at all. Scanning `Transfer` logs instead is
+///   fine on Ethereum but IMPOSSIBLE on Base, where every keyless host caps
+///   `eth_getLogs` far below the ~23M-block backfill required
+///   (`mainnet.base.org` 10k, `publicnode` 50k, `1rpc` 50 — all measured).
+///   So V4 enumeration rides `ZerionAPI.liquidityPositions`, and the chain
+///   supplies the ticks.
+///
+/// Zerion also supplies the USD VALUE for both versions — the number this
+/// file originally declined to compute, since deriving it on-chain needs the
+/// sqrt-price/liquidity math the honesty rule wouldn't let us guess at.
+/// Zerion already computes it, so it arrives measured rather than derived.
+/// Its fee figures were cross-checked against this file's own independent
+/// simulated-`collect()` read and agreed TO THE CENT ($47.65 on position
+/// #1327831), which is why they're trusted for V4, where no cheap on-chain
+/// fee read exists.
+///
+/// Both versions render as ONE merged list (user ruling 2026-07-30) — a
+/// person doesn't think of their LP by protocol version.
 ///
 /// Structurally different from the other two: Aave/Morpho ask "is it safe"
 /// (health factor vs. liquidation). A Uniswap LP position asks "is it
@@ -34,15 +58,26 @@ import SwiftData
 ///     timestamp-filtered API). A landed Collect event also feeds the
 ///     lifetime-fees-collected running total the milestone ladder reads.
 ///
-/// Deliberately NOT attempted: a position's total USD value (locked
-/// token0+token1 at the current price) needs the same sqrt-price/liquidity
-/// math Uniswap's own SDK implements — real math, easy to get subtly wrong,
-/// and the honesty rule says a confidently-wrong dollar figure is worse than
-/// none. What ships instead is fully derived from values already read
-/// straight off the contracts: uncollected fees (from a simulated
-/// `collect()` call, never sent) and the range/tick facts. No IL number
-/// either, same reasoning, deferred. The Aave-rate-comparison toast is
-/// deferred for the same structural reason — see `clearState`'s doc comment.
+/// Deliberately NOT attempted: an impermanent-loss / "vs. just holding"
+/// number. It needs each position's cost basis across every increase and
+/// decrease, and a subtly wrong figure there is worse than none. The
+/// Aave-rate-comparison toast is deferred for a related reason — see
+/// `clearState`'s doc comment.
+///
+/// V4 caveats worth knowing before extending this:
+/// - **33% of newly-initialized V4 pools carry a HOOK** (measured over 1,245
+///   pools in 20k mainnet blocks) — a contract that can override swap and
+///   fee behavior. Range is unaffected (tick math belongs to the
+///   PoolManager, not the hook), which is exactly why range is what this
+///   ships for V4 and an on-chain fee derivation is not.
+/// - V4 fee reads have no cheap equivalent of V3's simulated `collect()`:
+///   `modifyLiquidities(bytes,uint256)` is an encoded-action entry point,
+///   not a callable getter. Hence Zerion for that number.
+/// - Zerion's LP list is NOT exhaustive (measured: it returned 2 of a
+///   wallet's 3 real V3 positions, omitting a zero-fee out-of-range one).
+///   That's why V3 keeps its own complete on-chain enumeration and only
+///   borrows Zerion's money; for V4 the incompleteness is accepted, since
+///   the alternative is showing nothing at all.
 ///
 /// MEASURED live 2026-07-30, don't re-derive without re-measuring:
 /// - Factory/NonfungiblePositionManager addresses, from Uniswap's own
@@ -127,6 +162,11 @@ enum UniswapLiquidity {
     struct Position: Equatable, Sendable {
         let network: String
         let address: String       // the watched wallet, lowercased
+        /// 3 or 4 — the protocol version this position lives in. Both render
+        /// as one merged list (user ruling 2026-07-30): a person doesn't
+        /// think of their LP by protocol version, and splitting them would
+        /// repeat exactly what prd §212 undid for Aave/Morpho.
+        let version: Int
         let tokenId: Int
         let token0: String
         let token1: String
@@ -137,14 +177,33 @@ enum UniswapLiquidity {
         let tickUpper: Int
         let currentTick: Int
         let inRange: Bool
-        /// Uncollected fees, scaled by each token's own decimals — read via
-        /// a SIMULATED `collect()` (an `eth_call`, never sent), which is the
-        /// only way to read fees still accruing since the position's last
-        /// on-chain interaction; `positions()`'s own `tokensOwed` field only
-        /// reflects the LAST poke, not the live number.
+        /// Uncollected fees, scaled by each token's own decimals. V3 reads
+        /// these via a SIMULATED `collect()` (an `eth_call`, never sent) —
+        /// the only way to see fees accrued since the position's last
+        /// on-chain poke, since `positions()`'s own `tokensOwed` is stale.
+        /// V4 has no cheap equivalent (`modifyLiquidities` is an encoded-
+        /// action pattern, not a callable getter), so its fee number comes
+        /// from Zerion instead and these two stay 0.
         let uncollectedFee0: Double
         let uncollectedFee1: Double
-        let uncollectedFeeUSD: Double?   // nil when either token is unpriced
+        /// Uncollected fees in USD. V3: priced from the on-chain amounts via
+        /// `DefiLlamaPrices`, cross-checked against Zerion to the cent
+        /// (2026-07-30). V4: straight from Zerion's `reward` legs.
+        let uncollectedFeeUSD: Double?
+        /// The position's principal in USD, from Zerion (2026-07-30) — the
+        /// number this file's header once declined to compute on-chain,
+        /// because doing so needs the sqrt-price/liquidity math the honesty
+        /// rule wouldn't let us guess at. Zerion already computes it, so it
+        /// arrives measured rather than derived. nil when Zerion didn't
+        /// answer or doesn't know this position.
+        let valueUSD: Double?
+
+        /// Stable identity across network AND version — V3 and V4 mint
+        /// tokenIds from separate counters, so #8472 exists in both and a
+        /// bare tokenId would collide in a `ForEach` (the reused-id trap
+        /// that traps SwiftUI hard). Also the UserDefaults key shape for the
+        /// range bucket and the out-of-range stamp.
+        var key: String { "\(network)|\(version)|\(tokenId)" }
     }
 
     struct Book: Equatable, Sendable {
@@ -168,8 +227,21 @@ enum UniswapLiquidity {
 
     private static func fetchBook(addresses: [String]) async -> Book {
         var book = Book()
+        // Zerion's LP read, once per wallet — the enumeration for V4 (whose
+        // PositionManager isn't ERC721Enumerable, so no on-chain call can
+        // list a wallet's positions) and the money for BOTH versions. Keyed
+        // "network|version|tokenId" so the V3 arm below can enrich by lookup.
+        var zerion: [String: ZerionAPI.LiquidityPosition] = [:]
+        for address in addresses {
+            guard let found = await ZerionAPI.liquidityPositions(address: address) else { continue }
+            for p in found { zerion["\(p.network)|\(p.version)|\(p.tokenId)"] = p }
+        }
+
         for chain in chains {
             for address in addresses {
+                // V4 first — enumeration comes from Zerion, ticks from chain.
+                book.positions += await v4Positions(chain: chain, owner: address, zerion: zerion)
+
                 let tokenIds = await ownedTokenIds(chain: chain, owner: address)
                 guard !tokenIds.isEmpty else { continue }
                 var pairs: Set<String> = []   // dedupe pricing requests per pass
@@ -205,28 +277,198 @@ enum UniswapLiquidity {
                        let p1 = prices["\(chain.network)|\(info.token1)"]?.price {
                         usd = scaled0 * p0 + scaled1 * p1
                     }
+                    let known = zerion["\(chain.network)|3|\(entry.tokenId)"]
                     book.positions.append(Position(
                         network: chain.network, address: address.lowercased(),
-                        tokenId: entry.tokenId,
+                        version: 3, tokenId: entry.tokenId,
                         token0: info.token0, token1: info.token1,
                         token0Symbol: meta0?.symbol ?? "?", token1Symbol: meta1?.symbol ?? "?",
                         feeTier: info.fee, tickLower: info.tickLower, tickUpper: info.tickUpper,
                         currentTick: tick, inRange: inRange,
                         uncollectedFee0: scaled0, uncollectedFee1: scaled1,
-                        uncollectedFeeUSD: usd))
+                        // The on-chain read stays authoritative for V3 fees
+                        // (it's complete and independently verified); Zerion
+                        // only fills in when pricing failed.
+                        uncollectedFeeUSD: usd ?? known?.feesUSD,
+                        valueUSD: known?.valueUSD))
                 }
             }
         }
         return book
     }
 
+    // MARK: - Uniswap V4 (2026-07-30)
+    //
+    // Structurally different from V3 in the one way that matters: V4's
+    // PositionManager is ERC721 but NOT ERC721Enumerable (MEASURED —
+    // `supportsInterface(0x780e9d63)` returns false and `tokenOfOwnerByIndex`
+    // reverts), so `ownedTokenIds`' loop cannot work and NO on-chain call
+    // lists a wallet's positions. Zerion supplies the ids; the chain supplies
+    // the ticks. Everything else about the feature is shared.
+    //
+    // The read chain, verified live end-to-end 2026-07-30 against mainnet
+    // position #356417:
+    //   getPoolAndPositionInfo(tokenId)  → PoolKey + a PACKED PositionInfo
+    //   unpack                            → 200b poolId | 24b tickUpper
+    //                                       | 24b tickLower | 8b hasSubscriber
+    //   keccak256(abi.encode(PoolKey))    → the FULL 32-byte poolId
+    //   StateView.getSlot0(poolId)        → the current tick
+    // Decoded that position as range [-881100, 881100] against tick 241595.
+    //
+    // Note keccak is MANDATORY here, unlike V3 where `factory.getPool()` let
+    // this file avoid it: the packed info stores only the poolId's top 25
+    // bytes and `getSlot0` needs all 32. The derivation is checked against
+    // those 25 bytes on every read (see `v4PoolId`), so a wrong PoolKey
+    // encoding can never silently read some other pool's price.
+
+    private struct V4Chain {
+        let network: String
+        let positionManager: String
+        let stateView: String
+    }
+    /// Every address INDEPENDENTLY deployed per chain (unlike V3's shared
+    /// deterministic deploy) — all six verified live via `eth_getCode`
+    /// returning byte-identical code lengths on all five chains, 2026-07-30.
+    private static let v4Chains: [V4Chain] = [
+        V4Chain(network: "eth-mainnet",
+                positionManager: "0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e",
+                stateView: "0x7ffe42c4a5deea5b0fec41c94c136cf115597227"),
+        V4Chain(network: "base-mainnet",
+                positionManager: "0x7c5f5a4bbd8fd63184577525326123b519429bdc",
+                stateView: "0xa3c0c9b65bad0b08107aa264b0f3db444b867a71"),
+        V4Chain(network: "arb-mainnet",
+                positionManager: "0xd88f38f930b7952f2db2432cb002e7abbf3dd869",
+                stateView: "0x76fd297e2d437cd7f76d50f01afe6160f86e9990"),
+        V4Chain(network: "opt-mainnet",
+                positionManager: "0x3c3ea4b57a46241e54610e5f022e5c45859a1017",
+                stateView: "0xc18a3169788f4f75a170290584eca6395c75ecdb"),
+        V4Chain(network: "matic-mainnet",
+                positionManager: "0x1ec2ebf4f37e7363fdfe3551602425af0b3ceef9",
+                stateView: "0x5ea1bd7974c8a611cbab0bdcafcb1d9cc9b3ba5a"),
+    ]
+
+    /// The V4 positions Zerion listed for this wallet on this chain, each
+    /// given its live range status from the chain. A position Zerion knows
+    /// but whose on-chain read fails is DROPPED, not shown range-less — a
+    /// liquidity row whose whole job is "is it earning" must not appear
+    /// unable to say.
+    private static func v4Positions(chain: Chain, owner: String,
+                                    zerion: [String: ZerionAPI.LiquidityPosition])
+        async -> [Position] {
+        guard let v4 = v4Chains.first(where: { $0.network == chain.network }) else { return [] }
+        let mine = zerion.values.filter { $0.network == chain.network && $0.version == 4 }
+        guard !mine.isEmpty else { return [] }
+        var out: [Position] = []
+        for entry in mine {
+            guard let info = await v4PositionInfo(v4, tokenId: entry.tokenId),
+                  let tick = await v4CurrentTick(v4, poolId: info.poolId)
+            else { continue }
+            let meta0 = await tokenMeta(chain: chain, contract: info.currency0)
+            let meta1 = await tokenMeta(chain: chain, contract: info.currency1)
+            out.append(Position(
+                network: chain.network, address: owner.lowercased(),
+                version: 4, tokenId: entry.tokenId,
+                token0: info.currency0, token1: info.currency1,
+                // A V4 pool can hold the NATIVE coin (currency 0x0), which has
+                // no `symbol()` to call — name it from the chain rather than
+                // showing "?" (`tokenMeta` correctly fails on address zero).
+                token0Symbol: meta0?.symbol ?? nativeSymbol(chain.network, info.currency0),
+                token1Symbol: meta1?.symbol ?? nativeSymbol(chain.network, info.currency1),
+                feeTier: info.fee, tickLower: info.tickLower, tickUpper: info.tickUpper,
+                currentTick: tick, inRange: info.tickLower <= tick && tick < info.tickUpper,
+                // V4 fees ride Zerion — no cheap on-chain equivalent exists
+                // (see the Position doc); the two token amounts stay 0 rather
+                // than being back-derived from a USD figure.
+                uncollectedFee0: 0, uncollectedFee1: 0,
+                uncollectedFeeUSD: entry.feesUSD,
+                valueUSD: entry.valueUSD))
+        }
+        return out
+    }
+
+    private struct V4Info {
+        let currency0: String
+        let currency1: String
+        let fee: Int
+        let tickLower: Int
+        let tickUpper: Int
+        let poolId: String   // full 32-byte hex, no 0x
+    }
+
+    /// `getPoolAndPositionInfo(uint256)` → the PoolKey's five words plus the
+    /// packed PositionInfo, with the poolId re-derived and CHECKED against
+    /// the 25 bytes the packed value carries.
+    private static func v4PositionInfo(_ chain: V4Chain, tokenId: Int) async -> V4Info? {
+        guard let hex = await WalletApprovals.rpcRead(
+            network: chain.network, method: "eth_call",
+            params: [["to": chain.positionManager, "data": "0x7ba03aad" + padUint(tokenId)], "latest"]
+        ) as? String else { return nil }
+        var s = hex.lowercased(); if s.hasPrefix("0x") { s.removeFirst(2) }
+        guard s.count >= 64 * 6 else { return nil }
+        func word(_ i: Int) -> String {
+            let start = s.index(s.startIndex, offsetBy: i * 64)
+            return String(s[start..<s.index(start, offsetBy: 64)])
+        }
+        let currency0 = "0x" + word(0).suffix(40)
+        let currency1 = "0x" + word(1).suffix(40)
+        let fee = Int(WalletIngest.hexToDouble("0x" + word(2)))
+        let tickSpacing = word(3)
+        let hooks = "0x" + word(4).suffix(40)
+        // PositionInfo packing, MEASURED against position #356417 (whose real
+        // range is [-881100, 881100]): the 64-hex-char word is, from the
+        // RIGHT, 2 chars hasSubscriber, 6 chars tickLower, 6 chars tickUpper,
+        // then the poolId's top 25 bytes in the leading 50. The two slices
+        // below are pinned by that decode — an off-by-one here reads
+        // 6753649 instead of -881100 and every range verdict is silently
+        // wrong, so do not "tidy" them without re-checking against a real
+        // position.
+        let packed = word(5)
+        let tickLower = hexToSignedInt(String(packed.suffix(8).prefix(6)), bits: 24)
+        let tickUpper = hexToSignedInt(String(packed.suffix(14).prefix(6)), bits: 24)
+        // keccak256(abi.encode(PoolKey)) — the five words exactly as returned,
+        // which is what `abi.encode` of the struct produces.
+        let encoded = word(0) + word(1) + word(2) + tickSpacing + word(4)
+        guard let bytes = hexBytes(encoded) else { return nil }
+        let poolId = Keccak256.hexString(Keccak256.hash(bytes))
+        // The derived id must agree with the 25 bytes the position itself
+        // carries — otherwise the PoolKey encoding is wrong and `getSlot0`
+        // would read a DIFFERENT pool's price and silently mis-report range.
+        guard poolId.prefix(50) == packed.prefix(50) else { return nil }
+        _ = hooks
+        return V4Info(currency0: currency0, currency1: currency1, fee: fee,
+                      tickLower: tickLower, tickUpper: tickUpper, poolId: poolId)
+    }
+
+    /// `StateView.getSlot0(bytes32)` → the pool's current tick (word 1).
+    private static func v4CurrentTick(_ chain: V4Chain, poolId: String) async -> Int? {
+        guard let hex = await WalletApprovals.rpcRead(
+            network: chain.network, method: "eth_call",
+            params: [["to": chain.stateView, "data": "0xc815641c" + poolId], "latest"]
+        ) as? String else { return nil }
+        var s = hex.lowercased(); if s.hasPrefix("0x") { s.removeFirst(2) }
+        guard s.count >= 128 else { return nil }
+        return hexToSignedInt(String(s.dropFirst(64).prefix(64)), bits: 24)
+    }
+
+    /// A V4 pool may hold the chain's NATIVE coin as `currency0` (address
+    /// zero), which answers no `symbol()` call.
+    private static func nativeSymbol(_ network: String, _ contract: String) -> String {
+        guard Int(contract.dropFirst(2), radix: 16) == 0 else { return "?" }
+        return network == "matic-mainnet" ? "POL" : "ETH"
+    }
+
     // MARK: - Range-crossing alert (the WalletDeFi.sync bucket shape)
 
-    private static func rangeKey(_ address: String, _ network: String, _ tokenId: Int) -> String {
-        "wallet.defi.uniswap.range.\(address.lowercased()).\(network).\(tokenId)"
+    /// Both keys carry the VERSION (2026-07-30) — V3 and V4 mint tokenIds
+    /// from separate counters, so without it a V4 position could inherit a
+    /// same-numbered V3 position's range bucket and either fire a phantom
+    /// crossing or swallow a real one.
+    private static func rangeKey(_ address: String, _ position: Position) -> String {
+        "wallet.defi.uniswap.range.\(address.lowercased()).\(position.key)"
     }
-    private static func sinceKey(_ address: String, _ network: String, _ tokenId: Int) -> String {
-        "uniswap.range.since.\(address.lowercased()).\(network).\(tokenId)"
+    private static func sinceKey(_ address: String, _ network: String,
+                                 _ version: Int, _ tokenId: Int) -> String {
+        "uniswap.range.since.\(address.lowercased()).\(network)|\(version)|\(tokenId)"
     }
 
     /// Lands a thing on a NEW range crossing, in BOTH directions — the
@@ -241,18 +483,19 @@ enum UniswapLiquidity {
         let defaults = UserDefaults.standard
         var added = 0
         for position in book.positions {
-            let key = rangeKey(position.address, position.network, position.tokenId)
+            let key = rangeKey(position.address, position)
             let bucket = position.inRange ? "in-range" : "out-of-range"
             let last = defaults.string(forKey: key)
             defaults.set(bucket, forKey: key)
-            let since = sinceKey(position.address, position.network, position.tokenId)
+            let since = sinceKey(position.address, position.network,
+                                 position.version, position.tokenId)
             if bucket == "out-of-range", last != "out-of-range" {
                 defaults.set(Date.now.timeIntervalSince1970, forKey: since)
             } else if bucket == "in-range" {
                 defaults.removeObject(forKey: since)
             }
             guard let last, last != bucket else { continue }   // first sight or unchanged
-            let ref = "wallet:defi:uniswap:range:\(position.network):\(position.tokenId):"
+            let ref = "wallet:defi:uniswap:range:\(position.network):v\(position.version):\(position.tokenId):"
                 + String(Int(Date.now.timeIntervalSince1970))
             guard !existing.contains(ref) else { continue }
             let pair = "\(position.token0Symbol)/\(position.token1Symbol)"
@@ -261,7 +504,7 @@ enum UniswapLiquidity {
                 ? String(localized: "Your \(pair) position on \(chainName) drifted out of range — it stopped earning fees")
                 : String(localized: "Your \(pair) position on \(chainName) is back in range and earning again")
             let thing = Thing(kind: .transaction, title: title,
-                              content: "https://app.uniswap.org/positions/v3/\(chainSlug(position.network))/\(position.tokenId)",
+                              content: positionURL(position),
                               source: "Wallet", sourceRef: ref)
             thing.walletAddress = position.address
             context.insert(thing)
@@ -276,8 +519,9 @@ enum UniswapLiquidity {
     /// position, simpler than `MorphoDeFi.hfTrend`'s sampled series since
     /// range is a binary state, not a continuous drift. nil while in range
     /// or before a full day has passed.
-    static func timeOutOfRange(address: String, network: String, tokenId: Int) -> String? {
-        let key = sinceKey(address, network, tokenId)
+    static func timeOutOfRange(address: String, network: String,
+                               version: Int, tokenId: Int) -> String? {
+        let key = sinceKey(address, network, version, tokenId)
         guard UserDefaults.standard.object(forKey: key) != nil else { return nil }
         let since = UserDefaults.standard.double(forKey: key)
         let elapsed = Date.now.timeIntervalSince1970 - since
@@ -488,6 +732,8 @@ enum UniswapLiquidity {
             }
             guard let title else { continue }
             let thing = Thing(kind: .transaction, title: title,
+                              // v3 by construction: this sweep only scans the
+                              // V3 PositionManager's own events.
                               content: "https://app.uniswap.org/positions/v3/\(chainSlug(chain.network))/\(tokenId)",
                               source: "Wallet", sourceRef: ref)
             thing.walletAddress = owner
@@ -718,6 +964,24 @@ enum UniswapLiquidity {
 
     private static func hex(_ n: Int) -> String { "0x" + String(n, radix: 16) }
 
+    /// A hex nibble string (no `0x`, even length) as raw bytes — the input
+    /// `Keccak256.hash` takes. nil on odd length or a non-hex character, so
+    /// a malformed RPC response fails the poolId derivation cleanly instead
+    /// of hashing garbage.
+    private static func hexBytes(_ hex: String) -> [UInt8]? {
+        guard hex.count % 2 == 0 else { return nil }
+        var out: [UInt8] = []
+        out.reserveCapacity(hex.count / 2)
+        var index = hex.startIndex
+        while index < hex.endIndex {
+            let next = hex.index(index, offsetBy: 2)
+            guard let byte = UInt8(hex[index..<next], radix: 16) else { return nil }
+            out.append(byte)
+            index = next
+        }
+        return out
+    }
+
     /// Solidity sign-extends a negative `intN` across the WHOLE 32-byte ABI
     /// word. Taking the low `bits` bits and sign-extending from THAT width
     /// gives the identical result to a full 256-bit two's-complement read
@@ -735,6 +999,14 @@ enum UniswapLiquidity {
         return raw >= signBit ? raw - (1 << bits) : raw
     }
 
+    /// Uniswap's own position page — the route carries the version, so a V4
+    /// position must not be linked as `/positions/v3/…` (a door to the wrong
+    /// page, or none, is the honesty rule's dead control).
+    private static func positionURL(_ position: Position) -> String {
+        "https://app.uniswap.org/positions/v\(position.version)/"
+            + "\(chainSlug(position.network))/\(position.tokenId)"
+    }
+
     private static func chainSlug(_ network: String) -> String {
         switch network {
         case "eth-mainnet": return "ethereum"
@@ -748,12 +1020,14 @@ enum UniswapLiquidity {
 
     #if DEBUG
     /// `-uniswapProbe <blocksBack|YES>` — NSLogs every watched wallet's
-    /// Uniswap V3 book (pair, range status, uncollected fees) or the honest
-    /// miss. A numeric spec ALSO rewinds every activity cursor that many
-    /// BLOCKS (not Morpho's days — this rides raw RPC like Approvals/Peer/
-    /// GnosisPay) and runs the settled-activity sweep. Pairs with
-    /// `-walletAddress` — `0x7516d4e35a369fc18ddfeec0d69c28112fe13bf0` is a
-    /// real, live-verified out-of-range position on Ethereum (2026-07-30).
+    /// Uniswap book, V3 AND V4 (pair, version, range status, value, fees) or
+    /// the honest miss. A numeric spec ALSO rewinds every activity cursor
+    /// that many BLOCKS (not Morpho's days — this rides raw RPC like
+    /// Approvals/Peer/GnosisPay) and runs the settled-activity sweep. Pairs
+    /// with `-walletAddress`; two live-verified reference wallets
+    /// (2026-07-30): `0x7516d4e35a369fc18ddfeec0d69c28112fe13bf0` holds
+    /// three real V3 positions including an out-of-range one, and
+    /// `0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045` holds V4.
     @MainActor
     static func probe(context: ModelContext, blocksBack: Int?) async -> String {
         let watched = WalletStore.shared.addresses.map(\.address)
@@ -767,10 +1041,12 @@ enum UniswapLiquidity {
             for p in book.positions {
                 let chainName = WalletIngest.displayName(forNetwork: p.network) ?? p.network
                 let range = p.inRange ? "in-range" : "out-of-range"
-                let sinceLine = timeOutOfRange(address: p.address, network: p.network, tokenId: p.tokenId)
+                let sinceLine = timeOutOfRange(address: p.address, network: p.network,
+                                               version: p.version, tokenId: p.tokenId)
                     .map { " (\($0))" } ?? ""
                 let feeLine = p.uncollectedFeeUSD.map { "fees=$\(WalletIngest.format($0))" } ?? "fees=unpriced"
-                lines.append("\(WalletStore.shortAddress(p.address)) \(chainName) \(p.token0Symbol)/\(p.token1Symbol) #\(p.tokenId): \(range)\(sinceLine) tick=\(p.currentTick) range=[\(p.tickLower),\(p.tickUpper)] \(feeLine)")
+                let valueLine = p.valueUSD.map { "value=$\(WalletIngest.format($0))" } ?? "value=unknown"
+                lines.append("\(WalletStore.shortAddress(p.address)) \(chainName) v\(p.version) \(p.token0Symbol)/\(p.token1Symbol) #\(p.tokenId): \(range)\(sinceLine) tick=\(p.currentTick) range=[\(p.tickLower),\(p.tickUpper)] \(valueLine) \(feeLine)")
             }
         } else {
             lines.append("book UNREACHABLE")
@@ -801,7 +1077,7 @@ enum UniswapLiquidity {
         guard !addresses.isEmpty else { return "no EVM wallets watched" }
         guard let book = await book(addresses: addresses), let position = book.positions.first
         else { return "no Uniswap position to probe" }
-        let key = rangeKey(position.address, position.network, position.tokenId)
+        let key = rangeKey(position.address, position)
         let fakeLast = position.inRange ? "out-of-range" : "in-range"
         UserDefaults.standard.set(fakeLast, forKey: key)
         let existing = IngestSupport.existingSourceRefs(context, source: "Wallet")

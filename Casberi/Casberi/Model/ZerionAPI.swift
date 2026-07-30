@@ -137,6 +137,125 @@ enum ZerionAPI {
         return out
     }
 
+    // MARK: - Uniswap liquidity (2026-07-30)
+
+    /// One Uniswap LP position as Zerion aggregates it — already joined across
+    /// the legs Zerion reports separately. This is the ENUMERATION and the
+    /// MONEY; the range (in/out) is not here and never can be, so
+    /// `UniswapLiquidity` reads ticks on-chain and joins on `tokenId`.
+    struct LiquidityPosition {
+        /// 3 or 4 — off Zerion's own `protocol` string ("Uniswap V3"/"V4").
+        /// Uniswap V2 is deliberately excluded: it has no position NFT, hence
+        /// no tokenId to join on, and no range to be in or out of.
+        let version: Int
+        let network: String
+        /// The position-manager NFT id, parsed out of Zerion's display name
+        /// ("XAGM/USDC Pool 0.3% #1341219"). The join key to the on-chain read.
+        let tokenId: Int
+        /// Zerion's own pool label, cleaned of the trailing "#<id>".
+        let poolName: String
+        /// Principal — the sum of every `deposit` leg's USD value.
+        let valueUSD: Double
+        /// Uncollected fees — the sum of every `reward` leg's USD value.
+        /// MEASURED 2026-07-30: for position #1327831 this summed to $47.65,
+        /// matching `UniswapLiquidity`'s independent simulated-`collect()`
+        /// read TO THE CENT — two unrelated methods agreeing, which is why
+        /// this is trusted as the fee number for V4 (where no cheap on-chain
+        /// equivalent exists).
+        let feesUSD: Double
+    }
+
+    /// Every Uniswap V3/V4 LP position Zerion knows for one address, or nil
+    /// when Zerion couldn't be reached (an EMPTY array is a real "holds
+    /// none"). Rides `filter[positions]=only_complex` — the exact filter
+    /// `holdings` above EXCLUDES, which is why LP has never appeared in the
+    /// treemap.
+    ///
+    /// Zerion reports one entry PER TOKEN LEG PER TYPE — a two-sided position
+    /// with fees is four rows (deposit×2, reward×2) — so they're folded here
+    /// by (network, version, tokenId) into the one position a person owns.
+    ///
+    /// KNOWN INCOMPLETE, and the reason V3 does NOT enumerate through this:
+    /// measured against a wallet holding three real V3 positions, Zerion
+    /// returned only two (it omitted a zero-fee, fully out-of-range one).
+    /// `UniswapLiquidity` therefore keeps its own complete keyless on-chain
+    /// enumeration for V3 and uses this only to ADD value/fees. V4 has no
+    /// such option (its PositionManager isn't ERC721Enumerable), so there
+    /// this is the enumeration, incompleteness and all — an honest limit,
+    /// stated rather than hidden.
+    static func liquidityPositions(address: String) async -> [LiquidityPosition]? {
+        guard isConfigured,
+              let auth = "\(key):".data(using: .utf8)?.base64EncodedString(),
+              let encoded = address.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)
+        else { return nil }
+        // Same EVM-only chain filter `holdings` needs (a `solana` id 400s the
+        // whole request), and Uniswap is EVM-only anyway.
+        let chains = networkFor.keys.filter { $0 != "solana" }.sorted().joined(separator: ",")
+        let query = "filter[positions]=only_complex&currency=usd&filter[chain_ids]=\(chains)"
+        let url = "https://api.zerion.io/v1/wallets/\(encoded)/positions/?\(query)"
+
+        guard let root = await IngestSupport.getJSON(url, auth: "Basic \(auth)") as? [String: Any],
+              let data = root["data"] as? [[String: Any]] else { return nil }
+
+        // (network, version, tokenId) → accumulating position.
+        var folded: [String: (version: Int, network: String, tokenId: Int,
+                              name: String, value: Double, fees: Double)] = [:]
+        for item in data {
+            guard let attrs = item["attributes"] as? [String: Any],
+                  let proto = attrs["protocol"] as? String,
+                  let version = uniswapVersion(proto),
+                  let name = attrs["name"] as? String,
+                  let tokenId = trailingTokenID(name),
+                  let chainData = ((item["relationships"] as? [String: Any])?["chain"]
+                        as? [String: Any])?["data"] as? [String: Any],
+                  let zid = chainData["id"] as? String,
+                  let network = networkFor[zid]
+            else { continue }
+            let value = doubleValue(attrs["value"]) ?? 0
+            let isReward = (attrs["position_type"] as? String) == "reward"
+            let key = "\(network)|\(version)|\(tokenId)"
+            var entry = folded[key] ?? (version, network, tokenId,
+                                        poolLabel(name), 0, 0)
+            if isReward { entry.fees += value } else { entry.value += value }
+            folded[key] = entry
+        }
+        return folded.values.map {
+            LiquidityPosition(version: $0.version, network: $0.network, tokenId: $0.tokenId,
+                              poolName: $0.name, valueUSD: $0.value, feesUSD: $0.fees)
+        }
+    }
+
+    /// "Uniswap V3" → 3, "Uniswap V4" → 4, anything else (V2, SushiSwap V3,
+    /// PancakeSwap…) → nil. Matched on the exact protocol strings measured
+    /// 2026-07-30; a prefix test would wrongly claim "Uniswap V2".
+    private static func uniswapVersion(_ protocolName: String) -> Int? {
+        switch protocolName {
+        case "Uniswap V3": return 3
+        case "Uniswap V4": return 4
+        default: return nil
+        }
+    }
+
+    /// The `#1341219` at the end of a Zerion pool name, in either measured
+    /// spelling — bare (`"XAGM/USDC Pool 0.3% #1341219"`) or parenthesised
+    /// (`"Uniswap V4 ETH/GoGo Pool (#8472)"`). nil for a name carrying none
+    /// (Uniswap V2, which has no position NFT).
+    private static func trailingTokenID(_ name: String) -> Int? {
+        guard let hash = name.lastIndex(of: "#") else { return nil }
+        let digits = name[name.index(after: hash)...].prefix { $0.isNumber }
+        return digits.isEmpty ? nil : Int(digits)
+    }
+
+    /// The pool label without its trailing id — "XAGM/USDC Pool 0.3%".
+    /// Only a fallback: the card prefers the SYMBOLS read on-chain, since
+    /// those are what every other wallet row in the app is spelled from.
+    private static func poolLabel(_ name: String) -> String {
+        guard let hash = name.lastIndex(of: "#") else { return name }
+        var label = String(name[name.startIndex..<hash])
+        while let last = label.last, last == " " || last == "(" { label.removeLast() }
+        return label.trimmingCharacters(in: .whitespaces)
+    }
+
     // MARK: - Activity (2026-07-19)
 
     /// One fungible-asset leg of a wallet's activity, as Zerion's
