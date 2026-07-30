@@ -157,6 +157,10 @@ struct FeedScreen: View {
     /// Bumped when this page lands — rows replay their shape's
     /// entrance (each shape arrives its own way, ruling 2026-07-07).
     @State private var shapeWave = 0
+    /// Latches on the FIRST landing so the row entrance plays once, not on
+    /// every swipe back to this page (2026-07-30 swipe-smoothness — see
+    /// `land()`).
+    @State private var hasLanded = false
     /// The last time the person left THIS feed ("feed.lastSeen" is All's
     /// original key, so nothing migrates), no per-thing read state. The
     /// boundary freezes when the page lands and holds for the whole visit
@@ -1644,7 +1648,18 @@ struct FeedScreen: View {
     /// the person a page whose moment already happened.
     private func land() {
         freezeBoundary()
-        shapeWave += 1
+        // Replay the shape's entrance ONLY the first time this page is landed
+        // (2026-07-30, user: swiping between screens had a tiny lag; "just
+        // appear on revisit"). Re-animating every row on every swipe-in was
+        // both the extra motion and a per-frame main-actor cost on each visit —
+        // now the rows animate in the first time the page is seen and simply
+        // ARE there on return. Pull-to-refresh still replays deliberately
+        // (`refreshFeed` bumps `shapeWave` itself), and a page never yet built
+        // still gets its first-appearance entrance from `RowEntrance.onAppear`.
+        if !hasLanded {
+            hasLanded = true
+            shapeWave += 1
+        }
         streamBlock()
         loadWalletLive()
         // Every landing writes the crown pour's hue (prd §159): the scoped
