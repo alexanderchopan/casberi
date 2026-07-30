@@ -1647,10 +1647,12 @@ struct RootShell: View {
             }
         }
         // A DeFi ask ("how's my loan", "what's my health factor", "how are
-        // my Morpho vaults") — live read over Aave + Morpho, no model
-        // (2026-07-20; Morpho 2026-07-21). Same slot as WalletAsk, right
-        // after it: both need a watched wallet, and "aave"/"morpho"/"health
-        // factor" never collides with the generic wallet words.
+        // my Morpho vaults") — live read over Aave + Spark + Morpho, no
+        // model (2026-07-20; Morpho 2026-07-21, Spark 2026-07-30). Same slot
+        // as WalletAsk, right after it: both need a watched wallet, and
+        // "aave"/"morpho"/"health factor" never collides with the generic
+        // wallet words (bare "spark" deliberately isn't one of the triggers
+        // — see `WalletDeFiAsk`'s own doc comment).
         if WalletDeFiAsk.matches(query) {
             lastAnswerHits = []
             guard let line = await WalletDeFiAsk.answer() else {

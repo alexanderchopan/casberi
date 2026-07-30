@@ -365,13 +365,17 @@ struct WalletFaceChips: View {
     }
 }
 
-/// LENDING — Aave and Morpho, in ONE card as two rows (prd §212, 2026-07-25).
+/// LENDING — Aave, Spark and Morpho, in ONE card as rows (prd §212,
+/// 2026-07-25; Spark joined 2026-07-30).
 ///
 /// They used to be two full cards, each with its own caption ("DeFi · Aave on
 /// Base") and its own three-stat layout — the clearest case in the room of a
 /// component picking its container. Aave and Morpho were never two subjects;
 /// they're two providers of one subject, and a wallet that uses both got two
 /// identical parcels arguing for the same attention as the balance above them.
+/// Spark rides `WalletDeFi.positions` beside Aave (same type, a `protocolName`
+/// field distinguishes them) rather than a third full card for the same
+/// reason.
 ///
 /// The stats survive, re-ranked. What a lending position is actually asking
 /// you is "how much, and is it safe" — so the money leads on the trailing edge
@@ -381,17 +385,20 @@ struct WalletFaceChips: View {
 /// stated, so printing it a second time was the stat that earned its seat
 /// least.
 ///
-/// Still no chevron on either row — acting on a position happens on Aave or
-/// Morpho, never in here, and a chevron promises a page that doesn't exist.
-/// The card renders only when at least one of the two has something to say.
+/// Still no chevron on any row — acting on a position happens on Aave, Spark
+/// or Morpho, never in here, and a chevron promises a page that doesn't
+/// exist. The card renders only when at least one provider has something to
+/// say.
 struct WalletLendingCard: View {
+    /// Both Aave and Spark positions — `protocolName` tells them apart.
     let aave: [WalletDeFi.Position]
     let morpho: MorphoDeFi.Book
 
-    /// Aave's margin, borrowed by both rows: under this a position is worth
-    /// worrying about, and the mark goes `DS.attention` while the subline
-    /// says "at risk" in words — orange alone means nothing to anyone who
-    /// doesn't know where Aave's margin sits (the 2026-07-21 ruling, kept).
+    /// The shared liquidation margin, borrowed by every row: under this a
+    /// position is worth worrying about, and the mark goes `DS.attention`
+    /// while the subline says "at risk" in words — orange alone means
+    /// nothing to anyone who doesn't know where the margin sits (the
+    /// 2026-07-21 ruling, kept).
     private static let riskMargin: Double = 1.5
 
     var body: some View {
@@ -399,7 +406,8 @@ struct WalletLendingCard: View {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 WalletSectionLabel(title: String(localized: "Lending"))
                     .padding(.bottom, 2)
-                if !aave.isEmpty { aaveRow }
+                if !aavePositions.isEmpty { aaveRow }
+                if !sparkPositions.isEmpty { sparkRow }
                 if !morpho.isEmpty { morphoRow }
             }
             .padding(DS.Space.s4)
@@ -407,25 +415,36 @@ struct WalletLendingCard: View {
         }
     }
 
-    // MARK: - Aave
+    // MARK: - Aave / Spark (same shape, one row each, filtered by protocol)
 
-    private var aaveCollateral: Double { aave.reduce(0) { $0 + $1.totalCollateralUSD } }
-    private var aaveDebt: Double { aave.reduce(0) { $0 + $1.totalDebtUSD } }
-    /// The riskiest health factor across positions — nil when nothing is
-    /// borrowed anywhere (Aave's no-debt sentinel), which is not a zero.
-    private var aaveHealth: Double? { aave.compactMap(\.healthFactor).min() }
+    private var aavePositions: [WalletDeFi.Position] { aave.filter { $0.protocolName == "Aave" } }
+    private var sparkPositions: [WalletDeFi.Position] { aave.filter { $0.protocolName == "Spark" } }
 
-    private var aaveRow: some View {
-        let atRisk = (aaveHealth ?? .infinity) < Self.riskMargin
-        let borrowing = aaveDebt > 0
-        return WalletRow(mark: .monogram("AA", tint: atRisk ? DS.attention : DS.tint),
-                         title: "Aave",
-                         subtitle: Self.line(health: aaveHealth, atRisk: atRisk,
-                                             chains: aave.map(\.network))) {
-            WalletRowValue(value: TokenStats.compact(borrowing ? aaveDebt : aaveCollateral),
+    private func lendingRow(_ positions: [WalletDeFi.Position], title: String, monogram: String) -> some View {
+        let collateral = positions.reduce(0) { $0 + $1.totalCollateralUSD }
+        let debt = positions.reduce(0) { $0 + $1.totalDebtUSD }
+        // The riskiest health factor across positions — nil when nothing is
+        // borrowed anywhere (the protocol's no-debt sentinel), which is not
+        // a zero.
+        let health = positions.compactMap(\.healthFactor).min()
+        let atRisk = (health ?? .infinity) < Self.riskMargin
+        let borrowing = debt > 0
+        return WalletRow(mark: .monogram(monogram, tint: atRisk ? DS.attention : DS.tint),
+                         title: title,
+                         subtitle: Self.line(health: health, atRisk: atRisk,
+                                             chains: positions.map(\.network))) {
+            WalletRowValue(value: TokenStats.compact(borrowing ? debt : collateral),
                            caption: borrowing ? String(localized: "borrowed")
                                               : String(localized: "supplied"))
         }
+    }
+
+    private var aaveRow: some View {
+        lendingRow(aavePositions, title: "Aave", monogram: "AA")
+    }
+
+    private var sparkRow: some View {
+        lendingRow(sparkPositions, title: "Spark", monogram: "SP")
     }
 
     // MARK: - Morpho

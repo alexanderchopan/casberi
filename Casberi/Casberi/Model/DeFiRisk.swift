@@ -1,6 +1,8 @@
 import Foundation
 
-/// Borrowing risk across both lending protocols, in one place (2026-07-25).
+/// Borrowing risk across every lending protocol, in one place (2026-07-25;
+/// Spark joined `WalletDeFi`'s own pool table 2026-07-30, so it rides this
+/// read for free — `aave` below carries both).
 ///
 /// The 1.5 health-factor margin had quietly reached FOUR copies — `WalletDeFi`
 /// and `MorphoDeFi` each held a private `riskThreshold` for their own
@@ -49,7 +51,7 @@ enum DeFiRisk {
     static func debts(aave: [WalletDeFi.Position], morpho: MorphoDeFi.Book) -> [Debt] {
         var out: [Debt] = aave.compactMap { position in
             position.healthFactor.map {
-                Debt(hf: $0, protocolName: "Aave", network: position.network)
+                Debt(hf: $0, protocolName: position.protocolName, network: position.network)
             }
         }
         out += morpho.positions.compactMap { position in

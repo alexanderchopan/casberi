@@ -1,16 +1,25 @@
 import Foundation
 
-/// DeFi asks (2026-07-20; Morpho joined 2026-07-21) — "how's my Aave loan",
-/// "what's my health factor", "how are my Morpho vaults". Same shape as
-/// `WalletAsk`: the words name no corpus content to score, so the answer is
-/// a live read (`WalletDeFi.positions` + `MorphoDeFi.book`), never the
-/// retriever. "aave"/"morpho"/"health factor" are specific enough that a
-/// plain substring match is safe — unlike "wallet", none of these collide
-/// with an ordinary content search.
+/// DeFi asks (2026-07-20; Morpho joined 2026-07-21, Spark 2026-07-30) —
+/// "how's my Aave loan", "what's my health factor", "how are my Morpho
+/// vaults". Same shape as `WalletAsk`: the words name no corpus content to
+/// score, so the answer is a live read (`WalletDeFi.positions`, which
+/// carries both Aave and Spark, + `MorphoDeFi.book`), never the retriever.
+/// "aave"/"morpho"/"health factor" are specific enough that a plain
+/// substring match is safe — unlike "wallet", none of these collide with an
+/// ordinary content search. Bare "spark" does NOT get the same plain-substring
+/// treatment — unlike "Aave"/"Morpho" it's an everyday word (a note about a
+/// literal spark, an app called Spark, "spark joy"), so this branch would
+/// hijack an unrelated ask before it ever reached the retriever. "sparklend"
+/// and "spark protocol"/"spark position"/"spark loan" name the DeFi protocol
+/// specifically enough to be safe the same way.
 enum WalletDeFiAsk {
     static func matches(_ raw: String) -> Bool {
         let q = raw.lowercased().replacingOccurrences(of: "\u{2019}", with: "'")
-        return q.contains("aave") || q.contains("morpho") || q.contains("health factor")
+        return q.contains("aave") || q.contains("morpho") || q.contains("sparklend")
+            || q.contains("spark protocol") || q.contains("spark position")
+            || q.contains("spark loan")
+            || q.contains("health factor")
             || q.contains("liquidation") || q.contains("defi position")
             || q.contains("my loan") || q.contains("my loans")
     }
@@ -50,7 +59,7 @@ enum WalletDeFiAsk {
                 : String(localized: "$\(WalletIngest.format(deposits)) earning on Morpho."))
         }
         guard !parts.isEmpty else {
-            return String(localized: "No open Aave or Morpho positions right now.")
+            return String(localized: "No open Aave, Spark, or Morpho positions right now.")
         }
         return parts.joined(separator: " ")
     }

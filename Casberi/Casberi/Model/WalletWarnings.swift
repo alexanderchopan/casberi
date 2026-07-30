@@ -123,6 +123,7 @@ struct WalletLiveState: Equatable {
             && a.positions.count == b.positions.count
             && zip(a.positions, b.positions).allSatisfy {
                 $0.address == $1.address && $0.network == $1.network
+                    && $0.protocolName == $1.protocolName
                     && $0.totalCollateralUSD == $1.totalCollateralUSD
                     && $0.totalDebtUSD == $1.totalDebtUSD
                     && $0.healthFactor == $1.healthFactor
@@ -265,9 +266,13 @@ enum WalletWatch {
         var out: [WalletWarning] = []
         for p in positions where (p.healthFactor ?? .infinity) < DeFiRisk.floor {
             let chain = WalletIngest.displayName(forNetwork: p.network) ?? p.network
-            out.append(WalletWarning(id: "defi:\(p.network):\(p.address)", severity: .critical,
+            // Keyed by protocol too — Aave and Spark both run on Ethereum,
+            // so two at-risk positions for the same wallet/chain would
+            // otherwise share an `id` (a `ForEach` id collision, the crash
+            // class this app has paid for before).
+            out.append(WalletWarning(id: "defi:\(p.protocolName):\(p.network):\(p.address)", severity: .critical,
                                      kind: .liquidation,
-                                     title: String(localized: "Aave position close to liquidation"),
+                                     title: String(localized: "\(p.protocolName) position close to liquidation"),
                                      subtitle: "\(chain) · hf \(WalletIngest.format(p.healthFactor ?? 0))",
                                      address: owner[p.address.lowercased()]))
         }

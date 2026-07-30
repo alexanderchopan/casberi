@@ -141,7 +141,7 @@ enum BridgeCatalog {
                 "Warns if the wallet starts delegating its control.",
                 "Catches transfers that look like address-poisoning scams.",
                 "Tracks what you've paid in gas.",
-                "Shows your Aave and Morpho positions.",
+                "Shows your Aave, Spark and Morpho positions.",
               ],
               needsSetup: true),
         // Wallet group by ruling (user, 2026-07-21, prd §162). Privacy Pools

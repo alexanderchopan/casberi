@@ -876,9 +876,10 @@ enum ProbeHooks {
                 NSLog("Gas spent probe: %@", line)
             }
         },
-        // `-defiProbe YES` NSLogs each watched wallet's Aave collateral/debt/
-        // health-factor across every active Aave-supported chain (or the
-        // honest "no positions found"). Pairs with `-walletAddress`.
+        // `-defiProbe YES` NSLogs each watched wallet's Aave AND Spark
+        // (2026-07-30) collateral/debt/health-factor, tagged per protocol,
+        // across every active chain (or the honest "no positions found").
+        // Pairs with `-walletAddress`.
         Hook(key: "defiProbe") { _, _ in
             Task { @MainActor in
                 let line = await WalletDeFi.probe()
