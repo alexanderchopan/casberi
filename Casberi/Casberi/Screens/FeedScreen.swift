@@ -285,7 +285,22 @@ struct FeedScreen: View {
 
     private func liveVisible() -> [Thing] {
         feedThings.filter { thing in
-            (source == "All" || thing.source == source)
+            // modelContext == nil: crash guard (2026-07-24, live TestFlight
+            // crash on 125/126, upgrade-only). The delete-sync heal passes
+            // (Calendar/Reminders/Contacts/HomeKit/Bluesky/Farcaster, prd
+            // §121) run as `Task { @MainActor in }` and can delete a `Thing`
+            // between `feedThings` being captured for this render and a row
+            // closure further down the pipeline (shapedRow, nextEventID,
+            // isLive, dayGroups, …) reading its other properties. A deleted
+            // SwiftData model gets `modelContext` niled first — reading that
+            // is documented-safe — but any other stored property on it
+            // fault-resolves against the gone store row and crashes
+            // (`_assertionFailure` inside SwiftData). Filtering here, once,
+            // at the root of every downstream read is cheaper than guarding
+            // each call site individually (139f4fb only patched `standsAlone`
+            // and left `shapedRow`/`nextEventID`/`isLive`/`dayGroups` exposed).
+            thing.modelContext != nil
+                && (source == "All" || thing.source == source)
                 && (filter.tag == "All" || thing.tags.contains(filter.tag))
                 && walletScopeAllows(thing)
         }
