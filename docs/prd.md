@@ -10424,3 +10424,164 @@ Five fixes:
    `PolymarketBridge.grouped`, `maxOutcomes` default 4→3) — leader plus two
    challengers before "N more" takes over, one fewer row on every
    multi-candidate card in the book.
+
+## §239 — Social grows an inbound half: what an account amplifies, and what happens to YOU (user: "what else could we do with Farcaster?" → "do what you recommend", "can we do the same for bluesky", "i'd like to do the signer events too!", 2026-07-31)
+
+Every social read this app had was OUTBOUND. Farcaster and Bluesky read what
+a watched account POSTS, what they LIKED (Farcaster), and — the single
+exception — casts/posts that MENTION them. Nothing read what an account
+rebroadcast, and nothing at all read what happened to YOU.
+
+The reason for the second gap was named in §221 and left open there: the
+stores model accounts you WATCH, and have no concept of which account is
+YOURS. Three passes close both.
+
+### 1. What they amplify (`recasts` per account, both networks)
+
+A like is approval; a recast puts their own name on it. Farcaster's read is
+`reactionsByFid` one reaction type over, so `landLikes` became
+`landReactions(type:why:)` — Like and Recast share the endpoint, the target
+dedupe, the resurface and the bounded fan-out, and a recast cannot drift from
+a like in behaviour.
+
+**Bluesky's costs no extra request**, which is the nice part: reposts already
+arrive in the author feed as entries wearing a `reason`, and `land`'s
+`ownHandle` filter — the thing that keeps someone else's post out of an
+account's own feed — was silently dropping every one of them. `landReposts`
+reads exactly the entries that filter discards.
+
+Bluesky also gains **§221's resurface**, which was Farcaster-only: your own
+post, reposted by someone you watch, is precisely the shape that could never
+come back. Same three guards (forward only, news only, live only), same
+convergence argument, so no cursor is needed.
+
+**One marker, two nouns.** The thing carries `socialContext == "recast"` on
+both networks; the row says "Recast" on Farcaster and "Reposted" on Bluesky
+(`SocialThread.recastWord`). Kind shared, noun local — a bridge never renames
+another network's verb. The sheet's phrase deliberately avoids §221's
+still-open falsity: the thing carries no recaster handle, so it says "recast
+by an account you watch" rather than claiming you did it.
+
+### 2. The inbound half (`mine` per account, both networks)
+
+One flag, three reads (`Model/SocialInbound.swift`):
+
+- **Replies received.** The gap neither network could see: a reply names its
+  parent in the RECORD, not in the text, so `castsByMention` /
+  `searchPosts mentions:` structurally cannot find one. "Did anyone answer
+  me?" had no source at all.
+- **Likes received.** §221 from the other direction — that ruling surfaces
+  your post when the LIKER's own likes happen to be read; this surfaces it
+  whoever liked it, read from your post's side. Same restamp, same guards, so
+  the two cannot disagree. **Names, not numbers**: the count fills the post's
+  own `likeCount` and never lands as a record.
+- **New followers.** Diffed against a ledger; first sight seeds SILENTLY (the
+  Peer/Morpho/Hyperliquid cursor rule, and the bug that pass caught live —
+  22 open positions landing as 22 "Opened" things).
+
+**Module doctrine decides the shapes.** A count is never a thing; a named
+person is an event. So a follower LANDS (a `.link` to their profile, the
+`ENSExpiry` shape — it has no post text and no permalink to any post, so it
+is not a chat thing) and a like does NOT.
+
+**Bounded on purpose.** Both networks need one request per post for each of
+the two post reads (`reactionsByCast`/`castsByParent`; `getLikes`/
+`getPostThread` all take one post), so a pass is `2 × ownPostPage` (6)
+requests per account marked yours — usually exactly one — over posts from the
+last week only. Followers land at most 5 per pass.
+
+**The ledger is a SET, not a cursor** — forced by the API, not chosen:
+Bluesky's `getFollowers` returns profiles newest-first with NO follow
+timestamp anywhere in the payload, so there is nothing for a cursor to compare
+against. Farcaster's timestamp is still used where it genuinely helps
+(stamping the landed thing with when the follow happened). Capped at 500
+newest-first; the cost of the cap is that someone who unfollows, falls off the
+end and refollows much later is announced twice, which is the right trade
+against an unbounded list — and true anyway. Forgotten on disconnect and on
+flipping `mine` off, so reconnecting seeds fresh.
+
+**Bluesky's happy divergence:** all three inbound reads are on the
+unauthenticated AppView host. What happens TO you is public there even though
+what you did (`getActorLikes`) is not — so the half that needed sign-in on
+Farcaster's sibling ruling needs none here.
+
+**`Mine` sits in the watch-chip strip** rather than earning its own row. It is
+the odd one out conceptually (an identity statement, not another thing to
+fetch) but it is the same gesture on the same person, and it reads as one.
+
+### 3. Which apps can post as you (Farcaster, `Model/FarcasterSigners.swift`)
+
+A Farcaster account doesn't sign its own casts — apps do, on your behalf,
+through SIGNERS you grant them. Every grant and revocation is an onchain Key
+Registry event on Optimism, served by the same keyless node.
+
+**This is `WalletApprovals` applied to social identity** and inherits that
+doctrine whole: a standing permission that accumulates silently for years and
+that nobody ever reviews. It inherits §112's preparing-surface ruling without
+argument — it READS and PREVIEWS; each landed thing links to Farcaster's own
+connected-apps settings exactly as an approval links to Revoke.cash. Gated on
+`mine`: which apps can speak as someone else is neither your business nor
+useful to you.
+
+**First sight lands the current INVENTORY** rather than seeding silently — a
+deliberate divergence from the wallet sweeps, and the reason is timestamps.
+Those seed silently because their first read is a STATE that would arrive
+wearing today's date and read as news. A signer event carries its own block
+timestamp, so the inventory sorts to where it belongs — years back, where it
+cannot fake urgency — while the list of apps that can speak as you is exactly
+the thing you have never once been shown. The news-only MOMENT rule still
+holds: nothing older than a day says a word.
+
+**An app is NAMED only when honestly known.** The metadata must decode to a
+plausible fid AND that fid must resolve to a real profile; anything less says
+"an app". This matters more than the usual honesty case — a wrong name on a
+permission notice sends you to revoke the wrong thing. The decode is the one
+step in the whole batch with a confident wrong answer available to it (any 32
+bytes are SOME integer), so both ABI readings are tried and each is
+range-checked.
+
+`onChainEventsByFid` is asked before `onChainSignersByFid` because only the
+filtered form can carry REMOVES — a revocation being invisible would lose the
+event most worth seeing.
+
+### Probes
+
+`-fcRecasts <username>`, `-bskyReposts <handle>` (both report resurfaced
+beside landed — a recast of a held cast lands nothing); `-fcMine`,
+`-bskyMine`; `-inboundProbe YES` (ledger sizes and eligible-post counts, since
+a landed count alone can't tell "nobody replied" from "the read never ran",
+and first-sight seeding makes a silent pass the CORRECT first result);
+`-fcSignerProbe <username|YES>` (dumps the held inventory, since the landed
+count reads 0 on every pass after the first).
+
+### Left unbuilt, with reasons
+
+- **Storage and fname expiry** (`storageLimitsByFid`) — the reconciling-`dueAt`
+  shape `ENSExpiry` already has five of. Letting storage lapse prunes your own
+  casts, so it is a real obligation with a date. Next in line.
+- **Address → Farcaster identity, the reverse join.** `handle(forAddress:)`
+  only searches accounts you already watch; `onChainIdRegistryEventByAddress`
+  would let `CounterpartyLabels` name any counterparty in any watched wallet's
+  transfers. Reuses a join that is already half-built.
+- **Cast search for "who's talking about this link you saved".** Appealing for
+  `CrossSourceEcho`, but client-API-only (the measured 20-per-10s-per-connection
+  ceiling `SocialFollows` paid for) and its result quality is unmeasurable
+  from here.
+- **Frames/mini-app interaction** — a write path.
+- **Direct casts** — needs sign-in, same shelf as Bluesky likes.
+- **A watched account's verifications never refresh.** `verifiedAddresses`
+  resolves only `if …isEmpty` (`FarcasterIngest` line ~392), so an account
+  verifying a NEW wallet is never seen. Both a correctness fix and a news
+  event; deliberately not folded into this batch.
+
+NOT BUILT, NOT SEEN — authored in a Linux session with no Xcode AND no network
+egress (the proxy 403s every host, so neither the Snapchain node nor the
+AppView could be reached). The static gates (`catalog-sync.sh`, the SwiftData
+liveness audit) pass; `verify.sh` has not run. Facts to measure before
+trusting, each named at its own call site and each failing SAFE:
+1. whether the AppView returns repost entries under `filter=posts_no_replies`
+   (if it strips them, nothing lands — honest silence — and the fix is the
+   filter, not the code);
+2. which signer endpoint carries REMOVES, the `events` envelope key, and
+   whether `blockTimestamp` is seconds;
+3. the `SignedKeyRequestMetadata` ABI offset.
