@@ -41,6 +41,12 @@ KNOWN_NON_REACH=(
   # Mail app-password pages, and the Google Takeout page you download your
   # own Gemini export from — all opened in the browser, none read by us.
   appleid.apple.com myaccount.google.com takeout.google.com
+  # Instagram's own export page (openURL only — the same shape as Takeout
+  # above), plus the bare instagram.com literal, which is a link-MATCH
+  # pattern in OEmbed and a doc-comment example in InstagramImport. The
+  # endpoint actually fetched for those links is graph.facebook.com, which
+  # IS disclosed in NetworkReach.
+  accountscenter.instagram.com instagram.com
   # Demo / placeholder content only
   picsum.photos www.allbirds.com www.google.com www.nasa.gov
   developer.apple.com www. example.com

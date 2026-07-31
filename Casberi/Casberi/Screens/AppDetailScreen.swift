@@ -239,7 +239,18 @@ struct AppDetailScreen: View {
                 // "What it does" already covers what. Left-aligned, matching
                 // every other line of body copy on this page — DSSlabNote's
                 // centering belongs to a slab stack, not this layout.
-                Text("Lands in your feed the moment you connect.")
+                //
+                // 2026-07-31: the single line was "Lands in your feed the
+                // moment you connect", which under a header reading "What
+                // lands in your feed" answered with its own question — and
+                // was FALSE for a file import, which has no connect moment:
+                // you hand over an export and the whole of it lands at once,
+                // each thing dated to when it happened rather than to today.
+                // That date behaviour is the fact worth stating, and it's the
+                // one a person is actually surprised by.
+                Text(BridgeRouter.destination(forOffer: offer.name)?.isFileImport == true
+                     ? "Your whole export lands in one pass — each thing dated to when it happened, not to today."
+                     : "New things arrive on their own, as they happen.")
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
             }
         }

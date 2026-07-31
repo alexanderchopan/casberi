@@ -296,6 +296,11 @@ struct FeedScreen: View {
     private func liveVisible() -> [Thing] {
         feedThings.filter { thing in
             (source == "All" || thing.source == source)
+                // A bulk import (Instagram, Snapchat) keeps its own room but
+                // stays OUT of All — thousands of things dated across years
+                // would bury the day's real captures. All sees its receipt
+                // only; the chip opens the room that holds the rest.
+                && (source != "All" || Corpus.showsInAll(thing))
                 && (filter.tag == "All" || thing.tags.contains(filter.tag))
                 && walletScopeAllows(thing)
         }

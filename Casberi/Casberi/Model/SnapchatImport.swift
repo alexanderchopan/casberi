@@ -89,7 +89,34 @@ enum SnapchatImport {
 
         summary.failed = summary.chats == 0 && summary.healed == 0
             && summary.memories == 0 && summary.skipped == 0
+
+        // Snapchat is a `Corpus.bulkImportSources` member: its things stay out
+        // of the All feed and live in their own room, so All learns the import
+        // happened from this one reconciling row and nothing else. `healed`
+        // counts toward it — a conversation that GREW is a real thing this
+        // import brought back, not a skip.
+        let landed = summary.chats + summary.healed + summary.memories
+        if landed > 0 {
+            ImportReceipt.land(source: "Snapchat", count: landed,
+                               detail: receiptDetail(summary), context: context)
+            // `landChats`/`landMemories` each save their OWN work before
+            // returning, so the receipt is inserted after the last save and
+            // needs its own — without this it would live only in memory and
+            // vanish, leaving All with no sign the import ran at all.
+            context.saveHonestly()
+        }
         return summary
+    }
+
+    /// The receipt's own line — what the count is made of. Only non-zero
+    /// parts appear, so a chats-only export doesn't advertise empty ones.
+    private static func receiptDetail(_ s: Summary) -> String {
+        let parts = [
+            s.chats > 0 ? String(localized: "\(s.chats) conversations") : nil,
+            s.healed > 0 ? String(localized: "\(s.healed) updated") : nil,
+            s.memories > 0 ? String(localized: "\(s.memories) memories") : nil,
+        ].compactMap { $0 }
+        return parts.joined(separator: " · ")
     }
 
     /// Depth-2 search for the named files. Bounded (`fileCap`) because a

@@ -115,12 +115,32 @@ enum InstagramImport {
     @MainActor
     private static func finish(_ summary: inout Summary, landed: [Thing], context: ModelContext) {
         guard summary.imported > 0 else { return }
+        // Instagram is a `Corpus.bulkImportSources` member: its things stay
+        // out of the All feed and live in their own room, so All learns the
+        // import happened from this one reconciling row and nothing else.
+        // Landed BEFORE the save, so the receipt rides the same transaction —
+        // a receipt saved separately could survive a failed import.
+        ImportReceipt.land(source: "Instagram", count: summary.imported,
+                           detail: receiptDetail(summary), context: context)
         do {
             try context.save()
             SpotlightIndex.index(landed)
         } catch {
             summary = Summary(failed: true)
         }
+    }
+
+    /// The receipt's own line — what the count is made of, in the order a
+    /// person would care about. Only non-zero parts appear, so a saves-only
+    /// export doesn't advertise three empty categories.
+    private static func receiptDetail(_ s: Summary) -> String {
+        let parts = [
+            s.saved > 0 ? String(localized: "\(s.saved) saved") : nil,
+            s.liked > 0 ? String(localized: "\(s.liked) liked") : nil,
+            s.posts > 0 ? String(localized: "\(s.posts) posts") : nil,
+            s.comments > 0 ? String(localized: "\(s.comments) comments") : nil,
+        ].compactMap { $0 }
+        return parts.joined(separator: " · ")
     }
 
     // MARK: - Saves and likes (a handle, a link, a date)

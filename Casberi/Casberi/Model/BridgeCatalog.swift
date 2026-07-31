@@ -482,7 +482,7 @@ enum BridgeCatalog {
         // honesty rule — the alternative is a seat that reads as full search
         // over your saves and isn't.
         Offer(name: "Instagram",   tagline: "Your posts and saves, findable",        group: "Network",   connectable: true,
-              summary: "Instagram offers no live read — a personal account has no API at all — so your own export is the way in, the same as ChatGPT and Claude.\n\nWhat you wrote arrives whole: your posts' captions and your comments become findable text. What you saved and liked arrives as named links — the handle and the post, opening back on Instagram.\n\nOne honest caveat: Instagram's export doesn't include other people's captions or pictures, so a saved post lands named for who made it, not for what it said.",
+              summary: "Instagram only lets you export your account — a folder you'll never open again.\n\nCasberi lets you actually use it: everything you wrote becomes text you can search, everything you saved becomes a link you can tap. One tap, nothing leaves \(DS.device).\n\nMeta leaves other people's captions out, so a saved post lands named for who made it.",
               features: ["Your captions and comments, as searchable text",
                          "Saves and likes, named and openable",
                          "One-time import — re-importing adds only what's new",
@@ -495,7 +495,7 @@ enum BridgeCatalog {
         // "connected" and land nothing. The export is the one door, and the
         // copy names what the export honestly holds.
         Offer(name: "Snapchat",    tagline: "Import your saved chats and memories",  group: "Network",   connectable: true,
-              summary: "A one-time import of your Snapchat data export: the chats you saved become searchable, and your memories land on the day you took them.\n\nOnly saved chats exist — Snapchat deletes everything else when it's viewed, so it's never in the export either. (No live read: Snap doesn't offer one.)",
+              summary: "Snapchat only lets you export your account — and the pictures inside die after 7 days.\n\nCasberi lets you keep them forever: your Memories, dated the day you took them, and your saved chats, searchable. One tap, nothing leaves \(DS.device).\n\nOnly saved chats are in there — Snapchat deletes the rest on view.",
               features: ["Saved conversations, searchable beside everything else",
                          "Memories dated as you took them, with their pictures fetched",
                          "Re-importing keeps a conversation up to date",

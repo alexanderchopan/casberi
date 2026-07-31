@@ -71,6 +71,32 @@ enum ThingKind: String, Codable, CaseIterable {
 enum Corpus {
     static let searchOnlySources: Set<String> = ["Contacts", "HomeKit"]
 
+    /// Sources that arrive in BULK from a file you exported yourself —
+    /// thousands of things in one pass, dated across years (2026-07-31).
+    ///
+    /// They keep their own room and their source chip, unlike
+    /// `searchOnlySources` above; what they must never do is enter the ALL
+    /// feed, where a single import would bury every real capture the day it
+    /// ran — the same failure the address-book rule exists to prevent, one
+    /// step short of hiding the source entirely. All gets ONE receipt
+    /// instead (`isImportReceipt`), and the room holds everything.
+    static let bulkImportSources: Set<String> = ["Instagram", "Snapchat"]
+
+    /// The stable ref of a source's import receipt. Stable ON PURPOSE: a
+    /// second import must UPDATE the one receipt rather than stack another,
+    /// so All never accumulates a pile of "you imported" rows.
+    static func importReceiptRef(source: String) -> String {
+        "import:receipt:" + source.lowercased()
+    }
+
+    /// Does this thing belong in the unfiltered All feed? Everything does,
+    /// except a bulk-import source's own things — and its receipt is the one
+    /// exception to that exception.
+    static func showsInAll(_ thing: Thing) -> Bool {
+        guard bulkImportSources.contains(thing.source) else { return true }
+        return thing.sourceRef == importReceiptRef(source: thing.source)
+    }
+
     /// The things a surface (Feed, Home) should show — the corpus minus the
     /// search-only sources.
     static func surfaced(_ things: [Thing]) -> [Thing] {

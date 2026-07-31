@@ -143,6 +143,21 @@ enum BridgeRouter {
             }
         }
 
+        /// Connects by handing over a FILE you exported yourself, not by a
+        /// live credential — so there is no "moment you connect" and nothing
+        /// arrives later on its own. Everything in the export lands in one
+        /// pass, each thing dated to when it actually happened. Used by
+        /// `AppDetailScreen` to say which of those two worlds an offer is in.
+        var isFileImport: Bool {
+            switch self {
+            case .chatgpt, .claude, .gemini, .instagram, .snapchat,
+                 .kindle, .dayOne, .appleJournal, .bookmarks:
+                true
+            default:
+                false
+            }
+        }
+
         var id: String {
             switch self {
             case .wallet:         "wallet"

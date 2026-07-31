@@ -58,6 +58,17 @@ enum NetworkReach {
                  reach: .always,
                  purpose: "When you save a link, \(DS.device) fetches that page once to read its title and preview image. The request goes to the link's own site — whatever you saved — and carries nothing about you.",
                  hosts: ["the site you saved"]),
+        // The oEmbed siblings of "Saved links" above: a handful of sites hide
+        // the title and preview behind a script, so the plain page fetch reads
+        // nothing useful. Each of these publishes an oEmbed endpoint that
+        // returns the same public facts as data. Same trigger as the row
+        // above — saving a link of that kind, no connection involved — and the
+        // request carries only the public URL you saved.
+        Endpoint(service: "Link previews",
+                 reach: .always,
+                 purpose: "A few sites don't put a title or preview in the page itself. When you save one of those links, \(DS.device) asks that site's own public preview endpoint for it. The request carries only the link you saved.",
+                 hosts: ["www.tiktok.com", "graph.facebook.com", "vimeo.com",
+                         "soundcloud.com", "open.spotify.com", "www.flickr.com"]),
         Endpoint(service: "Maps",
                  reach: .always,
                  purpose: "Opening a place opens Apple Maps. The location you tapped is all it carries.",
