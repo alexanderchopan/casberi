@@ -40,12 +40,22 @@ Canonical mockups (visual reference, in ruling order):
    at engage. (The prototype's `-summonMode` sheet variant is dead — delete
    the flag.)
 4. **Rest state of the risen agent** (approved): greeting ("Saturday
-   morning." / "2,481 things, across 14 apps."), then the kept asks as **B1
-   pill chips**, then the glass bar. The ledger treatment was rejected —
-   chips are the more familiar pattern and differentiate the agent from the
-   app's rows.
-5. **Signals.** Each chip wears one line of state in secondary ink
-   ("While I was away? · 12 new", "How's my money? · $12,480"). The blue dot
+   morning."), then the kept asks as **B1 pill chips**, then the glass bar.
+   The ledger treatment was rejected — chips are the more familiar pattern
+   and differentiate the agent from the app's rows. **Amended 2026-07-31**
+   (prd §249): the greeting is ONE line, "Saturday morning." Everything that
+   sat under it — the corpus stat ("2,481 things, across 14 apps."), the
+   milestone, the anniversary — is GONE, because each was a fact about the
+   PILE rather than about the day, and the room now leads
+   with the DAY instead: the brief's own ranked lede as one tinted card above
+   the chips, which is the same door the whisper capsule opens. No mark on
+   it: the logo belongs to the ask bar and the whisper capsule, never inside
+   the brief.
+5. **Signals.** The blue dot alone since 2026-07-31 (prd §249) — each chip
+   used to print its digest beside the title ("While I was away? · 12 new",
+   "How's my money? · $12,480"), and that line was a count of things, which
+   the user ruled an annoyance. The digest is still computed and still
+   decides the dot; it just isn't printed. The blue dot
    appears **only when the answer changed** since last seen (a deterministic
    diff of the composer's facts against a stored last-seen — never a model
    judgment). Changed chips sort first; ignored asks decay dim (AskMemory's

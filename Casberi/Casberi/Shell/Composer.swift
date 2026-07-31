@@ -223,10 +223,6 @@ struct Composer: View {
     /// The first-ever kept ask earns its own line, sibling to "Your first
     /// thing" (RootShell) — persisted so it fires exactly once per install.
     @AppStorage("composer.firstKeptAsk.done") private var firstKeptAskDone = false
-    /// A deterministic flavor line under the greeting's corpus stat — an
-    /// anniversary or a real threshold just crossed, never invented (delight,
-    /// 2026-07-21). nil most opens; recomputed alongside `corpusSummary`.
-    @State private var greetingFlavorLine: String?
     /// Deals one small berry shower over a genuinely large "while I was
     /// away" haul — an arrival worth marking, the same vocabulary the wallet
     /// pass already uses for NFT/portfolio arrivals (prd §79).
@@ -234,14 +230,6 @@ struct Composer: View {
     /// Guards the away rain to once per open — a follow-up re-ask of the
     /// same away question must not replay it.
     @State private var awayRainPlayedThisOpen = false
-    /// The FIRST brief ever, deals its own small shower (delight, 2026-07-22)
-    /// — a real, provable, one-time event (mirrors the `bloom.seen.<source>`
-    /// idiom `MainSurface` already uses for a source's first-ever landing),
-    /// so it can never replay. A separate trigger from `awayRainTrigger` on
-    /// purpose — that one's name and doc comment are specific to the away
-    /// haul; reusing it for an unrelated moment would make a future reader
-    /// wonder why "away" rain fired for a brief.
-    @State private var firstBriefRainTrigger = 0
 
     /// The keepable text of a synthesis answer — a synthesis is one Insight
     /// carrying the prose (RootShell's proseDoc). Only that shape is worth
@@ -457,11 +445,12 @@ struct Composer: View {
     /// whole store, and computed-per-keystroke it made typing pay a corpus
     /// fetch per character (review 2026-07-08).
     @State private var tagPool: [String] = []
-    /// The rest-screen greeting's stat line ("2,481 things, across 14
-    /// apps."), ruling 4 — snapshotted once per open alongside `tagPool`
-    /// (same corpus walk `computeSuggestions()` already pays for, not a
-    /// second one).
-    @State private var corpusSummary = ""
+    /// The day's own sentence, shown as the rest screen's lead card
+    /// (2026-07-31) — snapshotted once per open alongside `tagPool`, off the
+    /// same corpus walk `computeSuggestions()` already pays for. This replaced
+    /// ruling 4's stat line ("2,481 things, across 14 apps."): the room's
+    /// first sentence should be what happened, not how much you own.
+    @State private var dayLede = ""
 
     /// The one predicate for "the composer is idle and showing its rest-screen
     /// chrome" — open, nothing typed, nothing recording, no answer in flight.
@@ -583,18 +572,23 @@ struct Composer: View {
         // the Codable ThingKind enum (it throws at runtime, and try? made
         // the miss silent).
         let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
-        // The greeting's stat line (ruling 4) — real counts off the fetch
-        // just paid for. Empty corpus = empty line (the greeting stands
-        // alone; a "0 things" boast would be dishonest warmth).
-        if all.isEmpty {
-            corpusSummary = ""
-            greetingFlavorLine = nil
-        } else {
-            let sources = Set(all.map(\.source)).count
-            let things = all.count.formatted()
-            corpusSummary = "\(things) thing\(all.count == 1 ? "" : "s"), across \(sources) app\(sources == 1 ? "" : "s")."
-            greetingFlavorLine = Self.greetingFlavor(all: all)
-        }
+        // NOTHING about the corpus itself goes under the greeting (user
+        // ruling 2026-07-31: "casberi is about insight and management, over
+        // tons of stuff, seeing numbers is just annoyance"). Three lines died
+        // here in one day, and they died for one reason, not three: the stat
+        // line ("2,481 things, across 14 apps."), the milestone ("1,000
+        // things banked.") and the anniversary ("3 years since your first
+        // thing.") were all FACTS ABOUT THE PILE — a scoreboard for having
+        // saved things, on the surface whose job is to tell you what the pile
+        // MEANS. The day's own sentence below is the room's lead now.
+        // The day, in the agent's own room (2026-07-31). Prefers the brief's
+        // ranked lede — risk, then money, then a person, then a deadline —
+        // which `TodayBrief.compose` republishes to the app group on every
+        // foreground for the widget; anyone who hasn't kept the `today` ask
+        // never publishes one, so the whisper's own line (synchronous, off
+        // the fetch just paid for) stands in. Empty = nothing to say today,
+        // and the card doesn't draw.
+        dayLede = WidgetLede.current() ?? DayBrief.whisper(things: all)?.detail ?? ""
         // One busy-publisher scan per open, shared by the timely chip below
         // and the placeholder examples (both want the same dominant handle).
         let busy = busyPublisher(in: all)
@@ -943,37 +937,6 @@ struct Composer: View {
         return "\(weekday) \(moment)."
     }
 
-    /// A real, deterministic flavor line under the greeting's corpus stat —
-    /// never a canned line, same register as §5's "Quiet so far today."
-    /// Two honest sources, checked in order (at most one line per open):
-    /// the corpus's actual anniversary (its oldest capture's month/day
-    /// falling today, one-plus years on), or a real count threshold just
-    /// crossed. Neither claims anything that isn't literally true of the
-    /// corpus right now.
-    private static let milestoneThresholds = [50, 100, 500, 1_000, 5_000, 10_000, 25_000, 50_000]
-    private static let milestoneSeenKey = "composer.greetingMilestoneSeen"
-
-    private static func greetingFlavor(all: [Thing], now: Date = .now) -> String? {
-        let cal = Calendar.current
-        if let oldest = all.map(\.capturedAt).min() {
-            let oldComps = cal.dateComponents([.month, .day], from: oldest)
-            let nowComps = cal.dateComponents([.month, .day], from: now)
-            let years = cal.dateComponents([.year], from: oldest, to: now).year ?? 0
-            if oldComps.month == nowComps.month, oldComps.day == nowComps.day, years >= 1 {
-                return "\(years) year\(years == 1 ? "" : "s") since your first thing."
-            }
-        }
-        let count = all.count
-        if let crossed = milestoneThresholds.last(where: { $0 <= count }) {
-            let seen = UserDefaults.standard.integer(forKey: milestoneSeenKey)
-            if crossed > seen {
-                UserDefaults.standard.set(crossed, forKey: milestoneSeenKey)
-                return "\(crossed.formatted()) things banked."
-            }
-        }
-        return nil
-    }
-
     /// One conversation turn — the question as the answer's own TITLE, then
     /// its answer. Heading weight (was subhead-muted, fixed 2026-07-20):
     /// ruling 8 calls each answer a "sovereign screen", and its question is
@@ -1133,12 +1096,18 @@ struct Composer: View {
             // sheet its warmth (design pass 2026-07-12, "B: greeting-led").
             // Hidden once a conversation is underway: the answer is the header.
             if embedded, turns.isEmpty, !answering {
-                // The greeting, as RULED (docs/agent-brief.md ruling 4,
-                // built 2026-07-20 — the static "What now?" that shipped
-                // first was a placeholder for this): the day and its moment
-                // ("Saturday morning."), then the corpus as one warm stat
-                // ("2,481 things, across 14 apps."). Deterministic, real,
-                // recomputed each open — never a canned line.
+                // The greeting (docs/agent-brief.md ruling 4, built
+                // 2026-07-20): the day and its moment, "Saturday morning."
+                // ONE line since 2026-07-31 — the corpus stat that used to
+                // follow it ("2,481 things, across 14 apps."), the milestone
+                // ("1,000 things banked.") and the anniversary ("3 years
+                // since your first thing.") are all gone, and for ONE reason
+                // rather than three (user: "casberi is about insight and
+                // management, over tons of stuff, seeing numbers is just
+                // annoyance"): each was a FACT ABOUT THE PILE, a scoreboard
+                // for having saved things, sitting on the surface whose whole
+                // job is to say what the pile MEANS. The day's own sentence
+                // (`dayCard`) is the room's lead now — insight, not inventory.
                 Text(timeGreeting())
                     .dsText(.heading34)
                     .foregroundStyle(DS.textPrimary)
@@ -1156,24 +1125,6 @@ struct Composer: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                     .settleIn()
-                if !corpusSummary.isEmpty {
-                    Text(corpusSummary)
-                        .dsText(.callout15)
-                        .foregroundStyle(DS.textSecondary)
-                        .padding(.horizontal, DS.Space.s4)
-                        .padding(.top, 2)
-                        .settleIn(delay: 0.05)
-                }
-                // A real anniversary or a real threshold just crossed — never
-                // a canned line (delight, 2026-07-21).
-                if let flavor = greetingFlavorLine {
-                    Text(flavor)
-                        .dsText(.subhead13)
-                        .foregroundStyle(DS.textTertiary)
-                        .padding(.horizontal, DS.Space.s4)
-                        .padding(.top, 1)
-                        .settleIn(delay: 0.08)
-                }
                 // The pairing line — teaches the sheet's dual nature (ask a
                 // question, or write a fact and send it out) and keeps the
                 // greeting from reading as an orphan label.
@@ -1246,22 +1197,33 @@ struct Composer: View {
                             if answering {
                                 convoTurn(question: currentQuestion, animateIn: true) {
                                     VStack(alignment: .leading, spacing: DS.Space.s2) {
-                                        // The librarian at work: the berry
-                                        // breathes while the answer is in
-                                        // flight — alive, not a spinner
-                                        // (delight 2026-07-13).
+                                        // The wait, drawn as the SHAPE of the
+                                        // answer coming (2026-07-31). A
+                                        // breathing berry stood here from
+                                        // 2026-07-13 — and the brief takes
+                                        // 20-25 seconds to assemble, which
+                                        // made this the longest, most visible
+                                        // logo moment in the app, inside the
+                                        // one screen the user ruled it out of
+                                        // ("i like our logo in the search /
+                                        // whisper bar, but not inside the
+                                        // daily brief itself"). Skeleton rows
+                                        // are the app's own loading grammar
+                                        // (`GenSkeletonRow`, what a streaming
+                                        // module already shows before its line
+                                        // lands), so the wait now says "an
+                                        // answer is arriving, here's its
+                                        // shape" instead of "a brand is
+                                        // thinking" — which is also what the
+                                        // build brief asked for all along: no
+                                        // thinking indicators, agency renders
+                                        // as results.
                                         if inFlight {
-                                            CasberiMark(size: 20)
-                                                .breathing()
-                                                .padding(.horizontal, DS.Space.s4)
-                                                // A quick settle — scale down
-                                                // as it fades, a small "found
-                                                // it" beat rather than a flat
-                                                // vanish (delight, 2026-07-21).
-                                                .transition(.asymmetric(
-                                                    insertion: .opacity,
-                                                    removal: .scale(scale: 0.6).combined(with: .opacity)))
-                                                .accessibilityLabel("Thinking")
+                                            // Self-padded (its own card
+                                            // margins) — see GenSkeletonBlock.
+                                            GenSkeletonBlock(minHeight: 84)
+                                                .transition(.opacity)
+                                                .accessibilityLabel("Working")
                                         }
                                         GenRender(id: "root", els: answerStream.els)
                                             .textSelection(.enabled)
@@ -1551,6 +1513,18 @@ struct Composer: View {
               .frame(maxWidth: .infinity, alignment: .leading)
               .padding(.top, DS.Space.s3)
 
+            // The rest screen settles at the BOTTOM (2026-07-31) — the same
+            // ruling the conversation already keeps ("the answer rises out of
+            // the composer it was asked from and its verbs land within
+            // reach"). At rest there was no expanding element at all, so the
+            // greeting, the chips and the bar floated as one block with the
+            // whole lower screen empty beneath them, and the input bar — whose
+            // own doc has said "pinned to the bottom" since it hugged a sheet
+            // — was nowhere near it. Only at rest: once an answer exists the
+            // conversation's own scroll is the expanding element.
+            if restChrome(keepBrief: false) { Spacer(minLength: DS.Space.s4) }
+            // The day, as the room's lead.
+            dayCard
             // Kept asks (docs/agent-brief.md ruling 4/5) — the standing
             // questions someone chose to keep, leading the empty-field chips
             // as B1 pills wearing their own one-line signal. The existing
@@ -1571,7 +1545,6 @@ struct Composer: View {
         // shower over the answer (delight, 2026-07-21) — an arrival worth
         // marking, contained to the bubble's own bounds by the clip below.
         .overlay { BerryRain(trigger: awayRainTrigger) }
-        .overlay { BerryRain(trigger: firstBriefRainTrigger) }
         // Report the content's natural height so the hosting sheet hugs it.
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { h in
             if embedded { onHeight(h) }
@@ -2042,6 +2015,96 @@ struct Composer: View {
         }
     }
 
+    // MARK: - The day (the room's lead)
+
+    /// The day's own sentence, as the rest screen's one card (2026-07-31,
+    /// user: "how if at all would you make the agent more visually
+    /// appealing").
+    ///
+    /// The agent was the only room in the app that led with nothing — every
+    /// other one opens on a treemap, a grid, a balance or a face, while this
+    /// one opened on four lines of shrinking gray text above two rows of gray
+    /// pills. The brief's ranked lede already exists and is already published
+    /// to the Lock Screen widget on every foreground; the room that composes
+    /// it was the one surface not showing it. What you got instead was a chip
+    /// reading "What's going on?" — a tap you had to spend to find out whether
+    /// it was worth spending.
+    ///
+    /// **No mark on it** (user ruling 2026-07-31: "i like our logo in the
+    /// search / whisper bar, but not inside the daily brief itself"). The
+    /// tinted surface alone carries the agent's voice — the same grammar
+    /// `DayNotes` and every `Insight` already use, where ink cards are your
+    /// things and a tint wash is the agent talking.
+    ///
+    /// Tapping it asks the canonical question, exactly as the kept pill and
+    /// the whisper capsule do — one composer, three doors (§132). Which is
+    /// also why the `today` pill and the today CHIP drop out of the rows below
+    /// while this shows: three controls opening one screen, stacked, is the
+    /// duplication the brief itself just stopped doing.
+    /// On screen when the room is at rest and the day has something to say.
+    private var dayCardShowing: Bool {
+        restChrome(keepBrief: false) && !dayLede.isEmpty
+    }
+
+    /// The kept kinds as actually docked — minus `today` while the card above
+    /// is already that ask's door. Its pill and the card open the identical
+    /// screen, and two controls for one screen, stacked, is the duplication
+    /// §248 just took out of the brief itself. It comes straight back the
+    /// moment the card isn't showing (an empty day, or mid-conversation), so
+    /// nothing is ever unreachable.
+    private var keptKinds: [String] {
+        let order = KeptAskStore.shared.order
+        return dayCardShowing ? order.filter { $0 != "today" } : order
+    }
+
+    @ViewBuilder
+    private var dayCard: some View {
+        if dayCardShowing {
+            Button {
+                DSHaptic.selection()
+                AskMemory.tapped("today")
+                // The card stands in for the kept pill while it shows, so it
+                // owes the same stamp — otherwise reading the day here would
+                // leave the pill's changed-dot lit for a day already read.
+                // Harmless when `today` isn't kept: the key is per-kind.
+                let store = KeptAskStore.shared
+                store.markSeen("today", digest: store.currentDigests["today"] ?? "")
+                draft = TodayBrief.title
+                commit()
+            } label: {
+                HStack(alignment: .top, spacing: DS.Space.s3) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(DayBrief.title())
+                            .dsText(.subhead13)
+                            .foregroundStyle(DS.textSecondary)
+                        Text(dayLede)
+                            .dsText(.heading17)
+                            .foregroundStyle(DS.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .multilineTextAlignment(.leading)
+                    }
+                    Spacer(minLength: DS.Space.s2)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(DS.textTertiary)
+                        .padding(.top, 4)
+                        .accessibilityHidden(true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(DS.Space.s4)
+                .background(DS.tintDim,
+                            in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s3)
+            .accessibilityElement(children: .combine)
+            .accessibilityHint("Opens your day")
+            .settleIn(delay: 0.06)
+        }
+    }
+
     // MARK: - Kept-ask pills (docs/agent-brief.md ruling 4/5 — B1)
 
     /// The standing questions someone chose to keep, as pill chips — a
@@ -2061,8 +2124,8 @@ struct Composer: View {
         // Docked beneath the brief LANDING too (prd §181) — a kept standing
         // ask must stay reachable when the agent opens onto the brief, not
         // only from the old empty state.
-        if restChrome(keepBrief: true), !KeptAskStore.shared.order.isEmpty {
-            let sorted = KeptAskStore.shared.order.sorted { a, b in
+        if restChrome(keepBrief: true), !keptKinds.isEmpty {
+            let sorted = keptKinds.sorted { a, b in
                 let store = KeptAskStore.shared
                 let changedA = store.changed(a, digest: store.currentDigests[a] ?? "")
                 let changedB = store.changed(b, digest: store.currentDigests[b] ?? "")
@@ -2094,24 +2157,38 @@ struct Composer: View {
                         // reads as a filled element against the steady gray
                         // of its unchanged neighbors. Still text-only chips
                         // (ruling 5's tripwire: never a thumbnail).
+                        //
+                        // A PIN leads each one since 2026-07-31. The two docked
+                        // rows were the same shape, size, radius and fill, so
+                        // the questions YOU kept and the ones the app is
+                        // merely proposing read as one undifferentiated set —
+                        // and the kept ones actually looked plainer, since
+                        // only the suggestions carry a glyph. The pin is the
+                        // verb that made them ("Keep" wears `pin.fill` in the
+                        // answer's verb row), so the row now says whose
+                        // questions these are in the vocabulary that already
+                        // exists. An outline would have read better still and
+                        // was drawn first — design law §8 forbids it ("no
+                        // hairlines, zero exceptions"), so it's a glyph.
+                        //
+                        // No digest number (user ruling 2026-07-31: "i don't
+                        // want to see a count of 'things'"). The digest is
+                        // still computed and still decides the dot — a plain
+                        // string compare, `KeptAskStore.changed` — it just
+                        // isn't printed. The dot says something moved; the
+                        // answer says what.
                         HStack(spacing: DS.Space.s2) {
                             if changed {
                                 Circle().fill(DS.tint).frame(width: 7, height: 7)
+                            } else {
+                                Image(systemName: "pin.fill")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(DS.tint)
+                                    .accessibilityHidden(true)
                             }
                             Text(title)
                                 .dsText(.callout15)
                                 .foregroundStyle(changed ? DS.textPrimary : DS.textSecondary)
-                            if !digest.isEmpty {
-                                // A changed pill's number climbs from what
-                                // was last seen to what's current (delight,
-                                // 2026-07-21) — the roll IS the dot's promise
-                                // made visible, restoring the digit-climb the
-                                // 2026-07-20 pill unification traded away.
-                                DigestRoll(text: "· \(digest)",
-                                          previous: changed ? store.lastSeenDigest(kind).map { "· \($0)" } : nil)
-                                    .dsText(.subhead13)
-                                    .foregroundStyle(changed ? DS.textSecondary : DS.textTertiary)
-                            }
                         }
                         .opacity(neglected ? 0.55 : 1)
                         .padding(.horizontal, DS.Space.s4)
@@ -2194,16 +2271,15 @@ struct Composer: View {
                                 .dsText(.callout15)
                                 .foregroundStyle(DS.textPrimary)
                                 .lineLimit(1)
-                            // The signal — parity with the kept pills
-                            // (2026-07-22). Every chip carrying a cheap
-                            // synchronous count shows it; a chip without one
-                            // (wallet/watchlist, read live) shows nothing
-                            // rather than a stale or invented number.
-                            if let signal = ask.signal {
-                                Text(signal)
-                                    .dsText(.subhead13)
-                                    .foregroundStyle(DS.textTertiary)
-                            }
+                            // The trailing "· 12" is gone (user ruling
+                            // 2026-07-31: "i don't want to see a count of
+                            // 'things', that's an annoyance to the user").
+                            // It was parity with the kept pills, and both
+                            // sides lost it in the same pass — a chip is a
+                            // question, and prefixing the answer with how many
+                            // rows it will contain is the tally §213 already
+                            // ruled isn't news. `AskOption.signal` still feeds
+                            // the timely dot's own gate.
                         }
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.vertical, DS.Space.s3)
@@ -2676,10 +2752,15 @@ struct Composer: View {
                 // saw it. The COPY is what changed (§193): it promised "every
                 // morning" back when this was a daily brief, and it now lands
                 // on every open.
+                //
+                // The berry SHOWER it used to deal is gone (2026-07-31): those
+                // are the logo's own berries raining over the brief, and the
+                // ruling is that the mark belongs to the bar and the whisper,
+                // not to this screen. The toast still marks the moment — it
+                // says the thing worth saying, which the rain never did.
                 if TodayBrief.matches(q), !docHasFallback(finalDoc),
                    !UserDefaults.standard.bool(forKey: "today.firstBriefShown") {
                     UserDefaults.standard.set(true, forKey: "today.firstBriefShown")
-                    firstBriefRainTrigger += 1
                     chrome.flash(String(localized: "I'll have this ready every time you open."),
                                 tone: .success)
                 }
@@ -2736,54 +2817,6 @@ struct ParseCard: View {
         .padding(DS.Space.s3)
         .background(DS.fillFaint,
                     in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-    }
-}
-
-/// A digest string that rolls its leading number from a previous reading to
-/// the current one (delight, 2026-07-21) — a kept pill's "· 12" climbing to
-/// "· 19" instead of popping cold, the same `.numericText()` grammar
-/// `CountUpText` already uses elsewhere. Falls back to a plain, unanimated
-/// `Text` whenever there's no real delta to show: no previous reading, no
-/// leading number in either string, an unchanged value, or Reduce Motion —
-/// motion only plays when it's telling the truth about a real change.
-private struct DigestRoll: View {
-    let text: String
-    let previous: String?
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// nil until the roll starts, then the mid-roll value climbing to
-    /// `cur.n` — one Text node throughout, so `.numericText()` has a stable
-    /// identity to interpolate (mirrors `CountUpText`'s own shape).
-    @State private var shown: Int?
-
-    /// The FIRST number wherever it sits in the string (not necessarily the
-    /// head — digests read "· 12 new" or "$12,480 · 3 wallets"), split into
-    /// what comes before/after it. nil when there's no digit run to animate.
-    private func split(_ s: String) -> (prefix: String, n: Int, suffix: String)? {
-        guard let range = s.rangeOfCharacter(from: .decimalDigits) else { return nil }
-        var end = range.upperBound
-        while end < s.endIndex, s[end].isNumber || s[end] == "," { end = s.index(after: end) }
-        guard let n = Int(String(s[range.lowerBound..<end].filter(\.isNumber))) else { return nil }
-        return (String(s[s.startIndex..<range.lowerBound]), n, String(s[end...]))
-    }
-
-    var body: some View {
-        if !reduceMotion, let cur = split(text), let prevText = previous,
-           let prev = split(prevText), prev.n != cur.n {
-            Text("\(cur.prefix)\((shown ?? prev.n).formatted())\(cur.suffix)")
-                .contentTransition(.numericText(value: Double(shown ?? prev.n)))
-                .onAppear {
-                    shown = prev.n
-                    // A follow-up main-actor hop, same fix `ConnectBloom`
-                    // documents: setting the start value and animating the
-                    // end value in one synchronous call coalesces, so the
-                    // start frame never commits and nothing rolls.
-                    Task { @MainActor in
-                        withAnimation(DS.Motion.standard) { shown = cur.n }
-                    }
-                }
-        } else {
-            Text(text)
-        }
     }
 }
 

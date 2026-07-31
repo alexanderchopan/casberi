@@ -2790,10 +2790,11 @@ struct GenSkeletonTile: View {
 /// this shipped for and is the majority of its own family, and either choice
 /// is an 8pt one-time settle on resolve, not a functional gap.
 ///
-/// A plain static fill, deliberately — this app sanctions exactly two
-/// breathing/pulsing loops (`GenTagMap`'s starter preview, the agent's own
-/// berry while an answer is in flight), each only while something real is
-/// pending; a shimmering skeleton would be a third, decorative one.
+/// A plain static fill, deliberately — a shimmering skeleton would be a
+/// decorative loop, and this app sanctions those only while something real is
+/// pending (`GenTagMap`'s starter preview is the surviving one; the agent's
+/// breathing berry retired 2026-07-31, and THIS view took its place as the
+/// in-flight state — see `Composer`'s answer stream).
 struct GenSkeletonBlock: View {
     var minHeight: CGFloat = 96
     var body: some View {

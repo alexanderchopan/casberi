@@ -11465,3 +11465,86 @@ assertions over coverage, tie determinism across three separate processes,
 word-boundary membership, and the one-shouty-title case — and mutation-tested
 three ways: removing the coverage gate, restoring the hash-order leader, and
 restoring substring membership each make it fail.
+
+## §249 — The agent's room leads with the day; no logo inside it, no tally on it (user: "how if at all would you make the agent more visually appealing", then "i don't want to see our logo inside at all" → "i like our logo in the search / whisper bar, but not inside the daily brief itself", then "i also don't want to see a count of 'things' b/c that's an annoyance to the user", 2026-07-31)
+
+The agent was the only room in the app that led with nothing. Every other one
+opens on a treemap, a grid, a balance, a face; this one opened on four stacked
+lines of shrinking gray text above two rows of gray pills, with no color on the
+screen at all unless something had changed. Six changes, all inside
+`Shell/Composer.swift` except one line of `GenRenderer` doc.
+
+**1. The day leads the room.** `TodayBrief.compose` already publishes its ranked
+lede — risk, then money, then a person, then a deadline — to the app group on
+every foreground, for the widget. The room that composes it was the one surface
+not showing it; what you got instead was a chip reading "What's going on?", a
+tap you had to spend to find out whether it was worth spending. It now draws as
+one tinted card (`dayCard`), reading `WidgetLede.current()` and falling back to
+`DayBrief.whisper(...)?.detail` — necessary, because the lede is only published
+for someone who has KEPT the `today` ask, and the whisper's line is synchronous
+and free off the corpus walk the open already pays for. Tapping it asks the
+canonical question, so it is the same door the whisper capsule and the kept
+pill are (§132's one composer, three doors) — which is exactly why the kept
+`today` pill drops out of the row beneath while the card shows. Three controls
+for one screen, stacked, is the duplication §248 just took out of the brief.
+
+**2. No mark inside the room.** RULING: the logo belongs to the ask bar and the
+whisper capsule — the two floating-layer surfaces that say "this is Casberi
+talking to you" — and not inside the brief. So the day card carries none (the
+tint wash alone is the agent's voice, the grammar `DayNotes` and every
+`Insight` already keep), and two existing uses retire: the breathing berry that
+was the ENTIRE in-flight state, and the berry shower over the first brief ever.
+The berry is the sharper loss and the clearer call: the brief takes 20-25
+seconds to assemble, which made it the longest and most visible logo moment in
+the whole app, inside the one screen ruled off-limits. Its replacement is
+`GenSkeletonBlock` — the app's own loading grammar, what a streaming module
+already shows before its own line lands — so the wait now says "an answer is
+arriving, here is its shape" rather than "a brand is thinking". Which is what
+build-brief §1 asked for from the beginning: *no thinking indicators, agency
+renders as results*. The first-brief moment keeps its toast, which said the
+thing worth saying; the rain never did.
+
+**3. Nothing about the pile, anywhere on the surface.** RULING (user), stated
+twice and widened the second time: first *"i don't want to see a count of
+'things', that's an annoyance to the user"*, then, on seeing what survived,
+*"i do not want to see anything like '3 years since your first thing'. wtf.
+that's annoying. casberi is about insight and management, over tons of stuff,
+seeing numbers is just annoyance."* So the test is not "is it a number" — the
+anniversary had no count in it — it is **is this a fact about the PILE?** A
+scoreboard for having saved things has no place on the surface whose whole job
+is to say what the things mean. Cut, all of it: the greeting's stat line
+("2,481 things, across 14 apps.", ruling 4's own copy), the milestone flavor
+("1,000 things banked."), the anniversary ("3 years since your first thing.")
+and with it `greetingFlavor` entirely, the kept pills' digest suffix, and the
+ask chips' signal suffix. The greeting is ONE line now: "Saturday morning." §213 ruled volume isn't
+news everywhere else in the app — *"people do not care how many things landed,
+because we have dozens a day"* — and the agent's rest screen was the last place
+still opening with one. Each digest is still COMPUTED: it decides the kept
+pill's changed dot (a plain string compare) and the suggestion set's own change
+key. It just isn't printed. The dot says something moved; the answer says what.
+
+**4. Kept pills wear a pin.** The two docked rows were identical in shape, size,
+radius and fill, so the questions you KEPT and the ones the app is merely
+proposing read as one undifferentiated set — and the kept ones read plainer,
+since only the suggestions carry a glyph. The pin is the verb that made them
+("Keep" wears `pin.fill` in the answer's verb row). An outlined pill read better
+and was drawn first; design law §8 forbids it ("no hairlines, zero exceptions"),
+so it is a glyph. Recorded because the next person to look at this will draw the
+outline too.
+
+**5. The room settles at the bottom.** At rest there was no expanding element in
+`openBubble` at all, so the greeting, the chips and the bar floated as one
+block — and the input bar, whose own doc comment has read "pinned to the bottom"
+since the era when this hugged a sheet, was nowhere near it. One `Spacer`, gated
+on `restChrome`, since once an answer exists the conversation's own scroll is
+the expanding element. Same ruling the answer already keeps (2026-07-21: the
+answer rises out of the composer it was asked from, its verbs within reach).
+
+**6. Dead weight removed.** `DigestRoll` (the digit-climb delight) has no caller
+now that no digest is printed, and is deleted rather than left to rot.
+
+Not done, deliberately: the greeting's teaching line ("Ask about your things, or
+write something and send it to another app") stays, and the whisper capsule's
+own fallback lead can still be a count ("14 new") on a day when nothing
+nameable landed — it is the artifact the user singled out as one they like, so
+it wasn't touched in the same pass that stripped counts from the room.

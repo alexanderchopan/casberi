@@ -217,11 +217,38 @@ enum TodayBrief {
             themeNames = themes.names
         }
 
-        // 5. The synthesis card (B3) — only the observations that fired. Sits
-        // BELOW the summaries now (2026-07-25): it used to open the screen,
+        // 5 and 6 COMPOSE in the other order than they render (2026-07-31).
+        // The leads are the screen's richest statement of a single thing — the
+        // post in full, the read with its image and its tap — so an
+        // observation that would name the same thing above them is the same
+        // fact told twice, worse first (user: "then below it will be another
+        // card with that specific item in it"). Composing the leads first lets
+        // `observations` see what's already being said and drop its own copy.
+        // The render order is unchanged: `ids` still appends notes, then leads.
+        let topic = dominantTopic(landed)
+        var leadIDs: [String] = []
+        var leadLines: [String] = []
+        var leadRefs: [String] = []
+        // The leads — a thing in full, per shape that landed. Both prefer
+        // something this window hasn't already led with, then the sources you
+        // actually visit (§214) — see `ranked`.
+        if let mention = mentionCard(landed, told: told, weights: weights) {
+            leadRefs.append("men")
+            leadLines += mention.lines
+            leadIDs.append(mention.id)
+        }
+        if let reading = readingCard(landed, topic: topic, told: told, weights: weights) {
+            leadRefs.append("read")
+            leadLines += reading.lines
+            leadIDs.append(reading.id)
+        }
+
+        // The synthesis card (B3) — only the observations that fired. Sits
+        // BELOW the summaries (2026-07-25): it used to open the screen,
         // which made the agent's read the crown instead of the money.
         let notes = observations(things: things, landed: landed, move: move, moves: moves,
-                                 now: now, ledger: ledger, ledeTookRisk: lede.tookRisk)
+                                 now: now, ledger: ledger, ledeTookRisk: lede.tookRisk,
+                                 topic: topic, leads: Set(leadIDs))
         if !notes.isEmpty {
             ids.append("notes")
             lines.append("notes = DayNotes([\(notes.indices.map { "n\($0)" }.joined(separator: ", "))])")
@@ -229,21 +256,8 @@ enum TodayBrief {
                 lines.append("n\(i) = DayNote(\"\(n.glyph)\", \"\(genSafe(n.text))\", \"\(n.thingID)\")")
             }
         }
-
-        // 6. The leads — a thing in full, per shape that landed. Both prefer
-        // something this window hasn't already led with, then the sources you
-        // actually visit (§214) — see `ranked`.
-        var leadIDs: [String] = []
-        if let mention = mentionCard(landed, told: told, weights: weights) {
-            ids.append("men")
-            lines += mention.lines
-            leadIDs.append(mention.id)
-        }
-        if let reading = readingCard(landed, told: told, weights: weights) {
-            ids.append("read")
-            lines += reading.lines
-            leadIDs.append(reading.id)
-        }
+        ids += leadRefs
+        lines += leadLines
 
         // What this window's brief showed — the memory every §214 read is
         // built on. Written last, so it records what was actually composed,
@@ -286,9 +300,15 @@ enum TodayBrief {
     /// Three strong lines read as intelligence; three padded ones read as a
     /// horoscope, so nothing here has a filler branch — a patternless day
     /// simply drops the card and the brief starts at the money hero.
+    ///
+    /// `topic` and `leads` are handed in rather than recomputed: both leads
+    /// (§166's cards) are composed BEFORE this now, so an observation can see
+    /// what the screen is already about to render in full and decline to say
+    /// it a second time.
     static func observations(things: [Thing], landed: [Thing], move: DayBrief.WalletMove?,
                              moves: [TokensAsk.Move], now: Date,
-                             ledger: [BriefLedger.Entry], ledeTookRisk: Bool) -> [Note] {
+                             ledger: [BriefLedger.Entry], ledeTookRisk: Bool,
+                             topic: Topic? = nil, leads: Set<String> = []) -> [Note] {
         var out: [Note] = []
 
         // The money's own sentence, displaced. When a liquidation risk takes
@@ -355,8 +375,16 @@ enum TodayBrief {
         // A mention that's gathering a conversation — the reply count is the
         // pattern, not the mention itself (any mention already leads its own
         // card below; this fires only when people are talking under it).
+        //
+        // And only for a mention the card below ISN'T already leading with
+        // (2026-07-31): that card renders the post in full and its meta line
+        // already carries the same reply count, so on the common day — one
+        // mention, and it's the busy one — the note was the card's own
+        // sentence, printed above the card. It still fires when the lead is a
+        // different mention, which is the case where it says something new.
         if let hot = landed
-            .filter({ $0.socialContext == "mention" && ($0.replyCount ?? 0) >= 3 })
+            .filter({ $0.socialContext == "mention" && ($0.replyCount ?? 0) >= 3
+                        && !leads.contains($0.id.uuidString) })
             .max(by: { ($0.replyCount ?? 0) < ($1.replyCount ?? 0) }),
            let replies = hot.replyCount {
             let who = hot.authorHandle ?? String(localized: "someone")
@@ -366,24 +394,23 @@ enum TodayBrief {
         }
 
         // A dominant topic across the day's reading — the same word carried by
-        // three or more titles. Named by that word, with the ONE read that
-        // isn't about it promoted as the outlier: the useful half of the
-        // observation is what your reading ISN'T.
-        if let topic = dominantTopic(landed) {
-            var text = String(localized: "Your reading keeps circling \(topic.word).")
-            if let outlier = topic.outlier {
-                // A clamped title already ends in an ellipsis — a sentence
-                // period after it renders "…." (caught on-device 2026-07-22).
-                // 60, not 48: at 48 an ordinary headline cut mid-phrase right
-                // above the Reading card showing the SAME headline in full,
-                // which read as a rendering fault rather than a summary.
-                let name = clamp(outlier.title, max: 60)
-                let stop = name.hasSuffix("…") ? "" : "."
-                text += " " + String(localized: "The one that doesn't: \(name)\(stop)")
-            }
+        // a third or more of the day's titles.
+        //
+        // The note NAMES NO READ (2026-07-31, user: "then below it will be
+        // another card with that specific item in it"). It used to spell out
+        // the outlier's headline, clamped to 60 — and the Reading card
+        // directly beneath it leads with that exact thing, in full, with its
+        // image and its tap. So the interesting read arrived twice, worse
+        // first. The observation now states only the pattern, which is the
+        // half the card can't state, and the card below says which read is the
+        // exception (`readingCard`'s own title). Same precedent as the wallet
+        // attribution moving into the hero: one screen, one place per fact.
+        if let topic {
             out.append(Note(glyph: "newspaper",
-                            text: text,
-                            thingID: topic.outlier?.id.uuidString ?? ""))
+                            text: topic.outlier == nil
+                                ? String(localized: "Your reading keeps circling \(topic.word).")
+                                : String(localized:
+                                    "Your reading keeps circling \(topic.word) — every read today but one.")))
         }
 
         // (The wallet attribution — "ETH did the lifting" — used to be a note
@@ -460,31 +487,76 @@ enum TodayBrief {
                         String(format: "%+.1f%%", move.pct)))
     }
 
-    /// The word three or more of the day's reads share, and the newest read
-    /// that doesn't carry it. Deterministic and cheap: significant words only
-    /// (4+ characters, not a stopword), counted across link titles.
-    private static func dominantTopic(_ landed: [Thing])
-        -> (word: String, outlier: Thing?)? {
+    /// What the day's reading is ABOUT, when it's about one thing — and, only
+    /// when the claim is literally true, the single read that isn't.
+    struct Topic {
+        let word: String
+        /// Non-nil ONLY when exactly one read lacks the word. "The one that
+        /// doesn't" is a claim of uniqueness, and it was being made about one
+        /// of seven equally-unrelated reads (user, 2026-07-31: "it never really
+        /// makes sense"). When several reads sit outside the topic there is no
+        /// outlier — there's just a topic — so this is nil and the note says
+        /// only what it can defend.
+        let outlier: Thing?
+    }
+
+    /// The word the day's reads share, and the one read that doesn't carry it.
+    /// Deterministic and cheap: significant words only (4+ characters, not a
+    /// stopword), counted once per title.
+    ///
+    /// Three gates, each paid for (2026-07-31):
+    ///
+    /// 1. **Coverage** — the word must reach at least a THIRD of the day's
+    ///    reading. At the old bare floor of 3 titles, a 20-read day let any
+    ///    word appearing three times claim the whole day "keeps circling" it,
+    ///    which is a coincidence wearing a pattern's clothes.
+    /// 2. **A deterministic leader** — `Dictionary.max(by: value)` resolves a
+    ///    tie by hash order, which is seeded per PROCESS, so two words tied at
+    ///    the top named a different topic on each rise of the same day's brief.
+    ///    Ties break alphabetically instead, so the brief says one thing.
+    /// 3. **A real outlier or none** — see `Topic.outlier`.
+    ///
+    /// Membership is decided by the SAME tokenizer that does the counting, not
+    /// by `title.contains(key)`: substring matching called a read carrying
+    /// "openai" a member of the topic "open", and it read the raw title while
+    /// the count read `topicText` (GitHub's repo path stripped), so a read
+    /// could be counted out of the topic and out of the outlier slot at once.
+    private static func dominantTopic(_ landed: [Thing]) -> Topic? {
         let reads = reads(landed)
-        guard reads.count >= 4 else { return nil }
+        guard reads.count >= 4, let lead = topicLead(titles: reads.map(topicText))
+        else { return nil }
+        return Topic(word: lead.display,
+                     outlier: lead.without.count == 1 ? reads[lead.without[0]] : nil)
+    }
+
+    /// The pure half of `dominantTopic` — titles in, the leading word and the
+    /// POSITIONS of the titles that don't carry it out. Split out so the gates
+    /// can be exercised against real title sets with no corpus, no SwiftData
+    /// and no simulator (`ScreenshotTopics.terms`' precedent).
+    static func topicLead(titles: [String]) -> (key: String, display: String, without: [Int])? {
         var counts: [String: Int] = [:]
         var display: [String: String] = [:]
-        for read in reads {
+        // Each title's significant words, kept so membership and the outlier
+        // are read off the same tokenization the count used.
+        var carried: [Set<String>] = []
+        for title in titles {
             // Count each word ONCE per title — a headline repeating a word
             // must not out-vote three separate articles sharing it.
-            var seen = Set<String>()
-            for word in words(of: topicText(read)) {
+            var keys = Set<String>()
+            for word in words(of: title) {
                 let key = word.lowercased()
-                guard key.count >= 4, !stopwords.contains(key), seen.insert(key).inserted
+                guard key.count >= 4, !stopwords.contains(key), keys.insert(key).inserted
                 else { continue }
                 counts[key, default: 0] += 1
-                display[key] = word
+                if display[key] == nil { display[key] = word }
             }
+            carried.append(keys)
         }
-        guard let (key, n) = counts.max(by: { $0.value < $1.value }), n >= 3
+        let leader = counts.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
+        guard let top = leader.first, top.value >= 3, top.value * 3 >= titles.count
         else { return nil }
-        let outlier = reads.first { !$0.title.lowercased().contains(key) }
-        return (display[key] ?? key, outlier)
+        return (top.key, display[top.key] ?? top.key,
+                carried.indices.filter { !carried[$0].contains(top.key) })
     }
 
     /// A read's title, stripped of an "owner/repo" token when the read is
@@ -821,8 +893,14 @@ enum TodayBrief {
                 seen[key] = (raw, [thing.source], thing)
             }
         }
+        // Sorted by handle before the max, so a tie (two people in two sources
+        // each — the common shape) names the same person on every rise: a
+        // Dictionary's iteration order is seeded per process, so `max` alone
+        // let the brief change its mind about who "turns up everywhere" when
+        // nothing about the day had changed. Same defect `dominantTopic` had.
         guard let best = seen.values
             .filter({ $0.sources.count >= 2 })
+            .sorted(by: { $0.handle.lowercased() < $1.handle.lowercased() })
             .max(by: { $0.sources.count < $1.sources.count })
         else { return nil }
         return Note(glyph: "person.2",
@@ -1063,7 +1141,14 @@ enum TodayBrief {
     /// dominant topic (the interesting one is the one that ISN'T like the
     /// others), else simply the newest. The residue is named, never counted:
     /// "the rest keeps circling Samsung".
-    private static func readingCard(_ landed: [Thing], told: Set<String>,
+    ///
+    /// When the lead IS the outlier the card's own title says so ("Reading ·
+    /// the odd one out", the `<source> · mentions you` grammar the mention
+    /// card already keeps — a lead card's title states WHY this thing is
+    /// here). That sentence used to live in the synthesis note above, which
+    /// then had to spell the headline out to make sense; saying it here costs
+    /// nothing and lets the note stay a pattern (2026-07-31).
+    private static func readingCard(_ landed: [Thing], topic: Topic?, told: Set<String>,
                                     weights: ChipMemory.Weights)
         -> (lines: [String], id: String)? {
         let reads = ranked(reads(landed), told: told, weights: weights)
@@ -1072,7 +1157,6 @@ enum TodayBrief {
         // isn't like the others" is a stronger claim than "the source you tap
         // most". The ranking decides only the fallback, which is where a plain
         // newest-first pick was leaving a habit source behind a stranger.
-        let topic = dominantTopic(landed)
         let lead = topic?.outlier ?? reads[0]
         let meta = "\(genSafe(lead.source)) · \(shortTime(lead.capturedAt))"
         var refs = ["r0"]
@@ -1090,7 +1174,10 @@ enum TodayBrief {
             refs.append("rmore")
             doc.append("rmore = AskMore(\"\(genSafe(String(localized: "See the rest")))\", \"\(genSafe(topic.word))\")")
         }
-        doc[0] = "read = Widget(\"\(String(localized: "Reading"))\", \"\", [\(refs.joined(separator: ", "))])"
+        let title = topic?.outlier == nil
+            ? String(localized: "Reading")
+            : String(localized: "Reading · the odd one out")
+        doc[0] = "read = Widget(\"\(genSafe(title))\", \"\", [\(refs.joined(separator: ", "))])"
         return (doc, lead.id.uuidString)
     }
 
