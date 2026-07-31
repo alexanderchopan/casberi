@@ -11,6 +11,10 @@ import SwiftData
 /// away"), CHANNEL feeds (/design by name, a topic beside the people), a
 /// cast's replies (the thing sheet shows the thread), and profile facts
 /// (the account row wears the face, display name, and bio).
+/// Grown again 2026-07-31 (prd §239): RECASTS an account makes land beside
+/// their likes, and an account marked `mine` turns on the INBOUND half
+/// (`Model/SocialInbound.swift`) — replies to your casts, who liked them, who
+/// started following you — plus `FarcasterSigners`, which apps can post as you.
 @Observable
 final class FarcasterStore {
     static let shared = FarcasterStore()
@@ -751,7 +755,7 @@ enum FarcasterIngest {
         ledger.record(followers.map { String($0.fid) })
         guard !firstSight, !fresh.isEmpty else { return 0 }
 
-        let freshFids = fresh.compactMap(Int.init)
+        let freshFids = fresh.compactMap { Int($0) }
         await prefetchProfiles(freshFids)
         var added = 0
         for followerFid in freshFids.prefix(SocialInbound.followerLandCap) {

@@ -10,6 +10,12 @@ import SwiftData
 /// thing sheet shows a post's replies (getPostThread), and account rows wear
 /// the profile (getProfile: display name, bio, face). LIKES still require an
 /// app-password sign-in (getActorLikes is auth-only) — the footer says so.
+/// Grown again 2026-07-31 (prd §239): REPOSTS a watched account makes land
+/// (free — they already ride the author feed), and an account marked `mine`
+/// turns on the INBOUND half (`Model/SocialInbound.swift`) — replies to your
+/// posts, who liked them, who started following you. All of that is on the
+/// UNAUTHENTICATED host: what happens TO you is public here even though what
+/// you did is not.
 @Observable
 final class BlueskyStore {
     static let shared = BlueskyStore()
@@ -491,12 +497,12 @@ enum BlueskyIngest {
 
     // MARK: - Reposts (2026-07-31)
 
-    /// How recent a repost has to be to count as NEWS — the window inside
-    /// which one may resurface a post the corpus already holds. Farcaster's
-    /// `likeNewsWindow`, same 24h, same reasoning: switching Reposts on for
-    /// an account with a long history must not throw their back catalogue at
-    /// the top of the feed.
-    private static let repostNewsWindow: TimeInterval = 86_400
+    /// How recent a reaction has to be to count as NEWS — the window inside
+    /// which a repost, or a like on one of your own posts, may resurface a
+    /// post the corpus already holds. Farcaster's `likeNewsWindow`, same 24h,
+    /// same reasoning: switching Reposts (or Mine) on for an account with a
+    /// long history must not throw their back catalogue at the top of the feed.
+    private static let reactionNewsWindow: TimeInterval = 86_400
 
     /// The posts a watched account REPOSTED, out of the author feed already
     /// in hand — so this costs NO extra request, unlike Farcaster's separate
@@ -567,7 +573,7 @@ enum BlueskyIngest {
     private static func resurface(_ thing: Thing?, reactedAt: Date?) {
         guard let thing, thing.isLive, let reactedAt,
               reactedAt > thing.capturedAt,
-              Date.now.timeIntervalSince(reactedAt) < repostNewsWindow else { return }
+              Date.now.timeIntervalSince(reactedAt) < reactionNewsWindow else { return }
         thing.capturedAt = reactedAt
         // Joins the refresh's save condition — a pass that only resurfaced
         // landed nothing new, and must still persist what it moved.

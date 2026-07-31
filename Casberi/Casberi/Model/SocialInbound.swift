@@ -60,6 +60,14 @@ enum SocialInbound {
     /// `ownPostPage` and `ownPostWindow` — what the likes-received and
     /// replies-received reads ask about.
     ///
+    /// Read out of the corpus, not the network: your posts are already landing
+    /// (that's what watching your own account does), so asking the network for
+    /// them again would be a second copy of a read the pass just made. The
+    /// consequence to know is that the VERY FIRST sync of a brand-new account
+    /// finds nothing here — `landed` is snapshotted before your casts land —
+    /// so the inbound reads begin on the second pass. `-inboundProbe` reports
+    /// this count for exactly that reason.
+    ///
     /// `.isLive` at the boundary (corollary 4 of the SwiftData liveness rule):
     /// this hands an array of models onward to readers that will read stored
     /// properties off them, so the guarantee is made HERE, where it's local
