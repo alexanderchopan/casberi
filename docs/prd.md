@@ -11009,3 +11009,54 @@ added to the browser-permalink denylist, the same treatment `venice.ai`/
 `bankr.bot` already get) all pass. No Grok key has been stored this session,
 so `validate`/the chat request/the pinned model are unverified against a live
 response — `-byokProbe` is the re-measurement step once one exists.
+
+## §243 — The key picker becomes a list (user: "how would you redesign the settings key picker", then "make the changes to the key picker while we wait", 2026-07-31)
+
+Settings → Your key drove a `Picker(.segmented)` over `AgentProvider
+.allCases` from the day there were four providers. Grok made seven, and it
+broke in three separate ways — only one of which was width:
+
+1. **Seven text segments don't fit.** "OpenRouter" alone truncates at 390pt,
+   and this app scales with Dynamic Type (§206), so it degrades further for
+   exactly the person a truncated control fails hardest.
+2. **A segment can't carry STATE.** It cannot say which providers hold a key,
+   or which one is currently answering — the two facts a person opens this
+   screen to learn. The card worked around this with a line ABOVE the picker
+   describing whichever segment was selected, so the list of seven told you
+   nothing and the line told you about one.
+3. **It conflated two jobs.** Selecting a segment picked which key to EDIT;
+   saving one silently made it ACTIVE (`AgentKey.set` writes both). "Update
+   my Venice key" and "run answers on Venice" were the same gesture, and
+   neither was named.
+
+**The build (`Screens/AgentKeyPicker.swift`, new).** A row per provider
+instead of a segment, because a row has room for a brand mark, a key hint,
+and its own verb. Connected providers lead with the active one checked; the
+rest sit under a quiet "Add another" label — the catalog's own
+connected/available split, with NO rule between them (the no-hairlines law,
+so grouping is carried by a label and air). Two visually distinct tap targets
+per row, the shape `WalletWarningsStrip`'s row-plus-Revoke-pill already
+established: the row BODY selects that provider for editing (the field below
+follows it), and a trailing "Make active" chip — only on a connected row
+that isn't already active — flips `AgentKey.active` without re-pasting an
+unchanged key. The active row shows a checkmark and NO button, since a
+control that performs its own current state is a dead control.
+
+Two knock-on fixes in the card around it, both consequences of the rows now
+carrying their own state:
+
+- The summary line stopped repeating the selected provider's key tail
+  ("Claude saved in the Keychain …3kQA"), which every row now states for
+  itself — §208's "one thing said twice". It says what no single row can:
+  which provider actually wins ("Answers run on Claude when you tap").
+- The console small-print is DERIVED from `AgentProvider.allCases` rather
+  than hand-listed. The old sentence named six consoles and went stale the
+  moment a seventh provider landed — which is exactly what this session did
+  to it. `console` is already a property on every case, so it can't drift
+  again.
+
+Built as its own file with a ~6-line swap-in at the call site on purpose: a
+concurrent session was mid-pass through `AccountDetailSheet.swift` (the
+`DS.device` Mac-copy conversion), so keeping the new component out of that
+file minimizes the collision surface and makes this trivially re-appliable if
+the edit is clobbered.
