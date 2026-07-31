@@ -19,6 +19,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     case privacy  = "Privacy"
     case oneclaw  = "1Claw"
     case posthog  = "PostHog"
+    case stripe   = "Stripe"
 
     var id: String { rawValue }
 
@@ -37,6 +38,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .privacy:  "privacy"
         case .oneclaw:  "oneclaw"
         case .posthog:  "posthog"
+        case .stripe:   "stripe"
         }
     }
 
@@ -66,6 +68,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .privacy:   URL(string: "https://app.privacy.com/account")
         case .oneclaw:   URL(string: "https://1claw.xyz")
         case .posthog:   URL(string: "https://us.posthog.com/settings/user-api-keys")
+        case .stripe:    URL(string: "https://dashboard.stripe.com/apikeys")
         }
     }
 
@@ -86,6 +89,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .privacy:   "privacy.com → account"
         case .oneclaw:   "1claw.xyz"
         case .posthog:   "posthog.com → personal API keys"
+        case .stripe:    "dashboard.stripe.com → API keys"
         }
     }
 
@@ -131,6 +135,9 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .posthog: [
             "Create a personal API key and tick only these scopes: query:read, annotation:read, event_definition:read.",
             "Copy it and paste it below — then pick which project to read."]
+        case .stripe: [
+            "Create a RESTRICTED key, and give it read access to Events, Disputes, Payouts, Subscriptions, Invoices and Balance — nothing else.",
+            "Copy it and paste it below. It starts with rk_live_; a test-mode key is refused, so your feed only ever holds real money."]
         }
     }
 
@@ -148,6 +155,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .privacy:  "API key"
         case .oneclaw:  "ocv_…"
         case .posthog:  "phx_…"
+        case .stripe:   "rk_live_…"
         }
     }
 
@@ -170,6 +178,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .privacy:  "API key"
         case .oneclaw:  "agent key"
         case .posthog:  "personal API key"
+        case .stripe:   "restricted key"
         }
     }
 
@@ -188,6 +197,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .privacy:  "purchases"
         case .oneclaw:  "grants"
         case .posthog:  "updates"
+        case .stripe:   "updates"
         }
     }
 
@@ -205,6 +215,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .privacy:  "Reads your card transactions only. Privacy's key isn't scoped read-only — it could also manage cards on your account — so Casberi keeps the read-only promise by conduct: it never creates, closes, or funds a card."
         case .oneclaw:  "Reads which vaults and secret paths the key can reach — names and permissions only. Nothing here ever reads a secret's value, signs, or spends."
         case .posthog:  "Reads the metrics you watch and your project's annotations. The key you mint is scoped read-only, so it cannot ship a flag, edit a dashboard, or write anything back — and nothing here ever reads an individual person's profile."
+        case .stripe:   "Reads five things that happen to your money: disputes, payouts, canceled subscriptions, failed payments, and your balance. The restricted key you mint is read-only, so it cannot refund, charge, pay out, or write anything back — and nothing here reads your customers' names or card details."
         }
     }
 
@@ -217,6 +228,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .bitrefill: BitrefillBalance.clear()
         case .oneclaw:   OneClawAccess.clear()
         case .posthog:   PostHogAccount.clear()
+        case .stripe:    StripeAccount.clear()
         default:         break
         }
     }
@@ -238,6 +250,14 @@ enum TokenIngest {
         // foreground loop still drives it, without the dedupe machinery below
         // that assumes an incoming list.
         if bridge == .posthog { return await PostHogIngest.refresh(context: context) }
+        // Stripe owns its whole pass for the same reason, from the other
+        // direction: it isn't a fetch-a-list-and-land bridge either. It reads a
+        // CURSORED event page (so the dedupe machinery below, which re-derives
+        // every known ref each pass, would be doing work the cursor already
+        // did) plus a balance behind a freshness window (§216 — a balance is a
+        // STATE), and it sets `dueAt` on two of its shapes, which the generic
+        // path has no notion of.
+        if bridge == .stripe { return await StripeIngest.refresh(context: context) }
         guard let token = TokenVault.get(bridge.tokenKey), !running.contains(bridge) else {
             return running.contains(bridge) ? 0 : nil
         }
@@ -300,21 +320,23 @@ enum TokenIngest {
         case .bitrefill: await BitrefillFetch.things(token: token)
         case .privacy:  await PrivacyFetch.things(token: token)
         case .oneclaw:  await OneClawFetch.things(token: token, context: context)
-        // Unreachable — `refresh` routes PostHog to its own sweep above.
+        // Unreachable — `refresh` routes these two to their own sweeps above.
         // Present so the switch stays exhaustive rather than defaulted, which
         // is what makes a future bridge impossible to add without deciding.
-        case .posthog:  postHogUnreachable()
+        case .posthog:  ownSweepUnreachable(.posthog)
+        case .stripe:   ownSweepUnreachable(.stripe)
         }
     }
 
-    /// PostHog can only arrive here if the routing at the top of `refresh` was
-    /// removed. It ASSERTS rather than just returning nil because in this
-    /// switch's vocabulary nil means "couldn't read", which `refresh` reports
-    /// to the user as "check the token" — so the silent failure would blame
-    /// the credential for a wiring mistake (review, 2026-07-27). A function
-    /// rather than an inline case body so the switch stays an expression.
-    private static func postHogUnreachable() -> [Thing]? {
-        assertionFailure("PostHog owns its own sweep — refresh should have routed it")
+    /// A bridge that owns its own sweep can only arrive here if the routing at
+    /// the top of `refresh` was removed. It ASSERTS rather than just returning
+    /// nil because in this switch's vocabulary nil means "couldn't read", which
+    /// `refresh` reports to the user as "check the token" — so the silent
+    /// failure would blame the credential for a wiring mistake (review,
+    /// 2026-07-27). A function rather than an inline case body so the switch
+    /// stays an expression.
+    private static func ownSweepUnreachable(_ bridge: TokenBridge) -> [Thing]? {
+        assertionFailure("\(bridge.rawValue) owns its own sweep — refresh should have routed it")
         return nil
     }
 

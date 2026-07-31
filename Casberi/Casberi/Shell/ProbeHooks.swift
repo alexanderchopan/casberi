@@ -244,6 +244,54 @@ enum ProbeHooks {
                   event, series.count, metric.total,
                   PostHogIngest.formatted(PostHogMilestone.next(after: metric.total)))
         },
+        // `-stripeProbe YES` reads the STORED Stripe key (connect first via
+        // `-tokenBridge "Stripe:<rk_live_…>"`) and NSLogs the RAW shapes —
+        // per-endpoint status, the resolved account, the balance buckets, and
+        // one `stripeEvent|` line per event with the title it would land
+        // wearing. The measure tool for an UNMEASURED API. Reads only, and it
+        // does NOT advance the cursor, so it can be re-run over one window.
+        Hook(key: "stripeProbe") { _, _ in
+            Task { await StripeIngest.probe() }
+        },
+        // `-stripeShapeProbe YES` — the same five shapes with NO key and NO
+        // network, over synthetic payloads in Stripe's documented envelope.
+        // It exists because this bridge was authored against docs alone: the
+        // titling, the `dueAt` extraction and the minor-unit maths are the part
+        // that can be wrong without any live account to catch it, and they're
+        // pure functions, so they can be checked for free. A zero-decimal
+        // currency (JPY) rides along on purpose — hardcoding /100 is the Gnosis
+        // Pay decimals bug in a new coin, and this is the line that catches it.
+        Hook(key: "stripeShapeProbe") { _, _ in
+            let due = Int(Date.now.addingTimeInterval(7 * 86_400).timeIntervalSince1970)
+            let samples: [[String: Any]] = [
+                ["type": "charge.dispute.created", "created": 1_760_000_000,
+                 "data": ["object": ["id": "dp_1", "amount": 4900, "currency": "gbp",
+                                     "evidence_details": ["due_by": due]]]],
+                ["type": "charge.dispute.closed", "created": 1_760_000_100,
+                 "data": ["object": ["id": "dp_1", "amount": 4900, "currency": "gbp",
+                                     "status": "won"]]],
+                ["type": "payout.paid", "created": 1_760_000_200,
+                 "data": ["object": ["id": "po_1", "amount": 214_000, "currency": "gbp"]]],
+                ["type": "payout.failed", "created": 1_760_000_300,
+                 "data": ["object": ["id": "po_2", "amount": 214_000, "currency": "usd",
+                                     "failure_message": "account closed"]]],
+                ["type": "customer.subscription.deleted", "created": 1_760_000_400,
+                 "data": ["object": ["id": "sub_1",
+                                     "items": ["data": [["price": ["nickname": "Pro yearly"]]]]]]],
+                ["type": "invoice.payment_failed", "created": 1_760_000_500,
+                 "data": ["object": ["id": "in_1", "amount_due": 5000, "currency": "jpy",
+                                     "next_payment_attempt": due]]],
+            ]
+            for sample in samples {
+                let type = (sample["type"] as? String) ?? "?"
+                guard let shaped = StripeShape.shape(sample) else {
+                    NSLog("[Casberi] stripeShape| %@ → UNSHAPED", type)
+                    continue
+                }
+                NSLog("[Casberi] stripeShape| %@ → %@ [%@]%@", type, shaped.title, shaped.tag,
+                      shaped.dueAt == nil ? "" : " (carries a deadline)")
+            }
+        },
         // `-fcName <username>` connects Farcaster headlessly (appends, so a
         // comma-separated list watches several — dedupes, safe to re-fire).
         Hook(key: "fcName") { name, context in

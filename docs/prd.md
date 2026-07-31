@@ -11548,3 +11548,99 @@ write something and send it to another app") stays, and the whisper capsule's
 own fallback lead can still be a count ("14 new") on a day when nothing
 nameable landed — it is the artifact the user singled out as one they like, so
 it wasn't touched in the same pass that stripped counts from the room.
+
+## §250 — Stripe: the five things that happen to money (user: "what if anything can we do with stablecoins? with x402 payments? with Stripe?", then "is there or is there not something to do with it. what would user flow be", then "lets do stripe! that's excellent!", then "how else would you add surprise and delight", then "do all", 2026-07-31)
+
+**The ruling: Stripe is a Work seat beside PostHog, and it lands FIVE shapes —
+never an individual charge.**
+
+Stripe inverts PostHog's design problem. PostHog is a firehose of counts, and a
+count is what the module doctrine forbids a thing to be, so §223 needed a
+carve-out (annotations, milestones, silence) to find anything thing-shaped at
+all. Stripe is entirely MONEY MOVING, which is the doctrine's one standing
+exception — the count IS the event — so its raw objects are already the right
+shape and no carve-out is needed.
+
+That does NOT license landing every charge. A £9 payment on a busy account is a
+tally wearing a currency symbol. The exception is for money whose MOVEMENT is
+the news, so exactly five things land: a **dispute opened** (the flagship — it
+carries an evidence deadline, so it lands as a reconciling `dueAt`, the
+ENSExpiry/Aerodrome shape, and missing it costs real money), a **dispute
+closed**, a **payout** (paid or failed — the moment a business actually feels,
+not the charge), a **subscription canceled**, and a **recurring payment failed**
+(carrying Stripe's own `next_payment_attempt` as its clock). Charges feed the
+balance and the silence baseline; they never become rows.
+
+**Read-only STRUCTURALLY**, the PostHog contract, not Privacy.com's conduct
+promise: Stripe restricted keys carry per-resource permissions, so the setup
+screen names six reads and a key minted that way cannot refund, charge, or pay
+out whatever this app does.
+
+**Ruling 2 — test-mode keys are REFUSED at connect.** Every other bridge here
+would happily read a sandbox. This one must not: the corpus is a record of
+things that really happened, and pretend money filed beside real money is the
+§83 fake-status ban in the one domain where believing it is expensive.
+`StripeFetch.validate` returns `.testKey` before a single request is made
+(the mode is in the key's own prefix) and the screen says why.
+
+**Ruling 3 — four failures, four sentences.** A test key, a key missing the
+Events scope, a typo, and a dead network have four different fixes. Collapsing
+them into "couldn't connect" leaves the two RECOVERABLE ones looking like a typo.
+
+**NOT built, deliberately: an MRR dashboard.** That is a tally screen, and
+Stripe already ships a better one.
+
+### The delight pass (same session, user: "do all")
+
+Five, and the through-line is that the bridge delivered bad news well and good
+news flatly:
+
+1. **Two registers, never one.** Money ARRIVING rains — `SourceMoments.fire`,
+   tinted Stripe's hue, the same berry shower every other source's celebration
+   uses. Money being CHALLENGED must never rain: it gets `chrome.flash(…,
+   tone: .failure)` and SAYS what happened. The sweep exposes `lastPassAlarm`
+   (one slot, cleared per pass) so the screen can answer in the right register,
+   and only on a sync the person is present for — the background pass stays
+   silent and lets the row and its deadline do the telling.
+2. **A celebration fires only for a row that is really new.** A stale cursor
+   makes the sweep re-read a window by design (that's what makes recovery
+   safe), so `insert` hands back exactly what it inserted and the rain rides
+   that, never the shaped list.
+3. **"On the way" carries a day.** Payouts have `arrival_date`; a pending
+   balance without it answers how much and leaves WHEN hanging, which is the
+   half you plan around. Month and day, never a bare weekday (Aerodrome).
+4. **Loop-closers.** A dispute won and a payment recovered both link back to
+   the row that worried you, joined on the dashboard URL (both halves name the
+   same object, so no new `Thing` field). The title gains how long it lasted,
+   measured against the app's OWN record of when it told you — the Hyperliquid
+   held-duration rule, never a duration Stripe didn't send. A dispute closing
+   is news either way; a payment SUCCEEDING is news only as a recovery
+   (`requiresPrior`), because otherwise it is the charge firehose renamed.
+5. **The silence alarm** — the most valuable thing this bridge can say, and the
+   one thing Stripe's own dashboard will not tell you: your checkout is broken.
+   One extra request (the last 100 `charge.succeeded` events, timestamps only,
+   never landed) gives the rate directly. `StripeSilence.verdict` is pure and
+   harnessed: the typical gap is the **MEDIAN**, not the mean (one burst would
+   drag a mean far enough to invent an outage — the case is in the harness and
+   decides between the two), with a 6-hour **floor** so a lunchtime lull can't
+   alarm, a 72-hour **ceiling** so a weekly business doesn't wait months, a
+   20-payment minimum, and a 14-day dormancy guard so a shop that closed in
+   March isn't told its payments stopped. One alert per outage, cleared when
+   money resumes. A failed pulse read is NOT silence — it's not knowing, and
+   the two must never be confused when the answer is "your revenue stopped".
+
+### Measurement
+
+**UNMEASURED against a live account** — built from Stripe's public API
+reference, no key stored, no egress to `api.stripe.com` from the build host.
+Every read is a GET, every failure returns nil, no write endpoint is reachable
+from the file, so it fails safe. `-stripeProbe YES` dumps raw shapes against a
+real key; `-stripeShapeProbe YES` exercises all five shapings with no key and
+no network.
+
+The PURE logic IS verified: a `swift` harness extracts `StripeMoney`,
+`StripeSilence`, the value coercions and `StripeShape` **from the shipped source
+text** (never a copy) and runs 100+ assertions, mutation-tested five ways —
+forgetting the zero-decimal currency table, dropping the dispute deadline,
+reading `amount` instead of `amount_due`, removing the silence floor/ceiling/
+dormancy guard, and swapping the median for a mean each make it fail.
