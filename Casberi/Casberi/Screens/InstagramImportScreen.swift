@@ -128,6 +128,17 @@ struct InstagramImportScreen: View {
         let proof = summary.imported > 0 ? "\(summary.imported) in" : "Imported just now"
         store.registerConnected(id: "instagram", name: "Instagram", proof: proof,
                                 can: ["Imports the export you choose."])
+        // Lift the topic terms off what just landed, so the room's "What you
+        // write about" map is there when they walk into it rather than a few
+        // foregrounds later. Detached from the scoped-folder read above (it
+        // touches only the store), and bounded — `BridgeRefresh` carries the
+        // rest on later opens.
+        if summary.posts + summary.comments > 0 {
+            Task { @MainActor in
+                _ = await ScreenshotTopics.healTopics(source: "Instagram",
+                                                      context: modelContext, limit: 400)
+            }
+        }
     }
 
     /// Names each category that actually landed rather than one total — the

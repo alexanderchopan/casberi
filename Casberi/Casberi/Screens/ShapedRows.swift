@@ -1521,6 +1521,13 @@ struct ApprovalCard: View {
 struct PhotoCell: View {
     let thing: Thing
     var dayPill: String?
+    /// The line across the foot of the tile, or nil for none (2026-07-31).
+    /// Passed in rather than always read off `thing.title`: a screenshot's
+    /// title is what it SAYS and belongs on the tile, but a Snapchat memory's
+    /// is "Memory · Jan 3, 2019" — the same date the day pill above it already
+    /// carries, so the tile would state it twice. That room passes the capture
+    /// PLACE when the export named one, and nothing when it didn't.
+    var caption: String?
 
     /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
     /// re-evaluates a LEAF view's body on the model's own observation,
@@ -1538,14 +1545,16 @@ struct PhotoCell: View {
             .frame(height: 148)
             .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
             .overlay(alignment: .bottomLeading) {
-                LinearGradient(colors: [.clear, .black.opacity(0.65)],
-                               startPoint: .center, endPoint: .bottom)
-                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-                    .allowsHitTesting(false)
-                Text(thing.title)
-                    .dsText(.subhead13).foregroundStyle(.white)
-                    .lineLimit(1)
-                    .padding(DS.Space.s2)
+                if let caption, !caption.isEmpty {
+                    LinearGradient(colors: [.clear, .black.opacity(0.65)],
+                                   startPoint: .center, endPoint: .bottom)
+                        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                        .allowsHitTesting(false)
+                    Text(caption)
+                        .dsText(.subhead13).foregroundStyle(.white)
+                        .lineLimit(1)
+                        .padding(DS.Space.s2)
+                }
             }
             .overlay(alignment: .topLeading) {
                 if let dayPill {

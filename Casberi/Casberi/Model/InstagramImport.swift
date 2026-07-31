@@ -80,19 +80,28 @@ enum InstagramImport {
     static func run(folder: URL, context: ModelContext) -> Summary {
         var summary = Summary()
         var landed: [Thing] = []
-        let existing = IngestSupport.existingSourceRefs(context, source: "Instagram")
-        var seen = existing               // grows as we land, so two files can't collide
+        // The stored rows themselves, not just their refs: a save landed by a
+        // build before `authorHandle` existed carries no author, and a
+        // re-import would dedupe it out and leave it faceless forever. The
+        // export names the author every time, so a repeat pass repairs it
+        // from the same field it would have landed with — no title-parsing,
+        // no guess.
+        let stored = IngestSupport.thingsByRef(context, source: "Instagram")
+        var seen = Set(stored.keys)       // grows as we land, so two files can't collide
+        var backfilled = false
         var foundAnyCategory = false
 
         if let data = read(savedPath, under: folder) {
             foundAnyCategory = true
             landSaves(data, key: "saved_saved_media", context: "saved",
-                      summary: &summary, landed: &landed, seen: &seen)
+                      summary: &summary, landed: &landed, seen: &seen,
+                      stored: stored, backfilled: &backfilled)
         }
         if let data = read(likedPath, under: folder) {
             foundAnyCategory = true
             landSaves(data, key: "likes_media_likes", context: "liked",
-                      summary: &summary, landed: &landed, seen: &seen)
+                      summary: &summary, landed: &landed, seen: &seen,
+                      stored: stored, backfilled: &backfilled)
         }
         for data in readNumbered(postsStem, under: folder) {
             foundAnyCategory = true
@@ -105,7 +114,7 @@ enum InstagramImport {
 
         guard foundAnyCategory else { return Summary(failed: true) }
         for thing in landed { context.insert(thing) }
-        finish(&summary, landed: landed, context: context)
+        finish(&summary, landed: landed, backfilled: backfilled, context: context)
         return summary
     }
 
@@ -113,8 +122,15 @@ enum InstagramImport {
     /// screen is fake status), and one batched Spotlight submission rather
     /// than an XPC round-trip per row. Mirrors `DayOneImport.finish`.
     @MainActor
-    private static func finish(_ summary: inout Summary, landed: [Thing], context: ModelContext) {
-        guard summary.imported > 0 else { return }
+    private static func finish(_ summary: inout Summary, landed: [Thing],
+                               backfilled: Bool, context: ModelContext) {
+        // A repeat import that landed nothing new may still have repaired
+        // authors on rows already here; that needs its own save, but never a
+        // receipt — nothing arrived, so All must not be told anything did.
+        guard summary.imported > 0 else {
+            if backfilled { _ = context.saveHonestly() }
+            return
+        }
         // Instagram is a `Corpus.bulkImportSources` member: its things stay
         // out of the All feed and live in their own room, so All learns the
         // import happened from this one reconciling row and nothing else.
@@ -154,7 +170,8 @@ enum InstagramImport {
     @MainActor
     private static func landSaves(_ data: Data, key: String, context marker: String,
                                   summary: inout Summary, landed: inout [Thing],
-                                  seen: inout Set<String>) {
+                                  seen: inout Set<String>,
+                                  stored: [String: Thing], backfilled: inout Bool) {
         guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let entries = root[key] as? [[String: Any]] else { return }
 
@@ -168,13 +185,24 @@ enum InstagramImport {
 
         for row in dated.prefix(cap) {
             let ref = "instagram:\(marker):\(row.link)"
-            guard !seen.contains(ref) else { summary.skipped += 1; continue }
+            guard !seen.contains(ref) else {
+                // Already here — repair its author if it predates the field.
+                // `isLive` because a heal or a CloudKit delete can tombstone a
+                // row between the fetch above and this write.
+                if let already = stored[ref], already.isLive,
+                   already.authorHandle == nil, !row.handle.isEmpty {
+                    already.authorHandle = row.handle
+                    backfilled = true
+                }
+                summary.skipped += 1
+                continue
+            }
             seen.insert(ref)
             // The handle is the only name this row will ever have; a rare
             // entry with none falls back to the permalink so it is still
             // openable rather than being dropped.
             let name = row.handle.isEmpty ? row.link : "@" + row.handle
-            landed.append(Thing(
+            let thing = Thing(
                 kind: .link,
                 title: IngestSupport.titleLine(name),
                 content: row.link,
@@ -182,7 +210,18 @@ enum InstagramImport {
                 capturedAt: row.date,
                 tags: [marker == "saved" ? "Saved" : "Liked"],
                 sourceRef: ref
-            ))
+            )
+            // The handle is stored as a FIELD as well as spoken in the title
+            // (2026-07-31). The title is display text — "@handle" or, for the
+            // rare entry with no title, a bare URL — so grouping on it would
+            // rank the "@" prefix and the fallback URLs as accounts. Every
+            // reader that groups by author (`FeedInsight.leaderboard`'s
+            // `handle(_:)`, the person surfaces) reads this instead, which is
+            // what makes "Who you save most" possible at all: the export
+            // names the author of each save, and this is the only place that
+            // name is preserved as data rather than as a face.
+            if !row.handle.isEmpty { thing.authorHandle = row.handle }
+            landed.append(thing)
             if marker == "saved" { summary.saved += 1 } else { summary.liked += 1 }
         }
     }

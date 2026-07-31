@@ -21,6 +21,14 @@ enum FeedHeatmap {
         /// sample — a trailing year there would be a mostly-empty grid with one
         /// bright recent smudge, so they draw the last few months instead.
         var columns: Int = 53
+        /// The kinds this grid counts, or nil for everything in the room
+        /// (2026-07-31). Every source registered before this held ONE kind of
+        /// thing, so the room and the habit were the same set. Snapchat is the
+        /// first that isn't: its room holds saved conversations beside dated
+        /// memories, and "your memory year" has to mean memories or the noun
+        /// is a lie. A filter, not a second registry — the grid still draws
+        /// off the feed's own `visible` things and costs no query.
+        var kinds: Set<ThingKind>? = nil
     }
 
     static let labels: [String: Label] = [
@@ -39,9 +47,36 @@ enum FeedHeatmap {
         // as casting density. Windowed to ~14 weeks (see `columns`).
         "Farcaster":     Label(title: "Casting activity",     unit: "cast",       units: "casts", columns: 14),
         "Bluesky":       Label(title: "Posting activity",     unit: "post",       units: "posts", columns: 14),
+        // The two import sources (2026-07-31). Both are a FULL year on
+        // purpose, unlike the social feeds above: an export is dated across
+        // years rather than being a rolling recent sample, so the grid it
+        // draws is the real shape of a habit and not a recent smudge.
+        //
+        // Snapchat counts memories only (`kinds`) — the room's saved chats are
+        // dated by their newest message, which is when a conversation last
+        // moved, not a day you captured anything. Instagram counts the whole
+        // room because everything in it IS one dated act: a save, a like, a
+        // post, a comment. Both are FALLBACKS in the hero chain, below the
+        // cards that name WHO and WHAT (see `FeedScreen.shapedSections`).
+        "Snapchat":      Label(title: "Your memory year",     unit: "memory",     units: "memories",
+                               kinds: [.file]),
+        "Instagram":     Label(title: "Your Instagram year",  unit: "entry",      units: "entries"),
     ]
 
     static func label(for source: String) -> Label? { labels[source] }
+
+    /// The things a label's grid actually counts. Two exclusions, both so the
+    /// subtitle's noun stays true: the kinds this label doesn't measure, and
+    /// the import receipt (`Corpus.isImportReceipt`) — the app's own row about
+    /// an import, which would light up today as if the person had captured
+    /// something. Caller passes the feed's own `visible`; no query.
+    static func counted(_ things: [Thing], label: Label) -> [Thing] {
+        things.filter { thing in
+            guard !Corpus.isImportReceipt(thing) else { return false }
+            guard let kinds = label.kinds else { return true }
+            return kinds.contains(thing.kind)
+        }
+    }
 
     /// The honest count subtitle for a heatmap card.
     static func subtitle(_ label: Label, total: Int) -> String {

@@ -11306,3 +11306,162 @@ measured quirk is already encoded: the 2024+ export spells the numeric stamp
 `SnapchatImport.stamp` decides the unit by MAGNITUDE and never by the label.
 Everything fails safe: an unparseable file reports `failed`, never a
 half-landed corpus. Re-measure against a real export before hardening.
+
+## §247 — Instagram and Snapchat get rooms with a face (user: "what surprise and delight can we add to instagram and snapchat", then picked all seven, 2026-07-31)
+
+Both seats landed earlier the same day (§245, §246) with the import working and
+the room empty of any read on it: neither source appeared in `FeedInsight`,
+neither was in `FeedHeatmap.labels`, and neither had a shape in `FeedScreen`.
+The import worked and the payoff was a list. Seven additions, and one
+re-ranking that made them possible.
+
+**The re-ranking, first, because it is the load-bearing change.** A room draws
+exactly ONE hero, chosen by a fixed chain. The calendar heatmap sat third in
+that chain, above the leaderboard, the distribution and the mosaic — and its
+label comes from a static dictionary, so unlike every card below it, it can
+never decline the slot. Any source registered for a heatmap therefore owned its
+room's head permanently. That already cost this codebase once: §219's social
+roster was built, shipped, and never rendered, because Farcaster's and
+Bluesky's density grids silently outranked it for weeks. The heatmap now sits
+LAST. It answers WHEN, which is the weakest thing a room can lead with when
+every card above it names a WHO or a WHAT, and it is the natural graceful
+fallback — the role it has already played under the Photos treemap since
+§230. **This changed nothing for any source that shipped before today**: the
+heatmap registry and the leaderboard/distribution/mosaic source lists do not
+intersect at a single name, so every existing room still draws the one card it
+always drew. Instagram and Snapchat are the first sources with two facts to
+choose between.
+
+**Snapchat.**
+
+1. **The memories room is a grid.** Snapchat is the first MIXED room in the
+   app — memories are pictures, saved chats are conversations — so it can be
+   neither `.photos` (which would hide the chats) nor `.chat` (which would list
+   the pictures as dated rows, i.e. reproduce the export this app exists to
+   beat). It gets its own shape: the memories whose pixels came back lead as a
+   grid, everything else reads as rows beneath. The split is the honest one — a
+   tile promises a picture, so a memory whose 7-day download window closed, or a
+   video (never fetched, by design), stays a dated row rather than a grey well
+   pretending to be a photograph. It also gives `-snapchatMedia` a visible
+   reward: run the fetch and rows become pictures.
+2. **"Your memory year"** — a full-year grid, and the first `FeedHeatmap.Label`
+   with a `kinds` filter. Every source registered before this held one kind of
+   thing, so the room and the habit were the same set; here they aren't, and
+   "your memory year" has to mean memories or the noun is a lie. A saved chat is
+   dated by its newest message — when a conversation last moved, not a day
+   anything was captured.
+3. **On this day, as the card itself.** `OnThisDay` has ridden INSIDE the
+   heatmap card since 2026-07-21 specifically so it would never compete for the
+   hero slot, and that stays right wherever the anniversary is a title — a
+   journal entry, a note, a highlight, text that a line of text represents
+   perfectly. A photograph is the case that doesn't fit: rendering
+   "Memory · Jan 3, 2019" beside a date label describes a picture the app is
+   already holding in memory. So the memories room leads with the picture at a
+   size worth looking at. It is not a card competing with the room's standing
+   facts — on a modest library it exists a handful of days a year, which is
+   exactly why it outranks them when it does. Scoped to this room deliberately;
+   widening it to every source would silently re-rank rooms nobody has reviewed.
+   The in-heatmap row also shows a thumbnail now when the anniversary has one.
+4. **"Who you snap with."** This needed a new field, and the reason is the
+   ruling: `content` holds a CLAMPED transcript (newest 60 lines inside a 4,000
+   byte ceiling), so ranking conversations by the lines a row stores would put a
+   ten-year friendship level with a week-old one and call it a ranking. The true
+   number exists at exactly one moment — the full parse, before the clamp — so
+   `Thing.messageCount` is stamped there. A conversation whose count is unknown
+   (landed before the field existed and not yet repaired by a re-import) is left
+   OUT rather than counted as zero: an unknown length is not a short one.
+
+**Instagram.**
+
+5. **"Who you save most"** — the export's single most surprising fact, because
+   nobody knows their own most-saved account. **Saves and likes are NOT
+   summed**: they are different acts, a deliberate keep versus a reaction in
+   passing, and one ranking over both would be a number with no meaning. Saves
+   lead; an export with too few falls back to likes and SAYS SO in the title
+   rather than quietly changing what the bars mean. This also cashes in a
+   correction — the importer stamps `authorHandle` now, where before the handle
+   existed only inside the display title ("@houseofgaming"), which is not data.
+   A re-import repairs rows landed without it, from the export's own field.
+6. **"Your Instagram year"** — the whole room counts, because everything in it
+   IS one dated act: a save, a like, a post, a comment.
+7. **"What you write about"** — §230's treemap, which never cared where its
+   text came from; only Photos had ever handed it any. An export's captions and
+   comments are years of a person's own words. Built from the `.note` half
+   ALONE and deliberately: the room's other half is somebody else's writing, so
+   "what you write about" would be a lie if it counted what you tapped.
+
+**One thing every aggregate here excludes: the import receipt.** It sits in the
+source's room as well as in All, which makes it the only row there that isn't
+something the person did — it would add a phantom day to a calendar year, and
+its body ("312 saved · 1,204 comments") would be read for topics alongside real
+writing. `Corpus.isImportReceipt` now names it in one place.
+
+Probes: `-roomInsightProbe <Source>` asks every hero card independently, logs
+each answer, and names the one that leads — the check nothing else could make,
+since the bug that actually happens is one card silently owning a slot another
+was built for. `-topicMapProbe` takes a source now. The pure logic (the true
+message count surviving the clamp, both chat eras, the grid caption reading
+back what the importer wrote) is `swift`-harness-tested against the shipped
+source text, 22 assertions, and mutation-tested: clamping the count makes it
+fail. **Unchanged from §245/§246: both importers remain UNMEASURED against a
+real export.**
+
+## §248 — The brief's reading note stops making a claim it can't keep (user: "the daily brief still seems kind of dumb, it'll say 'you are reading a lot of... the one thing you aren't is...' and it never really makes sense. and then below it will be another card with that specific item in it", 2026-07-31)
+
+Two defects in one sentence, both real, both in `TodayBrief`'s topic
+observation (§166's synthesis card).
+
+**1. "The one that doesn't" was usually not the one.** `dominantTopic` fired on
+any 4+-char non-stopword carried by **three** titles, with no relation to how
+much reading the day held — so on a twenty-read day a word appearing three
+times claimed the whole day "keeps circling" it. Then the outlier was picked as
+`reads.first { !title.contains(word) }`: the newest read that happened to lack
+the word. With three reads on the topic and seventeen off it, the note singled
+one of seventeen out as "the one that doesn't". The sentence was false in the
+ordinary case, which is exactly how it reads — a horoscope. Three gates now:
+
+- **Coverage** — the word must carry at least a THIRD of the day's reading, not
+  a flat three titles. A pattern is a proportion, not a count.
+- **A deterministic leader** — `counts.max(by: value)` over a `Dictionary`
+  resolves a tie in hash order, and Swift seeds that PER PROCESS: two words tied
+  at the top named a different topic on each rise of the same day's brief.
+  Ties break alphabetically now. (`personEcho` had the identical defect over
+  `seen.values` and is fixed the same way.)
+- **An outlier or none** — the outlier is non-nil ONLY when exactly one read
+  lacks the word. Otherwise there is no exception to name; there's just a topic,
+  and the note says only that.
+
+Membership is also read off the same tokenizer that did the counting.
+`title.contains(key)` counted an "OpenAI" headline as part of the topic "open",
+and it read the RAW title while the count read `topicText` (GitHub's repo path
+stripped, §166), so one read could be excluded from the topic and from the
+outlier slot at the same time.
+
+**2. The screen said the same thing twice, worse first.** The note spelled the
+outlier's headline out (clamped to 60), and the Reading card directly beneath
+it leads with that exact thing — in full, with its image and its tap. So the
+day's most interesting read arrived as a truncated sentence and then again as
+the card built to carry it. The fix follows the precedent the wallet
+attribution already set when it moved into the hero: **one screen, one place per
+fact.** The note states the PATTERN ("Your reading keeps circling Samsung —
+every read today but one"), the card states the EXCEPTION, and it says so in
+its own title — `Reading · the odd one out`, the same "title says why this is
+here" grammar the mention card keeps with `<source> · mentions you`.
+
+Structurally: `compose` now builds the LEADS before the observations (render
+order is unchanged — `ids` still appends notes, then leads) and hands the
+observations both the topic and the set of thing-ids the cards are about to
+render. That makes "don't tell me what the card below is about to show me" a
+rule the module can enforce rather than a thing each note has to remember. It
+immediately caught a second instance: the mention note ("@x's mention is
+gathering replies — 5 so far") fires above a mention card that renders that
+same post with "5 replies" in its own meta line. It now fires only when the
+card is leading with a DIFFERENT mention, which is the case where it adds
+something.
+
+The pure gates (`TodayBrief.topicLead`, split out of `dominantTopic` for
+exactly this) are `swift`-harness-tested against the shipped source text — 11
+assertions over coverage, tie determinism across three separate processes,
+word-boundary membership, and the one-shouty-title case — and mutation-tested
+three ways: removing the coverage gate, restoring the hash-order leader, and
+restoring substring membership each make it fail.

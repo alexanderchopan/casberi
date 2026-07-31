@@ -1019,6 +1019,63 @@ private struct InsightHeader: View {
     }
 }
 
+/// The anniversary as the card itself — a photograph taken on this exact day
+/// in an earlier year, at a size worth looking at (2026-07-31).
+///
+/// `OnThisDay` has ridden inside the heatmap card since 2026-07-21 precisely so
+/// it would never compete for a room's one hero slot, and that stays right
+/// wherever the anniversary is a TITLE: a journal entry, a note, a highlight —
+/// text that a line of text represents perfectly. A picture is the case that
+/// doesn't fit. Rendering "Memory · Jan 3, 2019" beside a date label describes
+/// a photograph the app is already holding in memory, which is the one thing a
+/// row can't do and a tile can.
+///
+/// It takes the head only when it EXISTS, which on a modest library is a
+/// handful of days a year — so it isn't a card competing with the room's
+/// standing facts, it's a rank above them on the rare day it has something.
+/// Nothing is invented: no match, no card, and no card without real pixels.
+struct OnThisDayHero: View {
+    let echo: OnThisDay.Echo
+    var onTap: () -> Void
+
+    /// Liveness guard (COROLLARY 5) — this view stores the echo's model and
+    /// SwiftUI re-runs a leaf's body on that model's own observation.
+    var body: some View {
+        // `previewImageData` gates the card (no pixels, no card) but the
+        // drawing is `PhotoWell`'s: it decodes ONCE into its own state instead
+        // of re-decoding a full-size photograph on every body evaluation, and
+        // it is the one image view in this app that honours
+        // `redactionReasons` — a hand-rolled `Image` survives into the
+        // app-switcher snapshot with hidePreviews ON, which for a private
+        // photograph at 190pt is exactly the leak that guard exists to stop.
+        if echo.thing.isLive, echo.thing.previewImageData != nil {
+            Button {
+                DSHaptic.selection()
+                onTap()
+            } label: {
+                PhotoWell(thing: echo.thing, size: nil)
+                    .frame(height: 190)
+                    .frame(maxWidth: .infinity)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+                    .overlay(alignment: .bottomLeading) {
+                        LinearGradient(colors: [.clear, .black.opacity(0.7)],
+                                       startPoint: .center, endPoint: .bottom)
+                            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget,
+                                                        style: .continuous))
+                            .allowsHitTesting(false)
+                        Text(echo.label)
+                            .dsText(.body17).foregroundStyle(.white)
+                            .padding(DS.Space.s3)
+                    }
+                    .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget,
+                                                   style: .continuous))
+            }
+            .buttonStyle(DSTileButtonStyle())
+        }
+    }
+}
+
 /// A calendar-heatmap card — the GitHub graph's chrome, generalized so any
 /// source that reads as a consistency-over-time habit (journaling, training,
 /// captures) can lead its feed with the same green-squares grid. GitHub and the
@@ -1052,12 +1109,31 @@ struct CalendarHeatmapHero: View {
                 .accessibilityLabel("Share")
             }
             ContributionGraph(year: year, minColumns: minColumns)
-            if let onThisDay {
+            // `isLive` because this card HOLDS the echo's model across renders
+            // and a heal can delete under it (COROLLARY 5 — a leaf view is
+            // re-evaluated on the model's own observation, with no help from
+            // the parent that built it).
+            if let onThisDay, onThisDay.thing.isLive {
                 Button {
                     DSHaptic.selection()
                     onTapOnThisDay?()
                 } label: {
                     HStack(spacing: DS.Space.s2) {
+                        // The picture itself, when the anniversary IS one
+                        // (2026-07-31). Text-only was right while this card
+                        // only ever appeared beside journals and note vaults,
+                        // where a title is the thing; a Snapchat memory's
+                        // title is a date, and a photograph from seven years
+                        // ago is not something to describe in words when it's
+                        // sitting in the store. Gated on `previewImageData` —
+                        // never a fetch — so a journal or note anniversary,
+                        // which is most of them, gets no placeholder square;
+                        // `PhotoWell` then draws the bytes (decoded once, and
+                        // redaction-aware, unlike a bare `Image`).
+                        if onThisDay.thing.previewImageData != nil {
+                            PhotoWell(thing: onThisDay.thing, size: 34)
+                                .accessibilityHidden(true)
+                        }
                         Text(onThisDay.label)
                             .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                         Spacer(minLength: DS.Space.s2)

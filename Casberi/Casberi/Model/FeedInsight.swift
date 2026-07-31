@@ -51,9 +51,63 @@ enum FeedInsight {
             return counted(things, title: "Your shows", unit: ("episode", "episodes"), key: handle)
         case "Steam":
             return steamPlaytime(things)
+        case "Snapchat":
+            return snapchatConversations(things)
+        case "Instagram":
+            return instagramAuthors(things)
         default:
             return nil
         }
+    }
+
+    /// Who you actually talk to on Snapchat (2026-07-31) — the saved
+    /// conversations ranked by how many messages each really holds.
+    ///
+    /// It ranks on `messageCount`, a field the importer stamps, and NOT on the
+    /// stored transcript: `content` keeps only the newest `lineCap` lines
+    /// inside a byte ceiling, so counting the lines a row holds would flatten
+    /// a ten-year friendship onto a week-old one and call it a ranking. A
+    /// conversation whose count is nil (landed before the field existed, and
+    /// not yet repaired by a re-import) is left OUT rather than counted as
+    /// zero — an unknown length is not a short one.
+    private static func snapchatConversations(_ things: [Thing]) -> Leaderboard? {
+        var best: [String: Int] = [:]
+        var order: [String] = []
+        var total = 0
+        for thing in things where thing.kind == .chat {
+            guard let count = thing.messageCount, count > 0 else { continue }
+            let who = (thing.authorHandle ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !who.isEmpty else { continue }
+            if best[who] == nil { order.append(who) }
+            // A handle appears once per export, but max() rather than += so a
+            // re-import can never double a conversation's length.
+            best[who] = max(best[who] ?? 0, count)
+            total += count
+        }
+        guard best.count >= 2 else { return nil }
+        let subtitle = "\(total.formatted()) \(total == 1 ? "saved message" : "saved messages")"
+        return Leaderboard(title: "Who you snap with", subtitle: subtitle,
+                           rows: ranked(order, best) { ($0, $0.formatted()) })
+    }
+
+    /// Whose posts fill your Instagram (2026-07-31) — the export's single most
+    /// surprising fact, because nobody knows their own most-saved account.
+    ///
+    /// SAVES AND LIKES ARE NOT SUMMED. They're different acts — a save is a
+    /// deliberate keep, a like is a reaction in passing — and one ranking over
+    /// both would be a number with no meaning. Saves lead; an export with too
+    /// few of them falls back to likes and SAYS SO in the title, rather than
+    /// quietly changing what the bars mean. Only the `authorHandle` the
+    /// importer stamped is read, never the "@handle" title, so the rare entry
+    /// the export gave no author simply doesn't rank.
+    private static func instagramAuthors(_ things: [Thing]) -> Leaderboard? {
+        func board(_ tag: String, title: String,
+                   unit: (String, String)) -> Leaderboard? {
+            counted(things.filter { $0.tags.contains(tag) },
+                    title: title, unit: unit, key: handle)
+        }
+        return board("Saved", title: "Who you save most", unit: ("save", "saves"))
+            ?? board("Liked", title: "Whose posts you like", unit: ("like", "likes"))
     }
 
     /// Count things by a grouping key, rank the top groups, format the subtitle
@@ -73,12 +127,26 @@ enum FeedInsight {
             total += 1
         }
         guard total >= 3, counts.count >= 2 else { return nil }
-        let rows = order
-            .sorted { (counts[$0]!, $1) > (counts[$1]!, $0) }   // count desc, then name asc
-            .prefix(6)
-            .map { LeaderRow(label: $0, value: counts[$0]!, detail: "\(counts[$0]!)") }
         let subtitle = "\(total.formatted()) \(total == 1 ? unit.one : unit.many)"
-        return Leaderboard(title: title, subtitle: subtitle, rows: Array(rows))
+        return Leaderboard(title: title, subtitle: subtitle,
+                           rows: ranked(order, counts) { ($0, "\($0)") })
+    }
+
+    /// The shape every board ends in: biggest first, ties broken by name so the
+    /// order is deterministic across launches, capped at what the card draws.
+    /// `bar` turns a group's measured value into the bar's magnitude and the
+    /// text printed beside it — the two differ for playtime (hours scaled to an
+    /// Int, printed as "3.4h") and coincide for a plain count, which is the
+    /// only reason each board used to spell this out for itself.
+    private static func ranked<V: Comparable>(_ order: [String], _ values: [String: V],
+                                              bar: (V) -> (Int, String)) -> [LeaderRow] {
+        order
+            .sorted { (values[$0]!, $1) > (values[$1]!, $0) }   // value desc, then name asc
+            .prefix(6)
+            .map { name in
+                let (value, detail) = bar(values[name]!)
+                return LeaderRow(label: name, value: value, detail: detail)
+            }
     }
 
     /// Steam ranks by the trailing-two-weeks hours baked into `content`
@@ -94,12 +162,10 @@ enum FeedInsight {
             best[game] = max(best[game] ?? 0, hours)
         }
         guard best.count >= 2 else { return nil }
-        let rows = order
-            .sorted { (best[$0]!, $1) > (best[$1]!, $0) }
-            .prefix(6)
-            .map { LeaderRow(label: $0, value: Int((best[$0]! * 10).rounded()),
-                             detail: String(format: "%.1fh", best[$0]!)) }
-        return Leaderboard(title: "Recently played", subtitle: "past two weeks", rows: Array(rows))
+        return Leaderboard(title: "Recently played", subtitle: "past two weeks",
+                           rows: ranked(order, best) {
+                               (Int(($0 * 10).rounded()), String(format: "%.1fh", $0))
+                           })
     }
 
     // MARK: Distribution (stacked bar)
@@ -283,20 +349,40 @@ enum FeedInsight {
     /// A pure count over stored fields — no NLTagger here (that ran once at
     /// heal time); this is the same cheap arithmetic shape as `leaderboard`.
     static func topicMap(source: String, things: [Thing]) -> TopicMap? {
-        guard source == "Photos" else { return nil }
+        // What the map is made of, per source. The extraction is the same
+        // deterministic term reader either way (`ScreenshotTopics.terms`
+        // stamped `ocrTopics` at heal time) — it never cared where the text
+        // came from, only Photos had ever handed it any. Instagram's own
+        // WRITING is the second corpus worth this treatment (2026-07-31): an
+        // export's captions and comments are years of a person's own words,
+        // and the room's other half (saves and likes) is somebody else's, so
+        // the map is deliberately built from the `.note` half alone — "what
+        // you write about" would be a lie if it counted what you tapped.
+        let title: String
+        let unit: (one: String, many: String)
+        let kind: ThingKind
+        switch source {
+        case "Photos":
+            title = "What you screenshot"; unit = ("screenshot", "screenshots"); kind = .screenshot
+        case "Instagram":
+            title = "What you write about"; unit = ("post", "posts"); kind = .note
+        default:
+            return nil
+        }
+
         var perShot: [[String]] = []
-        var totalScreens = 0
-        for thing in things where thing.kind == .screenshot {
-            totalScreens += 1
+        var total = 0
+        for thing in things where thing.kind == kind && !Corpus.isImportReceipt(thing) {
+            total += 1
             if !thing.ocrTopics.isEmpty { perShot.append(thing.ocrTopics) }
         }
-        // Needs a real spread of screenshots that read as SOMETHING — a couple
-        // of shots across one recurring term isn't a portrait.
+        // Needs a real spread of items that read as SOMETHING — a couple of
+        // them across one recurring term isn't a portrait.
         guard perShot.count >= 6 else { return nil }
         let ranked = ScreenshotTopics.cells(perShot: perShot)
         guard ranked.count >= 2 else { return nil }
-        let subtitle = "\(totalScreens.formatted()) \(totalScreens == 1 ? "screenshot" : "screenshots")"
-        return TopicMap(title: "What you screenshot", subtitle: subtitle,
+        let subtitle = "\(total.formatted()) \(total == 1 ? unit.one : unit.many)"
+        return TopicMap(title: title, subtitle: subtitle,
                         cells: ranked.map { TopicMap.Cell(label: $0.label, count: $0.count) })
     }
 

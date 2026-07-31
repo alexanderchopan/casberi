@@ -1604,28 +1604,106 @@ enum ProbeHooks {
         // the log reader — the `-todayProbe` lesson). Pair with a real
         // screenshot library (or `-connectPhotos`/`-photoHealProbe` to land OCR
         // first); the sim's seeds carry text, so it reports honestly there.
-        Hook(key: "topicMapProbe") { _, context in
+        // Takes an optional SOURCE (`-topicMapProbe Instagram`) since 2026-07-31
+        // — the same treemap now maps an Instagram export's own captions and
+        // comments ("What you write about"), whose terms come off `content` at
+        // import with no OCR to wait for. Bare `YES` still means Photos.
+        Hook(key: "topicMapProbe") { spec, context in
+            let source = (spec == "YES" || spec.isEmpty) ? "Photos" : spec
             Task { @MainActor in
-                let filled = await ScreenshotTopics.healTopics(context: context, limit: 500)
+                let filled = await ScreenshotTopics.healTopics(source: source, context: context,
+                                                              limit: 500)
                 let shots = (try? context.fetch(FetchDescriptor<Thing>(
-                    predicate: #Predicate { $0.source == "Photos" },
+                    predicate: #Predicate { $0.source == source },
                     sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []
-                let screens = shots.filter { $0.kind == .screenshot }
+                let wanted: ThingKind = source == "Instagram" ? .note : .screenshot
+                let screens = shots.filter { $0.kind == wanted && !Corpus.isImportReceipt($0) }
                 let withTerms = screens.filter { !$0.ocrTopics.isEmpty }.count
-                NSLog("[Casberi] topicMap: backfilled=%d · screenshots=%d · withTerms=%d",
-                      filled, screens.count, withTerms)
-                if let map = FeedInsight.topicMap(source: "Photos", things: screens) {
+                NSLog("[Casberi] topicMap: source=%@ backfilled=%d · rows=%d · withTerms=%d",
+                      source, filled, screens.count, withTerms)
+                if let map = FeedInsight.topicMap(source: source, things: screens) {
                     NSLog("[Casberi] topicMapCard| %@ · %@", map.title, map.subtitle)
                     for cell in map.cells {
                         NSLog("[Casberi] topicMapCell| %@ = %d", cell.label, cell.count)
                     }
                 } else {
-                    NSLog("[Casberi] topicMap: no card (too little OCR text or spread)")
+                    NSLog("[Casberi] topicMap: no card (too little text or spread)")
                 }
                 for t in screens.prefix(8) where !t.ocrTopics.isEmpty {
                     NSLog("[Casberi] topicMapTerms| %@ → %@",
                           t.title, t.ocrTopics.joined(separator: ", "))
                 }
+            }
+        },
+        // `-roomInsightProbe <Source>` — what a source's room would LEAD with
+        // (2026-07-31). Every hero card is asked independently and logged with
+        // its own answer, then the first non-nil in the documented order is
+        // named. This is the check the delight pass needed and nothing else
+        // could make: each card is individually easy to reason about, and the
+        // bug that actually happens is one card silently owning the slot
+        // another was built for (the §219 social roster spent weeks that way,
+        // beaten by a heatmap nobody thought to rank against it). The ORDER
+        // lives in `FeedScreen.shapedSections` — this mirrors it, so a change
+        // there means a change here.
+        //
+        // One NSLog per card (the `-todayProbe` truncation lesson). Live
+        // state — a Twitch stream, a social roster — is view-level and isn't
+        // reachable from here; both outrank everything below and are noted as
+        // unread rather than silently assumed absent.
+        Hook(key: "roomInsightProbe") { spec, context in
+            let source = spec == "YES" || spec.isEmpty ? "All" : spec
+            Task { @MainActor in
+                let things = ((try? context.fetch(FetchDescriptor<Thing>(
+                    predicate: #Predicate { $0.source == source },
+                    sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []).live
+                NSLog("[Casberi] roomInsight: source=%@ things=%d (live stream / social roster not read here)",
+                      source, things.count)
+
+                var leader: String?
+                func note(_ name: String, _ line: String?) {
+                    NSLog("[Casberi] roomInsight| %@: %@", name, line ?? "nil")
+                    if line != nil, leader == nil { leader = name }
+                }
+
+                // 1. the anniversary — memories room only, and only with pixels
+                let echo = source == "Snapchat"
+                    ? OnThisDay.find(in: things.filter {
+                        $0.kind == .file && $0.previewImageData != nil })
+                    : nil
+                note("anniversary", echo.map { "\($0.label) → \($0.thing.title)" })
+                // 2. the treemap
+                let map = FeedInsight.topicMap(source: source, things: things)
+                note("topicMap", map.map { "\($0.title) · \($0.subtitle) · \($0.cells.count) cells" })
+                for cell in map?.cells ?? [] {
+                    NSLog("[Casberi] roomInsightCell| %@ = %d", cell.label, cell.count)
+                }
+                // 3. the bars
+                let board = FeedInsight.leaderboard(source: source, things: things)
+                note("leaderboard", board.map { "\($0.title) · \($0.subtitle) · \($0.rows.count) rows" })
+                for row in board?.rows ?? [] {
+                    NSLog("[Casberi] roomInsightRow| %@ = %@", row.label, row.detail)
+                }
+                // 4. the split bar, 5. the wall
+                note("distribution", FeedInsight.distribution(source: source, things: things)?.title)
+                note("mosaic", FeedInsight.mosaic(source: source, things: things)
+                        .map { "\($0.title) · \($0.tiles.count) tiles" })
+                // 6. the grid — last, and reported with what it actually counts
+                if let label = FeedHeatmap.label(for: source) {
+                    let counted = FeedHeatmap.counted(things, label: label)
+                    let year = ContributionYear.from(dates: counted.map(\.capturedAt),
+                                                     columns: label.columns)
+                    // `activeDays >= 4` is the screen's own render gate.
+                    note("heatmap", year.activeDays >= 4
+                         ? "\(label.title) · counted=\(counted.count) · activeDays=\(year.activeDays)"
+                         : nil)
+                    if year.activeDays < 4 {
+                        NSLog("[Casberi] roomInsight| heatmap registered but too sparse (counted=%d activeDays=%d)",
+                              counted.count, year.activeDays)
+                    }
+                } else {
+                    note("heatmap", nil)
+                }
+                NSLog("[Casberi] roomInsight: leads with %@", leader ?? "NOTHING (rows only)")
             }
         },
         // `-photoBackfill YES|reset` walks one batch BACKWARDS through the

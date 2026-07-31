@@ -158,6 +158,13 @@ enum SnapchatImport {
         let newest: Date
         /// Oldest → newest, already capped and speaker-prefixed.
         let lines: [String]
+        /// Every message this conversation holds — counted BEFORE `lines` was
+        /// clamped to `lineCap`, so it survives the clamp that `transcript`
+        /// then applies again. This is the only moment the true number exists:
+        /// nothing downstream can recover it from a stored transcript, which
+        /// is why `Thing.messageCount` is a field and not a computed line
+        /// count. The room's "Who you snap with" bars rank on it.
+        let total: Int
 
         var transcript: String {
             String(lines.joined(separator: "\n").prefix(SnapchatImport.transcriptCap))
@@ -221,7 +228,8 @@ enum SnapchatImport {
             return Conversation(
                 handle: handle,
                 newest: ordered.last?.date ?? .distantPast,
-                lines: ordered.suffix(lineCap).map(\.line)
+                lines: ordered.suffix(lineCap).map(\.line),
+                total: ordered.count
             )
         }.sorted { $0.newest > $1.newest }
     }
@@ -232,6 +240,12 @@ enum SnapchatImport {
         guard let conversations = parseChats(data) else { return Summary() }
         let existing = IngestSupport.thingsByRef(context, source: source)
         var summary = Summary()
+        // A conversation landed by an earlier build carries no `messageCount`.
+        // Repairing that is not a heal — nothing about the conversation
+        // changed, we simply learned a number we can only read here — so it
+        // rides its own flag rather than inflating `healed`, and forces the
+        // save an otherwise all-skipped re-import would never make.
+        var backfilled = false
 
         for conversation in conversations.prefix(chatCap) {
             let ref = "snapchat:chat:\(conversation.handle.lowercased())"
@@ -239,6 +253,10 @@ enum SnapchatImport {
 
             if let already = existing[ref] {
                 guard already.isLive else { continue }
+                if already.messageCount != conversation.total {
+                    already.messageCount = conversation.total
+                    backfilled = true
+                }
                 // Only a genuinely newer conversation is news. An identical
                 // re-import must read as "already here", not as a heal.
                 guard conversation.newest > already.capturedAt
@@ -261,12 +279,13 @@ enum SnapchatImport {
                 sourceRef: ref
             )
             thing.authorHandle = conversation.handle
+            thing.messageCount = conversation.total
             context.insert(thing)
             SpotlightIndex.index([thing])
             summary.chats += 1
         }
 
-        if summary.chats > 0 || summary.healed > 0 { context.saveHonestly() }
+        if summary.chats > 0 || summary.healed > 0 || backfilled { context.saveHonestly() }
         return summary
     }
 
@@ -327,6 +346,7 @@ enum SnapchatImport {
 
             var note = memory.isVideo ? "Video" : "Photo"
             if let place = memory.location, !place.isEmpty { note += " · \(place)" }
+            // (`place(inMemoryNote:)` reads this format back — keep them together.)
 
             let thing = Thing(
                 kind: .file,
@@ -349,6 +369,18 @@ enum SnapchatImport {
 
         if summary.memories > 0 { context.saveHonestly() }
         return summary
+    }
+
+    /// The place a landed memory names, or nil. `landMemories` writes the note
+    /// as "Photo"/"Video", optionally " · <place>"; this reads that back, and
+    /// lives beside the writer so the two can't drift apart. Used by the room's
+    /// memory grid, where the tile's date is already on its day pill and the
+    /// place is the only thing left worth saying. Never invented — an export
+    /// that carried no location simply gets no caption.
+    static func place(inMemoryNote note: String) -> String? {
+        guard let separator = note.range(of: " · ") else { return nil }
+        let place = String(note[separator.upperBound...]).trimmed
+        return place.isEmpty ? nil : place
     }
 
     // MARK: - Media fetch (the second, explicit act)

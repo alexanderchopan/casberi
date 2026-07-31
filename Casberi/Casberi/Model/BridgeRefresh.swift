@@ -413,6 +413,18 @@ enum BridgeRefresh {
         // watch); the seat gates the foreground poll so a person who never
         // connected it doesn't pay the watched-tickers fetch every
         // foreground, and a disconnected seat stays disconnected.
+        // Instagram imports nothing on a foreground — it has no live read at
+        // all (prd §245). What it does have is unfinished local work: the
+        // topic terms behind the room's "What you write about" map, lifted off
+        // captions and comments already in the store. Bounded per pass, so a
+        // years-deep import finishes over a few opens rather than blocking the
+        // one it landed on, and self-terminating once every note is stamped.
+        if connected("instagram") {
+            let s = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await ScreenshotTopics.healTopics(source: "Instagram", context: context)
+            }
+        }
         if connected("stocktwits") {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)

@@ -231,11 +231,19 @@ struct FeedScreen: View {
 
     /// The shape a source takes when its chip is in force.
     private enum Shape {
-        case all, photos, wallet, calendar, gmail, chat, social, reminders, safari, notes, you, music, media, tokens, bitrefill, oneclaw, plain
+        case all, photos, wallet, calendar, gmail, chat, social, reminders, safari, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, plain
         init(source: String) {
             switch source {
             case "All":                 self = .all
             case "Photos":              self = .photos
+            // Snapchat is the first MIXED room (2026-07-31): memories are
+            // pictures and saved chats are conversations, so it can't be
+            // `.photos` (that would hide the chats) or `.chat` (that would
+            // list the pictures as dated rows, which is exactly what the
+            // export already is and what this app exists to beat). It gets
+            // its own shape: the memories that have their pixels back as a
+            // grid, everything else as rows beneath.
+            case "Snapchat":            self = .snapchat
             case "Wallet":              self = .wallet
             case "Calendar", "Cal.com", "Calendly": self = .calendar
             case "Gmail", "iCloud Mail": self = .gmail
@@ -1285,35 +1293,70 @@ struct FeedScreen: View {
         let rosterAccounts: [SocialAccount] = liveStream == nil && shape == .social
             ? (source == "Farcaster" ? FarcasterStore.shared.socialAccounts : BlueskyStore.shared.socialAccounts)
             : []
-        // The Photos feed's OCR treemap (2026-07-30) — what the screenshots are
-        // ABOUT, ahead of the capture-year heatmap. When there's too little OCR
-        // text to say anything it returns nil, and `heatmapLabel` (which still
-        // registers Photos) takes the head as a graceful fallback.
-        let topicMap = liveStream == nil && rosterAccounts.isEmpty
+        // The anniversary, when it's a PICTURE (2026-07-31). Scoped to the
+        // memories room on purpose: everywhere else `OnThisDay` rides inside
+        // the heatmap card, where a title represents the thing perfectly, and
+        // widening this to every source would silently re-rank rooms nobody
+        // has looked at yet. Here the thing is a photograph from this exact
+        // day years ago, which is worth more than any standing fact the room
+        // can state — and it's nil on nearly every day, so it takes the head
+        // rarely rather than owning it.
+        // Derived ONCE and shared with the grid below — the memories room asks
+        // this set twice (which picture leads, and which rows are tiles) and
+        // walking `visible` per question is the shape the 2026-07-13 feed
+        // freeze was made of. Empty for every other room, so it costs nothing
+        // there.
+        let memoryTiles = shape == .snapchat ? visible.live.filter(Self.isMemoryTile) : []
+        let anniversary: OnThisDay.Echo? = liveStream == nil && shape == .snapchat
+            ? OnThisDay.find(in: memoryTiles) : nil
+        // The OCR/text treemap (2026-07-30) — what the screenshots are ABOUT,
+        // and since 2026-07-31 what an Instagram export's own captions and
+        // comments are about. When there's too little text to say anything it
+        // returns nil and the next card down takes the head.
+        let topicMap = liveStream == nil && anniversary == nil && rosterAccounts.isEmpty
             ? FeedInsight.topicMap(source: source, things: visible) : nil
-        let heatmapLabel = liveStream == nil && rosterAccounts.isEmpty && topicMap == nil
-            ? FeedHeatmap.label(for: source) : nil
-        let leaderboard = liveStream == nil && topicMap == nil && heatmapLabel == nil && rosterAccounts.isEmpty
+        let leaderboard = liveStream == nil && anniversary == nil && topicMap == nil && rosterAccounts.isEmpty
             ? FeedInsight.leaderboard(source: source, things: visible) : nil
-        let distribution = liveStream == nil && topicMap == nil && heatmapLabel == nil && leaderboard == nil && rosterAccounts.isEmpty
+        let distribution = liveStream == nil && anniversary == nil && topicMap == nil
+            && leaderboard == nil && rosterAccounts.isEmpty
             ? FeedInsight.distribution(source: source, things: visible) : nil
-        let mosaic = liveStream == nil && topicMap == nil && heatmapLabel == nil && leaderboard == nil && distribution == nil
-            && rosterAccounts.isEmpty
+        let mosaic = liveStream == nil && anniversary == nil && topicMap == nil
+            && leaderboard == nil && distribution == nil && rosterAccounts.isEmpty
             ? FeedInsight.mosaic(source: source, things: visible) : nil
-        let heroShown = liveStream != nil || topicMap != nil || heatmapLabel != nil || leaderboard != nil
+        // The heatmap sits LAST (moved 2026-07-31), not third. It answers
+        // WHEN, which is the weakest thing a room can lead with — every card
+        // above it names a WHO or a WHAT — and its label comes from a static
+        // registry, so it can never decline the slot the way the derived cards
+        // do. Third, it silently owned every room it was registered for; the
+        // §219 social-roster bug was exactly that, caught late. Nothing
+        // changes for any source that shipped before this: no source in the
+        // registry qualifies for a leaderboard, distribution or mosaic (the
+        // sets don't intersect), so each still draws the one card it always
+        // drew. Instagram and Snapchat are the first sources with two facts
+        // to choose between, and for them the grid is the graceful fallback —
+        // the role it already plays for Photos under the treemap.
+        let heatmapLabel = liveStream == nil && rosterAccounts.isEmpty && anniversary == nil
+            && topicMap == nil && leaderboard == nil && distribution == nil && mosaic == nil
+            ? FeedHeatmap.label(for: source) : nil
+        let heroShown = liveStream != nil || anniversary != nil || topicMap != nil
+            || heatmapLabel != nil || leaderboard != nil
             || distribution != nil || mosaic != nil || !rosterAccounts.isEmpty
         if let liveStream {
             insightSection { LiveStreamHero(thing: liveStream) { openThing(liveStream) } }
+        } else if let anniversary {
+            insightSection {
+                OnThisDayHero(echo: anniversary) { feedSheet = .thing(anniversary.thing) }
+            }
         } else if let topicMap {
             insightSection { TopicMapHero(map: topicMap) }
-        } else if let heatmapLabel {
-            calendarHeatmapSection(visible, label: heatmapLabel)
         } else if let leaderboard {
             insightSection { LeaderboardHero(board: leaderboard) }
         } else if let distribution {
             insightSection { DistributionHero(dist: distribution) }
         } else if let mosaic {
             insightSection { ImageMosaicHero(mosaic: mosaic) }
+        } else if let heatmapLabel {
+            calendarHeatmapSection(visible, label: heatmapLabel)
         } else if !rosterAccounts.isEmpty {
             // Fresh = a post landed after this room's own last-visit stamp
             // (`newSince`, the same one the new-since divider rides).
@@ -1332,6 +1375,18 @@ struct FeedScreen: View {
         switch shape {
         case .photos:
             photoGridSection(visible)
+        case .snapchat:
+            // The memories whose pictures actually came back lead as a grid;
+            // everything else — saved chats, videos (never fetched, see
+            // `SnapchatImport`), and memories whose 7-day download window
+            // closed before anyone pressed Get pictures — reads as rows.
+            // The split is the honest one: a tile promises a picture, so a
+            // row with no pixels stays a dated entry rather than a grey well
+            // pretending to be a photograph.
+            let rest = visible.live.filter { !Self.isMemoryTile($0) }
+            if !memoryTiles.isEmpty { photoGridSection(memoryTiles) }
+            let days = chronoGroups(rest)
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .wallet:
             // The reads first, then the stream (2026-07-20, the surface split):
             // balance + warnings side by side, the holdings treemap, DeFi, and
@@ -1884,9 +1939,15 @@ struct FeedScreen: View {
     /// loading skeleton.
     @ViewBuilder
     private func calendarHeatmapSection(_ visible: [Thing], label: FeedHeatmap.Label) -> some View {
-        let year = ContributionYear.from(dates: visible.map(\.capturedAt), columns: label.columns)
+        // What the grid counts, which is not always the whole room (2026-07-31):
+        // a label may name one kind ("your memory year" must mean memories, not
+        // the chats sitting beside them), and the import receipt is never a day
+        // the person did something. The anniversary reads the SAME set, so the
+        // card can't reach back to something its own grid doesn't chart.
+        let counted = FeedHeatmap.counted(visible, label: label)
+        let year = ContributionYear.from(dates: counted.map(\.capturedAt), columns: label.columns)
         if year.activeDays >= 4 {
-            let echo = OnThisDay.find(in: visible)
+            let echo = OnThisDay.find(in: counted)
             Section {
                 CalendarHeatmapHero(title: label.title,
                                     subtitle: FeedHeatmap.subtitle(label, total: year.total),
@@ -2325,6 +2386,27 @@ struct FeedScreen: View {
         }
     }
 
+    /// A Snapchat memory that has its picture back — the grid's own membership
+    /// test, used to split that room (2026-07-31). Guarded internally because
+    /// it is a shared helper taking a raw `Thing` and every caller hands it its
+    /// own derived array (COROLLARY 4, see `ThingRowKeying`).
+    private static func isMemoryTile(_ thing: Thing) -> Bool {
+        thing.isLive && thing.source == "Snapchat" && thing.kind == .file
+            && thing.previewImageData != nil
+    }
+
+    /// What a grid tile says across its foot. A screenshot's title is the text
+    /// it shows, which is the tile's whole point; a Snapchat memory's title is
+    /// its date, which the day pill already carries — so that room says the
+    /// PLACE the export named, or nothing at all.
+    private static func tileCaption(_ thing: Thing) -> String? {
+        guard thing.isLive else { return nil }
+        if thing.source == "Snapchat" {
+            return SnapchatImport.place(inMemoryNote: thing.content)
+        }
+        return thing.title
+    }
+
     /// Photos: one continuous grid — day labels are overlay pills on the first
     /// photo of each day, never section breaks (mock P1).
     private func photoGridSection(_ visible: [Thing]) -> some View {
@@ -2365,7 +2447,8 @@ struct FeedScreen: View {
                                 Button {
                                     openThing(thing)
                                 } label: {
-                                    PhotoCell(thing: thing, dayPill: firstOfDay ? dayLabels[i] : nil)
+                                    PhotoCell(thing: thing, dayPill: firstOfDay ? dayLabels[i] : nil,
+                                              caption: Self.tileCaption(thing))
                                 }
                                 // The tiles press like tiles (2026-07-10) — the same
                                 // settle the Settings tiles and treemap cells wear.

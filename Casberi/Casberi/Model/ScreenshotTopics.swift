@@ -21,6 +21,13 @@ import SwiftData
 ///   • `cells(perShot:)` turns the stored per-shot term lists into ranked
 ///     treemap cells — global term frequency, keep only terms that RECUR,
 ///     credit each shot to its most common qualifying term. Pure arithmetic.
+///
+/// **The name is historical (2026-07-31).** Both stages take text and know
+/// nothing about pixels, and the sweep now runs over Instagram's imported
+/// captions and comments as well — "what you write about", the same treemap
+/// the Photos room leads with, over a person's own words instead of their
+/// screenshots. The type kept its name rather than churning every reference
+/// to it; `healTopics(source:)` is where the per-source difference lives.
 enum ScreenshotTopics {
 
     // MARK: - Extraction (heal-time, per screenshot)
@@ -140,36 +147,66 @@ enum ScreenshotTopics {
 
     // MARK: - Backfill sweep
 
-    /// True while a topics sweep is in flight — a concurrent foreground refresh
-    /// must not double-walk (mirrors `ScreenshotIngest.healing`).
-    @MainActor private static var sweeping = false
+    /// Which sources have a topics sweep in flight — a concurrent foreground
+    /// refresh must not double-walk (mirrors `ScreenshotIngest.healing`). Keyed
+    /// by source, not a single flag: Photos and Instagram sweep independently
+    /// and a shared flag would make whichever ran second silently do nothing.
+    @MainActor private static var sweeping: Set<String> = []
 
-    /// Extract `ocrTopics` for screenshots that don't have them yet — the
+    /// What a source's topics are read off, for the sweep below (2026-07-31).
+    ///
+    /// The extraction never cared where text came from — `terms(in:)` reads a
+    /// String — but until now only Photos handed it any, so the sweep was
+    /// written around OCR. Instagram's captions and comments are the second
+    /// corpus worth mapping, and they differ in exactly one way that matters:
+    /// their text is present the moment they land, so there is nothing to wait
+    /// for.
+    private struct TopicSource {
+        let kind: ThingKind
+        /// Whether a row must have been OCR'd before its text can be read.
+        /// TRUE for Photos and load-bearing there, not an optimization: topics
+        /// come off the OCR `content`, so a shot whose OCR hasn't run yet has
+        /// EMPTY content. Without the gate the sweep would extract [] from that
+        /// emptiness and stamp `topicsAt` — and since the stamp blocks
+        /// re-extraction, the words OCR writes moments later would never become
+        /// topics. FALSE for imported text, which arrives whole.
+        let needsOCR: Bool
+    }
+
+    private static func topicSource(_ source: String) -> TopicSource? {
+        switch source {
+        case "Photos":    return TopicSource(kind: .screenshot, needsOCR: true)
+        case "Instagram": return TopicSource(kind: .note, needsOCR: false)
+        default:          return nil
+        }
+    }
+
+    /// Extract `ocrTopics` for a source's rows that don't have them yet — the
     /// standalone counterpart to `ScreenshotIngest.heal`, deliberately NOT
     /// folded into it: heal walks PHAssets (thumbnails, re-OCR), which is why
     /// it's throttled and skips already-healed rows; topics need only the
-    /// `content` OCR already wrote, so this reads it straight from the store
-    /// with no Photos-library round-trip. `topicsAt` marks the attempt (even a
-    /// term-less shot), so a completed library makes this a cheap empty fetch.
+    /// `content` already stored, so this reads it straight from the store with
+    /// no Photos-library round-trip. `topicsAt` marks the attempt (even a
+    /// term-less row), so a completed corpus makes this a cheap empty fetch.
     /// Bounded per pass so a large first backfill spreads over a few opens.
     @MainActor
-    static func healTopics(context: ModelContext, limit: Int = 80) async -> Int {
-        guard !sweeping else { return 0 }
-        sweeping = true
-        defer { sweeping = false }
+    static func healTopics(source: String = "Photos", context: ModelContext,
+                           limit: Int = 80) async -> Int {
+        guard let spec = topicSource(source), !sweeping.contains(source) else { return 0 }
+        sweeping.insert(source)
+        defer { sweeping.remove(source) }
 
-        // `ocrAt != nil` is load-bearing, not just an optimization: topics are
-        // read off the OCR `content`, so a shot whose OCR pass hasn't run yet
-        // has an EMPTY `content`. Without this gate the sweep would extract []
-        // from that empty text and stamp `topicsAt` — and because the stamp
-        // then blocks re-extraction, the words OCR writes moments later would
-        // never become topics. Waiting for `ocrAt` means every shot is read
-        // exactly once, with its text present (or honestly absent).
-        let descriptor = FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.source == "Photos" && $0.topicsAt == nil && $0.ocrAt != nil })
+        let descriptor: FetchDescriptor<Thing> = spec.needsOCR
+            ? FetchDescriptor(predicate: #Predicate {
+                $0.source == source && $0.topicsAt == nil && $0.ocrAt != nil })
+            : FetchDescriptor(predicate: #Predicate {
+                $0.source == source && $0.topicsAt == nil })
         // Kind filter runs in memory — #Predicate can't compare Codable enums.
+        // The import receipt is excluded with it: it's the app's own row about
+        // an import, and reading "312 saved · 1,204 comments" for topics would
+        // put the app's voice in a map of the person's words.
         let rows = ((try? context.fetch(descriptor)) ?? [])
-            .filter { $0.kind == .screenshot }
+            .filter { $0.kind == spec.kind && !Corpus.isImportReceipt($0) }
             .prefix(limit)
         guard !rows.isEmpty else { return 0 }
 

@@ -94,6 +94,17 @@ enum Corpus {
     /// exception to that exception.
     static func showsInAll(_ thing: Thing) -> Bool {
         guard bulkImportSources.contains(thing.source) else { return true }
+        return isImportReceipt(thing)
+    }
+
+    /// Is this the app's own "you imported N things" row? It sits in the
+    /// source's room as well as in All (see `ImportReceipt`), which makes it
+    /// the one thing there that isn't something the person did — so every
+    /// aggregate over a room excludes it: it would add a phantom day to a
+    /// calendar year, and its `.note` body ("312 saved · 1,204 comments")
+    /// would otherwise be read for topics alongside real writing.
+    static func isImportReceipt(_ thing: Thing) -> Bool {
+        guard bulkImportSources.contains(thing.source) else { return false }
         return thing.sourceRef == importReceiptRef(source: thing.source)
     }
 
@@ -467,6 +478,17 @@ final class Thing {
     var likeCount: Int? = nil
     var repostCount: Int? = nil
     var replyCount: Int? = nil
+
+    /// How many messages a landed CONVERSATION really holds (2026-07-31). Its
+    /// whole reason to exist is that `content` is a clamped transcript — the
+    /// Snapchat importer keeps the newest `lineCap` lines inside a byte
+    /// ceiling — so counting the lines a row stores would rank a decade-long
+    /// friendship level with a week-old one. This is stamped at import from
+    /// the FULL parse, before the clamp, which is the only place the true
+    /// number is ever in hand. nil (not 0) when the source didn't say, the
+    /// same distinction the engagement counts above keep. Additive optional —
+    /// SwiftData infers it, no migration stage.
+    var messageCount: Int? = nil
 
     /// The post this one QUOTES — both networks' signature form, dropped at
     /// ingest until now (a quote-post read as a bare, contextless line).
