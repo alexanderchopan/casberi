@@ -6,7 +6,19 @@ import Observation
 /// the glass visibly reforms (iOS 26 grammar).
 @Observable
 final class ShellChrome {
+    /// Read by `AgentBar` (its words fold, the glass hugs its two controls) and
+    /// by `SourceChips` + the strip's top padding (56→48 chips, s6→s2 of air).
+    ///
+    /// This was written by every feed page and read by NOBODY from the day the
+    /// tab bar it was built for was dropped (2026-07-13) until 2026-07-30 — the
+    /// doc comment above described a behaviour the app hadn't had in months,
+    /// while each page still paid for the scroll observer that computed it.
     var minimized = false
+    /// When `minimized` last flipped — see `minimizesChrome`'s settle window.
+    /// Observation-ignored on purpose: it is written from a scroll callback,
+    /// and an observable write there would invalidate every reader of this
+    /// object on every fold.
+    @ObservationIgnored var chromeSettledAt: TimeInterval = 0
 
     /// The one transient message surface — the glass toast above the bar.
     /// Any screen can flash an outcome ("On your list", "Copied", a denial);
@@ -52,6 +64,13 @@ final class ShellChrome {
     /// consumes the query and sends it through the real answer path.
     var askRequest: String?
     func ask(_ query: String) { askRequest = query }
+
+    /// The agent rose to be TYPED IN, not to deliver something (2026-07-30) —
+    /// set by the bar's magnifier, consumed by the composer, which focuses the
+    /// field on open instead of landing on the day brief. Deliberately not an
+    /// `askRequest` of its own: there is no query yet, and the whole point of
+    /// the Find door is that nothing runs until the person says what they want.
+    var focusDraftOnOpen = false
 
     /// The whisper's title, mid-flight (2026-07-22, prd §167a) — set the
     /// instant the capsule is tapped, so a proxy title can mount in
@@ -179,8 +198,17 @@ extension View {
         } action: { old, new in
             guard active else { return }
             guard abs(new - old) > 4 else { return }   // ignore jitter
+            // A fold CHANGES the top inset, and changing a scroll view's inset
+            // reports back here as motion. The 60pt floor already prevents the
+            // pathological case (a fold can only happen mid-content, where the
+            // offset isn't re-clamped), but this settle window makes it
+            // structural rather than incidental: for one animation's length
+            // after a toggle, the chrome ignores what its own toggle did.
+            let now = Date.timeIntervalSinceReferenceDate
+            guard now - chrome.chromeSettledAt > DS.Motion.duration + 0.1 else { return }
             let down = new > old && new > 60
             if chrome.minimized != down {
+                chrome.chromeSettledAt = now
                 withAnimation(DS.Motion.standard) { chrome.minimized = down }
             }
         }

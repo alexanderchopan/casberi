@@ -946,7 +946,19 @@ struct RootShell: View {
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
                     }
                     AgentBar(hasUnseenSignal: KeptAskStore.shared.anyChanged && !agentEverOpened,
-                             morphNS: agentMorph) {
+                             // Folds while the feed scrolls down (2026-07-30) —
+                             // `chrome.minimized` finally has the reader its own
+                             // doc comment always described.
+                             minimized: chrome.minimized,
+                             morphNS: agentMorph,
+                             onFind: {
+                                 DSHaptic.tap()
+                                 // No `askRequest`: Find is the door where
+                                 // nothing runs until the person types. The
+                                 // composer reads this and focuses the field.
+                                 chrome.focusDraftOnOpen = true
+                                 composerOpen = true
+                             }) {
                         DSHaptic.tap()
                         // Open onto the Today brief, not the empty chips (prd
                         // §181, user: "make daily brief be the default when a

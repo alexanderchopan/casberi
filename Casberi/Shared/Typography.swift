@@ -39,8 +39,15 @@ struct DSTextStyle {
 
 extension DSTextStyle {
     // Prototype class → style. Names read as intent, not pixel counts.
-    static let heading34 = DSTextStyle(size: 34, weight: .bold,     tracking: 0.34, lineHeight: 41, relative: .largeTitle, rounded: true)
-    static let heading22 = DSTextStyle(size: 22, weight: .bold,     tracking: 0.22, lineHeight: 28, relative: .title2, rounded: true)
+    // Tracking is ZERO on both display rungs (2026-07-30). They carried +0.34
+    // and +0.22 — positive letter-spacing, ported straight from the prototype
+    // CSS, at exactly the two sizes where SF's own optical face wants letters
+    // pulled TOGETHER rather than pushed apart. It also sat against §8's own
+    // law ("no letter-spacing... `.kerning()` is banned"), which the rest of
+    // the ramp already honours — every other rung here is 0. Nothing else about
+    // these two changes: same size, same weight, same rounded face.
+    static let heading34 = DSTextStyle(size: 34, weight: .bold,     tracking: 0,    lineHeight: 41, relative: .largeTitle, rounded: true)
+    static let heading22 = DSTextStyle(size: 22, weight: .bold,     tracking: 0,    lineHeight: 28, relative: .title2, rounded: true)
     // Reading-band pass (2026-07-25). The app leaned on 13/15/17 for nearly
     // all its running text — a lot of real sentences (row sublines, wallet
     // metadata, DeFi stats) sat at 13pt, which read dense and document-like

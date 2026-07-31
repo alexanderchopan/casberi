@@ -22,28 +22,69 @@ import SwiftUI
 /// a time — matchedGeometryEffect needs that alternation to interpolate.
 struct AgentBar: View {
     var hasUnseenSignal: Bool
+    /// Scrolling down folds the bar (2026-07-30) — see `ShellChrome.minimized`,
+    /// whose own doc has described this since the tab-bar era. The words go and
+    /// the glass tightens around the two controls; NOTHING is removed, because
+    /// this is the only agent door on every screen and a door that leaves while
+    /// you scroll is the compromise dropping the tab bar was meant to end.
+    var minimized: Bool = false
     var morphNS: Namespace.ID?
+    /// The magnifier (2026-07-30). Find is deterministic and writes nothing —
+    /// a genuinely different act from asking — but it existed only as a chip
+    /// that appears AFTER you raise the agent and type, so the person who
+    /// wants to locate a link they saved had to start by asking a question.
+    /// This raises the composer straight into a typed search: no brief, field
+    /// focused, Find one keystroke away. Same surface, same ruling (§215),
+    /// one fewer act of faith.
+    var onFind: () -> Void = {}
     var action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: DS.Space.s3) {
-                Text("Ask your things…")
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textTertiary)
-                Spacer(minLength: 0)
-                if hasUnseenSignal {
-                    CasberiMark(size: 20).breathing()
-                } else {
-                    CasberiMark(size: 20)
-                }
+        HStack(spacing: 0) {
+            Button(action: onFind) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(DS.textSecondary)
+                    // The control is the CIRCLE, not the glyph (the catalogue
+                    // door's own 2026-07-26 lesson: a `.frame()` around a small
+                    // symbol leaves everything but its centre falling through).
+                    .frame(width: 44, height: 44)
+                    .contentShape(Circle())
+                    .dsHover()
             }
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.vertical, DS.Space.s3)
-            .contentShape(Capsule())
-            .dsHover()
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("Find in your things"))
+
+            Button(action: action) {
+                HStack(spacing: DS.Space.s3) {
+                    if !minimized {
+                        Text("Ask your things…")
+                            .dsText(.body17)
+                            .foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                    }
+                    if hasUnseenSignal {
+                        CasberiMark(size: 20).breathing()
+                    } else {
+                        CasberiMark(size: 20)
+                    }
+                }
+                .padding(.trailing, DS.Space.s4)
+                .padding(.leading, DS.Space.s1)
+                .padding(.vertical, DS.Space.s3)
+                .frame(maxWidth: minimized ? nil : .infinity, alignment: .leading)
+                .contentShape(Capsule())
+                .dsHover()
+            }
+            .buttonStyle(.plain)
+            // The words carried the button's name; folded, it needs its own.
+            .accessibilityLabel(Text("Ask your things"))
         }
-        .buttonStyle(.plain)
+        .padding(.leading, DS.Space.s1)
+        // Folded, the glass hugs its two controls instead of spanning the
+        // screen — the shape itself says the bar has yielded to the content.
+        .frame(maxWidth: minimized ? nil : .infinity)
         .dsGlass(cornerRadius: DS.Radius.pill)
         .modifier(MorphMatch(ns: morphNS))
     }

@@ -85,13 +85,59 @@ struct MainSurface: View {
     /// even though it just arrived. Set-diff on the real records instead.
     @State private var seenIDs: Set<UUID>?
 
+    /// The order the strip is actually WEARING — frozen at launch and at each
+    /// foreground (2026-07-30). See `chipLabels`.
+    @State private var frozenChips: [String] = []
+    @Environment(\.scenePhase) private var scenePhase
+
+    /// The strip's order, held still while you use it (2026-07-30).
+    ///
+    /// `computedChipLabels` below is derived, so it recomputed on EVERY body
+    /// evaluation of this surface — and both of its inputs move on their own:
+    /// recency changes whenever anything lands anywhere in the corpus, and the
+    /// learned weight changes on every chip tap. A Bluesky post arriving while
+    /// you were reaching for Photos could slide the chips sideways under your
+    /// thumb, and the order differed between one launch and the next.
+    ///
+    /// That is fatal for THIS strip specifically. These are 56pt icon-only
+    /// circles with no labels (ruling 2026-07-09) — an icon-only control is
+    /// legible at a glance only because you know where it lives. Position is
+    /// half the identity, and it was the half that wouldn't hold still.
+    ///
+    /// So the learning is unchanged and the freeze is on the DISPLAY: the order
+    /// is computed at launch and at each foreground — moments when nobody is
+    /// mid-reach — and held for the whole session in between. A tap still
+    /// counts (`ChipMemory.visited`); it simply lands next time you come back.
+    private var chipLabels: [String] {
+        let live = computedChipLabels
+        guard !frozenChips.isEmpty else { return live }
+        // Anything the freeze knows about keeps its frozen slot; a source whose
+        // last thing was deleted meanwhile drops out.
+        let liveSet = Set(live)
+        let held = frozenChips.filter { liveSet.contains($0) }
+        let heldSet = Set(held)
+        let fresh = live.filter { !heldSet.contains($0) }
+        guard !fresh.isEmpty else { return held }
+        // A source with no chip until now is a NEW ROOM — it goes to the head,
+        // not the tail, because it arrives wearing the bloom and the catch bob
+        // (see the arrival watcher below) and a celebration that happens off
+        // the right edge of the strip is a celebration nobody sees. This is the
+        // one thing allowed to move the strip mid-session, and it moves it for
+        // an event the person can watch happen.
+        return [held.first ?? "All"] + fresh + held.dropFirst()
+    }
+
+    /// Freeze the order as it stands. Called at mount and on every foreground —
+    /// never mid-session, which is the whole point.
+    private func freezeChips() { frozenChips = computedChipLabels }
+
     /// Chip order: All, then every source — most-recent-first is still the
     /// baseline (`things` is newest-first, so first appearance IS the newest
     /// thing per source), but a source you actually VISIT often (`ChipMemory`,
     /// amends §131, 2026-07-21) sorts ahead of it. `sorted` is stable, so a
     /// zero-weight tie keeps the recency order untouched — this only ever
     /// promotes a chip you use, never reorders the rest.
-    private var chipLabels: [String] {
+    private var computedChipLabels: [String] {
         var seen: Set<String> = []
         var ordered: [String] = []
         for thing in feedThings where seen.insert(thing.source).inserted {
@@ -188,6 +234,7 @@ struct MainSurface: View {
     private func sourceStrip(axis: Axis) -> some View {
         SourceChips(labels: chipLabels, active: filter.source,
                     axis: axis,
+                    minimized: chrome.minimized,
                     onApps: { route.present(.apps) },
                     onSettings: { route.present(.settings) },
                     refreshSpin: chrome.refreshPulse,
@@ -337,6 +384,13 @@ struct MainSurface: View {
         .onChange(of: chipLabels, initial: true) { _, labels in
             chrome.chipOrder = labels
         }
+        // Re-sort the strip on the way back IN, never while you're in it
+        // (2026-07-30, see `chipLabels`). A foreground is the one moment the
+        // order can change without moving under a finger — and it's also when
+        // a batch that landed while backgrounded should be reflected.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { freezeChips() }
+        }
     }
 
     private var surface: some View {
@@ -396,7 +450,10 @@ struct MainSurface: View {
                         // it read as ~65pt of dead chrome before the strip
                         // even starts (Mac polish, 2026-07-28), so Mac gets
                         // only a small breathing gap instead.
-                        .padding(.top, ProcessInfo.processInfo.isMacCatalystApp
+                        // …and that vacated space is the first thing handed
+                        // back when the strip folds (2026-07-30): air is what
+                        // it was, and content is what it's for.
+                        .padding(.top, ProcessInfo.processInfo.isMacCatalystApp || chrome.minimized
                                  ? DS.Space.s2 : DS.Space.s6)
                         .padding(.bottom, DS.Space.s2)
                 }
@@ -448,6 +505,11 @@ struct MainSurface: View {
                 // promotion verifies in one launch (seed Wallet high, watch
                 // it lead the sources behind All).
                 ChipMemory.seedFromLaunchArgs()
+                #endif
+                // The session's order, taken once (see `chipLabels`). AFTER the
+                // seed above, so `-chipStats` still decides what freezes.
+                freezeChips()
+                #if DEBUG
                 NSLog("[Casberi] chipLabels: %@", chipLabels.joined(separator: ", "))
                 #endif
                 // A door push that raced launch — casberi://settings arriving

@@ -1618,6 +1618,13 @@ struct Composer: View {
                 chipsAppeared = false
                 try? await Task.sleep(for: .milliseconds(90))
                 chipsAppeared = true
+                // Raised by the bar's magnifier (2026-07-30): the field takes
+                // focus and nothing else happens — no brief, no ask. Cleared
+                // on read so an ordinary later open doesn't inherit it.
+                if chrome.focusDraftOnOpen {
+                    chrome.focusDraftOnOpen = false
+                    fieldFocused = true
+                }
                 #if DEBUG
                 // `-composerDraft "<text>"` pre-fills the field on open —
                 // headless reach for the typed state (the Open-in chips)

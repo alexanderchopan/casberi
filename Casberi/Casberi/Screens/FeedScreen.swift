@@ -859,9 +859,12 @@ struct FeedScreen: View {
                 // opens the same setup screen) rather than a second stacked row
                 // (user, 2026-07-12). Compose sources keep their own row instead
                 // — that action leaves for another app, a genuinely other place.
-                Rectangle()
-                    .fill(DS.textTertiary.opacity(0.3))
-                    .frame(width: 1, height: 12)
+                // A 1×12 rule stood here until 2026-07-30 — the ONLY hairline
+                // left in the app, against a law that takes no exceptions
+                // ("No hairlines — zero exceptions"). Air separates the status
+                // words from the control instead, which is what every other
+                // grouping in this app already uses.
+                Group {
                 if showAddHint {
                     Image(systemName: "plus")
                         .accessibilityHidden(true)
@@ -879,6 +882,8 @@ struct FeedScreen: View {
                         .dsText(.subhead13).fontWeight(.medium)
                         .foregroundStyle(DS.tint)
                 }
+                }
+                .padding(.leading, DS.Space.s1)
             }
             .padding(.horizontal, DS.Space.s3)
             .padding(.vertical, DS.Space.s2)

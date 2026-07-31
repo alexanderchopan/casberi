@@ -27,6 +27,21 @@ struct SourceChips: View {
     let active: String
     /// `.horizontal` is the iPhone strip; `.vertical` is the iPad rail.
     var axis: Axis = .horizontal
+    /// Folded while the feed scrolls down (2026-07-30, `ShellChrome.minimized`).
+    ///
+    /// The strip does NOT leave — that ruling stands and is the whole reason
+    /// the tab bar went ("always in reach, never scrolls away with content").
+    /// It gets smaller: the scrolling chips step 56→48, while the two fixed
+    /// doors at the head keep their exact size and position, so nothing you
+    /// were already reaching for moves. iPad's rail sits it out — it folds a
+    /// HEIGHT, and a vertical rail has height to spare.
+    var minimized: Bool = false
+
+    private var folds: Bool { minimized && axis == .horizontal }
+    /// The chip's own icon; the doors beside it are deliberately fixed at 46.
+    private var iconSize: CGFloat { folds ? 40 : 46 }
+    /// The chip's outer slot, ring included.
+    private var chipSize: CGFloat { folds ? 48 : 56 }
     /// Opens the app catalogue (user 2026-07-17: its door moved OUT of the
     /// top-right cluster and INTO the head of this strip — "add a source"
     /// belongs with your sources).
@@ -272,14 +287,14 @@ struct SourceChips: View {
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.55)
-                        .frame(width: 46, height: 46)
+                        .frame(width: iconSize, height: iconSize)
                         .clipShape(Circle())
-                        .dsGlass(cornerRadius: 23)
+                        .dsGlass(cornerRadius: iconSize / 2)
                 default:
-                    BridgeIcon(name: label, size: 46, circular: true)
+                    BridgeIcon(name: label, size: iconSize, circular: true)
                 }
             }
-            .frame(width: 46, height: 46)
+            .frame(width: iconSize, height: iconSize)
             // The identity flip (2026-07-14, user): the chip is where
             // switching sources actually happens, so it's the one true flip
             // moment — the Feed source header dropped its own animated icon
@@ -321,7 +336,7 @@ struct SourceChips: View {
                                           style: StrokeStyle(lineWidth: 2.5, dash: [3, 3]))
                 }
             }
-            .frame(width: 56, height: 56)
+            .frame(width: chipSize, height: chipSize)
             // The capture flight lands on "All" — the record that shows every
             // capture in place, the same target the old Feed tab was.
             .background {

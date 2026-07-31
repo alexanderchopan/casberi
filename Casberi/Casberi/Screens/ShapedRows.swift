@@ -52,7 +52,6 @@ struct BandRow: View {
     /// minority gate: past half a day's rows these fall back to the ordinary
     /// band, or the All feed would quietly become the Photos grid.
     var imageOnly: Bool = false
-    @Environment(\.colorScheme) private var scheme
 
     private var done: Bool { thing.mark == .done }
 
@@ -202,13 +201,28 @@ struct BandRow: View {
         return thing.title
     }
 
-    /// The project writes in ITS color (V3b): stable per name, same hue on
-    /// every surface. Light mode pulls it toward black for contrast.
-    private var projectInk: Color {
-        guard let project else { return DS.textTertiary }
-        let base = ProjectHue.color(for: project)
-        return scheme == .light ? base.mix(with: .black, by: 0.35) : base
-    }
+    /// The trailing label's ink — the tertiary ramp, for every word this slot
+    /// can carry (2026-07-30).
+    ///
+    /// It ran through `ProjectHue` until now: a hash-picked hue, from the days
+    /// this slot held the person's own PROJECT TAG, where the color was real
+    /// identity ("Lisbon trip" wearing one hue everywhere). That tag was
+    /// dropped from the row on 2026-07-23 — but the coloring wasn't, so the
+    /// hash kept firing on whatever moved in behind it: "Liked", "/design",
+    /// "Mentions you", "BBC News", "★1.2k · Swift", "Cash App". A stable color
+    /// per arbitrary string is not identity, it's decoration with a memory —
+    /// exactly what §8's color law rules out ("identity, state, or magnitude,
+    /// never decoration").
+    ///
+    /// It also failed the contrast pass this app already made everywhere else:
+    /// at `label11`, light mode mixed the palette only 0.35 toward black, which
+    /// puts the yellow rung near 3.4:1 — under the 4.5:1 bar `DS.textTertiary`
+    /// was raised to meet on 2026-07-21, on the smallest text in the row.
+    ///
+    /// Nothing is lost where identity actually mattered: a multi-wallet row
+    /// already leads with that wallet's own `WalletBlockie` (see
+    /// `identiconAddress`), which is the identity, in the slot built for it.
+    private var labelInk: Color { DS.textTertiary }
 
     private var countdown: String? {
         guard emphasized else { return nil }
@@ -363,7 +377,7 @@ struct BandRow: View {
                 if let project {
                     Text(project)
                         .dsText(.label11)
-                        .foregroundStyle(projectInk)
+                        .foregroundStyle(labelInk)
                         .lineLimit(1)
                 }
             }
@@ -378,6 +392,34 @@ struct BandRow: View {
     }
 }
 
+/// ONE minute tick for the whole app (2026-07-30) — the clock every relative
+/// timestamp reads.
+///
+/// `LiveTimeText` wrapped itself in `TimelineView(.periodic(by: 60))`, which
+/// meant one independently scheduled timeline PER ROW: every row of the active
+/// feed, plus both mounted pager neighbours, each waking the main thread on its
+/// own 60s cadence — including the rows reading "5d", whose label cannot change
+/// for another 19 hours. One shared source costs one timer and lets a row opt
+/// out of the subscription entirely (see `LiveTimeText.body`).
+@MainActor @Observable
+final class MinuteClock {
+    static let shared = MinuteClock()
+    /// Bumped every 60s. Reading it in a body is what subscribes that body.
+    private(set) var minute = 0
+    private var timer: Timer?
+
+    private init() {
+        // `.common` mode so the tick survives a scroll — the default run-loop
+        // mode is suspended while a scroll view tracks, which is exactly when
+        // these labels are being looked at.
+        let timer = Timer(timeInterval: 60, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.minute &+= 1 }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
+    }
+}
+
 /// A relative time ("3m", "2h", "5d") that stays true — it re-renders each
 /// minute instead of going stale with the row (§9 polish). Moved here from
 /// the now-deleted ThingRow.swift (2026-07-21): BandRow is the row every
@@ -385,19 +427,30 @@ struct BandRow: View {
 struct LiveTimeText: View {
     let date: Date
     var color: Color = DS.textTertiary
+    private let clock = MinuteClock.shared
+
+    /// Whether this row's label can still move within a session. Under a day,
+    /// it reads minutes then hours and has to keep up; past a day it reads
+    /// whole days, and the next change is up to 24 hours out — nothing a
+    /// minute tick can usefully deliver. Future stamps (an event, a dated
+    /// reminder) count the same distance the other way, hence `abs`.
+    private var ticking: Bool { abs(date.timeIntervalSinceNow) < 86_400 }
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 60)) { _ in
-            let label = Self.short(date)
-            // "2h" → "3h" rolls its digit (the Clock app's grammar) instead
-            // of swapping — the change is the moment (motion pass 2026-07-11).
-            Text(label)
-                .dsText(.subhead13)
-                .foregroundStyle(color)
-                .contentTransition(.numericText())
-                .animation(DS.Motion.standard, value: label)
-                .accessibilityLabel(Self.spoken(date))
-        }
+        // The subscription IS this read: touching `clock.minute` registers
+        // this body with the shared clock's observation, and skipping it
+        // leaves a day-old row genuinely unsubscribed rather than merely
+        // re-rendering to the same string once a minute.
+        let _ = ticking ? clock.minute : 0
+        let label = Self.short(date)
+        // "2h" → "3h" rolls its digit (the Clock app's grammar) instead
+        // of swapping — the change is the moment (motion pass 2026-07-11).
+        Text(label)
+            .dsText(.subhead13)
+            .foregroundStyle(color)
+            .contentTransition(.numericText())
+            .animation(DS.Motion.standard, value: label)
+            .accessibilityLabel(Self.spoken(date))
     }
 
     /// A stamp AHEAD is not an age (2026-07-27, the calendar-room pass): an
