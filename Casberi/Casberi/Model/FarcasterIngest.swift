@@ -32,6 +32,11 @@ final class FarcasterStore {
         /// Watch what they LIKE too — liked casts land as things. On your
         /// own account that is the save verb: like it on Farcaster, it's here.
         var likes = false
+        /// Watch what they RECAST (2026-07-31) — the same read as `likes`
+        /// (`reactionsByFid`, one reaction type over), and arguably the
+        /// stronger curation signal: a like is approval, a recast is
+        /// rebroadcast — they put their own name on it.
+        var recasts = false
         /// Watch MENTIONS of them — casts naming this account land, so
         /// "while I was away" can answer with who talked to you.
         var mentions = false
@@ -59,6 +64,7 @@ final class FarcasterStore {
             bio = try c.decodeIfPresent(String.self, forKey: .bio)
             avatarURL = try c.decodeIfPresent(String.self, forKey: .avatarURL)
             likes = try c.decodeIfPresent(Bool.self, forKey: .likes) ?? false
+            recasts = try c.decodeIfPresent(Bool.self, forKey: .recasts) ?? false
             mentions = try c.decodeIfPresent(Bool.self, forKey: .mentions) ?? false
             verifiedAddresses = try c.decodeIfPresent([String].self, forKey: .verifiedAddresses) ?? []
         }
@@ -176,6 +182,11 @@ final class FarcasterStore {
         accounts[i].likes = on
     }
 
+    func setRecasts(_ on: Bool, for username: String) {
+        guard let i = accounts.firstIndex(where: { $0.username == username }) else { return }
+        accounts[i].recasts = on
+    }
+
     func setMentions(_ on: Bool, for username: String) {
         guard let i = accounts.firstIndex(where: { $0.username == username }) else { return }
         accounts[i].mentions = on
@@ -227,6 +238,7 @@ final class FarcasterStore {
                 subtitle: SocialAccount.subtitle(handle: "@\(a.username)", bio: a.bio),
                 avatarURL: a.avatarURL,
                 watches: [SocialWatch(kind: .likes, on: a.likes),
+                          SocialWatch(kind: .recasts, on: a.recasts),
                           SocialWatch(kind: .mentions, on: a.mentions)])
         }
     }
@@ -410,8 +422,14 @@ enum FarcasterIngest {
                                     landed: landed, backfill: backfill, context: context)
 
             if account.likes {
-                added += await landLikes(fid: fid, existing: &existing, landed: landed,
-                                         backfill: backfill, context: context)
+                added += await landReactions(fid: fid, type: "Like", why: "liked",
+                                             existing: &existing, landed: landed,
+                                             backfill: backfill, context: context)
+            }
+            if account.recasts {
+                added += await landReactions(fid: fid, type: "Recast", why: "recast",
+                                             existing: &existing, landed: landed,
+                                             backfill: backfill, context: context)
             }
             if account.mentions {
                 added += await landMentions(of: fid, existing: &existing, landed: landed,
@@ -433,17 +451,25 @@ enum FarcasterIngest {
         return added
     }
 
-    // MARK: - Likes, mentions, channels (2026-07-14)
+    // MARK: - Likes, recasts, mentions, channels (2026-07-14; recasts 2026-07-31)
 
-    /// How recent a like has to be to count as NEWS — the window inside which a
-    /// like may resurface a cast the corpus already holds. Mirrors the
-    /// alerts-are-news doctrine the Privacy Pools sweep follows: the first pass
-    /// over a curator's page walks their whole recent back catalogue, and a
-    /// month of old likes must not arrive as a month of new arrivals.
+    /// How recent a reaction has to be to count as NEWS — the window inside
+    /// which a like or a recast may resurface a cast the corpus already holds.
+    /// Mirrors the alerts-are-news doctrine the Privacy Pools sweep follows:
+    /// the first pass over a curator's page walks their whole recent back
+    /// catalogue, and a month of old likes must not arrive as a month of new
+    /// arrivals.
     private static let likeNewsWindow: TimeInterval = 86_400
 
-    /// The account's likes — each liked cast lands as a thing, stamped with
-    /// the LIKE's time (when it entered your attention), not the cast's.
+    /// The account's reactions of one type — each reacted-to cast lands as a
+    /// thing, stamped with the REACTION's time (when it entered your
+    /// attention), not the cast's.
+    ///
+    /// Two types ride this one path (2026-07-31): `Like` ("they approved of
+    /// it") and `Recast` ("they rebroadcast it under their own name"). The
+    /// endpoint, the target dedupe, the resurface, and the bounded fan-out
+    /// are identical — only the `reaction_type` and the marker word differ,
+    /// so a recast can never drift from a like in behaviour.
     ///
     /// A cast the corpus ALREADY holds is the case that used to fall through
     /// (fixed 2026-07-26). The target dedupe below skipped it BEFORE the fetch,
@@ -457,32 +483,33 @@ enum FarcasterIngest {
     ///
     /// Such a target now RESURFACES — see `resurface`.
     @MainActor
-    private static func landLikes(fid: Int, existing: inout Set<String>,
-                                  landed: [String: Thing],
-                                  backfill: ArtlessBackfill, context: ModelContext) async -> Int {
+    private static func landReactions(fid: Int, type: String, why: String,
+                                      existing: inout Set<String>,
+                                      landed: [String: Thing],
+                                      backfill: ArtlessBackfill, context: ModelContext) async -> Int {
         guard let root = await IngestSupport.getJSON(
-            "\(node)/v1/reactionsByFid?fid=\(fid)&reaction_type=Like&pageSize=25&reverse=true")
+            "\(node)/v1/reactionsByFid?fid=\(fid)&reaction_type=\(type)&pageSize=25&reverse=true")
                 as? [String: Any],
               let messages = root["messages"] as? [[String: Any]] else { return 0 }
-        var targets: [(fid: Int, hash: String, liked: Date?)] = []
+        var targets: [(fid: Int, hash: String, reacted: Date?)] = []
         for message in messages {
             guard let data = message["data"] as? [String: Any],
                   let body = data["reactionBody"] as? [String: Any],
                   let target = body["targetCastId"] as? [String: Any],
                   let targetFid = target["fid"] as? Int,
                   let targetHash = target["hash"] as? String else { continue }
-            let liked = (data["timestamp"] as? Double).map { epoch.addingTimeInterval($0) }
+            let reacted = (data["timestamp"] as? Double).map { epoch.addingTimeInterval($0) }
             // Already held: resurface it in place. Deliberately BEFORE the
             // `targets` append, so the steady state still costs zero castById
             // lookups — the property the ref dedupe was there to buy.
             guard !existing.contains("fc:\(targetHash)") else {
-                resurface(landed["fc:\(targetHash)"], liked: liked)
+                resurface(landed["fc:\(targetHash)"], reactedAt: reacted)
                 continue
             }
-            targets.append((targetFid, targetHash, liked))
+            targets.append((targetFid, targetHash, reacted))
         }
         guard !targets.isEmpty else { return 0 }
-        // The liked casts' bodies, a few at a time — the ref dedupe above
+        // The reacted-to casts' bodies, a few at a time — the ref dedupe above
         // keeps the steady state at zero of these lookups.
         let casts = await IngestSupport.boundedGather(targets, maxConcurrent: 4) { t in
             await IngestSupport.getJSON("\(node)/v1/castById?fid=\(t.fid)&hash=\(t.hash)")
@@ -493,9 +520,10 @@ enum FarcasterIngest {
         var added = 0
         for (target, cast) in zip(targets, casts) {
             guard let cast else { continue }
-            // "Liked" is the marker this cast wears — you liked it there, so
-            // it's here; the row can say so instead of reading as your own post.
-            if await land(cast: cast, capturedAt: target.liked, why: "liked",
+            // "Liked" / "Recast" is the marker this cast wears — a watched
+            // account reacted to it there, so it's here; the row can say so
+            // instead of reading as their own post.
+            if await land(cast: cast, capturedAt: target.reacted, why: why,
                           existing: &existing, landed: landed,
                           backfill: backfill, context: context) {
                 added += 1
@@ -505,34 +533,35 @@ enum FarcasterIngest {
     }
 
     /// Restamps a cast the corpus already holds with the moment a watched
-    /// account liked it, so a newest-first feed shows it again. No fetch: the
-    /// `Thing` is already in hand, which is what keeps the resurface free.
+    /// account liked or recast it, so a newest-first feed shows it again. No
+    /// fetch: the `Thing` is already in hand, which is what keeps the
+    /// resurface free.
     ///
-    /// The date it writes is the same one a freshly liked cast lands under —
-    /// the LIKE's time, not the cast's — so both halves of the flow answer
-    /// "when did this enter your attention?" the same way.
+    /// The date it writes is the same one a freshly reacted-to cast lands
+    /// under — the REACTION's time, not the cast's — so both halves of the
+    /// flow answer "when did this enter your attention?" the same way.
     ///
     /// Three guards, each load-bearing:
-    /// - **forward only** (`liked > capturedAt`) — a like can't predate the cast
-    ///   it likes, so this can only ever move a thing later, never rewrite the
-    ///   date of something that arrived after.
-    /// - **news only** (inside `likeNewsWindow`) — an old like heals nothing and
-    ///   stays silent, so enabling Likes on an account with a long history
-    ///   doesn't throw their back catalogue at the top of the feed.
+    /// - **forward only** (`reactedAt > capturedAt`) — a reaction can't predate
+    ///   the cast it reacts to, so this can only ever move a thing later, never
+    ///   rewrite the date of something that arrived after.
+    /// - **news only** (inside `likeNewsWindow`) — an old reaction heals nothing
+    ///   and stays silent, so enabling Likes or Recasts on an account with a
+    ///   long history doesn't throw their back catalogue at the top of the feed.
     /// - **live only** (`isLive`) — `landed` was captured at the start of the
     ///   refresh and every bridge's foreground heal deletes upstream-gone rows,
     ///   so a tombstoned model can reach here; reading `capturedAt` off one
     ///   traps inside SwiftData.
     ///
     /// No cursor is needed to make this once-only: it CONVERGES. Once
-    /// `capturedAt` is the like's time the forward-only guard stops firing, so
-    /// re-reading the same like on the next refresh writes nothing.
+    /// `capturedAt` is the reaction's time the forward-only guard stops firing,
+    /// so re-reading the same reaction on the next refresh writes nothing.
     @MainActor
-    private static func resurface(_ thing: Thing?, liked: Date?) {
-        guard let thing, thing.isLive, let liked,
-              liked > thing.capturedAt,
-              Date.now.timeIntervalSince(liked) < likeNewsWindow else { return }
-        thing.capturedAt = liked
+    private static func resurface(_ thing: Thing?, reactedAt: Date?) {
+        guard let thing, thing.isLive, let reactedAt,
+              reactedAt > thing.capturedAt,
+              Date.now.timeIntervalSince(reactedAt) < likeNewsWindow else { return }
+        thing.capturedAt = reactedAt
         // Joins the refresh's save condition — a pass that only resurfaced
         // landed nothing new, and must still persist what it moved.
         healed = true

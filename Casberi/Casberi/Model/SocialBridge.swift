@@ -167,9 +167,18 @@ enum SocialThread {
         }
         switch thing.socialContext {
         case "liked":   return String(localized: "Liked")
+        case "recast":  return recastWord(thing.source)
         case "mention": return String(localized: "Mentions you")
         default:        return nil
         }
+    }
+
+    /// The word a network uses for an amplified post — one shared marker
+    /// ("recast") on the thing, spoken in each network's own noun. Nostr
+    /// calls it a repost too (NIP-18), so Farcaster is the exception here,
+    /// not the rule.
+    static func recastWord(_ source: String) -> String {
+        source == "Farcaster" ? String(localized: "Recast") : String(localized: "Reposted")
     }
 
     /// The same fact as a CLAUSE, for the sheet's eyebrow — where it sits in a
@@ -187,6 +196,15 @@ enum SocialThread {
         }
         switch thing.socialContext {
         case "liked":   return String(localized: "you liked this")
+        // Deliberately NOT "you recast this" (§221's open falsity, which the
+        // likes phrase above still carries): a recast marker is written by
+        // whichever WATCHED account amplified it, which is usually not you.
+        // The thing carries no recaster handle, so the phrase says exactly
+        // what's known and no more.
+        case "recast":
+            return thing.source == "Farcaster"
+                ? String(localized: "recast by an account you watch")
+                : String(localized: "reposted by an account you watch")
         case "mention": return String(localized: "mentions you")
         default:        return nil
         }
@@ -370,15 +388,20 @@ enum SocialPeople {
     }
 }
 
-/// One "watch more" toggle on an account row (Likes / Mentions) — the
-/// capability a bridge offers per account. Bluesky offers Mentions only
-/// (likes need sign-in); Farcaster offers both.
+/// One "watch more" toggle on an account row (Likes / Recasts / Mentions) —
+/// the capability a bridge offers per account. Bluesky offers Reposts and
+/// Mentions (likes need sign-in); Farcaster offers all three.
 struct SocialWatch: Identifiable, Equatable {
-    enum Kind: String { case likes = "Likes", mentions = "Mentions" }
+    enum Kind: String { case likes = "Likes", recasts = "Recasts", mentions = "Mentions" }
     let kind: Kind
     let on: Bool
+    /// The word THIS network uses for the kind — Farcaster recasts, Bluesky
+    /// reposts. The KIND is shared (one flag, one code path); only the noun
+    /// differs, and a bridge never renames someone else's verb. Defaults to
+    /// the kind's own name.
+    var word: String? = nil
     var id: String { kind.rawValue }
-    var label: String { kind.rawValue }
+    var label: String { word ?? kind.rawValue }
 }
 
 /// A watched social account, rendered by the shared setup row: a face, a

@@ -24,6 +24,12 @@ final class BlueskyStore {
         var displayName: String?
         var bio: String?
         var avatarURL: String?
+        /// Watch what they REPOST (2026-07-31) — Farcaster's Recasts toggle,
+        /// in Bluesky's noun. Keyless where likes are not: `getActorLikes`
+        /// needs an app password, but a repost rides the account's own public
+        /// feed, so the one amplification signal Bluesky can honestly offer is
+        /// this one.
+        var recasts = false
         /// Watch MENTIONS of them — posts naming this account land, so
         /// "while I was away" can answer with who talked to you.
         var mentions = false
@@ -39,6 +45,7 @@ final class BlueskyStore {
             displayName = try c.decodeIfPresent(String.self, forKey: .displayName)
             bio = try c.decodeIfPresent(String.self, forKey: .bio)
             avatarURL = try c.decodeIfPresent(String.self, forKey: .avatarURL)
+            recasts = try c.decodeIfPresent(Bool.self, forKey: .recasts) ?? false
             mentions = try c.decodeIfPresent(Bool.self, forKey: .mentions) ?? false
         }
     }
@@ -153,6 +160,11 @@ final class BlueskyStore {
         accounts[i] = a
     }
 
+    func setRecasts(_ on: Bool, for handle: String) {
+        guard let i = accounts.firstIndex(where: { $0.handle == handle }) else { return }
+        accounts[i].recasts = on
+    }
+
     func setMentions(_ on: Bool, for handle: String) {
         guard let i = accounts.firstIndex(where: { $0.handle == handle }) else { return }
         accounts[i].mentions = on
@@ -175,8 +187,8 @@ final class BlueskyStore {
     }
 
     /// The watched accounts as the shared setup row renders them — face,
-    /// name, bio, and the Mentions toggle (Bluesky's only keyless watch;
-    /// likes need sign-in).
+    /// name, bio, and the keyless watches Bluesky can honestly offer:
+    /// Reposts and Mentions (likes still need sign-in).
     var socialAccounts: [SocialAccount] {
         accounts.map { a in
             SocialAccount(
@@ -184,7 +196,8 @@ final class BlueskyStore {
                 title: a.displayName ?? "@\(Self.short(a.handle))",
                 subtitle: SocialAccount.subtitle(handle: "@\(Self.short(a.handle))", bio: a.bio),
                 avatarURL: a.avatarURL,
-                watches: [SocialWatch(kind: .mentions, on: a.mentions)])
+                watches: [SocialWatch(kind: .recasts, on: a.recasts, word: "Reposts"),
+                          SocialWatch(kind: .mentions, on: a.mentions)])
         }
     }
 
@@ -227,6 +240,7 @@ enum BlueskyIngest {
         guard store.connected, !running else { return store.connected ? 0 : nil }
         running = true
         healed = false
+        resurfaced = 0
         defer { running = false }
 
         var existing = IngestSupport.existingSourceRefs(context, source: "Bluesky")
@@ -286,6 +300,10 @@ enum BlueskyIngest {
                                     ownHandle: handle, existing: &existing, landed: landed,
                                     backfill: backfill, context: context)
 
+            if account.recasts {
+                added += await landReposts(feed, existing: &existing, landed: landed,
+                                           backfill: backfill, context: context)
+            }
             if account.mentions {
                 added += await landMentions(of: handle, existing: &existing, landed: landed,
                                             backfill: backfill, context: context)
@@ -306,6 +324,97 @@ enum BlueskyIngest {
         if added > 0 || backfill.any || touched || healed { context.saveHonestly() }
         return added
     }
+
+    // MARK: - Reposts (2026-07-31)
+
+    /// How recent a repost has to be to count as NEWS — the window inside
+    /// which one may resurface a post the corpus already holds. Farcaster's
+    /// `likeNewsWindow`, same 24h, same reasoning: switching Reposts on for
+    /// an account with a long history must not throw their back catalogue at
+    /// the top of the feed.
+    private static let repostNewsWindow: TimeInterval = 86_400
+
+    /// The posts a watched account REPOSTED, out of the author feed already
+    /// in hand — so this costs NO extra request, unlike Farcaster's separate
+    /// `reactionsByFid` read. Each lands stamped with the REPOST's time (when
+    /// it entered your attention), not the post's, exactly as a Farcaster
+    /// like/recast does.
+    ///
+    /// A repost arrives as a feed ENTRY wearing a `reason`, wrapping someone
+    /// else's `post` — which is precisely why `land`'s `ownHandle` filter used
+    /// to drop every one of them on the floor (the filter is what keeps a
+    /// mention's author out of the account feed, and it can't tell the two
+    /// cases apart). This reads the entries the filter discards.
+    ///
+    /// A post the corpus already holds RESURFACES rather than being skipped —
+    /// §221's ruling, which was written for Farcaster likes and is the same
+    /// bug here: your own post, reposted by someone you watch, is exactly the
+    /// shape that could never come back.
+    ///
+    /// UNMEASURED (2026-07-31, no network from the authoring host): the author
+    /// feed is fetched with `filter=posts_no_replies`, and whether the AppView
+    /// includes repost entries under that filter is the one fact to check
+    /// before trusting this. If it strips them, nothing lands (an honest
+    /// silence, not a wrong answer) and the fix is the filter, not this code.
+    @MainActor
+    private static func landReposts(_ feed: [[String: Any]], existing: inout Set<String>,
+                                    landed: [String: Thing], backfill: ArtlessBackfill,
+                                    context: ModelContext) async -> Int {
+        var reposts: [(post: [String: Any], at: Date?)] = []
+        for entry in feed {
+            guard let reason = entry["reason"] as? [String: Any],
+                  let type = reason["$type"] as? String,
+                  type.hasSuffix("#reasonRepost"),
+                  let post = entry["post"] as? [String: Any],
+                  let uri = post["uri"] as? String else { continue }
+            // `indexedAt` on the REASON is when the repost happened; the
+            // post's own `createdAt` is when it was written, often long
+            // before. The distinction is the whole point of the stamp.
+            let at = IngestSupport.isoDate(reason["indexedAt"])
+            guard !existing.contains("bsky:\(uri)") else {
+                resurface(landed["bsky:\(uri)"], repostedAt: at)
+                continue
+            }
+            reposts.append((post, at))
+        }
+        guard !reposts.isEmpty else { return 0 }
+        await prefetchCards(reposts.compactMap { parentURI($0.post) })
+        var added = 0
+        for repost in reposts {
+            // ownHandle nil — a repost is by definition someone ELSE's post,
+            // so the author filter that guards the account feed must not run.
+            if await land(post: repost.post, ownHandle: nil, capturedAt: repost.at,
+                          why: "recast", existing: &existing, landed: landed,
+                          backfill: backfill, context: context) {
+                added += 1
+            }
+        }
+        return added
+    }
+
+    /// Restamps a post the corpus already holds with the moment a watched
+    /// account reposted it — `FarcasterIngest.resurface`, same three guards
+    /// (forward only, news only, live only) and the same convergence argument:
+    /// once `capturedAt` IS the repost's time, the forward-only guard stops
+    /// firing, so no cursor is needed to make it once-only.
+    @MainActor
+    private static func resurface(_ thing: Thing?, repostedAt: Date?) {
+        guard let thing, thing.isLive, let repostedAt,
+              repostedAt > thing.capturedAt,
+              Date.now.timeIntervalSince(repostedAt) < repostNewsWindow else { return }
+        thing.capturedAt = repostedAt
+        // Joins the refresh's save condition — a pass that only resurfaced
+        // landed nothing new, and must still persist what it moved.
+        healed = true
+        resurfaced += 1
+    }
+
+    /// How many held posts the last refresh moved back into view. A resurface
+    /// lands no thing, so `refresh`'s count reports 0 for a pass that did the
+    /// whole job — without this a probe can't tell that from a pass that did
+    /// nothing. Reset per refresh, like `healed`, under the same single-flight
+    /// `running` guard.
+    @MainActor private(set) static var resurfaced = 0
 
     /// A followed feed's newest posts (2026-07-16) — the Bluesky dose of
     /// Farcaster's channel sync. `getFeed` proxies to the generator's own
@@ -372,13 +481,16 @@ enum BlueskyIngest {
     }
 
     /// Lands one post by whoever wrote it — the shared tail of the author
-    /// feed and the mentions flow. `ownHandle` non-nil filters to that
-    /// author (the feed excludes reposts of others); nil accepts anyone
-    /// (mentions). The author is hydrated on the post, so its name and face
-    /// come free; a post the AppView didn't hydrate an author for is skipped.
+    /// feed, the mentions flow, and the repost flow. `ownHandle` non-nil
+    /// filters to that author, which is what keeps someone else's post out of
+    /// an account's own feed; nil accepts anyone (mentions, reposts — both are
+    /// by definition NOT the watched account's own words). The author is
+    /// hydrated on the post, so its name and face come free; a post the
+    /// AppView didn't hydrate an author for is skipped.
     @MainActor
     @discardableResult
     private static func land(post: [String: Any], ownHandle: String?,
+                             capturedAt: Date? = nil,
                              why: String? = nil, channel: String? = nil,
                              existing: inout Set<String>, landed: [String: Thing],
                              backfill: ArtlessBackfill,
@@ -398,7 +510,9 @@ enum BlueskyIngest {
                  why: why, channel: channel)
             return false
         }
-        let date = IngestSupport.isoDate(record["createdAt"])
+        // A repost stamps the post with when it was AMPLIFIED, not when it was
+        // written (`landReposts`); everything else uses the post's own date.
+        let date = capturedAt ?? IngestSupport.isoDate(record["createdAt"])
 
         let thing = Thing(
             kind: .chat,

@@ -242,6 +242,21 @@ enum ProbeHooks {
                       added.map(String.init) ?? "FAILED", FarcasterIngest.resurfaced)
             }
         },
+        // `-fcRecasts <username>` watches an account's RECASTS (adding the
+        // account if new) and syncs — what they rebroadcast lands as things,
+        // stamped with the recast's time. Reports resurfaced beside landed for
+        // the same reason `-fcLikes` does: a recast of a cast the corpus
+        // already holds lands NOTHING and moves it instead.
+        Hook(key: "fcRecasts") { name, context in
+            let n = FarcasterStore.normalize(name)
+            FarcasterStore.shared.add(n)
+            FarcasterStore.shared.setRecasts(true, for: n)
+            Task { @MainActor in
+                let added = await FarcasterIngest.refresh(context: context)
+                NSLog("Farcaster recasts probe: %@ new things, %d resurfaced",
+                      added.map(String.init) ?? "FAILED", FarcasterIngest.resurfaced)
+            }
+        },
         // `-fcMentions <username>` watches MENTIONS of an account and syncs.
         Hook(key: "fcMentions") { name, context in
             let n = FarcasterStore.normalize(name)
@@ -420,6 +435,21 @@ enum ProbeHooks {
                 let added = await BlueskyIngest.refresh(context: context)
                 NSLog("Bluesky mentions probe: %@ new things",
                       added.map(String.init) ?? "FAILED")
+            }
+        },
+        // `-bskyReposts <handle>` watches what a Bluesky account REPOSTS
+        // (adding it if new) and syncs — reposted posts land stamped with the
+        // repost's time. Costs no extra request: reposts ride the same author
+        // feed the account's own posts arrive on. Reports resurfaced beside
+        // landed, the `-fcLikes` rule.
+        Hook(key: "bskyReposts") { name, context in
+            let h = BlueskyStore.normalize(name)
+            BlueskyStore.shared.add(h)
+            BlueskyStore.shared.setRecasts(true, for: h)
+            Task { @MainActor in
+                let added = await BlueskyIngest.refresh(context: context)
+                NSLog("Bluesky reposts probe: %@ new things, %d resurfaced",
+                      added.map(String.init) ?? "FAILED", BlueskyIngest.resurfaced)
             }
         },
         // `-bskyHealProbe YES` runs the delete-sync reconcile headlessly over

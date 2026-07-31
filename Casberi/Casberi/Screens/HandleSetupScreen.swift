@@ -259,15 +259,21 @@ enum HandleBridge: String {
         case .farcaster:
             switch kind {
             case .likes:    FarcasterStore.shared.setLikes(on, for: name)
+            case .recasts:  FarcasterStore.shared.setRecasts(on, for: name)
             case .mentions: FarcasterStore.shared.setMentions(on, for: name)
             }
         case .nostr:
             switch kind {
             case .likes:    NostrStore.shared.setLikes(on, for: name)
             case .mentions: NostrStore.shared.setMentions(on, for: name)
+            case .recasts:  break   // NIP-18 reposts aren't read yet
             }
         case .bluesky:
-            if kind == .mentions { BlueskyStore.shared.setMentions(on, for: name) }
+            switch kind {
+            case .recasts:  BlueskyStore.shared.setRecasts(on, for: name)
+            case .mentions: BlueskyStore.shared.setMentions(on, for: name)
+            case .likes:    break   // getActorLikes is auth-only — no keyless read
+            }
         default: break
         }
     }
@@ -275,8 +281,8 @@ enum HandleBridge: String {
     /// The line under the watched-accounts list, explaining its toggles.
     var watchFooter: String? {
         switch self {
-        case .farcaster: "Likes — also saves the casts an account has liked. Mentions — also saves casts that name them."
-        case .bluesky:   "Mentions — also saves posts that name them, replies and quotes included."
+        case .farcaster: "Likes — also saves the casts an account has liked. Recasts — also saves what they rebroadcast. Mentions — also saves casts that name them."
+        case .bluesky:   "Reposts — also saves what an account rebroadcasts. Mentions — also saves posts that name them, replies and quotes included."
         case .nostr:     "Likes — also saves notes an account has reacted to. Mentions — also saves notes that name them."
         default:         nil
         }
