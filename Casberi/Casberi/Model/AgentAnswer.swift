@@ -124,15 +124,22 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         // OpenRouter's own router — picks whichever of its 400+ models fits
         // the request, so the app never pins one model or exposes a picker.
         case .openrouter: "openrouter/auto"
-        // UNVERIFIED (2026-07-31) — no Grok key has been stored yet, so
-        // this has never been confirmed against a live `/v1/models` read,
-        // unlike every other pin in this switch. "grok-4" is xAI's
-        // documented flagship chat model as of this writing; xAI (like
-        // every provider here) rotates names over time, and Venice's own
-        // comment already notes the same risk — the difference is this one
-        // hasn't been measured even once. `-byokProbe` against a real key
-        // is the re-measurement step before this stops being a guess.
-        case .grok:       "grok-4"
+        // CORRECTED 2026-07-31, hours after first being written: this was
+        // pinned to "grok-4", which xAI's own model list does not contain —
+        // ANY request would have failed the moment someone added a key.
+        // The published ids are grok-4.5 / grok-4.3 / grok-4.20-0309-*, and
+        // xAI names 4.5 the current default ("the most intelligent and
+        // fastest model we've built"). The first pin was written from
+        // memory of the product NAME rather than read off the docs, which
+        // is exactly the failure the "measure, don't assume" rule exists to
+        // catch — and it survived because no key exists to fail against.
+        //
+        // Still UNVERIFIED against a live `/v1/models` read: read off
+        // documentation, not measured, unlike every other pin here. xAI
+        // rotates ids (Venice's own comment notes the same risk for the
+        // same reason), and 4.5's ".5" suffix suggests a faster cadence
+        // than most. `-byokProbe` against a real key is the check.
+        case .grok:       "grok-4.5"
         }
     }
 

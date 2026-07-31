@@ -11001,6 +11001,26 @@ one leak path was a keyed tap on a draft that turns out to be a navigation
 command, which never sets `inFlight` true at all and would otherwise strand
 the flag for some later, unrelated ask's settle to spuriously fire on.
 
+### Correction, hours later: the pinned model didn't exist
+
+`AgentProvider.grok.model` shipped in build 208 as `"grok-4"`. xAI publishes
+no such id — the list is `grok-4.5` / `grok-4.3` / `grok-4.20-0309-*` /
+`grok-build-0.1`, with 4.5 named the current default. Every "Try with your
+key" on Grok would have failed (honestly — the request errors, the badge
+correctly credits the on-device model — but the feature simply would not
+work).
+
+The pin was written from memory of the product NAME rather than read off the
+docs. That is precisely the failure the "measure, don't assume" rule exists
+to prevent, and it survived review because there is no Grok key in this
+session to fail against — the same absence that already made the model pin
+"UNVERIFIED" in the first place. Corrected to `grok-4.5`; Mac build 209 was
+killed mid-archive before upload rather than shipping the same defect twice.
+
+The general lesson, worth more than the fix: an UNVERIFIED tag is not a
+substitute for reading the source. Where a value can be looked up — and a
+published model list can — looking it up is the cheap half of "measure."
+
 ### Verification
 
 Build clean; `catalog-sync.sh`, `swiftdata-liveness-audit.py` and
