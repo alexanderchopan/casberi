@@ -178,6 +178,12 @@ struct PredictionBrowseSection: View {
     /// load so each row can mark itself followed without its own fetch.
     @State private var followedRefs: Set<String> = []
     @State private var loaded = false
+    /// Bumped by the empty state's Retry — `.task(id:)` only re-fires when
+    /// its id string actually CHANGES, so a genuine one-off failure (the
+    /// first-ever load hitting a real network blip, not the cancellation
+    /// race the id already covers) had no way to try again short of leaving
+    /// and re-entering the room. Folded into that same id string below.
+    @State private var retryToken = 0
 
     /// The other exchange's price for the market just followed (prd §234) —
     /// the ON-RAMP to the comparison, and the only path to it for someone
@@ -329,9 +335,24 @@ struct PredictionBrowseSection: View {
             if !loaded && visible.isEmpty {
                 ForEach(0..<3, id: \.self) { _ in bookSkeleton }
             } else if loaded && visible.isEmpty {
-                Text(emptyLine)
-                    .dsText(.callout15).foregroundStyle(DS.textTertiary)
-                    .padding(.vertical, DS.Space.s3)
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    Text(emptyLine)
+                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                    // Only when there's actually something to retry — a
+                    // query or category that's simply too narrow has no
+                    // retry that would change the answer.
+                    if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, category == nil {
+                        Button {
+                            DSHaptic.tap()
+                            retryToken += 1
+                        } label: {
+                            Text("Try again").dsText(.subhead13).fontWeight(.semibold)
+                                .foregroundStyle(DS.tint)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.vertical, DS.Space.s3)
             } else {
                 ForEach(visible) { card in
                     browseCard(card)
@@ -341,7 +362,7 @@ struct PredictionBrowseSection: View {
         // Re-runs on scope, category AND query — each is a different read of
         // the book, and both bridges' `search` already takes all three
         // (`query`'s own debounce lives in `debouncedSearch`).
-        .task(id: "\(scope.rawValue)|\(category ?? "")|\(query)") { await loadIfNeeded() }
+        .task(id: "\(scope.rawValue)|\(category ?? "")|\(query)|\(retryToken)") { await loadIfNeeded() }
     }
 
     private func categoryChip(_ value: String?, label: String) -> some View {
@@ -380,20 +401,44 @@ struct PredictionBrowseSection: View {
             ? PolymarketBridge.search(q, limit: 24, category: category) : []
         async let kc: [String] = (scope == .kalshi || scope == .all) ? KalshiWatch.categories() : []
         async let pc: [String] = (scope == .polymarket || scope == .all) ? PolymarketBridge.categories() : []
+        // Gathered into LOCALS, not committed yet — see the cancellation
+        // guard below for why (2026-07-30, the "couldn't pull the market
+        // book" report).
+        let kRows = await k
+        let pRows = await p
+        let kCats = await kc
+        let pCats = await pc
+        let pairs = scope == .all ? await PredictionDisagreement.find(among: kRows) : []
+
+        // The bug this fixes: `.task(id:)` cancels the PREVIOUS
+        // `loadIfNeeded` the instant scope/category/query changes, but
+        // Swift does not abort a running function on cancellation — it
+        // only makes `await`s on cancellable work (like `URLSession
+        // .data(for:)`, inside `IngestSupport.run`) return nil/throw. So a
+        // STALE call, cancelled mid-flight, finishes with an empty or
+        // partial result and — without this guard — would go on to
+        // overwrite `kalshiRows`/`polymarketRows` with that emptiness
+        // regardless of whether a NEWER call (for whatever the user
+        // actually tapped) already landed the real book. Whichever
+        // `loadIfNeeded` finishes LAST wins, and the stale, cancelled one
+        // usually finishes fastest (its own network calls returned nil
+        // almost immediately), so it routinely stomped a live category's
+        // correct data with "nothing" a moment later — reading as a dead
+        // Kalshi connection on a perfectly healthy one. ONE check, after
+        // every await in this function and before the first write, makes a
+        // superseded call a true no-op instead of a silent regression.
+        guard !Task.isCancelled else { return }
+
         // A followed market STAYS in the book, marked (2026-07-29) — it used
         // to be filtered out, which quietly shrank the list under you and
         // left nowhere to go back to the thing you'd just followed.
         followedRefs = IngestSupport.existingSourceRefs(modelContext, source: "Kalshi")
             .union(IngestSupport.existingSourceRefs(modelContext, source: "Polymarket"))
-        kalshiRows = await k
-        polymarketRows = await p
-        kalshiCategories = await kc
-        polymarketCategories = await pc
-        if scope == .all {
-            disagreements = await PredictionDisagreement.find(among: kalshiRows)
-        } else {
-            disagreements = []
-        }
+        kalshiRows = kRows
+        polymarketRows = pRows
+        kalshiCategories = kCats
+        polymarketCategories = pCats
+        disagreements = pairs
         loaded = true
     }
 

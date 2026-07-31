@@ -10585,3 +10585,42 @@ trusting, each named at its own call site and each failing SAFE:
 2. which signer endpoint carries REMOVES, the `events` envelope key, and
    whether `blockTimestamp` is seconds;
 3. the `SignedKeyRequestMetadata` ABI offset.
+
+## §237 — The "couldn't pull the market book" bug was a race, not an outage (2026-07-30)
+
+User reported seeing Kalshi's "couldn't reach the market book" message a
+few times. Measured Kalshi's real API directly (discovery pages, a 12-call
+hydration burst at the app's own concurrency) before assuming anything —
+all green, sub-200ms, no rate-limiting. The actual cause was in
+`PredictionBrowseSection.loadIfNeeded`, not the network.
+
+`.task(id: "\(scope)|\(category)|\(query)")` cancels the PREVIOUS
+`loadIfNeeded` call the instant any of those change — a category tap, the
+venue switcher, a keystroke. But Swift does not abort a running `async`
+function just because its Task was cancelled; it only makes cancellable
+`await`s (here, `URLSession.data(for:)` inside `IngestSupport.run`) return
+nil early. Nothing in `loadIfNeeded` checked `Task.isCancelled`, so a STALE
+call — cancelled mid-flight, its own network calls returning nil almost
+instantly — ran to completion and unconditionally overwrote `kalshiRows`/
+`polymarketRows`/`loaded` with that emptiness, regardless of whether a
+NEWER call (for whatever the user actually tapped) had already landed the
+real book or was still legitimately in flight. Whichever call finishes
+LAST wins by construction, and the cancelled one usually finishes first —
+so tapping a category while the previous load was still resolving would
+routinely stomp correct, live data with "nothing" a moment later. Reads
+exactly like a dead Kalshi connection on a perfectly healthy one, and only
+"a few times" because it's a genuine race — it needs two loads to overlap
+in flight, which normal browsing produces intermittently, not reliably.
+
+Fixed by gathering every awaited result into LOCALS first, then ONE
+`guard !Task.isCancelled else { return }` before the first write to
+`@State` — a superseded call becomes a true no-op instead of a silent
+regression.
+
+Separately: even a genuine one-off failure (the very first load hitting a
+real transient blip) had no retry path, since `.task(id:)` only re-fires
+when its id string changes — nothing the user could tap would change
+scope/category/query just to retry. Added `retryToken`, folded into the id
+string, bumped by a "Try again" button on the empty state — shown only
+when there's actually something to retry (an empty query and no category;
+a too-narrow filter has no retry that would change the answer).
