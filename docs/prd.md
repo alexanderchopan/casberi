@@ -10585,3 +10585,41 @@ trusting, each named at its own call site and each failing SAFE:
 2. which signer endpoint carries REMOVES, the `events` envelope key, and
    whether `blockTimestamp` is seconds;
 3. the `SignedKeyRequestMetadata` ABI offset.
+
+## §240 — NFTs in folders, and the eager owned-NFT read behind them: both recorded, neither built (user: "nft are passé now", then "what is the purpose of doing this", 2026-07-31)
+
+Two noes from one conversation, recorded so neither is rediscovered from scratch.
+
+**NFTs in folders.** Asked whether the app could show a wallet's NFTs and let
+someone check them into folders. The display half is a revival, not new work —
+§72/§124's NFT strip shipped once and its renderer (`GenMediaShelf`) is still
+in the tree — but the folder half is exactly the surface §178 and §229 retired:
+the person never files. Dropped by the user before a ruling was needed, so this
+records the SHAPE rather than settling it. If NFTs ever return: the collection
+is the folder (computed grouping, the treemap idiom, zero taps), and a manual
+folder is a §178 reversal to be made deliberately — not shipped as a side
+effect of adding a picture grid.
+
+**The cost finding it turned up.** `WalletIngest.ownedNFTContracts` (`:294`)
+fires on EVERY wallet refresh, eager and unwindowed — 5 networks × every
+watched EVM address, paging up to 5 requests each — to build a spam allowlist
+with exactly two consumers, both filters that only fire when something
+NFT-shaped actually arrives: the received-ERC-721/1155 check (`:348`) and
+`WalletApprovals`' `ApprovalForAll` check (`:430`). On a quiet refresh nothing
+reads the set, and most refreshes are quiet. The fix would be LAZY, not a
+§216-style window: a memoized per-pass provider awaited only inside the
+branches that judge, which pays zero on the common quiet pass and leaves both
+fail directions untouched (transfers fail OPEN, approvals fail CLOSED — they
+differ on purpose, and a window would have preserved that too; laziness is
+simply the bigger cut).
+
+**Not built, and the reason IS the entry.** There is no measured number behind
+it. §216's window was earned by real math — Zerion's 60k/month against ~300
+calls per user per month, a ceiling around 200 users. Nothing equivalent was
+ever measured for the Alchemy NFT endpoints, and the latency case is one
+awaited stage in a pass that already fans out a Zerion call per wallet plus
+`addresses × chains × 2` transfer requests. "Wasteful" is not the same as
+"worth the time," and the proposal skipped the step between them. Revisit on
+either real signal: Alchemy's dashboard showing NFT-API burn, or someone
+saying the wallet room is slow to refresh. Both are cheap to detect later;
+neither is worth pre-empting.
