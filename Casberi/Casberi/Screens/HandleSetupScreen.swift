@@ -261,17 +261,20 @@ enum HandleBridge: String {
             case .likes:    FarcasterStore.shared.setLikes(on, for: name)
             case .recasts:  FarcasterStore.shared.setRecasts(on, for: name)
             case .mentions: FarcasterStore.shared.setMentions(on, for: name)
+            case .mine:     FarcasterStore.shared.setMine(on, for: name)
             }
         case .nostr:
             switch kind {
             case .likes:    NostrStore.shared.setLikes(on, for: name)
             case .mentions: NostrStore.shared.setMentions(on, for: name)
             case .recasts:  break   // NIP-18 reposts aren't read yet
+            case .mine:     break   // no inbound reads on Nostr yet
             }
         case .bluesky:
             switch kind {
             case .recasts:  BlueskyStore.shared.setRecasts(on, for: name)
             case .mentions: BlueskyStore.shared.setMentions(on, for: name)
+            case .mine:     BlueskyStore.shared.setMine(on, for: name)
             case .likes:    break   // getActorLikes is auth-only — no keyless read
             }
         default: break
@@ -281,8 +284,8 @@ enum HandleBridge: String {
     /// The line under the watched-accounts list, explaining its toggles.
     var watchFooter: String? {
         switch self {
-        case .farcaster: "Likes — also saves the casts an account has liked. Recasts — also saves what they rebroadcast. Mentions — also saves casts that name them."
-        case .bluesky:   "Reposts — also saves what an account rebroadcasts. Mentions — also saves posts that name them, replies and quotes included."
+        case .farcaster: "Likes — also saves the casts an account has liked. Recasts — also saves what they rebroadcast. Mentions — also saves casts that name them. Mine — this account is yours: replies to your casts land, new followers arrive, and a like from someone you watch brings your cast back."
+        case .bluesky:   "Reposts — also saves what an account rebroadcasts. Mentions — also saves posts that name them, replies and quotes included. Mine — this account is yours: replies to your posts land, new followers arrive, and a like from someone you watch brings your post back."
         case .nostr:     "Likes — also saves notes an account has reacted to. Mentions — also saves notes that name them."
         default:         nil
         }

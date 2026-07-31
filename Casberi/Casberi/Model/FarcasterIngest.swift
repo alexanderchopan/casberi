@@ -40,6 +40,11 @@ final class FarcasterStore {
         /// Watch MENTIONS of them — casts naming this account land, so
         /// "while I was away" can answer with who talked to you.
         var mentions = false
+        /// This account is YOURS (2026-07-31) — the flag the bridge never had
+        /// (prd §221 named its absence). It turns on the INBOUND reads in
+        /// `SocialInbound`: who replied to you, who liked your casts, who
+        /// started following you. Nothing about it changes the outbound reads.
+        var mine = false
         /// The Ethereum addresses this fid has verified onchain (2026-07-15) —
         /// resolved once from the keyless node's `verificationsByFid`, cached
         /// like the fid. Powers the wallet↔Farcaster join: "Watch their wallet"
@@ -66,6 +71,7 @@ final class FarcasterStore {
             likes = try c.decodeIfPresent(Bool.self, forKey: .likes) ?? false
             recasts = try c.decodeIfPresent(Bool.self, forKey: .recasts) ?? false
             mentions = try c.decodeIfPresent(Bool.self, forKey: .mentions) ?? false
+            mine = try c.decodeIfPresent(Bool.self, forKey: .mine) ?? false
             verifiedAddresses = try c.decodeIfPresent([String].self, forKey: .verifiedAddresses) ?? []
         }
     }
@@ -141,10 +147,18 @@ final class FarcasterStore {
         return fresh.count
     }
 
-    func remove(_ username: String) { accounts.removeAll { $0.username == username } }
+    func remove(_ username: String) {
+        accounts.removeAll { $0.username == username }
+        SocialInbound.FollowerLedger.forget(key: Self.followerLedgerKey(username))
+    }
 
-    /// Teardown clears the whole connection — people and channels both.
+    /// Teardown clears the whole connection — people and channels both, plus
+    /// every follower ledger, so reconnecting seeds fresh instead of
+    /// announcing a year of arrivals as today's news.
     func removeAll() {
+        for account in accounts {
+            SocialInbound.FollowerLedger.forget(key: Self.followerLedgerKey(account.username))
+        }
         accounts = []
         channels = []
     }
@@ -190,6 +204,22 @@ final class FarcasterStore {
     func setMentions(_ on: Bool, for username: String) {
         guard let i = accounts.firstIndex(where: { $0.username == username }) else { return }
         accounts[i].mentions = on
+    }
+
+    func setMine(_ on: Bool, for username: String) {
+        guard let i = accounts.firstIndex(where: { $0.username == username }) else { return }
+        accounts[i].mine = on
+        // Turning it OFF forgets the follower ledger, so turning it back on
+        // seeds fresh rather than announcing everyone who arrived meanwhile
+        // as today's news.
+        if !on { SocialInbound.FollowerLedger.forget(key: Self.followerLedgerKey(username)) }
+    }
+
+    /// Where one account's seen-followers ledger lives. Keyed on the USERNAME
+    /// (stable, and what every other per-account key here uses) rather than the
+    /// fid, which is 0 until the first resolve.
+    static func followerLedgerKey(_ username: String) -> String {
+        "farcaster.followers.\(username)"
     }
 
     /// Caches an fid's verified onchain addresses (lowercased), once resolved —
@@ -239,7 +269,8 @@ final class FarcasterStore {
                 avatarURL: a.avatarURL,
                 watches: [SocialWatch(kind: .likes, on: a.likes),
                           SocialWatch(kind: .recasts, on: a.recasts),
-                          SocialWatch(kind: .mentions, on: a.mentions)])
+                          SocialWatch(kind: .mentions, on: a.mentions),
+                          SocialWatch(kind: .mine, on: a.mine)])
         }
     }
 
@@ -435,6 +466,10 @@ enum FarcasterIngest {
                 added += await landMentions(of: fid, existing: &existing, landed: landed,
                                             backfill: backfill, context: context)
             }
+            if account.mine {
+                added += await landInbound(account: account, fid: fid, existing: &existing,
+                                           landed: landed, backfill: backfill, context: context)
+            }
         }
 
         for channel in store.channels {
@@ -574,6 +609,157 @@ enum FarcasterIngest {
     /// nothing. Reset per refresh, like `healed`, under the same single-flight
     /// `running` guard.
     @MainActor private(set) static var resurfaced = 0
+
+    // MARK: - Inbound: what happened to YOU (2026-07-31)
+
+    /// The three inbound reads for an account marked `mine` — replies to your
+    /// casts, likes on them, and new followers. See `SocialInbound` for why
+    /// this half existed nowhere before and what doctrine bounds it.
+    ///
+    /// Returns how many THINGS landed. Likes contribute none by design (a
+    /// count is a property of your cast, never a record of its own); they show
+    /// up as a filled `likeCount`, a resurfaced cast, and a moment.
+    @MainActor
+    private static func landInbound(account: FarcasterStore.Account, fid: Int,
+                                    existing: inout Set<String>, landed: [String: Thing],
+                                    backfill: ArtlessBackfill,
+                                    context: ModelContext) async -> Int {
+        let mine = SocialInbound.ownRecentPosts(landed, handle: account.username,
+                                                refPrefix: "fc:")
+        var added = 0
+        for cast in mine {
+            guard cast.isLive, let ref = cast.sourceRef else { continue }
+            let hash = String(ref.dropFirst(3))
+            added += await landReplies(to: hash, fid: fid, existing: &existing,
+                                       landed: landed, backfill: backfill, context: context)
+            await readLikes(on: cast, hash: hash, fid: fid)
+        }
+        added += await landFollowers(account: account, fid: fid,
+                                     existing: &existing, context: context)
+        return added
+    }
+
+    /// The replies under one of YOUR casts, landed as things.
+    ///
+    /// This is the read `castsByMention` structurally cannot make: a Farcaster
+    /// reply carries a `parentCastId`, not a mention, so answering someone
+    /// never names them. Before this, "did anyone answer me?" had no source.
+    @MainActor
+    private static func landReplies(to hash: String, fid: Int, existing: inout Set<String>,
+                                    landed: [String: Thing], backfill: ArtlessBackfill,
+                                    context: ModelContext) async -> Int {
+        guard let root = await IngestSupport.getJSON(
+            "\(node)/v1/castsByParent?fid=\(fid)&hash=\(hash)&pageSize=25") as? [String: Any],
+              let messages = root["messages"] as? [[String: Any]] else { return 0 }
+        // Your own replies in your own thread are not someone replying to you
+        // — they'd land wearing "Replied to you", pointing at yourself.
+        let others = messages.filter {
+            (($0["data"] as? [String: Any])?["fid"] as? Int) != fid
+        }
+        // The node serves ~2× the asked page (the channel read's measured
+        // quirk) — cap so one popular cast can't flood a refresh.
+        return await landPage(Array(others.prefix(25)), why: "reply", existing: &existing,
+                              landed: landed, backfill: backfill, context: context)
+    }
+
+    /// Who liked one of YOUR casts. Fills the cast's own `likeCount` — the
+    /// count is a PROPERTY of the cast, never a thing of its own (the module
+    /// doctrine's plainest case) — and does the two things a name makes
+    /// possible: resurfaces the cast when the liker is someone you watch, and
+    /// says so once, out loud.
+    ///
+    /// Snapchain reports no totals, only reaction MESSAGES, so the count is a
+    /// page's size and a full page means "at least this many" — `SocialCount`'s
+    /// honesty valve. `Thing.likeCount` is a bare Int with nowhere to carry
+    /// `atLeast`, so a FULL page is deliberately left unwritten rather than
+    /// stored as a total nobody counted.
+    @MainActor
+    private static func readLikes(on cast: Thing, hash: String, fid: Int) async {
+        guard let root = await IngestSupport.getJSON(
+            "\(node)/v1/reactionsByCast?target_fid=\(fid)&target_hash=\(hash)"
+            + "&reaction_type=Like&pageSize=\(reactionPage)") as? [String: Any],
+              let messages = root["messages"] as? [[String: Any]] else { return }
+        guard cast.isLive else { return }   // the pass awaited; a heal may have landed
+        if messages.count < reactionPage, cast.likeCount != messages.count {
+            cast.likeCount = messages.count
+            healed = true
+        }
+        // Names, not numbers: a liker you WATCH is a person the corpus knows,
+        // and their like is the sharpest signal this network produces.
+        let watched = Dictionary(
+            FarcasterStore.shared.accounts.filter { $0.fid != 0 }.map { ($0.fid, $0.username) },
+            uniquingKeysWith: { first, _ in first })
+        for message in messages {
+            guard let data = message["data"] as? [String: Any],
+                  let likerFid = data["fid"] as? Int, likerFid != fid,
+                  let liker = watched[likerFid] else { continue }
+            let when = (data["timestamp"] as? Double).map { epoch.addingTimeInterval($0) }
+            // §221 from the other direction: that ruling surfaces your post
+            // when the liker's OWN likes are being read; this surfaces it
+            // whenever they liked it, read from your cast's side. Same
+            // restamp, same three guards, so the two can't disagree.
+            resurface(cast, reactedAt: when)
+            if (when ?? .now).timeIntervalSinceNow > -SocialInbound.newsWindow {
+                SourceMoments.shared.fire(
+                    String(localized: "@\(liker) liked your cast"), source: "Farcaster")
+            }
+        }
+    }
+
+    /// Who started following you since the last pass. First sight seeds the
+    /// ledger SILENTLY — watching yourself must not land your whole follower
+    /// list as today's news.
+    ///
+    /// `linksByTargetFid` answers the graph from the TARGET's side: link
+    /// messages whose own `fid` is the follower. That's the one direction
+    /// `SocialFollows` doesn't read (it walks who a person follows, outbound,
+    /// through the client API), and it's keyless on the same node as
+    /// everything else here.
+    @MainActor
+    private static func landFollowers(account: FarcasterStore.Account, fid: Int,
+                                      existing: inout Set<String>,
+                                      context: ModelContext) async -> Int {
+        guard let root = await IngestSupport.getJSON(
+            "\(node)/v1/linksByTargetFid?target_fid=\(fid)&link_type=follow"
+            + "&pageSize=25&reverse=true") as? [String: Any],
+              let messages = root["messages"] as? [[String: Any]] else { return 0 }
+        var followers: [(fid: Int, when: Date?)] = []
+        for message in messages {
+            guard let data = message["data"] as? [String: Any],
+                  let followerFid = data["fid"] as? Int, followerFid != fid else { continue }
+            followers.append((followerFid,
+                              (data["timestamp"] as? Double).map { epoch.addingTimeInterval($0) }))
+        }
+        guard !followers.isEmpty else { return 0 }
+
+        var ledger = SocialInbound.FollowerLedger(
+            key: FarcasterStore.followerLedgerKey(account.username))
+        let firstSight = ledger.isFirstSight
+        let fresh = ledger.newcomers(in: followers.map { String($0.fid) })
+        ledger.record(followers.map { String($0.fid) })
+        guard !firstSight, !fresh.isEmpty else { return 0 }
+
+        let freshFids = fresh.compactMap(Int.init)
+        await prefetchProfiles(freshFids)
+        var added = 0
+        for followerFid in freshFids.prefix(SocialInbound.followerLandCap) {
+            guard let who = await profile(fid: followerFid),
+                  let username = who.username, !username.isEmpty else { continue }
+            let when = followers.first { $0.fid == followerFid }?.when
+            guard SocialInbound.landFollower(
+                id: String(followerFid), handle: username, displayName: who.displayName,
+                avatarURL: who.avatarURL,
+                profileURL: "https://farcaster.xyz/\(username)",
+                when: when, source: "Farcaster", existing: &existing, context: context) != nil
+            else { continue }
+            added += 1
+            if (when ?? .now).timeIntervalSinceNow > -SocialInbound.newsWindow {
+                SourceMoments.shared.fire(
+                    String(localized: "@\(username) started following you"), source: "Farcaster")
+            }
+        }
+        return added
+    }
 
     /// Casts by OTHERS that name this account — replies included, since a
     /// mention usually is one. New ones ride "while I was away" like any

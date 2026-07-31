@@ -169,6 +169,8 @@ enum SocialThread {
         case "liked":   return String(localized: "Liked")
         case "recast":  return recastWord(thing.source)
         case "mention": return String(localized: "Mentions you")
+        case "reply":   return String(localized: "Replied to you")
+        case "follow":  return String(localized: "Followed you")
         default:        return nil
         }
     }
@@ -206,6 +208,8 @@ enum SocialThread {
                 ? String(localized: "recast by an account you watch")
                 : String(localized: "reposted by an account you watch")
         case "mention": return String(localized: "mentions you")
+        case "reply":   return String(localized: "replied to you")
+        case "follow":  return String(localized: "started following you")
         default:        return nil
         }
     }
@@ -392,7 +396,13 @@ enum SocialPeople {
 /// the capability a bridge offers per account. Bluesky offers Reposts and
 /// Mentions (likes need sign-in); Farcaster offers all three.
 struct SocialWatch: Identifiable, Equatable {
-    enum Kind: String { case likes = "Likes", recasts = "Recasts", mentions = "Mentions" }
+    /// `mine` is the odd one out and stays here anyway: it's the same gesture
+    /// (a switch on a person, in the same strip) and it reads as one to the
+    /// person flipping it. What it turns on is the INBOUND half — see
+    /// `SocialInbound` — rather than another thing to fetch about them.
+    enum Kind: String {
+        case likes = "Likes", recasts = "Recasts", mentions = "Mentions", mine = "Mine"
+    }
     let kind: Kind
     let on: Bool
     /// The word THIS network uses for the kind — Farcaster recasts, Bluesky

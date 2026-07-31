@@ -33,6 +33,11 @@ final class BlueskyStore {
         /// Watch MENTIONS of them — posts naming this account land, so
         /// "while I was away" can answer with who talked to you.
         var mentions = false
+        /// This account is YOURS (2026-07-31) — turns on the INBOUND reads in
+        /// `SocialInbound`: who replied, who liked your posts, who started
+        /// following you. All three are keyless on the AppView, so unlike
+        /// likes-you-gave this half needs no sign-in.
+        var mine = false
 
         init(handle: String) { self.handle = handle }
 
@@ -47,6 +52,7 @@ final class BlueskyStore {
             avatarURL = try c.decodeIfPresent(String.self, forKey: .avatarURL)
             recasts = try c.decodeIfPresent(Bool.self, forKey: .recasts) ?? false
             mentions = try c.decodeIfPresent(Bool.self, forKey: .mentions) ?? false
+            mine = try c.decodeIfPresent(Bool.self, forKey: .mine) ?? false
         }
     }
 
@@ -141,10 +147,18 @@ final class BlueskyStore {
         return fresh.count
     }
 
-    func remove(_ handle: String) { accounts.removeAll { $0.handle == handle } }
+    func remove(_ handle: String) {
+        accounts.removeAll { $0.handle == handle }
+        SocialInbound.FollowerLedger.forget(key: Self.followerLedgerKey(handle))
+    }
 
-    /// Teardown clears the whole connection — people and feeds both.
+    /// Teardown clears the whole connection — people and feeds both, plus
+    /// every follower ledger, so reconnecting seeds fresh instead of
+    /// announcing a year of arrivals as today's news.
     func removeAll() {
+        for account in accounts {
+            SocialInbound.FollowerLedger.forget(key: Self.followerLedgerKey(account.handle))
+        }
         accounts = []
         feeds = []
     }
@@ -169,6 +183,17 @@ final class BlueskyStore {
         guard let i = accounts.firstIndex(where: { $0.handle == handle }) else { return }
         accounts[i].mentions = on
     }
+
+    func setMine(_ on: Bool, for handle: String) {
+        guard let i = accounts.firstIndex(where: { $0.handle == handle }) else { return }
+        accounts[i].mine = on
+        // Off forgets the follower ledger, so back on seeds fresh instead of
+        // announcing everyone who arrived meanwhile as today's news.
+        if !on { SocialInbound.FollowerLedger.forget(key: Self.followerLedgerKey(handle)) }
+    }
+
+    /// Where one account's seen-followers ledger lives.
+    static func followerLedgerKey(_ handle: String) -> String { "bluesky.followers.\(handle)" }
 
     /// The name a post's row shows. Your ONE watched mirror stays unlabeled
     /// (redundant); everything else — several accounts, or a mentioner who
@@ -197,7 +222,8 @@ final class BlueskyStore {
                 subtitle: SocialAccount.subtitle(handle: "@\(Self.short(a.handle))", bio: a.bio),
                 avatarURL: a.avatarURL,
                 watches: [SocialWatch(kind: .recasts, on: a.recasts, word: "Reposts"),
-                          SocialWatch(kind: .mentions, on: a.mentions)])
+                          SocialWatch(kind: .mentions, on: a.mentions),
+                          SocialWatch(kind: .mine, on: a.mine)])
         }
     }
 
@@ -308,6 +334,10 @@ enum BlueskyIngest {
                 added += await landMentions(of: handle, existing: &existing, landed: landed,
                                             backfill: backfill, context: context)
             }
+            if account.mine {
+                added += await landInbound(handle: handle, existing: &existing, landed: landed,
+                                           backfill: backfill, context: context)
+            }
         }
 
         for feed in store.feeds {
@@ -322,6 +352,140 @@ enum BlueskyIngest {
         // means the connection is good.
         guard anyResolved else { return nil }
         if added > 0 || backfill.any || touched || healed { context.saveHonestly() }
+        return added
+    }
+
+    // MARK: - Inbound: what happened to YOU (2026-07-31)
+
+    /// The three inbound reads for an account marked `mine` — replies to your
+    /// posts, likes on them, and new followers. See `SocialInbound` for the
+    /// doctrine; the Farcaster arm is `FarcasterIngest.landInbound`, and the
+    /// two are deliberately the same shape.
+    ///
+    /// Every endpoint here is on the AppView's UNAUTHENTICATED host. That's
+    /// the happy divergence from likes-you-gave, which stays unbuilt because
+    /// `getActorLikes` needs an app password: what happens TO you is public
+    /// on Bluesky even though what you did is not.
+    @MainActor
+    private static func landInbound(handle: String, existing: inout Set<String>,
+                                    landed: [String: Thing], backfill: ArtlessBackfill,
+                                    context: ModelContext) async -> Int {
+        let mine = SocialInbound.ownRecentPosts(landed, handle: handle, refPrefix: "bsky:")
+        var added = 0
+        for post in mine {
+            guard post.isLive, let ref = post.sourceRef else { continue }
+            let uri = String(ref.dropFirst("bsky:".count))
+            added += await landReplies(to: uri, ownHandle: handle, existing: &existing,
+                                       landed: landed, backfill: backfill, context: context)
+            await readLikes(on: post, uri: uri, ownHandle: handle)
+        }
+        added += await landFollowers(handle: handle, existing: &existing, context: context)
+        return added
+    }
+
+    /// The replies under one of YOUR posts, landed as things. `searchPosts
+    /// mentions:` can't see these — a Bluesky reply names its parent in the
+    /// record, not in the text, so answering someone never mentions them.
+    @MainActor
+    private static func landReplies(to uri: String, ownHandle: String,
+                                    existing: inout Set<String>, landed: [String: Thing],
+                                    backfill: ArtlessBackfill,
+                                    context: ModelContext) async -> Int {
+        var comps = URLComponents(string: "\(host)/app.bsky.feed.getPostThread")!
+        comps.queryItems = [URLQueryItem(name: "uri", value: uri),
+                            URLQueryItem(name: "depth", value: "1")]
+        guard let url = comps.url,
+              let root = await IngestSupport.getJSON(url) as? [String: Any],
+              let thread = root["thread"] as? [String: Any],
+              let raw = thread["replies"] as? [[String: Any]] else { return 0 }
+        // A blocked or deleted reply comes back as a stub with no `post` —
+        // compactMap drops those. Your OWN replies in your own thread aren't
+        // someone replying to you, so they go too.
+        let posts = raw.compactMap { $0["post"] as? [String: Any] }
+            .filter { (($0["author"] as? [String: Any])?["handle"] as? String) != ownHandle }
+        guard !posts.isEmpty else { return 0 }
+        return await landPage(posts, why: "reply", existing: &existing, landed: landed,
+                              backfill: backfill, context: context)
+    }
+
+    /// Who liked one of YOUR posts. The AppView already hydrates an exact
+    /// `likeCount` on every post view (that's what `applyCounts` stores), so
+    /// unlike the Farcaster arm this read is not about the NUMBER at all — it
+    /// is only ever about the NAMES, which the count can never carry: a like
+    /// from someone you watch resurfaces the post and says so once.
+    @MainActor
+    private static func readLikes(on post: Thing, uri: String, ownHandle: String) async {
+        var comps = URLComponents(string: "\(host)/app.bsky.feed.getLikes")!
+        comps.queryItems = [URLQueryItem(name: "uri", value: uri),
+                            URLQueryItem(name: "limit", value: "100")]
+        guard let url = comps.url,
+              let root = await IngestSupport.getJSON(url) as? [String: Any],
+              let likes = root["likes"] as? [[String: Any]] else { return }
+        guard post.isLive else { return }   // the pass awaited; a heal may have landed
+        let watched = Set(BlueskyStore.shared.accounts.map(\.handle))
+        for like in likes {
+            guard let actor = like["actor"] as? [String: Any],
+                  let liker = actor["handle"] as? String,
+                  liker != ownHandle, watched.contains(liker) else { continue }
+            let when = IngestSupport.isoDate(like["createdAt"])
+                ?? IngestSupport.isoDate(like["indexedAt"])
+            resurface(post, reactedAt: when)
+            if (when ?? .now).timeIntervalSinceNow > -SocialInbound.newsWindow {
+                SourceMoments.shared.fire(
+                    String(localized: "@\(BlueskyStore.short(liker)) liked your post"),
+                    source: "Bluesky")
+            }
+        }
+    }
+
+    /// Who started following you since the last pass. First sight seeds the
+    /// ledger SILENTLY.
+    ///
+    /// The AppView returns followers newest-first but carries NO follow
+    /// timestamp anywhere in the payload — which is exactly why
+    /// `SocialInbound.FollowerLedger` is a set rather than a cursor, and why a
+    /// landed follower here is stamped `.now` (when you learned of it) rather
+    /// than with a date the network never told us.
+    @MainActor
+    private static func landFollowers(handle: String, existing: inout Set<String>,
+                                      context: ModelContext) async -> Int {
+        var comps = URLComponents(string: "\(host)/app.bsky.graph.getFollowers")!
+        comps.queryItems = [URLQueryItem(name: "actor", value: handle),
+                            URLQueryItem(name: "limit", value: "50")]
+        guard let url = comps.url,
+              let root = await IngestSupport.getJSON(url) as? [String: Any],
+              let followers = root["followers"] as? [[String: Any]] else { return 0 }
+        let byDID = Dictionary(
+            followers.compactMap { profile -> (String, [String: Any])? in
+                guard let did = profile["did"] as? String else { return nil }
+                return (did, profile)
+            }, uniquingKeysWith: { first, _ in first })
+        let order = followers.compactMap { $0["did"] as? String }
+        guard !order.isEmpty else { return 0 }
+
+        var ledger = SocialInbound.FollowerLedger(key: BlueskyStore.followerLedgerKey(handle))
+        let firstSight = ledger.isFirstSight
+        let fresh = ledger.newcomers(in: order)
+        ledger.record(order)
+        guard !firstSight, !fresh.isEmpty else { return 0 }
+
+        var added = 0
+        for did in fresh.prefix(SocialInbound.followerLandCap) {
+            guard let profile = byDID[did],
+                  let followerHandle = profile["handle"] as? String,
+                  !followerHandle.isEmpty else { continue }
+            guard SocialInbound.landFollower(
+                id: did, handle: BlueskyStore.short(followerHandle),
+                displayName: profile["displayName"] as? String,
+                avatarURL: IngestSupport.imageURL(profile["avatar"] as? String),
+                profileURL: "https://bsky.app/profile/\(followerHandle)",
+                when: nil, source: "Bluesky", existing: &existing, context: context) != nil
+            else { continue }
+            added += 1
+            SourceMoments.shared.fire(
+                String(localized: "@\(BlueskyStore.short(followerHandle)) started following you"),
+                source: "Bluesky")
+        }
         return added
     }
 
@@ -372,7 +536,7 @@ enum BlueskyIngest {
             // before. The distinction is the whole point of the stamp.
             let at = IngestSupport.isoDate(reason["indexedAt"])
             guard !existing.contains("bsky:\(uri)") else {
-                resurface(landed["bsky:\(uri)"], repostedAt: at)
+                resurface(landed["bsky:\(uri)"], reactedAt: at)
                 continue
             }
             reposts.append((post, at))
@@ -392,17 +556,19 @@ enum BlueskyIngest {
         return added
     }
 
-    /// Restamps a post the corpus already holds with the moment a watched
-    /// account reposted it — `FarcasterIngest.resurface`, same three guards
-    /// (forward only, news only, live only) and the same convergence argument:
-    /// once `capturedAt` IS the repost's time, the forward-only guard stops
-    /// firing, so no cursor is needed to make it once-only.
+    /// Restamps a post the corpus already holds with the moment someone
+    /// reacted to it — a watched account reposting it (`landReposts`), or
+    /// anyone liking one of YOUR posts (`readLikes`). `FarcasterIngest.
+    /// resurface`, same three guards (forward only, news only, live only) and
+    /// the same convergence argument: once `capturedAt` IS the reaction's
+    /// time, the forward-only guard stops firing, so no cursor is needed to
+    /// make it once-only.
     @MainActor
-    private static func resurface(_ thing: Thing?, repostedAt: Date?) {
-        guard let thing, thing.isLive, let repostedAt,
-              repostedAt > thing.capturedAt,
-              Date.now.timeIntervalSince(repostedAt) < repostNewsWindow else { return }
-        thing.capturedAt = repostedAt
+    private static func resurface(_ thing: Thing?, reactedAt: Date?) {
+        guard let thing, thing.isLive, let reactedAt,
+              reactedAt > thing.capturedAt,
+              Date.now.timeIntervalSince(reactedAt) < repostNewsWindow else { return }
+        thing.capturedAt = reactedAt
         // Joins the refresh's save condition — a pass that only resurfaced
         // landed nothing new, and must still persist what it moved.
         healed = true

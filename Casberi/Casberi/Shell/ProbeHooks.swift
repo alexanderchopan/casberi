@@ -268,6 +268,22 @@ enum ProbeHooks {
                       added.map(String.init) ?? "FAILED")
             }
         },
+        // `-fcMine <username>` marks a watched Farcaster account as YOURS and
+        // syncs — the inbound half (replies to your casts, likes on them, new
+        // followers). The follower ledger seeds SILENTLY on first sight, so
+        // the first run of this reports 0 followers by design and the SECOND
+        // is the one that can land any; `-inboundProbe YES` reports the state
+        // either way.
+        Hook(key: "fcMine") { name, context in
+            let n = FarcasterStore.normalize(name)
+            FarcasterStore.shared.add(n)
+            FarcasterStore.shared.setMine(true, for: n)
+            Task { @MainActor in
+                let added = await FarcasterIngest.refresh(context: context)
+                NSLog("Farcaster mine probe: %@ new things, %d resurfaced",
+                      added.map(String.init) ?? "FAILED", FarcasterIngest.resurfaced)
+            }
+        },
         // `-fcHealProbe YES` runs the delete-sync reconcile headlessly over
         // already-watched accounts and NSLogs how many stale casts it
         // removed. `force: true` bypasses heal's own hourly throttle.
@@ -378,6 +394,47 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-inboundProbe YES` reports the INBOUND half's state across both
+        // networks (2026-07-31) — which accounts are marked yours, how many of
+        // your own recent posts are eligible for the likes/replies reads, how
+        // many followers each ledger has recorded, and what actually landed
+        // wearing each inbound marker. One NSLog per line (the `-todayProbe`
+        // truncation lesson).
+        //
+        // The one check that the whole half works: a count of landed things
+        // alone can't tell "nobody replied" from "the read never ran", and
+        // first-sight follower seeding makes a silent pass the CORRECT first
+        // result — so the ledger size is what says the read happened.
+        Hook(key: "inboundProbe") { _, context in
+            Task { @MainActor in
+                for (source, prefix, mine) in [
+                    ("Farcaster", "fc:",
+                     FarcasterStore.shared.accounts.filter(\.mine).map(\.username)),
+                    ("Bluesky", "bsky:",
+                     BlueskyStore.shared.accounts.filter(\.mine).map(\.handle)),
+                ] {
+                    let landed = IngestSupport.thingsByRef(context, source: source)
+                    NSLog("inbound %@: %d marked mine%@", source, mine.count,
+                          mine.isEmpty ? "" : " — " + mine.joined(separator: ", "))
+                    for handle in mine {
+                        let own = SocialInbound.ownRecentPosts(landed, handle: handle,
+                                                               refPrefix: prefix)
+                        let key = source == "Farcaster"
+                            ? FarcasterStore.followerLedgerKey(handle)
+                            : BlueskyStore.followerLedgerKey(handle)
+                        let ledger = SocialInbound.FollowerLedger(key: key)
+                        NSLog("inbound %@ @%@: %d own posts eligible, %d followers recorded%@",
+                              source, handle, own.count, ledger.seen.count,
+                              ledger.isFirstSight ? " (FIRST SIGHT — next pass can land)" : "")
+                    }
+                    let live = landed.values.filter(\.isLive)
+                    for marker in ["reply", "follow", "recast"] {
+                        NSLog("inbound %@ %@: %d landed", source, marker,
+                              live.filter { $0.socialContext == marker }.count)
+                    }
+                }
+            }
+        },
         // `-socialProbe <Bluesky|Farcaster>` reports what the enrichment
         // actually landed across that source's corpus (2026-07-16) — how many
         // posts carry their full text, pictures, a quote, a parent, a context
@@ -449,6 +506,19 @@ enum ProbeHooks {
             Task { @MainActor in
                 let added = await BlueskyIngest.refresh(context: context)
                 NSLog("Bluesky reposts probe: %@ new things, %d resurfaced",
+                      added.map(String.init) ?? "FAILED", BlueskyIngest.resurfaced)
+            }
+        },
+        // `-bskyMine <handle>` marks a watched Bluesky account as YOURS and
+        // syncs — same inbound half, same silent first-sight seeding as
+        // `-fcMine`.
+        Hook(key: "bskyMine") { name, context in
+            let h = BlueskyStore.normalize(name)
+            BlueskyStore.shared.add(h)
+            BlueskyStore.shared.setMine(true, for: h)
+            Task { @MainActor in
+                let added = await BlueskyIngest.refresh(context: context)
+                NSLog("Bluesky mine probe: %@ new things, %d resurfaced",
                       added.map(String.init) ?? "FAILED", BlueskyIngest.resurfaced)
             }
         },
