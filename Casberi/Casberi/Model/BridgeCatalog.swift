@@ -472,6 +472,22 @@ enum BridgeCatalog {
         Offer(name: "Nostr",       tagline: "Track any Nostr account",               group: "Network",   connectable: true,
               summary: "An open, relay-based protocol — notes are public, so this connects with an npub, a raw pubkey, or a name@domain identifier: your own or anyone's, plus #hashtags by name. An account's reactions and mentions can land too.\n\nNo password, nothing stored but the identity — read from whichever public relays answer.",
               needsSetup: true, added: day(2026, 7, 27)),
+        // Network, beside the open protocols — and the opposite of them
+        // (2026-07-31, prd §245). Farcaster/Bluesky/Nostr connect with a name
+        // because their posts are public; Instagram has no keyless read at
+        // all, so it connects by IMPORT, the ChatGPT grade. The summary states
+        // the split the export itself has rather than letting "your saves"
+        // imply a caption we never receive: what you MADE arrives as text,
+        // what you TAPPED arrives as a named link. Saying that here is the
+        // honesty rule — the alternative is a seat that reads as full search
+        // over your saves and isn't.
+        Offer(name: "Instagram",   tagline: "Your posts and saves, findable",        group: "Network",   connectable: true,
+              summary: "Instagram offers no live read — a personal account has no API at all — so your own export is the way in, the same as ChatGPT and Claude.\n\nWhat you wrote arrives whole: your posts' captions and your comments become findable text. What you saved and liked arrives as named links — the handle and the post, opening back on Instagram.\n\nOne honest caveat: Instagram's export doesn't include other people's captions or pictures, so a saved post lands named for who made it, not for what it said.",
+              features: ["Your captions and comments, as searchable text",
+                         "Saves and likes, named and openable",
+                         "One-time import — re-importing adds only what's new",
+                         "Read on \(DS.device); nothing is sent to Meta"],
+              needsSetup: true, added: day(2026, 7, 31)),
         Offer(name: "Steam",       tagline: "What you play, in your feed",           group: "Games",     connectable: true,
               summary: "Recently played games land in your feed, linking to their store pages.\n\nConnects with a free Steam Web API key and your public profile name — the key stays in \(DS.device)'s Keychain.\n\nRead-only.",
               needsSetup: true),

@@ -11149,3 +11149,81 @@ outright and `developers.tiktok.com` refused the doc fetch. It fails safe in
 every direction — a non-200, an unrecognised shape, or a retired endpoint all
 return nil and leave today's behaviour exactly as it is — but build it and
 walk `-oembedProbe` across all six hosts before trusting a single field.
+
+## §245 — Instagram connects by import, and the offer says which half is real (user: "what if anything can we do with instagram is any of their content open", then "I guess Instagram export is same as Chatgpt or others, so it's useful?", then "build the rest of it", 2026-07-31)
+
+**Nothing about Instagram is open.** Basic Display API — the old read-only
+personal-account OAuth — reached end-of-life 4 December 2024, and its
+replacement (Instagram API with Instagram Login) requires a Professional
+(Business/Creator) account. A personal account has **zero API access**. There
+is no public-profile read for arbitrary accounts the way Farcaster and Bluesky
+have one: Business Discovery reads only other *Professional* accounts and needs
+Facebook Login plus app review. No follower lists, no keyword search, no RSS,
+and a logged-out post URL serves a login wall. The one keyless surface is
+oEmbed (tokenless since 15 June 2026), which resolves ONE post you already have
+the URL for — a resolver, not a feed. That is the whole map.
+
+So the export is the only way in, which makes this the ChatGPT/Claude/Gemini
+grade — and the user's own question was whether that makes it as useful as
+ChatGPT. **It does not, and the reason is structural enough to shape the
+product copy.** A ChatGPT export contains your conversations: it is all
+content. An Instagram export is mostly *pointers*, because Meta's export gives
+you *your* data and on Instagram most of what you have is a record of what you
+TAPPED. Other people's posts aren't yours, so they don't come down. Confirmed
+against four independent parsers (2026-07-31), a saved post is the whole of:
+
+    {"title": "houseofgaming",
+     "string_map_data": {"Saved on": {"href": "https://instagram.com/reel/…",
+                                       "timestamp": 1739667172}}}
+
+A handle, a link, a date. No caption, no image.
+
+**RULING: the export splits in two and the offer must split with it.** What you
+MADE — your posts' captions, your comments — arrives whole and is real
+searchable text. What you TAPPED — saves and likes — arrives as named links. A
+save lands as "@houseofgaming" opening on the post. The catalog summary, the
+setup screen's note and the import result line all state this in those terms.
+The failure this prevents is specific and likely: someone imports their saves
+expecting "search everything I saved", searches for the pasta recipe, and finds
+nothing — because the word "pasta" was never in the export. An offer that let
+them believe otherwise would be fake status.
+
+**Decisions with reasons, don't undo without reading:**
+
+1. **The title comes from the export's `title` field, not left looking like
+   the URL.** This costs something real: `LinkTitle.enrich` only renames a link
+   still wearing its URL as a face, so these rows are NOT picked up by the
+   generic enrichment chain, and the new `OEmbed` Instagram entry therefore
+   serves pasted/shared links rather than imported saves. Taken knowingly — a
+   guaranteed handle from the export beats a naked URL waiting on an endpoint
+   Meta has already stripped `author_name` and `thumbnail_url` out of.
+2. **Per-category caps, not one shared budget.** A saves library runs to
+   thousands while your own posts are in the dozens; one budget would let the
+   contentless rows crowd out the ones carrying text.
+3. **A folder pick, not a file pick** — the four categories live in four files,
+   and four picks would be four chances to pick the wrong one. Both the zip's
+   own folder and the folder it was extracted into resolve, since which one a
+   person picks is a coin flip.
+4. **Mojibake is repaired.** Instagram writes UTF-8 bytes escaped as Latin-1,
+   so an em dash arrives as "â€”". Left alone that lands in both the title and
+   the search index. Repaired only when every scalar fits in a byte and the
+   re-decode round-trips, so a clean caption is never touched.
+
+**NOT BUILT, with reasons.** (a) MEDIA: your own posts reference their JPEGs by
+a path relative to a temporary security-scoped folder; landing them needs a
+copy-into-app-storage path this importer doesn't have. Captions land, pictures
+stay in the export, and the screen says so. (b) DMs: the largest prose corpus
+in the export, but whether years of private conversation belong in a searchable
+index is a decision to make deliberately, not a side effect of tapping Import.
+(c) FOLLOWERS/FOLLOWING: usernames and dates, no content — a tally, and the
+module doctrine says a thing is never a tally.
+
+**UNMEASURED: authored on Linux with no Xcode and no egress to any Meta host
+(the container's proxy 403s `graph.facebook.com` and `www.instagram.com`
+outright), and against no real export — never compiled, never run.** The JSON
+shapes are confirmed from four independent open-source parsers rather than from
+a download. Every category is optional and a missing or unparseable file is a
+skip, not a failure, so a shape that has drifted degrades to "nothing new"
+rather than to a wrong number; `failed` is reserved for "no category found
+anywhere", i.e. not an Instagram export at all. Walk `-instagramImport <path>`
+against a real export before trusting a count.

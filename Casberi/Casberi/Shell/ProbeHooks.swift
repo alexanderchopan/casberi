@@ -100,6 +100,19 @@ enum ProbeHooks {
             NSLog("Gemini probe: %d imported, %d skipped, failed=%d",
                   summary.imported, summary.skipped, summary.failed ? 1 : 0)
         },
+        // `-instagramImport <path>` imports an UNZIPPED Instagram export
+        // folder. Logs each category on its OWN line rather than one total:
+        // the halves differ in kind (captions and comments are text, saves and
+        // likes are named links), and a single number can't tell "the text
+        // half was empty" from "the whole import failed" — which for this
+        // export is the difference that matters most.
+        Hook(key: "instagramImport") { path, context in
+            let summary = InstagramImport.run(folder: URL(fileURLWithPath: path), context: context)
+            NSLog("Instagram probe: posts=%d comments=%d saved=%d liked=%d",
+                  summary.posts, summary.comments, summary.saved, summary.liked)
+            NSLog("Instagram probe: %d imported, %d skipped, failed=%d",
+                  summary.imported, summary.skipped, summary.failed ? 1 : 0)
+        },
         // `-dayoneImport <path>` imports a Day One export .json from disk.
         Hook(key: "dayoneImport") { path, context in
             guard let data = FileManager.default.contents(atPath: path) else { return }

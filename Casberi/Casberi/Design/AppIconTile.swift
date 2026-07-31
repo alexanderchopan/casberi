@@ -95,6 +95,11 @@ extension DS {
         case "files":               return Color.fixed("#4aa8f0")   // iCloud blue — any iCloud-reachable folder
         case "dropbox":             return Color.fixed("#0061ff")   // their brand blue
         case "twitch":              return Color.fixed("#9146ff")
+        // Instagram's mark is a gradient, and a flat fill has to pick one
+        // point on it — the magenta reads as Instagram where the orange end
+        // reads as any warm brand. Moot once `brand-instagram` is bundled;
+        // this is what the SF fallback wears until then.
+        case "instagram":           return Color.fixed("#e1306c")
         case "reddit":              return Color.fixed("#ff4500")
         case "youtube":             return Color.fixed("#ff0000")
         case "substack":            return Color.fixed("#ff6719")

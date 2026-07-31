@@ -58,6 +58,25 @@ enum OEmbed {
     /// here — this table is for sites the generic path reads badly.
     private static let endpoints: [(hosts: [String], endpoint: String)] = [
         (["tiktok.com"],              "https://www.tiktok.com/oembed"),
+        // Instagram (2026-07-31, prd §245). The generic path reads Instagram
+        // as badly as it reads TikTok — a logged-out post URL serves a login
+        // wall, so a shared post lands wearing a stock title and no art.
+        //
+        // THE FIELDS ARE IN DOUBT and the table entry is worth having anyway.
+        // Three sources disagree: Meta announced in April 2025 that
+        // `/instagram_oembed` would stop returning `thumbnail_url`,
+        // `thumbnail_width`, `thumbnail_height` and `author_name`; a June 2026
+        // change made the endpoint callable with NO token and no App Review;
+        // and an April 2026 reference still documents `author_name` and
+        // `thumbnail_url` as present. If the fields are stripped, `parse`
+        // finds nothing usable, `resolve` returns nil, and the caller falls
+        // through to exactly today's behaviour — so the cost of being wrong
+        // here is zero, and the payoff if `author_name` survives is a saved
+        // post reading "natgeo on Instagram" instead of a login wall's title.
+        // Note this endpoint answers for PUBLIC posts, carousels and reels
+        // only — never stories, never a private account, never a profile.
+        // MEASURE IT with `-oembedProbe` before trusting any field.
+        (["instagram.com"],           "https://graph.facebook.com/v23.0/instagram_oembed"),
         (["youtube.com", "youtu.be"], "https://www.youtube.com/oembed?format=json"),
         (["vimeo.com"],               "https://vimeo.com/api/oembed.json"),
         (["soundcloud.com"],          "https://soundcloud.com/oembed?format=json"),
