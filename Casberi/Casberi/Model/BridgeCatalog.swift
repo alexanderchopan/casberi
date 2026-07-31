@@ -378,8 +378,15 @@ enum BridgeCatalog {
         // wire shape; see the doc comment on `AgentProvider`), so nothing
         // user-facing claims it. What ships today is the same honest BYOK
         // contract every agent here keeps.
+        // The credits line is MEASURED, not boilerplate (2026-07-31): xAI has
+        // no free tier, and a key on a team without credits answers 200 to
+        // the key check but 403 to every real request. Gemini's API *does*
+        // have a free tier, so someone who added that key for nothing would
+        // reasonably expect the same here and be wrong. Same shape as
+        // Privacy.com's "Requires a paid Privacy plan" — a cost precondition
+        // belongs in the offer, not discovered after connecting.
         Offer(name: "Grok",        tagline: "Try with your key, on Grok",            group: "Agent",     connectable: true,
-              summary: "Grok's key powers \"Try with your key\" like every agent here — any answer re-runs on Grok, straight from \(DS.device), only when you tap.",
+              summary: "Grok's key powers \"Try with your key\" like every agent here — any answer re-runs on Grok, straight from \(DS.device), only when you tap.\n\nNeeds credits on your xAI team — there's no free tier, and a key without them can't answer.",
               needsSetup: true, added: day(2026, 7, 31)),
         Offer(name: "GitHub",      tagline: "Stars, releases, issues — your GitHub", group: "Work",      connectable: true,
               summary: "Pick the feeds you want — starred repos, new releases, gists, your contributions, watched repos, and the issues and pull requests that involve you. Connects with a read-only token you make in GitHub settings — it stays in \(DS.device)'s Keychain.",
