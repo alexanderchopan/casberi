@@ -8,17 +8,37 @@ import Foundation
 /// like every bridge token.
 ///
 /// The key is an AGENT key, never "the Anthropic key" (user ruling
-/// 2026-07-14): six providers speak here — Claude, ChatGPT, Gemini,
-/// Venice, Bankr, and OpenRouter — one request shape each, one contract
-/// for all. Bankr (2026-07-16) is the one agent that isn't a bare model:
-/// it's a wallet-attached trading agent, so its answers may ALSO draw on
-/// the wallet and live markets (the sanctioned grounding divergence), and
+/// 2026-07-14): seven providers speak here — Claude, ChatGPT, Gemini,
+/// Venice, Bankr, OpenRouter, and Grok — one request shape each, one
+/// contract for all. Bankr (2026-07-16) is the one agent that isn't a bare
+/// model: it's a wallet-attached trading agent, so its answers may ALSO draw
+/// on the wallet and live markets (the sanctioned grounding divergence), and
 /// every prompt it gets is hard-prefixed "answer only — never execute"
 /// (the answer verb stays a read; writes would be separate consented
 /// verbs, unbuilt). OpenRouter (2026-07-24) is the multi-model divergence:
 /// it never pins one model, riding its own `openrouter/auto` router
 /// instead, so it stays honestly text-only/no-search rather than claiming
 /// a capability whichever model it lands on might not have.
+///
+/// Grok (2026-07-31, prd §242) rides the same OpenAI-compatible request
+/// shape as OpenAI/Venice/OpenRouter — xAI's API speaks it natively — so it
+/// joins that branch rather than growing a fourth one.
+///
+/// The reason it's here isn't "a seventh model" — it's the only provider
+/// that could ever see X, which none of this app's own bridges can reach at
+/// all (X's API is closed, no keyless read exists). That's still a PLAN, not
+/// a shipped feature: three separate documentation fetches on 2026-07-31
+/// each described a DIFFERENT current shape for xAI's search/citations
+/// (an older `search_parameters` body, a newer `web_search` tool with no
+/// confirmed X-specific mode, and uncertainty over whether tool-use even
+/// applies to the `/v1/chat/completions` endpoint this file calls, as
+/// opposed to a separate Responses API). Writing request code against three
+/// disagreeing sources isn't the same risk as this codebase's usual
+/// "UNMEASURED, re-measure before hardening" pattern (PostHog/1Claw/Privacy
+/// all had ONE stable spec to transcribe) — so it's deliberately UNBUILT
+/// until either a real Grok key can confirm the live shape, or the user
+/// accepts shipping a best-guess version anyway. No user-facing copy here
+/// or on `GrokSetupScreen`/the catalog offer claims this works.
 enum AgentProvider: String, CaseIterable, Identifiable {
     case anthropic
     case openai
@@ -26,6 +46,7 @@ enum AgentProvider: String, CaseIterable, Identifiable {
     case venice
     case bankr
     case openrouter
+    case grok
 
     var id: String { rawValue }
 
@@ -38,6 +59,7 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         case .venice:     "Venice"
         case .bankr:      "Bankr"
         case .openrouter: "OpenRouter"
+        case .grok:       "Grok"
         }
     }
 
@@ -50,6 +72,7 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         case .venice:     "Venice"
         case .bankr:      "Bankr"
         case .openrouter: "OpenRouter"
+        case .grok:       "xAI"
         }
     }
 
@@ -62,6 +85,13 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         case .venice:     "venice.ai"
         case .bankr:      "bankr.bot/api-keys"
         case .openrouter: "openrouter.ai/keys"
+        // console.x.ai answers 403 to a scripted request (bot-protected SPA,
+        // verified 2026-07-31) rather than 404/unreachable — a real,
+        // resolving console, unlike the cases elsewhere in this codebase
+        // that omit a door for lack of ANY confirmable host. The root, not
+        // a guessed sub-path — SPA routing under it isn't independently
+        // confirmable, and a wrong deep link is worse than the root.
+        case .grok:       "console.x.ai"
         }
     }
 
@@ -73,6 +103,7 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         case .venice:     "Paste your Venice key"
         case .bankr:      "Paste your Bankr key"
         case .openrouter: "Paste your OpenRouter key"
+        case .grok:       "xai-…"
         }
     }
 
@@ -93,6 +124,15 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         // OpenRouter's own router — picks whichever of its 400+ models fits
         // the request, so the app never pins one model or exposes a picker.
         case .openrouter: "openrouter/auto"
+        // UNVERIFIED (2026-07-31) — no Grok key has been stored yet, so
+        // this has never been confirmed against a live `/v1/models` read,
+        // unlike every other pin in this switch. "grok-4" is xAI's
+        // documented flagship chat model as of this writing; xAI (like
+        // every provider here) rotates names over time, and Venice's own
+        // comment already notes the same risk — the difference is this one
+        // hasn't been measured even once. `-byokProbe` against a real key
+        // is the re-measurement step before this stops being a guess.
+        case .grok:       "grok-4"
         }
     }
 
@@ -107,7 +147,14 @@ enum AgentProvider: String, CaseIterable, Identifiable {
     var seesImages: Bool {
         switch self {
         case .anthropic, .openai, .google: true
-        case .venice, .bankr, .openrouter: false
+        // Grok: false is the SAFE default, not a measured fact (2026-07-31)
+        // — xAI's own docs describe image input on some chat models without
+        // confirming it for the specific id `model` pins above, and the
+        // honesty rule's one-way door is clear: understating a capability
+        // costs a screenshot going text-only, overstating one silently
+        // drops a photo the person thought was seen. Re-measure before
+        // flipping this.
+        case .venice, .bankr, .openrouter, .grok: false
         }
     }
 
@@ -124,7 +171,15 @@ enum AgentProvider: String, CaseIterable, Identifiable {
     var searchesWeb: Bool {
         switch self {
         case .anthropic, .google, .venice: true
-        case .openai, .bankr, .openrouter: false
+        // Grok: no search tool is wired to the plain chat request AT ALL yet
+        // (see the file-level doc comment on `AgentProvider` — the intended
+        // X-search verb is unbuilt pending a confirmed live wire shape). Even
+        // once it exists, the design intent is for it to ride a SEPARATE,
+        // explicit request fired only from a thing's own "What's X saying
+        // about this?" verb — never silently appended to an ordinary keyed
+        // answer the way Claude/Gemini/Venice's tool declarations are, since
+        // it's billed per source and shouldn't fire on every routine answer.
+        case .openai, .bankr, .openrouter, .grok: false
         }
     }
 
@@ -147,6 +202,8 @@ enum AgentProvider: String, CaseIterable, Identifiable {
             nil
         case .openrouter:
             "Auto-picks whichever model fits your question and remembers this chat's answers so far — screenshots and web search stay off since the model it lands on can vary."
+        case .grok:
+            "Remembers this chat's answers so far — screenshots and web search stay off for now."
         }
     }
 }
@@ -178,6 +235,23 @@ enum AgentKey {
     static func set(_ key: String, for provider: AgentProvider) {
         TokenVault.set(key.trimmingCharacters(in: .whitespacesAndNewlines),
                        for: provider.vaultKey)
+        UserDefaults.standard.set(provider.rawValue, forKey: activeDefaultsKey)
+    }
+
+    /// Makes an ALREADY-configured provider the active one, without touching
+    /// its stored key (2026-07-31, prd §242). No-ops on an unconfigured
+    /// provider — activating a key that doesn't exist would just mint a
+    /// dangling pointer `active` then has to fall back past anyway.
+    ///
+    /// Exists because `set` doubled as the only way to change the active
+    /// provider, which meant re-becoming active required re-pasting a key
+    /// that hadn't changed. With more than one key ever stored — a real
+    /// case once Venice/Bankr/OpenRouter/Grok all sit in the same "Agent"
+    /// catalog group — reconnecting via any ONE tile silently answered with
+    /// whichever provider happened to be saved last, and nothing on any of
+    /// those screens said so.
+    static func activate(_ provider: AgentProvider) {
+        guard isConfigured(provider) else { return }
         UserDefaults.standard.set(provider.rawValue, forKey: activeDefaultsKey)
     }
 
@@ -307,6 +381,17 @@ enum AgentAnswer {
             // call, no tokens billed.
             request = URLRequest(url: URL(string: "https://openrouter.ai/api/v1/auth/key")!)
             request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        case .grok:
+            // MEASURED 2026-07-31 (curl, no key): `/v1/api-key` answers 401
+            // "unauthenticated:no-credentials" with no credentials at all —
+            // a real endpoint, distinct from the model-list read the pinned
+            // `model` string can't itself vouch for. A models LIST read
+            // (Venice's own pattern) would be the model-name-proof choice,
+            // but xAI's `/v1/api-key` is the documented purpose-built
+            // key-identity check, so it's used here; re-confirm the 200
+            // shape once a real key exists.
+            request = URLRequest(url: URL(string: "https://api.x.ai/v1/api-key")!)
+            request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         }
         request.timeoutInterval = 15
         guard let (_, response) = try? await URLSession.shared.data(for: request),
@@ -392,14 +477,23 @@ enum AgentAnswer {
             }
             request.httpBody = try? JSONSerialization.data(withJSONObject: body)
             parse = anthropicDelta
-        case .openai, .venice, .openrouter:
-            // One OpenAI-compatible shape covers all three — Venice's and
-            // OpenRouter's APIs both speak it.
+        case .openai, .venice, .openrouter, .grok:
+            // One OpenAI-compatible shape covers all four — Venice's,
+            // OpenRouter's and xAI's APIs all speak it natively (MEASURED
+            // 2026-07-31 for the endpoint's mere existence — `/v1/chat/
+            // completions` answers 405 to a bare GET rather than 404,
+            // confirming it's real and POST-only; the streamed SSE shape
+            // itself is unconfirmed against a live key). `default:` was
+            // deliberately replaced with an explicit case here — a silent
+            // fallthrough is exactly how a future fifth provider would land
+            // in the wrong branch unnoticed.
             let base: String
             switch provider {
             case .openai:     base = "https://api.openai.com/v1"
             case .venice:     base = "https://api.venice.ai/api/v1"
-            default:          base = "https://openrouter.ai/api/v1"
+            case .openrouter: base = "https://openrouter.ai/api/v1"
+            case .grok:       base = "https://api.x.ai/v1"
+            default:          fatalError("unreachable — case list above is exhaustive for this branch")
             }
             request = URLRequest(url: URL(string: "\(base)/chat/completions")!)
             request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")

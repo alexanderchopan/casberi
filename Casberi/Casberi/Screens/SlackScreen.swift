@@ -26,7 +26,7 @@ struct SlackScreen: View {
                     bridgeID: "slack",
                     name: "Slack",
                     identity: SlackAuth.teamName,
-                    connectionNote: String(localized: "Signed in on this iPhone · search only, no server ever holds a secret"),
+                    connectionNote: String(localized: "Signed in on \(DS.device) · search only, no server ever holds a secret"),
                     capabilitiesFallback: ["Looks up mentions of you.",
                                            "Read-only — never posts, reads files, or browses channels."],
                     openConnection: { showConnection = true }

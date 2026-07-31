@@ -106,7 +106,7 @@ struct OpenFoodFactsScreen: View {
 
     private var footerSection: some View {
         Section {
-            Text("Open Food Facts is a free, collaborative database — like Wikipedia for food. Keyless and read-only: nothing about you leaves this iPhone but the barcode you look up.")
+            Text("Open Food Facts is a free, collaborative database — like Wikipedia for food. Keyless and read-only: nothing about you leaves \(DS.device) but the barcode you look up.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .listRowBackground(Color.clear)
         }
@@ -132,7 +132,7 @@ struct OpenFoodFactsScreen: View {
             store.registerConnected(id: "off", name: "Open Food Facts",
                                     proof: "Scanned in",
                                     can: ["Looks up a barcode in the open food database.",
-                                          "Read-only — nothing leaves this iPhone but the code."])
+                                          "Read-only — nothing leaves \(DS.device) but the code."])
         } else {
             lastResult = String(localized: "Already in your feed.")
         }

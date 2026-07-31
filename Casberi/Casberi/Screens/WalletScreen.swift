@@ -787,7 +787,7 @@ struct WalletScreen: View {
                 // Only reachable now if no manual-pairing handler ran — the
                 // screen always passes one, so this is the belt to that braces.
                 resultIsError = true
-                result = String(localized: "No wallet app on this iPhone — paste the address instead.")
+                result = String(localized: "No wallet app on \(DS.device) — paste the address instead.")
             case .success(.timedOut):
                 resultIsError = true
                 // Which wait actually expired decides the words: if the URI

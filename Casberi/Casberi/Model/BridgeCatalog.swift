@@ -81,10 +81,20 @@ enum BridgeCatalog {
         /// from another device — a real, still-useful seat, just not what
         /// the iOS sentence describes. Falls back to `summary` everywhere
         /// else, including Photos on iOS/iPadOS.
+        ///
+        /// The closing sentence (2026-07-31) points at the seat that DOES
+        /// cover a Mac screenshot: `FilesBridge.heal` already thumbnails,
+        /// OCRs, and retitles any image a connected folder sees — the exact
+        /// machinery Photos runs on iOS — and `isMachineGeneratedName`
+        /// already matches a `screenshot`-prefixed filename, which is how
+        /// macOS names its own. Connecting `~/Desktop` through Files gets a
+        /// Mac screenshot the same treatment for free; leaving the summary
+        /// silent about that read as the gap being unaddressed rather than
+        /// one door over.
         var effectiveSummary: String {
             #if targetEnvironment(macCatalyst)
             if name == "Photos" {
-                return "Screenshots that land in your Photos library — the ones your iPhone or iPad takes, synced over iCloud — flow into your feed, searchable by what's in them. A Mac screenshot goes to the Desktop rather than Photos, so this seat sees the ones that arrive from another device, not ones taken here."
+                return "Screenshots that land in your Photos library — the ones your iPhone or iPad takes, synced over iCloud — flow into your feed, searchable by what's in them. A Mac screenshot goes to the Desktop rather than Photos, so this seat sees the ones that arrive from another device, not ones taken here.\n\nA screenshot taken on this Mac lands on your Desktop instead — connect that folder from Files (in Storage) and it gets the same treatment: thumbnailed, read for its text, and titled from what's in it."
             }
             #endif
             return summary
@@ -212,7 +222,7 @@ enum BridgeCatalog {
               summary: "A one-time import of your Gemini history via Google Takeout, kept searchable alongside your things. (No live read — Google doesn't offer one; this is your export, backfilled.)",
               needsSetup: true),
         Offer(name: "Tokens",      tagline: "Track any token",                       group: "Markets",   connectable: true,
-              summary: "Watch any token — paste its address or a link and its live price chart lands in your feed, drawn on your iPhone. Public price data only; nothing about you leaves the device.",
+              summary: "Watch any token — paste its address or a link and its live price chart lands in your feed, drawn on \(DS.device). Public price data only; nothing about you leaves the device.",
               needsSetup: true),
         Offer(name: "Kalshi",      tagline: "Watch real-event odds",                 group: "Markets",   connectable: true,
               summary: "Every open market on Kalshi, the CFTC-regulated event exchange — say yes and its chip lands in your feed, where you can browse the whole book and follow just the questions you want to keep. Public price data only, read-only: nothing here places a trade.",
@@ -229,7 +239,7 @@ enum BridgeCatalog {
                          "No account, no wallet — public odds, read-only"],
               needsSetup: true, added: day(2026, 7, 28)),
         Offer(name: "Stocktwits",  tagline: "Watch any stock",                      group: "Markets",   connectable: true,
-              summary: "Watch any stock — search a ticker and the takes traders post about it on Stocktwits land in your feed, each wearing its author's own bullish or bearish call.\n\nThe stock's live price chart draws on this iPhone from public market data.\n\nNo account, no key, read-only: nothing here trades, and a watched ticker can never see your portfolio.",
+              summary: "Watch any stock — search a ticker and the takes traders post about it on Stocktwits land in your feed, each wearing its author's own bullish or bearish call.\n\nThe stock's live price chart draws on \(DS.device) from public market data.\n\nNo account, no key, read-only: nothing here trades, and a watched ticker can never see your portfolio.",
               needsSetup: true),
         // Wallet, not Markets (2026-07-25, prd §210 — amending the 2026-07-17
         // ruling below, kept for the record). A Peer fill is the person's OWN
@@ -313,7 +323,7 @@ enum BridgeCatalog {
               ],
               needsSetup: true, added: day(2026, 7, 30)),
         Offer(name: "GeckoTerminal", tagline: "Trending tokens, per chain",          group: "Markets",   connectable: true,
-              summary: "Pick the chains you care about and the tokens trending on each — GeckoTerminal's own ranking, by 24-hour volume and price move — land in your feed as links.\n\nNo account, no key: fetched straight from GeckoTerminal's public API by this iPhone.\n\nRead-only public price data; nothing here buys, sells, or trades.\n\nEach trending row opens to its live on-device chart.",
+              summary: "Pick the chains you care about and the tokens trending on each — GeckoTerminal's own ranking, by 24-hour volume and price move — land in your feed as links.\n\nNo account, no key: fetched straight from GeckoTerminal's public API by \(DS.device).\n\nRead-only public price data; nothing here buys, sells, or trades.\n\nEach trending row opens to its live on-device chart.",
               needsSetup: true),
         Offer(name: "OpenSea",     tagline: "New NFT drops in your feed",            group: "NFTs",      connectable: true,
               summary: "Watch the chains you care about and their newest NFT collections land in your feed as links — the ones with real artwork, not the empty test contracts. Fetched straight from OpenSea's public API, read-only: nothing here buys, sells, or bids.",
@@ -321,7 +331,7 @@ enum BridgeCatalog {
         // Shopping, not Markets (2026-07-17): Bitrefill is your own commerce
         // account — orders and receipts — not a market you watch.
         Offer(name: "Bitrefill",   tagline: "Your gift cards, in reach",             group: "Shopping",  connectable: true,
-              summary: "What you buy on Bitrefill lands in your feed — gift cards wearing their own artwork, phone top-ups, eSIMs, balance refills — with your balance at the top of the Bitrefill feed.\n\nConnects with an API key from Bitrefill's developer settings — it stays in this iPhone's Keychain.\n\nRead-only by conduct: nothing here ever buys, pays, or spends your balance.",
+              summary: "What you buy on Bitrefill lands in your feed — gift cards wearing their own artwork, phone top-ups, eSIMs, balance refills — with your balance at the top of the Bitrefill feed.\n\nConnects with an API key from Bitrefill's developer settings — it stays in \(DS.device)'s Keychain.\n\nRead-only by conduct: nothing here ever buys, pays, or spends your balance.",
               needsSetup: true, added: day(2026, 7, 17)),
         // Shopping, beside Bitrefill: Privacy.com is your own card-spending
         // record — receipts across every merchant — not a market you watch.
@@ -329,28 +339,28 @@ enum BridgeCatalog {
         // the summary says plainly that the read-only promise is kept by
         // conduct, not by the credential (unlike every other keyed bridge).
         Offer(name: "Privacy",     tagline: "Your card purchases, in reach",         group: "Shopping",  connectable: true,
-              summary: "What you buy with your Privacy.com virtual cards lands in your feed — each purchase with its merchant and amount, so your spending is findable next to everything else. Connects with an API key from your Privacy account (a paid Privacy plan is required); the key stays in this iPhone's Keychain.\n\nRead-only by conduct: Casberi only ever reads your transactions.\n\nOne honest caveat — Privacy's key can't be scoped read-only, so the same key could manage cards on your account; Casberi never creates, closes, or funds a card.",
+              summary: "What you buy with your Privacy.com virtual cards lands in your feed — each purchase with its merchant and amount, so your spending is findable next to everything else. Connects with an API key from your Privacy account (a paid Privacy plan is required); the key stays in \(DS.device)'s Keychain.\n\nRead-only by conduct: Casberi only ever reads your transactions.\n\nOne honest caveat — Privacy's key can't be scoped read-only, so the same key could manage cards on your account; Casberi never creates, closes, or funds a card.",
               needsSetup: true, added: day(2026, 7, 22)),
         Offer(name: "Shopify",     tagline: "Follow any store's new drops",          group: "Shopping",  connectable: true,
-              summary: "Follow any Shopify store — paste its web address and its newest products, restocks, and sale prices land in your feed as things, opening back on the store's own page.\n\nFetched straight from the store's public catalog by this iPhone: no account, no sign-in, read-only — nothing here checks out or pays.\n\nSome big stores block automated reads; those it can't follow, it says so.",
+              summary: "Follow any Shopify store — paste its web address and its newest products, restocks, and sale prices land in your feed as things, opening back on the store's own page.\n\nFetched straight from the store's public catalog by \(DS.device): no account, no sign-in, read-only — nothing here checks out or pays.\n\nSome big stores block automated reads; those it can't follow, it says so.",
               needsSetup: true),
         Offer(name: "Deals",       tagline: "The best deals, as they drop",          group: "Shopping",  connectable: true,
-              summary: "Follow the deal aggregators — Slickdeals, DealNews — and their newest deals land in your feed as products, each already priced in the headline and opening back on the deal's own page. Fetched straight from each source's public feed by this iPhone: no account, read-only — nothing here buys anything.",
+              summary: "Follow the deal aggregators — Slickdeals, DealNews — and their newest deals land in your feed as products, each already priced in the headline and opening back on the deal's own page. Fetched straight from each source's public feed by \(DS.device): no account, read-only — nothing here buys anything.",
               needsSetup: true),
         Offer(name: "Open Food Facts", tagline: "Scan a grocery barcode",           group: "Shopping",  connectable: true,
-              summary: "Scan or enter a grocery item's barcode and the product lands in your feed — its name, picture, and Nutri-Score, from the open food database.\n\nKeyless and free: Open Food Facts is a public, collaborative catalog, so no account, and nothing about you leaves this iPhone but the barcode.\n\nRead-only.",
+              summary: "Scan or enter a grocery item's barcode and the product lands in your feed — its name, picture, and Nutri-Score, from the open food database.\n\nKeyless and free: Open Food Facts is a public, collaborative catalog, so no account, and nothing about you leaves \(DS.device) but the barcode.\n\nRead-only.",
               needsSetup: true),
         Offer(name: "Venice",      tagline: "Private answers with your key",         group: "Agent",     connectable: true,
-              summary: "Venice keeps chats on your own device by design, so there's nothing to read in — instead, your Venice key powers \"Try with your key\": any answer re-runs on Venice's private API, straight from this iPhone, only when you tap.",
+              summary: "Venice keeps chats on your own device by design, so there's nothing to read in — instead, your Venice key powers \"Try with your key\": any answer re-runs on Venice's private API, straight from \(DS.device), only when you tap.",
               needsSetup: true),
         Offer(name: "Bankr",       tagline: "Answers that know your wallet",        group: "Agent",     connectable: true,
-              summary: "Bankr is an agent with a wallet, so its answers can weigh what you hold and what the market is doing — not just what you saved.\n\nYour Bankr key powers \"Try with your key\": any answer re-runs on Bankr, straight from this iPhone, only when you tap.\n\nMake it a read-only key: every question says answer only, and nothing here trades, sends, or swaps.",
+              summary: "Bankr is an agent with a wallet, so its answers can weigh what you hold and what the market is doing — not just what you saved.\n\nYour Bankr key powers \"Try with your key\": any answer re-runs on Bankr, straight from \(DS.device), only when you tap.\n\nMake it a read-only key: every question says answer only, and nothing here trades, sends, or swaps.",
               needsSetup: true),
         // 1Claw is the agents' vault (2026-07-17, prd 111): grants, not
         // secrets — the feed answers "what can this key reach", never what
         // a secret's value is.
         Offer(name: "1Claw",       tagline: "What your agent's key can reach",       group: "Agent",     connectable: true,
-              summary: "1Claw is a vault that holds your AI agents' secrets behind human-granted permissions. Paste an agent's API key and its actual reach lands in your feed — every vault it can see, and each grant's secret paths and permissions, straight from 1Claw's own records.\n\nNames and permissions only, read straight from this iPhone: nothing here ever reads a secret's value, signs, or spends.",
+              summary: "1Claw is a vault that holds your AI agents' secrets behind human-granted permissions. Paste an agent's API key and its actual reach lands in your feed — every vault it can see, and each grant's secret paths and permissions, straight from 1Claw's own records.\n\nNames and permissions only, read straight from \(DS.device): nothing here ever reads a secret's value, signs, or spends.",
               needsSetup: true, added: day(2026, 7, 17)),
         // OpenRouter (2026-07-24): a sixth agent key, one API routed across
         // 400+ models. It never pins one model — it rides OpenRouter's own
@@ -358,19 +368,30 @@ enum BridgeCatalog {
         // honestly text-only/no-search rather than claiming whatever the
         // picked model might not have.
         Offer(name: "OpenRouter",  tagline: "One key, whichever model fits",         group: "Agent",     connectable: true,
-              summary: "OpenRouter routes your question to whichever of its 400+ models fits, so your OpenRouter key powers \"Try with your key\" without pinning one model. Any answer re-runs straight from this iPhone, only when you tap.",
+              summary: "OpenRouter routes your question to whichever of its 400+ models fits, so your OpenRouter key powers \"Try with your key\" without pinning one model. Any answer re-runs straight from \(DS.device), only when you tap.",
               needsSetup: true, added: day(2026, 7, 24)),
+        // Grok (2026-07-31, prd §242): a seventh agent key. The eventual
+        // reason for it isn't "a seventh model" — it would be the only
+        // provider that could ever see X, which none of this app's own
+        // bridges can read at all (closed API, no keyless path) — but that
+        // search is UNBUILT (three docs fetches disagreed on xAI's current
+        // wire shape; see the doc comment on `AgentProvider`), so nothing
+        // user-facing claims it. What ships today is the same honest BYOK
+        // contract every agent here keeps.
+        Offer(name: "Grok",        tagline: "Try with your key, on Grok",            group: "Agent",     connectable: true,
+              summary: "Grok's key powers \"Try with your key\" like every agent here — any answer re-runs on Grok, straight from \(DS.device), only when you tap.",
+              needsSetup: true, added: day(2026, 7, 31)),
         Offer(name: "GitHub",      tagline: "Stars, releases, issues — your GitHub", group: "Work",      connectable: true,
-              summary: "Pick the feeds you want — starred repos, new releases, gists, your contributions, watched repos, and the issues and pull requests that involve you. Connects with a read-only token you make in GitHub settings — it stays in this iPhone's Keychain.",
+              summary: "Pick the feeds you want — starred repos, new releases, gists, your contributions, watched repos, and the issues and pull requests that involve you. Connects with a read-only token you make in GitHub settings — it stays in \(DS.device)'s Keychain.",
               needsSetup: true),
         Offer(name: "Linear",      tagline: "Your issues stay in reach",             group: "Work",      connectable: true,
-              summary: "The issues assigned to you join your things and surface when they matter. Connects with a personal API key from Linear settings — it stays in this iPhone's Keychain.",
+              summary: "The issues assigned to you join your things and surface when they matter. Connects with a personal API key from Linear settings — it stays in \(DS.device)'s Keychain.",
               needsSetup: true),
         Offer(name: "Notion",      tagline: "Pages join your things",                group: "Work",      connectable: true,
-              summary: "The pages you connect become findable things, so what you wrote isn't stranded in one more app.\n\nPages only.\n\nConnects with an integration token from notion.so — it stays in this iPhone's Keychain.",
+              summary: "The pages you connect become findable things, so what you wrote isn't stranded in one more app.\n\nPages only.\n\nConnects with an integration token from notion.so — it stays in \(DS.device)'s Keychain.",
               needsSetup: true),
         Offer(name: "PostHog",     tagline: "The numbers behind what you ship",      group: "Work",      connectable: true,
-              summary: "Name a metric and its curve draws in your feed, on this iPhone — with the deploys and launches you annotate landing beside it.\n\nA watched metric updates in place. Only a milestone, or a metric falling silent, arrives as news.\n\nConnects with a personal API key you mint read-only — it can query and read, and it cannot ship a flag, edit a dashboard, or write anything back.",
+              summary: "Name a metric and its curve draws in your feed, on \(DS.device) — with the deploys and launches you annotate landing beside it.\n\nA watched metric updates in place. Only a milestone, or a metric falling silent, arrives as news.\n\nConnects with a personal API key you mint read-only — it can query and read, and it cannot ship a flag, edit a dashboard, or write anything back.",
               features: ["Watch any event — its seven-day curve is its mark",
                          "Your PostHog annotations land as things",
                          "A milestone lands once — never a weekly tally",
@@ -378,7 +399,7 @@ enum BridgeCatalog {
                          "Aggregates only — never an individual's profile"],
               needsSetup: true, added: day(2026, 7, 27)),
         Offer(name: "Slack",       tagline: "Never miss a mention",                  group: "Work",      connectable: true,
-              summary: "Anyone who @-mentions you across Slack lands in your feed, on this iPhone — findable next to everything else.\n\nConnects with Slack's own sign-in — no password, no token to copy.\n\nSearch only: Casberi can look up your mentions and nothing else — it can't post, read files, or see channels it isn't asked about.",
+              summary: "Anyone who @-mentions you across Slack lands in your feed, on \(DS.device) — findable next to everything else.\n\nConnects with Slack's own sign-in — no password, no token to copy.\n\nSearch only: Casberi can look up your mentions and nothing else — it can't post, read files, or see channels it isn't asked about.",
               needsSetup: true, added: day(2026, 7, 28)),
         Offer(name: "Reddit",      tagline: "Follow subreddits and people",          group: "Saves",     connectable: true,
               summary: "Follow any subreddit or person on Reddit — their new posts land in your feed as links, through Reddit's own public feed.\n\nNo account, no sign-in.\n\nRead-only.",
@@ -387,33 +408,33 @@ enum BridgeCatalog {
               summary: "Follow any YouTube channel — its new uploads land in your feed as links, through YouTube's own public feed. Paste the channel's @handle or URL.\n\nNo account.\n\nRead-only.",
               needsSetup: true),
         Offer(name: "Apple Music", tagline: "What you play stays in reach",          group: "Listening", connectable: true,
-              summary: "What you've recently played lands in your feed, opening back in Apple Music.\n\nUses Apple's own MusicKit with your permission — read-only, nothing added to your library.\n\nEverything stays on this iPhone."),
+              summary: "What you've recently played lands in your feed, opening back in Apple Music.\n\nUses Apple's own MusicKit with your permission — read-only, nothing added to your library.\n\nEverything stays on \(DS.device)."),
         Offer(name: "Spotify",     tagline: "Liked songs join your things",          group: "Listening", connectable: true,
-              summary: "Your liked songs become things you can find and revisit alongside everything else. Connects with Spotify's own sign-in — PKCE, entirely on this iPhone, no server holds a secret.",
+              summary: "Your liked songs become things you can find and revisit alongside everything else. Connects with Spotify's own sign-in — PKCE, entirely on \(DS.device), no server holds a secret.",
               needsSetup: true),
         Offer(name: "Apple Health", tagline: "Workouts land in your feed",           group: "Fitness",   connectable: true,
-              summary: "Your workouts join your things — a run shows up next to the plan that inspired it. Everything stays on this iPhone: HealthKit never touches a server.",
+              summary: "Your workouts join your things — a run shows up next to the plan that inspired it. Everything stays on \(DS.device): HealthKit never touches a server.",
               unavailableOnMac: true),
         Offer(name: "Strava",      tagline: "Every activity, one record",            group: "Fitness",   connectable: true,
-              summary: "Rides and runs land in your feed with distance and time — read from Apple Health, where Strava saves them. Turn on Strava's Health sync and everything stays on this iPhone; no Strava account is asked for.",
+              summary: "Rides and runs land in your feed with distance and time — read from Apple Health, where Strava saves them. Turn on Strava's Health sync and everything stays on \(DS.device); no Strava account is asked for.",
               unavailableOnMac: true),
         Offer(name: "Cal.com",     tagline: "Bookings land in your feed",            group: "Schedule",  connectable: true,
-              summary: "The meetings people book with you join your things as events, next to your calendar. Connects with an API key from Cal.com settings — it stays in this iPhone's Keychain.",
+              summary: "The meetings people book with you join your things as events, next to your calendar. Connects with an API key from Cal.com settings — it stays in \(DS.device)'s Keychain.",
               needsSetup: true),
         Offer(name: "Calendly",    tagline: "Meetings join your things",             group: "Schedule",  connectable: true,
-              summary: "Your scheduled meetings land as events beside everything else. Connects with a personal access token from Calendly's integrations page — it stays in this iPhone's Keychain.",
+              summary: "Your scheduled meetings land as events beside everything else. Connects with a personal access token from Calendly's integrations page — it stays in \(DS.device)'s Keychain.",
               needsSetup: true),
         Offer(name: "Todoist",     tagline: "Tasks beside your lists",               group: "Schedule",  connectable: true,
-              summary: "Your open tasks join your things alongside Reminders. Connects with the API token from Todoist settings — it stays in this iPhone's Keychain.",
+              summary: "Your open tasks join your things alongside Reminders. Connects with the API token from Todoist settings — it stays in \(DS.device)'s Keychain.",
               needsSetup: true),
         Offer(name: "Pinterest",   tagline: "Your pins, in your feed",               group: "Images",    connectable: true,
               summary: "Your recent public pins land in your feed as links — what you saved on Pinterest joins everything else.\n\nConnects with just your username through Pinterest's own public feed: no password, nothing stored but the name.\n\nPublic boards only.",
               needsSetup: true),
         Offer(name: "Raindrop",    tagline: "Bookmarks become findable",             group: "Saves",     connectable: true,
-              summary: "Your Raindrop bookmarks join your things, searchable next to everything else you saved. Connects with a token from Raindrop settings — it stays in this iPhone's Keychain.",
+              summary: "Your Raindrop bookmarks join your things, searchable next to everything else you saved. Connects with a token from Raindrop settings — it stays in \(DS.device)'s Keychain.",
               needsSetup: true),
         Offer(name: "Readwise",    tagline: "Highlights stay with you",              group: "Reading",   connectable: true,
-              summary: "Your highlights land in your feed — what you read joins what you do. Connects with your Readwise access token — it stays in this iPhone's Keychain.",
+              summary: "Your highlights land in your feed — what you read joins what you do. Connects with your Readwise access token — it stays in \(DS.device)'s Keychain.",
               needsSetup: true),
         Offer(name: "Apple Journal", tagline: "Your entries, findable",              group: "Notes",     connectable: true,
               summary: "A one-time import of Journal's own export — entries become findable notes, dated as you wrote them.\n\nIn Journal: your profile picture → Export Journal, unzip in Files, pick the folder here.\n\nApple offers no live read.",
@@ -425,7 +446,7 @@ enum BridgeCatalog {
               summary: "Share any note straight into Casberi — open it in Notes, tap share, choose Casberi. Apple offers no export or live read for Notes, so they arrive one at a time, as you share them.",
               needsSetup: true),
         Offer(name: "RSS",         tagline: "Any site with a feed",                  group: "Reading",   connectable: true,
-              summary: "Follow any site that publishes a feed — new posts land in your feed as links, fetched by this iPhone directly. No account, no algorithm in between.",
+              summary: "Follow any site that publishes a feed — new posts land in your feed as links, fetched by \(DS.device) directly. No account, no algorithm in between.",
               needsSetup: true),
         // Social, with Bluesky (user ruling 2026-07-17, reversing the
         // 2026-07-14 "onchain network" shelving): Farcaster is a social account
@@ -445,10 +466,10 @@ enum BridgeCatalog {
               summary: "An open, relay-based protocol — notes are public, so this connects with an npub, a raw pubkey, or a name@domain identifier: your own or anyone's, plus #hashtags by name. An account's reactions and mentions can land too.\n\nNo password, nothing stored but the identity — read from whichever public relays answer.",
               needsSetup: true, added: day(2026, 7, 27)),
         Offer(name: "Steam",       tagline: "What you play, in your feed",           group: "Games",     connectable: true,
-              summary: "Recently played games land in your feed, linking to their store pages.\n\nConnects with a free Steam Web API key and your public profile name — the key stays in this iPhone's Keychain.\n\nRead-only.",
+              summary: "Recently played games land in your feed, linking to their store pages.\n\nConnects with a free Steam Web API key and your public profile name — the key stays in \(DS.device)'s Keychain.\n\nRead-only.",
               needsSetup: true),
         Offer(name: "Obsidian",    tagline: "Your vault, beside your things",        group: "Notes",     connectable: true,
-              summary: "Point at your vault folder and your notes land as things — findable next to everything else. Fully local: the vault is read in place, never modified, and nothing leaves this iPhone.",
+              summary: "Point at your vault folder and your notes land as things — findable next to everything else. Fully local: the vault is read in place, never modified, and nothing leaves \(DS.device).",
               needsSetup: true),
         // Any folder, not just an Obsidian vault (2026-07-27) — Files
         // generalizes the same "point at a folder" mechanism past Markdown to
@@ -460,7 +481,7 @@ enum BridgeCatalog {
         // put HomeKit there). Own "Storage" group so its detail-page eyebrow
         // reads honestly ("Storage · Files", not "Notes · Files").
         Offer(name: "Files",       tagline: "Any folder, findable",                  group: "Storage",   connectable: true,
-              summary: "Point at any folder and what's inside lands in your feed, findable next to everything else. Fully local: the folder is read in place, never modified, and nothing leaves this iPhone.",
+              summary: "Point at any folder and what's inside lands in your feed, findable next to everything else. Fully local: the folder is read in place, never modified, and nothing leaves \(DS.device).",
               needsSetup: true, added: day(2026, 7, 27)),
         // Storage, beside Files (2026-07-27): the same "point at a folder"
         // idea, reading Dropbox's own API instead of a local bookmark — so it
@@ -497,7 +518,7 @@ enum BridgeCatalog {
               summary: "Follow any podcast — new episodes land in your feed as links. Search for a show and pick it; episodes arrive through the show's own public feed.\n\nNo account.\n\nRead-only.",
               needsSetup: true),
         Offer(name: "Contacts",    tagline: "The people you know, findable",         group: "People",    connectable: true,
-              summary: "Your contacts become findable people — a name you're looking for turns up with everything it connects to. Search-only: they never crowd your feed.\n\nEverything stays on this iPhone — Contacts never touches a server.\n\nRead-only."),
+              summary: "Your contacts become findable people — a name you're looking for turns up with everything it connects to. Search-only: they never crowd your feed.\n\nEverything stays on \(DS.device) — Contacts never touches a server.\n\nRead-only."),
         Offer(name: "HomeKit",     tagline: "Your home's accessories, at a glance",  group: "Home",      connectable: true,
               summary: "Your HomeKit accessories — locks, doors, sensors — land as things you can find, kept current while the app is open.\n\nSearch-only: they never crowd your feed.\n\nRead-only — Casberi never controls anything.",
               unavailableOnMac: true),

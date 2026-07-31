@@ -97,7 +97,7 @@ struct TokenSetupScreen: View {
         BridgeConnectedState(
             bridgeID: bridge.bridgeID,
             name: bridge.rawValue,
-            connectionNote: String(localized: "Your \(bridge.credentialNoun) · stored in this iPhone's Keychain"),
+            connectionNote: String(localized: "Your \(bridge.credentialNoun) · stored in \(DS.device)'s Keychain"),
             capabilitiesFallback: [bridge.canLine],
             openConnection: { showConnection = true }
         )
@@ -167,7 +167,7 @@ struct TokenSetupScreen: View {
     /// here). Three footers used to say this — the Keychain, the recipient,
     /// and the read-only promise — which is one fact wearing three paragraphs.
     private var keychainNote: String {
-        String(localized: "Your \(bridge.credentialNoun) stays in this iPhone's Keychain, goes only to \(bridge.rawValue), and only to read.")
+        String(localized: "Your \(bridge.credentialNoun) stays in \(DS.device)'s Keychain, goes only to \(bridge.rawValue), and only to read.")
     }
 
     /// The sign-in path — GitHub shows a short code here, you approve it on
@@ -378,7 +378,7 @@ struct TokenSetupScreen: View {
                 BridgeSyncStatusRows(syncing: watching,
                                      syncingLine: String(localized: "Looking it up…"),
                                      result: watchResult, resultIsError: watchResultIsError)
-                DSSlabNote(text: "Private to this iPhone — watching here never touches your GitHub account.")
+                DSSlabNote(text: "Private to \(DS.device) — watching here never touches your GitHub account.")
             }
         }
         .dsSlabSection()

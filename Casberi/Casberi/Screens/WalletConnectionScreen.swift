@@ -63,7 +63,7 @@ struct WalletConnectionScreen: View {
                     Text("Stops new Wallet things from landing. What already landed stays yours unless you remove it.")
                 }
             } footer: {
-                Text("Read-only — watching can never trade or move funds. Activity is public, read across chains directly on this iPhone.")
+                Text("Read-only — watching can never trade or move funds. Activity is public, read across chains directly on \(DS.device).")
                     .dsText(.subhead13).foregroundStyle(DS.textSecondary)
             }
         }

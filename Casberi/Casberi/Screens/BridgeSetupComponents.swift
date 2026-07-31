@@ -235,6 +235,57 @@ struct BridgeFieldRow: View {
     }
 }
 
+/// Which agent actually answers "Try with your key" (2026-07-31, prd §242) —
+/// shown on EACH of the four key-backed agent screens (Venice, Bankr,
+/// OpenRouter, Grok; Claude/ChatGPT/Gemini's own screens are chat IMPORTS,
+/// a different facet with no key of their own) once THIS provider is
+/// configured. `AgentKey.active` is the last key SAVED, app-wide, across
+/// every provider — with more than one ever stored, reconnecting via any one
+/// tile used to silently answer with whichever was saved last, and nothing
+/// on any of the four screens said so. This states it plainly and, when
+/// it's someone else, offers the one-tap fix without re-pasting a key that
+/// hasn't changed (`AgentKey.activate`, which only flips the pointer).
+///
+/// Renders nothing when `provider` isn't configured yet — there's no "active"
+/// fact to state about a key that doesn't exist.
+struct AgentActiveStatusRow: View {
+    let provider: AgentProvider
+    /// Bumped by the caller (or internally, after a tap) to force a re-read
+    /// of the static, non-observable `AgentKey.active`.
+    @State private var tick = 0
+
+    var body: some View {
+        if AgentKey.isConfigured(provider) {
+            let active = AgentKey.active
+            HStack(spacing: DS.Space.s2) {
+                if active == provider {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(DS.confirm)
+                    Text("\(provider.agent) is your active agent for \"Try with your key.\"")
+                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                } else {
+                    Text(active.map { "\($0.agent) is currently answering \"Try with your key.\"" }
+                         ?? "\(provider.agent) is saved but not active.")
+                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    Spacer(minLength: DS.Space.s2)
+                    Button {
+                        DSHaptic.selection()
+                        AgentKey.activate(provider)
+                        tick += 1
+                    } label: {
+                        Chip(text: "Make active", style: .tint, glyph: "checkmark")
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            // `tick` is otherwise unread — mutating it is enough to trigger
+            // SwiftUI's own re-render, which re-evaluates `AgentKey.active`
+            // (a static, non-observable read) fresh on every body pass.
+            .dsListCardRow()
+        }
+    }
+}
+
 /// The proof rows under the field: a spinner while fetching, then the
 /// result in confirm green (or attention red when it failed). Proof counts
 /// up ("3 games in" earns its number); failure knocks sideways once.

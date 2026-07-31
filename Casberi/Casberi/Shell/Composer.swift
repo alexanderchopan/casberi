@@ -191,6 +191,17 @@ struct Composer: View {
     /// chip gate can't afford a Keychain round-trip per render (typing a
     /// follow-up re-renders per keystroke).
     @State private var keyAvailable = false
+    /// The one-tap version of the same consent (2026-07-31, prd §242): a
+    /// person who chose "Ask with your key" from the TYPED-DRAFT band, before
+    /// either answer exists, gets the on-device answer first (unchanged —
+    /// it's free, instant, private, and stays the default source of truth)
+    /// and the keyed retry fires itself the moment that settles, via the
+    /// `inFlight` watcher below, instead of waiting to be noticed and tapped
+    /// a second time in the settled verb row. Set at the SAME moment as a
+    /// normal `commit()`, so the tap that sets it IS the consent (prd §67's
+    /// rule — nothing leaves this iPhone until a deliberate tap — is kept,
+    /// just moved earlier).
+    @State private var pendingKeyedFollowUp = false
     /// The kept-ask KIND the current question would mint, computed once per
     /// settled answer (same reason `keyAvailable` is settle-cached, not a
     /// per-render computed property: a corpus fetch per render would be
@@ -1475,6 +1486,20 @@ struct Composer: View {
                     .onChange(of: turns.count) { _, _ in
                         withAnimation(DS.Motion.standard) { proxy.scrollTo("bottom", anchor: .bottom) }
                     }
+                    // The deferred half of the ask-time keyed tap (prd §242):
+                    // fires strictly AFTER commit()'s own Task has fully
+                    // settled (inFlight true → false) and returned, rather
+                    // than calling askWithKey() from inside that Task —
+                    // which would race its own later settle work
+                    // (keepableAskKind, nextAsk) against askWithKey()'s state
+                    // writes. Watching the value drop from the OUTSIDE, once
+                    // SwiftUI has already delivered the settled state, avoids
+                    // that race entirely.
+                    .onChange(of: inFlight) { was, now in
+                        guard was, !now, pendingKeyedFollowUp else { return }
+                        pendingKeyedFollowUp = false
+                        askWithKey()
+                    }
                 }
                 .padding(.top, DS.Space.s2)
             }
@@ -1507,7 +1532,7 @@ struct Composer: View {
                 .animation(DS.Motion.standard, value: voice.elapsed)
             }
             if voice.phase == .denied {
-                Text("No mic access — allow Casberi in iOS Settings")
+                Text("No mic access — allow Casberi in \(DS.settingsAppName)")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s2)
@@ -1795,6 +1820,15 @@ struct Composer: View {
         answerFailed = false
         foundCurrent = false
         conversationIsKeyed = false
+        // Cleared HERE, not just at askWithKey()'s own entry (2026-07-31):
+        // askDirectly() sets this true BEFORE commit() runs, and commit()'s
+        // voice/paste/navigate branches never set `inFlight` true at all —
+        // so a keyed tap on a draft that turns out to be a navigation
+        // command would otherwise leave this flag stranded true, and the
+        // NEXT ask's unrelated inFlight-false transition would fire
+        // askWithKey() out of context. `inFlight = false` two lines below
+        // would itself spuriously trigger the watcher on a stale flag too.
+        pendingKeyedFollowUp = false
         inFlight = false
         keepJustLanded = false
         awayRainPlayedThisOpen = false
@@ -1899,9 +1933,9 @@ struct Composer: View {
         // Collapsing the two would let the most trustworthy result in the app
         // wear the same label as the least.
         let glyph = found ? "magnifyingglass" : (keyed ? "key.fill" : "lock.iphone")
-        let words = found ? String(localized: "Matched on this iPhone — nothing was written")
+        let words = found ? String(localized: "Matched on \(DS.device) — nothing was written")
                           : (keyed ? String(localized: "Answered with your key\(detail)")
-                                   : String(localized: "Answered on this iPhone"))
+                                   : String(localized: "Answered on \(DS.device)"))
         return HStack(spacing: DS.Space.s1) {
             Image(systemName: glyph)
                 .font(.system(size: 10))
@@ -1912,6 +1946,17 @@ struct Composer: View {
         .dsText(.label12)
         .foregroundStyle(DS.textTertiary)
         .padding(.horizontal, DS.Space.s4)
+    }
+
+    /// The ask-time form of the same consent (2026-07-31, prd §242) — a
+    /// normal `commit()`, plus a flag so the keyed retry fires ITSELF the
+    /// moment the on-device answer settles (the `onChange(of: inFlight)`
+    /// watcher above), instead of waiting for a second, separate tap on a
+    /// chip in the settled verb row. `commit()` is unchanged and does
+    /// everything it always does — this only decides what happens next.
+    private func askDirectly() {
+        pendingKeyedFollowUp = true
+        commit()
     }
 
     /// The BYO-key retry: the same question, re-answered by the person's own
@@ -2340,13 +2385,24 @@ struct Composer: View {
     ///   receipt line — proof the Calendar jump lands on the right day.
     @ViewBuilder
     private var takeChips: some View {
-        // Two independent gates, so Find is purely ADDITIVE — the Send-to
-        // band's own visibility rule is byte-for-byte what it was.
+        // Three independent gates, so each is purely ADDITIVE — the older
+        // two bands' own visibility rules are byte-for-byte what they were.
         // Find sits out for a PASTE: that's a capture path on its way to being
         // kept, not a phrase to search for.
         let offerFind = !pasted
         let offerSend = !answering && !draftIsQuestion
-        if isOpen && hasDraft && !isRecording, offerFind || offerSend {
+        // The ask-time keyed tap (2026-07-31, prd §242) — the discoverability
+        // fix: today's only door to "Try with your key" is a chip in the
+        // SETTLED verb row, which means asking, reading the whole on-device
+        // answer, and noticing a chip among three others before the option
+        // is even visible. This puts the SAME consent tap where the intent
+        // already is — needs a real question (mirrors `askWithKey()`'s own
+        // "the same question" framing; a capture-a-link paste has nothing
+        // for an agent to answer) and a configured key. Mutually exclusive
+        // with Send-to by construction (that band explicitly excludes
+        // questions), so the row never crowds.
+        let offerKeyed = !pasted && draftIsQuestion && AgentKey.isConfigured
+        if isOpen && hasDraft && !isRecording, offerFind || offerSend || offerKeyed {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: DS.Space.s2) {
@@ -2369,6 +2425,29 @@ struct Composer: View {
                         }
                         .buttonStyle(PressSpring())
                         .accessibilityLabel("Find in your things")
+                        }
+
+                        // Same tint-on-tintDim language "Try with your key"
+                        // already wears downstream (`Chip(style: .tint)`),
+                        // resized to this row's 40pt capsule so it scrolls
+                        // evenly beside Find and Send-to rather than reading
+                        // as a smaller, different kind of control.
+                        if offerKeyed {
+                        Button { askDirectly() } label: {
+                            HStack(spacing: DS.Space.s2) {
+                                Image(systemName: "key.fill")
+                                    .accessibilityHidden(true)
+                                    .font(.system(size: 14, weight: .medium))
+                                Text("Ask \(AgentKey.active?.agent ?? "your key")")
+                                    .dsText(.callout15).fontWeight(.semibold)
+                            }
+                            .foregroundStyle(DS.tint)
+                            .padding(.horizontal, DS.Space.s3 + 2)
+                            .frame(height: 40)
+                            .background(DS.tintDim, in: Capsule(style: .continuous))
+                        }
+                        .buttonStyle(PressSpring())
+                        .accessibilityLabel("Ask with your key")
                         }
 
                         if offerSend {

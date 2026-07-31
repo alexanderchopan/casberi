@@ -25,7 +25,7 @@ struct FilesScreen: View {
                     name: "Files",
                     identity: files.folderName.isEmpty
                         ? String(localized: "Folder") : files.folderName,
-                    connectionNote: String(localized: "A folder on this iPhone · read-only, never modified"),
+                    connectionNote: String(localized: "A folder on \(DS.device) · read-only, never modified"),
                     capabilitiesFallback: ["Reads the folder you picked.",
                                            "Read-only — never edits a file."],
                     openConnection: { showConnection = true }

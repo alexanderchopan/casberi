@@ -10917,3 +10917,95 @@ FACT still stands unaddressed and is the best follow-up here — no actionable
 row says WHOSE wallet it is (a delegation names it inside its sentence; an
 approval never does), so on a multi-wallet setup "Uniswap can spend unlimited
 USDC" doesn't say which wallet is exposed.
+
+## §242 — Grok joins the agents, and the agents get two structural fixes (user: "how do we add support for Grok", then "Grok and the agents are popular features for investors and a certain class of users... i'd like to add grok and give it a tile", then "can you synthesize what we can do with grok?", then "lets build the stuff w/ grok you suggest, and also the two structural things like which agent is active and try with your key", 2026-07-31)
+
+The prior turn (recorded nowhere, since it changed nothing) had argued for
+PULLING Venice/Bankr/OpenRouter's catalog tiles — they land nothing in the
+feed, and the funnel for the chat-import trio is the worst in the app. The
+user's actual read reversed that: the agents are real promotional and
+investor-facing surface, low usage is a REAL problem worth fixing, and the
+fix is more visibility, not less. Grok was the test case for both halves at
+once — a new tile, and the structural fixes the existing six tiles needed
+regardless of Grok.
+
+### What shipped
+
+**Grok, the seventh agent key** (`AgentProvider.grok`, `Model/AgentAnswer.swift`).
+Rides the SAME OpenAI-compatible request branch as OpenAI/Venice/OpenRouter —
+xAI's API speaks it natively (`api.x.ai/v1/chat/completions`, MEASURED
+2026-07-31: answers 405 to a bare GET, confirming it's real and POST-only).
+Validated via `GET /v1/api-key`, MEASURED to 401 with no credentials. A new
+catalog offer (Agent group), `GrokSetupScreen.swift` (structurally
+`OpenRouterSetupScreen` with a different console), routing, and a bundled
+brand asset (`Assets.xcassets/brand-grok.imageset`, the xAI mark the user
+supplied, squared onto its own black plate and scaled to the shipped 512×512
+convention). The website's three required spots (hero rain, sw-tab Agents
+swatch, `#catalog` Agents shelf) all gained the same asset inlined as base64,
+`catalog-sync.sh` verified, cache-busters bumped.
+
+**Deliberately UNBUILT, and said so everywhere it would otherwise be implied:**
+Grok's actual reason for a tile — the only agent that could ever see X, since
+none of this app's bridges can reach it at all (closed API, no keyless path)
+— is a search verb ("What's X saying about this?" on a thing's own sheet)
+that DOES NOT EXIST YET. Three documentation fetches on 2026-07-31 each
+described a DIFFERENT current wire shape for xAI's search/citations: an
+older `search_parameters` request body, a newer `web_search` tool with no
+confirmed X-specific mode, and genuine doubt over whether tool-use even
+reaches the `/v1/chat/completions` endpoint this file calls, as opposed to a
+separate Responses API. This is NOT the same risk as this codebase's usual
+"built from public docs, UNMEASURED against the live API" pattern (PostHog,
+1Claw, Privacy.com, Bitrefill all had ONE stable spec to transcribe, just
+unconfirmed live) — three actively disagreeing sources is a different, worse
+failure mode, likelier to be flatly wrong rather than merely unmeasured. So
+the first draft of the catalog tagline/summary, the setup screen's pitch
+section, its connect success line, and its `can:` capability strings all
+claimed the search verb WORKED — caught and rewritten before this shipped, on
+the same "no dead controls, no fake status" law that governs everything
+else here. What ships is exactly the honest BYOK contract every agent here
+keeps, worded with the same confidence level as Venice/Bankr/OpenRouter's own
+copy, nothing more. The pinned model id (`grok-4`) is similarly UNVERIFIED —
+no key has ever been stored against this build, so it's a documented
+best-guess, not a measured fact, same honesty tag Venice's own model-name
+comment already carries.
+
+**Structural fix 1 — which agent is active, stated on the tile
+(`AgentKey.activate(_:)`, `AgentActiveStatusRow` in
+`Screens/BridgeSetupComponents.swift`).** `AgentKey.active` was always "the
+provider whose key was saved LAST," app-wide, invisible outside Settings →
+Your key. With four key-backed catalog tiles now (Venice/Bankr/OpenRouter/
+Grok), reconnecting via any ONE of them silently answered with whichever
+provider happened to be saved last, and nothing on any of those four screens
+said so. Each now states plainly whether it IS the active agent, or names
+which one is and offers a one-tap "Make active" — `AgentKey.activate` flips
+only the pointer, so becoming active again never requires re-pasting a key
+that hasn't changed. Claude/ChatGPT/Gemini's own screens are chat IMPORTS, a
+different facet with no key of their own, so they're untouched.
+
+**Structural fix 2 — "Try with your key" surfaced at ASK time
+(`Shell/Composer.swift`).** The only door to a keyed answer used to be a chip
+in the SETTLED verb row — meaning ask, read the whole on-device answer, and
+notice a chip among three others, before the option is even visible. The
+typed-draft band (Find / Send-to) gains a third chip, "Ask `<active agent>`",
+offered for any real question when a key is configured. Tapping it is a
+normal `commit()` — the free, instant, on-device answer still runs and still
+leads, unchanged — plus a `pendingKeyedFollowUp` flag that fires the SAME
+`askWithKey()` retry itself the moment that on-device turn settles, via an
+`onChange(of: inFlight)` watcher rather than an inline call inside `commit()`'s
+own async Task (which would race that Task's own later settle work —
+`keepableAskKind`, `nextAsk` — against `askWithKey()`'s state writes). The
+consent model is unchanged: the tap made BEFORE either answer exists still is
+the deliberate consent prd §67 requires: nothing leaves the device until the
+tap, it's just moved earlier. `close()` clears the flag defensively — the
+one leak path was a keyed tap on a draft that turns out to be a navigation
+command, which never sets `inFlight` true at all and would otherwise strand
+the flag for some later, unrelated ask's settle to spuriously fire on.
+
+### Verification
+
+Build clean; `catalog-sync.sh`, `swiftdata-liveness-audit.py` and
+`network-reach-audit.sh` (which caught `console.x.ai` as an undisclosed host —
+added to the browser-permalink denylist, the same treatment `venice.ai`/
+`bankr.bot` already get) all pass. No Grok key has been stored this session,
+so `validate`/the chat request/the pinned model are unverified against a live
+response — `-byokProbe` is the re-measurement step once one exists.

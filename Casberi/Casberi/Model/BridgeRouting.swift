@@ -41,6 +41,7 @@ enum BridgeRouter {
         case venice
         case bankr
         case openRouter
+        case grok
         case bluesky
         case farcaster
         case pinterest
@@ -158,6 +159,7 @@ enum BridgeRouter {
             case .venice:         "venice"
             case .bankr:          "bankr"
             case .openRouter:     "openrouter"
+            case .grok:           "grok"
             case .bluesky:        "bsky"
             case .farcaster:      "fc"
             case .pinterest:      "pinterest"
@@ -249,6 +251,7 @@ enum BridgeRouter {
         Row(offer: "Venice",    id: "venice", destination: .venice),
         Row(offer: "Bankr",     id: "bankr",  destination: .bankr),
         Row(offer: "OpenRouter", id: "openrouter", destination: .openRouter),
+        Row(offer: "Grok",       id: "grok",   destination: .grok),
         Row(offer: "Bluesky",   id: "bsky",   destination: .bluesky),
         Row(offer: "Farcaster", id: "fc",     destination: .farcaster),
         Row(offer: "Pinterest", id: "pinterest", destination: .pinterest),
@@ -328,6 +331,7 @@ struct BridgeDestinationView: View {
         case .venice:         VeniceSetupScreen()
         case .bankr:          BankrSetupScreen()
         case .openRouter:     OpenRouterSetupScreen()
+        case .grok:           GrokSetupScreen()
         case .exchange(let venue): ExchangeSetupScreen(venue: venue)
         case .bluesky:        HandleSetupScreen(bridge: .bluesky)
         case .farcaster:      HandleSetupScreen(bridge: .farcaster)

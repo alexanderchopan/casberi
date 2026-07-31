@@ -18,7 +18,7 @@ struct KindleImportScreen: View {
         List {
             BridgeSetupHeader(name: "Kindle")
             ImportStepsCard("Get your highlights", [
-                "Plug your Kindle into this iPhone (or a Mac) with its cable.",
+                "Plug your Kindle into \(DS.device)\(DS.isMac ? "" : " (or a Mac)") with its cable.",
                 "Open the Kindle's drive → documents → My Clippings.txt, and copy it to Files.",
                 "Pick that file below.",
             ])
@@ -71,7 +71,7 @@ struct KindleImportScreen: View {
         let proof = summary.imported > 0 ? "\(summary.imported) highlights in" : "Synced just now"
         store.registerConnected(id: "kindle", name: "Kindle", proof: proof,
                                 can: ["Imports the highlights you export.",
-                                      "Read-only — nothing leaves this iPhone."])
+                                      "Read-only — nothing leaves \(DS.device)."])
     }
 }
 

@@ -56,7 +56,7 @@ enum NetworkReach {
 
         Endpoint(service: "Saved links",
                  reach: .always,
-                 purpose: "When you save a link, this iPhone fetches that page once to read its title and preview image. The request goes to the link's own site — whatever you saved — and carries nothing about you.",
+                 purpose: "When you save a link, \(DS.device) fetches that page once to read its title and preview image. The request goes to the link's own site — whatever you saved — and carries nothing about you.",
                  hosts: ["the site you saved"]),
         Endpoint(service: "Maps",
                  reach: .always,
@@ -83,7 +83,7 @@ enum NetworkReach {
                          "api.safe.global", "yields.llama.fi", "api.hyperliquid.xyz"]),
         Endpoint(service: "Tokens",
                  reach: .whenConnected(bridge: "Tokens"),
-                 purpose: "Fetches the public price history of a token you watch to draw its chart on this iPhone. Carries only the token — nothing about you.",
+                 purpose: "Fetches the public price history of a token you watch to draw its chart on \(DS.device). Carries only the token — nothing about you.",
                  hosts: ["api.dexscreener.com", "api.geckoterminal.com"]),
         Endpoint(service: "GeckoTerminal",
                  reach: .whenConnected(bridge: "GeckoTerminal"),
@@ -291,9 +291,9 @@ enum NetworkReach {
 
         Endpoint(service: "Your agent key",
                  reach: .onTapWithKey,
-                 purpose: "Only when you tap \"Try with your key\" on an answer, your question and the few matched things go straight from this iPhone to the provider you chose — Anthropic, OpenAI, Google, Venice, Bankr, or OpenRouter. Never otherwise, and never through us.",
+                 purpose: "Only when you tap \"Try with your key\" on an answer, your question and the few matched things go straight from \(DS.device) to the provider you chose — Anthropic, OpenAI, Google, Venice, Bankr, OpenRouter, or xAI (Grok). Never otherwise, and never through us.",
                  hosts: ["api.anthropic.com", "api.openai.com", "generativelanguage.googleapis.com",
-                         "api.venice.ai", "api.bankr.bot", "openrouter.ai"]),
+                         "api.venice.ai", "api.bankr.bot", "openrouter.ai", "api.x.ai"]),
     ]
 
     /// The hosts this registry accounts for — the audit script checks every

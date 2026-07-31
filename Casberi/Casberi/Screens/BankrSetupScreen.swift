@@ -52,6 +52,7 @@ struct BankrSetupScreen: View {
                             isArmed: !checking && !keyDraft.trimmingCharacters(in: .whitespaces).isEmpty,
                             action: connect)
                 BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
+                AgentActiveStatusRow(provider: .bankr)
                 DSSlabNote(text: "Your key powers \"Try with your key\": any answer re-runs on Bankr — which can weigh your wallet and live markets, not just your things — only when you tap. Every question says answer only: nothing here trades, sends, or swaps.\n\nThe key lives in the Keychain, goes only to Bankr, and Bankr bills you directly.")
             }
         }

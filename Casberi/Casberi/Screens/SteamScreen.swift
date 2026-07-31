@@ -28,7 +28,7 @@ struct SteamScreen: View {
                     bridgeID: "steam",
                     name: "Steam",
                     identity: SteamBridge.profile,
-                    connectionNote: String(localized: "Web API key · stored in this iPhone's Keychain"),
+                    connectionNote: String(localized: "Web API key · stored in \(DS.device)'s Keychain"),
                     capabilitiesFallback: ["Reads what you've played.",
                                            "Read-only — public profile data."],
                     openConnection: { showConnection = true }
@@ -94,7 +94,7 @@ struct SteamScreen: View {
                             secure: true, isArmed: canConnect, action: connect)
                 BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your games…"),
                                      result: result, resultIsError: resultIsError)
-                DSSlabNote(text: "Your key stays in this iPhone's Keychain, goes only to Steam, and only to read public profile data.")
+                DSSlabNote(text: "Your key stays in \(DS.device)'s Keychain, goes only to Steam, and only to read public profile data.")
             }
         }
         .dsSlabSection()

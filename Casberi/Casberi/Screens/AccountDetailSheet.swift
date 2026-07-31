@@ -78,7 +78,7 @@ struct AccountDetailSheet: View {
             Button("Delete \(thingCount) things", role: .destructive) { deleteEverything() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Your things, voice recordings, and photo — this iPhone and iCloud. Your app connections and keys stay. No undo.")
+            Text("Your things, voice recordings, and photo — \(DS.device) and iCloud. Your app connections and keys stay. No undo.")
         }
         .confirmationDialog("Delete Casberi's access?",
                             isPresented: $confirmDeleteAccess, titleVisibility: .visible) {
@@ -187,7 +187,7 @@ struct AccountDetailSheet: View {
 
     private var syncStatusLine: String {
         guard icloudSync else {
-            return SharedStore.cloudSyncActive ? "Stops syncing from your next launch" : "Stays on this iPhone"
+            return SharedStore.cloudSyncActive ? "Stops syncing from your next launch" : "Stays on \(DS.device)"
         }
         guard SharedStore.cloudSyncActive else { return "Syncs from your next launch" }
         if syncHasLiveError { return "Couldn't sync — will keep retrying" }
@@ -211,7 +211,7 @@ struct AccountDetailSheet: View {
                 dataStat(storeSize, "storage")
             }
             // One plain line for the whole on-device story.
-            aliveRow("sparkles", DS.confirm, "Private", "Answers run on this iPhone")
+            aliveRow("sparkles", DS.confirm, "Private", "Answers run on \(DS.device)")
             // iCloud sync: the badge shows where things live — green lock here,
             // blue cloud when synced, red when the mirror itself is failing.
             // The container binds at launch, so a fresh flip says WHEN it
@@ -257,7 +257,7 @@ struct AccountDetailSheet: View {
                     badge("network", DS.tint)
                     VStack(alignment: .leading, spacing: 1) {
                         Text("What this app reaches").dsText(.body17).foregroundStyle(DS.textPrimary)
-                        Text("Every service, straight from this iPhone")
+                        Text("Every service, straight from \(DS.device)")
                             .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     }
                     Spacer(minLength: 0)
@@ -282,11 +282,17 @@ struct AccountDetailSheet: View {
     /// regardless (2026-07-16).
     private var keyCard: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
-            aliveRow("key.fill", keyConfigured ? DS.confirm : DS.textSecondary,
+            // The SUMMARY — who answers, app-wide. It used to describe
+            // whichever provider the picker had selected ("Claude saved in
+            // the Keychain …3kQA"), which every row of `AgentKeyPicker` now
+            // states for itself; keeping it would be prd §208's "one thing
+            // said twice". What the rows CAN'T say from any single row is
+            // which one wins, so that's what this says now.
+            aliveRow("key.fill", AgentKey.isConfigured ? DS.confirm : DS.textSecondary,
                      "Agent API key",
-                     keyConfigured ? "\(keyProvider.agent) saved in the Keychain \(AgentKey.hint(keyProvider))"
-                                   : "Answers run on this iPhone until you add one")
-            Text("With your key saved, every answer offers \"Try with your key\" — the question and the few matched things go straight from this iPhone to the agent's provider, only when you tap. They bill your key directly.")
+                     AgentKey.active.map { String(localized: "Answers run on \($0.agent) when you tap") }
+                        ?? String(localized: "Answers run on \(DS.device) until you add one"))
+            Text("With your key saved, every answer offers \"Try with your key\" — the question and the few matched things go straight from \(DS.device) to the agent's provider, only when you tap. They bill your key directly.")
                 .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             // What THIS agent adds beyond a plain text answer — changes with
@@ -298,13 +304,10 @@ struct AccountDetailSheet: View {
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            Picker("Agent", selection: $keyProvider) {
-                ForEach(AgentProvider.allCases) { provider in
-                    Text(provider.agent).tag(provider)
-                }
-            }
-            .pickerStyle(.segmented)
-            .onChange(of: keyProvider) {
+            // A list, not a segmented control (prd §243) — see
+            // `AgentKeyPicker` for why seven providers broke the old one in
+            // three ways, of which width was only the most visible.
+            AgentKeyPicker(selection: $keyProvider) {
                 keyConfigured = AgentKey.isConfigured(keyProvider)
                 keyResult = nil
                 keyDraft = ""
@@ -336,7 +339,7 @@ struct AccountDetailSheet: View {
                     keyResultIsError = false
                     keyResult = AgentKey.isConfigured
                         ? "Removed — answers run on \(AgentKey.active?.agent ?? "") now."
-                        : "Removed — answers stay on this iPhone."
+                        : "Removed — answers stay on \(DS.device)."
                 } label: {
                     actionLabel("Remove key", icon: "trash",
                                 fg: DS.destructive, bg: DS.gray100)
@@ -349,7 +352,11 @@ struct AccountDetailSheet: View {
                     .foregroundStyle(keyResultIsError ? DS.attention : DS.textSecondary)
                     .settleIn()
             }
-            Text("Get a key from the agent's own console — console.anthropic.com (Claude), platform.openai.com (ChatGPT), aistudio.google.com (Gemini), venice.ai (Venice), bankr.bot/api-keys (Bankr — make it a read-only key; answers never trade), or openrouter.ai/keys (OpenRouter — routes to whichever model fits, no model to pick). It stays in this iPhone's Keychain and goes only to the provider you chose.")
+            // Derived from the providers themselves (2026-07-31) rather than
+            // hand-listed: the old sentence named six consoles and silently
+            // went stale the moment a seventh provider landed. `console` is
+            // already a property on every case, so this can't drift again.
+            Text("Get a key from the agent's own console — \(AgentProvider.allCases.map { "\($0.console) (\($0.agent))" }.formatted(.list(type: .or))). Bankr's should be minted read-only; answers never trade regardless. It stays in \(DS.device)'s Keychain and goes only to the provider you chose.")
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -653,7 +660,7 @@ struct AccountDetailSheet: View {
                     if let error, (error as? CKError)?.code != .zoneNotFound {
                         deleteResult = "Deleted here. The iCloud copy couldn't be cleared — check your connection and try again."
                     } else {
-                        deleteResult = "Things deleted — this iPhone and iCloud. Your connections and keys stayed."
+                        deleteResult = "Things deleted — \(DS.device) and iCloud. Your connections and keys stayed."
                         // A remembered sync error/success now describes a
                         // corpus that no longer exists — clear it with the
                         // zone rather than let it read as current.
@@ -662,7 +669,7 @@ struct AccountDetailSheet: View {
                 }
             }
         } else {
-            deleteResult = "Things deleted from this iPhone. Your connections and keys stayed."
+            deleteResult = "Things deleted from \(DS.device). Your connections and keys stayed."
         }
         DSHaptic.success()
     }

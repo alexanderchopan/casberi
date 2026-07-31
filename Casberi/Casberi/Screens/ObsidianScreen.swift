@@ -27,7 +27,7 @@ struct ObsidianScreen: View {
                     name: "Obsidian",
                     identity: obsidian.vaultName.isEmpty
                         ? String(localized: "Vault") : obsidian.vaultName,
-                    connectionNote: String(localized: "A folder on this iPhone · read-only, never modified"),
+                    connectionNote: String(localized: "A folder on \(DS.device) · read-only, never modified"),
                     capabilitiesFallback: ["Reads the vault you picked.",
                                            "Read-only — never edits a note."],
                     openConnection: { showConnection = true }

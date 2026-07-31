@@ -29,7 +29,7 @@ struct MailScreen: View {
                     bridgeID: provider.bridgeID,
                     name: provider.source,
                     identity: provider.address,
-                    connectionNote: String(localized: "App password · stored in this iPhone's Keychain. Read-only over IMAP."),
+                    connectionNote: String(localized: "App password · stored in \(DS.device)'s Keychain. Read-only over IMAP."),
                     openConnection: { showConnection = true }
                 )
                 .listRowBackground(Color.clear)

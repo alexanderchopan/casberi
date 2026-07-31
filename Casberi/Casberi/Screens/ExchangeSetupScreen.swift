@@ -50,7 +50,7 @@ struct ExchangeSetupScreen: View {
                     bridgeID: venue.rawValue,
                     name: venue.display,
                     identity: String(localized: "Read-only key"),
-                    connectionNote: String(localized: "\(venue.display) confirmed this key can't trade or withdraw · stored in this iPhone's Keychain"),
+                    connectionNote: String(localized: "\(venue.display) confirmed this key can't trade or withdraw · stored in \(DS.device)'s Keychain"),
                     capabilitiesFallback: [String(localized: "Reads your balances."),
                                            String(localized: "Adds them to your combined total."),
                                            String(localized: "Can't place an order, withdraw, or transfer.")],
@@ -122,7 +122,7 @@ struct ExchangeSetupScreen: View {
                 // load-bearing trust content, not padding). What left is the
                 // capability line the product page and the connected state
                 // both already carry.
-                DSSlabNote(text: "Casberi asks \(venue.display) what this key can do before storing it, and hands it back if it can move money.\n\nIt lives in this iPhone's Keychain and goes only to \(venue.display) — nothing here can place an order, withdraw, or transfer.")
+                DSSlabNote(text: "Casberi asks \(venue.display) what this key can do before storing it, and hands it back if it can move money.\n\nIt lives in \(DS.device)'s Keychain and goes only to \(venue.display) — nothing here can place an order, withdraw, or transfer.")
             }
         }
         .dsSlabSection()

@@ -33,7 +33,7 @@ struct DropboxScreen: View {
                     bridgeID: "dropbox",
                     name: "Dropbox",
                     identity: folderIdentity,
-                    connectionNote: String(localized: "Signed in on this iPhone · read-only key, never writes"),
+                    connectionNote: String(localized: "Signed in on \(DS.device) · read-only key, never writes"),
                     capabilitiesFallback: ["Reads the folder you named.",
                                            "Read-only — never edits, shares, or deletes a file."],
                     openConnection: { showConnection = true }

@@ -80,7 +80,7 @@ struct SafeScreen: View {
 
     private var footerSection: some View {
         Section {
-            Text("Read from Safe's own public Transaction Service by this iPhone — no account, no key.\n\nFinds every Safe you're a signer on, not just ones you watch directly, and says plainly when it's your own signature that's missing. Also alerts on a new or removed owner, a changed signature threshold, or a newly enabled module — the facts that decide who can move a Safe's funds.\n\nRead-only: signing always happens in your own Safe app, never here.")
+            Text("Read from Safe's own public Transaction Service by \(DS.device) — no account, no key.\n\nFinds every Safe you're a signer on, not just ones you watch directly, and says plainly when it's your own signature that's missing. Also alerts on a new or removed owner, a changed signature threshold, or a newly enabled module — the facts that decide who can move a Safe's funds.\n\nRead-only: signing always happens in your own Safe app, never here.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .listRowBackground(Color.clear)
         }

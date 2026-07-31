@@ -48,7 +48,8 @@ struct OpenRouterSetupScreen: View {
                             isArmed: !checking && !keyDraft.trimmingCharacters(in: .whitespaces).isEmpty,
                             action: connect)
                 BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-                DSSlabNote(text: "OpenRouter auto-picks whichever of its 400+ models fits your question. Your key powers \"Try with your key\": any answer re-runs there, straight from this iPhone, only when you tap.\n\nThe key lives in the Keychain, goes only to OpenRouter, and OpenRouter bills you directly.")
+                AgentActiveStatusRow(provider: .openrouter)
+                DSSlabNote(text: "OpenRouter auto-picks whichever of its 400+ models fits your question. Your key powers \"Try with your key\": any answer re-runs there, straight from \(DS.device), only when you tap.\n\nThe key lives in the Keychain, goes only to OpenRouter, and OpenRouter bills you directly.")
             }
         }
         .dsSlabSection()

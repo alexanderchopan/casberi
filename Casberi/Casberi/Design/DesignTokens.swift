@@ -187,6 +187,30 @@ enum DS {
         static let s8: CGFloat = 32   // macro — unchanged
     }
 
+    // MARK: - Device naming (Mac Catalyst polish, 2026-07-31)
+
+    /// True on the Mac Catalyst build — the one branch point every
+    /// device-naming string below reads off, so it can't drift from the
+    /// actual target.
+    static var isMac: Bool {
+        #if targetEnvironment(macCatalyst)
+        true
+        #else
+        false
+        #endif
+    }
+
+    /// The on-device noun privacy/connect copy names — every "this
+    /// iPhone"/"this Mac" claim in the app is a literal, checkable promise
+    /// (see `NetworkReach.swift`), so it has to name the device it's
+    /// actually running on, not hardcode the phone case.
+    static var device: String { isMac ? "this Mac" : "this iPhone" }
+
+    /// Where a denied permission sends you to re-grant it — Mac Catalyst has
+    /// no "iOS Settings" app, so a denial copy pointing there is a dead
+    /// instruction on Mac (the honesty rule).
+    static var settingsAppName: String { isMac ? "System Settings" : "iOS Settings" }
+
     // MARK: - Layout (iPad content width — see `dsAdaptiveContentWidth()`)
 
     enum Layout {

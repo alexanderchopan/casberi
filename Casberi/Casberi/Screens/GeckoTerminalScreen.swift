@@ -81,7 +81,7 @@ struct GeckoTerminalScreen: View {
 
     private var footerSection: some View {
         Section {
-            Text("Trending is GeckoTerminal's own ranking — by 24-hour volume and price move — fetched directly by this iPhone through its public API. Read-only: nothing here buys, sells, or trades.")
+            Text("Trending is GeckoTerminal's own ranking — by 24-hour volume and price move — fetched directly by \(DS.device) through its public API. Read-only: nothing here buys, sells, or trades.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .listRowBackground(Color.clear)
         }

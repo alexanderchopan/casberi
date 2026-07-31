@@ -114,6 +114,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-bankr     { background: #a78bfa; }
 .ai-1claw     { background: #990029; }
 .ai-openrouter { background: #0b0f11; }
+.ai-grok      { background: #000; }   /* xAI's own black, matching the mark's opaque plate */
 .ai-github    { background: #24292f; font-size: 16px; }
 .ai-linear    { background: #5e6ad2; }
 .ai-posthog   { background: #fff; }
@@ -978,9 +979,10 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 .sw-tab .t-ico .ai { width: 36px; height: 36px; border-radius: 11px; font-size: 15px; flex: none; }
 .sw-tab .t-ico .ai img { width: 52%; height: 52%; }
 .sw-tab .t-ico .ai.tilefull img { width: 100%; height: 100%; }
-/* near-black brand tiles (Venice, dark marks) vanish against this dark rail —
-   a thin ring gives them a readable edge without changing their true color. */
-.sw-tab .t-ico .ai-venice { box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
+/* near-black brand tiles (Venice, Grok, dark marks) vanish against this dark
+   rail — a thin ring gives them a readable edge without changing their true
+   color. */
+.sw-tab .t-ico .ai-venice, .sw-tab .t-ico .ai-grok { box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
 .sw-tab b { display: block; font-size: 16px; font-weight: 750; letter-spacing: -.01em; }
 .sw-tab span { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
 .sw-tab.on { background: var(--surface-2); box-shadow: inset 0 0 0 1.5px rgba(59,140,240,.5); }

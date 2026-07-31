@@ -28,7 +28,7 @@ struct SpotifyScreen: View {
                 BridgeConnectedState(
                     bridgeID: "spotify",
                     name: "Spotify",
-                    connectionNote: String(localized: "Signed in on this iPhone · no server ever holds a secret"),
+                    connectionNote: String(localized: "Signed in on \(DS.device) · no server ever holds a secret"),
                     capabilitiesFallback: ["Reads your liked songs.",
                                            "Read-only — never plays, adds, or removes."],
                     openConnection: { showConnection = true }

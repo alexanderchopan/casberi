@@ -79,7 +79,7 @@ struct OpenSeaScreen: View {
 
     private var footerSection: some View {
         Section {
-            Text("Fetched directly by this iPhone through OpenSea's public API — no account, no ranking. Read-only: nothing here buys, sells, or bids.")
+            Text("Fetched directly by \(DS.device) through OpenSea's public API — no account, no ranking. Read-only: nothing here buys, sells, or bids.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .listRowBackground(Color.clear)
         }

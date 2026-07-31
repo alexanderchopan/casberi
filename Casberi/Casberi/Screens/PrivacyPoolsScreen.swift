@@ -77,7 +77,7 @@ struct PrivacyPoolsScreen: View {
 
     private var footerSection: some View {
         Section {
-            Text("Deposits are read from Ethereum's public chain and each deposit's review status from 0xBow's public API by this iPhone — no account, no key.\n\nWithdrawals are private by design: the chain can't link them to your deposit, so Casberi never sees or shows that side. Read-only: nothing here deposits, withdraws, or moves funds.")
+            Text("Deposits are read from Ethereum's public chain and each deposit's review status from 0xBow's public API by \(DS.device) — no account, no key.\n\nWithdrawals are private by design: the chain can't link them to your deposit, so Casberi never sees or shows that side. Read-only: nothing here deposits, withdraws, or moves funds.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .listRowBackground(Color.clear)
         }

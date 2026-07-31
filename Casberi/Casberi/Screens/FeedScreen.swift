@@ -2365,6 +2365,7 @@ struct FeedScreen: View {
                                 // The tiles press like tiles (2026-07-10) — the same
                                 // settle the Settings tiles and treemap cells wear.
                                 .buttonStyle(DSTileButtonStyle())
+                                .dsHover()
                                 .matchedTransitionSource(id: thing.id, in: zoomNS)
                             }
                         }
@@ -2756,6 +2757,13 @@ struct FeedScreen: View {
             .contentShape(Rectangle())
             .matchedTransitionSource(id: thing.id, in: zoomNS)
             .onTapGesture { openThing(thing) }
+            // Mac/pointer polish (2026-07-31): every feed row is a Button
+            // elsewhere in the app's list screens (`dsListCardRow`'s own
+            // `.hoverEffect`, 27 call sites) but the feed itself renders bare
+            // rows over `onTapGesture`, so this is the one surface a Mac
+            // cursor crossed with nothing lighting up. One call, one place —
+            // every shape (`shapedRow`'s dozen anatomies) inherits it.
+            .dsHover()
             // V3b (2026-07-07, supersedes the kind-color wash): rows are
             // NEUTRAL cards — the translucent kind wash read as murk. Color
             // moved into the tag text: the project's own stable hue.

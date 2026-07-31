@@ -226,7 +226,7 @@ struct RSSScreen: View {
 
     private var footerSection: some View {
         Section {
-            Text("Fetched directly by this iPhone — no account, no server, no ranking.")
+            Text("Fetched directly by \(DS.device) — no account, no server, no ranking.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .listRowBackground(Color.clear)
         }

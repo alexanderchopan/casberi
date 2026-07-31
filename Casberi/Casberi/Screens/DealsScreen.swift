@@ -77,7 +77,7 @@ struct DealsScreen: View {
 
     private var footerSection: some View {
         Section {
-            Text("Fetched directly by this iPhone through each aggregator's public feed — no account, no ranking. Read-only: nothing here buys anything.")
+            Text("Fetched directly by \(DS.device) through each aggregator's public feed — no account, no ranking. Read-only: nothing here buys anything.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .listRowBackground(Color.clear)
         }

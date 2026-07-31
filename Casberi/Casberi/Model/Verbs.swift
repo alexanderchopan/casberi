@@ -390,7 +390,7 @@ enum HandOff {
         case declined
         // After a system denial iOS never re-asks — Settings is the only
         // honest route, so the message names it.
-        var errorDescription: String? { "No access — allow Casberi in iOS Settings" }
+        var errorDescription: String? { "No access — allow Casberi in \(DS.settingsAppName)" }
     }
 }
 
