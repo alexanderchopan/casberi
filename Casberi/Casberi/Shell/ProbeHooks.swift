@@ -284,6 +284,38 @@ enum ProbeHooks {
                       added.map(String.init) ?? "FAILED", FarcasterIngest.resurfaced)
             }
         },
+        // `-fcSignerProbe <username|YES>` runs the signer sweep directly —
+        // which apps can post as you (`Model/FarcasterSigners.swift`), the
+        // WalletApprovals shape for social identity. A bare YES uses the first
+        // account marked `mine`. Logs one line per landed grant/revocation
+        // plus the whole inventory currently held, because the landed count
+        // alone reports 0 on every pass after the first — which is what a
+        // working sweep looks like once the inventory is in.
+        Hook(key: "fcSignerProbe") { spec, context in
+            Task { @MainActor in
+                let store = FarcasterStore.shared
+                let name = FarcasterStore.normalize(spec)
+                let account = name.isEmpty || name == "yes"
+                    ? store.accounts.first(where: \.mine) ?? store.accounts.first
+                    : store.accounts.first { $0.username == name }
+                guard let account, let fid = await FarcasterIngest.fid(forName: account.username)
+                else { return NSLog("fcSignerProbe: no watched account to read") }
+                var existing = IngestSupport.existingSourceRefs(context, source: "Farcaster")
+                let added = await FarcasterSigners.sync(fid: fid, existing: &existing,
+                                                        context: context)
+                if added > 0 { context.saveHonestly() }
+                NSLog("fcSignerProbe @%@ (fid %d): %d landed", account.username, fid, added)
+                let held = IngestSupport.thingsByRef(context, source: "Farcaster")
+                    .filter { $0.key.hasPrefix("farcaster:signer:") }
+                    .values.filter(\.isLive)
+                    .sorted { $0.capturedAt > $1.capturedAt }
+                NSLog("fcSignerProbe inventory: %d held", held.count)
+                for thing in held {
+                    NSLog("fcSigner| %@ — %@", thing.title,
+                          thing.capturedAt.formatted(date: .abbreviated, time: .omitted))
+                }
+            }
+        },
         // `-fcHealProbe YES` runs the delete-sync reconcile headlessly over
         // already-watched accounts and NSLogs how many stale casts it
         // removed. `force: true` bypasses heal's own hourly throttle.

@@ -148,6 +148,9 @@ final class FarcasterStore {
     }
 
     func remove(_ username: String) {
+        if let fid = accounts.first(where: { $0.username == username })?.fid, fid != 0 {
+            FarcasterSigners.forget(fid: fid)
+        }
         accounts.removeAll { $0.username == username }
         SocialInbound.FollowerLedger.forget(key: Self.followerLedgerKey(username))
     }
@@ -158,6 +161,7 @@ final class FarcasterStore {
     func removeAll() {
         for account in accounts {
             SocialInbound.FollowerLedger.forget(key: Self.followerLedgerKey(account.username))
+            if account.fid != 0 { FarcasterSigners.forget(fid: account.fid) }
         }
         accounts = []
         channels = []
@@ -211,8 +215,14 @@ final class FarcasterStore {
         accounts[i].mine = on
         // Turning it OFF forgets the follower ledger, so turning it back on
         // seeds fresh rather than announcing everyone who arrived meanwhile
-        // as today's news.
-        if !on { SocialInbound.FollowerLedger.forget(key: Self.followerLedgerKey(username)) }
+        // as today's news. The signer cursor goes too, for the opposite
+        // reason: its first sight lands the whole inventory on purpose, and
+        // resuming mid-history would silently skip everything granted while
+        // the flag was off.
+        if !on {
+            SocialInbound.FollowerLedger.forget(key: Self.followerLedgerKey(username))
+            if accounts[i].fid != 0 { FarcasterSigners.forget(fid: accounts[i].fid) }
+        }
     }
 
     /// Where one account's seen-followers ledger lives. Keyed on the USERNAME
@@ -636,6 +646,8 @@ enum FarcasterIngest {
         }
         added += await landFollowers(account: account, fid: fid,
                                      existing: &existing, context: context)
+        // Which apps can post as you — `WalletApprovals` for social identity.
+        added += await FarcasterSigners.sync(fid: fid, existing: &existing, context: context)
         return added
     }
 
