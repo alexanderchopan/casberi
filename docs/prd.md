@@ -11080,3 +11080,72 @@ concurrent session was mid-pass through `AccountDetailSheet.swift` (the
 `DS.device` Mac-copy conversion), so keeping the new component out of that
 file minimizes the collision surface and makes this trivially re-appliable if
 the edit is clobbered.
+
+## §244 — TikTok gets a better read, not a seat (user: "what if anything could we do with tiktok", then "yes do it", then "do they have an export function?", 2026-07-31)
+
+§36 declined TikTok on 2026-07-09 under the live-data-only ruling: their
+export lands 1–4 days stale and never updates. That ruling is UNCHANGED and
+was re-checked this session — the export is still 1–4 days (TikTok's own docs
+say up to 30), still JSON-or-TXT, still expires four days after it's ready.
+
+But §36 only ever weighed the export. Four routes exist, and three are still
+correctly declined:
+
+- **Export** — stale by construction. Declined, as above.
+- **RSS** — TikTok has never had it. The generators are scraped and
+  rate-limited, which is the ToS-gray that got Duolingo declined in §36.
+- **Display API** — official, live, OAuth. Returns only the AUTHENTICATED
+  account's own public posts: no liked, no saved, no following. Production
+  use needs app review with an end-to-end demo video. Worth revisiting only
+  for someone who posts on TikTok, and its view counts would have to land
+  under §223's milestone ladder (a count is a thing only when the count IS
+  the event), never as a weekly tally.
+- **Data Portability API (DMA, EEA)** — the export made recurring and
+  real-time, which is precisely the objection §36 raised. Still declined, on
+  three counts: EEA-only (a US user gets a dead seat, which is fake status),
+  access gated on a security-and-privacy review, and it delivers archives —
+  the post-M2 server, same as Credit Karma/NerdWallet/Acorns.
+
+**The ruling: TikTok gets enrichment, not a catalog seat.** The gap worth
+closing isn't "follow a creator" — no honest live route reaches that. It's
+that a TikTok link the person ALREADY saved, by share sheet or paste, is one
+of the ugliest rows in the app. `LinkTitle.enrich` reads a page's `<head>`,
+and TikTok serves a non-browser client nothing usable, so the link lands
+wearing a stock page title with no thumbnail and no creator while every other
+link in the corpus gets a real face.
+
+`Model/OEmbed.swift` (new) closes it with oEmbed — a published spec, keyless,
+one request, no account. The caption becomes the face (a captionless post
+falls back to naming its creator: "Charlie on TikTok" is findable later, a
+naked video URL isn't), the poster art becomes `previewImageURL` (so
+`LinkPreviewCard` draws it with no UI change at all), and caption + creator
+become `enrichedText` — the only text the corpus will ever hold for a link
+with no readable page behind it, and what lets the answer path reach a video
+by its creator.
+
+Three decisions with reasons, don't undo without reading them:
+
+1. **Allowlist, never discovery.** The spec lets a page advertise its own
+   endpoint via `<link rel="alternate" type="application/json+oembed">`.
+   Honouring that would require fetching the page first — the exact fetch
+   this path exists to beat — and would let any saved URL name an arbitrary
+   host for us to call. Host matching is on the label boundary, never
+   `contains`, so `tiktok.com.attacker.example` can't claim the table entry.
+2. **A hit RETURNS from `enrich`** rather than falling through. Falling
+   through would let the page fetch overwrite the good title with the stock
+   one — the regression this whole change exists to fix.
+3. **Not a bridge.** No seat, no switch, no sync, nothing for
+   `catalog-sync.sh` to check and nothing owed to the website. Making it a
+   seat would be claiming a connection that doesn't exist.
+
+The generalization is the actual prize: oEmbed is a spec, not a TikTok
+feature, so the same branch serves YouTube, Vimeo, SoundCloud, Spotify and
+Flickr links. TikTok is just its first customer.
+
+**UNMEASURED, and unusually so — authored on Linux with no Xcode and no
+egress to any of these hosts. It has never been compiled and never run.**
+Every endpoint is doc-derived; the container's proxy denied `tiktok.com`
+outright and `developers.tiktok.com` refused the doc fetch. It fails safe in
+every direction — a non-200, an unrecognised shape, or a retired endpoint all
+return nil and leave today's behaviour exactly as it is — but build it and
+walk `-oembedProbe` across all six hosts before trusting a single field.

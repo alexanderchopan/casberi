@@ -599,6 +599,32 @@ struct RootShell: View {
                           body ?? "FAILED (nothing readable)")
                 }
             }
+            // Debug hook: `-oembedProbe <url>` asks an allowlisted host what a
+            // link is (`OEmbed`) and NSLogs every field it answered with — the
+            // measure tool for a path authored against provider docs with no
+            // egress to any of them. One line, four facts: a "handled=NO" says
+            // the host isn't in the table, a "FAILED" says it is and the
+            // endpoint didn't answer, and those are different bugs.
+            if let raw = UserDefaults.standard.string(forKey: "oembedProbe"),
+               let url = URL(string: raw) {
+                Task { @MainActor in
+                    guard OEmbed.handles(url) else {
+                        NSLog("[Casberi] oembedProbe(%@) → handled=NO (host not allowlisted)", raw)
+                        return
+                    }
+                    guard let embed = await OEmbed.resolve(url) else {
+                        NSLog("[Casberi] oembedProbe(%@) → FAILED (no usable answer)", raw)
+                        return
+                    }
+                    NSLog("[Casberi] oembedProbe(%@) → provider=%@ author=%@ thumb=%@",
+                          raw, embed.providerName ?? "-", embed.authorName ?? "-",
+                          embed.thumbnailURL ?? "-")
+                    NSLog("[Casberi] oembedProbe title → %@",
+                          OEmbed.title(embed, host: url.host()) ?? "-")
+                    NSLog("[Casberi] oembedProbe enrichedText → %@",
+                          OEmbed.enrichedText(embed) ?? "-")
+                }
+            }
             // Debug hook: `-toolAnswer "<query>"` runs the tool-calling agent
             // path (AnswerTools) in isolation — the model searches the corpus
             // via tools and answers, logging the prose and the ids it grounded

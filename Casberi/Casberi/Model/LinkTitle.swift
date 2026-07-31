@@ -172,6 +172,17 @@ enum LinkTitle {
                 ?? firstURL(in: thing.content),
               thing.title.contains(url.host() ?? "") || thing.title == thing.content
         else { return }
+        // An allowlisted host answers what a link IS directly, keylessly, in
+        // one request (`OEmbed`) — and it beats the page fetch below on
+        // exactly the sites that don't serve a usable <head> to a non-browser
+        // client at all. A TikTok link enriched by the generic path lands
+        // wearing the site's stock page title with no thumbnail and no
+        // creator; this names it by its caption instead. A miss (non-200, an
+        // unrecognised shape, a retired endpoint) falls through unchanged.
+        if OEmbed.handles(url), let embed = await OEmbed.resolve(url) {
+            applyOEmbed(embed, to: thing, url: url, context: context)
+            return
+        }
         // A product page (one with a machine-readable price) upgrades the link
         // to a watched product — priced in the title, ready for a drop check.
         // A product's page is a store listing, not an article, so it gets no
@@ -208,6 +219,41 @@ enum LinkTitle {
         // Only when something actually changed: drop the stale vector so the
         // next semantic sweep re-embeds on the real text (EmbeddingIndex), and
         // save + reindex. A no-change fetch leaves the good vector alone.
+        guard changed else { return }
+        thing.embedding = nil
+        context.saveHonestly()
+        SpotlightIndex.index([thing])
+    }
+
+    /// Names a link from its own site's oEmbed answer: the caption (or, for a
+    /// captionless post, its creator) as the face, the poster art as the
+    /// preview, and caption + creator as the retrieval text — the only text
+    /// the corpus will ever hold for a link with no readable page behind it.
+    ///
+    /// Mirrors `enrich`'s save discipline exactly: nothing is written unless
+    /// something actually changed, and a change drops the stale vector so the
+    /// next semantic sweep re-embeds on the real words.
+    @MainActor
+    private static func applyOEmbed(_ embed: OEmbed.Response, to thing: Thing,
+                                    url: URL, context: ModelContext) {
+        // The fetch above is an await, and a delete can land under one — a
+        // heal or a CloudKit-propagated removal reaching this exact thing.
+        // Reading a stored property off a tombstoned model traps inside
+        // SwiftData (the liveness rule, CLAUDE.md).
+        guard thing.isLive else { return }
+        var changed = false
+        if let title = OEmbed.title(embed, host: url.host()), title != thing.title {
+            thing.title = title
+            changed = true
+        }
+        if let art = embed.thumbnailURL, art != thing.previewImageURL {
+            thing.previewImageURL = art
+            changed = true
+        }
+        if let text = OEmbed.enrichedText(embed), text != thing.enrichedText {
+            thing.enrichedText = text
+            changed = true
+        }
         guard changed else { return }
         thing.embedding = nil
         context.saveHonestly()
