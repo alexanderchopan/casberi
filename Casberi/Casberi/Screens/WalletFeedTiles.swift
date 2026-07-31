@@ -305,6 +305,292 @@ struct WalletWarningsStrip: View {
     }
 }
 
+/// IN PROTOCOLS — the money the crown number doesn't count, inside the
+/// balance card (prd §240, 2026-07-31).
+///
+/// The reasoning for a composition rather than a bigger total lives on
+/// `WalletComposition`; this is only its shape. Three things it does on
+/// purpose:
+///
+/// - **It states, it doesn't relate.** No "not counted above", no "+". The
+///   holdings read falls back from Zerion to Alchemy on a bad day, and
+///   Alchemy hands back aTokens as plain tokens, so any claim about what the
+///   crown does or doesn't include would go false exactly when the network is
+///   worst. Rows that merely state a fact stay true on every path.
+/// - **Locked wears its own unit.** "12,977 AERO", never a dollar — pricing a
+///   four-year lock at spot is the accounting opinion the whole ruling
+///   refused, so the strip declines to have one.
+/// - **A chevron only where something is behind it** (2026-07-31). Deposited
+///   and Locked open trays; Owed does not, and that asymmetry is the honest
+///   shape rather than an inconsistency. The Lending card further down the
+///   room already states health per protocol, so a debt tray would be prd
+///   §208's exact mistake — a door onto a page that repeats the card beneath
+///   it. Deposited and Locked have no such card for Hyperliquid or Aerodrome,
+///   which until this pass had no seat anywhere in the app. Same conditional
+///   door `WalletBalanceHeadline` already keeps for its own number.
+///
+/// It sits under the face chips rather than above them: the chips decompose
+/// the number they sit beneath, so they stay welded to it, and this is a
+/// different register — not "whose is that number" but "what else is there".
+struct WalletCompositionStrip: View {
+    let composition: WalletComposition
+    /// Both nil-able so this view stays usable as a pure read wherever a
+    /// caller has nowhere to route (the honesty rule's own corollary: don't
+    /// render a control that opens nothing).
+    var onOpenDeposits: (() -> Void)? = nil
+    var onOpenLocks: (() -> Void)? = nil
+
+    var body: some View {
+        if !composition.isEmpty {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                WalletSectionLabel(title: String(localized: "In protocols"))
+                if composition.hasDeposited {
+                    line(title: String(localized: "Deposited"),
+                         places: composition.depositedPlaces,
+                         value: TokenStats.compact(composition.deposited),
+                         onOpen: onOpenDeposits)
+                }
+                if composition.hasLocked {
+                    line(title: String(localized: "Locked"),
+                         places: composition.lockedPlaces,
+                         value: lockedValue,
+                         onOpen: onOpenLocks)
+                }
+                if composition.hasOwed {
+                    // The minus is spelled, never implied by color: red here
+                    // would claim urgency the room spends color on elsewhere
+                    // (a liquidation, an active approval), and a debt you
+                    // opened on purpose isn't an alarm.
+                    line(title: String(localized: "Owed"),
+                         places: composition.owedPlaces,
+                         value: "−" + TokenStats.compact(composition.owed),
+                         onOpen: nil)
+                }
+            }
+            .padding(.horizontal, DS.Space.s3)
+            .padding(.vertical, DS.Space.s3)
+            .background(DS.fillFaint,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.widget,
+                                             style: .continuous))
+        }
+    }
+
+    /// "12,977 AERO · 340 HYPE" — the locked total per UNIT. Individual locks
+    /// live in the tray; here they merge, because a sum of AERO is still AERO
+    /// (a sum of end dates would be nothing, which is why the tray exists).
+    private var lockedValue: String {
+        composition.lockedTotals
+            .map { "\(WalletIngest.format($0.amount)) \($0.symbol)" }
+            .joined(separator: " · ")
+    }
+
+    /// `callout15`, not `WalletRow`'s `rowTitle17`: these sit INSIDE the
+    /// balance card under a 48pt number, and a row-weight title here would
+    /// argue with the crown instead of supporting it. Same reasoning that
+    /// stepped the headline's own caption back (prd §157).
+    @ViewBuilder
+    private func line(title: String, places: [String], value: String,
+                      onOpen: (() -> Void)?) -> some View {
+        if let onOpen {
+            Button(action: onOpen) {
+                lineBody(title: title, places: places, value: value, door: true)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        } else {
+            lineBody(title: title, places: places, value: value, door: false)
+        }
+    }
+
+    private func lineBody(title: String, places: [String], value: String,
+                          door: Bool) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 4) {
+                    Text(title)
+                        .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    if door {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(DS.textTertiary)
+                    }
+                }
+                if !places.isEmpty {
+                    // WHERE it is, in the quietest ink — the same job the
+                    // headline's mover line does for the number above.
+                    Text(places.joined(separator: " · "))
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: DS.Space.s2)
+            Text(value)
+                .dsText(.price16).foregroundStyle(DS.textPrimary)
+                .monospacedDigit()
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+        }
+    }
+}
+
+/// What's behind "Deposited" (2026-07-31) — one row per protocol, and its
+/// share of the deposited total as a bar.
+///
+/// For Aave, Morpho and Uniswap this is a shortcut to detail the room already
+/// carries further down. For HYPERLIQUID it is the only view of the account
+/// that exists anywhere in the app, which is what earns the door: the strip
+/// states a number that, for two of its five contributors, nothing else on any
+/// screen explains.
+///
+/// Rows are TERMINAL, per the Worth-a-look ruling (2026-07-20, "you can't have
+/// worth a look pull up a sheet that then says to go look somewhere else").
+/// Acting on a position happens on Aave or Hyperliquid; there is no second hop
+/// from here, so no row carries a chevron.
+struct WalletDepositsTray: View {
+    let composition: WalletComposition
+
+    var body: some View {
+        DSTray(title: String(localized: "Deposited"),
+               height: min(560, CGFloat(170 + composition.deposits.count * 64))) {
+            ScrollView {
+                VStack(spacing: DS.Space.s1) {
+                    ForEach(composition.deposits) { deposit in
+                        row(deposit)
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+        }
+    }
+
+    private func row(_ deposit: WalletComposition.Deposit) -> some View {
+        let total = composition.deposited
+        let share = total > 0 ? deposit.usd / total : 0
+        return VStack(alignment: .leading, spacing: DS.Space.s1) {
+            HStack(spacing: DS.Space.s2) {
+                Text(deposit.place)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                Text(TokenStats.compact(deposit.usd))
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .monospacedDigit()
+                if total > 0 {
+                    Text("\(Int((share * 100).rounded()))%")
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .monospacedDigit()
+                }
+            }
+            ShareBar(fraction: share, tint: DS.tint)
+        }
+        .dsListCardRow()
+    }
+}
+
+/// What's behind "Locked" (2026-07-31) — the MELT.
+///
+/// A lock is time-shaped, not value-shaped, so this is the one place in the
+/// wallet room that draws a position as a clock rather than an amount. veAERO
+/// voting power decays linearly to zero at the lock's end, and the app already
+/// reads both halves of that fact per veNFT: `locked().amount` and
+/// `balanceOfNFT`. A real measured lock read 12,977 AERO against 5,342 votes —
+/// about 41% of its power left on a 2028 end. Nothing in the app has ever
+/// shown that, and no amount alone can.
+///
+/// Three honesty rules the bar keeps:
+///
+/// - **No dollars, anywhere.** Same rule as the strip: pricing an illiquid
+///   lock at spot is the accounting opinion prd §240 refused.
+/// - **A permanent lock gets a full bar and no date**, because it has no end
+///   by definition — never a bar drawn at some invented fraction.
+/// - **Staked HYPE gets NO bar.** It doesn't decay; it sits until its unlock.
+///   Drawing it a melt would invent a mechanic Hyperliquid doesn't have, so a
+///   HYPE row states its amount and its unlock date and stops.
+struct WalletLocksTray: View {
+    let composition: WalletComposition
+
+    var body: some View {
+        DSTray(title: String(localized: "Locked"),
+               height: min(560, CGFloat(170 + composition.locks.count * 74))) {
+            ScrollView {
+                VStack(spacing: DS.Space.s1) {
+                    ForEach(composition.locks) { lock in
+                        row(lock)
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+        }
+    }
+
+    private func row(_ lock: WalletComposition.Lock) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            HStack(spacing: DS.Space.s2) {
+                Text("\(WalletIngest.format(lock.amount)) \(lock.symbol)")
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                Text(lock.place)
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+            }
+            if let remaining = lock.remaining {
+                ShareBar(fraction: remaining, tint: DS.tint)
+            } else if lock.isPermanent {
+                ShareBar(fraction: 1, tint: DS.tint)
+            }
+            Text(subline(lock))
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
+                .lineLimit(1)
+        }
+        .dsListCardRow()
+    }
+
+    /// The whole state of the lock in one sentence — power left, then when it
+    /// ends. Each clause drops out rather than guessing: a lock with no power
+    /// read states only its date, and a lock with no date states only its
+    /// power.
+    private func subline(_ lock: WalletComposition.Lock) -> String {
+        var parts: [String] = []
+        if lock.isPermanent {
+            parts.append(String(localized: "Permanent · never decays"))
+        } else if let remaining = lock.remaining, let power = lock.power {
+            parts.append(String(localized:
+                "\(WalletIngest.format(power)) votes left · \(Int((remaining * 100).rounded()))%"))
+        }
+        if let until = lock.until {
+            // Month and day, never a bare weekday — the Aerodrome date-format
+            // bug (2026-07-30): a weekday alone is ambiguous for a date days
+            // out, and read as if the end preceded the start.
+            parts.append(String(localized: "Ends \(until.formatted(.dateTime.month().day().year()))"))
+        }
+        return parts.joined(separator: " · ")
+    }
+}
+
+/// A share of a whole, as a filled track — the room's one bar shape, used by
+/// both composition trays. A fill, never a rule: the design law's no-hairlines
+/// ban is about LINES that divide, and this is a quantity with a length.
+private struct ShareBar: View {
+    let fraction: Double
+    let tint: Color
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule(style: .continuous).fill(DS.fillFaint)
+                Capsule(style: .continuous)
+                    .fill(tint)
+                    .frame(width: max(2, geo.size.width * min(max(fraction, 0), 1)))
+            }
+        }
+        .frame(height: 6)
+        .accessibilityHidden(true)
+    }
+}
+
 /// The per-wallet split, as CHIPS inside the balance card (prd §212,
 /// 2026-07-25). It was a card of its own until this pass — a face, a name, a
 /// total, an 80pt sparkline and a delta pill per wallet — which is a lot of

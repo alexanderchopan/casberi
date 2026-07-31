@@ -1085,6 +1085,21 @@ enum ProbeHooks {
                 for line in lines { NSLog("aerodromeProbe| %@", line) }
             }
         },
+        // `-compositionProbe YES` NSLogs the Wallet card's composition strip
+        // (prd §240) — what's deposited into protocols, what's locked in its
+        // own units, what's owed, and WHICH protocols each came from. One
+        // NSLog per line (the `-todayProbe` truncation lesson). Reads the
+        // same live state the feed reads, so it exercises the real gather
+        // rather than a parallel one; pair with `-walletAddress`.
+        Hook(key: "compositionProbe") { _, context in
+            Task { @MainActor in
+                let live = await WalletWatch.liveState(context: context)
+                let composition = WalletComposition.from(
+                    aave: live.positions, morpho: live.morpho, uniswap: live.uniswap,
+                    hyperliquid: live.hyperliquid, aerodrome: live.aerodrome)
+                for line in composition.probeLines { NSLog("compositionProbe| %@", line) }
+            }
+        },
         // `-safeProbe YES` NSLogs which watched wallets are detected Safes
         // per chain and their pending queue counts (or the honest
         // unreachable/none). Pairs with `-walletAddress` (a Safe address, to

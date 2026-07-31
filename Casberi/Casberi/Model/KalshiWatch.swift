@@ -91,8 +91,26 @@ enum KalshiWatch {
             fetchedAt = Date()
             return (events, truncated)
         }
+
+        /// A deliberate pull re-fetches live (2026-07-30, the density-pass
+        /// follow-up) — the same contract `WalletIngest.invalidateHoldingsCache`
+        /// already holds for the wallet's own TTL cache: the window is for
+        /// the automatic browse, not the gesture that explicitly asks for
+        /// fresh.
+        func invalidate() { fetchedAt = nil }
+
+        var age: TimeInterval? { fetchedAt.map { Date().timeIntervalSince($0) } }
     }
     private static let cache = Cache()
+
+    /// Room's own pull-to-refresh calls this (`FeedScreen.refreshFeed`) —
+    /// see `Cache.invalidate`'s note. Polymarket's `search` never caches
+    /// (every call is already live), so it has no equivalent.
+    static func invalidateCache() async { await cache.invalidate() }
+
+    /// Seconds since the last real fetch, nil before the first one — what
+    /// the room's freshness line reads (`PredictionBrowseSection`).
+    static func cacheAge() async -> TimeInterval? { await cache.age }
 
     /// Markets matching the query, most-traded first — one row per market (a
     /// two-outcome event is two markets, each naming its own side, so both

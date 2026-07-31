@@ -126,7 +126,10 @@ enum PredictionMoments {
         "win", "wins", "be", "is", "at", "or", "than", "before",
     ]
 
-    private static func significantWords(_ s: String) -> Set<String> {
+    /// Not `private` — `PredictionCrossings` reuses this exact test at
+    /// browse time (2026-07-30), so "are these the same thing?" has one
+    /// definition whichever caller asks it.
+    static func significantWords(_ s: String) -> Set<String> {
         Set(s.lowercased().split { !$0.isLetter && !$0.isNumber }
             .map(String.init)
             .filter { $0.count > 2 && !stopWords.contains($0) })

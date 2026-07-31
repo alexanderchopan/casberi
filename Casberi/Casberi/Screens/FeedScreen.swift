@@ -118,6 +118,14 @@ struct FeedScreen: View {
         case token(TokenQuickRoute)
         case allocation
         case worthALook
+        /// The two composition doors (prd §240, 2026-07-31). Both carry the
+        /// composition VALUE rather than reading `walletLive` at present time:
+        /// the books can land again under an open tray, and a tray that
+        /// re-reads mid-presentation would renumber itself while being looked
+        /// at. Value-typed all the way down, so no `Thing` and no liveness
+        /// question here.
+        case deposits(WalletComposition)
+        case locks(WalletComposition)
         /// A market from the live book, previewed BEFORE it's followed
         /// (prd §234) — so it has no `Thing` yet and can't ride `.thing`.
         /// Routed here rather than presented by the browse section itself
@@ -132,6 +140,8 @@ struct FeedScreen: View {
             case .token(let r): "token:\(r.id)"
             case .allocation: "allocation"
             case .worthALook: "worthALook"
+            case .deposits: "deposits"
+            case .locks: "locks"
             case .market(let p): "market:\(p.id)"
             }
         }
@@ -1204,6 +1214,10 @@ struct FeedScreen: View {
                     warnings: walletLive.warnings,
                     flagged: walletLive.flagged,
                     activeApprovals: walletLive.activeApprovals)
+            case .deposits(let composition):
+                WalletDepositsTray(composition: composition)
+            case .locks(let composition):
+                WalletLocksTray(composition: composition)
             case .market(let preview):
                 PredictionPreviewSheet(preview: preview)
             }
@@ -1932,7 +1946,15 @@ struct FeedScreen: View {
         let total = portfolio.map(\.totalUSD).flatMap { $0 > 0 ? $0 : nil }
         let warnings = walletLive.warnings
         let chips = walletFaceChipEntries
-        if chart != nil || total != nil || !warnings.isEmpty {
+        // Gathered ONCE — the gate below and the strip inside both read it,
+        // and a computed property would re-walk every book on each body pass.
+        let composition = walletComposition
+        // The composition earns the card on its own (prd §240): a wallet whose
+        // money is entirely in protocols — everything supplied to Aave, or a
+        // Hyperliquid account with an empty EVM wallet — has no priced
+        // holdings and no warnings, so without this the one surface that
+        // states its money would never render at all.
+        if chart != nil || total != nil || !warnings.isEmpty || !composition.isEmpty {
             Section {
                 // ONE card (prd §212, 2026-07-25) — the balance, the per-wallet
                 // split, and the security read. Three parcels of equal weight
@@ -1976,6 +1998,22 @@ struct FeedScreen: View {
                         WalletFaceChips(entries: chips) { address in
                             withAnimation(DS.Motion.standard) { selectedWallet = address }
                         }
+                    }
+                    // What the crown doesn't count (prd §240) — every protocol
+                    // position the app already reads sits outside that number,
+                    // and for Hyperliquid and Aerodrome this is their only
+                    // seat on the screen. Inside this card rather than a card
+                    // of its own: "what's it worth" is one glance (§212), and
+                    // this is the rest of that glance's answer. Guarded at the
+                    // call site like every other strip in this card, so an
+                    // empty one can't take a spacing slot in the stack.
+                    if !composition.isEmpty {
+                        WalletCompositionStrip(
+                            composition: composition,
+                            onOpenDeposits: { feedSheet = .deposits(composition) },
+                            // Owed gets no door on purpose — the Lending card
+                            // below already states health per protocol.
+                            onOpenLocks: { feedSheet = .locks(composition) })
                     }
                     if !warnings.isEmpty {
                         WalletWarningsStrip(warnings: warnings) { feedSheet = .worthALook }
@@ -2039,6 +2077,18 @@ struct FeedScreen: View {
         guard let top = wallet.holdingsDeltas(forAddress: selectedWallet).first else { return nil }
         let sign = top.delta >= 0 ? "+" : "−"
         return String(localized: "Mostly \(top.symbol) · \(sign)\(TokenStats.compact(abs(top.delta)))")
+    }
+
+    /// What's in protocols, for the balance card's composition strip (prd
+    /// §240). Pure arithmetic over books `loadWalletLive` already fetched —
+    /// no network of its own, and it follows the feed's wallet scope for free
+    /// because `WalletWatch.liveState` reads every book at that same scope.
+    private var walletComposition: WalletComposition {
+        WalletComposition.from(aave: walletLive.positions,
+                               morpho: walletLive.morpho,
+                               uniswap: walletLive.uniswap,
+                               hyperliquid: walletLive.hyperliquid,
+                               aerodrome: walletLive.aerodrome)
     }
 
     /// The per-wallet split as chip entries (prd §212, 2026-07-25) — value
@@ -3323,6 +3373,12 @@ struct FeedScreen: View {
         // Wallet feed's treemap isn't served a TTL-cached read (same contract as
         // Home's pull; the cache is for the automatic fan-out, not the gesture).
         await WalletIngest.invalidateHoldingsCache()
+        // Same contract for the prediction rooms' own book (prd §237-follow-up)
+        // — the room otherwise has no way to force past its 120s cache short of
+        // waiting it out, and `chrome.refreshPulse` (bumped below) already
+        // reaches `PredictionBrowseSection`'s own reload — this just makes
+        // that reload a genuinely fresh one instead of re-serving the cache.
+        if LiveRoomSources.has(source) { await KalshiWatch.invalidateCache() }
         BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges, force: true)
         streamBlock()
     }

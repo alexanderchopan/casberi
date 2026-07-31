@@ -10624,3 +10624,168 @@ scope/category/query just to retry. Added `retryToken`, folded into the id
 string, bumped by a "Try again" button on the empty state — shown only
 when there's actually something to retry (an empty query and no category;
 a too-narrow filter has no retry that would change the answer).
+
+## §240 — The crown counts wallets; the protocols get their own lines (user: "what else could we do with wallets", then "the issue with the total is that it would be our calculation rules not necessarily how someone else would calculate?", then "lets do 1", 2026-07-31)
+
+The Wallet room's crown number counts wallet token holdings, connected
+exchange balances and watched validators — that and nothing else
+(`WalletPortfolio.from`). Every protocol position sits outside it, and not by
+oversight: Zerion is asked for `only_simple` positions precisely so loan and
+LP legs never reach the treemap. So an Aave supply, a Morpho vault, a Uniswap
+position, a Hyperliquid account and a veAERO lock are read on every foreground
+pass, cost requests every time, and none of them reach the number the room
+calls your money. A wallet with $6K of tokens and $82K supplied to Aave was
+told it had $6K.
+
+Two of the five were worse than uncounted: **Hyperliquid and Aerodrome had no
+seat on the screen at all** — no card, no line, nothing — their books read
+only to land events. This is the first surface either has ever had.
+
+### The ruling, and the objection that shaped it
+
+The obvious fix — fold them into the total — was raised and REFUSED by the
+user, on the grounds that a net-worth number is *our* accounting rules wearing
+the authority of a fact: "the issue with the total is that it would be our
+calculation rules not necessarily how someone else would calculate?"
+
+That objection is right, and it lands on the number already shipping too — the
+current rule (wallets + exchanges + validators) is equally a choice, just an
+unstated one that leaked out of an API filter. There is also nothing to match:
+Zerion, DeBank and MetaMask routinely disagree with each other on the same
+address over exactly these questions (does debt subtract, is a lock worth
+spot). There is no "how everyone else calculates it."
+
+And it could not have been done honestly anyway: the headline's sparkline
+draws off `WalletStore.ValueSample`s recorded under today's rule, so changing
+what the total counts would step the line and print a delta that never
+happened.
+
+So the answer is a **composition, not a total**: named lines, each stating one
+fact, summed by nobody. Every choice a person might disagree with becomes a
+line they can see and do their own arithmetic on, instead of an opinion buried
+in a scalar. This is the same instinct as "never invent a single Hyperliquid
+total" (2026-07-30) and the module doctrine's ban on tallies, applied one
+level up.
+
+### The build (`Model/WalletComposition.swift`, `WalletCompositionStrip`)
+
+A faint-fill strip inside the balance card (§212's "one glance, one card"),
+under the face chips, above Worth a look. Up to three rows under a small
+"In protocols" label:
+
+- **Deposited** — Aave/Spark collateral, Morpho vault + supply + collateral,
+  Uniswap principal, Hyperliquid perp account value + spot. Subline names
+  which protocols.
+- **Locked** — in NATIVE UNITS ("12,977 AERO · 340 HYPE"), never dollars.
+- **Owed** — Aave/Spark debt + Morpho borrow, spelled with a minus, never
+  netted against anything and never colored red.
+
+Four rules, each load-bearing:
+
+1. **It makes no claim about the crown.** Not "not counted above", not "+" —
+   just what's there. The reason is measured, not fussiness: holdings normally
+   come from Zerion (which types a deposit as a deposit and filters it out),
+   but `WalletIngest` falls back to Alchemy when Zerion is unreachable, and
+   Alchemy returns raw ERC-20 balances — where an aToken or a Morpho vault
+   share IS a plain token. On a fallback day the same money can legitimately
+   appear in both places, so a set-relation claim would be false exactly when
+   the network is worst.
+2. **Locked money is never priced.** Pricing an illiquid four-year lock at
+   spot is the exact accounting opinion the ruling refused; the unit IS the
+   honest answer.
+3. **An unpriced leg contributes nothing, never a zero.** `valueUSD` is nil
+   when Zerion didn't price a Uniswap position — that position adds nothing
+   and names no place, rather than a 0 standing in for a number we don't have.
+4. **No chevron on any row.** Acting happens on Aave or Hyperliquid, and the
+   Lending/Liquidity cards below already carry per-protocol detail
+   (`WalletLendingCard`'s own rule).
+
+Costs no network: all five books are already read by `WalletWatch.liveState`
+(Hyperliquid and Aerodrome joined it this pass) and every one is coalesced
+behind the same 60s TTL the refresh arm and the asks share. Uncollected
+Uniswap fees are deliberately EXCLUDED from Deposited — they're the Liquidity
+card's own headline read, and counting them twice in one scroll is worse than
+counting them once where they're more interesting.
+
+The strip also earns the card on its own: the gate gained
+`|| !walletComposition.isEmpty`, so a wallet whose money is entirely in
+protocols (an empty EVM wallet with a Hyperliquid account) finally renders a
+balance card instead of nothing.
+
+### Verification
+
+`-compositionProbe YES` NSLogs one line per fact with the places named — a
+number alone can't separate "Morpho didn't answer" from "no Morpho position",
+and for a read whose whole job is closing a blind spot that distinction is the
+point. The pure gather is `swift`-harness-tested against the shipped source
+text (27 assertions: floor, Aave/Spark separation, Morpho's three legs, nil
+prices, locked-in-units, whole-book) and mutation-tested — zeroing the debt
+sum and defaulting a nil price both fail it.
+
+### Not done in this pass
+
+The wallet ASK (`KeptAskComposers.walletDoc`) and the day brief's money crown
+still speak only the wallet total. Neither is now wrong — the crown number is
+unchanged and honest — but a person who reads "How's my money?" gets less than
+the room shows. Folding the composition into `walletDoc` is the natural next
+goal; it needs the composer to await the same books, which is a real change to
+that path's cost.
+
+## §238 — Four follow-ups: forced refresh, freshness, corpus crossing, curve shape (2026-07-30)
+
+Four improvements beyond §237's race fix, in priority order.
+
+**1. Pull-to-refresh now reaches the book.** The room sits inside
+`FeedScreen`'s one List, whose `.refreshable` already invalidates the
+Wallet feed's holdings cache on a deliberate pull
+(`WalletIngest.invalidateHoldingsCache`) — the browse book had no
+equivalent, so a pull did nothing for it. `KalshiWatch.Cache` gained
+`invalidate()`/`age` (mirroring the wallet cache's own contract: a TTL for
+the automatic case, cleared outright for the gesture that explicitly asks
+for fresh), and `refreshFeed()` calls it when `LiveRoomSources.has(source)`.
+`PredictionBrowseSection` already needed no NEW plumbing to actually
+re-fetch — `chrome.refreshPulse` (bumped by every pull, app-wide) folds
+into its `.task(id:)` string, so the pull's own invalidation and the
+room's own reload land in the same gesture. Polymarket's `search` never
+caches (already live every call), so it needed nothing.
+
+**2. A freshness line, only when it's not "just now."** Kalshi's cache
+can legitimately serve a read up to 120s old (a category tap inside that
+window reuses it rather than refetching) — the room said nothing about
+that. `KalshiWatch.cacheAge()` exposes the actor's `fetchedAt`, and the
+room shows "Kalshi updated 2m ago" only past 10 seconds, so a normal fresh
+load stays silent and only a genuinely-served-from-cache read discloses
+its age. A pull-to-refresh (item 1) always clears it.
+
+**3. The Tokens-watchlist crossing moved to browse time.**
+`PredictionMoments.checkCrossings` already fires "you're already watching
+ETH" as a post-follow moment — but only once, ever, per pair
+(UserDefaults-guarded), and only AFTER you'd already followed. That means
+the one piece of information that could most inform the decision to
+follow was structurally unavailable at decision time. New
+`Model/PredictionCrossings.swift` reuses the exact same word-overlap test
+(`PredictionMoments.significantWords`, now internal instead of private so
+both files share one definition of "is this the same thing") as a pure
+READ against the Tokens watchlist, surfaced on the card itself — "You're
+already watching ETH" — before any follow. Does not duplicate or replace
+the moment; `PredictionMoments` still owns the one-time delight fire.
+`watchedTokens` is filtered `.live` at both its true origin (the fetch
+inside `PredictionCrossings.watchedTokens`) AND again at the `@State`
+call site in `PredictionBrowseSection` — the liveness audit is a static
+pattern check, not a semantic one, and corollary 4's own rule
+("provable locally, not a cross-file promise") means the guard has to be
+visible at the boundary the audit actually reads, not just at the
+function that's already safe.
+
+**4. The Polymarket curve gets a shape, not just a decoration.** The
+sheet loaded `priceHistory` and drew it since §235, but nothing described
+what the curve actually SHOWED — the one thing a curve answers ("did this
+move gradually or all at once?") was left for the reader to eyeball.
+`curveShape` classifies into "climbed/fell steadily" (≥70% of steps agree
+with the week's overall direction) or "jumped/dropped on one move" (a
+single step accounts for ≥60% of the total change), and stays SILENT
+otherwise — under 3 points of net movement, or genuinely choppy data, get
+no line at all, the same restraint the lede's 5-point floor and
+`PredictionDisagreement`'s notable-gap floor already hold: a weak signal
+dressed up as a clean story is worse than no line. Kalshi carries no
+curve at all (§51, unchanged) so this only ever applies to Polymarket.

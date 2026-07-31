@@ -90,6 +90,10 @@ private struct BrowseCard: Identifiable {
     let previousProbability: Double?
     let deltaLabel: String
     let isThin: Bool
+    /// The Tokens-watchlist name this question crosses, if any (2026-07-30)
+    /// — "You're already watching ETH" surfaced BEFORE following, the same
+    /// join `PredictionMoments.checkCrossings` fires as a post-follow moment.
+    let crossing: String?
 }
 
 /// Registers (or reconnects) a prediction-market bridge's catalog entry —
@@ -161,6 +165,12 @@ struct PredictionBrowseSection: View {
     /// Needed by `acceptTwin` — taking the twin offer registers the other
     /// exchange's seat, which may not exist yet.
     @Environment(BridgeStore.self) private var store
+    /// Folded into the load's own id below — a List-wide pull-to-refresh
+    /// bumps this once regardless of which source is showing
+    /// (`FeedScreen.performPull`), and `refreshFeed()` invalidates Kalshi's
+    /// cache in the same gesture, so this reload is a genuinely fresh one
+    /// rather than a re-serve of whatever the 120s cache still holds.
+    @Environment(ShellChrome.self) private var chrome
     /// The book is browsable, but a specific question still has to be
     /// findable — "Chiefs" shouldn't require scrolling Sports. Search lives
     /// HERE, with the book, rather than on the connect page where it used to
@@ -184,6 +194,14 @@ struct PredictionBrowseSection: View {
     /// race the id already covers) had no way to try again short of leaving
     /// and re-entering the room. Folded into that same id string below.
     @State private var retryToken = 0
+    /// Kalshi's own cache age (2026-07-30) — Polymarket's `search` never
+    /// caches (every call is already live), so only Kalshi has a staleness
+    /// to disclose. Shown only past a few seconds; under that, saying
+    /// "updated just now" is noise nobody asked for.
+    @State private var kalshiAge: TimeInterval? = nil
+    /// The Tokens watchlist, read once per load — what the corpus-crossing
+    /// line below matches against.
+    @State private var watchedTokens: [Thing] = []
 
     /// The other exchange's price for the market just followed (prd §234) —
     /// the ON-RAMP to the comparison, and the only path to it for someone
@@ -287,6 +305,10 @@ struct PredictionBrowseSection: View {
 
             DSSlabField(placeholder: String(localized: "Find a team, player, or question"),
                         text: $query, actionLabel: "", action: {})
+            if let freshnessLine {
+                Text(freshnessLine).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .padding(.horizontal, DS.Space.s1)
+            }
             // Order + categories share ONE scrolling row: the order menu is a
             // chip like the rest, since "Busiest" and "Politics" are both
             // just ways of narrowing what you're looking at.
@@ -362,7 +384,7 @@ struct PredictionBrowseSection: View {
         // Re-runs on scope, category AND query — each is a different read of
         // the book, and both bridges' `search` already takes all three
         // (`query`'s own debounce lives in `debouncedSearch`).
-        .task(id: "\(scope.rawValue)|\(category ?? "")|\(query)|\(retryToken)") { await loadIfNeeded() }
+        .task(id: "\(scope.rawValue)|\(category ?? "")|\(query)|\(retryToken)|\(chrome.refreshPulse)") { await loadIfNeeded() }
     }
 
     private func categoryChip(_ value: String?, label: String) -> some View {
@@ -409,6 +431,8 @@ struct PredictionBrowseSection: View {
         let kCats = await kc
         let pCats = await pc
         let pairs = scope == .all ? await PredictionDisagreement.find(among: kRows) : []
+        let age = (scope == .kalshi || scope == .all) ? await KalshiWatch.cacheAge() : nil
+        let tokens = PredictionCrossings.watchedTokens(context: modelContext)
 
         // The bug this fixes: `.task(id:)` cancels the PREVIOUS
         // `loadIfNeeded` the instant scope/category/query changes, but
@@ -439,7 +463,24 @@ struct PredictionBrowseSection: View {
         kalshiCategories = kCats
         polymarketCategories = pCats
         disagreements = pairs
+        kalshiAge = age
+        watchedTokens = tokens
         loaded = true
+    }
+
+    /// "Updated 2m ago" — only past a few seconds (2026-07-30). Most loads
+    /// just fetched live, so age reads ~0 and the line stays hidden; it only
+    /// appears when Kalshi's own 120s cache served a still-warm read instead
+    /// of refetching (switching categories, say, inside that window), which
+    /// is exactly the case where the displayed odds are genuinely dated and
+    /// worth disclosing. Pull-to-refresh (`FeedScreen.refreshFeed`)
+    /// invalidates the cache outright, so a pull always clears this.
+    private var freshnessLine: String? {
+        guard let kalshiAge, kalshiAge > 10 else { return nil }
+        let then = Date(timeIntervalSinceNow: -kalshiAge)
+        // Same `.formatted(.relative(...))` every close-time line in this
+        // room already uses — one date-phrasing convention, not two.
+        return String(localized: "Kalshi updated \(then.formatted(.relative(presentation: .named)))")
     }
 
     // MARK: - Card construction
@@ -458,7 +499,8 @@ struct PredictionBrowseSection: View {
                           closeTime: race.closeTime,
                           previousProbability: race.outcomes.first?.previousProbability,
                           deltaLabel: "vs yesterday",
-                          isThin: race.outcomes.first?.isThin ?? false)
+                          isThin: race.outcomes.first?.isThin ?? false,
+                          crossing: PredictionCrossings.crossing(for: race.title, tokens: watchedTokens.live))
     }
 
     private func polymarketCard(_ race: PolymarketBridge.Race) -> BrowseCard {
@@ -475,7 +517,8 @@ struct PredictionBrowseSection: View {
                           closeTime: race.closeTime,
                           previousProbability: race.outcomes.first?.previousProbability,
                           deltaLabel: "vs last week",
-                          isThin: race.outcomes.first?.isThin ?? false)
+                          isThin: race.outcomes.first?.isThin ?? false,
+                          crossing: PredictionCrossings.crossing(for: race.title, tokens: watchedTokens.live))
     }
 
     /// The one write in this whole view. Reached from a row's explicit
@@ -534,6 +577,14 @@ struct PredictionBrowseSection: View {
                     BridgeIcon(name: venueBadge, size: 18, circular: false)
                 }
                 Text(card.title).dsText(.body17).fontWeight(.semibold).lineLimit(2)
+            }
+            // The corpus join, at browse time (2026-07-30) — the same
+            // "you're already watching X" fact `PredictionMoments
+            // .checkCrossings` fires as a one-time post-follow moment, shown
+            // here BEFORE you follow, where it can actually inform the tap.
+            if let crossing = card.crossing {
+                Text("You're already watching \(crossing)")
+                    .dsText(.subhead13).foregroundStyle(DS.tint)
             }
 
             if card.outcomes.count > 1 {

@@ -105,6 +105,14 @@ struct WalletLiveState: Equatable {
     /// The Uniswap V3 liquidity book (2026-07-30) — read beside Aave/
     /// Morpho's in the same parallel pass.
     var uniswap: UniswapLiquidity.Book = UniswapLiquidity.Book()
+    /// Hyperliquid and Aerodrome (2026-07-31, prd §240). Both were read every
+    /// foreground pass by `WalletIngest.refresh`'s event sweeps and had NO
+    /// seat on the screen at all — no card, no line, nothing in the crown
+    /// number. They join the live state so `WalletComposition` can state
+    /// them; both reads are coalesced behind the same 60s TTL the three above
+    /// use, so adding them here costs no extra request inside a pass.
+    var hyperliquid: HyperliquidDeFi.Book = HyperliquidDeFi.Book()
+    var aerodrome: AerodromeDeFi.Book = AerodromeDeFi.Book()
     var warnings: [WalletWarning] = []
     /// The address-poisoning things behind the poisoning warning — carried so
     /// the Worth-a-look tray can list each flagged transfer as its own row
@@ -124,6 +132,8 @@ struct WalletLiveState: Equatable {
             && a.activeApprovals.map(\.id) == b.activeApprovals.map(\.id)
             && a.morpho == b.morpho
             && a.uniswap == b.uniswap
+            && a.hyperliquid == b.hyperliquid
+            && a.aerodrome == b.aerodrome
             && a.positions.count == b.positions.count
             && zip(a.positions, b.positions).allSatisfy {
                 $0.address == $1.address && $0.network == $1.network
@@ -200,6 +210,8 @@ enum WalletWatch {
         async let defi = WalletDeFi.positions(addresses: resolved)
         async let morphoBook = MorphoDeFi.book(addresses: resolved)
         async let uniswapBook = UniswapLiquidity.book(addresses: resolved)
+        async let hyperBook = HyperliquidDeFi.book(addresses: resolved)
+        async let aeroBook = AerodromeDeFi.book(addresses: resolved)
         async let safe = SafeBridge.pendingCounts(addresses: resolved)
         async let delegs = WalletSafety.currentDelegations(addresses: resolved)
         async let approvalsRead = WalletApprovals.activeApprovals(hexAddresses: resolved, context: context)
@@ -207,6 +219,12 @@ enum WalletWatch {
         let positions = await defi
         let morpho = await morphoBook ?? MorphoDeFi.Book()
         let uniswap = await uniswapBook ?? UniswapLiquidity.Book()
+        // An unreachable book is an EMPTY book here, exactly as Morpho's and
+        // Uniswap's are above: the composition states what it could read and
+        // says nothing about what it couldn't, which is the only shape that
+        // can't overstate.
+        let hyperliquid = await hyperBook ?? HyperliquidDeFi.Book()
+        let aerodrome = await aeroBook ?? AerodromeDeFi.Book()
         let safePending = await safe
         let delegations = await delegs
         let activeApprovals = await approvalsRead
@@ -241,6 +259,8 @@ enum WalletWatch {
             positions: positions,
             morpho: morpho,
             uniswap: uniswap,
+            hyperliquid: hyperliquid,
+            aerodrome: aerodrome,
             warnings: warnings(positions: positions, morpho: morpho,
                                safePending: safePending,
                                delegations: delegations, poisoningCount: poisoningCount,
