@@ -488,6 +488,19 @@ enum BridgeCatalog {
                          "One-time import — re-importing adds only what's new",
                          "Read on \(DS.device); nothing is sent to Meta"],
               needsSetup: true, added: day(2026, 7, 31)),
+        // The second import-grade social seat, beside Instagram (2026-07-31, prd
+        // §246). Snapchat has no keyless read either — and less than no read:
+        // Login Kit's entire scope list is a display name, a Bitmoji avatar
+        // and a user id, so a connect-by-name seat could only ever say
+        // "connected" and land nothing. The export is the one door, and the
+        // copy names what the export honestly holds.
+        Offer(name: "Snapchat",    tagline: "Import your saved chats and memories",  group: "Network",   connectable: true,
+              summary: "A one-time import of your Snapchat data export: the chats you saved become searchable, and your memories land on the day you took them.\n\nOnly saved chats exist — Snapchat deletes everything else when it's viewed, so it's never in the export either. (No live read: Snap doesn't offer one.)",
+              features: ["Saved conversations, searchable beside everything else",
+                         "Memories dated as you took them, with their pictures fetched",
+                         "Re-importing keeps a conversation up to date",
+                         "Read-only — the export is a file you already have"],
+              needsSetup: true, added: day(2026, 7, 31)),
         Offer(name: "Steam",       tagline: "What you play, in your feed",           group: "Games",     connectable: true,
               summary: "Recently played games land in your feed, linking to their store pages.\n\nConnects with a free Steam Web API key and your public profile name — the key stays in \(DS.device)'s Keychain.\n\nRead-only.",
               needsSetup: true),

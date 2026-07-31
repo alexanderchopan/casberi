@@ -128,6 +128,35 @@ enum ProbeHooks {
                       summary.imported, summary.skipped, summary.failed ? 1 : 0)
             }
         },
+        // `-snapchatImport <path>` imports an unzipped Snapchat data export
+        // folder (chat_history.json + memories_history.json, at the root or
+        // one level down). Lands metadata only — the memories' pictures are
+        // the separate `-snapchatMedia` pass, exactly as in the UI.
+        Hook(key: "snapchatImport") { path, context in
+            Task { @MainActor in
+                let summary = await SnapchatImport.run(folder: URL(fileURLWithPath: path),
+                                                       context: context)
+                NSLog("Snapchat probe: %d chats, %d healed, %d memories, %d skipped, failed=%d",
+                      summary.chats, summary.healed, summary.memories,
+                      summary.skipped, summary.failed ? 1 : 0)
+                NSLog("Snapchat probe: %d awaiting pictures",
+                      SnapchatImport.pendingMediaCount(context: context))
+            }
+        },
+        // `-snapchatMedia <limit|YES>` runs the memories' picture fetch over
+        // whatever is already landed. The one probe that can tell a dead
+        // 7-day export window (every POST fails) from a working one — a
+        // landed count alone can't, since a metadata-only import looks
+        // identical either way.
+        Hook(key: "snapchatMedia") { spec, context in
+            Task { @MainActor in
+                let limit = Int(spec) ?? 300
+                let outcome = await SnapchatImport.fetchMedia(limit: limit, context: context)
+                NSLog("Snapchat media probe: %d fetched, %d failed, expired=%d, %d still waiting",
+                      outcome.fetched, outcome.failed, outcome.expired ? 1 : 0,
+                      SnapchatImport.pendingMediaCount(context: context))
+            }
+        },
         // `-bookmarksImport <path>` imports a Netscape Bookmark File Format
         // export (.html) from Safari or Chrome — lands ALL entries headlessly
         // (the UI's Reading-List-only split is a person's choice, not a probe's).

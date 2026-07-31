@@ -87,6 +87,7 @@ extension DS {
         case "spotify":             return Color.fixed("#1db954")   // their brand green — missing until now, so Spotify's icon tile and rain wash both fell back to gray/default blue
         case "apple music":         return Color.fixed("#fc3c44")   // Apple Music's coral-red mark
         case "bluesky":             return Color.fixed("#0285ff")
+        case "snapchat":            return Color.fixed("#fffc00")   // their yellow — the field IS the mark (a white ghost sits on it), so the SF fallback's white glyph reads thin until the official icon is bundled at brand-snapchat
         case "nostr":               return Color.fixed("#9543dc")   // their purple (icon-sampled from the bundled mark)
         case "cal.com":             return Color.fixed("#292929")
         case "calendly":            return Color.fixed("#006bff")

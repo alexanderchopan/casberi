@@ -11227,3 +11227,82 @@ skip, not a failure, so a shape that has drifted degrades to "nothing new"
 rather than to a wrong number; `failed` is reserved for "no category found
 anywhere", i.e. not an Instagram export at all. Walk `-instagramImport <path>`
 against a real export before trusting a count.
+## §246 — Snapchat: the only door Snap leaves open is your own export (user: "what if anything could we do with snapchat", then "what about the export function. i mean if we do it for chatgpt then it's not too lame if we do the same for snapchat", then "ok, lets do it", 2026-07-31)
+
+**The research finding that decided the shape.** Snap's developer platform
+exposes nothing readable. Login Kit's entire scope list is a display name, a
+Bitmoji avatar URL and a user id (the wrapper SDKs are deprecated; the OAuth2
+service remains). Creative Kit only shares OUT. Camera Kit is AR lenses. There
+is no read for snaps, memories, stories, chats or the friend graph — not
+gated, not partner-only, simply absent. So the Bluesky/Farcaster shape (a
+keyless public read) has no Snapchat analog, and the Pinterest shape (a public
+per-user RSS feed) doesn't either.
+
+**Ruling 1 — no Login Kit seat.** It would connect successfully and then land
+zero things, which is precisely what the honesty law forbids (build-brief §8,
+"no dead controls, no fake status"). A seat that can only ever say "connected"
+is a lie with a checkmark.
+
+**Ruling 2 — the Photos-riding seat was proposed and rejected.** Snapchat can
+save snaps into a "Snapchat" album, and `ScreenshotIngest.walkPaths()` already
+fetches by album collection, so a seat riding Photos would have been nearly
+free. Rejected by the user ("seems useless"), and they were right about the
+yield: saved snaps are wordless camera photos, so they carry no OCR, no
+`ocrTopics`, and nothing the treemap or the retriever can hold onto. The
+correction worth keeping is that it would NOT merely have re-tagged existing
+rows — Photos ingest is screenshots-only — but landing pictures the app can't
+read is still thin.
+
+**Ruling 3 — two of the export's files land, and the rest deliberately don't.**
+`chat_history.json` holds the SAVED chats: not all chats, the ones somebody
+pressed Save on, because Snapchat deletes the rest off its own servers. That
+is the corpus's own semantics, arriving pre-filtered by the person who made
+it. `memories_history.json` holds their own photos and videos with real dates.
+`snap_history.json` is skipped: it is `{"From": "user1", "Media Type":
+"IMAGE", "Created": …}` with the content already deleted — a ledger of events
+whose payload is gone, i.e. a tally, and §166's module doctrine already rules
+that a tally isn't a thing. Story views, search history, ranking and purchases
+go the same way.
+
+**Ruling 4 — the media fetch is its own act, because its cost and its deadline
+are real.** The export ZIP contains no pixels. Each memory is a `Download
+Link` that must be POSTed — the response BODY is a plain-text CDN URL — and
+the links stop working 7 days after Snapchat generates the export. Folding
+that into the import button would hide hundreds of network requests behind a
+file pick and quietly bury a deadline the person can still act on. So
+`SnapchatImport.run(folder:)` lands metadata immediately (fast, local,
+offline) and `fetchMedia` is a second button that only appears while something
+is genuinely waiting. When every POST in a run fails, the screen says the
+links have expired and to request a fresh export, rather than reporting zero
+and letting it read as "no memories".
+
+**Ruling 5 — a conversation HEALS, a memory doesn't.** A ChatGPT thread is
+finished when it's exported, so §55's importers skip a ref they've already
+seen. A Snapchat conversation grows: the same handle re-exported next month is
+the same thing with more in it. So a dedupe hit updates the transcript and the
+date in place (the social-bridge "dedupe hit heals" rule) and reports as
+`healed`, distinct from `skipped` — an identical re-import must still read as
+"already here", never as work done. Memories never heal; they're stamped with
+their moment.
+
+**Consequences worth naming.** Videos land as dated entries and are never
+fetched (`previewImageData` is an image field), and they carry no
+`externalLink`, so they can't sit in the fetch queue forever pretending to be
+pending. A memory's `sourceRef` is date+media-type, the only stable key the
+export offers — the download link is minted per export and the array's order
+isn't promised — so two memories saved in the same second wearing the same
+type collapse into one; the alternative (an index) would re-land the entire
+library on every re-import. And unlike every other one-shot import,
+`finishesOnConnect` is FALSE for this seat: the raised sheet must not dismiss
+itself on the connect, because the second act's button appears only after the
+first one runs.
+
+**UNMEASURED.** Both parsers were written against open-source exporters and
+Snap's published export documentation, not against a real ZIP held in hand.
+Both chat eras are handled — pre-2024's `"Received/Sent Saved Chat History"`
+arrays, and 2024+'s username-keyed map with `IsSender`/`Content` — and one
+measured quirk is already encoded: the 2024+ export spells the numeric stamp
+`Created(microseconds)` while the value reads as milliseconds, so
+`SnapchatImport.stamp` decides the unit by MAGNITUDE and never by the label.
+Everything fails safe: an unparseable file reports `failed`, never a
+half-landed corpus. Re-measure against a real export before hardening.

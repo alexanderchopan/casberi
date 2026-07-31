@@ -45,6 +45,10 @@ enum BridgeRouter {
         case grok
         case bluesky
         case farcaster
+        /// Snapchat sits with the social seats but behaves like the ChatGPT
+        /// imports — Snap exposes no readable API, so its screen is a file
+        /// pick, not a handle field.
+        case snapchat
         case pinterest
         case steam
         case obsidian
@@ -127,6 +131,13 @@ enum BridgeRouter {
                  .chatgpt, .claude, .gemini,
                  .kindle, .dayOne, .appleJournal, .appleNotes, .bookmarks:
                 true
+            // Snapchat is an import, but NOT a one-shot: landing the export
+            // is the first of two acts, and the second (fetching the
+            // memories' pictures, against links that expire) only appears
+            // once the first has run. Dismissing on connect would close the
+            // sheet on the button the person still needs.
+            case .snapchat:
+                false
             default:
                 false
             }
@@ -163,6 +174,11 @@ enum BridgeRouter {
             case .grok:           "grok"
             case .bluesky:        "bsky"
             case .farcaster:      "fc"
+            // Missing when Instagram landed (2026-07-31) — this switch has no
+            // `default`, so its absence was a build break, and a seat with no
+            // id can't resolve `destination(forID:)` either.
+            case .instagram:      "instagram"
+            case .snapchat:       "snapchat"
             case .pinterest:      "pinterest"
             case .steam:          "steam"
             case .obsidian:       "obsidian"
@@ -256,6 +272,7 @@ enum BridgeRouter {
         Row(offer: "Grok",       id: "grok",   destination: .grok),
         Row(offer: "Bluesky",   id: "bsky",   destination: .bluesky),
         Row(offer: "Farcaster", id: "fc",     destination: .farcaster),
+        Row(offer: "Snapchat",  id: "snapchat", destination: .snapchat),
         Row(offer: "Pinterest", id: "pinterest", destination: .pinterest),
         Row(offer: "Steam",     id: "steam",  destination: .steam),
         Row(offer: "Obsidian",  id: "obsidian", destination: .obsidian),
@@ -338,6 +355,7 @@ struct BridgeDestinationView: View {
         case .exchange(let venue): ExchangeSetupScreen(venue: venue)
         case .bluesky:        HandleSetupScreen(bridge: .bluesky)
         case .farcaster:      HandleSetupScreen(bridge: .farcaster)
+        case .snapchat:       SnapchatImportScreen()
         case .pinterest:      HandleSetupScreen(bridge: .pinterest)
         case .steam:          SteamScreen()
         case .obsidian:       ObsidianScreen()
