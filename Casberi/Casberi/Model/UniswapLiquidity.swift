@@ -118,6 +118,11 @@ import SwiftData
 ///   `-uniswapProbe`.
 enum UniswapLiquidity {
 
+    /// Which watched wallets actually hold a Uniswap LP position — the
+    /// catalog seat's gate (2026-07-30). See `WalletSeatEvidence` for why a
+    /// seat is evidence-gated rather than lit for every watched wallet.
+    static let evidence = WalletSeatEvidence("uniswap.accounts")
+
     private struct Chain {
         let network: String
         let factory: String
@@ -482,6 +487,13 @@ enum UniswapLiquidity {
         guard !addresses.isEmpty, let book = await book(addresses: addresses) else { return 0 }
         let defaults = UserDefaults.standard
         var added = 0
+        // The catalog seat's evidence mark (2026-07-30) — an LP position, in
+        // range or out, is proof this wallet provides liquidity here. Read
+        // off this pass's own `book`, so it costs nothing extra; never
+        // unstamped on an empty book (`WalletSeatEvidence`'s
+        // stamp-never-unstamp rule), so closing one position for a week
+        // doesn't flap the seat.
+        for position in book.positions { evidence.remember(position.address) }
         for position in book.positions {
             let key = rangeKey(position.address, position)
             let bucket = position.inRange ? "in-range" : "out-of-range"
@@ -808,6 +820,9 @@ enum UniswapLiquidity {
         }
         defaults.removeObject(forKey: lifetimeFeesKey(addr))
         defaults.removeObject(forKey: "uniswap.fees.milestone.\(addr)")
+        // …and the catalog seat's mark, or the seat stays lit for a wallet
+        // that's gone (`WalletSeatEvidence` rule 2).
+        evidence.forget(address)
     }
 
     // MARK: - RPC primitives

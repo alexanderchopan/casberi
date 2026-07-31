@@ -199,7 +199,16 @@ enum PeerBridge {
         UserDefaults.standard.removeObject(forKey: cursorKey(address))
         let wallet = address.lowercased()
         setOpenDeposits(openDeposits().filter { $0["wallet"] != wallet })
+        // …and the catalog seat's mark, or the seat stays lit for a wallet
+        // that's gone (`WalletSeatEvidence` rule 2).
+        evidence.forget(address)
     }
+
+    /// Which watched wallets have actually traded on Peer — the catalog
+    /// seat's gate (2026-07-30). Until now the seat lit for ANY watched
+    /// wallet, which claimed a relationship most people don't have; see
+    /// `WalletSeatEvidence` for why evidence beats a bare watch.
+    static let evidence = WalletSeatEvidence("peer.accounts")
 
     // MARK: - Open deposits watchlist (maker/sell side, prd §237)
 
@@ -277,6 +286,12 @@ enum PeerBridge {
         guard let latest = await blockNumber() else { return nil }
         let defaults = UserDefaults.standard
         var added = 0
+        // Peer's seat is evidence-gated (2026-07-30), and this sweep reads
+        // FORWARD from a cursor — so fills that landed before the mark
+        // existed are already behind it and no future pass would ever see
+        // them. One fetch over what they landed reconstructs the mark; runs
+        // once, ever. See `backfillFromCorpus`.
+        evidence.backfillFromCorpus(context, source: "Peer")
 
         for address in addresses {
             let key = cursorKey(address)
@@ -324,7 +339,16 @@ enum PeerBridge {
                 // lost fills (the WalletApprovals lesson, 2026-07-16).
                 guard context.saveHonestly() else { continue }
                 added += landed.count
+                // A settled fill is proof this wallet trades on Peer — the
+                // catalog seat's evidence (2026-07-30). Stamped only after
+                // the save above, so the mark can never outlive the things
+                // that justify it.
+                evidence.remember(address)
             }
+            // The sell side counts too: a deposit this wallet CREATED is a
+            // Peer maker order, evidence in its own right even before a
+            // taker fills it.
+            if !depositLogs.isEmpty { evidence.remember(address) }
             registerNewDeposits(from: depositLogs, wallet: address)
             defaults.set(scanned, forKey: key)
         }

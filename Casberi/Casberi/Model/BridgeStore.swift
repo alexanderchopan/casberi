@@ -84,46 +84,106 @@ final class BridgeStore {
         bridges.removeAll { $0.id == id }
     }
 
-    /// Peer & Privacy Pools ride the watched wallets automatically now (prd
-    /// §207, 2026-07-25) — there is no connect switch, so their catalog seat
-    /// is a mirror of "is a wallet watched": connected while ≥1 is, gone when
-    /// none are. This is the one place that truth is written; call it after
-    /// any change to the watch list and once per foreground refresh.
-    /// Idempotent (registerConnected reconnects an existing seat).
+    /// One catalog seat that RIDES the watched wallets — no account, no key,
+    /// no connect switch (prd §207).
+    private struct WalletSeat {
+        let id: String
+        let name: String
+        /// How many of the thing this seat's proof line counts. Reads a
+        /// persisted mark, never the network — `reconcileWalletSeats` runs on
+        /// every foreground and inside several screens' `onAppear`.
+        let count: () -> Int
+        /// What that number IS, singular ("wallet", "card", "Safe") — pluralised
+        /// below. Naming the object beats "wallets" wherever the protocol has
+        /// one: "Watching 2 locks" says more than "Watching 1 wallet".
+        let noun: String
+        let can: [String]
+    }
+
+    /// Every wallet-riding seat, and the evidence that lights it.
+    ///
+    /// These nine have no connect switch: watching a wallet is the whole
+    /// consent, and each sweep runs unconditionally inside
+    /// `WalletIngest.refresh`. **A seat here gates no requests at all** — it
+    /// is pure display, and has been since §207 took the switches away. So
+    /// the only question it has to answer is whether the protocol is really
+    /// part of this person's life, and each answers it from its own evidence
+    /// mark rather than from "a wallet is watched" (see `WalletSeatEvidence`
+    /// for why, and for the stamp-never-unstamp rule the sweeps keep).
+    ///
+    /// Peer and Privacy Pools moved onto that rule on 2026-07-30. They shipped
+    /// with the §207 mirror — lit for ANY watched wallet — which claimed a
+    /// relationship most people don't have, and made the seat wallpaper for
+    /// the ones who do. Gnosis Pay (§222) and Safe already diverged this way;
+    /// now there is one rule instead of two, and five more protocols the app
+    /// already reads (Aave, Morpho, Hyperliquid, Aerodrome, Uniswap) can wear
+    /// a seat honestly without a single extra request.
+    private static let walletSeats: [WalletSeat] = [
+        WalletSeat(id: "peer", name: "Peer",
+                   count: { PeerBridge.evidence.count }, noun: "wallet",
+                   can: ["Reads Peer fills for the wallets you watch, from the public chain.",
+                         "Read-only — never starts, signs, or settles a trade."]),
+        WalletSeat(id: "privacypools", name: "0xBow Privacy Pools",
+                   count: { PrivacyPoolsBridge.evidence.count }, noun: "wallet",
+                   can: ["Reads Privacy Pools deposits and their screening status for the wallets you watch, from public sources.",
+                         "Read-only — never deposits, withdraws, or moves funds."]),
+        WalletSeat(id: "gnosispay", name: "Gnosis Pay",
+                   count: { GnosisPayBridge.evidence.count }, noun: "card",
+                   can: ["Reads your Gnosis Pay card spending from Gnosis Chain, for the wallets you watch.",
+                         "Amounts and timing only — the merchant never reaches the chain.",
+                         "Read-only — never spends, tops up, or freezes a card."]),
+        WalletSeat(id: "safe", name: "Safe",
+                   count: { SafeBridge.detectedCount() }, noun: "Safe",
+                   can: ["Reads the pending signature queue for any Safe you watch, or that watches you as a signer.",
+                         "Alerts on a change to a Safe's owners, threshold, or modules.",
+                         "Read-only — signing always happens in your own Safe app."]),
+        WalletSeat(id: "aave", name: "Aave",
+                   count: { WalletDeFi.evidence.count }, noun: "wallet",
+                   can: ["Reads your Aave collateral and debt for the wallets you watch, from the public chain.",
+                         "Warns when a position drifts close to liquidation.",
+                         "Read-only — never supplies, borrows, repays, or withdraws."]),
+        WalletSeat(id: "morpho", name: "Morpho",
+                   count: { MorphoDeFi.evidence.count }, noun: "wallet",
+                   can: ["Reads your Morpho positions and vault deposits for the wallets you watch, from Morpho's public API.",
+                         "Warns when a position drifts close to liquidation, and when a vault reallocates.",
+                         "Read-only — never supplies, borrows, repays, or withdraws."]),
+        WalletSeat(id: "hyperliquid", name: "Hyperliquid",
+                   count: { HyperliquidDeFi.evidence.count }, noun: "wallet",
+                   can: ["Reads your open positions, spot balances and staked HYPE for the wallets you watch, from Hyperliquid's public API.",
+                         "Warns when a position drifts close to liquidation.",
+                         "Read-only — never opens, closes, or adjusts a position."]),
+        WalletSeat(id: "aerodrome", name: "Aerodrome",
+                   count: { AerodromeDeFi.evidence.count }, noun: "wallet",
+                   can: ["Reads your veAERO locks for the wallets you watch, from Base's public chain.",
+                         "Reminds you before the weekly vote closes, and before a lock expires.",
+                         "Read-only — never votes, locks, or claims."]),
+        WalletSeat(id: "uniswap", name: "Uniswap",
+                   count: { UniswapLiquidity.evidence.count }, noun: "wallet",
+                   can: ["Reads your liquidity positions and uncollected fees for the wallets you watch, from the public chain.",
+                         "Tells you when a position moves out of range, and when it comes back.",
+                         "Read-only — never swaps, adds, removes, or collects."]),
+    ]
+
+    /// Writes the wallet-riding seats' truth — the one place it's written.
+    /// Call after any change to the watch list and once per foreground
+    /// refresh. Idempotent (`registerConnected` reconnects an existing seat).
+    ///
+    /// Note the loop: until 2026-07-30 this was a chain of
+    /// `guard … else { remove(…); return }`, which meant a person with a Safe
+    /// but no Gnosis Pay card never got their Safe seat — the Gnosis Pay guard
+    /// returned before Safe was ever considered. Each seat now stands alone.
     func reconcileWalletSeats() {
-        let n = WalletStore.shared.addresses.count
-        guard n > 0 else {
-            remove("peer"); remove("privacypools"); remove("gnosispay"); return
+        // Belt-and-suspenders: no watched wallets means no wallet-riding seat
+        // can be honest, whatever a stale mark says. (Unwatching drops each
+        // mark through `WalletStore`, so this rarely does anything.)
+        let watching = !WalletStore.shared.addresses.isEmpty
+        for seat in Self.walletSeats {
+            let n = watching ? seat.count() : 0
+            guard n > 0 else { remove(seat.id); continue }
+            registerConnected(id: seat.id, name: seat.name,
+                              proof: "Watching \(n) \(seat.noun)\(n == 1 ? "" : "s")",
+                              can: seat.can)
         }
-        let watching = "Watching \(n) wallet\(n == 1 ? "" : "s")"
-        registerConnected(id: "peer", name: "Peer", proof: watching,
-            can: ["Reads Peer fills for the wallets you watch, from the public chain.",
-                  "Read-only — never starts, signs, or settles a trade."])
-        registerConnected(id: "privacypools", name: "0xBow Privacy Pools", proof: watching,
-            can: ["Reads Privacy Pools deposits and their screening status for the wallets you watch, from public sources.",
-                  "Read-only — never deposits, withdraws, or moves funds."])
-        // Gnosis Pay DIVERGES from its two siblings above (prd §222): its
-        // seat is gated on a card spend actually having been seen, not on a
-        // wallet merely being watched. Most wallets hold no Gnosis Pay card,
-        // and a seat claiming to watch one that doesn't exist is fake status.
-        let cards = GnosisPayBridge.accounts().count
-        guard cards > 0 else { remove("gnosispay"); return }
-        registerConnected(id: "gnosispay", name: "Gnosis Pay",
-            proof: "Watching \(cards) card\(cards == 1 ? "" : "s")",
-            can: ["Reads your Gnosis Pay card spending from Gnosis Chain, for the wallets you watch.",
-                  "Amounts and timing only — the merchant never reaches the chain.",
-                  "Read-only — never spends, tops up, or freezes a card."])
-        // Safe DIVERGES the same way Gnosis Pay does: gated on an actual
-        // detected Safe, not on a wallet merely being watched — most wallets
-        // are neither a Safe nor a Safe signer, and a seat claiming
-        // otherwise would be fake status.
-        let safes = SafeBridge.detectedCount()
-        guard safes > 0 else { remove("safe"); return }
-        registerConnected(id: "safe", name: "Safe",
-            proof: "Watching \(safes) Safe\(safes == 1 ? "" : "s")",
-            can: ["Reads the pending signature queue for any Safe you watch, or that watches you as a signer.",
-                  "Alerts on a change to a Safe's owners, threshold, or modules.",
-                  "Read-only — signing always happens in your own Safe app."])
     }
 
     func togglePause(_ id: String) {

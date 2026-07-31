@@ -74,6 +74,13 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-gnosispay { background: #4830c0; }   /* their indigo (icon-sampled) */
 .ai-privacypools { background: #fff; }
 .ai-safe      { background: #12ff80; }   /* Safe{Wallet}'s green (icon-sampled) */
+/* The five DeFi protocols seated 2026-07-30 — each icon-sampled from the same
+   mark bundled in the app, so tile and hue can't drift between the two. */
+.ai-aave        { background: #9391f7; }   /* the ghost's lavender */
+.ai-morpho      { background: #2a73ff; }   /* the butterfly's blue field */
+.ai-uniswap     { background: #ff007a; }   /* their documented brand pink */
+.ai-hyperliquid { background: #0e3333; }   /* the mark's own near-black ground; the mint is the glyph */
+.ai-aerodrome   { background: #ebe8e1; }   /* the mark's cream field — the swoosh carries the color */
 .ai-gmail     { background: #fff; color: #ea4335; }
 .ai-icloud    { background: #3693f3; font-size: 18px; }
 .ai-chatgpt   { background: #fff; }
@@ -520,10 +527,9 @@ p.lede strong { color: var(--ink); font-weight: 600; }
 }
 .hero .hero-chips { margin-top: 18px; max-width: 720px; margin-left: auto; margin-right: auto; }
 /* ---------- Platform row (hero) ----------
-   iPhone/iPad ship today; Mac is the roadmap beat and has to be SEEN, so its
-   pill carries an accent ring that breathes plus a slow light sweep. Both are
-   decorative only — the row reads correctly frozen, and both stop under
-   prefers-reduced-motion. */
+   All three platforms ship today (Mac went live 2026-07-30). The old
+   `.plat.next` "Soon" pulse/sweep retired with the pill — a shipped platform
+   wears the same quiet chip as the other two. */
 .hero .platforms { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 24px; }
 .plat {
   display: inline-flex; align-items: center; gap: 8px;
@@ -533,34 +539,81 @@ p.lede strong { color: var(--ink); font-weight: 600; }
   font-size: 14px; font-weight: 600; color: var(--ink);
 }
 .plat svg { width: 17px; height: 17px; flex: none; opacity: .7; }
-.plat.next {
-  position: relative; overflow: hidden;
-  color: #fff;
-  animation: platGlow 2.6s ease-in-out infinite;
+
+
+/* ---------- Product shots (first scroll beat) ----------
+   Real screenshots of the running app, sitting between "All of this lands
+   here" and the What-you-can-do switcher. Three different screens on purpose
+   — one screen shown three times proves nothing. Static, not video: the page
+   already animates above and the motion story is carried by the clips below.
+   Each screenshot sits in its own device shell (phone / iPad / Mac) so the
+   platform reads at a glance — no captions, the images carry it. */
+.shots { padding-top: 8px; }
+/* The Apple family shot: the Mac large and centered in back, iPad front-left,
+   iPhone front-right, everything straight-on (no rotation — Apple never
+   tilts), bottoms sharing one baseline, the small devices overlapping the
+   Mac's lower corners so the three read as one object. Depth comes from
+   z-order and long soft shadows, not angles. */
+.shotgrid {
+  --macw: 680px; --padw: 240px; --phonew: 148px;
+  display: flex; align-items: flex-end; justify-content: center;
+  padding: 26px 0 8px;
 }
-.plat.next svg { opacity: .95; }
-.plat.next em {
-  font-style: normal; font-size: 11px; font-weight: 800;
-  letter-spacing: .07em; text-transform: uppercase;
-  background: var(--blue); color: #fff;
-  border-radius: 999px; padding: 3px 9px; margin-left: 3px;
+.shotgrid .shotdev { position: relative; flex: none; }
+.shotgrid .shotdev img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+.shotgrid .shotdev-pad   { margin-right: -72px; margin-bottom: -4px; z-index: 2; }
+.shotgrid .shotdev-mac   { z-index: 1; }
+.shotgrid .shotdev-phone { order: 3; margin-left: -64px; margin-bottom: -4px; z-index: 2; }
+.shotgrid .shotdev-pad .screen,
+.shotgrid .shotdev-phone .screen {
+  box-shadow: 0 0 0 7px #1c1f26, 0 0 0 8px #2b3038,
+              -18px 30px 60px rgba(0,0,0,.65);
 }
-.plat.next::after {
-  content: ""; position: absolute; top: 0; bottom: 0; left: -45%; width: 40%;
-  background: linear-gradient(100deg, transparent, rgba(140,185,255,.20), transparent);
-  animation: platSweep 3.6s ease-in-out infinite;
+.shotgrid .shotdev-phone .screen { box-shadow: 0 0 0 7px #1c1f26, 0 0 0 8px #2b3038, 18px 30px 60px rgba(0,0,0,.65); }
+
+.shotdev-mac { width: var(--macw); }
+.shotdev-mac .screen {
+  position: relative; border-radius: 10px 10px 3px 3px; overflow: hidden;
+  background: #0b0910; aspect-ratio: 16 / 10;
+  box-shadow: 0 0 0 8px #1c1f26, 0 0 0 9px #2b3038, 0 30px 60px rgba(0,0,0,.55);
 }
-@keyframes platGlow {
-  0%, 100% { box-shadow: inset 0 0 0 1.5px rgba(59,140,240,.42), 0 0 0 0 rgba(22,115,230,0); }
-  50%      { box-shadow: inset 0 0 0 1.5px rgba(59,140,240,.85), 0 0 22px 3px rgba(22,115,230,.30); }
+.shotdev-mac .chrome {
+  position: absolute; inset: 0 0 auto 0; height: 22px; z-index: 2;
+  background: rgba(20,23,30,.92); display: flex; align-items: center; gap: 6px; padding: 0 10px;
 }
-@keyframes platSweep {
-  0%        { left: -45%; }
-  55%, 100% { left: 118%; }
+.shotdev-mac .chrome i { width: 8px; height: 8px; border-radius: 50%; display: block; }
+.shotdev-mac .foot {
+  height: 10px; margin: 0 auto; width: 72%;
+  background: linear-gradient(180deg,#2b3038,#171a20);
+  border-radius: 0 0 8px 8px;
 }
-@media (prefers-reduced-motion: reduce) {
-  .plat.next { animation: none; box-shadow: inset 0 0 0 1.5px rgba(59,140,240,.7); }
-  .plat.next::after { display: none; }
+.shotdev-mac .lip { height: 4px; width: 16%; margin: 0 auto; background: #12151a; border-radius: 0 0 6px 6px; }
+
+.shotdev-pad { width: var(--padw); }
+.shotdev-pad .screen {
+  border-radius: 18px; overflow: hidden; background: #0b0910; aspect-ratio: 2048 / 2732;
+  box-shadow: 0 0 0 9px #1c1f26, 0 0 0 10px #2b3038, 0 26px 54px rgba(0,0,0,.5);
+}
+
+.shotdev-phone { width: var(--phonew); }
+.shotdev-phone .screen {
+  position: relative; border-radius: 26px; overflow: hidden; background: #0b0910;
+  aspect-ratio: 1242 / 2688;
+  box-shadow: 0 0 0 7px #1c1f26, 0 0 0 8px #2b3038, 0 24px 50px rgba(0,0,0,.55);
+}
+.shotdev-phone .island {
+  position: absolute; top: 5%; left: 50%; transform: translateX(-50%);
+  width: 30%; aspect-ratio: 10 / 3; border-radius: 999px; background: #000; z-index: 2;
+}
+@media (max-width: 900px) {
+  .shotgrid { --macw: 440px; --padw: 160px; --phonew: 100px; }
+  .shotgrid .shotdev-pad { margin-right: -46px; }
+  .shotgrid .shotdev-phone { margin-left: -42px; }
+}
+@media (max-width: 560px) {
+  .shotgrid { --macw: 238px; --padw: 94px; --phonew: 62px; }
+  .shotgrid .shotdev-pad { margin-right: -30px; }
+  .shotgrid .shotdev-phone { margin-left: -26px; }
 }
 
 /* ---------- FAQ ---------- */

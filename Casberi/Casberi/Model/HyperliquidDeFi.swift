@@ -60,8 +60,10 @@ import SwiftData
 /// NOT built this pass, by scope, not oversight: `userFills`/`userFunding`
 /// (exactly the firehose the position-transition design avoids landing);
 /// spot-pair discovery beyond the tokens a watched wallet already holds
-/// (no watchlist, unlike Tokens/GeckoTerminal — Hyperliquid stays a wallet
-/// read, not a catalog offer, matching Aave/Morpho/Uniswap's precedent).
+/// (no watchlist, unlike Tokens/GeckoTerminal — Hyperliquid rides the
+/// watched wallets, and its catalog seat is a MIRROR of that, not a switch:
+/// it lights once a watched wallet is really seen trading here, and its
+/// Connect routes to the wallet manager. See `WalletSeatEvidence`.)
 enum HyperliquidDeFi {
 
     private static let endpoint = "https://api.hyperliquid.xyz/info"
@@ -70,6 +72,11 @@ enum HyperliquidDeFi {
     /// .holdingFloor`, the dust line the treemap and Morpho both draw. The
     /// $0.65-notional / $8.3B-liquidationPx position above is exactly why.
     private static var floor: Double { WalletIngest.holdingFloor }
+
+    /// Which watched wallets actually trade on Hyperliquid — the catalog
+    /// seat's gate (2026-07-30). See `WalletSeatEvidence` for why a seat is
+    /// evidence-gated rather than lit for every watched wallet.
+    static let evidence = WalletSeatEvidence("hyperliquid.accounts")
 
     /// Distance from mark to liquidation, as a fraction of mark — under this
     /// is the heads-up margin. Not Aave/Morpho's health factor (this API
@@ -315,6 +322,20 @@ enum HyperliquidDeFi {
 
         for address in addresses {
             let mine = book.positions.filter { $0.owner == address.lowercased() }
+            // The catalog seat's evidence mark (2026-07-30) — an open perp or
+            // staked HYPE is proof this wallet trades here. Read off this
+            // pass's own `book`, so it costs nothing extra; never unstamped
+            // on an empty book (`WalletSeatEvidence`'s stamp-never-unstamp
+            // rule). Spot holdings deliberately DON'T count: `book.spot`
+            // accumulates across every watched wallet and `SpotHolding`
+            // carries no owner, so a spot-only wallet can't be told apart
+            // from its neighbour — and marking on it would light the seat
+            // for wallets that have never touched Hyperliquid. Under-claim
+            // over over-claim; a spot-only holder's seat waits for a perp.
+            if !mine.isEmpty
+                || book.delegations.contains(where: { $0.owner == address.lowercased() }) {
+                evidence.remember(address)
+            }
             var snapshot = loadSnapshot(address)
             // First sight of this wallet (no snapshot yet) seeds silently —
             // an ALREADY-open position isn't news that it just opened, the
@@ -474,6 +495,9 @@ enum HyperliquidDeFi {
     /// self-correct next sync since the snapshot they key off is gone.
     static func clearState(address: String) {
         UserDefaults.standard.removeObject(forKey: snapshotKey(address))
+        // …and the catalog seat's mark, or the seat stays lit for a wallet
+        // that's gone (`WalletSeatEvidence` rule 2).
+        evidence.forget(address)
     }
 
     // MARK: - Parsing helpers

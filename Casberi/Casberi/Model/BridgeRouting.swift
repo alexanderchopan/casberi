@@ -210,6 +210,20 @@ enum BridgeRouter {
         // the dead control the honesty rule forbids. The spends themselves
         // live in the feed, where every other landed thing lives.
         Row(offer: "Gnosis Pay", id: "gnosispay", destination: .wallet),
+        // The five DeFi protocols seated 2026-07-30 route BOTH ways to the
+        // wallet manager for the same two reasons Gnosis Pay does — watching
+        // a wallet is the only real action, and the generic
+        // `BridgeDetailScreen`'s Remove would be a dead control against a
+        // seat that re-registers itself next foreground. They add a third:
+        // their live book already has a home in the Wallet feed's own DeFi
+        // tiles, so a screen here would only duplicate it. If one ever grows
+        // something to manage that the feed can't carry, it earns its own
+        // screen then — that's what Peer/0xBow/Safe have.
+        Row(offer: "Aave",        id: "aave",        destination: .wallet),
+        Row(offer: "Morpho",      id: "morpho",      destination: .wallet),
+        Row(offer: "Uniswap",     id: "uniswap",     destination: .wallet),
+        Row(offer: "Hyperliquid", id: "hyperliquid", destination: .wallet),
+        Row(offer: "Aerodrome",   id: "aerodrome",   destination: .wallet),
         // Read-only exchange seats (prd §163) — Wallet group by ruling: their
         // balances merge into the combined total, so they belong beside the
         // wallets they join.

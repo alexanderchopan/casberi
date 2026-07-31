@@ -59,6 +59,14 @@ extension DS {
         case "safe":                return Color.fixed("#12ff80")   // Safe{Wallet}'s green (icon-sampled from the bundled mark)
         case "privacy pools", "0xbow privacy pools":
                                     return Color.fixed("#ffffff")   // 0xBow's mark is black on white (bundled) — the white field is the identity, like ChatGPT's; zero saturation means washHue nils, so the page stays pure ink on purpose
+        // The five DeFi protocols the wallet already reads, seated in the
+        // catalog 2026-07-30. Every one is icon-sampled from the mark bundled
+        // beside it in the asset catalog, so tile and hue can't drift.
+        case "aave":                return Color.fixed("#9391f7")   // the ghost's lavender
+        case "morpho":              return Color.fixed("#2a73ff")   // the butterfly's blue field
+        case "aerodrome":           return Color.fixed("#0434ff")   // the swoosh's electric blue — its cream FIELD is the most common pixel, but a near-white hue carries no signal (the 0xBow case), so the identity is the mark itself
+        case "uniswap":             return Color.fixed("#ff007a")   // their documented brand pink; the bundled mark's gradient samples a shade off it
+        case "hyperliquid":         return Color.fixed("#0e3333")   // the dark field IS the mark's ground — near-zero saturation on purpose, so the mint below carries the signal (the Tokens rule)
         case "kalshi":              return Color.fixed("#4fae7b")   // their green (matches the bundled logo)
         case "polymarket":          return Color.fixed("#1652f0")   // their official blue (the site's own mask-icon color, matching the bundled mark)
         case "opensea":             return Color.fixed("#2081e2")   // OpenSea's marine blue

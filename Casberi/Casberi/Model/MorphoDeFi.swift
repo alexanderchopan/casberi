@@ -59,6 +59,11 @@ enum MorphoDeFi {
     /// (sub-cent vault shares people spray at every address) becomes rows.
     private static var floor: Double { WalletIngest.holdingFloor }
 
+    /// Which watched wallets actually hold a Morpho position — the catalog
+    /// seat's gate (2026-07-30). See `WalletSeatEvidence` for why a seat is
+    /// evidence-gated rather than lit for every watched wallet.
+    static let evidence = WalletSeatEvidence("morpho.accounts")
+
     /// One isolated-market position: collateral posted, debt drawn, and the
     /// market's own health factor. `collateralUSD` is optional because the
     /// API measurably returns null for unpriced collateral while the health
@@ -238,6 +243,17 @@ enum MorphoDeFi {
             guard let hf = position.healthFactor else { continue }
             recordHFSample(network: position.network, address: position.address,
                            marketLabel: position.marketLabel, hf: hf)
+        }
+        // The catalog seat's evidence mark (2026-07-30) — a wallet holding a
+        // real Morpho position or vault deposit is a wallet Morpho is part
+        // of, and that is what lights the seat. Read off this pass's own
+        // `book`, so it costs nothing extra; never unstamped on an empty
+        // book (see `WalletSeatEvidence`'s stamp-never-unstamp rule).
+        for address in addresses {
+            let a = address.lowercased()
+            guard book.positions.contains(where: { $0.address == a })
+                    || book.vaults.contains(where: { $0.address == a }) else { continue }
+            evidence.remember(a)
         }
         let defaults = UserDefaults.standard
         let active = Set(WalletChainStore.activeNetworkIDs())
@@ -504,6 +520,9 @@ enum MorphoDeFi {
         for (_, network) in chains {
             defaults.removeObject(forKey: riskKey(network, address))
         }
+        // …and the catalog seat's mark, or the seat stays lit for a wallet
+        // that's gone (`WalletSeatEvidence` rule 2).
+        evidence.forget(address)
     }
 
     /// Newest events landed per wallet per pass — a long gap folds to its

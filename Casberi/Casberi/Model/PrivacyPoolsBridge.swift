@@ -166,7 +166,16 @@ enum PrivacyPoolsBridge {
         UserDefaults.standard.removeObject(forKey: cursorKey(address))
         let wallet = address.lowercased()
         setPending(pending().filter { $0["wallet"] != wallet })
+        // …and the catalog seat's mark, or the seat stays lit for a wallet
+        // that's gone (`WalletSeatEvidence` rule 2).
+        evidence.forget(address)
     }
+
+    /// Which watched wallets have actually deposited into Privacy Pools —
+    /// the catalog seat's gate (2026-07-30). Until now the seat lit for ANY
+    /// watched wallet; see `WalletSeatEvidence` for why evidence beats a
+    /// bare watch.
+    static let evidence = WalletSeatEvidence("privacypools.accounts")
 
     // MARK: - Pending-status watchlist (flat UserDefaults, keyless seat)
 
@@ -273,6 +282,11 @@ enum PrivacyPoolsBridge {
         let defaults = UserDefaults.standard
         coverThisPass = nil   // fresh per pass; filled lazily only if something lands
         var added = 0
+        // This seat is evidence-gated (2026-07-30) and this sweep reads
+        // FORWARD from a cursor, so deposits that landed before the mark
+        // existed sit behind it. One fetch over what they landed rebuilds
+        // the mark; runs once, ever. See `backfillFromCorpus`.
+        evidence.backfillFromCorpus(context, source: "Privacy Pools")
 
         for address in addresses {
             let key = cursorKey(address)
@@ -306,6 +320,11 @@ enum PrivacyPoolsBridge {
                 scanned = to
             }
             guard scanned > cursor else { continue }   // nothing read — transient
+            // A deposit found under this wallet is proof it uses Privacy
+            // Pools — the catalog seat's evidence (2026-07-30). Keyed off
+            // the LOGS, not what landed: a re-scanned window dedupes to zero
+            // landed things while still proving the deposit is theirs.
+            if !depositLogs.isEmpty { evidence.remember(address) }
             var landed = await things(from: depositLogs, wallet: address, existing: existing)
             landed += await ragequitThings(from: ragequitLogs, wallet: address, existing: existing)
             if !landed.isEmpty {

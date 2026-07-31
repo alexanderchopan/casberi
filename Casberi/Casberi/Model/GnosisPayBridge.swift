@@ -117,26 +117,21 @@ enum GnosisPayBridge {
     /// and a seat reading "Gnosis Pay · watching 3 wallets" for someone who
     /// has never held one is a fake status, which the honesty rule forbids.
     /// So the seat appears only once a spend has actually been seen.
-    private static let accountsKey = "gnosispay.accounts"
+    /// This bridge invented the evidence-mark shape on 2026-07-26; it was
+    /// generalised into `WalletSeatEvidence` on 2026-07-30 when Morpho,
+    /// Hyperliquid, Aerodrome and Uniswap gained seats of their own and Peer
+    /// and Privacy Pools were converted to the same rule. Same key, same
+    /// on-disk format — nothing to migrate.
+    static let evidence = WalletSeatEvidence("gnosispay.accounts")
 
-    static func accounts() -> [String] {
-        (UserDefaults.standard.array(forKey: accountsKey) as? [String]) ?? []
-    }
-
-    private static func remember(account address: String) {
-        let a = address.lowercased()
-        var known = accounts()
-        guard !known.contains(a) else { return }
-        known.append(a)
-        UserDefaults.standard.set(known, forKey: accountsKey)
-    }
+    static func accounts() -> [String] { evidence.addresses }
 
     /// Wallet unwatch takes this seat's cursor and its card-account mark with
     /// it — called from WalletStore beside the siblings'.
     static func clearState(address: String) {
         let a = address.lowercased()
         UserDefaults.standard.removeObject(forKey: cursorKey(a))
-        UserDefaults.standard.set(accounts().filter { $0 != a }, forKey: accountsKey)
+        evidence.forget(a)
     }
 
     // MARK: - Sync
@@ -192,7 +187,7 @@ enum GnosisPayBridge {
             // one, nothing lands — and the seat never comes back. A log that
             // passed this filter (from == wallet, to == settlement, on a
             // spendable token) IS a card spend by construction.
-            if !logs.isEmpty { remember(account: address) }
+            if !logs.isEmpty { evidence.remember(address) }
 
             let landed = await things(from: logs, wallet: address, existing: existing)
             if !landed.isEmpty {

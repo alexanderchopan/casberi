@@ -72,10 +72,19 @@ final class WalletStore {
                 // freshly "opened" on re-watch instead of the honest silent
                 // reseed.
                 HyperliquidDeFi.clearState(address: old.address)
+                // Aerodrome keeps no cursor (both its events are reconciling
+                // dueAt rows, read fresh every pass) — but its catalog seat's
+                // evidence mark leaves with the watch like every sibling's,
+                // or the seat stays lit for a wallet that's gone.
+                AerodromeDeFi.clearState(address: old.address)
                 // The EIP-7702 delegation baseline leaves too (2026-07-20) —
                 // a re-watch should seed fresh, not compare against a
                 // delegate state from a prior, unrelated watch period.
                 WalletSafety.clearDelegation(address: old.address)
+                // Aave's catalog-seat mark leaves too (2026-07-30) — the
+                // risk buckets above already reset themselves, this is the
+                // seat's own record.
+                WalletDeFi.clearSeatEvidence(address: old.address)
                 // The gas-spent running total leaves too (2026-07-20) — a
                 // re-watch starts the count at zero, honest about what it can
                 // actually know.

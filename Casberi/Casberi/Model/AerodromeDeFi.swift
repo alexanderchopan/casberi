@@ -74,6 +74,20 @@ enum AerodromeDeFi {
     /// locks (enumeration order), never a silent guess at the rest.
     private static let maxLocksPerWallet = 10
 
+    /// Which watched wallets actually hold a veAERO lock — the catalog seat's
+    /// gate (2026-07-30). See `WalletSeatEvidence` for why a seat is
+    /// evidence-gated rather than lit for every watched wallet.
+    static let evidence = WalletSeatEvidence("aerodrome.accounts")
+
+    /// Wallet unwatch takes this seat's mark with it, or the seat stays lit
+    /// for a wallet that's gone (`WalletSeatEvidence` rule 2). There is no
+    /// cursor or bucket to clear beside it: both events this file lands are
+    /// reconciling `dueAt` rows read fresh from the chain every pass (the
+    /// ENSExpiry shape), so nothing here can back-fill an unwatched gap.
+    static func clearState(address: String) {
+        evidence.forget(address)
+    }
+
     struct Lock: Equatable, Sendable {
         let owner: String
         let tokenId: Int
@@ -189,6 +203,13 @@ enum AerodromeDeFi {
         guard !addresses.isEmpty else { return 0 }
         guard let book = await book(addresses: addresses) else { return nil }
         var added = 0
+
+        // The catalog seat's evidence mark (2026-07-30) — a veAERO lock is
+        // proof this wallet is an Aerodrome voter. Read off this pass's own
+        // `book`, so it costs nothing extra; never unstamped on an empty
+        // book (`WalletSeatEvidence`'s stamp-never-unstamp rule), which also
+        // means a lock withdrawn and re-made doesn't flap the seat.
+        for lock in book.locks { evidence.remember(lock.owner) }
 
         if let bounds = await epochBounds(), bounds.voteEnd > .now {
             for lock in book.locks {

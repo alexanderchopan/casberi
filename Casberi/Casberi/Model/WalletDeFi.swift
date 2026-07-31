@@ -46,6 +46,24 @@ import SwiftData
 /// absent, not skipped.
 enum WalletDeFi {
 
+    /// Which watched wallets actually hold an Aave position — the catalog
+    /// seat's gate (2026-07-30). See `WalletSeatEvidence` for why a seat is
+    /// evidence-gated rather than lit for every watched wallet.
+    ///
+    /// Aave ONLY, not Spark: this file reads both (Spark is a straight Aave
+    /// V3 fork on the same selector), but they are different products and a
+    /// Spark position is not evidence that someone uses Aave. Spark has no
+    /// catalog seat yet — when it gets one it gets its own mark beside this,
+    /// keyed off the same `protocolName` the positions already carry.
+    static let evidence = WalletSeatEvidence("aave.accounts")
+
+    /// Wallet unwatch takes the seat's mark with it (`WalletSeatEvidence`
+    /// rule 2). The risk buckets are cleared by `clearDelegation`'s sibling
+    /// path already; this is only the seat's own record.
+    static func clearSeatEvidence(address: String) {
+        evidence.forget(address)
+    }
+
     private struct Pool {
         let network: String
         let address: String
@@ -199,6 +217,16 @@ enum WalletDeFi {
                 // in review, 2026-07-20 — an ordinary DeFi usage pattern,
                 // not an edge case).
                 guard let data = await accountData(pool: pool, address: address) else { continue }
+                // The catalog seat's evidence mark (2026-07-30) — collateral
+                // posted on an Aave pool is proof this wallet lends there.
+                // Read off this pass's own account data, so it costs nothing
+                // extra; never unstamped once set (`WalletSeatEvidence`'s
+                // stamp-never-unstamp rule), so repaying and withdrawing for
+                // a month doesn't flap the seat. Spark deliberately excluded
+                // — see `evidence`'s own doc.
+                if pool.protocolName == "Aave", data.totalCollateralUSD > 0 {
+                    evidence.remember(address)
+                }
                 let key = riskKey(pool.protocolName, pool.network, address)
                 guard data.totalCollateralUSD > 0, let hf = data.healthFactor else {
                     defaults.set("safe", forKey: key)

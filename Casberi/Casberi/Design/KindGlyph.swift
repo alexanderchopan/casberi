@@ -102,6 +102,10 @@ enum BridgeGlyph {
         // DS.confirm's dark value — re-typed fixed because the mark must not
         // shift per scheme; keep in step if the confirm green is ever tuned.
         case "tokens": return Color.fixed("#30d158")
+        // Hyperliquid's mark is mint on near-black, the Tokens shape exactly:
+        // the tile is dark in both modes, so the signal has to come from the
+        // glyph. Icon-sampled from the bundled mark.
+        case "hyperliquid": return Color.fixed("#97fce4")
         default:       return nil
         }
     }

@@ -390,19 +390,23 @@ enum WalletIngest {
                                                         heldByOwner: heldByOwner,
                                                         ownedNFTs: ownedNFTs)
         added += approvalsAdded
-        // Peer fills ride the same pass when that seat is on (prd §112) — a
-        // filtered-log read per wallet against Peer's orchestrators on Base,
-        // landing "Bought 25 USDC with Venmo on Peer" things. Inside the
-        // running guard like everything above; no-ops unless connected.
+        // Peer fills ride the same pass (prd §112) — a filtered-log read per
+        // wallet against Peer's orchestrators on Base, landing "Bought 25
+        // USDC with Venmo on Peer" things. Inside the running guard like
+        // everything above. (Said "no-ops unless connected" until 2026-07-30;
+        // that stopped being true in §207, which deleted the connect switch.
+        // Nothing in this list is seat-gated — see `BridgeStore
+        // .reconcileWalletSeats`, where the seats are written FROM what these
+        // sweeps find, never the other way round.)
         let peerAdded = await PeerBridge.sync(context: context,
                                               addresses: evmAddresses,
                                               existing: existing)
         added += peerAdded ?? 0
-        // Privacy Pools rides the same pass when that seat is on (prd §162) —
-        // one filtered Entrypoint-log read per wallet on mainnet, landing
-        // deposits, plus the ASP status poll that lands "your deposit
-        // cleared" alerts. Inside the running guard like everything above;
-        // no-ops unless connected.
+        // Privacy Pools rides the same pass (prd §162) — one filtered
+        // Entrypoint-log read per wallet on mainnet, landing deposits, plus
+        // the ASP status poll that lands "your deposit cleared" alerts.
+        // Inside the running guard like everything above; not seat-gated
+        // (see the Peer note).
         let privacyPoolsAdded = await PrivacyPoolsBridge.sync(context: context,
                                                               addresses: evmAddresses,
                                                               existing: existing)

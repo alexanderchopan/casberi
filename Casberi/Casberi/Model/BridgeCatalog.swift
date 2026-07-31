@@ -141,7 +141,12 @@ enum BridgeCatalog {
                 "Warns if the wallet starts delegating its control.",
                 "Catches transfers that look like address-poisoning scams.",
                 "Tracks what you've paid in gas.",
-                "Shows your Aave, Spark and Morpho positions.",
+                // Aave/Morpho/Uniswap/Hyperliquid/Aerodrome each carry their
+                // own tile since 2026-07-30, so naming them here would sell
+                // the same thing twice. Spark has no tile of its own yet and
+                // would otherwise go unmentioned anywhere — hence the one
+                // name left in this bullet.
+                "Shows your DeFi positions, Spark's included.",
               ],
               needsSetup: true),
         // Wallet group by ruling (user, 2026-07-21, prd §162). Privacy Pools
@@ -256,6 +261,55 @@ enum BridgeCatalog {
                 "Finds every Safe you're a signer on, not just ones you watch directly.",
                 "Says whether it's your signature that's still missing.",
                 "Alerts on a new/removed owner, a changed threshold, or a newly enabled module.",
+              ],
+              needsSetup: true, added: day(2026, 7, 30)),
+        // The five DeFi protocols the wallet has been reading all along
+        // (2026-07-30), seated in the catalog beside Peer/0xBow/Gnosis
+        // Pay/Safe. NOT a new integration and NOT a new request: every one of
+        // these sweeps already runs unconditionally for every watched wallet
+        // inside `WalletIngest.refresh` — the seat gates nothing, it says the
+        // protocol is part of this person's life. Which is why each is
+        // EVIDENCE-gated (`WalletSeatEvidence`): the seat lights the day a
+        // real position is seen, never merely because a wallet is watched.
+        // Connect and Open both route to the wallet manager (the Gnosis Pay
+        // rule, `BridgeRouter`) — there is no setting to set, and the live
+        // book already has a home in the Wallet feed's own DeFi tiles, so a
+        // screen here would only duplicate it.
+        Offer(name: "Aave",        tagline: "Your lending position, watched",       group: "Wallet",    connectable: true,
+              summary: "Aave is where a lot of onchain lending happens — you post collateral, you borrow against it, and the gap between the two is the thing you can't afford to stop watching. Watch the wallet and your position lands in your feed, with a warning while there's still time to act.\n\nRead from each chain's public RPC for the wallets you already watch, across Ethereum, Base, Arbitrum, Optimism and Polygon.\n\nNo account, no key, read-only: nothing here supplies, borrows, repays, or withdraws.",
+              features: [
+                "Shows collateral, debt and health factor per chain.",
+                "Warns when a position drifts close to liquidation — once per crossing, not every day.",
+              ],
+              needsSetup: true, added: day(2026, 7, 30)),
+        Offer(name: "Morpho",      tagline: "Your markets and vaults, watched",     group: "Wallet",    connectable: true,
+              summary: "Morpho is isolated markets and curated vaults rather than one big pool, which makes it powerful and easy to lose track of. Watch the wallet and every position and vault deposit lands in your feed — with the health factor's own trajectory, not just today's number.\n\nRead from Morpho's own public API for the wallets you already watch.\n\nNo account, no key, read-only: nothing here supplies, borrows, repays, or withdraws.",
+              features: [
+                "Warns when a position drifts close to liquidation, and says which way it's been trending.",
+                "Tells you when a vault you're in materially reallocates.",
+                "Notices when a vault's rate falls behind Aave's for the same asset.",
+              ],
+              needsSetup: true, added: day(2026, 7, 30)),
+        Offer(name: "Uniswap",     tagline: "Your liquidity, in or out of range",   group: "Wallet",    connectable: true,
+              summary: "A concentrated-liquidity position stops earning the moment price leaves its range, and nothing tells you. Watch the wallet and yours land in your feed — V3 and V4 together, with uncollected fees — and Casberi says when one goes out of range, and when it comes back.\n\nRead from each chain's public RPC for the wallets you already watch, across Ethereum, Base, Arbitrum, Optimism and Polygon.\n\nNo account, no key, read-only: nothing here swaps, adds, removes, or collects.",
+              features: [
+                "Alerts both ways — out of range, and back in.",
+                "Shows uncollected fees, and marks the milestones as they add up.",
+              ],
+              needsSetup: true, added: day(2026, 7, 30)),
+        Offer(name: "Hyperliquid", tagline: "Your positions, as they turn",         group: "Wallet",    connectable: true,
+              summary: "Hyperliquid moves fast enough that a fill-by-fill feed would be noise — one measured wallet made 2,000 trades in three and a half hours. So this watches the thing that actually changes: a position opening, a position closing, and how close the open ones are to liquidation.\n\nRead from Hyperliquid's own public API for the wallets you already watch, sub-accounts included.\n\nNo account, no key, read-only: nothing here opens, closes, or adjusts a position.",
+              features: [
+                "Lands a position opening and closing — never the fills in between.",
+                "Warns when a position drifts close to liquidation.",
+                "Counts down your staked HYPE's unlock.",
+              ],
+              needsSetup: true, added: day(2026, 7, 30)),
+        Offer(name: "Aerodrome",   tagline: "Never miss the weekly vote",           group: "Wallet",    connectable: true,
+              summary: "A veAERO lock earns by voting, every week, in a window that closes whether or not you remembered. Watch the wallet and your locks land in your feed — with the vote deadline as a real date you can act on, and the lock's own expiry beside it.\n\nRead from Base's public chain for the wallets you already watch, including how much of a decaying lock's voting power is left.\n\nNo account, no key, read-only: nothing here votes, locks, or claims.",
+              features: [
+                "Reminds you before the weekly vote window closes — read live from the Voter, never guessed at.",
+                "Counts down a lock's expiry, and stays quiet about permanent locks, which have none.",
               ],
               needsSetup: true, added: day(2026, 7, 30)),
         Offer(name: "GeckoTerminal", tagline: "Trending tokens, per chain",          group: "Markets",   connectable: true,
