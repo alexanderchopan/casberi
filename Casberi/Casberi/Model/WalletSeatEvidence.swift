@@ -36,7 +36,13 @@ import SwiftData
 ///    someone closes a position they'll reopen.
 /// 2. **The mark leaves with the watch.** Every owner calls `forget` from its
 ///    own `clearState`, which `WalletStore` already invokes on unwatch —
-///    otherwise a seat stays lit for a wallet that's gone.
+///    otherwise a seat stays lit for a wallet that's gone. This is best
+///    effort, not a guarantee, and deliberately not the only defence: unwatch
+///    passes the wallet's TYPED spelling while marks hold RESOLVED hex, so an
+///    ENS-watched wallet slips through, and `SafeBridge` keeps its own
+///    detection key which nothing clears. `count(in:)` is the belt to this
+///    braces — it counts only marks that are still watched, so a missed
+///    `forget` self-corrects rather than inflating a seat forever.
 ///
 /// Addresses are stored lowercased hex, matching the resolved form every
 /// sweep works in. This is deliberately the shape `GnosisPayBridge` invented
@@ -61,6 +67,25 @@ struct WalletSeatEvidence: Sendable {
     var count: Int { addresses.count }
 
     var isEmpty: Bool { count == 0 }
+
+    /// How many marked wallets are still being watched — what a seat's proof
+    /// line must state, rather than the raw `count`.
+    ///
+    /// The mark can outlive the watch in three measured ways, and this one
+    /// read closes all of them (review, 2026-07-30): a wallet watched by ENS
+    /// or SNS name unwatches under its TYPED spelling while the mark holds
+    /// the RESOLVED hex, so `forget` misses it; `SafeBridge` never clears its
+    /// detection key at all; and `backfillFromCorpus` reads things landed by
+    /// wallets that were dropped months ago. Intersecting here makes every
+    /// one of those self-correct on the next reconcile instead of leaving a
+    /// seat counting a wallet that's gone — which is the same fake status the
+    /// evidence rule exists to prevent, just arriving from the other side.
+    ///
+    /// `watched` must carry BOTH forms of every watched wallet (typed and
+    /// resolved); `BridgeStore.watchedForms()` builds it.
+    func count(in watched: Set<String>) -> Int {
+        addresses.filter { watched.contains($0) }.count
+    }
 
     /// Records that this protocol was really seen at `address`. Idempotent —
     /// every sweep calls it on every pass that finds something, so it must

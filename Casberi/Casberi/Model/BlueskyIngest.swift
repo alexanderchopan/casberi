@@ -1159,6 +1159,8 @@ enum BlueskyIngest {
     }
 }
 
-private extension String {
+// Internal, not fileprivate: `SocialInbound.followerThing` reads it too
+// (2026-07-30), which broke the build the moment that call site landed.
+extension String {
     var nilIfEmpty: String? { isEmpty ? nil : self }
 }

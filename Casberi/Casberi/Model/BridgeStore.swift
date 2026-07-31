@@ -81,6 +81,12 @@ final class BridgeStore {
     }
 
     func remove(_ id: String) {
+        // `bridges` persists and notifies observers on every mutating access,
+        // so removing what isn't there costs a full JSON encode and an
+        // invalidation for nothing. `reconcileWalletSeats` now calls this for
+        // each of nine seats on every foreground, which for a person with no
+        // wallet is nine of them (review, 2026-07-30).
+        guard bridges.contains(where: { $0.id == id }) else { return }
         bridges.removeAll { $0.id == id }
     }
 
@@ -89,10 +95,11 @@ final class BridgeStore {
     private struct WalletSeat {
         let id: String
         let name: String
-        /// How many of the thing this seat's proof line counts. Reads a
-        /// persisted mark, never the network — `reconcileWalletSeats` runs on
-        /// every foreground and inside several screens' `onAppear`.
-        let count: () -> Int
+        /// How many of the thing this seat's proof line counts, given every
+        /// form of every currently-watched wallet. Reads a persisted mark,
+        /// never the network — `reconcileWalletSeats` runs on every
+        /// foreground and inside several screens' `onAppear`.
+        let count: (Set<String>) -> Int
         /// What that number IS, singular ("wallet", "card", "Safe") — pluralised
         /// below. Naming the object beats "wallets" wherever the protocol has
         /// one: "Watching 2 locks" says more than "Watching 1 wallet".
@@ -120,45 +127,45 @@ final class BridgeStore {
     /// a seat honestly without a single extra request.
     private static let walletSeats: [WalletSeat] = [
         WalletSeat(id: "peer", name: "Peer",
-                   count: { PeerBridge.evidence.count }, noun: "wallet",
+                   count: { PeerBridge.evidence.count(in: $0) }, noun: "wallet",
                    can: ["Reads Peer fills for the wallets you watch, from the public chain.",
                          "Read-only — never starts, signs, or settles a trade."]),
         WalletSeat(id: "privacypools", name: "0xBow Privacy Pools",
-                   count: { PrivacyPoolsBridge.evidence.count }, noun: "wallet",
+                   count: { PrivacyPoolsBridge.evidence.count(in: $0) }, noun: "wallet",
                    can: ["Reads Privacy Pools deposits and their screening status for the wallets you watch, from public sources.",
                          "Read-only — never deposits, withdraws, or moves funds."]),
         WalletSeat(id: "gnosispay", name: "Gnosis Pay",
-                   count: { GnosisPayBridge.evidence.count }, noun: "card",
+                   count: { GnosisPayBridge.evidence.count(in: $0) }, noun: "card",
                    can: ["Reads your Gnosis Pay card spending from Gnosis Chain, for the wallets you watch.",
                          "Amounts and timing only — the merchant never reaches the chain.",
                          "Read-only — never spends, tops up, or freezes a card."]),
         WalletSeat(id: "safe", name: "Safe",
-                   count: { SafeBridge.detectedCount() }, noun: "Safe",
+                   count: { _ in SafeBridge.detectedCount() }, noun: "Safe",
                    can: ["Reads the pending signature queue for any Safe you watch, or that watches you as a signer.",
                          "Alerts on a change to a Safe's owners, threshold, or modules.",
                          "Read-only — signing always happens in your own Safe app."]),
         WalletSeat(id: "aave", name: "Aave",
-                   count: { WalletDeFi.evidence.count }, noun: "wallet",
+                   count: { WalletDeFi.evidence.count(in: $0) }, noun: "wallet",
                    can: ["Reads your Aave collateral and debt for the wallets you watch, from the public chain.",
                          "Warns when a position drifts close to liquidation.",
                          "Read-only — never supplies, borrows, repays, or withdraws."]),
         WalletSeat(id: "morpho", name: "Morpho",
-                   count: { MorphoDeFi.evidence.count }, noun: "wallet",
+                   count: { MorphoDeFi.evidence.count(in: $0) }, noun: "wallet",
                    can: ["Reads your Morpho positions and vault deposits for the wallets you watch, from Morpho's public API.",
                          "Warns when a position drifts close to liquidation, and when a vault reallocates.",
                          "Read-only — never supplies, borrows, repays, or withdraws."]),
         WalletSeat(id: "hyperliquid", name: "Hyperliquid",
-                   count: { HyperliquidDeFi.evidence.count }, noun: "wallet",
+                   count: { HyperliquidDeFi.evidence.count(in: $0) }, noun: "wallet",
                    can: ["Reads your open positions, spot balances and staked HYPE for the wallets you watch, from Hyperliquid's public API.",
                          "Warns when a position drifts close to liquidation.",
                          "Read-only — never opens, closes, or adjusts a position."]),
         WalletSeat(id: "aerodrome", name: "Aerodrome",
-                   count: { AerodromeDeFi.evidence.count }, noun: "wallet",
+                   count: { AerodromeDeFi.evidence.count(in: $0) }, noun: "wallet",
                    can: ["Reads your veAERO locks for the wallets you watch, from Base's public chain.",
                          "Reminds you before the weekly vote closes, and before a lock expires.",
                          "Read-only — never votes, locks, or claims."]),
         WalletSeat(id: "uniswap", name: "Uniswap",
-                   count: { UniswapLiquidity.evidence.count }, noun: "wallet",
+                   count: { UniswapLiquidity.evidence.count(in: $0) }, noun: "wallet",
                    can: ["Reads your liquidity positions and uncollected fees for the wallets you watch, from the public chain.",
                          "Tells you when a position moves out of range, and when it comes back.",
                          "Read-only — never swaps, adds, removes, or collects."]),
@@ -173,17 +180,34 @@ final class BridgeStore {
     /// but no Gnosis Pay card never got their Safe seat — the Gnosis Pay guard
     /// returned before Safe was ever considered. Each seat now stands alone.
     func reconcileWalletSeats() {
-        // Belt-and-suspenders: no watched wallets means no wallet-riding seat
-        // can be honest, whatever a stale mark says. (Unwatching drops each
-        // mark through `WalletStore`, so this rarely does anything.)
-        let watching = !WalletStore.shared.addresses.isEmpty
+        let watched = Self.watchedForms()
         for seat in Self.walletSeats {
-            let n = watching ? seat.count() : 0
+            // An empty watch list means no wallet-riding seat can be honest,
+            // whatever a stale mark says — and `count(in:)` gives that for
+            // free, since nothing intersects the empty set.
+            let n = seat.count(watched)
             guard n > 0 else { remove(seat.id); continue }
             registerConnected(id: seat.id, name: seat.name,
                               proof: "Watching \(n) \(seat.noun)\(n == 1 ? "" : "s")",
                               can: seat.can)
         }
+    }
+
+    /// Every spelling of every watched wallet, lowercased — the typed form
+    /// AND its resolved hex, because the two halves of this app disagree on
+    /// which one identifies a wallet: `WalletStore` unwatches by what the
+    /// person typed, while every sweep stamps its evidence against the
+    /// resolved address. Carrying both means a seat's count is right whether
+    /// a wallet was added as `vitalik.eth` or as its hex.
+    private static func watchedForms() -> Set<String> {
+        var out = Set<String>()
+        for watch in WalletStore.shared.addresses {
+            out.insert(watch.address.lowercased())
+            if let hex = WalletStore.shared.resolvedForm(of: watch.address) {
+                out.insert(hex.lowercased())
+            }
+        }
+        return out
     }
 
     func togglePause(_ id: String) {

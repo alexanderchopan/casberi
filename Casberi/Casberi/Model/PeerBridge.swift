@@ -339,16 +339,17 @@ enum PeerBridge {
                 // lost fills (the WalletApprovals lesson, 2026-07-16).
                 guard context.saveHonestly() else { continue }
                 added += landed.count
-                // A settled fill is proof this wallet trades on Peer — the
-                // catalog seat's evidence (2026-07-30). Stamped only after
-                // the save above, so the mark can never outlive the things
-                // that justify it.
-                evidence.remember(address)
             }
-            // The sell side counts too: a deposit this wallet CREATED is a
-            // Peer maker order, evidence in its own right even before a
-            // taker fills it.
-            if !depositLogs.isEmpty { evidence.remember(address) }
+            // A fill or a maker deposit under this wallet is proof it trades
+            // on Peer — the catalog seat's evidence (2026-07-30). Keyed off
+            // the LOGS, not what landed, matching Gnosis Pay and Privacy
+            // Pools: a rescanned window dedupes to zero landed things while
+            // still proving the fills are theirs. Keying it on `landed` cost
+            // the seat forever for anyone who unwatched and re-watched — the
+            // re-watch seeds silently at head, so nothing ever lands again
+            // (found in review, 2026-07-30; it's the hazard `GnosisPayBridge`
+            // already documents in prose).
+            if !logs.isEmpty || !depositLogs.isEmpty { evidence.remember(address) }
             registerNewDeposits(from: depositLogs, wallet: address)
             defaults.set(scanned, forKey: key)
         }

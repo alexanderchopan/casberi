@@ -237,15 +237,30 @@ enum UniswapLiquidity {
         // list a wallet's positions) and the money for BOTH versions. Keyed
         // "network|version|tokenId" so the V3 arm below can enrich by lookup.
         var zerion: [String: ZerionAPI.LiquidityPosition] = [:]
+        // …and WHOSE it is. `ZerionAPI.LiquidityPosition` carries no owner, so
+        // without this the V4 arm below can only filter the pooled dictionary
+        // by chain and version — and would hand every V4 position to every
+        // watched wallet in turn (found in review, 2026-07-30). That misfiled
+        // a position under wallets that don't hold it, gave it two independent
+        // range buckets so an out-of-range crossing landed twice, and lit the
+        // catalog seat for wallets that have never provided liquidity. The
+        // read is per wallet already; this just keeps the attribution the
+        // request itself established.
+        var zerionOwner: [String: String] = [:]
         for address in addresses {
             guard let found = await ZerionAPI.liquidityPositions(address: address) else { continue }
-            for p in found { zerion["\(p.network)|\(p.version)|\(p.tokenId)"] = p }
+            for p in found {
+                let key = "\(p.network)|\(p.version)|\(p.tokenId)"
+                zerion[key] = p
+                zerionOwner[key] = address.lowercased()
+            }
         }
 
         for chain in chains {
             for address in addresses {
                 // V4 first — enumeration comes from Zerion, ticks from chain.
-                book.positions += await v4Positions(chain: chain, owner: address, zerion: zerion)
+                book.positions += await v4Positions(chain: chain, owner: address,
+                                                    zerion: zerion, owners: zerionOwner)
 
                 let tokenIds = await ownedTokenIds(chain: chain, owner: address)
                 guard !tokenIds.isEmpty else { continue }
@@ -358,10 +373,16 @@ enum UniswapLiquidity {
     /// liquidity row whose whole job is "is it earning" must not appear
     /// unable to say.
     private static func v4Positions(chain: Chain, owner: String,
-                                    zerion: [String: ZerionAPI.LiquidityPosition])
+                                    zerion: [String: ZerionAPI.LiquidityPosition],
+                                    owners: [String: String])
         async -> [Position] {
         guard let v4 = v4Chains.first(where: { $0.network == chain.network }) else { return [] }
-        let mine = zerion.values.filter { $0.network == chain.network && $0.version == 4 }
+        // Owner term included, or a pooled dictionary hands one wallet's
+        // position to all of them — see `fetchBook`'s note on `zerionOwner`.
+        let mine = zerion.values.filter {
+            $0.network == chain.network && $0.version == 4
+                && owners["\($0.network)|\($0.version)|\($0.tokenId)"] == owner.lowercased()
+        }
         guard !mine.isEmpty else { return [] }
         var out: [Position] = []
         for entry in mine {

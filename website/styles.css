@@ -80,7 +80,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-morpho      { background: #2a73ff; }   /* the butterfly's blue field */
 .ai-uniswap     { background: #ff007a; }   /* their documented brand pink */
 .ai-hyperliquid { background: #0e3333; }   /* the mark's own near-black ground; the mint is the glyph */
-.ai-aerodrome   { background: #ebe8e1; }   /* the mark's cream field — the swoosh carries the color */
+.ai-aerodrome   { background: #0434ff; }   /* the swoosh's electric blue — matches DS.brandHue, which rejects the cream field as carrying no signal */
 .ai-gmail     { background: #fff; color: #ea4335; }
 .ai-icloud    { background: #3693f3; font-size: 18px; }
 .ai-chatgpt   { background: #fff; }

@@ -97,6 +97,32 @@ final class WalletStore {
                 // (2026-07-27) — same back-fill reason; a no-op for any
                 // non-Bitcoin address, like every sibling clear above.
                 BitcoinBridge.clearState(address: old.address)
+                // Every clear above is passed the TYPED spelling, while the
+                // sweeps key their state on the RESOLVED hex — so a wallet
+                // watched as "vitalik.eth" leaves its state behind (review,
+                // 2026-07-30). Repeat the round for the resolved form when
+                // the two differ; each clear is idempotent and a no-op for a
+                // key that isn't there. The seats don't depend on this
+                // landing (`WalletSeatEvidence.count(in:)` intersects with
+                // the live watch list either way) — but a stale cursor still
+                // back-fills the unwatched gap on re-watch, which is what
+                // every one of these clears exists to prevent.
+                if let hex = self.resolvedForm(of: old.address),
+                   hex.lowercased() != old.address.lowercased() {
+                    WalletApprovals.clearCursors(address: hex)
+                    PeerBridge.clearCursor(address: hex)
+                    PrivacyPoolsBridge.clearState(address: hex)
+                    GnosisPayBridge.clearState(address: hex)
+                    MorphoDeFi.clearState(address: hex)
+                    UniswapLiquidity.clearState(address: hex)
+                    HyperliquidDeFi.clearState(address: hex)
+                    AerodromeDeFi.clearState(address: hex)
+                    WalletSafety.clearDelegation(address: hex)
+                    WalletDeFi.clearSeatEvidence(address: hex)
+                    WalletGas.clearTotals(address: hex)
+                    SafeBridge.clearCache(address: hex)
+                    BitcoinBridge.clearState(address: hex)
+                }
             }
         }
     }
