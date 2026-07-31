@@ -88,7 +88,12 @@ struct GrokSetupScreen: View {
                                               "Remembers a chat's earlier answers."])
             } else {
                 resultIsError = true
-                result = String(localized: "xAI didn't accept that key — check it and try again.")
+                // Names BOTH real causes (2026-07-31, measured): a wrong key,
+                // and a valid key on a team with no credits — which xAI
+                // reports as a 200 on the key check and a 403 on every actual
+                // request, so "check your key" alone would send someone
+                // hunting a key that was never the problem.
+                result = String(localized: "xAI didn't accept that key. Check the key itself — and that your team has credits at console.x.ai, since a key without them can't answer.")
             }
         }
     }

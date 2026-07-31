@@ -401,9 +401,30 @@ enum AgentAnswer {
             request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         }
         request.timeoutInterval = 15
-        guard let (_, response) = try? await URLSession.shared.data(for: request),
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
               let http = response as? HTTPURLResponse else { return false }
         if provider == .bankr { return http.statusCode == 404 || http.statusCode == 200 }
+        // Grok needs the BODY, not just the status (MEASURED 2026-07-31 with a
+        // real key): `/v1/api-key` answers **200** for a perfectly real key
+        // whose team has no credits — and every actual request from that same
+        // key gets 403 `permission-denied`, "Your newly created team doesn't
+        // have any credits or licenses yet."
+        //
+        // A status-only check would therefore report CONNECTED for a key that
+        // cannot answer a single question — the exact fake status the honesty
+        // rule forbids, and worse than a plain rejection because the failure
+        // then surfaces later, on an answer, looking like a bug in the app.
+        // The response carries the truth in three flags; all three are read,
+        // since a blocked KEY and a blocked TEAM fail identically from here.
+        if provider == .grok {
+            guard http.statusCode == 200,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            else { return false }
+            let blocked = (json["team_blocked"] as? Bool ?? false)
+                || (json["api_key_blocked"] as? Bool ?? false)
+                || (json["api_key_disabled"] as? Bool ?? false)
+            return !blocked
+        }
         return http.statusCode == 200
     }
 
