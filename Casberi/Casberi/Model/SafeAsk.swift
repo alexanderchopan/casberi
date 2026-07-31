@@ -23,7 +23,7 @@ enum SafeAsk {
         guard !counts.isEmpty else {
             return String(localized: "No Safe wallets detected.")
         }
-        let total = counts.values.reduce(0, +)
+        let total = counts.values.reduce(0) { $0 + $1.count }
         guard total > 0 else {
             return String(localized: "Nothing pending on your Safe.")
         }

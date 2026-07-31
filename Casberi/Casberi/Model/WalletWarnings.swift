@@ -69,11 +69,39 @@ struct WalletWarning: Identifiable, Equatable {
         }
     }
 
+    /// WHERE acting on this actually happens (2026-07-31, prd §241) — a
+    /// label and the URL behind it.
+    ///
+    /// The app never signs, revokes or repays; prd §112's preparing-surface
+    /// ruling settled that, and nothing here revisits it. What it settled was
+    /// that the ACT lives elsewhere — not that the row should name elsewhere
+    /// and then refuse to take you. Two of the four actionable kinds carried a
+    /// door and two didn't: a Safe row read "Sign in the Safe app" as a dead
+    /// sentence, and a liquidation row named a health factor with no route to
+    /// the protocol holding it.
+    ///
+    /// Built HERE rather than in the view because this is where the facts a
+    /// door needs already are — the protocol name, the chain, the Safe's own
+    /// queue — and a view reverse-engineering them out of a title string is
+    /// how a link goes quietly wrong.
+    struct Action: Equatable {
+        /// Names the destination, never the mechanism ("Open Aave", not
+        /// "Fix"): the app can't perform this, so the label promises travel,
+        /// not an outcome.
+        let label: String
+        let url: String
+    }
+
     let id: String
     let severity: Severity
     let kind: Kind
     let title: String
     let subtitle: String?
+    /// nil where no honest door exists — a liquidation on a protocol without
+    /// a known app, or a Safe queue spanning several Safes at once (see
+    /// `SafeBridge.Pending.queueURL`). A missing door renders NO pill rather
+    /// than a disabled one; the design law's own rule about dead controls.
+    var action: Action? = nil
     /// How many underlying things this warning stands for — 1 for the ones
     /// that are inherently singular (a delegation, a Safe's pending queue),
     /// N for the three aggregates (poisoning, spoofed symbols, active
@@ -85,6 +113,23 @@ struct WalletWarning: Identifiable, Equatable {
     /// warning's own title said "21" two taps away. Poisoning had the identical
     /// bug and is fixed by the same field.
     var count: Int = 1
+    /// Where a lending protocol's own app lives — the door a liquidation row
+    /// offers. Each URL was verified to answer 200 on 2026-07-31 rather than
+    /// assumed; a link that 404s is a dead control wearing a promise.
+    ///
+    /// The protocol's own app ROOT, deliberately, not a per-position deep
+    /// link: none of the three documents a stable per-position web URL, and
+    /// the honest destination is the page that definitely exists (the same
+    /// call `OneClawFetch.dashboard` makes for the same reason).
+    static func appURL(forProtocol name: String) -> String? {
+        switch name {
+        case "Aave":   "https://app.aave.com/"
+        case "Spark":  "https://app.spark.fi/"
+        case "Morpho": "https://app.morpho.org/"
+        default:       nil
+        }
+    }
+
     /// The WATCHED address this warning belongs to (the person's own spelling
     /// — "vitalik.eth", not the resolved hex), so a door can route to that
     /// wallet's screen. nil when the warning spans wallets (poisoning).
@@ -283,7 +328,7 @@ enum WalletWatch {
     /// readable place.
     static func warnings(positions: [WalletDeFi.Position],
                          morpho: MorphoDeFi.Book = MorphoDeFi.Book(),
-                         safePending: [String: Int],
+                         safePending: [String: SafeBridge.Pending],
                          delegations: [WalletSafety.Delegation],
                          poisoningCount: Int,
                          spoofedSymbolCount: Int,
@@ -301,6 +346,9 @@ enum WalletWatch {
                                      kind: .liquidation,
                                      title: String(localized: "\(p.protocolName) position close to liquidation"),
                                      subtitle: "\(chain) · hf \(WalletIngest.format(p.healthFactor ?? 0))",
+                                     action: WalletWarning.appURL(forProtocol: p.protocolName).map {
+                                         WalletWarning.Action(label: String(localized: "Open \(p.protocolName)"), url: $0)
+                                     },
                                      address: owner[p.address.lowercased()]))
         }
         // Morpho's markets are isolated, so each at-risk market warns on its
@@ -312,6 +360,9 @@ enum WalletWatch {
                                      kind: .liquidation,
                                      title: String(localized: "Morpho position close to liquidation"),
                                      subtitle: "\(chain) · \(p.marketLabel) · hf \(WalletIngest.format(p.healthFactor ?? 0))",
+                                     action: WalletWarning.appURL(forProtocol: "Morpho").map {
+                                         WalletWarning.Action(label: String(localized: "Open Morpho"), url: $0)
+                                     },
                                      address: owner[p.address.lowercased()]))
         }
         if poisoningCount > 0 {
@@ -343,14 +394,20 @@ enum WalletWatch {
                                          : String(localized: "\(approvalCount) active approvals"),
                                      subtitle: nil, count: approvalCount, address: nil))
         }
-        for (address, count) in safePending.sorted(by: { $0.key < $1.key }) where count > 0 {
+        for (address, pending) in safePending.sorted(by: { $0.key < $1.key }) where pending.count > 0 {
             let label = wallet.label(forAddress: address) ?? WalletStore.shortAddress(address)
+            let count = pending.count
             out.append(WalletWarning(id: "safe:\(address)", severity: .notice,
                                      kind: .safe,
                                      title: count == 1
                                          ? String(localized: "1 signature needed on \(label)'s Safe")
                                          : String(localized: "\(count) signatures needed on \(label)'s Safe"),
                                      subtitle: nil,
+                                     // Straight to that Safe's own queue —
+                                     // absent when the count spans Safes.
+                                     action: pending.queueURL.map {
+                                         WalletWarning.Action(label: String(localized: "Open Safe"), url: $0)
+                                     },
                                      address: owner[address.lowercased()] ?? address))
         }
         for d in delegations {
@@ -368,6 +425,17 @@ enum WalletWatch {
                                      kind: .delegation,
                                      title: String(localized: "\(label) delegates to \(target) on \(chain)"),
                                      subtitle: target,
+                                     // Moved off the view (2026-07-31): the
+                                     // tray used to build this URL itself from
+                                     // `w.address`, which made it the one door
+                                     // living somewhere different from the
+                                     // other three. Same URL, same
+                                     // `canServe` gate, one place.
+                                     action: WalletApprovals.canServe(d.address)
+                                         ? WalletWarning.Action(
+                                             label: String(localized: "Revoke"),
+                                             url: WalletApprovals.revokeURL(address: d.address))
+                                         : nil,
                                      address: owner[d.address.lowercased()] ?? d.address))
         }
         // Belt-and-suspenders against the exact crash the resolved-hex dedup

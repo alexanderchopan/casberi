@@ -32,12 +32,15 @@ import SwiftData
 /// `safe-transaction-<network>.safe.global` subdomains to
 /// `api.safe.global/tx-service/<seg>/...`; `seg` is a Safe-internal short
 /// name, NOT always the chain's EIP-3770 shortName — Polygon is `pol`, not
-/// `matic`. Keyless access works (capped at 2 RPS on the free tier). The
-/// Safe WEB APP's own door-URL chain-prefix could not be independently
-/// verified for every chain in the time available (only "eth" was confirmed
-/// live) — rather than guess and risk a dead/wrong link, this bridge omits
-/// that door entirely; the card states counts and lets the person open their
-/// own Safe app.
+/// `matic`. Keyless access works (capped at 2 RPS on the free tier).
+///
+/// The Safe WEB APP's door-URL chain-prefix was originally omitted rather
+/// than guessed (only "eth" had been confirmed live). It is no longer a
+/// guess: every `shortName` below is read from Safe's own config service
+/// (2026-07-30), `safeAppURL` builds the queue link from it, and since
+/// 2026-07-31 (prd §241) `pendingCounts` hands that link to the Worth-a-look
+/// row that asks a person to go sign something — which until then named the
+/// Safe app in a sentence and offered no way to reach it.
 ///
 /// Re-verified live 2026-07-30 while adding (2)/(3): `/owners/{addr}/safes/`
 /// answers per chain (vitalik.eth: 59 on eth, more on base — overwhelmingly
@@ -698,10 +701,29 @@ enum SafeBridge {
     /// already gives `.safe` (an already-signed item isn't yours to act on
     /// anymore). Absent (not just zero) for an address with nothing pending
     /// anywhere. The Wallet screen's live summary row.
+    /// What's pending for one address, and the door to it (2026-07-31, prd
+    /// §241). The count was always here; `queueURL` is `SafeBridge`'s own
+    /// verified `safeAppURL(chain:safeAddress:)` — built since 2026-07-30 and,
+    /// until now, never handed to the one surface that asks a person to go
+    /// sign something.
+    ///
+    /// `queueURL` is nil when this address's pending items span MORE THAN ONE
+    /// Safe or chain: the count legitimately sums across them, and picking
+    /// one queue to open would send someone to a page that doesn't hold most
+    /// of what the row just counted. No door beats an arbitrary one.
+    struct Pending: Equatable {
+        var count: Int = 0
+        var queueURL: String?
+        /// Set once the second contributor lands, which is what makes
+        /// `queueURL` nil — tracked rather than inferred, since two Safes can
+        /// each contribute a legitimately different queue.
+        var spansSafes = false
+    }
+
     @MainActor
-    static func pendingCounts(addresses: [String]) async -> [String: Int] {
+    static func pendingCounts(addresses: [String]) async -> [String: Pending] {
         guard !addresses.isEmpty else { return [:] }
-        var out: [String: Int] = [:]
+        var out: [String: Pending] = [:]
         for candidate in await candidates(addresses: addresses) {
             var pending = await pendingQueue(chain: candidate.chain, address: candidate.safeAddress) ?? []
             // Stranded entries never count — see `sync`. A tray row asking for
@@ -719,7 +741,18 @@ enum SafeBridge {
             }
             guard count > 0 else { continue }
             let key = (candidate.viaOwner ?? candidate.safeAddress).lowercased()
-            out[key, default: 0] += count
+            let door = safeAppURL(chain: candidate.chain, safeAddress: candidate.safeAddress)
+            var entry = out[key] ?? Pending()
+            entry.count += count
+            if entry.queueURL == nil && !entry.spansSafes {
+                entry.queueURL = door
+            } else if entry.queueURL != door {
+                // A second Safe (or the same Safe on another chain) — the
+                // count keeps summing, the door drops out.
+                entry.spansSafes = true
+                entry.queueURL = nil
+            }
+            out[key] = entry
         }
         return out
     }

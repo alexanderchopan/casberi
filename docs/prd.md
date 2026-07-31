@@ -10722,6 +10722,52 @@ text (27 assertions: floor, Aave/Spark separation, Morpho's three legs, nil
 prices, locked-in-units, whole-book) and mutation-tested — zeroing the debt
 sum and defaulting a nil price both fail it.
 
+
+### The two doors (same-day addition, user: "will you be able to click into one and see a visualization" → "yes do both")
+
+The first cut made all three rows plain reads, reasoning that acting happens on
+Aave or Hyperliquid and the Lending/Liquidity cards carry the detail. That
+holds for Owed and is wrong for the other two: **Aerodrome and Hyperliquid have
+no detail surface anywhere in the app**, so the strip was stating a number that,
+for two of its five contributors, nothing on any screen explained.
+
+So Deposited and Locked open trays; **Owed does not**, and the asymmetry is the
+honest shape rather than an inconsistency — a debt tray would be §208's exact
+mistake, a door onto a page repeating the card beneath it. Same conditional
+door `WalletBalanceHeadline` already keeps for its own number.
+
+- **`WalletDepositsTray`** — one row per protocol with its amount and its
+  share of the deposited total as a bar. Rows are TERMINAL (the Worth-a-look
+  ruling, 2026-07-20: "you can't have worth a look pull up a sheet that then
+  says to go look somewhere else").
+- **`WalletLocksTray`** — THE MELT, and the one genuinely new visualization
+  in this pass. A lock is time-shaped, not value-shaped, and the app already
+  reads both halves per veNFT (`locked().amount` and `balanceOfNFT`): a real
+  measured lock reads 12,977 AERO against 5,342 votes, ~41% of its power left
+  on a 2028 end. Nothing in the app has ever drawn that and no amount alone
+  can say it. Three rules: **no dollars anywhere** (§240's rule 2); a
+  **permanent lock gets a full bar and no date**, never an invented fraction;
+  and **staked HYPE gets NO bar** — it doesn't decay, it sits until its
+  unlock, so drawing it a melt would invent a mechanic Hyperliquid lacks.
+
+`WalletComposition` was refactored to carry `deposits`/`debts`/`locks` as its
+ONLY stored state, with every total, place list and per-unit roll-up derived —
+so the strip and the trays cannot disagree about the same money. Locks are one
+entry PER LOCK, never merged per symbol: two veNFTs can end years apart, and
+merging them would invent a lock with an end date neither has. The per-unit
+merge survives only in the strip's one-line summary, where it's sound (a sum of
+AERO is still AERO; a sum of end dates is nothing).
+
+Both trays ride the screen's single `.sheet(item:)` as new `FeedSheetRoute`
+cases — never a second `.sheet` (the half-open-then-close bug, 2026-07-28) —
+and each carries the composition VALUE rather than re-reading `walletLive`,
+so a book landing under an open tray can't renumber it while it's being read.
+
+Harness now at 40 assertions including the melt (clamping over-reads, permanent
+locks, HYPE's absent decay, a zero-amount lock that would divide badly);
+mutation-tested three ways — ignoring permanence, dropping the clamp, and
+merging locks each fail it.
+
 ### Not done in this pass
 
 The wallet ASK (`KeptAskComposers.walletDoc`) and the day brief's money crown
@@ -10789,3 +10835,85 @@ no line at all, the same restraint the lede's 5-point floor and
 `PredictionDisagreement`'s notable-gap floor already hold: a weak signal
 dressed up as a clean story is worse than no line. Kalshi carries no
 curve at all (§51, unchanged) so this only ever applies to Polymarket.
+
+## §241 — Worth a look: every actionable row gets its door, and the rows get a surface (user: "how would you improve the worth a look tray" → "lets also do 2", then "how would you improve the visuals" → "do a", 2026-07-31)
+
+Two changes to a tray that had already been through §196, §197, §203 and §212.
+
+### 1. The door (idea 2)
+
+Four kinds sit under "Worth doing" and only two could be acted on from the
+row: an approval and a delegation carried a Revoke pill, while a liquidation
+named a health factor with no route to the protocol holding it, and a Safe row
+read **"Sign in the Safe app"** — an instruction rendered as a sentence, which
+is a button that forgot to be one.
+
+Prd §112's preparing-surface ruling is untouched: the app still signs, revokes
+and repays nothing. What §112 settled is that the ACT happens elsewhere — not
+that a row may name elsewhere and then refuse to take you there.
+
+- **Liquidation** → the protocol's own app (`WalletWarning.appURL(forProtocol:)`
+  — Aave, Spark, Morpho). The app ROOT, deliberately, not a per-position deep
+  link: none of the three documents a stable per-position web URL, so the
+  honest destination is the page that definitely exists (`OneClawFetch
+  .dashboard`'s own call, for the same reason). All three verified to answer
+  200 on 2026-07-31 rather than assumed — a link that 404s is a dead control
+  wearing a promise.
+- **Safe** → that Safe's own queue. This one was already built and thrown
+  away: `SafeBridge.safeAppURL` has existed since 2026-07-30 with every
+  EIP-3770 `shortName` read from Safe's own config service, and
+  `pendingCounts` returned a bare `[String: Int]` that dropped it on the floor.
+  It now returns `Pending { count, queueURL }`. **`queueURL` is nil when one
+  address's pending items span more than one Safe or chain** — the count
+  legitimately sums across them, and opening one queue would land someone on a
+  page that doesn't hold most of what the row just counted. No door beats an
+  arbitrary one.
+
+Doors are built on `WalletWarning.Action` in the MODEL, where the protocol
+name, the chain and the queue already are — the delegation's Revoke URL moved
+there too, so all four are built in one place instead of three. The label
+always names the DESTINATION and never an outcome ("Open Aave", not "Fix"),
+because travel is the only thing this pill can honestly promise. Where no door
+exists, no pill renders — never a disabled one. The Safe row's old "Sign in
+the Safe app" subtitle now appears ONLY when there's no door, where it's still
+the honest thing to say.
+
+`SafeBridge`'s header doc still claimed the web-app door was deliberately
+omitted for lack of verified chain prefixes; that stopped being true on
+2026-07-30 and is corrected.
+
+### 2. The visuals (variant A of three)
+
+Five problems were put up as mockups; the user took **A**.
+
+- **Rows get a real surface.** These were the only rows in the wallet room
+  without one — bare vertical padding on the ink page — and they are also the
+  one place in the room where a title WRAPS, so two consecutive rows ran
+  together with nothing between them. The design law bans hairlines, so the
+  separation comes from tone: the row steps UP to `surfaceSheet` while the
+  aware pile stays recessed on `surfaceWell`, and the two groups read as
+  different kinds of thing without a single line. Inter-row spacing steps s4 →
+  s2, since the card edges now do what the air was doing.
+- **"Worth doing" stops being orange.** It is a LABEL, not a warning. Orange
+  put a third tint in a sheet already spending red on a live liquidation and
+  blue on the doors — and since every row beneath it is actionable by
+  definition, the color discriminated nothing; it just tinted the section and
+  competed with the one row that had earned a color.
+
+**Audit finding on the way (real, and wider than this tray): `dsListCardRow()`
+does nothing inside a `DSTray`.** It applies `listRowBackground`, a
+List-scoped modifier, and `DSTray`'s content is a plain `VStack` — so the
+surface silently never paints. The `hoverEffect` it also carries DOES work,
+which is why the no-op went unnoticed. `WalletDepositsTray` and
+`WalletLocksTray` (shipped hours earlier, in §240) had inherited the same
+habit and now use a real `dsCompositionRow()` background.
+**`WalletAllocationTray` still calls it and is therefore still surface-less —
+left alone deliberately, since changing a shipped screen's appearance is a
+ruling, not a cleanup.**
+
+Not taken from the mockups: variant C's quiet action pill and reduced header
+chrome, and variant B's wallet face as the row's leading mark. B's underlying
+FACT still stands unaddressed and is the best follow-up here — no actionable
+row says WHOSE wallet it is (a delegation names it inside its sentence; an
+approval never does), so on a multi-wallet setup "Uniswap can spend unlimited
+USDC" doesn't say which wallet is exposed.

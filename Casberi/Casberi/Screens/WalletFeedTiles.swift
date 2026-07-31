@@ -484,7 +484,7 @@ struct WalletDepositsTray: View {
             }
             ShareBar(fraction: share, tint: DS.tint)
         }
-        .dsListCardRow()
+        .dsCompositionRow()
     }
 }
 
@@ -545,7 +545,7 @@ struct WalletLocksTray: View {
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
                 .lineLimit(1)
         }
-        .dsListCardRow()
+        .dsCompositionRow()
     }
 
     /// The whole state of the lock in one sentence — power left, then when it
@@ -567,6 +567,22 @@ struct WalletLocksTray: View {
             parts.append(String(localized: "Ends \(until.formatted(.dateTime.month().day().year()))"))
         }
         return parts.joined(separator: " · ")
+    }
+}
+
+/// The row surface both composition trays wear.
+///
+/// NOT `dsListCardRow()`, which every tray in this room reaches for by habit:
+/// that modifier applies `listRowBackground`, a List-scoped modifier, and
+/// `DSTray`'s content is a plain `VStack` — so inside a tray it silently
+/// paints nothing (audited 2026-07-31, prd §241). The hover effect it also
+/// carries does work, which is why the no-op went unnoticed.
+private extension View {
+    func dsCompositionRow() -> some View {
+        padding(DS.Space.s3)
+            .background(DS.surfaceSheet,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+            .dsHover()
     }
 }
 
@@ -1057,10 +1073,12 @@ struct WalletWorthALookTray: View {
     /// detent (see `trayDetents`) so a long pile can be dragged open past
     /// even this, but the natural-height detent still caps here first.
     private static let maxTrayHeight: CGFloat = 720
-    /// A "Worth doing" row now carries an icon, a wrapping title, and a
-    /// subtitle line (2026-07-24, matching the mockup) — taller than the
-    /// bare one-line rows the aware pile still uses.
-    private static let actionRowHeight: CGFloat = 66
+    /// A "Worth doing" row carries an icon, a wrapping title, a subtitle
+    /// line (2026-07-24) and, since 2026-07-31, its own card padding — so it
+    /// prices well above the bare one-line rows the aware pile still uses.
+    /// First-frame guess only; `contentHeight` measures the truth one pass
+    /// later (see `estimatedContentHeight`).
+    private static let actionRowHeight: CGFloat = 66 + 2 * DS.Space.s3
     /// The aware pile's expanded rows stay bare one-liners — spam doesn't
     /// need the same per-row weight the actionable rows earn.
     private static let rowHeight: CGFloat = 46
@@ -1088,7 +1106,7 @@ struct WalletWorthALookTray: View {
         if hasActionable {
             h += 46 + DS.Space.s4 // the "Worth doing" group label + its explainer line
             h += CGFloat(actionableRowCount) * Self.actionRowHeight
-            h += CGFloat(actionableRowCount - 1) * DS.Space.s4
+            h += CGFloat(actionableRowCount - 1) * DS.Space.s2
         }
         if hasActionable && !flagged.isEmpty { h += DS.Space.s6 }
         if !flagged.isEmpty {
@@ -1169,12 +1187,29 @@ struct WalletWorthALookTray: View {
                         // screenshot of the top of the tray alone).
                         VStack(alignment: .leading, spacing: DS.Space.s6) {
                             if hasActionable {
-                                VStack(alignment: .leading, spacing: DS.Space.s4) {
+                                // Rows carry their own padding now that each
+                                // wears a surface, so the gap between them
+                                // steps down from s4 to s2 — the card edges
+                                // are doing the separating the air used to.
+                                VStack(alignment: .leading, spacing: DS.Space.s2) {
                                     VStack(alignment: .leading, spacing: 2) {
                                         HStack(spacing: DS.Space.s2) {
+                                            // Secondary, not `DS.attention`
+                                            // (2026-07-31): this is a LABEL,
+                                            // not a warning. Orange here put
+                                            // a third tint in a sheet that
+                                            // already spends red on a live
+                                            // liquidation and blue on the
+                                            // doors, and since every row
+                                            // under it is actionable by
+                                            // definition, the color wasn't
+                                            // discriminating anything — it
+                                            // just tinted the section and
+                                            // competed with the one row that
+                                            // had earned a color.
                                             Text("Worth doing")
                                                 .dsText(.label12).fontWeight(.semibold)
-                                                .foregroundStyle(DS.attention)
+                                                .foregroundStyle(DS.textSecondary)
                                             Text("\(actionableRowCount)")
                                                 .dsText(.label12).foregroundStyle(DS.textSecondary)
                                                 .monospacedDigit()
@@ -1404,13 +1439,20 @@ struct WalletWorthALookTray: View {
     /// title that WRAPS — no `lineLimit`, unlike the aware pile's bare rows
     /// below — since "Uniswap can spend unlimited USDC" is worth reading in
     /// full, not clipped, and an optional subtitle stating the one spec that
-    /// differs (a chain, a health factor). A Revoke.cash grant, when one
-    /// exists, is its own tappable pill on the trailing edge — the row
-    /// itself carries no dead tap target when there's nothing to open
-    /// (liquidation and Safe rows: acting happens on Aave or in the Safe
-    /// app, never in here).
+    /// differs (a chain, a health factor). The door, when one exists, is its
+    /// own tappable pill on the trailing edge — the row itself carries no
+    /// dead tap target when there's nothing to open.
+    ///
+    /// EVERY actionable kind carries one now (2026-07-31, prd §241): Revoke
+    /// for an approval or delegation, "Open Aave"/"Open Morpho" for a
+    /// liquidation, "Open Safe" for a pending queue. The app still performs
+    /// none of them itself (prd §112, untouched) — but a row that names
+    /// somewhere and then won't take you there was the sentence "Sign in the
+    /// Safe app" doing the work of a button. The label always names the
+    /// DESTINATION, never an outcome, because travel is the only thing this
+    /// pill can honestly promise.
     private func actionRow(icon: String, hot: Bool, title: String, subtitle: String?,
-                           revokeURL: URL?) -> some View {
+                           door: (label: String, url: URL)?) -> some View {
         HStack(alignment: .top, spacing: DS.Space.s3) {
             Image(systemName: icon)
                 .font(.system(size: 13, weight: .semibold))
@@ -1428,13 +1470,13 @@ struct WalletWorthALookTray: View {
                 }
             }
             Spacer(minLength: DS.Space.s2)
-            if let revokeURL {
+            if let door {
                 Button {
                     DSHaptic.selection()
-                    openURL(revokeURL)
+                    openURL(door.url)
                 } label: {
                     HStack(spacing: 3) {
-                        Text("Revoke")
+                        Text(door.label)
                         Image(systemName: "arrow.up.right")
                             .font(.system(size: 9, weight: .bold))
                     }
@@ -1446,11 +1488,28 @@ struct WalletWorthALookTray: View {
                 .buttonStyle(.plain)
             }
         }
-        .padding(.vertical, DS.Space.s2)
+        // A REAL SURFACE per row (2026-07-31, prd §241 variant A). These were
+        // the only rows in the wallet room without one — bare vertical
+        // padding on the ink page — and since a title WRAPS here (the one
+        // place in the room where it does), two consecutive rows ran together
+        // with nothing between them. The design law bans hairlines, so
+        // separation has to come from tone, which is exactly what the
+        // elevation ladder is for: the row steps UP to `surfaceSheet` while
+        // the aware pile below stays recessed on `surfaceWell`, and the two
+        // groups read as different kinds of thing without a single line.
+        //
+        // Note this is a real background, NOT `dsListCardRow()`: that applies
+        // `listRowBackground`, which is a List-scoped modifier and silently
+        // does nothing inside `DSTray`'s plain VStack (see the tray audit
+        // note in prd §241).
+        .padding(DS.Space.s3)
+        .background(DS.surfaceSheet,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
     }
 
     private func liquidationRow(_ w: WalletWarning) -> some View {
-        actionRow(icon: "chart.line.downtrend.xyaxis", hot: true, title: w.title, subtitle: w.subtitle, revokeURL: nil)
+        actionRow(icon: "chart.line.downtrend.xyaxis", hot: true, title: w.title,
+                  subtitle: w.subtitle, door: door(w))
     }
 
     /// An approval thing already carries its own Revoke.cash page as
@@ -1458,23 +1517,33 @@ struct WalletWorthALookTray: View {
     /// tracked as a dedicated field) is read back out of `sourceRef`.
     private func approvalActionRow(_ thing: Thing) -> some View {
         actionRow(icon: "key.fill", hot: false, title: thing.title,
-                 subtitle: approvalChain(thing), revokeURL: URL(string: thing.content))
+                  subtitle: approvalChain(thing),
+                  door: URL(string: thing.content).map { (String(localized: "Revoke"), $0) })
     }
 
     /// The title already states the whole fact ("X delegates to Y on
     /// Ethereum") — no subtitle, since the model's `subtitle` field just
     /// repeats the delegate target the title already names in full.
     private func delegationRow(_ w: WalletWarning) -> some View {
-        let url = w.address.flatMap { address -> URL? in
-            guard WalletApprovals.canServe(address) else { return nil }
-            return URL(string: WalletApprovals.revokeURL(address: address))
-        }
-        return actionRow(icon: "arrow.triangle.branch", hot: false, title: w.title, subtitle: nil, revokeURL: url)
+        actionRow(icon: "arrow.triangle.branch", hot: false, title: w.title,
+                  subtitle: nil, door: door(w))
     }
 
     private func safeRow(_ w: WalletWarning) -> some View {
+        // The subtitle no longer has to carry the instruction the row can now
+        // perform — with a door present it states WHERE, and the pill takes
+        // you. Without one (a queue spanning Safes) the old sentence is still
+        // the honest thing to say.
         actionRow(icon: "signature", hot: false, title: w.title,
-                 subtitle: String(localized: "Sign in the Safe app"), revokeURL: nil)
+                  subtitle: w.action == nil ? String(localized: "Sign in the Safe app") : nil,
+                  door: door(w))
+    }
+
+    /// A warning's own door, built where the facts are (`WalletWarning.Action`)
+    /// rather than reverse-engineered from a title here.
+    private func door(_ w: WalletWarning) -> (label: String, url: URL)? {
+        guard let action = w.action, let url = URL(string: action.url) else { return nil }
+        return (action.label, url)
     }
 
     /// Pulls the chain an approval landed on out of its `sourceRef`
