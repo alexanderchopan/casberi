@@ -214,6 +214,8 @@ struct FeedScreen: View {
         var days: [(String, [Thing])] = []
         var groups: [(String, [FeedRow])] = []
         var imageOnly: Set<UUID> = []
+        var wideArt: Set<UUID> = []
+        var coarse: Set<String> = []
     }
     @State private var memo = DerivationMemo()
 
@@ -554,6 +556,27 @@ struct FeedScreen: View {
         return order.map { ($0, groups[$0] ?? []) }
     }
 
+    /// Which of these groups came from the COARSE regroup above rather than the
+    /// day grain — the folded tail (prd §254, 2026-07-31), whose headers weigh
+    /// one step less than a day's.
+    ///
+    /// Asked of `coarseLabel` ITSELF rather than pattern-matched off the
+    /// string: a group is coarse exactly when its label is what `coarseLabel`
+    /// would name its own members. That keeps it correct in every language (no
+    /// English words here), and — the reason it isn't the simpler "is this not
+    /// a `dayLabel`?" — it leaves the MUSIC room's session groups ("This
+    /// morning", "Mon evening") alone, which are a different grain, not a
+    /// coarser one.
+    private func coarseLabels(in groups: [(String, [Thing])]) -> Set<String> {
+        Set(groups.compactMap { label, rows -> String? in
+            // `.isLive` before `capturedAt`: a derived array, read during the
+            // same graph update a heal's delete can land in (the dead-Thing
+            // rule, CLAUDE.md).
+            guard let first = rows.first(where: \.isLive) else { return nil }
+            return label == coarseLabel(first.capturedAt) ? label : nil
+        })
+    }
+
     private func coarseLabel(_ date: Date) -> String {
         let cal = Self.groupingCalendar
         if cal.isDate(date, equalTo: .now, toGranularity: .weekOfYear) {
@@ -760,6 +783,39 @@ struct FeedScreen: View {
             let wordless = dayThings.filter(isWordless)
             guard wordless.count * 2 < dayThings.count else { continue }
             ids.formUnion(wordless.map(\.id))
+        }
+        return ids
+    }
+
+    /// The ONE row per day whose own picture reads at size (prd §254,
+    /// 2026-07-31) — the newest post or article that actually carries art.
+    ///
+    /// §218 gave a wordless screenshot the room its missing words would have
+    /// had; this is the same argument for a row that HAS words: the picture is
+    /// the part you can't get from the title, and at 26pt a day of them is a
+    /// column of specks. One per day, so the feed gains an anchor without
+    /// becoming a gallery — the same minority discipline `imageOnlyIDs` uses,
+    /// stated as a count instead of a ratio.
+    ///
+    /// Read off the BUNDLED groups, not the raw days: a row that collapsed
+    /// into a bundle never renders as a band, so choosing from the day would
+    /// silently promote a row nobody can see (RSS is bundleable, and RSS is
+    /// one of the three sources that qualify).
+    ///
+    /// Withheld under 3 rows — on a two-row day the promoted picture is half
+    /// the day, which is a gallery, not an anchor.
+    private func wideArtIDs(_ groups: [(String, [FeedRow])]) -> Set<UUID> {
+        var ids: Set<UUID> = []
+        for (_, rows) in groups where rows.count >= 3 {
+            for row in rows {
+                // `.live` before any stored read (corollary 3, build 176).
+                guard case .single(let item) = row.kind, let thing = item.live
+                else { continue }
+                if BandRow.artRidesBesideIdentity(thing) {
+                    ids.insert(thing.id)
+                    break
+                }
+            }
         }
         return ids
     }
@@ -1682,13 +1738,14 @@ struct FeedScreen: View {
             memo.days = perfAccum("dayGrouping") { recentDaysThenCoarseTail(visible) }
             memo.groups = perfAccum("bundle") { bundle(memo.days) }
             memo.imageOnly = perfAccum("imageOnlyIDs") { imageOnlyIDs(memo.days) }
+            memo.wideArt = perfAccum("wideArtIDs") { wideArtIDs(memo.groups) }
+            memo.coarse = perfAccum("coarseLabels") { coarseLabels(in: memo.days) }
         }
-        let days = memo.days
         let groups = memo.groups
         let boundary = boundaryID(in: groups)
         let imageOnly = memo.imageOnly
-        let dayTotals = Dictionary(days.map { ($0.0, $0.1.count) },
-                                   uniquingKeysWith: { first, _ in first })
+        let wideArt = memo.wideArt
+        let coarse = memo.coarse
         return ForEach(groups, id: \.0) { label, rows in
             // Bundles merge into the day card like any row-shaped thing —
             // only a single that stands alone (consent, token) breaks the run.
@@ -1714,7 +1771,8 @@ struct FeedScreen: View {
                         if let thing = item.live {
                             shapedListRow(thing, index: i, nextEventID: nextEventID,
                                           position: positions[i],
-                                          imageOnly: imageOnly.contains(thing.id))
+                                          imageOnly: imageOnly.contains(thing.id),
+                                          wideArt: wideArt.contains(thing.id))
                         }
                     case .bundle(let source, let word, let count, let newest, let art):
                         bundleListRow(source: source, word: word, count: count,
@@ -1729,7 +1787,18 @@ struct FeedScreen: View {
                 // clearest case against it — a number that can only ever say
                 // "one", under a header already carrying the date.
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Text(label).dsText(.heading22).foregroundStyle(DS.textPrimary)
+                    Text(label)
+                        .dsText(.heading22)
+                        // The tail cools (prd §254, 2026-07-31). §218 already
+                        // folds everything past a week into week/month groups;
+                        // the type never followed, so a month from last spring
+                        // shouted in the same 22pt bold as Today. One weight
+                        // step down — size and weight are the only hierarchy
+                        // this app has (no kerning, no caps, design law), and
+                        // dropping a SIZE step instead would land the header at
+                        // 18pt, which is the row titles beneath it.
+                        .fontWeight(coarse.contains(label) ? .semibold : .bold)
+                        .foregroundStyle(DS.textPrimary)
                 }
                 .textCase(nil)
                 .padding(.leading, DS.Space.s4)
@@ -1916,8 +1985,13 @@ struct FeedScreen: View {
                                  nextEventID: UUID?,
                                  boundary: UUID? = nil,
                                  replies: [String: [Thing]] = [:]) -> some View {
+        // Computed once for the whole feed rather than per section: every
+        // shaped room routes its groups through here, so the folded tail's
+        // lighter header (prd §254) reaches all of them from one place.
+        let coarse = coarseLabels(in: groups)
         ForEach(groups, id: \.0) { label, rows in
-            daySection(label, rows, nextEventID: nextEventID, boundary: boundary, replies: replies)
+            daySection(label, rows, nextEventID: nextEventID, boundary: boundary,
+                       replies: replies, coarse: coarse.contains(label))
         }
     }
 
@@ -3260,10 +3334,12 @@ struct FeedScreen: View {
     private func shapedListRow(_ thing: Thing, index: Int = 0, nextEventID: UUID?,
                                position: RunPosition = .only,
                                imageOnly: Bool = false,
+                               wideArt: Bool = false,
                                replies: [String: [Thing]] = [:]) -> some View {
         // AnyView: same metadata-depth insurance as GenRender (crash fix).
         return AnyView(shapedRow(thing, nextEventID: nextEventID, index: index,
-                                 imageOnly: imageOnly, replies: replies))
+                                 imageOnly: imageOnly, wideArt: wideArt,
+                                 replies: replies))
             .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
             .contentShape(Rectangle())
             .matchedTransitionSource(id: thing.id, in: zoomNS)
@@ -3314,6 +3390,7 @@ struct FeedScreen: View {
     @ViewBuilder
     private func shapedRow(_ thing: Thing, nextEventID: UUID?, index: Int = 0,
                            imageOnly: Bool = false,
+                           wideArt: Bool = false,
                            replies: [String: [Thing]] = [:]) -> some View {
         // Dead-model guard first (corollary 3, build 176 — see
         // `ThingRowKeying`). This is where build 176 trapped: `thing.kind`,
@@ -3393,7 +3470,8 @@ struct FeedScreen: View {
                     BandRow(thing: thing,
                             emphasized: thing.id == nextEventID,
                             live: isLive(thing),
-                            imageOnly: imageOnly)
+                            imageOnly: imageOnly,
+                            wideArt: wideArt)
                 }
             }
         }
@@ -3659,7 +3737,13 @@ struct FeedScreen: View {
     private func daySection(_ label: String, _ rows: [Thing],
                             nextEventID: UUID?,
                             boundary: UUID? = nil,
-                            replies: [String: [Thing]] = [:]) -> some View {
+                            replies: [String: [Thing]] = [:],
+                            // A week/month group from the folded tail rather
+                            // than a day — its header weighs one step less
+                            // (prd §254). Defaults false for the one caller
+                            // that isn't a day at all (the kind-filtered All
+                            // room, whose single header is the filter's name).
+                            coarse: Bool = false) -> some View {
         // LIVE ONLY, before anything reads a stored property (build 150 crash,
         // 2026-07-25 — pull-to-refresh, symbolicated to `countLabel` inside
         // this section's own header). `rows` is a DERIVED array (the day
@@ -3698,7 +3782,12 @@ struct FeedScreen: View {
                 }
             } header: {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Text(label).dsText(.heading22).foregroundStyle(DS.textPrimary)
+                    Text(label)
+                        .dsText(.heading22)
+                        // The folded tail weighs less than today (prd §254) —
+                        // see the twin in `bundledSections` for the reasoning.
+                        .fontWeight(coarse ? .semibold : .bold)
+                        .foregroundStyle(DS.textPrimary)
                     // In a source's own room the count speaks the source's unit —
                     // "3 events", "5 screenshots" (2026-07-13). All keeps the
                     // bare number: mixed kinds have no one unit worth naming.

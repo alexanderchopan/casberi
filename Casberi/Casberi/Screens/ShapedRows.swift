@@ -52,8 +52,38 @@ struct BandRow: View {
     /// minority gate: past half a day's rows these fall back to the ordinary
     /// band, or the All feed would quietly become the Photos grid.
     var imageOnly: Bool = false
+    /// The day's ONE picture read at size (prd §254, 2026-07-31). A post's
+    /// photo and an article's art ride this row as a 26pt thumb — small enough
+    /// that a day of them is a column of specks, and the picture is the one
+    /// thing in that row you can't get from the words. The feed promotes a
+    /// single row per day (see `FeedScreen.wideArtIDs`) to the art size the
+    /// media rooms already ship, so each day opens with something to look at.
+    ///
+    /// It grows the art in place rather than restacking the row: the band is
+    /// the one row anatomy (ruling 2026-07-06), and a full-width banner under
+    /// the title would be a second one. Never collides with `imageOnly` —
+    /// that gate is wordless screenshots, which carry no identity leader and
+    /// so can never satisfy `artRidesBesideIdentity`.
+    var wideArt: Bool = false
 
     private var done: Bool { thing.mark == .done }
+
+    /// Whether this thing's own picture rides BESIDE an identity leader — a
+    /// post with a photo, an RSS story with art (the "both" pattern in the
+    /// body below: the face or publisher mark leads, the picture follows the
+    /// title). The row's art is then genuinely a PICTURE, never an identity or
+    /// a logo, which is what makes it safe to enlarge.
+    ///
+    /// Static so the feed can ask the same question when it picks the day's
+    /// wide row without restating the rule — one definition, so the gate and
+    /// the render can't drift into disagreeing about which rows qualify.
+    static func artRidesBesideIdentity(_ thing: Thing) -> Bool {
+        guard faceSources.contains(thing.source)
+                || publisherMarkSources.contains(thing.source) else { return false }
+        guard let avatar = thing.authorAvatarURL, !avatar.isEmpty else { return false }
+        guard let art = thing.previewImageURL, !art.isEmpty else { return false }
+        return true
+    }
 
     /// The signed amount for the money column, when this row has one. Only
     /// directional transfers qualify: a swap and a self-move have two legs and
@@ -140,9 +170,18 @@ struct BandRow: View {
     /// thought Farcaster/Bluesky showed the avatar of the person you follow").
     /// Unlike the @handle LABEL (redundant with one account, so it stays gated
     /// to >1), the avatar is never redundant — it's who posted.
+    /// The sources whose leading slot is a FACE — drawn circular, because it's
+    /// a person. Named once: `artRidesBesideIdentity` unions it with the
+    /// publisher-mark sources below, so adding a network can't leave the two
+    /// disagreeing about whether that network's rows have an identity leader.
+    static let faceSources: Set<String> = ["Bluesky", "Farcaster"]
+    /// The sources whose leading slot is a publisher's MARK — a logo, so a
+    /// squircle, not a circle.
+    static let publisherMarkSources: Set<String> = ["RSS"]
+
     private var identityAvatarURL: String? {
         guard let avatar = thing.authorAvatarURL, !avatar.isEmpty else { return nil }
-        return (thing.source == "Bluesky" || thing.source == "Farcaster") ? avatar : nil
+        return Self.faceSources.contains(thing.source) ? avatar : nil
     }
 
     /// An RSS row leads with its PUBLISHER's mark — Reuters, a blog — the way
@@ -154,8 +193,8 @@ struct BandRow: View {
     /// not a circle — a logo, not a face. nil (or a dead URL) keeps the RSS
     /// glyph.
     private var publisherIconURL: String? {
-        guard thing.source == "RSS", let icon = thing.authorAvatarURL,
-              !icon.isEmpty else { return nil }
+        guard Self.publisherMarkSources.contains(thing.source),
+              let icon = thing.authorAvatarURL, !icon.isEmpty else { return nil }
         return icon
     }
 
@@ -338,12 +377,25 @@ struct BandRow: View {
             // A post with a photo shows BOTH (ruling 2026-07-10: "keep faces
             // always but show pictures too"): the avatar keeps the leading
             // slot — who — and the attached image rides here before the
-            // time — what. Same 26pt scale, so the band's rhythm holds. An
-            // RSS row does the same: publisher mark leads, the story's own
-            // image rides here.
-            if identityAvatarURL != nil || publisherIconURL != nil,
-               let art = thing.previewImageURL, !art.isEmpty {
-                RemoteThumb(urlString: art, size: 26, fallback: thing.source)
+            // time — what. An RSS row does the same: publisher mark leads, the
+            // story's own image rides here. 26pt keeps the band's rhythm,
+            // except on the day's one promoted row (`wideArt`).
+            if Self.artRidesBesideIdentity(thing), let art = thing.previewImageURL {
+                if wideArt {
+                    // The day's one picture at reading size (prd §254) — the
+                    // media rooms' own art dimensions (§219), so the app has
+                    // ONE size for "a picture worth looking at in a row"
+                    // rather than a second one invented here. `.still` because
+                    // the shape is unknowable: unlike a Steam header or album
+                    // art, whatever a publisher or a poster attached has no
+                    // inherent ratio, and 16:9 is the honest general crop.
+                    RemoteArt(urlString: art,
+                              width: MediaShape.rowArtWidth(.still),
+                              height: MediaShape.rowArtHeight,
+                              fallback: thing.source)
+                } else {
+                    RemoteThumb(urlString: art, size: 26, fallback: thing.source)
+                }
             }
             VStack(alignment: .trailing, spacing: 1) {
                 // The ledger figure leads the trailing stack (prd §158) —
@@ -1402,7 +1454,25 @@ struct BundleRow: View {
     var body: some View {
         HStack(spacing: DS.Space.s3) {
             if art.isEmpty {
-                BridgeIcon(name: source, size: 26)
+                // The deck (prd §254, 2026-07-31): a pictureless bundle used to
+                // wear the plain single glyph every ordinary row wears, so the
+                // only thing saying "this is several things" was the number in
+                // the trailing slot — a fact you read, not a shape you see. Two
+                // cards peek from behind the icon, which is what a stack looks
+                // like everywhere else. It is a FILL, never a stroke: nothing in
+                // this app draws a line (design law).
+                ZStack(alignment: .leading) {
+                    ForEach([2, 1], id: \.self) { step in
+                        RoundedRectangle(cornerRadius: DS.Radius.appIcon(26),
+                                         style: .continuous)
+                            .fill(DS.fillFaint)
+                            .frame(width: 26, height: 26)
+                            .offset(x: CGFloat(step) * 4)
+                            .accessibilityHidden(true)
+                    }
+                    BridgeIcon(name: source, size: 26)
+                }
+                .frame(width: 26 + 8, alignment: .leading)
             } else {
                 // The fan: newest on top, each a step behind — the same 26pt
                 // leading seat every band row keeps, grown only by the
