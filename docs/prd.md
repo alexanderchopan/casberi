@@ -12655,3 +12655,44 @@ blind to where the work happens. **A sampling profiler sees what a hand-placed
 timer cannot, and four rounds of careful reasoning lost to fifteen seconds of
 `sample`.** `xctrace` against a simulator process records empty traces; plain
 `sample <pid>` works and is what to reach for.
+
+## §261 — What the swipe is NOT: a hypothesis raised, implemented, and withdrawn (user: "and you tested the swipe between screens too?", 2026-08-01)
+
+Recorded as a NEGATIVE result, because it is exactly the shape of theory this
+sequence keeps producing: plausible, well-evidenced-looking, and wrong.
+
+**The hypothesis.** `chipLabels` is not only the strip — `feedLabels` hands it
+to the pager's `ForEach`, so its membership is the page set. Until this, a
+brand-new source went to the HEAD (2026-07-30, so its bloom would be seen),
+which would insert a page IN FRONT of the one being swiped to; a
+`TabView(.page)` whose data source changes mid-transition lands between pages.
+The user's screen recording appeared to corroborate it: the strip read
+`All · Wallet · Photos` at 2.3s into a launch and `All · CALENDAR · Wallet ·
+Photos` by 5s, with bridges still landing sources while they swiped.
+
+**Why it was withdrawn.** Implemented as tail-append, then reproduced with
+`-seedThing "Reddit:9"` — and the swipe still crossed two pages and rested
+between them. Tightened to "membership changes only at a freeze", with a
+connect exemption; still stranded. The third run logged `freezeChips` directly
+and showed the truth: **Reddit was already in the FIRST freeze**, because the
+earlier reproduction runs had seeded it permanently into the store. The page
+set had been stable the whole time and the stranding happened anyway. The
+reproduction was contaminated after its first use, and two "fixes" were
+evaluated against it.
+
+So mid-session page-set mutation is NOT demonstrably the cause, and the change
+was reverted rather than shipped — it costs a real thing (a new room's arrival
+celebrated where it can be seen) to buy something unproven.
+
+**What IS established about the swipe**, and it is less than the last three
+sections implied: with a completely stable page set, a slow deliberate swipe
+lands one page and snaps cleanly, while a fast flick can cross two — and
+stranding correlates with the app being BUSY, not with the strip changing.
+That points back at main-thread occupancy, which §260 reduced measurably and
+evidently not enough on a device that is also running CloudKit.
+
+**The standing rule this cost the most to learn: a reproduction that writes to
+the store is single-use.** `-seedThing` lands a real, persistent thing; the
+second run is a different experiment wearing the first one's name. Wipe the app
+(or assert the precondition — here, that the source is ABSENT at mount) before
+each run, and log the precondition rather than assuming it.
