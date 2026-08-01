@@ -520,6 +520,10 @@ struct FeedScreen: View {
     /// their own day cards (that's the part you're actually reading), and
     /// everything older goes through the existing sparseness gate — which
     /// leaves a genuinely dense older stretch day-grained, exactly as before.
+    ///
+    /// The gate is asked in ROWS here, not things (prd §255) — this is the one
+    /// feed that bundles, so it's the one feed where the two numbers differ,
+    /// and counting things is what kept the fold from ever happening.
     private func recentDaysThenCoarseTail(_ visible: [Thing]) -> [(String, [Thing])] {
         let cal = Self.groupingCalendar
         guard let cutoff = cal.date(byAdding: .day, value: -7,
@@ -527,18 +531,48 @@ struct FeedScreen: View {
         else { return dayGroups(visible) }
         let recent = visible.filter { $0.capturedAt >= cutoff }
         let older = visible.filter { $0.capturedAt < cutoff }
-        return dayGroups(recent) + coarsenIfSparse(dayGroups(older))
+        return dayGroups(recent) + coarsenIfSparse(dayGroups(older), rows: bundledRowCount)
     }
 
     /// The sparseness gate + regroup, shared by the plain day path and the
-    /// agent path (which builds its own day groups first). Judged on the
-    /// SHOWN things (dayGroups already dropped future-dated rows), so the
-    /// average matches what the feed actually renders.
-    private func coarsenIfSparse(_ days: [(String, [Thing])]) -> [(String, [Thing])] {
-        let shown = days.flatMap { $0.1 }
+    /// agent path (which builds its own day groups first).
+    ///
+    /// `rows` answers how many ROWS a day will actually DRAW, which is not
+    /// always how many things it holds (prd §255, 2026-07-31). In a source's
+    /// own room the two are the same number and the default is right. The All
+    /// feed BUNDLES after grouping, so a day whose seven wallet transactions
+    /// collapse into one row was scoring seven here — and this gate, whose
+    /// entire job is to prevent a ladder of one-row day cards, therefore never
+    /// once fired on the one feed that actually had one. Measured on a real
+    /// corpus: single-row days marching back 487 days, every header full
+    /// weight, while the gate read the tail as "dense" and left it alone.
+    ///
+    /// The old comment here claimed the average "matches what the feed
+    /// actually renders". That was the bug, stated as a fact.
+    private func coarsenIfSparse(_ days: [(String, [Thing])],
+                                 rows: ([Thing]) -> Int = { $0.count }) -> [(String, [Thing])] {
+        let drawn = days.reduce(0) { $0 + rows($1.1) }
         guard days.count >= 6,
-              Double(shown.count) / Double(days.count) < 1.5 else { return days }
-        return coarseGroups(shown)
+              Double(drawn) / Double(days.count) < 1.5 else { return days }
+        return coarseGroups(days.flatMap { $0.1 })
+    }
+
+    /// How many rows a day's things draw once `bundle` has run over them.
+    ///
+    /// Mirrors `bundle`'s own rule — a source with `bundleThreshold`+
+    /// bundleable things in the day collapses to ONE row, everything else draws
+    /// itself — without building the rows, because the gate runs BEFORE
+    /// bundling and only needs the count. One pass per day, no allocation
+    /// beyond a small per-source tally.
+    private func bundledRowCount(_ dayThings: [Thing]) -> Int {
+        var bySource: [String: Int] = [:]
+        var loose = 0
+        for t in dayThings {
+            if bundleable(t) { bySource[t.source, default: 0] += 1 } else { loose += 1 }
+        }
+        return loose + bySource.values.reduce(0) {
+            $0 + ($1 >= Self.bundleThreshold ? 1 : $1)
+        }
     }
 
     /// Regroup already-ordered (newest-first) things by week, then month —
@@ -843,10 +877,16 @@ struct FeedScreen: View {
             && t.source != "1Claw"
     }
 
-    /// 3+ bundleable things from one source in one day collapse into a
-    /// BundleRow at the position of their newest member (threshold lowered
-    /// from 4, 2026-07-12 — smaller same-source runs were the real All-feed
-    /// clutter). Order is untouched otherwise — compression, not ranking.
+    /// How many bundleable things from one source in one day collapse into a
+    /// single BundleRow (lowered from 4, 2026-07-12 — smaller same-source runs
+    /// were the real All-feed clutter). Named since 2026-07-31 because
+    /// `bundledRowCount` has to predict this exact rule to gate the coarsening,
+    /// and two copies of a literal 3 is how that prediction goes quietly wrong.
+    static let bundleThreshold = 3
+
+    /// `bundleThreshold`+ bundleable things from one source in one day collapse
+    /// into a BundleRow at the position of their newest member.
+    /// Order is untouched otherwise — compression, not ranking.
     /// Takes the already-computed day groups so the caller derives `dayGroups`
     /// (→`visible`→`feedThings`) ONCE per render and reuses it for the day
     /// totals too, instead of rebuilding the whole chain here a second time.
@@ -859,7 +899,7 @@ struct FeedScreen: View {
             // built with one pass instead of one pass per source.
             var bySource: [String: [Thing]] = [:]
             for t in dayThings where bundleable(t) { bySource[t.source, default: []].append(t) }
-            let bundledSources = Set(bySource.filter { $0.value.count >= 3 }.keys)
+            let bundledSources = Set(bySource.filter { $0.value.count >= Self.bundleThreshold }.keys)
             var rows: [FeedRow] = []
             var seen: Set<String> = []
             for t in dayThings {

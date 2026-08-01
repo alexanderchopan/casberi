@@ -12203,3 +12203,56 @@ purely about what a screen LOOKS like. (Also re-paid the stale-binary lesson:
 `verify.sh` builds into `CasberiDD` while a plain `xcodebuild` writes to Xcode's
 own DerivedData, so the first screenshot showed the old copy — `strings … | grep`
 on the installed bundle is what settled it.)
+
+## §255 — The fold that never fired: §218's gate counted things while the feed drew rows (user: "what are you suggesting" → "ok", 2026-07-31)
+
+§218 split the All feed by recency so its thin tail would stop being "the ladder
+of one-row day cards the 2026-07-21 ruling killed everywhere else". It never
+happened. Found while verifying §254 on the simulator: the real corpus rendered
+single-row days marching back **487 days**, every one under a full-weight 22pt
+header, all the way down to the floor line.
+
+**The defect, in one sentence: the gate measured THINGS per day while the feed
+draws ROWS.** `coarsenIfSparse` folds a stretch when it averages under 1.5 a
+day — but bundling happens AFTER grouping, so a day whose seven wallet
+transactions collapse into a single `BundleRow` scored seven. On a wallet-heavy
+history that pushes the average well past the threshold, so the gate reported
+"dense, leave it day-grained" about a screen that is, row for row, almost
+exactly one line per day. The old comment on that function claimed the average
+"matches what the feed actually renders" — the bug, written down as a fact,
+which is likely why nobody re-checked it.
+
+**Why this is a fix and not a re-litigation.** §218's stated intent is exactly
+what now happens; the remedy simply never fired because the measurement didn't
+match the rendering. No threshold moved (still 1.5 a day, still 6+ groups
+needed), no new grain was invented, and the last 7 days are untouched.
+
+**The change.** `coarsenIfSparse` takes a `rows:` closure answering how many
+rows a day will DRAW, defaulting to one-per-thing. Only the All feed passes
+anything else, because only the All feed bundles — in a source's own room rows
+and things are the same number and the old behaviour was already correct. That
+scoping is the whole reason this is a small change rather than a risky one.
+
+`bundledRowCount` mirrors `bundle`'s rule (a source with `bundleThreshold`+
+bundleable things becomes ONE row, everything else draws itself) without
+building the rows, since the gate runs before bundling and needs only the count
+— one pass per day. The literal `3` it has to predict is now the named
+`bundleThreshold` shared with `bundle` itself: two copies of that number is
+precisely how a prediction like this goes quietly wrong later.
+
+**Measured, same corpus, before and after.** Before: day headers to 487 days
+back, ~1 row each, six drags to reach the floor. After: "This week", "Last
+week", then month names — and because the coarse groups bundle too, a month
+compresses further still ("Wallet · 23 transactions" for May, "· 4" for
+February). Two drags to the floor instead of six. §254's lighter coarse header
+now has something to apply to, and the contrast against the day headers above
+it is visible on screen.
+
+**Known consequence, stated because it is a real change to a familiar screen:**
+history a person is used to scrolling day by day now collapses into months.
+That is the point, and it is what §218 asked for, but it is the first time
+anyone's feed will actually do it.
+
+VERIFIED ON SIMULATOR (the fold, the month grain, the in-month bundling, the
+weight contrast) plus build + catalog sync + network-reach + SwiftData liveness
+audit.
