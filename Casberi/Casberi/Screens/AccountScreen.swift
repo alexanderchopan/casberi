@@ -170,11 +170,18 @@ struct SettingsScreen: View {
             // Ruling 2026-07-14: it's an AGENT key — name the agents, never
             // "the Anthropic key". Keyed, the fact earns the badge's green —
             // a live connection states itself in the connected color.
+            // The unkeyed value used to name all six providers, which broke
+            // twice over (2026-07-31): it TRUNCATED at row width — and it had
+            // already gone stale, since Grok made seven and this string still
+            // said six. Naming them is the detail sheet's job (it lists every
+            // provider, with state); this row only has to invite. §243 fixed
+            // the same hand-listing in the key card's console line by deriving
+            // it — here the honest fix is to stop listing at all.
             RowSpec(title: "Your key",
                     value: keyedAgent.map {
                        String.localizedStringWithFormat(
                            String(localized: "%@ answers on tap"), $0.agent)
-                    } ?? String(localized: "Claude, ChatGPT, Gemini, Venice, Bankr, or OpenRouter"),
+                    } ?? String(localized: "Bring your own agent"),
                     valueColor: keyed ? DS.confirm : DS.textTertiary,
                     badge: ("key.fill", keyed ? DS.confirm : DS.textSecondary),
                     action: { detail = .key }),

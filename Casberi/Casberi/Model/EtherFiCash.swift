@@ -327,7 +327,15 @@ enum EtherFiCash {
                 : String(localized: "Spent \(money) with ether.fi Cash")
             let thing = Thing(kind: .transaction, title: title,
                               content: "https://optimistic.etherscan.io/tx/\(spend.txHash)",
-                              source: "ether.fi Cash",
+                              // ONE source (user ruling 2026-07-31): ether.fi
+                              // is one seat, so its two reads share one chip
+                              // and one room — and that room is "Wallet", the
+                              // same place `EtherFiUnstake` and every sibling
+                              // wallet-riding read (Aerodrome, Hyperliquid,
+                              // Uniswap) already land. The row's own title
+                              // still says "with ether.fi Cash", so nothing
+                              // about the purchase is lost.
+                              source: "Wallet",
                               capturedAt: times[spend.block] ?? .now,
                               sourceRef: ref)
             thing.walletAddress = safe
@@ -554,7 +562,7 @@ enum EtherFiCash {
         running = true
         let spends = await syncLocked(
             context: context, addresses: addresses,
-            existing: IngestSupport.existingSourceRefs(context, source: "ether.fi Cash"))
+            existing: IngestSupport.existingSourceRefs(context, source: "Wallet"))
         running = false
         lines.append("spends: \(spends.map(String.init) ?? "FAILED") landed")
         let risk = await syncRisk(context: context, addresses: addresses,

@@ -322,16 +322,11 @@ enum BridgeCatalog {
                 "Counts down a lock's expiry, and stays quiet about permanent locks, which have none.",
               ],
               needsSetup: true, added: day(2026, 7, 30)),
-        Offer(name: "ether.fi",    tagline: "Don't leave unstaked ETH sitting",     group: "Wallet",    connectable: true,
-              summary: "Unstaking from ether.fi doesn't return your ETH — it gives you a claim ticket that queues for about ten days, then becomes claimable and waits, silently, until you remember to collect it. Nothing tells you when that moment arrives.\n\nWatch the wallet and each request lands in your feed, saying plainly whether it's still queued or ready — the row retitles itself the moment it turns claimable.\n\nRead from Ethereum's public chain for the wallets you already watch. No account, no key, read-only: claiming happens in ether.fi's own app.",
+        Offer(name: "ether.fi",    tagline: "Your staked ETH, and the card",     group: "Wallet",    connectable: true,
+              summary: "Unstaking from ether.fi doesn't return your ETH — it gives you a claim ticket that queues for about ten days, then becomes claimable and waits, silently, until you remember to collect it. Nothing tells you when that moment arrives.\n\nether.fi Cash is the other half: a Visa card that settles onchain, so every purchase moves out of your own account in real time. Watch the wallet and both land in your feed — a request that's queued or ready, a purchase and whether it went on credit.\n\nRead from the public chain for the wallets you already watch. No account, no key, read-only: claiming and spending happen in ether.fi's own app.",
               features: [
                 "Tells you the moment your ETH is actually claimable.",
                 "Shows what's still queued, without inventing a date ether.fi hasn't promised.",
-              ],
-              needsSetup: true, added: day(2026, 7, 31)),
-        Offer(name: "ether.fi Cash", tagline: "Card spending, straight off the chain", group: "Wallet",  connectable: true,
-              summary: "ether.fi Cash is a Visa card that settles onchain: every purchase moves out of your own smart account on Optimism in real time, and you can spend from your balance or borrow against it. Watch that account and each purchase lands in your feed — the amount, the moment, whether it went on credit, and a link to the transaction.\n\nRead from Optimism's public chain for the wallets you already watch. No account, no key.\n\nTwo honest limits: the merchant's name never reaches the chain, so rows show what you spent but not where; and this is a record of spending, not a balanced statement.",
-              features: [
                 "Lands each card purchase, and says when one went on credit.",
                 "Warns when the credit line drifts close to its limit.",
                 "Amounts and timing only — the merchant never reaches the chain.",

@@ -164,19 +164,33 @@ final class BridgeStore {
                    can: ["Reads your veAERO locks for the wallets you watch, from Base's public chain.",
                          "Reminds you before the weekly vote closes, and before a lock expires.",
                          "Read-only — never votes, locks, or claims."]),
+        // ONE ether.fi seat, not two (user ruling 2026-07-31). The unstake
+        // queue and Cash were seated separately because they're separate
+        // products on separate chains — but to a person they are one company
+        // and one tile, and two adjacent rows called "ether.fi" and "ether.fi
+        // Cash" read as a duplicate, not as a distinction.
+        //
+        // Counted in WALLETS: the two reads find different evidence (an
+        // unstake request is held by any wallet; a Cash account is its own
+        // smart account), so the honest shared noun is the thing a person
+        // actually watched. A wallet that shows up in either read counts once
+        // — hence the union rather than the sum, which would double-count a
+        // wallet that both stakes and spends.
         WalletSeat(id: "etherfi", name: "ether.fi",
-                   count: { EtherFiUnstake.evidence.count(in: $0) }, noun: "wallet",
-                   can: ["Reads your unstake requests for the wallets you watch, from Ethereum's public chain.",
+                   count: { watched in
+                       // The same shape `evidence.count(in:)` uses — evidence
+                       // addresses filtered by what's watched — over the UNION
+                       // of both reads, so a wallet that both stakes and spends
+                       // counts once. `remember` already lowercases, and
+                       // `watchedForms()` carries both forms of each wallet.
+                       Set(EtherFiUnstake.evidence.addresses)
+                           .union(EtherFiCash.evidence.addresses)
+                           .filter { watched.contains($0) }.count
+                   }, noun: "wallet",
+                   can: ["Reads your unstake requests from Ethereum and your Cash spending from Optimism, for the wallets you watch.",
                          "Tells you the moment queued ETH becomes claimable.",
-                         "Read-only — never stakes, unstakes, or claims."]),
-        // Counted in CARDS, like Gnosis Pay above — the evidence is a Cash
-        // account, not a wallet, and calling it a wallet would overstate what
-        // was found.
-        WalletSeat(id: "etherficash", name: "ether.fi Cash",
-                   count: { EtherFiCash.evidence.count(in: $0) }, noun: "card",
-                   can: ["Reads your ether.fi Cash spending and credit line from Optimism, for the wallets you watch.",
-                         "Amounts and timing only — the merchant never reaches the chain.",
-                         "Read-only — never spends, borrows, repays, or freezes a card."]),
+                         "Lands each card purchase, and warns when the credit line nears its limit.",
+                         "Read-only — never stakes, claims, spends, or borrows."]),
         WalletSeat(id: "uniswap", name: "Uniswap",
                    count: { UniswapLiquidity.evidence.count(in: $0) }, noun: "wallet",
                    can: ["Reads your liquidity positions and uncollected fees for the wallets you watch, from the public chain.",
