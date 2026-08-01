@@ -30,8 +30,16 @@ def glow(body):
     if r<26 and g<26 and b<26:    return '#5a6474'      # near-black: give it presence
     return '#'+h
 
+# Measured in-browser: the inked area of each mark, as width/height. Every
+# icon lands at 1.52 or below except Cal.com at 4.57 — a wordmark that is
+# illegible at tile size. It stays in the website catalog; it just isn't a
+# game tile. Re-measure before adding to this set.
+WORDMARKS = {'Cal.com'}
+
 out={}; used={}
 for name,uri in icons.items():
+    if name in WORDMARKS:
+        continue
     k=namecls[name]
     body=rules.get(k,'')
     out[name]={'u':uri,'c':k,'g':glow(body)}
