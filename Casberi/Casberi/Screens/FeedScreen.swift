@@ -222,6 +222,11 @@ struct FeedScreen: View {
         var imageOnly: Set<UUID> = []
         var wideArt: Set<UUID> = []
         var coarse: Set<String> = []
+        /// Set while the sections render; read by `feedList` a few lines later
+        /// to decide whether "that's everything" is still true. Same
+        /// write-during-body / read-later shape `groups` already has, and safe
+        /// for the same reason: the sections are evaluated before the footer.
+        var windowHasMore = false
     }
     @State private var memo = DerivationMemo()
 
@@ -1395,8 +1400,11 @@ struct FeedScreen: View {
                     // a subset too, and its disclosure row ("Show 12 past
                     // events") is that subset's honest close — expanded, the
                     // room is whole again and the line comes back.
+                    // "That's everything" is a CLAIM, so it waits until the
+                    // room really is whole (prd §264). While a window is open
+                    // the `olderRow` is what sits at the bottom instead.
                     if shape != .reminders && shape != .wallet
-                        && !hidesPastEvents(visible) {
+                        && !hidesPastEvents(visible) && !memo.windowHasMore {
                         caughtUpFooter(visible)
                     }
                 }
@@ -1966,12 +1974,18 @@ struct FeedScreen: View {
             memo.wideArt = perfAccum("wideArtIDs") { wideArtIDs(memo.groups) }
             memo.coarse = perfAccum("coarseLabels") { coarseLabels(in: memo.days) }
         }
-        let groups = memo.groups
-        let boundary = boundaryID(in: groups)
+        // Windowed (prd §264). `boundary` reads the FULL set so the new-since
+        // divider lands on the same row whether or not the window is open.
+        let allGroups = memo.groups
+        let window = windowed(allGroups)
+        let _ = { memo.windowHasMore = window.more }()
+        let groups = window.shown
+        let boundary = boundaryID(in: allGroups)
         let imageOnly = memo.imageOnly
         let wideArt = memo.wideArt
         let coarse = memo.coarse
-        return ForEach(groups, id: \.0) { label, rows in
+        return Group {
+        ForEach(groups, id: \.0) { label, rows in
             // Bundles merge into the day card like any row-shaped thing —
             // only a single that stands alone (consent, token) breaks the run.
             let positions = cardRunPositions(
@@ -2029,6 +2043,8 @@ struct FeedScreen: View {
                 .padding(.leading, DS.Space.s4)
                 .padding(.vertical, DS.Space.s1)
             }
+        }
+        if window.more { olderRow }
         }
     }
 
@@ -2214,10 +2230,16 @@ struct FeedScreen: View {
         // shaped room routes its groups through here, so the folded tail's
         // lighter header (prd §254) reaches all of them from one place.
         let coarse = coarseLabels(in: groups)
-        ForEach(groups, id: \.0) { label, rows in
+        // Windowed (prd §264) — `coarse` and `boundary` are computed against
+        // the FULL set above, so a label or a divider does not change meaning
+        // when the window opens.
+        let window = windowed(groups)
+        let _ = { memo.windowHasMore = window.more }()
+        ForEach(window.shown, id: \.0) { label, rows in
             daySection(label, rows, nextEventID: nextEventID, boundary: boundary,
                        replies: replies, coarse: coarse.contains(label))
         }
+        if window.more { olderRow }
     }
 
     /// The cross-source Themes treemap (2026-07-18: moved off Home — "should
@@ -4155,6 +4177,108 @@ struct FeedScreen: View {
             .padding(.top, DS.Space.s6)
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
+    }
+
+
+    // MARK: - Windowed rows (prd §264)
+
+    /// How many ROWS a room draws before it stops. Whole day groups only, so
+    /// the real count overshoots to the end of whichever group crosses this.
+    ///
+    /// A room built EVERY row it held on every render, and a device profile put
+    /// `feedList` at 46% of all main-thread samples with 36 hangs of up to
+    /// 850ms in the first ten seconds. That cost scaled with the room, not with
+    /// what anyone could see. The derivations above are unchanged and still run
+    /// over the WHOLE set — the grouping, the bundling, the themes treemap and
+    /// every count stay corpus-true — because the expensive thing was never the
+    /// deriving (it is memoized, once per real change), it was handing a
+    /// thousand rows to a `ForEach` whose content closure runs for each one.
+    ///
+    /// Distinct from the off-screen page trim rejected in §263: that deferred a
+    /// page's rows to the body evaluation that made it ACTIVE, which moved the
+    /// cost onto the moment of arrival. This never builds the rest at all until
+    /// the person scrolls toward it, and then it builds a few groups.
+    /// About two screenfuls. The screen holds 8-12 rows, so this is a small
+    /// amount of pre-built content ahead of the viewport rather than the ten
+    /// screens the first cut budgeted (user, 2026-08-01: "why not just show the
+    /// last day and current day only on load" — right that it was too
+    /// generous; see `windowed` for why the unit is rows and not days).
+    private static let windowRowTarget = 30
+
+    /// Each step opens another target's worth. Monotonic for the life of the
+    /// screen: it must not collapse when a thing lands, or scrolling back would
+    /// undo itself every sync.
+    @State private var windowSteps = 0
+
+    /// One more screenful per step, deliberately linear (user ruling,
+    /// 2026-08-01: "most people won't be scrolling back to previous history").
+    /// Geometric growth was offered and declined — it only helps the person
+    /// walking a long room to its beginning, which is the rare case, and the
+    /// cost of getting the common case right is what this whole change is for.
+    private var windowRowBudget: Int { Self.windowRowTarget * (windowSteps + 1) }
+
+    /// Whole groups covering the budget, plus whether any were held back.
+    ///
+    /// ROWS are the unit, not days, and that is the whole point: a day is not a
+    /// bound on work. An import (Instagram, Snapchat, ChatGPT) lands its entire
+    /// history at once and those cluster onto dates, so ONE day in that room
+    /// can be thousands of rows — "draw today and yesterday" would leave the
+    /// cost completely unbounded. A row budget also adapts by itself: a busy
+    /// day fills the screen, a quiet week shows several days.
+    ///
+    /// Whole days wherever possible, because a half-drawn day would otherwise
+    /// need its header to lie about what sits under it. The exception is a day
+    /// that busts the budget ON ITS OWN — the import case above — which is
+    /// truncated rather than allowed to unbound the room. Its header keeps
+    /// stating the day's REAL total (`daySection` is handed the full day for
+    /// counting), so the count stays true and "Show older" explains the gap.
+    private func windowed<T>(_ groups: [(String, [T])]) -> (shown: [(String, [T])], more: Bool) {
+        var shown: [(String, [T])] = []
+        var rows = 0
+        for group in groups {
+            let remaining = windowRowBudget - rows
+            if shown.isEmpty && group.1.count > windowRowBudget {
+                // One day bigger than the whole budget: take a screenful of it
+                // rather than the day, or this bounds nothing.
+                shown.append((group.0, Array(group.1.prefix(windowRowBudget))))
+                return (shown, true)
+            }
+            if rows > 0 && group.1.count > remaining { return (shown, true) }
+            shown.append(group)
+            rows += group.1.count
+            if rows >= windowRowBudget { break }
+        }
+        return (shown, shown.count < groups.count)
+    }
+
+    /// The row that opens the next step — a TAP, deliberately, not an
+    /// appearance trigger.
+    ///
+    /// Growing on `.onAppear` was the first cut and is a runaway: `List`
+    /// realizes rows ahead of the viewport, so the row appears immediately,
+    /// grows the window, re-renders, appears again. Measured — it drove
+    /// `feedList` from 12% of main-thread samples to 60%, i.e. it cost far more
+    /// than the windowing saved, while looking like seamless infinite scroll.
+    /// A tap fires exactly once per request and cannot feed back into its own
+    /// trigger.
+    ///
+    /// While this is on screen the room is NOT whole, so `caughtUpFooter`
+    /// stands down; `memo.windowHasMore` carries that (see `feedList`).
+    private var olderRow: some View {
+        Button {
+            DSHaptic.tap()
+            withAnimation(DS.Motion.standard) { windowSteps += 1 }
+        } label: {
+            Text("Show older")
+                .dsText(.subhead13)
+                .foregroundStyle(DS.tint)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, DS.Space.s4)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
     }
 
     // MARK: - Verbs from the swipe (reads pass, writes confirm)

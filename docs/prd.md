@@ -12779,3 +12779,44 @@ sample before anyone claims to have moved it. The real remedy is for a room to
 stop building every row it holds on every render, which means paged/windowed
 content — a product change (a room shows the newest N with a way to reach
 older) that has not been ruled on.
+
+## §264 — A room draws a screenful, not its whole history (user: "what are you recommending re the room?" → "yes lets do it!" → "why not just show the last day and current day only on load", 2026-08-01)
+
+The device profile (§262) put `FeedScreen.feedList` at 46% of all main-thread
+samples with 36 hangs in the first ten seconds, and named the reason: a room
+built EVERY row it held, on every render, and the cost scaled with the room
+rather than with anything a person could see.
+
+**Ruling — window the ROWS, never the data.** Every derivation still runs over
+the whole set and is memoized (§258, §263): the grouping, the bundling, the
+themes treemap, the counts, "That's everything · N". Only the drawing is
+bounded. That split is the whole design — the expensive thing was never the
+deriving, it was handing a thousand rows to a `ForEach` whose content closure
+runs for each one. Measured on a 4,000-row corpus: `daySection` 360 → 15
+samples, `shapedListRow` 110 → 6, `groupedSections` 242 → 12, `chronoGroups`
+165 → 1.
+
+**Ruling — ROWS are the unit, not days.** The user proposed "show the last day
+and the current day only", which is the right instinct and the wrong unit: a day
+is not a bound on work. An import lands its entire history at once and those
+cluster onto dates, so ONE day in that room can be thousands of rows. A row
+budget also adapts by itself — a busy day fills the screen, a quiet week shows
+several days — where a fixed day count shows almost nothing on a sparse room.
+Whole days wherever possible (a half-drawn day would need its header to lie
+about what sits under it); the one exception is a day that busts the budget
+alone, which is truncated with its header still stating the day's REAL total.
+
+**Ruling — a tap, not infinite scroll.** Growing the window from the older
+row's `.onAppear` was built first and measured: `List` realizes rows ahead of
+the viewport, so it fired instantly, grew, re-rendered, fired again. It drove
+`feedList` from 12% of samples to **60%** — costing far more than the windowing
+saved while looking seamless. A tap fires once and cannot feed its own trigger.
+
+**Ruling — linear growth, not geometric (user).** Doubling was offered, to spare
+someone walking a long room to its beginning ~100 taps. Declined: "most people
+won't be scrolling back to previous history." The common case is the first
+paint, and that is what this change is for.
+
+**Honesty.** "That's everything · N" is a claim, so it waits until the room
+really is whole; while a window is open, "Show older" sits there instead.
+Rooms under ~30 rows never show it and are visually untouched.
