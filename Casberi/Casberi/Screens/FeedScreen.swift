@@ -4546,11 +4546,15 @@ private struct EmptyFeedPile: View {
     /// Hand-curated subset of the catalog — every name MUST resolve to a
     /// real BridgeCatalog offer (scripts/catalog-sync.sh checks this array
     /// by name, like the other decorative marquees). First six are the back
-    /// row; the last six draw over them as the front row.
+    /// row; the last six draw over them as the front row. Wallet sits LAST
+    /// in the front row (2026-07-29, user: "wallet should definitely be one
+    /// of them") — a flagship feature belongs fully unobstructed, not in the
+    /// back row where the front row's -10pt overlap clips its bottom edge.
+    /// Swapped places with YouTube, which moved back.
     static let pileApps = ["Notion", "Strava", "ChatGPT", "Photos",
-                           "Wallet", "Reddit",
+                           "YouTube", "Reddit",
                            "Gmail", "GitHub", "Farcaster", "Bluesky",
-                           "Claude", "YouTube"]
+                           "Claude", "Wallet"]
 
     /// Deterministic per-tile jitter — no randomness in a view body; the
     /// same pile settles identically every launch (and the screen sweep
@@ -4575,7 +4579,11 @@ private struct EmptyFeedPile: View {
 
     var body: some View {
         VStack(spacing: DS.Space.s3) {
-            Text("Tap any app to add it")
+            // "Tap any app to add it" alone read as "this pile of 12 is what
+            // you get" (user, 2026-07-29) — the real catalog door sits a
+            // whole screen-height above this settled pile, easy to miss once
+            // your eye has landed on the tiles. Named again, right here.
+            Text("Tap any app to add it — the catalog above has the rest")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .opacity(fell ? 1 : 0)
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.3).delay(1.5),
