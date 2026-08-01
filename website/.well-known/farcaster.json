@@ -1,0 +1,23 @@
+{
+  "accountAssociation": {
+    "header": "PASTE_FROM_FARCASTER_MANIFEST_TOOL",
+    "payload": "PASTE_FROM_FARCASTER_MANIFEST_TOOL",
+    "signature": "PASTE_FROM_FARCASTER_MANIFEST_TOOL"
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "Casberi Blocks",
+    "homeUrl": "https://casberi.app/blocks.html",
+    "iconUrl": "https://casberi.app/m/i.png",
+    "splashImageUrl": "https://casberi.app/m/s.png",
+    "splashBackgroundColor": "#0a0c10",
+    "subtitle": "Falling blocks, no rotate key",
+    "description": "Two buttons and a drop. The pieces turn by themselves, one quarter-turn per row, so timing the drop is the whole game.",
+    "primaryCategory": "games",
+    "tags": ["puzzle", "blocks", "arcade", "casberi"],
+    "heroImageUrl": "https://casberi.app/m/e.png",
+    "ogTitle": "Casberi Blocks",
+    "ogDescription": "Two buttons. The pieces turn on their own.",
+    "ogImageUrl": "https://casberi.app/m/e.png"
+  }
+}
