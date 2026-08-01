@@ -12256,3 +12256,148 @@ anyone's feed will actually do it.
 VERIFIED ON SIMULATOR (the fold, the month grain, the in-month bundling, the
 weight contrast) plus build + catalog sync + network-reach + SwiftData liveness
 audit.
+
+---
+
+## §252 — The Mac stops being a port (user: "how if at all would you improve the Mac app design", then "do all these", 2026-07-31)
+
+The two-pane shape landed 2026-07-25 and the Mac chrome pass 2026-07-28 — window
+title, system appearance, a real minimum window size, ⌘N/⌘R/⌘,/⌘[/⌘1–9, pointer
+hover, drag-in capture, the displaced-pane→sheet handoff. What was left is that
+the app still only answered a POINTER, and rested like a phone. Five changes.
+
+### 1. The list is walkable (`Shell/KeyboardWalk.swift`, `ShellChrome.canWalk`)
+
+↑/↓ move a selection through the feed, Return opens it, Escape closes the pane.
+A list+detail app you cannot arrow through reads as a port however good its
+chrome is, and this was the largest remaining gap.
+
+**The keys are MENU ITEMS, not an `onKeyPress` on a focusable view**, and both
+halves matter. A menu key equivalent is delivered through the responder chain
+with no focus to win first, so ↑/↓ work wherever the pointer is. And a DISABLED
+item's equivalent falls straight THROUGH to the responder chain while an enabled
+one does not — so `canWalk` going false genuinely hands the keys back rather than
+swallowing them into a no-op. That is what gates it: Mac only, never over a
+raised agent / sources tray / deep-linked sheet / onboarding cover
+(`walkModalOpen`), never over the feed's own sheet (`walkSheetOpen` — this
+matters most where the pane ISN'T: a window under `PadLayout.minWidthForPane`
+opens every row as a sheet), never inside a pushed room full of text fields
+(`walkInPushedRoom`), never with nothing to walk. Escape is bound ONLY while the
+pane holds something, because Escape is how UIKit dismisses a sheet.
+
+Once something is open in the pane, arrowing moves what the pane SHOWS (the
+Mail/Finder idiom). Before that it only moves the highlight — pre-filling a pane
+nobody opened would turn a glance down the list into a dozen documents rendering.
+
+**The walk order is the RENDERED rows, not the corpus** — the review catch that
+mattered. The first cut published `visible` on the theory that day-grouping a
+newest-first array leaves the sequence untouched: true of the grouping, false of
+the All room, which is the room this is most for. `bundledSections` collapses a
+day's three-or-more same-source things into ONE bundle row and drops the members
+from the tree, so walking `visible` would step onto dozens of ids with no view —
+↓ apparently dead for a run of presses on exactly the busiest days. It reads
+`memo.groups` instead (the row list the `ForEach` walks, which `boundaryID(in:)`
+already treats as canonical), carries `FeedRow.id` so the scroll target and the
+list's identity are one value, and skips bundle rows — a bundle summarizes things
+rather than being one. Reminders and Gmail regroup rather than bundle; every row
+there renders, so the walk reaches all of them, in corpus order. Stated, not
+hidden: the alternative is a second copy of every shape branch.
+
+Ids and never models — a `[Thing]` on the shell's long-lived `chrome` is the
+2026-07-24 crash class by construction.
+
+### 2. The pane at rest leads with the day (`MainSurface.paneRest`)
+
+Up to 560pt of the widest column in the app stood empty all session behind "Pick
+something to open it here." A sentence describing the layout is not content, and
+on a Mac window it is most of what you see. §249 already ruled the agent's room
+leads with the day; the pane leads with the same line. `RootShell.refreshWhisper`
+composes ONE `DayBrief.Whisper` and gates only the CAPSULE on the once-a-day
+stamp, so the two can never state different days — and per §248's rule one column
+over (three controls for one screen, stacked, is duplication), the capsule stands
+down entirely when the pane is showing the same line. Composing is gated on
+`paneActive`: `DayBrief.lead` walks the window several times and `walletMove`
+decodes every watched wallet's sample line, and on a phone nobody would read it.
+No berry inside the brief (§249); the mark survives only in the nothing-to-say
+branch, where there is no brief for it to be inside of.
+
+### 3. The touch grammar gets a pointer form
+
+The sources tray's only trigger was a 0.45s hold on the agent bar. Click-and-wait
+is not something anyone tries with a mouse, so the tray also hangs off the bar's
+right-click menu and off View → Your Sources (⌘0, continuing the ⌘1–⌘9 chip run).
+The right-click menu is Catalyst-ONLY and the `#if` is load-bearing:
+`.contextMenu` installs its own ~0.5s long-press recognizer, which on a touch
+screen would fire alongside the bar's hold — one press opening the tray AND
+raising a menu over it.
+
+The feed row's context menu is the whole verb surface for a row (the both-edge
+swipe was measured unreachable inside a paged `TabView` and retired 2026-07-16),
+and it had been carrying one of the verbs `VerbDerivation` produces — so Translate
+existed for every row in the corpus and was reachable from none. Reads only,
+inheriting the swipe ruling: writes confirm in the sheet, Copy is sheet-only, and
+Approve/Deny are consent — a consent action fired from a right-click menu is
+exactly the one-slip yes S10 exists to prevent.
+
+### 4. ⌘F reclaimed, and four dead controls removed (`Shell/MacMenuBar.swift`)
+
+The 2026-07-28 note recorded both as verified-live dead ends and neither was
+retried. Both are reachable — through `UIMenuBuilder`, which is why no
+`CommandGroup` placement worked. Catalyst synthesizes a Find submenu it keeps
+permanently DISABLED in an app with no `NSTextFinder`-compatible text view while
+still claiming the key equivalent, so ⌘F did nothing at all; `remove(menu: .find)`
+hands it back and the app's own Find (§215) now answers the first keystroke every
+Mac user tries. Duplicate / Move / Rename… / Export As… are document-app
+scaffolding this app can never perform — the honesty law broken by scaffolding,
+but broken in our own menu bar.
+
+`AppDelegate` became a `UIResponder` (it is the last link in the chain UIKit walks
+to build the menu bar).
+
+**The identifiers are MEASURED, and that earned its keep immediately**: the first
+cut matched File's children on "duplicate/move/rename/export" and would have
+removed NOTHING, because the four live inside a group called
+`com.apple.menu.document` whose identifier contains none of those words. Measured
+live on Mac Catalyst, 2026-07-31 — File holds `new-item`, `open`, `close`, an
+EMPTY `swiftui.synthesized.importExport`, and `document`. Only `document` is
+removed, and only after reading what was inside it.
+
+`-macMenuProbe YES` re-measures it. It writes a FILE as well as NSLogging, which
+no sibling probe does and which is measured rather than decorative: a Catalyst
+app's NSLog could not be read back from the unified log on this host at all, and
+the menu bar is precisely the surface no screenshot-free check can otherwise see.
+
+### 5. The answer reads from its masthead on Mac (`Composer`)
+
+`.defaultScrollAnchor(.bottom)` is a THUMB argument — it puts an answer's verbs
+in reach of the hand that typed the question. A Mac has no thumb and a far taller
+surface, where the same anchor starts a fresh answer at the bottom edge of a
+760pt+ window with a void above it: a document read from its own footer.
+
+### Verification
+
+Both builds green (iOS sim + Mac Catalyst); catalog-sync, network-reach and the
+SwiftData liveness audit all pass. The menu-bar half is VERIFIED LIVE via
+`-macMenuProbe YES` on this Mac: the document group is gone from File, the system
+Find submenu is gone and our own "Find…" stands in Edit, and View carries Next /
+Previous / Open / Close Item plus Your Sources — with **Next and Previous ENABLED
+at rest** (so `canWalk` is true and `walkRowIDs` is publishing a non-empty order
+through the bundled All room) while Open and Close correctly read `[disabled]`
+with nothing selected and an empty pane. The menu labels also render the live chip
+order ("Switch to Gnosis Pay", …), which is independent proof that the
+`FocusedValue` bridge resolves and that Commands re-evaluate on `@Observable`
+change — the mechanism the walk's own enablement rides.
+
+**Not verified**: that a physical ↓ keypress moves the selection and paints the
+wash. Confirming it needs synthetic keystrokes (Accessibility permission) plus a
+screenshot; every link in the chain is measured or shipped-and-proven except the
+system's own delivery of a menu key equivalent.
+
+### Measured while there, not acted on
+
+View → Show Toolbar / Customize Toolbar… / Show Sidebar are three more Catalyst
+scaffolding items for furniture this app doesn't have. They can't be removed the
+way `document` was: our own Refresh/Back/⌘1–9 and the walk items live INSIDE
+those same groups, and Apple's items there report EMPTY identifiers, so nothing
+distinguishes them but a localized title. Matching on a translated string is the
+exact fragility the measurement above avoided, so it is left alone and recorded.

@@ -952,16 +952,96 @@ struct FeedScreen: View {
         // field + crown pour BEHIND the pager, so a not-yet-built page shows
         // that field, not a hole. `everBuilt` latches so a page assembled once
         // never drops back to the placeholder on a later pass.
-        return Group {
-            if isActive || nearActive || everBuilt {
-                builtBody
-            } else {
-                Color.clear
-            }
+        //
+        // The keyboard walk is Mac-only, and so is everything that carries it
+        // (`ShellChrome.canWalk`). The `#if` keeps the `ScrollViewReader`
+        // container, the modifier's closure box and its four observers off the
+        // phone entirely rather than gating them at run time — this is the
+        // root of the app's deepest view tree, the one the 8MB main-stack
+        // history is about, and neither iPhone nor iPad gains anything here.
+        #if targetEnvironment(macCatalyst)
+        return ScrollViewReader { proxy in
+            page
+                .modifier(KeyboardWalk(isActive: isActive, chrome: chrome,
+                                       proxy: proxy, ids: walkRowIDs,
+                                       open: openRowID))
         }
         .onChange(of: isActive || nearActive, initial: true) { _, want in
             if want && !everBuilt { everBuilt = true }
         }
+        #else
+        return page
+            .onChange(of: isActive || nearActive, initial: true) { _, want in
+                if want && !everBuilt { everBuilt = true }
+            }
+        #endif
+    }
+
+    @ViewBuilder private var page: some View {
+        if isActive || nearActive || everBuilt {
+            builtBody
+        } else {
+            Color.clear
+        }
+    }
+
+    /// What ↑/↓ walk: the rows this feed ACTUALLY RENDERED, in the order it
+    /// rendered them. Mac only — nothing else compiles this.
+    ///
+    /// The first cut published `visible`, the room's chronology, on the theory
+    /// that day-grouping a newest-first array leaves the sequence untouched.
+    /// True of the grouping, false of the All room — which is the room this
+    /// feature is most for. `bundledSections` collapses any day's three-or-more
+    /// same-source things into ONE bundle row and drops the members from the
+    /// tree entirely, so walking `visible` there steps onto dozens of ids with
+    /// no view: `scrollTo` finds nothing, no highlight paints, and ↓ looks dead
+    /// for a run of presses on exactly the days with the most in them.
+    ///
+    /// So it reads `memo.groups` — the bundled row list the `ForEach` itself
+    /// walks, which `boundaryID(in:)` already treats as the feed's canonical
+    /// order for the same reason. Reading a memo written during body evaluation
+    /// is safe here precisely because nothing reads this DURING body:
+    /// `KeyboardWalk` publishes from `.onChange`, which runs after the update
+    /// that filled it. Rooms that don't bundle leave the memo empty and fall
+    /// back to `visible`, which for them genuinely is the render order.
+    ///
+    /// A BUNDLE row is skipped: it summarizes things rather than being one, so
+    /// it has nothing to open in the pane. The walk steps over it.
+    ///
+    /// Two shapes regroup rather than bundle — Reminders splits by mark (Doing
+    /// / To do / Done), Gmail lifts two "Waiting on you" rows to the top while
+    /// leaving them in their day. Every row there does render, so nothing is
+    /// unreachable; the walk visits them in corpus order and the list scrolls
+    /// to each. Stated rather than hidden: the alternative is a second copy of
+    /// every shape branch, drifting from the first the day either changes.
+    ///
+    /// Row ids (`String`) — the same value `FeedRow.id` and every `ForEach` key
+    /// in this feed use, so the scroll target and the list's own identity are
+    /// one thing rather than two kept in step by hand. Ids and never models: a
+    /// `[Thing]` handed to the shell's long-lived `chrome` is the 2026-07-24
+    /// crash class by construction.
+    ///
+    /// `isActive` guards for PERF as much as correctness — `body` evaluates for
+    /// all three mounted pager pages, including the one the 2026-07-30 pass
+    /// deliberately leaves unbuilt, and `visible` is the derivation that pass
+    /// exists to avoid paying for off-screen.
+    private var walkRowIDs: [String] {
+        guard isActive else { return [] }
+        guard memo.groups.isEmpty else {
+            return memo.groups.flatMap(\.1).compactMap { row in
+                if case .single = row.kind { return row.id }
+                return nil
+            }
+        }
+        return visible.map { $0.id.uuidString }
+    }
+
+    /// Open a walked row. Resolves against the live corpus at the moment of the
+    /// keypress rather than holding a model — see `walkRowIDs`.
+    private func openRowID(_ rowID: String) {
+        guard let thing = visible.live.first(where: { $0.id.uuidString == rowID })
+        else { return }
+        openThing(thing)
     }
 
     /// The single surface owns the NavigationStack, the chip header, and the
@@ -1373,6 +1453,15 @@ struct FeedScreen: View {
         // still serves everywhere else.
         .navigationDestination(item: $openPerson) { profile in
             PersonRoomScreen(profile: profile)
+        }
+        // A raised sheet owns the keyboard (Mac, 2026-07-31 — see
+        // `ShellChrome.canWalk`). It matters most where the detail pane
+        // ISN'T: a Mac window narrower than `PadLayout.minWidthForPane` opens
+        // every row as one of these, and the walk staying live underneath
+        // would keep ↑/↓/Return off the sheet that's actually in front.
+        .onChange(of: feedSheet != nil) { _, open in
+            guard isActive else { return }
+            chrome.walkSheetOpen = open
         }
         // One `.sheet(item:)` for every sheet this screen presents — see
         // `FeedSheetRoute`'s doc comment for why five separate `.sheet`
@@ -3361,12 +3450,49 @@ struct FeedScreen: View {
     /// designed-card anatomies (consent card, post, takeaway, fat token row
     /// — cards by anatomy, their surface IS this background) and the head
     /// reads (map, chart, mosaic, lede), which stay §160 parcels.
+    ///
+    /// `selected` is the keyboard walk's position (Mac, 2026-07-31) and is
+    /// painted HERE rather than as a `.background` on the row's content,
+    /// because this function already owns row-surface geometry. The first cut
+    /// drew its own `RoundedRectangle` at `DS.Radius.widget` inside the row's
+    /// `listRowInsets`, which put a smaller, rounder, differently-inset rect
+    /// floating inside the card it was meant to be selecting — and mid-run it
+    /// could not take the square shoulders a merged run demands, so the
+    /// selected row visibly broke the run's silhouette. Inheriting the shape
+    /// makes selection a state of the surface instead of a second surface. A
+    /// FILL and never a stroke: "no hairlines — zero exceptions" makes an
+    /// outline the wrong vocabulary, and `DS.tintDim` is already how this app
+    /// says "this one".
     @ViewBuilder
-    private func runBackground(_ position: RunPosition, bare: Bool) -> some View {
-        if bare {
+    private func runBackground(_ position: RunPosition, bare: Bool,
+                               selected: Bool = false) -> some View {
+        if selected {
+            selectionWash(position, bare: bare)
+        } else if bare {
             Color.clear
         } else {
             dayCardBackground(position)
+        }
+    }
+
+    /// The walk's position, wearing the run's own corners and insets. A bare
+    /// row gets the wash alone; a card row keeps its surface with the wash over
+    /// it, so a consent card or a post still reads as the card it is.
+    private func selectionWash(_ position: RunPosition, bare: Bool) -> some View {
+        let r = DS.Radius.card
+        let top = position == .first || position == .only
+        let bottom = position == .last || position == .only
+        return ZStack {
+            if !bare { dayCardBackground(position) }
+            UnevenRoundedRectangle(topLeadingRadius: top ? r : 0,
+                                   bottomLeadingRadius: bottom ? r : 0,
+                                   bottomTrailingRadius: bottom ? r : 0,
+                                   topTrailingRadius: top ? r : 0,
+                                   style: .continuous)
+                .fill(DS.tintDim)
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, top ? DS.Space.s1 : 0)
+                .padding(.bottom, bottom ? DS.Space.s1 : 0)
         }
     }
 
@@ -3394,7 +3520,12 @@ struct FeedScreen: View {
             // V3b (2026-07-07, supersedes the kind-color wash): rows are
             // NEUTRAL cards — the translucent kind wash read as murk. Color
             // moved into the tag text: the project's own stable hue.
-            .listRowBackground(runBackground(position, bare: !standsAlone(thing)))
+            // `walkSelected` is only ever written on Mac, and `DS.isMac`
+            // short-circuits ahead of the comparison — so no phone row ever
+            // observes it (see `ShellChrome.canWalk`).
+            .listRowBackground(runBackground(position, bare: !standsAlone(thing),
+                                             selected: DS.isMac
+                                                && chrome.walkSelected == thing.id.uuidString))
             // Feed rhythm (2026-07-13): back to s2 — the s3 airy read made
             // every gap the same size, so days never clustered. Rows sit
             // tight within their day; the day header carries the big gap.
@@ -3414,11 +3545,45 @@ struct FeedScreen: View {
             // long-press is what's left, and it's what the Home board has used
             // for Open/Unpin all along (`GenRenderer.pinnedRowActions`).
             .contextMenu {
-                if let openVerb = openVerb(for: thing) {
+                // Derived ONCE for the whole menu. `contextMenu(menuItems:)`
+                // takes a non-escaping builder, so this runs at body-build time
+                // per row — and `VerbDerivation.verbs` reaches `thing.content`
+                // (one of the heavy inline columns the 2026-07-30 pass
+                // deliberately leaves out of the All room's `propertiesToFetch`)
+                // and runs an `NSDataDetector` pass over it. Asking twice, once
+                // for the open verb and once for the rest, doubled a per-row
+                // fault and a per-row detector run against the exact
+                // optimization that pass exists for.
+                let verbs = VerbDerivation.verbs(for: thing)
+                if let openVerb = verbs.first(where: {
+                    if case .openURL = $0.action { return true } else { return false }
+                }) {
                     Button {
                         run(openVerb, on: thing)
                     } label: {
                         Label("Open in app", systemImage: "arrow.up.right")
+                    }
+                }
+                // The row's OTHER derived reads (2026-07-31). This menu is the
+                // whole verb surface for a row — the both-edge swipe was
+                // measured unreachable inside a paged TabView and retired on
+                // 2026-07-16 — and it had been carrying exactly one of the
+                // verbs `VerbDerivation` produces, so Translate (a read, over
+                // the thing's own text) existed for every row in the corpus
+                // and was reachable from none of them.
+                //
+                // READS ONLY, which the swipe ruling already settled and this
+                // menu inherits: writes confirm in the sheet, Copy is
+                // sheet-only, and Approve/Deny are consent — a consent action
+                // fired from a right-click menu is precisely the kind of
+                // one-slip yes S10 exists to prevent.
+                if let translate = verbs.first(where: {
+                    if case .translate = $0.action { return true } else { return false }
+                }) {
+                    Button {
+                        run(translate, on: thing)
+                    } label: {
+                        Label(translate.label, systemImage: translate.icon)
                     }
                 }
                 ThingShareLink(thing: thing) {

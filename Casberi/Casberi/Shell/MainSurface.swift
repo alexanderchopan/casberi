@@ -56,6 +56,10 @@ struct MainSurface: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var surfaceWidth: CGFloat = 0
     @Bindable private var detail = PadDetailSelection.shared
+    /// The rendered appearance, for the pane brief's own gain/loss accent —
+    /// Mac follows the SYSTEM's mode (`RootShell`'s `.preferredColorScheme(nil)`
+    /// under Catalyst), so the accent has to read the trait it actually got.
+    @Environment(\.colorScheme) private var paneScheme
 
     private var isRegular: Bool { horizontalSizeClass == .regular }
     private var showsPane: Bool { isRegular && surfaceWidth >= PadLayout.minWidthForPane }
@@ -299,19 +303,74 @@ struct MainSurface: View {
         .onChange(of: things.count) { _, _ in detail.pruneIfDead() }
     }
 
-    /// The pane at rest. Quiet on purpose — this is the two-pane shape's
-    /// resting half, not an empty state apologising for itself, and it must
-    /// not compete with the feed beside it for attention.
+    /// The pane at rest — the DAY (2026-07-31), not a placeholder sentence.
+    ///
+    /// This is the largest single area the app shows at rest: up to 560pt of
+    /// the widest column, for the whole session, previously holding a mark and
+    /// the words "Pick something to open it here." A sentence that describes
+    /// the layout is not content, and on a Mac window it is most of what you
+    /// see. §249 already ruled that the agent's room leads with the day; the
+    /// pane leads with the same line, which is what makes the desktop's extra
+    /// width worth having rather than merely wide.
+    ///
+    /// It reads `chrome.paneBrief` — composed by the same `DayBrief` pass the
+    /// whisper capsule uses, published ungated (see `ShellChrome.paneBrief`),
+    /// so the pane and the capsule can never state different days. On a day
+    /// with nothing to say it composes nil and the quiet mark stands, exactly
+    /// as before: the honesty law forbids manufacturing a headline to fill a
+    /// column.
+    ///
+    /// No berry inside the brief — §249's ruling ("i like our logo in the
+    /// search / whisper bar, but not inside the daily brief itself"). The mark
+    /// survives only in the nothing-to-say branch, where there is no brief for
+    /// it to be inside of.
     private var paneRest: some View {
         VStack(spacing: DS.Space.s3) {
-            CasberiMark(size: 44)
-                .opacity(0.32)
-            Text("Pick something to open it here.")
-                .dsText(.subhead13)
-                .foregroundStyle(DS.textTertiary)
-                .multilineTextAlignment(.center)
+            if let brief = chrome.paneBrief {
+                paneBriefCard(brief)
+            } else {
+                CasberiMark(size: 44)
+                    .opacity(0.32)
+                Text("Pick something to open it here.")
+                    .dsText(.subhead13)
+                    .foregroundStyle(DS.textTertiary)
+                    .multilineTextAlignment(.center)
+            }
         }
         .padding(DS.Space.s6)
+    }
+
+    /// The day as the pane's lead. Tapping opens the real Today brief, routed
+    /// through `chrome.askRequest` — the same door the whisper capsule, the
+    /// bar's own tap and a typed "how's my day" all use (§132), so a fourth
+    /// entry point can't drift into a fourth presentation of one screen.
+    private func paneBriefCard(_ brief: DayBrief.Whisper) -> some View {
+        Button {
+            DSHaptic.tap()
+            chrome.ask(TodayBrief.title)
+            chrome.openComposer()
+        } label: {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                Text(brief.title)
+                    .dsText(.heading22)
+                    .foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                brief.detailText(scheme: paneScheme)
+                    .dsText(.body17)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("Open your day")
+                    .dsText(.subhead13)
+                    .foregroundStyle(DS.tint)
+                    .padding(.top, DS.Space.s1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .dsHover()
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(brief.title). \(brief.detail)")
+        .accessibilityHint("Opens your day")
     }
 
     var body: some View {
@@ -383,6 +442,14 @@ struct MainSurface: View {
         // Mac's ⌘1–⌘9 (2026-07-28) reads this mirror — see `ShellChrome.chipOrder`.
         .onChange(of: chipLabels, initial: true) { _, labels in
             chrome.chipOrder = labels
+        }
+        // The keyboard walk stands down inside a pushed room (2026-07-31):
+        // Settings and every bridge setup form are full of text fields, and a
+        // menu item holding a bare Return or ↓ would take those keys from
+        // them. This surface owns the stack, so it is the one honest reporter
+        // of how deep it is. See `ShellChrome.canWalk`.
+        .onChange(of: route.path.isEmpty, initial: true) { _, atRoot in
+            chrome.walkInPushedRoom = !atRoot
         }
         // Re-sort the strip on the way back IN, never while you're in it
         // (2026-07-30, see `chipLabels`). A foreground is the one moment the

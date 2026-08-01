@@ -82,11 +82,43 @@ final class ShellChrome {
     /// real masthead has had time to mount and take over the geometry pairing.
     var risingBriefTitle: String?
 
+    /// The day, for the detail pane's RESTING state (2026-07-31) — the same
+    /// `DayBrief` the whisper capsule composes, published UNGATED.
+    ///
+    /// The capsule is once-a-day by ruling (§165: it's a delivery, and a
+    /// delivery that repeats is noise). The pane is not a delivery — it is up
+    /// to 560pt of the widest column in the app, standing empty for the whole
+    /// session behind one placeholder sentence, and §249 already ruled that
+    /// the agent's room leads with the day. So the pane at rest leads with it
+    /// too, every open, and simply says nothing on a day with nothing to say
+    /// (`DayBrief.whisper` composes nil — the honesty law: no manufactured
+    /// news). `RootShell.refreshWhisper` writes it from the corpus walk it
+    /// already pays for; the once-a-day stamp still gates the capsule alone.
+    var paneBrief: DayBrief.Whisper?
+
     /// The FAB lives on MainSurface's root now (it belongs to Home/Feed, not
     /// to pushed rooms or forms) — bumping this asks RootShell, which still
     /// owns the sheet, to open the composer.
     var composerRequest = 0
     func openComposer() { composerRequest += 1 }
+
+    /// The sources tray, asked for without the hold (2026-07-31). The tray's
+    /// only trigger was a 0.45s press on the agent bar — a gesture with no
+    /// visible affordance, which a phone can teach through repetition and a
+    /// mouse simply cannot: click-and-wait is not something anyone tries. So
+    /// the same tray hangs off the bar's right-click menu and off the View
+    /// menu (⌘0, continuing the ⌘1–⌘9 chip run), and the hold is unchanged.
+    var sourcesRequest = 0
+    func openSources() { sourcesRequest += 1 }
+
+    /// Find — the composer raised straight into a typed search, nothing
+    /// running until the person types (§215). One verb because three doors now
+    /// reach it: the bar's magnifier, the bar's right-click menu, and Mac's
+    /// ⌘F. The two-statement spelling was already drifting into copies.
+    func openFind() {
+        focusDraftOnOpen = true
+        openComposer()
+    }
 
     /// Bumped by every pull-to-refresh on the main surface (Home board or
     /// feed alike — the per-tab distinction died with the tabs). MainSurface
@@ -118,6 +150,92 @@ final class ShellChrome {
     /// shortcut on a chip that moved. "All" is always first, so ⌘1 is always
     /// valid; MainSurface keeps this in sync via `.onChange(of: chipLabels)`.
     var chipOrder: [String] = ["All"]
+
+    // MARK: - The keyboard walk (Mac, 2026-07-31)
+
+    /// The rows the ACTIVE feed page is showing, as ids only — the list half
+    /// of list+detail, walkable from the keyboard (↑/↓ move, Return opens,
+    /// Escape closes the pane). A two-pane app you cannot arrow through reads
+    /// as a port however good its chrome is; this is the gap the 2026-07-28
+    /// Mac pass left.
+    ///
+    /// **Ids, never models.** A `[Thing]` parked on a long-lived object is the
+    /// 2026-07-24 crash class by construction — every bridge heal deletes rows
+    /// on the main context while this is held. A `String` can't trap, so the
+    /// walk carries row ids and the feed page (which has live models anyway)
+    /// resolves one only at the moment it opens it. They are ROW ids, matching
+    /// `FeedScreen.FeedRow.id` and every `ForEach` key in the feed, so the
+    /// scroll target and the list's identity are one value — see
+    /// `FeedScreen.walkRowIDs` for why the order is the rendered rows and not
+    /// the corpus.
+    ///
+    /// Written by the active `FeedScreen`, which only compiles this on Mac.
+    var walkOrder: [String] = []
+
+    /// The row the keyboard has landed on. nil = nothing selected yet, which
+    /// is the resting state — the first ↓ selects the first row rather than
+    /// the app pre-selecting something the person didn't ask for.
+    var walkSelected: String?
+
+    /// Bumped by the Open command; the active feed page opens `walkSelected`
+    /// through its own `openThing` (so the pane/sheet split stays in one
+    /// place). A counter rather than a flag, for the same reason
+    /// `composerRequest` is one: two Returns in a row are two opens.
+    var walkOpenPulse = 0
+
+    /// Something is raised over the shell — the risen agent, the sources tray,
+    /// a deep-linked thing or person, the onboarding cover. Written by
+    /// `RootShell` only, as one expression over every presentation it owns.
+    var walkModalOpen = false
+
+    /// A sheet raised by the feed itself (a thing, a token, a market book).
+    /// Written by the active `FeedScreen` only. Separate from `walkModalOpen`
+    /// because it has a different owner, not because it means anything
+    /// different — and it matters most exactly where the pane doesn't exist: a
+    /// Mac window under `PadLayout.minWidthForPane` opens every row as a sheet.
+    var walkSheetOpen = false
+
+    /// A pushed room stands on top of the feed. Written by `MainSurface` only.
+    /// Settings and every bridge setup form are full of text fields, and a menu
+    /// item holding a bare Return or ↓ would take those keys away from them — a
+    /// disabled menu item's key equivalent falls through to the responder
+    /// chain, an enabled one does not. Three flags with one writer each rather
+    /// than one Bool three views race to set.
+    var walkInPushedRoom = false
+
+    /// Whether the walk commands are live at all. Mac-only (there is no menu
+    /// bar to hold them elsewhere), never over anything raised or pushed, and
+    /// never with nothing to walk. This is the single gate — when it is false
+    /// the menu items disable, which is what actually hands ↑/↓/Return back to
+    /// whatever should have had them.
+    var canWalk: Bool {
+        DS.isMac && !walkModalOpen && !walkSheetOpen && !walkInPushedRoom
+            && !walkOrder.isEmpty
+    }
+
+    /// Move the selection by `delta`, clamped at both ends — a walk that
+    /// wrapped would silently jump a reader from the newest thing to the
+    /// oldest. With nothing selected, the first step lands on the first row
+    /// going down and the last going up.
+    func walkStep(_ delta: Int) {
+        guard canWalk else { return }
+        guard let current = walkSelected,
+              let index = walkOrder.firstIndex(of: current) else {
+            walkSelected = delta > 0 ? walkOrder.first : walkOrder.last
+            return
+        }
+        let next = index + delta
+        guard walkOrder.indices.contains(next) else { return }
+        walkSelected = walkOrder[next]
+    }
+
+    /// Open whatever is selected. The "Open Item" command disables itself when
+    /// nothing is (so Return falls through to the responder chain in exactly
+    /// that state), which is why this guards rather than selecting a fallback.
+    func walkOpen() {
+        guard canWalk, walkSelected != nil else { return }
+        walkOpenPulse += 1
+    }
 
     /// A thing ARRIVED while the person watched (a bridge sync, a pull, a
     /// share landing) — the source's chip does one catch bob: the capture

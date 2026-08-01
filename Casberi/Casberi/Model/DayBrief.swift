@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 /// The day's shared reading (prd §165, extended §166) — the window the day's
 /// news is measured from, the one nameable thing that leads it, and the
@@ -60,6 +61,30 @@ enum DayBrief {
         var detail: String {
             guard let walletPct else { return lead }
             return lead + String(format: ", wallet %+.1f%%", walletPct)
+        }
+
+        /// The same two facts with the wallet's move painted in its own
+        /// direction — the reason `walletPct` travels separately from `lead`
+        /// at all (see the property's note): a pre-joined string gives a view
+        /// no way to find the figure inside it, so a gain and a loss read
+        /// identically.
+        ///
+        /// It lives on the model rather than in a view because two surfaces
+        /// render it now (the whisper capsule, and the detail pane's resting
+        /// state, 2026-07-31). The first cut was a verbatim copy in the second
+        /// place, which put §83's accent rule, the localized `", wallet "`
+        /// fragment and the `%+.1f%%` format in two files — a translator or a
+        /// change to the flat-move rule would have fixed one and missed the
+        /// other.
+        func detailText(scheme: ColorScheme) -> Text {
+            let base = Text(lead).foregroundStyle(DS.textSecondary)
+            guard let walletPct else { return base }
+            return base
+                + Text(String(localized: ", wallet ")).foregroundStyle(DS.textSecondary)
+                + Text(String(format: "%+.1f%%", walletPct))
+                    .foregroundStyle(TokenChartStyle.accent(change: walletPct / 100,
+                                                            scheme: scheme))
+                    .fontWeight(.semibold)
         }
     }
 

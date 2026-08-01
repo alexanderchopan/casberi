@@ -20,7 +20,13 @@ enum LaunchClock {
 /// flag the widget's Control Center button already writes — RootShell's
 /// existing foreground check (`compose.request` in the app group) picks it
 /// up with no new consumer code.
-final class AppDelegate: NSObject, UIApplicationDelegate {
+///
+/// `UIResponder`, not `NSObject` (2026-07-31): `buildMenu(with:)` is declared
+/// on `UIResponder`, and the app delegate is the last link in the responder
+/// chain UIKit walks when it builds the menu bar — so the Mac menu surgery in
+/// `MacMenuBar.swift` has nowhere else to live. Every other delegate callback
+/// is unaffected; `UIResponder` is itself an `NSObject`.
+class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         application.shortcutItems = [
@@ -146,15 +152,22 @@ struct CasberiApp: App {
             // needs a `UIApplicationDelegate.buildMenu(with:)` override
             // (`builder.remove(menu:)` on the relevant identifiers) — a
             // separate, untried change, not attempted here.
-            // NOTE (verified live, 2026-07-28): a custom ⌘F "Find…" here
-            // does NOT work — it's absorbed into Mac Catalyst's own
-            // default "Find" submenu (Find…/Find & Replace/Find Next/
-            // Find Previous), which the system keeps permanently DISABLED
-            // in an app with no NSTextFinder-compatible text view. The
-            // button silently never fires; ⌘F does nothing rather than
-            // opening the composer. Dropped rather than ship a menu item
-            // that reads as broken. Reaching the composer without a mouse
-            // still works via ⌘N.
+            // ⌘F, working since 2026-07-31. The 2026-07-28 note that used to
+            // stand here was right about the cause and wrong about the fix
+            // being impossible: Catalyst's synthesized Find submenu claimed
+            // the key equivalent while staying permanently disabled (no
+            // NSTextFinder-compatible text view exists in this app), so a
+            // custom ⌘F silently never fired. `MacMenuBar.swift` removes that
+            // menu in `buildMenu(with:)` — the only door, since no
+            // `CommandGroup` placement can address it — which hands the
+            // shortcut back to this item. Edit → Find is where a Mac user
+            // looks for it, and it opens the same Find door the bar's
+            // magnifier does (§215): field focused, nothing running until
+            // they type.
+            CommandGroup(after: .pasteboard) {
+                Button("Find…") { focusedChrome?.openFind() }
+                .keyboardShortcut("f", modifiers: .command)
+            }
             CommandGroup(after: .toolbar) {
                 Button("Refresh") {
                     focusedChrome?.requestRefresh()
@@ -193,6 +206,50 @@ struct CasberiApp: App {
                     .keyboardShortcut(KeyEquivalent(Character("\(n)")), modifiers: .command)
                     .disabled(n > order.count)
                 }
+            }
+            // The keyboard walk (2026-07-31) — the list half of list+detail,
+            // arrow-walkable. See `KeyboardWalk.swift` for the feed's end of
+            // it and `ShellChrome.canWalk` for the gate.
+            //
+            // These are MENU ITEMS holding bare keys rather than an
+            // `onKeyPress` on a focusable view, and both halves of that matter.
+            // A menu key equivalent is delivered with no focus to win first,
+            // which is what makes ↑/↓ work while the pointer is anywhere. And
+            // a DISABLED item's equivalent falls straight through to the
+            // responder chain, while an enabled one does not — so `canWalk`
+            // going false (the agent risen, the sources tray up, a pushed
+            // Settings form full of text fields) genuinely hands ↑/↓/Return
+            // back to whatever should have had them, rather than swallowing
+            // them into a no-op. Everything here is Mac-only by that same
+            // gate; there is no menu bar to hold it anywhere else.
+            CommandGroup(after: .sidebar) {
+                Button("Next Item") { focusedChrome?.walkStep(1) }
+                    .keyboardShortcut(.downArrow, modifiers: [])
+                    .disabled(!(focusedChrome?.canWalk ?? false))
+                Button("Previous Item") { focusedChrome?.walkStep(-1) }
+                    .keyboardShortcut(.upArrow, modifiers: [])
+                    .disabled(!(focusedChrome?.canWalk ?? false))
+                Button("Open Item") { focusedChrome?.walkOpen() }
+                    .keyboardShortcut(.return, modifiers: [])
+                    .disabled(!(focusedChrome?.canWalk ?? false)
+                              || focusedChrome?.walkSelected == nil)
+                // Escape closes what the pane is showing, and is enabled ONLY
+                // when the pane is actually showing something. That condition
+                // is the whole design: Escape is the key UIKit uses to dismiss
+                // a sheet, so an item that held it unconditionally would break
+                // sheet dismissal everywhere in the app to serve a pane that
+                // is usually empty.
+                Button("Close Item") { PadDetailSelection.shared.clear() }
+                    .keyboardShortcut(.escape, modifiers: [])
+                    .disabled(PadDetailSelection.shared.thing == nil)
+                Divider()
+                // ⌘0, continuing the ⌘1–⌘9 chip run below: nine numbered
+                // sources, and the zero that shows you all of them. The tray's
+                // only other trigger is a 0.45s hold on the agent bar — a
+                // gesture a mouse will never discover, since click-and-wait
+                // isn't something anyone tries (see `BarSecondaryMenu`).
+                Button("Your Sources") { focusedChrome?.openSources() }
+                    .keyboardShortcut("0", modifiers: .command)
             }
             // Help → the real docs, Mac convention (2026-07-28) — replaces
             // the system's default "Casberi Help" item, which without this

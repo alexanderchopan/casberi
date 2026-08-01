@@ -1415,7 +1415,16 @@ struct Composer: View {
                     // the answer rises out of the composer it was asked from
                     // and its verbs land within reach; a long conversation
                     // still scrolls exactly as before.
-                    .defaultScrollAnchor(.bottom)
+                    // …except on Mac (2026-07-31), where the reason doesn't
+                    // hold. Bottom-anchoring is a THUMB argument: it puts the
+                    // answer's verbs within reach of the hand that just typed
+                    // the question. A Mac has no thumb and a much taller
+                    // surface — the same anchor there starts a fresh answer at
+                    // the bottom edge of a 760pt+ window with a void above it,
+                    // which is a document read from its own footer. A brief
+                    // opens at its masthead instead; a long conversation
+                    // scrolls exactly as before either way.
+                    .defaultScrollAnchor(DS.isMac ? .top : .bottom)
                     .dsAdaptiveContentWidth()
                     // Tapping empty space puts the keyboard away WITHOUT
                     // lowering the agent — a separate action from the ✕/⌄

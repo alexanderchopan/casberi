@@ -156,6 +156,7 @@ struct AgentBar: View {
                     onSources()
                 }
         )
+        .modifier(BarSecondaryMenu(onSources: onSources, onFind: onFind))
         .modifier(MorphMatch(ns: morphNS))
     }
 
@@ -164,6 +165,43 @@ struct AgentBar: View {
         guard heldForSources else { return false }
         heldForSources = false
         return true
+    }
+}
+
+/// The bar's verbs in words, for a pointer (2026-07-31) — Mac ONLY, and the
+/// `#if` is load-bearing rather than tidiness.
+///
+/// The hold that opens the sources tray (0.45s, above) has no visible
+/// affordance: a phone teaches that through repetition, a mouse never does,
+/// because click-and-wait is not something anyone tries. A right-click states
+/// both doors in words instead.
+///
+/// It cannot ship on iOS, though. `.contextMenu` installs its own ~0.5s
+/// long-press recognizer, which on a touch screen would fire alongside the
+/// bar's own hold — one press would open the tray AND raise a menu over it.
+/// Under Catalyst there is no touch input, so the menu answers a secondary
+/// click only and the two never meet.
+private struct BarSecondaryMenu: ViewModifier {
+    let onSources: () -> Void
+    let onFind: () -> Void
+
+    func body(content: Content) -> some View {
+        #if targetEnvironment(macCatalyst)
+        content.contextMenu {
+            Button {
+                onSources()
+            } label: {
+                Label("Your sources", systemImage: "square.grid.2x2")
+            }
+            Button {
+                onFind()
+            } label: {
+                Label("Find in your things", systemImage: "magnifyingglass")
+            }
+        }
+        #else
+        content
+        #endif
     }
 }
 
@@ -202,16 +240,12 @@ struct WhisperCapsule: View {
 
     @Environment(\.colorScheme) private var scheme
 
+    /// The figure wears its own direction (§83's accent rule) — rendered by
+    /// `DayBrief.Whisper` itself since 2026-07-31, so the capsule and the
+    /// detail pane's resting state can't drift on the format or the accent.
     private var detail: Text {
-        let base = Text(lead).foregroundStyle(DS.textSecondary)
-        guard let walletPct else { return base }
-        // The figure wears its own direction (§83's accent rule), which is
-        // the whole reason `walletPct` travels separately from the lead.
-        return base
-            + Text(String(localized: ", wallet ")).foregroundStyle(DS.textSecondary)
-            + Text(String(format: "%+.1f%%", walletPct))
-                .foregroundStyle(TokenChartStyle.accent(change: walletPct / 100, scheme: scheme))
-                .fontWeight(.semibold)
+        DayBrief.Whisper(title: title, lead: lead, walletPct: walletPct)
+            .detailText(scheme: scheme)
     }
 
     var body: some View {

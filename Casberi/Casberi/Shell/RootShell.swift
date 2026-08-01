@@ -125,15 +125,33 @@ struct RootShell: View {
         #endif
         let today = Date.now.formatted(.iso8601.year().month().day())
         let dayKey = "whisper.lastShownDay"
-        guard force || UserDefaults.standard.string(forKey: dayKey) != today
-        else { return }
-        guard let composed = DayBrief.whisper(things: things) else {
+        let capsuleDue = force || UserDefaults.standard.string(forKey: dayKey) != today
+        // The pane's resting state leads with the day too (2026-07-31), on a
+        // different clock: the capsule is a once-a-day DELIVERY, the pane is a
+        // standing lead redrawn every open. Composing once serves both and is
+        // what stops them ever disagreeing about what today was.
+        //
+        // But composing is not free — `DayBrief.lead` walks the window several
+        // times and `walletMove` decodes every watched wallet's sample line —
+        // so it happens only when someone will actually read the result. On a
+        // phone (no pane, capsule already shown today) that is nobody, and the
+        // pre-review cut paid for it on every single foreground.
+        let paneReads = PadDetailSelection.shared.paneActive
+        guard capsuleDue || paneReads else { return }
+        let composed = DayBrief.whisper(things: things)
+        if paneReads { chrome.paneBrief = composed }
+        guard capsuleDue, let composed else {
             #if DEBUG
-            if force { NSLog("[Casberi] whisper: (nothing to say)") }
+            if force && composed == nil { NSLog("[Casberi] whisper: (nothing to say)") }
             #endif
             return
         }
         UserDefaults.standard.set(today, forKey: dayKey)
+        // …and the capsule stands down when the pane is already showing the
+        // same line beside it (§248's own rule, one column over: three
+        // controls for one screen, stacked, is duplication). The day stamp is
+        // still spent — the delivery happened, the pane made it.
+        guard !paneReads else { return }
         withAnimation(DS.Motion.standard) { whisper = composed }
         #if DEBUG
         NSLog("[Casberi] whisper: %@ | %@", composed.title, composed.detail)
@@ -147,6 +165,15 @@ struct RootShell: View {
         // A fresh composer open is a fresh answer conversation — drop the prior
         // transcript so one conversation's turns never bleed into the next
         // (ConversationModel). Follow-ups WITHIN this open carry context.
+        // Anything raised over the shell owns the keyboard — see
+        // `ShellChrome.canWalk`. A menu item holding a bare Return or ↓ would
+        // take those keys away from a composer field, a tray, or a sheet's own
+        // Escape otherwise. ONE expression over every presentation this view
+        // owns, rather than a handler per flag each re-ORing the others.
+        .onChange(of: composerOpen || sourcesOpen || deepLinkThing != nil
+                  || deepLinkPerson != nil || !onboarded, initial: true) { _, modal in
+            chrome.walkModalOpen = modal
+        }
         .onChange(of: composerOpen) { _, open in
             if open {
                 OnDeviceModel.resetConversation()
@@ -157,6 +184,9 @@ struct RootShell: View {
                 // The whisper's job is done however the agent rose — it
                 // never returns until a new day has something to say.
                 whisper = nil
+                // Whatever the walk had selected belongs to the feed you just
+                // left; coming back should not find a stale ring on a row.
+                chrome.walkSelected = nil
             } else {
                 // A safety clear, not the primary one (that's the guarded
                 // timer at the tap site) — a fast close before the timer
@@ -781,6 +811,11 @@ struct RootShell: View {
         .onChange(of: chrome.composerRequest) { _, _ in
             composerOpen = true
         }
+        // The tray, asked for from the menu bar or the bar's own right-click
+        // (2026-07-31) — the hold is not the only door anymore.
+        .onChange(of: chrome.sourcesRequest) { _, _ in
+            sourcesOpen = true
+        }
         // Privacy as the default (goal 6): leaving the app redacts the
         // corpus — the app-switcher snapshot shows choreography, not content.
         // The person can turn it off in Privacy (Hide previews). Never before
@@ -1038,10 +1073,10 @@ struct RootShell: View {
                              onFind: {
                                  DSHaptic.tap()
                                  // No `askRequest`: Find is the door where
-                                 // nothing runs until the person types. The
-                                 // composer reads this and focuses the field.
-                                 chrome.focusDraftOnOpen = true
-                                 composerOpen = true
+                                 // nothing runs until the person types. One
+                                 // verb, since ⌘F and the bar's right-click
+                                 // menu reach the same door.
+                                 chrome.openFind()
                              },
                              onSources: { sourcesOpen = true }) {
                         DSHaptic.tap()
