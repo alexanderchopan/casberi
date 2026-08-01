@@ -148,11 +148,12 @@ struct AgentBar: View {
                 .onChanged { _ in heldForSources = false }
                 .onEnded { _ in
                     heldForSources = true
-                    // Heavier than a selection tick, the way picking something
-                    // up is (`DSHaptic.lift`) — the hold has been RECEIVED,
-                    // which is the one thing a gesture with no visible
-                    // affordance must say.
-                    DSHaptic.lift()
+                    // The `DSHaptic.lift()` this used to fire here now lives on
+                    // `RootShell.openSources()`, so the accessibility action
+                    // below and the Mac menu get the same buzz the hold does.
+                    // Timing is unchanged — the closure runs on this same
+                    // threshold, which is the moment a gesture with no visible
+                    // affordance has to say it was received.
                     onSources()
                 }
         )

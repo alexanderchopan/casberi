@@ -11,9 +11,22 @@ import Observation
 /// moment applies to the fingers too.
 ///
 /// Feel rides SwiftUI's `.sensoryFeedback` (§16): each call bumps a counter
-/// on the bus, and `dsSensoryFeedback()` — attached once at the shell root —
-/// declares the counter → feedback mapping. `DSHaptic` stays as the call-site
-/// grammar, so a moment still reads `DSHaptic.success()` where it happens.
+/// on the bus, and `dsSensoryFeedback()` declares the counter → feedback
+/// mapping. `DSHaptic` stays as the call-site grammar, so a moment still reads
+/// `DSHaptic.success()` where it happens.
+///
+/// **Attach it once PER PRESENTATION, not once per app** (2026-08-01). The
+/// counter is global but the mapping is a view modifier, so it plays only where
+/// it is attached — and a `.sheet` covers the view the root attached it to.
+/// For a year it was on `RootShell`'s body alone, which meant every haptic
+/// fired from inside a raised tray bumped its counter into silence: the sources
+/// tray's cells ticked nothing, while the hold that opened it (fired from the
+/// root, before any sheet existed) felt correct. That asymmetry is the tell.
+/// `DSTray` now carries its own, which covers every tray in the app by design
+/// law. A new full-screen presentation that is NOT a tray needs its own too.
+///
+/// Doubling is not the risk it looks like: the root's copy is exactly the one
+/// that goes quiet under a presentation, so the two can't both fire.
 @Observable
 final class HapticBus {
     static let shared = HapticBus()

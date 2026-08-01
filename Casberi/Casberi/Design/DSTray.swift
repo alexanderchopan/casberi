@@ -45,6 +45,22 @@ struct DSTray<Content: View>: View {
         .padding(.bottom, DS.Space.s6)
         .presentationDetents(detents ?? [.height(height)])
         .presentationDragIndicator(.visible)
+        // Feel, re-declared for this presentation (2026-08-01, user: the
+        // sources tray's cells were silent). `DSHaptic` is a counter bump on a
+        // shared bus, and the mapping from counter to feedback is a VIEW
+        // modifier — so it plays only where it is attached. It was attached in
+        // exactly one place, `RootShell`'s body, and a sheet covers that: every
+        // haptic fired from inside a tray bumped its counter and nothing was
+        // listening. A tray is its own hosting environment, the same reason
+        // `RootShell.rootPresented` has to re-inject the shell's environment
+        // objects rather than let a sheet inherit them.
+        //
+        // It cannot double up with the root's copy — that copy is precisely
+        // what doesn't fire under a sheet, which is the bug. And it belongs
+        // HERE rather than at each call site because design law already says
+        // every tray in this app is a `DSTray`, so one line covers all of them
+        // and a tray built tomorrow can't be born silent.
+        .dsSensoryFeedback()
 
         if ink {
             tray.dsInk()

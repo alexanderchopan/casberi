@@ -12533,3 +12533,67 @@ SECONDS at 4,000 things — the fix was right and the number that justified it w
 meaningless. **Seed the corpus before believing a launch number:** eight
 `-chatgptImport` batches of 500 is a two-minute setup and it is the difference
 between a 2ms render and a 143ms one.
+
+## §259 — The tray's cells ticked into silence: a haptic bus with one listener, and a sheet over it (user: "the all source tray should have haptics", 2026-08-01)
+
+The sources tray (§251) shipped with two haptics written into it — `DSHaptic.lift()`
+at the 0.45s hold that raises it, `DSHaptic.selection()` on every cell — and on a
+device only the first one could be felt. Both calls were correct. Both fired. One
+of them had nothing listening.
+
+### 1. The bug is the word "once"
+
+`Design/Haptics.swift` splits feel into a call-site grammar and a mapping: every
+`DSHaptic.x()` bumps a counter on a global `@Observable` bus, and
+`dsSensoryFeedback()` declares counter → `.sensoryFeedback`. The doc comment said
+it is "attached once at the shell root", and it was — `RootShell`'s body, one line,
+the whole app's haptic grammar in one place. That is a good design for everything
+that happens ON the root.
+
+**A counter is global; a `.sensoryFeedback` is a view modifier.** It plays where it
+is attached, and a `.sheet` covers the view the root attached it to. So every haptic
+fired from inside a raised tray incremented an integer nobody was watching.
+
+The asymmetry is the whole diagnosis, and it is why this survived a year: the hold
+fires from the agent bar on `RootShell`'s own ZStack, **before the sheet exists**, so
+opening the tray always felt right. Only the half that happens after the sheet is up
+went quiet. A feature whose entrance works is not a feature anyone tests further.
+
+### 2. The fix belongs to `DSTray`, not to the call site
+
+`Design/DSTray.swift` now carries its own `dsSensoryFeedback()`. One line, and it
+covers every tray in the app rather than the one that got reported — design law
+already says trays are never hand-rolled (§8), so the scaffold is the one place a
+tray built next month cannot avoid inheriting. Putting it at the call sites instead
+would have fixed the sources tray and left the next one silent.
+
+It cannot double up with the root's copy, and the reason is precisely the bug: the
+root's copy is the one that does not fire under a presentation. The user confirmed
+the shape directly — open buzzes, cells silent — which is a cleaner measurement of
+SwiftUI's visibility rule than the documentation gives.
+
+**The generalisation, for any presentation that is not a tray:** attach it once PER
+PRESENTATION, not once per app. `RootShell.rootPresented` already re-injects the
+shell's environment objects for exactly this reason — a sheet does not inherit the
+root's context — and feel is the same kind of thing. Known still-silent and
+deliberately out of this pass's scope: `ThingSheetView` and `SocialProfileCard`,
+which fire their own `DSHaptic` calls as root sheets without being `DSTray`s.
+
+### 3. Feel belongs to the tray, not to one recognizer
+
+A second gap found while reading, smaller and fixed the same way. `DSHaptic.lift()`
+lived inside `AgentBar`'s `LongPressGesture`, so the hold said it had been received
+and the three doors built for people who cannot perform that hold — the
+`accessibilityAction` on the ask button, the Mac menu bar, the bar's right-click —
+opened the tray in silence. It now lives on `RootShell.openSources()`, the single
+door all four routes go through, with the debug hook (`-openSources`) routed through
+it too so a probe exercises what a finger does. Timing at the hold is unchanged: the
+closure runs on the same threshold the haptic used to fire on.
+
+### Measurement
+
+**UNMEASURED — authored on Linux with no Xcode and no simulator**, so this was
+neither compiled nor felt. The diagnosis rests on the user's own device report
+(open buzzes, cells do not), which is the one fact no static reading could supply
+and the simulator could never have produced — it has no haptics at all. The change
+is three additive lines and a moved call; nothing branches on it.

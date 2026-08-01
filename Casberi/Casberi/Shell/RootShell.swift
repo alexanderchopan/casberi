@@ -53,6 +53,8 @@ struct RootShell: View {
     /// what made them permanent furniture in the first place.
     @AppStorage("agent.everRaised") private var agentEverRaised = false
     /// Every source at once (`SourcesTray`) — raised by holding the agent bar.
+    /// Never set directly by a door: they all go through `openSources()`, so
+    /// the tray's own feel can't depend on which one you reached it by.
     @State private var sourcesOpen = false
     @Environment(\.scenePhase) private var scenePhase
     @State private var hasBeenActive = false
@@ -635,7 +637,9 @@ struct RootShell: View {
                 Task { @MainActor in
                     try? await Task.sleep(for: .milliseconds(600))
                     NSLog("[Casberi] openSources: %@", chrome.chipOrder.joined(separator: ", "))
-                    sourcesOpen = true
+                    // Through the same door as the hold it stands in for, so a
+                    // probe exercises what a finger does.
+                    openSources()
                 }
             }
             // `-openComposerDelay <s>` opens the composer after a delay.
@@ -824,7 +828,7 @@ struct RootShell: View {
         // The tray, asked for from the menu bar or the bar's own right-click
         // (2026-07-31) — the hold is not the only door anymore.
         .onChange(of: chrome.sourcesRequest) { _, _ in
-            sourcesOpen = true
+            openSources()
         }
         // Privacy as the default (goal 6): leaving the app redacts the
         // corpus — the app-switcher snapshot shows choreography, not content.
@@ -1088,7 +1092,7 @@ struct RootShell: View {
                                  // menu reach the same door.
                                  chrome.openFind()
                              },
-                             onSources: { sourcesOpen = true }) {
+                             onSources: { openSources() }) {
                         DSHaptic.tap()
                         // Open onto the Today brief, not the empty chips (prd
                         // §181, user: "make daily brief be the default when a
@@ -1164,6 +1168,18 @@ struct RootShell: View {
         }
     }
 
+    /// The one door into the sources tray. Every way in fires the SAME
+    /// `DSHaptic.lift()` — the hold, the VoiceOver action on the ask button,
+    /// the Mac menu bar and the bar's own right-click. It used to live inside
+    /// `AgentBar`'s long-press, which meant the gesture with no visible
+    /// affordance was the only route that said it had been received, and the
+    /// three routes built for the people who can't perform that gesture opened
+    /// the tray in silence. Feel belongs to the tray, not to one recognizer.
+    private func openSources() {
+        DSHaptic.lift()
+        sourcesOpen = true
+    }
+
     /// Everything the shell hands its own tree, re-applied to a ROOT-PRESENTED
     /// sheet or cover — whose content hangs OUTSIDE the chain those modifiers
     /// wrap (fullScreenCover doesn't even reliably inherit `\.locale`). One
@@ -1173,6 +1189,11 @@ struct RootShell: View {
     /// `@Environment(BridgeStore.self)` under it was a mount-time fatal. Any
     /// new root sheet/cover goes through here; any new shell-wide environment
     /// object gets added HERE, not to individual sheets.
+    ///
+    /// NOTE it does NOT re-apply `dsSensoryFeedback()`, deliberately: the trays
+    /// raised through here carry their own (`DSTray`), and a second listener in
+    /// the same presentation would buzz twice. A root sheet that is not a tray
+    /// and fires its own `DSHaptic` calls needs one — see `Haptics.swift`.
     private func rootPresented(_ content: some View) -> some View {
         content
             .environment(bridges)
