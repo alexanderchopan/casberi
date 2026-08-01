@@ -33,11 +33,19 @@ KNOWN_NON_REACH=(
   dexscreener.com twitch.tv reddit.com stocktwits.com farcaster.xyz
   privacy.com polymarket.com app.safe.global app.uniswap.org
   aerodrome.finance app.hyperliquid.xyz
+  # ether.fi's own app — where an unstake row's "claim" and a Cash row open on
+  # tap. Never fetched: the reads are public RPC hosts, and those ARE disclosed
+  # in NetworkReach (the "ether.fi" and "ether.fi Cash" entries).
+  app.ether.fi
   # Setup doors — `setupURL`/`openURL` only, never fetched. Each is the page
   # that mints the key you then paste, opened in your browser.
   app.privacy.com app.raindrop.io calendly.com linear.app www.notion.so
   venice.ai bankr.bot www.kraken.com portal.cdp.coinbase.com
   www.binance.com exchange.gemini.com console.x.ai
+  # Stripe's dashboard — where a landed row opens on tap, and where you mint
+  # the restricted key. Never fetched; `api.stripe.com` is the read, and it
+  # IS disclosed in NetworkReach.
+  dashboard.stripe.com
   # Mail app-password pages, and the Google Takeout page you download your
   # own Gemini export from — all opened in the browser, none read by us.
   appleid.apple.com myaccount.google.com takeout.google.com

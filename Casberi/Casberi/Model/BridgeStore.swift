@@ -164,6 +164,19 @@ final class BridgeStore {
                    can: ["Reads your veAERO locks for the wallets you watch, from Base's public chain.",
                          "Reminds you before the weekly vote closes, and before a lock expires.",
                          "Read-only — never votes, locks, or claims."]),
+        WalletSeat(id: "etherfi", name: "ether.fi",
+                   count: { EtherFiUnstake.evidence.count(in: $0) }, noun: "wallet",
+                   can: ["Reads your unstake requests for the wallets you watch, from Ethereum's public chain.",
+                         "Tells you the moment queued ETH becomes claimable.",
+                         "Read-only — never stakes, unstakes, or claims."]),
+        // Counted in CARDS, like Gnosis Pay above — the evidence is a Cash
+        // account, not a wallet, and calling it a wallet would overstate what
+        // was found.
+        WalletSeat(id: "etherficash", name: "ether.fi Cash",
+                   count: { EtherFiCash.evidence.count(in: $0) }, noun: "card",
+                   can: ["Reads your ether.fi Cash spending and credit line from Optimism, for the wallets you watch.",
+                         "Amounts and timing only — the merchant never reaches the chain.",
+                         "Read-only — never spends, borrows, repays, or freezes a card."]),
         WalletSeat(id: "uniswap", name: "Uniswap",
                    count: { UniswapLiquidity.evidence.count(in: $0) }, noun: "wallet",
                    can: ["Reads your liquidity positions and uncollected fees for the wallets you watch, from the public chain.",

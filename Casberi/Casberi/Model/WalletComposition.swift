@@ -148,7 +148,10 @@ struct WalletComposition: Equatable, Sendable {
                      morpho: MorphoDeFi.Book,
                      uniswap: UniswapLiquidity.Book,
                      hyperliquid: HyperliquidDeFi.Book,
-                     aerodrome: AerodromeDeFi.Book) -> WalletComposition {
+                     aerodrome: AerodromeDeFi.Book,
+                     etherfiCash: EtherFiCash.Book = EtherFiCash.Book(),
+                     etherfiUnstake: EtherFiUnstake.Book = EtherFiUnstake.Book())
+    -> WalletComposition {
         var out = WalletComposition()
 
         // Aave and Spark share one type and differ by `protocolName`, so each
@@ -197,6 +200,17 @@ struct WalletComposition: Equatable, Sendable {
             out.deposits.append(Deposit(place: "Hyperliquid", usd: hyper))
         }
 
+        // An ether.fi Cash account is a smart account holding collateral with
+        // a credit line drawn against it — the same deposited/owed pair as a
+        // lending protocol, and named for the card rather than folded under
+        // "ether.fi", because the staking side is a different product.
+        if etherfiCash.collateralUSD >= floor {
+            out.deposits.append(Deposit(place: "ether.fi Cash", usd: etherfiCash.collateralUSD))
+        }
+        if etherfiCash.debtUSD >= floor {
+            out.debts.append(Debt(place: "ether.fi Cash", usd: etherfiCash.debtUSD))
+        }
+
         // Locked, in units (rule 2), ONE ENTRY PER LOCK. veAERO leads — it's
         // the larger and more deliberate lock of the two, and the only one
         // that decays.
@@ -218,6 +232,22 @@ struct WalletComposition: Equatable, Sendable {
                                   // its unlock, so it gets no melt.
                                   power: nil,
                                   until: delegation.lockedUntil,
+                                  isPermanent: false))
+        }
+
+        // An ether.fi unstake request is money that has left the wallet's
+        // balance and not yet arrived — committed, unusable, and reported in
+        // ETH rather than dollars like every other lock (rule 2). No decay
+        // (`power` nil) and no end date: ether.fi finalizes in batches at its
+        // own pace, so an `until` here would be invented. ONE ENTRY PER
+        // REQUEST, for the same reason two veNFTs never merge.
+        for request in etherfiUnstake.requests where request.amount > 0 {
+            out.locks.append(Lock(id: "etherfi:\(request.tokenId)",
+                                  place: "ether.fi",
+                                  symbol: "ETH",
+                                  amount: request.claimable ?? request.amount,
+                                  power: nil,
+                                  until: nil,
                                   isPermanent: false))
         }
 

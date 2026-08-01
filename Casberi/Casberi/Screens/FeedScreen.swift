@@ -2154,7 +2154,9 @@ struct FeedScreen: View {
                                morpho: walletLive.morpho,
                                uniswap: walletLive.uniswap,
                                hyperliquid: walletLive.hyperliquid,
-                               aerodrome: walletLive.aerodrome)
+                               aerodrome: walletLive.aerodrome,
+                               etherfiCash: walletLive.etherfiCash,
+                               etherfiUnstake: walletLive.etherfiUnstake)
     }
 
     /// The per-wallet split as chip entries (prd §212, 2026-07-25) — value

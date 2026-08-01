@@ -77,6 +77,15 @@ final class WalletStore {
                 // evidence mark leaves with the watch like every sibling's,
                 // or the seat stays lit for a wallet that's gone.
                 AerodromeDeFi.clearState(address: old.address)
+                // ether.fi Cash's spend cursor and risk bucket leave too
+                // (2026-07-31) — same back-fill reason, plus a stale "at-risk"
+                // bucket would suppress a real alert on re-watch.
+                EtherFiCash.clearState(address: old.address)
+                // The unstake queue keeps no cursor (its rows are reconciling
+                // dueAt, read fresh every pass) — but the discovered-id cache
+                // and walk floor leave with the watch, or a re-watch would
+                // trust ids it never re-verified.
+                EtherFiUnstake.clearState(address: old.address)
                 // The EIP-7702 delegation baseline leaves too (2026-07-20) —
                 // a re-watch should seed fresh, not compare against a
                 // delegate state from a prior, unrelated watch period.

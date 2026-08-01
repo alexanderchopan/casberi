@@ -106,6 +106,10 @@ enum BridgeGlyph {
         // the tile is dark in both modes, so the signal has to come from the
         // glyph. Icon-sampled from the bundled mark.
         case "hyperliquid": return Color.fixed("#97fce4")
+        // ether.fi's tile is pure black (the mark's own ground), so the signal
+        // has to come from the glyph — the cyan end of the mark's cyan→indigo
+        // run, icon-sampled from the bundled asset.
+        case "ether.fi":   return Color.fixed("#35a2ed")
         default:       return nil
         }
     }
@@ -149,6 +153,13 @@ enum BridgeGlyph {
         case "peer":      return "arrow.left.arrow.right"
         case "privacy pools", "0xbow privacy pools": return "shield.lefthalf.filled"
         case "gnosis pay": return "creditcard"
+        // The unstake queue's whole subject is waiting, then collecting — an
+        // hourglass says that where a generic coin or chain glyph wouldn't.
+        case "ether.fi":  return "hourglass"
+        // Same mark as Gnosis Pay: they are the same object (a card that
+        // settles onchain), and picking a different glyph for one would say
+        // they were different kinds of thing.
+        case "ether.fi cash": return "creditcard"
         // A multisig is a signature queue — the same mark `WalletWarning.Kind`
         // already uses for a pending Safe signature, so the catalog tile and
         // the Worth-a-look row can't pick different glyphs for one thing.

@@ -1175,6 +1175,32 @@ enum ProbeHooks {
                 for line in lines { NSLog("aerodromeProbe| %@", line) }
             }
         },
+        // `-etherfiUnstakeProbe YES` NSLogs each watched wallet's outstanding
+        // ether.fi unstake requests (amount, queued vs CLAIMABLE) or the
+        // honest miss, then runs the reconciling sync. The queued/claimable
+        // split is the point: a count alone can't separate "nothing is
+        // claimable yet" from "the finalized read didn't run". Pairs with
+        // `-walletAddress`.
+        Hook(key: "etherfiUnstakeProbe") { _, context in
+            Task { @MainActor in
+                let lines = await EtherFiUnstake.probe(context: context)
+                for line in lines { NSLog("etherfiUnstakeProbe| %@", line) }
+            }
+        },
+        // `-etherfiCashProbe <blocksBack|YES>` NSLogs, per watched wallet,
+        // whether it's an ether.fi Cash account at all (the `isEtherFiSafe`
+        // gate — "not a Cash account" and "couldn't reach Optimism" read
+        // differently on purpose), then its collateral/debt/health, then runs
+        // the spend sweep and the risk check. A numeric spec rewinds the
+        // cursors so real past spends land headlessly. Pairs with
+        // `-walletAddress <a Cash safe address>`.
+        Hook(key: "etherfiCashProbe") { spec, context in
+            let back = Int(spec)
+            Task { @MainActor in
+                let lines = await EtherFiCash.probe(context: context, blocksBack: back)
+                for line in lines { NSLog("etherfiCashProbe| %@", line) }
+            }
+        },
         // `-compositionProbe YES` NSLogs the Wallet card's composition strip
         // (prd §240) — what's deposited into protocols, what's locked in its
         // own units, what's owed, and WHICH protocols each came from. One
@@ -1186,7 +1212,8 @@ enum ProbeHooks {
                 let live = await WalletWatch.liveState(context: context)
                 let composition = WalletComposition.from(
                     aave: live.positions, morpho: live.morpho, uniswap: live.uniswap,
-                    hyperliquid: live.hyperliquid, aerodrome: live.aerodrome)
+                    hyperliquid: live.hyperliquid, aerodrome: live.aerodrome,
+                    etherfiCash: live.etherfiCash, etherfiUnstake: live.etherfiUnstake)
                 for line in composition.probeLines { NSLog("compositionProbe| %@", line) }
             }
         },

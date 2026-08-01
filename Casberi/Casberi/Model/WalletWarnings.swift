@@ -158,6 +158,12 @@ struct WalletLiveState: Equatable {
     /// use, so adding them here costs no extra request inside a pass.
     var hyperliquid: HyperliquidDeFi.Book = HyperliquidDeFi.Book()
     var aerodrome: AerodromeDeFi.Book = AerodromeDeFi.Book()
+    /// ether.fi's two halves (2026-07-31): the Cash account's collateral and
+    /// credit line on Optimism, and the unstake queue on mainnet. Both join
+    /// the same parallel pass and are coalesced behind the same 60s TTL as the
+    /// books above, so stating them costs no extra request inside a pass.
+    var etherfiCash: EtherFiCash.Book = EtherFiCash.Book()
+    var etherfiUnstake: EtherFiUnstake.Book = EtherFiUnstake.Book()
     var warnings: [WalletWarning] = []
     /// The address-poisoning things behind the poisoning warning — carried so
     /// the Worth-a-look tray can list each flagged transfer as its own row
@@ -257,6 +263,8 @@ enum WalletWatch {
         async let uniswapBook = UniswapLiquidity.book(addresses: resolved)
         async let hyperBook = HyperliquidDeFi.book(addresses: resolved)
         async let aeroBook = AerodromeDeFi.book(addresses: resolved)
+        async let cashBook = EtherFiCash.book(addresses: resolved)
+        async let unstakeBook = EtherFiUnstake.book(addresses: resolved)
         async let safe = SafeBridge.pendingCounts(addresses: resolved)
         async let delegs = WalletSafety.currentDelegations(addresses: resolved)
         async let approvalsRead = WalletApprovals.activeApprovals(hexAddresses: resolved, context: context)
@@ -270,6 +278,11 @@ enum WalletWatch {
         // can't overstate.
         let hyperliquid = await hyperBook ?? HyperliquidDeFi.Book()
         let aerodrome = await aeroBook ?? AerodromeDeFi.Book()
+        // Unreachable is EMPTY here, exactly as the four books above — the
+        // composition states what it could read and says nothing about what it
+        // couldn't, the only shape that can't overstate.
+        let etherfiCash = await cashBook ?? EtherFiCash.Book()
+        let etherfiUnstake = await unstakeBook ?? EtherFiUnstake.Book()
         let safePending = await safe
         let delegations = await delegs
         let activeApprovals = await approvalsRead
@@ -306,6 +319,8 @@ enum WalletWatch {
             uniswap: uniswap,
             hyperliquid: hyperliquid,
             aerodrome: aerodrome,
+            etherfiCash: etherfiCash,
+            etherfiUnstake: etherfiUnstake,
             warnings: warnings(positions: positions, morpho: morpho,
                                safePending: safePending,
                                delegations: delegations, poisoningCount: poisoningCount,

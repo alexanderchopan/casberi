@@ -265,6 +265,8 @@ enum BridgeRouter {
         Row(offer: "Uniswap",     id: "uniswap",     destination: .wallet),
         Row(offer: "Hyperliquid", id: "hyperliquid", destination: .wallet),
         Row(offer: "Aerodrome",   id: "aerodrome",   destination: .wallet),
+        Row(offer: "ether.fi",    id: "etherfi",     destination: .wallet),
+        Row(offer: "ether.fi Cash", id: "etherficash", destination: .wallet),
         // Read-only exchange seats (prd §163) — Wallet group by ruling: their
         // balances merge into the combined total, so they belong beside the
         // wallets they join.

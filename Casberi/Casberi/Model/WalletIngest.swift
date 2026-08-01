@@ -419,6 +419,26 @@ enum WalletIngest {
                                                         addresses: evmAddresses,
                                                         existing: existing)
         added += gnosisPayAdded ?? 0
+        // ether.fi Cash card spends ride the same pass (2026-07-31) — one
+        // filtered `Spend` read per Cash account on Optimism, plus the credit
+        // line's risk crossing. Gated on `isEtherFiSafe`, so a wallet that
+        // holds no Cash account costs exactly one eth_call and no scan.
+        let etherfiCashAdded = await EtherFiCash.sync(context: context,
+                                                       addresses: evmAddresses,
+                                                       existing: existing)
+        added += etherfiCashAdded ?? 0
+        let etherfiRiskAdded = await EtherFiCash.syncRisk(context: context,
+                                                           addresses: evmAddresses,
+                                                           existing: existing)
+        added += etherfiRiskAdded ?? 0
+        // …and the ether.fi unstake queue (2026-07-31) — a reconciling row per
+        // outstanding withdraw request, retitled in place when it turns
+        // claimable. Gated on `balanceOf`, so a wallet with nothing unstaking
+        // costs exactly one eth_call.
+        let etherfiUnstakeAdded = await EtherFiUnstake.syncEvents(context: context,
+                                                                   addresses: evmAddresses,
+                                                                   existing: existing)
+        added += etherfiUnstakeAdded ?? 0
         // ENS names expire (2026-07-21) — keyless, one GET per readable name,
         // landing a dated row the "What's coming up?" chip sorts on. Inside the
         // running guard like everything above.

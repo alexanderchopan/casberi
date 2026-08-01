@@ -69,6 +69,17 @@ enum NetworkReach {
                  purpose: "A few sites don't put a title or preview in the page itself. When you save one of those links, \(DS.device) asks that site's own public preview endpoint for it. The request carries only the link you saved.",
                  hosts: ["www.tiktok.com", "graph.facebook.com", "vimeo.com",
                          "soundcloud.com", "open.spotify.com", "www.flickr.com"]),
+        // The one IMPORT that reaches the network. Instagram, ChatGPT, Claude,
+        // Day One and the rest are read entirely on this device and appear
+        // nowhere in this registry, correctly — but a Snapchat export holds no
+        // pixels, only links, so fetching the Memories is a real (and
+        // separately tapped) network act. Its hosts can't be listed: each URL
+        // comes out of your own export file, which is also why the reach audit
+        // can't see them and why this entry is hand-written.
+        Endpoint(service: "Snapchat Memories",
+                 reach: .whenConnected(bridge: "snapchat"),
+                 purpose: "Your Snapchat export holds links, not pictures — and they expire. When you tap to fetch your Memories, \(DS.device) asks Snapchat's own link for each one and downloads that picture. Nothing is sent but the link your export already gave you.",
+                 hosts: ["the links in your own export"]),
         Endpoint(service: "Maps",
                  reach: .always,
                  purpose: "Opening a place opens Apple Maps. The location you tapped is all it carries.",
@@ -116,6 +127,18 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Reads your Gnosis Pay card spending off Gnosis Chain's public chain, for the wallets you watch — the amount and the moment, which is all the chain carries.",
                  hosts: ["rpc.gnosischain.com", "rpc.gnosis.gateway.fm"]),
+        // Both ether.fi entries reach under WALLET, not their own seats, for
+        // Gnosis Pay's reason above: each seat appears only once there's
+        // evidence (an unstake request / a Cash account), but the read that
+        // discovers one runs for every watched wallet.
+        Endpoint(service: "ether.fi",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "Reads your ether.fi unstake requests off Ethereum's public chain, for the wallets you watch — how much is queued, and when it becomes claimable. Read-only: claiming happens in ether.fi's own app.",
+                 hosts: ["rpc.mevblocker.io", "eth.api.onfinality.io"]),
+        Endpoint(service: "ether.fi Cash",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "Reads your ether.fi Cash card spending and credit position off Optimism's public chain, for the wallets you watch — the amount and the moment, which is all the chain carries.",
+                 hosts: ["optimism.gateway.tenderly.co", "mainnet.optimism.io"]),
         Endpoint(service: "Exchange rates",
                  reach: .whenConnected(bridge: "Tokens"),
                  purpose: "Fetches public reference prices to show token and wallet values in your currency. Carries only the pair being priced.",
@@ -150,6 +173,10 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "posthog"),
                  purpose: "Reads the metrics, annotations, and event counts you watch on your own PostHog project. Read-only scoped key.",
                  hosts: ["us.posthog.com"]),
+        Endpoint(service: "Stripe",
+                 reach: .whenConnected(bridge: "stripe"),
+                 purpose: "Reads the events that mean money moved — disputes, payouts, cancellations, failed payments — and your balance. Restricted key with read scopes only: it cannot refund, charge, or pay out. Your customers' details are never read. The dashboard opens in your browser when you tap a row; this app doesn't call it.",
+                 hosts: ["api.stripe.com"]),
         Endpoint(service: "Slack",
                  reach: .whenConnected(bridge: "slack"),
                  purpose: "Looks up mentions of you across Slack. Search-only user token — can't post, read files, or browse channels.",
