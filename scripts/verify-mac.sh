@@ -51,7 +51,14 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DD="$HOME/Library/Developer/CasberiMacDD"       # Mac-only, never shared with verify.sh's iOS DD
 APP="$DD/Build/Products/Debug-maccatalyst/Casberi.app"
 BIN="$APP/Contents/MacOS/Casberi"
-CONTAINER_TMP="$HOME/Library/Containers/com.casberi.app/Data/tmp"
+# Snapshots land in the APP GROUP container, not the app container. Measured
+# from a real LaunchAgent on 2026-08-01: a launchd job reading
+# ~/Library/Containers/com.casberi.app/Data is DENIED by TCC ("Operation not
+# permitted"), while the group container reads fine. An interactive terminal
+# usually holds the app-data grant, which is exactly why the first version of
+# this passed by hand every time and failed on the first real nightly.
+# The team prefix is required — the unprefixed path simply doesn't exist.
+SNAPDIR="$HOME/Library/Group Containers/35428TQK3S.group.com.casberi.app/HarnessSnapshots"
 OUT="$ROOT/scripts/output/mac-$(date +%Y%m%d-%H%M%S)"
 HIST="$ROOT/scripts/output/perf-history-mac.csv"
 CRASHDIR="$HOME/Library/Logs/DiagnosticReports"
@@ -80,6 +87,10 @@ warn() { print -P "%F{yellow}⚠ $1%f"; }
 fail() { print -P "%F{red}✗ $1%f"; exit 1; }
 
 mkdir -p "$OUT"
+# Announced up front, not only in the closing line: a run that FAILS never
+# reaches the closing line, so nightly-mac.sh had no run dir to record for
+# exactly the nights whose artifacts someone would want to open.
+print -r -- "OUTPUT_DIR $OUT"
 typeset -a WARNINGS
 
 # ── Launch helpers ─────────────────────────────────────────────────────────
@@ -169,17 +180,20 @@ sweep() {  # sweep <name> <launch-args...>
   # reads an unset `name` and trips `set -u`.
   local name="$1"; shift
   local log="$OUT/sweep-$name.log"
-  rm -f "$CONTAINER_TMP/$name.png"
+  # No pre-clear of the destination: the harness has READ but not WRITE access
+  # to the group container, so `rm` there fails. Freshness comes from waiting
+  # on THIS run's own "wrote" line below — the app overwrites in place.
   launch "$log" "$@" -macSnapshot "$name" -snapshotDelay 4
   if ! wait_for "$log" "macSnapshot: wrote" 20; then
     quit_app
     fail "screen sweep '$name': no snapshot in 20s (see $log)"
   fi
   quit_app
-  [[ -f "$CONTAINER_TMP/$name.png" ]] || fail "screen sweep '$name': snapshot logged but no file"
-  cp "$CONTAINER_TMP/$name.png" "$OUT/$name.png"
-  rm -f "$CONTAINER_TMP/$name.png"
-  local bytes=$(stat -f%z "$OUT/$name.png")
+  [[ -f "$SNAPDIR/$name.png" ]] || fail "screen sweep '$name': snapshot logged but no file at $SNAPDIR"
+  cp "$SNAPDIR/$name.png" "$OUT/$name.png" \
+    || fail "screen sweep '$name': cannot read the snapshot (TCC? see $SNAPDIR)"
+  local bytes=$(stat -f%z "$OUT/$name.png" 2>/dev/null)
+  : ${bytes:=0}
   (( bytes > 20000 )) || fail "screen sweep '$name': ${bytes}B PNG — window mounted but painted nothing"
   ok "$name (${bytes}B)"
 }
@@ -382,7 +396,11 @@ echo "$TS,$LAUNCH_MS,$MEM_MB,$ANSWER_MS,$SHA" >> "$HIST"
 # ── Cleanup ────────────────────────────────────────────────────────────────
 # Scratch stores are per-PID and would otherwise accumulate one dir per launch
 # forever inside the container.
-rm -rf "$CONTAINER_TMP"/casberi-scratch-* 2>/dev/null
+# Best-effort only: this path is inside the TCC-protected app container, so
+# under launchd the delete is denied and silently skipped. The scratch dirs
+# live in the app's own tmp, which macOS reclaims on its own schedule, so an
+# unattended run leaving them behind is untidy rather than unbounded.
+rm -rf "$HOME/Library/Containers/com.casberi.app/Data/tmp"/casberi-scratch-* 2>/dev/null
 quit_app
 
 print -r -- ""

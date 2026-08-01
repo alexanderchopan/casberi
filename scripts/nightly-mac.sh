@@ -36,7 +36,9 @@ SHA=$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)
 LAUNCH_CYCLES=${LAUNCH_CYCLES:-10} "$ROOT/scripts/verify-mac.sh" > /tmp/nightly-mac-run.log 2>&1
 STATUS=$?
 
-RUN_DIR=$(grep -o '/.*/scripts/output/mac-[0-9-]*' /tmp/nightly-mac-run.log | tail -1)
+# From the OUTPUT_DIR line verify-mac.sh prints before any check runs, so a
+# FAILING night still records where to look.
+RUN_DIR=$(grep -o 'OUTPUT_DIR /.*/mac-[0-9-]*' /tmp/nightly-mac-run.log | tail -1 | cut -d' ' -f2)
 [[ -n "$RUN_DIR" ]] && cp /tmp/nightly-mac-run.log "$RUN_DIR/console.log" 2>/dev/null
 
 # Pull the three perf numbers straight out of the run's own report rather than
@@ -68,7 +70,10 @@ if (( STATUS == 0 )); then
   (( ${LIVE_W:-0} > 0 ))  && VERDICT="PASS(${LIVE_W} live-warn)"
   (( ${PERF_F:-0} > 0 ))  && VERDICT="$VERDICT[${PERF_F} perf-flag]"
 else
-  VERDICT="FAIL: $(grep '✗' /tmp/nightly-mac-run.log | tail -1 | sed 's/^[^ ]* //' | cut -c1-90)"
+  # Strip ANSI before trimming: `fail()` colours its output, so the escape
+  # codes rode into the ledger and every FAIL row ended in a stray "[39m".
+  VERDICT="FAIL: $(grep '✗' /tmp/nightly-mac-run.log | tail -1 \
+    | sed $'s/\033\\[[0-9;]*m//g' | sed 's/^✗ *//' | cut -c1-90)"
 fi
 
 print -r -- "$TS  $SHA  $VERDICT  $PERF  ${RUN_DIR:-no-output-dir}" >> "$LEDGER"

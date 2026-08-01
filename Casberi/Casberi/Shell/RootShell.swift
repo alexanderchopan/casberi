@@ -474,16 +474,30 @@ struct RootShell: View {
                 }
             }
             // Debug hook (the Mac harness's screenshot, scripts/verify-mac.sh):
-            // `-macSnapshot <name>` renders the key window into the app
-            // container's tmp as <name>.png after `-snapshotDelay <s>`
-            // (default 4s — verify.sh's sweep settle) and NSLogs the full
-            // path for the script to copy out. Exists because the Mac has no
+            // `-macSnapshot <name>` renders the key window as <name>.png after
+            // `-snapshotDelay <s>` (default 4s) and NSLogs the full path for
+            // the script to copy out. Exists because the Mac has no
             // `simctl io screenshot`, and `screencapture` needs a Screen
-            // Recording grant a headless nightly can't click through — an
-            // app rendering its own window needs no permission. The write
-            // lands in the sandbox container (not a caller-chosen path)
-            // because the sandbox would refuse anywhere else anyway; the
-            // NSLog line is the contract, not a guessed path.
+            // Recording grant a headless nightly can't click through — an app
+            // rendering its own window needs no permission at all.
+            //
+            // It writes into the APP GROUP container, and that is load-bearing
+            // rather than tidiness. The obvious home is
+            // `FileManager.default.temporaryDirectory` — inside
+            // `~/Library/Containers/com.casberi.app/Data`, which macOS TCC
+            // protects as app data. An interactive terminal usually holds that
+            // access, so the first version of this worked perfectly by hand
+            // and then failed on the very first launchd run with
+            // `cp: Operation not permitted` (2026-08-01). Measured from a real
+            // LaunchAgent: app container read DENIED, group container read OK.
+            // So the group container is the one directory both a sandboxed app
+            // can write and an unattended job can read.
+            //
+            // The harness cannot DELETE these (group-container writes are
+            // denied to it too), so names are reused and overwritten rather
+            // than made unique — the set stays as small as the sweep's screen
+            // list. Freshness is guaranteed by the caller waiting for THIS
+            // run's "wrote" line, not by clearing the file first.
             if let snapName = UserDefaults.standard.string(forKey: "macSnapshot") {
                 let snapDelay = UserDefaults.standard.double(forKey: "snapshotDelay")
                 Task { @MainActor in
@@ -495,18 +509,33 @@ struct RootShell: View {
                     let image = UIGraphicsImageRenderer(bounds: window.bounds).image { _ in
                         window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
                     }
-                    let url = FileManager.default.temporaryDirectory
-                        .appendingPathComponent(snapName)
-                        .appendingPathExtension("png")
-                    if let data = image.pngData() {
-                        do {
-                            try data.write(to: url)
-                            NSLog("[Casberi] macSnapshot: wrote %@", url.path)
-                        } catch {
-                            NSLog("[Casberi] macSnapshot: FAILED %@", error.localizedDescription)
-                        }
-                    } else {
-                        NSLog("[Casberi] macSnapshot: FAILED png encode")
+                    guard let data = image.pngData() else {
+                        NSLog("[Casberi] macSnapshot: FAILED png encode"); return
+                    }
+                    // macOS resolves an app group ONLY by its team-prefixed id
+                    // — the same divergence Casberi-Catalyst.entitlements
+                    // documents for keychain groups. Handing `containerURL`
+                    // the bare "group.com.casberi.app" here returned a path
+                    // OUTSIDE the sandbox grant, so `createDirectory` was
+                    // denied and the write failed with the memorably unhelpful
+                    // "The file home.png doesn't exist" (2026-08-01). Try
+                    // prefixed first, keep the bare id as the iOS-shaped
+                    // fallback, and log whichever directory won so the next
+                    // failure names itself instead of needing this rediscovered.
+                    // Team-prefixed first (macOS), bare second (the iOS shape).
+                    let groupIDs = ["35428TQK3S." + SharedStore.appGroup, SharedStore.appGroup]
+                    let base = groupIDs.lazy
+                        .compactMap { FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: $0) }
+                        .first { FileManager.default.fileExists(atPath: $0.path) }
+                    let dir = (base ?? FileManager.default.temporaryDirectory)
+                        .appendingPathComponent("HarnessSnapshots")
+                    do {
+                        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+                        let url = dir.appendingPathComponent(snapName).appendingPathExtension("png")
+                        try data.write(to: url)
+                        NSLog("[Casberi] macSnapshot: wrote %@", url.path)
+                    } catch {
+                        NSLog("[Casberi] macSnapshot: FAILED dir=%@ %@", dir.path, error.localizedDescription)
                     }
                 }
             }
