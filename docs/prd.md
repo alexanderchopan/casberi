@@ -11760,3 +11760,159 @@ go to a form is a grid you have to read before you can trust — and the feed
 already carries the repair door (its own Manage route), so nothing is lost by
 landing there first. The dashed ring's job is to SAY the connection is broken,
 not to redirect the tap that follows.
+
+## §253 — The wallet room gets a future, a floor for routine, a seat for perps; the tray says whose and since when (user: "how if at all would you improve our wallet source feed", then "and how if at all would you improve the 'worth looking at' tray", then "do 1 and 2 for the tray, and do 1-4 for the wallet", 2026-07-31)
+
+Six changes across two surfaces, both of which had already been through several
+passes (§212's Cash App pass on the room, §241's on the tray a day earlier). The
+shared shape of all six: none of them adds a read. Every fact below was already
+being computed, and was going unsaid, unattributed, or unseen.
+
+### The tray
+
+**1. An actionable row names the wallet that's exposed.** §241 closed with this
+as its own recorded follow-up and it is now built. Scoped precisely rather than
+blanket-applied: a delegation's title already opens with the wallet's label
+("vitalik.eth delegates to …") and a Safe row's reads "… on vitalik.eth's Safe",
+so those two are left alone — prefixing them would print the same name twice in
+one row. An **approval** names only the spender and a **liquidation** only the
+protocol, and those are the two rows where "which of my wallets is this?" went
+unanswered. It's the fact you need *before* tapping Revoke, since that page asks
+you to connect the wallet in question. Stated only when more than one wallet is
+watched.
+
+The two rows needed two different lookups and that is not incidental: a landed
+approval carries the RESOLVED hex, a `WalletWarning` carries the WATCHED
+spelling. `WalletStore` grew `displayName(forStored:)` (via `scopeMatches`, the
+ENS-vs-hex mismatch that once emptied a scoped feed) and
+`displayName(forWatched:)`. Both return nil rather than guessing.
+
+**2. An approval row says how old the grant is.** "Granted Mar 2024" is what
+turns a live approval from a notice into a decision — a forgotten two-year-old
+unlimited grant is precisely what Revoke.cash exists for, and one made this
+morning is probably you.
+
+This needed a new field, and the reason is the interesting part.
+`WalletApprovals` stamps `capturedAt` with the block's real time *when it can
+read it* and falls back to `.now` when it can't — invisible while that date only
+drove sort order, but rendered as a sentence it would date a years-old grant to
+today, understating the age of exactly the approvals that most deserve
+attention. So `Thing.grantedAt` (additive optional, no migration) is set ONLY
+from a real block timestamp, and the row states an age only when one is known.
+Approvals landed before the field existed carry nil forever and stay silent —
+the only honest reading of "we never read that block".
+
+`blockTimes` also stopped capping at the newest 8 distinct blocks and now covers
+all 10 (the event cap), because the two it dropped were the OLDEST — backwards
+twice over, since an old grant is the one whose date carries the most
+information.
+
+### The room
+
+**3. "Coming up" — the room finally has a future.** The room's stream reads
+backwards from today, and the rows that are dated *forwards* were invisible
+through two independent mechanisms. `dayGroups` drops future-dated things by
+design ("what's still ahead lives on Home's Coming up lane, not here",
+2026-07-19) — but **that lane retired with the Home board in §131**, so the
+ruling has been pointing at a deleted surface for eleven days. And these
+particular rows dodge that drop only to land somewhere worse: `AerodromeDeFi`,
+`HyperliquidDeFi` and `ENSExpiry` all stamp `capturedAt: .now` and carry the
+deadline on `dueAt`, reconciling the row in place as the date moves — so a vote
+window that first landed three weeks ago sorts three weeks down a stream ordered
+by *arrival*, far past the five-row preview, no matter how soon it closes.
+
+Which is the whole problem: a weekly vote deadline and a lock expiry are the two
+rows in this room where being late is the only failure mode, and they were the
+two least likely to be seen.
+
+A card, not bare rows on the page, even though these are landed things while the
+room's other cards are live state. What decides it is what the reader is being
+asked to do: everything below is history to scroll, this is a standing fact to
+act on. Putting it on the page would make it read as the top of the stream —
+which is the exact misreading that buried these rows to begin with. Promoted
+rows leave the stream, so no deadline is read twice on one screen.
+
+**4. Routine transfers fold in the preview.** The preview is five rows over a
+stream mixing two very different kinds of event: transfers, which a busy wallet
+produces by the dozen and which ask nothing of anyone, and the rare rows that
+carry a decision. Straight chronology lets the first evict the second, so on an
+active wallet the one row worth acting on sits behind "See all" while the
+preview shows five variations of "Sent 0.1 ETH". A run of 3+ consecutive routine
+transfers now collapses to one counted row and the freed slots go to whatever
+the run was burying.
+
+Three deliberate constraints. It's an **allow-list**, not "anything
+uninteresting" — every other row is recognized by its own `sourceRef` namespace
+and stands alone, so a bridge added tomorrow is unfoldable by default rather
+than silently swept into a count; a flagged transfer and anything carrying a
+deadline are never routine. A run **never crosses midnight**, since the fold
+takes its date from its newest member and a multi-day run would file all of them
+under a day header that lies about what's under it. And **nothing is hidden**:
+the fold states its count, the stream door still totals the room unfolded, and
+the history screen behind it lists every row as before.
+
+*(Note the original framing — five coffee purchases crowding out an approval —
+turned out to be wrong on inspection: Gnosis Pay spends land under their own
+source and so live in their own room, never this one. The flooding case here is
+plain transfers. The fix is the same; the reason is different.)*
+
+**5. Hyperliquid perps get a card.** `syncPositions` has computed a
+liquidation-proximity crossing since 2026-07-30, but that alert is a landed
+thing in the stream, so it scrolls away — and the LIVE state behind it had no
+seat on any screen. §240 gave Hyperliquid its first seat in the composition
+strip, which states amounts and deliberately makes no claim about risk. So the
+one question a leveraged position actually asks — *how close am I* — was
+answerable only by catching a row as it went past.
+
+A **sibling card, not a third row inside Lending**, and §212's own reasoning is
+what rules that out: a perp is not lending. Nothing is supplied, nothing is
+borrowed, there is no health factor. Filing it under a card headed "Lending"
+would make the label wrong to buy one fewer surface — `WalletLiquidityCard`
+settled this exact shape for the same reason a month earlier. The margin is read
+from `HyperliquidDeFi.riskProximity` rather than redeclared (a card calling a
+position safe while the sweep has already alerted on it is the disagreement the
+honesty rule bans), the distance is stated for **every** position rather than
+only risky ones (a number that appeared only in danger would make its absence
+the alarm), and unrealized PnL is deliberately absent — it re-prices every
+second, so a card showing it would be wrong between reads more often than right,
+and this card's subject is whether the position survives.
+
+**6. The face chips stop under-decomposing the crown number.** The number they
+sit under is `portfolio.totalUSD`, which has merged connected exchange balances
+and staked-validator ETH since §163 — while the chips only ever decomposed
+watched wallets. So a setup whose main holding is on Coinbase read as a number
+with chips beneath it silently accounting for a fraction of it, and a caption
+that still said "wallets": the honesty rule's own failure mode, a true-sounding
+phrase that isn't describing what it counts. Worst exactly where it mattered
+most, since someone whose main holding is on an exchange is the case §163 exists
+for.
+
+A venue now contributes a chip, differing in three ways that are all forced
+rather than chosen: it wears its NAME (there's no address to derive a face
+from), it carries NO delta (the value line is recorded per watched wallet, so a
+venue has no history to difference, and a 0% pill would be a claim rather than a
+blank), and it **isn't a button** (the feed scopes by wallet address, so tapping
+one could only ever do nothing). The caption reads "Across your accounts" only
+when a venue is actually present, "wallets" otherwise. The wallet chips still
+read their own recorded lines, so the strip continues not to claim it SUMS to
+the number above it — it answers "whose", not "how it adds up".
+
+### Verification
+
+**NOT SIMULATOR-VERIFIED**, per the standing direction (*"it takes too much time
+and credits for me"*). Green build, plus `catalog-sync.sh`, the SwiftData
+liveness audit (self-test first) and the network-reach audit — the last of these
+trivially clean, since not one of these six changes adds a network call.
+
+What has NOT been seen on screen: the Coming up card's rhythm against the cards
+above it, a real fold row in place, the perps card at more than one position,
+and a venue chip beside a wallet chip. Two things worth knowing when it is:
+`dueLine` uses a relative format ("in 3 days"), which is unambiguous near-term
+but vague for a lock two months out — the title carries the absolute date; and
+the fold's subline ("Most recent 2:14 PM") is the only wallet-room row that has
+no title of its own.
+
+A concurrent Claude session was editing this working copy throughout (Slack /
+Spotify / Dropbox screens), so several builds failed on files outside this diff
+before one came back clean — the shared-build-DB and concurrent-edit hazards
+CLAUDE.md warns about, both observed live.

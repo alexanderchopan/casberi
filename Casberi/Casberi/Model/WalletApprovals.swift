@@ -461,6 +461,13 @@ enum WalletApprovals {
                 capturedAt: times[e.block] ?? .now,
                 sourceRef: ref)
             thing.walletAddress = owner
+            // Only the REAL block time (2026-07-31) — never the `.now`
+            // fallback `capturedAt` accepts one line up. The tray renders this
+            // as "Granted Mar 2024", and a fallback rendered as a sentence
+            // would date a years-old grant to today, understating the age of
+            // precisely the approvals worth revoking. Unknown stays nil and
+            // the row simply says nothing. See `Thing.grantedAt`.
+            thing.grantedAt = times[e.block]
             thing.counterpartyAddress = e.spender
             // An approval names an asset too — "Approved Uniswap to spend
             // unlimited ÚЅDС" is the same lie in a more dangerous sentence,
@@ -601,13 +608,19 @@ enum WalletApprovals {
         return out
     }
 
-    /// Real timestamps for the events' blocks (capped) — an approval found
-    /// after a week away should land dated when it happened, not when the app
-    /// next opened. A block past the cap stamps .now, close enough for the
-    /// tail of a busy pass.
+    /// Real timestamps for the events' blocks — an approval found after a week
+    /// away should land dated when it happened, not when the app next opened.
+    ///
+    /// Covers every distinct block in the batch (2026-07-31), where it used to
+    /// take the newest 8. The events themselves are already capped at 10, so
+    /// this is at most two extra reads per chain per pass — and the two it
+    /// used to drop were the OLDEST, which is backwards twice over: an old
+    /// grant is the one whose date carries the most information, and since
+    /// `grantedAt` is set only from a real read, a missing one is now a fact
+    /// the tray declines to state rather than a slightly-off sort key.
     private static func blockTimes(blocks: [Int], chain: Chain) async -> [Int: Date] {
         var out: [Int: Date] = [:]
-        for block in Set(blocks).sorted(by: >).prefix(8) {
+        for block in Set(blocks).sorted(by: >).prefix(10) {
             guard let b = await call(chain, method: "eth_getBlockByNumber",
                                      params: [hex(block), false]) as? [String: Any],
                   let ts = b["timestamp"] as? String else { continue }

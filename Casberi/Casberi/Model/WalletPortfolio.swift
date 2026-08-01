@@ -59,6 +59,42 @@ struct WalletPortfolio: Equatable {
         positions.first { $0.symbol == symbol }?.holders ?? []
     }
 
+    /// The `Holder.address` a validator balance is filed under. There is no
+    /// real address for staked ETH, and inventing one would put a "name this
+    /// address" verb on something that isn't one (see `from`).
+    static let validatorHolderID = "ethvalidators"
+
+    /// Whether a holder is a PLACE rather than a watched wallet — a connected
+    /// exchange venue or the validator pool.
+    ///
+    /// Matched against the known sentinels rather than by asking whether the
+    /// id parses as an address: a misclassified wallet would be stated twice
+    /// on screen (once as a face chip, once as a venue), and the set of things
+    /// that aren't wallets is small, closed and known right here.
+    static func isVenue(_ holderID: String) -> Bool {
+        holderID == validatorHolderID || ExchangeBridge.Venue(rawValue: holderID) != nil
+    }
+
+    /// Every non-wallet place holding money, biggest first, totalled across
+    /// symbols (2026-07-31).
+    ///
+    /// The balance card's face chips decompose the crown number by wallet, but
+    /// the crown number has merged exchange and validator balances since
+    /// §163 — so on a setup where the main holding sits on Coinbase, the chips
+    /// silently accounted for a fraction of the number they sit beneath and
+    /// the caption above still said "wallets". This is the missing half.
+    var venueTotals: [Holder] {
+        var byID: [String: (label: String, usd: Double)] = [:]
+        for position in positions {
+            for holder in position.holders where Self.isVenue(holder.address) {
+                byID[holder.address, default: (holder.label, 0)].usd += holder.usd
+            }
+        }
+        return byID
+            .map { Holder(address: $0.key, label: $0.value.label, usd: $0.value.usd) }
+            .sorted { $0.usd > $1.usd }
+    }
+
     /// Merges the per-wallet holdings groups into one portfolio. Amounts come
     /// from `bySymbolAll` (every counted position, not the sampled top-8 clip),
     /// so the token count and every share are the real ones.

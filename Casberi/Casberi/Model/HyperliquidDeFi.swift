@@ -84,7 +84,13 @@ enum HyperliquidDeFi {
     /// `DeFiRisk.floor`: 15% headroom sits in the same "still time to react"
     /// zone Aave's 1.5 HF represents, a design choice, not a measured
     /// liquidation-mechanics constant.
-    private static let riskProximity = 0.15
+    ///
+    /// Internal rather than private since 2026-07-31: `WalletPerpsCard` states
+    /// the same margin on screen that this sweep alerts on, and two copies of
+    /// a threshold are two thresholds — a card calling a position safe while
+    /// the sweep had already alerted on it is the kind of disagreement the
+    /// honesty rule exists to prevent.
+    static let riskProximity = 0.15
 
     struct Position: Equatable, Sendable {
         /// The WATCHED wallet this position belongs to — distinct from
@@ -103,6 +109,24 @@ enum HyperliquidDeFi {
         let leverageType: String    // "cross" or "isolated"
         let unrealizedPnl: Double
         let fundingSinceOpen: Double
+
+        /// How far the mark is from the liquidation price, as a fraction of
+        /// mark — the same arithmetic `syncPositions`' risk bucket runs, kept
+        /// here so the card and the alert can't drift apart. nil when the API
+        /// gives no liquidation price (a position that can't be liquidated has
+        /// no distance, which is not a distance of zero).
+        var liquidationProximity: Double? {
+            guard let liq = liquidationPx, markPx > 0 else { return nil }
+            return abs(markPx - liq) / markPx
+        }
+
+        /// Inside the heads-up margin. False when the distance is unknown —
+        /// never unknown-as-dangerous, which would paint an alarm the sweep
+        /// itself would not raise.
+        var isNearLiquidation: Bool {
+            guard let proximity = liquidationProximity else { return false }
+            return proximity < HyperliquidDeFi.riskProximity
+        }
     }
 
     struct SpotHolding: Equatable, Sendable {

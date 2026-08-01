@@ -386,6 +386,24 @@ final class Thing {
     /// default nil keeps CloudKit mirroring happy.
     var dueAt: Date? = nil
 
+    /// When a token approval was actually GRANTED on chain (2026-07-31) — the
+    /// fact the Worth-a-look tray states as "Granted Mar 2024", which is what
+    /// turns a live approval from a notice into a decision: a two-year-old
+    /// forgotten unlimited grant is exactly what Revoke.cash exists for, while
+    /// one made this morning is probably you.
+    ///
+    /// It exists as its own field rather than reading `capturedAt` because
+    /// `capturedAt` cannot carry this honestly. `WalletApprovals` stamps the
+    /// block's real time when it can read it and falls back to `.now` when it
+    /// can't — fine when the date only drives sort order, but a fallback
+    /// rendered as a sentence would say "Granted today" about a grant from
+    /// years ago, understating the age of exactly the approvals that most
+    /// deserve attention. So this is set ONLY from a real block timestamp and
+    /// left nil otherwise; the tray states an age only when one is known, and
+    /// approvals landed before this field existed stay silent rather than
+    /// guessing. Optional + default nil keeps CloudKit mirroring happy.
+    var grantedAt: Date? = nil
+
     /// When a screenshot's text was last read off its pixels (Vision OCR,
     /// prd §67 goal ⑤) — set even when no text was found, so text-less
     /// screenshots aren't re-read on every heal pass. nil = not yet tried.

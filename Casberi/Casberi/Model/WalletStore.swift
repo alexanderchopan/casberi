@@ -559,6 +559,33 @@ final class WalletStore {
             ?? (entry.label.isEmpty ? entry.short : entry.label)
     }
 
+    /// The name for the watched wallet a LANDED thing belongs to (2026-07-31,
+    /// prd §241's follow-up) — for a surface holding a thing's stamped address
+    /// that needs to say whose wallet it is.
+    ///
+    /// Things carry the RESOLVED hex while the roster holds the watched
+    /// spelling, so this goes through `scopeMatches` rather than comparing
+    /// raw strings — the exact mismatch that once emptied an ENS-watched
+    /// wallet's scoped feed. nil when the address belongs to no watched
+    /// wallet, so a caller states nothing rather than guessing.
+    func displayName(forStored stored: String?) -> String? {
+        guard let stored, !stored.isEmpty else { return nil }
+        guard let entry = addresses.first(where: { scopeMatches(stored, scope: $0.address) })
+        else { return nil }
+        return displayName(for: entry)
+    }
+
+    /// The name for a wallet named in its WATCHED spelling — what
+    /// `WalletWarning.address` carries. Same nil-rather-than-guess contract as
+    /// `displayName(forStored:)`; the two exist separately because the two
+    /// callers genuinely hold different forms of an address.
+    func displayName(forWatched watched: String?) -> String? {
+        guard let watched, !watched.isEmpty else { return nil }
+        guard let entry = addresses.first(where: { WalletWatch.sameAddress($0.address, watched) })
+        else { return nil }
+        return displayName(for: entry)
+    }
+
     private func persist() {
         if let data = try? JSONEncoder().encode(addresses) {
             UserDefaults.standard.set(data, forKey: Self.key)

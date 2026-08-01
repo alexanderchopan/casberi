@@ -618,11 +618,26 @@ private struct ShareBar: View {
 /// width it was decoration, and tapping a chip scopes the WHOLE feed to that
 /// wallet, where the same line is drawn at full width as the room's headline.
 /// So the read isn't lost, it's one tap away and bigger.
+/// VENUES JOIN THE STRIP (2026-07-31). The crown number above has merged
+/// connected exchange balances and staked-validator ETH since §163, but this
+/// strip only ever decomposed watched wallets — so a setup whose main holding
+/// sits on Coinbase read as a number with chips beneath it that quietly
+/// accounted for a fraction of it. A venue chip differs in two ways, both
+/// forced by what's true of a venue rather than chosen for looks: it wears its
+/// NAME instead of a face (there's no address to derive one from), and it
+/// carries NO delta (the value line is recorded per watched wallet, so a venue
+/// has no history to difference — and a 0% pill would be a claim, not a
+/// blank). It also isn't a button: the feed scopes by wallet address, so
+/// tapping a venue could only ever do nothing (the dead-control rule).
 struct WalletFaceChips: View {
     struct Entry: Identifiable {
-        let id: String        // the address — stable, value-typed
+        let id: String        // the address (or venue id) — stable, value-typed
         let value: Double
-        let change: Double
+        /// nil where no honest delta exists — a venue with no recorded line.
+        let change: Double?
+        /// nil for a watched wallet, whose address IS its face; the venue's
+        /// display name otherwise.
+        var venueLabel: String? = nil
     }
 
     let entries: [Entry]
@@ -643,27 +658,50 @@ struct WalletFaceChips: View {
         .scrollIndicators(.hidden)
     }
 
+    @ViewBuilder
     private func chip(_ entry: Entry) -> some View {
-        Button {
-            DSHaptic.selection()
-            onPick(entry.id)
-        } label: {
-            HStack(spacing: 6) {
-                WalletFace(address: entry.id, size: 20, circular: true)
-                Text(TokenStats.compact(entry.value))
+        if entry.venueLabel == nil {
+            Button {
+                DSHaptic.selection()
+                onPick(entry.id)
+            } label: {
+                capsule(entry)
+            }
+            .buttonStyle(.plain)
+        } else {
+            // A read, not a door — see the type's own note on why a venue
+            // chip can't be tappable.
+            capsule(entry)
+        }
+    }
+
+    private func capsule(_ entry: Entry) -> some View {
+        HStack(spacing: 6) {
+            if let venue = entry.venueLabel {
+                Text(venue)
                     .dsText(.label12).fontWeight(.semibold)
-                    .foregroundStyle(DS.textPrimary)
-                    .monospacedDigit()
-                Text(TokenChartStyle.changeText(entry.change))
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
+            } else {
+                WalletFace(address: entry.id, size: 20, circular: true)
+            }
+            Text(TokenStats.compact(entry.value))
+                .dsText(.label12).fontWeight(.semibold)
+                .foregroundStyle(DS.textPrimary)
+                .monospacedDigit()
+            if let change = entry.change {
+                Text(TokenChartStyle.changeText(change))
                     .dsText(.label12)
-                    .foregroundStyle(TokenChartStyle.accent(change: entry.change, scheme: scheme))
+                    .foregroundStyle(TokenChartStyle.accent(change: change, scheme: scheme))
                     .monospacedDigit()
             }
-            .padding(.leading, 4).padding(.trailing, DS.Space.s3).padding(.vertical, 4)
-            .background(Capsule(style: .continuous).fill(DS.fillFaint))
-            .contentShape(Capsule(style: .continuous))
         }
-        .buttonStyle(.plain)
+        // A face sits tight to the leading edge; a word needs the same gutter
+        // as the trailing edge or the capsule reads lopsided.
+        .padding(.leading, entry.venueLabel == nil ? 4 : DS.Space.s3)
+        .padding(.trailing, DS.Space.s3).padding(.vertical, 4)
+        .background(Capsule(style: .continuous).fill(DS.fillFaint))
+        .contentShape(Capsule(style: .continuous))
     }
 }
 
@@ -1048,7 +1086,12 @@ struct WalletWorthALookTray: View {
 
     private var actionRows: [ActionRow] {
         liquidation.map(ActionRow.liquidation)
-            + activeApprovals.map { ActionRow.approval(id: $0.id.uuidString, thing: $0) }
+            // `.live` at the boundary (corollary 4): `activeApprovals` is a
+            // held `[Thing]`, and every read below — the id captured here, the
+            // title, the granted date — is a stored-property read that traps
+            // on a model a foreground heal tombstoned after this array was
+            // handed over.
+            + activeApprovals.live.map { ActionRow.approval(id: $0.id.uuidString, thing: $0) }
             + delegations.map(ActionRow.delegation)
             + safeSignatures.map(ActionRow.safe)
     }
@@ -1509,16 +1552,78 @@ struct WalletWorthALookTray: View {
 
     private func liquidationRow(_ w: WalletWarning) -> some View {
         actionRow(icon: "chart.line.downtrend.xyaxis", hot: true, title: w.title,
-                  subtitle: w.subtitle, door: door(w))
+                  subtitle: Self.subline([whose(watched: w.address), w.subtitle]),
+                  door: door(w))
     }
 
     /// An approval thing already carries its own Revoke.cash page as
     /// `content` (`WalletApprovals`' own field); its chain (not otherwise
     /// tracked as a dedicated field) is read back out of `sourceRef`.
+    ///
+    /// The subline is the row's whole context, in decision order: WHOSE wallet
+    /// is exposed, where, and since when.
     private func approvalActionRow(_ thing: Thing) -> some View {
         actionRow(icon: "key.fill", hot: false, title: thing.title,
-                  subtitle: approvalChain(thing),
+                  subtitle: Self.subline([whose(stored: thing.walletAddress),
+                                          approvalChain(thing),
+                                          Self.grantedLine(thing)]),
                   door: URL(string: thing.content).map { (String(localized: "Revoke"), $0) })
+    }
+
+    /// "Granted Mar 2024" — the fact that turns a live approval from a notice
+    /// into a decision (2026-07-31). A forgotten two-year-old unlimited grant
+    /// is precisely what Revoke.cash exists for; one made this morning is
+    /// probably you, and the row reads differently for each.
+    ///
+    /// Month and year, never a weekday or a bare month: the year is what
+    /// carries "this is old", and the app has already paid once for a
+    /// date format that left a reader guessing which one was meant
+    /// (Aerodrome's vote window, 2026-07-30).
+    ///
+    /// Silent when unknown. `grantedAt` is set only from a real block
+    /// timestamp, so nil here means "we never read the block", not "it's
+    /// new" — and an approval that landed before the field existed carries
+    /// nil forever. Saying nothing is the only honest reading of that.
+    private static func grantedLine(_ thing: Thing) -> String? {
+        guard thing.isLive, let granted = thing.grantedAt else { return nil }
+        return String(localized:
+            "Granted \(granted.formatted(.dateTime.month(.abbreviated).year()))")
+    }
+
+    /// Whose wallet a row is about — stated only when more than one is
+    /// watched (prd §241's own recorded follow-up). With a single wallet
+    /// there is nothing to disambiguate, the same guard the feed's source
+    /// header already keeps.
+    ///
+    /// Only two of the four actionable kinds get it, and the asymmetry is the
+    /// point rather than an oversight: a delegation's title already opens with
+    /// the wallet's label ("vitalik.eth delegates to …") and a Safe row's
+    /// reads "… on vitalik.eth's Safe", so prefixing those would print the
+    /// same name twice in one row. An approval names only the spender and a
+    /// liquidation only the protocol — those are the rows where "which of my
+    /// wallets is exposed" goes unanswered, and it's the fact you need BEFORE
+    /// tapping Revoke, since that page asks you to connect the wallet in
+    /// question.
+    private var namesWallet: Bool { WalletStore.shared.addresses.count > 1 }
+
+    /// A landed thing's wallet — stamped as the RESOLVED hex, so it goes
+    /// through the store's scope matching rather than a raw compare.
+    private func whose(stored address: String?) -> String? {
+        guard namesWallet else { return nil }
+        return WalletStore.shared.displayName(forStored: address)
+    }
+
+    /// A warning's wallet — carried in the WATCHED spelling, the other form.
+    private func whose(watched address: String?) -> String? {
+        guard namesWallet else { return nil }
+        return WalletStore.shared.displayName(forWatched: address)
+    }
+
+    /// The row's subline, dropping whatever isn't known — so a missing fact
+    /// costs a phrase, never a stray separator.
+    private static func subline(_ parts: [String?]) -> String? {
+        let kept = parts.compactMap { $0 }.filter { !$0.isEmpty }
+        return kept.isEmpty ? nil : kept.joined(separator: " · ")
     }
 
     /// The title already states the whole fact ("X delegates to Y on
