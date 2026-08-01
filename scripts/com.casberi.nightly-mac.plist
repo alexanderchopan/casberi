@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Nightly Mac verification. Copy to ~/Library/LaunchAgents/ and bootstrap it:
+
+    cp scripts/com.casberi.nightly-mac.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.casberi.nightly-mac.plist
+
+  A LaunchAgent (not a Daemon) because the run drives a real GUI app and needs
+  the logged-in user's window server session.
+
+  03:20 rather than 03:00: the run opens and closes app windows for a couple
+  of minutes, so it wants an hour nobody is at the keyboard — and every cron
+  fleet on earth piles onto :00.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.casberi.nightly-mac</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>-lc</string>
+        <string>/Users/alexanderchopan/Developer/casberi/scripts/nightly-mac.sh</string>
+    </array>
+
+    <!-- -lc above gives the job a login shell, so xcodebuild/git/python3 are
+         on PATH exactly as they are in a terminal. A LaunchAgent otherwise
+         inherits a minimal PATH and the build fails on "xcodebuild: not
+         found" with no other symptom. -->
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key><integer>3</integer>
+        <key>Minute</key><integer>20</integer>
+    </dict>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/alexanderchopan/Developer/casberi</string>
+
+    <!-- The wrapper writes its own ledger; these two catch anything that dies
+         before the wrapper can (a bad PATH, a missing script). -->
+    <key>StandardOutPath</key>
+    <string>/Users/alexanderchopan/Developer/casberi/scripts/output/nightly-mac.stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/alexanderchopan/Developer/casberi/scripts/output/nightly-mac.stderr.log</string>
+
+    <!-- Missed runs (lid closed, machine off) are SKIPPED, not queued: a
+         nightly that fires the moment you open the laptop would seize the
+         machine for a build while you are trying to use it. -->
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>

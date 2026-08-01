@@ -59,9 +59,20 @@ CRASHDIR="$HOME/Library/Logs/DiagnosticReports"
 # Perf ceilings. Separate history + ceilings from iOS on purpose: these are
 # different silicon running a different binary, so a shared baseline would
 # make every comparison meaningless in both directions.
-LAUNCH_CEIL=900;   LAUNCH_RATIO=140
-MEM_CEIL=600;      MEM_RATIO=140
-ANSWER_CEIL=12000; ANSWER_RATIO=160
+#
+# The RATIOS are deliberately looser than verify.sh's, from four back-to-back
+# runs of identical code on 2026-08-01: launch 190/400/237/378ms and answer
+# 1332/2178/3194ms. That is ~2x and ~2.4x of pure run-to-run noise — the
+# answer metric ends in an on-device model inference, which is the least
+# repeatable thing this app does, and launch varies with whatever else the Mac
+# is doing at 03:20. At verify.sh's 140/160 every single night flags a
+# REGRESSION, and a nightly that always warns is a nightly nobody reads.
+# Memory is the stable one (104–126MB) and keeps a tight ratio.
+# Tighten these when there is enough history to know the real distribution;
+# the absolute ceilings are what catch a genuine blow-up in the meantime.
+LAUNCH_CEIL=900;   LAUNCH_RATIO=200
+MEM_CEIL=600;      MEM_RATIO=150
+ANSWER_CEIL=12000; ANSWER_RATIO=250
 
 step() { print -P "%F{cyan}▶ $1%f"; }
 ok()   { print -P "%F{green}✓ $1%f"; }
@@ -234,7 +245,13 @@ probe intent 'Intent probe: [0-9]+ hits' 25 -intentProbe "Ring"
 # below is keyless by construction — the Alchemy-backed ones (-holdingsProbe,
 # -portfolioProbe, -peerProbe, -approvalProbe, -prepareProbe) are deliberately
 # absent, and adding one would put a bill on the nightly.
+LIVE_SKIPPED=0
 if [[ "${SKIP_LIVE:-0}" == "1" ]]; then
+  # Recorded, not just printed. A skip is an operator's choice rather than a
+  # failure, so it isn't a warning — but a ledger row that reads exactly like
+  # a full pass while three checks never ran is the silent-coverage-gap this
+  # repo bans everywhere else.
+  LIVE_SKIPPED=1
   warn "live integrations skipped (SKIP_LIVE=1)"
 else
   step "Live integrations (warn-only, keyless)"
@@ -372,5 +389,12 @@ print -r -- ""
 if (( ${#WARNINGS} )); then
   warn "${#WARNINGS} live-integration warning(s) — deterministic checks all passed"
 fi
+# One machine-readable line for nightly-mac.sh to parse. It exists because the
+# wrapper's first cut counted "⚠" characters in the console and scored a clean
+# run as PASS(5warn): the perf section prints ⚠ for its own REGRESSION/CEILING
+# flags, which are REPORTED BY DESIGN and never gate anything. Conflating those
+# with a real third-party outage is how a ledger becomes noise. Two counts,
+# kept apart, named.
+print -r -- "SUMMARY live_warnings=${#WARNINGS} perf_flags=${#FLAGS} live_skipped=$LIVE_SKIPPED"
 ok "mac verify complete → $OUT"
 exit 0
