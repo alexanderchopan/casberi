@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Casberi Blocks</title>
-<meta name="description" content="Tetris with two buttons, played with every app Casberi connects to.">
+<meta name="description" content="Falling blocks, built out of every app Casberi connects to.">
 <meta property="og:title" content="Casberi Blocks">
-<meta property="og:description" content="Two buttons. Every app icon. The pieces turn on their own.">
+<meta property="og:description" content="Falling blocks, made of every app you connect.">
 <meta property="og:image" content="https://casberi.app/m/e.png">
 <meta name="fc:miniapp" content='{"version":"1","imageUrl":"https://casberi.app/m/e.png","button":{"title":"Play Casberi Blocks","action":{"type":"launch_frame","name":"Casberi Blocks","url":"https://casberi.app/blocks.html","splashImageUrl":"https://casberi.app/m/s.png","splashBackgroundColor":"#0a0c10"}}}'>
 <style>
@@ -105,35 +105,50 @@ body{
 .rot i.half{background:rgba(59,140,240,.45);}
 
 /* ---------- Controls ---------- */
-.pad{display:flex;gap:11px;width:100%;flex:none;}
+.pad{display:flex;gap:10px;width:100%;flex:none;}
 .btn{
-  flex:1;height:78px;border:0;border-radius:22px;
-  background:linear-gradient(180deg,#242a37,#161a23);
+  flex:1;height:82px;border:0;border-radius:26px;
   color:var(--ink);
-  font-size:26px;font-weight:700;
+  font-size:27px;font-weight:700;line-height:1;
   display:flex;align-items:center;justify-content:center;
-  position:relative;overflow:hidden;
-  /* depth without a hairline: an inset highlight, not a border */
-  box-shadow:0 1px 0 rgba(255,255,255,.07) inset, 0 8px 20px rgba(0,0,0,.42);
-  transition:transform .11s cubic-bezier(.2,.7,.2,1), box-shadow .11s ease, filter .11s ease;
+  position:relative;overflow:hidden;isolation:isolate;
+  /* Each key is a lit slab: a bright top edge, a darker belly, and a glow
+     underneath. Depth comes from inset light — never a drawn line. */
+  background:
+    radial-gradient(120% 80% at 50% -20%, rgba(255,255,255,.16), transparent 60%),
+    linear-gradient(180deg,#2b3242,#141821);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.14) inset,
+    0 -10px 22px rgba(0,0,0,.35) inset,
+    0 10px 24px rgba(0,0,0,.45);
+  transition:transform .12s cubic-bezier(.2,.8,.2,1), box-shadow .12s ease, filter .12s ease;
 }
+/* pressing sinks the slab and kills its own drop shadow */
 .btn:active,.btn.on{
-  transform:translateY(2px) scale(.972);
-  box-shadow:0 2px 8px rgba(0,0,0,.5);
-  filter:brightness(1.32);
+  transform:translateY(3px) scale(.965);
+  box-shadow:0 1px 0 rgba(255,255,255,.10) inset, 0 -6px 16px rgba(0,0,0,.45) inset, 0 2px 6px rgba(0,0,0,.5);
+  filter:brightness(1.3);
 }
-/* Drop is the commit, so it reads as the accent action. It has exactly ONE
-   verb — tap and the piece slams, like every other falling-block game.
-   Overloading it with a nudge made a tap feel like a rotate, which is the
-   opposite of what Tetris trains people to expect. */
+/* the icons get a soft halo so they read as lit, not printed */
+.btn > .g{position:relative;z-index:2;display:flex;filter:drop-shadow(0 0 9px rgba(255,255,255,.30));}
+.btn > .g svg{display:block;}
+
+/* Each verb owns a colour, so no two keys are ever confused for each other
+   the way ↓ and ▼ once were. */
+.btn.turn{
+  flex:0 0 19%;font-size:26px;
+  background:
+    radial-gradient(120% 80% at 50% -20%, rgba(255,255,255,.20), transparent 60%),
+    linear-gradient(180deg,#8f6ad8,#5b3ba3);
+  box-shadow:0 1px 0 rgba(255,255,255,.26) inset, 0 -10px 22px rgba(0,0,0,.28) inset, 0 10px 26px rgba(133,93,205,.42);
+}
 .btn.drop{
-  flex:0 0 26%;font-size:25px;
-  background:linear-gradient(180deg,#4a97f5,#1461c9);
-  box-shadow:0 1px 0 rgba(255,255,255,.22) inset, 0 8px 24px rgba(22,115,230,.42);
+  flex:0 0 27%;font-size:26px;
+  background:
+    radial-gradient(120% 80% at 50% -20%, rgba(255,255,255,.22), transparent 60%),
+    linear-gradient(180deg,#4a97f5,#1157bd);
+  box-shadow:0 1px 0 rgba(255,255,255,.28) inset, 0 -10px 22px rgba(0,0,0,.28) inset, 0 10px 26px rgba(22,115,230,.48);
 }
-/* The nudge is the optional finesse key — quieter, and off to the side so
-   it can never be hit when someone means to drop. */
-.btn.nudge{flex:0 0 17%;font-size:21px;color:var(--muted);}
 .btn.drop:active,.btn.drop.on{
   box-shadow:0 3px 14px rgba(22,115,230,.55), 0 -2px 10px rgba(0,0,0,.25) inset;
 }
@@ -252,10 +267,7 @@ body{
       <div class="stat"><div class="k">Best</div><div class="v" id="best">0</div></div>
     </div>
     <div class="next">
-      <div>
-        <div class="k">Next</div>
-        <div class="rot" id="rot"><i></i><i></i><i></i><i></i></div>
-      </div>
+      <div class="k">Next</div>
       <div id="nextBox"></div>
       <div id="nextBox2"></div>
     </div>
@@ -266,7 +278,7 @@ body{
     <div class="toast" id="toast"></div>
     <div class="veil" id="veil">
       <h1 id="vTitle">Casberi Blocks</h1>
-      <p id="vBody">There is no rotate button. Pieces turn by themselves — one quarter-turn for every row they fall.<br><br><b>◀ ▶ steer. ▼ drops all the way</b> and locks the shape it has right then — it never turns on the way down. <b>↓ nudges one row</b>, and because a fallen row turns the piece, that is how you buy the angle you want.</p>
+      <p id="vBody">Falling blocks, built out of every app Casberi connects to.<br><br>The arrows move, <b>the purple key turns</b>, and <b>the blue key drops</b> straight to the floor. Fill a row to clear it — and a row of four or more of the same app pays a bonus.</p>
       <div class="legend" id="legend"></div>
       <div class="row">
         <button class="cta" id="vPlay">Play</button>
@@ -276,12 +288,12 @@ body{
   </div>
 
   <div class="pad">
-    <button class="btn" id="bl" aria-label="Move left">◀</button>
-    <button class="btn nudge" id="bn" aria-label="Nudge down one row">↓</button>
-    <button class="btn drop" id="bd" aria-label="Drop all the way">▼</button>
-    <button class="btn" id="br" aria-label="Move right">▶</button>
+    <button class="btn" id="bl" aria-label="Move left"><span class="g"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><polygon points="16,3.5 5.5,12 16,20.5" fill="currentColor"/></svg></span></button>
+    <button class="btn turn" id="bn" aria-label="Turn the piece"><span class="g"><svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 5 22 11 16 11"/><path d="M19.6 15.5a8.5 8.5 0 1 1-2-8.9L22 11"/></svg></span></button>
+    <button class="btn drop" id="bd" aria-label="Drop all the way to the floor"><span class="g"><svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v10.5"/><polyline points="6.5 9.5 12 15 17.5 9.5"/><path d="M5 20h14"/></svg></span></button>
+    <button class="btn" id="br" aria-label="Move right"><span class="g"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><polygon points="8,3.5 18.5,12 8,20.5" fill="currentColor"/></svg></span></button>
   </div>
-  <div class="hint">▼ drops all the way · ↓ nudges one row, which turns it</div>
+  <div class="hint">Keys: ← → move · ↑ turns · ↓ drops to the floor</div>
 
 </div>
 
@@ -338,7 +350,7 @@ const nextIcon = makeBag(NAMES);
 /* ---------------- state ---------------- */
 let grid, piece, queue, score, lines, level, over, started;
 let dropAcc, lockAcc, lockResets, clearing, clearAcc, clearRows;
-let rowsSinceTurn, clearedApps, best;
+let clearedApps, best;
 
 const el = id => document.getElementById(id);
 const boardEl = el('board'), veil = el('veil');
@@ -355,7 +367,7 @@ function reset(){
   score = 0; lines = 0; level = 1; over = false;
   dropAcc = 0; lockAcc = 0; lockResets = 0;
   clearing = null; clearAcc = 0; clearRows = null;
-  rowsSinceTurn = 0; clearedApps = new Set();
+  clearedApps = new Set();
   queue = [spawnData(), spawnData()];
   newPiece();
   syncHUD();
@@ -371,7 +383,6 @@ function newPiece(){
   queue.push(spawnData());
   piece = { m: d.m, icon: d.icon, key: d.key,
             x: ((COLS - d.m.length) / 2) | 0, y: -topPad(d.m), rot: 0 };
-  rowsSinceTurn = 0;
   tint(d.icon);
   if (hits(piece.m, piece.x, piece.y)) gameOver();
   drawNext();
@@ -394,19 +405,10 @@ function thud(){
   s.classList.add('thud');
 }
 
-/* How many rows a piece must fall to earn one quarter-turn.
-   It rises with level ON PURPOSE: dropInterval already shrinks, so if a
-   turn stayed at one row the piece would simply spin faster and the game
-   would scale on reflex instead of on planning. Costing two rows late on
-   means you fall faster but steer the ANGLE more finely. */
-const rowsPerTurn = () => (level >= 8 ? 2 : 1);
-
-/* One row of descent, from gravity or from a nudge — both pay into the
-   same turn meter, which is what makes soft drop a rotate button. */
-function advanceTurn(){
-  rowsSinceTurn++;
-  if (rowsSinceTurn >= rowsPerTurn()){ rowsSinceTurn = 0; autoTurn(); }
-}
+/* Rotation is a plain control now. Pieces used to turn by themselves, one
+   quarter-turn per row fallen — it made the game a lookahead puzzle, but it
+   also made every drop feel like it rotated something, and it was simply
+   hard to play. Falling and turning are fully independent again. */
 
 /* rows of empty space at the top of the matrix — so pieces enter flush */
 function topPad(m){
@@ -426,9 +428,10 @@ function hits(m, px, py){
   return false;
 }
 
-/* The automatic quarter-turn. Tries kicks; if nothing fits it simply
-   does not turn this row — the piece still falls, so it can never stall. */
-function autoTurn(){
+/* One quarter-turn clockwise. Tries a few kicks so a piece snug against a
+   wall or the stack can still turn; if nothing fits, it refuses rather than
+   forcing an overlap. */
+function turnPiece(){
   const t = rotCW(piece.m);
   for (const [dx, dy] of KICKS){
     if (!hits(t, piece.x + dx, piece.y + dy)){
@@ -451,14 +454,13 @@ function move(dx){
 
 const grounded = () => hits(piece.m, piece.x, piece.y + 1);
 
-/* Soft drop: spend one row of height to buy one step of rotation. This is
-   the closest thing to a rotate button the game has, and it is deliberately
-   not free — deep in a stack there is no height left to spend. */
-function softDrop(){
+/* The rotate control. Free — it costs no height and no time, which is what
+   every falling-block game trains people to expect. Turning while resting
+   on the stack resets the lock timer (bounded) so you can still adjust. */
+function rotate(){
   if (over || !started || clearing) return false;
-  if (grounded()) return false;          // nothing left to spend
-  piece.y++; score += 1; dropAcc = 0;
-  advanceTurn();
+  if (!turnPiece()) return false;
+  if (grounded() && lockResets < MAX_LOCK_RESETS){ lockAcc = 0; lockResets++; }
   syncHUD(); render();
   return true;
 }
@@ -545,7 +547,7 @@ function commitClear(){
     buzz([0, 25, 50, 25]);
     const t = el('toast');
     t.innerHTML = '<span class="bonus">Level ' + level + '</span>' +
-                  (rowsPerTurn() > 1 ? ' <span class="dim">— a turn now costs two rows</span>' : '');
+                  ' <span class="dim">— they fall faster now</span>';
     t.classList.add('show');
     clearTimeout(t._h);
     t._h = setTimeout(() => t.classList.remove('show'), 1600);
@@ -739,14 +741,6 @@ function syncHUD(){
   el('lines').textContent = lines;
   el('level').textContent = level;
   el('best').textContent  = Math.max(best, score);
-  const pips = el('rot').children;
-  const part = rowsPerTurn() > 1 && rowsSinceTurn > 0;
-  for (let i = 0; i < 4; i++){
-    const isNow  = piece && i === piece.rot;
-    const isNext = piece && i === ((piece.rot + 1) & 3);
-    pips[i].classList.toggle('on', !!isNow);
-    pips[i].classList.toggle('half', !isNow && !!isNext && part);
-  }
 }
 
 /* ---------------- loop ---------------- */
@@ -773,9 +767,7 @@ function loop(t){
     dropAcc += dt;
     if (dropAcc >= dropInterval()){
       dropAcc = 0;
-      piece.y++;
-      advanceTurn();         // a fallen row pays into the turn meter
-      syncHUD();
+      piece.y++;             // falling only — turning is the player's job
     }
   }
   stepDAS(dt);
@@ -803,7 +795,7 @@ function aim(dir){ dasDir = dir; dasAcc = 0; dasCharged = false; }
    ambiguity. ↓ is the separate finesse key that spends a row to turn. */
 function down(side){
   if (side === 'd'){ hardDrop(); return; }
-  if (side === 'n'){ softDrop(); return; }
+  if (side === 'n'){ rotate(); return; }
   held[side] = true;
   aim(side === 'l' ? -1 : 1);
   move(dasDir);
@@ -860,20 +852,21 @@ addEventListener('pointerup', release);
 addEventListener('pointercancel', release);
 wire('bl', 'l'); wire('br', 'r'); wire('bd', 'd'); wire('bn', 'n');
 
+/* Down means DOWN — it goes to the floor, like the ▼ key it mirrors.
+   Rotation lives on Up (and X/Z), which is where falling-block games put it. */
 addEventListener('keydown', e => {
-  // ArrowDown is allowed to repeat — nudging is meant to be spammable.
-  if (e.key === 'ArrowDown'){ e.preventDefault(); el('bn').classList.add('on'); softDrop(); return; }
   if (e.repeat) return;
   if (e.key === 'ArrowLeft')  { el('bl').classList.add('on'); down('l'); }
   if (e.key === 'ArrowRight') { el('br').classList.add('on'); down('r'); }
-  if (e.key === ' ')          { e.preventDefault(); el('bd').classList.add('on'); hardDrop(); }
+  if (e.key === 'ArrowUp' || e.key === 'x' || e.key === 'z'){ e.preventDefault(); el('bn').classList.add('on'); rotate(); }
+  if (e.key === 'ArrowDown' || e.key === ' '){ e.preventDefault(); el('bd').classList.add('on'); hardDrop(); }
   if (e.key === 'Enter' && !started) start();
 });
 addEventListener('keyup', e => {
   if (e.key === 'ArrowLeft')  { el('bl').classList.remove('on'); up('l'); }
   if (e.key === 'ArrowRight') { el('br').classList.remove('on'); up('r'); }
-  if (e.key === ' ') el('bd').classList.remove('on');
-  if (e.key === 'ArrowDown') el('bn').classList.remove('on');
+  if (e.key === 'ArrowUp' || e.key === 'x' || e.key === 'z') el('bn').classList.remove('on');
+  if (e.key === 'ArrowDown' || e.key === ' ') el('bd').classList.remove('on');
 });
 
 /* ---------------- shell ---------------- */
@@ -918,7 +911,7 @@ el('vShare').addEventListener('click', async () => {
   const text = 'Casberi Blocks: ' + score + ' · ' + lines +
                (lines === 1 ? ' line' : ' lines') +
                (apps.length ? ' — cleared ' + named + tail + '.' : '.') +
-               ' No rotate button; the pieces turn on their own.';
+               ' Falling blocks made of every app you connect.';
   const url = 'https://casberi.app/blocks.html';
   try {
     if (FC && FC.actions.composeCast) { await FC.actions.composeCast({ text, embeds: [url] }); return; }
