@@ -20,14 +20,25 @@ import SwiftUI
 /// sheet's opaque background fades in). `RootShell` hides this view entirely
 /// once risen (`if !composerOpen`) so exactly one side of the pair exists at
 /// a time — matchedGeometryEffect needs that alternation to interpolate.
+///
+/// **It rests COMPACT** (user ruling 2026-07-31). The full-width
+/// "Ask your things…" invitation was the heaviest chrome in the app doing its
+/// least-frequent job: this is a corpus you open and READ, and asking is
+/// occasional — capture arrives through the share sheet, the paste chip and the
+/// bridges. Chrome is priced by frequency of use, so the bar now wears the
+/// shape it used to reach only after a scroll. It is NOT the old FAB restored:
+/// the magnifier stays visible beside the berry, because Find was promoted out
+/// of the risen composer on 2026-07-30 precisely for being undiscoverable, and
+/// a lone berry would re-bury it a month later.
 struct AgentBar: View {
     var hasUnseenSignal: Bool
-    /// Scrolling down folds the bar (2026-07-30) — see `ShellChrome.minimized`,
-    /// whose own doc has described this since the tab-bar era. The words go and
-    /// the glass tightens around the two controls; NOTHING is removed, because
-    /// this is the only agent door on every screen and a door that leaves while
-    /// you scroll is the compromise dropping the tab bar was meant to end.
-    var minimized: Bool = false
+    /// The words, and the full width. FALSE at rest now (see the type's own
+    /// note) — `RootShell` grants it only as a teaching grace, until the agent
+    /// has been raised once on this device, and `ShellChrome.minimized` folds
+    /// it away early if that first-time reader scrolls before ever asking.
+    /// The flag still drives the STRIP's own 56→48 fold; it simply no longer
+    /// decides this bar's resting shape.
+    var expanded: Bool = false
     var morphNS: Namespace.ID?
     /// The magnifier (2026-07-30). Find is deterministic and writes nothing —
     /// a genuinely different act from asking — but it existed only as a chip
@@ -37,11 +48,34 @@ struct AgentBar: View {
     /// focused, Find one keystroke away. Same surface, same ruling (§215),
     /// one fewer act of faith.
     var onFind: () -> Void = {}
+    /// Hold the bar → every source at once (`SourcesTray`, 2026-07-31). It
+    /// lives HERE rather than on the chip strip's catalogue door for three
+    /// reasons: this bar is in the bottom thumb zone and the strip is at the
+    /// top, which is the hardest place to reach on a phone; this bar is hosted
+    /// on `RootShell`'s own ZStack, so the gesture works from Settings, a
+    /// bridge setup form, anywhere, while the strip only exists on
+    /// `MainSurface`; and the catalogue door is this app's most
+    /// gesture-cursed control (three reports, `highPriorityGesture` belt and
+    /// braces, the safeAreaInset-over-pager arbitration), which is not a place
+    /// to stack a second recognizer.
+    var onSources: () -> Void = {}
     var action: () -> Void
+
+    /// A hold has fired, so the button's own touch-up must not act on top of
+    /// it: a SwiftUI Button fires on RELEASE however long the press lasted,
+    /// and the long-press gesture ends at its threshold while the finger is
+    /// still down — so this flag is always set before the tap it exists to
+    /// swallow. Self-clearing on a timer because a press that ends by dragging
+    /// off never delivers that tap at all, and a flag left set would eat the
+    /// next legitimate one.
+    @State private var heldForSources = false
 
     var body: some View {
         HStack(spacing: 0) {
-            Button(action: onFind) {
+            Button {
+                guard !consumeHold() else { return }
+                onFind()
+            } label: {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(DS.textSecondary)
@@ -55,9 +89,12 @@ struct AgentBar: View {
             .buttonStyle(.plain)
             .accessibilityLabel(Text("Find in your things"))
 
-            Button(action: action) {
+            Button {
+                guard !consumeHold() else { return }
+                action()
+            } label: {
                 HStack(spacing: DS.Space.s3) {
-                    if !minimized {
+                    if expanded {
                         Text("Ask your things…")
                             .dsText(.body17)
                             .foregroundStyle(DS.textTertiary)
@@ -73,20 +110,60 @@ struct AgentBar: View {
                 .padding(.trailing, DS.Space.s4)
                 .padding(.leading, DS.Space.s1)
                 .padding(.vertical, DS.Space.s3)
-                .frame(maxWidth: minimized ? nil : .infinity, alignment: .leading)
+                .frame(maxWidth: expanded ? .infinity : nil, alignment: .leading)
                 .contentShape(Capsule())
                 .dsHover()
             }
             .buttonStyle(.plain)
-            // The words carried the button's name; folded, it needs its own.
+            // The words carried the button's name; compact, it needs its own.
             .accessibilityLabel(Text("Ask your things"))
+            // The hold, reachable without holding. It rides THIS button rather
+            // than the container: a custom action on a plain layout view has no
+            // accessibility element of its own to be found on, and VoiceOver
+            // would simply never offer it.
+            .accessibilityAction(named: Text("Your sources"), onSources)
         }
         .padding(.leading, DS.Space.s1)
-        // Folded, the glass hugs its two controls instead of spanning the
+        // At rest the glass hugs its two controls instead of spanning the
         // screen — the shape itself says the bar has yielded to the content.
-        .frame(maxWidth: minimized ? nil : .infinity)
+        .frame(maxWidth: expanded ? .infinity : nil)
         .dsGlass(cornerRadius: DS.Radius.pill)
+        // The whole pill, not a per-icon zone: at ~110pt there isn't room to
+        // split one hold between two targets, and the tray it opens belongs to
+        // the bar as a whole rather than to asking or to finding.
+        // `simultaneous`, so the two Buttons above keep their own taps — each
+        // guards on `consumeHold()` for the release that follows a hold.
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.45)
+                // Cleared when the NEXT press BEGINS, never on a timer. A timer
+                // has to guess how long a finger stays down, and it guesses
+                // wrong in the most ordinary case there is: hold until the tray
+                // appears, look at it, then let go — by which time a 900ms
+                // clear has already expired and the release raises the agent on
+                // top of the tray. Press-begin is the one moment that is always
+                // before the release it has to swallow and always after the
+                // last one, so a hold that ends by dragging off (no touch-up
+                // inside, no button action, flag left set) can't eat the next
+                // real tap either.
+                .onChanged { _ in heldForSources = false }
+                .onEnded { _ in
+                    heldForSources = true
+                    // Heavier than a selection tick, the way picking something
+                    // up is (`DSHaptic.lift`) — the hold has been RECEIVED,
+                    // which is the one thing a gesture with no visible
+                    // affordance must say.
+                    DSHaptic.lift()
+                    onSources()
+                }
+        )
         .modifier(MorphMatch(ns: morphNS))
+    }
+
+    /// True if this touch-up is the tail of a hold that already acted.
+    private func consumeHold() -> Bool {
+        guard heldForSources else { return false }
+        heldForSources = false
+        return true
     }
 }
 

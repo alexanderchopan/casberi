@@ -44,6 +44,16 @@ struct RootShell: View {
     @State private var landingNode: HomeRoute.Node?
     @AppStorage("privacy.hidePreviews") private var hidePreviews = true
     @AppStorage("firstThingSaved") private var firstThingSaved = false
+    /// The bar's teaching grace (2026-07-31). `AgentBar` rests COMPACT now —
+    /// but a bar that has never been used should still say what it is once, so
+    /// it wears the full-width "Ask your things…" until the agent has been
+    /// raised on this device by ANY path, then hugs its two controls forever.
+    /// Persisted, unlike the session-scoped `agentEverOpened` above: the words
+    /// are a first-run explanation, and re-explaining on every cold launch is
+    /// what made them permanent furniture in the first place.
+    @AppStorage("agent.everRaised") private var agentEverRaised = false
+    /// Every source at once (`SourcesTray`) — raised by holding the agent bar.
+    @State private var sourcesOpen = false
     @Environment(\.scenePhase) private var scenePhase
     @State private var hasBeenActive = false
     /// The last answer's grounding — a follow-up ("which ones were from
@@ -141,6 +151,9 @@ struct RootShell: View {
             if open {
                 OnDeviceModel.resetConversation()
                 agentEverOpened = true
+                // The teaching grace is spent the first time the agent rises
+                // by any path — the bar's words have done their one job.
+                agentEverRaised = true
                 // The whisper's job is done however the agent rose — it
                 // never returns until a new day has something to say.
                 whisper = nil
@@ -571,6 +584,20 @@ struct RootShell: View {
                 || UserDefaults.standard.bool(forKey: "openComposer") {
                 composerOpen = true
             }
+            // Debug hook: `-openSources YES` raises the sources tray — the
+            // agent bar's HOLD, which no headless run can perform (a long
+            // press isn't a launch arg and computer-use is blocked in
+            // scheduled runs). Delayed so `chrome.chipOrder` has been mirrored
+            // from `MainSurface.chipLabels` first; opening at mount would
+            // render the tray against the ["All"] placeholder and read as a
+            // one-source corpus.
+            if UserDefaults.standard.bool(forKey: "openSources") {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(600))
+                    NSLog("[Casberi] openSources: %@", chrome.chipOrder.joined(separator: ", "))
+                    sourcesOpen = true
+                }
+            }
             // `-openComposerDelay <s>` opens the composer after a delay.
             let composerDelay = UserDefaults.standard.double(forKey: "openComposerDelay")
             if composerDelay > 0 {
@@ -683,6 +710,34 @@ struct RootShell: View {
         }
         .sheet(item: $deepLinkPerson) { person in
             rootPresented(SocialProfileCard(profile: person))
+        }
+        // Every source at once (2026-07-31) — the agent bar's hold. Hosted
+        // HERE, beside the bar that raises it, so it opens over a pushed room
+        // (Apps, Settings, a bridge setup form) the same way it opens over the
+        // feed; the chip strip it complements only exists on `MainSurface`.
+        // `chrome.chipOrder` is the strip's own frozen order, mirrored live —
+        // the same array Mac's ⌘1–⌘9 counts along, so the grid and the strip
+        // can never disagree about where a source sits.
+        .sheet(isPresented: $sourcesOpen) {
+            rootPresented(SourcesTray(labels: chrome.chipOrder, active: filter.source) { label in
+                // Land ON the feed that was named. A pick made from a pushed
+                // room would otherwise switch the source BEHIND a Settings
+                // screen still standing on the stack — the tray would close
+                // onto the same room it was opened from, having visibly done
+                // nothing.
+                HomeRoute.shared.path = []
+                guard label != filter.source else { return }
+                withAnimation(DS.Motion.standard) {
+                    filter.source = label
+                    // Entering "All" means all; a source keeps its own tag.
+                    // The chip strip's own rule, restated rather than shared,
+                    // because the two call sites differ on the re-tap branch.
+                    if label == "All" { filter.tag = "All" }
+                }
+                // A pick here teaches the strip exactly as a chip tap does —
+                // this is the same act, reached by a different gesture.
+                ChipMemory.visited(label)
+            })
         }
         .fullScreenCover(isPresented: Binding(
             get: { !onboarded }, set: { if !$0 { onboarded = true } }
@@ -972,10 +1027,13 @@ struct RootShell: View {
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
                     }
                     AgentBar(hasUnseenSignal: KeptAskStore.shared.anyChanged && !agentEverOpened,
-                             // Folds while the feed scrolls down (2026-07-30) —
-                             // `chrome.minimized` finally has the reader its own
-                             // doc comment always described.
-                             minimized: chrome.minimized,
+                             // Compact at rest (user ruling 2026-07-31, see
+                             // `AgentBar`'s own note). The words survive only
+                             // as a first-run grace — and `chrome.minimized`,
+                             // which still folds the chip strip, folds them
+                             // early if that first-time reader scrolls before
+                             // ever asking.
+                             expanded: !agentEverRaised && !chrome.minimized,
                              morphNS: agentMorph,
                              onFind: {
                                  DSHaptic.tap()
@@ -984,7 +1042,8 @@ struct RootShell: View {
                                  // composer reads this and focuses the field.
                                  chrome.focusDraftOnOpen = true
                                  composerOpen = true
-                             }) {
+                             },
+                             onSources: { sourcesOpen = true }) {
                         DSHaptic.tap()
                         // Open onto the Today brief, not the empty chips (prd
                         // §181, user: "make daily brief be the default when a

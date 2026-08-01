@@ -11644,3 +11644,119 @@ text** (never a copy) and runs 100+ assertions, mutation-tested five ways —
 forgetting the zero-decimal currency table, dropping the dispute deadline,
 reading `amount` instead of `amount_due`, removing the silence floor/ceiling/
 dormancy guard, and swapping the median for a mean each make it fail.
+
+---
+
+## §251 — The agent bar rests compact, and holding it opens every source (user: "do you think the app would be better if the source chips were vertical instead of a horizontal row on mobile", "i ask b/c you would then see more", then "or if instead of scrolling they were stacked rows", then "would it be better if the long press was on the agent button eg the casberi logo", "i don't think using the agent is a feature folks will be doing all the time is why i am asking", then "shoudl that be default resting state", "or even do we go back to it being just the icon as a fab basically", 2026-07-31)
+
+The question was about the source chips; the answer turned out to be about the
+agent bar. Both halves are recorded here because the rejected shapes are the
+valuable part — they will be proposed again otherwise.
+
+### 1. The chip strip stays horizontal (both alternatives rejected, with reasons)
+
+Measured on a 402pt phone: `SourceChips.stripInset` (the avatar, the catalogue
+door, and the leading fade ramp) eats 135pt before the first chip, and each chip
+is a 68pt pitch — **four visible, a fifth peeking**, against a corpus that
+routinely runs past twenty. The complaint is real. Neither proposed fix is the
+answer.
+
+**A vertical rail on the phone** shows roughly eight instead of four, and costs
+`PadLayout.railWidth` (88pt) of feed width permanently — 8% of an iPad, **22% of
+a phone**, which is why the identical view is already right on iPad
+(`SourceChips.verticalRail`) and wrong here. It also points the wrong way: the
+feed is a `TabView(.page)` over `MainSurface.feedLabels`, the same array in the
+same order, so the strip is the map of a HORIZONTAL swipe. And the eight it
+reveals are, by `ChipMemory`'s construction, the least-reached-for sources — a
+permanent tax paid to surface the tail.
+
+**Stacked full-width rows** are the retired Home board (§131) wearing new
+clothes: a screen between you and the content. Their one honest gain is LABELS,
+which the strip gave up on 2026-07-09 for making the row scroll.
+
+### 2. The gain the strip couldn't have goes in a tray
+
+`Shell/SourcesTray.swift` — every source at once, five across, each with its
+name, in the strip's own frozen order (`ShellChrome.chipOrder`, mirrored from
+`MainSurface.chipLabels`; NOT alphabetical, because position is half a chip's
+identity when it has no label). Zero permanent chrome, all twenty rather than
+eight, and it is where the labels finally live. The active ring and the dashed
+attention ring read exactly as they do on the strip (the 2026-07-21 ruling that
+selection and breakage must not be one ring in two hues).
+
+### 3. The bar rests COMPACT — the ruling this pass turns on
+
+> "i don't think using the agent is a feature folks will be doing all the time
+> is why i am asking"
+
+Chrome is priced by frequency of use. The full-width "Ask your things…" bar was
+the heaviest chrome in the app doing its least-frequent job: this is a corpus
+you open and READ; capture arrives through the share sheet, the paste chip and
+the bridges. `AgentBar.minimized` became `expanded`, and it is FALSE at rest —
+the bar now wears at rest the shape it previously reached only after a scroll.
+
+**It is not the FAB restored.** The magnifier stays beside the berry: Find was
+promoted out of the risen composer on 2026-07-30 *precisely* for being
+undiscoverable, and a lone berry would re-bury it a month later. Two controls,
+~110pt of glass.
+
+**One teaching grace**, `@AppStorage("agent.everRaised")`: the words survive
+until the agent has been raised once on this device, then never return. A
+first-run explanation that re-explains on every cold launch is how it became
+permanent furniture in the first place. `ShellChrome.minimized` still folds the
+words early if that first-time reader scrolls, and still drives the strip's own
+56→48 fold — it simply no longer decides the bar's resting shape.
+
+### 4. The hold lives on the bar, not on the catalogue door
+
+Three reasons, all structural. The bar is in the bottom thumb zone and the strip
+is at the top, which is the hardest place to reach one-handed — an overlay built
+for *faster* switching, opened from the top, forfeits half its point. The bar is
+hosted on `RootShell`'s own ZStack (ruling 6), so the gesture works from
+Settings, a bridge setup form, anywhere; the strip only exists on `MainSurface`.
+And the catalogue door is this app's most gesture-cursed control — three
+reports, the `highPriorityGesture` belt-and-braces, the
+safeAreaInset-over-pager arbitration — which is not a place to stack a second
+recognizer.
+
+The hold takes the whole pill (at ~110pt there is no room to split one gesture
+between two icons), fires `DSHaptic.lift()` because a gesture with no visible
+affordance must at least say it was received, and is reachable without holding
+via an `accessibilityAction` on the ask button.
+
+**The press-guard is the subtle part.** A SwiftUI Button fires on RELEASE
+however long the press lasted, and `LongPressGesture` ends at its threshold with
+the finger still down — so without a guard, one hold both opens the tray and
+raises the agent. The flag that swallows that release is cleared **when the next
+press begins, never on a timer**: a timer has to guess how long a finger stays
+down and guesses wrong in the most ordinary case there is — hold until the tray
+appears, look at it, let go — by which point the clear has expired and the
+release raises the agent on top of the tray. Press-begin is always after the
+last release and always before the next one, which also means a hold that ends
+by dragging off (no touch-up, no button action, flag left set) cannot eat the
+following real tap.
+
+A pick clears `HomeRoute.path` before switching, so a source named from a pushed
+room lands ON that feed instead of switching it invisibly behind a Settings
+screen; and it calls `ChipMemory.visited`, because this is the same act as a chip
+tap reached by a different gesture.
+
+### Measurement
+
+Built and audited (catalog sync, network reach, SwiftData liveness, all green);
+`-openSources YES` raises the tray headlessly, since a long press is not
+something a launch arg can perform. **The gesture arbitration itself is
+unverified on a device** — the press-guard reasoning above is the argument, not
+a measurement.
+
+### A broken source in the tray opens its FEED, not its repair screen
+
+> "i think it should go to the feed b/c it's one behavior nand user can from
+> their feed go fix it. they can see it broken." (user, 2026-07-31)
+
+Asked whether the dashed-ring cell should divert to the reconnect screen. It
+does not: one cell, one behaviour. A grid where most taps go to a feed and some
+go to a form is a grid you have to read before you can trust — and the feed
+already carries the repair door (its own Manage route), so nothing is lost by
+landing there first. The dashed ring's job is to SAY the connection is broken,
+not to redirect the tap that follows.

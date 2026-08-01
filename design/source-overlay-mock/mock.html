@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent bar at rest + sources tray — as shipped</title>
+<style>
+  /* Tokens lifted from DesignTokens.swift (dark mode) */
+  :root {
+    --page: #000000;
+    --surface-sheet: #111113;
+    --text1: #ffffff;
+    --text2: rgba(235,235,245,0.60);
+    --text3: rgba(235,235,245,0.49);
+    --tint: #1673e6;
+    --attention: #ff9f0a;
+    --glass: rgba(28,28,30,0.62);
+    --scrim: rgba(0,0,0,0.50);
+    --r-sheet: 16px;
+    --r-card: 10px;
+    --s1: 4px; --s2: 10px; --s3: 14px; --s4: 18px; --s6: 24px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0c; color: var(--text1);
+    font-family: -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 44px 24px 64px; gap: 10px;
+  }
+  h1 { font-size: 22px; font-weight: 700; }
+  .sub { font-size: 14px; color: var(--text2); max-width: 700px; text-align: center; line-height: 1.55; }
+  .stage { display: flex; gap: 44px; margin-top: 30px; flex-wrap: wrap; justify-content: center; }
+  .col { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .caption { font-size: 13px; color: var(--text2); max-width: 402px; text-align: center; line-height: 1.55; }
+  .caption b { color: var(--text1); font-weight: 600; }
+  code { font-family: ui-monospace, "SF Mono", monospace; font-size: 12px; color: var(--text1); }
+
+  /* ---- phone frame: iPhone 17 Pro, 402×874 pt ---- */
+  .phone {
+    width: 402px; height: 874px; background: var(--page);
+    border-radius: 56px; overflow: hidden; position: relative;
+    box-shadow: 0 0 0 10px #1a1a1d, 0 24px 80px rgba(0,0,0,0.7);
+    display: flex; flex-direction: column;
+  }
+  .pour { position: absolute; inset: 0 0 auto 0; height: 500px; pointer-events: none;
+    background: linear-gradient(180deg, rgba(22,115,230,0.34), rgba(22,115,230,0) 92%); }
+  .statusbar { position: relative; height: 62px; display: flex; align-items: flex-end;
+    justify-content: space-between; padding: 0 34px 6px; font-size: 15px; font-weight: 600; }
+
+  /* ---- the source strip (unchanged by this pass) ---- */
+  .strip { position: relative; display: flex; align-items: center;
+           padding: var(--s6) 0 var(--s2) var(--s4); gap: var(--s3); }
+  .door { width: 46px; height: 46px; border-radius: 23px; flex: none; background: var(--glass);
+          backdrop-filter: blur(14px); display: flex; align-items: center; justify-content: center; }
+  .avatar { background: linear-gradient(135deg,#3b3b40,#232327); font-size: 17px; }
+  .doorglyph { display: grid; grid-template-columns: repeat(2, 8px); gap: 4px; }
+  .doorglyph span { width: 8px; height: 8px; border-radius: 2.5px; background: rgba(255,255,255,0.85); }
+  .chips { display: flex; gap: var(--s3); overflow: hidden; flex: 1;
+           mask-image: linear-gradient(90deg, transparent 0, black 24px); padding: 3px 0 3px 6px; }
+  .chip { position: relative; width: 56px; height: 56px; flex: none;
+          display: flex; align-items: center; justify-content: center; }
+  .chip .icon { width: 46px; height: 46px; border-radius: 50%; display: flex;
+                align-items: center; justify-content: center; font-size: 15px; font-weight: 700; color: #fff; }
+  .chip.active::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2.5px solid var(--tint); }
+  .chip.broken::after { content: ""; position: absolute; inset: 0; border-radius: 50%;
+                        border: 2.5px dashed var(--attention); }
+  .all { background: var(--glass); backdrop-filter: blur(14px); font-size: 12px; font-weight: 600; }
+
+  /* feed rows */
+  .feed { padding: var(--s3) var(--s4); display: flex; flex-direction: column; gap: var(--s3);
+          position: relative; flex: 1; }
+  .row { background: var(--surface-sheet); border-radius: var(--r-card); height: 76px;
+         box-shadow: 0 6px 18px rgba(0,0,0,0.55); display: flex; align-items: center;
+         gap: 12px; padding: 0 14px; flex: none; }
+  .row .thumb { width: 48px; height: 48px; border-radius: 8px; background: #1f1f23; flex: none; }
+  .row .lines { flex: 1; display: flex; flex-direction: column; gap: 7px; }
+  .row .l1 { height: 11px; border-radius: 5px; background: rgba(255,255,255,0.16); width: 82%; }
+  .row .l2 { height: 9px; border-radius: 5px; background: rgba(255,255,255,0.07); width: 52%; }
+
+  /* ---- the agent bar ---- */
+  .barwrap { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 var(--s4) 28px;
+             display: flex; justify-content: center; z-index: 5; }
+  .bar { display: flex; align-items: center; padding-left: var(--s1);
+         background: var(--glass); backdrop-filter: blur(22px); border-radius: 9999px;
+         box-shadow: 0 8px 30px rgba(0,0,0,0.45); position: relative; }
+  .bar.wide { width: 100%; }
+  .mag { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
+         color: var(--text2); font-size: 17px; font-weight: 600; }
+  .askside { display: flex; align-items: center; gap: var(--s3);
+             padding: var(--s3) var(--s4) var(--s3) var(--s1); }
+  .bar.wide .askside { flex: 1; }
+  .askside .words { font-size: 17px; color: var(--text3); flex: 1; white-space: nowrap; }
+  /* the berry — three-circle Casberi mark, simplified */
+  .berry { width: 20px; height: 20px; position: relative; flex: none; }
+  .berry i { position: absolute; border-radius: 50%; display: block; }
+  .berry i:nth-child(1) { width: 9px; height: 9px; left: 5.5px; top: 0; background: #3f9fff; }
+  .berry i:nth-child(2) { width: 9px; height: 9px; left: 0; top: 8px; background: #1673e6; }
+  .berry i:nth-child(3) { width: 9px; height: 9px; left: 11px; top: 8px; background: #0a4a9e; }
+  .holdring { position: absolute; inset: -7px; border-radius: 9999px;
+              border: 2px solid rgba(255,255,255,0.55); }
+  .holdtag { position: absolute; bottom: -26px; left: 50%; transform: translateX(-50%);
+             font-size: 11px; color: rgba(255,255,255,0.55); white-space: nowrap; }
+
+  /* ---- the tray ---- */
+  .scrim-layer { position: absolute; inset: 0; background: var(--scrim); z-index: 6; }
+  .tray { position: absolute; left: 0; right: 0; bottom: 0; z-index: 7;
+          background: var(--surface-sheet); border-radius: var(--r-sheet) var(--r-sheet) 0 0;
+          padding: var(--s6) var(--s4); box-shadow: 0 -18px 60px rgba(0,0,0,0.6); }
+  .grabber { width: 36px; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.25);
+             margin: -14px auto 16px; }
+  .tray h2 { font-size: 22px; font-weight: 700; margin-bottom: var(--s4); }
+  .grid { display: grid; grid-template-columns: repeat(5, 1fr); row-gap: var(--s3); column-gap: var(--s2); }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: var(--s1); }
+  .cell .chip { width: 52px; height: 52px; }
+  .cell .icon { width: 44px; height: 44px; font-size: 14px; }
+  .cell .name { font-size: 12px; color: var(--text2); height: 28px; text-align: center;
+                line-height: 1.15; padding-top: 1px; }
+  .cell.active .name { color: var(--text1); font-weight: 600; }
+
+  /* placeholder brand hues — the real build uses BridgeIcon marks */
+  .c-photos { background: linear-gradient(135deg,#ff9f0a,#ff375f); }
+  .c-bluesky { background: #0a7aff; } .c-farcaster { background: #855dcd; }
+  .c-wallet { background: linear-gradient(135deg,#1673e6,#0a4a9e); }
+  .c-github { background: #24292f; } .c-rss { background: #f26522; }
+  .c-calendar { background: #d70015; } .c-notes { background: #e8b64c; color:#000 !important; }
+  .c-readwise { background: #ffd600; color:#000 !important; } .c-spotify { background: #1db954; }
+  .c-dropbox { background: #0061ff; } .c-posthog { background: #f54e00; }
+  .c-stripe { background: #635bff; } .c-hyper { background: #97fce4; color:#003c2e !important; }
+  .c-linear { background: #5e6ad2; } .c-mail { background: #1b8bfa; }
+  .c-health { background: #ff2d55; } .c-reminders { background: #ff9500; }
+  .c-obsidian { background: #7c3aed; } .c-opensea { background: #2081e2; }
+</style>
+</head>
+<body>
+  <h1>As shipped — compact bar, hold for sources</h1>
+  <p class="sub">The source strip is unchanged. The agent bar now rests as the pill it used to reach only
+  after a scroll, and holding it raises every source at once — five across, each with the name the
+  icon-only strip could never afford.</p>
+
+  <div class="stage">
+
+    <!-- STATE 1: first run, teaching grace -->
+    <div class="col">
+      <div class="phone">
+        <div class="pour"></div>
+        <div class="statusbar"><span>9:41</span><span>&#9679;&#9679;&#9679;</span></div>
+        <div class="strip">
+          <div class="door avatar">A</div>
+          <div class="door"><div class="doorglyph"><span></span><span></span><span></span><span></span></div></div>
+          <div class="chips">
+            <div class="chip active"><div class="icon all">All</div></div>
+            <div class="chip"><div class="icon c-photos">Ph</div></div>
+            <div class="chip"><div class="icon c-bluesky">Bs</div></div>
+            <div class="chip broken"><div class="icon c-farcaster">Fc</div></div>
+            <div class="chip"><div class="icon c-wallet">W</div></div>
+          </div>
+        </div>
+        <div class="feed">
+          <div class="row"><div class="thumb"></div><div class="lines"><div class="l1"></div><div class="l2"></div></div></div>
+          <div class="row"><div class="thumb"></div><div class="lines"><div class="l1" style="width:68%"></div><div class="l2"></div></div></div>
+          <div class="row"><div class="thumb"></div><div class="lines"><div class="l1" style="width:90%"></div><div class="l2" style="width:40%"></div></div></div>
+          <div class="row"><div class="thumb"></div><div class="lines"><div class="l1" style="width:75%"></div><div class="l2" style="width:58%"></div></div></div>
+          <div class="row"><div class="thumb"></div><div class="lines"><div class="l1" style="width:60%"></div><div class="l2" style="width:45%"></div></div></div>
+        </div>
+        <div class="barwrap">
+          <div class="bar wide">
+            <div class="mag">&#9906;</div>
+            <div class="askside">
+              <span class="words">Ask your things…</span>
+              <span class="berry"><i></i><i></i><i></i></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="caption"><b>First run only.</b> The words are a teaching grace — <code>agent.everRaised</code>.
+      The moment the agent is raised once by any path, the bar hugs its two controls forever and never
+      re-explains itself.</p>
+    </div>
+
+    <!-- STATE 2: at rest, hold shown -->
+    <div class="col">
+      <div class="phone">
+        <div class="pour"></div>
+        <div class="statusbar"><span>9:41</span><span>&#9679;&#9679;&#9679;</span></div>
+        <div class="strip">
+          <div class="door avatar">A</div>
+          <div class="door"><div class="doorglyph"><span></span><span></span><span></span><span></span></div></div>
+          <div class="chips">
+            <div class="chip active"><div class="icon all">All</div></div>
+            <div class="chip"><div class="icon c-photos">Ph</div></div>
+            <div class="chip"><div class="icon c-bluesky">Bs</div></div>
+            <div class="chip broken"><div class="icon c-farcaster">Fc</div></div>
+            <div class="chip"><div class="icon c-wallet">W</div></div>
+          </div>
+        </div>
+        <div class="feed">
+          <div class="row"><div class="thumb"></div><div class="lines"><div class="l1"></div><div class="l2"></div></div></div>
+          <div class="row"><div class="thumb"></div><div class="lines"><div class="l1" style="width:68%"></div><div class="l2"></div></div></div>
+          <div class="row"><div class="thumb"></div><div class="lines"><div class="l1" style="width:90%"></div><div class="l2" style="width:40%"></div></div></div>
+          <div class="row"><div class="thumb"></div><div class="lines"><div class="l1" style="width:75%"></div><div class="l2" style="width:58%"></div></div></div>
+          <div class="row"><div class="thumb"></div><div class="lines"><div class="l1" style="width:60%"></div><div class="l2" style="width:45%"></div></div></div>
+          <div class="row"><div class="thumb"></div><div class="lines"><div class="l1" style="width:84%"></div><div class="l2" style="width:50%"></div></div></div>
+        </div>
+        <div class="barwrap">
+          <div class="bar">
+            <div class="mag">&#9906;</div>
+            <div class="askside">
+              <span class="berry"><i></i><i></i><i></i></span>
+            </div>
+            <div class="holdring"></div>
+            <div class="holdtag">hold → your sources</div>
+          </div>
+        </div>
+      </div>
+      <p class="caption"><b>At rest, every launch after the first.</b> ~110pt of glass instead of the full
+      width. Tap the berry → the agent. Tap the magnifier → Find. Hold the pill → the tray. The magnifier
+      stays visible on purpose: Find was promoted out of the composer on 2026-07-30 for being
+      undiscoverable, and a lone berry would re-bury it.</p>
+    </div>
+
+    <!-- STATE 3: tray open -->
+    <div class="col">
+      <div class="phone">
+        <div class="pour"></div>
+        <div class="statusbar"><span>9:41</span><span>&#9679;&#9679;&#9679;</span></div>
+        <div class="strip">
+          <div class="door avatar">A</div>
+          <div class="door"><div class="doorglyph"><span></span><span></span><span></span><span></span></div></div>
+          <div class="chips">
+            <div class="chip active"><div class="icon all">All</div></div>
+            <div class="chip"><div class="icon c-photos">Ph</div></div>
+            <div class="chip"><div class="icon c-bluesky">Bs</div></div>
+            <div class="chip broken"><div class="icon c-farcaster">Fc</div></div>
+            <div class="chip"><div class="icon c-wallet">W</div></div>
+          </div>
+        </div>
+        <div class="feed">
+          <div class="row"><div class="thumb"></div><div class="lines"><div class="l1"></div><div class="l2"></div></div></div>
+          <div class="row"><div class="thumb"></div><div class="lines"><div class="l1" style="width:68%"></div><div class="l2"></div></div></div>
+          <div class="row"><div class="thumb"></div><div class="lines"><div class="l1" style="width:90%"></div><div class="l2" style="width:40%"></div></div></div>
+        </div>
+        <div class="scrim-layer"></div>
+        <div class="tray">
+          <div class="grabber"></div>
+          <h2>Your sources</h2>
+          <div class="grid">
+            <div class="cell active"><div class="chip active"><div class="icon all">All</div></div><div class="name">All</div></div>
+            <div class="cell"><div class="chip"><div class="icon c-photos">Ph</div></div><div class="name">Photos</div></div>
+            <div class="cell"><div class="chip"><div class="icon c-bluesky">Bs</div></div><div class="name">Bluesky</div></div>
+            <div class="cell"><div class="chip broken"><div class="icon c-farcaster">Fc</div></div><div class="name">Farcaster</div></div>
+            <div class="cell"><div class="chip"><div class="icon c-wallet">W</div></div><div class="name">Wallet</div></div>
+
+            <div class="cell"><div class="chip"><div class="icon c-github">GH</div></div><div class="name">GitHub</div></div>
+            <div class="cell"><div class="chip"><div class="icon c-rss">R</div></div><div class="name">RSS</div></div>
+            <div class="cell"><div class="chip"><div class="icon c-calendar">17</div></div><div class="name">Calendar</div></div>
+            <div class="cell"><div class="chip"><div class="icon c-notes">N</div></div><div class="name">Notes</div></div>
+            <div class="cell"><div class="chip"><div class="icon c-readwise">Rw</div></div><div class="name">Readwise</div></div>
+
+            <div class="cell"><div class="chip"><div class="icon c-spotify">Sp</div></div><div class="name">Spotify</div></div>
+            <div class="cell"><div class="chip"><div class="icon c-dropbox">Db</div></div><div class="name">Dropbox</div></div>
+            <div class="cell"><div class="chip"><div class="icon c-posthog">PH</div></div><div class="name">PostHog</div></div>
+            <div class="cell"><div class="chip"><div class="icon c-stripe">St</div></div><div class="name">Stripe</div></div>
+            <div class="cell"><div class="chip"><div class="icon c-hyper">Hy</div></div><div class="name">Hyperliquid</div></div>
+
+            <div class="cell"><div class="chip"><div class="icon c-linear">Ln</div></div><div class="name">Linear</div></div>
+            <div class="cell"><div class="chip"><div class="icon c-mail">M</div></div><div class="name">Mail</div></div>
+            <div class="cell"><div class="chip"><div class="icon c-health">He</div></div><div class="name">Health</div></div>
+            <div class="cell"><div class="chip"><div class="icon c-reminders">Re</div></div><div class="name">Reminders</div></div>
+            <div class="cell"><div class="chip"><div class="icon c-obsidian">Ob</div></div><div class="name">Obsidian</div></div>
+          </div>
+        </div>
+      </div>
+      <p class="caption"><b>Twenty sources, one screen.</b> In the strip's own frozen order, not alphabetical —
+      position is half a chip's identity when it has no label. Rings read exactly as they do on the strip:
+      solid tint is where you are, dashed orange is a connection that needs you. Icons here are placeholder
+      hues; the real build uses the same <code>BridgeIcon</code> marks.</p>
+    </div>
+
+  </div>
+</body>
+</html>
