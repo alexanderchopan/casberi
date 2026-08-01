@@ -102,6 +102,36 @@ enum SharedStore {
     /// the app still launches (empty, but alive); the real store file is
     /// left untouched on disk for a future fixed build to recover.
     static func containerWithFallback() -> ModelContainer {
+        #if DEBUG
+        // Harness hook (`-storeScratch YES`, scripts/verify-mac.sh): open an
+        // on-disk store at a throwaway per-process temp path instead of the
+        // real group container, CloudKit off. On the Mac there is no
+        // simulator sandbox — a directly-launched DEBUG build shares the
+        // REAL container with the person's installed app, so a probe run
+        // whose schema is ahead of the installed build would forward-migrate
+        // the daily driver's store out from under it. Scratch keeps the
+        // harness hermetic: a real disk open (unlike in-memory, so the
+        // container-open launch span stays measured), zero reads or writes
+        // against the person's corpus, no CloudKit attempt, no trap-marker
+        // bookkeeping (a scratch launch is not evidence about the mirror).
+        // DEBUG-only and argument-domain-only — unreachable in any shipped
+        // build.
+        if UserDefaults.standard.bool(forKey: "storeScratch") {
+            let dir = FileManager.default.temporaryDirectory
+                .appendingPathComponent("casberi-scratch-\(ProcessInfo.processInfo.processIdentifier)")
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            let config = ModelConfiguration(url: dir.appendingPathComponent("scratch.store"),
+                                            cloudKitDatabase: .none)
+            if let made = try? ModelContainer(for: Thing.self,
+                                              migrationPlan: ThingMigrationPlan.self,
+                                              configurations: config) {
+                NSLog("[Casberi] storeScratch: opened %@", dir.path)
+                return made
+            }
+            NSLog("[Casberi] storeScratch: on-disk open failed, using in-memory scratch")
+            return ephemeralContainer()
+        }
+        #endif
         // If the last launch stamped the CloudKit attempt marker and never
         // cleared it, the mirror trapped mid-setup. RULE (2026-07-27, was a
         // single-launch trip before this): only auto-flip sync off after

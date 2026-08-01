@@ -473,6 +473,43 @@ struct RootShell: View {
                     NSLog("[Casberi] berryPulse: dealt")
                 }
             }
+            // Debug hook (the Mac harness's screenshot, scripts/verify-mac.sh):
+            // `-macSnapshot <name>` renders the key window into the app
+            // container's tmp as <name>.png after `-snapshotDelay <s>`
+            // (default 4s — verify.sh's sweep settle) and NSLogs the full
+            // path for the script to copy out. Exists because the Mac has no
+            // `simctl io screenshot`, and `screencapture` needs a Screen
+            // Recording grant a headless nightly can't click through — an
+            // app rendering its own window needs no permission. The write
+            // lands in the sandbox container (not a caller-chosen path)
+            // because the sandbox would refuse anywhere else anyway; the
+            // NSLog line is the contract, not a guessed path.
+            if let snapName = UserDefaults.standard.string(forKey: "macSnapshot") {
+                let snapDelay = UserDefaults.standard.double(forKey: "snapshotDelay")
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(snapDelay > 0 ? snapDelay : 4))
+                    let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+                    guard let window = scenes.flatMap(\.windows).first(where: \.isKeyWindow)
+                            ?? scenes.first?.windows.first
+                    else { NSLog("[Casberi] macSnapshot: no window"); return }
+                    let image = UIGraphicsImageRenderer(bounds: window.bounds).image { _ in
+                        window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
+                    }
+                    let url = FileManager.default.temporaryDirectory
+                        .appendingPathComponent(snapName)
+                        .appendingPathExtension("png")
+                    if let data = image.pngData() {
+                        do {
+                            try data.write(to: url)
+                            NSLog("[Casberi] macSnapshot: wrote %@", url.path)
+                        } catch {
+                            NSLog("[Casberi] macSnapshot: FAILED %@", error.localizedDescription)
+                        }
+                    } else {
+                        NSLog("[Casberi] macSnapshot: FAILED png encode")
+                    }
+                }
+            }
             // Debug hook: `simctl launch ... -answerProbe "what did I save about work"`
             // runs the whole answer path (retrieve → on-device compose → doc)
             // and logs the composition + its latency, so it can be verified and
