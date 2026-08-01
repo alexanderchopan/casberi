@@ -12259,7 +12259,7 @@ audit.
 
 ---
 
-## §252 — The Mac stops being a port (user: "how if at all would you improve the Mac app design", then "do all these", 2026-07-31)
+## §256 — The Mac stops being a port (user: "how if at all would you improve the Mac app design", then "do all these", 2026-07-31)
 
 The two-pane shape landed 2026-07-25 and the Mac chrome pass 2026-07-28 — window
 title, system appearance, a real minimum window size, ⌘N/⌘R/⌘,/⌘[/⌘1–9, pointer
