@@ -1510,16 +1510,23 @@ enum ProbeHooks {
         // the addresses that follow may carry their own. An address with no
         // entry yet is named with its short form first, exactly as the tap
         // does — a group can never name an address the book doesn't hold.
+        //
+        // Rides the BULK call (2026-08-01) because that is what the book-level
+        // "New group" sheet calls — a probe walking the per-address loop would
+        // be exercising a path the UI no longer takes. It also reports the
+        // spelling actually filed under, which is the one outcome that differs
+        // from what you asked for: "family" against a book already holding
+        // "Family" joins the existing group rather than making a second one.
         Hook(key: "addressGroup") { spec, _ in
             guard let colon = spec.firstIndex(of: ":") else { return }
             let group = String(spec[spec.startIndex..<colon])
             let addresses = String(spec[spec.index(after: colon)...])
                 .split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }
-            for address in addresses where !address.isEmpty {
-                AddressBook.shared.addToGroup(group, address: address)
-            }
-            NSLog("Address-group probe: %@ now holds %d", group,
-                  AddressBook.shared.entries(inGroup: group).count)
+                .filter { !$0.isEmpty }
+            let filed = AddressBook.shared.addToGroup(group, addresses: addresses)
+            NSLog("Address-group probe: %@ → filed under %@, now holds %d",
+                  group, filed ?? "(nothing — blank name or no addresses)",
+                  filed.map { AddressBook.shared.entries(inGroup: $0).count } ?? 0)
         },
         // `-addressSafetyProbe <address>` — the two checks the omnibox makes
         // before you commit (2026-08-01), headless: the EIP-55 checksum

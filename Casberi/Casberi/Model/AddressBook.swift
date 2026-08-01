@@ -479,6 +479,41 @@ final class AddressBook {
         editGroups(of: [key]) { $0.contains(where: { Self.sameGroup($0, group) }) ? $0 : $0 + [group] }
     }
 
+    /// Files SEVERAL addresses under one group in a single write (2026-08-01) —
+    /// the book-level door, where a group is named and its members picked in
+    /// one pass. Calling the single-address form in a loop would be correct and
+    /// slow in the way `editGroups` exists to prevent: `entries`' own `didSet`
+    /// encodes the whole book and pushes it to iCloud, so a forty-address pick
+    /// would be forty encodes of a growing dictionary.
+    ///
+    /// Returns the spelling actually filed under, which is NOT always the one
+    /// typed: a book already holding "Family" answers "family" with its own
+    /// spelling. The caller needs that back to select the chip it just made —
+    /// selecting the typed form would filter on a group that matches nothing.
+    /// Nil when the name is blank, so a caller can't select a group that was
+    /// never created.
+    @discardableResult
+    func addToGroup(_ name: String, addresses: some Sequence<String>) -> String? {
+        let group = canonicalGroupName(name)
+        guard !group.isEmpty else { return nil }
+        // Name anything not yet in the book first, for the reason the
+        // single-address door does it: a group naming an address the book
+        // doesn't hold is the orphan this design makes impossible. A write
+        // apiece, but only for addresses the picker could not have offered.
+        var keys: [String] = []
+        for address in addresses {
+            let key = Self.key(for: address)
+            guard !key.isEmpty else { continue }
+            if entries[key] == nil {
+                setName(WalletStore.shortAddress(Self.resolvedForm(of: address)), for: address)
+            }
+            keys.append(key)
+        }
+        guard !keys.isEmpty else { return nil }
+        editGroups(of: keys) { $0.contains(where: { Self.sameGroup($0, group) }) ? $0 : $0 + [group] }
+        return group
+    }
+
     func removeFromGroup(_ name: String, address: String) {
         editGroups(of: [Self.key(for: address)]) {
             $0.filter { !Self.sameGroup($0, name) }

@@ -28,6 +28,22 @@ private enum BookSort: CaseIterable, Hashable {
     }
 }
 
+/// What the book is presenting — one address's card, or the door that makes a
+/// group. See `WalletScreen.bookSheet` for why these share a slot.
+private enum BookSheetRoute: Identifiable {
+    case entry(AddressBook.Entry)
+    case newGroup
+
+    /// Spelled out rather than computed off the payload, so the two cases can
+    /// never collide on an address whose key happens to read like a sentinel.
+    var id: String {
+        switch self {
+        case .entry(let entry): "entry:\(entry.id)"
+        case .newGroup: "newGroup"
+        }
+    }
+}
+
 /// Wallet, connected — the wallet's home in Casberi. The person manages WHICH
 /// addresses are watched (paste to add, tap to rename, long-press to remove),
 /// sees a live holdings treemap (top 5 by USD value), and sees what's landed
@@ -92,7 +108,13 @@ struct WalletScreen: View {
     /// input, not two") was only half true while the results it searched
     /// lived one page away. Same field, same list, no door.
     @Bindable private var book = AddressBook.shared
-    @State private var openBookEntry: AddressBook.Entry?
+    /// The book's ONE presentation (2026-08-01) — the address card and the
+    /// new-group sheet share a slot instead of hanging off this view as two
+    /// more siblings. This screen already carries the two token sheets, and
+    /// FeedScreen's lesson is on the record: sibling `.sheet` modifiers on one
+    /// screen start silently self-dismissing each other's first tap. A route
+    /// costs one enum and takes that whole class off the table.
+    @State private var bookSheet: BookSheetRoute?
     /// How the list below the roster orders itself — recency by default,
     /// name or activity on request.
     @State private var bookSort: BookSort = .recent
@@ -266,6 +288,26 @@ struct WalletScreen: View {
                 Task { await wallet.loadAvatars() }
             }
         }
+        // A group stops existing the moment its last member is unfiled — which
+        // can happen from the address card, from a row's context menu, or by
+        // removing the address itself, none of which know the book is being
+        // filtered by it. Left alone, the filter would sit on a name no chip
+        // shows and the list would read as empty for no visible reason. Only
+        // the menu's own Delete cleared it before.
+        //
+        // This does re-walk the book once per body pass, which is the shape
+        // §266 just took `historyCounts` apart for — but not the same cost:
+        // that was an unscoped CORPUS fetch, this is a dictionary walk over a
+        // list that stays scannable at fifty rows. It sits at screen level
+        // rather than on the chips section, which already has `groupNames` in
+        // hand, because that section doesn't render for an empty book — and
+        // emptying the book is one of the ways a selected group stops existing.
+        .onChange(of: book.groupNames) { _, groups in
+            if let group = selectedGroup,
+               !groups.contains(where: { AddressBook.sameGroup($0, group) }) {
+                withAnimation(DS.Motion.standard) { selectedGroup = nil }
+            }
+        }
         // A tapped holdings cell (2026-07-14): the token's own chart — its
         // thing sheet when watched, the quick sheet when it's just held.
         .environment(\.genProjectTap) { name in
@@ -282,7 +324,18 @@ struct WalletScreen: View {
         .sheet(item: $quickToken) { route in
             TokenQuickSheet(route: route)
         }
-        .sheet(item: $openBookEntry) { entry in AddressCard(entry: entry) }
+        .sheet(item: $bookSheet) { route in
+            switch route {
+            case .entry(let entry):
+                AddressCard(entry: entry)
+            case .newGroup:
+                // Select what was just made: a group you created and then had
+                // to go find is a filing cabinet, not a filing gesture.
+                NewGroupSheet { group in
+                    withAnimation(DS.Motion.standard) { selectedGroup = group }
+                }
+            }
+        }
         .alert("Watching \(WalletStore.watchLimit) already", isPresented: $watchCapHit) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -582,20 +635,35 @@ struct WalletScreen: View {
         wallet.addresses.contains { wallet.scopeMatches(entry.address, scope: $0.address) }
     }
 
-    /// The group filter (2026-08-01) — a scrolling row of chips above the
-    /// list, rendered ONLY once a group exists. Someone who never makes one
-    /// sees exactly the screen §212 shipped; the feature costs nothing until
-    /// it's used, the same argument that kept the peek chip.
+    /// The group filter (2026-08-01) — a scrolling row of chips above the list.
+    ///
+    /// AMENDED the same day (user: "I don't see how to create groups"). This
+    /// rendered only once a group existed, on the argument that the feature
+    /// should cost nothing until it's used. The cost it actually carried was
+    /// the opposite one: with no groups there was no group UI anywhere on the
+    /// screen, so the only doors in were a long-press on a row or a tap into an
+    /// address card — both of which you have to already know about. A feature
+    /// whose entire surface appears only after you've used it can't be found.
+    ///
+    /// So the row draws whenever the book holds anything, and when there are no
+    /// groups it holds exactly one chip: the verb. Nothing to filter, nothing
+    /// claiming a group exists — just the way in.
     @ViewBuilder
     private var groupChipsSection: some View {
         let groups = book.groupNames
-        if !groups.isEmpty {
+        if book.count > 0 {
             Section {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: DS.Space.s2) {
-                            groupChip(nil, label: String(localized: "All"))
-                            ForEach(groups, id: \.self) { groupChip($0, label: $0) }
+                            // "All" is a filter, and a filter over one state
+                            // isn't one — it appears with the groups it selects
+                            // between.
+                            if !groups.isEmpty {
+                                groupChip(nil, label: String(localized: "All"))
+                                ForEach(groups, id: \.self) { groupChip($0, label: $0) }
+                            }
+                            newGroupChip
                         }
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.vertical, 2)
@@ -607,6 +675,31 @@ struct WalletScreen: View {
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
         }
+    }
+
+    /// The verb, sitting in the row it fills. Tinted rather than gray, which is
+    /// the whole difference between it and the chips beside it: those select,
+    /// this one does something. No border — nothing in this app draws a line
+    /// (design law), so the tint carries it alone.
+    private var newGroupChip: some View {
+        Button {
+            DSHaptic.selection()
+            bookSheet = .newGroup
+        } label: {
+            HStack(spacing: DS.Space.s1) {
+                Image(systemName: "folder.badge.plus")
+                    .font(.system(size: 12, weight: .semibold))
+                Text("New group")
+                    .dsText(.subhead13).fontWeight(.semibold)
+                    .lineLimit(1)
+            }
+            .foregroundStyle(DS.tint)
+            .padding(.horizontal, DS.Space.s3)
+            .padding(.vertical, DS.Space.s2)
+            .background(DS.tintDim, in: Capsule(style: .continuous))
+            .contentShape(Capsule(style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 
     private func groupChip(_ group: String?, label: String) -> some View {
@@ -689,7 +782,7 @@ struct WalletScreen: View {
                 ForEach(rows) { entry in
                     Button {
                         DSHaptic.selection()
-                        openBookEntry = entry
+                        bookSheet = .entry(entry)
                     } label: {
                         bookRow(entry, colliding: colliding.contains(entry.id), groups: groups)
                     }
@@ -739,6 +832,14 @@ struct WalletScreen: View {
                             } label: {
                                 Label("Copy all as text", systemImage: "doc.on.doc")
                             }
+                        }
+                        // Group management, all of it, in one place: the chip
+                        // row carries the verb where you'd look for it, and
+                        // this carries it where rename and delete already are.
+                        Section {
+                            Button {
+                                bookSheet = .newGroup
+                            } label: { Label("New group…", systemImage: "folder.badge.plus") }
                         }
                         if let group = selectedGroup {
                             Section(group) {

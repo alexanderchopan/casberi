@@ -79,6 +79,204 @@ struct GroupMenuItems: View {
     }
 }
 
+/// Making a group from the BOOK rather than from one address (2026-08-01,
+/// amending prd §266).
+///
+/// §266 shipped creation as a per-address verb only, and the reasoning held:
+/// filing something is what brings a group into being, so the door lived where
+/// the thing being filed was. Nothing here changes that model — this sheet
+/// still cannot make an empty group. What it fixes is DISCOVERY. The chips row
+/// renders only once a group exists, so a book with none showed no trace of the
+/// feature anywhere, and the only ways in were a long-press on a row or a tap
+/// into an address card: "we just shipped some Wallet features improving the
+/// address book, but I don't see how to create groups" (user, 2026-08-01).
+///
+/// So the gesture inverts — name it, then pick who's in it, in one pass. That
+/// is also the shape the job actually has: a group is several addresses you
+/// already have in mind, and filing them one long-press at a time is the same
+/// work spread over N gestures with no way to see the set coming together.
+///
+/// Two honesty details worth keeping. Typing a name the book already uses
+/// (case-folded) ADDS to that group rather than making a second one wearing the
+/// same word — `AddressBook.canonicalGroupName` has always done this, and the
+/// sheet says so in place instead of letting the outcome surprise you. And the
+/// button states which of the two requirements is still missing, rather than
+/// sitting inert with nothing to say.
+struct NewGroupSheet: View {
+    /// Handed the spelling the book actually filed under, so the caller can
+    /// select the chip it just made. See `AddressBook.addToGroup(_:addresses:)`.
+    var onCreate: (String) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    private var book = AddressBook.shared
+
+    @State private var name = ""
+    @State private var filter = ""
+    @State private var picked: Set<String> = []
+
+    init(onCreate: @escaping (String) -> Void) {
+        self.onCreate = onCreate
+    }
+
+    var body: some View {
+        DSTray(title: "New group", height: 660) {
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                Text("A group is a label on the addresses in it — so it comes into being with its members. Deleting one later never deletes an address.")
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                nameField
+                if let existing = matchingGroup {
+                    note(String(localized: "You already have “\(existing)” — these get added to it."))
+                }
+                if book.count > 8 { filterField }
+                list
+                createButton
+            }
+        }
+    }
+
+    private func note(_ text: String) -> some View {
+        Text(text).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var nameField: some View {
+        TextField("Name (e.g. Family, Cold)", text: $name)
+            .dsText(.body17)
+            .foregroundStyle(DS.textPrimary)
+            .submitLabel(.done)
+            .padding(.horizontal, DS.Space.s3)
+            .frame(minHeight: 44)
+            .background(DS.surfaceWell,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+    }
+
+    /// Only for a book big enough to need it — a filter above six rows is
+    /// furniture, and this sheet already asks for two things.
+    private var filterField: some View {
+        HStack(spacing: DS.Space.s2) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(DS.textTertiary)
+            TextField("Filter your addresses", text: $filter)
+                .dsText(.body17)
+                .foregroundStyle(DS.textPrimary)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+        }
+        .padding(.horizontal, DS.Space.s3)
+        .frame(minHeight: 44)
+        .background(DS.surfaceWell,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+    }
+
+    private var list: some View {
+        ScrollView {
+            LazyVStack(spacing: DS.Space.s2) {
+                ForEach(rows) { entry in row(entry) }
+            }
+            .padding(.vertical, DS.Space.s1)
+            if rows.isEmpty {
+                note(book.count == 0
+                     ? String(localized: "Your book is empty — name an address first, then it can go in a group.")
+                     : String(localized: "Nothing here matches “\(filter)”."))
+                    .padding(.top, DS.Space.s2)
+            }
+        }
+        .scrollIndicators(.hidden)
+        .frame(maxHeight: .infinity)
+    }
+
+    private func row(_ entry: AddressBook.Entry) -> some View {
+        let on = picked.contains(entry.id)
+        return Button {
+            DSHaptic.tap()
+            withAnimation(DS.Motion.standard) {
+                if on { picked.remove(entry.id) } else { picked.insert(entry.id) }
+            }
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                AddressMark(entry: entry, size: 36)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(entry.name).dsText(.heading17)
+                        .foregroundStyle(DS.textPrimary).lineLimit(1)
+                    Text(entry.short).dsText(.subhead13)
+                        .foregroundStyle(DS.textTertiary).monospaced().lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "checkmark")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(DS.tint)
+                    .opacity(on ? 1 : 0)
+            }
+            .padding(DS.Space.s3)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(on ? DS.tintDim : DS.fillFaint,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        }
+        .buttonStyle(DSTileButtonStyle())
+        .accessibilityLabel(entry.name)
+        .accessibilityAddTraits(on ? [.isSelected] : [])
+    }
+
+    /// Says which requirement is still open rather than going inert — and
+    /// swaps its own FILL when it does, since `.disabled` dims a label and not
+    /// a background a button painted itself (honesty rule, prd §83).
+    private var createButton: some View {
+        let ready = !trimmedName.isEmpty && !picked.isEmpty
+        return Button {
+            create()
+        } label: {
+            Text(buttonLabel)
+                .dsText(.callout15).fontWeight(.semibold)
+                .foregroundStyle(ready ? .white : DS.textTertiary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 48)
+                .background(ready ? DS.tint : DS.gray100,
+                            in: RoundedRectangle(cornerRadius: DS.Radius.control,
+                                                 style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(!ready)
+    }
+
+    private var buttonLabel: String {
+        if trimmedName.isEmpty { return String(localized: "Name the group") }
+        if picked.isEmpty { return String(localized: "Pick who's in it") }
+        return String(localized: "Create with \(picked.count)")
+    }
+
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// The group this name would join rather than create, if any.
+    private var matchingGroup: String? {
+        let typed = trimmedName
+        guard !typed.isEmpty else { return nil }
+        return book.groupNames.first { AddressBook.sameGroup($0, typed) }
+    }
+
+    private var rows: [AddressBook.Entry] {
+        let all = book.all
+        let q = filter.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !q.isEmpty else { return all }
+        return all.filter {
+            $0.name.lowercased().contains(q) || $0.address.lowercased().contains(q)
+        }
+    }
+
+    private func create() {
+        // Off `book.all` rather than the filtered `rows`, or narrowing the
+        // filter after picking would drop members already chosen.
+        let addresses = book.all.filter { picked.contains($0.id) }.map(\.address)
+        guard let group = book.addToGroup(trimmedName, addresses: addresses) else { return }
+        DSHaptic.success()
+        onCreate(group)
+        dismiss()
+    }
+}
+
 /// What an address IS, as a mark. A wallet is a WHO — it wears the same
 /// identicon face the watched wallets and transfer stages use, so the same
 /// address looks the same everywhere. Everything else is machinery and wears a
