@@ -12820,3 +12820,47 @@ paint, and that is what this change is for.
 **Honesty.** "That's everything · N" is a claim, so it waits until the room
 really is whole; while a window is open, "Show older" sits there instead.
 Rooms under ~30 rows never show it and are visually untouched.
+
+## §265 — A swipe is a step, not a drag: the pager that could rest between rooms is gone (user: "it's faster but the swipes still go half way!", 2026-08-01)
+
+Build 225 removed the app's largest measured cost and the half-page swipe
+survived it — the decisive datum. Four cost removals (§257–§264), each real,
+none the cause: the stall was never about how much work the feed does. So the
+MECHANISM went instead. `TabView(.page)` holds a continuous scroll position,
+and something in this shell corrupts it mid-gesture; after six sections of
+hunting, the class was removed rather than the instance.
+
+**Ruling — one mounted room, discrete transitions.** The pager is a `ZStack`
+holding ONLY the active room, `.id(filter.source)`, an asymmetric move
+transition sliding from the direction of travel. A swipe ends → `go(to:)` steps
+exactly one room. There is no intermediate position to strand at, by
+construction. A chip tap and a swipe are still the same move — both walk
+through `go(to:)`, writing the same `filter.source` every deep link writes.
+What it trades away, stated: the page no longer tracks the finger mid-drag,
+and switching away and back re-enters a room at its top. What it buys beyond
+the fix: the `nearActive`/`neighborsReady` machinery is deleted (no neighbour
+pages exist), and a re-render wave touches ONE room, not every mounted page —
+§258's "23 page rebuilds per swipe" is structurally impossible now.
+
+**Ruling — the swipe itself is a UIKit pan on the WINDOW, and both prior
+designs are recorded because both were measured dead:**
+1. A SwiftUI `DragGesture` — plain or simultaneous, any minimumDistance —
+   beats the List's vertical pan entirely. The deck measured this 2026-07-16
+   (`DeckPanCatcher`'s doc); this pager's `simultaneousGesture` first cut
+   appeared to freeze scrolling too. (Honesty note: that "confirmation" was
+   itself contaminated — the vertical test swipes were OUTSIDE the 402×874
+   viewport, coordinates from the Pro Max recording. The deck's measurement
+   stands; this pass's does not.)
+2. The deck's own pattern — a recognizer on each room's List — attaches into
+   the TRANSITIONING subtree: mid-switch, the new room's walk found the DYING
+   room's scroller, the recognizer died with it, and the next swipe hit
+   nothing. An attach that races every transition.
+The window never transitions, so ONE recognizer, mounted once by the shell.
+Gates at begin time: clearly horizontal (the deck's velocity test), the
+walk's own modal/sheet/pushed-room flags (a window recognizer would otherwise
+turn pages under a sheet), and never inside a nested horizontal scroller.
+
+Verified on the simulator at 4,000 rows: a fast flick lands exactly one page,
+twice consecutively across transitions; vertical scroll intact; "That's
+everything" and the new-since divider unchanged. The one thing a simulator
+cannot prove is feel on the user's device — stated, not claimed.

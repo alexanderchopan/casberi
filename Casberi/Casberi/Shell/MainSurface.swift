@@ -292,12 +292,7 @@ struct MainSurface: View {
                 chrome.popHome += 1
                 return
             }
-            withAnimation(DS.Motion.standard) {
-                filter.source = label
-                // Entering "All" means all; a specific source keeps
-                // its own tag.
-                if label == "All" { filter.tag = "All" }
-            }
+            go(to: label)
             // Tap-learning (ChipMemory) counts an actual switch, not
             // the re-tap-to-pop branch above.
             ChipMemory.visited(label)
@@ -508,60 +503,98 @@ struct MainSurface: View {
         // from connecting an exchange and find no room to browse its book from,
         // which is the whole point of connecting one (prd §234).
         .onChange(of: liveRoomChipCount) { _, _ in refreshLiveChips() }
-        // Neighbour feed pages are assembled while things are STILL — never
-        // during the first paint, and never during a page change (2026-07-31
-        // perf; user: "swiping between pages ... doesn't snap to next screen,
-        // more like shows half of one screen and half of other").
-        //
-        // Two moments, one rule. At cold launch the `nearActive` gate
-        // (2026-07-30) still built a second full room, hero chains and all, in
-        // the window the first frame was being drawn. And on every swipe, the
-        // page you ARRIVE at makes a new page one-away, so a fresh heavy
-        // assembly fired exactly as the pager's release animation should have
-        // been running — the animation is on the main thread, the assembly
-        // blocks it, and the pager rests between two pages until it frees.
-        // That is the reported symptom, and it reads as the pager being broken
-        // rather than as the app being busy.
-        //
-        // `.task(id:)` gives cancel-and-restart for free: each selection change
-        // restarts the wait, so a run of quick swipes builds nothing until the
-        // person stops. Nothing is ever UNBUILT — `FeedScreen.everBuilt`
-        // latches — so this only ever defers a page's FIRST assembly, and the
-        // neighbour is still pre-built well before anyone swipes again.
-        .task(id: filter.source) {
-            neighborsReady = false
-            try? await Task.sleep(for: .milliseconds(400))
-            neighborsReady = true
+    }
+
+    /// Which edge the incoming room slides from — set by `go(to:)` BEFORE the
+    /// source changes, so both halves of the transition read the same answer.
+    @State private var slideEdge: Edge = .trailing
+
+    /// The one door every source switch walks through (prd §265): chip taps and
+    /// swipes both come here, so direction, the tag reset, and tap-learning
+    /// cannot drift between them.
+    private func go(to label: String) {
+        guard label != filter.source else { return }
+        let labels = feedLabels
+        let from = labels.firstIndex(of: filter.source) ?? 0
+        let to = labels.firstIndex(of: label) ?? from
+        slideEdge = to >= from ? .trailing : .leading
+        withAnimation(DS.Motion.standard) {
+            filter.source = label
+            // Entering "All" means all; a specific source keeps its own tag.
+            if label == "All" { filter.tag = "All" }
         }
     }
 
-    /// Whether the pager should pre-build the page one swipe away. False during
-    /// the launch's first moments and during a page change — see the `.task`.
-    @State private var neighborsReady = false
+    /// One step left or right in the strip's order. The swipe's whole job.
+    private func step(_ delta: Int) {
+        let labels = feedLabels
+        guard let idx = labels.firstIndex(of: filter.source),
+              labels.indices.contains(idx + delta) else { return }
+        DSHaptic.selection()
+        go(to: labels[idx + delta])
+        ChipMemory.visited(filter.source)
+    }
+
 
     private var surface: some View {
         NavigationStack(path: $route.path) {
-            // The feeds are one pager (2026-07-16): a chip tap and a swipe are
-            // the same move, because selection binds to the SAME value the chips
-            // write — so the strip, the wash, and every deep link
-            // (casberi://feed/source/X) all keep working with no second source of
-            // truth to reconcile. Uniformly the feed now (the board's own
-            // non-swiping page retired 2026-07-20).
-            TabView(selection: $filter.source) {
-                // `nearActive` builds only the active page and its immediate
-                // neighbours up front (PERF 2026-07-30, see `FeedScreen`); the
-                // rest stay clear placeholders until reached. `activeIdx` is
-                // read once per render off the same ordered labels the TabView
-                // pages, so a one-swipe-away page is always already assembled.
-                let activeIdx = feedLabels.firstIndex(of: filter.source) ?? 0
-                ForEach(Array(feedLabels.enumerated()), id: \.element) { i, label in
-                    FeedScreen(source: label,
-                               isActive: label == filter.source,
-                               nearActive: neighborsReady && abs(i - activeIdx) <= 1)
-                        .tag(label)
-                }
+            // The feeds are one surface and a swipe is a STEP, not a drag
+            // (prd §265, 2026-08-01 — this replaced `TabView(.page)`).
+            //
+            // The pager carried a continuous scroll position, and for two weeks
+            // of builds that position could rest BETWEEN two pages: the user's
+            // recording showed a half-and-half frame held for ~0.8s, reported
+            // as "swipes only go half way" across 220–225. Four measured cost
+            // removals (§257–§264) each shaved the app's main-thread work and
+            // none fixed it — the last, windowed rows, removed the single
+            // largest cost in the app and the symptom survived it. Whatever
+            // corrupts a `UICollectionView`'s mid-gesture offset under this
+            // shell was never isolated; this removes the CLASS instead of the
+            // instance. A discrete transition has no intermediate position to
+            // strand at — the gesture ends, one full page slides in, done.
+            //
+            // What this trades away, stated: the page no longer tracks the
+            // finger mid-drag, and only the ACTIVE room is mounted, so
+            // switching away and back re-enters the room at its top (the
+            // re-tap-a-chip pop already made that the going rate). What it
+            // buys beyond the fix: the `nearActive`/`neighborsReady` machinery
+            // is gone because there are no neighbour pages to pre-build, and a
+            // re-render wave now touches ONE mounted FeedScreen, not every
+            // room in the strip — the §258-era "23 page rebuilds per swipe"
+            // measurement becomes structurally impossible.
+            //
+            // A chip tap and a swipe are still the same move: both walk
+            // through `go(to:)`, which writes the SAME `filter.source` every
+            // deep link (casberi://feed/source/X) already writes, so there is
+            // still no second source of truth. `.id(filter.source)` is what
+            // makes the switch a remove+insert pair the transition can
+            // animate; the windowed rows (§264) are what make a fresh mount
+            // cheap enough to pay at every switch.
+            // No SwiftUI gesture here, and that is measured, not stylistic:
+            // the first cut used `.simultaneousGesture(DragGesture)` and froze
+            // vertical scrolling dead — the standing CLAUDE.md gotcha, which
+            // the deck had already measured applies to simultaneous gestures
+            // too. The swipe rides `PageSwipeCatcher` (a UIKit pan on the
+            // List's own scroll view, mounted by FeedScreen), which hands its
+            // one-step decision up through `chrome.pageStep` below.
+            ZStack {
+                FeedScreen(source: filter.source, isActive: true, nearActive: true)
+                    .id(filter.source)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: slideEdge),
+                        removal: .move(edge: slideEdge == .trailing ? .leading : .trailing)))
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
+            // The swipe input, mounted ONCE at the shell — never inside the
+            // transitioning subtree (see PageSwipeCatcher for the two designs
+            // that died first). The gates are the walk's own modal flags: a
+            // window-level recognizer must stand down when anything covers
+            // the pager.
+            .background {
+                PageSwipeCatcher(
+                    enabled: { !chrome.walkModalOpen && !chrome.walkSheetOpen
+                               && !chrome.walkInPushedRoom },
+                    step: { delta in step(delta) })
+            }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             // The strip FLOATS over the feed rather than sitting above it
             // (2026-07-20). It was a VStack sibling, which meant nothing ever

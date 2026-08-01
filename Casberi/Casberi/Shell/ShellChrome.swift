@@ -51,6 +51,7 @@ final class ShellChrome {
     /// "re-tap to pop" habit, now the "re-tap the active chip" habit).
     var popHome = 0
 
+
     /// The crown pour's hue override (prd §159, 2026-07-21). nil = Casberi's
     /// own tint, the permanent field; the Wallet feed sets a scoped wallet's
     /// face tint here while you stand in that wallet, so the whole crown —
