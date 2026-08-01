@@ -158,7 +158,7 @@ enum VerbDerivation {
         if let tel = thing.detectedTel.flatMap(URL.init(string:)) {
             out.append(Verb(label: "Call", icon: "phone", action: .openURL(tel)))
         }
-        if let mail = mailtoURL(for: thing) {
+        if let mail = thing.detectedMailto.flatMap(URL.init(string:)) {
             out.append(Verb(label: thing.kind == .mail ? "Reply" : "Email",
                             icon: "envelope", action: .openURL(mail)))
         }
@@ -231,7 +231,7 @@ enum VerbDerivation {
     /// raw address when the header carries one ("Jane Appleseed", no "@") —
     /// so this only fires for the addresses it can already see, same as
     /// before body text existed; it never guesses.
-    private static func mailtoURL(for thing: Thing) -> URL? {
+    static func mailtoURL(for thing: Thing) -> URL? {
         let text: String
         if thing.kind == .mail {
             guard let from = thing.authorHandle else { return nil }

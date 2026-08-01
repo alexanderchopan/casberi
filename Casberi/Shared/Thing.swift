@@ -582,6 +582,20 @@ final class Thing {
     /// trivially lightweight for `propertiesToFetch`.
     var detectedTel: String? = nil
     var detectedPlace: String? = nil
+    /// The mailto: compose URL, detected from the same text (added 2026-08-01,
+    /// prd §262). It was left computing per row by §260 because it is a regex
+    /// rather than an `NSDataDetector` and looked cheap next to the other two;
+    /// a Time Profiler trace of the real device measured it at **7% of all
+    /// main-thread samples** — the same mistake as its two siblings, in the one
+    /// function that was judged rather than measured.
+    var detectedMailto: String? = nil
+    /// Which detection PASS stamped this row (prd §262). `detectedAt` answers
+    /// "has it been scanned", which is not enough the moment the scan learns a
+    /// new field — every already-stamped row would keep the old answer forever,
+    /// which is exactly what happened when `detectedMailto` joined. Bumping
+    /// `VerbDetection.version` re-enrols the whole corpus in the bounded sweep
+    /// without a migration or a mass write.
+    var detectionVersion: Int? = nil
     /// When detection last ran. Distinct from both fields being nil, which is
     /// the common and legitimate answer ("this text holds no phone or
     /// address") — without this marker every such thing would be re-scanned

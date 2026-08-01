@@ -97,7 +97,7 @@ struct FeedScreen: View {
                 // otherwise storing the detection would just trade a detector
                 // pass for a per-row fault, which is the same mistake wearing a
                 // cheaper coat.
-                \.detectedTel, \.detectedPlace,
+                \.detectedTel, \.detectedPlace, \.detectedMailto,
             ]
             _things = Query(d)
         } else {

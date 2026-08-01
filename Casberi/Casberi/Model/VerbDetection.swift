@@ -31,6 +31,11 @@ enum VerbDetection {
     /// exists to bound, so the sweep is deliberately small and repeats: it runs
     /// on every foreground (off the launch window), so a large corpus drains
     /// over a handful of opens instead of stalling one.
+    /// Bump when the scan learns a new field, so already-stamped rows are
+    /// re-enrolled. 1 = tel + place (prd §260). 2 = mailto joined them (§262),
+    /// after a device profile measured it at 7% of main-thread samples.
+    static let version = 2
+
     private static let batch = 150
 
     /// Guards against two sweeps overlapping — the pass is `async` and a fast
@@ -48,8 +53,9 @@ enum VerbDetection {
         running = true
         defer { running = false }
 
+        let current = version
         var d = FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.detectedAt == nil },
+            predicate: #Predicate { $0.detectionVersion != current },
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
         d.fetchLimit = batch
         guard let pending = try? context.fetch(d), !pending.isEmpty else { return }
@@ -60,7 +66,9 @@ enum VerbDetection {
             // and `detectedAt` is what stops it being re-asked forever.
             thing.detectedPlace = VerbDerivation.placeURL(for: thing)?.absoluteString
             thing.detectedTel = VerbDerivation.telURL(in: thing)?.absoluteString
+            thing.detectedMailto = VerbDerivation.mailtoURL(for: thing)?.absoluteString
             thing.detectedAt = now
+            thing.detectionVersion = current
         }
         context.saveHonestly()
     }
@@ -73,5 +81,6 @@ enum VerbDetection {
     static func invalidate(_ thing: Thing) {
         guard thing.isLive else { return }
         thing.detectedAt = nil
+        thing.detectionVersion = nil
     }
 }

@@ -12696,3 +12696,47 @@ the store is single-use.** `-seedThing` lands a real, persistent thing; the
 second run is a different experiment wearing the first one's name. Wipe the app
 (or assert the precondition — here, that the source is ABSENT at mount) before
 each run, and log the precondition rather than assuming it.
+
+## §262 — The device finally answered: 36 hangs, and the one function I judged instead of measuring (user: "still takes about 3-5 seconds to load home screen, and the swipe still only does half pages", then a screen recording, then a device profile, 2026-08-01)
+
+The first measurement of this whole sequence taken on the machine that is
+actually slow — a Time Profiler trace of a dev-signed Release build on the
+user's own iPhone 17 Pro Max, with iCloud sync live.
+
+**What it says.** **36 potential hangs**, 300–850ms each, arriving back to back:
+~6.4 SECONDS of main-thread hangs inside the first 10 seconds. One number for
+both complaints — a thread unavailable for most of a second at a time cannot
+paint a launch or run a page animation. Casberi's own frames, by sample count
+(≈15,700 total): `FeedScreen.feedList.getter` **7,229 (~46%)**, `shapedListRow`
+closure 1,825, `VerbDerivation.verbs(for:)` 1,789, **`VerbDerivation.mailtoURL`
+1,087 (7%)**, `MainSurface.body.getter` 1,236.
+
+**Ruling — `mailtoURL` joins the stored detection.** §260 moved the phone and
+address detections onto `Thing` and LEFT THIS ONE computing per row, on the
+reasoning that a regex is cheap next to an `NSDataDetector`. The device measured
+it at 7% of all main-thread samples. It was the one function in that pass judged
+rather than measured, and it was wrong by the same mechanism as its two
+siblings: cost per row × every row × every render.
+
+**Ruling — a scan needs a VERSION, not just a timestamp.** `detectedAt` answers
+"has this been scanned", which stops being sufficient the moment the scan learns
+a new field: every already-stamped row keeps the old answer forever, so
+`detectedMailto` would have been nil for the entire existing corpus. New
+additive `detectionVersion`; `VerbDetection.version` bumps to re-enrol
+everything in the bounded sweep with no migration and no mass write.
+
+**What is NOT fixed, and is now the top of the list with a number on it.**
+`feedList` is ~46% of main-thread samples on the device. That is the row-tree
+construction itself, and no single cheap trick removes it; it needs the feed to
+stop building the whole room per render. Recorded rather than guessed at,
+because guessing is what the previous four sections did.
+
+**The method lesson, paid for across §257–§262.** Every earlier measurement was
+taken on a simulator with `icloud.sync` off — visible in the output the whole
+time as `SyncReconcile.dedupe took=0.0ms`, which is the early return, not speed.
+The tracked launch metric reads 487ms on the device the user calls "3-5 seconds
+to load", because it times the FIRST FRAME and the complaint is about the
+populated screen. **Profile the configuration the person runs, on the hardware
+they run it on, before believing any of it** — and note the trace needs a
+dev-signed build (a TestFlight build refuses Instruments) and an unlocked phone,
+neither of which is obvious until a recording comes back empty.
