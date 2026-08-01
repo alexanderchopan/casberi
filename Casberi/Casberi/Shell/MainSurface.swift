@@ -154,30 +154,13 @@ struct MainSurface: View {
         let heldSet = Set(held)
         let fresh = live.filter { !heldSet.contains($0) }
         guard !fresh.isEmpty else { return held }
-        // A source with no chip until now is a NEW ROOM, and it goes to the
-        // TAIL (corrected 2026-08-01, prd §261 — it went to the HEAD from
-        // 2026-07-30 until this).
-        //
-        // This list is not only the strip: `feedLabels` hands it straight to
-        // the pager's `ForEach`, so its order IS the page order. Inserting a
-        // new room at the head therefore inserted a PAGE IN FRONT of the one
-        // the person was moving toward, and a `TabView(.page)` whose data
-        // source changes mid-transition lands between two pages. That is the
-        // long-standing "swiping only does half pages" report, caught on a
-        // user's own screen recording: the strip read All · Wallet · Photos at
-        // 2.3s into a launch and All · CALENDAR · Wallet · Photos by 5s, with
-        // bridges still landing new sources during the exact window the person
-        // was swiping. Three rounds of perf work never touched it because it
-        // was never a timing problem — the pages moved under the gesture.
-        //
-        // The cost is stated plainly, because it overrides half of the
-        // 2026-07-30 ruling: a new room's arrival is now celebrated off the
-        // right edge of the strip where it may not be seen. The bloom and the
-        // catch bob (the arrival watcher below) still fire, and the next
-        // freeze — the next foreground — sorts it into its earned place. A
-        // celebration nobody sees is a real loss; a pager that strands you
-        // between two rooms whenever a bridge syncs is a worse one.
-        return held + fresh
+        // A source with no chip until now is a NEW ROOM — it goes to the head,
+        // not the tail, because it arrives wearing the bloom and the catch bob
+        // (see the arrival watcher below) and a celebration that happens off
+        // the right edge of the strip is a celebration nobody sees. This is the
+        // one thing allowed to move the strip mid-session, and it moves it for
+        // an event the person can watch happen.
+        return [held.first ?? "All"] + fresh + held.dropFirst()
     }
 
     /// Freeze the order as it stands. Called at mount and on every foreground —
