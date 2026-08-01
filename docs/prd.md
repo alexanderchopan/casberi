@@ -12401,3 +12401,72 @@ way `document` was: our own Refresh/Back/⌘1–9 and the walk items live INSIDE
 those same groups, and Apple's items there report EMPTY identifiers, so nothing
 distinguishes them but a localized title. Matching on a translated string is the
 exact fragility the measurement above avoided, so it is left alone and recorded.
+
+## §257 — The launch stops re-walking the corpus, and the perf pass finally says why (user: "how if at all would you improve the speed of the app on load", then "do all", 2026-07-31)
+
+Cold launch had been climbing for three weeks — `scripts/output/perf-history.csv`
+records 293ms (2026-07-11), 385ms (07-22), 632ms (07-29), 763ms (07-31), toward
+the pass's own 900ms ceiling — with memory flat. Nine runs recorded the climb and
+not one recorded a cause.
+
+**Ruling 1 — an instrument that discards its own detail isn't a measurement.**
+`perf.sh` streamed a predicate matching only `launchTimer` and `answerProbe(`,
+while the app had been emitting per-span markers (`LaunchPerf.time`/`accumulate`/
+`buildTick`) since 2026-07-30. Every one was dropped on the floor, so the whole
+climb had to be re-instrumented by hand before it could be acted on. The
+predicate now takes `launchPerf` too and the report carries a span breakdown.
+Reported, never flagged: the three history metrics stay the gate.
+
+**Ruling 2 — derive from EVENTS, not from body passes.** The measured cause,
+once visible: `MainSurface` walked the WHOLE corpus **74 times** in one cold
+launch. Two sites, same mistake. `chipLabels` called `computedChipLabels` on
+every body evaluation — a full corpus walk plus a sort — to decide which frozen
+chip slots still had a source behind them. And the arrival watcher's
+`onChange(of: feedThings.count)` value expression is *itself* evaluated on every
+body pass, so asking it for the FILTERED count bought a second full walk each
+time. Now: a `liveChips` cache refreshed from the three events that can change
+the SET of sources (mount, foreground, a corpus count change), plus a fourth for
+connected live-room bridges (§234) so a Kalshi chip still appears the moment you
+return from connecting it; and the watcher keys on the raw `@Query` count, which
+is an O(1) array read. **74 walks → 8.** The cache is `nil`-until-first-use and
+computes inline on that first pass rather than rendering an empty strip for a
+frame and writing state to fix it.
+
+**Ruling 3 — the neighbour page is worth having, not worth paying for during the
+first paint.** §2026-07-30's `nearActive` gate cut feed-page assembly from every
+source to the active one plus its neighbour. At cold launch that still assembles
+a second full room, hero chains and all, in the window where the first frame is
+being drawn — and nobody swipes in the first half-second. The neighbour now
+joins 400ms after mount. It is still pre-built, so a swipe is still instant; it
+simply stops competing with the frame nobody can swipe on.
+
+**Ruling 4 — the common case must not pay for the rare one.** `SyncReconcile`
+ran one unqualified fetch of the whole corpus at every launch, on the main
+actor, hydrating every column — `content`, `enrichedText`, `postText`, the heavy
+inline text — to read one short string per row. Nearly every row has a
+`sourceRef` and `continue`s before the text is ever touched; only the ref-less
+handful (typed notes, voice memos, composer pastes) needs it. Two passes now,
+each fetching only its own columns. Same walk in two parts: the groups never
+compare against each other, so no outcome changes.
+
+**Ruling 5 — measure the build people actually run.** Every launch number this
+project has recorded came from an unoptimized `-Onone` Debug build, because the
+`launchTimer` marker was `#if DEBUG`. The stopwatch is a `Date`; what was worth
+gating is the LOG, so `LaunchClock.reports` gates that instead — always in DEBUG,
+in Release only under an explicit `-launchTimer YES` nobody passes in normal use.
+Measured the same day: **Release settles at ~350ms** where Debug settles at
+~477ms, so Debug is an upper bound and the history's ceilings are conservative.
+
+**A note on the tool measuring itself.** `LaunchPerf.accumulate` logged a line
+per call — 74 NSLogs to report 87ms of work, roughly 700ms of logging inside the
+launch it was timing, which made the first instrumented run look like a 196%
+regression. Throttled to one line per label per 250ms. The counters stay exact;
+the totals are now a floor, since the last line can omit a final sub-250ms
+window.
+
+Not done, deliberately: `containerWithFallback` (SwiftData + CloudKit store open,
+53–150ms settled) is synchronous in `CasberiApp.init` and must complete before
+the `WindowGroup` body exists — it is the launch's floor, not a target. And
+`BridgeRefresh.refreshAllConnected` was already correct: every bridge runs inside
+its own staggered `Task`, so the 6–15ms it costs synchronously is dispatch, not
+work. It was on the improvement list until it was read; nothing was changed there.

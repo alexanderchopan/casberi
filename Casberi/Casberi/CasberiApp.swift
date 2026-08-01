@@ -1,17 +1,34 @@
 import SwiftUI
 import SwiftData
 
-#if DEBUG
-/// Cold-launch stopwatch (DEBUG only). `start` is stamped the instant the first
-/// line of `CasberiApp.init` runs — the earliest app-owned code — so RootShell
-/// can log init→ready latency once per process for the perf pass
-/// (`scripts/perf.sh`). One `Date` plus one `NSLog`; it never touches the
-/// launch path's stack depth (see CLAUDE.md's 4MB main-stack note).
+/// Cold-launch stopwatch. `start` is stamped the instant the first line of
+/// `CasberiApp.init` runs — the earliest app-owned code — so RootShell can log
+/// init→ready latency once per process for the perf pass (`scripts/perf.sh`).
+/// One `Date` plus one `NSLog`; it never touches the launch path's stack depth
+/// (see CLAUDE.md's 4MB main-stack note).
+///
+/// Not `#if DEBUG` anymore (2026-07-31). It was, and that meant every launch
+/// number this project has ever recorded came from an unoptimized `-Onone`
+/// build — while the thing anyone actually waits on is the Release binary on
+/// TestFlight. The stopwatch itself is a `Date`; what was worth gating is the
+/// LOG, so that's what `reports` gates, on an explicit `-launchTimer YES`
+/// argument nobody passes in normal use. A shipped build stays silent, and the
+/// shipping configuration finally becomes measurable instead of merely assumed
+/// to be faster.
 enum LaunchClock {
     static let start = Date()
     nonisolated(unsafe) static var didLog = false   // read/written on main only
+
+    /// DEBUG always reports (perf.sh's existing contract, unchanged). Release
+    /// reports only when asked.
+    static var reports: Bool {
+        #if DEBUG
+        return true
+        #else
+        return UserDefaults.standard.bool(forKey: "launchTimer")
+        #endif
+    }
 }
-#endif
 
 /// A Home Screen quick action (long-press the icon on iOS/iPadOS) IS a Mac
 /// Dock menu under Catalyst — Apple surfaces the same `UIApplicationShortcutItem`
@@ -59,9 +76,7 @@ struct CasberiApp: App {
     let container: ModelContainer
 
     init() {
-        #if DEBUG
         _ = LaunchClock.start   // stamp the earliest app-code moment
-        #endif
         // The store lives in the app group so the share extension writes to
         // the same corpus (S3: every capture surface routes here).
         // `containerWithFallback` degrades (CloudKit off, then in-memory)

@@ -277,16 +277,17 @@ struct RootShell: View {
                 scene.sizeRestrictions?.minimumSize = CGSize(width: 560, height: 480)
             }
             #endif
-            #if DEBUG
             // Perf pass: log init→ready (first content appearance) once per
             // process. `ready` = this onAppear, i.e. the first frame's view tree
             // is assembled — read by scripts/perf.sh, not an in-app surface.
-            if !LaunchClock.didLog {
+            // Always in DEBUG; in Release only under `-launchTimer YES`, so the
+            // shipping build can be measured without ever logging for a real
+            // person (see `LaunchClock.reports`).
+            if !LaunchClock.didLog, LaunchClock.reports {
                 LaunchClock.didLog = true
                 let ms = Int(Date().timeIntervalSince(LaunchClock.start) * 1000)
                 NSLog("[Casberi] launchTimer init→ready %dms", ms)
             }
-            #endif
             // Spotlight mirrors the store; launch reconciles (covers things
             // the share extension made while the app was closed). The fetch
             // reads the main-actor store, so it stays on the main actor — a
@@ -305,8 +306,17 @@ struct RootShell: View {
                 guard !Task.isCancelled else { return }
                 // Every launch: Spotlight reconciles and CloudKit-merge
                 // duplicates collapse (covers extension writes + sync merges).
+                #if DEBUG
+                LaunchPerf.time("SpotlightIndex.reindexAll") {
+                    SpotlightIndex.reindexAll(context: modelContext)
+                }
+                LaunchPerf.time("SyncReconcile.dedupe") {
+                    SyncReconcile.dedupeBySourceRef(context: modelContext)
+                }
+                #else
                 SpotlightIndex.reindexAll(context: modelContext)
                 SyncReconcile.dedupeBySourceRef(context: modelContext)
+                #endif
 
                 // One-time migrations run once per install (bump the version
                 // when adding one) — steady-state launches skip the scans.

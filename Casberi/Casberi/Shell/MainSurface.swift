@@ -74,7 +74,13 @@ struct MainSurface: View {
     /// The corpus MINUS search-only sources (Contacts) — the same rule Home and
     /// Feed already share (`Corpus.surfaced`), so the chip row lists exactly the
     /// sources the feed shows.
-    private var feedThings: [Thing] { Corpus.surfaced(things) }
+    /// The whole corpus, minus search-only sources — a full walk and a fresh
+    /// array every call, so it is read from EVENTS (mount, foreground, an
+    /// arrival) and never from a body pass. Measured 2026-07-31: it ran 74
+    /// times in one cold launch, because both `chipLabels` and the arrival
+    /// watcher's `onChange(of:)` value asked for it on every body evaluation.
+    /// See `liveChips` and the watcher below for the two fixes.
+    private var feedThings: [Thing] { perfAccum("MainSurface.feedThings") { Corpus.surfaced(things) } }
 
     /// First-ever thing from a source blooms its hue across the header once.
     @State private var bloomHue: Color?
@@ -112,8 +118,34 @@ struct MainSurface: View {
     /// is computed at launch and at each foreground — moments when nobody is
     /// mid-reach — and held for the whole session in between. A tap still
     /// counts (`ChipMemory.visited`); it simply lands next time you come back.
+    /// The live label set, cached (2026-07-31 perf).
+    ///
+    /// `computedChipLabels` walks the WHOLE corpus and sorts it, and `chipLabels`
+    /// reads it to decide which frozen slots still have a source behind them —
+    /// so before this cache, every body evaluation of the shell paid for a full
+    /// corpus walk. Measured: 74 walks in one cold launch, which is the shell's
+    /// single largest launch-window cost and one that grows with the corpus
+    /// forever.
+    ///
+    /// `nil` means "never computed", which only happens on the very first body
+    /// pass — it computes inline there rather than rendering an empty strip for
+    /// a frame and writing state to fix it. After that it is refreshed from the
+    /// three events that can genuinely change the SET of sources: mount,
+    /// foreground, and a corpus count change (an arrival or a deletion). A chip
+    /// tap changes only the ORDER, which is frozen until foreground anyway.
+    @State private var liveChips: [String]?
+
+    /// Connected live-room bridges (Kalshi, Polymarket) earn a chip with nothing
+    /// landed, so connecting one changes the label set without changing the
+    /// corpus count. Cheap enough to read per body pass — it walks the ~25
+    /// bridges, not the corpus — and it's what lets a chip appear the moment you
+    /// come back from connecting rather than waiting for the next foreground.
+    private var liveRoomChipCount: Int {
+        store.bridges.filter { $0.status == .connected && LiveRoomSources.has($0.name) }.count
+    }
+
     private var chipLabels: [String] {
-        let live = computedChipLabels
+        let live = liveChips ?? computedChipLabels
         guard !frozenChips.isEmpty else { return live }
         // Anything the freeze knows about keeps its frozen slot; a source whose
         // last thing was deleted meanwhile drops out.
@@ -132,8 +164,19 @@ struct MainSurface: View {
     }
 
     /// Freeze the order as it stands. Called at mount and on every foreground —
-    /// never mid-session, which is the whole point.
-    private func freezeChips() { frozenChips = computedChipLabels }
+    /// never mid-session, which is the whole point. One walk serves both the
+    /// freeze and the live cache, since at this instant they are the same list.
+    private func freezeChips() {
+        let live = computedChipLabels
+        liveChips = live
+        frozenChips = live
+    }
+
+    /// Refresh the live set WITHOUT re-freezing — a source arriving or leaving
+    /// mid-session must be reflected (that's what earns a new room its head
+    /// slot in `chipLabels`), but re-freezing here would slide the strip under
+    /// a thumb, which is the one thing the freeze exists to prevent.
+    private func refreshLiveChips() { liveChips = computedChipLabels }
 
     /// Chip order: All, then every source — most-recent-first is still the
     /// baseline (`things` is newest-first, so first appearance IS the newest
@@ -458,7 +501,30 @@ struct MainSurface: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { freezeChips() }
         }
+        // Connecting a live-room bridge (Kalshi, Polymarket) earns a chip with
+        // nothing landed, so it changes the label set without changing the
+        // corpus count the watcher above keys on. Without this the new chip
+        // would wait for the next arrival or foreground — i.e. you'd come back
+        // from connecting an exchange and find no room to browse its book from,
+        // which is the whole point of connecting one (prd §234).
+        .onChange(of: liveRoomChipCount) { _, _ in refreshLiveChips() }
+        // Neighbour feed pages join AFTER the first paint (2026-07-31 perf).
+        // The 2026-07-30 `nearActive` gate cut page assembly from every source
+        // to the active one plus its neighbour — but at COLD LAUNCH that still
+        // assembles a second full room (hero chains and all) in the same window
+        // as the first, and nobody can swipe in the first half-second. Measured:
+        // 44 heavy assemblies across two pages in one launch. The neighbour is
+        // what makes a swipe feel instant, so it is kept — just not paid for
+        // while the first frame is still being drawn.
+        .task {
+            try? await Task.sleep(for: .milliseconds(400))
+            neighborsReady = true
+        }
     }
+
+    /// Whether the pager should pre-build the page one swipe away. False only
+    /// for the first moments of a launch — see the `.task` above.
+    @State private var neighborsReady = false
 
     private var surface: some View {
         NavigationStack(path: $route.path) {
@@ -478,7 +544,7 @@ struct MainSurface: View {
                 ForEach(Array(feedLabels.enumerated()), id: \.element) { i, label in
                     FeedScreen(source: label,
                                isActive: label == filter.source,
-                               nearActive: abs(i - activeIdx) <= 1)
+                               nearActive: neighborsReady && abs(i - activeIdx) <= 1)
                         .tag(label)
                 }
             }
@@ -589,8 +655,22 @@ struct MainSurface: View {
                 // mount is rendered on the first frame with no re-landing
                 // dance needed.
             }
-            .onChange(of: feedThings.count) { _, _ in
-                let ids = Set(feedThings.map(\.id))
+            // Watches the RAW query count, not `feedThings.count` (2026-07-31
+            // perf): an `onChange(of:)` value expression is evaluated on every
+            // body pass, so asking it for the filtered count meant a full
+            // corpus walk per pass — half of the 74 measured at launch. The
+            // raw count is an O(1) read of an array already in hand. A
+            // search-only source (Contacts) landing moves this count without
+            // moving the filtered one; the diff below simply finds nothing
+            // fresh and returns, which is the same outcome as never firing.
+            .onChange(of: things.count) { _, _ in
+                // One walk for the whole watcher — every derivation below
+                // reads this binding rather than asking `feedThings` again.
+                let surfaced = feedThings
+                // A source may have arrived or emptied out; the strip's live
+                // set is derived from the corpus, so it moves with it.
+                refreshLiveChips()
+                let ids = Set(surfaced.map(\.id))
                 defer { seenIDs = ids }
                 // nil = the query hasn't been baselined yet (cold mount).
                 guard let seen = seenIDs else { return }
@@ -600,13 +680,13 @@ struct MainSurface: View {
                 // populate) — a bob for a bulk import would be noise.
                 guard !fresh.isEmpty, fresh.count <= 12 else { return }
                 // The loudest voice of the batch: its newest member.
-                guard let lead = feedThings.first(where: { fresh.contains($0.id) })
+                guard let lead = surfaced.first(where: { fresh.contains($0.id) })
                 else { return }
                 // First-ever = nothing OLDER from this source survives AND
                 // the source has never bloomed before (persistent — pruning
                 // old things must not replay the connect celebration).
                 let bloomedKey = "bloom.seen.\(lead.source)"
-                let hasOlder = feedThings.contains {
+                let hasOlder = surfaced.contains {
                     $0.source == lead.source && !fresh.contains($0.id)
                 }
                 let firstEver = !hasOlder
@@ -616,7 +696,7 @@ struct MainSurface: View {
                 // moment worth marking: the berry rain falls and a toast names
                 // it. One celebration per arrival batch — the marker is stamped
                 // at ingest (GitHubFeedFetch.isMajorRelease).
-                if let major = feedThings.first(where: {
+                if let major = surfaced.first(where: {
                     fresh.contains($0.id) && $0.source == "GitHub"
                         && $0.tags.contains(GitHubFeedFetch.majorReleaseTag)
                 }) {
@@ -626,7 +706,7 @@ struct MainSurface: View {
                 // A source crossing a round total of things is a quiet
                 // count-up, said once (prd §36v, generalized per-source
                 // 2026-07-21) — a fact the corpus can prove, never a streak.
-                let sourceCount = feedThings.filter { $0.source == lead.source }.count
+                let sourceCount = surfaced.filter { $0.source == lead.source }.count
                 ThingMilestones.check(source: lead.source, count: sourceCount, chrome: chrome)
                 if firstEver {
                     UserDefaults.standard.set(true, forKey: bloomedKey)

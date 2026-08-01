@@ -40,9 +40,19 @@ fi
 LOG="$OUT/perf-stream.log"
 step "Cold launch + probe"
 xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
-# Stream the two timing lines the app emits during THIS launch.
+# Stream the timing lines the app emits during THIS launch.
+#
+# `launchPerf` joined the predicate on 2026-07-31 and is the reason this pass
+# can now say WHY a launch got slower rather than only that it did. The app
+# has emitted per-span lines (`LaunchPerf.time`/`accumulate`/`buildTick` —
+# container open, the dedupe/Spotlight housekeeping, the foreground sweep,
+# feed-page assembly counts) since 2026-07-30, and this predicate dropped
+# every one of them on the floor — so nine runs recorded a launch climbing
+# 293ms → 763ms with no breakdown of what grew, and the spans had to be
+# re-measured by hand to act on it. A stream is the cheap half of a perf
+# pass; discarding it to keep the log tidy costs the whole diagnosis.
 xcrun simctl spawn "$DEVICE" log stream \
-  --predicate 'process == "Casberi" AND (eventMessage CONTAINS "launchTimer" OR eventMessage CONTAINS "answerProbe(")' \
+  --predicate 'process == "Casberi" AND (eventMessage CONTAINS "launchTimer" OR eventMessage CONTAINS "answerProbe(" OR eventMessage CONTAINS "launchPerf")' \
   --style compact > "$LOG" 2>/dev/null &
 LOGPID=$!
 sleep 1
@@ -118,6 +128,32 @@ TS=$(date +%Y-%m-%dT%H:%M:%S)
   line "memory (RSS)"        "MB" "$MEM_MB"    "$PREV_MEM"    "$MEM_CEIL"    "$MEM_RATIO"
   line "answer (compose)"    "ms" "$ANSWER_MS" "$PREV_ANSWER" "$ANSWER_CEIL" "$ANSWER_RATIO"
   print -r -- ""
+  # ── Span breakdown (the WHY behind the launch number) ─────────────────
+  # Reported, never flagged: these are DEBUG-only markers and the three
+  # numbers above are what the history tracks. This section exists so a
+  # regression run names its own cause instead of sending the next reader
+  # back to re-instrument by hand.
+  if grep -q 'launchPerf' "$LOG" 2>/dev/null; then
+    print -r -- "launch spans (DEBUG markers, not gated):"
+    # One-shot timings: `timed=<label> took=<n>ms`.
+    grep -o 'timed=[^ ]* took=[0-9.]*ms' "$LOG" | sort -u | while read -r span; do
+      print -r -- "  ${span/ took=/  }"
+    done
+    # Accumulators are cumulative — the LAST line per label is the total.
+    for label in $(grep -o 'accum=[^ ]*' "$LOG" | cut -d= -f2 | sort -u); do
+      last=$(grep "accum=$label " "$LOG" | tail -1)
+      calls=$(echo "$last" | grep -o 'calls=[0-9]*' | cut -d= -f2)
+      total=$(echo "$last" | grep -o 'totalMs=[0-9.]*' | cut -d= -f2)
+      print -r -- "  accum=$label  ${total}ms over ${calls} calls"
+    done
+    # Feed-page assembly: the count is the metric (see LaunchPerf.buildTick).
+    BUILDS=$(grep -c 'HEAVYBUILD' "$LOG" 2>/dev/null || echo 0)
+    if (( BUILDS > 0 )); then
+      PAGES=$(grep -o 'HEAVYBUILD source=[^ ]*' "$LOG" | cut -d= -f2 | sort -u | tr '\n' ' ')
+      print -r -- "  feed page assemblies: $BUILDS across: $PAGES"
+    fi
+    print -r -- ""
+  fi
   if (( ${#FLAGS} )); then
     print -r -- "FLAGS (${#FLAGS}):"
     for f in "${FLAGS[@]}"; do print -r -- "  ⚠ $f"; done

@@ -44,17 +44,38 @@ enum LaunchPerf {
     /// shape that matters once per-call time is already small.
     nonisolated(unsafe) static var totals: [String: (calls: Int, ms: Double)] = [:]
 
+    /// When each label last WROTE a line. The counters are exact; only the
+    /// reporting is throttled — see below.
+    nonisolated(unsafe) static var lastLogged: [String: Date] = [:]
+    /// Minimum gap between two lines for the same label.
+    private static let logThrottle: TimeInterval = 0.25
+
     @MainActor
     static func accumulate<T>(_ label: String, _ work: () -> T) -> T {
         let t0 = Date()
         let v = work()
-        let ms = Date().timeIntervalSince(t0) * 1000
+        let now = Date()
+        let ms = now.timeIntervalSince(t0) * 1000
         var e = totals[label] ?? (0, 0)
         e.calls += 1; e.ms += ms
         totals[label] = e
+        // Throttled (2026-07-31): a line per call made this instrument cost
+        // several times what it measured. A derivation running 74 times in a
+        // cold launch emitted 74 NSLogs — ~700ms of logging to report 87ms of
+        // work, which inflated the very launch number the pass exists to track
+        // and made a fix look like a regression. The counters above are still
+        // exact; only the reporting is rate-limited, and each line carries the
+        // RUNNING total, which is why `perf.sh` parses the last line per label.
+        // The first call always logs, so a label that fires once still reports.
+        // Stated plainly: the last line can therefore omit whatever happened in
+        // the final sub-250ms window — a rounding error next to the ~700ms of
+        // distortion it removes, but it does mean these totals are a floor.
+        let due = lastLogged[label].map { now.timeIntervalSince($0) >= logThrottle } ?? true
+        guard due else { return v }
+        lastLogged[label] = now
         NSLog("[Casberi] launchPerf accum=%@ calls=%d totalMs=%.1f lastMs=%.1f at=%dms",
               label, e.calls, e.ms, ms,
-              Int(Date().timeIntervalSince(LaunchClock.start) * 1000))
+              Int(now.timeIntervalSince(LaunchClock.start) * 1000))
         return v
     }
 }
