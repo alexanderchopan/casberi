@@ -1544,8 +1544,20 @@ struct FeedScreen: View {
         .sheet(item: $feedSheet) { route in
             switch route {
             case .thing(let thing):
+                // Zoom transition DROPPED for thing opens (2026-07-30, prd
+                // ruling 232): a beta tester on build 225 hit a deterministic crash
+                // opening any photo ("every photo, instantly, every time")
+                // that never reproduced for the dev or on the simulator —
+                // headless open, the real tile-tap zoom, and the sheet content
+                // path were all verified clean. That profile — universal for
+                // one device, invisible everywhere else — is an OS/device-
+                // specific `.navigationTransition(.zoom)` fault, the one
+                // fragile system API in an otherwise clean path. The zoom is
+                // decorative; the standard sheet present is the safe fallback.
+                // The matching `matchedTransitionSource` sources were removed
+                // with it. Restore only once a symbolicated stack proves a
+                // different cause.
                 ThingSheetView(thing: thing)
-                    .navigationTransition(.zoom(sourceID: thing.id, in: zoomNS))
             case .token(let route):
                 TokenQuickSheet(route: route)
             case .allocation:
@@ -3198,7 +3210,7 @@ struct FeedScreen: View {
                                 // settle the Settings tiles and treemap cells wear.
                                 .buttonStyle(DSTileButtonStyle())
                                 .dsHover()
-                                .matchedTransitionSource(id: thing.id, in: zoomNS)
+                                // Zoom source removed with the thing-open zoom (prd 232, 2026-07-30).
                             }
                         }
                         // An incomplete last row keeps its tiles at the same
@@ -3626,7 +3638,7 @@ struct FeedScreen: View {
                                  replies: replies))
             .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
             .contentShape(Rectangle())
-            .matchedTransitionSource(id: thing.id, in: zoomNS)
+            // Zoom source removed with the thing-open zoom (prd 232, 2026-07-30).
             .onTapGesture { openThing(thing) }
             // Mac/pointer polish (2026-07-31): every feed row is a Button
             // elsewhere in the app's list screens (`dsListCardRow`'s own
