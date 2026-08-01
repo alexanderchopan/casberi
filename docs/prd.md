@@ -12597,3 +12597,61 @@ neither compiled nor felt. The diagnosis rests on the user's own device report
 (open buzzes, cells do not), which is the one fact no static reading could supply
 and the simulator could never have produced — it has no haptics at all. The change
 is three additive lines and a moved call; nothing branches on it.
+## §260 — The menu nobody opened, scanned every row (user: "still lags swiping between screens a bit", then "All rooms, evenly", then "lets do profiling", 2026-08-01)
+
+§257 and §258 fixed the launch and were measured honestly, and the swipe still
+lagged. Four rounds of reasoning about it produced three changes that measured
+neutral-or-worse and were reverted. What actually found it was a PROFILER.
+
+**Ruling 1 — the answer, and it is per-ROW.** A `sample` of a Release build
+during swipes (4,304 busy main-thread samples; 61% of the thread was idle):
+`VerbDerivation.telURL` 469, `placeURL` 455, `verbs(for:)` 648 — **~21% of all
+busy main-thread time** running two `NSDataDetector` passes, address and phone,
+over every row's full text. The mechanism is a SwiftUI detail worth writing
+down: a feed row attaches a `.contextMenu`, and **`contextMenu(menuItems:)`
+takes a NON-ESCAPING builder**, so its contents are built for every row on
+every render — not on long-press. A menu almost nobody opens was doing
+linguistic analysis on the whole corpus, repeatedly. Per row, not per corpus,
+which is exactly why the user reported the lag as EVEN ACROSS ROOMS rather than
+concentrated in a big one — the observation that redirected the search after
+four wrong turns.
+
+**Ruling 2 — detection is a property of the CONTENT, not of the render.** Three
+additive optional fields (`detectedTel`, `detectedPlace`, `detectedAt`) stamped
+once by a bounded foreground sweep (`VerbDetection.backfill`, 150/pass, newest
+first), read by `verbs(for:)` thereafter. Measured after: telURL and placeURL
+**0 samples**, `verbs(for:)` 648 → 162, the `daySection` row closure 1,290 →
+335, `shapedListRow` 1,215 → 209. `detectedAt` is load-bearing and distinct from
+both fields being nil — nil/nil is the common, legitimate answer ("no phone, no
+address here"), and without the stamp every such thing is rescanned forever.
+
+The sweep is deliberately NOT wired into each bridge's ingest: there are ~40
+landing paths, one would be forgotten, and a thing arriving by CloudKit merge
+from another device has no local ingest hook at all. One sweep over whatever is
+unstamped covers every path, including ones added later.
+
+**Ruling 3 — a cache was the obvious fix and it did nothing.** Caching detector
+results keyed on the text measured NO improvement, and no improvement again at a
+20,000-entry limit. The scans are cold most of the time: a swipe brings a room's
+rows into view for the first time, so there is nothing to hit. Recorded because
+it is the fix anyone would reach for first.
+
+**Three other rejected-by-measurement attempts, so nobody repeats them:**
+giving source rooms the All room's `propertiesToFetch` made a 4,000-row room
+WORSE (~300ms → ~510ms per render — faults beat materializing forty columns per
+row); `.equatable()` on `FeedScreen` did nothing (pages are invalidated by their
+own observation of `FeedFilter`/`ShellChrome`, not by the parent handing them a
+new struct, and `EquatableView` only short-circuits parent-driven updates); and
+memoizing the source rooms' `chronoGroups` measured neutral at the time — though
+with the detector cost removed it is now visible at 208 samples, so it is worth
+revisiting on evidence rather than on faith.
+
+**The standing lesson, and it is the session's real output.** §257's own
+instrument was honest and still pointed at the wrong 7%: `feedList` measured 307
+samples while the row closure it *returns* cost 1,290, because SwiftUI evaluates
+a `ForEach` content closure AFTER the property that built it has returned — so
+any `perfAccum`-style timer around a view-building property is structurally
+blind to where the work happens. **A sampling profiler sees what a hand-placed
+timer cannot, and four rounds of careful reasoning lost to fifteen seconds of
+`sample`.** `xctrace` against a simulator process records empty traces; plain
+`sample <pid>` works and is what to reach for.

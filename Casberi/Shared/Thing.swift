@@ -562,6 +562,33 @@ final class Thing {
     /// year-old list isn't mostly dead markets. nil for everything else.
     var marketResolvedYes: Bool? = nil
 
+    /// What a row can REACH, detected once from this thing's own text and
+    /// stored (PERF 2026-08-01, prd §260) — a `tel:` URL and a maps
+    /// destination, or nil when the text holds neither.
+    ///
+    /// These exist because detection is a property of the CONTENT, not of the
+    /// render, and it was being paid as if it were the latter. Every feed row
+    /// attaches a `.contextMenu`, whose builder is non-escaping and therefore
+    /// runs at body-build time for EVERY row on EVERY render; it called
+    /// `VerbDerivation.verbs(for:)`, which faulted the heavy `content` column
+    /// and ran two `NSDataDetector` passes (address + phone) over the full
+    /// text. A profile of a swipe put that at ~21% of all busy main-thread
+    /// time — the single largest cost, and per-row rather than per-corpus,
+    /// which is why the lag was even across rooms rather than concentrated in
+    /// a big one.
+    ///
+    /// Stored as `String`, not `URL`: these are CheckingType results rebuilt
+    /// into schemes we construct ourselves, and a String keeps the column
+    /// trivially lightweight for `propertiesToFetch`.
+    var detectedTel: String? = nil
+    var detectedPlace: String? = nil
+    /// When detection last ran. Distinct from both fields being nil, which is
+    /// the common and legitimate answer ("this text holds no phone or
+    /// address") — without this marker every such thing would be re-scanned
+    /// forever, which is the cost this exists to remove. See
+    /// `VerbDetection.backfill`.
+    var detectedAt: Date? = nil
+
     init(
         id: UUID = UUID(),
         kind: ThingKind,

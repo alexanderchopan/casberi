@@ -889,6 +889,13 @@ struct RootShell: View {
                     // not yet embedded — a bounded background sweep, so Ask can
                     // retrieve by meaning, not just shared words.
                     EmbeddingIndex.backfill(context: modelContext)
+                    // Stamp what each new thing can REACH (a phone number, an
+                    // address) once, instead of re-detecting it per row per
+                    // render — prd §260. Same bounded-sweep shape as the
+                    // embedding backfill above, and deliberately in the same
+                    // deferred block: it is the work the launch window exists
+                    // to keep clear.
+                    VerbDetection.backfill(context: modelContext)
                     // The "Noticed" line's real trigger (docs/agent-brief.md
                     // ruling 10). Also refreshes the kept-ask digest cache
                     // (`KeptAskStore.anyChanged`) the bar's pulse reads from.

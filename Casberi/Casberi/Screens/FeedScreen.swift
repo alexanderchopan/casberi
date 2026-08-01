@@ -92,6 +92,12 @@ struct FeedScreen: View {
                 \.socialContext, \.channelName, \.likeCount, \.repostCount, \.replyCount,
                 \.quote, \.parent, \.imageURLs, \.postAuthor, \.externalLink, \.wikilinks,
                 \.marketResolvedYes,
+                // The row's context menu reads these per row now (prd §260), so
+                // they belong in the pre-fetch with everything else it reads —
+                // otherwise storing the detection would just trade a detector
+                // pass for a per-row fault, which is the same mistake wearing a
+                // cheaper coat.
+                \.detectedTel, \.detectedPlace,
             ]
             _things = Query(d)
         } else {

@@ -142,12 +142,20 @@ enum VerbDerivation {
         // address or a maps link, routing to it is the most useful move —
         // prepend so it survives the cap. Apple Maps over the web URL, so it
         // opens even if the Maps app was removed (never a dead hand-off).
-        if let maps = placeURL(for: thing) {
+        // READ, never detect (PERF 2026-08-01, prd §260). These two were
+        // `NSDataDetector` passes over the row's full text, run from a
+        // non-escaping `.contextMenu` builder — i.e. per row, per render, in
+        // every room, and ~21% of busy main-thread time while swiping. They are
+        // stamped once by `VerbDetection.backfill` now and simply read here.
+        // A thing not yet scanned (`detectedAt == nil`) offers neither verb
+        // rather than scanning inline: a verb arriving a beat late is honest,
+        // where a per-render scan was merely invisible.
+        if let maps = thing.detectedPlace.flatMap(URL.init(string:)) {
             out.insert(Verb(label: "Directions", icon: "map", action: .openURL(maps)), at: 0)
         }
 
         // 1c — reach a person: call a detected number, email a detected address.
-        if let tel = telURL(in: thing) {
+        if let tel = thing.detectedTel.flatMap(URL.init(string:)) {
             out.append(Verb(label: "Call", icon: "phone", action: .openURL(tel)))
         }
         if let mail = mailtoURL(for: thing) {
@@ -181,7 +189,7 @@ enum VerbDerivation {
     /// when there's no address to route to (the verb drops; no dead control).
     /// A maps/geo link passes straight through; otherwise a detected street
     /// address becomes the destination query.
-    private static func placeURL(for thing: Thing) -> URL? {
+    static func placeURL(for thing: Thing) -> URL? {
         let text = thing.content.isEmpty ? thing.title : thing.content
 
         if let url = Capture.detectURL(in: text) {
@@ -204,7 +212,7 @@ enum VerbDerivation {
     }
 
     /// A phone number in the thing → a tel: URL, else nil (the verb drops).
-    private static func telURL(in thing: Thing) -> URL? {
+    static func telURL(in thing: Thing) -> URL? {
         let text = thing.content.isEmpty ? thing.title : thing.content
         let range = NSRange(text.startIndex..., in: text)
         guard let number = phoneDetector?.firstMatch(in: text, range: range)?.phoneNumber else { return nil }
