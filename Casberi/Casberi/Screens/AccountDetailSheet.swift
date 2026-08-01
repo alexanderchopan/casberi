@@ -234,7 +234,16 @@ struct AccountDetailSheet: View {
             // so. `CloudSyncStatus` now carries the mirror's real last
             // outcome; this reads that instead of guessing from the toggle.
             toggleRow(syncGlyph, syncTone, "iCloud sync", syncStatusLine,
-                      Binding(get: { icloudSync }, set: { icloudSync = $0; DSHaptic.tap() }))
+                      Binding(get: { icloudSync }, set: {
+                          icloudSync = $0
+                          DSHaptic.tap()
+                          // The address book rides this same consent (it
+                          // mirrors through the key-value store, not the model
+                          // container, so nothing else starts it). Flipping the
+                          // toggle on exchanges immediately rather than waiting
+                          // for the next edit to trigger a push.
+                          if $0 { AddressBookSync.shared.syncNow() }
+                      }))
             if icloudSync, syncHasLiveError, let detail = CloudSyncStatus.lastError {
                 Text(detail)
                     .dsText(.subhead13).foregroundStyle(DS.destructive)
@@ -602,8 +611,14 @@ struct AccountDetailSheet: View {
             if let audio = t.audio { dict["audio"] = audio.base64EncodedString() }
             return dict
         }
+        // The address book rides along (2026-08-01). A name the person typed
+        // lives in UserDefaults rather than the corpus, so walking `Thing`s
+        // alone left it out of a file that calls itself everything — and names
+        // are the one thing here they could put in and never take out.
         guard let data = try? JSONSerialization.data(
-            withJSONObject: ["things": payload, "exported": iso.string(from: .now)],
+            withJSONObject: ["things": payload,
+                             "addressBook": AddressBook.shared.exportPayload(),
+                             "exported": iso.string(from: .now)],
             options: [.prettyPrinted, .sortedKeys]) else { return nil }
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("casberi-things.json")
@@ -622,6 +637,11 @@ struct AccountDetailSheet: View {
             importResult = "That file isn't a Casberi export."
             return
         }
+        // Names first — they're cheap, and a restore that lands the
+        // transactions but not the words for them reads as a half restore.
+        // Absent from files exported before 2026-08-01, which is a skip.
+        let names = (root["addressBook"] as? [[String: Any]])
+            .map { AddressBook.shared.importPayload($0) } ?? 0
         let existing = Set(((try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []).map(\.id))
         let iso = ISO8601DateFormatter()
         var added: [Thing] = []
@@ -663,9 +683,15 @@ struct AccountDetailSheet: View {
         modelContext.saveHonestly()
         SpotlightIndex.index(added)
         DSHaptic.success()
-        importResult = added.isEmpty
-            ? "Nothing new — everything in that file is already here."
+        // Two counts, stated separately — a file that restored 40 names and no
+        // things is a real outcome, and one merged number would hide it.
+        let nameLine = names > 0
+            ? "\(names) name\(names == 1 ? "" : "s") came back."
+            : nil
+        let thingLine = added.isEmpty
+            ? (names > 0 ? nil : "Nothing new — everything in that file is already here.")
             : "\(added.count) thing\(added.count == 1 ? "" : "s") came back."
+        importResult = [thingLine, nameLine].compactMap { $0 }.joined(separator: " ")
     }
 
     private func deleteEverything() {

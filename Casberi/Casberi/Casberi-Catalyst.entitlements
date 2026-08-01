@@ -45,6 +45,9 @@
 	<array>
 		<string>CloudKit</string>
 	</array>
+	<!-- The address book's mirror (AddressBookSync) — see the iOS file. -->
+	<key>com.apple.developer.ubiquity-kvstore-identifier</key>
+	<string>$(TeamIdentifierPrefix)$(CFBundleIdentifier)</string>
 
 	<!-- Team-prefixed, the macOS rule. HealthKit/HomeKit are absent on
 	     purpose — both frameworks are unavailable under Mac Catalyst. -->

@@ -7,12 +7,24 @@ import UIKit
 /// card behind a tap.
 
 extension AddressBook.Entry {
-    /// "0x9a2E…44b1 · Contract" — the address, plus what it turned out to be
-    /// and where it came from, when either is known. A `.wallet` says nothing
-    /// extra: a wallet is the unmarked case, and labelling it would put a word
-    /// on every row that differentiates none of them.
-    var subline: String {
+    /// "0x9a2E…44b1 · 12 together · Contract" — the address, how much you've
+    /// dealt with it, and what it turned out to be, when each is known. A
+    /// `.wallet` says nothing extra: a wallet is the unmarked case, and
+    /// labelling it would put a word on every row that differentiates none.
+    ///
+    /// `activity` is how many landed things name this address (`AddressActivity`)
+    /// — added 2026-08-01, and placed AHEAD of the kind on purpose. The kind is
+    /// already drawn: `AddressMark` gives a wallet a round face and everything
+    /// else a square glyph, which is the whole reason that mark exists. What
+    /// the row could not say is the only fact that makes this a relationships
+    /// list rather than a list of strings — how much you've actually dealt with
+    /// them. It's also the "Most active" sort's evidence: that sort reordered
+    /// rows with nothing on screen explaining why, which reads as arbitrary.
+    func subline(activity: Int?) -> String {
         var parts = [short]
+        if let activity, activity > 0 {
+            parts.append(String(localized: "\(activity) together"))
+        }
         // A Bitcoin address's "kind" is its script type (Legacy/P2SH/Native
         // SegWit/Taproot) — a different axis than `kind.label`'s who-vs-
         // machinery question, read straight off the encoding, free
@@ -22,6 +34,48 @@ extension AddressBook.Entry {
         else if let script = BitcoinAddress.scriptKind(address) { parts.append(script) }
         if let provenance { parts.append(provenance) }
         return parts.joined(separator: " · ")
+    }
+}
+
+/// The filing menu's ITEMS — every group with a tick beside the ones this
+/// address is already in, then "New group…".
+///
+/// Shared because both places you can file from need the identical list: the
+/// book row's context menu and the address card's own group row. Only the
+/// LABEL differs between them (a context-menu entry vs a card row), so the
+/// label stays with each caller and the items live here once.
+///
+/// Creating a group stays a callback rather than an `.alert` attached here —
+/// an alert can't be presented from inside `contextMenu` content, so the host
+/// has to own it.
+struct GroupMenuItems: View {
+    let entry: AddressBook.Entry
+    let groups: [String]
+    var onNewGroup: () -> Void
+    private var book = AddressBook.shared
+
+    init(entry: AddressBook.Entry, groups: [String], onNewGroup: @escaping () -> Void) {
+        self.entry = entry
+        self.groups = groups
+        self.onNewGroup = onNewGroup
+    }
+
+    var body: some View {
+        ForEach(groups, id: \.self) { name in
+            let inGroup = entry.isIn(name)
+            Button {
+                DSHaptic.tap()
+                if inGroup { book.removeFromGroup(name, address: entry.address) }
+                else { book.addToGroup(name, address: entry.address) }
+            } label: {
+                if inGroup { Label(name, systemImage: "checkmark") } else { Text(name) }
+            }
+        }
+        Section {
+            Button(action: onNewGroup) {
+                Label("New group…", systemImage: "folder.badge.plus")
+            }
+        }
     }
 }
 
@@ -161,22 +215,10 @@ struct HistorySummary {
 ///     those seats ride the watched wallets and have no separate home, so a
 ///     watched wallet's own fills and deposits live on its address-book card.
 /// `walletAddress` is the owner both bridges stamp on every thing they land.
-private func addressHistory(for address: String, in context: ModelContext) -> [Thing] {
-    let key = AddressBook.key(for: address)
-    let all = (try? context.fetch(FetchDescriptor<Thing>(
-        predicate: #Predicate {
-            $0.source == "Wallet" || $0.source == "Peer" || $0.source == "Privacy Pools"
-        },
-        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []
-    return all.filter { thing in
-        if thing.source == "Wallet" {
-            guard let cp = thing.counterpartyAddress else { return false }
-            return AddressBook.key(for: cp) == key
-        }
-        guard let owner = thing.walletAddress else { return false }
-        return AddressBook.key(for: owner) == key
-    }
-}
+// What belongs to an address now lives in `AddressActivity` (2026-08-01), so
+// the Wallet manager's "Most active" sort, this card's own count, and the
+// name-this-address nudge can no longer disagree about what activity means —
+// they did, and the sort was the one that was wrong.
 
 struct AddressCard: View {
     let entry: AddressBook.Entry
@@ -186,6 +228,11 @@ struct AddressCard: View {
     private var book = AddressBook.shared
     @State private var renaming = false
     @State private var nameDraft = ""
+    @State private var addingGroup = false
+    @State private var groupDraft = ""
+    /// Bumped when a rename actually rewrote landed titles — the history rows
+    /// stagger their cross-fade off it. See `rename(to:)`.
+    @State private var renameCascade = 0
 
     init(entry: AddressBook.Entry) { self.entry = entry }
 
@@ -193,9 +240,9 @@ struct AddressCard: View {
     private var current: AddressBook.Entry { book.entry(for: entry.address) ?? entry }
 
     /// The corpus's own record of this address — counterparty transactions
-    /// plus its own Peer/Pool activity (see `addressHistory`), newest first.
+    /// plus its own Peer/Pool activity (see `AddressActivity`), newest first.
     private var history: [Thing] {
-        addressHistory(for: entry.address, in: modelContext)
+        AddressActivity.history(for: entry.address, in: modelContext)
     }
 
     var body: some View {
@@ -204,13 +251,26 @@ struct AddressCard: View {
                 VStack(spacing: DS.Space.s3) {
                     AddressMark(entry: current, size: 64)
                         .padding(.top, DS.Space.s4)
+                    // The NAME reveal (2026-08-01) — `AddressMark`'s kind
+                    // turn-over (prd §171) applied to the other half of the
+                    // question. An address added bare stands under its own
+                    // short form; a beat later reverse ENS answers, or a typed
+                    // `.eth` resolves and `reconcileAliases` re-keys the row,
+                    // and the card learns what to call it while you're looking
+                    // at it. Same transition as the mark beside it, so the two
+                    // halves of "what is this" resolve in one visual language.
                     Text(current.name)
                         .dsText(.heading22).foregroundStyle(DS.textPrimary)
                         .multilineTextAlignment(.center)
+                        .transition(.scale(scale: 0.9).combined(with: .opacity))
+                        .id(current.name)
+                        .animation(DS.Motion.standard, value: current.name)
                     Text(kindLine)
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     bitcoinVintageLine
 
+                    lookalikeWarning
+                    groupRow
                     addressRow
                     historySection
                     explorerRow
@@ -255,13 +315,20 @@ struct AddressCard: View {
             }
             .alert("Name this address", isPresented: $renaming) {
                 TextField("Name", text: $nameDraft)
-                Button("Save") {
-                    book.setName(nameDraft, for: entry.address)
+                Button("Save") { rename(to: nameDraft) }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("A blank name removes it from your book.")
+            }
+            .alert("New group", isPresented: $addingGroup) {
+                TextField("Name (e.g. Family, Cold)", text: $groupDraft)
+                Button("Create") {
+                    book.addToGroup(groupDraft, address: entry.address)
                     DSHaptic.success()
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
-                Text("A blank name removes it from your book.")
+                Text("Files \(current.name) under a new group.")
             }
             .task { await AddressKind.detect(entry.address) }
         }
@@ -317,6 +384,103 @@ struct AddressCard: View {
         return parts.joined(separator: " · ")
     }
 
+    /// Naming, and the history catching up (2026-08-01).
+    ///
+    /// **The moment this card was missing.** A name isn't a label on one row —
+    /// it rewrites every transaction you've ever had with this address, all at
+    /// once, and that is the entire argument for naming anything. The card
+    /// already had those transactions on screen and changed them silently, so
+    /// the one thing worth seeing happened invisibly.
+    ///
+    /// `renameCascade` is bumped after the rewrite lands; the history rows key
+    /// their animation off it and cross-fade a beat apart (see
+    /// `historySection`), so the change reads as sweeping down the list rather
+    /// than as a redraw. Nothing is claimed if nothing changed: a rename that
+    /// rewrote no titles (a contract's approvals carry no counterparty clause)
+    /// simply doesn't cascade.
+    private func rename(to name: String) {
+        book.setName(name, for: entry.address)
+        let changed = CounterpartyRetitle.applyCurrentName(for: entry.address,
+                                                           in: modelContext)
+        DSHaptic.success()
+        guard changed > 0 else { return }
+        withAnimation(DS.Motion.standard) { renameCascade += 1 }
+    }
+
+    /// The address(es) already in this book that PRINT the same as this one
+    /// (2026-08-01). Shown as a card rather than a glyph because here there is
+    /// room to name the twin and show both addresses in full — which is the
+    /// only form of this warning that lets someone actually resolve it.
+    ///
+    /// It says what the app knows and stops. It does NOT accuse either side of
+    /// being the impostor: the book cannot know which one you meant, and a
+    /// wrong accusation on a security notice is worse than none.
+    @ViewBuilder
+    private var lookalikeWarning: some View {
+        let twins = book.lookalikes(of: current.address)
+        if !twins.isEmpty {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                HStack(spacing: DS.Space.s2) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(DS.destructive)
+                    Text("Another address looks just like this one")
+                        .dsText(.body17).fontWeight(.semibold)
+                        .foregroundStyle(DS.textPrimary)
+                }
+                Text("They shorten to the same thing everywhere this app prints them, and they are not the same address. Copy carefully.")
+                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                ForEach(twins) { twin in
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(twin.name).dsText(.subhead13).fontWeight(.semibold)
+                            .foregroundStyle(DS.textPrimary)
+                        Text(twin.address)
+                            .dsText(.label12).foregroundStyle(DS.textTertiary)
+                            .monospaced()
+                            .lineLimit(2)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .padding(DS.Space.s3)
+            .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
+        }
+    }
+
+    /// Which groups this address is filed under, and the door to file it
+    /// (2026-08-01). Always present: a card that only showed groups once you
+    /// had them would leave the feature discoverable solely by long-pressing a
+    /// row, which is where the verb lives but not where anyone looks first.
+    private var groupRow: some View {
+        let groups = current.groupNames
+        return Menu {
+            GroupMenuItems(entry: current, groups: book.groupNames) {
+                groupDraft = ""
+                addingGroup = true
+            }
+        } label: {
+            HStack(spacing: DS.Space.s2) {
+                Image(systemName: "folder")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(DS.textTertiary)
+                Text(groups.isEmpty ? String(localized: "Add to a group")
+                                    : groups.joined(separator: ", "))
+                    .dsText(.callout15)
+                    .foregroundStyle(groups.isEmpty ? DS.textSecondary : DS.textPrimary)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(DS.textTertiary)
+            }
+            .padding(DS.Space.s3)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
+    }
+
     private var addressRow: some View {
         HStack(spacing: DS.Space.s3) {
             Text(current.address)
@@ -353,6 +517,15 @@ struct AddressCard: View {
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(thing.title).dsText(.subhead13)
                                     .foregroundStyle(DS.textPrimary).lineLimit(1)
+                                    // The rename cascade (see `rename(to:)`) —
+                                    // each row picks up the new name a beat
+                                    // after the one above it, so a name
+                                    // visibly sweeps down your history with
+                                    // this address instead of the list simply
+                                    // being different afterwards.
+                                    .contentTransition(.opacity)
+                                    .animation(DS.Motion.standard.delay(Double(i) * 0.06),
+                                               value: renameCascade)
                                 Text(thing.capturedAt.formatted(.dateTime.month(.abbreviated).day()))
                                     .dsText(.label12).foregroundStyle(DS.textTertiary)
                             }
@@ -419,18 +592,50 @@ struct AddressCard: View {
         return f.string(from: NSNumber(value: value)) ?? String(format: "%.4f", value)
     }
 
-    /// The one door out — and only for an address an explorer can actually
-    /// serve (a Solana address on Etherscan would be a dead link).
+    /// The door out, per family (2026-08-01). It used to be Etherscan or
+    /// nothing — the refusal was right (a Solana address on Etherscan is a
+    /// dead link) but the conclusion wasn't: the fix for a wrong explorer is
+    /// the right explorer. Each family gets the one that can actually serve it,
+    /// and an address belonging to none still gets no door.
+    ///
+    /// Bitcoin is checked BEFORE Solana: a legacy/P2SH Bitcoin address is
+    /// base58-shaped too and occupies the same band `SNS.isAddress` accepts —
+    /// the same ordering trap the manager's own `watch()` pays for.
+    private var explorerLink: (label: String, url: URL)? {
+        let address = current.address
+        // Ethereum routes through the chain table `WalletIngest` already
+        // owns, so the host lives in exactly one place (`WalletSafety` reads
+        // it the same way) rather than being spelled again here.
+        if ENS.isHexAddress(address),
+           let string = WalletIngest.explorerAddressURL(forNetwork: "eth-mainnet",
+                                                        address: address),
+           let url = URL(string: string) {
+            return (String(localized: "View on Etherscan"), url)
+        }
+        if BitcoinAddress.isAddress(address),
+           let url = URL(string: "https://mempool.space/address/\(address)") {
+            return (String(localized: "View on mempool.space"), url)
+        }
+        // Solana is spelled out rather than routed through the chain table:
+        // Solscan's address pages are `/account/`, so the table's `/tx/` →
+        // `/address/` rewrite would build a dead link.
+        if SNS.isAddress(address),
+           let url = URL(string: "https://solscan.io/account/\(address)") {
+            return (String(localized: "View on Solscan"), url)
+        }
+        return nil
+    }
+
     @ViewBuilder
     private var explorerRow: some View {
-        if ENS.isHexAddress(current.address),
-           let url = URL(string: "https://etherscan.io/address/\(current.address)") {
+        if let link = explorerLink {
+            let url = link.url
             Button {
                 DSHaptic.tap()
                 openURL(url)
             } label: {
                 HStack(spacing: DS.Space.s2) {
-                    Text("View on Etherscan").dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    Text(link.label).dsText(.callout15).foregroundStyle(DS.textSecondary)
                     Image(systemName: "arrow.up.right")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(DS.textTertiary)
@@ -454,7 +659,7 @@ struct AddressHistoryScreen: View {
     @Environment(\.modelContext) private var modelContext
 
     private var history: [Thing] {
-        addressHistory(for: entry.address, in: modelContext)
+        AddressActivity.history(for: entry.address, in: modelContext)
     }
 
     var body: some View {

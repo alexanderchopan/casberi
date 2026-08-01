@@ -548,7 +548,13 @@ final class WalletStore {
         // Through to the book (prd §169): renaming a watched wallet renames
         // the ADDRESS, so the name outlives the watch and every surface — feed
         // tags, transfer titles, the switcher — keeps reading one word.
-        AddressBook.shared.setName(trimmed, for: addresses[i].address, kind: .wallet)
+        // A blank rename falls back to the short-address name rather than
+        // passing "" through — `setName("")` REMOVES the entry, and a watched
+        // wallet is always a book entry (`add`'s own invariant); the alert's
+        // "a blank name shows the address instead" promise depends on this.
+        let addr = addresses[i].address
+        AddressBook.shared.setName(trimmed.isEmpty ? Self.shortAddress(addr) : trimmed,
+                                   for: addr, kind: .wallet)
     }
 
     /// The name for a watched wallet, book first. The stored `label` remains

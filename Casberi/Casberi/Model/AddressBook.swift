@@ -74,13 +74,69 @@ final class AddressBook {
         /// identity GUESSED across sources: a wrong link silently retitles
         /// history with the wrong name, which the person can't see or correct.
         var provenance: String? = nil
+        /// The groups this address is in (2026-08-01) — a portfolio, a family,
+        /// a set of work wallets. Stored ON the entry rather than in a store of
+        /// its own precisely because `reconcileAliases` RE-KEYS entries when a
+        /// name resolves: membership keyed separately would be orphaned by the
+        /// same merge that fixes the duplicate.
+        ///
+        /// Optional, and every new field here must be: Swift's synthesized
+        /// `Codable` does NOT fall back to a property's default for a missing
+        /// key, so a non-optional addition would throw on decode and take the
+        /// WHOLE book with it (the decode is one `try?` over the entire
+        /// dictionary). `provenance` set that precedent.
+        var groups: [String]? = nil
+        /// When this entry last CHANGED — the merge stamp iCloud sync compares
+        /// (`AddressBookSync`). Distinct from `addedAt`, which records when the
+        /// address was first named and deliberately never moves.
+        var updatedAt: Date? = nil
         var id: String { AddressBook.key(for: address) }
 
         var short: String { WalletStore.shortAddress(address) }
+
+        /// The stamp a merge sorts on — `addedAt` for entries written before
+        /// the field existed, which is the honest floor: whatever the other
+        /// device has that carries a real stamp is newer.
+        var stamp: Date { updatedAt ?? addedAt }
+
+        var groupNames: [String] { groups ?? [] }
+
+        /// Group membership, case-folded — the ONE place that test is spelled.
+        /// It was written out at thirteen sites across three files before this,
+        /// which is how a fold rule quietly stops being one.
+        func isIn(_ group: String) -> Bool {
+            groupNames.contains { AddressBook.sameGroup($0, group) }
+        }
     }
 
     /// key (normalised address) → entry.
-    private var entries: [String: Entry] { didSet { persist() } }
+    private var entries: [String: Entry] {
+        didSet {
+            cachedColliding = nil
+            persist()
+        }
+    }
+
+    /// `collidingKeys`' memo, dropped whenever the book changes. Not
+    /// `@ObservationIgnored`-worthy: it's derived from `entries`, which is
+    /// already the observed thing, and every reader reads it through a body
+    /// that `entries` invalidates anyway.
+    private var cachedColliding: Set<String>?
+
+    /// True while a multi-address operation is in flight, so `persist()` (a
+    /// full JSON encode of the whole book, plus an iCloud push) runs ONCE at
+    /// the end instead of once per address. A forty-address paste did eighty
+    /// encodes and eighty `NSUbiquitousKeyValueStore.synchronize()` calls
+    /// before this — on the main thread, for what is logically one write.
+    private var batching = false
+
+    private func batched(_ body: () -> Void) {
+        guard !batching else { return body() }   // already inside one
+        batching = true
+        body()
+        batching = false
+        persist()
+    }
 
     /// The comparison form. A NAME resolves to the address it stands for
     /// first (below); then hex lowercases (EIP-55 case is a checksum, not
@@ -191,6 +247,14 @@ final class AddressBook {
         out.addedAt = min(standing.addedAt, alias.addedAt)
         if out.kind == .unknown { out.kind = alias.kind }
         if out.provenance == nil { out.provenance = alias.provenance }
+        // Groups UNION rather than pick a side: both rows were the person's
+        // own filing of the same wallet, and dropping either half would lose a
+        // group they put it in. Ordered, not a Set, so the list stays stable.
+        let combined = standing.groupNames + alias.groupNames.filter {
+            !standing.groupNames.contains($0)
+        }
+        out.groups = combined.isEmpty ? nil : combined
+        out.updatedAt = [standing.updatedAt, alias.updatedAt].compactMap { $0 }.max()
         return out
     }
 
@@ -208,6 +272,10 @@ final class AddressBook {
         // migration flag, because the reconcile is the same pass that keeps
         // the book correct from here on.
         reconcileAliases()
+        // The iCloud mirror, one runloop turn later — `attach` reads
+        // `AddressBook.shared`, which does not exist until this initializer
+        // returns.
+        DispatchQueue.main.async { AddressBookSync.shared.attach() }
     }
 
     // MARK: - Reading
@@ -253,7 +321,7 @@ final class AddressBook {
         let key = Self.key(for: address)
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            entries.removeValue(forKey: key)
+            remove(address)
             return nil
         }
         if var existing = entries[key] {
@@ -262,6 +330,7 @@ final class AddressBook {
             // must not erase the verified source an entry arrived with.
             if let provenance { existing.provenance = provenance }
             if let kind { existing.kind = kind }
+            existing.updatedAt = .now
             entries[key] = existing
             return existing
         }
@@ -271,13 +340,19 @@ final class AddressBook {
         // folds it in the moment resolution lands.
         let entry = Entry(address: Self.resolvedForm(of: address),
                           name: trimmed, addedAt: .now,
-                          kind: kind ?? .unknown, provenance: provenance)
+                          kind: kind ?? .unknown, provenance: provenance,
+                          updatedAt: .now)
         entries[key] = entry
         return entry
     }
 
     /// Records what an address turned out to BE. Separate from naming because
     /// detection is the chain's answer, arriving whenever the lookup lands.
+    ///
+    /// Deliberately does NOT stamp `updatedAt`: a kind is the chain's answer,
+    /// not the person's edit, and every device detects it independently.
+    /// Stamping would make a passive detection outrank a real rename made on
+    /// another device.
     func setKind(_ kind: Kind, for address: String) {
         let key = Self.key(for: address)
         guard var entry = entries[key], entry.kind != kind else { return }
@@ -286,7 +361,251 @@ final class AddressBook {
     }
 
     func remove(_ address: String) {
-        entries.removeValue(forKey: Self.key(for: address))
+        let key = Self.key(for: address)
+        guard entries[key] != nil else { return }
+        // The tombstone is recorded BEFORE the entry goes, so the push that
+        // the removal itself triggers already carries it — otherwise the
+        // deletion would leave here without the fact that explains it, and
+        // whichever device still holds the entry would send it straight back
+        // (`AddressBookSync`).
+        AddressBookSync.shared.noteRemoval(key)
+        entries.removeValue(forKey: key)
+    }
+
+    // MARK: - Sync (AddressBookSync's own two doors)
+
+    /// Which of two versions of one entry stands, or nil when the standing one
+    /// does. The single statement of the rule both the iCloud merge and the
+    /// Data tray's import follow: a STRICTLY newer stamp wins, and the winner
+    /// keeps the earliest `addedAt` either side knows — that field records
+    /// when the address was first named, so the true value is the older one
+    /// whichever side's edit is newer.
+    static func newer(_ incoming: Entry, than standing: Entry?) -> Entry? {
+        guard let standing else { return incoming }
+        guard incoming.stamp > standing.stamp else { return nil }
+        var winner = incoming
+        winner.addedAt = min(standing.addedAt, incoming.addedAt)
+        return winner
+    }
+
+    /// This device's whole book, for the mirror to push.
+    var syncSnapshot: [String: Entry] { entries }
+
+    /// Replaces the book with a merged one. Only `AddressBookSync` calls this,
+    /// and only with the result of its own newest-fact-wins merge.
+    func applyMerged(_ merged: [String: Entry]) {
+        entries = merged
+        reconcileAliases()
+    }
+
+    // MARK: - Groups (2026-08-01)
+
+    /// **A group is a label on entries, not a container of them.** There is no
+    /// group store, no group ids, no empty groups to manage: a group exists
+    /// exactly as long as some address carries its name. That is what keeps
+    /// this a flat list with a filter rather than a tree — and it means rename
+    /// is a relabel, delete is an unlabel, and a group can never end up holding
+    /// an address the book no longer has.
+    ///
+    /// The one rule worth stating: **deleting a group never deletes an
+    /// address.** Every door that offers it says so.
+    /// Two group names are the same group when they differ only in case.
+    static func sameGroup(_ a: String, _ b: String) -> Bool {
+        a.caseInsensitiveCompare(b) == .orderedSame
+    }
+
+    /// Every group in use, alphabetical — for display. Sorted, so callers that
+    /// only need a lookup use `canonicalGroupName` instead.
+    var groupNames: [String] {
+        var seen: [String: String] = [:]   // folded → the spelling in use
+        for entry in entries.values {
+            for name in entry.groupNames where seen[name.lowercased()] == nil {
+                seen[name.lowercased()] = name
+            }
+        }
+        return seen.values.sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+    }
+
+    /// The spelling already in use for a group matching this one case-folded,
+    /// so "family" typed twice doesn't become two groups wearing one word.
+    /// Scans `entries` directly rather than going through `groupNames`, whose
+    /// localized SORT is pure waste for a first-match lookup — this is called
+    /// once per address in a bulk paste.
+    private func canonicalGroupName(_ name: String) -> String {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        for entry in entries.values {
+            if let match = entry.groupNames.first(where: { Self.sameGroup($0, trimmed) }) {
+                return match
+            }
+        }
+        return trimmed
+    }
+
+    func entries(inGroup name: String) -> [Entry] {
+        all.filter { $0.isIn(name) }
+    }
+
+    /// The one read-modify-write behind every group edit: transform the group
+    /// list of each named key, stamp what changed, and write the dictionary
+    /// back ONCE — which matters because `entries`' own `didSet` persists and
+    /// pushes to iCloud, so a per-key write would encode the whole book once
+    /// per key.
+    private func editGroups(of keys: some Sequence<String>,
+                            _ transform: ([String]) -> [String]) {
+        var out = entries
+        var changed = false
+        for key in keys {
+            guard let names = out[key]?.groupNames else { continue }
+            let next = transform(names)
+            guard next != names else { continue }
+            out[key]?.groups = next.isEmpty ? nil : next
+            out[key]?.updatedAt = .now
+            changed = true
+        }
+        if changed { entries = out }
+    }
+
+    /// Files an address under a group. An address with no entry yet is named
+    /// with its own short form first — filing something implies keeping it,
+    /// and a group naming an address the book doesn't hold would be the
+    /// orphan this design exists to make impossible.
+    func addToGroup(_ name: String, address: String) {
+        let group = canonicalGroupName(name)
+        guard !group.isEmpty else { return }
+        let key = Self.key(for: address)
+        if entries[key] == nil {
+            setName(WalletStore.shortAddress(Self.resolvedForm(of: address)), for: address)
+        }
+        editGroups(of: [key]) { $0.contains(where: { Self.sameGroup($0, group) }) ? $0 : $0 + [group] }
+    }
+
+    func removeFromGroup(_ name: String, address: String) {
+        editGroups(of: [Self.key(for: address)]) {
+            $0.filter { !Self.sameGroup($0, name) }
+        }
+    }
+
+    func renameGroup(_ old: String, to new: String) {
+        let target = new.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !target.isEmpty, !Self.sameGroup(target, old) else { return }
+        editGroups(of: entries.keys) { names in
+            // Renaming ONTO an existing group merges rather than duplicating.
+            var seen: Set<String> = []
+            return names.map { Self.sameGroup($0, old) ? target : $0 }
+                .filter { seen.insert($0.lowercased()).inserted }
+        }
+    }
+
+    /// Unfiles every address in a group. The addresses and their names stay —
+    /// only the label goes.
+    func deleteGroup(_ name: String) {
+        editGroups(of: entries.keys) { $0.filter { !Self.sameGroup($0, name) } }
+    }
+
+    // MARK: - Lookalikes (address poisoning, 2026-08-01)
+
+    /// Entries that would print identically to this address but aren't it —
+    /// see `AddressSafety.isLookalike` for what that means and why it's the
+    /// one attack a named-address ledger is uniquely placed to catch.
+    /// Reached on every keystroke while an address is being typed, so it
+    /// early-outs on input that can't collide with anything (a partial
+    /// address, a name) before touching the book at all — and walks
+    /// `entries.values` rather than `all`, whose sort would be discarded.
+    func lookalikes(of address: String) -> [Entry] {
+        guard let target = AddressSafety.displayForm(address) else { return [] }
+        let identity = AddressSafety.identity(address)
+        return entries.values.filter {
+            AddressSafety.displayForm($0.address) == target
+                && AddressSafety.identity($0.address) != identity
+        }
+    }
+
+    /// Every entry that collides with another entry already in the book — the
+    /// rows that wear a warning.
+    ///
+    /// Cached, because its input only changes when `entries` does while its
+    /// reader is a SwiftUI list body that re-evaluates on every keystroke:
+    /// uncached, each one re-parsed the address shape of every row.
+    var collidingKeys: Set<String> {
+        if let cachedColliding { return cachedColliding }
+        var byDisplay: [String: [String]] = [:]
+        for entry in entries.values {
+            guard let display = AddressSafety.displayForm(entry.address) else { continue }
+            byDisplay[display, default: []].append(entry.id)
+        }
+        var out: Set<String> = []
+        for (_, ids) in byDisplay where ids.count > 1 { out.formUnion(ids) }
+        cachedColliding = out
+        return out
+    }
+
+    // MARK: - Export
+
+    /// The whole book as text, in the exact shape `addBulk` reads back —
+    /// `Name, address[, group…]`, one entry per line.
+    ///
+    /// It exists because names are the person's own record and, until this,
+    /// were the one thing in the app they could put in but never take out.
+    /// Round-tripping is the whole point, so this and `addBulk` are a pair:
+    /// change one and change the other.
+    func exportText() -> String {
+        all.map { entry in
+            ([entry.name, entry.address] + entry.groupNames).joined(separator: ", ")
+        }.joined(separator: "\n")
+    }
+
+    /// The book as JSON-ready dictionaries, for the Data tray's export
+    /// (2026-08-01). That export calls itself "everything as one JSON file"
+    /// and walked `Thing`s only — but a name the person typed lives in
+    /// UserDefaults, not the corpus, so the address book was the one piece of
+    /// their own data "everything" quietly left behind. Losslessly here (kind,
+    /// provenance, groups and both dates), unlike `exportText`, whose job is
+    /// pasting names into another app rather than restoring them into this one.
+    func exportPayload() -> [[String: Any]] {
+        let iso = ISO8601DateFormatter()
+        return all.map { entry in
+            var dict: [String: Any] = [
+                "address": entry.address,
+                "name": entry.name,
+                "addedAt": iso.string(from: entry.addedAt),
+                "kind": entry.kind.rawValue,
+            ]
+            if let provenance = entry.provenance { dict["provenance"] = provenance }
+            if !entry.groupNames.isEmpty { dict["groups"] = entry.groupNames }
+            if let updatedAt = entry.updatedAt { dict["updatedAt"] = iso.string(from: updatedAt) }
+            return dict
+        }
+    }
+
+    /// Reads exported entries back. An entry the book doesn't hold lands; one
+    /// it does is overwritten only by a STRICTLY newer stamp, so importing an
+    /// older backup can restore what was lost without undoing a rename made
+    /// since. Returns how many rows changed.
+    @discardableResult
+    func importPayload(_ items: [[String: Any]]) -> Int {
+        let iso = ISO8601DateFormatter()
+        var out = entries
+        var changed = 0
+        for item in items {
+            guard let address = item["address"] as? String, !address.isEmpty,
+                  let name = item["name"] as? String, !name.isEmpty
+            else { continue }
+            let key = Self.key(for: address)
+            let added = (item["addedAt"] as? String).flatMap { iso.date(from: $0) } ?? .now
+            let updated = (item["updatedAt"] as? String).flatMap { iso.date(from: $0) }
+            let incoming = Entry(address: Self.resolvedForm(of: address),
+                                 name: name, addedAt: added,
+                                 kind: (item["kind"] as? String).flatMap(Kind.init(rawValue:))
+                                     ?? .unknown,
+                                 provenance: item["provenance"] as? String,
+                                 groups: item["groups"] as? [String],
+                                 updatedAt: updated)
+            guard let winner = Self.newer(incoming, than: out[key]) else { continue }
+            out[key] = winner
+            changed += 1
+        }
+        if changed > 0 { entries = out }
+        return changed
     }
 
     // MARK: - Bulk
@@ -298,25 +617,77 @@ final class AddressBook {
     /// A bare address lands unnamed ONLY if it can't be helped: an entry needs
     /// a name to be a book entry, so a bare paste takes its short form as the
     /// name, which the person can rename in one tap.
+    /// Parsed LINE BY LINE, then comma by comma within a line — which is what
+    /// lets one parser read every shape a pasted list actually takes without
+    /// any of them being ambiguous:
+    ///
+    ///     0x9a2E…                     a bare address
+    ///     Mom, 0x9a2E…                a name for it
+    ///     0xaaa…, 0xbbb…              several bare addresses on one line
+    ///     Mom, 0x9a2E…, Family        …and the groups it belongs to
+    ///     Mom                         a name for the address on the NEXT line
+    ///
+    /// The rule that disambiguates the last two: within a line, a non-address
+    /// token BEFORE the first address is a name; non-address tokens AFTER an
+    /// address are that address's groups. Across lines, a line that named
+    /// nothing carries its name forward — the old multi-line behaviour, kept.
+    ///
+    /// Pairs with `exportText`, whose output this reads back exactly.
     @discardableResult
     func addBulk(_ raw: String) -> Int {
-        let lines = raw.split(whereSeparator: { $0 == "\n" || $0 == "," })
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty }
         var landed = 0
-        var pendingName: String?
-        for token in lines {
-            if looksLikeAddress(token) {
-                let name = pendingName ?? WalletStore.shortAddress(token)
-                if setName(name, for: token) != nil { landed += 1 }
-                pendingName = nil
-            } else {
-                // A non-address token is a name for the address that follows
-                // ("Mom, 0x9a2E…") — the shape a pasted list actually takes.
-                pendingName = token
+        // ONE write for the whole paste — see `batched`.
+        batched {
+            var pendingName: String?
+            for line in raw.split(separator: "\n") {
+                let tokens = Self.tokens(in: line)
+                guard !tokens.isEmpty else { continue }
+                var lastAddress: String?
+                for token in tokens {
+                    if looksLikeAddress(token) {
+                        let name = pendingName ?? WalletStore.shortAddress(token)
+                        if setName(name, for: token) != nil { landed += 1 }
+                        pendingName = nil
+                        lastAddress = token
+                    } else if let address = lastAddress {
+                        // Trailing tokens belong to the address they follow.
+                        addToGroup(token, address: address)
+                    } else {
+                        // Leading token — a name for the address still to
+                        // come, on this line or the next.
+                        pendingName = token
+                    }
+                }
             }
         }
         return landed
+    }
+
+    private static func tokens(in line: some StringProtocol) -> [String] {
+        line.split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+    }
+
+    /// True when pasted text holds MORE than one thing worth landing — the
+    /// test the omnibox uses to decide between watching one address and
+    /// importing a list. Deliberately counts addresses, not lines: "Mom,
+    /// 0x9a2E…" is one address wearing a name, and treating it as a list
+    /// would drop the person into a bulk import for a single paste.
+    ///
+    /// Shares `addBulk`'s tokenizer — two parsers for one format is exactly
+    /// the drift `exportText`'s "change one and change the other" note warns
+    /// about. Stops at the second address rather than tokenizing a whole
+    /// forty-line paste: this runs on every keystroke.
+    func looksLikeBulk(_ raw: String) -> Bool {
+        var found = 0
+        for line in raw.split(separator: "\n") {
+            for token in Self.tokens(in: line) where looksLikeAddress(token) {
+                found += 1
+                if found > 1 { return true }
+            }
+        }
+        return false
     }
 
     /// Loose on purpose, exactly like `WalletStore.add`'s own validation: an
@@ -381,8 +752,13 @@ final class AddressBook {
     }
 
     private func persist() {
+        guard !batching else { return }
         if let data = try? JSONEncoder().encode(entries) {
             UserDefaults.standard.set(data, forKey: Self.key)
         }
+        // …and up, when the person has iCloud sync on. A no-op otherwise, and
+        // a no-op while a remote merge is being applied, so a pull can't bounce
+        // back out as a push.
+        AddressBookSync.shared.push()
     }
 }

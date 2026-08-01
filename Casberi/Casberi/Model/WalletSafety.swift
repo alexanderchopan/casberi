@@ -262,17 +262,21 @@ enum WalletSafety {
     /// GOOD address, but not identical to it — shared by the real ingest-time
     /// flag and the read-only probe, so testing the rule doesn't need a
     /// second copy of it.
+    /// Delegates to `AddressSafety.isLookalike` (2026-08-01) rather than
+    /// keeping its own copy. It WAS its own copy — comparing `prefix(4)` and
+    /// `suffix(4)` of the body, which is the same rule the display-truncated
+    /// form gives, spelled a second way. Two spellings of one rule is a silent
+    /// disagreement waiting to happen: change `WalletStore.shortAddress` and
+    /// this flag and the address book's warning triangle would stop agreeing
+    /// about the same pair of addresses, with nothing failing.
+    ///
+    /// `AddressSafety`'s version is also the better one — it keys on the
+    /// display form (so it follows truncation automatically), it covers base58
+    /// as well as hex, and it's harness-tested by
+    /// `scripts/address-safety-selftest.sh`. The `good != candidate` guard the
+    /// old rule needed is inside `isLookalike`, which compares identities.
     private static func isFuzzyMatch(_ candidate: String, against knownGood: Set<String>) -> Bool {
-        guard ENS.isHexAddress(candidate) else { return false }
-        let body = candidate.dropFirst(2)
-        for good in knownGood where good != candidate {
-            guard ENS.isHexAddress(good) else { continue }
-            let goodBody = good.dropFirst(2)
-            if body.prefix(4) == goodBody.prefix(4), body.suffix(4) == goodBody.suffix(4) {
-                return true
-            }
-        }
-        return false
+        knownGood.contains { AddressSafety.isLookalike(candidate, $0) }
     }
 
     /// Flags `thing` when its counterparty fuzzily mimics one of

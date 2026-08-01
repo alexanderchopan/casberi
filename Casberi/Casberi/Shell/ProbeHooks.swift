@@ -1463,12 +1463,83 @@ enum ProbeHooks {
                 NSLog("Address-book probe: %d named · %d/%d watched · canWatchMore=%@",
                       AddressBook.shared.count, WalletStore.shared.addresses.count,
                       WalletStore.watchLimit, WalletStore.shared.canWatchMore ? "YES" : "NO")
+                let colliding = AddressBook.shared.collidingKeys
+                let groups = AddressBook.shared.groupNames
+                NSLog("Address-book probe: groups=%@",
+                      groups.isEmpty ? "(none)"
+                        : groups.map { "\($0)(\(AddressBook.shared.entries(inGroup: $0).count))" }
+                            .joined(separator: ", "))
+                // LOOKALIKES on their own line, not folded into the roll below:
+                // a poisoning collision is the one finding here that means
+                // something is wrong rather than merely describing the book.
+                NSLog("Address-book probe: lookalike collisions=%d", colliding.count)
                 for entry in AddressBook.shared.all {
-                    NSLog("  %@ · %@ · kind=%@%@%@", entry.name, entry.short,
+                    NSLog("  %@ · %@ · kind=%@%@%@%@%@", entry.name, entry.short,
                           entry.kind.rawValue,
                           watched.contains(entry.id) ? " · WATCHED" : "",
-                          entry.provenance.map { " · from \($0)" } ?? "")
+                          entry.provenance.map { " · from \($0)" } ?? "",
+                          entry.groupNames.isEmpty ? ""
+                            : " · in \(entry.groupNames.joined(separator: "/"))",
+                          colliding.contains(entry.id) ? " · ⚠︎ LOOKALIKE" : "")
                 }
+            }
+        },
+        // `-retitleProbe YES|<address>` — run the counterparty rewrite that a
+        // name triggers (2026-08-01) and NSLog how many landed things it
+        // changed. `YES` brings the whole corpus in line with the whole book
+        // (the bulk-paste path); an address does just that one (every other
+        // naming door). The count IS the feature — naming an address rewrites
+        // history, and this is the only headless way to see that happen. The
+        // cascade the address card animates cannot be probed; the substance
+        // underneath it can. Pair with `-addressBook "Mom:0x…"`, declared
+        // first, since hooks run in list order.
+        Hook(key: "retitleProbe") { spec, context in
+            Task { @MainActor in
+                let changed = spec == "YES" || spec.isEmpty
+                    ? CounterpartyRetitle.applyBook(in: context)
+                    : CounterpartyRetitle.applyCurrentName(for: spec, in: context)
+                NSLog("Retitle probe: %@ → %d retitled (name=%@)",
+                      spec.isEmpty ? "YES" : spec, changed,
+                      spec == "YES" || spec.isEmpty
+                        ? "whole book"
+                        : (CounterpartyRetitle.realName(for: spec) ?? "(none — clause stripped)"))
+            }
+        },
+        // `-addressGroup "<Group>:<address>[,<address>…]"` — file addresses
+        // into a group headlessly (2026-08-01). Splits on the FIRST colon, so
+        // the addresses that follow may carry their own. An address with no
+        // entry yet is named with its short form first, exactly as the tap
+        // does — a group can never name an address the book doesn't hold.
+        Hook(key: "addressGroup") { spec, _ in
+            guard let colon = spec.firstIndex(of: ":") else { return }
+            let group = String(spec[spec.startIndex..<colon])
+            let addresses = String(spec[spec.index(after: colon)...])
+                .split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }
+            for address in addresses where !address.isEmpty {
+                AddressBook.shared.addToGroup(group, address: address)
+            }
+            NSLog("Address-group probe: %@ now holds %d", group,
+                  AddressBook.shared.entries(inGroup: group).count)
+        },
+        // `-addressSafetyProbe <address>` — the two checks the omnibox makes
+        // before you commit (2026-08-01), headless: the EIP-55 checksum
+        // verdict and any book entry this address would print identically to.
+        // One NSLog per fact — a joined line truncates (the `-todayProbe`
+        // lesson), and these are read one at a time anyway.
+        Hook(key: "addressSafetyProbe") { address, _ in
+            let verdict: String
+            switch AddressSafety.checksum(address) {
+            case .verified: verdict = "verified"
+            case .failed: verdict = "FAILED — a character is wrong"
+            case .unavailable: verdict = "unavailable (no case to check)"
+            }
+            NSLog("Address-safety probe: %@", address)
+            NSLog("  display=%@", AddressSafety.displayForm(address) ?? "(not a raw address)")
+            NSLog("  checksum=%@", verdict)
+            let twins = AddressBook.shared.lookalikes(of: address)
+            NSLog("  lookalikes=%d", twins.count)
+            for twin in twins {
+                NSLog("  ⚠︎ prints as %@ but is %@ (%@)", twin.short, twin.address, twin.name)
             }
         },
         // `-watchCapProbe <address>` — try to watch one more and NSLog the

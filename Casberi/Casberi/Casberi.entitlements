@@ -18,6 +18,12 @@
 	<array>
 		<string>CloudKit</string>
 	</array>
+	<!-- The address book's mirror (AddressBookSync). Names live in
+	     UserDefaults rather than the model container, so CloudKit's mirroring
+	     never carried them; this is what lets them reach a second device.
+	     Gated at runtime on the same `icloud.sync` toggle the corpus uses. -->
+	<key>com.apple.developer.ubiquity-kvstore-identifier</key>
+	<string>$(TeamIdentifierPrefix)$(CFBundleIdentifier)</string>
 	<key>com.apple.security.application-groups</key>
 	<array>
 		<string>group.com.casberi.app</string>

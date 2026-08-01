@@ -12864,3 +12864,142 @@ Verified on the simulator at 4,000 rows: a fast flick lands exactly one page,
 twice consecutively across transitions; vertical scroll intact; "That's
 everything" and the new-since divider unchanged. The one thing a simulator
 cannot prove is feel on the user's device — stated, not claimed.
+
+## §266 — The address manager becomes an address manager: groups, a book that survives the device, and the one attack a named-address ledger can see (user: "how if at all would you improve our wallet management screen… the address manager section", then "do all these", then "for 5 it's like a portfolio or group. it's a group create groups. lets do that too", 2026-08-01)
+
+§212 settled the manager's SHAPE — one list, a star for watch, the book as the
+page's content — and the shape was right; nothing here moves a block that ruling
+placed. What the census found instead were two definitions that disagreed, one
+promise the app was quietly breaking, and three things a book of named addresses
+could do that no wallet app does.
+
+**Two readings of one word, deleted down to one.** The address card counted "Your
+history together" as Wallet counterparty transactions PLUS the Peer fills and
+Privacy Pools deposits a watched wallet made (the §207 seats, which ride the
+watched wallets and have no home of their own); the manager's "Most active" sort
+counted only the first kind, because §207 never propagated back. A wallet whose
+activity was mostly Peer fills sorted as inactive while its own card said "· 40".
+`Model/AddressActivity.swift` is now the only answer to "does this thing belong
+to that address", and the third copy — the name-this-address nudge's own count,
+found during review — routes through it too.
+
+**A blank rename deleted the entry.** `WalletStore.rename` passed the trimmed
+label straight to `AddressBook.setName`, where an empty name REMOVES the row
+(the book's own "clearing a name is how you leave" grammar). So blanking a
+roster face left the wallet watched but absent from its own book — the exact
+state `add`'s invariant calls a bug, under an alert promising "a blank name
+shows the address instead."
+
+**The export said everything and meant Things.** Settings › Privacy › Data
+exports "everything as one JSON file" and walked the corpus — but a name the
+person typed lives in UserDefaults, so the address book was the one piece of
+their own data "everything" left behind. It rides the same file now, losslessly
+(kind, provenance, groups, both dates), and imports back newest-stamp-wins. A
+second export button on the wallet page was REFUSED: the Data tray owns backup,
+and "Copy all as text" — the different job, names into another app — rides the
+book header's existing sort menu rather than becoming a block on a page §212
+fought to shorten.
+
+**Groups are a label on entries, not a container of them.** No group store, no
+ids, no empty groups to manage: a group exists exactly as long as some address
+carries its name, so rename is a relabel, delete is an unlabel, and a group can
+never hold an address the book no longer has. Forced, not merely chosen —
+`reconcileAliases` RE-KEYS entries when an ENS name resolves, and membership
+kept in a separate store would be orphaned by the very merge that fixes the
+duplicate. It parallels the corpus's own convention (`Thing.tags`, where project
+membership rides a tag). Chips above the list, filing in the row's context menu,
+and the chips render only once a group exists — someone who never makes one sees
+exactly the screen §212 shipped, the argument that kept the peek chip.
+
+The scoped note is the honesty case: only WATCHED wallets have their holdings
+read, so a group of forty named addresses with two watched can price only those
+two, and the line says which — "4 addresses · 2 watched worth $45K". Never a
+group total.
+
+**Address poisoning — the one attack this ledger is uniquely placed to catch.**
+The attack works because every truncated address in every wallet app hides
+exactly the characters that differ. A book of named addresses already holds the
+address you MEANT, so it can say which one this isn't. `AddressSafety.isLookalike`
+keys on the DISPLAY form (`WalletStore.shortAddress`), deliberately: the display
+is the risk surface, so if truncation ever changes shape the check follows it.
+Surfaced where the consequence is — a warning under the field before you commit,
+a triangle on colliding rows, a card naming the twin in full. It NEVER accuses
+either side of being the impostor: the book cannot know which one you meant, and
+a wrong accusation on a security notice is worse than none.
+
+Two things review moved deeper. `WalletSafety.isFuzzyMatch` was already a second
+copy of this rule (`prefix(4)`/`suffix(4)` of the body — the same rule spelled
+another way), so it now delegates: one rule, harness-tested, and it gained base58
+coverage for free. And `AddressNudge` — the app's ONLY place that asks for a name
+— would happily have asked you to name a poisoned address, because poisoners send
+several dust transfers (clearing its ≥2 threshold) and have no `knownLabel` by
+construction. Naming is the most dangerous thing you can give one:
+`WalletIngest.knownLabel` and `counterpartyNames` both put the person's own label
+ABOVE every resolver, deliberately, so one tap would have turned a flagged
+attacker into "Mom" across every title, row and answer. It now refuses on the
+poisoning flag or any book lookalike.
+
+**A checksum is a typo caught before it becomes a watch.** A mixed-case hex
+address carries its own EIP-55 checksum; one that fails it has a character wrong,
+and watching it finds nothing and reads as "no activity found on your chains
+yet" — the chain blamed for a transcription error. `unavailable` is the common
+answer (most pasted addresses are all-lowercase and carry no checksum at all) and
+must stay SILENT, not warn.
+
+**`addBulk` existed and nothing reached it.** It had always parsed `Mom, 0x9a2E…`
+one per line; the field read a multi-line paste as one token and answered "that
+doesn't look like an address". A pasted list now gets its own verb, and it NAMES
+rather than watches — a paste of forty can't watch against a cap of five, and the
+notice says so. The parser generalized to carry groups, which is what makes
+`exportText` a real round trip.
+
+**iCloud.** The book is the person's data and lived only on one device.
+`AddressBookSync` mirrors it through the key-value store — not SwiftData, because
+`AddressBook.name(for:)` is read synchronously by every counterparty resolver and
+a model fetch on that path would be a hot-path store hit plus a new `@Model` in a
+schema that must stay CloudKit-lightweight-migratable. Gated on the SAME
+`icloud.sync` toggle the corpus uses, which ships OFF. Deletions carry tombstones
+— the classic key-value failure is a deleted row returning from whichever device
+still holds it — pruned at 90 days.
+
+Two consequences named rather than fixed. `WalletStore.addresses` is equally
+user-authored and does NOT mirror, so a second device receives a wallet's NAME
+but not its WATCH; and `AddressBookSync` is written for one store where a generic
+`KeyValueMirror` would serve the next one (`TokenWatchOrder.manual`,
+`KeptAskStore.order`, `AddressNudge.declined`). Both are deliberate scope, not
+oversights.
+
+**Verified** without the simulator, per the standing preference: build green;
+`catalog-sync`, `network-reach-audit` (the ship gate — no new host: `solscan.io`
+was already denylisted as an on-tap explorer, `mempool.space` already disclosed
+for `BitcoinBridge`) and the SwiftData liveness audit all pass; and the pure
+logic has its own harness — `scripts/address-safety-selftest.sh` compiles the
+SHIPPED `AddressSafety.swift` with a driver appended, 18 assertions, and is
+mutation-tested two ways (a checksum that never fails, a lookalike that ignores
+identity) so it can't be a check that cannot fail. The harness earned its keep
+immediately: it rejected a first-draft Solana vector whose difference sat in the
+last four characters — which the display SHOWS — proving the rule was right and
+the test was wrong.
+
+**Not done, deliberately.** Per-address explorer doors gained Solscan and
+mempool.space but Solana is spelled out rather than routed through
+`WalletIngest`'s chain table, because Solscan's address pages are `/account/`
+and the table's `/tx/`→`/address/` rewrite would build a dead link. A QR scanner
+for the field was cut by the user from this pass. And one person holding several
+addresses across chains still means several rows — real address managers end up
+there, but it adds a grouping UI to a list whose whole strength is being flat, so
+it waits until the flat book demonstrably hurts.
+
+**Delight, same day** (user: "how would you add surprise and delight to this address book experience", then chose three of five). The constraint first: §218's floor ruling and the module doctrine mean this book cannot celebrate milestones, and it must never congratulate anyone about money or safety — so the delight had to come from the app KNOWING something, not from confetti. Two proposals were REFUSED by the user and are recorded so they aren't re-pitched: a "you've met before" card when a newly named address turns out to have history, and a generalized vintage line ("you've known this address longer than any other"). Rain was refused by the design instead — rain is money ARRIVING (§250), and spending it on adding a contact devalues it everywhere.
+
+**1. The name landing on the history it explains.** This was half delight and half missing feature. `retitleWalletThings` — which rewrites the counterparty clause of every landed transfer — was PRIVATE to `ThingSheetView`, so it ran for exactly one of the app's four naming doors. Naming the same address from its card, from the omnibox, from a pasted list, or by renaming a roster face left every landed title still reading `0x9a2E…44b1`, because the clause is baked at ingest and nothing re-ran it. Same act, same address, a different outcome depending on which door you used. It now lives in `Model/CounterpartyRetitle.swift` and every door calls it, matching through `AddressBook.key` rather than a raw `lowercased()` compare so it agrees with the book about what one address IS.
+
+The moment itself: the address card already had those transactions on screen and changed them silently. Now `renameCascade` bumps after the rewrite lands and the history rows cross-fade a beat apart, so a name visibly sweeps down a year of history — which is the entire argument for naming anything, finally shown rather than asserted. Nothing is claimed when nothing changed: a rename that rewrote no titles (a contract's approvals carry no counterparty clause) doesn't cascade.
+
+**The guard that makes it honest:** `realName(for:)`. `WalletStore.add` and `addBulk` both file a bare address under its own short form so every watched wallet is findable in its own book — a display fallback, not something anyone typed. Feeding that to the rewrite would push a raw hash into history ("Received 1 ETH from 0x9a2E…44b1") and break ingest's own rule that an unnamed address stays unnamed. The short form is not a name.
+
+**2. The name reveal.** `AddressMark` already turns over when the chain answers WHAT an address is (§171); the other half of that question — what it's CALLED — snapped. An address added bare stands under its short form until reverse ENS answers, or a typed `.eth` resolves and `reconcileAliases` re-keys the row. The card's hero name now uses the mark's own transition, so both halves of "what is this" resolve in one visual language. The book row uses `contentTransition(.opacity)` instead, deliberately: an `.id()` swap inside a `List` row churns row identity, and the cross-fade gets the same moment with none of that.
+
+**3. A group's faces, not its count.** A number beside a group name says how many are in it, which nobody wonders; the faces say WHO, which is the only thing a group of addresses is for. Up to three, overlapping, through `AddressMark` — so the book's round-face-for-a-who / square-glyph-for-machinery rule holds inside the chip too, and "Family" starts looking like your family. "All" gets none: every face in the book is not a face.
+
+`-retitleProbe YES|<address>` verifies the substance headlessly (the animation can't be, the count can): `YES` brings the whole corpus in line with the whole book, an address does just that one.

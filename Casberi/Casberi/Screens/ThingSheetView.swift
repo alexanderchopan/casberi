@@ -449,77 +449,14 @@ struct ThingSheetView: View {
         // The display name after the change: the user's label, else whatever
         // else resolves it (a known contract, a watched handle), else nil —
         // clearing a label reverts the historical titles to that.
-        retitleWalletThings(counterparty: address, to: WalletIngest.knownLabel(for: address))
+        CounterpartyRetitle.applyCurrentName(for: address, in: modelContext)
         DSHaptic.success()
     }
 
-    /// Rewrites the counterparty clause of every landed Wallet transfer whose
-    /// stored counterparty matches — to `name`, or stripped when `name` is nil.
-    /// The clause lives twice, and both writes happen here: the title's words,
-    /// and `transferCounterparty` (the structured copy TransferStage reads) —
-    /// updating one without the other is how a stage would drift from its row.
-    private func retitleWalletThings(counterparty: String, to name: String?) {
-        let addr = counterparty.lowercased()
-        let all = (try? modelContext.fetch(
-            FetchDescriptor<Thing>(predicate: #Predicate { $0.source == "Wallet" }))) ?? []
-        var changed = false
-        for t in all where t.counterpartyAddress?.lowercased() == addr {
-            if let rebuilt = Self.retitled(t.title, to: name), rebuilt != t.title {
-                t.title = rebuilt
-                changed = true
-            }
-            if t.transferCounterparty != name {
-                t.transferCounterparty = name
-                changed = true
-            }
-        }
-        if changed {
-            modelContext.saveHonestly()
-            CorpusSignal.shared.bump()   // Home/Feed compose a doc, not a live @Query
-        }
-    }
-
-    /// Which wallet verbs carry a trailing counterparty clause, and the word
-    /// that introduces it. A title whose verb ISN'T here is left alone — that
-    /// gate is the whole point (see `retitled`).
-    private static let counterpartyClause: [String: String] = [
-        "Received": " from ", "Sent": " to ", "Swapped": " on ",
-        // The staking verbs (WalletVerbs, 2026-07-21) name the protocol the
-        // same way — "Staked 1 ETH with Lido".
-        "Staked": " with ", "Unstaked": " from ",
-        // Zerion-classified verbs, each with the preposition its own sentence
-        // uses. "Burned"/"Minted an NFT" name no venue and so appear nowhere
-        // here — nothing to rewrite means the title is left untouched.
-        "Claimed": " from ", "Deposited": " into ", "Withdrew": " from ",
-        "Minted": " on ", "Bid": " on ",
-    ]
-
-    /// Swaps (or strips) a wallet title's trailing counterparty clause.
-    ///
-    /// Gated on the title's leading VERB, not on finding a delimiter anywhere in
-    /// the string. The original wrote the delimiter search as safe because "the
-    /// only ' from '/' to '/' on ' in a wallet title is that clause" — true when
-    /// transfers were the only things carrying `counterpartyAddress`, and false
-    /// since approvals started carrying it too (prd §84, 2026-07-16). Naming an
-    /// approval's spender ran the blind search over "Approved Uniswap to spend
-    /// unlimited USDC through Permit2", matched the `to` in "to spend", and
-    /// saved "Approved Uniswap to Mom" — losing the asset, the amount and the
-    /// Permit2 clause, silently and permanently. Fixed 2026-07-21.
-    ///
-    /// Verbs with no counterparty clause to rewrite (an approval, a "Moved …"
-    /// self-transfer named from watched-wallet labels, a "Minted"/"Burned" whose
-    /// counterparty is the void) return nil and keep their titles untouched.
-    static func retitled(_ title: String, to name: String?) -> String? {
-        guard let verb = title.split(separator: " ").first.map(String.init),
-              let delim = counterpartyClause[verb] else { return nil }
-        if let r = title.range(of: delim, options: .backwards) {
-            if let name { return String(title[..<r.upperBound]) + name }
-            return String(title[..<r.lowerBound])   // strip the clause
-        }
-        // No clause yet — a nameless title gains one from its verb.
-        guard let name else { return nil }
-        return title + delim + name
-    }
+    // The counterparty rewrite moved to `Model/CounterpartyRetitle.swift`
+    // (2026-08-01). It was private here, so it ran for this one naming door
+    // and not for the address card, the book's omnibox, or a star — same act,
+    // same address, different outcome depending on which door you used.
 
     // MARK: - Title (a post's words ARE the title, 2026-07-16)
 

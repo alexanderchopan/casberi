@@ -43,12 +43,27 @@ enum AddressNudge {
         // already reads as words, so a prompt would be asking for busywork.
         guard WalletIngest.knownLabel(for: address) == nil else { return nil }
 
-        let key = AddressBook.key(for: address)
-        let all = (try? context.fetch(FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.source == "Wallet" }))) ?? []
-        let count = all.filter {
-            ($0.counterpartyAddress).map { AddressBook.key(for: $0) == key } ?? false
-        }.count
+        // NEVER solicit a name for an address that impersonates one you
+        // already know (2026-08-01). This prompt is the app's only place that
+        // ASKS for a name, and a name is the most dangerous thing you can give
+        // a poisoning address: `WalletIngest.knownLabel` and
+        // `counterpartyNames` both put the person's own label ABOVE every
+        // resolver, deliberately — so one tap here would turn a flagged
+        // attacker into "Mom" across every title, row and answer in the app.
+        //
+        // The attack fits this prompt's own trigger perfectly: poisoners send
+        // several dust transfers, so `threshold` is trivially met, and they
+        // have no `knownLabel` by construction. Both tests are cheap and
+        // deterministic — the flag `WalletSafety` already stamped at ingest,
+        // and the book's own record of what this address is pretending to be.
+        guard !thing.hasSecurityFlag("poisoning"),
+              AddressBook.shared.lookalikes(of: address).isEmpty
+        else { return nil }
+
+        // Counted through the ONE definition of activity (`AddressActivity`),
+        // the same one the address card's "Your history together" states — a
+        // second count here could tell you "4 times" while the card said 12.
+        let count = AddressActivity.counts(in: context)[AddressBook.key(for: address)] ?? 0
         guard count >= threshold else { return nil }
         return (address, count, AddressBook.shared.entry(for: address)?.kind ?? .unknown)
     }

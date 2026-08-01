@@ -91,7 +91,7 @@ enum WalletVerbs {
     /// A decoded sentence, plus the venue name its trailing clause shows (when
     /// it has one) — so the caller can keep `Thing.transferCounterparty` in
     /// agreement with the words. Writing one without the other is how a stage
-    /// drifts from its row, which `ThingSheetView.retitleWalletThings` already
+    /// drifts from its row, which `CounterpartyRetitle.apply` already
     /// records as a lesson.
     struct Decoded {
         let title: String
