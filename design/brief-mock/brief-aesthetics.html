@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Today brief — aesthetic pass (shipped)</title>
+<style>
+  :root {
+    --bg: #0b0c0f;
+    --page: #101216;
+    --card: #1a1d23;
+    --card2: #202329;
+    --ink: #f2f3f5;
+    --ink2: #b9bdc6;
+    --ink3: #7d828d;
+    --tint: #c9527c;
+    --tint-dim: rgba(201, 82, 124, 0.13);
+    --gain: #3fbf7f;
+    --loss: #e05d5d;
+    --eth: rgba(98, 126, 234, 0.35);
+    --usdc: rgba(39, 117, 202, 0.30);
+    --sol: rgba(153, 69, 255, 0.28);
+    --radius: 18px;
+    --ctl: 12px;
+    /* DS.Space, iOS branch */
+    --s1: 4px; --s2: 10px; --s3: 14px; --s4: 18px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif;
+    padding: 40px 24px 64px;
+  }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .sub { color: var(--ink3); font-size: 14px; margin-bottom: 30px; max-width: 820px; line-height: 1.5; }
+  .row { display: flex; gap: 44px; flex-wrap: wrap; align-items: flex-start; }
+  .col { width: 393px; flex: 0 0 auto; }
+  .col h2 { font-size: 15px; font-weight: 600; color: var(--ink2); margin-bottom: 4px; }
+  .col .note { font-size: 12.5px; color: var(--ink3); margin-bottom: 12px; height: 32px; line-height: 1.35; }
+  .phone { background: var(--page); border-radius: 34px; padding: 16px 0 24px; box-shadow: 0 12px 48px rgba(0,0,0,.5); }
+  .q { font-size: 14px; color: var(--ink3); padding: 4px var(--s4) 6px; }
+
+  /* modules self-pad horizontally by s4 */
+  .mod { padding-left: var(--s4); padding-right: var(--s4); }
+  .card { background: var(--card); border-radius: var(--radius); box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+  .cardpad { padding: var(--s4); }
+
+  /* ─── lede ─── */
+  .dateline { font-size: 14px; line-height: 21px; color: var(--ink3); }
+  .lede-old { font-size: 22px; line-height: 28px; font-weight: 700; font-family: -apple-system, "SF Pro Rounded", sans-serif; }
+  .lede-new { font-size: 28px; line-height: 34px; font-weight: 700; font-family: -apple-system, "SF Pro Rounded", sans-serif; margin-top: 2px; }
+
+  /* ─── money hero ─── */
+  .money { display: flex; align-items: baseline; justify-content: space-between; }
+  .total { font-size: 40px; line-height: 44px; font-weight: 700; font-family: -apple-system, "SF Pro Rounded", sans-serif; font-variant-numeric: tabular-nums; letter-spacing: -.5px; }
+  .pill { font-size: 13px; font-weight: 600; color: var(--gain); background: rgba(63,191,127,.14); border-radius: 999px; padding: 3px 9px; }
+  .herobody { display: flex; gap: var(--s3); margin-top: var(--s3); height: 84px; }
+  .mini { flex: 1; display: flex; gap: 4px; }
+  .cell { border-radius: 6px; display: flex; flex-direction: column; justify-content: flex-end; padding: 4px 7px; font-size: 12px; font-weight: 600; overflow: hidden; min-height: 0; }
+  .cell small { font-weight: 400; color: var(--ink2); font-size: 11px; }
+  .stackcells { display: flex; flex-direction: column; gap: 4px; flex: 1; min-height: 0; }
+  .stackcells .cell { flex-direction: row; align-items: center; gap: 5px; font-size: 11px; padding: 2px 7px; white-space: nowrap; }
+  .stackcells .cell small { font-size: 10px; }
+  .spark { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-end; }
+  .spark svg { width: 100%; height: 62px; }
+  .anchor { font-size: 11px; color: var(--ink3); margin-top: 3px; }
+  .txrow { display: flex; align-items: center; gap: var(--s3); margin-top: var(--s3); font-size: 16px; }
+  .txrow .g { width: 28px; height: 28px; border-radius: 8px; background: var(--card2); display: flex; align-items: center; justify-content: center; font-size: 13px; flex: 0 0 auto; }
+  .txrow .meta { font-size: 14px; color: var(--ink3); }
+  .txrow .chev { margin-left: auto; color: var(--ink3); font-size: 12px; }
+
+  /* ─── tiles ─── */
+  .pair { display: flex; gap: var(--s3); }
+  .tile { flex: 1; background: var(--card); border-radius: var(--radius); padding: var(--s3); box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+  .tile .lbl { font-size: 14px; color: var(--ink3); margin-bottom: 6px; }
+  .mv { display: flex; align-items: center; gap: var(--s2); font-size: 16px; margin-top: 6px; }
+  .mv .v { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .mv svg { width: 44px; height: 20px; }
+  .up { color: var(--gain); } .dn { color: var(--loss); }
+
+  /* ─── themes ─── */
+  .eyebrow { font-size: 14px; color: var(--ink3); }
+  .themes { display: grid; grid-template-columns: repeat(4,1fr); grid-template-rows: repeat(3,48px); gap: 4px; margin-top: var(--s2); }
+  .tcell { border-radius: 6px; padding: 5px 7px; font-size: 12px; font-weight: 600; display: flex; flex-direction: column; justify-content: flex-end; }
+  .tcell small { font-weight: 400; font-size: 11px; color: var(--ink2); }
+
+  /* ─── notes ─── */
+  .tintcard { background: var(--tint-dim); border-radius: var(--radius); padding: var(--s4); }
+  .nt { display: flex; gap: var(--s3); font-size: 16px; line-height: 1.44; align-items: flex-start; }
+  .nt + .nt { margin-top: var(--s3); }
+  .nt .ic { color: var(--tint); width: 20px; text-align: center; flex: 0 0 auto; padding-top: 1px; }
+  .nt .chev { margin-left: auto; color: var(--ink3); font-size: 12px; padding-top: 3px; }
+
+  /* ─── widget card (the leads live in these) ─── */
+  .whead { font-size: 14px; line-height: 21px; color: var(--ink2); padding: var(--s4) var(--s4) 4px; }
+  .wbody { padding: 0 0 var(--s2); }
+  .lrow { padding: var(--s2) var(--s4); }
+
+  /* current lead shapes */
+  .old-read { display: flex; gap: var(--s3); align-items: flex-start; }
+  .old-read .thumb { width: 48px; height: 48px; border-radius: 11px; background: linear-gradient(135deg,#2b3a55,#1c2434); flex: 0 0 auto; }
+  .old-read .t { font-size: 16px; line-height: 23px; font-weight: 600; }
+  .old-post { display: flex; gap: var(--s3); align-items: flex-start; }
+  .old-post .av { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg,#7c4dcc,#4d33a8); flex: 0 0 auto; }
+  .old-post .who { font-size: 14px; color: var(--ink2); }
+  .old-post .txt { font-size: 16px; line-height: 23px; margin-top: 2px; }
+  .meta { font-size: 14px; color: var(--ink3); margin-top: 3px; }
+
+  /* proposed lead shapes */
+  .new-read .banner { height: 128px; border-radius: var(--ctl); background: linear-gradient(120deg,#2b3a55,#3a2b55 60%,#1c2434); }
+  .new-read .t { font-size: 18px; line-height: 24px; font-weight: 600; margin-top: var(--s2); }
+  .new-post .hd { display: flex; align-items: center; gap: var(--s2); }
+  .new-post .av { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg,#7c4dcc,#4d33a8); flex: 0 0 auto; }
+  .new-post .who { font-size: 14px; color: var(--ink2); }
+  .new-post .txt { font-size: 18px; line-height: 26px; margin-top: var(--s2); }
+
+  .badge { font-size: 12px; color: var(--ink3); display: flex; align-items: center; gap: 6px; }
+  .chips { display: flex; gap: var(--s2); margin-top: var(--s2); }
+  .chip { font-size: 13px; font-weight: 500; color: var(--ink2); background: var(--card2); border-radius: 999px; padding: 6px 12px; }
+
+  /* spacing: every module's own top pad, plus the new chapter gap */
+  .t2 { margin-top: 10px; }              /* DS.Space.s2 — the universal module gap */
+  .t4 { margin-top: 18px; }              /* DS.Space.s4 — a Widget card's own gap */
+  .ch2 { margin-top: 28px; }             /* s2 + chapter s4 */
+  .ch4 { margin-top: 36px; }             /* s4 + chapter s4 */
+
+  .ruler { position: relative; }
+  .ruler::after {
+    content: attr(data-gap); position: absolute; right: -34px; top: -22px;
+    font-size: 10px; color: var(--tint); font-family: ui-monospace, monospace;
+  }
+
+  .legend { max-width: 880px; margin-top: 44px; }
+  .legend h3 { font-size: 16px; margin-bottom: 12px; }
+  .legend ol { padding-left: 20px; color: var(--ink2); font-size: 14px; line-height: 1.6; }
+  .legend li { margin-bottom: 11px; }
+  .legend b { color: var(--ink); }
+  .legend code { font-family: ui-monospace, monospace; font-size: 12.5px; color: var(--ink); background: var(--card2); padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<h1>Today brief — aesthetic pass (as shipped)</h1>
+<p class="sub">Same modules, same doctrine, same facts. Both columns draw the real anatomy — the leads sit inside <code>Widget</code> cards with their own eyebrow, which is what they already were. Sizes and gaps are the actual token values (<code>DS.Space</code> iOS branch: s2=10, s4=18).</p>
+
+<div class="row">
+
+  <!-- ═══════════ BEFORE ═══════════ -->
+  <div class="col">
+    <h2>Before</h2>
+    <div class="note">One dense column: every module 10pt apart, the lede at the same rung as a card title.</div>
+    <div class="phone">
+      <div class="q">What's going on?</div>
+
+      <div class="mod"><div class="lede-old">Up $1,247 today. ETH did the lifting, three days running.</div></div>
+
+      <div class="mod t2"><div class="card cardpad">
+        <div class="money"><span class="total">$48.2K</span><span class="pill">+2.7%</span></div>
+        <div class="herobody">
+          <div class="mini">
+            <div class="cell" style="flex:1.4;background:var(--eth)">ETH<small>$31.4K</small></div>
+            <div class="stackcells">
+              <div class="cell" style="background:var(--usdc)">USDC<small>$9.1K</small></div>
+              <div class="cell" style="background:var(--sol)">SOL<small>$5.2K</small></div>
+              <div class="cell" style="background:rgba(255,255,255,.06)">AERO<small>$2.5K</small></div>
+            </div>
+          </div>
+          <div class="spark">
+            <svg viewBox="0 0 120 60"><path d="M0,48 C20,44 30,50 45,38 S75,30 90,22 S110,14 120,10" fill="none" stroke="var(--gain)" stroke-width="2"/><circle cx="120" cy="10" r="3" fill="var(--gain)"/></svg>
+            <div class="anchor">since midnight</div>
+          </div>
+        </div>
+        <div class="txrow"><span class="g">⇄</span><span>Bought 25 USDC with Venmo on Peer<div class="meta">1 transaction today</div></span><span class="chev">›</span></div>
+      </div></div>
+
+      <div class="mod t2"><div class="pair">
+        <div class="tile"><div class="lbl">Watching</div>
+          <div class="mv">ETH <svg viewBox="0 0 44 20"><path d="M0,16 C10,15 18,10 28,8 S40,4 44,3" fill="none" stroke="var(--gain)" stroke-width="1.5"/></svg><span class="v up">+4.2%</span></div>
+          <div class="mv">SOL <svg viewBox="0 0 44 20"><path d="M0,6 C10,8 20,10 30,13 S40,15 44,16" fill="none" stroke="var(--loss)" stroke-width="1.5"/></svg><span class="v dn">−1.1%</span></div>
+        </div>
+        <div class="tile"><div class="lbl">Next</div>
+          <div style="font-size:16px;font-weight:600;">Rent due</div>
+          <div class="meta">Friday · 2 more overdue</div>
+        </div>
+      </div></div>
+
+      <div class="mod t2"><div class="card cardpad">
+        <div class="eyebrow">What today was about</div>
+        <div class="themes">
+          <div class="tcell" style="grid-area:1/1/3/3;background:var(--tint-dim)">Onchain<small>6 things</small></div>
+          <div class="tcell" style="grid-area:1/3/3/5;background:rgba(98,126,234,.18)">Design<small>4 things</small></div>
+          <div class="tcell" style="grid-area:3/1/4/3;background:rgba(255,255,255,.06)">Sam<small>3 things</small></div>
+          <div class="tcell" style="grid-area:3/3/4/5;background:rgba(255,255,255,.05)">Recipes<small>2 things</small></div>
+        </div>
+      </div></div>
+
+      <div class="mod t2"><div class="tintcard">
+        <div class="nt"><span class="ic">✦</span><span>ETH moved <b class="up">+4.2%</b> and it's also what you've been reading — 3 saves this week.</span><span class="chev">›</span></div>
+        <div class="nt"><span class="ic">☾</span><span>Bluesky has been quiet since Jul 27 — first miss in 9 days.</span></div>
+      </div></div>
+
+      <div class="mod t4"><div class="card">
+        <div class="whead">Bluesky · mentions you</div>
+        <div class="wbody"><div class="lrow"><div class="old-post">
+          <div class="av"></div>
+          <div><div class="who">@paulg.bsky.social</div>
+            <div class="txt">This is exactly the kind of local-first corpus idea I was talking about — @you nailed the fram…</div>
+            <div class="meta">12 replies · 2 more behind it</div></div>
+        </div></div></div>
+      </div></div>
+
+      <div class="mod t4"><div class="card">
+        <div class="whead">Reading · the odd one out</div>
+        <div class="wbody"><div class="lrow"><div class="old-read">
+          <div class="thumb"></div>
+          <div><div class="t">Apple is reportedly testing a MacBook with a touch…</div>
+            <div class="meta">The Verge · 2h ago</div></div>
+        </div></div></div>
+      </div></div>
+
+      <div class="mod t2"><div class="badge">🔒 Composed on this iPhone — nothing left your device</div>
+        <div class="chips"><span class="chip">📌 Keep this view</span><span class="chip">Try with your key</span></div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ AFTER ═══════════ -->
+  <div class="col">
+    <h2>After</h2>
+    <div class="note">A dateline, a headline rung of its own, and gaps that mark the four movements.</div>
+    <div class="phone">
+      <div class="q">What's going on?</div>
+
+      <div class="mod">
+        <div class="dateline">Friday, July 31</div>
+        <div class="lede-new">Up <span class="up">$1,247</span> today. ETH did the lifting, three days running.</div>
+      </div>
+
+      <div class="mod ch2 ruler" data-gap="28"><div class="card cardpad">
+        <div class="money"><span class="total">$48.2K</span><span class="pill">+2.7%</span></div>
+        <div class="herobody">
+          <div class="mini">
+            <div class="cell" style="flex:1.4;background:var(--eth)">ETH<small>$31.4K</small></div>
+            <div class="stackcells">
+              <div class="cell" style="background:var(--usdc)">USDC<small>$9.1K</small></div>
+              <div class="cell" style="background:var(--sol)">SOL<small>$5.2K</small></div>
+              <div class="cell" style="background:rgba(255,255,255,.06)">AERO<small>$2.5K</small></div>
+            </div>
+          </div>
+          <div class="spark">
+            <svg viewBox="0 0 120 60"><path d="M0,48 C20,44 30,50 45,38 S75,30 90,22 S110,14 120,10" fill="none" stroke="var(--gain)" stroke-width="2"/><circle cx="120" cy="10" r="3" fill="var(--gain)"/></svg>
+            <div class="anchor">since midnight</div>
+          </div>
+        </div>
+        <div class="txrow"><span class="g">⇄</span><span>Bought 25 USDC with Venmo on Peer<div class="meta">1 transaction today</div></span><span class="chev">›</span></div>
+      </div></div>
+
+      <div class="mod t2 ruler" data-gap="10"><div class="pair">
+        <div class="tile"><div class="lbl">Watching</div>
+          <div class="mv">ETH <svg viewBox="0 0 44 20"><path d="M0,16 C10,15 18,10 28,8 S40,4 44,3" fill="none" stroke="var(--gain)" stroke-width="1.5"/></svg><span class="v up">+4.2%</span></div>
+          <div class="mv">SOL <svg viewBox="0 0 44 20"><path d="M0,6 C10,8 20,10 30,13 S40,15 44,16" fill="none" stroke="var(--loss)" stroke-width="1.5"/></svg><span class="v dn">−1.1%</span></div>
+        </div>
+        <div class="tile"><div class="lbl">Next</div>
+          <div style="font-size:16px;font-weight:600;">Rent due</div>
+          <div class="meta">Friday · 2 more overdue</div>
+        </div>
+      </div></div>
+
+      <div class="mod ch2 ruler" data-gap="28"><div class="card cardpad">
+        <div class="eyebrow">What today was about</div>
+        <div class="themes">
+          <div class="tcell" style="grid-area:1/1/3/3;background:var(--tint-dim)">Onchain<small>6 things</small></div>
+          <div class="tcell" style="grid-area:1/3/3/5;background:rgba(98,126,234,.18)">Design<small>4 things</small></div>
+          <div class="tcell" style="grid-area:3/1/4/3;background:rgba(255,255,255,.06)">Sam<small>3 things</small></div>
+          <div class="tcell" style="grid-area:3/3/4/5;background:rgba(255,255,255,.05)">Recipes<small>2 things</small></div>
+        </div>
+      </div></div>
+
+      <div class="mod ch2 ruler" data-gap="28"><div class="tintcard">
+        <div class="nt"><span class="ic">✦</span><span>ETH moved <b class="up">+4.2%</b> and it's also what you've been reading — 3 saves this week.</span><span class="chev">›</span></div>
+        <div class="nt"><span class="ic">☾</span><span>Bluesky has been quiet since Jul 27 — first miss in 9 days.</span></div>
+      </div></div>
+
+      <div class="mod ch4 ruler" data-gap="36"><div class="card">
+        <div class="whead">Bluesky · mentions you</div>
+        <div class="wbody"><div class="lrow"><div class="new-post">
+          <div class="hd"><div class="av"></div><span class="who">@paulg.bsky.social</span></div>
+          <div class="txt">This is exactly the kind of local-first corpus idea I was talking about — @you nailed the framing better than I managed to.</div>
+          <div class="meta">12 replies · 2 more behind it</div>
+        </div></div></div>
+      </div></div>
+
+      <div class="mod t4 ruler" data-gap="18"><div class="card">
+        <div class="whead">Reading · the odd one out</div>
+        <div class="wbody"><div class="lrow"><div class="new-read">
+          <div class="banner"></div>
+          <div class="t">Apple is reportedly testing a MacBook with a touch display for 2027</div>
+          <div class="meta">The Verge · 2h ago</div>
+        </div></div></div>
+      </div></div>
+
+      <div class="mod ch2"><div class="badge">🔒 Composed on this iPhone — nothing left your device</div>
+        <div class="chips"><span class="chip">📌 Keep this view</span><span class="chip">Try with your key</span></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="legend">
+  <h3>What shipped</h3>
+  <ol>
+    <li><b>A dateline above the lede.</b> The whisper capsule that opens this screen says "Your Friday"; the screen itself named the day nowhere. One tertiary line, locale-formatted (<code>Friday, July 31</code> / <code>Freitag, 31. Juli</code>), so a brief re-opened at 4pm still reads as today's.</li>
+    <li><b>A lede rung of its own — <code>heading28</code>.</b> It was <code>heading22</code>, which is what every card title and tray header wears, so the sentence and the hero's <code>price40</code> under it — same rounded bold face, ten points apart — read as one label-over-value unit. 34 was the other option and it's wrong the opposite way: a real lede runs four lines there and pushes the money hero, the crown by ruling, off the first screen. One caller only, the way <code>price48</code> is one caller.</li>
+    <li><b>The figure wears its direction.</b> The synthesis notes already color signed percentages; the day's biggest number, in the sentence most likely to carry it, was the app's only uncolored move. The composer hands the renderer the <em>exact substring</em> it built the sentence from, so the color can never disagree with the words — and a rung that isn't a gain or loss (a health factor, a handle, a deadline) sends no direction and stays in body ink.</li>
+    <li><b>Spacing as structure.</b> Every module self-padded the same 10pt, drawing the brief as one undifferentiated column. <code>Stack</code> now takes an optional second argument naming the ids that open a chapter, and the brief composes it — so the money story, the day's subject, the agent's read and the things themselves separate at 28/28/28/36pt while what's glued stays glued: the watchlist to the hero (ruled, one story never split), and the second lead to the first. No headers, no rules, no hairlines. Absent on the other ~90 <code>Stack</code> emitters, where it's a no-op.</li>
+    <li><b>The leads get the room the doctrine promises.</b> "A lead is one item given room" — but the read was a 48pt thumbnail with a two-line title that cut mid-word, and the mention was 16pt text in a gutter 32pt narrower than the card. The read's art now leads as a 128pt banner at the card's own width with an 18pt title on three lines; the mention's avatar moves to a header row so the words get the full width, at <code>body17</code>, the app's reading rung, up to five lines (the composer already clamps the post to 200 characters upstream, so that's bounded).</li>
+  </ol>
+</div>
+
+</body>
+</html>

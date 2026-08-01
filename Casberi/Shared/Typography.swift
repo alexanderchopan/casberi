@@ -47,6 +47,21 @@ extension DSTextStyle {
     // the ramp already honours — every other rung here is 0. Nothing else about
     // these two changes: same size, same weight, same rounded face.
     static let heading34 = DSTextStyle(size: 34, weight: .bold,     tracking: 0,    lineHeight: 41, relative: .largeTitle, rounded: true)
+    /// The LEDE rung (2026-07-31) — the day brief's opening sentence, and
+    /// nothing else. It exists because the two display rungs either side of it
+    /// are both wrong for a sentence: `heading22` is the card-and-tray TITLE
+    /// rung (`DSTray`, `GenWidget`), so the brief's headline read as a label
+    /// over the hero's `price40` rather than as the day said in words — same
+    /// rounded bold face, eight points apart, one visual unit. And
+    /// `heading34` is the COVER rung, sized for two-to-four-word statements: a
+    /// real lede ("Up $1,247 today. ETH did the lifting, three days running.")
+    /// runs three or four lines there and pushes the money hero — the crown by
+    /// ruling — clean off the first screen. 28 keeps the crown visible while
+    /// putting a full step of air between the sentence and the number.
+    ///
+    /// One caller, deliberately, the way `price48` is one caller: a second
+    /// would flatten the hierarchy this exists to make.
+    static let heading28 = DSTextStyle(size: 28, weight: .bold,     tracking: 0,    lineHeight: 34, relative: .title1, rounded: true)
     static let heading22 = DSTextStyle(size: 22, weight: .bold,     tracking: 0,    lineHeight: 28, relative: .title2, rounded: true)
     // Reading-band pass (2026-07-25). The app leaned on 13/15/17 for nearly
     // all its running text — a lot of real sentences (row sublines, wallet

@@ -275,8 +275,32 @@ struct GenRender: View {
             // BLOCK lays out at once — the whole screen's shape is visible
             // before a single one has content — and each block crossfades to
             // its real component as that module's own line streams in.
-            ForEach(el.refs(0), id: \.self) {
-                GenRender(id: $0, els: els, slot: inAgentAnswer ? .block : .none)
+            //
+            // Arg 1 (optional, 2026-07-31) — the ids that OPEN A CHAPTER.
+            // A composition with a ranked order (the Today brief's money →
+            // subject → the agent's read → the things) drew as one
+            // undifferentiated column, because the gap between two movements
+            // was the same as the gap inside one. A chapter id gets extra air
+            // above it, so the structure reads without a single header —
+            // which the design law wants anyway (no eyebrows, no rules, no
+            // hairlines).
+            //
+            // The gap is ADDITIVE, and modules do NOT all self-pad equally —
+            // don't read a single number off this. There are two tiers: `s2`
+            // for a bare module (`MoneyHero`, `DayNotes`, `TilePair`) and `s4`
+            // for a card that carries a shadow (`GenWidget`, `GenTagMap`). So
+            // a chapter lands at s2+s4 or s4+s4, i.e. 28 or 36 on iOS, against
+            // 10 or 18 of glue. Uniform totals are not the invariant and never
+            // were; the CONTRAST is — every chapter opens on at least twice
+            // the air of the join it follows, which is what the eye reads.
+            //
+            // Absent on every other `Stack` emitter, and absence is a no-op:
+            // an empty arg means an empty set means nobody is a chapter,
+            // exactly as before.
+            let chapters = genChapterIDs(el.str(1))
+            ForEach(el.refs(0), id: \.self) { ref in
+                GenRender(id: ref, els: els, slot: inAgentAnswer ? .block : .none)
+                    .padding(.top, chapters.contains(ref) ? DS.Space.s4 : 0)
             }
 
         case "Hero":        GenHero(el: el).mountIn()
@@ -3031,6 +3055,17 @@ private func genCSVDoubles(_ s: String) -> [Double] {
     s.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
 }
 
+/// `Stack`'s chapter ids — the comma-joined arg 1, as a set. A `Set` because
+/// the Stack asks it a containment question once per child; a partial arg
+/// mid-stream just yields a shorter set (the last id may still be arriving),
+/// which costs a chapter its extra air for one frame and self-heals — never a
+/// mis-parse, since ids are matched whole.
+private func genChapterIDs(_ s: String) -> Set<String> {
+    Set(s.split(separator: ",")
+         .map { $0.trimmingCharacters(in: .whitespaces) }
+         .filter { !$0.isEmpty })
+}
+
 /// ValueSpark(eyebrow, subline, "v0,v1,…") — a balance sparkline over recorded
 /// value samples. Reuses `TokenChartPlot` so the wallet's own value line wears
 /// the exact anatomy a token curve does; the delta pill is computed first→last,
@@ -3500,31 +3535,75 @@ private extension View {
 /// (and the same `TokenHue` washes at the same squared magnitude) the full
 /// `TagMap` draws elsewhere, so the small read and the big one can't disagree
 /// about which holding is largest.
-/// DayLede(text) — the day brief's opening sentence, in display type, above
-/// everything (2026-07-25, user: "that line should be above wallet").
+/// DayLede(text, dateline, figure, direction) — the day brief's opening
+/// sentence, in display type, above everything (2026-07-25, user: "that line
+/// should be above wallet").
 ///
 /// No surface, by design: it is a sentence on the page, not a card. The whole
 /// point of putting it here rather than under the hero's total is that the
 /// screen opens with WORDS — "Up $1,247 today. ETH did the lifting." — and
 /// then hands the number the room to be a number in.
 ///
-/// Flat by law: a plain `Text`, no nesting. This draws at the head of the
-/// agent's Stack, the exact position that has tipped the main-thread stack
-/// three times (see CLAUDE.md's eager-head depth lesson).
+/// Three things landed here on 2026-07-31, all of them the same idea — that
+/// this is a masthead and had been drawing as a caption:
+///
+///   • The DATELINE above it. The whisper capsule that opens this screen says
+///     "Your Wednesday"; the screen itself named the day nowhere.
+///   • `heading28` instead of `heading22`. See that rung's own note in
+///     Typography: 22 is what every card title and tray header in the app
+///     wears, so the sentence and the hero's `price40` under it — same rounded
+///     bold face, eight points apart — read as one label-over-value unit.
+///   • The FIGURE wears its direction. `GenSignedText` already colors signed
+///     percentages inside the synthesis notes; the day's biggest number, in
+///     the one sentence most likely to carry it, was the app's only uncolored
+///     move. Same rule, and §83's corollary comes with it: the composer sends
+///     no `direction` for a rung that isn't a gain or a loss (a health factor,
+///     a handle, a deadline), so those stay in body ink.
+///
+/// Flat by law: two `Text`s in a `VStack`, no nesting beyond that. This draws
+/// at the head of the agent's Stack, the exact position that has tipped the
+/// main-thread stack three times (see CLAUDE.md's eager-head depth lesson).
 private struct GenDayLede: View {
     let el: GenEl
+    @Environment(\.colorScheme) private var scheme
+
+    /// The sentence with its figure accented — and the plain sentence
+    /// whenever the accent can't be placed with certainty. `range(of:)`
+    /// rather than any parsing of the text: the composer hands over the exact
+    /// substring it built the sentence from, so a miss means the two
+    /// disagreed, and the honest response to that is no color at all.
+    private var sentence: Text {
+        let text = el.str(0)
+        let figure = el.str(2)
+        let direction = el.str(3)
+        guard !figure.isEmpty, direction == "up" || direction == "down",
+              let range = text.range(of: figure) else { return Text(text) }
+        let accent = TokenChartStyle.accent(change: direction == "up" ? 1 : -1, scheme: scheme)
+        return Text(String(text[text.startIndex..<range.lowerBound]))
+            + Text(figure).foregroundStyle(accent)
+            + Text(String(text[range.upperBound...]))
+    }
+
     var body: some View {
-        Text(el.str(0))
-            .dsText(.heading22)
-            .foregroundStyle(DS.textPrimary)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            // Self-padded, like every other component in this file (the
-            // answer column doesn't inset its children — `GenTagMap`,
-            // `GenWidget` and the rest each own their horizontal margin). A
-            // bare `maxWidth: .infinity` ran the sentence off both edges,
-            // starting left of the masthead above it.
-            .padding(.horizontal, DS.Space.s4)
+        // Self-padded, like every other component in this file (the answer
+        // column doesn't inset its children — `GenTagMap`, `GenWidget` and the
+        // rest each own their horizontal margin). A bare `maxWidth: .infinity`
+        // ran the sentence off both edges, starting left of the masthead above
+        // it.
+        VStack(alignment: .leading, spacing: 2) {
+            if !el.str(1).isEmpty {
+                Text(el.str(1))
+                    .dsText(.subhead13)
+                    .foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+            }
+            sentence
+                .dsText(.heading28)
+                .foregroundStyle(DS.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, DS.Space.s4)
     }
 }
 
@@ -3763,8 +3842,8 @@ private struct GenMoneyHero: View {
     }
 }
 
-/// LeadRow(title, meta, imageURL, thingID) — one item PROMOTED: thumbnail,
-/// the title on up to two full lines, meta beneath.
+/// LeadRow(title, meta, imageURL, thingID, source) — one item PROMOTED: its
+/// art as a banner, the title on up to three full lines, meta beneath.
 ///
 /// The brief's doctrine is "the thing itself, not a count" — but the first cut
 /// used the ordinary one-line `Row` for its promoted read, which showed the
@@ -3772,21 +3851,67 @@ private struct GenMoneyHero: View {
 /// caught on-device 2026-07-22). Feed rows elsewhere keep their one-line
 /// discipline on purpose; a lead is one item GIVEN ROOM, which is the entire
 /// meaning of promoting it.
+///
+/// 2026-07-31 finished that thought: the art led instead of sitting beside the
+/// words as a 48pt square, which had left the screen's most-promoted module as
+/// its least-promoted-looking one.
 private struct GenLeadRow: View {
     let el: GenEl
     @Environment(\.genThingOpen) private var thingOpen
 
+    /// A letterbox, not a 16:9 frame (2026-07-31). At the card's inner width
+    /// (~333pt on a 6.3" screen) sixteen-by-nine is ~187pt of picture over a
+    /// two-line title, which makes the module the image rather than the read.
+    /// A banner states "this one has a face" and leaves the words the lead.
+    private var bannerHeight: CGFloat { 128 }
+
+    /// A banner is drawn only for art we have no reason to think is gone.
+    /// `RemoteThumb`'s 2026-07-10 ruling — "a 404'd Steam header or expired
+    /// frame must not read worse than having no art at all" — is written for a
+    /// 48pt tile; at 333×128 a placeholder is seven times the hole, so a URL
+    /// the loader has already blacklisted doesn't get a slot at all and the
+    /// row degrades to the title-and-meta shape a lead with no image already
+    /// has. A FRESH failure can't be known before the fetch, so that one falls
+    /// to `RemoteArt`'s own `fallback` (the source's mark) below.
+    private var showsBanner: Bool {
+        let url = el.str(2)
+        return !url.isEmpty && !RemoteImageLoader.isDead(url)
+    }
+
     var body: some View {
         Button { thingOpen?(el.str(3)) } label: {
-            HStack(alignment: .top, spacing: DS.Space.s3) {
-                if !el.str(2).isEmpty {
-                    RemoteThumb(urlString: el.str(2), size: 48, fallback: el.str(0))
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                // The art LEADS now, at the card's own width, where it used to
+                // be a 48pt square beside the title. §166's doctrine for this
+                // module is "the thing itself, not a count" and "a lead is one
+                // item GIVEN ROOM" — but a thumbnail the size of a favicon,
+                // under a card header, in a stack of full-width
+                // visualizations, was the least promoted thing on a screen
+                // whose whole argument is that this item is worth opening.
+                // Inset rather than full-bleed on purpose: the row sits inside
+                // `GenWidget`'s card, and bleeding to the card edge would mean
+                // negative padding fighting the header's own inset.
+                if showsBanner {
+                    GeometryReader { geo in
+                        RemoteArt(urlString: el.str(2),
+                                  width: geo.size.width, height: bannerHeight,
+                                  fallback: el.str(4),
+                                  cornerRadius: DS.Radius.control)
+                    }
+                    .frame(height: bannerHeight)
                 }
                 VStack(alignment: .leading, spacing: 3) {
+                    // `heading17` (the app's headline rung), not `callout15`
+                    // semibold: with the art carrying the module's weight, a
+                    // title at row size read as a caption under its own
+                    // picture. Three lines rather than two — the two-line
+                    // clamp is what cut "Apple is reportedly testing a MacB…"
+                    // on device in the first place (see this type's own note),
+                    // and a wider title block has fewer of them to fill.
                     Text(el.str(0))
-                        .dsText(.callout15).fontWeight(.semibold)
+                        .dsText(.heading17)
                         .foregroundStyle(DS.textPrimary)
-                        .lineLimit(2)
+                        .lineLimit(3)
                         .fixedSize(horizontal: false, vertical: true)
                     if !el.str(1).isEmpty {
                         Text(el.str(1))
@@ -3795,7 +3920,7 @@ private struct GenLeadRow: View {
                             .lineLimit(1)
                     }
                 }
-                Spacer(minLength: 0)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.horizontal, DS.Space.s4)
             .padding(.vertical, DS.Space.s2)
@@ -3817,29 +3942,40 @@ private struct GenLeadPost: View {
 
     var body: some View {
         Button { thingOpen?(el.str(4)) } label: {
-            HStack(alignment: .top, spacing: DS.Space.s3) {
-                RemoteThumb(urlString: el.str(2), size: 32, fallback: el.str(0), circular: true)
-                VStack(alignment: .leading, spacing: 2) {
+            // The avatar leads a HEADER row now rather than a column of its
+            // own (2026-07-31), which gives the words the card's full width
+            // instead of the 32pt-narrower gutter left beside a face. Someone
+            // addressing you by name is the most human thing this screen
+            // carries; it should not be the narrowest.
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                HStack(spacing: DS.Space.s2) {
+                    RemoteThumb(urlString: el.str(2), size: 36, fallback: el.str(0), circular: true)
                     if !el.str(0).isEmpty {
                         Text(el.str(0))
                             .dsText(.subhead13)
                             .foregroundStyle(DS.textSecondary)
                             .lineLimit(1)
                     }
-                    Text(el.str(1))
-                        .dsText(.callout15)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(3)
-                        .fixedSize(horizontal: false, vertical: true)
-                    if !el.str(3).isEmpty {
-                        Text(el.str(3))
-                            .dsText(.subhead13)
-                            .foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
-                            .padding(.top, 2)
-                    }
+                    Spacer(minLength: 0)
                 }
-                Spacer(minLength: 0)
+                // `body17` — the app's READING rung (Typography's 2026-07-25
+                // reading-band pass), not `callout15`. These are a person's
+                // actual words quoted in full; every other quotation of real
+                // prose in the app reads at this size, and the composer
+                // already clamps the post to 200 characters upstream, so the
+                // five-line allowance is bounded rather than open-ended.
+                Text(el.str(1))
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(5)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if !el.str(3).isEmpty {
+                    Text(el.str(3))
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
             }
             .padding(.horizontal, DS.Space.s4)
             .padding(.vertical, DS.Space.s2)

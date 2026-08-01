@@ -161,7 +161,7 @@ enum TodayBrief {
                             ledger: ledger, now: now)
         if !lede.text.isEmpty {
             ids.append("lede")
-            lines.append("lede = DayLede(\"\(genSafe(lede.text))\")")
+            lines.append("lede = DayLede(\"\(genSafe(lede.text))\", \"\(genSafe(dateline(now: now)))\", \"\(genSafe(lede.figure))\", \"\(lede.direction)\")")
         }
         // The home/Lock Screen widget carries this SAME sentence (2026-07-25).
         // Published here rather than at a display route so it refreshes on
@@ -282,8 +282,24 @@ enum TodayBrief {
         // not part of it: a pill that already reads "How's my day?" doesn't
         // need "Your Wednesday brief" repeated after it.)
         let digest = DayBrief.detail(things: things, now: now) ?? String(localized: "quiet")
+        // The CHAPTERS (2026-07-31) — which modules open a new movement, so
+        // the rank order this file spent three rulings establishing is
+        // legible as rhythm rather than only as sequence. Every module
+        // self-pads the same 8pt, which drew the whole brief as one dense
+        // column: the money story, the day's subject, the agent's read and
+        // the things themselves all sat at the same distance from each other
+        // as the hero sits from its own watchlist.
+        //
+        // What is NOT a chapter is the point: `pair` stays glued to `hero`
+        // (user ruling 2026-07-23, one story never split) and `tmkt` with
+        // them (a resolved market is money news), and the second lead stays
+        // glued to the first. Composed rather than hard-coded in the renderer
+        // because only this file knows which of them actually fired.
+        let chapters = ["hero", "themes", "notes", leadRefs.first]
+            .compactMap { $0 }
+            .filter { ids.contains($0) && $0 != ids.first }
         return KeptAskComposers.Result(delta: digest, digest: digest,
-                                       doc: ["root = Stack([\(ids.joined(separator: ", "))])"] + lines)
+                                       doc: ["root = Stack([\(ids.joined(separator: ", "))], \"\(chapters.joined(separator: ","))\")"] + lines)
     }
 
     // MARK: - Synthesis (direction B3)
@@ -682,11 +698,18 @@ enum TodayBrief {
         guard let move, move.anchorUSD > 0 else { return Lede() }
         let delta = move.usd - move.anchorUSD
         guard abs(delta) >= 1 else { return Lede() }
+        // The figure is captured as the SAME string the sentence is built from
+        // — not re-derived — so the accented run and the words can never
+        // disagree about what the day's number was.
+        let figure = compactUSD(abs(delta))
+        let direction = delta > 0 ? "up" : "down"
         var line = delta > 0
             ? String(localized: "Up \(compactUSD(delta)) today.")
             : String(localized: "Down \(compactUSD(abs(delta))) today.")
         let deltas = WalletStore.shared.holdingsDeltas(forAddress: nil, since: move.since)
-        guard let top = deltas.first, abs(top.delta) >= 1 else { return Lede(text: line) }
+        guard let top = deltas.first, abs(top.delta) >= 1 else {
+            return Lede(text: line, figure: figure, direction: direction)
+        }
         // The CONTINUITY half (§214): when the same holding has carried the
         // wallet several days in a row, saying so is strictly more than
         // naming it once more. Consecutive CALENDAR days, checked in
@@ -702,7 +725,7 @@ enum TodayBrief {
                 ? String(localized: "\(top.symbol) did the lifting.")
                 : String(localized: "\(top.symbol) took it back."))
         }
-        return Lede(text: line, symbol: top.symbol)
+        return Lede(text: line, symbol: top.symbol, figure: figure, direction: direction)
     }
 
     /// The ladder itself — the rungs in the order they can cost you something.
@@ -763,10 +786,34 @@ enum TodayBrief {
     /// `symbol` is the holding the sentence credited, carried out for the
     /// ledger; `tookRisk` tells the synthesis card whether the money's
     /// attribution still needs a seat.
+    ///
+    /// `figure`/`direction` are the ACCENT pair (2026-07-31): the exact
+    /// substring of `text` that is the day's number, and which way it went.
+    /// The renderer colors that run and nothing else. Carried as the literal
+    /// substring rather than as a number the view would re-format, so the
+    /// coloring can never disagree with the words — and so a localized
+    /// sentence needs no parsing rule of its own. Empty `figure` means no
+    /// accent, which is every rung but the money one: a health factor, a
+    /// handle and a deadline are not gains or losses.
     struct Lede {
         var text = ""
         var symbol = ""
         var tookRisk = false
+        var figure = ""
+        var direction = ""
+    }
+
+    /// "Thursday, July 31" — the brief's dateline (2026-07-31), the tertiary
+    /// line above the lede.
+    ///
+    /// The whisper capsule that opens this screen says "Your Wednesday", and
+    /// until now the screen it opened never named the day anywhere. It is a
+    /// fact the brief already stands on (every module here is scoped to this
+    /// window), so stating it is not padding — it's the masthead the lede
+    /// hangs from, and it's what makes a brief re-opened at 4pm legible as
+    /// today's rather than as an answer with no date on it.
+    private static func dateline(now: Date) -> String {
+        now.formatted(.dateTime.weekday(.wide).month(.wide).day())
     }
 
     /// The nearest open deadline falling inside today, overdue included — the
@@ -1160,7 +1207,13 @@ enum TodayBrief {
         let lead = topic?.outlier ?? reads[0]
         let meta = "\(genSafe(lead.source)) · \(shortTime(lead.capturedAt))"
         var refs = ["r0"]
-        var doc = ["", "r0 = LeadRow(\"\(genSafe(lead.title))\", \"\(meta)\", \"\(genSafe(lead.previewImageURL ?? ""))\", \"\(lead.id.uuidString)\")"]
+        // The SOURCE rides as its own arg (2026-07-31) rather than only
+        // inside `meta`: the row's art is a full-width banner now, and
+        // `RemoteArt` needs a bridge name to fall back to when the URL turns
+        // out dead — "never a gray hole" (`RemoteThumb`'s own 2026-07-10
+        // ruling), which matters seven times more at banner size than it did
+        // at 48pt. Passed whole, never parsed back out of `meta`.
+        var doc = ["", "r0 = LeadRow(\"\(genSafe(lead.title))\", \"\(meta)\", \"\(genSafe(lead.previewImageURL ?? ""))\", \"\(lead.id.uuidString)\", \"\(genSafe(lead.source))\")"]
         // The residue gets somewhere to GO (2026-07-22) — it was a plain
         // subline naming a topic the person then had no way to see. Asking
         // the topic re-runs the deterministic retriever and pushes the result
