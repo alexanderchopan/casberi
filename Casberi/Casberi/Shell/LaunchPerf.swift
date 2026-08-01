@@ -38,5 +38,35 @@ enum LaunchPerf {
         NSLog("[Casberi] launchPerf timed=%@ took=%.1fms", label, ms)
         return v
     }
+
+    /// Accumulates total time under a label across a launch, so a derivation
+    /// that runs cheaply but MANY times shows its real aggregate cost — the
+    /// shape that matters once per-call time is already small.
+    nonisolated(unsafe) static var totals: [String: (calls: Int, ms: Double)] = [:]
+
+    @MainActor
+    static func accumulate<T>(_ label: String, _ work: () -> T) -> T {
+        let t0 = Date()
+        let v = work()
+        let ms = Date().timeIntervalSince(t0) * 1000
+        var e = totals[label] ?? (0, 0)
+        e.calls += 1; e.ms += ms
+        totals[label] = e
+        NSLog("[Casberi] launchPerf accum=%@ calls=%d totalMs=%.1f lastMs=%.1f at=%dms",
+              label, e.calls, e.ms, ms,
+              Int(Date().timeIntervalSince(LaunchClock.start) * 1000))
+        return v
+    }
 }
 #endif
+
+/// Release-safe timing shim — `#if DEBUG` inside a `@ViewBuilder` `let` is
+/// awkward, so call sites use this and pay nothing in release.
+@MainActor @inline(__always)
+func perfAccum<T>(_ label: String, _ work: () -> T) -> T {
+    #if DEBUG
+    return LaunchPerf.accumulate(label, work)
+    #else
+    return work()
+    #endif
+}

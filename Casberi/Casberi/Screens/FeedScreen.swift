@@ -192,6 +192,76 @@ struct FeedScreen: View {
     @Namespace private var walletSwitcherNS
     /// Bumped when this page lands — rows replay their shape's
     /// entrance (each shape arrives its own way, ruling 2026-07-07).
+    /// Memo for the feed's two expensive derivations (PERF 2026-07-31).
+    /// Measured on a cold launch: the All page's body evaluates ~18 times while
+    /// the corpus and the bridge sweep settle, and each pass re-ran the day
+    /// grouping and the bundling over the SAME visible set — pure waste, and
+    /// the cost scales with corpus size. These are pure functions of `visible`,
+    /// so they're computed once per real change and reused otherwise.
+    ///
+    /// A plain class, deliberately NOT `@Observable`: writing to it during a
+    /// body evaluation is memoization, not state, and must never itself
+    /// schedule another render.
+    ///
+    /// Liveness (the 176/177/188 crash class): a cache hit means the key is
+    /// unchanged, and the key covers every id in `visible` — so a delete (which
+    /// removes an id, `visible` being `.live`-filtered upstream) always misses
+    /// the cache and recomputes. The rows are `KeyedThing` and every reader is
+    /// already guarded, so a hit can only ever serve models that were live when
+    /// derived.
+    @MainActor private final class DerivationMemo {
+        var key: Int?
+        var days: [(String, [Thing])] = []
+        var groups: [(String, [FeedRow])] = []
+        var imageOnly: Set<UUID> = []
+    }
+    @State private var memo = DerivationMemo()
+
+    /// Same memo, for the themes treemap's own corpus walk (`projectClusters`
+    /// → `themesDocument` → `GenParser.parse`), which ran on every one of those
+    /// same ~18 passes.
+    @MainActor private final class ThemesMemo {
+        var key: Int?
+        var clusters: [HomeComposition.Cluster] = []
+        var doc: [String]?
+    }
+    @State private var themesMemo = ThemesMemo()
+
+    /// The themes lede's corpus walk, computed once per real change. Kept as a
+    /// function (not inline in the `@ViewBuilder`) because a memo needs a
+    /// statement body, which a ViewBuilder won't take.
+    private func themesData() -> (clusters: [HomeComposition.Cluster], doc: [String]?) {
+        let key = derivationKey(visible)
+        if themesMemo.key != key {
+            themesMemo.key = key
+            themesMemo.clusters = perfAccum("projectClusters") {
+                HomeComposition.projectClusters(things: visible)
+            }
+            themesMemo.doc = perfAccum("themesDocument") {
+                HomeComposition.themesDocument(clusters: themesMemo.clusters)
+            }
+        }
+        return (themesMemo.clusters, themesMemo.doc)
+    }
+
+    /// Cheap identity for a derivation input — count + every id and capture
+    /// date, which is what the grouping and bundling actually key on. O(n)
+    /// hashing is ~1% of the grouping it saves. An in-place cosmetic heal (a
+    /// backfilled thumbnail) doesn't change this and so won't repaint until the
+    /// next structural change — the same tradeoff `debouncedAllSnapshot`
+    /// already documents and accepts.
+    private func derivationKey(_ things: [Thing]) -> Int {
+        var h = Hasher()
+        h.combine(things.count)
+        h.combine(filter.tag)
+        h.combine(source)
+        for t in things {
+            h.combine(t.id)
+            h.combine(t.capturedAt)
+        }
+        return h.finalize()
+    }
+
     @State private var shapeWave = 0
     /// Latches on the FIRST landing so the row entrance plays once, not on
     /// every swipe back to this page (2026-07-30 swipe-smoothness — see
@@ -1593,10 +1663,20 @@ struct FeedScreen: View {
         // (as `newBoundaryID` and `dayGroups.first(where:)` were) they rebuilt
         // the whole chain per row/section — the Feed freeze (perf pass
         // 2026-07-13).
-        let days = recentDaysThenCoarseTail(visible)
-        let groups = bundle(days)
+        // Memoized (PERF 2026-07-31 — see `DerivationMemo`): recomputed only
+        // when `visible` actually changed, not on all ~18 launch-window body
+        // passes over the same set.
+        let key = derivationKey(visible)
+        if memo.key != key {
+            memo.key = key
+            memo.days = perfAccum("dayGrouping") { recentDaysThenCoarseTail(visible) }
+            memo.groups = perfAccum("bundle") { bundle(memo.days) }
+            memo.imageOnly = perfAccum("imageOnlyIDs") { imageOnlyIDs(memo.days) }
+        }
+        let days = memo.days
+        let groups = memo.groups
         let boundary = boundaryID(in: groups)
-        let imageOnly = imageOnlyIDs(days)
+        let imageOnly = memo.imageOnly
         let dayTotals = Dictionary(days.map { ($0.0, $0.1.count) },
                                    uniquingKeysWith: { first, _ in first })
         return ForEach(groups, id: \.0) { label, rows in
@@ -1847,13 +1927,16 @@ struct FeedScreen: View {
     private var themesLedeSection: some View {
         // Computed once and shared with the collapsed row below (2026-07-21) —
         // this used to run `projectClusters` a second time over the same
-        // `visible` set just to build the collapsed summary.
-        let clusters = HomeComposition.projectClusters(things: visible)
-        if let doc = HomeComposition.themesDocument(clusters: clusters) {
+        // `visible` set just to build the collapsed summary. Memoized since
+        // 2026-07-31 (see `themesData`), so it no longer walks the corpus on
+        // every launch-window body pass.
+        let themes = themesData()
+        if let doc = themes.doc {
+            let clusters = themes.clusters
             let digest = doc.joined(separator: "\n")
             let unchanged = digest == UserDefaults.standard.string(forKey: Self.themesSeenDigestKey)
             if themesExpanded || !unchanged {
-                let els = GenParser.parse(prefix: digest[...], isComplete: true)
+                let els = perfAccum("themesParse") { GenParser.parse(prefix: digest[...], isComplete: true) }
                 Section {
                     GenRender(id: "root", els: els)
                         // The Themes CARD (2026-07-21, the §160 ruling carried
