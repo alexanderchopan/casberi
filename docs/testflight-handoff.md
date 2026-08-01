@@ -63,7 +63,7 @@ SKIP_BUMP=1 \
 ```
 
 - `SKIP_BUMP=1` reuses the already-committed build number. Omit it to let the
-  script bump the number itself (then commit the bump afterward — step 4).
+  script bump the number itself (then commit the bump afterward — step 5).
 - After `✓ Uploaded`, Claude wipes the staged copy: `rm -f /tmp/asc.p8` (the
   script also deletes it itself; belt and braces). The Keychain copy persists
   for the next ship — do NOT delete `asc-p8` from the Keychain.
@@ -81,20 +81,66 @@ SKIP_BUMP=1 \
    `git worktree add /tmp/casberi-ship-N <commit>` and point the command's last
    line at `/tmp/casberi-ship-N/scripts/testflight.sh`.
 
-3. **Build-clean check first** — must succeed before shipping:
+3. **Run `scripts/verify.sh` — not just a build.** It must pass before shipping:
    ```sh
-   cd ~/Developer/casberi && xcodebuild -project Casberi/Casberi.xcodeproj -scheme Casberi \
-     -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
+   cd ~/Developer/casberi && scripts/verify.sh
    ```
 
-4. **Bump the build number and commit it** so it sticks and never collides
+   A bare `xcodebuild … build` used to be step 3, and that is what let build 214
+   ship with an **undisclosed network host** (2026-07-31). Compiling proves the
+   code is valid, not that it's honest. `verify.sh` runs the static audits
+   FIRST, before it builds anything, and two of them are ship gates in a way a
+   compiler can never be:
+
+   - **`network-reach-audit.sh`** — every host literal in the app must appear in
+     the "What this app reaches" registry (`Model/NetworkReach.swift`, prd §205)
+     or in the audit's explicit non-reach denylist. This is the privacy promise
+     as a test: "no server, nothing routes through us" is only checkable because
+     that registry is complete, and a bridge whose API host nobody disclosed
+     makes the app's own privacy screen quietly wrong. **A missing entry ships
+     as a broken promise and cannot be pulled back** — TestFlight builds are
+     already on testers' devices by the time anyone notices.
+   - **`catalog-sync.sh`** — the app catalog, the website shelf and the
+     onboarding tiles are ONE set.
+
+   Running these two individually is not a substitute for `verify.sh`, and
+   picking the audits you happen to remember is exactly the failure mode: the
+   Stripe ship ran `catalog-sync.sh` and the liveness audit by hand, both
+   passed, and the reach audit — the one that would have caught the real gap —
+   was simply never invoked. **Run the whole script.**
+
+   If `verify.sh` is too slow for the moment (it reinstalls and cold-launches
+   ten times), the minimum acceptable gate is every static audit at its head,
+   not a subset:
+   ```sh
+   LAUNCH_CYCLES=0 scripts/verify.sh
+   ```
+
+4. **Re-check `git status` IMMEDIATELY before each archive, not once at the
+   start.** Both ship scripts `rsync` the WORKING TREE, so whatever is
+   uncommitted at archive time goes into the build — and another Claude session
+   editing this repo can dirty the tree in the minutes between your commit and
+   your archive. That happened on 2026-07-31: the tree was clean when build 214
+   was committed, and by the time build 215 rsynced it carried two files of
+   another session's in-progress work that nobody reviewed.
+
+   When any other session might be active, don't rely on timing — **archive from
+   a clean worktree at the committed HEAD**, which makes the question
+   unanswerable-by-construction rather than a race you have to win:
+   ```sh
+   git worktree add /tmp/casberi-ship-<n> <commit>
+   # …then point the ship command's last line at /tmp/casberi-ship-<n>/scripts/testflight.sh
+   git worktree remove /tmp/casberi-ship-<n>   # when the upload is done
+   ```
+
+5. **Bump the build number and commit it** so it sticks and never collides
    across sessions. Either let the script bump (omit `SKIP_BUMP`) then commit
    `Casberi/Casberi.xcodeproj/project.pbxproj`, or bump + commit first and pass
    `SKIP_BUMP=1`. Commit message: `Bump build number to N for TestFlight (internal)`.
 
-5. **Run the one command above.** When it finishes you'll see `✓ Uploaded`.
+6. **Run the one command above.** When it finishes you'll see `✓ Uploaded`.
 
-6. **Don't re-check the App Store Connect API too soon.** Processing runs from
+7. **Don't re-check the App Store Connect API too soon.** Processing runs from
    ~5 min to over an hour. A build missing from the list right after upload is
    almost always still processing, not rejected.
 
