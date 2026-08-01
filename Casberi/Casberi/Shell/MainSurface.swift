@@ -508,22 +508,35 @@ struct MainSurface: View {
         // from connecting an exchange and find no room to browse its book from,
         // which is the whole point of connecting one (prd §234).
         .onChange(of: liveRoomChipCount) { _, _ in refreshLiveChips() }
-        // Neighbour feed pages join AFTER the first paint (2026-07-31 perf).
-        // The 2026-07-30 `nearActive` gate cut page assembly from every source
-        // to the active one plus its neighbour — but at COLD LAUNCH that still
-        // assembles a second full room (hero chains and all) in the same window
-        // as the first, and nobody can swipe in the first half-second. Measured:
-        // 44 heavy assemblies across two pages in one launch. The neighbour is
-        // what makes a swipe feel instant, so it is kept — just not paid for
-        // while the first frame is still being drawn.
-        .task {
+        // Neighbour feed pages are assembled while things are STILL — never
+        // during the first paint, and never during a page change (2026-07-31
+        // perf; user: "swiping between pages ... doesn't snap to next screen,
+        // more like shows half of one screen and half of other").
+        //
+        // Two moments, one rule. At cold launch the `nearActive` gate
+        // (2026-07-30) still built a second full room, hero chains and all, in
+        // the window the first frame was being drawn. And on every swipe, the
+        // page you ARRIVE at makes a new page one-away, so a fresh heavy
+        // assembly fired exactly as the pager's release animation should have
+        // been running — the animation is on the main thread, the assembly
+        // blocks it, and the pager rests between two pages until it frees.
+        // That is the reported symptom, and it reads as the pager being broken
+        // rather than as the app being busy.
+        //
+        // `.task(id:)` gives cancel-and-restart for free: each selection change
+        // restarts the wait, so a run of quick swipes builds nothing until the
+        // person stops. Nothing is ever UNBUILT — `FeedScreen.everBuilt`
+        // latches — so this only ever defers a page's FIRST assembly, and the
+        // neighbour is still pre-built well before anyone swipes again.
+        .task(id: filter.source) {
+            neighborsReady = false
             try? await Task.sleep(for: .milliseconds(400))
             neighborsReady = true
         }
     }
 
-    /// Whether the pager should pre-build the page one swipe away. False only
-    /// for the first moments of a launch — see the `.task` above.
+    /// Whether the pager should pre-build the page one swipe away. False during
+    /// the launch's first moments and during a page change — see the `.task`.
     @State private var neighborsReady = false
 
     private var surface: some View {

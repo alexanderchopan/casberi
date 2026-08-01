@@ -12470,3 +12470,66 @@ the `WindowGroup` body exists — it is the launch's floor, not a target. And
 `BridgeRefresh.refreshAllConnected` was already correct: every bridge runs inside
 its own staggered `Task`, so the 6–15ms it costs synchronously is dispatch, not
 work. It was on the improvement list until it was read; nothing was changed there.
+
+## §258 — The memo whose key cost as much as the memo (user: "still slow and also swiping between pages swipes them more than they should eg doesn't snap to next screen more like shows half of one screen and half of other", 2026-07-31)
+
+§257 measured a cold launch on the SIMULATOR'S DEMO CORPUS — a few dozen things
+— and reported a real but small win. The user, on a real device, said it was
+still slow. The demo corpus was the reason §257 could not see the actual cost:
+seeded to **4,000 things** (eight `-chatgptImport` batches), the same launch
+told a completely different story.
+
+**The finding.** `feedList[All]` — building the All room's view tree —
+cost **6,278ms of main-thread time across 44 launch-window renders**: 143ms per
+render, against 2ms on the demo corpus. Nothing else came close.
+
+**Ruling 1 — a cache key that walks the collection is not a cache.**
+`derivationKey` hashed every element's `id` and `capturedAt` — two PERSISTED
+property reads per thing — and `visible` (the All room's `.live` filter over the
+whole snapshot) was derived two or three times per render because `themesData()`
+read `self.visible` instead of taking the array the render already held. So the
+memo's key cost about what the day-grouping and bundling it protects cost, and
+it was paid on all 44 renders while the thing it saved ran twice. The key is now
+the snapshot's own CONTENT SIGNATURE, computed once per write to
+`debouncedAllSnapshot` (three times a launch, not forty-four), and `visible` is
+threaded in. **6,278ms → 1,280ms.**
+
+A revision COUNTER was the first cut and measurably worse (1,384ms): the
+debounce republishes on every count-changing emission, so the counter moved even
+when the array was identical and the derivations recomputed three times instead
+of once. Hashing the contents at write time is the same walk the old key did —
+just paid where it belongs.
+
+Safety is unchanged and rests on two things, both worth stating because this is
+the 176/177/188 crash class's neighbourhood: `things.count` in the key is the
+count of `visible`, which is `.live`-filtered at the boundary, so a DELETE always
+misses the cache; and an INSERT can only reach the All room through the snapshot,
+every write to which recomputes the signature. Only the All room takes the fast
+path — every other room reads its own source-filtered `@Query`, has no snapshot
+to sign, and keeps the exact walk.
+
+**Ruling 2 — the pager was never broken; it was blocked.** "Doesn't snap, shows
+half of one screen and half of another" is not a paging bug. A `TabView(.page)`
+runs its release animation on the main thread, and a 143ms block lands exactly
+where that animation should be — so the pager rests between two pages until the
+thread frees, and a flick whose touches all arrive at once on unblock advances
+further than one page. Both reported symptoms are one cause, and the cause is
+ruling 1. Verified after the fix: a single controlled swipe advances exactly one
+page and snaps, rows fully rendered.
+
+What was ALSO changed, because it is the same mistake one level up: the
+neighbour page is now assembled only while things are still — not during the
+first paint (§257's version) and not during a page change. Arriving at a page
+makes a NEW page one-away, so a fresh heavy assembly used to fire precisely as
+the release animation ran. `.task(id: filter.source)` gives cancel-and-restart,
+so a run of quick swipes builds nothing until the person stops; nothing is ever
+unbuilt (`everBuilt` latches), so this only defers a page's FIRST assembly.
+
+**The standing lesson, and it is not about SwiftUI.** §257's own instrument was
+honest and its conclusion was still wrong, because it was pointed at a corpus
+nobody has. A perf measurement on demo data measures the demo. `MainSurface`'s
+74 corpus walks (§257) cost 87ms on the demo corpus and would have cost ~3
+SECONDS at 4,000 things — the fix was right and the number that justified it was
+meaningless. **Seed the corpus before believing a launch number:** eight
+`-chatgptImport` batches of 500 is a two-minute setup and it is the difference
+between a 2ms render and a 143ms one.

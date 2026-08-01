@@ -232,7 +232,12 @@ struct FeedScreen: View {
     /// The themes lede's corpus walk, computed once per real change. Kept as a
     /// function (not inline in the `@ViewBuilder`) because a memo needs a
     /// statement body, which a ViewBuilder won't take.
-    private func themesData() -> (clusters: [HomeComposition.Cluster], doc: [String]?) {
+    /// Takes the render's own `visible` (PERF 2026-07-31). It used to read
+    /// `self.visible` twice — and for the All room every read is a `.live`
+    /// filter over the WHOLE corpus, so the render paid for three passes where
+    /// one would do. The caller already holds the array; passing it makes that
+    /// obvious rather than incidental.
+    private func themesData(_ visible: [Thing]) -> (clusters: [HomeComposition.Cluster], doc: [String]?) {
         let key = derivationKey(visible)
         if themesMemo.key != key {
             themesMemo.key = key
@@ -257,6 +262,58 @@ struct FeedScreen: View {
         h.combine(things.count)
         h.combine(filter.tag)
         h.combine(source)
+        // The All room keys on the SNAPSHOT's revision, not on a walk of its
+        // contents (PERF 2026-07-31, measured on a 4,000-thing corpus: the All
+        // page's `feedList` cost 6.3 SECONDS of main-thread time across 44
+        // launch-window renders — 143ms each, against 2ms on the demo corpus).
+        // Almost all of it was HERE. The loop below reads two PERSISTED
+        // properties per element, so the cache key cost about what the grouping
+        // it caches costs, and it ran two or three times per render — a memo
+        // that pays for itself twice over is not a memo. It is also what made
+        // the pager stick: a 143ms main-thread block lands right where the
+        // page's release animation should run, so the swipe rests between two
+        // pages until the thread frees.
+        //
+        // O(1) and still safe on the crash class: `things` here is `visible`,
+        // which is `.live`-filtered at the boundary, so a DELETE always shows
+        // up in `things.count` above and misses the cache. An INSERT can only
+        // reach the All room through `debouncedAllSnapshot`, and every write to
+        // it bumps `allRevision`. Same standing tradeoff the debounce itself
+        // documents: an in-place heal that changes neither count nor revision
+        // (including a `capturedAt` edit that would re-day-group a row) waits
+        // for the next structural change to repaint.
+        if source == "All", filter.tag == "All" {
+            h.combine(allSnapshotKey)
+            return h.finalize()
+        }
+        // Every other room reads its own source-filtered `@Query` directly, so
+        // it is only re-emitted by ITS source's own saves and there is no
+        // snapshot to count revisions of. The walk stays exact there.
+        for t in things {
+            h.combine(t.id)
+            h.combine(t.capturedAt)
+        }
+        return h.finalize()
+    }
+
+    /// The All snapshot's CONTENT signature, computed once each time the
+    /// snapshot is written — the All room's O(1) derivation identity at render
+    /// time. See `derivationKey`.
+    ///
+    /// A plain revision counter was the first cut and measurably worse: the
+    /// debounce republishes on every count-changing emission, so the counter
+    /// moved even when the resulting array was identical, and the grouping and
+    /// bundling recomputed three times a launch instead of once (+420ms at
+    /// 4,000 things). This is the same walk the old per-render key did — just
+    /// paid on the three writes instead of on all forty-four renders.
+    @State private var allSnapshotKey = 0
+
+    /// Identity of a snapshot's contents: what the grouping and bundling
+    /// actually key on. Mirrors `derivationKey`'s non-All walk deliberately —
+    /// if one ever learns about a new field, so must the other.
+    private func snapshotSignature(_ things: [Thing]) -> Int {
+        var h = Hasher()
+        h.combine(things.count)
         for t in things {
             h.combine(t.id)
             h.combine(t.capturedAt)
@@ -1052,7 +1109,7 @@ struct FeedScreen: View {
         #if DEBUG
         let _ = LaunchPerf.buildTick(source)
         #endif
-        return feedList
+        return perfAccum("feedList[\(source)]") { feedList }
             // Re-tapping the active chip pops this surface's own pushed
             // screens and sheets back to root (the old per-tab pop habit).
             .onChange(of: chrome.popHome) {
@@ -1377,14 +1434,18 @@ struct FeedScreen: View {
         .task(id: things.count) {
             guard source == "All", filter.tag == "All" else { return }
             guard debouncedAllSnapshot != nil else {
-                debouncedAllSnapshot = liveVisible()   // first paint: no delay
+                let first = liveVisible()              // first paint: no delay
+                allSnapshotKey = snapshotSignature(first)
+                debouncedAllSnapshot = first
                 return
             }
             do {
                 try await Task.sleep(for: .milliseconds(250))
             } catch { return }   // superseded by a newer emission
             guard !Task.isCancelled else { return }
-            debouncedAllSnapshot = liveVisible()
+            let next = liveVisible()
+            allSnapshotKey = snapshotSignature(next)
+            debouncedAllSnapshot = next
         }
         // The page coat moved UP to the shell (prd §159, 2026-07-21): the crown
         // pour lives in MainSurface's background so it can run behind the chip
@@ -1710,7 +1771,7 @@ struct FeedScreen: View {
                 // moved off Home) — a cross-source overview, so it only makes
                 // sense over the WHOLE corpus, not a kind-filtered slice (the
                 // `if` branch above).
-                themesLedeSection
+                themesLedeSection(visible)
                 // All is where volume floods — bundles + the new-since
                 // divider live here. A single source's shape IS that source;
                 // bundling there would collapse the whole screen into one row.
@@ -2137,13 +2198,13 @@ struct FeedScreen: View {
     /// which is scoped to kept ASKS specifically). Tapping expands the full
     /// treemap for the rest of this session and marks the digest seen.
     @ViewBuilder
-    private var themesLedeSection: some View {
+    private func themesLedeSection(_ visible: [Thing]) -> some View {
         // Computed once and shared with the collapsed row below (2026-07-21) —
         // this used to run `projectClusters` a second time over the same
         // `visible` set just to build the collapsed summary. Memoized since
         // 2026-07-31 (see `themesData`), so it no longer walks the corpus on
         // every launch-window body pass.
-        let themes = themesData()
+        let themes = themesData(visible)
         if let doc = themes.doc {
             let clusters = themes.clusters
             let digest = doc.joined(separator: "\n")
