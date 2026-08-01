@@ -15,6 +15,10 @@ struct SettingsScreen: View {
     /// Drives the Data tile's badge: a green lock on device, a blue cloud once
     /// the person turns iCloud sync on.
     @AppStorage("icloud.sync") private var icloudSync = false
+    /// The highest round number the corpus has been congratulated for, so a
+    /// crossing is celebrated once and never re-celebrated on the next open.
+    @AppStorage("settings.thingsRung") private var celebratedRung = 0
+    @State private var rungBounce = 0
     @State private var diagnosticsOpen = false
     @State private var languageOpen = false
     @State private var howItWorksOpen = false
@@ -41,6 +45,7 @@ struct SettingsScreen: View {
             .dsAdaptiveContentWidth()
             .dsPageBackground()
             .dsScreenTitle("Settings")
+            .onAppear { markMilestone() }
             .sheet(isPresented: $diagnosticsOpen) {
                 NavigationStack { DiagnosticsScreen() }
             }
@@ -99,12 +104,31 @@ struct SettingsScreen: View {
         /// The row's leading glyph-in-a-squircle (the Data row's trust mark) —
         /// the same colored mark the Apps page speaks, at row size.
         var badge: (symbol: String, color: Color)? = nil
+        /// The trailing fact leads with a live number worth watching arrive —
+        /// it rolls up from zero instead of simply being there.
+        var countsUp = false
+        /// Bump to make the badge give one bounce (a milestone crossing).
+        var bounce = 0
         var action: () -> Void = {}
     }
 
     /// Live count for the Data row — the number that leads its story.
     private var thingCount: Int {
         (try? modelContext.fetchCount(FetchDescriptor<Thing>())) ?? 0
+    }
+
+    /// A corpus passing a round number is a real crossing, and this is the one
+    /// screen that states the count — so the lock gives one bounce the first
+    /// time we can say it, then never again for that rung. The ladder is
+    /// `PostHogMilestone`'s (1-2-5 × powers of ten from 100), reused rather
+    /// than reinvented for the same reason it exists there: "every 1,000" is
+    /// noise for a large corpus and unreachable for a new one. Nothing is
+    /// claimed if nothing was crossed — an open with no new rung is silent.
+    private func markMilestone() {
+        let rung = PostHogMilestone.reached(thingCount)
+        guard rung > celebratedRung else { return }
+        celebratedRung = rung
+        rungBounce += 1
     }
 
     /// Group one — your things and their state. A–Z.
@@ -129,6 +153,8 @@ struct SettingsScreen: View {
             // blue cloud — which is itself the privacy fact at a glance.
             RowSpec(title: "Privacy", value: String(localized: "\(thingCount) things · on device"),
                     badge: icloudSync ? ("icloud.fill", DS.tint) : ("lock.iphone", DS.confirm),
+                    countsUp: true,
+                    bounce: rungBounce,
                     action: { detail = .data }),
         ].sorted { $0.title < $1.title }
     }
@@ -230,7 +256,9 @@ struct SettingsScreen: View {
                                valueColor: row.valueColor,
                                avatar: row.avatar,
                                avatarSeat: row.avatarSeat,
-                               badge: row.badge)
+                               badge: row.badge,
+                               countsUp: row.countsUp,
+                               bounce: row.bounce)
                 }
                 .buttonStyle(DSTileButtonStyle())
             }
@@ -250,18 +278,20 @@ struct AccountRow: View {
     var avatar: UIImage? = nil
     var avatarSeat = false
     var badge: (symbol: String, color: Color)? = nil
+    var countsUp = false
+    var bounce = 0
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: DS.Space.s3) {
-            if let avatar {
+            if avatarSeat {
+                AvatarSeat(avatar: avatar, size: 34)
+            } else if let avatar {
                 Image(uiImage: avatar)
                     .resizable().scaledToFill()
                     .frame(width: 34, height: 34)
                     .clipShape(Circle())
-            } else if avatarSeat {
-                // Empty, the seat wears the app's own face — the Casberi
-                // mark, avatar-shaped, where the photo will land.
-                CasberiSeal(size: 34)
             } else if let badge {
                 // The row's trust mark: the same colored-glyph-in-a-squircle
                 // the Apps page speaks.
@@ -273,6 +303,15 @@ struct AccountRow: View {
                             .accessibilityHidden(true)
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(badge.color)
+                            // Two rows genuinely SWAP their glyph rather than
+                            // opening anything — Theme's sun/moon and
+                            // Privacy's lock/cloud — and for a setting that
+                            // flips in place the swap IS the feedback. A row
+                            // whose symbol never changes never transitions,
+                            // so this costs the others nothing.
+                            .contentTransition(reduceMotion ? .identity
+                                               : .symbolEffect(.replace.downUp))
+                            .symbolEffect(.bounce, value: bounce)
                     )
             }
             // The title doubles as its own catalog key — localized at
@@ -282,15 +321,53 @@ struct AccountRow: View {
                 .lineLimit(1)
             Spacer(minLength: DS.Space.s2)
             if !value.isEmpty {
-                Text(value)
-                    .dsText(.callout15).foregroundStyle(valueColor)
-                    .multilineTextAlignment(.trailing)
-                    .lineLimit(2)
+                // A fact that leads with a live number arrives by counting to
+                // it (CountUpText renders any other shape plainly, including
+                // a translation that doesn't lead with the digits).
+                Group {
+                    if countsUp, !reduceMotion { CountUpText(text: value) }
+                    else { Text(value) }
+                }
+                .dsText(.callout15).foregroundStyle(valueColor)
+                .multilineTextAlignment(.trailing)
+                .lineLimit(2)
             }
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s3)
         .contentShape(Rectangle())
+    }
+}
+
+/// The photo seat — the app's own face until a photo lands, the photo after.
+/// Setting your picture is the most personal act on this screen, so the swap
+/// is a card turn rather than a cross-fade: one 3D flip and one success tick,
+/// the moment the seal hands the seat over. Only ever on the way IN — removing
+/// a photo is an undo, and an undo doesn't get a flourish.
+private struct AvatarSeat: View {
+    let avatar: UIImage?
+    let size: CGFloat
+    @State private var spin: Double = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        Group {
+            if let avatar {
+                Image(uiImage: avatar)
+                    .resizable().scaledToFill()
+                    .frame(width: size, height: size)
+                    .clipShape(Circle())
+            } else {
+                CasberiSeal(size: size)
+            }
+        }
+        .rotation3DEffect(.degrees(spin), axis: (x: 0, y: 1, z: 0))
+        .onChange(of: avatar != nil) { _, has in
+            guard has else { return }
+            DSHaptic.success()
+            guard !reduceMotion else { return }
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.72)) { spin += 360 }
+        }
     }
 }
 

@@ -47,6 +47,13 @@ struct AccountDetailSheet: View {
     @State private var keyChecking = false
     @State private var keyProvider: AgentProvider = AgentKey.active ?? .anthropic
     @State private var keyConfigured = AgentKey.isConfigured(AgentKey.active ?? .anthropic)
+    /// One shower per colour actually CHOSEN (prd §204's pour, dealt as the
+    /// app's own rain) — the setting you just picked falling through the sheet
+    /// in its own colour, so a swatch tap answers "what did I just change?"
+    /// before you close the tray and look. Re-tapping the colour already in
+    /// force pours nothing: one pick, one shower.
+    @State private var bleedPulse = 0
+    @State private var bleedHue: Color?
 
     var body: some View {
         DSTray(title: title, height: sheetHeight) {
@@ -59,6 +66,9 @@ struct AccountDetailSheet: View {
             case .color:
                 bleedCard
             }
+        }
+        .overlay {
+            if detail == .color { BerryRain(trigger: bleedPulse, hue: bleedHue) }
         }
         .onAppear { if detail == .data { exportURL = buildExport() } }
         .sheet(isPresented: $reachOpen) {
@@ -320,16 +330,27 @@ struct AccountDetailSheet: View {
                     .padding(.horizontal, DS.Space.s3)
                     .frame(height: 44)
                     .background(DS.fillFaint, in: Capsule(style: .continuous))
+                // The §83 corollary: `.disabled` dims a PLAIN-style button's
+                // label, never a background you painted yourself — so a
+                // hand-rolled fill must swap its own fill and label, or it
+                // reads live while inert. This one stayed full-tint and
+                // white-labelled on an empty field and mid-check (audit,
+                // 2026-07-31), the exact defect `DSSlabButton` and
+                // `FollowImportSheet` both carry comments about avoiding.
+                let keySaveOff = keyChecking
+                    || keyDraft.trimmingCharacters(in: .whitespaces).isEmpty
                 Button { saveKey() } label: {
                     Text(keyChecking ? "Checking…" : "Save")
                         .dsText(.callout15).fontWeight(.semibold)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(keySaveOff ? DS.textTertiary : .white)
                         .padding(.horizontal, DS.Space.s4)
                         .frame(height: 44)
-                        .background(DS.tint, in: Capsule(style: .continuous))
+                        .background(keySaveOff ? AnyShapeStyle(DS.gray200) : AnyShapeStyle(DS.tint),
+                                    in: Capsule(style: .continuous))
+                        .animation(DS.Motion.standard, value: keySaveOff)
                 }
                 .buttonStyle(.plain)
-                .disabled(keyChecking || keyDraft.trimmingCharacters(in: .whitespaces).isEmpty)
+                .disabled(keySaveOff)
             }
             if keyConfigured {
                 Button {
@@ -378,6 +399,12 @@ struct AccountDetailSheet: View {
                     let selected = ThemeStore.shared.bleed.id == option.id
                     Button {
                         DSHaptic.tap()
+                        // A real change pours; re-picking what's already in
+                        // force is a no-op and reads as one.
+                        if !selected {
+                            bleedHue = Color(hex: option.hex)
+                            bleedPulse += 1
+                        }
                         withAnimation(DS.Motion.standard) { ThemeStore.shared.bleed = option }
                     } label: {
                         Circle()
@@ -419,9 +446,15 @@ struct AccountDetailSheet: View {
         keyChecking = true
         keyResult = nil
         Task { @MainActor in
-            let ok = await AgentAnswer.validate(candidate, provider: keyProvider)
+            // The same differentiated check the four agent setup screens use
+            // (audit, 2026-07-31) — this sheet is the SEVEN-provider door, so
+            // it was the widest place a rate limit, a blocked key and a dead
+            // connection all read as "check it and try again". The wording
+            // lives on `AgentKeyCheck` so this door and those four screens
+            // can't drift apart.
+            let outcome = await AgentAnswer.check(candidate, provider: keyProvider)
             keyChecking = false
-            if ok {
+            if outcome == .accepted {
                 AgentKey.set(candidate, for: keyProvider)
                 keyConfigured = true
                 keyDraft = ""
@@ -430,7 +463,7 @@ struct AccountDetailSheet: View {
                 keyResult = "Saved — answers now offer \"Try with your key\" on \(keyProvider.agent)."
             } else {
                 keyResultIsError = true
-                keyResult = "\(keyProvider.company) didn't accept that key — check it and try again."
+                keyResult = outcome.line(for: keyProvider)
             }
         }
     }

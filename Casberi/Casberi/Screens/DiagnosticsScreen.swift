@@ -27,8 +27,17 @@ struct DiagnosticsScreen: View {
                         .textSelection(.enabled)
                 }
                 if running {
+                    // The instrument beats while it listens. A generic spinner
+                    // says "something is happening"; the stethoscope from the
+                    // Settings row that opened this screen says WHAT — and it
+                    // stops the instant the last real line lands, so the beat
+                    // is never decoration over a finished run.
                     HStack(spacing: DS.Space.s2) {
-                        ProgressView().controlSize(.small)
+                        Image(systemName: "stethoscope")
+                            .accessibilityHidden(true)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(DS.textSecondary)
+                            .symbolEffect(.pulse, options: .repeating, isActive: running)
                         Text("Running…").dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     }
                     .dsListCardRow()
