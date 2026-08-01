@@ -1797,11 +1797,40 @@ struct FeedScreen: View {
                 // that's on RIGHT NOW is the one row whose relevance isn't
                 // chronological, so it leads its group. No-op for sources
                 // with no live set.
-                let days = liveFirst(chronoGroups(roomThings))
+                let days = chronoDays(roomThings)
                 groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
                                 replies: threadReplies)
             }
         }
+    }
+
+    /// A SOURCE room's day grouping, memoized (PERF 2026-08-01, prd §263).
+    ///
+    /// The All room's grouping has been memoized since §258; every OTHER room
+    /// recomputed `chronoGroups` from scratch on each body evaluation, and every
+    /// mounted page re-evaluates whenever `filter.source` changes — i.e. on
+    /// every swipe. Measured with `sample` (the only instrument here that sees
+    /// row-closure work at all): `chronoGroups` 165 samples + `dayGroups` 124
+    /// on a 4,000-row corpus.
+    ///
+    /// This was tried once before and recorded as "neutral", which was a
+    /// measurement artifact: it was judged with a `perfAccum` timer wrapped
+    /// around a view-building property, and SwiftUI evaluates the `ForEach`
+    /// content closure AFTER that property returns, so the timer could not see
+    /// the work either way. Same change, real instrument, different answer.
+    ///
+    /// Shares `DerivationMemo` with `bundledSections` safely: a given
+    /// `FeedScreen` has a fixed `source` and takes one branch or the other
+    /// consistently, and `filter.tag` — the one input that moves it between
+    /// them — is part of the key.
+    private func chronoDays(_ roomThings: [Thing]) -> [(String, [Thing])] {
+        let key = derivationKey(roomThings)
+        if memo.key != key {
+            memo.key = key
+            memo.days = liveFirst(chronoGroups(roomThings))
+            memo.groups = []        // this path renders things, not bundled rows
+        }
+        return memo.days
     }
 
     /// The first thing at-or-past the last-visit boundary in a shaped feed's

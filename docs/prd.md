@@ -12740,3 +12740,42 @@ populated screen. **Profile the configuration the person runs, on the hardware
 they run it on, before believing any of it** — and note the trace needs a
 dev-signed build (a TestFlight build refuses Instruments) and an unlocked phone,
 neither of which is obvious until a recording comes back empty.
+
+## §263 — The source rooms' grouping was never memoized, and the off-screen trim only moved the cost (2026-08-01)
+
+Follow-through on §262's remaining 46% (`FeedScreen.feedList`), measured with
+`sample` — the only instrument in this sequence that sees row-closure work,
+since SwiftUI runs a `ForEach` content closure AFTER the property that built it
+returns, which is why every `perfAccum` timer wrapped around a view-building
+property has been blind to exactly the work that matters.
+
+**Ruling — memoize the SOURCE rooms' day grouping.** The All room's has been
+memoized since §258; every other room recomputed `chronoGroups` from scratch on
+each body evaluation, and every mounted page re-evaluates whenever
+`filter.source` changes — on every swipe. Measured on a 4,000-row corpus:
+`chronoGroups` 165 + `dayGroups` 124 samples → **2 combined**, with no other
+frame regressing.
+
+This exact change was tried during §258 and recorded as "neutral". That verdict
+was a measurement artifact, not a fact: it was judged with a `perfAccum` timer
+that could not observe the work. **A rejected optimization is only rejected
+against the instrument that judged it** — worth re-running the graveyard when
+the instrument improves.
+
+**Rejected on measurement — trimming off-screen pages.** Capping a non-active
+page to three day groups looked obviously right (a neighbour exists so a swipe
+lands on content, and one screenful is all anyone can see at that instant). It
+does not remove the work, it MOVES it: the page builds its remaining rows in the
+body evaluation that makes it active, i.e. exactly as the person arrives. In a
+room-switching sample the cost showed up undiminished and concentrated at the
+transition — the worst possible moment. Reverted. The idea only works if the
+rest fills in asynchronously after the transition settles, which is a larger
+change than a `prefix()`.
+
+**Still open.** `feedList` remains the largest single frame. Its parent count
+swings run to run (it is the top frame and absorbs whatever rendering happened
+in the window), so it needs a fixed-work benchmark rather than an interactive
+sample before anyone claims to have moved it. The real remedy is for a room to
+stop building every row it holds on every render, which means paged/windowed
+content — a product change (a room shows the newest N with a way to reach
+older) that has not been ruled on.
