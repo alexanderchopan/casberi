@@ -91,25 +91,33 @@ struct StripeScreen: View {
                         openURL(url)
                     }
                 }
-                BridgeStepLines(steps: TokenBridge.stripe.steps, startingAt: 2)
-                BridgeFieldRow(placeholder: TokenBridge.stripe.placeholder,
-                               text: $keyField, buttonLabel: "SAVE", secure: true,
-                               action: saveKey)
+                // Step 2, then the list step 2 points AT, then step 3 and the
+                // field. The scopes used to sit below the field, which is why
+                // step 2 had to name all six in prose to be useful there — the
+                // reorder is what let that sentence lose them (2026-07-31).
+                BridgeStepLines(steps: [TokenBridge.stripe.steps[0]], startingAt: 2)
                 // The permissions are the honest ask, and they're why this
                 // bridge's read-only promise is STRUCTURAL rather than kept by
                 // conduct (the Privacy.com divergence): a restricted key with
                 // these six reads and nothing else physically cannot refund,
-                // charge or pay out, whatever the app does.
+                // charge or pay out, whatever the app does. The list IS the
+                // read-only promise, so the gray note that restated it is gone.
                 DSCheckList(lines: ["Events — read",
                                     "Disputes — read",
                                     "Payouts — read",
                                     "Subscriptions — read",
                                     "Invoices — read",
                                     "Balance — read"])
+                BridgeStepLines(steps: [TokenBridge.stripe.steps[1]], startingAt: 3)
+                // Slabbed with the rest of the family (audit, 2026-07-31) — it
+                // was a `BridgeFieldRow` capsule, the one control on the screen
+                // still wearing the pre-§218 shape.
+                DSSlabField(placeholder: TokenBridge.stripe.placeholder,
+                            text: $keyField, actionLabel: "SAVE", secure: true,
+                            action: saveKey)
                 BridgeSyncStatusRows(syncing: connecting,
                                      syncingLine: String(localized: "Checking the key…"),
                                      result: result, resultIsError: resultIsError)
-                DSSlabNote(text: "Read-only — the key can read your money, never move it.")
             }
         }
         .dsSlabSection()
@@ -157,12 +165,19 @@ struct StripeScreen: View {
         }
     }
 
+    /// The five shapes as a LIST, because that's what they are — welded into a
+    /// tertiary paragraph they were the least-read sentence on the screen
+    /// (2026-07-31). "The key can never write" left with them: the slab note
+    /// above already says it, and one fact wearing two paragraphs is §220's
+    /// finding one component down.
     private var footerSection: some View {
-        Section {
-            Text("Individual charges never land — a payment is a tally, and Stripe already counts those. What arrives here is the money news you'd want waking you up: a dispute and its deadline, a payout reaching your bank, a subscription ending, a payment that failed.\n\nNothing here reads your customers' names or card details, and the key can never write.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .listRowBackground(Color.clear)
-        }
+        BridgeFooterNote(
+            lede: "What arrives is the money news you'd want waking you up:",
+            detail: "Individual charges never land — a payment is a tally, and Stripe already counts those. Nothing here reads your customers' names or card details.",
+            points: ["A dispute, and its deadline",
+                     "A payout reaching your bank",
+                     "A subscription ending",
+                     "A payment that failed"])
     }
 
     // MARK: - Actions

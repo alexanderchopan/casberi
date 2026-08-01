@@ -12,6 +12,10 @@ struct SpotifyScreen: View {
     @State private var result: String?
     @State private var resultIsError = false
     @State private var flow: Task<Void, Never>?
+    /// The last attempt was closed by hand. Kept apart from `result` because
+    /// the status row speaks two voices — red for an error, green for a
+    /// result — and a sign-in you dismissed is neither.
+    @State private var cancelled = false
 
     /// The connection door, open (prd §186).
     @State private var showConnection = false
@@ -88,6 +92,11 @@ struct SpotifyScreen: View {
                 DSSlabButton(title: "Connect Spotify",
                              systemImage: "person.badge.key",
                              action: connect)
+                if cancelled {
+                    Text("Sign-in cancelled — nothing was connected.")
+                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Checking your liked songs…"),
                                  result: result, resultIsError: resultIsError)
@@ -117,20 +126,38 @@ struct SpotifyScreen: View {
         guard flow == nil else { return }   // one flow at a time
         DSHaptic.tap()
         result = nil
+        cancelled = false
         connecting = true
         flow = Task {
             defer { flow = nil }
-            let ok = await SpotifyAuth.signIn()
+            let outcome = await SpotifyAuth.signIn()
             guard !Task.isCancelled else { connecting = false; return }
             connecting = false
-            if ok {
+            switch outcome {
+            case .ok:
                 DSHaptic.success()
                 await sync()
-            } else {
-                result = String(localized: "Couldn't connect — tap Connect to try again.")
-                resultIsError = true
+            // One sentence per outcome the flow can actually tell apart (audit
+            // 2026-07-31). "Couldn't connect" said the same thing for a sheet
+            // you closed, a phone with no signal, and an exchange Spotify
+            // turned down — and the next move differs for each.
+            case .cancelled:
+                cancelled = true
+            case .declined:
+                fail(String(localized: "You didn't approve it on Spotify — nothing was connected."))
+            case .cantOpen:
+                fail(String(localized: "Couldn't open Spotify's sign-in page — try again."))
+            case .unreachable:
+                fail(String(localized: "Couldn't reach Spotify — check your connection."))
+            case .refused:
+                fail(String(localized: "Spotify wouldn't finish the sign-in — tap Connect to start again."))
             }
         }
+    }
+
+    private func fail(_ message: String) {
+        result = message
+        resultIsError = true
     }
 
     private func sync() async {
@@ -144,7 +171,11 @@ struct SpotifyScreen: View {
             return
         }
         resultIsError = false
-        result = added > 0 ? String(localized: "\(added) new") : String(localized: "Connected — liked songs land as you save them.")
+        // The family's own "nothing new" line (audit, 2026-07-31). This said
+        // "Connected — liked songs land as you save them." directly beneath the
+        // row that already says "Connected — liked songs land in your feed.",
+        // so the connection sheet claimed the same thing twice in a row.
+        result = added > 0 ? String(localized: "\(added) new") : String(localized: "Up to date")
         let proof = added > 0 ? "\(added) new" : "Synced just now"
         if store.registerConnected(id: "spotify", name: "Spotify", proof: proof,
                                    can: ["Reads your liked songs.",

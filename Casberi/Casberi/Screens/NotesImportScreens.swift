@@ -21,10 +21,11 @@ struct DayOneImportScreen: View {
     var body: some View {
         List {
             BridgeSetupHeader(name: "Day One")
+            // The third step was "Pick the .json inside below", above a button
+            // titled "Choose your Day One .json" (§220, 2026-07-31).
             ImportStepsCard("Get your export", [
                 "In Day One, open Settings → Import/Export → Export → JSON.",
                 "Save the zip to Files and tap it once to unzip.",
-                "Pick the .json inside below.",
             ])
             Section {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
@@ -102,10 +103,11 @@ struct JournalImportScreen: View {
     var body: some View {
         List {
             BridgeSetupHeader(name: "Apple Journal")
+            // The third step was "Pick the unzipped folder below", above a
+            // button titled "Choose the export folder" (§220, 2026-07-31).
             ImportStepsCard("Get your export", [
                 "In Journal, tap your profile picture → Export Journal.",
                 "Save the zip to Files and tap it once to unzip.",
-                "Pick the unzipped folder below.",
             ])
             Section {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
@@ -199,7 +201,10 @@ struct NotesShareScreen: View {
                 .buttonStyle(.plain)
                 .dsListCardRow()
             } footer: {
-                Text("Apple offers no export or live read for Notes, so they arrive one at a time, as you share them — they land as your captures.")
+                // Where they land is step 3's job ("It lands in your feed as a
+                // note"); this footer only has to say why one at a time
+                // (2026-07-31).
+                Text("Apple offers no export or live read for Notes, so they arrive one at a time, as you share them.")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
             }
             .listRowSeparator(.hidden)
@@ -238,7 +243,9 @@ struct BookmarksImportScreen: View {
             ImportStepsCard("Get your export", [
                 "Chrome: chrome://bookmarks → ⋮ → Export bookmarks.",
                 "Safari (Mac): File → Export Bookmarks…",
-                "Save it to Files, then pick it below.",
+                // "then pick it below" was the button beneath it read out loud
+                // (§220, 2026-07-31).
+                "Save it to Files.",
             ])
             Section {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {

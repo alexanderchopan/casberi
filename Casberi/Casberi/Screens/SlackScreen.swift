@@ -15,6 +15,10 @@ struct SlackScreen: View {
     @State private var result: String?
     @State private var resultIsError = false
     @State private var flow: Task<Void, Never>?
+    /// The last attempt was closed by hand. Kept apart from `result` because
+    /// the status row speaks two voices — red for an error, green for a
+    /// result — and a sign-in you dismissed is neither.
+    @State private var cancelled = false
 
     /// The connection door, open (prd §186).
     @State private var showConnection = false
@@ -74,10 +78,22 @@ struct SlackScreen: View {
                 DSSlabButton(title: "Connect Slack",
                              systemImage: "at",
                              action: connect)
+                if cancelled {
+                    Text("Sign-in cancelled — nothing was connected.")
+                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Checking your mentions…"),
                                  result: result, resultIsError: resultIsError)
-            DSSlabNote(text: "Sign-in happens on Slack's own page — PKCE, no password in the app, no server ever holds a secret. Search only: Casberi can look up your mentions and nothing else — it can't post, read files, or see channels it isn't asked about.")
+            // Says what LANDS before what's safe (audit, 2026-07-31) — this
+            // named PKCE, the missing password, the absent server and the
+            // search-only scope, and never once said what a mention becomes
+            // once it's here. The scope's own clause then said "Casberi can
+            // look up your mentions and nothing else", which is the first
+            // sentence again; the SCOPE (prd §192) is what it's there for, and
+            // that survives whole.
+            DSSlabNote(text: "The messages that mention you land in your feed, findable beside everything else. Sign-in happens on Slack's own page — PKCE, no password in the app, no server ever holds a secret. Search only — it can't post, read files, or see channels it isn't asked about.")
         }
         .dsSlabSection()
     }
@@ -103,20 +119,38 @@ struct SlackScreen: View {
         guard flow == nil else { return }   // one flow at a time
         DSHaptic.tap()
         result = nil
+        cancelled = false
         connecting = true
         flow = Task {
             defer { flow = nil }
-            let ok = await SlackAuth.signIn()
+            let outcome = await SlackAuth.signIn()
             guard !Task.isCancelled else { connecting = false; return }
             connecting = false
-            if ok {
+            switch outcome {
+            case .ok:
                 DSHaptic.success()
                 await sync()
-            } else {
-                result = String(localized: "Couldn't connect — tap Connect to try again.")
-                resultIsError = true
+            // One sentence per outcome the flow can actually tell apart (audit
+            // 2026-07-31). "Couldn't connect" said the same thing for a sheet
+            // you closed, a phone with no signal, and an exchange Slack turned
+            // down — and the next move differs for each.
+            case .cancelled:
+                cancelled = true
+            case .declined:
+                fail(String(localized: "You didn't approve it in Slack — nothing was connected."))
+            case .cantOpen:
+                fail(String(localized: "Couldn't open Slack's sign-in page — try again."))
+            case .unreachable:
+                fail(String(localized: "Couldn't reach Slack — check your connection."))
+            case .refused:
+                fail(String(localized: "Slack wouldn't finish the sign-in — tap Connect to start again."))
             }
         }
+    }
+
+    private func fail(_ message: String) {
+        result = message
+        resultIsError = true
     }
 
     private func sync() async {

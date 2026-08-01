@@ -57,20 +57,27 @@ enum MailProvider: String, CaseIterable, Identifiable {
         }
     }
 
-    /// What's left after the door, numbered from two on screen.
+    /// What's left after the door — ONE line, so `MailScreen` renders it
+    /// unnumbered (§220's boundary: one instruction is not a sequence).
+    ///
+    /// The second step was deleted, not shortened (audit, 2026-07-31). It said
+    /// "enter your address and paste the password below" over two fields
+    /// placeheld `you@icloud.com` and `App-specific password` — §220's Kraken
+    /// finding word for word, on the screen that was missed when it was fixed.
     var steps: [String] {
         switch self {
         case .icloud: [
-            "Go to Sign-In and Security → App-Specific Passwords, generate one named \u{201C}Casberi\u{201D}, and copy it.",
-            "Enter your @icloud.com address and paste the password below."]
+            "Go to Sign-In and Security → App-Specific Passwords, generate one named \u{201C}Casberi\u{201D}, and copy it."]
         case .gmail: [
-            "Turn on 2-Step Verification first if it asks, then create an app password named \u{201C}Casberi\u{201D} and copy it.",
-            "Enter your Gmail address and paste the password below."]
+            "Turn on 2-Step Verification first if it asks, then create an app password named \u{201C}Casberi\u{201D} and copy it."]
         }
     }
 
+    /// Says what LANDS before what's safe (audit, 2026-07-31) — this named the
+    /// app password, IMAP and the read-only promise, and never once said what a
+    /// mail becomes once it's here.
     var footer: String {
-        "Casberi reads your inbox over IMAP with this app-specific password — your real password is never shared, and mail is read-only."
+        "Your recent mail lands in your feed, findable by sender and subject. Casberi reads the inbox over IMAP with this app-specific password — your real password is never shared, and mail is read-only."
     }
 }
 

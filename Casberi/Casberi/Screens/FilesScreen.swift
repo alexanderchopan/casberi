@@ -25,7 +25,10 @@ struct FilesScreen: View {
                     name: "Files",
                     identity: files.folderName.isEmpty
                         ? String(localized: "Folder") : files.folderName,
-                    connectionNote: String(localized: "A folder on \(DS.device) · read-only, never modified"),
+                    // How it connected, and only that (audit, 2026-07-31): the
+                    // note ended "· read-only, never modified" two lines above
+                    // the checklist's "Read-only — never edits a file."
+                    connectionNote: String(localized: "A folder on \(DS.device)"),
                     capabilitiesFallback: ["Reads the folder you picked.",
                                            "Read-only — never edits a file."],
                     openConnection: { showConnection = true }
@@ -107,7 +110,10 @@ struct FilesScreen: View {
             }
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your files…"),
                                  result: result, resultIsError: resultIsError)
-            DSSlabNote(text: "Any folder Files can reach — often iCloud Drive. Read-only: the folder is never changed.")
+            // Says what LANDS before what's safe — see `SteamScreen` (audit,
+            // 2026-07-31). "findable by name" left the same day: the header
+            // three rows up is already the offer's "Any folder, findable".
+            DSSlabNote(text: "Every file in the folder lands in your feed. Any folder Files can reach — often iCloud Drive. Read-only: the folder is never changed.")
         }
         .dsSlabSection()
     }

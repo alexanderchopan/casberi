@@ -35,10 +35,11 @@ struct SnapchatImportScreen: View {
     var body: some View {
         List {
             BridgeSetupHeader(name: "Snapchat")
+            // The third step was "Pick the unzipped folder below", above a
+            // button titled "Choose the export folder" (§220, 2026-07-31).
             ImportStepsCard("Get your export", [
                 "At accounts.snapchat.com, open My Data and submit a request (pick JSON).",
                 "Snapchat emails a link within a few hours. Save the zip to Files and tap it once to unzip.",
-                "Pick the unzipped folder below.",
             ])
             pickSection
             if pending > 0 { picturesSection }

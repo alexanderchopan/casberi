@@ -24,6 +24,10 @@ struct ShopifyScreen: View {
     @State private var newStore = ""
     @State private var syncing = false
     @State private var lastResult: String?
+    /// Whether `lastResult` is a failure — see `PrivacyPoolsScreen` (audit,
+    /// 2026-07-31): hardcoding `false` painted "Couldn't reach your stores" in
+    /// confirm green with the count-up animation.
+    @State private var lastResultIsError = false
     @FocusState private var fieldFocused: Bool
 
     @Query(shopifyRecentDescriptor) private var recent: [Thing]
@@ -33,6 +37,13 @@ struct ShopifyScreen: View {
             BridgeSetupHeader(name: "Shopify", connected: shopify.connected)
             addSection.listRowSeparator(.hidden)
             if !shopify.shops.isEmpty { followingSection.listRowSeparator(.hidden) }
+            // What landed, newest first. The `@Query` above was declared with a
+            // full descriptor and never read in `body` — a live SwiftData
+            // subscription doing nothing, where every sibling import/watch
+            // screen shows its proof (audit, 2026-07-31).
+            if !recent.isEmpty {
+                RecentThingsSection(header: "Landed", things: recent.live)
+            }
             if !shopify.shops.isEmpty {
                 BridgeDisconnectSection(
                     bridgeID: "shopify", name: "Shopify",
@@ -119,7 +130,7 @@ struct ShopifyScreen: View {
                         keyboard: .URL, focus: $fieldFocused, action: addStore)
             BridgeSyncStatusRows(syncing: syncing,
                                  syncingLine: String(localized: "Reading the store…"),
-                                 result: lastResult, resultIsError: false)
+                                 result: lastResult, resultIsError: lastResultIsError)
             DSSlabNote(text: "New drops, restocks, and sale prices land in your feed.")
             }
         }
@@ -127,21 +138,38 @@ struct ShopifyScreen: View {
     }
 
     private var footerSection: some View {
-        Section {
-            Text("Fetched directly by \(DS.device) through each store's public catalog — no account, no ranking. Read-only: nothing here checks out or pays.\n\nSome big stores block automated reads; those it can't follow, it says so.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .listRowBackground(Color.clear)
-        }
+        BridgeFooterNote(
+            lede: "Read-only: nothing here checks out or pays.",
+            detail: "Fetched directly by \(DS.device) through each store's public catalog — no account, no ranking.\n\nSome big stores block automated reads; those it can't follow, it says so.")
     }
 
     // MARK: - Actions
 
+    /// Follows the pasted store, and SAYS what happened either way. A silent
+    /// `guard … else { return }` left a rejected address sitting in the field
+    /// with no message, no haptic and no state change, so nothing on screen
+    /// separated "that isn't a store" from "you didn't tap" (audit,
+    /// 2026-07-31). A duplicate isn't an error — it's the thing you wanted,
+    /// already done — so it says so without the red and the shake.
     private func addStore() {
-        guard shopify.add(newStore) else { return }
-        newStore = ""
-        fieldFocused = false
-        DSHaptic.success()
-        Task { await sync() }
+        switch shopify.add(newStore) {
+        case .added:
+            newStore = ""
+            fieldFocused = false
+            lastResult = nil
+            lastResultIsError = false
+            DSHaptic.success()
+            Task { await sync() }
+        case .duplicate:
+            newStore = ""
+            fieldFocused = false
+            lastResult = String(localized: "Already following that store.")
+            lastResultIsError = false
+            DSHaptic.selection()
+        case .unreadable:
+            lastResult = String(localized: "That isn't a store web address — paste one like allbirds.com.")
+            lastResultIsError = true
+        }
     }
 
     /// Fetch + land; the bridge's status line carries the proof.
@@ -154,9 +182,11 @@ struct ShopifyScreen: View {
             // nil = every followed store refused or was unreachable — the
             // honest "won't share" line, not a silent empty.
             lastResult = String(localized: "Couldn't reach your stores — check the address, or the store isn't Shopify / blocks reads.")
+            lastResultIsError = true
             return
         }
         lastResult = added > 0 ? String(localized: "\(added) new") : String(localized: "Up to date")
+        lastResultIsError = false
         let proof = added > 0 ? "\(added) drops in" : "Synced just now"
         store.registerConnected(id: "shopify", name: "Shopify", proof: proof,
                                 can: ["Reads the newest products from the stores you follow.",

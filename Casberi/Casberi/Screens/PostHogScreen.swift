@@ -135,25 +135,38 @@ struct PostHogScreen: View {
                         openURL(url)
                     }
                 }
-                BridgeStepLines(steps: TokenBridge.posthog.steps, startingAt: 2)
+                // Step 2, then the list step 2 points AT, then step 3 and the
+                // fields. The scopes used to sit below the fields, which is why
+                // step 2 had to name all three in prose to be useful there —
+                // the reorder is what let that sentence lose them (the Stripe
+                // fix, one screen over; 2026-07-31).
+                BridgeStepLines(steps: [TokenBridge.posthog.steps[0]], startingAt: 2)
+                // The scopes are the honest ask, and they're the reason this
+                // bridge's read-only promise is STRUCTURAL rather than kept by
+                // conduct (the Privacy.com divergence): a key minted with these
+                // three physically cannot write, whatever the app does. The
+                // list IS the read-only promise, so the gray note that restated
+                // it is gone.
+                DSCheckList(lines: ["query:read", "annotation:read", "event_definition:read"])
+                BridgeStepLines(steps: [TokenBridge.posthog.steps[1]], startingAt: 3)
                 // The host has no verb of its own — SAVE below commits both.
                 // A `BridgeFieldRow` with an empty label still paints its
                 // capsule, and a pre-filled host made it read as a live,
                 // tinted, inert button (§83's disabled-control corollary).
                 DSSlabField(placeholder: PostHogAccount.defaultHost, text: $hostField,
                             actionLabel: "", keyboard: .URL, action: { })
-                BridgeFieldRow(placeholder: TokenBridge.posthog.placeholder,
-                               text: $keyField, buttonLabel: "SAVE", secure: true,
-                               action: saveKey)
-                // The scopes are the honest ask, and they're the reason this
-                // bridge's read-only promise is STRUCTURAL rather than kept by
-                // conduct (the Privacy.com divergence): a key minted with these
-                // three physically cannot write, whatever the app does.
-                DSCheckList(lines: ["query:read", "annotation:read", "event_definition:read"])
+                // The key field was the last `BridgeFieldRow` here, stacked
+                // directly under the host's `DSSlabField` — two field shapes at
+                // two heights for one act, the most visible seam left by the
+                // §218 slab migration (audit, 2026-07-31). The empty-verb pair
+                // above is exactly the shape `DSSlabField` documents for two
+                // inputs one act needs; SAVE belongs to the last field.
+                DSSlabField(placeholder: TokenBridge.posthog.placeholder,
+                            text: $keyField, actionLabel: "SAVE", secure: true,
+                            action: saveKey)
                 BridgeSyncStatusRows(syncing: resolving,
                                      syncingLine: String(localized: "Checking the key…"),
                                      result: result, resultIsError: resultIsError)
-                DSSlabNote(text: "Read-only — the key can query, never write.")
             }
         }
         .dsSlabSection()
@@ -276,12 +289,15 @@ struct PostHogScreen: View {
         return Double(thisWeek - lastWeek) / Double(lastWeek)
     }
 
+    /// "The key can never write" left with the paragraph — the three `:read`
+    /// scopes on the key card say it exactly (2026-07-31). The sentence
+    /// defining an annotation left the same day: the watch card's own slab
+    /// note ("Deploys and launches you annotate land on their own") names them
+    /// in plainer words beside the control, which is the tier that wins.
     private var footerSection: some View {
-        Section {
-            Text("Annotations are the notes your team writes on the PostHog timeline. A watched metric updates in place — only a milestone or a metric falling silent lands as news.\n\nAggregates only: nothing here reads an individual person's profile, and the key can never write.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .listRowBackground(Color.clear)
-        }
+        BridgeFooterNote(
+            lede: "Aggregates only: nothing here reads an individual person's profile.",
+            detail: "A watched metric updates in place — only a milestone or a metric falling silent lands as news.")
     }
 
     // MARK: - Actions

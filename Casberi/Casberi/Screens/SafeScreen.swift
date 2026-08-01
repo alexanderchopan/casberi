@@ -16,6 +16,10 @@ struct SafeScreen: View {
     @Environment(BridgeStore.self) private var store
     @State private var syncing = false
     @State private var lastResult: String?
+    /// Whether `lastResult` is a failure — see `PrivacyPoolsScreen` (audit,
+    /// 2026-07-31): hardcoding `false` painted "Couldn't reach Safe" in
+    /// confirm green with the count-up animation.
+    @State private var lastResultIsError = false
 
     private var hasWallets: Bool { !WalletStore.shared.addresses.isEmpty }
     private var walletCount: Int { WalletStore.shared.addresses.count }
@@ -69,21 +73,36 @@ struct SafeScreen: View {
                 }
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Reading your Safe's queue…"),
-                                     result: lastResult, resultIsError: false)
+                                     result: lastResult, resultIsError: lastResultIsError)
+                // The bare "Read-only." left this note (duplication audit,
+                // 2026-07-31): it was in one branch only, and the footer's
+                // lede says the same thing with the part that matters — where
+                // signing actually happens — in both states.
                 DSSlabNote(text: safeCount > 0
                     ? String(localized: "Watching \(safeCount) Safe\(safeCount == 1 ? "" : "s") — a pending signature lands in your feed the moment it's proposed.")
-                    : String(localized: "Watch a Safe directly, or just your own wallet if it's one of a Safe's signers — either way, its queue reads automatically. Read-only."))
+                    : String(localized: "Watch a Safe directly, or just your own wallet if it's one of a Safe's signers — either way, its queue reads automatically."))
             }
         }
         .dsSlabSection()
     }
 
+    /// The family's worst wall — 453 characters welding four separate facts
+    /// into one tertiary paragraph. They were always a list; now they read as
+    /// one (2026-07-31).
+    ///
+    /// Three points, not four: "Finds every Safe you're a signer on" was the
+    /// connect slab's own sentence a screen-length above ("Watch a Safe
+    /// directly, or just your own wallet if it's one of a Safe's signers"),
+    /// and that is where it's news — before a Safe is detected. Once one is,
+    /// the point described something that already happened (duplication audit,
+    /// 2026-07-31).
     private var footerSection: some View {
-        Section {
-            Text("Read from Safe's own public Transaction Service by \(DS.device) — no account, no key.\n\nFinds every Safe you're a signer on, not just ones you watch directly, and says plainly when it's your own signature that's missing. Also alerts on a new or removed owner, a changed signature threshold, or a newly enabled module — the facts that decide who can move a Safe's funds.\n\nRead-only: signing always happens in your own Safe app, never here.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .listRowBackground(Color.clear)
-        }
+        BridgeFooterNote(
+            lede: "Read-only: signing always happens in your own Safe app, never here.",
+            detail: "Read from Safe's own public Transaction Service by \(DS.device) — no account, no key.",
+            points: ["Says plainly when it's your own signature that's missing",
+                     "Alerts on a new or removed owner, or a changed signature threshold",
+                     "Alerts on a newly enabled module — the facts that decide who can move the funds"])
     }
 
     // MARK: - Who you sign with
@@ -136,8 +155,10 @@ struct SafeScreen: View {
         if let added {
             lastResult = added > 0 ? String(localized: "\(added) new")
                                    : String(localized: "Up to date")
+            lastResultIsError = false
         } else {
             lastResult = String(localized: "Couldn't reach Safe — check your connection.")
+            lastResultIsError = true
         }
     }
 }

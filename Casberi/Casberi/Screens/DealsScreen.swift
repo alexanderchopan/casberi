@@ -70,17 +70,17 @@ struct DealsScreen: View {
                 }
             }
         } footer: {
-            Text("Turn on a source and its newest deals — each already priced in the headline — land in your feed as products. Read-only.")
+            // "Read-only." left the end of this line (audit, 2026-07-31) — the
+            // footer below spends a whole sentence on it, and says what it means.
+            Text("Turn on a source and its newest deals — each already priced in the headline — land in your feed as products.")
                 .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
     }
 
     private var footerSection: some View {
-        Section {
-            Text("Fetched directly by \(DS.device) through each aggregator's public feed — no account, no ranking. Read-only: nothing here buys anything.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .listRowBackground(Color.clear)
-        }
+        BridgeFooterNote(
+            lede: "Read-only: nothing here buys anything.",
+            detail: "Fetched directly by \(DS.device) through each aggregator's public feed — no account, no ranking.")
     }
 
     private func toggle(_ source: DealSource) {

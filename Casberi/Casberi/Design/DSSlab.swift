@@ -285,16 +285,29 @@ struct DSSlabNote: View {
 /// distinct capabilities were being crammed into one 60-word run-on clause
 /// rather than deleted or restructured). Same lines, same look, whichever side
 /// of Connect you're standing on.
+///
+/// The MARK is a parameter because a checkmark makes a CLAIM (this is granted,
+/// this is verified) and not every scannable list is making it. Stripe's setup
+/// screen put two of these on one page — the six scopes the key will hold, and
+/// the four kinds of news that land — and in a green checkmark apiece they read
+/// as one list of ten equivalent facts, when one is a permission and the other
+/// is content (caught on screen, 2026-07-31). A list of what ARRIVES takes the
+/// neutral bullet instead; the checkmark stays for what's actually granted.
 struct DSCheckList: View {
     let lines: [String]
+    /// The leading mark. Defaults to the granted-capability checkmark.
+    var systemImage = "checkmark"
+    /// Its color — confirm green reads as "yes, you have this"; tertiary is the
+    /// neutral bullet for a list that isn't claiming anything.
+    var tint: Color? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             ForEach(lines, id: \.self) { line in
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Image(systemName: "checkmark")
+                    Image(systemName: systemImage)
                         .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(DS.confirm)
+                        .foregroundStyle(tint ?? DS.confirm)
                     Text(LocalizedStringKey(line))
                         .dsText(.callout15).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)

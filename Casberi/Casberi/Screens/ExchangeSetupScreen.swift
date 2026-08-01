@@ -122,7 +122,15 @@ struct ExchangeSetupScreen: View {
                 // load-bearing trust content, not padding). What left is the
                 // capability line the product page and the connected state
                 // both already carry.
-                DSSlabNote(text: "Casberi asks \(venue.display) what this key can do before storing it, and hands it back if it can move money.\n\nIt lives in \(DS.device)'s Keychain and goes only to \(venue.display) — nothing here can place an order, withdraw, or transfer.")
+                //
+                // "— nothing here can place an order, withdraw, or transfer"
+                // left too (audit, 2026-07-31): the sentence above it already
+                // says a key that can move money is handed back, this screen's
+                // connected state carries the clause word for word as its third
+                // capability line, and the doc note at the top of this file
+                // rules that the copy shouldn't be leaning on "Casberi can't
+                // trade" in the first place.
+                DSSlabNote(text: "Casberi asks \(venue.display) what this key can do before storing it, and hands it back if it can move money.\n\nIt lives in \(DS.device)'s Keychain and goes only to \(venue.display).")
             }
         }
         .dsSlabSection()

@@ -16,14 +16,16 @@ struct VeniceSetupScreen: View {
     @State private var result: String?
     @State private var resultIsError = false
     @State private var configured = AgentKey.isConfigured(.venice)
+    @State private var flipTrigger = 0
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Venice")
+            BridgeSetupHeader(name: "Venice", flipTrigger: flipTrigger)
             setupSection
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: "Venice")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
@@ -40,8 +42,12 @@ struct VeniceSetupScreen: View {
                     DSHaptic.tap()
                     if let url = URL(string: "https://venice.ai/settings/api") { openURL(url) }
                 }
-                BridgeStepLines(steps: ["Create a key and copy it.",
-                                     "Paste it below — it's checked with Venice before it saves."])
+                // "Paste it below" sat directly above a field placeheld "Paste
+                // your Venice key" — §220's own finding, in the family it was
+                // never applied to (2026-07-31). With one instruction left the
+                // numerals go too, per §220's boundary.
+                BridgeStepLines(steps: ["Create a key and copy it — it's checked with Venice before it saves."],
+                                numbered: false)
                 DSSlabField(placeholder: AgentProvider.venice.placeholder, text: $keyDraft,
                             actionLabel: checking ? "CHECKING…" : (configured ? "UPDATE" : "CONNECT"),
                             secure: true,
@@ -63,12 +69,13 @@ struct VeniceSetupScreen: View {
         checking = true
         result = nil
         Task { @MainActor in
-            let ok = await AgentAnswer.validate(candidate, provider: .venice)
+            let outcome = await AgentAnswer.check(candidate, provider: .venice)
             checking = false
-            if ok {
+            if outcome == .accepted {
                 AgentKey.set(candidate, for: .venice)
                 configured = true
                 keyDraft = ""
+                flipTrigger += 1
                 DSHaptic.success()
                 resultIsError = false
                 result = String(localized: "Connected — answers now offer \"Try with your key\" on Venice.")
@@ -77,8 +84,12 @@ struct VeniceSetupScreen: View {
                                         can: ["Answers with your key — only when you tap.",
                                               "Remembers a chat's earlier answers, and can search the web."])
             } else {
+                // Four ways this can fail and four sentences for them (audit
+                // 2026-07-31) — a rate limit, a blocked account and a dropped
+                // connection are not the key, and one shared "check it and try
+                // again" sent people hunting a key that was never wrong.
                 resultIsError = true
-                result = String(localized: "Venice didn't accept that key — check it and try again.")
+                result = outcome.line(for: .venice)
             }
         }
     }

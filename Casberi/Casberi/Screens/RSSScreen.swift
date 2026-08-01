@@ -108,7 +108,10 @@ struct RSSScreen: View {
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Reading your feeds…"),
                                      result: lastResult, resultIsError: resultIsError)
-                DSSlabNote(text: "A site's own address works too — Casberi finds its feed.")
+                // The note that used to sit here said "A site's own address
+                // works too" beneath a field placeheld "Site or feed URL" —
+                // §220's finding exactly, so it went rather than got tightened
+                // (audit, 2026-07-31).
                 if let opmlParsed {
                     opmlScopePicker(opmlParsed)
                 } else {
@@ -268,7 +271,10 @@ struct RSSScreen: View {
         opmlParsed = nil
         let summary = OPMLImport.land(feeds)
         guard summary.added > 0 else {
-            resultIsError = true
+            // Not a failure — nothing was wrong with the file, you're just
+            // already following all of it. See `EthValidatorScreen` for the
+            // ruling that settled this across the family (2026-07-31).
+            resultIsError = false
             lastResult = String(localized: "Already following every feed in that file.")
             return
         }

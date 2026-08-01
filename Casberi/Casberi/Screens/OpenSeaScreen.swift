@@ -15,6 +15,10 @@ struct OpenSeaScreen: View {
     /// next visit.
     @State private var syncPending = false
     @State private var lastResult: String?
+    /// Whether `lastResult` is a failure — see `PrivacyPoolsScreen` (audit,
+    /// 2026-07-31): hardcoding `false` painted "Couldn't reach OpenSea" in
+    /// confirm green with the count-up animation.
+    @State private var lastResultIsError = false
 
     var body: some View {
         List {
@@ -70,19 +74,19 @@ struct OpenSeaScreen: View {
                 }
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Reading the chain…"),
-                                     result: lastResult, resultIsError: false)
+                                     result: lastResult, resultIsError: lastResultIsError)
                 DSSlabNote(text: "Switch a chain on and its newest drops land. Read-only.")
             }
         }
         .dsSlabSection()
     }
 
+    /// The read-only promise is the slab note's, beside the switches that make
+    /// the connection — so the footer, which said it again in longer words,
+    /// keeps only what the note doesn't say (§252's ruling, 2026-07-31).
     private var footerSection: some View {
-        Section {
-            Text("Fetched directly by \(DS.device) through OpenSea's public API — no account, no ranking. Read-only: nothing here buys, sells, or bids.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .listRowBackground(Color.clear)
-        }
+        BridgeFooterNote(
+            lede: "Fetched directly by \(DS.device) through OpenSea's public API — no account, no ranking.")
     }
 
     // MARK: - Actions
@@ -118,12 +122,14 @@ struct OpenSeaScreen: View {
             guard opensea.connected else { store.remove("opensea"); return }
             if let added {
                 lastResult = added > 0 ? String(localized: "\(added) new") : String(localized: "Up to date")
+                lastResultIsError = false
                 let proof = added > 0 ? "\(added) drops in" : "Synced just now"
                 store.registerConnected(id: "opensea", name: "OpenSea", proof: proof,
                                         can: ["Reads new NFT collections on the chains you watch.",
                                               "Read-only — never buys, sells, or bids."])
             } else {
                 lastResult = String(localized: "Couldn't reach OpenSea — check your connection.")
+                lastResultIsError = true
             }
         } while syncPending && opensea.connected
     }

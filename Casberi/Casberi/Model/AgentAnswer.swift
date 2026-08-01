@@ -349,6 +349,61 @@ enum AgentAnswerFailure: Error, Sendable {
     }
 }
 
+/// What a key check actually found (connect-screen audit, 2026-07-31). The
+/// old check answered a bare Bool, so all four agent screens said the same
+/// "didn't accept that key — check it and try again" for a rejected key, a
+/// rate limit, a key the provider itself has blocked, and no network at all.
+/// Three of those four are not the key, and telling someone to re-check a key
+/// that was never wrong is the failure `StripeFetch.Outcome` exists to avoid.
+///
+/// Only what the wire genuinely separates gets a case. It stays distinct from
+/// `AgentAnswerFailure` — that one words a failed ANSWER (a refusal, an empty
+/// reply, a missing key are all possible there and none of them are here), and
+/// its advice is "your key is fine", which is the opposite of this screen's job.
+enum AgentKeyCheck: Equatable {
+    case accepted
+    /// 401/403 — the provider turned the key down. The one case where
+    /// "check your key" is the honest advice.
+    case rejected
+    /// 429 — the key is real and the provider is throttling it right now.
+    case rateLimited
+    /// The provider took the key and then said it can't answer. Only Grok
+    /// reports this (MEASURED 2026-07-31, see `check`): xAI's key endpoint
+    /// answers 200 with `team_blocked`/`api_key_blocked`/`api_key_disabled`
+    /// for a real key whose team has no credits, while every actual request
+    /// from it 403s. No other provider here exposes a comparable signal, so
+    /// no other provider ever returns this — the honesty rule cuts both ways.
+    case blocked
+    /// The provider answered, but with nothing this could read — a 5xx, or a
+    /// 200 whose body didn't parse.
+    case providerError(Int)
+    /// Nothing came back at all.
+    case unreachable
+
+    /// One plain sentence for the connect screen — what happened, and what to
+    /// do about it. Worded once here rather than five times on each of the
+    /// four agent screens: the sentences differ only by the provider's own
+    /// name and console, which this already knows, and four hand-kept copies
+    /// of the same five strings drift (the `BridgeSetupHeader` "one source of
+    /// words" rule). `.accepted` has no line — nothing failed.
+    func line(for provider: AgentProvider) -> String {
+        switch self {
+        case .accepted:
+            ""
+        case .rejected:
+            String(localized: "\(provider.company) turned that key down — check you copied the whole thing.")
+        case .rateLimited:
+            String(localized: "\(provider.company) is rate-limiting this key right now — wait a minute and try again.")
+        case .blocked:
+            String(localized: "\(provider.company) took the key but has it blocked — usually an account with no credits, or a key that's been disabled. Sort it at \(provider.console) and try again.")
+        case .providerError(let status):
+            String(localized: "\(provider.company) answered the check with something unexpected (HTTP \(status)) — nothing to fix on your end, try again in a moment.")
+        case .unreachable:
+            String(localized: "Couldn't reach \(provider.company) — check your connection.")
+        }
+    }
+}
+
 /// The device→provider call itself. Same contract as the on-device model:
 /// grounded strictly on the candidates it is handed (the SAME retrieved
 /// things the on-device answer saw), plain sentences, never invents a thing.
@@ -357,8 +412,8 @@ enum AgentAnswerFailure: Error, Sendable {
 enum AgentAnswer {
 
     /// Checks a key against its provider before it's saved — a models read,
-    /// no tokens billed. True means the provider accepted the key.
-    static func validate(_ key: String, provider: AgentProvider) async -> Bool {
+    /// no tokens billed.
+    static func check(_ key: String, provider: AgentProvider) async -> AgentKeyCheck {
         let key = key.trimmingCharacters(in: .whitespacesAndNewlines)
         var request: URLRequest
         switch provider {
@@ -402,8 +457,11 @@ enum AgentAnswer {
         }
         request.timeoutInterval = 15
         guard let (data, response) = try? await URLSession.shared.data(for: request),
-              let http = response as? HTTPURLResponse else { return false }
-        if provider == .bankr { return http.statusCode == 404 || http.statusCode == 200 }
+              let http = response as? HTTPURLResponse else { return .unreachable }
+        // Bankr's bogus job id: a good key gets 404, which is the whole trick
+        // (see the request above).
+        if provider == .bankr, http.statusCode == 404 { return .accepted }
+        let verdict = classify(status: http.statusCode)
         // Grok needs the BODY, not just the status (MEASURED 2026-07-31 with a
         // real key): `/v1/api-key` answers **200** for a perfectly real key
         // whose team has no credits — and every actual request from that same
@@ -416,16 +474,28 @@ enum AgentAnswer {
         // then surfaces later, on an answer, looking like a bug in the app.
         // The response carries the truth in three flags; all three are read,
         // since a blocked KEY and a blocked TEAM fail identically from here.
-        if provider == .grok {
-            guard http.statusCode == 200,
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-            else { return false }
+        if provider == .grok, verdict == .accepted {
+            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            else { return .providerError(http.statusCode) }
             let blocked = (json["team_blocked"] as? Bool ?? false)
                 || (json["api_key_blocked"] as? Bool ?? false)
                 || (json["api_key_disabled"] as? Bool ?? false)
-            return !blocked
+            return blocked ? .blocked : .accepted
         }
-        return http.statusCode == 200
+        return verdict
+    }
+
+    /// The status codes every provider here speaks in common. 401/403 is the
+    /// key, 429 is the quota, anything else the provider answered with is the
+    /// provider's own trouble — the same split `streamText` already makes on
+    /// the answer path.
+    private static func classify(status: Int) -> AgentKeyCheck {
+        switch status {
+        case 200:      .accepted
+        case 401, 403: .rejected
+        case 429:      .rateLimited
+        default:       .providerError(status)
+        }
     }
 
     /// Synthesizes a grounded answer over the retrieved candidates with the

@@ -235,12 +235,14 @@ struct StocktwitsScreen: View {
         }
     }
 
+    /// The old lede was the add slab's note VERBATIM — "Read-only: nothing
+    /// here trades or sees a portfolio." twice on one screen (duplication
+    /// audit, 2026-07-31). The slab's copy keeps it: it sits beside the field
+    /// that does the watching. What's left is what only this footer says.
     private var footerSection: some View {
-        Section {
-            Text("Takes are what traders post publicly on Stocktwits — each bullish or bearish call is its author's, never a rating of ours.\n\nCharts draw from public market data on \(DS.device). Read-only: nothing here trades or sees a portfolio.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .listRowBackground(Color.clear)
-        }
+        BridgeFooterNote(
+            lede: "Takes are what traders post publicly on Stocktwits — each bullish or bearish call is its author's, never a rating of ours.",
+            detail: "Charts draw from public market data on \(DS.device).")
     }
 
     // MARK: - Actions

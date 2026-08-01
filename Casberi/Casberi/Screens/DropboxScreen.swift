@@ -18,6 +18,10 @@ struct DropboxScreen: View {
     @State private var resultIsError = false
     @State private var flow: Task<Void, Never>?
     @State private var folderField = ""
+    /// The last attempt was closed by hand. Kept apart from `result` because
+    /// the status row speaks two voices — red for an error, green for a
+    /// result — and a sign-in you dismissed is neither.
+    @State private var cancelled = false
 
     private var folderIdentity: String {
         dropbox.folderPath.isEmpty ? String(localized: "All of Dropbox") : dropbox.folderPath
@@ -33,7 +37,10 @@ struct DropboxScreen: View {
                     bridgeID: "dropbox",
                     name: "Dropbox",
                     identity: folderIdentity,
-                    connectionNote: String(localized: "Signed in on \(DS.device) · read-only key, never writes"),
+                    // How it connected, and only that (audit, 2026-07-31): the
+                    // note ended "· read-only key, never writes" two lines above
+                    // the checklist that makes the same promise in full.
+                    connectionNote: String(localized: "Signed in on \(DS.device)"),
                     capabilitiesFallback: ["Reads the folder you named.",
                                            "Read-only — never edits, shares, or deletes a file."],
                     openConnection: { showConnection = true }
@@ -83,6 +90,11 @@ struct DropboxScreen: View {
                 DSSlabButton(title: "Connect Dropbox",
                              systemImage: "person.badge.key",
                              action: connect)
+                if cancelled {
+                    Text("Sign-in cancelled — nothing was connected.")
+                        .dsText(.callout15).foregroundStyle(DS.textTertiary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your Dropbox…"),
                                  result: result, resultIsError: resultIsError)
@@ -93,12 +105,17 @@ struct DropboxScreen: View {
 
     private var folderSection: some View {
         Section {
-            BridgeFieldRow(
-                placeholder: "e.g. /Camera Uploads — blank for everything",
-                text: $folderField,
-                buttonLabel: "Save",
-                action: saveFolder
-            )
+            // One slab holding the path and its verb (§190/§218) — this was
+            // the last field-plus-side-pill on the screen, sitting in a stack
+            // where everything else had already moved. `alwaysEnabled` because
+            // an empty path is a real choice here, not a missing one: it means
+            // all of Dropbox, which the placeholder promises and the old side
+            // pill went dead on.
+            DSSlabField(placeholder: String(localized: "e.g. /Camera Uploads — blank for everything"),
+                        text: $folderField,
+                        actionLabel: String(localized: "SAVE"),
+                        alwaysEnabled: true,
+                        action: saveFolder)
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your Dropbox…"),
                                  result: result, resultIsError: resultIsError)
             DSSlabNote(text: "Whatever's inside the folder you name lands in your feed — and only that folder. Changing it starts a fresh sync there.")
@@ -127,20 +144,38 @@ struct DropboxScreen: View {
         guard flow == nil else { return }   // one flow at a time
         DSHaptic.tap()
         result = nil
+        cancelled = false
         connecting = true
         flow = Task {
             defer { flow = nil }
-            let ok = await DropboxAuth.signIn()
+            let outcome = await DropboxAuth.signIn()
             guard !Task.isCancelled else { connecting = false; return }
             connecting = false
-            if ok {
+            switch outcome {
+            case .ok:
                 DSHaptic.success()
                 await sync()
-            } else {
-                result = String(localized: "Couldn't connect — tap Connect to try again.")
-                resultIsError = true
+            // One sentence per outcome the flow can actually tell apart (audit
+            // 2026-07-31). "Couldn't connect" said the same thing for a sheet
+            // you closed, a phone with no signal, and an exchange Dropbox
+            // turned down — and the next move differs for each.
+            case .cancelled:
+                cancelled = true
+            case .declined:
+                fail(String(localized: "You didn't approve it on Dropbox — nothing was connected."))
+            case .cantOpen:
+                fail(String(localized: "Couldn't open Dropbox's sign-in page — try again."))
+            case .unreachable:
+                fail(String(localized: "Couldn't reach Dropbox — check your connection."))
+            case .refused:
+                fail(String(localized: "Dropbox wouldn't finish the sign-in — tap Connect to start again."))
             }
         }
+    }
+
+    private func fail(_ message: String) {
+        result = message
+        resultIsError = true
     }
 
     private func saveFolder() {

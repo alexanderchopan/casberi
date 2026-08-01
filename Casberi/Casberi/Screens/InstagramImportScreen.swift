@@ -38,13 +38,16 @@ struct InstagramImportScreen: View {
 
     var body: some View {
         List {
+            BridgeSetupHeader(name: "Instagram")
             setupSection
             if !recent.isEmpty {
-                recentSection.listRowSeparator(.hidden)
+                RecentThingsSection(header: "Imported", things: recent.live)
+                    .listRowSeparator(.hidden)
             }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: "Instagram")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
@@ -72,7 +75,9 @@ struct InstagramImportScreen: View {
                     "Choose Download or transfer information, then Some of your information.",
                     "Tick Saved, Likes, Posts and Comments, then Download to device.",
                     "Set Format to JSON — an HTML export can't be read. Instagram emails a link within about an hour.",
-                    "Save the zip to Files and tap it once to unzip, then pick the unzipped folder below.",
+                    // "then pick the unzipped folder below" was the button
+                    // beneath it read out loud (2026-07-31).
+                    "Save the zip to Files and tap it once to unzip.",
                 ], startingAt: 2)
                 DSSlabButton(title: "Choose your export folder", systemImage: "folder") {
                     DSHaptic.tap()
@@ -83,27 +88,6 @@ struct InstagramImportScreen: View {
             }
         }
         .dsSlabSection()
-    }
-
-    private var recentSection: some View {
-        Section {
-            ForEach(recent) { thing in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(thing.title)
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                    if !thing.content.isEmpty {
-                        Text(thing.content)
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
-                    }
-                }
-                .dsListCardRow()
-            }
-        } header: {
-            Text("Imported").dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-        }
     }
 
     // MARK: - Run

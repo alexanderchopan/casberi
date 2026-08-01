@@ -100,6 +100,25 @@ extension DS {
         case "bluesky":             return Color.fixed("#0285ff")
         case "snapchat":            return Color.fixed("#fffc00")   // their yellow — the field IS the mark (a white ghost sits on it), so the SF fallback's white glyph reads thin until the official icon is bundled at brand-snapchat
         case "nostr":               return Color.fixed("#9543dc")   // their purple (icon-sampled from the bundled mark)
+        // The five newest seats, all with marks already bundled beside this and
+        // none of them named here until now — so Stripe, PostHog, Grok,
+        // OpenRouter and Linear fell to the default gray on every wash surface
+        // (audit, 2026-07-31). Each is icon-sampled from its own bundled mark.
+        case "stripe":              return Color.fixed("#635bff")   // their documented indigo; the bundled mark samples #6050f0 against it
+        // PostHog's mark is the hedgehog on a white field, but unlike ChatGPT's
+        // white-IS-the-identity case this is a logo-on-white lockup — the brand
+        // is the orange. Their documented primary; the mark's own saturated
+        // pixels sample #e03000–#f0b000 across the hedgehog.
+        case "posthog":             return Color.fixed("#f54e00")
+        // Grok's mark is pure black with ZERO saturated pixels — the X case
+        // exactly (and xAI is X). washHue nils this, so the Grok screens stay
+        // pure ink ON PURPOSE; the tile just stops falling back to gray.
+        case "grok":                return Color.fixed("#000000")
+        // OpenRouter is the Hyperliquid/ether.fi shape: a near-black ground
+        // with one vivid accent. The ground is the tile (sampled), and the lime
+        // carries the signal from `glyphTint`.
+        case "openrouter":          return Color.fixed("#000010")
+        case "linear":              return Color.fixed("#5e6ad2")   // their documented indigo; the bundled mark samples #5060d0
         case "cal.com":             return Color.fixed("#292929")
         case "calendly":            return Color.fixed("#006bff")
         case "steam":               return Color.fixed("#1b2838")   // their dark navy

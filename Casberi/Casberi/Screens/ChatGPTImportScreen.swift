@@ -29,13 +29,16 @@ struct ChatGPTImportScreen: View {
 
     var body: some View {
         List {
+            BridgeSetupHeader(name: "ChatGPT")
             setupSection
             if !recent.isEmpty {
-                recentSection.listRowSeparator(.hidden)
+                RecentThingsSection(header: "Imported", things: recent.live)
+                    .listRowSeparator(.hidden)
             }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: "ChatGPT")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
@@ -53,39 +56,22 @@ struct ChatGPTImportScreen: View {
     private var setupSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
+                // The last step said "Pick conversations.json below" directly
+                // above a button titled "Choose conversations.json", and the
+                // note said "your chats become findable things" directly below
+                // the header's own "Import your chats, keep them findable"
+                // (§220's finding, twice; 2026-07-31).
                 BridgeStepLines(steps: ["In ChatGPT, open Settings → Data controls → Export data.",
-                                     "OpenAI emails a download link. Save the zip to Files and tap it once to unzip.",
-                                     "Pick conversations.json below."], startingAt: 1)
+                                     "OpenAI emails a download link. Save the zip to Files and tap it once to unzip."], startingAt: 1)
                 DSSlabButton(title: "Choose conversations.json", systemImage: "square.and.arrow.down") {
                     DSHaptic.tap()
                     importing = true
                 }
                 BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-                DSSlabNote(text: "One-time import — your chats become findable things. Re-importing later adds only what's new.")
+                DSSlabNote(text: "One-time import — re-importing later adds only what's new.")
             }
         }
         .dsSlabSection()
-    }
-
-    private var recentSection: some View {
-        Section {
-            ForEach(recent) { thing in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(thing.title)
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                    if !thing.content.isEmpty {
-                        Text(thing.content)
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
-                    }
-                }
-                .dsListCardRow()
-            }
-        } header: {
-            Text("Imported").dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-        }
     }
 
     // MARK: - Run

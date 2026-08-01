@@ -15,6 +15,11 @@ struct PrivacyPoolsScreen: View {
     @Environment(BridgeStore.self) private var store
     @State private var syncing = false
     @State private var lastResult: String?
+    /// Whether `lastResult` is a failure. Hardcoding `false` at the call site
+    /// painted "Couldn't reach the chain" in confirm green with the count-up
+    /// animation — the fake-status class §83 bans, in the component whose own
+    /// doc-comment prohibits it (audit, 2026-07-31).
+    @State private var lastResultIsError = false
 
     private var hasWallets: Bool { !WalletStore.shared.addresses.isEmpty }
     private var walletCount: Int { WalletStore.shared.addresses.count }
@@ -24,8 +29,11 @@ struct PrivacyPoolsScreen: View {
             BridgeSetupHeader(name: "0xBow Privacy Pools", connected: hasWallets)
             connectSection.listRowSeparator(.hidden)
             if hasWallets {
-                ChipLiveNote(name: "0xBow Privacy Pools",
-                            verb: "for your deposits and their screening status.")
+                // "…and their screening status" left the verb (duplication
+                // audit, 2026-07-31): the slab note directly above already
+                // promises the screening flip, and the header's tagline says
+                // it a third time. The chip note's job is WHERE, not what.
+                ChipLiveNote(name: "0xBow Privacy Pools", verb: "for your deposits.")
                     .listRowSeparator(.hidden)
             }
             footerSection.listRowSeparator(.hidden)
@@ -66,21 +74,24 @@ struct PrivacyPoolsScreen: View {
                 }
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Reading your deposits…"),
-                                     result: lastResult, resultIsError: false)
+                                     result: lastResult, resultIsError: lastResultIsError)
+                // The bare "Read-only." left this note (duplication audit,
+                // 2026-07-31). It was in one branch only, while the footer's
+                // lede states the same promise in full — what it never
+                // deposits, withdraws or moves — in BOTH states. The fuller,
+                // always-visible one is the one that survives.
                 DSSlabNote(text: hasWallets
                     ? String(localized: "On automatically — tells you the moment screening clears a deposit.")
-                    : String(localized: "Deposits are read off the wallets you watch. Read-only."))
+                    : String(localized: "Deposits are read off the wallets you watch."))
             }
         }
         .dsSlabSection()
     }
 
     private var footerSection: some View {
-        Section {
-            Text("Deposits are read from Ethereum's public chain and each deposit's review status from 0xBow's public API by \(DS.device) — no account, no key.\n\nWithdrawals are private by design: the chain can't link them to your deposit, so Casberi never sees or shows that side. Read-only: nothing here deposits, withdraws, or moves funds.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .listRowBackground(Color.clear)
-        }
+        BridgeFooterNote(
+            lede: "Read-only: nothing here deposits, withdraws, or moves funds.",
+            detail: "Deposits are read from Ethereum's public chain and each deposit's review status from 0xBow's public API by \(DS.device) — no account, no key.\n\nWithdrawals are private by design: the chain can't link them to your deposit, so Casberi never sees or shows that side.")
     }
 
     // MARK: - Actions
@@ -95,8 +106,10 @@ struct PrivacyPoolsScreen: View {
         if let added {
             lastResult = added > 0 ? String(localized: "\(added) new")
                                    : String(localized: "Up to date")
+            lastResultIsError = false
         } else {
             lastResult = String(localized: "Couldn't reach the chain — check your connection.")
+            lastResultIsError = true
         }
     }
 }

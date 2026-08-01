@@ -96,6 +96,60 @@ extension View {
     }
 }
 
+/// The screen's closing paragraph — its promise, then its fine print
+/// (2026-07-31, user: *"how would you make the text in each of the app connect
+/// sheets more appealing in terms of display"*).
+///
+/// Every setup screen ended with one undifferentiated `Text` at `subhead13` in
+/// `DS.textTertiary` — 60 to 80 words of it on the worst screens (Safe ran 453
+/// characters, Stripe 351). That tier measures 4.5:1 and `DesignTokens` defines
+/// its job as *"row metadata (timestamps, source names), placeholders, disabled
+/// glyphs"*: so the sentence the whole screen exists to earn — read-only, no
+/// account, nothing signs here — was wearing the timestamp tier, inside a wall.
+/// §218 ruled "one gray sentence per screen" and these had grown back to three
+/// paragraphs.
+///
+/// The fix is not shorter copy — the words were the good part. It's a LEDE and
+/// its detail: the load-bearing promise steps up to the `BridgeStepLines` tier
+/// (`callout15`/secondary, still quiet, now legible), and the elaboration keeps
+/// the old one. Where the detail is really a LIST of separate facts, pass
+/// `points` instead and they render as a `DSCheckList` — the treatment Stripe's
+/// scopes already proved is the most scannable text on any of these screens.
+struct BridgeFooterNote: View {
+    /// The one sentence worth reading if nothing else is.
+    let lede: String
+    /// The paragraph after it, or nil when the lede says everything.
+    var detail: String? = nil
+    /// Separate facts that read as a list, not a paragraph. Rendered as a
+    /// checklist beneath the lede; combine freely with `detail`.
+    var points: [String] = []
+
+    var body: some View {
+        Section {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                Text(LocalizedStringKey(lede))
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if !points.isEmpty {
+                    // The neutral bullet, never the checkmark: these are the
+                    // things that ARRIVE, not permissions granted. On Stripe
+                    // both lists sit on one screen, and in matching green they
+                    // read as one list of ten (caught on screen, 2026-07-31).
+                    DSCheckList(lines: points, systemImage: "circle.fill",
+                                tint: DS.textTertiary)
+                }
+                if let detail {
+                    Text(LocalizedStringKey(detail))
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .listRowBackground(Color.clear)
+        }
+    }
+}
+
 /// The steps that remain after the door (prd §218, 2026-07-25).
 ///
 /// Every keyed bridge's setup used to open with "Open &lt;url&gt;…" set in body

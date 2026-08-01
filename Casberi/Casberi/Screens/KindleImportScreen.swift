@@ -17,10 +17,11 @@ struct KindleImportScreen: View {
     var body: some View {
         List {
             BridgeSetupHeader(name: "Kindle")
+            // The third step was "Pick that file below", above a button titled
+            // "Choose My Clippings.txt" (§220, 2026-07-31).
             ImportStepsCard("Get your highlights", [
                 "Plug your Kindle into \(DS.device)\(DS.isMac ? "" : " (or a Mac)") with its cable.",
                 "Open the Kindle's drive → documents → My Clippings.txt, and copy it to Files.",
-                "Pick that file below.",
             ])
             Section {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {

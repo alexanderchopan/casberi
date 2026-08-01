@@ -56,16 +56,30 @@ final class ShopifyStore {
 
     var connected: Bool { !shops.isEmpty }
 
+    /// What happened to a pasted store address. Two failures used to collapse
+    /// into one `false`, which the screen then dropped on the floor — a
+    /// malformed address and a store already followed both produced no message,
+    /// no haptic and no field change, so "rejected" and "you didn't tap" looked
+    /// identical (audit, 2026-07-31). They need different sentences: one is a
+    /// typo to fix, the other is nothing to fix at all.
+    enum AddOutcome {
+        case added
+        /// Not a usable web address — nothing to follow.
+        case unreadable
+        /// Already in the list; the person's already done this.
+        case duplicate
+    }
+
     /// Normalizes a pasted store URL (or bare domain) to its host and follows
     /// it. Scheme- and path-forgiving — people paste "allbirds.com",
     /// "https://www.allbirds.com/collections/mens", or a product link, and all
-    /// mean the same store. Returns false when it's empty or already followed.
+    /// mean the same store.
     @discardableResult
-    func add(_ raw: String) -> Bool {
-        guard let host = Self.host(from: raw) else { return false }
-        guard !shops.contains(where: { $0.host == host }) else { return false }
+    func add(_ raw: String) -> AddOutcome {
+        guard let host = Self.host(from: raw) else { return .unreadable }
+        guard !shops.contains(where: { $0.host == host }) else { return .duplicate }
         shops.append(Shop(host: host))
-        return true
+        return .added
     }
 
     func remove(at offsets: IndexSet) { shops.remove(atOffsets: offsets) }

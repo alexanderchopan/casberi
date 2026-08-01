@@ -17,6 +17,9 @@ struct TwitchScreen: View {
     /// The in-flight device flow — one at a time, cancelled when the screen
     /// goes away (review 2026-07-08: double-taps raced two flows).
     @State private var flow: Task<Void, Never>?
+    /// Bumped when the device code is copied — the copy button briefly reads
+    /// "Copied" so the tap is acknowledged.
+    @State private var codeCopied = false
 
     /// The connection door, open (prd §186).
     @State private var showConnection = false
@@ -31,7 +34,10 @@ struct TwitchScreen: View {
                 BridgeConnectedState(
                     bridgeID: "twitch",
                     name: "Twitch",
-                    connectionNote: String(localized: "Approved on twitch.tv · reads who you follow"),
+                    // How it connected, and only that (audit, 2026-07-31): the
+                    // note ended "· reads who you follow" two lines above the
+                    // checklist's "Reads channels you follow."
+                    connectionNote: String(localized: "Approved on twitch.tv"),
                     capabilitiesFallback: ["Reads channels you follow.",
                                            "Read-only — never chats or follows."],
                     openConnection: { showConnection = true }
@@ -77,24 +83,54 @@ struct TwitchScreen: View {
                 .padding(.vertical, DS.Space.s1)
                 .dsListCardRow()
             } else if waiting, let code {
-                // The code, big — the person approves it on Twitch's side.
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
-                    Text(code.userCode)
-                        .dsText(.monoCode34)
-                        .foregroundStyle(DS.textPrimary)
-                        .frame(maxWidth: .infinity)
-                        .settleIn()
-                    Button {
-                        if let url = code.verificationURL { openURL(url) }
-                    } label: {
-                        Text("Approve on twitch.tv/activate")
-                            .dsText(.callout15).fontWeight(.semibold)
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                            .background(BridgeGlyph.color(for: "Twitch"),
-                                        in: Capsule(style: .continuous))
+                    // The code is the whole moment — big, in a well with an
+                    // explicit Copy button, so it plainly reads as "copy this
+                    // and enter it on Twitch". GitHub's identical step learned
+                    // this the hard way: a bare tap-to-copy went unnoticed
+                    // (user, 2026-07-15), and this screen never got the fix
+                    // (audit 2026-07-31).
+                    HStack(spacing: DS.Space.s3) {
+                        Text(code.userCode)
+                            .dsText(.monoCode34)
+                            .foregroundStyle(DS.textPrimary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .minimumScaleFactor(0.6)
+                            .lineLimit(1)
+                            .settleIn()
+                        Button(action: { copyCode(code.userCode) }) {
+                            HStack(spacing: DS.Space.s1) {
+                                Image(systemName: codeCopied ? "checkmark" : "doc.on.doc")
+                                    .font(.system(size: 13, weight: .semibold))
+                                Text(codeCopied ? "Copied" : "Copy").dsText(.subhead13).fontWeight(.semibold)
+                            }
+                            .foregroundStyle(codeCopied ? DS.confirm : DS.tint)
+                            .padding(.horizontal, DS.Space.s3)
+                            .frame(height: 34)
+                            .background(DS.gray100, in: Capsule(style: .continuous))
+                            .contentShape(Capsule(style: .continuous))
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
+                    .padding(DS.Space.s3)
+                    .frame(maxWidth: .infinity)
+                    .background(DS.surfaceWell, in: DSSlab.shape)
+                    // The door, as this state's one filled block. It was a
+                    // hand-painted capsule in Twitch purple: a primary control
+                    // never sits on brand color, because two near-match colors
+                    // read as a mistake (`bridgeSetupWash`'s standing rule).
+                    // Gated on the URL actually being there (§83: no dead
+                    // controls). `verificationURL` is optional, so an answer
+                    // without `verification_uri` used to paint a full slab
+                    // whose tap did nothing — the code well above still shows
+                    // what to type, which is the honest fallback.
+                    if let url = code.verificationURL {
+                        DSSlabButton(title: "Approve on twitch.tv/activate",
+                                     systemImage: "arrow.up.right") {
+                            DSHaptic.tap()
+                            openURL(url)
+                        }
+                    }
                     HStack(spacing: DS.Space.s2) {
                         ProgressView().controlSize(.small)
                         Text("Waiting for your approval…")
@@ -172,6 +208,16 @@ struct TwitchScreen: View {
         }
     }
 
+    private func copyCode(_ code: String) {
+        UIPasteboard.general.string = code
+        DSHaptic.tap()
+        withAnimation(DS.Motion.standard) { codeCopied = true }
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
+            withAnimation(DS.Motion.standard) { codeCopied = false }
+        }
+    }
+
     private func sync() async {
         guard !syncing else { return }
         syncing = true
@@ -183,7 +229,10 @@ struct TwitchScreen: View {
             return
         }
         resultIsError = false
-        result = added > 0 ? String(localized: "\(added) live now") : String(localized: "Connected — follows land when they go live.")
+        // The family's own "nothing new" line (audit, 2026-07-31). This said
+        // "Connected — follows land when they go live." directly beneath the row
+        // that already says "Connected — live follows land in your feed."
+        result = added > 0 ? String(localized: "\(added) live now") : String(localized: "Up to date")
         let proof = added > 0 ? "\(added) live now" : "Synced just now"
         if store.registerConnected(id: "twitch", name: "Twitch", proof: proof,
                                    can: ["Reads channels you follow.",

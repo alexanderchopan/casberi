@@ -29,14 +29,19 @@ struct GrokSetupScreen: View {
     @State private var result: String?
     @State private var resultIsError = false
     @State private var configured = AgentKey.isConfigured(.grok)
+    @State private var flipTrigger = 0
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Grok")
+            BridgeSetupHeader(name: "Grok", flipTrigger: flipTrigger)
             setupSection
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        // Grok's mark is pure black, so `DS.washHue` returns nil and this
+        // paints nothing — called anyway so the family has no exception to
+        // remember, and a rebrand with a real hue lands for free.
+        .bridgeSetupWash(name: "Grok")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
@@ -59,7 +64,10 @@ struct GrokSetupScreen: View {
                             action: connect)
                 BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
                 AgentActiveStatusRow(provider: .grok)
-                DSSlabNote(text: "Your key powers \"Try with your key\" like every agent here: any answer re-runs on Grok, straight from \(DS.device), only when you tap.\n\nxAI has no free tier, so your team needs credits before a key can answer — buy them in the same console.\n\nThe key lives in the Keychain, goes only to xAI, and xAI bills you directly.")
+                // The opening clause was the header's own tagline — "Try with
+                // your key, on Grok" — restated a screen below it
+                // (2026-07-31). The consent clause it carried stays.
+                DSSlabNote(text: "Any answer re-runs on Grok, straight from \(DS.device), only when you tap.\n\nxAI has no free tier, so your team needs credits before a key can answer — buy them in the same console.\n\nThe key lives in the Keychain, goes only to xAI, and xAI bills you directly.")
             }
         }
         .dsSlabSection()
@@ -73,12 +81,13 @@ struct GrokSetupScreen: View {
         checking = true
         result = nil
         Task { @MainActor in
-            let ok = await AgentAnswer.validate(candidate, provider: .grok)
+            let outcome = await AgentAnswer.check(candidate, provider: .grok)
             checking = false
-            if ok {
+            if outcome == .accepted {
                 AgentKey.set(candidate, for: .grok)
                 configured = true
                 keyDraft = ""
+                flipTrigger += 1
                 DSHaptic.success()
                 resultIsError = false
                 result = String(localized: "Connected — answers now offer \"Try with your key\" on Grok.")
@@ -87,13 +96,16 @@ struct GrokSetupScreen: View {
                                         can: ["Answers with your key — only when you tap.",
                                               "Remembers a chat's earlier answers."])
             } else {
+                // The two real causes were named in ONE sentence until the
+                // 2026-07-31 audit, because the check could only say yes or
+                // no. `AgentKeyCheck` separates them: a wrong key gets
+                // "check you copied the whole thing", and the credits case —
+                // the measured 200-with-`team_blocked` xAI answers for a real
+                // key that can't answer — gets its own `.blocked` sentence
+                // pointing at the console. Nobody reads a fix meant for
+                // someone else's problem anymore.
                 resultIsError = true
-                // Names BOTH real causes (2026-07-31, measured): a wrong key,
-                // and a valid key on a team with no credits — which xAI
-                // reports as a 200 on the key check and a 403 on every actual
-                // request, so "check your key" alone would send someone
-                // hunting a key that was never the problem.
-                result = String(localized: "xAI didn't accept that key. Check the key itself — and that your team has credits at console.x.ai, since a key without them can't answer.")
+                result = outcome.line(for: .grok)
             }
         }
     }

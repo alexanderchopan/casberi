@@ -16,14 +16,19 @@ struct OpenRouterSetupScreen: View {
     @State private var result: String?
     @State private var resultIsError = false
     @State private var configured = AgentKey.isConfigured(.openrouter)
+    @State private var flipTrigger = 0
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "OpenRouter")
+            BridgeSetupHeader(name: "OpenRouter", flipTrigger: flipTrigger)
             setupSection
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        // OpenRouter's mark is near-black, so `DS.washHue` returns nil and this
+        // paints nothing — called anyway so the family has no exception to
+        // remember, and a rebrand with a real hue lands for free.
+        .bridgeSetupWash(name: "OpenRouter")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
@@ -40,8 +45,12 @@ struct OpenRouterSetupScreen: View {
                     DSHaptic.tap()
                     if let url = URL(string: "https://openrouter.ai/settings/keys") { openURL(url) }
                 }
-                BridgeStepLines(steps: ["Create a key and copy it.",
-                                     "Paste it below — it's checked with OpenRouter before it saves."])
+                // "Paste it below" sat directly above a field placeheld "Paste
+                // your OpenRouter key" — §220's own finding, in the family it
+                // was never applied to (2026-07-31). With one instruction left
+                // the numerals go too, per §220's boundary.
+                BridgeStepLines(steps: ["Create a key and copy it — it's checked with OpenRouter before it saves."],
+                                numbered: false)
                 DSSlabField(placeholder: AgentProvider.openrouter.placeholder, text: $keyDraft,
                             actionLabel: checking ? "CHECKING…" : (configured ? "UPDATE" : "CONNECT"),
                             secure: true,
@@ -49,7 +58,11 @@ struct OpenRouterSetupScreen: View {
                             action: connect)
                 BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
                 AgentActiveStatusRow(provider: .openrouter)
-                DSSlabNote(text: "OpenRouter auto-picks whichever of its 400+ models fits your question. Your key powers \"Try with your key\": any answer re-runs there, straight from \(DS.device), only when you tap.\n\nThe key lives in the Keychain, goes only to OpenRouter, and OpenRouter bills you directly.")
+                // The opening sentence ("auto-picks whichever model fits") was
+                // the header's own tagline — "One key, whichever model fits" —
+                // a screen apart (2026-07-31). "there" lost its antecedent
+                // with it, so it names OpenRouter now.
+                DSSlabNote(text: "Your key powers \"Try with your key\": any answer re-runs on OpenRouter, straight from \(DS.device), only when you tap.\n\nThe key lives in the Keychain, goes only to OpenRouter, and OpenRouter bills you directly.")
             }
         }
         .dsSlabSection()
@@ -63,12 +76,13 @@ struct OpenRouterSetupScreen: View {
         checking = true
         result = nil
         Task { @MainActor in
-            let ok = await AgentAnswer.validate(candidate, provider: .openrouter)
+            let outcome = await AgentAnswer.check(candidate, provider: .openrouter)
             checking = false
-            if ok {
+            if outcome == .accepted {
                 AgentKey.set(candidate, for: .openrouter)
                 configured = true
                 keyDraft = ""
+                flipTrigger += 1
                 DSHaptic.success()
                 resultIsError = false
                 result = String(localized: "Connected — answers now offer \"Try with your key\" on OpenRouter.")
@@ -77,8 +91,12 @@ struct OpenRouterSetupScreen: View {
                                         can: ["Answers with your key — only when you tap.",
                                               "Routes to whichever model fits, and remembers a chat's earlier answers."])
             } else {
+                // Four ways this can fail and four sentences for them (audit
+                // 2026-07-31) — a rate limit, a blocked account and a dropped
+                // connection are not the key, and one shared "check it and try
+                // again" sent people hunting a key that was never wrong.
                 resultIsError = true
-                result = String(localized: "OpenRouter didn't accept that key — check it and try again.")
+                result = outcome.line(for: .openrouter)
             }
         }
     }

@@ -20,14 +20,16 @@ struct BankrSetupScreen: View {
     @State private var result: String?
     @State private var resultIsError = false
     @State private var configured = AgentKey.isConfigured(.bankr)
+    @State private var flipTrigger = 0
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Bankr")
+            BridgeSetupHeader(name: "Bankr", flipTrigger: flipTrigger)
             setupSection
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: "Bankr")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
@@ -44,8 +46,16 @@ struct BankrSetupScreen: View {
                     DSHaptic.tap()
                     if let url = URL(string: "https://bankr.bot/api-keys") { openURL(url) }
                 }
-                BridgeStepLines(steps: ["Make the key read-only, and enable agent access. Answers never trade — a read-only key keeps it that way.",
-                                     "Paste it below — it's checked with Bankr before it saves."])
+                // Two duplicates in one line (2026-07-31). "Answers never
+                // trade — a read-only key keeps it that way" is the note below
+                // it ("nothing here trades, sends, or swaps"), which keeps the
+                // promise because it's adjacent to the field and names the
+                // stronger guarantee — every question is prefixed answer only,
+                // whatever the key can do. "Paste it below" is the field's own
+                // placeholder ("Paste your Bankr key"), §220's finding. One
+                // instruction left, so the numerals go too.
+                BridgeStepLines(steps: ["Make the key read-only, and enable agent access — it's checked with Bankr before it saves."],
+                                numbered: false)
                 DSSlabField(placeholder: AgentProvider.bankr.placeholder, text: $keyDraft,
                             actionLabel: checking ? "CHECKING…" : (configured ? "UPDATE" : "CONNECT"),
                             secure: true,
@@ -68,12 +78,13 @@ struct BankrSetupScreen: View {
         checking = true
         result = nil
         Task { @MainActor in
-            let ok = await AgentAnswer.validate(candidate, provider: .bankr)
+            let outcome = await AgentAnswer.check(candidate, provider: .bankr)
             checking = false
-            if ok {
+            if outcome == .accepted {
                 AgentKey.set(candidate, for: .bankr)
                 configured = true
                 keyDraft = ""
+                flipTrigger += 1
                 DSHaptic.success()
                 resultIsError = false
                 result = String(localized: "Connected — answers now offer \"Try with your key\" on Bankr.")
@@ -83,8 +94,12 @@ struct BankrSetupScreen: View {
                                               "Reads your wallet and live markets to answer.",
                                               "Never trades, sends, or swaps."])
             } else {
+                // Four ways this can fail and four sentences for them (audit
+                // 2026-07-31) — a rate limit, a blocked account and a dropped
+                // connection are not the key, and one shared "check it and try
+                // again" sent people hunting a key that was never wrong.
                 resultIsError = true
-                result = String(localized: "Bankr didn't accept that key — check it and try again.")
+                result = outcome.line(for: .bankr)
             }
         }
     }

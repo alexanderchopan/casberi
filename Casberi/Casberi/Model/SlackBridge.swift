@@ -76,9 +76,32 @@ enum SlackAuth {
 
     // MARK: - Sign in (PKCE: verifier stays here, challenge goes out)
 
+    /// Why a connect attempt ended the way it did, so the screen can say the
+    /// true thing (audit 2026-07-31 — it said "Couldn't connect" for all of
+    /// these, which reads as a breakage even when the person simply closed the
+    /// sheet). The shape `StripeFetch.Outcome` set: one case per outcome that
+    /// is actually distinguishable on the wire, and no more.
+    enum SignIn {
+        case ok
+        /// The person dismissed Slack's sheet — `canceledLogin`. Not a
+        /// failure: nothing was attempted, so nothing went wrong.
+        case cancelled
+        /// The callback came back carrying an OAuth `error` instead of a code
+        /// — Slack asked and the answer was no.
+        case declined
+        /// The sign-in page never opened: the session refused to start, or the
+        /// bridge has no client id to open it with.
+        case cantOpen
+        /// The token exchange never reached Slack at all.
+        case unreachable
+        /// Slack answered the exchange and refused it — a non-200, an `ok:
+        /// false` envelope, or one with no token in it.
+        case refused
+    }
+
     @MainActor
-    static func signIn() async -> Bool {
-        guard ready else { return false }
+    static func signIn() async -> SignIn {
+        guard ready else { return .cantOpen }
         let verifier = randomVerifier()
         let challenge = Data(SHA256.hash(data: Data(verifier.utf8)))
             .base64URLEncoded()
@@ -94,12 +117,25 @@ enum SlackAuth {
             URLQueryItem(name: "code_challenge_method", value: "S256"),
             URLQueryItem(name: "code_challenge", value: challenge),
         ]
-        guard let url = auth.url,
-              let callback = await presentAuth(url: url) else { return false }
+        guard let url = auth.url else { return .cantOpen }
+        let callback: URL
+        switch await presentAuth(url: url) {
+        case .callback(let landed): callback = landed
+        case .cancelled: return .cancelled
+        case .cantOpen: return .cantOpen
+        }
 
         guard let comps = URLComponents(url: callback, resolvingAgainstBaseURL: false),
-              let code = comps.queryItems?.first(where: { $0.name == "code" })?.value
-        else { return false }
+              let items = comps.queryItems else { return .refused }
+        // Saying no on Slack's page still redirects here — with `error` where
+        // the code would be. Only `access_denied` is that decision; every
+        // other OAuth error is Slack refusing the request, which is a
+        // different sentence on the screen.
+        let refusal = items.first(where: { $0.name == "error" })?.value
+        if refusal == "access_denied" { return .declined }
+        guard refusal == nil,
+              let code = items.first(where: { $0.name == "code" })?.value
+        else { return .refused }
 
         return await exchange(form: [
             "client_id": clientID,
@@ -132,13 +168,16 @@ enum SlackAuth {
             "client_id": clientID,
             "grant_type": "refresh_token",
             "refresh_token": refresh,
-        ])
+        ]) == .ok
         return ok ? TokenVault.get(tokenKey) : nil
     }
 
     /// One door for both grants — the authorization code and the refresh —
-    /// because Slack answers them with the same envelope.
-    private static func exchange(form: [String: String]) async -> Bool {
+    /// because Slack answers them with the same envelope. It reports WHICH way
+    /// it failed: a request that never landed and one Slack turned down are
+    /// different sentences on the setup screen. The refresh path above only
+    /// cares whether it worked.
+    private static func exchange(form: [String: String]) async -> SignIn {
         var request = URLRequest(url: URL(string: "https://slack.com/api/oauth.v2.access")!)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
@@ -146,10 +185,11 @@ enum SlackAuth {
             .map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? $0.value)" }
             .joined(separator: "&")
             .data(using: .utf8)
-        guard let (data, response) = try? await URLSession.shared.data(for: request),
-              (response as? HTTPURLResponse)?.statusCode == 200,
+        guard let (data, response) = try? await URLSession.shared.data(for: request)
+        else { return .unreachable }
+        guard (response as? HTTPURLResponse)?.statusCode == 200,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-        else { return false }
+        else { return .refused }
         guard (json["ok"] as? Bool) == true else {
             // A refresh Slack refuses outright (the 30-day ceiling, or the
             // person revoked us in Slack) is a DEAD connection, not a hiccup
@@ -159,14 +199,14 @@ enum SlackAuth {
                error.contains("invalid_refresh_token") || error.contains("invalid_grant") {
                 disconnect()
             }
-            return false
+            return .refused
         }
         // A user-scope-only code exchange carries the token under
         // `authed_user` (the top-level `access_token` slot is for a bot
         // install, which never happens here); a user-token REFRESH answers
         // with those same fields at the top level. Read either shape.
         let user = (json["authed_user"] as? [String: Any]) ?? json
-        guard let token = user["access_token"] as? String else { return false }
+        guard let token = user["access_token"] as? String else { return .refused }
         TokenVault.set(token, for: tokenKey)
         if let refresh = user["refresh_token"] as? String {
             TokenVault.set(refresh, for: refreshKey)
@@ -182,19 +222,34 @@ enum SlackAuth {
         if let team = json["team"] as? [String: Any], let name = team["name"] as? String {
             UserDefaults.standard.set(name, forKey: teamNameKey)
         }
-        return true
+        return .ok
+    }
+
+    /// What the sign-in sheet came back with — the callback, or why there
+    /// isn't one. A dismissal is the one the screen most needs told apart.
+    private enum Presented {
+        case callback(URL)
+        case cancelled
+        case cantOpen
     }
 
     @MainActor
-    private static func presentAuth(url: URL) async -> URL? {
+    private static func presentAuth(url: URL) async -> Presented {
         await withCheckedContinuation { cont in
             let session = ASWebAuthenticationSession(
                 url: url, callbackURLScheme: "casberi"
-            ) { callback, _ in
-                cont.resume(returning: callback)
+            ) { callback, error in
+                if let callback {
+                    cont.resume(returning: .callback(callback))
+                } else if let error = error as? ASWebAuthenticationSessionError,
+                          error.code == .canceledLogin {
+                    cont.resume(returning: .cancelled)
+                } else {
+                    cont.resume(returning: .cantOpen)
+                }
             }
             session.presentationContextProvider = SlackAuthPresenter.shared
-            if !session.start() { cont.resume(returning: nil) }
+            if !session.start() { cont.resume(returning: .cantOpen) }
         }
     }
 

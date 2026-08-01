@@ -68,9 +68,15 @@ struct SteamScreen: View {
 
     /// What's left once "Open steamcommunity.com/dev/apikey and sign in."
     /// became the button that does it.
+    ///
+    /// "Paste it with your profile name below" went (audit, 2026-07-31) — it
+    /// re-typed the two fields under it, placeheld `Profile name or SteamID`
+    /// and `Web API key`, which is §220's Kraken finding. The requirement it
+    /// was carrying is a real one nothing else on the screen states, so that
+    /// half stayed.
     private var steps: [String] = [
         "Enter any domain (casberi.app works) and copy the key.",
-        "Paste it with your profile name below. Your profile must be public.",
+        "Your profile must be public.",
     ]
 
     private var setupSection: some View {
@@ -94,7 +100,14 @@ struct SteamScreen: View {
                             secure: true, isArmed: canConnect, action: connect)
                 BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your games…"),
                                      result: result, resultIsError: resultIsError)
-                DSSlabNote(text: "Your key stays in \(DS.device)'s Keychain, goes only to Steam, and only to read public profile data.")
+                // What LANDS is the header's own line — `BridgeSetupHeader`
+                // shows Steam's tagline, "What you play, in your feed", in
+                // primary body type at the top of this screen, so the sentence
+                // added here earlier the same day ("The games you play land in
+                // your feed") was that line paraphrased 60 points lower
+                // (audit, 2026-07-31). What's left is the part the header
+                // can't say.
+                DSSlabNote(text: "Your key stays in \(DS.device)'s Keychain, goes only to Steam, and only ever reads public profile data.")
             }
         }
         .dsSlabSection()

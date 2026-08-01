@@ -84,9 +84,19 @@ struct PredictionVenueConnect: View {
             // One gray sentence for the whole screen (DSSlab's companion
             // rule) — the two venues' honesty notes collapsed into one,
             // rather than a paragraph per exchange.
-            Text("No account, no key — both exchanges' odds are public. Read-only: nothing here ever places a trade.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .listRowBackground(Color.clear)
+            // Lede then detail (2026-07-31) — the promise steps up to the tier
+            // the step lines use; the sourcing keeps the quiet one. Written
+            // inline rather than as `BridgeFooterNote` because that component
+            // IS a Section and this is a Section's own `footer:` closure.
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text("Read-only: nothing here ever places a trade.")
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("No account, no key — both exchanges' odds are public.")
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .listRowBackground(Color.clear)
         }
     }
 

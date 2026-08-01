@@ -11761,6 +11761,121 @@ already carries the repair door (its own Manage route), so nothing is lost by
 landing there first. The dashed ring's job is to SAY the connection is broken,
 not to redirect the tap that follows.
 
+## §252 — The connect screens: failures that looked like successes, and a promise wearing the timestamp tier (user: "how if at all would you improve our app connect screens", then "do all these", then "how would you make the text in each of the app connect sheets more appealing in terms of display or do you think it is good as it is", then "do all these", 2026-07-31)
+
+§218 and §219 fixed the SHAPE of connecting — Connect raises the form over the
+page that sold it, step one became the button it was describing, the slab rule
+finally reached the pre-connect form. A full audit of all ~37 setup screens a
+week later found the shape had held and the drift had moved somewhere else: into
+what the screens SAY, and into which of them got the family's conventions at all.
+
+**Five screens rendered failures in confirm green.** `PrivacyPoolsScreen`,
+`SafeScreen`, `GeckoTerminalScreen`, `OpenSeaScreen` and `ShopifyScreen` each
+passed a hardcoded `resultIsError: false` into `BridgeSyncStatusRows` while
+assigning real failures ("Couldn't reach the chain…") into the same `lastResult`.
+That component renders a non-error in `DS.confirm` wrapped in `CountUpText`, so a
+network failure arrived in success green with the count-up animation, no shake
+and no failure haptic — the fake-status class §83 bans, in the component whose
+own doc-comment prohibits it. Each now carries a real `lastResultIsError`.
+
+**`PeerScreen` computed its result and threw it away.** It declared `syncing`
+and `lastResult`, assigned both, and read neither in `body` — the only screen in
+the family with a sync path and no status row, while its three structural twins
+(Safe, 0xBow, Exchange) all had one. Both "3 new" and "Couldn't reach Base" were
+discarded silently.
+
+**Grok's raised sheet never left.** `finishesOnConnect` listed `.venice`,
+`.bankr` and `.openRouter`; `.grok` landed on 2026-07-31 and fell through to
+`default: false`, so a verified key left the sheet sitting there — alone among
+the agent seats, and against its own screen's doc-comment ("structurally
+`OpenRouterSetupScreen` with a different name").
+
+**The §83 disabled-button defect was live again**, on `AccountDetailSheet`'s key
+Save — full tint, white label, inert on an empty field and mid-check. Two other
+files carry comments about avoiding exactly this.
+
+**Smaller, same family:** Shopify rejected a pasted address silently (`guard …
+else { return }` — no message, no haptic, nothing separating "rejected" from
+"you didn't tap") and carried a `@Query` declared with a full descriptor and
+never read; Open Food Facts rendered errors as `label12` tertiary text in a
+section header (success and failure looked identical), told you a valid barcode
+"isn't a barcode number" when you tapped during an in-flight lookup (one `else`
+covering both guard clauses), and hid Disconnect until something had landed, so
+a connect-then-every-lookup-failed left a registered seat with no way off it.
+
+**Five seats had no brand hue at all.** Stripe, PostHog, Grok, OpenRouter and
+Linear all ship bundled marks and none was named in `DS.brandHue`, so the newest
+and most impressive seats were the only gray ones. Each is now icon-sampled from
+its own mark. Two of them correctly get NO wash and that is the point: Grok's
+mark has zero saturated pixels (the X case — `washHue` nils it, the screens stay
+pure ink), and OpenRouter is the Hyperliquid/ether.fi shape, a near-black ground
+whose signal comes from `glyphTint` instead.
+
+**"Already there" was classified three ways** — red plus shake plus failure
+haptic on EthValidator and RSS, green on PostHog and Stocktwits, gray on Open
+Food Facts. Settled as NOT an error: nothing went wrong, you asked for the thing
+and it was already done.
+
+**Six screens never said what lands.** Steam, Slack, Files, Mail, Obsidian and
+EthValidator each explained what was SAFE — Keychain, read-only, scopes, IMAP —
+three ways, and never once named the output, so a person could finish setup
+without being told what connecting actually gets them. Steam's note was 100%
+about the Keychain. EthValidator's one what-lands fact lived in a section footer
+that doesn't exist until the watchlist does; it moved up into the add slab.
+
+**Then the display question, which is the one worth recording.** Asked whether
+the text itself could be more appealing, the answer was that the WORDS are the
+good part and the display of the longest block is not. Every screen closed with
+one undifferentiated `Text` at `subhead13` in `DS.textTertiary` — Safe ran 453
+characters, Stripe 351, Privacy Pools 335. That tier measures 4.5:1 and
+`DesignTokens` defines its job as *"row metadata (timestamps, source names),
+placeholders, disabled glyphs"*. So "Read-only: nothing here deposits,
+withdraws, or moves funds" — the sentence the whole screen exists to earn — was
+wearing the timestamp tier, in a wall. §218 ruled "one gray sentence per screen"
+and these had quietly grown back to three paragraphs.
+
+`BridgeFooterNote` (`Screens/BridgeSetupComponents.swift`) is the fix, and it is
+NOT shorter copy:
+
+- **A lede and its detail.** The load-bearing promise steps up to the
+  `BridgeStepLines` tier (`callout15`/secondary — still quiet, now legible); the
+  elaboration keeps `subhead13`/tertiary.
+- **A list renders as a list.** Where the detail was really several facts welded
+  into prose, `points:` renders them as a `DSCheckList` — the treatment Stripe's
+  six scope lines already proved is the most scannable text on any of these
+  screens. Safe's four facts (finds every Safe you sign on, says when it's your
+  signature missing, alerts on owner/threshold changes, alerts on a new module)
+  were the worst offender and are the clearest win.
+- **The duplicate goes.** Where a `DSSlabNote` and the footer said the same
+  thing — Stripe's "the key can never write" against its slab's "read-only, the
+  key can read your money, never move it"; PostHog's identical pair — the slab
+  note keeps it (adjacent to the control, better tier) and the footer drops it.
+  That is §220's finding ("a step that was already on screen twice") recurring
+  one component down.
+
+Applied to `BridgeFooterNote`'s eleven call sites plus `PredictionVenueConnect`,
+which takes the same split inline because its footer is a `Section`'s own
+`footer:` closure and the component IS a Section.
+
+Also closed in the same pass: the last `BridgeFieldRow` holdouts (Stripe,
+PostHog — where a `DSSlabField` and a `BridgeFieldRow` stacked in one VStack,
+two field shapes at two heights for one act — Dropbox and Open Food Facts); the
+four agent-key screens gaining `bridgeSetupWash` and the connect coin-flip every
+other keyed screen had; the four import screens gaining `BridgeSetupHeader`;
+ChatGPT, Instagram, Claude and Gemini's four hand-rolled copies of
+`RecentThingsSection` collapsing into the shared one; Twitch's device code
+gaining the Copy button GitHub's identical step got on 2026-07-15 and losing its
+brand-colored primary button (`BridgeSetupComponents` states the rule: *"primary
+controls never sit on brand color"*); and the three byte-identical PKCE failures
+(Spotify, Slack, Dropbox) plus the agent-key screens' bare-`Bool` validation
+splitting into differentiated, actionable sentences on the Stripe model.
+
+**NOT SIMULATOR-VERIFIED**, per the standing direction (*"forget the simulator
+it takes too much time and credits for me"*). Shipped on a green build plus
+`catalog-sync.sh`, the SwiftData liveness audit, and the network-reach audit.
+What has NOT been seen on screen: the new footer's lede/detail rhythm and its
+checklists, the five new brand washes, and the slabbed Open Food Facts screen.
+
 ## §253 — The wallet room gets a future, a floor for routine, a seat for perps; the tray says whose and since when (user: "how if at all would you improve our wallet source feed", then "and how if at all would you improve the 'worth looking at' tray", then "do 1 and 2 for the tray, and do 1-4 for the wallet", 2026-07-31)
 
 Six changes across two surfaces, both of which had already been through several
@@ -11916,3 +12031,175 @@ A concurrent Claude session was editing this working copy throughout (Slack /
 Spotify / Dropbox screens), so several builds failed on files outside this diff
 before one came back clean — the shared-build-DB and concurrent-edit hazards
 CLAUDE.md warns about, both observed live.
+
+## §254 — The All feed's tail cools, its bundles look like stacks, and one picture a day reads at size (user: "how would you add surprise and delight in the All source feed" → none of the six joins appealed → "what about just visually anything you would change or you think it is in good shape", then "do all these", 2026-07-31)
+
+A purely visual pass over the landing screen. No new facts, no new joins, nothing
+computed that wasn't already on the row — three changes to how what's already
+there is drawn.
+
+**A correction first, because it was reported as a finding.** The review claimed
+the All feed's day headers still carried §218's retired count. They do not:
+`bundledSections` — the renderer the unfiltered All room actually uses — has
+rendered its header countless since §218, with the ruling quoted above it. The
+count that exists lives in `daySection`, which serves the SHAPED rooms, where
+§218 deliberately kept it ("in a source's own room the count speaks the source's
+unit"), and the All room's kind-filtered branch, where the header is the
+filter's name and the number is that filter's total rather than a day's tally.
+Nothing was changed for it. Recorded because the wrong version of this was said
+out loud, and the next reader deserves the corrected one.
+
+**1. The folded tail weighs less than today.** §218 split the All feed by
+recency — the last 7 days keep their own day cards, everything older folds into
+week/month groups — but only the GROUPING followed. The type never did, so
+"March" shouted in the same 22pt bold as "Today", and a scroll into last spring
+read as loud as a scroll into this morning. Coarse headers now step one weight
+down (bold → semibold) at the same size.
+
+Two decisions worth keeping:
+
+- *Weight, not size.* Size and weight are the only hierarchy this app has (no
+  kerning, no caps — design law). A size step would land the header on
+  `heading17`, which is 18pt — the size of the row titles directly beneath it —
+  so the header would stop reading as a header. Weight is the lever that cools
+  without flattening. `heading22` is also the DISPLAY tier, whose rungs the
+  2026-07-25 reading-band pass deliberately froze.
+- *A group is coarse when `coarseLabel` says so, not when the string looks it.*
+  `coarseLabels(in:)` asks the producer directly — a group is coarse exactly
+  when its label equals what `coarseLabel` would name its own members. The
+  simpler test ("is this not a `dayLabel`?") would have swept up the MUSIC
+  room's session groups ("This morning", "Mon evening"), which are a different
+  grain, not a coarser one. It also keeps the check correct in every language,
+  since no English word appears in it.
+
+Applies wherever a coarse group renders, not just in All — one rule, by grain.
+A sparse per-source room whose every group is coarse therefore reads uniformly
+semibold, which is honest: that room has no "today" to contrast with.
+
+**2. A bundle looks like several things.** A bundle whose members carry pictures
+has led with a fan of them since 2026-07-21. A bundle with no pictures led with
+the same single brand glyph an ordinary row leads with — so the only thing
+saying "this is 14 things" was the number in the trailing slot: a fact you read,
+not a shape you see. Two cards now peek from behind the icon at 4pt steps, which
+is what a stack looks like everywhere else. A FILL (`DS.fillFaint`), never a
+stroke — nothing in this app draws a line. The deck is marked
+`accessibilityHidden`; the count already speaks.
+
+**3. One picture a day reads at size.** A post's photo and an article's art ride
+their row as a 26pt thumb, so a day of them is a column of specks — and the
+picture is the one thing in that row you cannot get from the title. The feed now
+promotes exactly one row per day to the art size the media rooms already ship
+(`MediaShape.rowArtHeight`, §219), so each day opens with something to look at.
+
+The gates, each with a reason:
+
+- *Only art that rides BESIDE an identity leader* — `BandRow.artRidesBesideIdentity`,
+  which is Bluesky/Farcaster/RSS with both an avatar and a picture. That is the
+  existing "both" pattern (§2026-07-10: the face leads, the picture follows the
+  title), and it guarantees the enlarged image is a PICTURE rather than an
+  identity or a logo. Without it the rule would blow a watched token's circular
+  coin logo up to 85pt. One definition, static on `BandRow`, called by both the
+  gate and the render so they cannot drift into disagreeing.
+- *Chosen from the BUNDLED groups, not the raw day.* RSS is bundleable, so a
+  row picked from the day could be one that collapsed into a bundle and never
+  renders as a band — the promotion would silently do nothing.
+- *Three rows minimum.* On a two-row day the promoted picture is half the day,
+  which is a gallery, not an anchor.
+- *It grows in place.* A full-width banner beneath the title was the stronger
+  anchor and was rejected: the band is the one row anatomy (ruling 2026-07-06),
+  and that would have been a second one.
+
+Never collides with §218's `imageOnly` — that gate is wordless screenshots,
+which carry no identity leader and so can never qualify here. The two are the
+same argument from opposite sides: §218 gave a picture the room its missing
+words would have had; this gives a picture room the words don't need.
+
+**Also removed:** `dayTotals` in `bundledSections`, dead since §218 took the
+count out of that header — computed every pass, read by nothing.
+
+**What was NOT done.** Six delight ideas were pitched first and all six declined
+("none of those appeal to me"): cross-source convergence, an anniversary echo at
+the day seam, a first-from-a-source whisper, tinting the refresh rain by what
+landed, an entrance wave scoped to the away boundary, and a tappable floor. A
+corpus milestone ("your 1,000th thing") was flagged as contentious against §213
+and also not taken. They are listed so the next pass knows they were considered
+and refused, not overlooked.
+
+VERIFIED BY BUILD + STATIC AUDITS ONLY, NOT SEEN ON SCREEN. `scripts/verify.sh
+--build-only` green: catalog sync, network-reach audit, SwiftData liveness audit
+(all five checks), clean compile with no new warnings. Per the standing user
+ruling ("forget the simulator, it takes too much time and credits for me") no
+device pass was run. Three things a diff cannot show and a screenshot could: the
+semibold coarse header against the bold one above it, the deck's 4pt peek at
+`fillFaint` in both themes, and how hard the promoted row's 85pt art squeezes a
+two-line title on the narrowest iPhone.
+
+### §252a — The duplication sweep (user, seeing the built Stripe screen: "THAT IS A LOT OF TEXT ON THE STRIPE PAGE", then "make sure there is NO duplication in any of the app connect screens please", 2026-07-31)
+
+The footer treatment above went out, and a screenshot of the built Stripe screen
+answered the design question better than the reasoning had. The words were not
+too long. **They were said twice.**
+
+Stripe's step 2 read *"Create a RESTRICTED key, and give it read access to
+Events, Disputes, Payouts, Subscriptions, Invoices and Balance — nothing else."*
+A `DSCheckList` on the same screen listed those exact six scopes again. Step 3
+spent 25 words on a fact the placeholder (`rk_live_…`) shows and the failure
+sentence explains at the moment it matters. A gray note promised "read-only"
+under six lines each ending "— read". That is §220's finding — *a step that was
+already on screen twice* — recurring on the screen §220's own rule was quoted
+from, and it took two full screens to reach a key field.
+
+**The fix is order, then deletion.** The scopes sat BELOW the field, which is
+why step 2 had to name them to be useful up there. Moving the checklist directly
+under step 2 let the sentence lose the list and become *"Create a RESTRICTED key
+with only these reads:"* — a step that POINTS AT a list instead of being one.
+Step 3 became "Copy it and paste it below." The gray note went. ~42 words gone,
+nothing learned lost, and the key flow now fits on one screen. `PostHogScreen`
+took the identical treatment the same hour; those two were the only screens in
+the family carrying both `BridgeStepLines` and a `DSCheckList`.
+
+**Then the same rubric over all ~37 screens**, run as four parallel sweeps:
+
+1. A step naming items a list on the same screen already shows.
+2. A step restating the FIELD PLACEHOLDER below it (§220's original finding —
+   which turned out to still be live on three screens it was never applied to:
+   Mail's *"enter your address and paste the password below"* over two fields
+   placeheld `you@icloud.com` and `App-specific password`; Steam's *"paste it
+   with your profile name below"*; RSS's *"a site's own address works too"*
+   under a field placeheld `Site or feed URL`. Cal.com's and 1Claw's steps spelt
+   out the key prefix their own placeholders display).
+3. A step restating a `DSSlabButton`'s title.
+4. A `DSSlabNote` and a footer making one promise in two voices.
+5. A footer lede restating the offer TAGLINE the header already shows.
+6. `registerConnected(can:)` lines restating the connection note (Twitch's note
+   ended *"· reads who you follow"* two lines above a checklist reading *"Reads
+   channels you follow."*; Obsidian's ended *"· read-only, never modified"*
+   above *"Read-only — never edits a note."*).
+
+**The rule that settles ties:** when one fact appears twice, the surviving copy
+is the one that renders in EVERY state and sits nearest the control it is a
+promise about. That is why Peer, ETH Validators and Stocktwits kept the slab
+note and lost the footer lede, while Privacy Pools and Safe kept the footer —
+their slab versions rendered in one branch only.
+
+**It policed this session's own additions too**, which is the part worth
+recording: the "what lands" sentence added to `SteamScreen` an hour earlier was
+deleted again, because `BridgeSetupHeader` already shows Steam's tagline —
+*"What you play, in your feed"* — in primary body type at the top of the same
+screen. A fix and a duplication can be the same edit.
+
+**One thing only the screenshot could catch.** With the footer's `points:`
+rendering as a `DSCheckList`, Stripe showed TWO green-checkmark lists — six
+scopes and four kinds of news — reading as one list of ten equivalent facts,
+when one is a permission and the other is content. `DSCheckList` now takes its
+mark as a parameter: a checkmark makes a CLAIM (this is granted), so a list of
+what ARRIVES takes a neutral bullet instead.
+
+Verified with `verify.sh` end to end. Stripe's screen was walked on the
+simulator before and after, which is how both the duplication and the
+two-checkmark collision were found — the standing "skip the simulator" direction
+saves time on logic, and cost real defects here. Worth one walk when a change is
+purely about what a screen LOOKS like. (Also re-paid the stale-binary lesson:
+`verify.sh` builds into `CasberiDD` while a plain `xcodebuild` writes to Xcode's
+own DerivedData, so the first screenshot showed the old copy — `strings … | grep`
+on the installed bundle is what settled it.)

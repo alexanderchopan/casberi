@@ -77,7 +77,8 @@ struct MailScreen: View {
                         openURL(url)
                     }
                 }
-                BridgeStepLines(steps: provider.steps)
+                // Unnumbered: one instruction is not a sequence (§220).
+                BridgeStepLines(steps: provider.steps, numbered: false)
                 // Two inputs, one act — the verb rides the password, where
                 // connecting actually happens.
                 DSSlabField(placeholder: provider.addressPlaceholder, text: $addressField,

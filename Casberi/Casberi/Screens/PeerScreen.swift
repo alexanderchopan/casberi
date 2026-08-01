@@ -15,6 +15,8 @@ struct PeerScreen: View {
     @Environment(BridgeStore.self) private var store
     @State private var syncing = false
     @State private var lastResult: String?
+    /// Whether `lastResult` is a failure — see `PrivacyPoolsScreen`.
+    @State private var lastResultIsError = false
 
     private var hasWallets: Bool { !WalletStore.shared.addresses.isEmpty }
     private var walletCount: Int { WalletStore.shared.addresses.count }
@@ -64,6 +66,14 @@ struct PeerScreen: View {
                         HomeRoute.shared.pushBridge(.wallet)
                     }
                 }
+                // `syncing`/`lastResult` were computed and thrown away — this
+                // was the only screen in the family with a sync path and no
+                // status row, so both "3 new" and "Couldn't reach Base" were
+                // discarded silently (audit, 2026-07-31). Its three structural
+                // twins (Safe, 0xBow, Exchange) all have one.
+                BridgeSyncStatusRows(syncing: syncing,
+                                     syncingLine: String(localized: "Reading your fills…"),
+                                     result: lastResult, resultIsError: lastResultIsError)
                 DSSlabNote(text: hasWallets
                     ? "On automatically — Peer reads the wallets you watch. Read-only, never trades."
                     : "Peer settles into your own wallet, so watching a wallet is all it takes. Read-only, never trades.")
@@ -72,12 +82,15 @@ struct PeerScreen: View {
         .dsSlabSection()
     }
 
+    /// The read-only promise lives in the slab note above — it says it in BOTH
+    /// states, adjacent to the control, at the better tier. This footer opened
+    /// with the same promise in different words, so one fact wore two
+    /// paragraphs (duplication audit, 2026-07-31); the sourcing line it used to
+    /// bury moved up to lead.
     private var footerSection: some View {
-        Section {
-            Text("Fills are read from Base's public chain by \(DS.device) — no Peer account, no key.\n\nPeer's zero-knowledge design keeps your Venmo or PayPal side private; the chain never shows it, so neither does Casberi. Read-only: nothing here ever starts a trade.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .listRowBackground(Color.clear)
-        }
+        BridgeFooterNote(
+            lede: "Fills are read from Base's public chain by \(DS.device) — no Peer account, no key.",
+            detail: "Peer's zero-knowledge design keeps your Venmo or PayPal side private; the chain never shows it, so neither does Casberi.")
     }
 
     // MARK: - Actions
@@ -93,8 +106,10 @@ struct PeerScreen: View {
         if let added {
             lastResult = added > 0 ? String(localized: "\(added) new")
                                    : String(localized: "Up to date")
+            lastResultIsError = false
         } else {
             lastResult = String(localized: "Couldn't reach Base — check your connection.")
+            lastResultIsError = true
         }
     }
 }

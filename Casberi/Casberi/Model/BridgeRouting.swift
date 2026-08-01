@@ -133,7 +133,11 @@ enum BridgeRouter {
             switch self {
             case .token, .steam, .obsidian, .files, .dropbox, .twitch, .spotify, .slack,
                  .icloudMail, .gmail, .exchange,
-                 .venice, .bankr, .openRouter,
+                 // Grok is `OpenRouterSetupScreen` structurally (its own
+                 // doc-comment says so) and was missed here when it landed
+                 // 2026-07-31 — so a verified key left the raised sheet sitting
+                 // there, alone among the agent seats (audit, 2026-07-31).
+                 .venice, .bankr, .openRouter, .grok,
                  .chatgpt, .claude, .gemini,
                  .kindle, .dayOne, .appleJournal, .appleNotes, .bookmarks:
                 true

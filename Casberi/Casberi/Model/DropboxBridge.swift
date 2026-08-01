@@ -49,9 +49,32 @@ enum DropboxAuth {
 
     // MARK: - Sign in (PKCE: verifier stays here, challenge goes out)
 
+    /// Why a connect attempt ended the way it did, so the screen can say the
+    /// true thing (audit 2026-07-31 — it said "Couldn't connect" for all of
+    /// these, which reads as a breakage even when the person simply closed the
+    /// sheet). The shape `StripeFetch.Outcome` set: one case per outcome that
+    /// is actually distinguishable on the wire, and no more.
+    enum SignIn {
+        case ok
+        /// The person dismissed Dropbox's sheet — `canceledLogin`. Not a
+        /// failure: nothing was attempted, so nothing went wrong.
+        case cancelled
+        /// The callback came back carrying an OAuth `error` instead of a code
+        /// — Dropbox asked and the answer was no.
+        case declined
+        /// The sign-in page never opened: the session refused to start, or the
+        /// bridge has no app key to open it with.
+        case cantOpen
+        /// The token exchange never reached Dropbox at all.
+        case unreachable
+        /// Dropbox answered the exchange and refused it — a non-200, or an
+        /// envelope with no token in it.
+        case refused
+    }
+
     @MainActor
-    static func signIn() async -> Bool {
-        guard ready else { return false }
+    static func signIn() async -> SignIn {
+        guard ready else { return .cantOpen }
         let verifier = randomVerifier()
         let challenge = Data(SHA256.hash(data: Data(verifier.utf8)))
             .base64URLEncoded()
@@ -67,12 +90,25 @@ enum DropboxAuth {
             URLQueryItem(name: "code_challenge_method", value: "S256"),
             URLQueryItem(name: "code_challenge", value: challenge),
         ]
-        guard let url = auth.url,
-              let callback = await presentAuth(url: url) else { return false }
+        guard let url = auth.url else { return .cantOpen }
+        let callback: URL
+        switch await presentAuth(url: url) {
+        case .callback(let landed): callback = landed
+        case .cancelled: return .cancelled
+        case .cantOpen: return .cantOpen
+        }
 
         guard let comps = URLComponents(url: callback, resolvingAgainstBaseURL: false),
-              let code = comps.queryItems?.first(where: { $0.name == "code" })?.value
-        else { return false }
+              let items = comps.queryItems else { return .refused }
+        // Saying no on Dropbox's page still redirects here — with `error`
+        // where the code would be. Only `access_denied` is that decision;
+        // every other OAuth error is Dropbox refusing the request, which is a
+        // different sentence on the screen.
+        let refusal = items.first(where: { $0.name == "error" })?.value
+        if refusal == "access_denied" { return .declined }
+        guard refusal == nil,
+              let code = items.first(where: { $0.name == "code" })?.value
+        else { return .refused }
 
         return await exchange(form: [
             "grant_type": "authorization_code",
@@ -96,11 +132,14 @@ enum DropboxAuth {
             "grant_type": "refresh_token",
             "refresh_token": refresh,
             "client_id": clientID,
-        ])
+        ]) == .ok
         return ok ? TokenVault.get(tokenKey) : nil
     }
 
-    private static func exchange(form: [String: String]) async -> Bool {
+    /// The token exchange, reporting WHICH way it failed — a request that
+    /// never landed and one Dropbox turned down are different sentences on the
+    /// setup screen. The refresh path above only cares whether it worked.
+    private static func exchange(form: [String: String]) async -> SignIn {
         var request = URLRequest(url: URL(string: "https://api.dropboxapi.com/oauth2/token")!)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
@@ -108,10 +147,11 @@ enum DropboxAuth {
             .map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? $0.value)" }
             .joined(separator: "&")
             .data(using: .utf8)
-        guard let (data, response) = try? await URLSession.shared.data(for: request),
-              (response as? HTTPURLResponse)?.statusCode == 200,
+        guard let (data, response) = try? await URLSession.shared.data(for: request)
+        else { return .unreachable }
+        guard (response as? HTTPURLResponse)?.statusCode == 200,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let access = json["access_token"] as? String else { return false }
+              let access = json["access_token"] as? String else { return .refused }
         TokenVault.set(access, for: tokenKey)
         if let refresh = json["refresh_token"] as? String {
             TokenVault.set(refresh, for: refreshKey)
@@ -119,19 +159,34 @@ enum DropboxAuth {
         let lifetime = (json["expires_in"] as? Double) ?? 14400
         UserDefaults.standard.set(Date.now.timeIntervalSince1970 + lifetime,
                                   forKey: expiryKey)
-        return true
+        return .ok
+    }
+
+    /// What the sign-in sheet came back with — the callback, or why there
+    /// isn't one. A dismissal is the one the screen most needs told apart.
+    private enum Presented {
+        case callback(URL)
+        case cancelled
+        case cantOpen
     }
 
     @MainActor
-    private static func presentAuth(url: URL) async -> URL? {
+    private static func presentAuth(url: URL) async -> Presented {
         await withCheckedContinuation { cont in
             let session = ASWebAuthenticationSession(
                 url: url, callbackURLScheme: "casberi"
-            ) { callback, _ in
-                cont.resume(returning: callback)
+            ) { callback, error in
+                if let callback {
+                    cont.resume(returning: .callback(callback))
+                } else if let error = error as? ASWebAuthenticationSessionError,
+                          error.code == .canceledLogin {
+                    cont.resume(returning: .cancelled)
+                } else {
+                    cont.resume(returning: .cantOpen)
+                }
             }
             session.presentationContextProvider = DropboxAuthPresenter.shared
-            if !session.start() { cont.resume(returning: nil) }
+            if !session.start() { cont.resume(returning: .cantOpen) }
         }
     }
 

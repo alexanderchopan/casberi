@@ -22,9 +22,14 @@ struct OpenFoodFactsScreen: View {
     @State private var code = ""
     @State private var looking = false
     @State private var lastResult: String?
+    /// Whether `lastResult` is a failure — see `PrivacyPoolsScreen`.
+    @State private var lastResultIsError = false
     @FocusState private var fieldFocused: Bool
 
     @Query(offRecentDescriptor) private var recent: [Thing]
+
+    /// Whether the catalog seat exists at all — the honest gate for Disconnect.
+    private var seated: Bool { store.bridges.contains { $0.id == "off" } }
 
     /// The live scanner only runs where the camera can (a real device); the sim,
     /// older hardware, and Mac Catalyst (DataScannerViewController is unavailable
@@ -44,6 +49,11 @@ struct OpenFoodFactsScreen: View {
             if !recent.isEmpty {
                 ChipLiveNote(name: "Open Food Facts", verb: "for what you've scanned.")
                     .listRowSeparator(.hidden)
+            }
+            // Gated on the SEAT, not on what landed (audit, 2026-07-31).
+            // Someone who connected and whose every lookup then failed had a
+            // registered bridge and no way to remove it from its own screen.
+            if seated {
                 BridgeDisconnectSection(bridgeID: "off", name: "Open Food Facts", teardown: {})
                     .listRowSeparator(.hidden)
             }
@@ -66,76 +76,82 @@ struct OpenFoodFactsScreen: View {
         #endif
     }
 
+    /// Slabbed, and its result moved out of the section header (§218 + audit,
+    /// 2026-07-31). Three things were wrong here at once: the scan button was a
+    /// hand-painted tint capsule where every other screen's primary act is a
+    /// `DSSlabButton`; the field was the last `BridgeFieldRow` holdout beside
+    /// it; and `lastResult` rendered as `label12`/tertiary text in the section
+    /// header, so "Not found in Open Food Facts." looked exactly like
+    /// "Added Nutella" — no red, no shake, no failure haptic, the only screen
+    /// in the family where success and failure were indistinguishable.
     private var scanSection: some View {
         Section {
-            if canScan {
-                Button {
-                    DSHaptic.tap()
-                    scanning = true
-                } label: {
-                    HStack(spacing: DS.Space.s2) {
-                        Image(systemName: "barcode.viewfinder")
-                        Text("Scan a barcode")
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                if canScan {
+                    DSSlabButton(title: String(localized: "Scan a barcode"),
+                                 systemImage: "barcode.viewfinder") {
+                        DSHaptic.tap()
+                        scanning = true
                     }
-                    .dsText(.body17).foregroundStyle(.white)
-                    .frame(maxWidth: .infinity).frame(height: 44)
-                    .background(DS.tint, in: Capsule(style: .continuous))
                 }
-                .buttonStyle(.plain)
-                .listRowBackground(Color.clear)
+                DSSlabField(placeholder: String(localized: "Barcode number"),
+                            text: $code, actionLabel: String(localized: "LOOK UP"),
+                            keyboard: .numberPad, focus: $fieldFocused,
+                            action: { Task { await lookUp(code) } })
+                BridgeSyncStatusRows(syncing: looking,
+                                     syncingLine: String(localized: "Looking it up…"),
+                                     result: lastResult, resultIsError: lastResultIsError)
+                DSSlabNote(text: "The product lands in your feed with its name, picture, and Nutri-Score.")
             }
-            BridgeFieldRow(placeholder: "Barcode number", text: $code,
-                           buttonLabel: "Look up", keyboard: .numberPad,
-                           focus: $fieldFocused, action: { Task { await lookUp(code) } })
-        } header: {
-            HStack {
-                Text(canScan ? "Scan or enter" : "Enter a barcode")
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
-                Spacer()
-                if looking {
-                    ProgressView().controlSize(.small)
-                } else if let lastResult {
-                    Text(lastResult).dsText(.label12).foregroundStyle(DS.textTertiary)
-                }
-            }
-        } footer: {
-            Text("The product lands in your feed with its name, picture, and Nutri-Score — looked up in the open food database.")
-                .dsText(.callout15).foregroundStyle(DS.textTertiary)
         }
+        .dsSlabSection()
     }
 
     private var footerSection: some View {
-        Section {
-            Text("Open Food Facts is a free, collaborative database — like Wikipedia for food. Keyless and read-only: nothing about you leaves \(DS.device) but the barcode you look up.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .listRowBackground(Color.clear)
-        }
+        BridgeFooterNote(
+            lede: "Keyless and read-only: nothing about you leaves \(DS.device) but the barcode you look up.",
+            detail: "Open Food Facts is a free, collaborative database — like Wikipedia for food.")
     }
 
     private func lookUp(_ raw: String) async {
+        // A lookup already in flight is NOT a bad barcode. One `else` covering
+        // both guard clauses meant tapping Look up during a live lookup
+        // reported "That isn't a barcode number." about a perfectly good one
+        // (audit, 2026-07-31) — so the in-flight case returns silently, the way
+        // every other screen's `!syncing` guard does.
+        guard !looking else { return }
         let barcode = raw.filter(\.isNumber)
-        guard barcode.count >= 8, !looking else {
-            if !barcode.isEmpty { lastResult = String(localized: "That isn't a barcode number.") }
+        guard barcode.count >= 8 else {
+            if !barcode.isEmpty { fail(String(localized: "That isn't a barcode number — they're at least 8 digits.")) }
             return
         }
         looking = true
         defer { looking = false }
         fieldFocused = false
         guard let food = await OpenFoodFacts.lookup(barcode) else {
-            lastResult = String(localized: "Not found in Open Food Facts.")
+            fail(String(localized: "Not found in Open Food Facts."))
             return
         }
         if OpenFoodFacts.land(food, context: modelContext) != nil {
             code = ""
             lastResult = String(localized: "Added \(food.name)")
+            lastResultIsError = false
             DSHaptic.success()
             store.registerConnected(id: "off", name: "Open Food Facts",
                                     proof: "Scanned in",
                                     can: ["Looks up a barcode in the open food database.",
                                           "Read-only — nothing leaves \(DS.device) but the code."])
         } else {
+            // Already here isn't a failure — it's the thing you wanted, already
+            // done. No red, no shake.
             lastResult = String(localized: "Already in your feed.")
+            lastResultIsError = false
         }
+    }
+
+    private func fail(_ message: String) {
+        lastResult = message
+        lastResultIsError = true
     }
 }
 

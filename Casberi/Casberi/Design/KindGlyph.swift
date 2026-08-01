@@ -110,6 +110,10 @@ enum BridgeGlyph {
         // has to come from the glyph — the cyan end of the mark's cyan→indigo
         // run, icon-sampled from the bundled asset.
         case "ether.fi":   return Color.fixed("#35a2ed")
+        // OpenRouter's mark is a lime glyph on a near-black ground — the same
+        // shape again, so the signal comes from the glyph. Icon-sampled from
+        // the bundled mark (2026-07-31).
+        case "openrouter": return Color.fixed("#c0f000")
         default:       return nil
         }
     }

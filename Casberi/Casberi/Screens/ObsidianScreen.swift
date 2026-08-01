@@ -27,7 +27,10 @@ struct ObsidianScreen: View {
                     name: "Obsidian",
                     identity: obsidian.vaultName.isEmpty
                         ? String(localized: "Vault") : obsidian.vaultName,
-                    connectionNote: String(localized: "A folder on \(DS.device) · read-only, never modified"),
+                    // How it connected, and only that (audit, 2026-07-31): the
+                    // note ended "· read-only, never modified" two lines above
+                    // the checklist's "Read-only — never edits a note."
+                    connectionNote: String(localized: "A folder on \(DS.device)"),
                     capabilitiesFallback: ["Reads the vault you picked.",
                                            "Read-only — never edits a note."],
                     openConnection: { showConnection = true }
@@ -112,7 +115,10 @@ struct ObsidianScreen: View {
             }
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your notes…"),
                                  result: result, resultIsError: resultIsError)
-            DSSlabNote(text: "A vault is a folder of Markdown — find it in Files (often iCloud Drive → Obsidian). Read-only: the vault is never changed.")
+            // Says what LANDS before what's safe — see `SteamScreen` (audit,
+            // 2026-07-31). "beside everything else" left the same day: the
+            // header three rows up is already "Your vault, beside your things".
+            DSSlabNote(text: "Every note in the vault lands in your feed. A vault is a folder of Markdown — find it in Files (often iCloud Drive → Obsidian). Read-only: the vault is never changed.")
         }
         .dsSlabSection()
     }

@@ -97,6 +97,11 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     /// from TWO on screen, because opening the page really was step one.
     /// Nothing was deleted here: what the old first step said beyond "open
     /// the page" moved into the step that follows it.
+    ///
+    /// A step never re-types the field beneath it (§220). Cal.com's and 1Claw's
+    /// steps used to spell out the key prefix — "it starts with cal_live_",
+    /// "it starts with ocv_" — which is exactly what `placeholder` shows a line
+    /// lower (audit, 2026-07-31).
     var steps: [String] {
         switch self {
         case .readwise: [
@@ -112,7 +117,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
             "Create an app, then copy its Test token.",
             "Paste it below."]
         case .calcom: [
-            "Add a new key — it starts with cal_live_.",
+            "Add a new key.",
             "Copy it and paste it below."]
         case .calendly: [
             "Generate a personal access token.",
@@ -130,14 +135,23 @@ enum TokenBridge: String, CaseIterable, Identifiable {
             "Generate an API key (a paid Privacy plan is required).",
             "Copy it and paste it below."]
         case .oneclaw: [
-            "Sign in, then create an agent (or open one) and copy its API key — it starts with ocv_.",
+            "Sign in, then create an agent (or open one) and copy its API key.",
             "Paste it below."]
+        // The three scopes are NOT named here — the checklist directly beneath
+        // this step is the list, the same fix Stripe took the day before
+        // (§220, "a step that was already on screen twice"; audit 2026-07-31).
         case .posthog: [
-            "Create a personal API key and tick only these scopes: query:read, annotation:read, event_definition:read.",
+            "Create a personal API key and tick only these scopes:",
             "Copy it and paste it below — then pick which project to read."]
+        // The six scopes are NOT named here — the checklist directly beneath
+        // this step is the list, and naming them twice on one screen is §220's
+        // "a step that was already on screen twice" (user, seeing the built
+        // screen: "THAT IS A LOT OF TEXT ON THE STRIPE PAGE", 2026-07-31).
+        // Same for the test-mode refusal, which the placeholder shows and the
+        // failure sentence explains at the moment it actually matters.
         case .stripe: [
-            "Create a RESTRICTED key, and give it read access to Events, Disputes, Payouts, Subscriptions, Invoices and Balance — nothing else.",
-            "Copy it and paste it below. It starts with rk_live_; a test-mode key is refused, so your feed only ever holds real money."]
+            "Create a RESTRICTED key with only these reads:",
+            "Copy it and paste it below."]
         }
     }
 
@@ -204,7 +218,12 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     var canLine: String {
         switch self {
         case .readwise: "Reads your highlights."
-        case .github:   "Reads the GitHub feeds you pick — issues, notifications, stars, releases, gists, contributions, watched repos — plus any repos you watch privately, never touching your GitHub account."
+        // Two deletions, both because the connected GitHub screen renders this
+        // sentence directly above the things it was describing (audit,
+        // 2026-07-31): the seven feeds were the seven switch rows beneath it,
+        // and "never touching your GitHub account" is the private-watch field's
+        // own slab note verbatim. "Privately" carries what's left.
+        case .github:   "Reads the GitHub feeds you pick, plus any repos you watch privately."
         case .todoist:  "Reads your open tasks."
         case .raindrop: "Reads your bookmarks."
         case .calcom:   "Reads your bookings."

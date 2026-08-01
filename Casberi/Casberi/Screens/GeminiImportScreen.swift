@@ -31,13 +31,16 @@ struct GeminiImportScreen: View {
 
     var body: some View {
         List {
+            BridgeSetupHeader(name: "Gemini")
             setupSection
             if !recent.isEmpty {
-                recentSection.listRowSeparator(.hidden)
+                RecentThingsSection(header: "Imported", things: recent.live)
+                    .listRowSeparator(.hidden)
             }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: "Gemini")
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
@@ -59,40 +62,25 @@ struct GeminiImportScreen: View {
                     DSHaptic.tap()
                     if let url = URL(string: "https://takeout.google.com") { openURL(url) }
                 }
+                // The last step said "Pick MyActivity.json below" directly above
+                // a button titled "Choose MyActivity.json", and the note said
+                // "your prompts become findable things" directly below the
+                // header's own "Import your chats, keep them findable" (§220's
+                // finding, twice; 2026-07-31). The Takeout path stays whole —
+                // nothing else on screen teaches it.
                 BridgeStepLines(steps: ["Tap Deselect all, then pick My Activity and set it to Gemini Apps only.",
-                                     "Under Multiple formats, choose JSON for activity records, then Export. Google emails a download link — save the zip to Files and tap it once to unzip.",
-                                     "Pick MyActivity.json below."], startingAt: 2)
+                                     "Under Multiple formats, choose JSON for activity records, then Export. Google emails a download link — save the zip to Files and tap it once to unzip."], startingAt: 2)
                 DSSlabButton(title: "Choose MyActivity.json", systemImage: "square.and.arrow.down") {
                     DSHaptic.tap()
                     importing = true
                 }
                 BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-                DSSlabNote(text: "One-time import — your prompts become findable things. Re-importing later adds only what's new.")
+                DSSlabNote(text: "One-time import — re-importing later adds only what's new.")
             }
         }
         .dsSlabSection()
     }
 
-    private var recentSection: some View {
-        Section {
-            ForEach(recent) { thing in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(thing.title)
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                    if !thing.content.isEmpty {
-                        Text(thing.content)
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
-                    }
-                }
-                .dsListCardRow()
-            }
-        } header: {
-            Text("Imported").dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-        }
-    }
 
     // MARK: - Run
 

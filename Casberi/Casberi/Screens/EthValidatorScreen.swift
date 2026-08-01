@@ -18,6 +18,14 @@ struct EthValidatorScreen: View {
 
     var body: some View {
         List {
+            // The one setup screen in the family with no header (audit,
+            // 2026-07-31), so its tagline appeared nowhere and the slab note
+            // below had to carry the what-lands fact alone. NOT the §185 case:
+            // Tokens and Stocktwits go headerless on purpose because their
+            // omnibox leads an asset SHELF; this is a wallet seat with a
+            // watchlist, and it simply never got one.
+            BridgeSetupHeader(name: "ETH Validators",
+                              connected: !validatorStore.watched.isEmpty)
             addSection.listRowSeparator(.hidden)
             if !validatorStore.watched.isEmpty {
                 watchlistSection
@@ -47,7 +55,14 @@ struct EthValidatorScreen: View {
                 BridgeSyncStatusRows(syncing: working,
                                      syncingLine: String(localized: "Checking the validator…"),
                                      result: result, resultIsError: resultIsError)
-                DSSlabNote(text: "Your staking client (or any beacon-chain explorer) shows the index. Read-only — nothing here stakes, exits, or moves a balance.")
+                // The what-lands sentence added here earlier the same day is
+                // gone again with the arrival of the header above, whose
+                // tagline — "Your validator balance, in your total" — says it
+                // in primary type (the same edit `SteamScreen` took; a fix and
+                // a duplication can be one line). What survives is the part
+                // the tagline can't carry: WHERE it shows, where to find the
+                // index, and the promise.
+                DSSlabNote(text: "It shows under ETH. Your staking client (or any beacon-chain explorer) shows the index. Read-only — nothing here stakes, exits, or moves a balance.")
             }
         }
         .dsSlabSection()
@@ -59,10 +74,12 @@ struct EthValidatorScreen: View {
                 validatorRow(row)
             }
             .onDelete(perform: unwatch)
-        } footer: {
-            Text("Balance folds into your combined wallet total, under ETH.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
         }
+        // The footer that said "Balance folds into your combined wallet total,
+        // under ETH." moved UP into the add slab's note (2026-07-31), where it
+        // is visible BEFORE you watch anything rather than only after — it was
+        // the screen's one what-lands fact, and it lived in a section that
+        // doesn't exist until the watchlist does.
     }
 
     private func validatorRow(_ row: EthValidatorStore.Watched) -> some View {
@@ -114,9 +131,14 @@ struct EthValidatorScreen: View {
         }
     }
 
+    /// One sentence, and it's the one nothing else on the screen says. The
+    /// read-only promise that used to close it — "watching one can never
+    /// stake, exit, or move its balance" — is already the last clause of the
+    /// add slab's note, which sits beside the field it's a promise about
+    /// (duplication audit, 2026-07-31).
     private var footerSection: some View {
         Section {
-            Text("A validator index is public — anyone can look up its balance and status. Read-only: watching one can never stake, exit, or move its balance.")
+            Text("A validator index is public — anyone can look up its balance and status.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .listRowBackground(Color.clear)
         }
@@ -143,7 +165,14 @@ struct EthValidatorScreen: View {
                 return
             }
             guard validatorStore.add(index: index) else {
-                resultIsError = true
+                // Already watching is NOT a failure — it's the thing you asked
+                // for, already done, so it doesn't get the red, the sideways
+                // shake and the failure haptic `BridgeSyncStatusRows` fires on
+                // an error. The same condition was classified three different
+                // ways across the family (red here and in RSS, green in
+                // PostHog/Stocktwits, gray in Open Food Facts); settled as
+                // not-an-error, 2026-07-31.
+                resultIsError = false
                 result = String(localized: "Already watching validator #\(index).")
                 return
             }
