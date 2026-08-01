@@ -19,7 +19,9 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;overflow:hidden;overscroll-behavior:none;}
 body{
-  background:var(--bg); color:var(--ink);
+  /* a faint lift behind the board so the page isn't a flat black rectangle */
+  background:radial-gradient(120% 70% at 50% 0%, #12151d 0%, var(--bg) 62%);
+  color:var(--ink);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   -webkit-font-smoothing:antialiased;
   user-select:none;-webkit-user-select:none;
@@ -31,10 +33,12 @@ body{
 
 /* ---------- HUD ---------- */
 .hud{display:flex;align-items:center;justify-content:space-between;width:100%;gap:10px;flex:none;}
-.stats{display:flex;gap:14px;}
-.stat .k{font-size:10px;letter-spacing:0;color:var(--faint);text-transform:none;}
-.stat .v{font-size:19px;font-weight:750;line-height:1.05;font-variant-numeric:tabular-nums;}
-.stats{display:flex;gap:11px;}
+/* Hierarchy: the score is the headline, the rest are footnotes. Four
+   equal-weight numbers read as a spreadsheet, not a game. */
+.stats{display:flex;align-items:baseline;gap:12px;}
+.stat .k{font-size:9.5px;letter-spacing:0;color:var(--faint);text-transform:none;}
+.stat .v{font-size:16px;font-weight:700;line-height:1.05;font-variant-numeric:tabular-nums;color:var(--muted);}
+.stat.lead .v{font-size:26px;font-weight:800;letter-spacing:-.6px;color:var(--ink);}
 .next{display:flex;align-items:center;gap:5px;}
 .next .k{font-size:10px;color:var(--faint);}
 #nextBox{width:48px;height:48px;background:var(--surface);border-radius:12px;position:relative;flex:none;}
@@ -52,6 +56,37 @@ body{
 #holdBox.filled .bk{display:none;}
 #holdBox.spent{opacity:.34;}
 #holdBox:active{filter:brightness(1.3);}
+
+/* A chain is a STATE, so it stays on screen while it is alive instead of
+   flashing once in a toast you may not be looking at. It sits on the board
+   because that is where your eyes already are. */
+#chain{
+  position:absolute;top:8px;left:8px;z-index:3;
+  padding:5px 10px;border-radius:9px;
+  background:rgba(52,199,123,.16);color:var(--confirm);
+  font-size:12px;font-weight:700;letter-spacing:0;
+  opacity:0;transform:translateY(-4px);pointer-events:none;
+  transition:opacity .18s ease,transform .18s ease;
+}
+#chain.on{opacity:1;transform:none;}
+#chain.bump{animation:chainbump .30s cubic-bezier(.2,.8,.2,1);}
+@keyframes chainbump{0%{transform:scale(1)}40%{transform:scale(1.22)}100%{transform:scale(1)}}
+
+/* Points fly up from the row that earned them, itemised, so the scoring
+   explains itself instead of living in a rulebook nobody reads. */
+.pop{
+  position:absolute;left:0;right:0;z-index:6;text-align:center;
+  pointer-events:none;font-weight:800;
+  animation:popup 1.15s cubic-bezier(.2,.7,.2,1) forwards;
+}
+.pop .n{display:block;font-size:27px;color:var(--ink);text-shadow:0 2px 10px rgba(0,0,0,.6);}
+.pop .why{display:block;font-size:11.5px;font-weight:650;color:var(--confirm);margin-top:2px;}
+@keyframes popup{
+  0%{opacity:0;transform:translateY(6px) scale(.9)}
+  18%{opacity:1;transform:translateY(0) scale(1)}
+  70%{opacity:1;transform:translateY(-26px)}
+  100%{opacity:0;transform:translateY(-46px)}
+}
 
 /* pause sits on the board so it costs the HUD no width */
 #pauseBtn{
@@ -85,6 +120,11 @@ body{
   box-shadow:0 18px 46px rgba(0,0,0,.55), 0 0 34px -10px var(--glow, transparent);
   transition:box-shadow .6s ease;
 }
+/* Filled tiles sit ABOVE the board rather than in it — a touch of lift so
+   the icons read as objects, not as a printed grid. */
+.cell.ai{box-shadow:0 1px 2px rgba(0,0,0,.30);}
+.cell.ghost{box-shadow:none;}
+
 /* the thud when a piece commits */
 @keyframes thud{0%{transform:translateY(0)}30%{transform:translateY(3px)}100%{transform:translateY(0)}}
 .stage.thud #board{animation:thud .16s ease-out;}
@@ -266,7 +306,7 @@ body{
 
   <div class="hud">
     <div class="stats">
-      <div class="stat"><div class="k">Score</div><div class="v" id="score">0</div></div>
+      <div class="stat lead"><div class="k">Score</div><div class="v" id="score">0</div></div>
       <div class="stat"><div class="k">Lines</div><div class="v" id="lines">0</div></div>
       <div class="stat"><div class="k">Level</div><div class="v" id="level">1</div></div>
       <div class="stat"><div class="k">Best</div><div class="v" id="best">0</div></div>
@@ -281,6 +321,7 @@ body{
 
   <div class="stage">
     <div id="board"><div id="aura"></div></div>
+    <div id="chain" aria-live="polite"></div>
     <button id="pauseBtn" aria-label="Pause">
       <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="6.5" y="5" width="4" height="14" rx="1.4" fill="currentColor"/><rect x="13.5" y="5" width="4" height="14" rx="1.4" fill="currentColor"/></svg>
     </button>
@@ -291,7 +332,7 @@ body{
     <div class="toast" id="toast"></div>
     <div class="veil" id="veil">
       <h1 id="vTitle">Casberi Blocks</h1>
-      <p id="vBody">Falling blocks, built out of the apps Casberi connects to. Every run is cast from ten of them.<br><br>The arrows move, the circular arrow turns, and <b>the blue key drops</b> straight to the floor. Fill a row to clear it — four or more of the same app in one row pays a bonus, and back-to-back clears chain. Tap <b>Hold</b> to stash a piece for later.</p>
+      <p id="vBody">Falling blocks made of your apps.<br><br>Fill a row to clear it. Clear again straight away to chain.</p>
       <div class="legend" id="legend"></div>
       <div class="row">
         <button class="cta" id="vPlay">Play</button>
@@ -369,13 +410,48 @@ const nextKey = makeBag(KEYS);
 /* The run's line-up, and the bag that deals from it. Both are rebuilt on
    every reset() so each game gets a different cast. */
 let cast = [], drawIcon = makeBag(NAMES);
+
+/* Which colour family a brand belongs to. Greys, blacks and whites collapse
+   into one "neutral" family so a run can't quietly fill up with them. */
+function family(hex){
+  const h = hex.replace('#','');
+  const r = parseInt(h.slice(0,2),16)/255, g = parseInt(h.slice(2,4),16)/255, b = parseInt(h.slice(4,6),16)/255;
+  const mx = Math.max(r,g,b), mn = Math.min(r,g,b), d = mx - mn;
+  if (d < 0.16) return 'neutral';
+  let hue;
+  if (mx === r) hue = ((g - b) / d + 6) % 6;
+  else if (mx === g) hue = (b - r) / d + 2;
+  else hue = (r - g) / d + 4;
+  return 'h' + Math.round(hue * 60 / 45);        // eight wedges of colour
+}
+
+const shuffle = a => { for (let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [a[i],a[j]]=[a[j],a[i]]; } return a; };
+
 function newCast(){
-  const pool = NAMES.slice();
-  for (let i = pool.length - 1; i > 0; i--){
-    const j = (Math.random() * (i + 1)) | 0;
-    [pool[i], pool[j]] = [pool[j], pool[i]];
+  /* Cast for COLOUR VARIETY, not pure chance: a straight random ten can come
+     up almost entirely black-and-white tiles, and the board reads as mud.
+     One app is taken from each colour family in turn, so every run looks
+     like a deliberate palette. Neutrals are capped so they can't dominate. */
+  const byFamily = {};
+  for (const n of NAMES){
+    const f = family(ICONS[n].g);
+    (byFamily[f] = byFamily[f] || []).push(n);
   }
-  cast = pool.slice(0, CAST_SIZE);
+  for (const f in byFamily) shuffle(byFamily[f]);
+  const families = shuffle(Object.keys(byFamily));
+  const picked = [];
+  let neutrals = 0;
+  for (let round = 0; picked.length < CAST_SIZE && round < 12; round++){
+    for (const f of families){
+      if (picked.length >= CAST_SIZE) break;
+      const bucket = byFamily[f];
+      if (!bucket.length) continue;
+      if (f === 'neutral' && neutrals >= 3) continue;
+      picked.push(bucket.pop());
+      if (f === 'neutral') neutrals++;
+    }
+  }
+  cast = picked;
   /* Drawn at RANDOM from the cast, not bagged. A bag deals each app once
      before repeating, which spreads them evenly — the opposite of what the
      match bonus needs. Plain random clusters naturally (~1 in CAST_SIZE
@@ -406,6 +482,9 @@ function reset(){
   clearing = null; clearAcc = 0; clearRows = null;
   clearedApps = new Set();
   hold = null; holdUsed = false; combo = 0; paused = false;
+  danger = false;
+  document.querySelector('.stage').classList.remove('danger');
+  showChain();
   newCast();
   queue = [spawnData(), spawnData()];
   newPiece();
@@ -431,13 +510,26 @@ function newPiece(data){
 }
 
 /* The room glows in the colour of whatever app is falling — one write
-   drives both the inner wash and the board's coloured halo. */
+   drives both the inner wash and the board's coloured halo. When the stack
+   is near the top the room goes berry instead, so the warning is ambient
+   rather than a number you have to read. */
+let danger = false;
 function tint(icon){
-  const g = ICONS[icon] && ICONS[icon].g;
+  const g = danger ? '#e0345c' : (ICONS[icon] && ICONS[icon].g);
   if (!g) return;
   el('aura').style.background =
     'radial-gradient(closest-side, ' + g + ', transparent 76%)';
   boardEl.style.setProperty('--glow', g);
+}
+
+/* Recomputed on every lock: how close the stack is to the ceiling. */
+function checkDanger(){
+  let top = ROWS;
+  for (let r = 0; r < ROWS; r++){ if (grid[r].some(Boolean)){ top = r; break; } }
+  const was = danger;
+  danger = top <= 4;
+  document.querySelector('.stage').classList.toggle('danger', danger);
+  if (danger !== was && piece) tint(piece.icon);
 }
 
 function thud(){
@@ -585,16 +677,21 @@ function lock(){
     clearing = full; clearAcc = 0;
     combo++;                         // counted here so the toast can name it
     buzz(30);
-    announce(summarise(clearRows), combo);
+    const s = summarise(clearRows);
+    announce(s, combo);
+    popScore(full[full.length - 1], gains(full.length, s, combo, level));
+    showChain();
     scatter(full);
     render();
   } else {
     combo = 0;                       // a lock with no clear ends the chain
+    showChain();
     buzz(10);
     newPiece();
   }
   holdUsed = false;                  // Hold recharges once a piece commits
   drawHold();
+  checkDanger();
   thud();
   lockAcc = 0; lockResets = 0; dropAcc = 0;
   syncHUD();
@@ -629,6 +726,42 @@ function announce(s, chain){
   t._h = setTimeout(() => t.classList.remove('show'), 1250);
 }
 
+/* The ONE place scoring is defined, so the number that flies off the row and
+   the number added to the score can never disagree. */
+function gains(rowCount, s, chain, lvl){
+  const base  = [0, 100, 300, 500, 800][rowCount] * lvl;
+  const match = s.bonus;
+  const chn   = chain > 1 ? 50 * (chain - 1) * lvl : 0;
+  return { base, match, chain: chn, total: base + match + chn };
+}
+
+/* A chain is worth seeing while it is alive — and worth seeing vanish. */
+function showChain(){
+  const c = el('chain');
+  if (combo > 1){
+    c.textContent = 'Chain ×' + combo;
+    c.classList.add('on');
+    c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump');
+  } else {
+    c.classList.remove('on', 'bump');
+  }
+}
+
+/* Points fly off the row that earned them, itemised. */
+function popScore(row, g){
+  const parts = [];
+  if (g.match) parts.push('match +' + g.match);
+  if (g.chain) parts.push('chain +' + g.chain);
+  const d = document.createElement('div');
+  d.className = 'pop';
+  d.style.top = (2 + row * cellPx - 6) + 'px';
+  d.innerHTML = '<span class="n">+' + g.total + '</span>' +
+                (parts.length ? '<span class="why">' + parts.join(' · ') + '</span>' : '');
+  document.querySelector('.stage').appendChild(d);
+  d.addEventListener('animationend', () => d.remove());
+  setTimeout(() => d.remove(), 1600);
+}
+
 function commitClear(){
   const s = summarise(clearRows);
   // Recorded HERE, in the state transition — not in announce(), which is
@@ -637,8 +770,7 @@ function commitClear(){
   for (const a of s.uniq) clearedApps.add(a);
   for (const r of clearing) grid.splice(r, 1);
   for (let i = 0; i < clearing.length; i++) grid.unshift(Array(COLS).fill(null));
-  const comboBonus = combo > 1 ? 50 * (combo - 1) * level : 0;
-  score += [0, 100, 300, 500, 800][clearing.length] * level + s.bonus + comboBonus;
+  score += gains(clearing.length, s, combo, level).total;
   lines += clearing.length;
   const was = level;
   level = ((lines / 10) | 0) + 1;
