@@ -161,7 +161,12 @@ body{
 .btn .ring.go{animation:bloom .42s cubic-bezier(.2,.7,.2,1) forwards;}
 @keyframes bloom{to{transform:translate(-50%,-50%) scale(9);opacity:0;}}
 
-.hint{width:100%;text-align:center;font-size:11.5px;color:var(--faint);flex:none;}
+/* The hint is a KEYBOARD legend, so it is hidden on touch devices — there it
+   named controls that don't exist while repeating what the buttons already
+   say with their own colour and shape. Hidden it also returns its height to
+   the board. */
+.hint{display:none;width:100%;text-align:center;font-size:11.5px;color:var(--faint);flex:none;}
+@media (hover: hover) and (pointer: fine){ .hint{display:block;} }
 
 @media (prefers-reduced-motion: reduce){
   .cell.pop{transition:opacity .2s ease;}
