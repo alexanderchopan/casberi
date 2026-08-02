@@ -13135,3 +13135,48 @@ HTML shell with a 200, which will fool a naive probe.
 own SDK config carries `supportsV3: false` with empty mainnet addresses, and v2
 took shields minutes before measurement. v3 is designed to share v2's anonymity
 set with optional migration, so a bridge built on v2 today does not go stale.
+
+## §269 — The filter the agent may set and the person may not manage (user: "where did those come from we don't use those anymore", then "i do not want to see the x chips those are supposed to be internal only", 2026-08-01)
+
+A sweep reported `FeedFilter.tag` as dead code and proposed deleting the whole
+surface: the property, the `× Tag` chip, the `casberi://feed/type/<Tag>` route,
+and every `filter.tag == "All"` guard threaded through `FeedScreen`. **It was
+not dead**, and the check that found it dead is worth recording because it was
+thorough and still wrong: it enumerated the writers, found every one of them
+setting `"All"`, and concluded nothing sets it. The live writer was one hop
+further out — `Composer.commit()` → `NavigateCommand.parse` → `.kind` →
+`RootShell.navigate` → `FeedFilter.shared.tag = kind.typeTag`. Typing "show my
+links" and hitting send is that path, and `NavigateCommand`'s own doc comment
+had said so all along ("Three destinations exist: a tag's view, a source's
+feed, a kind's feed"). **A grep for assignments finds the writers, not the
+callers of the writers** — enumerate the call graph, not the call sites.
+
+Two writers WERE dead and are now deleted: the GenUI elements `KindBar` and
+`KindPills`. No composer had emitted either name in months, and it was provably
+safe rather than probably safe — every document in this app is built by a
+deterministic composer, and the on-device model authors prose, never element
+names, so a retired element name cannot arrive from a synthesis. Their shared
+`[Tag N, ...]` ref parser (`KindCountRow`) is read by roughly ten live elements
+and survives as a plain `enum`; only the chip row and its tap went.
+
+**The ruling: the kind filter stays, its chip goes.** The agent should be smart
+enough to act on "show my links"; the person should never have to think about a
+chip to undo it. So there is no control for it anywhere — the day-section header
+already names what's in force (`filterLabel`), and any source chip tap clears
+it.
+
+The clearing rule changed in two ways, both forced by removing the chip, which
+had been the only exit. It now clears for EVERY label, not just `"All"` — the
+old comment read "a specific source keeps its own tag", a rule that pre-dates
+the tag being agent-set only, and its real effect was that a filter followed you
+into whatever room you swiped to and silently emptied it. That is how this was
+found: the Wallet room reading **"No wallet yet."** was not a wallet bug, it was
+`emptyLine`'s `(source == "All", tag != "All")` branch. And it now clears BEFORE
+the same-source guard, so re-tapping the source already showing drops the filter
+— without that, an ask that filters the All room to Links would have left no
+one-gesture way back, since `"show my links"` sets `source = "All"` and
+re-tapping the active chip was a no-op.
+
+The `casberi://feed/type/<Tag>` route stays as internal/debug plumbing. It has
+zero producers in the app, scripts, or skills — it never had any — so it costs
+nothing and remains the only way to drive this state headlessly.

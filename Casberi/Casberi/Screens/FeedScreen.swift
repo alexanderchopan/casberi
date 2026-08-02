@@ -3,9 +3,10 @@ import SwiftData
 import Translation
 
 /// Feed — the record paints (M3), and it is ENTIRELY a feed (re-ruling
-/// 2026-07-04): source chips, machine presence, then rows. The type chart
-/// moved to Home as the kind bar — its segments land here filtered via
-/// FeedFilter; an active type filter clears from a chip in the same row.
+/// 2026-07-04): source chips, machine presence, then rows. A kind filter
+/// (`FeedFilter.tag`) can still be in force — the agent sets it when an ask
+/// names a kind — but it wears no chip of its own (2026-08-01): the day
+/// header names it and any source chip tap clears it.
 ///
 /// SHAPED FEEDS (docs/handoff-shaped-feeds.md): when one source is in force
 /// the feed takes that source's native shape — Photos becomes a grid, Zerion
@@ -522,7 +523,6 @@ struct FeedScreen: View {
         guard let scope = selectedWallet else { return true }
         return wallet.scopeMatches(thing.walletAddress, scope: scope)
     }
-    private var isFiltered: Bool { source != "All" || filter.tag != "All" }
     private var filterLabel: String {
         let tagLabel = filter.tag == "All" ? nil
             : (ThingKind.from(typeTag: filter.tag)?.typeTagPlural ?? filter.tag)
@@ -1294,28 +1294,16 @@ struct FeedScreen: View {
         List {
             Group {
                 // The source chips moved to the shell's fixed header
-                // (MainSurface / SourceChips) — the app is one surface now. What
-                // stays here is the kind-clear chip: Home's kind bar and the
-                // casberi://feed/type/<Tag> route can land the feed filtered by
-                // type, and that filter clears from a chip in place.
-                if filter.tag != "All" {
-                    let label = ThingKind.from(typeTag: filter.tag)?.typeTagPlural ?? filter.tag
-                    HStack(spacing: DS.Space.s1) {
-                        Image(systemName: "xmark").font(.system(size: 10, weight: .semibold))
-                            .accessibilityHidden(true)
-                        Text(label).dsText(.label12)
-                    }
-                    .foregroundStyle(DS.tint)
-                    .padding(.horizontal, DS.Space.s3).frame(height: 28)
-                    .background(DS.tintDim, in: Capsule(style: .continuous))
-                    .padding(.leading, DS.Space.s4)
-                    .padding(.bottom, DS.Space.s2)
-                    .onTapGesture {
-                        DSHaptic.selection()
-                        withAnimation(DS.Motion.standard) { filter.tag = "All" }
-                    }
-                    .accessibilityLabel("Clear \(label) filter")
-                }
+                // (MainSurface / SourceChips) — the app is one surface now.
+                // The kind-clear "× Links" chip that used to sit here is GONE
+                // (user, 2026-08-01: "i do not want to see the x chips those
+                // are supposed to be internal only"). A kind filter still
+                // exists — the agent sets it when an ask names a kind ("show
+                // my links") — it just never asks the person to manage it: the
+                // day-section header already names it (`filterLabel`), and any
+                // source chip tap clears it, INCLUDING a re-tap of the source
+                // already showing, which is the one-gesture way out that the
+                // chip used to be (see `MainSurface.go(to:)`).
                 // The door back to the app: when the feed wears one connected
                 // source's shape, its header opens that app's control panel
                 // (Pause/Remove/ask/Reconnect) — the reverse of the detail's

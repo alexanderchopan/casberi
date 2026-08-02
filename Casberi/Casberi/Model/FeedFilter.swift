@@ -1,9 +1,19 @@
 import Foundation
 import Observation
 
-/// Feed's filter state, shared — Home's kind bar sets it (a segment tap
-/// lands you in the filtered feed), Feed's chips read and write it, and the
-/// casberi://feed/type/<Tag> route drives it from anywhere.
+/// Feed's filter state, shared. `source` is the pager's selection — the chip
+/// strip's whole job.
+///
+/// `tag` is the AGENT's filter, not the person's (ruling 2026-08-01): an ask
+/// that names a kind ("show my links") lands the feed filtered to it via
+/// `NavigateCommand` → `RootShell.navigate`, and `casberi://feed/type/<Tag>`
+/// drives the same state for internal/debug use. What it no longer has is a
+/// control of its own — the "× Links" chip is gone (user: "i do not want to
+/// see the x chips those are supposed to be internal only"). So nothing here
+/// asks the person to manage a filter: the day-section header names it, and
+/// ANY source chip tap clears it, a re-tap of the current source included.
+/// Keep it that way — a `tag` that outlives a source switch reads as a
+/// broken room, not a filter (it showed up once as "No wallet yet.").
 @Observable
 final class FeedFilter {
     static let shared = FeedFilter()
