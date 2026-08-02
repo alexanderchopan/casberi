@@ -6,7 +6,14 @@ exceptions — this is not a step to wait to be asked for (user ruling
 2026-07-21):
 
 1. `scripts/testflight.sh` bumps the build number across all targets, archives
-   Release **unsigned**, then signs + uploads for App Store distribution.
+   Release **signed**, then re-signs + uploads for App Store distribution.
+   (It archived UNSIGNED until 2026-08-01. That stripped every entitlement
+   from every iOS build ever shipped — an unsigned `.app` carries no record of
+   what `Casberi.entitlements` asked for, so export re-signed with only the
+   four baseline keys: no app group, no keychain sharing, no iCloud, no
+   HealthKit, no push. Do not "restore" the unsigned trick. Verify a doubtful
+   build with `codesign -d --entitlements :- Payload/Casberi.app` on the
+   exported IPA.)
 2. `scripts/testflight-public-beta.sh` waits for that build to finish
    processing, writes tester-facing release notes, assigns it to the
    **Casberi Public Beta** external group, and submits it for Beta App Review.
