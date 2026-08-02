@@ -17,6 +17,7 @@ enum BridgeRouter {
         case tokens
         case peer
         case privacyPools
+        case railgun
         /// The Safe multisig signature queue (2026-07-30) — same shape as
         /// `.peer`/`.privacyPools`: no account of its own, "connecting" IS
         /// watching a wallet (§207), and Connect for the "Safe" offer routes
@@ -174,6 +175,7 @@ enum BridgeRouter {
             case .tokens:         "tokens"
             case .peer:           "peer"
             case .privacyPools:   "privacypools"
+            case .railgun:        "railgun"
             case .safe:           "safe"
             // The venue's own raw value IS the seat id ("kraken", "coinbase"),
             // so the Row above and this can't drift apart.
@@ -245,6 +247,7 @@ enum BridgeRouter {
         Row(offer: "Tokens",    id: "tokens", destination: .tokens),
         Row(offer: "Peer",      id: "peer",   destination: .peer),
         Row(offer: "0xBow Privacy Pools", id: "privacypools", destination: .privacyPools),
+        Row(offer: "Railgun", id: "railgun", destination: .railgun),
         Row(offer: "Safe", id: "safe", destination: .safe),
         // Gnosis Pay has no screen of its own, and routes BOTH ways to the
         // wallet manager (prd §222). Connect, because watching the wallet is
@@ -337,7 +340,8 @@ enum BridgeRouter {
         // (recent fills) is unaffected: it's the OPEN/manage path, which resolves
         // through `destination(forID:)` below, and still returns `.peer`/
         // `.privacyPools` once a wallet is watched and the seat reads connected.
-        if name == "Peer" || name == "0xBow Privacy Pools" || name == "Safe" { return .wallet }
+        if name == "Peer" || name == "0xBow Privacy Pools" || name == "Safe"
+            || name == "Railgun" { return .wallet }
         return rows.first { $0.offer == name }?.destination
     }
 
@@ -359,6 +363,7 @@ struct BridgeDestinationView: View {
         case .tokens:         TokenWatchScreen()
         case .peer:           PeerScreen()
         case .privacyPools:   PrivacyPoolsScreen()
+        case .railgun:        RailgunScreen()
         case .safe:           SafeScreen()
         case .ethValidators:  EthValidatorScreen()
         case .kalshi:         KalshiScreen()

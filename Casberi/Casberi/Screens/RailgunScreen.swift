@@ -1,0 +1,105 @@
+import SwiftUI
+import SwiftData
+
+/// Railgun, connected — what you shield and what comes back (prd §252).
+/// Shielding happens from the person's own wallet in Railgun's own app, so
+/// there is no account, no key, no OAuth — the seat rides the watched wallets
+/// the way Peer and Privacy Pools do, and there is no switch to throw.
+///
+/// This screen exists to carry Railgun's CEILINGS, which are unusual enough
+/// that the catalog summary alone shouldn't be their only home: nothing inside
+/// the pool is read, an unshield never names its sender, and native ETH isn't
+/// attributable. Every one of those is the product working rather than a gap,
+/// and the footer says so in those words.
+struct RailgunScreen: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(BridgeStore.self) private var store
+    @State private var syncing = false
+    @State private var lastResult: String?
+    /// Whether `lastResult` is a failure — never hardcoded false, or a
+    /// "couldn't reach the chain" line paints in confirm green with the
+    /// count-up animation, which is the fake status §83 bans.
+    @State private var lastResultIsError = false
+
+    private var hasWallets: Bool { !WalletStore.shared.addresses.isEmpty }
+    private var walletCount: Int { WalletStore.shared.addresses.count }
+
+    var body: some View {
+        List {
+            BridgeSetupHeader(name: "Railgun", connected: hasWallets)
+            connectSection.listRowSeparator(.hidden)
+            if hasWallets {
+                ChipLiveNote(name: "Railgun", verb: "for what you shield.")
+                    .listRowSeparator(.hidden)
+            }
+            footerSection.listRowSeparator(.hidden)
+        }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .bridgeSetupWash(name: "Railgun")
+        .dsAdaptiveContentWidth()
+        .dsPageBackground()
+        .dsSoftScrollEdges()
+        .dsScreenTitle("Railgun")
+        .onAppear {
+            // Watching is consent (prd §207): keep the catalog seat honest on
+            // appear, and refresh if a wallet's watched.
+            store.reconcileWalletSeats()
+            if hasWallets { Task { await sync() } }
+        }
+    }
+
+    // MARK: - Connect (automatic — no switch, prd §207)
+
+    /// No toggle: shields come from your own wallet, so watching a wallet IS
+    /// the consent to read them. With wallets watched, the row states the fact
+    /// and doors to the wallet manager; with none, it's the invitation.
+    private var connectSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                if hasWallets {
+                    DSSlabDoor(title: String(localized: "Watching \(walletCount) wallet\(walletCount == 1 ? "" : "s")"),
+                               detail: String(localized: "Manage")) {
+                        HomeRoute.shared.pushBridge(.wallet)
+                    }
+                } else {
+                    DSSlabDoor(title: "Watch a wallet") {
+                        HomeRoute.shared.pushBridge(.wallet)
+                    }
+                }
+                BridgeSyncStatusRows(syncing: syncing,
+                                     syncingLine: String(localized: "Reading the pool's doors…"),
+                                     result: lastResult, resultIsError: lastResultIsError)
+                DSSlabNote(text: hasWallets
+                    ? String(localized: "On automatically — both doors land in your feed as they happen.")
+                    : String(localized: "Shields are read off the wallets you watch."))
+            }
+        }
+        .dsSlabSection()
+    }
+
+    private var footerSection: some View {
+        BridgeFooterNote(
+            lede: "Read-only: nothing here shields, unshields, or moves funds.",
+            detail: "Shields and unshields are read from Ethereum's public chain by \(DS.device) — no account, no key.\n\nWhat happens inside the pool is never read. Your private balance and transfers stay private, which is the point of using Railgun at all.\n\nAn unshield can't name who sent it — the sender is private by design — so a row says the money arrived and doesn't guess whether it was you withdrawing or someone paying you.\n\nOnly moves made straight from your own wallet carry your address publicly. A shield sent through Railgun's relayer — which is how every ETH shield works — leaves no public record of who made it, so it can't appear here. It still shows in your wallet's own activity, just not under Railgun's name.")
+    }
+
+    // MARK: - Actions
+
+    /// Refresh both doors for the watched wallets. The catalog seat is kept
+    /// honest by `store.reconcileWalletSeats()`, not here.
+    private func sync() async {
+        guard hasWallets, !syncing else { return }
+        syncing = true
+        defer { syncing = false }
+        let added = await RailgunBridge.syncNow(context: modelContext)
+        if let added {
+            lastResult = added > 0 ? String(localized: "\(added) new")
+                                   : String(localized: "Up to date")
+            lastResultIsError = false
+        } else {
+            lastResult = String(localized: "Couldn't reach the chain — check your connection.")
+            lastResultIsError = true
+        }
+    }
+}

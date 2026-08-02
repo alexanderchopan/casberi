@@ -260,7 +260,13 @@ struct ThingContentView: View {
             // Peer fills carry the same idea (prd §237): what you actually
             // paid vs. market, decoded off the fill's own IntentSignaled event
             // and otherwise thrown away. Same exception, same reasoning.
-            if (thing.source == "Privacy Pools" || thing.source == "Peer"),
+            // Railgun unshields carry the same shape (prd §252): the sender is
+            // private BY DESIGN, so the row can't say who paid — and that one
+            // sentence is the fact a reader most needs and would otherwise get
+            // wrong, which is exactly the bar this exception was written for.
+            // Only unshields set it; shields leave it nil.
+            if (thing.source == "Privacy Pools" || thing.source == "Peer"
+                || thing.source == "Railgun"),
                let cover = thing.enrichedText?.trimmingCharacters(in: .whitespacesAndNewlines),
                !cover.isEmpty {
                 Text(cover)

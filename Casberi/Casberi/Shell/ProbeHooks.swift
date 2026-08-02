@@ -1282,6 +1282,25 @@ enum ProbeHooks {
                       PrivacyPoolsBridge.pendingSummary(), cover)
             }
         },
+        // `-railgunProbe <blocksBack|YES>` runs the Railgun sweep over the
+        // watched wallets, NSLogging the landed count, which watched wallets
+        // turned out to use Railgun, and one line PER ROW with the amount it
+        // actually wrote — a count alone can't tell a correct amount from one
+        // off by twelve decimal places, which is the trap this bridge is most
+        // exposed to (Railgun takes any ERC-20, so a pass sees 18-decimal
+        // WETH beside 6-decimal USDC). A numeric spec rewinds every cursor
+        // that many blocks below the mainnet head first; a fresh install
+        // backfills from the deploy block by design, so a plain YES already
+        // lands real history for a wallet that has used Railgun. Pair with
+        // `-walletAddress <a Railgun user>`.
+        Hook(key: "railgunProbe") { spec, context in
+            Task { @MainActor in
+                let n = await RailgunBridge.probe(context: context, blocksBack: Int(spec))
+                NSLog("Railgun probe: %@ landed; %@",
+                      n.map(String.init) ?? "FAILED",
+                      RailgunBridge.accountSummary())
+            }
+        },
         // `-gnosisPayProbe <blocksBack|YES>` runs the Gnosis Pay card-spend
         // sweep over the watched wallets, NSLogging the landed count and
         // which watched wallets turned out to be card accounts. A numeric

@@ -73,6 +73,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-peer      { background: #4b47f6; }
 .ai-gnosispay { background: #4830c0; }   /* their indigo (icon-sampled) */
 .ai-privacypools { background: #fff; }
+.ai-railgun   { background: #000; }      /* their black — the mark's own field */
 .ai-safe      { background: #12ff80; }   /* Safe{Wallet}'s green (icon-sampled) */
 /* The five DeFi protocols seated 2026-07-30 — each icon-sampled from the same
    mark bundled in the app, so tile and hue can't drift between the two. */

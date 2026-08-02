@@ -25,6 +25,15 @@ enum StorePreview {
             "p1 = TxRow(\"Cleared\", \"0.5 ETH\", \"ready to withdraw privately\")",
             "p2 = TxRow(\"Deposited\", \"0.5 ETH\", \"in review\")",
         ]
+        // Both doors, and only the doors — the preview must not imply a
+        // private balance or a named sender, since the whole seat is built on
+        // not claiming either (prd §252).
+        case "Railgun": [
+            "root = Stack([w])",
+            "w = Widget(\"Railgun\", null, [r1, r2])",
+            "r1 = TxRow(\"Received\", \"500 USDC\", \"from Railgun · sender private\")",
+            "r2 = TxRow(\"Shielded\", \"1.2 WETH\", \"into Railgun\")",
+        ]
         case "Gmail": [
             "root = Stack([w])",
             "w = Widget(\"Waiting on you\", null, [m1, m2])",
