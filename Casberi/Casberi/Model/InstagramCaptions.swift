@@ -213,6 +213,12 @@ enum InstagramCaptions {
         request.timeoutInterval = 12
         request.setValue(IngestSupport.safariUserAgent, forHTTPHeaderField: "User-Agent")
         request.setValue("text/html", forHTTPHeaderField: "Accept")
+        // The receipts ledger, same as `OEmbed.resolve` and `LinkTitle`'s two
+        // fetches. Without it a caption pass would reach instagram.com once per
+        // imported save and show up NOWHERE in "What it actually reached" — the
+        // invisible-by-construction failure that shipped an undisclosed host in
+        // build 214, and the reason the coverage audit exists.
+        NetworkLedger.shared.record(request)
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               let http = response as? HTTPURLResponse
         else { return .unreachable }
