@@ -237,6 +237,9 @@ struct SourceChips: View {
         .accessibilityLabel(bridges.attentionCount > 0
                             ? Text("Apps, needs attention")
                             : Text("Apps"))
+        .dsTooltip(bridges.attentionCount > 0
+                   ? String(localized: "Apps, needs attention")
+                   : String(localized: "Apps"))
         // This strip rides `.safeAreaInset(edge: .top)` on the paged feed
         // TabView (`MainSurface`) — a plain Button's own tap gesture there
         // competes with the TabView(.page)'s internal pan recognizer for the
@@ -356,6 +359,10 @@ struct SourceChips: View {
             .dsHover()
         }
         .buttonStyle(.plain)
+        // Names the mark on hover, Mac only (2026-08-01) — see `dsTooltip`.
+        // Same string the accessibility label uses, so the two can't drift on
+        // what a broken connection is called.
+        .dsTooltip(chipAccessibilityLabel(label, broken: broken))
         // Finger-driven, never idle: chips ease down as they leave the viewport
         // edges (Stories grammar). Under Reduce Motion only the fade remains.
         // Follows `axis` so the rail's chips ease at its TOP and BOTTOM edges,

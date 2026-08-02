@@ -64,13 +64,39 @@ struct MainSurface: View {
 
     private var isRegular: Bool { horizontalSizeClass == .regular }
     private var showsPane: Bool { isRegular && surfaceWidth >= PadLayout.minWidthForPane }
-    /// The rail is an iPad-regular-width answer specifically — a Mac window
-    /// also reports `.regular` (Catalyst has no compact width in practice),
-    /// but the horizontal strip is the one built for a wide/landscape-shaped
-    /// surface (user ruling 2026-07-28), so Mac keeps it rather than
-    /// silently inheriting the iPad rail rule. The detail pane (`showsPane`)
-    /// is untouched — that's a width question, not an axis one.
-    private var showsRail: Bool { isRegular && !ProcessInfo.processInfo.isMacCatalystApp }
+    /// The rail is every regular-width surface now — iPad AND Mac (user
+    /// ruling 2026-08-01, reversing 2026-07-28's "Mac keeps the horizontal
+    /// strip"). That ruling pre-dates living with the detail pane, and the
+    /// pane is what made it wrong:
+    ///
+    ///   • The strip is a `.safeAreaInset(edge: .top)` applied INSIDE the
+    ///     pane's own trailing inset, so it spans the feed column only — and
+    ///     the pane takes up to 560pt the moment the window passes
+    ///     `minWidthForPane`. The strip's room therefore SHRINKS exactly when
+    ///     the window grows enough to earn a pane, which is how it came to be
+    ///     cutting chips off (user report).
+    ///   • Horizontal scrolling with hidden indicators is a touch idiom.
+    ///     Chips past the fold are invisible to a cursor and reachable only by
+    ///     shift+scroll; a rail takes a plain wheel and shows more sources at
+    ///     once than the pane-narrowed strip ever did.
+    ///   • The rail lives OUTSIDE the NavigationStack (see `body`), so it
+    ///     survives into Apps, Settings and every bridge form — the strip
+    ///     vanishes in all of them. The argument the iPad rail was built on
+    ///     ("primary navigation that disappears the moment you use it is the
+    ///     phone's compromise, made because a phone has no room to keep it")
+    ///     is if anything stronger on a desktop window.
+    ///   • Position is half the identity of an icon-only chip. A horizontal
+    ///     strip's visible set changes on every window resize; a rail's
+    ///     doesn't.
+    ///
+    /// This also settles a mismatch that shipped with the 2026-07-28 ruling:
+    /// `PadShellInsets` insets the floating agent bar by `railWidth` for any
+    /// REGULAR shell, and Mac reports regular — so the bar has been floating
+    /// 88pt clear of a rail that wasn't rendered. The two agree again now.
+    ///
+    /// The detail pane (`showsPane`) is untouched — that's a width question,
+    /// not an axis one.
+    private var showsRail: Bool { isRegular }
 
     /// The corpus MINUS search-only sources (Contacts) — the same rule Home and
     /// Feed already share (`Corpus.surfaced`), so the chip row lists exactly the
@@ -431,8 +457,21 @@ struct MainSurface: View {
                     .background {
                         ZStack(alignment: .top) {
                             DS.themedPage
-                            crownPour
+                            // Poured only while the FEED is beside it (§274).
+                            // A pushed room (Apps, Settings, a bridge form)
+                            // paints its own opaque page with no pour — the
+                            // standing NavigationStack-backing gotcha — so
+                            // the rail keeping its pour drew a hard vertical
+                            // edge where blue field met flat ink, exactly on
+                            // the no-hairlines law, made of background
+                            // (caught in the rail flip's own verify sweep).
+                            // The stack root's copy below is untouched: a
+                            // pushed room covers it, so it never seams.
+                            if route.path.isEmpty {
+                                crownPour.transition(.opacity)
+                            }
                         }
+                        .animation(DS.Motion.standard, value: route.path.isEmpty)
                         .ignoresSafeArea()
                     }
             }

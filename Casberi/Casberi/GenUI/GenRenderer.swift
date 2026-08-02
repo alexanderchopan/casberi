@@ -297,10 +297,22 @@ struct GenRender: View {
             // Absent on every other `Stack` emitter, and absence is a no-op:
             // an empty arg means an empty set means nobody is a chapter,
             // exactly as before.
+            //
+            // A chapter-carrying doc routes through `GenFrontPage` (§274,
+            // 2026-08-01): on a wide surface the same chapters that earn
+            // extra air become COLUMN seams — the brief lays out as a front
+            // page instead of one narrow column with a third of a Mac window
+            // empty either side. Narrow surfaces render exactly the single
+            // column this ForEach always drew; a chapterless doc never
+            // routes there at all.
             let chapters = genChapterIDs(el.str(1))
-            ForEach(el.refs(0), id: \.self) { ref in
-                GenRender(id: ref, els: els, slot: inAgentAnswer ? .block : .none)
-                    .padding(.top, chapters.contains(ref) ? DS.Space.s4 : 0)
+            if chapters.isEmpty {
+                ForEach(el.refs(0), id: \.self) { ref in
+                    GenRender(id: ref, els: els, slot: inAgentAnswer ? .block : .none)
+                }
+            } else {
+                GenFrontPage(el: el, els: els, chapters: chapters,
+                             inAgentAnswer: inAgentAnswer)
             }
 
         case "Hero":        GenHero(el: el).mountIn()
@@ -2998,10 +3010,142 @@ private func genCSVDoubles(_ s: String) -> [Double] {
 /// mid-stream just yields a shorter set (the last id may still be arriving),
 /// which costs a chapter its extra air for one frame and self-heals — never a
 /// mis-parse, since ids are matched whole.
-private func genChapterIDs(_ s: String) -> Set<String> {
+func genChapterIDs(_ s: String) -> Set<String> {
     Set(s.split(separator: ",")
          .map { $0.trimmingCharacters(in: .whitespaces) }
          .filter { !$0.isEmpty })
+}
+
+/// The Today brief as a FRONT PAGE (§274, 2026-08-01) — the chapter-carrying
+/// `Stack` on a surface wide enough for columns.
+///
+/// The brief is the one document in the app that is MODULE-shaped rather than
+/// prose-shaped, and on a Mac window a 700pt column left a third of the
+/// canvas empty either side (user: "it still has gaps at the side"). The
+/// chapters (§272-era) already mark where one movement ends and the next
+/// begins, so they become the column seams: the masthead and the first
+/// chapter — the money story, which ruling 2026-07-23 says is never split —
+/// span the full width like a broadsheet's lead, and the remaining chapters
+/// flow into two columns. It is a NEWSPAPER, not a bento: no module grows to
+/// fill a cell (the module doctrine — a module is exactly as big as its
+/// fact); width buys modules SIDE BY SIDE, never bigger ones.
+///
+/// Two stability rules, both for the ~20s progressive assembly:
+///   • Blocks alternate columns BY INDEX, never by measured height — a block
+///     landing later can never move an earlier one to rebalance, so the page
+///     only ever appends.
+///   • The width decision is MEASURED (`onGeometryChange`), not inferred
+///     from idiom — a Mac window dragged narrow gets the single column, and
+///     the same window dragged wide gets the columns back.
+///
+/// `qualifies` is consulted by BOTH deciders — the Composer's per-turn width
+/// cap and this view's own layout — so "the cap widened but the column never
+/// split" (a single file of modules stretched across 1040pt) is structurally
+/// impossible, not just untested.
+struct GenFrontPage: View {
+    let el: GenEl
+    let els: GenEls
+    let chapters: Set<String>
+    let inAgentAnswer: Bool
+    @State private var width: CGFloat = 0
+
+    /// Two readable columns (≥ ~390pt each) plus the gutter. Below this the
+    /// single column is the better page, whatever the idiom says.
+    private static let columnsFloor: CGFloat = 820
+
+    /// Whether a doc has the STRUCTURE a front page needs: a root `Stack`
+    /// carrying chapters, with at least two chapter blocks left over after
+    /// the head. Width is deliberately not part of this — the caller asking
+    /// (the Composer's turn cap) has no measurement yet, and a qualifying
+    /// doc on a narrow window simply falls back to the single column below.
+    static func qualifies(_ els: GenEls) -> Bool {
+        guard let root = els["root"], root.comp == "Stack" else { return false }
+        let chapters = genChapterIDs(root.str(1))
+        guard !chapters.isEmpty else { return false }
+        let segs = segments(refs: root.refs(0), chapters: chapters)
+        return segs.count - headSegmentCount(segs) >= 2
+    }
+
+    var body: some View {
+        let refs = el.refs(0)
+        let segs = Self.segments(refs: refs, chapters: chapters)
+        let headCount = Self.headSegmentCount(segs)
+        Group {
+            if width >= Self.columnsFloor, segs.count - headCount >= 2 {
+                frontPage(segs: segs, headCount: headCount)
+            } else {
+                // The single column, exactly as the plain Stack draws it —
+                // capped back to the reading column and centered, so a
+                // qualifying doc in a `.wide` container on a narrow window
+                // renders indistinguishably from the pre-§274 brief.
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    ForEach(refs, id: \.self) { module($0) }
+                }
+                .frame(maxWidth: PadLayout.readingMaxWidth, alignment: .leading)
+                .frame(maxWidth: .infinity)
+            }
+        }
+        // Full proposed width, measured OUTSIDE the fallback's own cap — the
+        // question is "what could the page use", not "what did it use".
+        .frame(maxWidth: .infinity)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+    }
+
+    private func frontPage(segs: [[String]], headCount: Int) -> some View {
+        let head = segs.prefix(headCount).flatMap { $0 }
+        let blocks = Array(segs.dropFirst(headCount))
+        // Alternation by index — see the stability rule in the header doc.
+        let left = blocks.indices.filter { $0.isMultiple(of: 2) }.map { blocks[$0] }
+        let right = blocks.indices.filter { !$0.isMultiple(of: 2) }.map { blocks[$0] }
+        return VStack(alignment: .leading, spacing: DS.Space.s2) {
+            ForEach(head, id: \.self) { module($0) }
+            HStack(alignment: .top, spacing: DS.Space.s4) {
+                column(left)
+                column(right)
+            }
+        }
+    }
+
+    private func column(_ blocks: [[String]]) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            ForEach(blocks.flatMap { $0 }, id: \.self) { module($0) }
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+
+    /// One module, wearing the same chapter air the single column gives it.
+    /// The column-topping chapters keep theirs too — the two columns open
+    /// level with each other, and dropping it would put the first module of
+    /// each column at a different distance from the head than every later
+    /// chapter sits from its predecessor.
+    private func module(_ ref: String) -> some View {
+        GenRender(id: ref, els: els, slot: inAgentAnswer ? .block : .none)
+            .padding(.top, chapters.contains(ref) ? DS.Space.s4 : 0)
+    }
+
+    /// The refs cut at every chapter opener. Segment 0 is whatever precedes
+    /// the first chapter (the composer never marks the first id, so it is
+    /// never empty in practice, but the walk tolerates it).
+    private static func segments(refs: [String], chapters: Set<String>) -> [[String]] {
+        var segs: [[String]] = []
+        var cur: [String] = []
+        for ref in refs {
+            if chapters.contains(ref), !cur.isEmpty { segs.append(cur); cur = [] }
+            cur.append(ref)
+        }
+        if !cur.isEmpty { segs.append(cur) }
+        return segs
+    }
+
+    /// The head is at least the pre-chapter segment. A lone module there is a
+    /// masthead line (the brief's lede), and a one-line masthead is not a
+    /// lead story — the first chapter joins it, which in the brief is the
+    /// money hero and everything glued to it (`pair`, `tmkt` — one story,
+    /// never split, ruling 2026-07-23).
+    private static func headSegmentCount(_ segs: [[String]]) -> Int {
+        guard let first = segs.first else { return 0 }
+        return first.count == 1 && segs.count > 1 ? 2 : 1
+    }
 }
 
 /// ValueSpark(eyebrow, subline, "v0,v1,…") — a balance sparkline over recorded

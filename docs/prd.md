@@ -13362,3 +13362,117 @@ place naming where full access is granted — the same reason it exists).
 Applied across 29 Screens/ files, 18 Model/ files, and 8 Shell/Shared/Design/
 GenUI/widget files. All three static gates green; verified by build, not sim
 (the user's standing verification rule for logic-free copy).
+
+## §273 — The Mac wears the rail: the source chips go vertical (user: "should the source chip icons be on the side vertically? b/c right now the side panel cuts them off", then "yes make all these changes", 2026-08-01)
+
+Reverses the 2026-07-28 ruling that Mac keeps the horizontal chip strip
+("the one built for a wide/landscape-shaped surface"). That ruling pre-dates
+living with the detail pane, and the pane is what made it wrong: the strip is
+a top `safeAreaInset` applied INSIDE the pane's trailing inset, so it spans
+the feed column only — and the pane takes up to 560pt the moment the window
+passes `minWidthForPane`, so the strip's room SHRANK exactly when the window
+grew enough to earn a pane. The user saw it as the side panel cutting the
+chips off, which is precisely what it was.
+
+The ruling: `showsRail` is now every regular-width surface — iPad AND Mac
+(`MainSurface.showsRail`, the Catalyst exclusion deleted). Four reasons,
+recorded with it in the code:
+
+1. Left icon rail + feed + right detail pane is the native Mac three-column
+   shape (Mail, Notes, Slack). Mac was the only wide surface wearing the
+   phone's header.
+2. Horizontal scroll with hidden indicators is a touch idiom — chips past the
+   fold are invisible to a cursor and reachable only by shift+scroll. A rail
+   takes a plain wheel and shows more sources at once.
+3. The rail lives OUTSIDE the NavigationStack and survives into Apps,
+   Settings and every bridge form; the strip vanished in all of them. The
+   iPad rail's own founding argument ("primary navigation that disappears the
+   moment you use it is the phone's compromise") is stronger on a desktop.
+4. Position is half the identity of an icon-only chip; a strip's visible set
+   changes on every window resize, a rail's doesn't.
+
+This also settled a shipped mismatch: `PadShellInsets` had been insetting the
+floating agent bar by `railWidth` for ANY regular shell — Mac included — so
+the bar was floating 88pt clear of a rail that wasn't rendered. The two agree
+again.
+
+Rode along, same session:
+
+- **Mac hover tooltips on the chips** (`dsTooltip`, Design/Glass.swift) — the
+  chips are icon-only 56pt circles with no labels (ruling 2026-07-09), which
+  works on a phone because the strip is short and thumb-learned; a Mac rail
+  can hold a dozen sources and a cursor can rest on one without committing.
+  `.help()` is gated Mac-only ON PURPOSE: everywhere else it sets the
+  accessibility HINT, so an unwrapped `.help("Photos")` would make VoiceOver
+  read "Photos" twice on every chip. The tooltip string IS the accessibility
+  label string (one function), so the two can't drift. Nothing renders until
+  hover, so the no-labels ruling is untouched.
+- **The Mac window floor gained the rail's width**
+  (`CasberiApp.swift`: `minWidth: 560 + PadLayout.railWidth`) — 560 was
+  always a statement about the CONTENT column; leaving it alone once a fixed
+  88pt rail moved in would have quietly redefined it as 472. Stated as
+  arithmetic so it tracks `railWidth`.
+
+What did NOT change: `showsPane` (a width question, not an axis one), the
+fold (`chrome.minimized` folds a HEIGHT and the rail sits it out by design —
+already true on iPad), ⌘1–⌘9 (`chrome.chipOrder` is orientation-agnostic),
+and the iPhone strip (compact width never shows a rail).
+
+## §274 — The brief becomes a front page, and the rail drops its pour behind a pushed room (user: "the agent brief is one column filling the screen, but it still has gaps at the side… would it be better if it filled the screen in a sort of bento kind of way with larger elements", then "make the other changes then commit and push to main i trust your design", 2026-08-01)
+
+Two rulings in one pass, both born from living with §273's Mac rail.
+
+**1. The Today brief lays out as a NEWSPAPER FRONT PAGE on a wide surface —
+not a bento.** The brief is the one document in the app that is MODULE-shaped
+rather than prose-shaped, and on a Mac window its 700pt reading column left a
+third of the canvas empty either side. But "larger elements" was declined on
+module-doctrine grounds: a module is exactly as big as its fact, and inflating
+a tile to fill a bento cell manufactures visual weight the fact doesn't have.
+Width buys modules SIDE BY SIDE, never bigger ones — which is a broadsheet,
+and the broadsheet keeps the editorial identity (lede, movements, chapters)
+the brief was built on.
+
+The mechanism (`GenFrontPage`, GenUI/GenRenderer.swift): the §272-era
+chapters — already composed by `TodayBrief` as "which modules open a new
+movement" — become the COLUMN SEAMS. The masthead and the first chapter (the
+money story, which ruling 2026-07-23 says is never split — `pair` and `tmkt`
+stay glued to `hero`) span the full width as the lead; the remaining chapter
+blocks flow into two columns. Decisions with reasons:
+
+- **Blocks alternate columns BY INDEX, never by measured height** — the brief
+  assembles progressively over ~20s, and a height-balanced layout would move
+  settled blocks to rebalance as later ones land. Index parity means the page
+  only ever appends.
+- **The width decision is MEASURED** (`onGeometryChange`, floor 820pt = two
+  ~390pt columns plus the gutter), not inferred from idiom — a Mac window
+  dragged narrow gets the single column back, live.
+- **The head rule is generic, not name-coupled**: the head is at least the
+  pre-chapter segment, and a LONE module there (a masthead line) pulls the
+  first chapter up to join it. The renderer never knows the id "hero".
+- **`GenFrontPage.qualifies` is consulted by BOTH deciders** — the Composer's
+  per-turn width cap (front-page turns get `.wide`, prose keeps `.reading`;
+  1040pt prose lines are bad typography) and the renderer's own column split
+  — so "the cap widened but the columns never split" is structurally
+  impossible. The conversation container went `.wide` with each turn capping
+  itself, so mixed conversations keep prose at reading width.
+- **Chapterless docs are untouched** — every other Stack emitter renders the
+  exact single column it always did, and a qualifying doc on iPhone renders
+  indistinguishably from the pre-§274 brief (the fallback re-caps itself to
+  the reading column).
+
+The pure logic (chapter parse, segmentation, head rule, the qualify gate,
+streaming-prefix stability) is harness-verified against the SHIPPED source —
+`scripts/frontpage-selftest.sh`, 15 assertions, extraction-based since a
+SwiftUI file can't compile standalone, mutation-tested (a broken head rule
+fails 2 assertions), with drift guards on both qualify call sites. The
+harness re-learned the wallet-viz lesson the hard way: `swift f1 f2` compiles
+a module and RUNS NOTHING, exiting 0 — `swiftc -o` + execute, always.
+
+**2. The rail's crown pour is gated on the stack being at root.** §273's own
+verify sweep caught it: a pushed room (Apps, Settings) paints its own opaque
+page with no pour — the standing NavigationStack-backing gotcha — so the rail
+keeping its pour drew a hard vertical edge of blue field against flat ink,
+the no-hairlines law broken with a background. The rail now pours only while
+the feed is beside it (`route.path.isEmpty`, animated); the stack root's own
+pour is untouched since a pushed room covers it. This was inherited iPad
+behavior, fixed for both.

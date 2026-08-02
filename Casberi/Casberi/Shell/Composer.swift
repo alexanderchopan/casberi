@@ -1193,6 +1193,17 @@ struct Composer: View {
                                         }
                                     }
                                 }
+                                // Each turn wears the cap ITS doc earns
+                                // (§274): a front-page doc gets the wide
+                                // column its two-column layout needs, prose
+                                // keeps the reading column — 1040pt lines
+                                // are bad typography, and most answers are
+                                // prose. `GenFrontPage.qualifies` is the
+                                // same test the renderer's own column split
+                                // consults, so the cap and the layout can't
+                                // disagree.
+                                .dsAdaptiveContentWidth(
+                                    GenFrontPage.qualifies(turn.els) ? .wide : .reading)
                             }
                             if answering {
                                 convoTurn(question: currentQuestion, animateIn: true) {
@@ -1397,6 +1408,13 @@ struct Composer: View {
                                         }
                                     }
                                 }
+                                // Same per-turn cap as the settled turns
+                                // above (§274). Live, this flips reading→wide
+                                // the moment the root line's chapters parse —
+                                // which is the doc's first line, so it lands
+                                // before any module has content to move.
+                                .dsAdaptiveContentWidth(
+                                    GenFrontPage.qualifies(answerStream.els) ? .wide : .reading)
                             }
                             Color.clear.frame(height: 1).id("bottom")
                         }
@@ -1425,7 +1443,13 @@ struct Composer: View {
                     // opens at its masthead instead; a long conversation
                     // scrolls exactly as before either way.
                     .defaultScrollAnchor(DS.isMac ? .top : .bottom)
-                    .dsAdaptiveContentWidth()
+                    // `.wide` is the CONTAINER's cap, not any turn's (§274):
+                    // each turn caps itself just above — prose at the reading
+                    // column, a front-page doc at the wide one — so this
+                    // outer bound only has to be as wide as the widest turn
+                    // can ever be. Leaving it at `.reading` would clamp the
+                    // front page back to one column with extra steps.
+                    .dsAdaptiveContentWidth(.wide)
                     // Tapping empty space puts the keyboard away WITHOUT
                     // lowering the agent — a separate action from the ✕/⌄
                     // exits (ruling 7). Without this, the only tap that

@@ -53,6 +53,7 @@ struct AvatarChip: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Settings")
+        .dsTooltip(String(localized: "Settings"))
         // See `SourceChips.catalogueChip`'s comment: a plain Button here
         // competes with the paged feed TabView's pan recognizer for the
         // first touch (Apple forums thread 725366) and can need several

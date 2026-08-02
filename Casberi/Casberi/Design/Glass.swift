@@ -129,6 +129,31 @@ extension View {
         hoverEffect(effect)
     }
 
+    /// A Mac hover tooltip (2026-08-01). Mac-ONLY on purpose, and the gate is
+    /// the whole reason this wrapper exists rather than a bare `.help()`.
+    ///
+    /// `help(_:)` renders a tooltip on Mac but sets the ACCESSIBILITY HINT
+    /// everywhere else — so on iPhone a chip already labelled "Photos" would
+    /// gain the hint "Photos", and VoiceOver reads label then hint. The
+    /// tooltip's whole value is on a pointer surface; the hint's cost is on a
+    /// touch one. Gating separates them.
+    ///
+    /// Why the source chips need it at all: they are icon-only 56pt circles
+    /// with no labels (ruling 2026-07-09), which works on a phone because the
+    /// strip is short and thumb-learned. A Mac rail can hold a dozen sources
+    /// at once, a cursor can rest on one without committing to it, and the
+    /// tooltip is the only affordance that names a mark you don't recognize
+    /// without making you click into the room to find out. It renders nothing
+    /// until hover, so the no-labels ruling is untouched.
+    @ViewBuilder
+    func dsTooltip(_ text: String) -> some View {
+        #if targetEnvironment(macCatalyst)
+        help(text)
+        #else
+        self
+        #endif
+    }
+
     /// A modal sheet / tray surface with the overlay shadow.
     func dsSheetSurface() -> some View {
         let shape = RoundedRectangle(cornerRadius: DS.Radius.sheet, style: .continuous)

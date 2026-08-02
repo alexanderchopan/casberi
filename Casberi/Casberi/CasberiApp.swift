@@ -128,16 +128,24 @@ struct CasberiApp: App {
                 // point size — tall and narrow, reading as a phone screen
                 // in a Mac frame rather than an app that was actually sized
                 // for a desktop window. `idealWidth`/`idealHeight` set a
-                // Mac-appropriate default; `minWidth` keeps the horizontal
-                // chip strip (SourceChips, Mac-forced by `showsRail`) and
-                // the composer field from collapsing into each other —
-                // `PadLayout.readingMaxWidth` (700) is the app's own
-                // "one comfortable reading column" number, so the floor is
-                // a fraction under it rather than an arbitrary guess.
-                // `minHeight` leaves room for the strip plus a handful of
-                // feed rows above the composer.
+                // Mac-appropriate default; `minWidth` keeps the CONTENT
+                // column from collapsing under the composer field —
+                // `PadLayout.readingMaxWidth` (700) is the app's own "one
+                // comfortable reading column" number, so the floor is a
+                // fraction under it rather than an arbitrary guess.
+                // `minHeight` leaves room for a handful of feed rows above
+                // the composer.
+                //
+                // The rail is ADDED to that floor rather than eaten out of
+                // it (2026-08-01, when the source chips became a vertical
+                // rail on Mac too — see `MainSurface.showsRail`). The 560
+                // was always a statement about the content column; leaving
+                // it alone once a fixed 88pt rail moved in would have
+                // quietly redefined it as 472 and broken its own stated
+                // intent. Stated as arithmetic so it tracks `railWidth`.
                 .frame(
-                    minWidth: 560, idealWidth: 980, maxWidth: .infinity,
+                    minWidth: 560 + PadLayout.railWidth,
+                    idealWidth: 980, maxWidth: .infinity,
                     minHeight: 480, idealHeight: 760, maxHeight: .infinity)
                 #endif
         }
