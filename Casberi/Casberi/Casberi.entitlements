@@ -24,11 +24,19 @@
 	     Gated at runtime on the same `icloud.sync` toggle the corpus uses. -->
 	<key>com.apple.developer.ubiquity-kvstore-identifier</key>
 	<string>$(TeamIdentifierPrefix)$(CFBundleIdentifier)</string>
+	<!-- The app group alone carries keychain sharing on iOS: every group in
+	     application-groups is automatically a valid keychain access group, so
+	     the WalletConnect SDK's kSecAttrAccessGroup = group.com.casberi.app
+	     write is authorized by THIS key. Do not re-add a keychain-access-groups
+	     entry for it (tried 2026-07-24, removed 2026-08-01): the provisioning
+	     profile only allows keychain-access-groups matching 35428TQK3S.*, so an
+	     unprefixed group.* entry fails a signed archive — and its first entry
+	     would also silently move TokenVault's DEFAULT access group away from
+	     the app identifier every shipped install stores its keys under. The
+	     -34018 it was meant to fix was never a missing key here: the old
+	     unsigned-archive ship pipeline stripped ALL entitlements from every
+	     TestFlight build (see scripts/testflight.sh). -->
 	<key>com.apple.security.application-groups</key>
-	<array>
-		<string>group.com.casberi.app</string>
-	</array>
-	<key>keychain-access-groups</key>
 	<array>
 		<string>group.com.casberi.app</string>
 	</array>

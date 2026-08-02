@@ -82,8 +82,29 @@ enum SharedStore {
     /// mirror on the same store fights the first. Extension writes reach
     /// iCloud the next time the app opens.
     static func extensionContainer() throws -> ModelContainer {
-        try make(cloudKit: .none)
+        // Never CREATE the store from an extension process (2026-08-01).
+        // Opening a ModelContainer creates the file when it's missing, and a
+        // widget timeline refresh can run in the window between an app update
+        // landing and the app's own first launch. Every iOS build shipped
+        // before 2026-08-01 lacked the app-group entitlement (the unsigned-
+        // archive pipeline stripped it — see scripts/testflight.sh), so the
+        // first entitled launch must ADOPT the legacy sandbox store into the
+        // group container (`adoptLegacyStoreIfNeeded`); an extension-created
+        // empty store in that window would read as "the group store already
+        // exists" and the whole corpus would appear wiped. Every caller
+        // `try?`s and degrades (widget placeholder, share reports failure),
+        // so declining is honest — and the store exists on every install the
+        // moment the app has launched once.
+        guard let groupURL = FileManager.default
+                .containerURL(forSecurityApplicationGroupIdentifier: appGroup),
+              FileManager.default.fileExists(atPath: groupStoreURL(in: groupURL).path)
+        else { throw StoreUnready() }
+        return try make(cloudKit: .none)
     }
+
+    /// Thrown by `extensionContainer` when the app hasn't created the shared
+    /// store yet — see the comment there.
+    struct StoreUnready: Error {}
 
     /// Non-nil once the app has fallen back from the real corpus (a bad open
     /// that survived retries). RootShell flashes this once at launch instead
@@ -191,9 +212,62 @@ enum SharedStore {
     private static func make(cloudKit: ModelConfiguration.CloudKitDatabase) throws -> ModelContainer {
         let groupURL = FileManager.default
             .containerURL(forSecurityApplicationGroupIdentifier: appGroup)
+        if let groupURL { adoptLegacyStoreIfNeeded(into: groupURL) }
         let config = groupURL != nil
             ? ModelConfiguration(groupContainer: .identifier(appGroup), cloudKitDatabase: cloudKit)
             : ModelConfiguration(cloudKitDatabase: cloudKit)
         return try ModelContainer(for: Thing.self, migrationPlan: ThingMigrationPlan.self, configurations: config)
+    }
+
+    /// Where SwiftData puts the store inside the group container (verified
+    /// against a real container: `Library/Application Support/default.store`).
+    private static func groupStoreURL(in groupURL: URL) -> URL {
+        groupURL.appendingPathComponent("Library/Application Support/default.store")
+    }
+
+    /// One-time upgrade path (2026-08-01). Every iOS build shipped before this
+    /// date carried NO app-group entitlement — the unsigned-archive ship
+    /// pipeline stripped every entitlement from every TestFlight build (see
+    /// scripts/testflight.sh) — so on real devices `make`'s nil-group fallback
+    /// has been putting the corpus in the app sandbox's own Application
+    /// Support all along. The first build with the entitlement restored
+    /// suddenly sees a group container and would open a brand-new EMPTY store
+    /// there: the whole corpus would appear wiped while sitting untouched one
+    /// directory over. So before the group store first exists, copy the
+    /// legacy store in — all four pieces: the store, -shm, -wal (committed
+    /// rows not yet checkpointed live in the -wal), and `.default_SUPPORT`
+    /// (externally-stored blobs — voice-note audio). COPY, not move: the
+    /// sandbox originals stay behind as a backup. Idempotent by the group
+    /// store's own existence — once it's there (adopted or freshly created)
+    /// this never runs again; a missing -shm/-wal is a checkpointed store,
+    /// not an error. On a copy failure every piece is removed so the NEXT
+    /// launch retries, rather than this one opening a half-copied corpus.
+    /// From an extension process the legacy path is the extension's OWN empty
+    /// sandbox, so this is a structural no-op there.
+    private static func adoptLegacyStoreIfNeeded(into groupURL: URL) {
+        let fm = FileManager.default
+        let groupSupport = groupURL.appendingPathComponent("Library/Application Support",
+                                                           isDirectory: true)
+        guard !fm.fileExists(atPath: groupStoreURL(in: groupURL).path),
+              let legacySupport = fm.urls(for: .applicationSupportDirectory,
+                                          in: .userDomainMask).first,
+              fm.fileExists(atPath: legacySupport.appendingPathComponent("default.store").path)
+        else { return }
+        try? fm.createDirectory(at: groupSupport, withIntermediateDirectories: true)
+        let pieces = ["default.store", "default.store-shm", "default.store-wal",
+                      ".default_SUPPORT"]
+        do {
+            for name in pieces {
+                let src = legacySupport.appendingPathComponent(name)
+                guard fm.fileExists(atPath: src.path) else { continue }
+                try fm.copyItem(at: src, to: groupSupport.appendingPathComponent(name))
+            }
+            NSLog("[Casberi] adopted the legacy sandbox store into the app-group container")
+        } catch {
+            NSLog("[Casberi] legacy store adoption failed (will retry next launch): \(error)")
+            for name in pieces {
+                try? fm.removeItem(at: groupSupport.appendingPathComponent(name))
+            }
+        }
     }
 }

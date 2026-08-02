@@ -85,10 +85,22 @@ rm -rf "$WORK"; mkdir -p "$WORK"
 rsync -a --exclude '.git' --exclude 'build' "$SRC/" "$WORK/project/" >/dev/null
 xattr -rc "$WORK/project" 2>/dev/null || true
 
-# Archive UNSIGNED — the dev profile a signed archive wants needs a
-# registered device; App Store signing happens at export instead (no
-# device needed). Needs an ADMIN App Store Connect API key.
-echo "▶ Archiving (Release, unsigned; signed for App Store at export)"
+# Archive SIGNED (2026-08-01). The old unsigned-archive-then-sign-at-export
+# trick STRIPPED EVERY ENTITLEMENT from every shipped build: an unsigned .app
+# carries no record of what Casberi.entitlements asked for, so exportArchive
+# re-signed all three binaries with only the four baseline keys
+# (application-identifier / team / beta-reports / get-task-allow) — no app
+# group, no keychain-access-groups, no iCloud, no HealthKit, no aps.
+# Measured against build 229's archive: `codesign -d --entitlements` on the
+# exported IPA shows exactly that. On-device symptoms it caused: the
+# WalletConnect keychain preflight refusing with errSecMissingEntitlement
+# (-34018), CloudKit mirroring silently off, the share extension unable to
+# reach the shared store. The Mac script hit the same class on 2026-07-28
+# ("App sandbox not enabled") and already signs at archive; the
+# registered-device requirement this comment used to cite is met (two
+# devices on the team profile), so iOS now signs the same way. Export then
+# re-signs for distribution but PRESERVES the archive's entitlements.
+echo "▶ Archiving (Release, signed automatic — entitlements ride the archive)"
 xcodebuild \
   -project "$WORK/project/Casberi.xcodeproj" \
   -scheme Casberi \
@@ -96,7 +108,10 @@ xcodebuild \
   -destination 'generic/platform=iOS' \
   -archivePath "$ARCHIVE" \
   -derivedDataPath "$DD" \
-  CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
+  -allowProvisioningUpdates \
+  -authenticationKeyPath "$ASC_KEY_PATH" \
+  -authenticationKeyID "$ASC_KEY_ID" \
+  -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
   archive
 
 echo "▶ Exporting + uploading to App Store Connect"
