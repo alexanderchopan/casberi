@@ -191,6 +191,10 @@ enum WalletIngest {
         // permalink (`chain.explorer + hash`) independent of whatever ref
         // scheme produced it. See `IngestSupport.existingContent`.
         let existingWalletContent = IngestSupport.existingContent(context, source: "Wallet")
+        // Transactions a labelled seat already owns (prd §271) — read once per
+        // pass, consulted beside `existingWalletContent` below so a shield or a
+        // Privacy Pools deposit never lands a second time as a bare transfer.
+        let seatCovered = WalletRowSupersede.coveredContent(context)
 
         // Zerion first for EVM fungible activity — one request per wallet,
         // covering every chain and both directions at once. Only used for a
@@ -258,6 +262,13 @@ enum WalletIngest {
                 // entirely) — its permalink can. See `zerionTransferDict`.
                 if !leg.hash.isEmpty,
                    existingWalletContent.contains(chain.explorer + leg.hash) { continue }
+                // …and the same check against the labelled seats (prd §271):
+                // Railgun, Privacy Pools, Peer and Gnosis Pay each describe a
+                // transaction that IS an ordinary transfer, so without this the
+                // feed carries both "Sent 1.2 WETH" and "Shielded 1.2 WETH into
+                // Railgun" for one movement of money. The labelled row wins.
+                if !leg.hash.isEmpty,
+                   seatCovered.contains(chain.explorer + leg.hash) { continue }
                 fresh.append(leg)
             }
         }
@@ -448,6 +459,14 @@ enum WalletIngest {
                                                                    addresses: evmAddresses,
                                                                    existing: existing)
         added += etherfiUnstakeAdded ?? 0
+        // The seats have all run, so any generic row written earlier THIS pass
+        // for a transaction one of them just claimed can now go (prd §271).
+        // Must run here, after them: the wallet sweep lands first, so on the
+        // pass a shield first appears the bare "Sent 1.2 WETH" is already
+        // written before anything knows it had a better name. The skip above
+        // handles every later pass; this handles the overlap and the backlog.
+        // Not counted into `added` — removing a duplicate isn't landing a thing.
+        WalletRowSupersede.prune(context, covered: WalletRowSupersede.coveredContent(context))
         // ENS names expire (2026-07-21) — keyless, one GET per readable name,
         // landing a dated row the "What's coming up?" chip sorts on. Inside the
         // running guard like everything above.

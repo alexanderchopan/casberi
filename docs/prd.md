@@ -13267,3 +13267,46 @@ it clips off the bottom and reads as a missing counterparty). Probes:
 `-flowProbe <days|YES>`, `-riskStripProbe YES`, and `-seedFlow` to plant priced
 transfers, since the card's real inputs need a keyed sync against a wallet that
 actually moved money.
+
+## §271 — One transaction, one row: the labelled seat beats the bare transfer (user: "so in our flow it will be labled as railgun?", then "ok", 2026-08-01)
+
+**The ruling: when a wallet-riding seat has named a transaction, the generic
+`Wallet` row for it does not land. The labelled row always wins.**
+
+Railgun (§268) made an old bug visible. The wallet-riding seats read protocols
+whose activity IS an ordinary token transfer, so on any chain the generic
+wallet sweep also covers, one movement of money landed twice — `Sent 1.2 WETH`
+under `Wallet` and `Shielded 1.2 WETH into Railgun` under `Railgun`, the same
+explorer link on both, with nothing to collapse them. `dedupeBySourceRef`
+cannot: the refs are namespaced per source, so they are legitimately different
+rows by the only rule that pass knows.
+
+**This shipped with 0xBow Privacy Pools and nobody noticed for weeks.** Its
+deposits are rare enough that the pair seldom appeared side by side. Peer and
+Gnosis Pay escaped by accident — they live on chains the wallet sweep doesn't
+read. Railgun is on mainnet and shields are ordinary, so it surfaced at once.
+
+Why the labelled row wins rather than the generic one: it says everything the
+bare receipt does PLUS what the transaction meant, which is the whole reason
+the seat exists. Someone shown both learns nothing from the second and has to
+work out for themselves that they aren't looking at two separate movements.
+
+**Two halves, and either alone flaps.** `coveredContent` is consulted by the
+sweep BEFORE it lands a leg, so a claimed transaction never lands generically
+again; `prune` removes the rows already in the corpus. Without the skip, the
+prune deletes a row the next refresh re-lands, forever. Without the prune, the
+pair that arrives in the SAME pass never separates — the sweep runs before the
+seats, so on the pass a shield first appears the bare row is written before
+anything knows it had a better name.
+
+**Matching is on the explorer URL alone**, which is deliberate and is the same
+key the adjacent Zerion-cutover guard in `refresh` already uses, with the same
+tolerance: a transaction carrying several legs loses all its generic rows to
+one labelled row. That trade is right here. These protocols move one asset per
+transaction in practice, and the failure it risks (one row fewer) is much
+cheaper than the failure a finer key risks — matching on a re-formatted amount
+string, and silently suppressing nothing at all.
+
+The lookup runs from the seats outward, not from the wallet rows inward: these
+seats land RARE events, so fetching all of them is small where a scan of every
+`Wallet` row would not be.
