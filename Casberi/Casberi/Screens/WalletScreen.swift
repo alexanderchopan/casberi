@@ -1220,7 +1220,26 @@ struct WalletScreen: View {
                 // claimed `wc:`" and still a dead end for anyone with a wallet
                 // on their home screen. See `connectViaModal`; the read-only
                 // proposal is unchanged.
+                //
+                // Mac Catalyst can't link the SDK (see the import in
+                // `WalletConnectBridge`), so it keeps the open-then-paste
+                // route. That is not a lesser fallback there: the directory is
+                // 496 PHONE apps opened by deep link, none of which a Mac has,
+                // and pasting the URI into a phone's wallet is what a desktop
+                // dapp asks for too. Everything the branch needs is still on
+                // this screen — `openWalletApp`, `pairingURI`, the paste card.
+                #if targetEnvironment(macCatalyst)
+                outcome = .success(try await WalletConnectBridge.connect(
+                    open: openWalletApp,
+                    offerManualPairing: { url in
+                        // Still the current handshake? A cancelled one must not
+                        // paint its URI over a fresh attempt.
+                        guard connectGeneration == generation else { return }
+                        pairingURI = url
+                    }))
+                #else
                 outcome = .success(try await WalletConnectBridge.connectViaModal())
+                #endif
             } catch {
                 outcome = .failure(error)
             }

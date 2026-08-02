@@ -10,6 +10,7 @@
 		CB000000000000000000001B /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CB0000000000000000000012 /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		CC000000000000000000002B /* CasberiWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000022 /* CasberiWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		CE0000000000000000000001 /* WalletConnect in Frameworks */ = {isa = PBXBuildFile; productRef = CE0000000000000000000002 /* WalletConnect */; };
+		CE0000000000000000000005 /* ReownAppKit in Frameworks */ = {isa = PBXBuildFile; platformFilters = (ios, ); productRef = CE0000000000000000000004 /* ReownAppKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -125,6 +126,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				CE0000000000000000000001 /* WalletConnect in Frameworks */,
+				CE0000000000000000000005 /* ReownAppKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

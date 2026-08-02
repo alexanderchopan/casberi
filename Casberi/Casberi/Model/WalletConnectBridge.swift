@@ -5,11 +5,36 @@ import WalletConnectSign
 import WalletConnectPairing
 import WalletConnectNetworking
 import WalletConnectSigner
-// WalletConnect's own wallet chooser. NOTE: this module is literally named
-// `AppKit`, which shadows Apple's framework — see the project-level
-// ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO, without
-// which the SDK's generated asset symbols fail to compile for Mac Catalyst.
+// WalletConnect's own wallet chooser — iPhone only, and the `#if` is a LINK
+// fact, not a taste one (2026-08-01). ReownAppKit declares `public class
+// AppKit`, which shadows Apple's framework inside the asset symbols Xcode
+// generates for that package, so the SDK cannot compile for Mac Catalyst:
+//
+//     error: 'NSColor' is not a member type of class 'ReownAppKit.AppKit'
+//
+// The product is therefore linked for iOS alone (`platformFilters = (ios, )`
+// on its Frameworks entry in the pbxproj), which drops the whole package —
+// ReownAppKit, ReownAppKitUI, ReownAppKitBackport, QRCode, CoinbaseWalletSDK —
+// out of the Catalyst build GRAPH, not merely out of the link. That is what
+// makes this guard sufficient: on Catalyst the module does not exist to
+// import, so every reference to it must sit behind the same condition.
+//
+// Do not reach for the asset-symbol build settings instead. Two were tried and
+// they are different settings with different answers, which is worth stating
+// because the first one's failure was recorded as the second's:
+// `..._GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO` does NOT fix it (it is
+// already NO for that package target, and the colliding extensions come from
+// the generated file's backwards-deployment block, which that flag doesn't
+// gate), while `..._GENERATE_ASSET_SYMBOLS = NO` DOES — but only as an
+// `xcodebuild` command-line override, since package targets are built as a
+// separate synthesized project and inherit nothing from ours. An override no
+// Xcode GUI build passes is not a fix.
+//
+// Mac keeps `connect(open:offerManualPairing:)`, which is the honest path
+// there anyway: the modal's job is deep-linking into phone wallet apps.
+#if !targetEnvironment(macCatalyst)
 import ReownAppKit
+#endif
 
 /// Connect a wallet instead of typing its address (prd 84, 2026-07-16).
 ///
@@ -113,6 +138,15 @@ enum WalletConnectBridge {
         // `authRequestParams: nil` — no SIWE, which is why the crypto provider
         // stays the unused one: `recoverPubKey` is reached only by an auth
         // request we never make.
+        //
+        // Mac Catalyst has no AppKit (see the import), so it configures the two
+        // singletons directly — the shape this file carried before the modal
+        // landed. Both arms must end with the same two configured, or
+        // `Sign.instance` fatalErrors on a config that was never set.
+        #if targetEnvironment(macCatalyst)
+        Pair.configure(metadata: metadata)
+        Sign.configure(crypto: UnusedCryptoProvider())
+        #else
         AppKit.configure(
             projectId: projectID,
             metadata: metadata,
@@ -120,6 +154,7 @@ enum WalletConnectBridge {
             sessionParams: SessionParams(namespaces: readOnlyNamespaces()),
             authRequestParams: nil
         )
+        #endif
 
         // Last, not first: an early return above must leave this false, or
         // every later call short-circuits on the guard while `Sign.instance`
@@ -293,49 +328,6 @@ enum WalletConnectBridge {
     ///   for pasting into a wallet directly. The handshake keeps listening
     ///   after this fires; it is an alternative route to the same approval,
     ///   not a failure report.
-    /// The screen's route: present WalletConnect's OWN modal and wait for a
-    /// session (2026-08-01).
-    ///
-    /// Modern wallets no longer claim the bare `wc:` scheme, so `open(uri)`
-    /// silently did nothing on a phone with MetaMask on its home screen. There
-    /// is no system chooser to fall back on — the familiar WalletConnect picker
-    /// is a WEB component — so either this app maintains a wallet directory by
-    /// hand, or it uses the one the protocol already ships. AppKit brings the
-    /// full directory (496+), each wallet's real icon and its correct deep
-    /// link, current without a release.
-    ///
-    /// What does NOT change: the proposal is still `readOnlyNamespaces()`, the
-    /// session is still read and then torn down before any address reaches the
-    /// caller, and the teardown still runs detached.
-    ///
-    /// The sibling `connect(open:)` stays exactly as it was — it is what
-    /// `-wcConnectProbe` and `scripts/wc-handshake.sh` drive, because proving
-    /// the promise needs a URI in hand and AppKit mints its own internally.
-    static func connectViaModal(timeout: Duration = .seconds(300)) async throws -> ConnectOutcome {
-        guard isAvailable else { throw ConnectError.unavailable }
-        if let refusal = keychainRefusal() {
-            NSLog("WalletConnect: keychain refused the app-group write (OSStatus %d)", refusal)
-            throw ConnectError.keychainUnavailable(refusal)
-        }
-        configureIfNeeded()
-        // Re-stated per attempt: the watched chain set is a live setting, and a
-        // proposal built at first-configure would name yesterday's chains.
-        AppKit.set(sessionParams: SessionParams(namespaces: readOnlyNamespaces()))
-
-        // Subscribe BEFORE presenting, for the reason the other path documents
-        // at length: a wallet with a remembered pairing can settle inside the
-        // window between presenting and subscribing.
-        async let settled = firstSettledSession(timeout: timeout)
-        await MainActor.run { AppKit.present() }
-
-        guard let session = await settled else { return .timedOut }
-        let found = accounts(from: session)
-        if let failure = await tearDownShielded(topic: session.topic) {
-            throw ConnectError.tearDownFailed(topic: session.topic, underlying: failure)
-        }
-        return .connected(found)
-    }
-
     static func connect(timeout: Duration = .seconds(300),
                         open: @MainActor (URL) async -> Bool,
                         offerManualPairing: @MainActor (URL) -> Void = { _ in }) async throws -> ConnectOutcome {
@@ -396,6 +388,55 @@ enum WalletConnectBridge {
         }
         return .connected(found)
     }
+
+    #if !targetEnvironment(macCatalyst)
+    /// The screen's route: present WalletConnect's OWN modal and wait for a
+    /// session (2026-08-01).
+    ///
+    /// Modern wallets no longer claim the bare `wc:` scheme, so `open(uri)`
+    /// silently did nothing on a phone with MetaMask on its home screen. There
+    /// is no system chooser to fall back on — the familiar WalletConnect picker
+    /// is a WEB component — so either this app maintains a wallet directory by
+    /// hand, or it uses the one the protocol already ships. AppKit brings the
+    /// full directory (496+), each wallet's real icon and its correct deep
+    /// link, current without a release.
+    ///
+    /// What does NOT change: the proposal is still `readOnlyNamespaces()`, the
+    /// session is still read and then torn down before any address reaches the
+    /// caller, and the teardown still runs detached.
+    ///
+    /// The sibling `connect(open:)` stays exactly as it was — it is what
+    /// `-wcConnectProbe` and `scripts/wc-handshake.sh` drive, because proving
+    /// the promise needs a URI in hand and AppKit mints its own internally.
+    ///
+    /// iPhone only — see the import. Mac Catalyst cannot link the SDK, and
+    /// calls `connect(open:)` instead, which is the right verb there anyway:
+    /// every wallet in this directory is a phone app opened by deep link.
+    static func connectViaModal(timeout: Duration = .seconds(300)) async throws -> ConnectOutcome {
+        guard isAvailable else { throw ConnectError.unavailable }
+        if let refusal = keychainRefusal() {
+            NSLog("WalletConnect: keychain refused the app-group write (OSStatus %d)", refusal)
+            throw ConnectError.keychainUnavailable(refusal)
+        }
+        configureIfNeeded()
+        // Re-stated per attempt: the watched chain set is a live setting, and a
+        // proposal built at first-configure would name yesterday's chains.
+        AppKit.set(sessionParams: SessionParams(namespaces: readOnlyNamespaces()))
+
+        // Subscribe BEFORE presenting, for the reason the other path documents
+        // at length: a wallet with a remembered pairing can settle inside the
+        // window between presenting and subscribing.
+        async let settled = firstSettledSession(timeout: timeout)
+        await MainActor.run { AppKit.present() }
+
+        guard let session = await settled else { return .timedOut }
+        let found = accounts(from: session)
+        if let failure = await tearDownShielded(topic: session.topic) {
+            throw ConnectError.tearDownFailed(topic: session.topic, underlying: failure)
+        }
+        return .connected(found)
+    }
+    #endif
 
     /// The status the keychain answers the SDK's write with, asked FIRST —
     /// nil means writes work and the handshake may proceed. This mirrors the
