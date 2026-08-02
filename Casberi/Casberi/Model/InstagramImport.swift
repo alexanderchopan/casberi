@@ -26,11 +26,14 @@ import SwiftData
 /// The title is taken from the export's own `title` field rather than left
 /// looking like the URL. That is deliberate and costs something: `LinkTitle.enrich`
 /// only renames a link still wearing its URL as a face, so a save named
-/// "@houseofgaming" will not be picked up by the generic enrichment chain, and
-/// `OEmbed`'s Instagram entry therefore serves pasted/shared links rather than
-/// these. The trade is taken knowingly — a guaranteed handle from the export
-/// beats a naked URL waiting on an endpoint that Meta has already stripped the
-/// author and thumbnail fields out of (see `OEmbed.endpoints`).
+/// "@houseofgaming" is not picked up by the generic enrichment chain. The trade
+/// was taken knowingly, on the reasoning that a guaranteed handle from the
+/// export beats a naked URL waiting on an endpoint Meta had already stripped
+/// fields out of — and measurement on 2026-08-02 settled it: `instagram_oembed`
+/// answers keylessly with an embed blockquote and no title, author or
+/// thumbnail, so it was removed from `OEmbed.endpoints` entirely. There is no
+/// endpoint left for these rows to have waited on; the export's own handle is
+/// the only face they will ever have.
 ///
 /// NOT BUILT, with reasons. (1) MEDIA: your own posts reference their JPEGs by
 /// a path relative to the export folder, and that folder is a temporary

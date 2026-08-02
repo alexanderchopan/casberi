@@ -26,6 +26,15 @@ private let instagramRecentDescriptor: FetchDescriptor<Thing> = {
 /// comments arrive as text, saves and likes arrive as named links — because
 /// the alternative is a person importing their saves and finding rows that
 /// don't say what the post said. That is the honesty rule, not hedging.
+///
+/// AMENDED 2026-08-02 (`InstagramCaptions`, prd §245 amendment). Those rows no
+/// longer STAY wordless: the caption is public on the post's own page, so a
+/// paced background pass reads it back. The note had to change with the
+/// behaviour and gained two obligations rather than losing one — it says the
+/// app will open those pages (a network act the person is entitled to know
+/// about before tapping Import, and disclosed in `NetworkReach` besides), and
+/// it says a deleted or private post stays a link, because the failure has to
+/// be named where the promise is made.
 struct InstagramImportScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
@@ -84,7 +93,7 @@ struct InstagramImportScreen: View {
                     importing = true
                 }
                 BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-                DSSlabNote(text: "One-time import — re-importing later adds only what's new. Saves and likes land as links — Instagram's export has no one else's captions or pictures.")
+                DSSlabNote(text: "One-time import — re-importing later adds only what's new. Instagram's export lists your saves and likes by handle and link, with no words in them. Casberi opens each saved post's own public page afterwards to read its caption, a few at a time, so you can search what was in them. A post that's since been deleted or made private stays a link.")
             }
         }
         .dsSlabSection()

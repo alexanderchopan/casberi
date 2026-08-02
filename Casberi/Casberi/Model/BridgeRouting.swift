@@ -50,6 +50,15 @@ enum BridgeRouter {
         /// imports — Snap exposes no readable API, so its screen is a file
         /// pick, not a handle field.
         case snapchat
+        /// TikTok, same shape as Snapchat and for a harder reason: no RSS ever,
+        /// a Display API that reads only your own posts, and an EEA-only
+        /// portability API. The export is the whole door (prd §279).
+        case tiktok
+        /// X, the same file-pick shape and the hardest reason of the three:
+        /// the free API tier was discontinued for new developers on
+        /// 2026-02-06 and there is no keyless read left at any price worth
+        /// taking. The archive is the only door (prd §277).
+        case x
         case pinterest
         case steam
         case obsidian
@@ -147,7 +156,10 @@ enum BridgeRouter {
             // memories' pictures, against links that expire) only appears
             // once the first has run. Dismissing on connect would close the
             // sheet on the button the person still needs.
-            case .snapchat:
+            // TikTok is the same two-act shape: the export lands, then the
+            // saved videos are given their real faces. Same reason not to
+            // dismiss — the second button only exists once the first has run.
+            case .snapchat, .tiktok:
                 false
             default:
                 false
@@ -161,7 +173,7 @@ enum BridgeRouter {
         /// `AppDetailScreen` to say which of those two worlds an offer is in.
         var isFileImport: Bool {
             switch self {
-            case .chatgpt, .claude, .gemini, .instagram, .snapchat,
+            case .chatgpt, .claude, .gemini, .instagram, .snapchat, .tiktok, .x,
                  .kindle, .dayOne, .appleJournal, .bookmarks:
                 true
             default:
@@ -206,6 +218,8 @@ enum BridgeRouter {
             // id can't resolve `destination(forID:)` either.
             case .instagram:      "instagram"
             case .snapchat:       "snapchat"
+            case .x:              "x"
+            case .tiktok:         "tiktok"
             case .pinterest:      "pinterest"
             case .steam:          "steam"
             case .obsidian:       "obsidian"
@@ -303,6 +317,8 @@ enum BridgeRouter {
         Row(offer: "Bluesky",   id: "bsky",   destination: .bluesky),
         Row(offer: "Farcaster", id: "fc",     destination: .farcaster),
         Row(offer: "Snapchat",  id: "snapchat", destination: .snapchat),
+        Row(offer: "TikTok",    id: "tiktok",   destination: .tiktok),
+        Row(offer: "X",         id: "x",        destination: .x),
         Row(offer: "Pinterest", id: "pinterest", destination: .pinterest),
         Row(offer: "Steam",     id: "steam",  destination: .steam),
         Row(offer: "Obsidian",  id: "obsidian", destination: .obsidian),
@@ -389,6 +405,8 @@ struct BridgeDestinationView: View {
         case .bluesky:        HandleSetupScreen(bridge: .bluesky)
         case .farcaster:      HandleSetupScreen(bridge: .farcaster)
         case .snapchat:       SnapchatImportScreen()
+        case .tiktok:         TikTokImportScreen()
+        case .x:              XArchiveImportScreen()
         case .pinterest:      HandleSetupScreen(bridge: .pinterest)
         case .steam:          SteamScreen()
         case .obsidian:       ObsidianScreen()

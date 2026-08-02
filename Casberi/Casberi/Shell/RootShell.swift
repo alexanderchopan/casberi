@@ -773,6 +773,28 @@ struct RootShell: View {
                           OEmbed.enrichedText(embed) ?? "-")
                 }
             }
+            // Debug hook: `-instagramCaptions <n|YES>` runs the caption heal
+            // (prd §245 amendment) over imported saves/likes and NSLogs one
+            // line per row plus a summary. A numeric spec first FORGETS the
+            // attempt ledger, so a pass can be re-walked in one session
+            // instead of every row it already gave up on staying skipped.
+            //
+            // Three counts, not one: "considered" separates "nothing needed
+            // doing" from "we tried and got nothing", and `backedOff` says
+            // the host pushed back — which is the one outcome that means stop
+            // rather than retry, and the reason this probe exists at all.
+            // Walk it against a real library before trusting `perPass`/`pace`.
+            if let spec = UserDefaults.standard.string(forKey: "instagramCaptions") {
+                Task { @MainActor in
+                    if Int(spec) != nil { InstagramCaptions.forgetFailures() }
+                    let report = await InstagramCaptions.heal(context: modelContext) { line in
+                        NSLog("[Casberi] instagramCaption| %@", line)
+                    }
+                    NSLog("[Casberi] instagramCaptions: considered=%d enriched=%d failed=%d backedOff=%@",
+                          report.considered, report.enriched, report.failed,
+                          report.backedOff ? "YES" : "NO")
+                }
+            }
             // Debug hook: `-toolAnswer "<query>"` runs the tool-calling agent
             // path (AnswerTools) in isolation — the model searches the corpus
             // via tools and answers, logging the prose and the ids it grounded

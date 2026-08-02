@@ -131,6 +131,10 @@ extension DS {
         // reads as any warm brand. Moot once `brand-instagram` is bundled;
         // this is what the SF fallback wears until then.
         case "instagram":           return Color.fixed("#e1306c")
+        // TikTok's mark is two offset inks (cyan/magenta) over black, and a
+        // flat fill has to pick one. The magenta carries the brand where the
+        // cyan reads as any tech blue. Moot once `brand-tiktok` is bundled.
+        case "tiktok":              return Color.fixed("#ee1d52")
         case "reddit":              return Color.fixed("#ff4500")
         case "youtube":             return Color.fixed("#ff0000")
         case "substack":            return Color.fixed("#ff6719")

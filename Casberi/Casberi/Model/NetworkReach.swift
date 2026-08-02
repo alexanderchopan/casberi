@@ -67,15 +67,43 @@ enum NetworkReach {
         Endpoint(service: "Link previews",
                  reach: .always,
                  purpose: "A few sites don't put a title or preview in the page itself — saving one of those links asks that site's own public preview endpoint instead. The request carries only the link you saved.",
-                 hosts: ["www.tiktok.com", "graph.facebook.com", "vimeo.com",
-                         "soundcloud.com", "open.spotify.com", "www.flickr.com"]),
-        // The one IMPORT that reaches the network. Instagram, ChatGPT, Claude,
-        // Day One and the rest are read entirely on this device and appear
-        // nowhere in this registry, correctly — but a Snapchat export holds no
-        // pixels, only links, so fetching the Memories is a real (and
-        // separately tapped) network act. Its hosts can't be listed: each URL
-        // comes out of your own export file, which is also why the reach audit
-        // can't see them and why this entry is hand-written.
+                 hosts: ["www.tiktok.com", "vimeo.com", "soundcloud.com",
+                         "open.spotify.com", "www.flickr.com", "publish.x.com"]),
+        // The IMPORTS that reach the network — one until 2026-08-02, three
+        // now, and they share a single reason. ChatGPT, Claude, Day One and
+        // the rest are read entirely on this device and appear nowhere in this
+        // registry, correctly. These three differ because an export hands you
+        // YOUR data, so the half belonging to somebody else is missing and has
+        // to be asked for: Snapchat's holds links instead of pictures,
+        // Instagram's holds handles instead of captions, TikTok's holds bare
+        // links. Each asks the public page or endpoint that does have it.
+        //
+        // Snapchat's hosts can't be listed — every URL comes out of your own
+        // export file, which is also why the reach audit can't see them and
+        // why that entry is hand-written. The other two can be: it is always
+        // the post's own page, or its provider's own preview endpoint.
+        Endpoint(service: "Instagram captions",
+                 reach: .whenConnected(bridge: "instagram"),
+                 purpose: "Your Instagram export lists the posts you saved by handle and link, without their words. \(DS.device) opens each saved post's own public page once to read its caption, so you can search for what was in it. The request carries only that post's link.",
+                 hosts: ["instagram.com"]),
+        // The third, same family. A TikTok export names the videos you saved
+        // by link and NOTHING else — no caption, no creator, no cover, because
+        // the video belongs to whoever made it. Those facts are public on
+        // TikTok's own preview endpoint, so this asks for them. Separately
+        // tapped, one request per saved video, and only for rows imported from
+        // TikTok.
+        //
+        // The host is the same `www.tiktok.com` the always-on "Link previews"
+        // row above already names. It is listed again on purpose rather than
+        // left to that row: this reach is a DIFFERENT trigger (a connected
+        // import, not a link you just saved) and a different volume (a whole
+        // library at once), and a privacy screen that made someone infer one
+        // from the other would be technically complete and practically
+        // misleading.
+        Endpoint(service: "TikTok video names",
+                 reach: .whenConnected(bridge: "tiktok"),
+                 purpose: "Your TikTok export lists the videos you saved as bare links, without their words. \(DS.device) asks TikTok's own public preview endpoint what each one is — the caption, who made it, the cover picture — so you can search for it later. The request carries only that video's link, and no account or key is involved.",
+                 hosts: ["www.tiktok.com"]),
         Endpoint(service: "Snapchat Memories",
                  reach: .whenConnected(bridge: "snapchat"),
                  purpose: "Your Snapchat export holds links, not pictures — and they expire. When you tap to fetch your Memories, \(DS.device) asks Snapchat's own link for each one and downloads that picture.",

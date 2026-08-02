@@ -115,8 +115,13 @@ enum BridgeCatalog {
                 "Bluesky", "Nostr", "OpenSea", "Kalshi", "Shopify", "GeckoTerminal", "Deals",
                 "Open Food Facts", "Stocktwits"]
             if keyless.contains(name) { return "No account" }
+            // Instagram and Snapchat were missed here when they landed
+            // (2026-07-31) and TikTok would have been missed the same way:
+            // all three connect by pointing at an export, which is exactly
+            // what this badge is for, and all three were showing none.
             let imports: Set<String> = ["ChatGPT", "Claude", "Gemini",
-                "Day One", "Apple Journal", "Kindle", "Bookmarks"]
+                "Day One", "Apple Journal", "Kindle", "Bookmarks",
+                "Instagram", "Snapchat", "TikTok", "X"]
             if imports.contains(name) { return "Import" }
             return nil
         }
@@ -535,6 +540,43 @@ enum BridgeCatalog {
                          "Re-importing keeps a conversation up to date",
                          "Read-only — the export is a file you already have"],
               needsSetup: true, added: day(2026, 7, 31)),
+        // The third import-grade social seat (2026-08-02, prd §279), and the
+        // one that overturns a ruling this app made twice: §36 and §244 both
+        // declined TikTok because the export lands 1–4 days stale, which is
+        // fatal for a FEED and irrelevant for an IMPORT — the same reasoning
+        // Instagram and Snapchat shipped on the day §244 was written.
+        //
+        // The tagline leads with the deadline because the deadline is the
+        // pitch: TikTok makes you wait up to four days and then gives you four
+        // days to act. The summary states the export's own split (§245's rule)
+        // AND the one thing this import does that Instagram's can't — TikTok's
+        // oEmbed endpoint is live and keyless, so a bare saved link can be
+        // given back its caption, its creator and its cover.
+        Offer(name: "TikTok",      tagline: "Your saves, before the link expires",   group: "Network",   connectable: true,
+              summary: "TikTok makes you wait up to 4 days for your data, then the download link dies 4 days later.\n\nCasberi keeps it: import once and your saves are yours for good. Your captions and comments become searchable text, and every saved video can be given back its caption, its creator and its cover.\n\nTikTok's export is only links, so naming them is a second tap — but the videos don't expire the way the export does.",
+              features: ["Saved and liked videos, named and openable",
+                         "Your own captions and comments, as searchable text",
+                         "One-time import — re-importing adds only what's new",
+                         "No account and no key — the export is a file you already have"],
+              needsSetup: true, added: day(2026, 8, 2)),
+        // The fourth import-grade social seat, and the one with the least
+        // choice behind it (2026-08-02, prd §277). Instagram and TikTok at
+        // least have a theoretical API; X discontinued its free tier for new
+        // developers on 2026-02-06 and now charges per post read, so there is
+        // no keyless door and no cheap one. The archive is all of it.
+        //
+        // The summary names the BOOKMARKS GAP in its own line. That is not
+        // hedging — bookmarks are the pile an X user would most expect this
+        // seat to hold, they have never been in the export, and an offer that
+        // let "your saves" imply them would be selling something it can't
+        // deliver. §245's rule, applied to the one absence that matters here.
+        Offer(name: "X",           tagline: "Your posts and likes, searchable",     group: "Network",   connectable: true,
+              summary: "X charges per post read now, so there's no live way in — the archive you can request for free is the whole door.\n\nCasberi opens it: everything you posted becomes text you can search, and every post you liked lands with the words you liked it for.\n\nBookmarks aren't in X's archive — they never have been — so those can't come.",
+              features: ["Your posts and replies, as searchable text",
+                         "Your likes, carrying the post's own words",
+                         "One-time import — re-importing adds only what's new",
+                         "Read on \(DS.device); no account, no key, nothing sent to X"],
+              needsSetup: true, added: day(2026, 8, 2)),
         Offer(name: "Steam",       tagline: "What you play, in your feed",           group: "Games",     connectable: true,
               summary: "Recently played games land in your feed, linking to their store pages.\n\nConnects with a free Steam Web API key and your public profile name — the key stays in \(DS.device)'s Keychain.\n\nRead-only.",
               needsSetup: true),

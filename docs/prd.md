@@ -11150,6 +11150,51 @@ every direction — a non-200, an unrecognised shape, or a retired endpoint all
 return nil and leave today's behaviour exactly as it is — but build it and
 walk `-oembedProbe` across all six hosts before trusting a single field.
 
+**MEASURED 2026-08-02 (addendum — the walk above, finally run).** All seven
+hosts were called keylessly against real public links. Six answer with the
+fields `parse` reads: TikTok, YouTube, Vimeo, SoundCloud and Flickr return
+`title` + `author_name` + `thumbnail_url`; Spotify returns title and thumbnail
+but no author. The table is sound and the doc-derived endpoints were right.
+
+**Instagram was the one failure, and it is removed.** `instagram_oembed` is
+live and keyless, but answers with `provider_name`, `type`, `width` and a 6KB
+embed `html` blockquote and nothing else — the blockquote is a SKELETON
+LOADER whose only text node is "View this post on Instagram", with the caption
+and author filled in client-side by `embeds.js`. So there is no title, author
+or thumbnail anywhere in the payload, and §245's hedge ("if the fields are
+stripped the cost is zero") held exactly as designed: `resolve` returned nil
+every time and `enrich` fell through. Cost of removal is one fewer wasted
+request and one fewer host disclosed in `NetworkReach`. Facebook's own
+`oembed_video` was measured the same day and is no better (keyless, embed
+script, no fields) and `oembed_post` refuses keyless calls, so no Meta host
+belongs in this table at all.
+
+**The finding that matters more, because it contradicts a §245 premise.**
+§245 stated that a logged-out Instagram post URL serves a login wall, which is
+why oEmbed was reached for. That is true of the page BODY and false of its
+`<head>`: measured under four user agents including the Safari one the app
+already sends, `www.instagram.com/p/<id>/` returns `og:title`
+("Everyday Astronaut on Instagram: \"I love @spacecenterhou…\""), `og:image`
+(a real CDN thumbnail) and `og:description` (likes, comments, date) — at byte
+10,539, well inside `ProductMeta.fetch`'s 400KB window. **So the generic path
+already gives a pasted Instagram link a correct face today, and always did.**
+The oEmbed entry was never load-bearing; removing it changes nothing a person
+sees. Held open, NOT built: the same og read would give IMPORTED SAVES the
+captions §245 says they can never have (see the amendment there).
+
+**And the file's own premise was measured too, because that finding raised the
+obvious question — if the page head answers, is `OEmbed.swift` redundant?**
+It is not. Fetched with the app's own `safariUserAgent`: **TikTok serves no
+`og:title` at all and a `<title>` of "TikTok - Make Your Day"; YouTube serves
+none and a `<title>` of "YouTube".** Those two are why this file was built and
+there is no other route to them, so §244 was right about the sites it named.
+SoundCloud, Vimeo, Flickr and Spotify do serve og tags, so for them oEmbed is
+an improvement of degree — it adds the `author_name` their heads omit (Spotify
+ties) at one small request instead of a 100–400KB page fetch. **The two paths
+are complementary, not duplicative, and the app now holds the right entry in
+each: six hosts where oEmbed wins or ties cheaply, and Instagram where the
+page head wins outright.** Nothing here is redundant machinery to delete.
+
 ## §245 — Instagram connects by import, and the offer says which half is real (user: "what if anything can we do with instagram is any of their content open", then "I guess Instagram export is same as Chatgpt or others, so it's useful?", then "build the rest of it", 2026-07-31)
 
 **Nothing about Instagram is open.** Basic Display API — the old read-only
@@ -11197,6 +11242,21 @@ them believe otherwise would be fake status.
    serves pasted/shared links rather than imported saves. Taken knowingly — a
    guaranteed handle from the export beats a naked URL waiting on an endpoint
    Meta has already stripped `author_name` and `thumbnail_url` out of.
+
+   **AMENDED 2026-08-02 (measured, see §244's addendum).** Both halves of that
+   reasoning turned out to be wrong in the same direction, and the ruling
+   survives anyway. The Instagram oEmbed entry answers with no title, author or
+   thumbnail at all, so it was removed — it never served pasted links either.
+   But a logged-out Instagram post URL DOES serve full `og:title`/`og:image`/
+   `og:description` to the UA the app already sends, so the enrichment this
+   decision declined is real and available: one keyless request per saved row
+   would turn "@houseofgaming" into that post's actual caption, which is
+   precisely the searchable text this section says a save can never have —
+   the pasta search would work. **Not built, and not a silent change to make:**
+   it inverts what §245's copy promises, it is ~500 requests against a host
+   that rate-limits, and a private or deleted post fails. It belongs to
+   whoever rules on the copy, as a background enrichment with its own honest
+   line, not as a side effect of Import.
 2. **Per-category caps, not one shared budget.** A saves library runs to
    thousands while your own posts are in the dozens; one budget would let the
    contentless rows crowd out the ones carrying text.
@@ -13796,3 +13856,200 @@ keychain, secret scan, SwiftData liveness) all pass, and the pure detection
 logic is harness-verified against the shipped source, but the Swift itself is
 unbuilt. Run `scripts/verify.sh` plus `-secretScanProbe corpus`,
 `-keychainProbe YES` and `-receiptsProbe YES` before trusting any of it.
+## §278 — Bank accounts: Plaid is closed by construction, FinanceKit is closed by category (user: "why can't we do someting with Plaid", then "how can we do FinanceKit", then "so we can come back to this when ready", 2026-08-02)
+
+**The ruling: Plaid — and every aggregator shaped like it — is refused
+permanently, on the same grounds §67 refuses a server. FinanceKit is PARKED,
+not refused: it is the only honest door to a real bank account this app can
+walk through, and the thing blocking it is App Store category, not code.**
+
+Nothing shipped this session. This entry exists so the next one starts from
+the gates rather than re-deriving them.
+
+### Plaid is not a missing endpoint, it is the wrong shape
+
+Every call in Plaid's chain needs `client_id` + `secret`: `/link/token/create`
+mints the token the iOS Link SDK requires, `/item/public_token/exchange` turns
+the result into an `access_token`, and `/transactions/sync` needs all three.
+Plaid's own documentation says never to call their API from a client. There is
+no PKCE variant and no device flow, so the §67 carve-out that let GitHub in
+does not apply, and a relay to hold the secret is a server.
+
+**The deeper objection is the one that makes it permanent.** Every keyed
+bridge in this catalog works because the third party issues a credential to
+the PERSON, scoped to the person's own data — a Stripe restricted key, a
+Privacy.com key, a Readwise token. Plaid issues credentials to a DEVELOPER,
+and the person is a downstream end user. So even a hypothetical
+device→Plaid call would be authenticated as Casberi, put Casberi's identity on
+every bank request, and make Casberi the data recipient under Plaid's MSA.
+That is precisely the "Casberi never becomes a data custodian" line in §67's
+Tier 2 — a legal posture, not an engineering inconvenience. Production access
+also requires a company application and bills per connected Item per month, a
+recurring per-user cost in an app with no billing surface. **MX, Finicity,
+Teller and Akoya are the same shape and inherit the same refusal.**
+
+**SimpleFIN Bridge is the one exception worth remembering.** The person signs
+up themselves (~$1.50/mo, paid by them), connects their banks there, and gets a
+Setup Token; the app claims it once and receives an Access URL carrying its own
+basic-auth credentials. After that it is a plain `GET <accessURL>/accounts` —
+the person's own credential, the phone talking directly, no Casberi identity
+anywhere. That is the Bitrefill/Privacy.com pattern exactly. UNMEASURED —
+documentation only, no account, never probed.
+
+### FinanceKit: what it actually gives, and why the UK arm is the point
+
+Two regions, two different payloads:
+
+- **US** (iOS 17.4+) — Apple Card, Apple Cash, Savings. Excludes Family
+  participants and children on Family accounts.
+- **UK** (iOS 18.4+) — **real bank accounts through open banking**: Barclays,
+  HSBC, Lloyds, Monzo, NatWest, Nationwide, RBS, Santander and others.
+
+**The UK arm is the whole reason to bother.** Apple Card alone is not worth a
+store-category decision; a current account is. Data is read out of on-device
+Wallet storage and Apple never sees it, so this would be the first bridge here
+where "nothing routes through us" is enforced by the OS rather than by our own
+conduct.
+
+### The three gates, and which one is real
+
+Apple's eligibility criteria are checkable, not vibes. The app must (1) be
+listed in the **Finance category** in App Store Connect, (2) be distributed on
+the **App Store** for iPhone in the US or UK, and (3) provide **financial
+management tools** — "comprehensive view of net worth, spending trends,
+budgeting". Then `NSFinancialDataUsageDescription` in Info.plist, and the
+entitlement requested by the **Account Holder**, granted **per bundle ID**
+after review. The framework page also states an organization-level developer
+account; indie apps have been approved, so check this against our own
+enrollment type rather than assuming it disqualifies us.
+
+**Criterion 3 we arguably already meet** — the wallet crown total, §240's
+composition strip, the balance sparkline and three spending bridges are net
+worth and spending trends by any reading. **Criterion 2 is only time.**
+**Criterion 1 is the blocker, and it is not an engineering problem**:
+Casberi is not a Finance app, and recategorizing the whole product to unlock
+one bridge misfiles it in the store for what it actually is. That trade is the
+user's to make, and it does not need making until criterion 2 clears.
+
+**Rejected as the workaround: a Finance-category companion bundle ID** sharing
+`group.com.casberi.app`. Entitlements are per bundle ID so it would technically
+work, but it is a second app to maintain and review, and Apple may reasonably
+read it as a shell.
+
+### What the build would be, so it isn't re-derived
+
+Smaller than Stripe was — no network layer, no key, no host, no cursor
+arithmetic. `FinanceStore.shared`, gated on `isDataAvailable(.financialData)`
+then `requestAuthorization()`; `accounts(query: AccountQuery())`; then
+`transactionHistory(forAccountID:since:isMonitoring:)`, an `AsyncSequence`
+whose elements carry the changes and a new `HistoryToken` to persist.
+
+- **`Transaction` is already thing-shaped** — `merchantName`,
+  `transactionAmount`, `transactionDate`, `merchantCategoryCode`,
+  `creditDebitIndicator`, `status`. Money moving is the module doctrine's
+  standing exception, so per-purchase rows are right here, matching
+  Privacy.com and Gnosis Pay rather than §250's "an individual charge never
+  lands" (that rule is about business revenue).
+- **`CurrencyAmount` is `Decimal` + an ISO 4217 code**, so Stripe's
+  zero-decimal/three-decimal minor-unit table does NOT apply. Do not port it.
+- **§216 splits cleanly**: balances are a STATE (windowed), transactions are
+  EVENTS (every pass).
+- **`status` gives healing for free** — `.pending` → `.booked` is the
+  social-bridge dedupe-and-heal pattern, keyed on the stable `Transaction.id`.
+- **The cursor is Apple's own `HistoryToken`** — no block rewinds, no
+  epoch-unit-by-magnitude guessing.
+- **`NetworkReach` gains nothing** — zero host literals, so the audit has
+  nothing to check. Say so on the privacy screen rather than staying silent.
+- **Mac Catalyst 17.0+ is supported**, so `verify-mac.sh` covers it too.
+- **Untestable on simulator** — `isDataAvailable` is false and there is no
+  Wallet data, so it is device-only, the Strava-via-HealthKit grade.
+  `Model/HealthIngest.swift` is the template throughout: permission-gated,
+  device-only, and honest about a denial it cannot distinguish from empty.
+- **Ship behind a compile-time flag** until the entitlement lands — the
+  `MCPPairing.transportReady` pattern — so the seat never renders as a dead
+  control.
+
+**One standing ruling would need amending if this ever ships, but not
+before**: `enableBackgroundDelivery(for:frequency:)` plus a
+`BackgroundDeliveryExtension` is always-on monitoring while the phone is
+pocketed, with no Casberi server — which §67 deferred as impossible. That
+amendment is contingent on the entitlement; §67 stands unchanged today.
+
+**Order of operations is forced**: App Store approval first (the entitlement
+cannot be requested for an unshipped app), then the category decision, then
+roughly a day of code.
+
+## §279 — TikTok, imported: the expiry is the argument FOR it (user: "we talked about tiktok before it takes four days to get and your data expires in four days but if you can import it wouldn't it last longer", then "yes lets do tiktok", 2026-08-02)
+
+**The user was right, and the codebase already agreed with them twice.** §36
+(2026-07-09) declined TikTok under a live-data-only rule — "their export lands
+1–4 days stale and never updates … the person asked for live data or nothing" —
+and §244 (2026-07-31) restated that decline verbatim while building the oEmbed
+enrichment instead.
+
+Both were weighing the export as a **FEED**, where 1–4 days stale is fatal. As
+an **IMPORT** it isn't a defect at all: nothing claims to be current, every row
+is stamped with the moment it actually happened, and a save from 2021 is exactly
+as true today as it was when the export was cut. §244 was written on the SAME DAY
+as §245 (Instagram) and §246 (Snapchat), both of which shipped as export-only
+imports on the explicit reasoning that no live door exists. TikTok's other three
+doors are shut by the same test §244 itself applied: no RSS ever, a Display API
+that returns only the authenticated account's own posts, and an EEA-only Data
+Portability API needing the post-M2 server. So the export isn't the stale
+option — it's the only one, which is precisely §245's own bar.
+
+**RULING: the export lands as an import, and the four-day expiry is the pitch.**
+TikTok makes you wait up to four days, then kills the link four days later. The
+export is the perishable artifact; the corpus is not. That is the same reasoning
+that already built `SnapchatImport`'s media fetch against a 7-day window — a
+short window is a reason to get the data out, not a reason to leave it there.
+§244's oEmbed ruling is UNCHANGED and is now load-bearing rather than
+consolatory: it is what gives an imported save a face.
+
+**Decisions with reasons, don't undo without reading:**
+
+1. **The link canonicalisation is the whole feature, and it was nearly missed.**
+   Measured 2026-08-02 against the live keyless endpoint: a TikTok export writes
+   its links as `www.tiktokv.com/share/video/<id>/` — a DIFFERENT HOST from
+   `tiktok.com` — and that form answers **400**. The username-less
+   `www.tiktok.com/video/<id>` answers **200** with the caption, the creator and
+   the cover, identical to the canonical `@user/video/<id>` form. Without the
+   rewrite, `OEmbed.handles` returns false for every imported row and the
+   enrichment this import exists for silently never runs. `sourceRef` therefore
+   keys on the video ID, not the URL, so dedupe survives TikTok changing the
+   link shape again.
+2. **Saves and likes are ONE row wearing two tags, not two rows.** Instagram
+   lands them as separate things; that is livable there (a saves library and a
+   likes library barely overlap) and would not be here, where the overlap is
+   most of the saves list.
+3. **Naming the videos is a SECOND, explicit act** — §246's Snapchat split. The
+   import itself is instant and touches no network; the face pass is one request
+   per video. The divergence worth stating in the UI: Snapchat's fetch races a
+   7-day deadline, TikTok's has **none** — the export expires, the videos don't.
+4. **Watch history is not landed**, and it is the largest list in the export. It
+   records what scrolled PAST you, not what you chose, so landing it would bury
+   every deliberate save under thousands of videos nobody picked — the
+   `snap_history.json` call from §246. Search history, followers and following
+   are tallies (§245's ground). DMs are §245's deliberate abstention, unchanged.
+5. **No topic map for this room**, unlike Instagram. TikTok's own writing is
+   split across two kinds — captions ride the `.link` rows of your posts,
+   comments are `.note`s — and `FeedInsight.topicMap` reads one kind. A map
+   labelled "what you write about" that silently covered half the writing would
+   be the fake status §245 forbids. The room leads with "Who you save most"
+   (ranked on `authorHandle`, which the face pass stamps) and falls back to
+   "Your TikTok year".
+6. **`OEmbed.Response` gained `authorHandle`** (`author_unique_id`, measured
+   present). Kept apart from `authorName` because a handle is DATA — it groups,
+   and "Scout, Suki & Stella" does not — which is what makes the leaderboard
+   possible at all. nil for every other provider in the table.
+
+**UNMEASURED against a real export.** Every path and field name is derived from
+four independent parsers of real exports — a research-grade data-donation parser
+that handles both schema eras, two archivers, and a published TypeScript type
+definition — not from a file this project has opened. Two structural facts came
+out of that reading and are encoded rather than guessed: the top level exists in
+two eras (`Activity` vs `Your Activity` + `Likes and Favorites`, so every
+category is looked up against candidate paths), and **field case is not
+consistent within a single file** (`CommentsList` spells `date`/`comment`/`url`
+lower, `VideoList` spells `Date`/`Link`/`Title` upper), so every field read tries
+both cases. A missing or renamed category is a skip, never a failure.

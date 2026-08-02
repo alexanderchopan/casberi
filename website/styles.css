@@ -146,6 +146,8 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-farcaster { background: #855dcd; }
 .ai-nostr     { background: #9543dc; }
 .ai-snapchat  { background: #fffc00; }   /* their yellow — the mark rides it in BLACK, since a white ghost on this field is invisible */
+.ai-x         { background: #000; }      /* their black — the mark is a white glyph and needs the field */
+.ai-tiktok    { background: #000; }      /* their black — the mark is two offset inks (cyan/magenta) and only reads on this field */
 .ai-strava    { background: #fc4c02; font-size: 18px; }
 .ai-steam     { background: #1b2838; }
 .ai-obsidian  { background: #7c3aed; }

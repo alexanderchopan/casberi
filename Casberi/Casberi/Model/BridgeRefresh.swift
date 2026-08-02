@@ -419,10 +419,38 @@ enum BridgeRefresh {
         // captions and comments already in the store. Bounded per pass, so a
         // years-deep import finishes over a few opens rather than blocking the
         // one it landed on, and self-terminating once every note is stamped.
+        // Its OTHER unfinished local work is captions (prd §245 amendment):
+        // saves and likes land as a handle and a permalink, and one keyless
+        // request each turns them into the post's own words. That one IS a
+        // network pass, so unlike the topic map it goes behind `dueForHeal` —
+        // at most once per `healInterval`, `perPass` rows at a time, paced,
+        // and self-terminating once every row carries its caption.
         if connected("instagram") {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await ScreenshotTopics.healTopics(source: "Instagram", context: context)
+                if BridgeRefresh.dueForHeal("instagram.captions") {
+                    _ = await InstagramCaptions.heal(context: context)
+                }
+            }
+        }
+        // TikTok imports nothing on a foreground either — it has no live read
+        // at all (prd §279). Its unfinished local work is FACES: saves and
+        // likes land as a bare link, and one keyless oEmbed request each turns
+        // one into the video's caption, creator and cover. That is a network
+        // pass, so it goes behind `dueForHeal` exactly like Instagram's
+        // captions — at most once per `healInterval`, a bounded slice at a
+        // time, self-terminating once every row has been named.
+        //
+        // No topic-map heal beside it, unlike Instagram: TikTok's own writing
+        // is split across two kinds (captions ride the `.link` rows of your
+        // posts, comments are `.note`s), and `FeedInsight.topicMap` reads one
+        // kind. A map labelled "what you write about" that silently covered
+        // half the writing would be exactly the fake status §245 forbids.
+        if connected("tiktok"), BridgeRefresh.dueForHeal("tiktok.faces") {
+            let s = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await TikTokImport.fetchFaces(limit: 60, context: context)
             }
         }
         if connected("stocktwits") {

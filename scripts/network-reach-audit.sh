@@ -57,12 +57,34 @@ KNOWN_NON_REACH=(
   # so a door here can't stand in for an undisclosed call.
   metamask.app.link rnbwapp.com go.cb-w.com link.trustwallet.com
   wallet.zerion.io uniswap.org
-  # Instagram's own export page (openURL only — the same shape as Takeout
-  # above), plus the bare instagram.com literal, which is a link-MATCH
-  # pattern in OEmbed and a doc-comment example in InstagramImport. The
-  # endpoint actually fetched for those links is graph.facebook.com, which
-  # IS disclosed in NetworkReach.
-  accountscenter.instagram.com instagram.com
+  # Instagram's own export page — openURL only, the same shape as Takeout
+  # above. The bare `instagram.com` literal is NOT here any more: as of
+  # 2026-08-02 `InstagramCaptions` really does fetch it (one request per
+  # imported save, for the caption), so it belongs in the registry and is
+  # disclosed there. `graph.facebook.com` is gone from both lists — the
+  # oEmbed entry that reached it was measured dead and removed.
+  accountscenter.instagram.com
+  # X, and BOTH of its literals are doors rather than calls (2026-08-02).
+  # `x.com/settings/download_your_data` is the archive-request page the setup
+  # screen opens in your browser, and `x.com/i/web/status/<id>` is the
+  # permalink an imported like is STORED as — opened on tap, never fetched:
+  # the importers don't run `LinkTitle.enrich`, and a liked row wears the
+  # post's own words as its title, so nothing would enrich it anyway.
+  #
+  # `publish.x.com` is deliberately NOT here. That one IS a call this app
+  # makes (the oEmbed read for a saved X link) and it is disclosed in the
+  # registry under "Link previews". Different host, so this door can't stand
+  # in for that fetch — the property the whole denylist rests on.
+  x.com
+  # TikTok's export link host — the ONE entry here that is never opened either.
+  # A TikTok export writes its links as `www.tiktokv.com/share/video/<id>/`, and
+  # `TikTokLink.video` exists to RECOGNISE that form and rewrite it to
+  # `www.tiktok.com/video/<id>` before anything is requested — measured
+  # 2026-08-02, the share form answers 400 at the oEmbed endpoint and the
+  # canonical one answers 200. So this host appears in the source as a string we
+  # match against and deliberately never send to. The host we DO reach for these
+  # rows is `www.tiktok.com`, disclosed in the registry as "TikTok video names".
+  www.tiktokv.com tiktokv.com tiktokv.us
   # Demo / placeholder content only
   picsum.photos www.allbirds.com www.google.com www.nasa.gov
   developer.apple.com www. example.com

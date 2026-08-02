@@ -54,7 +54,16 @@ enum FeedInsight {
         case "Snapchat":
             return snapchatConversations(things)
         case "Instagram":
-            return instagramAuthors(things)
+            return savedAuthors(things)
+        // TikTok is the same shape as Instagram and reads the same field, but
+        // it earns its handles differently: Instagram's export names the author
+        // of every save, while TikTok's names nobody at all — `authorHandle`
+        // arrives later, from the oEmbed pass that gives a saved video its face
+        // (`TikTokImport.fetchFaces`). So this board is empty until that has
+        // run, and `counted` declining on too few groups is exactly the right
+        // behaviour rather than something to work around.
+        case "TikTok":
+            return savedAuthors(things)
         default:
             return nil
         }
@@ -90,7 +99,7 @@ enum FeedInsight {
                            rows: ranked(order, best) { ($0, $0.formatted()) })
     }
 
-    /// Whose posts fill your Instagram (2026-07-31) — the export's single most
+    /// Whose posts fill your Instagram, or your TikTok (2026-07-31) — the single most
     /// surprising fact, because nobody knows their own most-saved account.
     ///
     /// SAVES AND LIKES ARE NOT SUMMED. They're different acts — a save is a
@@ -100,7 +109,10 @@ enum FeedInsight {
     /// quietly changing what the bars mean. Only the `authorHandle` the
     /// importer stamped is read, never the "@handle" title, so the rare entry
     /// the export gave no author simply doesn't rank.
-    private static func instagramAuthors(_ things: [Thing]) -> Leaderboard? {
+    /// Shared with TikTok since 2026-08-02 — the two rooms differ in where the
+    /// handle comes from (Instagram's export names it, TikTok's is learned from
+    /// the oEmbed face pass) and not at all in how it ranks.
+    private static func savedAuthors(_ things: [Thing]) -> Leaderboard? {
         func board(_ tag: String, title: String,
                    unit: (String, String)) -> Leaderboard? {
             counted(things.filter { $0.tags.contains(tag) },

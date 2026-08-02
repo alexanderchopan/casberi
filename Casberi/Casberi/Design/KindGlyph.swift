@@ -145,6 +145,7 @@ enum BridgeGlyph {
         case "notion":    return "doc.richtext"
         case "x", "twitter": return "bookmark"
         case "instagram": return "camera"
+        case "tiktok":    return "music.note"
         case "reddit":    return "text.bubble"
         case "youtube":   return "play.rectangle"
         case "substack":  return "doc.text.image"

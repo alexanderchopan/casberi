@@ -80,7 +80,7 @@ enum Corpus {
     /// ran — the same failure the address-book rule exists to prevent, one
     /// step short of hiding the source entirely. All gets ONE receipt
     /// instead (`isImportReceipt`), and the room holds everything.
-    static let bulkImportSources: Set<String> = ["Instagram", "Snapchat"]
+    static let bulkImportSources: Set<String> = ["Instagram", "Snapchat", "TikTok", "X"]
 
     /// The stable ref of a source's import receipt. Stable ON PURPOSE: a
     /// second import must UPDATE the one receipt rather than stack another,

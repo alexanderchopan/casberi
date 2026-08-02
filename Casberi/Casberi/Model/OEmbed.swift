@@ -28,12 +28,29 @@ import Foundation
 /// to beat — and would let any saved URL name an arbitrary host for us to
 /// call. A fixed table costs one request and can't be redirected by the page.
 ///
-/// UNMEASURED (2026-07-31): authored with no egress to any of these hosts, so
-/// every endpoint below is doc-derived, not observed. It fails SAFE in every
-/// direction — a non-200, a shape we don't recognise, or a host that has
-/// retired its endpoint all return nil, and the caller falls through to the
-/// page-fetch path that runs today. Re-measure with `-oembedProbe <url>`
-/// before hardening anything here.
+/// MEASURED (2026-08-02): every endpoint below was called keylessly against a
+/// real public link and answered with the fields `parse` reads — a `title` and
+/// a `thumbnail_url` in all six, plus an `author_name` in all but Spotify.
+/// Instagram was measured the same day and REMOVED for answering with none of
+/// them (see the table). It still fails SAFE in every direction — a non-200, a
+/// shape we don't recognise, or a host that has retired its endpoint all
+/// return nil, and the caller falls through to the page-fetch path that runs
+/// today. Re-measure with `-oembedProbe <url>` before hardening anything here.
+///
+/// THE PREMISE WAS ALSO MEASURED, and it holds where it was written. Fetching
+/// each of these pages with the app's own `safariUserAgent` and reading the
+/// head the generic path reads: TikTok serves NO `og:title` and a `<title>` of
+/// "TikTok - Make Your Day"; YouTube serves NO `og:title` and a `<title>` of
+/// "YouTube". Those two are the whole reason this file exists and there is no
+/// other route to them. SoundCloud, Vimeo, Flickr and Spotify DO serve usable
+/// og tags, so for them this path is an improvement of degree — it adds the
+/// `author_name` none of their heads carry (Spotify excepted, where it ties)
+/// and costs one small request instead of a 100–400KB page fetch. Do not
+/// "simplify" this file away as redundant with `ProductMeta`: for its two
+/// headline hosts it is the only thing that works.
+///
+/// Instagram is the exact inverse and that is why it is NOT in the table: its
+/// oEmbed carries nothing and its page head carries everything.
 enum OEmbed {
 
     /// What a link's own site says it is. Every field is optional because
@@ -44,6 +61,13 @@ enum OEmbed {
         let authorName: String?
         let thumbnailURL: String?
         let providerName: String?
+        /// The creator's @handle, where the provider gives one separately from
+        /// their display name (TikTok's `author_unique_id`; measured present
+        /// 2026-08-02). Kept apart from `authorName` because a handle is DATA —
+        /// it groups, and "Scout, Suki & Stella" does not — which is what makes
+        /// a room's "Who you save most" possible. nil for every other provider
+        /// in the table, and no reader may assume it.
+        let authorHandle: String?
     }
 
     // MARK: - The allowlist
@@ -58,30 +82,55 @@ enum OEmbed {
     /// here — this table is for sites the generic path reads badly.
     private static let endpoints: [(hosts: [String], endpoint: String)] = [
         (["tiktok.com"],              "https://www.tiktok.com/oembed"),
-        // Instagram (2026-07-31, prd §245). The generic path reads Instagram
-        // as badly as it reads TikTok — a logged-out post URL serves a login
-        // wall, so a shared post lands wearing a stock title and no art.
+        // NOT INSTAGRAM — added 2026-07-31 (prd §245), removed 2026-08-02.
         //
-        // THE FIELDS ARE IN DOUBT and the table entry is worth having anyway.
-        // Three sources disagree: Meta announced in April 2025 that
-        // `/instagram_oembed` would stop returning `thumbnail_url`,
-        // `thumbnail_width`, `thumbnail_height` and `author_name`; a June 2026
-        // change made the endpoint callable with NO token and no App Review;
-        // and an April 2026 reference still documents `author_name` and
-        // `thumbnail_url` as present. If the fields are stripped, `parse`
-        // finds nothing usable, `resolve` returns nil, and the caller falls
-        // through to exactly today's behaviour — so the cost of being wrong
-        // here is zero, and the payoff if `author_name` survives is a saved
-        // post reading "natgeo on Instagram" instead of a login wall's title.
-        // Note this endpoint answers for PUBLIC posts, carousels and reels
-        // only — never stories, never a private account, never a profile.
-        // MEASURE IT with `-oembedProbe` before trusting any field.
-        (["instagram.com"],           "https://graph.facebook.com/v23.0/instagram_oembed"),
+        // The entry was taken while its fields were in doubt, on the reasoning
+        // that the cost of being wrong was zero. The doubt is now settled by
+        // measurement, and the answer is that the entry could never have paid:
+        // `graph.facebook.com/v23.0/instagram_oembed` is live and keyless, and
+        // answers a public post with `provider_name`, `type`, `width` and an
+        // embed `html` blockquote — and NOTHING ELSE. No `title`, no
+        // `author_name`, no `thumbnail_url`, which are the only three fields
+        // `parse` reads. So `resolve` returned nil on every call: a request
+        // spent to learn nothing, against a host we then had to disclose in
+        // `NetworkReach`. Of the three disagreeing sources, Meta's April 2025
+        // announcement (author and thumbnail stripped) is the true one.
+        //
+        // Facebook's own `oembed_video` was measured the same day and is no
+        // better — keyless, but an embed script with no fields — and
+        // `oembed_post` refuses keyless calls outright. Neither Meta host
+        // belongs in this table. Re-add only against a fresh `-oembedProbe`
+        // showing a real title or author, not against a doc.
         (["youtube.com", "youtu.be"], "https://www.youtube.com/oembed?format=json"),
         (["vimeo.com"],               "https://vimeo.com/api/oembed.json"),
         (["soundcloud.com"],          "https://soundcloud.com/oembed?format=json"),
         (["open.spotify.com"],        "https://open.spotify.com/oembed"),
         (["flickr.com", "flic.kr"],   "https://www.flickr.com/services/oembed?format=json"),
+        // X, added 2026-08-02. The strongest case in this table after TikTok,
+        // and for the same reason, measured directly rather than assumed: an
+        // x.com post URL fetched with this app's own `safariUserAgent` answers
+        // 200 with ~210KB of markup carrying ZERO `og:` tags and no `<title>`
+        // element at all. So the generic path names an X link nothing, and the
+        // row keeps the naked URL it was born with — the exact failure this
+        // file exists for. `publish.x.com/oembed` answers the same link
+        // keylessly with the author, their handle, and — inside the embed
+        // `html` — the post's own words.
+        //
+        // NOT THE INSTAGRAM CASE, though the two payloads look alike. Both
+        // answer with an `html` blockquote and no `title`; the difference is
+        // what the blockquote HOLDS. Instagram's is a skeleton whose only text
+        // is "View this post on Instagram" — the caption is filled in later,
+        // client-side, by their embeds.js — which is why that entry could
+        // never pay and was removed. X writes the post itself into the `<p>`,
+        // so `blockquoteText` has real words to lift and `resolve` returns a
+        // real answer. Measured against two live posts on 2026-08-02.
+        //
+        // X gives no `thumbnail_url` and never has; these rows stay text, the
+        // same as any `.link` with no preview image. `twitter.com` is carried
+        // beside `x.com` because saved links are old — the endpoint resolves
+        // either, and a link saved in 2019 deserves the same face as one saved
+        // today.
+        (["x.com", "twitter.com"],    "https://publish.x.com/oembed?omit_script=1"),
     ]
 
     /// The endpoint for a link's host, or nil when the host isn't allowlisted.
@@ -154,15 +203,58 @@ enum OEmbed {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             return clean.isEmpty ? nil : clean
         }
-        let response = Response(title: text("title"),
+        // A provider that names the link in `title` is read from `title`. The
+        // fallback is for the one shape that puts the words in the embed
+        // instead (X) — and it can only ever ADD a title where there was none,
+        // so it cannot change what the six providers above already answer.
+        let response = Response(title: text("title") ?? blockquoteText(json["html"] as? String),
                                 authorName: text("author_name"),
                                 thumbnailURL: IngestSupport.imageURL(json["thumbnail_url"] as? String),
-                                providerName: text("provider_name"))
+                                providerName: text("provider_name"),
+                                authorHandle: text("author_unique_id"))
         // An answer that names nothing is not an answer — fall through to the
         // page fetch rather than saving an empty enrichment over a real title.
         guard response.title != nil || response.authorName != nil
                 || response.thumbnailURL != nil else { return nil }
         return response
+    }
+
+    /// The words inside an embed's `<blockquote><p>…</p>`, for the one provider
+    /// shape that carries the post there instead of in a `title` (X).
+    ///
+    /// ORDER IS LOAD-BEARING: tags are stripped from the RAW html and entities
+    /// are decoded only afterwards. Decoding first would turn an escaped
+    /// `&lt;b&gt;` that somebody actually typed into a tag the stripper then
+    /// eats, silently deleting words the person wrote.
+    ///
+    /// Only the FIRST `<p>` is read. What follows it in a `twitter-tweet`
+    /// blockquote is the attribution — "— Developers (@XDevelopers) April 16,
+    /// 2026" — whose author we already carry as its own field and whose date
+    /// the thing gets from the capture; appended, it would read as part of the
+    /// sentence the person wrote.
+    ///
+    /// A `<br>` becomes a space rather than a newline: this text is a title
+    /// clamped to one line and retrieval substance, and in both a hard break
+    /// is worth less than the words either side of it staying apart.
+    ///
+    /// Bounded at 64KB of html. This is a fallback for a missing title, not a
+    /// licence for a provider to hand us a page to store.
+    private static func blockquoteText(_ raw: String?) -> String? {
+        guard let raw, !raw.isEmpty, raw.count <= 64_000,
+              let regex = try? NSRegularExpression(
+                pattern: "<p[^>]*>(.*?)</p>",
+                options: [.caseInsensitive, .dotMatchesLineSeparators]),
+              let match = regex.firstMatch(in: raw, range: NSRange(raw.startIndex..., in: raw)),
+              let inner = Range(match.range(at: 1), in: raw)
+        else { return nil }
+        var text = String(raw[inner])
+            .replacingOccurrences(of: "<br\\s*/?>", with: " ",
+                                  options: [.regularExpression, .caseInsensitive])
+            .replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+        text = IngestSupport.decodeHTMLEntities(text)
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.isEmpty ? nil : text
     }
 
     // MARK: - Shaping a thing

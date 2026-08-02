@@ -196,6 +196,21 @@ enum ProbeHooks {
             NSLog("Instagram probe: %d imported, %d skipped, failed=%d",
                   summary.imported, summary.skipped, summary.failed ? 1 : 0)
         },
+        // `-xArchiveImport <path>` imports an UNZIPPED X archive folder (the
+        // one holding `data/`, or its parent). Logs each category on its OWN
+        // line, plus the reposts it deliberately skipped: the halves differ in
+        // kind (your posts are your words, likes are someone else's carrying
+        // their own text), and a bare total can't tell "this account never
+        // posted" from "the tweets file didn't parse" — which for an archive
+        // whose files are JavaScript rather than JSON is the failure most
+        // worth being able to see.
+        Hook(key: "xArchiveImport") { path, context in
+            let summary = XArchiveImport.run(folder: URL(fileURLWithPath: path), context: context)
+            NSLog("X probe: posts=%d replies=%d liked=%d reposts-skipped=%d",
+                  summary.posts, summary.replies, summary.liked, summary.retweets)
+            NSLog("X probe: %d imported, %d skipped, failed=%d",
+                  summary.imported, summary.skipped, summary.failed ? 1 : 0)
+        },
         // `-dayoneImport <path>` imports a Day One export .json from disk.
         Hook(key: "dayoneImport") { path, context in
             guard let data = FileManager.default.contents(atPath: path) else { return }
@@ -238,6 +253,40 @@ enum ProbeHooks {
                 NSLog("Snapchat media probe: %d fetched, %d failed, expired=%d, %d still waiting",
                       outcome.fetched, outcome.failed, outcome.expired ? 1 : 0,
                       SnapchatImport.pendingMediaCount(context: context))
+            }
+        },
+        // `-tiktokImport <path>` imports a TikTok export — the
+        // `user_data_tiktok.json` file itself, or a folder holding it. Logs
+        // each category on its OWN line for the Instagram reason: what you
+        // MADE (your captions, your comments) is text and what you TAPPED
+        // (saves, likes) is a bare link, so one total can't tell an export
+        // with no text half from an import that failed.
+        //
+        // Lands metadata only. Giving those links their real faces is the
+        // separate `-tiktokFaces` pass, exactly as in the UI.
+        Hook(key: "tiktokImport") { path, context in
+            let summary = TikTokImport.run(file: URL(fileURLWithPath: path), context: context)
+            NSLog("TikTok probe: saved=%d liked=%d posts=%d comments=%d",
+                  summary.saved, summary.liked, summary.posts, summary.comments)
+            NSLog("TikTok probe: %d imported, %d skipped, failed=%d, %d awaiting faces",
+                  summary.imported, summary.skipped, summary.failed ? 1 : 0,
+                  TikTokImport.pendingFaceCount(context: context))
+        },
+        // `-tiktokFaces <limit|YES>` runs the oEmbed face pass over whatever is
+        // already landed: caption, creator and poster art per saved video.
+        //
+        // The one probe that can tell "the endpoint stopped answering the form
+        // we send" from "there was nothing left to name" — a landed count
+        // can't, since an import with no faces fetched looks identical either
+        // way. `unreachable` is only claimed when every attempt failed, since
+        // one deleted video legitimately answers 400 on its own.
+        Hook(key: "tiktokFaces") { spec, context in
+            Task { @MainActor in
+                let limit = Int(spec) ?? 200
+                let outcome = await TikTokImport.fetchFaces(limit: limit, context: context)
+                NSLog("TikTok faces probe: %d named, %d missed, unreachable=%d, %d still waiting",
+                      outcome.named, outcome.missed, outcome.unreachable ? 1 : 0,
+                      TikTokImport.pendingFaceCount(context: context))
             }
         },
         // `-bookmarksImport <path>` imports a Netscape Bookmark File Format

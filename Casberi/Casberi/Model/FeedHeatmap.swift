@@ -61,6 +61,10 @@ enum FeedHeatmap {
         "Snapchat":      Label(title: "Your memory year",     unit: "memory",     units: "memories",
                                kinds: [.file]),
         "Instagram":     Label(title: "Your Instagram year",  unit: "entry",      units: "entries"),
+        // TikTok counts the whole room, the Instagram reason: a save, a like, a
+        // post and a comment are each one dated act, and the export dates every
+        // one of them.
+        "TikTok":        Label(title: "Your TikTok year",     unit: "entry",      units: "entries"),
     ]
 
     static func label(for source: String) -> Label? { labels[source] }
