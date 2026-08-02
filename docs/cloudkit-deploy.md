@@ -18,10 +18,17 @@ syncs fine while anything carrying an undeployed field — a voice note's
 `audio`, a social post's `socialContext`, a screenshot's `ocrTopics` — fails
 its export and retries forever.
 
-Measured 2026-08-01: Production was **20 fields behind** the model and
-Development **20 behind** as well (they had drifted together since roughly the
+Measured 2026-08-01: Production was **25 fields behind** the model and
+Development **20 behind** (they had drifted together since roughly the
 wallet/social/detection work). The whole corpus of anything richer than a note
 would have failed to sync.
+
+**Resolved the same day.** Development was brought current via `cktool` and
+promoted in the Console; both environments now carry all 57 stored properties
+of `Thing` plus CoreData's `CD_entityName`, verified by re-export — no missing
+fields, no type mismatches, the two environments level. That clears the last
+server-side blocker; what remains unproven is a real device round-trip, which
+needs build 231+ installed with sync switched on.
 
 ## The drift is invisible — check it, don't assume it
 
