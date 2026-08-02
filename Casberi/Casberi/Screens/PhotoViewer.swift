@@ -80,8 +80,12 @@ struct PhotoViewer: View {
         }
         .buttonStyle(.plain)
         .dsGlass(cornerRadius: 18)
+        .dsHover()
         .padding(DS.Space.s4)
         .accessibilityLabel(Text("Close"))
+        // The only control on the screen, and it's a bare glyph — on Mac the
+        // cursor gets the same word VoiceOver reads.
+        .dsTooltip(String(localized: "Close"))
     }
 
     /// Same load ORDER as `PhotoWell` and `ThingShareLink` — a fourth copy of

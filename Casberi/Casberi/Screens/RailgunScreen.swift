@@ -14,6 +14,8 @@ import SwiftData
 struct RailgunScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
+    // This window's stack (per-window since `SceneState`).
+    @Environment(HomeRoute.self) private var route
     @State private var syncing = false
     @State private var lastResult: String?
     /// Whether `lastResult` is a failure — never hardcoded false, or a
@@ -60,11 +62,11 @@ struct RailgunScreen: View {
                 if hasWallets {
                     DSSlabDoor(title: String(localized: "Watching \(walletCount) wallet\(walletCount == 1 ? "" : "s")"),
                                detail: String(localized: "Manage")) {
-                        HomeRoute.shared.pushBridge(.wallet)
+                        route.pushBridge(.wallet)
                     }
                 } else {
                     DSSlabDoor(title: "Watch a wallet") {
-                        HomeRoute.shared.pushBridge(.wallet)
+                        route.pushBridge(.wallet)
                     }
                 }
                 BridgeSyncStatusRows(syncing: syncing,

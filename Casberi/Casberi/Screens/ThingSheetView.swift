@@ -192,7 +192,11 @@ struct ThingSheetView: View {
                                 .background(Circle().fill(.white.opacity(0.08)))
                         }
                         .buttonStyle(.plain)
+                        .dsHover()
                         .accessibilityLabel(Text("Back"))
+                        // A bare chevron: the tooltip names it on Mac with the
+                        // same word VoiceOver reads, so the two can't drift.
+                        .dsTooltip(String(localized: "Back"))
                     }
                     eyebrow
                 }
@@ -259,8 +263,13 @@ struct ThingSheetView: View {
                         .onTapGesture {
                             if thing.sourceRef != nil { zoomingPhoto = true }
                         }
+                        .dsHover()
                         .accessibilityAddTraits(.isButton)
                         .accessibilityHint(Text("Opens the photo full screen"))
+                        // The picture carries no word saying it's a door, and
+                        // on a pointer surface a cursor is the only thing that
+                        // can ask. Same sentence as the hint above it.
+                        .dsTooltip(String(localized: "Opens the photo full screen"))
                         .settleIn(delay: 0.06)
                     Text(thing.title)
                         .dsText(.heading22).foregroundStyle(DS.textPrimary)
@@ -555,6 +564,7 @@ struct ThingSheetView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .dsHover()
     }
 
     // MARK: - Eyebrow (source icon · kind · age)
@@ -577,8 +587,10 @@ struct ThingSheetView: View {
                         .coinFlip(trigger: thing.id)
                 }
                 .buttonStyle(.plain)
+                .dsHover()
                 // A bare face: the only control here with no word in it.
                 .accessibilityLabel(Text("Open profile"))
+                .dsTooltip(String(localized: "Open profile"))
                 // WHY this post is here rides the sentence when there's a
                 // reason worth stating ("@dwr · in /design · 2h ago") — a
                 // liked cast, a channel cast, and your own post used to read
@@ -627,6 +639,7 @@ struct ThingSheetView: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .dsHover()
                 } else {
                     sourceLine
                 }
@@ -816,6 +829,9 @@ struct ThingSheetView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // No tooltip: the row already says "Who" and shows the name, so the
+        // pencil is never the only thing a cursor has to go on.
+        .dsHover()
     }
 
     // MARK: - The dial's wiring (stage sheets — B1, 2026-07-16)
@@ -985,6 +1001,7 @@ struct ThingSheetView: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .dsHover()
                 }
             }
         }

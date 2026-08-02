@@ -372,6 +372,9 @@ struct HandleSetupScreen: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
+    // This window's filter and stack (per-window since `SceneState`).
+    @Environment(FeedFilter.self) private var filter
+    @Environment(HomeRoute.self) private var route
     /// The one omnibox — finds a person (and, on Bluesky, a feed) as you
     /// type; on Farcaster a leading "/" follows a channel instead. Doubles as
     /// the single/multi bridges' plain add field.
@@ -496,14 +499,14 @@ struct HandleSetupScreen: View {
         Section {
             Button {
                 showHomeHint = false
-                FeedFilter.shared.source = bridge.rawValue
-                FeedFilter.shared.tag = "All"
+                filter.source = bridge.rawValue
+                filter.tag = "All"
                 // This screen can be RAISED as the connect sheet (prd §219),
                 // and `path` is the stack behind it — so close the sheet too,
                 // or the feed we just navigated to sits under a form that's
                 // still on top of it.
-                HomeRoute.shared.closeConnectForm()
-                HomeRoute.shared.path = []
+                route.closeConnectForm()
+                route.path = []
                 DSHaptic.tap()
             } label: {
                 HStack(spacing: DS.Space.s2) {

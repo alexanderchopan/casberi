@@ -34,6 +34,9 @@ struct KeyboardWalk: ViewModifier {
     /// Resolve and open — the feed page owns `openThing`, so the pane-or-sheet
     /// split stays in the one place that already decides it.
     let open: (String) -> Void
+    /// This window's pane selection (per-window since `SceneState`), read to
+    /// tell "the pane is already open" from "the ring is only moving".
+    @Environment(PadDetailSelection.self) private var detail
 
     func body(content: Content) -> some View {
         content
@@ -79,7 +82,7 @@ struct KeyboardWalk: ViewModifier {
                 // arrowing only moves the ring: pre-filling a pane the person
                 // hasn't opened would turn a glance down the list into a
                 // dozen documents rendering behind it.
-                if PadDetailSelection.shared.thing != nil {
+                if detail.thing != nil {
                     open(selected)
                 }
             }

@@ -10,6 +10,8 @@ import Photos
 struct BridgeDetailScreen: View {
     let bridgeID: String
     @Environment(BridgeStore.self) private var store
+    // This window's source filter (per-window since `SceneState`).
+    @Environment(FeedFilter.self) private var filter
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -91,8 +93,8 @@ struct BridgeDetailScreen: View {
                     if let recent, recent.isLive {
                         section("Recent") {
                             Button {
-                                FeedFilter.shared.source = bridge.name
-                                FeedFilter.shared.tag = "All"
+                                filter.source = bridge.name
+                                filter.tag = "All"
                                 if let url = URL(string: "casberi://feed") { openURL(url) }
                             } label: {
                                 HStack(spacing: DS.Space.s3) {

@@ -1058,9 +1058,11 @@ struct Composer: View {
                             .foregroundStyle(DS.textSecondary)
                             .padding(10)
                             .background(DS.fillFaint, in: Circle())
+                            .dsHover()
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Close")
+                    .dsTooltip(String(localized: "Close"))
                     .padding(.top, DS.Space.s3)
                     .padding(.trailing, DS.Space.s4)
                 }
@@ -2128,6 +2130,7 @@ struct Composer: View {
                 .background(DS.tintDim,
                             in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
                 .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                .dsHover()
             }
             .buttonStyle(.plain)
             .padding(.horizontal, DS.Space.s4)
@@ -2229,6 +2232,7 @@ struct Composer: View {
                         .background(changed ? AnyShapeStyle(DS.tintDim) : AnyShapeStyle(DS.gray100),
                                     in: RoundedRectangle(cornerRadius: DS.Radius.control,
                                                          style: .continuous))
+                        .dsHover()
                     }
                     .buttonStyle(.plain)
                 }
@@ -2322,6 +2326,7 @@ struct Composer: View {
                         .background(ask.timely ? AnyShapeStyle(DS.tintDim) : AnyShapeStyle(DS.gray100),
                                     in: RoundedRectangle(cornerRadius: DS.Radius.control,
                                                          style: .continuous))
+                        .dsHover()
                     }
                     .buttonStyle(.plain)
                     .modifier(ChipEntrance(index: i, shown: chipsAppeared, reduceMotion: reduceMotion))
@@ -2361,9 +2366,11 @@ struct Composer: View {
                     .foregroundStyle(DS.textTertiary)
                     .frame(width: 32, height: 36)
                     .contentShape(Rectangle())
+                    .dsHover()
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Lower")
+            .dsTooltip(String(localized: "Lower"))
 
             Button {
                 if isRecording { commit() }   // the live mic is STOP + keep
@@ -2374,9 +2381,14 @@ struct Composer: View {
                     .foregroundStyle(isRecording ? DS.destructive : DS.textSecondary)
                     .frame(width: 36, height: 36)
                     .background(DS.fillFaint, in: Circle())
+                    .dsHover()
             }
             .buttonStyle(.plain)
             .accessibilityLabel(isRecording ? "Stop and keep" : "Record a voice note")
+            // The glyph swaps mid-recording and so must the name — the same
+            // ternary as the label above, so the two can't drift.
+            .dsTooltip(isRecording ? String(localized: "Stop and keep")
+                                   : String(localized: "Record a voice note"))
 
             TextField("", text: $draft, axis: .vertical)
                 // The invitation cycles through what the composer can DO —
@@ -2445,9 +2457,11 @@ struct Composer: View {
                 .background(hasDraft || isRecording ? AnyShapeStyle(DS.tint)
                                                     : AnyShapeStyle(DS.fillFaint),
                             in: Capsule(style: .continuous))
+                .dsHover()
             }
             .buttonStyle(.plain)
             .accessibilityLabel(hasDraft && !isRecording ? "Ask" : "Send")
+            .modifier(SendTooltip(glyphOnly: !(hasDraft && !isRecording)))
         }
         .padding(.leading, DS.Space.s2)
         .padding(.trailing, DS.Space.s2)
@@ -2531,6 +2545,7 @@ struct Composer: View {
                             .padding(.horizontal, DS.Space.s3 + 2)
                             .frame(height: 40)
                             .background(DS.tint, in: Capsule(style: .continuous))
+                            .dsHover()
                         }
                         .buttonStyle(PressSpring())
                         .accessibilityLabel("Find in your things")
@@ -2554,6 +2569,7 @@ struct Composer: View {
                             .padding(.horizontal, DS.Space.s3 + 2)
                             .frame(height: 40)
                             .background(DS.tintDim, in: Capsule(style: .continuous))
+                            .dsHover()
                         }
                         .buttonStyle(PressSpring())
                         .accessibilityLabel("Ask with your key")
@@ -2581,6 +2597,7 @@ struct Composer: View {
                                     .padding(.horizontal, DS.Space.s3 + 2)
                                     .frame(height: 40)
                                     .background(DS.gray100, in: Capsule(style: .continuous))
+                                    .dsHover()
                                 }
                                 .buttonStyle(PressSpring())
                             }
@@ -2824,6 +2841,22 @@ struct Composer: View {
     }
 }
 
+/// The send button's pointer tooltip, present only in its GLYPH-ONLY states —
+/// empty field, or a live recording. With a draft the capsule already wears
+/// the word "Ask", and a tooltip repeating a word that's on screen is noise.
+/// A modifier rather than a ternary because `dsTooltip` takes a String: the
+/// alternative is naming an empty one, which on Mac is a blank tooltip.
+private struct SendTooltip: ViewModifier {
+    let glyphOnly: Bool
+    func body(content: Content) -> some View {
+        if glyphOnly {
+            content.dsTooltip(String(localized: "Send"))
+        } else {
+            content
+        }
+    }
+}
+
 /// The parse card — what keeping the pasted draft will write (kind + title
 /// preview). No candidate-tag chips (prd §178 — the filing surface retired;
 /// a #hashtag typed in the text itself still rides in via Capture).
@@ -2877,6 +2910,11 @@ struct Chip: View {
         .fixedSize(horizontal: true, vertical: false)
         .background(style == .tint ? DS.tintDim : DS.gray100,
                     in: Capsule(style: .continuous))
+        // Folded in HERE rather than at each call site, the same reasoning
+        // `dsListCardRow` states: every Chip but `ParseCard`'s status badge is
+        // the label of a Button, so a screen that reaches for one gets Mac
+        // hover with no separate decision. No tooltip — a chip is a word.
+        .dsHover()
     }
 }
 

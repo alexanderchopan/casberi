@@ -13,6 +13,8 @@ import SwiftData
 /// needs it). Capsule verbs are honest: Connect / Pair / Fix / Open / Soon.
 struct AppsScreen: View {
     @Environment(ShellChrome.self) private var chrome
+    // This window's stack (per-window since `SceneState`).
+    @Environment(HomeRoute.self) private var route
     @Environment(BridgeStore.self) private var store
     @Environment(\.modelContext) private var modelContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -216,7 +218,7 @@ struct AppsScreen: View {
         // Setup bridges (paste an address/token/handle) route to their setup
         // screen; only the system-permission bridges connect in one tap.
         if offer.needsSetup {
-            HomeRoute.shared.openSetup(forOffer: offer.name)
+            route.openSetup(forOffer: offer.name)
         } else {
             attemptConnect(offer)
         }
@@ -248,7 +250,7 @@ struct AppsScreen: View {
                             let cards = stories
                             if !cards.isEmpty {
                                 DiscoverDeck(stories: cards,
-                                            onOpen: { HomeRoute.shared.pushAppDetail($0.name) },
+                                            onOpen: { route.pushAppDetail($0.name) },
                                             onConnect: onDiscoverConnect,
                                             onPair: { pairing = true })
                             }
@@ -341,10 +343,10 @@ struct AppsScreen: View {
             // Resolve before pushing: navigationDestination's `if let` falls
             // through to EmptyView, so an unresolvable name (a renamed offer
             // outrunning the pile array) would push a blank screen.
-            if let name = HomeRoute.shared.openOffer {
-                HomeRoute.shared.openOffer = nil
+            if let name = route.openOffer {
+                route.openOffer = nil
                 if BridgeCatalog.offers.contains(where: { $0.name == name }) {
-                    HomeRoute.shared.pushAppDetail(name)
+                    route.pushAppDetail(name)
                 }
             }
             #if DEBUG
@@ -354,7 +356,7 @@ struct AppsScreen: View {
             // `-openSetup "<Offer name>"` pushes a bridge's setup screen
             // directly — the token/handle field screens have no deep link.
             if let name = UserDefaults.standard.string(forKey: "openSetup") {
-                HomeRoute.shared.pushBridge(BridgeRouter.destination(forOffer: name))
+                route.pushBridge(BridgeRouter.destination(forOffer: name))
             }
             // `-openBridgeDetail "<BridgeStore id>"` pushes a CONNECTED seat's
             // manage screen — the route a connected tile's Open takes. The
@@ -362,7 +364,7 @@ struct AppsScreen: View {
             // system permission (Photos, Calendar…) has no setup screen, so
             // `destination(forOffer:)` gives nothing to push.
             if let id = UserDefaults.standard.string(forKey: "openBridgeDetail") {
-                HomeRoute.shared.pushBridge(BridgeRouter.destination(forID: id))
+                route.pushBridge(BridgeRouter.destination(forID: id))
             }
             #endif
         }
@@ -1084,7 +1086,7 @@ struct AppsScreen: View {
             enabled: entry.tier == 1 && StorePreview.doc(for: entry.offer.name) != nil,
             onConnect: {
                 if entry.offer.needsSetup {
-                    HomeRoute.shared.openSetup(forOffer: entry.offer.name)
+                    route.openSetup(forOffer: entry.offer.name)
                 } else {
                     attemptConnect(entry.offer)
                 }
@@ -1172,7 +1174,7 @@ struct AppsScreen: View {
                 enabled: entry.tier == 1 && StorePreview.doc(for: entry.offer.name) != nil,
                 onConnect: {
                     if entry.offer.needsSetup {
-                        HomeRoute.shared.openSetup(forOffer: entry.offer.name)
+                        route.openSetup(forOffer: entry.offer.name)
                     } else {
                         attemptConnect(entry.offer)
                     }
@@ -1202,13 +1204,13 @@ struct AppsScreen: View {
             // Broken connection — Fix opens management, where Reconnect lives.
             if let bridge = entry.bridge {
                 VerbCapsule(verb: .fix) {
-                    HomeRoute.shared.pushBridge(BridgeRouter.destination(forID: bridge.id))
+                    route.pushBridge(BridgeRouter.destination(forID: bridge.id))
                 }
             }
         case 2:
             if let bridge = entry.bridge {
                 VerbCapsule(verb: .open) {
-                    HomeRoute.shared.pushBridge(BridgeRouter.destination(forID: bridge.id))
+                    route.pushBridge(BridgeRouter.destination(forID: bridge.id))
                 }
             }
         case 1:
@@ -1217,7 +1219,7 @@ struct AppsScreen: View {
                 // form (a pasted key, a sign-in) or pushes their manager (a
                 // watch list); the connect happens there, with proof (§218).
                 VerbCapsule(verb: .connect) {
-                    HomeRoute.shared.openSetup(forOffer: entry.offer.name)
+                    route.openSetup(forOffer: entry.offer.name)
                 }
             } else {
                 VerbCapsule(verb: .connect) { attemptConnect(entry.offer) }

@@ -88,6 +88,9 @@ struct AgentBar: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text("Find in your things"))
+            // Same words as the label above, verbatim, so the pointer and
+            // VoiceOver can never name this glyph two different things.
+            .dsTooltip(String(localized: "Find in your things"))
 
             Button {
                 guard !consumeHold() else { return }
@@ -272,6 +275,7 @@ struct WhisperCapsule: View {
             .padding(.horizontal, DS.Space.s4)
             .padding(.vertical, DS.Space.s3)
             .contentShape(RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+            .dsHover()
         }
         .buttonStyle(.plain)
         .dsGlass(cornerRadius: DS.Radius.control)

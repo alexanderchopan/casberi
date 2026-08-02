@@ -85,6 +85,10 @@ struct AssetRosterSlot<Mark: View>: View {
         }
         .frame(width: Self.slotWidth)
         .contentShape(Rectangle())
+        // The slot IS the tap target (the screen attaches the gesture), so the
+        // hover belongs here rather than on the mark inside it — one lift for
+        // whichever verb the host hangs on it.
+        .dsHover()
     }
 }
 
@@ -112,6 +116,7 @@ struct AssetRosterAddSlot: View {
         }
         .frame(width: AssetRosterSlot<EmptyView>.slotWidth)
         .contentShape(Rectangle())
+        .dsHover()
         .onTapGesture {
             DSHaptic.tap()
             action()

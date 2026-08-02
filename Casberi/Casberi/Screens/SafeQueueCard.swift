@@ -197,6 +197,7 @@ struct SafeQueueCard: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .dsHover()
     }
 }
 
@@ -241,5 +242,12 @@ struct SafeSignatureDisc: View {
         .accessibilityLabel(required > 0
                             ? Text("\(have) of \(required) signatures collected")
                             : Text("\(have) signatures collected"))
+        // Tooltip but no hover, deliberately: the ring is a readout, not a
+        // control, and a pointer lift on something a click can't act on is the
+        // dead affordance the honesty rule bans. Naming a wordless mark is
+        // exactly what `dsTooltip` is for — same sentence VoiceOver reads.
+        .dsTooltip(required > 0
+                   ? String(localized: "\(have) of \(required) signatures collected")
+                   : String(localized: "\(have) signatures collected"))
     }
 }

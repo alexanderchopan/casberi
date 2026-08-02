@@ -534,5 +534,9 @@ struct VerbDial: View {
                 .lineLimit(1)
         }
         .contentShape(Rectangle())
+        // One hover for all three callers above — the verb discs, Name, and
+        // Share — since they share this anatomy. No tooltip: every disc wears
+        // its own word underneath, so a cursor already has the name.
+        .dsHover()
     }
 }

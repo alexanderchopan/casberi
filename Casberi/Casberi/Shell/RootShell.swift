@@ -16,7 +16,15 @@ struct RootShell: View {
     @State private var chrome = ShellChrome()
     /// Read-only, for the Mac window title (see the `onChange` below) — the
     /// feed's own scope, the same value the chip strip is bound to.
-    @Bindable private var filter = FeedFilter.shared
+    /// Everything this WINDOW owns (multi-window, 2026-08-02) — navigation,
+    /// the source filter and the pane's selection. `@State`, so a second
+    /// window gets its own; see `SceneState` for why the `.shared` statics
+    /// these replaced were deleted rather than kept as a convenience.
+    @State private var sceneState = SceneState()
+    private var filter: FeedFilter { sceneState.filter }
+    /// THIS window's scene, read off the view's own UIWindow rather than
+    /// asked of `UIApplication` (see `WindowSceneReader`).
+    @State private var windowScene: UIWindowScene?
     @State private var draft = ""
     @State private var composerOpen = false
     /// Session-scoped only, never persisted — the bar's pulse (ruling 6)
@@ -91,7 +99,7 @@ struct RootShell: View {
         // centre over a room that runs the full width beside the rail.
         PadShellInsets(regular: horizontalSizeClass == .regular,
                        width: shellWidth,
-                       paneVisible: HomeRoute.shared.path.isEmpty)
+                       paneVisible: sceneState.route.path.isEmpty)
     }
     /// The bar↔surface morph (2026-07-20) — shared between `AgentBar` and
     /// `Composer`'s `glassNamespace`, both keying `matchedGeometryEffect` to
@@ -141,7 +149,7 @@ struct RootShell: View {
         // so it happens only when someone will actually read the result. On a
         // phone (no pane, capsule already shown today) that is nobody, and the
         // pre-review cut paid for it on every single foreground.
-        let paneReads = PadDetailSelection.shared.paneActive
+        let paneReads = sceneState.detail.paneActive
         guard capsuleDue || paneReads else { return }
         let composed = DayBrief.whisper(things: things)
         if paneReads { chrome.paneBrief = composed }
@@ -222,6 +230,17 @@ struct RootShell: View {
         // Mac menu bar commands (2026-07-28) read `chrome` back through this
         // — see ShellChromeFocusedKey.
         .focusedSceneValue(\.shellChrome, chrome)
+        // The three per-window stores, for screens (environment) and for the
+        // menu bar (focused value — a command fires from outside every
+        // window's hierarchy and must be told which window it meant).
+        .environment(sceneState.route)
+        .environment(sceneState.filter)
+        .environment(sceneState.detail)
+        .focusedSceneValue(\.sceneState, sceneState)
+        .background(WindowSceneReader { scene in
+            windowScene = scene
+            applyMacWindowChrome(to: scene)
+        })
         // The app-language override, applied to the whole tree: reading the
         // observable store here means picking a language repaints every `Text`
         // from its `.lproj` live, no relaunch (LanguageStore).
@@ -265,23 +284,6 @@ struct RootShell: View {
             if SharedStore.cloudSyncActive {
                 UIApplication.shared.registerForRemoteNotifications()
             }
-            #if targetEnvironment(macCatalyst)
-            // Mac window sizing (2026-07-28): SwiftUI's `.frame(minWidth:…)`
-            // on the WindowGroup's root view does NOT constrain the actual
-            // NSWindow under Catalyst — verified live: the window drags
-            // straight past it, the chip strip overlapping the title bar
-            // well before the intended floor. `UIWindowScene.sizeRestrictions`
-            // is the real Catalyst API for this (AppKit-native apps use the
-            // SwiftUI modifier; a Catalyst window is still fundamentally a
-            // UIWindowScene). Matches CasberiApp's `.frame(idealWidth:980,
-            // idealHeight:760…)` default-size hint, which — unlike the min —
-            // Catalyst does honor for the FIRST launch (a saved window frame
-            // from a prior run wins after that, same as any Mac app).
-            if let scene = UIApplication.shared.connectedScenes
-                .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
-                scene.sizeRestrictions?.minimumSize = CGSize(width: 560, height: 480)
-            }
-            #endif
             // Perf pass: log init→ready (first content appearance) once per
             // process. `ready` = this onAppear, i.e. the first frame's view tree
             // is assembled — read by scripts/perf.sh, not an in-app surface.
@@ -444,12 +446,12 @@ struct RootShell: View {
                 // pane" — and the hook would take the sheet on a device that
                 // has one.
                 Task { @MainActor in
-                    await PadDetailSelection.shared.awaitLayout()
+                    await sceneState.detail.awaitLayout()
                     guard let match, match.isLive else {
                         NSLog("[Casberi] openThing: no match for %@", prefix)
                         return
                     }
-                    let inPane = PadDetailSelection.shared.present(match)
+                    let inPane = sceneState.detail.present(match)
                     if !inPane { deepLinkThing = match }
                     NSLog("[Casberi] openThing: %@ (%@)", match.title,
                           inPane ? "pane" : "sheet")
@@ -462,7 +464,7 @@ struct RootShell: View {
             // This onAppear runs after the whole tree mounts — same proven
             // timing as the `-deeplink` hook above.
             if UserDefaults.standard.bool(forKey: "openSettings") {
-                HomeRoute.shared.present(.settings)
+                sceneState.route.present(.settings)
             }
             // `-openAppsDelay <s>` pushes the store after a delay — records
             // "tapping the grid door" (the zoom plays on the real push path).
@@ -470,7 +472,7 @@ struct RootShell: View {
             if appsDelay > 0 {
                 Task { @MainActor in
                     try? await Task.sleep(for: .seconds(appsDelay))
-                    withAnimation(DS.Motion.standard) { HomeRoute.shared.present(.apps) }
+                    withAnimation(DS.Motion.standard) { sceneState.route.present(.apps) }
                 }
             }
             // `-berryPulse <s>` bumps the refresh pulse after a delay — plays
@@ -835,18 +837,18 @@ struct RootShell: View {
                 predicate: #Predicate { $0.id == id }
             ))) ?? []
             if let thing = all.first {
-                HomeRoute.shared.path = []   // land on the record, not a stale store push
-                FeedFilter.shared.source = "All"
+                sceneState.route.path = []   // land on the record, not a stale store push
+                sceneState.filter.source = "All"
                 deepLinkThing = thing
             }
         }
         // Mac window resize (2026-07-28): the detail pane hands off a thing
         // it can no longer render instead of discarding it — see
         // `PadDetailSelection.displaced`.
-        .onChange(of: PadDetailSelection.shared.displaced) { _, thing in
+        .onChange(of: sceneState.detail.displaced) { _, thing in
             guard let thing else { return }
             deepLinkThing = thing
-            PadDetailSelection.shared.displaced = nil
+            sceneState.detail.displaced = nil
         }
         .sheet(item: $deepLinkThing) { thing in
             rootPresented(ThingSheetView(thing: thing))
@@ -868,7 +870,7 @@ struct RootShell: View {
                 // screen still standing on the stack — the tray would close
                 // onto the same room it was opened from, having visibly done
                 // nothing.
-                HomeRoute.shared.path = []
+                sceneState.route.path = []
                 // A pick means the whole source — the kind filter clears for
                 // every label, and BEFORE the same-source guard, so a re-tap
                 // drops it. The chip strip's own rule (`MainSurface.go(to:)`),
@@ -889,11 +891,11 @@ struct RootShell: View {
         .fullScreenCover(isPresented: Binding(
             get: { !onboarded }, set: { if !$0 { onboarded = true } }
         ), onDismiss: {
-            FeedFilter.shared.source = "All"
-            FeedFilter.shared.tag = "All"
+            sceneState.filter.source = "All"
+            sceneState.filter.tag = "All"
             guard let node = landingNode else { return }   // nil = the feed itself
             landingNode = nil
-            HomeRoute.shared.present(node)
+            sceneState.route.present(node)
         }) {
             // Onboarding is TWO screens since §217 (2026-07-25), and the
             // second one is the point. The greeting is unchanged — the rain,
@@ -1378,40 +1380,40 @@ struct RootShell: View {
         // A deep link lands you AT a destination, not back in a store the route
         // singleton still holds from an earlier visit. apps/settings re-set it
         // below.
-        HomeRoute.shared.path = []
+        sceneState.route.path = []
         if url.isFileURL {
             guard url.pathExtension.lowercased() == "opml" else { return }
             PendingOPMLFile.shared.url = url
-            HomeRoute.shared.openSetup(forOffer: "RSS")
+            sceneState.route.openSetup(forOffer: "RSS")
             return
         }
         switch url.host() {
         // casberi://home is back-compat (the app was a Home tab, then a
         // board) — it now lands on the All feed, ruling 11.
-        case "home":    FeedFilter.shared.source = "All"; FeedFilter.shared.tag = "All"
+        case "home":    sceneState.filter.source = "All"; sceneState.filter.tag = "All"
         case "feed":
-            FeedFilter.shared.source = "All"
-            FeedFilter.shared.tag = "All"
+            sceneState.filter.source = "All"
+            sceneState.filter.tag = "All"
             // casberi://feed/type/Link — Home's kind bar lands here filtered.
             // casberi://feed/source/Zerion — lands in that source's shape.
             let parts = url.pathComponents.filter { $0 != "/" }
             if parts.count == 2, parts[0] == "type" {
-                FeedFilter.shared.tag = parts[1]
+                sceneState.filter.tag = parts[1]
             } else if parts.count == 2, parts[0] == "source" {
                 // A source with no room lands on All rather than on a page
                 // nothing can light (ruling 2026-08-02, `Corpus.chiplessSources`).
                 // Nothing in the app mints such a link any more — the sheet's
                 // eyebrow stopped being a door for these — but an old one, or a
                 // hand-typed one, must not strand the strip with no chip lit.
-                FeedFilter.shared.source = Corpus.earnsRoom(parts[1]) ? parts[1] : "All"
+                sceneState.filter.source = Corpus.earnsRoom(parts[1]) ? parts[1] : "All"
             }
         // Apps is reached through the shared doors now — push it directly,
         // wherever the chip header currently sits (back-compat for
         // casberi://apps and //account).
         case "account", "apps":
-            HomeRoute.shared.present(.apps)
+            sceneState.route.present(.apps)
         case "settings":
-            HomeRoute.shared.present(.settings)
+            sceneState.route.present(.settings)
         // casberi://brief — the agent, raised onto the brief (2026-07-25).
         // The hero widget carries the brief's own lede now, so its tap has to
         // land on the sentence it was showing; landing on the feed instead
@@ -1419,8 +1421,8 @@ struct RootShell: View {
         // `askRequest` door the whisper capsule, the agent bar and a typed
         // "how's my day" all already funnel through — one composer, one route.
         case "brief":
-            FeedFilter.shared.source = "All"
-            FeedFilter.shared.tag = "All"
+            sceneState.filter.source = "All"
+            sceneState.filter.tag = "All"
             chrome.askRequest = TodayBrief.title
             composerOpen = true
         // casberi://person/<Source>/<handle> — the profile card for one person
@@ -1434,7 +1436,7 @@ struct RootShell: View {
                                                displayName: nil, bio: nil, avatarURL: nil)
             }
         case "thing":
-            FeedFilter.shared.source = "All"
+            sceneState.filter.source = "All"
             let part = url.pathComponents.filter { $0 != "/" }.first
             if part == "latest" {
                 deepLinkThing = (try? modelContext.fetch(FetchDescriptor<Thing>(
@@ -1463,11 +1465,11 @@ struct RootShell: View {
                  knownSources: { bridges.bridges.map(\.name) },
                  // Fixed 2026-07-20 — this was hardcoded nil, silently
                  // dropping the "meets you where you are" lead chip since
-                 // the agent shell was built. FeedFilter.shared.source is
+                 // the agent shell was built. sceneState.filter.source is
                  // the same active-chip signal MainSurface itself binds
                  // against; "All" is a safe sentinel that never collides
                  // with a real source name.
-                 contextSource: { FeedFilter.shared.source == "All" ? nil : FeedFilter.shared.source },
+                 contextSource: { sceneState.filter.source == "All" ? nil : sceneState.filter.source },
                  onNavigate: navigate,
                  onKeepAnswer: keepAnswer,
                  glassNamespace: agentMorph,
@@ -1484,7 +1486,7 @@ struct RootShell: View {
                 // be a dead control (honesty rule).
                 if name == "@apps" {
                     composerOpen = false
-                    HomeRoute.shared.present(.apps)
+                    sceneState.route.present(.apps)
                     return
                 }
                 // Other sentinels ("@wallet", "@token:…") are surface routes,
@@ -1493,12 +1495,12 @@ struct RootShell: View {
                 // nothing.
                 guard !name.hasPrefix("@") else { return }
                 composerOpen = false
-                FeedFilter.shared.source = "All"
+                sceneState.filter.source = "All"
                 // Land on the All feed with the tag's project view pushed —
                 // the same screen the feed's Themes treemap opens (this wrote
                 // a `HomeRoute.openTag` nothing consumed after the board
                 // retired, so the tile was silently inert until 2026-07-22).
-                HomeRoute.shared.path = [.project(name)]
+                sceneState.route.path = [.project(name)]
             }
     }
 
@@ -1512,18 +1514,18 @@ struct RootShell: View {
         // Every destination here is content, not a door — drop any Apps/Settings
         // the singleton still holds, else asking to open a tag while in the
         // store re-presents the store.
-        HomeRoute.shared.path = []
+        sceneState.route.path = []
         composerOpen = false
         switch intent {
         case .tag(let name):
-            FeedFilter.shared.source = "All"
-            HomeRoute.shared.path = [.project(name)]
+            sceneState.filter.source = "All"
+            sceneState.route.path = [.project(name)]
         case .source(let source):
-            FeedFilter.shared.source = source
-            FeedFilter.shared.tag = "All"
+            sceneState.filter.source = source
+            sceneState.filter.tag = "All"
         case .kind(let kind):
-            FeedFilter.shared.source = "All"
-            FeedFilter.shared.tag = kind.typeTag
+            sceneState.filter.source = "All"
+            sceneState.filter.tag = kind.typeTag
         }
     }
 
@@ -1673,7 +1675,7 @@ struct RootShell: View {
 
         // "Watching the record" used to mean either feed shape (Pinned or
         // All); the board retired 2026-07-20, so All is the one shape left.
-        if FeedFilter.shared.source == "All" || first {
+        if sceneState.filter.source == "All" || first {
             chrome.flight = ShellChrome.Flight(kind: thing.kind, title: thing.title)
         }
     }
@@ -2598,14 +2600,47 @@ struct RootShell: View {
     }
 
     #if targetEnvironment(macCatalyst)
+    /// Mac window chrome for THIS window, applied the moment its scene is
+    /// known (2026-08-02).
+    ///
+    /// SwiftUI's `.frame(minWidth:)` on the WindowGroup's root does NOT
+    /// constrain a Catalyst NSWindow — verified live 2026-07-28: the window
+    /// drags straight past it, the chip strip overlapping the title bar well
+    /// before the intended floor. `UIWindowScene.sizeRestrictions` is the real
+    /// Catalyst API (AppKit-native apps use the SwiftUI modifier; a Catalyst
+    /// window is still fundamentally a UIWindowScene).
+    ///
+    /// The floor comes from `PadLayout.macMinWindowSize` now, and that fixed a
+    /// live bug: this call read a hardcoded 560 while CasberiApp's frame read
+    /// `560 + railWidth`, and since only THIS one binds, the window's real
+    /// floor sat 88pt under its stated intent from the day the rail landed —
+    /// a 472pt content column, exactly what the frame's own comment believed
+    /// it had prevented.
+    ///
+    /// Driven by `WindowSceneReader` rather than `onAppear`, for two reasons:
+    /// the old code asked `UIApplication` for "the first foreground-active
+    /// scene", which with two windows open can be the OTHER one (restricting
+    /// it twice and this one never); and it fired once with no retry, so a
+    /// scene that wasn't foreground-active at that instant was never
+    /// restricted at all.
+    private func applyMacWindowChrome(to scene: UIWindowScene) {
+        scene.sizeRestrictions?.minimumSize = PadLayout.macMinWindowSize
+        updateMacWindowTitle()
+    }
+    #else
+    private func applyMacWindowChrome(to scene: UIWindowScene) {}
+    #endif
+
+    #if targetEnvironment(macCatalyst)
     /// `nil` reverts the title bar to the app's own display name (Info.plist
     /// `CFBundleDisplayName`) — the "All" case, so an unscoped feed reads as
     /// plain "Casberi" exactly as it always has.
     private func updateMacWindowTitle() {
-        guard let scene = UIApplication.shared.connectedScenes
-            .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene
-        else { return }
-        scene.title = filter.source == "All" ? nil : filter.source
+        // THIS window's scene (multi-window, 2026-08-02). The old
+        // `connectedScenes.first(where: .foregroundActive)` lookup answered
+        // "whichever window is frontmost", so with two open, one window
+        // changing source retitled the other.
+        windowScene?.title = filter.source == "All" ? nil : filter.source
     }
     #endif
 

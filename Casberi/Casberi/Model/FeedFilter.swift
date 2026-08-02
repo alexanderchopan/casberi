@@ -16,7 +16,9 @@ import Observation
 /// broken room, not a filter (it showed up once as "No wallet yet.").
 @Observable
 final class FeedFilter {
-    static let shared = FeedFilter()
+    // `.shared` DELETED (multi-window, 2026-08-02) — per-window now, held by
+    // `SceneState`. Two windows showing two different sources is the whole
+    // point of a second window.
 
     /// Content-first landing (reverted 2026-07-28: §131's amendment that made
     /// this persist "wherever you left it" is undone per user feedback — the
@@ -24,7 +26,10 @@ final class FeedFilter {
     var source = "All"
     var tag = "All"
 
-    private init() {}
+    // Per-window now, so the init is reachable — the `private` here was
+    // the singleton's own guard against a second instance, and a second
+    // instance is exactly what a second window is.
+    init() {}
 
     func clear() { source = "All"; tag = "All" }
 }

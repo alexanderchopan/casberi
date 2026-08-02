@@ -511,6 +511,9 @@ private struct LinkPreviewCard: View {
                         in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
         }
         .buttonStyle(.plain)
+        // Hover on the CARD, before the padding — the lift belongs to the
+        // card's own silhouette, not the gutter around it.
+        .dsHover()
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
         .task { await fetch() }
@@ -636,6 +639,7 @@ private struct ChatBubbles: View {
                         .dsText(.subhead13).foregroundStyle(DS.tint)
                 }
                 .buttonStyle(.plain)
+                .dsHover()
                 .padding(.horizontal, DS.Space.s3)
             }
         }
@@ -681,7 +685,12 @@ private struct VoiceContent: View {
                             .foregroundStyle(DS.tint)
                     }
                     .buttonStyle(.plain)
+                    .dsHover()
                     .accessibilityLabel(playing ? "Pause" : "Play")
+                    // A bare transport glyph — it says the same word to a
+                    // cursor as it does to VoiceOver, and follows the state.
+                    .dsTooltip(playing ? String(localized: "Pause")
+                                       : String(localized: "Play"))
                 }
                 HStack(spacing: 2) {
                     ForEach(Array((envelope ?? Self.flatBars).enumerated()), id: \.offset) { _, h in
@@ -1073,6 +1082,7 @@ private struct TokenChartContent: View {
                     .contentShape(Capsule(style: .continuous))
             }
             .buttonStyle(.plain)
+            .dsHover()
         }
     }
 

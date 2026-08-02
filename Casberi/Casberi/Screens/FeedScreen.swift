@@ -22,7 +22,7 @@ import Translation
 struct FeedScreen: View {
     /// The source this feed IS (2026-07-16, the pager): each page owns one
     /// source for its whole life instead of the whole screen re-reading the
-    /// shared filter. `FeedFilter.shared.source` is still the truth for WHICH
+    /// shared filter. `FeedFilter.source` is still the truth for WHICH
     /// page is up — it's the pager's selection — but a page's own shape,
     /// query, and boundary are this.
     let source: String
@@ -62,6 +62,9 @@ struct FeedScreen: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(BridgeStore.self) private var bridges
     @Environment(\.modelContext) private var modelContext
+    // This window's stack and detail pane (per-window since `SceneState`).
+    @Environment(HomeRoute.self) private var route
+    @Environment(PadDetailSelection.self) private var detail
 
     init(source: String, isActive: Bool, nearActive: Bool = true) {
         self.source = source
@@ -109,7 +112,8 @@ struct FeedScreen: View {
 
     /// Only `tag` is read from here now — a kind filter is a cross-page state
     /// (it arrives from Home's kind bar and applies to the All room).
-    @State private var filter = FeedFilter.shared
+    /// Per-WINDOW since `SceneState`: `RootShell` owns it and injects it.
+    @Environment(FeedFilter.self) private var filter
     /// The one sheet this screen can have open at a time (2026-07-24, fixing
     /// prd §196's "opens and dismisses itself on first try"). Five separate
     /// `.sheet` modifiers stacked on one view — thing/token/combined
@@ -1125,7 +1129,7 @@ struct FeedScreen: View {
             // screens and sheets back to root (the old per-tab pop habit).
             .onChange(of: chrome.popHome) {
                 feedSheet = nil
-                HomeRoute.shared.path = []
+                route.path = []
                 confirming = nil
             }
     }
@@ -1162,7 +1166,7 @@ struct FeedScreen: View {
     /// live status. Tapping opens the app's control panel through the router —
     /// the dedicated screen when the bridge has one (Tokens' watchlist,
     /// Wallet's addresses), the generic detail page otherwise. It rides
-    /// `HomeRoute.shared.pushBridge` — the same channel a Wallet row already
+    /// `HomeRoute.pushBridge` — the same channel a Wallet row already
     /// uses. (2026-07-11:
     /// this hardcoded `.detail`, so Tokens' Feed header opened a page with
     /// no way to watch a second token.)
@@ -1180,7 +1184,7 @@ struct FeedScreen: View {
         HStack(spacing: DS.Space.s2) {
         Button {
             DSHaptic.selection()
-            HomeRoute.shared.pushBridge(BridgeRouter.destination(forID: bridge.id))
+            route.pushBridge(BridgeRouter.destination(forID: bridge.id))
         } label: {
             HStack(spacing: DS.Space.s2) {
                 sourceStatusMark(bridge)
@@ -2980,7 +2984,7 @@ struct FeedScreen: View {
                         // dead-control clause).
                         Button {
                             DSHaptic.selection()
-                            HomeRoute.shared.pushBridge(.walletHistory(scope: selectedWallet))
+                            route.pushBridge(.walletHistory(scope: selectedWallet))
                         } label: {
                             WalletRow(mark: .symbol("arrow.left.arrow.right", tint: DS.tint),
                                       title: String(localized: "\(count) \(word)"),
@@ -3039,7 +3043,7 @@ struct FeedScreen: View {
         if total > Self.walletPreviewRows {
             Section {
                 WalletSeeAllRow(count: total) {
-                    HomeRoute.shared.pushBridge(.walletHistory(scope: selectedWallet))
+                    route.pushBridge(.walletHistory(scope: selectedWallet))
                 }
                 .listRowSeparator(.hidden)
                 // On the page itself, not in a card — a quiet continuation
@@ -3162,7 +3166,7 @@ struct FeedScreen: View {
                                         portfolio?.holders(forSymbol: route.symbol ?? "") ?? []))
                                 }
                             } else if name == "@wallet" {
-                                HomeRoute.shared.pushBridge(.wallet)
+                                route.pushBridge(.wallet)
                             }
                         }
                     // The map says WHAT you hold; this says how much of it is
@@ -3904,7 +3908,7 @@ struct FeedScreen: View {
                 .settleIn(delay: 0.05)
             Button {
                 DSHaptic.selection()
-                HomeRoute.shared.present(.apps)
+                route.present(.apps)
             } label: {
                 HStack(spacing: DS.Space.s1) {
                     Text("Open the catalog")
@@ -4130,7 +4134,7 @@ struct FeedScreen: View {
     /// exists (iPhone, an iPad mini in portrait, Slide Over), and the sheet
     /// path below is then exactly the one this app has always taken.
     private func openThing(_ thing: Thing) {
-        guard !PadDetailSelection.shared.present(thing) else { return }
+        guard !detail.present(thing) else { return }
         feedSheet = .thing(thing)
     }
 
@@ -4663,6 +4667,8 @@ private struct EmptyFeedPile: View {
     /// prd 43h: Reduce Motion is law — under it the pile is simply there,
     /// settled, no 700pt fall (nil animation makes the flip instant).
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    // This window's stack (per-window since `SceneState`).
+    @Environment(HomeRoute.self) private var route
 
     var body: some View {
         VStack(spacing: DS.Space.s3) {
@@ -4691,8 +4697,8 @@ private struct EmptyFeedPile: View {
                 Task { @MainActor in
                     try? await Task.sleep(for: .seconds(1.5))
                     NSLog("pileTap: \(name)")
-                    HomeRoute.shared.openOffer = name
-                    HomeRoute.shared.present(.apps)
+                    route.openOffer = name
+                    route.present(.apps)
                 }
             }
             #endif
@@ -4710,8 +4716,8 @@ private struct EmptyFeedPile: View {
     private func tile(_ name: String, index i: Int, size: CGFloat) -> some View {
         Button {
             DSHaptic.selection()
-            HomeRoute.shared.openOffer = name
-            HomeRoute.shared.present(.apps)
+            route.openOffer = name
+            route.present(.apps)
         } label: {
             BridgeIcon(name: name, size: size)
         }

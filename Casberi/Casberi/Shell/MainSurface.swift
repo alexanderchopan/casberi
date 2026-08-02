@@ -36,8 +36,10 @@ struct MainSurface: View {
     /// Polymarket earns a chip with nothing landed yet, since its room's
     /// content is the live book rather than the corpus.
     @Environment(BridgeStore.self) private var store
-    @Bindable private var filter = FeedFilter.shared
-    @Bindable private var route = HomeRoute.shared
+    // Per-WINDOW, not per-process (see `SceneState`): `RootShell` owns one of
+    // each and injects them, so a second window routes and filters on its own.
+    @Environment(FeedFilter.self) private var filter
+    @Environment(HomeRoute.self) private var route
     /// Source moments (wallet new highs, token new highs, a Bitrefill refill,
     /// a quiet account posting again) — the data paths can't reach the
     /// corpus-arrival watcher that fires the release rain (some aren't things
@@ -56,7 +58,7 @@ struct MainSurface: View {
     /// neither can hold two columns.
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var surfaceWidth: CGFloat = 0
-    @Bindable private var detail = PadDetailSelection.shared
+    @Environment(PadDetailSelection.self) private var detail
 
     private var isRegular: Bool { horizontalSizeClass == .regular }
     private var showsPane: Bool { isRegular && surfaceWidth >= PadLayout.minWidthForPane }
@@ -688,7 +690,12 @@ struct MainSurface: View {
 
 
     private var surface: some View {
-        NavigationStack(path: $route.path) {
+        // `@Environment` hands back the object, not a projection, so the two
+        // places this body needs a real `Binding` — the stack's path and the
+        // connect form — take one through a local `@Bindable` re-declaration
+        // (the documented Observation pattern).
+        @Bindable var route = route
+        return NavigationStack(path: $route.path) {
             // The feeds are one surface and a swipe is a STEP, not a drag
             // (prd §265, 2026-08-01 — this replaced `TabView(.page)`).
             //

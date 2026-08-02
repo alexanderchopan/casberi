@@ -9,7 +9,10 @@ import Observation
 /// same push the toolbar buttons do.
 @Observable
 final class HomeRoute {
-    static let shared = HomeRoute()
+    // `.shared` DELETED (multi-window, 2026-08-02) — this is per-window state
+    // now, held by `SceneState`. The deletion is the enforcement: see that
+    // file for why a "current window" accessor would be a bug, not a
+    // convenience.
 
     /// One ordered stack of pushed screens. Replaces the old pair of sibling
     /// `navigationDestination(item:)` bindings — `push` for the Apps/Settings
@@ -117,5 +120,8 @@ final class HomeRoute {
     /// just to the shelf); AppsScreen consumes it on appear, after the
     /// `.apps` push above has mounted the stack.
     var openOffer: String?
-    private init() {}
+    // Per-window now, so the init is reachable — the `private` here was
+    // the singleton's own guard against a second instance, and a second
+    // instance is exactly what a second window is.
+    init() {}
 }

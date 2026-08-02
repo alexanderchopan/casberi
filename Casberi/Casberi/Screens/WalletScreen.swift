@@ -65,6 +65,8 @@ private enum BookSheetRoute: Identifiable {
 /// nobody revisits isn't one).
 struct WalletScreen: View {
     @Bindable private var wallet = WalletStore.shared
+    // This window's stack (per-window since `SceneState`).
+    @Environment(HomeRoute.self) private var route
     @State private var newAddress = ""
     @FocusState private var addressFieldFocused: Bool
     @Environment(\.modelContext) private var modelContext
@@ -238,7 +240,7 @@ struct WalletScreen: View {
             // the list rather than between the verbs and the names.
             Section {
                 DSSlabDoor(title: "Connection", detail: chainsSummary) {
-                    HomeRoute.shared.pushBridge(.walletConnection)
+                    route.pushBridge(.walletConnection)
                 }
             }
             .listRowInsets(EdgeInsets(top: DS.Space.s6, leading: DS.Space.s4,

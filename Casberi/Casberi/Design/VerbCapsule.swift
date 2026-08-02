@@ -43,6 +43,10 @@ struct VerbCapsule: View {
         if let action {
             Button(action: action) { label }
                 .buttonStyle(.plain)
+                // Hover rides the ACTIONABLE branch only — Soon is inert, and a
+                // cursor lighting it up would be the honesty rule's dead
+                // control wearing a pointer affordance.
+                .dsHover()
         } else {
             label
         }

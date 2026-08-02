@@ -117,6 +117,16 @@ struct CasberiApp: App {
     /// (see `ShellChromeFocusedKey`) — commands live at the Scene level,
     /// outside the view hierarchy `chrome` is injected into.
     @FocusedValue(\.shellChrome) private var focusedChrome: ShellChrome?
+    /// The frontmost window's navigation, source filter and pane selection
+    /// (multi-window, 2026-08-02). A menu command fires from outside every
+    /// window's view hierarchy, so it has to be TOLD which window it meant —
+    /// the same argument `focusedChrome` above already makes. Before this,
+    /// ⌘, ⌘[ ⌘1–⌘9 and Escape all drove process singletons, which with two
+    /// windows open would have moved the wrong one.
+    @FocusedValue(\.sceneState) private var focusedScene: SceneState?
+    /// False when the platform can't open a second window — the New Window
+    /// item disables itself rather than sitting there doing nothing.
+    @Environment(\.supportsMultipleWindows) private var supportsMultipleWindows
     @Environment(\.openURL) private var openURL
 
     var body: some Scene {
@@ -143,10 +153,16 @@ struct CasberiApp: App {
                 // it alone once a fixed 88pt rail moved in would have
                 // quietly redefined it as 472 and broken its own stated
                 // intent. Stated as arithmetic so it tracks `railWidth`.
+                // Both numbers come from `PadLayout` now (2026-08-02) — see
+                // `macMinWindowSize` for the drift this cost. Note this
+                // `minWidth` is a HINT here and nothing more: the floor that
+                // actually binds is the `sizeRestrictions` call in RootShell,
+                // which reads the same constant.
                 .frame(
-                    minWidth: 560 + PadLayout.railWidth,
-                    idealWidth: 980, maxWidth: .infinity,
-                    minHeight: 480, idealHeight: 760, maxHeight: .infinity)
+                    minWidth: PadLayout.macMinWindowSize.width,
+                    idealWidth: PadLayout.macIdealWindowSize.width, maxWidth: .infinity,
+                    minHeight: PadLayout.macMinWindowSize.height,
+                    idealHeight: PadLayout.macIdealWindowSize.height, maxHeight: .infinity)
                 #endif
         }
         .modelContainer(container)
@@ -163,6 +179,21 @@ struct CasberiApp: App {
                     focusedChrome?.openComposer()
                 }
                 .keyboardShortcut("n", modifiers: .command)
+                // A second window (multi-window, 2026-08-02). ⇧⌘N rather than
+                // the Mac-conventional ⌘N because ⌘N was already spent on the
+                // app's own primary verb, and moving it would retrain the one
+                // shortcut people already use to capture something.
+                //
+                // `requestSceneSessionActivation` is the Catalyst door.
+                // SwiftUI's `openWindow` addresses a WindowGroup by id, which
+                // this app's group doesn't carry, and giving it one to serve a
+                // menu item would change how the scene is restored.
+                Button("New Window") {
+                    UIApplication.shared.requestSceneSessionActivation(
+                        nil, userActivity: nil, options: nil, errorHandler: nil)
+                }
+                .keyboardShortcut("n", modifiers: [.command, .shift])
+                .disabled(!supportsMultipleWindows)
             }
             // NOTE (verified live, 2026-07-28): Mac Catalyst's default
             // document-menu scaffolding (Duplicate/Move/Rename/Export As —
@@ -199,7 +230,7 @@ struct CasberiApp: App {
             }
             CommandGroup(replacing: .appSettings) {
                 Button("Settings…") {
-                    HomeRoute.shared.present(.settings)
+                    focusedScene?.route.present(.settings)
                 }
                 .keyboardShortcut(",", modifiers: .command)
             }
@@ -207,7 +238,7 @@ struct CasberiApp: App {
             // `HomeRoute.goBack()` for why there's no ⌘] forward.
             CommandGroup(after: .toolbar) {
                 Button("Back") {
-                    HomeRoute.shared.goBack()
+                    focusedScene?.route.goBack()
                 }
                 .keyboardShortcut("[", modifiers: .command)
             }
@@ -224,7 +255,7 @@ struct CasberiApp: App {
                     let order = focusedChrome?.chipOrder ?? ["All"]
                     Button(n <= order.count ? "Switch to \(order[n - 1])" : "Switch to Chip \(n)") {
                         guard n <= order.count else { return }
-                        FeedFilter.shared.source = order[n - 1]
+                        focusedScene?.filter.source = order[n - 1]
                     }
                     .keyboardShortcut(KeyEquivalent(Character("\(n)")), modifiers: .command)
                     .disabled(n > order.count)
@@ -262,9 +293,9 @@ struct CasberiApp: App {
                 // a sheet, so an item that held it unconditionally would break
                 // sheet dismissal everywhere in the app to serve a pane that
                 // is usually empty.
-                Button("Close Item") { PadDetailSelection.shared.clear() }
+                Button("Close Item") { focusedScene?.detail.clear() }
                     .keyboardShortcut(.escape, modifiers: [])
-                    .disabled(PadDetailSelection.shared.thing == nil)
+                    .disabled(focusedScene?.detail.thing == nil)
                 Divider()
                 // ⌘0, continuing the ⌘1–⌘9 chip run below: nine numbered
                 // sources, and the zero that shows you all of them. The tray's

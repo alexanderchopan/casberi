@@ -8,6 +8,8 @@ import SwiftData
 struct AppDetailScreen: View {
     @Environment(ShellChrome.self) private var chrome
     let offer: BridgeCatalog.Offer
+    // This window's stack (per-window since `SceneState`).
+    @Environment(HomeRoute.self) private var route
     @Environment(BridgeStore.self) private var store
     @Environment(\.modelContext) private var modelContext
     @State private var previewStream = GenStream()
@@ -96,7 +98,7 @@ struct AppDetailScreen: View {
         .onChange(of: liveConnected) { _, isLive in
             guard isLive, raisedForm else { return }
             raisedForm = false
-            HomeRoute.shared.connectForm = nil
+            route.connectForm = nil
             connectToken += 1
             DSHaptic.success()
             chrome.flash(BridgeConnect.landingMessage(offer.name), tone: .success)
@@ -144,7 +146,7 @@ struct AppDetailScreen: View {
             }
         } else if connected {
             VerbCapsule(verb: .open) {
-                if let id = bridge?.id { HomeRoute.shared.pushBridge(BridgeRouter.destination(forID: id)) }
+                if let id = bridge?.id { route.pushBridge(BridgeRouter.destination(forID: id)) }
             }
         } else if offer.connectable {
             if offer.needsSetup {
@@ -174,7 +176,7 @@ struct AppDetailScreen: View {
         // where it can't be seen.
         let dest = BridgeRouter.destination(forOffer: offer.name)
         raisedForm = dest?.raisedByConnect == true && dest?.finishesOnConnect == true
-        HomeRoute.shared.openSetup(forOffer: offer.name)
+        route.openSetup(forOffer: offer.name)
     }
 
     /// Fires the connect and turns success into a moment (delight): the app's

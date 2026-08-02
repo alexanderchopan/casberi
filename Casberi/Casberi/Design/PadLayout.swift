@@ -35,6 +35,31 @@ enum PadLayout {
     /// column ~540pt — wide enough to read as a list, not a sidebar.
     static let minWidthForPane: CGFloat = 980
 
+    /// The Mac window's floor, stated ONCE (2026-08-02).
+    ///
+    /// It used to be stated twice and the two drifted the day the rail landed.
+    /// `CasberiApp`'s `.frame(minWidth:)` gained `+ railWidth` with a comment
+    /// explaining that 560 is a statement about the CONTENT column, so leaving
+    /// it alone once a fixed 88pt rail moved in "would have quietly redefined
+    /// it as 472". `RootShell`'s `UIWindowScene.sizeRestrictions` did not gain
+    /// it — and that is the one that BINDS: RootShell's own note records, from
+    /// a live measurement, that SwiftUI's `minWidth` does not constrain a
+    /// Catalyst NSWindow at all. So the floor really was 560 with a 472pt
+    /// column under it, i.e. precisely the outcome the other comment believed
+    /// it had prevented. Both sites read this now, so a future rail-width
+    /// change moves one number.
+    static let macMinContentWidth: CGFloat = 560
+    static var macMinWindowSize: CGSize {
+        CGSize(width: macMinContentWidth + railWidth, height: 480)
+    }
+
+    /// The first-launch window size. Deliberately clear of `minWidthForPane`:
+    /// it used to be exactly 980, so a fresh install opened ON the pane
+    /// boundary and the first nudge of the resize handle collapsed the pane
+    /// and fired the displaced-to-sheet hand-off. A default size should sit in
+    /// the middle of a layout, never on its edge.
+    static let macIdealWindowSize = CGSize(width: 1120, height: 760)
+
     /// The detail pane's width for a given total. Proportional so a 13" in
     /// landscape gives the pane real room, clamped so it can never crush the
     /// list beside it or stretch into a second full screen.
@@ -98,8 +123,10 @@ struct PadShellInsets {
 /// letting the pane trap on a stored property.
 @Observable
 final class PadDetailSelection {
-    static let shared = PadDetailSelection()
-    private init() {}
+    // `.shared` DELETED (multi-window, 2026-08-02) — per-window now, held by
+    // `SceneState`. A pane selection is the most obviously per-window thing
+    // in the app: two windows each open on their own record is the reason to
+    // have two.
 
     /// What the pane is showing. nil = the pane's own resting state.
     var thing: Thing?

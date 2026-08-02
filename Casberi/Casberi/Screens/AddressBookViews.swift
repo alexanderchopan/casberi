@@ -215,6 +215,7 @@ struct NewGroupSheet: View {
                         in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         }
         .buttonStyle(DSTileButtonStyle())
+        .dsHover()
         .accessibilityLabel(entry.name)
         .accessibilityAddTraits(on ? [.isSelected] : [])
     }
@@ -348,7 +349,12 @@ struct CopyAddressButton: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .dsHover()
         .accessibilityLabel(copied ? "Address copied" : "Copy address")
+        // The compact form is a bare glyph, so the tooltip names the verb
+        // and its object; the expanded form's own word ("Copy") says less.
+        .dsTooltip(copied ? String(localized: "Address copied")
+                          : String(localized: "Copy address"))
     }
 }
 
@@ -677,6 +683,7 @@ struct AddressCard: View {
         }
         .buttonStyle(.plain)
         .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
+        .dsHover()
     }
 
     private var addressRow: some View {
@@ -751,6 +758,7 @@ struct AddressCard: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .dsHover()
                     .padding(.top, 2)
                 }
             }
@@ -844,6 +852,7 @@ struct AddressCard: View {
             }
             .buttonStyle(.plain)
             .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
+            .dsHover()
         }
     }
 }
