@@ -13476,3 +13476,71 @@ the no-hairlines law broken with a background. The rail now pours only while
 the feed is beside it (`route.path.isEmpty`, animated); the stack root's own
 pour is untouched since a pushed room covers it. This was inherited iPad
 behavior, fixed for both.
+
+## §275 — The verb that opened nothing: a screenshot's picture becomes reachable (user: "when they opened the photo and there is the icon for the photos it doesn't go to the Photos app or actual photo in their app", 2026-08-02)
+
+A screenshot's thing sheet carried exactly one verb, "Open in Photos", and on
+the reporter's device tapping it did nothing at all — no Photos app, no photo.
+
+**The verb could never have worked as named, and its failure was invisible by
+construction.** Two separate defects wearing one symptom:
+
+1. **iOS publishes no URL that opens a SPECIFIC asset.** `photos-redirect://`
+   reaches the Photos app's ROOT at best. So even in the success case a disc
+   labelled with a destination, sitting under one particular screenshot, could
+   only ever dump you into the library — never onto the picture you were
+   looking at. That is half the complaint, and it was true on every device.
+2. **When nothing claims the scheme, the tap is silently inert.** The verb
+   opened `photos-redirect://` unconditionally, and neither
+   `UIApplication.open`'s completion nor SwiftUI's `openURL` reports a refusal
+   — LaunchServices fails it asynchronously in its own daemon. This app had
+   already MEASURED that exact blindness for `wc:` on 2026-07-16 and written it
+   down; the Photos verb predated the lesson and never got it applied. A disc
+   that reads live and does nothing is the dead control the honesty rule bans,
+   and nothing in the build, the audits, or `verify.sh` could see it.
+
+**The ruling: the picture opens where it cannot fail — in the app.** The
+corpus already holds the pixels twice over (`previewImageData`, the healed copy
+that outlives the original, and the `PHAsset` behind it), so the primary verb
+is now **Zoom** → a full-screen, pinch-and-pan viewer (`Screens/PhotoViewer.swift`),
+reached from the disc AND from a tap on the framed shot itself, which is the
+gesture people try first. The Photos hand-off survives as a SECOND disc, gated
+on `canOpenURL` via the existing `HandOffState` snapshot (`photos-redirect`
+joined `LSApplicationQueriesSchemes` and the probe list) — so it appears only
+where it opens something, and its label promises the app, never this photo.
+The same gate now covers `sourceURL("photos")`.
+
+Three decisions with reasons:
+
+- **`UIScrollView`, not SwiftUI gestures.** Zoom-and-pan is precisely the
+  scroll-vs-gesture arbitration this codebase has already lost twice (the
+  retired `BoardDragDriver`; the standing "never a custom swipe DragGesture in
+  scroll content" rule). UIKit has done rubber-banding, momentum and zoom
+  bounce correctly since 2007, for free.
+- **The stored thumbnail is the FIRST PAINT, not the answer.** The viewer shows
+  the corpus copy instantly, then swaps in the full-resolution asset when it
+  lands — no spinner, and no settling for a ~480pt image under a 6× zoom.
+- **It takes plain values, never the `Thing`.** Nothing to keep alive, so none
+  of the `isLive` guard chain applies and a heal deleting the row under an open
+  viewer just leaves the picture on screen. It reads `redactionReasons` by hand
+  like `PhotoWell` — a full-screen screenshot is the largest leak this app could
+  put in the app-switcher snapshot, and `.redacted(.placeholder)` doesn't blank
+  Images.
+
+**One adjacent defect fixed in the same pass:** `ScreenshotContent` — the
+sheet's OWN image loader — was the only one of the four that skipped the
+`previewImageData` rung, so with Photos access denied or limited-out, or the
+original deleted, the sheet painted the "In your photos" placeholder while the
+feed row it opened from drew the stored thumbnail fine. It now follows the same
+ladder as `PhotoWell`/`ThingShareLink`, strips the `phasset:` prefix like they
+do, and waits past the degraded callback so a blurry stand-in can't replace a
+good stored copy.
+
+**UNMEASURED — authored on Linux with no Xcode and no simulator.** Nothing here
+was compiled or run. `-photoVerbProbe YES` exists to close that: it logs
+`canOpenURL`'s ground-truth answer for `photos-redirect` beside the cached
+`HandOffState` snapshot, then the derived disc row with each disc's real
+destination, then whether the newest screenshot actually has pixels reachable
+(stored bytes, and whether the asset is still in the library). That last pair is
+the check a landed count can't make — a Zoom disc is only honest if a picture
+is reachable.

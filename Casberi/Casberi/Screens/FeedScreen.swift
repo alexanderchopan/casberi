@@ -4403,6 +4403,12 @@ struct FeedScreen: View {
         case .translate:
             translateText = thing.postText ?? thing.content
             showTranslate = true
+        case .viewImage:
+            // The full-screen viewer lives in the thing sheet, which is where
+            // this row's tap already goes — the feed's own menu never offers
+            // this verb (it picks out the open and translate verbs by hand), so
+            // this arm exists for completeness, not as a second door.
+            openThing(thing)
         case .approve:
             // An MCP client asked to save a thing (PRD §34) — the approval
             // carries the payload; the tap is what commits it. Consent → write.

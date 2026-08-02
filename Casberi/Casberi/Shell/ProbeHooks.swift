@@ -1849,6 +1849,70 @@ enum ProbeHooks {
             let n = ScreenshotIngest.ingest(context: context)
             NSLog("Photos re-ingest probe: %d new", n)
         },
+        // `-photoVerbProbe YES` — what a screenshot's thing sheet OFFERS, and
+        // whether each offer can actually land (2026-08-02).
+        //
+        // Built for the bug it verifies: the sheet's only screenshot verb was
+        // "Open in Photos" and it did nothing at all on the reporter's device.
+        // Nothing could see that, because the failure is INVISIBLE at the call
+        // site — LaunchServices refuses an unclaimed scheme asynchronously in
+        // its own daemon, and both `UIApplication.open`'s completion and
+        // SwiftUI's `openURL` report success anyway (measured 2026-07-16 for
+        // `wc:`). So the probe asks the only question that answers it —
+        // `canOpenURL`, which needs the scheme declared in
+        // LSApplicationQueriesSchemes — and prints the disc row beside it.
+        //
+        // One NSLog per line (the `-todayProbe` truncation lesson). The pixel
+        // lines are the other half: a Zoom disc is only honest if a picture is
+        // reachable, and `stored` vs `asset` separates "the corpus kept its own
+        // copy" from "the original is still in the library" — the viewer needs
+        // either, and a row with neither should be reporting that it's gone.
+        Hook(key: "photoVerbProbe") { _, context in
+            // Deliberately delayed: `HandOffState.installedSchemes` — the
+            // snapshot the verb is GATED on — is written by the first
+            // foreground pass, which has not run when `runAll` fires. Reading
+            // it at launch would report an empty set and print a disc row
+            // nobody will ever see. `claimed` is ground truth either way; the
+            // two are logged separately so a disagreement is legible rather
+            // than mysterious.
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(2))
+                let claimed = URL(string: "photos-redirect://").map {
+                    UIApplication.shared.canOpenURL($0)
+                } ?? false
+                NSLog("[Casberi] photoVerb: photos-redirect claimed=%@ · inHandOffSet=%@",
+                      claimed ? "YES" : "NO",
+                      HandOffState.installedSchemes.contains("photos-redirect") ? "YES" : "NO")
+                let shots = (try? context.fetch(FetchDescriptor<Thing>(
+                    predicate: #Predicate { $0.source == "Photos" },
+                    sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []
+                guard let shot = shots.first(where: { $0.kind == .screenshot }) else {
+                    NSLog("[Casberi] photoVerb: no screenshot in the corpus to derive from")
+                    return
+                }
+                NSLog("[Casberi] photoVerb: over %@", shot.title)
+                for verb in VerbDerivation.verbs(for: shot) {
+                    let destination: String
+                    switch verb.action {
+                    case .openURL(let url): destination = url.absoluteString
+                    case .viewImage:        destination = "in-app viewer"
+                    default:                destination = "\(verb.action)"
+                    }
+                    NSLog("[Casberi] photoVerbDisc| %@ → %@",
+                          VerbDial.dialLabel(for: verb), destination)
+                }
+                let ref = shot.sourceRef ?? ""
+                let assetAlive = ref.isEmpty || ref.hasPrefix("sample:")
+                    ? false
+                    : PHAsset.fetchAssets(
+                        withLocalIdentifiers: [ref.replacingOccurrences(of: "phasset:", with: "")],
+                        options: nil).firstObject != nil
+                NSLog("[Casberi] photoVerbPixels| ref=%@ stored=%d bytes · assetInLibrary=%@",
+                      ref.isEmpty ? "(none)" : ref,
+                      shot.previewImageData?.count ?? 0,
+                      assetAlive ? "YES" : "NO")
+            }
+        },
         // `-topicMapProbe YES` — the Photos feed's OCR treemap (2026-07-30),
         // headless. Runs the `ocrTopics` backfill first (reads the OCR text
         // already on each shot — no PHAsset walk), then composes
