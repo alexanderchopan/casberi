@@ -224,7 +224,7 @@ enum AerodromeDeFi {
                 let voteEndText = bounds.voteEnd.formatted(
                     .dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute())
                 let fresh = String(localized:
-                    "Aerodrome voting closes \(voteEndText) — your veAERO #\(lock.tokenId) (\(WalletIngest.format(lock.votingPower)) votes) hasn't voted this epoch")
+                    "veAERO #\(lock.tokenId) hasn't voted — Aerodrome voting closes \(voteEndText)")
                 if existing.contains(ref) {
                     if let landed = try? context.fetch(FetchDescriptor<Thing>(
                         predicate: #Predicate { $0.sourceRef == ref })).first,
@@ -256,8 +256,8 @@ enum AerodromeDeFi {
             let ref = "aerodrome:lockend:\(lock.owner):\(lock.tokenId)"
             let when = end.formatted(.dateTime.month(.abbreviated).day())
             let fresh = end < .now
-                ? String(localized: "Your veAERO #\(lock.tokenId) lock (\(WalletIngest.format(lock.amountAERO)) AERO) expired \(when)")
-                : String(localized: "Your veAERO #\(lock.tokenId) lock (\(WalletIngest.format(lock.amountAERO)) AERO) expires \(when)")
+                ? String(localized: "veAERO #\(lock.tokenId) (\(WalletIngest.format(lock.amountAERO)) AERO) expired \(when)")
+                : String(localized: "veAERO #\(lock.tokenId) (\(WalletIngest.format(lock.amountAERO)) AERO) expires \(when)")
             if existing.contains(ref) {
                 if let landed = try? context.fetch(FetchDescriptor<Thing>(
                     predicate: #Predicate { $0.sourceRef == ref })).first,

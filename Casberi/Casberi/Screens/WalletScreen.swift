@@ -339,7 +339,7 @@ struct WalletScreen: View {
         .alert("Watching \(WalletStore.watchLimit) already", isPresented: $watchCapHit) {
             Button("OK", role: .cancel) { }
         } message: {
-            Text("Watching is capped at \(WalletStore.watchLimit) so your feed stays focused. Unwatch one first — its name stays in your book either way.")
+            Text("Watching \(WalletStore.watchLimit) — the cap. Unwatch one first; its name stays in your book.")
         }
         // TYPING again retires the last paste's outcome — a result line that
         // outlives what produced it starts describing the wrong thing.
@@ -896,7 +896,7 @@ struct WalletScreen: View {
         if let selectedGroup {
             return String(localized: "Nothing in \(selectedGroup) yet — hold any address below and file it here.")
         }
-        return String(localized: "No names yet. Every wallet you watch lands here, and naming an address costs nothing — it's how transfers start reading in your own words.")
+        return String(localized: "No names yet. Name an address and every transfer reads by that name.")
     }
 
     private func bookRow(_ entry: AddressBook.Entry, colliding: Bool,
@@ -1179,7 +1179,7 @@ struct WalletScreen: View {
     /// the approval it leads to is the same one the direct open would get.
     private func manualPairingCard(_ uri: URL) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text("No app answered the tap. Copy this and paste it in your wallet's scan or “connect with link” screen — it's still waiting.")
+            Text("Not listed? Copy the link into your wallet's scan screen — it's still waiting.")
                 .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: DS.Space.s2) {
@@ -1344,7 +1344,7 @@ struct WalletScreen: View {
             // said this before it was hit; this is the honest confirmation
             // for someone who tried anyway.
             resultIsError = true
-            result = String(localized: "You're watching \(WalletStore.watchLimit) wallets — the limit for now. Stop watching one first, or name this address instead.")
+            result = String(localized: "Watching \(WalletStore.watchLimit) — the cap. Unwatch one first, or name this address instead.")
             return
         case .invalid:
             resultIsError = true

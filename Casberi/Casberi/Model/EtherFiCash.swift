@@ -378,7 +378,7 @@ enum EtherFiCash {
                 ?? "$\(WalletIngest.format(account.debtUSD))"
             let title = account.liquidatable
                 ? String(localized: "Your ether.fi Cash credit line can be liquidated — \(debt) owed")
-                : String(localized: "Your ether.fi Cash credit line is close to its limit (health \(String(format: "%.2f", hf))) — \(debt) owed")
+                : String(localized: "Your ether.fi Cash credit line is close to its limit — \(debt) owed, health \(String(format: "%.2f", hf))")
             let thing = Thing(kind: .link, title: title,
                               content: "https://app.ether.fi/cash",
                               source: "Wallet", capturedAt: .now, sourceRef: ref)

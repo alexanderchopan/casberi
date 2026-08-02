@@ -227,7 +227,7 @@ enum PrivacyPoolsBridge {
     /// exact count is noise, the ORDER OF MAGNITUDE is the privacy fact.
     private static func coverLine(symbol: String, count: Int) -> String {
         let approx = roundedSet(count)
-        return String(localized: "Privacy Pools' \(symbol) pool holds about \(approx) accepted deposits — that's the anonymity set your deposit hides in. The bigger it is, the stronger your privacy.")
+        return String(localized: "Privacy Pools' \(symbol) pool holds about \(approx) accepted deposits — the anonymity set your deposit hides in.")
     }
 
     /// "3,900" from 3,947, "12" from 12 — two significant figures, grouped.
@@ -636,7 +636,7 @@ enum PrivacyPoolsBridge {
                         .trimmingCharacters(in: .whitespaces)
                     let title = status == "approved"
                         ? String(localized: "Privacy Pools cleared your \(what) deposit — ready to withdraw privately")
-                        : String(localized: "Privacy Pools declined your \(what) deposit — you can reclaim it to your wallet")
+                        : String(localized: "Privacy Pools declined your \(what) deposit — reclaim it to your wallet")
                     let ref = "privacypools:status:\(label)"
                     if !existing.contains(ref) {
                         let thing = Thing(kind: .transaction, title: title,
@@ -677,7 +677,7 @@ enum PrivacyPoolsBridge {
                     if !existing.contains(ref) {
                         let thing = Thing(
                             kind: .transaction,
-                            title: String(localized: "Privacy Pools needs proof before it can clear your \(what) deposit — open 0xBow to respond"),
+                            title: String(localized: "Privacy Pools needs proof for your \(what) deposit — open 0xBow"),
                             content: "https://app.0xbow.io",
                             source: "Privacy Pools",
                             capturedAt: .now, sourceRef: ref)

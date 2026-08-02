@@ -3176,7 +3176,7 @@ private struct GenChartCard: View {
                     .foregroundStyle(DS.textPrimary)
             }
             TokenChartView(chain: el.str(1), address: el.str(2)) {
-                Text("Couldn't load this chart right now.")
+                Text("Couldn't load this chart.")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
             }
         }

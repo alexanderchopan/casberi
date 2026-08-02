@@ -69,7 +69,8 @@ struct GeminiImportScreen: View {
                 // finding, twice; 2026-07-31). The Takeout path stays whole —
                 // nothing else on screen teaches it.
                 BridgeStepLines(steps: ["Tap Deselect all, then pick My Activity and set it to Gemini Apps only.",
-                                     "Under Multiple formats, choose JSON for activity records, then Export. Google emails a download link — save the zip to Files and tap it once to unzip."], startingAt: 2)
+                                     "Under Multiple formats, choose JSON for activity records, then Export.",
+                                     "Google emails a download link. Save the zip to Files and tap it once to unzip."], startingAt: 2)
                 DSSlabButton(title: "Choose MyActivity.json", systemImage: "square.and.arrow.down") {
                     DSHaptic.tap()
                     importing = true

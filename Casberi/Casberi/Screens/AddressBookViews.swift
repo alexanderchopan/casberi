@@ -121,7 +121,7 @@ struct NewGroupSheet: View {
     var body: some View {
         DSTray(title: "New group", height: 660) {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
-                Text("A group is a label on the addresses in it — so it comes into being with its members. Deleting one later never deletes an address.")
+                Text("Deleting a group never deletes an address.")
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
                 nameField
                 if let existing = matchingGroup {
@@ -626,7 +626,7 @@ struct AddressCard: View {
                         .dsText(.body17).fontWeight(.semibold)
                         .foregroundStyle(DS.textPrimary)
                 }
-                Text("They shorten to the same thing everywhere this app prints them, and they are not the same address. Copy carefully.")
+                Text("Same short form, different address. Copy carefully.")
                     .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 ForEach(twins) { twin in

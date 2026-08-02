@@ -567,7 +567,7 @@ enum RailgunBridge {
                 // claim). This is the one fact about an unshield that a
                 // reader will otherwise get wrong, and getting it wrong here
                 // means believing you know who paid you.
-                thing.enrichedText = String(localized: "Railgun can't tell you who sent this — inside the pool the sender is private by design. If you unshielded this yourself, that's you.")
+                thing.enrichedText = String(localized: "Railgun can't tell you who sent this — inside the pool the sender is private by design.")
             }
             out.append(thing)
         }

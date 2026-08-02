@@ -188,7 +188,7 @@ enum WalletSafety {
                         // verify, not an accusation against 7702 itself.
                         let short = WalletStore.shortAddress(delegate)
                         title = String(localized:
-                            "Your wallet now delegates to an unrecognized contract (\(short)) — if you didn't do this, it may have been signed by a phishing page")
+                            "Your wallet now delegates to an unknown contract (\(short)) — if that wasn't you, it's phishing")
                     }
                 } else {
                     title = String(localized: "Your wallet's delegation was removed")

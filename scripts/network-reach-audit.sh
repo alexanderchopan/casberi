@@ -49,6 +49,14 @@ KNOWN_NON_REACH=(
   # Mail app-password pages, and the Google Takeout page you download your
   # own Gemini export from — all opened in the browser, none read by us.
   appleid.apple.com myaccount.google.com takeout.google.com
+  # The wallet picker's universal links (2026-08-01). Each is a DOOR the person
+  # taps to hand the pairing URI to their own wallet app — iOS routes it to the
+  # installed app, or to that wallet's web page if it isn't installed. Casberi
+  # never fetches any of them. The relay it DOES talk to
+  # (relay.walletconnect.org) is the registry entry, and it is a different host,
+  # so a door here can't stand in for an undisclosed call.
+  metamask.app.link rnbwapp.com go.cb-w.com link.trustwallet.com
+  wallet.zerion.io uniswap.org
   # Instagram's own export page (openURL only — the same shape as Takeout
   # above), plus the bare instagram.com literal, which is a link-MATCH
   # pattern in OEmbed and a doc-comment example in InstagramImport. The

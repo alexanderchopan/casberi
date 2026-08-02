@@ -94,7 +94,7 @@ enum BridgeCatalog {
         var effectiveSummary: String {
             #if targetEnvironment(macCatalyst)
             if name == "Photos" {
-                return "Screenshots that land in your Photos library — the ones your iPhone or iPad takes, synced over iCloud — flow into your feed, searchable by what's in them. A Mac screenshot goes to the Desktop rather than Photos, so this seat sees the ones that arrive from another device, not ones taken here.\n\nA screenshot taken on this Mac lands on your Desktop instead — connect that folder from Files (in Storage) and it gets the same treatment: thumbnailed, read for its text, and titled from what's in it."
+                return "Screenshots synced from your iPhone or iPad flow into your feed, searchable by what's in them.\n\nA screenshot taken on this Mac lands on your Desktop — connect that folder from Files and it gets the same treatment."
             }
             #endif
             return summary
@@ -141,7 +141,7 @@ enum BridgeCatalog {
         Offer(name: "Photos",      tagline: "Screenshots, straight to your feed",            group: "Photos",    connectable: true,
               summary: "The screenshots you take flow into your feed, searchable by what's in them — no album to dig through."),
         Offer(name: "Calendar",    tagline: "Events join your things",               group: "Schedule",  connectable: true,
-              summary: "Your events land alongside everything else, so your day shows up in your week — and Casberi can add one when you ask."),
+              summary: "Your events land alongside everything else — and Casberi can add one when you ask."),
         Offer(name: "Reminders",   tagline: "Lists stay in reach",                   group: "Schedule",  connectable: true,
               summary: "Your reminders join your things and stay findable, and Casberi can add one to your list when you ask."),
         Offer(name: "Wallet",      tagline: "Track any wallet's activity",          group: "Wallet",    connectable: true,
@@ -164,7 +164,7 @@ enum BridgeCatalog {
         // connect — deposits come from the person's own wallet, so the seat
         // is a switch over the watched list.
         Offer(name: "0xBow Privacy Pools", tagline: "Know when your deposit clears",       group: "Wallet",    connectable: true,
-              summary: "Privacy Pools (by 0xBow) lets you move crypto with privacy and a compliance screen: you deposit, their screening reviews it, and once cleared you can withdraw to a fresh address privately. Connect and your deposits land in your feed — and Casberi tells you the moment a deposit clears review and is ready to withdraw privately, or if it's declined.\n\nRead from Ethereum's public chain and 0xBow's public API for the wallets you already watch.\n\nNo account, no key, read-only: nothing here deposits, withdraws, or moves funds.",
+              summary: "Privacy Pools (by 0xBow) moves crypto privately, behind a compliance screen. Connect and your deposits land in your feed — and Casberi says the moment one clears, or is declined.\n\nRead from Ethereum's public chain and 0xBow's public API for the wallets you already watch.\n\nNo account, no key, read-only: nothing here deposits, withdraws, or moves funds.",
               needsSetup: true, added: day(2026, 7, 21)),
         // Wallet group, beside Privacy Pools — the same category for the same
         // reason (prd §268): Railgun trades nothing, it's your own funds
@@ -180,7 +180,7 @@ enum BridgeCatalog {
         // only shape in this app where someone can pay you privately and the
         // money still shows up.
         Offer(name: "Railgun", tagline: "See what you shield, and what comes back", group: "Wallet", connectable: true,
-              summary: "Railgun is a shielded pool on Ethereum: you shield tokens in, move them privately inside, and unshield back out to a public address. Watch a wallet and both doors land in your feed — what you shielded, and what arrived back.\n\nRead from Ethereum's public chain for the wallets you already watch. No account, no key.\n\nThree honest limits. Nothing inside the pool is ever read — your private balance and transfers stay private, which is the whole point. An unshield can never name who sent it, so Casberi shows the money arriving and doesn't guess whether it was you or a payment. And only moves made straight from your own wallet carry your address publicly — shields sent through Railgun's relayer, including any ETH shield, leave no trace of who made them, so those can't appear here.",
+              summary: "Railgun is a shielded pool on Ethereum. Watch a wallet and its two public doors land in your feed — what you shielded in, and what came back out.\n\nRead from Ethereum's public chain for the wallets you already watch. No account, no key.\n\nWhat it can't see: anything inside the pool, which is the point. An unshield never names its sender, so it shows the money arriving without guessing whose it was — and a shield sent through Railgun's relayer leaves no public trace at all.",
               needsSetup: true, added: day(2026, 8, 1)),
         // Wallet group by ruling (prd §222, 2026-07-26): a Gnosis Pay account
         // IS a Safe holding your own balance, so it belongs beside the wallets
@@ -191,20 +191,20 @@ enum BridgeCatalog {
         // it) — because the obvious expectation of a card feed is that it
         // reads like a statement, and this one can't.
         Offer(name: "Gnosis Pay",  tagline: "Card spending, straight off the chain", group: "Wallet",    connectable: true,
-              summary: "Gnosis Pay is a Visa card that settles onchain: every purchase moves stablecoin out of your own Safe in real time. Watch that wallet and each purchase lands in your feed — what you spent, when, and a link to the transaction itself.\n\nRead from Gnosis Chain's public chain for the wallets you already watch. No account, no key.\n\nTwo honest limits: the merchant's name never reaches the chain, so rows show the amount and the moment but not where you were; and refunds settle off-chain, so this records what you spent, not a balanced statement.",
+              summary: "Gnosis Pay is a Visa card that settles onchain: every purchase moves stablecoin out of your own Safe in real time. Watch that wallet and each purchase lands in your feed — what you spent, when, and a link to the transaction itself.\n\nRead from Gnosis Chain's public chain for the wallets you already watch. No account, no key.\n\nThe merchant's name never reaches the chain, so rows show the amount and the moment, not where you were. Refunds settle off-chain — this is what you spent, not a statement.",
               needsSetup: true, added: day(2026, 7, 26)),
         // Wallet group by ruling (user, 2026-07-21): the balances MERGE into
         // the combined portfolio, so an exchange belongs beside the wallets
         // whose total it joins — not in Markets, which is where things you
         // watch rather than own live.
         Offer(name: "Coinbase",    tagline: "Your exchange balance, in your total",  group: "Wallet",    connectable: true,
-              summary: "Most people's crypto isn't all onchain. Connect Coinbase and your balances there join your watched wallets in one combined total and one map, so the number finally covers everything you hold.\n\nConnecting takes a view-only API key — and Casberi asks Coinbase what that key is allowed to do before storing it, handing it back if it can trade or move money.\n\nRead-only: no order, withdrawal or transfer is reachable from the app at all.",
+              summary: "Your Coinbase balances join your watched wallets in one combined total and one map.\n\nConnecting takes a view-only API key — Casberi asks Coinbase what that key is allowed to do before storing it, and hands it back if it can trade or move money.\n\nRead-only.",
               needsSetup: true, added: day(2026, 7, 21)),
         Offer(name: "Kraken",      tagline: "Your exchange balance, in your total",  group: "Wallet",    connectable: true,
-              summary: "Most people's crypto isn't all onchain. Connect Kraken and your balances there join your watched wallets in one combined total and one map, so the number finally covers everything you hold.\n\nConnecting takes an API key with query permissions only — and Casberi asks Kraken what that key is allowed to do before storing it, handing it back if it can trade, withdraw, or manage withdrawal addresses.\n\nRead-only: no order, withdrawal or transfer is reachable from the app at all.",
+              summary: "Your Kraken balances join your watched wallets in one combined total and one map.\n\nConnecting takes an API key with query permissions only — Casberi asks Kraken what that key is allowed to do before storing it, and hands it back if it can trade, withdraw, or manage withdrawal addresses.\n\nRead-only.",
               needsSetup: true, added: day(2026, 7, 21)),
         Offer(name: "Binance",     tagline: "Your exchange balance, in your total",  group: "Wallet",    connectable: true,
-              summary: "Most people's crypto isn't all onchain. Connect Binance and your balances there join your watched wallets in one combined total and one map, so the number finally covers everything you hold.\n\nConnecting takes an API key with reading enabled only — and Casberi asks Binance what that key is allowed to do before storing it, handing it back if it can trade or withdraw.\n\nRead-only: no order, withdrawal or transfer is reachable from the app at all.",
+              summary: "Your Binance balances join your watched wallets in one combined total and one map.\n\nConnecting takes an API key with reading enabled only — Casberi asks Binance what that key is allowed to do before storing it, and hands it back if it can trade or withdraw.\n\nRead-only.",
               needsSetup: true, added: day(2026, 7, 27)),
         // "Gemini Exchange", not "Gemini" — the catalog already has an offer
         // named "Gemini" (the Google AI chat importer), an unrelated company
@@ -212,7 +212,7 @@ enum BridgeCatalog {
         // user-facing (this tile, the venue's display name, the website) so
         // the two are never confused for one another.
         Offer(name: "Gemini Exchange", tagline: "Your exchange balance, in your total", group: "Wallet", connectable: true,
-              summary: "Most people's crypto isn't all onchain. Connect Gemini and your balances there join your watched wallets in one combined total and one map, so the number finally covers everything you hold.\n\nConnecting takes an API key with the Auditor role — Gemini's own read-only designation — and Casberi asks Gemini what that key is allowed to do before storing it, handing it back if it can trade or move funds.\n\nRead-only: no order, withdrawal or transfer is reachable from the app at all.",
+              summary: "Your Gemini balances join your watched wallets in one combined total and one map.\n\nConnecting takes an API key with the Auditor role — Gemini's own read-only designation. Casberi asks Gemini what that key is allowed to do before storing it, and hands it back if it can trade or move funds.\n\nRead-only.",
               needsSetup: true, added: day(2026, 7, 27)),
         // A validator can't be FOUND from a wallet address the way a Solana
         // stake account can (see EthValidatorWatch.swift) — the only free
@@ -229,26 +229,26 @@ enum BridgeCatalog {
               summary: "Your recent @icloud.com mail becomes findable things. Connects over IMAP with an app-specific password from appleid.apple.com — your real password is never shared, and it's read-only.",
               needsSetup: true),
         Offer(name: "ChatGPT",     tagline: "Import your chats, keep them findable", group: "Agent",     connectable: true,
-              summary: "A one-time import of your chat history, kept searchable alongside your things. (No live read — OpenAI doesn't offer one; this is your export, backfilled.)",
+              summary: "A one-time import of your chat history, kept searchable alongside your things. (No live read exists — this is your export.)",
               needsSetup: true),
         Offer(name: "Claude",      tagline: "Import your chats, keep them findable", group: "Agent",     connectable: true,
-              summary: "A one-time import of your Claude chat history, kept searchable alongside your things. (No live read — Anthropic doesn't offer one; this is your export, backfilled.)",
+              summary: "A one-time import of your Claude chat history, kept searchable alongside your things. (No live read exists — this is your export.)",
               needsSetup: true),
         Offer(name: "Gemini",      tagline: "Import your chats, keep them findable", group: "Agent",     connectable: true,
-              summary: "A one-time import of your Gemini history via Google Takeout, kept searchable alongside your things. (No live read — Google doesn't offer one; this is your export, backfilled.)",
+              summary: "A one-time import of your Gemini history via Google Takeout, kept searchable alongside your things. (No live read exists — this is your export.)",
               needsSetup: true),
         Offer(name: "Tokens",      tagline: "Track any token",                       group: "Markets",   connectable: true,
               summary: "Watch any token — paste its address or a link and its live price chart lands in your feed, drawn on \(DS.device). Public price data only; nothing about you leaves the device.",
               needsSetup: true),
         Offer(name: "Kalshi",      tagline: "Watch real-event odds",                 group: "Markets",   connectable: true,
-              summary: "Every open market on Kalshi, the CFTC-regulated event exchange — say yes and its chip lands in your feed, where you can browse the whole book and follow just the questions you want to keep. Public price data only, read-only: nothing here places a trade.",
+              summary: "Every open market on Kalshi, the CFTC-regulated event exchange. Browse the whole book, follow what you want. Public odds, read-only — nothing here places a trade.",
               features: ["Browse every open market — by category, or by what closes soonest",
                          "Follow a question and its odds land in your feed",
                          "See where Polymarket's crowd prices the same question differently",
                          "No account, no key — public odds, read-only"],
               needsSetup: true),
         Offer(name: "Polymarket", tagline: "Watch any prediction market",           group: "Markets",   connectable: true,
-              summary: "Every open market on Polymarket, the onchain prediction-market exchange — say yes and its chip lands in your feed, where you can browse the whole book (real price history included) and follow just the questions you want to keep. Public price data only, read-only: nothing here places a trade.",
+              summary: "Every open market on Polymarket, the onchain prediction-market exchange. Browse the whole book, follow what you want. Public odds, read-only — nothing here places a trade.",
               features: ["Browse every open market — by category, or by what closes soonest",
                          "Follow a question and its odds land in your feed, with a real price curve",
                          "See where Kalshi's crowd prices the same question differently",
@@ -302,10 +302,10 @@ enum BridgeCatalog {
         // book already has a home in the Wallet feed's own DeFi tiles, so a
         // screen here would only duplicate it.
         Offer(name: "Aave",        tagline: "Your lending position, watched",       group: "Wallet",    connectable: true,
-              summary: "Aave is where a lot of onchain lending happens — you post collateral, you borrow against it, and the gap between the two is the thing you can't afford to stop watching. Watch the wallet and your position lands in your feed, with a warning while there's still time to act.\n\nRead from each chain's public RPC for the wallets you already watch, across Ethereum, Base, Arbitrum, Optimism and Polygon.\n\nNo account, no key, read-only: nothing here supplies, borrows, repays, or withdraws.",
+              summary: "Aave is where a lot of onchain lending happens: collateral posted, borrowed against. Watch the wallet and your position lands in your feed, with a warning while there's still time to act.\n\nRead from each chain's public RPC for the wallets you already watch, across Ethereum, Base, Arbitrum, Optimism and Polygon.\n\nNo account, no key, read-only: nothing here supplies, borrows, repays, or withdraws.",
               features: [
                 "Shows collateral, debt and health factor per chain.",
-                "Warns when a position drifts close to liquidation — once per crossing, not every day.",
+                "Warns when a position drifts close to liquidation — once per crossing.",
               ],
               needsSetup: true, added: day(2026, 7, 30)),
         Offer(name: "Morpho",      tagline: "Your markets and vaults, watched",     group: "Wallet",    connectable: true,
@@ -334,15 +334,15 @@ enum BridgeCatalog {
         Offer(name: "Aerodrome",   tagline: "Never miss the weekly vote",           group: "Wallet",    connectable: true,
               summary: "A veAERO lock earns by voting, every week, in a window that closes whether or not you remembered. Watch the wallet and your locks land in your feed — with the vote deadline as a real date you can act on, and the lock's own expiry beside it.\n\nRead from Base's public chain for the wallets you already watch, including how much of a decaying lock's voting power is left.\n\nNo account, no key, read-only: nothing here votes, locks, or claims.",
               features: [
-                "Reminds you before the weekly vote window closes — read live from the Voter, never guessed at.",
+                "Reminds you before the weekly vote window closes — read live.",
                 "Counts down a lock's expiry, and stays quiet about permanent locks, which have none.",
               ],
               needsSetup: true, added: day(2026, 7, 30)),
         Offer(name: "ether.fi",    tagline: "Your staked ETH, and the card",     group: "Wallet",    connectable: true,
-              summary: "Unstaking from ether.fi doesn't return your ETH — it gives you a claim ticket that queues for about ten days, then becomes claimable and waits, silently, until you remember to collect it. Nothing tells you when that moment arrives.\n\nether.fi Cash is the other half: a Visa card that settles onchain, so every purchase moves out of your own account in real time. Watch the wallet and both land in your feed — a request that's queued or ready, a purchase and whether it went on credit.\n\nRead from the public chain for the wallets you already watch. No account, no key, read-only: claiming and spending happen in ether.fi's own app.",
+              summary: "Unstaking from ether.fi hands you a claim ticket that queues about ten days, then waits silently. ether.fi Cash is the other half: a Visa card that settles onchain.\n\nWatch the wallet and both land in your feed.\n\nRead from the public chain for the wallets you already watch. No account, no key, read-only: claiming and spending happen in ether.fi's own app.",
               features: [
                 "Tells you the moment your ETH is actually claimable.",
-                "Shows what's still queued, without inventing a date ether.fi hasn't promised.",
+                "Shows what's still queued.",
                 "Lands each card purchase, and says when one went on credit.",
                 "Warns when the credit line drifts close to its limit.",
                 "Amounts and timing only — the merchant never reaches the chain.",
@@ -365,13 +365,13 @@ enum BridgeCatalog {
         // the summary says plainly that the read-only promise is kept by
         // conduct, not by the credential (unlike every other keyed bridge).
         Offer(name: "Privacy",     tagline: "Your card purchases, in reach",         group: "Shopping",  connectable: true,
-              summary: "What you buy with your Privacy.com virtual cards lands in your feed — each purchase with its merchant and amount, so your spending is findable next to everything else. Connects with an API key from your Privacy account (a paid Privacy plan is required); the key stays in \(DS.device)'s Keychain.\n\nRead-only by conduct: Casberi only ever reads your transactions.\n\nOne honest caveat — Privacy's key can't be scoped read-only, so the same key could manage cards on your account; Casberi never creates, closes, or funds a card.",
+              summary: "What you buy with your Privacy.com virtual cards lands in your feed — each purchase with its merchant and amount, so your spending is findable next to everything else. Connects with an API key from your Privacy account (a paid Privacy plan is required); the key stays in \(DS.device)'s Keychain.\n\nPrivacy's key can't be scoped read-only, so the read-only promise is kept by conduct: Casberi only ever reads your transactions — never creates, closes, or funds a card.",
               needsSetup: true, added: day(2026, 7, 22)),
         Offer(name: "Shopify",     tagline: "Follow any store's new drops",          group: "Shopping",  connectable: true,
-              summary: "Follow any Shopify store — paste its web address and its newest products, restocks, and sale prices land in your feed as things, opening back on the store's own page.\n\nFetched straight from the store's public catalog by \(DS.device): no account, no sign-in, read-only — nothing here checks out or pays.\n\nSome big stores block automated reads; those it can't follow, it says so.",
+              summary: "Follow any Shopify store — paste its web address and its newest products, restocks, and sale prices land in your feed as things.\n\nFetched straight from the store's public catalog by \(DS.device): no account, no sign-in, read-only — nothing here checks out or pays.\n\nSome big stores block automated reads; those it can't follow, it says so.",
               needsSetup: true),
         Offer(name: "Deals",       tagline: "The best deals, as they drop",          group: "Shopping",  connectable: true,
-              summary: "Follow the deal aggregators — Slickdeals, DealNews — and their newest deals land in your feed as products, each already priced in the headline and opening back on the deal's own page. Fetched straight from each source's public feed by \(DS.device): no account, read-only — nothing here buys anything.",
+              summary: "Follow the deal aggregators — Slickdeals, DealNews — and their newest deals land in your feed as products, each already priced in the headline. Fetched straight from each source's public feed by \(DS.device): no account, read-only — nothing here buys anything.",
               needsSetup: true),
         Offer(name: "Open Food Facts", tagline: "Scan a grocery barcode",           group: "Shopping",  connectable: true,
               summary: "Scan or enter a grocery item's barcode and the product lands in your feed — its name, picture, and Nutri-Score, from the open food database.\n\nKeyless and free: Open Food Facts is a public, collaborative catalog, so no account, and nothing about you leaves \(DS.device) but the barcode.\n\nRead-only.",
@@ -424,7 +424,7 @@ enum BridgeCatalog {
               summary: "The pages you connect become findable things, so what you wrote isn't stranded in one more app.\n\nPages only.\n\nConnects with an integration token from notion.so — it stays in \(DS.device)'s Keychain.",
               needsSetup: true),
         Offer(name: "PostHog",     tagline: "The numbers behind what you ship",      group: "Work",      connectable: true,
-              summary: "Name a metric and its curve draws in your feed, on \(DS.device) — with the deploys and launches you annotate landing beside it.\n\nA watched metric updates in place. Only a milestone, or a metric falling silent, arrives as news.\n\nConnects with a personal API key you mint read-only — it can query and read, and it cannot ship a flag, edit a dashboard, or write anything back.",
+              summary: "Name a metric and its curve draws in your feed, on \(DS.device) — with the deploys and launches you annotate landing beside it.\n\nConnects with a personal API key you mint read-only — it can query and read, and it cannot ship a flag, edit a dashboard, or write anything back.",
               features: ["Watch any event — its seven-day curve is its mark",
                          "Your PostHog annotations land as things",
                          "A milestone lands once — never a weekly tally",
@@ -435,7 +435,7 @@ enum BridgeCatalog {
               summary: "Anyone who @-mentions you across Slack lands in your feed, on \(DS.device) — findable next to everything else.\n\nConnects with Slack's own sign-in — no password, no token to copy.\n\nSearch only: Casberi can look up your mentions and nothing else — it can't post, read files, or see channels it isn't asked about.",
               needsSetup: true, added: day(2026, 7, 28)),
         Offer(name: "Stripe",      tagline: "What your money did today",             group: "Work",      connectable: true,
-              summary: "The five things that happen to money, landing in your feed as they happen: a dispute opened, a dispute won or lost, a payout reaching your bank, a subscription canceled, a payment that failed.\n\nA dispute arrives carrying its evidence deadline, so it sits in what's coming up rather than in an inbox you forgot. Individual charges never land — a payment is a tally, and your dashboard already counts those.\n\nConnects with a restricted key you mint read-only — it cannot refund, charge, pay out, or write anything back. Test-mode keys are refused, so your feed only ever holds real money.",
+              summary: "The five things that happen to money, landing in your feed as they happen — disputes opened and closed, payouts, canceled subscriptions, failed payments.\n\nConnects with a restricted key you mint read-only: it cannot refund, charge, or pay out. Test-mode keys are refused.",
               features: ["A dispute lands with its evidence deadline",
                          "Payouts, so you know when money really arrived",
                          "A canceled subscription tells you it canceled",
@@ -582,7 +582,7 @@ enum BridgeCatalog {
         // Safari's Reading List rides along as a folder inside that same
         // file, for free.
         Offer(name: "Bookmarks",   tagline: "Import your bookmarks",                 group: "Reading",   connectable: true,
-              summary: "A one-time import of your bookmarks — from Safari or Chrome's own export — lands as findable links, with folders kept as tags.\n\nSafari's Reading List rides along as its own folder, so you can import just that or everything.\n\nExport from Chrome's bookmark manager, or Safari's File menu on a Mac, then pick the file here. Re-imports add only what's new.",
+              summary: "A one-time import of your bookmarks — from Safari or Chrome's own export — lands as findable links, with folders kept as tags. Safari's Reading List rides along as its own folder. Re-imports add only what's new.",
               needsSetup: true, added: day(2026, 7, 28)),
         Offer(name: "Podcasts",    tagline: "Follow any show",                       group: "Listening", connectable: true,
               summary: "Follow any podcast — new episodes land in your feed as links. Search for a show and pick it; episodes arrive through the show's own public feed.\n\nNo account.\n\nRead-only.",

@@ -82,7 +82,7 @@ struct SteamScreen: View {
     private var setupSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSSlabButton(title: "Open steamcommunity.com/dev/apikey",
+                DSSlabButton(title: "Open Steam's API key page",
                              systemImage: "arrow.up.right") {
                     DSHaptic.tap()
                     if let url = URL(string: "https://steamcommunity.com/dev/apikey") {

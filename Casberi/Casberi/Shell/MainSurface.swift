@@ -369,7 +369,7 @@ struct MainSurface: View {
             } else {
                 CasberiMark(size: 44)
                     .opacity(0.32)
-                Text("Pick something to open it here.")
+                Text("Pick something to open.")
                     .dsText(.subhead13)
                     .foregroundStyle(DS.textTertiary)
                     .multilineTextAlignment(.center)

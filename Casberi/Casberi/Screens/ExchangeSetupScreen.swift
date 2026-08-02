@@ -130,7 +130,7 @@ struct ExchangeSetupScreen: View {
                 // capability line, and the doc note at the top of this file
                 // rules that the copy shouldn't be leaning on "Casberi can't
                 // trade" in the first place.
-                DSSlabNote(text: "Casberi asks \(venue.display) what this key can do before storing it, and hands it back if it can move money.\n\nIt lives in \(DS.device)'s Keychain and goes only to \(venue.display).")
+                DSSlabNote(text: "Casberi asks \(venue.display) what this key can do before storing it, and hands it back if it can move money. It goes only to \(venue.display).")
             }
         }
         .dsSlabSection()
@@ -190,7 +190,7 @@ struct ExchangeSetupScreen: View {
             // Kraken's dashboard is checkboxes across four groups, so the line
             // has to name which to tick AND which to leave — one clause each,
             // not a paragraph carrying both plus a conditional.
-            return ["Create a key with only the Query permissions ticked — Query Funds, plus Query Ledger Entries for deposits and withdrawals. Leave everything else unticked."]
+            return ["Create a key with only the Query permissions ticked — Query Funds, plus Query Ledger Entries for deposits and withdrawals."]
         case .coinbase:
             return ["Create an API key with View permission only — not Trade, not Transfer."]
         case .binance:

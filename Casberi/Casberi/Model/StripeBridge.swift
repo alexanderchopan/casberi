@@ -152,7 +152,7 @@ enum StripeMoney {
 
 // MARK: - The silence alarm
 
-/// "No payments in 14 hours — you normally take one every 20 minutes."
+/// "No payments in 14 hours — normally one every 20 minutes."
 ///
 /// The most valuable thing this bridge can say, and the one thing Stripe's own
 /// dashboard will not tell you: your checkout is broken. PostHog's silence
@@ -224,7 +224,7 @@ enum StripeSilence {
         return Verdict(quiet: since > threshold, typicalGap: median, since: since)
     }
 
-    /// "you normally take one every 20 minutes" — the clause that makes the
+    /// "normally one every 20 minutes" — the clause that makes the
     /// alarm mean something. A bare "no payments in 14 hours" is unreadable
     /// without knowing whether 14 hours is unusual for THIS account.
     static func rateText(_ gap: TimeInterval) -> String {
@@ -899,7 +899,7 @@ enum StripeIngest {
 
     // MARK: Silence
 
-    /// "No payments in 14 hours — you normally take one every 20 minutes."
+    /// "No payments in 14 hours — normally one every 20 minutes."
     ///
     /// Lands at most once per outage and clears itself the moment money starts
     /// arriving again, so a long weekend is one row rather than one per
@@ -920,7 +920,7 @@ enum StripeIngest {
         reading.silent = true
 
         let title = "No payments in \(StripeSilence.sinceText(verdict.since))"
-            + " — you normally take \(StripeSilence.rateText(verdict.typicalGap))"
+            + " — normally \(StripeSilence.rateText(verdict.typicalGap))"
         return [Thing(
             kind: .link,
             title: IngestSupport.titleLine(title),

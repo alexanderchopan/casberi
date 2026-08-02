@@ -284,9 +284,9 @@ enum HandleBridge: String {
     /// The line under the watched-accounts list, explaining its toggles.
     var watchFooter: String? {
         switch self {
-        case .farcaster: "Likes — also saves the casts an account has liked. Recasts — also saves what they rebroadcast. Mentions — also saves casts that name them. Mine — this account is yours: replies to your casts land, new followers arrive, and a like from someone you watch brings your cast back."
-        case .bluesky:   "Reposts — also saves what an account rebroadcasts. Mentions — also saves posts that name them, replies and quotes included. Mine — this account is yours: replies to your posts land, new followers arrive, and a like from someone you watch brings your post back."
-        case .nostr:     "Likes — also saves notes an account has reacted to. Mentions — also saves notes that name them."
+        case .farcaster: "Mine — this account is yours: replies, new followers, and likes bring your posts back."
+        case .bluesky:   "Mine — this account is yours: replies, new followers, and likes bring your posts back."
+        case .nostr:     nil
         default:         nil
         }
     }

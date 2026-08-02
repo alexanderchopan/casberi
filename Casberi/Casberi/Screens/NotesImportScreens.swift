@@ -113,7 +113,7 @@ struct JournalImportScreen: View {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     ImportPickRow(label: "Choose the export folder") { importing = true }
                     BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-                    DSSlabNote(text: "One-time import — entries become findable notes, dated as you wrote them. Photos stay in the export for now. Re-importing adds only what's new. (Apple offers no live read.)")
+                    DSSlabNote(text: "One-time import — entries become findable notes, dated as you wrote them. Photos stay in the export for now. (Apple offers no live read.)")
                 }
             }
             .dsSlabSection()
@@ -204,7 +204,7 @@ struct NotesShareScreen: View {
                 // Where they land is step 3's job ("It lands in your feed as a
                 // note"); this footer only has to say why one at a time
                 // (2026-07-31).
-                Text("Apple offers no export or live read for Notes, so they arrive one at a time, as you share them.")
+                Text("Apple offers no export for Notes, so they arrive one at a time, as you share them.")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
             }
             .listRowSeparator(.hidden)

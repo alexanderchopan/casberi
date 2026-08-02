@@ -564,7 +564,7 @@ enum BitcoinBridge {
             if days >= 180 {
                 let thing = Thing(
                     kind: .transaction,
-                    title: String(localized: "Nothing has moved from this address since \(last.formatted(.dateTime.month(.wide).year()))"),
+                    title: String(localized: "This address hasn't moved since \(last.formatted(.dateTime.month(.wide).year()))"),
                     content: explorer, source: "Wallet", capturedAt: .now, sourceRef: dormantRef)
                 thing.walletAddress = address
                 context.insert(thing)

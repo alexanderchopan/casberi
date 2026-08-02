@@ -172,7 +172,7 @@ struct StripeScreen: View {
     /// finding one component down.
     private var footerSection: some View {
         BridgeFooterNote(
-            lede: "What arrives is the money news you'd want waking you up:",
+            lede: "What arrives:",
             detail: "Individual charges never land — a payment is a tally, and Stripe already counts those. Nothing here reads your customers' names or card details.",
             points: ["A dispute, and its deadline",
                      "A payout reaching your bank",
@@ -236,7 +236,7 @@ struct StripeScreen: View {
             // key, a key missing one permission) looking identical to a typo,
             // and the fix for each is different.
             case .testKey:
-                fail(String(localized: "That's a test-mode key. Casberi only holds real money, so it won't file pretend payouts beside your real ones — mint a live restricted key instead."))
+                fail(String(localized: "That's a test-mode key — Casberi only holds real money. Mint a live restricted key."))
             case .rejected:
                 fail(String(localized: "Stripe didn't accept that key. Check you copied the whole thing."))
             case .missingScope:

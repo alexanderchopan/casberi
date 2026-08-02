@@ -385,7 +385,7 @@ enum HyperliquidDeFi {
                             let side = p.isLong ? "long" : "short"
                             let who = p.accountLabel.map { " in \($0)" } ?? ""
                             let title = String(localized:
-                                "Opened \(p.coin) \(side) on Hyperliquid\(who) — \(p.leverageX)x leverage, entry $\(WalletIngest.format(p.entryPx))")
+                                "Opened \(p.coin) \(side) on Hyperliquid\(who) — \(p.leverageX)x, entry $\(WalletIngest.format(p.entryPx))")
                             let thing = Thing(kind: .transaction, title: title,
                                               content: "https://app.hyperliquid.xyz/trade/\(p.coin)",
                                               source: "Wallet", sourceRef: ref)
@@ -439,8 +439,8 @@ enum HyperliquidDeFi {
                     : String(localized: "held \(days) days")
                 let pnlNote = snap.lastUPnl == 0 ? "" :
                     (snap.lastUPnl > 0
-                        ? String(localized: " — was up about $\(WalletIngest.format(snap.lastUPnl)) when last checked")
-                        : String(localized: " — was down about $\(WalletIngest.format(abs(snap.lastUPnl))) when last checked"))
+                        ? String(localized: ", last seen up ~$\(WalletIngest.format(snap.lastUPnl))")
+                        : String(localized: ", last seen down ~$\(WalletIngest.format(abs(snap.lastUPnl)))"))
                 let ref = "hyperliquid:close:\(key):\(now)"
                 if !existing.contains(ref) {
                     let title = String(localized: "Closed \(coin) \(side) on Hyperliquid — \(held)\(pnlNote)")

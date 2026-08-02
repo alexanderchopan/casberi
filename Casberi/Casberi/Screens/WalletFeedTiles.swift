@@ -1257,7 +1257,7 @@ struct WalletWorthALookTray: View {
                                                 .dsText(.label12).foregroundStyle(DS.textSecondary)
                                                 .monospacedDigit()
                                         }
-                                        Text("You can still change how these turn out.")
+                                        Text("These are still yours to change.")
                                             .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                                     }
                                     .padding(.horizontal, 3)

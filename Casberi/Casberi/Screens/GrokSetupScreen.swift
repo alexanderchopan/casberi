@@ -67,7 +67,7 @@ struct GrokSetupScreen: View {
                 // The opening clause was the header's own tagline — "Try with
                 // your key, on Grok" — restated a screen below it
                 // (2026-07-31). The consent clause it carried stays.
-                DSSlabNote(text: "Any answer re-runs on Grok, straight from \(DS.device), only when you tap.\n\nxAI has no free tier, so your team needs credits before a key can answer — buy them in the same console.\n\nThe key lives in the Keychain, goes only to xAI, and xAI bills you directly.")
+                DSSlabNote(text: "xAI has no free tier, so your team needs credits before a key can answer — buy them in the same console.")
             }
         }
         .dsSlabSection()

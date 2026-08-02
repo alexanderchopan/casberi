@@ -65,7 +65,7 @@ struct PolymarketMarketView<Fallback: View>: View {
             if let closeTime = market.closeTime {
                 Text(!market.closed
                      ? "Closes \(closeTime.formatted(.relative(presentation: .named)))"
-                     : "A Polymarket prediction market — public odds, not a bet placed here.")
+                     : "Public odds — not a bet placed here.")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
             }
         }

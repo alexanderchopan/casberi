@@ -73,7 +73,7 @@ struct StartHereScreen: View {
                         .foregroundStyle(DS.textPrimary)
                         .minimumScaleFactor(0.8)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text("Pick one. You can add the rest any time.")
+                    Text("Pick one. The rest can wait.")
                         .dsText(.body17)
                         .foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)

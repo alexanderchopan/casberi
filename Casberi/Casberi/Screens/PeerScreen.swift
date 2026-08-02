@@ -90,7 +90,7 @@ struct PeerScreen: View {
     private var footerSection: some View {
         BridgeFooterNote(
             lede: "Fills are read from Base's public chain by \(DS.device) — no Peer account, no key.",
-            detail: "Peer's zero-knowledge design keeps your Venmo or PayPal side private; the chain never shows it, so neither does Casberi.")
+            detail: "Your Venmo/PayPal side never hits the chain, so Casberi never sees it.")
     }
 
     // MARK: - Actions

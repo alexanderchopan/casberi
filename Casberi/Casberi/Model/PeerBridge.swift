@@ -806,8 +806,8 @@ enum PeerBridge {
                 let ref = "peer:expired:\(signal.intentHash)"
                 guard !existing.contains(ref), seen.insert(ref).inserted else { continue }
                 let title = signal.method.map {
-                    String(localized: "A buyer's \($0) payment fell through — your \(what) is available again on Peer")
-                } ?? String(localized: "A buyer's payment fell through — your \(what) is available again on Peer")
+                    String(localized: "A buyer's \($0) payment fell through — your \(what) is back on Peer")
+                } ?? String(localized: "A buyer's payment fell through — your \(what) is back on Peer")
                 let thing = Thing(
                     kind: .transaction, title: title,
                     content: "https://basescan.org/address/\(escrow)",

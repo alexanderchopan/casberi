@@ -76,6 +76,6 @@ enum BridgeConnect {
     /// of claiming a sync that may not have happened (honesty rule).
     private static func healthProof(_ r: HealthIngest.HealthConnectResult) -> String? {
         guard r.added == 0, r.likelyBlocked else { return nil }
-        return "Connected — nothing found. If that's wrong, check Settings ▸ Privacy & Security ▸ Health ▸ Casberi."
+        return "Connected — nothing found. Check Settings ▸ Privacy & Security ▸ Health ▸ Casberi."
     }
 }

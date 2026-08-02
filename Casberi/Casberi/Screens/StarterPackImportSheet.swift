@@ -62,7 +62,7 @@ struct StarterPackImportSheet: View {
                 if let selected {
                     packDetail(selected)
                 } else {
-                    Text("Someone else's curated list of people — follow all of them in one tap.")
+                    Text("Follow all of them in one tap.")
                         .dsText(.callout15).foregroundStyle(DS.textSecondary)
                     searchField
                     results

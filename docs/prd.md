@@ -13310,3 +13310,55 @@ string, and silently suppressing nothing at all.
 The lookup runs from the seats outward, not from the wallet rows inward: these
 seats land RARE events, so fetching all of them is small where a scan of every
 `Wallet` row would not be.
+
+## §272 — The wordiness sweep: the unmeasured bridges wrote walls (user: "do a sweep of the app for wordiness. where do we have it, i feel like it is creeping in again", then "run the trim pass across all", 2026-08-01)
+
+A full-corpus copy sweep (Screens/, Model/, Shell/, Shared/, Design/, GenUI/,
+widgets, share extension), then a trim pass applying ~100 findings. The
+diagnosis is worth more than any single trim: **wordiness correlated almost
+perfectly with the unmeasured bridges** — Stripe, Railgun, ether.fi, the
+Instagram/Snapchat imports — copy authored in sessions with no screen to render
+it, where a paragraph in source doesn't look like a wall in the app. §220's
+finding ("a step that was already on screen twice") had recurred at every
+scale: the read-only promise stated three times per screen (SlackScreen),
+near-verbatim in triplicate across surfaces (Stripe's catalog summary, its
+`can:` blurb, and its NetworkReach purpose), and summaries restated item-for-
+item by their own `features` arrays.
+
+The mechanical rules applied, now standing:
+
+- **The `can:` list owns the read-only claim.** A footer, summary, or note
+  that restates it drops it. (Screens that keep a pre-connect statement where
+  the `can:` list renders connected-only keep exactly one — the
+  ExchangeSetupScreen :133 shape.)
+- **A features array and its summary never say the same item twice.** The
+  summary carries the promise; the bullets carry the enumeration.
+- **NetworkReach purposes hold to their own "one honest sentence"** (±one for
+  a what's-not-read disclosure stated nowhere else). Disclaimers about calls
+  the app does NOT make don't belong in a purpose — the registry preamble
+  covers display hosts once.
+- **Toasts get one short sentence** — a 26-word two-sentence failure toast in
+  a 4-second window is unread by construction. The safety fact ("nothing was
+  lost") survives the trim; the internal detail ("twice in a row") doesn't.
+- **Row titles carry at most one trailing clause.** Honesty hedges survive at
+  ≤3 words ("last seen up ~$412" keeps the never-claim-realized-PnL rule
+  without "when last checked").
+- **Toggle labels are their own glossary** — a footer restating four labels
+  sitting directly above it deletes (HandleSetupScreen).
+
+Headline numbers: AppUpdates' worst entry 165→30 words; ether.fi's catalog
+summary 109→62; Stripe's 100→43; RailgunScreen's footer 128→57; the four
+exchange summaries ~75→~45 each with their identical 33-word opener gone.
+Facts beat suggested rewrites throughout: the trim's own draft said Stripe
+lands "refunds" — it doesn't (five shapes, none a refund), and the honest five
+shipped instead.
+
+Untouched on purpose: the provenance badges ("Matched on this iPhone — nothing
+was written"), the destructive-confirm messages, the lookalike-address
+warnings, PrivacyPoolsScreen's withdrawal disclosure, and
+BridgeDetailScreen's "Allow all photos in Settings" (the label is the only
+place naming where full access is granted — the same reason it exists).
+
+Applied across 29 Screens/ files, 18 Model/ files, and 8 Shell/Shared/Design/
+GenUI/widget files. All three static gates green; verified by build, not sim
+(the user's standing verification rule for logic-free copy).

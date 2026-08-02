@@ -231,10 +231,10 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .notion:   "Reads the pages you connect."
         case .linear:   "Reads issues assigned to you."
         case .bitrefill: "Reads your orders, refills, and balance — nothing here ever buys, pays, or spends."
-        case .privacy:  "Reads your card transactions only. Privacy's key isn't scoped read-only — it could also manage cards on your account — so Casberi keeps the read-only promise by conduct: it never creates, closes, or funds a card."
+        case .privacy:  "Reads your card transactions only. Privacy's key can't be scoped read-only, so the promise is kept by conduct: Casberi never creates, closes, or funds a card."
         case .oneclaw:  "Reads which vaults and secret paths the key can reach — names and permissions only. Nothing here ever reads a secret's value, signs, or spends."
-        case .posthog:  "Reads the metrics you watch and your project's annotations. The key you mint is scoped read-only, so it cannot ship a flag, edit a dashboard, or write anything back — and nothing here ever reads an individual person's profile."
-        case .stripe:   "Reads five things that happen to your money: disputes, payouts, canceled subscriptions, failed payments, and your balance. The restricted key you mint is read-only, so it cannot refund, charge, pay out, or write anything back — and nothing here reads your customers' names or card details."
+        case .posthog:  "Reads the metrics you watch and your project's annotations. The key is scoped read-only — it cannot ship a flag, edit a dashboard, or write anything back."
+        case .stripe:   "Reads disputes, payouts, canceled subscriptions, failed payments, and your balance. The restricted key is read-only — it cannot refund, charge, or pay out."
         }
     }
 

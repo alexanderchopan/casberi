@@ -66,9 +66,9 @@ struct SnapchatImportScreen: View {
     private var pickSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                ImportPickRow(label: "Choose the export folder") { importing = true }
+                ImportPickRow(label: "Choose folder") { importing = true }
                 BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-                DSSlabNote(text: "One-time import — your saved chats become searchable, your memories land on the day you took them. Only saved chats exist: Snapchat deletes everything else when it's viewed. Re-importing adds what's new and keeps a conversation up to date.")
+                DSSlabNote(text: "One-time import — your saved chats become searchable, your memories land on the day you took them. Only saved chats exist: Snapchat deletes everything else when it's viewed.")
             }
         }
         .dsSlabSection()

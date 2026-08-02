@@ -81,7 +81,7 @@ struct RailgunScreen: View {
     private var footerSection: some View {
         BridgeFooterNote(
             lede: "Read-only: nothing here shields, unshields, or moves funds.",
-            detail: "Shields and unshields are read from Ethereum's public chain by \(DS.device) — no account, no key.\n\nWhat happens inside the pool is never read. Your private balance and transfers stay private, which is the point of using Railgun at all.\n\nAn unshield can't name who sent it — the sender is private by design — so a row says the money arrived and doesn't guess whether it was you withdrawing or someone paying you.\n\nOnly moves made straight from your own wallet carry your address publicly. A shield sent through Railgun's relayer — which is how every ETH shield works — leaves no public record of who made it, so it can't appear here. It still shows in your wallet's own activity, just not under Railgun's name.")
+            detail: "Shields and unshields are read from Ethereum's public chain by \(DS.device) — no account, no key.\n\nWhat happens inside the pool is never read. Your private balance and transfers stay private, which is the point of using Railgun at all.\n\nRelayed shields carry no public sender, so they can't appear here — only your wallet's own activity shows them.")
     }
 
     // MARK: - Actions

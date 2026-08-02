@@ -336,7 +336,7 @@ enum AgentAnswerFailure: Error, Sendable {
         case .rejectedKey:
             String(localized: "Your key was turned down — check it in Settings.")
         case .rateLimited:
-            String(localized: "Your agent is rate-limiting this key right now — try again in a minute.")
+            String(localized: "Your agent is rate-limiting this key — try again in a minute.")
         case .refused:
             String(localized: "The agent declined to answer that one. Your key is fine.")
         case .unreachable:
@@ -393,11 +393,11 @@ enum AgentKeyCheck: Equatable {
         case .rejected:
             String(localized: "\(provider.company) turned that key down — check you copied the whole thing.")
         case .rateLimited:
-            String(localized: "\(provider.company) is rate-limiting this key right now — wait a minute and try again.")
+            String(localized: "\(provider.company) is rate-limiting this key — try again in a minute.")
         case .blocked:
-            String(localized: "\(provider.company) took the key but has it blocked — usually an account with no credits, or a key that's been disabled. Sort it at \(provider.console) and try again.")
+            String(localized: "\(provider.company) blocked this key — usually no credits, or it's disabled. Check \(provider.console).")
         case .providerError(let status):
-            String(localized: "\(provider.company) answered the check with something unexpected (HTTP \(status)) — nothing to fix on your end, try again in a moment.")
+            String(localized: "\(provider.company) returned an unexpected HTTP \(status) — not your key. Try again.")
         case .unreachable:
             String(localized: "Couldn't reach \(provider.company) — check your connection.")
         }

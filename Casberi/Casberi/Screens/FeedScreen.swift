@@ -4664,7 +4664,7 @@ private struct EmptyFeedPile: View {
             // you get" (user, 2026-07-29) — the real catalog door sits a
             // whole screen-height above this settled pile, easy to miss once
             // your eye has landed on the tiles. Named again, right here.
-            Text("Tap any app to add it — the catalog above has the rest")
+            Text("Tap any app to add it")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .opacity(fell ? 1 : 0)
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.3).delay(1.5),

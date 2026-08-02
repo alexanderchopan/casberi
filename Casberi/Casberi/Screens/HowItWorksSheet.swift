@@ -83,15 +83,15 @@ struct HowItWorksSheet: View {
     private let points: [Point] = [
         Point(glyph: "square.grid.2x2.fill", hue: .blue,
               title: "Connect your apps",
-              line: "The catalog is top left. Everything you connect lands here on its own."),
+              line: "Everything you connect lands here on its own — the catalog is top left."),
         Point(glyph: "line.3.horizontal.decrease.circle.fill", hue: .pink,
               title: "One feed, or one app",
-              line: "The chips up top narrow it to a single app."),
+              line: "Narrow it to one app with the chips up top."),
         // Wears the agent bar's own seat — the ask bar sits at the bottom of
         // every feed, the same reason step 1 wears the catalog's grid.
         Point(glyph: "sparkles", hue: .purple,
               title: "Ask anything",
-              line: "The bar at the bottom answers questions about anything you've saved."),
+              line: "Ask the bar at the bottom about anything you've saved."),
     ]
 
     // MARK: - The onboarding rain (moved here 2026-07-16 when the connect

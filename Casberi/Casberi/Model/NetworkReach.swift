@@ -56,7 +56,7 @@ enum NetworkReach {
 
         Endpoint(service: "Saved links",
                  reach: .always,
-                 purpose: "When you save a link, \(DS.device) fetches that page once to read its title and preview image. The request goes to the link's own site — whatever you saved — and carries nothing about you.",
+                 purpose: "Saving a link fetches that page once for its title and preview. The request goes to that site and carries nothing about you.",
                  hosts: ["the site you saved"]),
         // The oEmbed siblings of "Saved links" above: a handful of sites hide
         // the title and preview behind a script, so the plain page fetch reads
@@ -66,7 +66,7 @@ enum NetworkReach {
         // request carries only the public URL you saved.
         Endpoint(service: "Link previews",
                  reach: .always,
-                 purpose: "A few sites don't put a title or preview in the page itself. When you save one of those links, \(DS.device) asks that site's own public preview endpoint for it. The request carries only the link you saved.",
+                 purpose: "A few sites don't put a title or preview in the page itself — saving one of those links asks that site's own public preview endpoint instead. The request carries only the link you saved.",
                  hosts: ["www.tiktok.com", "graph.facebook.com", "vimeo.com",
                          "soundcloud.com", "open.spotify.com", "www.flickr.com"]),
         // The one IMPORT that reaches the network. Instagram, ChatGPT, Claude,
@@ -78,7 +78,7 @@ enum NetworkReach {
         // can't see them and why this entry is hand-written.
         Endpoint(service: "Snapchat Memories",
                  reach: .whenConnected(bridge: "snapchat"),
-                 purpose: "Your Snapchat export holds links, not pictures — and they expire. When you tap to fetch your Memories, \(DS.device) asks Snapchat's own link for each one and downloads that picture. Nothing is sent but the link your export already gave you.",
+                 purpose: "Your Snapchat export holds links, not pictures — and they expire. When you tap to fetch your Memories, \(DS.device) asks Snapchat's own link for each one and downloads that picture.",
                  hosts: ["the links in your own export"]),
         Endpoint(service: "Maps",
                  reach: .always,
@@ -89,10 +89,21 @@ enum NetworkReach {
 
         Endpoint(service: "Wallet",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Reads the public onchain activity, balances, approvals, and DeFi positions of the wallets you watch — across Ethereum, Base, Arbitrum, Optimism, Polygon and Solana. Each request carries only a public address you chose to watch. Block explorers (Etherscan, Basescan, Revoke.cash, Solscan) open in your browser when you tap a transaction — this app doesn't call them.",
+                 purpose: "Reads the public onchain activity, balances, approvals, and DeFi positions of the wallets you watch — across Ethereum, Base, Arbitrum, Optimism, Polygon and Solana. Each request carries only a public address you chose to watch. Block explorers open in your browser, not from here.",
                  hosts: ["api.g.alchemy.com", "api.zerion.io", "coins.llama.fi",
                          "rpc.mevblocker.io", "mainnet.base.org", "mainnet.optimism.io",
                          "arb1.arbitrum.io", "eth.api.onfinality.io", "polygon.api.onfinality.io"]),
+        // Disclosed 2026-08-01, and it should have been here all along: these
+        // hosts have been reached since WalletConnect shipped, but the reach
+        // audit only reads THIS app's source and every one of these literals
+        // lives inside the SDK — so the one gap the audit structurally cannot
+        // see is a dependency's own calls. Anything vendored that talks to the
+        // network needs an entry written by hand, exactly like this one.
+        Endpoint(service: "Connect a wallet app",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "Only when you tap “Connect a wallet app”. Casberi relays one connection request to your wallet — the relay carries an encrypted handshake it can't read. The request asks for your address and NOTHING else: no signing, no transactions. Nothing is sent when you type or paste an address instead.",
+                 hosts: ["relay.walletconnect.org", "verify.walletconnect.org",
+                         "pulse.walletconnect.com"]),
         Endpoint(service: "Wallet names",
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Resolves .eth and .sol names and their avatars for the wallets you watch. Carries only the name or address being resolved.",
@@ -100,7 +111,7 @@ enum NetworkReach {
                          "sns-sdk-proxy.bonfida.workers.dev", "lite-api.jup.ag"]),
         Endpoint(service: "Wallet DeFi & Safe",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Reads your Aave, Spark and Morpho lending positions, Hyperliquid perps/spot/staked HYPE, veAERO locks on Aerodrome, and any Safe signatures awaiting you, for the wallets you watch — keyless, public data. Also checks Aave's public rate against a Morpho vault you hold, to tell you when yours is falling behind.",
+                 purpose: "Reads your Aave, Spark and Morpho lending positions, Hyperliquid perps/spot/staked HYPE, veAERO locks on Aerodrome, and any Safe signatures awaiting you, for the wallets you watch — keyless, public data. Also reads Aave's public rate to compare against a vault you hold.",
                  hosts: ["blue-api.morpho.org", "app.morpho.org", "app.aave.com", "app.spark.fi",
                          "api.safe.global", "yields.llama.fi", "api.hyperliquid.xyz"]),
         Endpoint(service: "Tokens",
@@ -184,7 +195,7 @@ enum NetworkReach {
                  hosts: ["us.posthog.com"]),
         Endpoint(service: "Stripe",
                  reach: .whenConnected(bridge: "stripe"),
-                 purpose: "Reads the events that mean money moved — disputes, payouts, cancellations, failed payments — and your balance. Restricted key with read scopes only: it cannot refund, charge, or pay out. Your customers' details are never read. The dashboard opens in your browser when you tap a row; this app doesn't call it.",
+                 purpose: "Reads the events that mean money moved — disputes, payouts, cancellations, failed payments — and your balance. Restricted read-only key: it cannot refund, charge, or pay out, and your customers' details are never read.",
                  hosts: ["api.stripe.com"]),
         Endpoint(service: "Slack",
                  reach: .whenConnected(bridge: "slack"),
@@ -338,7 +349,7 @@ enum NetworkReach {
 
         Endpoint(service: "Your agent key",
                  reach: .onTapWithKey,
-                 purpose: "Only when you tap \"Try with your key\" on an answer, your question and the few matched things go straight from \(DS.device) to the provider you chose — Anthropic, OpenAI, Google, Venice, Bankr, OpenRouter, or xAI (Grok). Never otherwise, and never through us.",
+                 purpose: "Only when you tap \"Try with your key\", your question and the matched things go straight from \(DS.device) to the provider you chose. Never otherwise, never through us.",
                  hosts: ["api.anthropic.com", "api.openai.com", "generativelanguage.googleapis.com",
                          "api.venice.ai", "api.bankr.bot", "openrouter.ai", "api.x.ai"]),
     ]

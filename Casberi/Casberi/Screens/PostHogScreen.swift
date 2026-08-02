@@ -247,8 +247,8 @@ struct PostHogScreen: View {
     private var rosterNote: String {
         let n = watched.count
         return n == 1
-            ? String(localized: "Watching 1 · tap for its chart, hold to unwatch")
-            : String(localized: "Watching \(n) · tap for its chart, hold to unwatch")
+            ? String(localized: "Watching 1 · hold to unwatch")
+            : String(localized: "Watching \(n) · hold to unwatch")
     }
 
     /// One metric on the shelf. The mark is the metric's OWN shape — its

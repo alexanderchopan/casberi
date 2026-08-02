@@ -154,7 +154,7 @@ enum SharedStore {
             if streak >= 2, defaults.bool(forKey: "icloud.sync") {
                 NSLog("[Casberi] two consecutive trapped launches — turning sync off")
                 defaults.set(false, forKey: "icloud.sync")
-                degradeReason = "iCloud sync couldn't set up twice in a row and was turned off. Your things are safe here — you can turn it back on in Data."
+                degradeReason = "iCloud sync failed and was turned off — your things are safe here. Turn it back on in Data."
             }
         } else {
             // A launch that never even attempted CloudKit (sync off, or the
@@ -170,11 +170,11 @@ enum SharedStore {
             NSLog("[Casberi] primary store open failed, retrying without CloudKit: \(primaryError)")
             do {
                 let made = try make(cloudKit: .none)
-                degradeReason = "iCloud sync couldn't open — your things are here, but sync is off until the next update."
+                degradeReason = "iCloud sync is off — your things are here."
                 return made
             } catch let localError {
                 NSLog("[Casberi] local fallback store open ALSO failed, using an ephemeral store: \(localError)")
-                degradeReason = "Your things couldn't load this launch — nothing was lost, but they won't show until the next update."
+                degradeReason = "Couldn't load your things — nothing was lost. Try relaunching."
                 return ephemeralContainer()
             }
         }

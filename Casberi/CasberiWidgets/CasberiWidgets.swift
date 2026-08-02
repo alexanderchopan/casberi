@@ -231,7 +231,7 @@ struct HeroWidget: Widget {
         // Named for what it now shows (§193 renamed the brief "What's going
         // on"); the old "Synthesis" described the tag-cluster line that's gone.
         .configurationDisplayName("What's going on")
-        .description("Your day in one line, the same one the brief opens with.")
+        .description("Your day in one line.")
         .supportedFamilies([.systemSmall, .systemMedium,
                             .accessoryRectangular, .accessoryInline])
     }

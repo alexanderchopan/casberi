@@ -499,7 +499,7 @@ enum TodayBrief {
         else { return nil }
         return Note(glyph: "trophy",
                     text: String(format: String(localized:
-                        "Your wallet's best day since you started watching — %@ on the day."),
+                        "Your wallet's best day since you started watching — %@."),
                         String(format: "%+.1f%%", move.pct)))
     }
 
@@ -647,7 +647,7 @@ enum TodayBrief {
         if settled.count == 1 {
             let tx = settled[0]
             txTitle = clamp(tx.title, max: 52)
-            txMeta = String(localized: "your only transaction · settled \(tx.capturedAt.formatted(.dateTime.hour().minute()))")
+            txMeta = String(localized: "settled \(tx.capturedAt.formatted(.dateTime.hour().minute()))")
             txID = tx.id.uuidString
         } else if settled.count > 1 {
             subline = String(localized: "\(settled.count) transactions settled")
@@ -903,7 +903,7 @@ enum TodayBrief {
             guard hits.count >= 2, let lead = hits.first else { continue }
             return Note(glyph: "arrow.triangle.merge",
                         text: String(localized:
-                            "\(move.symbol) is \(TokenChartStyle.changeText(move.change)) today, and it's what you've been reading: \(clamp(lead.title, max: 52))"),
+                            "\(move.symbol) is \(TokenChartStyle.changeText(move.change)) today — and it's what you've been reading: \(clamp(lead.title, max: 52))"),
                         thingID: lead.id.uuidString)
         }
         return nil

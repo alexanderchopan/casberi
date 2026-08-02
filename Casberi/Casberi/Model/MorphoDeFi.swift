@@ -495,7 +495,7 @@ enum MorphoDeFi {
             let points = Int((gap * 100).rounded())
             guard points > 0 else { continue }
             SourceMoments.shared.fire(
-                String(localized: "Aave is paying about \(points) point\(points == 1 ? "" : "s") more on \(vault.assetSymbol) than your \(vault.vaultName) vault right now"),
+                String(localized: "Aave pays about \(points) point\(points == 1 ? "" : "s") more on \(vault.assetSymbol) than your \(vault.vaultName) vault"),
                 source: "Wallet")
         }
     }

@@ -84,7 +84,7 @@ struct FollowImportSheet: View {
     }
 
     private var blurb: String {
-        String(localized: "The people @\(SocialThread.shortHandle(handle)) follows on \(source). Pick who you want here — their posts land like any watched account.")
+        String(localized: "Who @\(SocialThread.shortHandle(handle)) follows. Pick any — their posts land like any watched account.")
     }
 
     private func note(_ text: String) -> some View {

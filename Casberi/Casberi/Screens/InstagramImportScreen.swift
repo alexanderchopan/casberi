@@ -62,7 +62,7 @@ struct InstagramImportScreen: View {
     private var setupSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSSlabButton(title: "Open Instagram's download page", systemImage: "arrow.up.right") {
+                DSSlabButton(title: "Open Instagram", systemImage: "arrow.up.right") {
                     DSHaptic.tap()
                     if let url = URL(string: "https://accountscenter.instagram.com/info_and_permissions/dyi/") {
                         openURL(url)
@@ -79,12 +79,12 @@ struct InstagramImportScreen: View {
                     // beneath it read out loud (2026-07-31).
                     "Save the zip to Files and tap it once to unzip.",
                 ], startingAt: 2)
-                DSSlabButton(title: "Choose your export folder", systemImage: "folder") {
+                DSSlabButton(title: "Choose folder", systemImage: "folder") {
                     DSHaptic.tap()
                     importing = true
                 }
                 BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-                DSSlabNote(text: "One-time import — re-importing later adds only what's new. Your captions and comments land as text you can search. Saves and likes land as links named for who posted them: Instagram's export doesn't include other people's captions or pictures, so nothing here can.")
+                DSSlabNote(text: "One-time import — re-importing later adds only what's new. Saves and likes land as links — Instagram's export has no one else's captions or pictures.")
             }
         }
         .dsSlabSection()

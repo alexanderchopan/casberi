@@ -92,7 +92,7 @@ struct AccountDetailSheet: View {
         }
         .confirmationDialog("Delete Casberi's access?",
                             isPresented: $confirmDeleteAccess, titleVisibility: .visible) {
-            Button("Delete every token and key", role: .destructive) { deleteAccess() }
+            Button("Delete all access", role: .destructive) { deleteAccess() }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Every token, key, and mail password Casberi holds — connected apps stop syncing and paired clients disconnect. Your things stay.\n\nPhotos and Calendar access is iOS's; revoke those in Settings. No undo.")
@@ -255,7 +255,7 @@ struct AccountDetailSheet: View {
             // one thing that upgrades their sync to true end-to-end, which
             // is theirs to enable, not ours: Advanced Data Protection.
             if icloudSync {
-                Text("For end-to-end encryption of your iCloud copy, turn on Advanced Data Protection in Settings › [your name] › iCloud. Then only your devices can read it — not even Apple.")
+                Text("Turn on Advanced Data Protection (Settings › your name › iCloud) and only your devices can read the iCloud copy — not even Apple.")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.leading, 38 + DS.Space.s3)
@@ -311,7 +311,7 @@ struct AccountDetailSheet: View {
                      "Agent API key",
                      AgentKey.active.map { String(localized: "Answers run on \($0.agent) when you tap") }
                         ?? String(localized: "Answers run on \(DS.device) until you add one"))
-            Text("With your key saved, every answer offers \"Try with your key\" — the question and the few matched things go straight from \(DS.device) to the agent's provider, only when you tap. They bill your key directly.")
+            Text("The question and its matched things go straight to the provider. They bill you directly.")
                 .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             // What THIS agent adds beyond a plain text answer — changes with
@@ -386,7 +386,7 @@ struct AccountDetailSheet: View {
             // hand-listed: the old sentence named six consoles and silently
             // went stale the moment a seventh provider landed. `console` is
             // already a property on every case, so this can't drift again.
-            Text("Get a key from the agent's own console — \(AgentProvider.allCases.map { "\($0.console) (\($0.agent))" }.formatted(.list(type: .or))). Bankr's should be minted read-only; answers never trade regardless. It stays in \(DS.device)'s Keychain and goes only to the provider you chose.")
+            Text("Get a key from the agent's own console. It stays in \(DS.device)'s Keychain and goes only to that provider.")
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -441,7 +441,7 @@ struct AccountDetailSheet: View {
                 }
                 Spacer(minLength: 0)
             }
-            Text("Washes the top of every screen behind the source chips — atmosphere, not an affordance. Your key color (buttons, chips, what's pressable) stays Casberi blue no matter what you pick here.")
+            Text("Buttons and chips stay Casberi blue whatever you pick.")
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }

@@ -93,7 +93,7 @@ struct Composer: View {
     /// the specifics you can tap.
     @State private var placeholderIndex = 0
     private let invitations = [
-        "Ask, or say what to do",
+        "Ask anything",
         "What did I save this week?",
         "Find that thing I pasted",
         "Recap my month",
@@ -888,14 +888,14 @@ struct Composer: View {
     /// The cycling placeholder's pool for THIS open — the static invitations
     /// plus real-corpus examples that teach the widened vocabulary by naming
     /// things that exist and would answer (2026-07-22). A busy publisher
-    /// earns "Try: synthesize my <feed> feed"; a watched token earns a
+    /// earns "Synthesize my <feed> feed"; a watched token earns a
     /// per-token ask. Honest by construction: every added line names a real
     /// entity the answer path resolves.
     private func computeInvitationPool(_ all: [Thing],
                                        busy: (handle: String, count: Int)?) -> [String] {
         var pool = invitations
         if let busy {
-            pool.append(String(localized: "Try: synthesize my \(shortPublisher(busy.handle)) feed"))
+            pool.append(String(localized: "Synthesize my \(shortPublisher(busy.handle)) feed"))
         }
         if let token = all.first(where: { $0.source == "Tokens" }),
            !token.title.isEmpty {
@@ -1128,7 +1128,7 @@ struct Composer: View {
                 // The pairing line — teaches the sheet's dual nature (ask a
                 // question, or write a fact and send it out) and keeps the
                 // greeting from reading as an orphan label.
-                Text("Ask about your things, or write something and send it to another app.")
+                Text("Ask, or write and send it out.")
                     .dsText(.subhead13)
                     .foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1278,10 +1278,10 @@ struct Composer: View {
                                                         KeptAskStore.shared.keep(kind, title: currentQuestion)
                                                         if !firstKeptAskDone {
                                                             firstKeptAskDone = true
-                                                            chrome.flash("Your first standing question — I'll keep it fresh.",
+                                                            chrome.flash("Kept — I'll keep it fresh.",
                                                                          tone: .success)
                                                         } else {
-                                                            chrome.flash("Kept — it'll stay fresh on your rest screen",
+                                                            chrome.flash("Kept — it'll stay fresh.",
                                                                          tone: .success)
                                                         }
                                                         // The chip morphs to its own receipt for
@@ -1300,7 +1300,7 @@ struct Composer: View {
                                                         // Tint is reserved for what genuinely
                                                         // wants attention (design pass
                                                         // 2026-07-21): the just-landed receipt,
-                                                        // and the proactive "you ask this a lot"
+                                                        // and the proactive "Asked often"
                                                         // prompt. A plain Keep is a routine save
                                                         // and sits at neutral — so the row's one
                                                         // consequential verb (Try with your key,
@@ -1315,7 +1315,7 @@ struct Composer: View {
                                                         // stopped being a daily brief).
                                                         Chip(text: keepJustLanded ? "Kept"
                                                                 : (askedOften
-                                                                   ? "You ask this a lot — keep it?"
+                                                                   ? "Asked often — keep it?"
                                                                    : (kind == "today" ? "Keep this view" : "Keep")),
                                                              style: (keepJustLanded || askedOften) ? .tint : .neutral,
                                                              glyph: keepJustLanded ? "checkmark"
@@ -1976,7 +1976,7 @@ struct Composer: View {
         // (submit → poll), so it says so rather than leaving the same
         // "Asking…" line sitting for 90 seconds looking stuck.
         let waitLine = AgentKey.active == .bankr
-            ? "Asking Bankr — reading your wallet and the market. This can take a minute."
+            ? "Asking Bankr — this can take a minute."
             : "Asking with your key…"
         answerStream.paint(["root = Stack([w])", "w = Insight(\"\(waitLine)\")"])
         Task { @MainActor in

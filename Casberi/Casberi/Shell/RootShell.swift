@@ -1638,7 +1638,7 @@ struct RootShell: View {
     private func tagsDoc(_ ask: TagsAsk.Intent, in all: [Thing]) -> [String] {
         let counts = tagCounts(in: all)
         guard !counts.isEmpty else {
-            let line = "No tags of your own yet. Tags arrive on their own — from imports, bridges, and #hashtags in things you capture."
+            let line = "No tags yet — they arrive from imports, bridges, and #hashtags."
             return ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"]
         }
         switch ask {
@@ -1648,7 +1648,7 @@ struct RootShell: View {
         case .list:
             let n = counts.count
             let line = n > 6
-                ? "You have \(n) tags. Your biggest are here — tap one to open it."
+                ? "\(n) tags — tap one to open it."
                 : "You have \(n) tag\(n == 1 ? "" : "s") — tap one to open it."
             // TagMap caps at 6 cells; hand it the biggest, "Label Count" each.
             let cells = counts.prefix(6).map { "\(tagMapLabel($0.tag)) \($0.count)" }
@@ -1683,9 +1683,9 @@ struct RootShell: View {
                 line = l
             }
         case .catalog:
-            var l = "The catalog has \(shelf.count) apps to connect — \(shelf.prefix(3).map(\.name).joined(separator: ", ")), and more."
-            if !seats.isEmpty { l += " You've connected \(seats.count)." }
-            line = l
+            line = seats.isEmpty
+                ? "\(shelf.count) apps to connect."
+                : "\(shelf.count) apps to connect — you've connected \(seats.count)."
         }
         return ["root = Stack([ins, door])",
                 "ins = Insight(\"\(genSafe(line))\")",
@@ -1861,7 +1861,7 @@ struct RootShell: View {
                 let watchesNothing = TokensAsk.watched(modelContext).isEmpty
                     && MarketsAsk.watched(modelContext).isEmpty
                 return proseDoc(watchesNothing
-                    ? "Nothing on your watchlist yet — watch a token from Apps → Tokens, or a market from Kalshi or Polymarket."
+                    ? "Nothing watched yet — add one from Apps."
                     : "Couldn't read your watchlist's prices right now — check your connection.")
             }
             // TokenChip rows alongside the summary — `KeptAskComposers.watchlistDoc`
@@ -2175,7 +2175,7 @@ struct RootShell: View {
         // evidence, so an empty match gets the honest line instead.
         guard !hits.isEmpty || AgentKey.active == .bankr else {
             return .success(KeyedAnswer(doc: proseDoc(
-                "Nothing in your things matches that — a bigger model can't change what's here.")))
+                "Nothing matches that — a bigger model won't help.")))
         }
         let outcome = await AgentAnswer.synthesize(
             query: query, candidates: candidates(hits), history: keyedHistory,
@@ -2414,8 +2414,8 @@ struct RootShell: View {
             // and don't suggest asking about things when there are none.
             let total = (try? modelContext.fetchCount(FetchDescriptor<Thing>())) ?? 0
             let line = total == 0
-                ? "Nothing here yet — connect an app or capture one thing, then ask about it."
-                : "Nothing in your things matches that. Casberi answers from what you've captured — try your links, events, or screenshots, or ask what landed today."
+                ? "Nothing here yet — connect an app, or capture something."
+                : "Nothing matches that. Try your links, events, or what landed today."
             return ["root = Stack([ins])",
                     "ins = Insight(\"\(genSafe(line))\")"]
         }

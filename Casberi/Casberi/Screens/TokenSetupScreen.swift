@@ -237,7 +237,7 @@ struct TokenSetupScreen: View {
                 // only fact worth a gray line on a screen about trust. The
                 // "Sign in" header went with the furniture: the button says
                 // what it does (§190).
-                DSSlabNote(text: "Grants repo, profile and gist access — GitHub's smallest scope that reaches private issues and PRs. Read-only; Casberi never writes back.")
+                DSSlabNote(text: "Grants repo, profile and gist access — GitHub's smallest scope that reaches private issues and PRs.")
             }
         }
         .dsSlabSection()
