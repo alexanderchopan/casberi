@@ -164,7 +164,10 @@ enum VerbDerivation {
             out.append(Verb(label: "Copy text", icon: "doc.on.doc", action: .copyText))
             // The full body — a post's own words (postText), else whatever
             // the kind carries as its text (a transcript, a mail body).
-            if !(thing.postText ?? thing.content).isEmpty {
+            //
+            // Mail defers its Translate to the very end of derivation (see
+            // below) so the cap eats it first. Every other kind keeps it here.
+            if thing.kind != .mail, !(thing.postText ?? thing.content).isEmpty {
                 out.append(Verb(label: "Translate", icon: "character.bubble", action: .translate))
             }
         default:
@@ -197,9 +200,32 @@ enum VerbDerivation {
         }
 
         // 2 — the source hand-off, when the source has an address.
-        if let url = sourceURL(thing.source), !out.contains(where: {
+        //
+        // Gmail is the one source that offers it EVEN when a hand-off is
+        // already present (user, 2026-08-02: "do it for gmail"). Every other
+        // source stands down because its first hand-off opens the thing
+        // itself — a cast's own thread, a track, a store page — so a second
+        // one pointing at the app's front door adds nothing. Mail is the
+        // opposite: the hand-off it usually gets is Reply, which opens a
+        // COMPOSER, and the person who wants to read the mail where it lives
+        // is left with no door at all. Which of the two a Gmail row happened
+        // to get was decided by whether the sender header carried a bare
+        // address or a display name (`mailtoURL`) — a coin flip, not a
+        // ruling.
+        //
+        // Still only the app, never the message: no iOS URL opens a specific
+        // email (`message://<Message-ID>` is macOS Mail's, undocumented here,
+        // and mail things key on the IMAP UID anyway). "Open in Gmail" is the
+        // whole promise, the same one "Open in Calendar" makes. iCloud Mail
+        // gets nothing because Apple publishes no scheme that opens Mail's
+        // inbox — `mailto:` is a composer, and a disc that opens a blank
+        // draft while claiming to open your mail is the dead control §83
+        // bans. The verb drops instead, which is why this reads through
+        // `sourceURL` rather than special-casing the kind.
+        let handsOffAlready = out.contains(where: {
             if case .openURL = $0.action { return true } else { return false }
-        }) {
+        })
+        if let url = sourceURL(thing.source), !handsOffAlready || thing.source == "Gmail" {
             out.append(Verb(label: "Open in \(thing.source)", icon: "arrow.up.right",
                             action: .openURL(url)))
         }
@@ -211,6 +237,19 @@ enum VerbDerivation {
            thing.source != "Reminders",
            !out.contains(where: { $0.label == "Mark done" }) {
             out.append(Verb(label: "Mark done", icon: "checkmark.circle", action: .markDone))
+        }
+
+        // 4 — mail's Translate, last on purpose (2026-08-02). Mail is the one
+        // kind that can carry five candidates — Directions off a signature's
+        // street address, Copy, Reply, Open in Gmail, Translate — and the cap
+        // takes four, so one of them has to lose. It's this one: Reply and
+        // Open in Gmail are the two moves only THIS row can make, and a mail
+        // with an address in its footer is exactly a mail from a real
+        // correspondent, i.e. the case where reaching them matters most.
+        // Translating is a generic utility over text the person can still
+        // Copy, so it yields rather than costing them the door to their mail.
+        if thing.kind == .mail, !(thing.postText ?? thing.content).isEmpty {
+            out.append(Verb(label: "Translate", icon: "character.bubble", action: .translate))
         }
 
         // The cap (was three): a place-y or contactful thing can earn a fourth
@@ -330,7 +369,15 @@ enum VerbDerivation {
         case "photos":
             return HandOffState.installedSchemes.contains("photos-redirect")
                 ? URL(string: "photos-redirect://") : nil
-        case "gmail":     return URL(string: "googlegmail://")
+        // Gated like the screenshot verb (2026-08-02). It was ungated while it
+        // only appeared for the rare Gmail row that had no Reply verb; now that
+        // every Gmail row offers it, an ungated read would put a disc that
+        // silently does nothing on every mail in the corpus for anyone reading
+        // Gmail over IMAP without the Gmail app — which is most of them, since
+        // the bridge signs in with an app-specific password, not the app.
+        case "gmail":
+            return HandOffState.installedSchemes.contains("googlegmail")
+                ? URL(string: "googlegmail://") : nil
         case "chatgpt":   return URL(string: "chatgpt://")
         // Music apps — the per-track universal link opens the exact song; this
         // is the fallback that still opens the app for a URL-less library play.
