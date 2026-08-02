@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UIKit
 
 /// The one surface (2026-07-13, drastic restructure; the Pinned board
 /// retired 2026-07-20, docs/agent-brief.md rulings 11-12): the app is a
@@ -495,6 +496,15 @@ struct MainSurface: View {
         // a batch that landed while backgrounded should be reflected.
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { freezeChips() }
+        }
+        // The Mac's foreground (2026-08-01): Catalyst never delivers the
+        // scenePhase transition above (the scene is .active before the
+        // observer attaches — see RootShell.handleActivation), so the strip
+        // re-sorts on the AppKit focus-in instead. `freezeChips` is a pure
+        // local sort, so the extra fires a Mac's focus flips produce are free.
+        .onReceive(NotificationCenter.default.publisher(
+            for: UIApplication.didBecomeActiveNotification)) { _ in
+            if ProcessInfo.processInfo.isMacCatalystApp { freezeChips() }
         }
         // Connecting a live-room bridge (Kalshi, Polymarket) earns a chip with
         // nothing landed, so it changes the label set without changing the

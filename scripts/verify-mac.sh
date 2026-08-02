@@ -137,6 +137,10 @@ step "Building Casberi (Mac Catalyst, derivedData: $DD)"
 xcodebuild -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \
   -destination 'platform=macOS,variant=Mac Catalyst' \
   -derivedDataPath "$DD" build -quiet 2>&1 | grep -E "error:" | head -20
+# Gate on xcodebuild's OWN exit, not just the bundle's existence (2026-08-01):
+# an incremental dir keeps yesterday's bundle around, so a broken build would
+# otherwise sail through and every later step would certify a STALE binary.
+(( pipestatus[1] == 0 )) || fail "xcodebuild failed (errors above) — the bundle at $APP is stale, not current"
 [[ -d "$APP" ]] || fail "build produced no app bundle at $APP"
 ok "build"
 
@@ -232,6 +236,18 @@ probe() {  # probe <name> <success-regex> <timeout> <args...>
 # retriever has something to find; the model is cold, hence the wide window.
 probe answer 'answerProbe\(.+\) [0-9]+ms' 60 \
   -seedThing "Bluesky:0" -answerProbe "what did I save" -probeDelay 6
+
+# The Mac activation door (2026-08-01). Catalyst never delivers the launch
+# scenePhase transition, so RootShell routes activation through
+# `didBecomeActiveNotification` (+ a `.task` fallback). Before that fix, NO
+# Mac process ever ran the foreground block — no bridge refresh, no whisper,
+# no pane brief — and every sweep still passed, because nothing asserted the
+# block ran. This does: the span only logs from inside the block itself, and
+# the answer probe's process lives long past the 800ms deferral, so absence
+# is a regression, not a race.
+grep -q 'timed=refreshAllConnected' "$OUT/probe-answer.log" \
+  || fail "activation work never ran — RootShell's Mac activation door (handleActivation) is dead again, so bridge refresh and the pane brief are too"
+ok "activation door (refreshAllConnected span present)"
 
 # Find: the composer's deterministic door (prd §215) — no model is reached,
 # so a slow/absent model can't mask a retrieval regression here. Two details

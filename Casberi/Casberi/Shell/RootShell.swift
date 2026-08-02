@@ -58,6 +58,9 @@ struct RootShell: View {
     @State private var sourcesOpen = false
     @Environment(\.scenePhase) private var scenePhase
     @State private var hasBeenActive = false
+    /// Debounce for `handleActivation`'s two Mac launch-time doors — see its
+    /// note. Distant past so the first activation always passes.
+    @State private var lastActivation = Date.distantPast
     /// The last answer's grounding — a follow-up ("which ones were from
     /// Sam?") searches inside it instead of the whole corpus (2026-07-10).
     @State private var lastAnswerHits: [Thing] = []
@@ -908,139 +911,197 @@ struct RootShell: View {
         .redacted(reason: redactNow ? .placeholder : [])
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
-                let firstActivation = !hasBeenActive
-                hasBeenActive = true
-                // Freeze the away window (librarian, prd §67 ⑥) — "while you
-                // were away" grounds on it; things landing from here on are
-                // arriving while you're present.
-                AppVisit.markOpened()
-                // Returning crossfades from placeholder to content (§14);
-                // leaving redacts instantly — the snapshot must already hide.
-                withAnimation(.easeOut(duration: 0.2)) { redactNow = false }
-                // Warm the model so the first Ask is fast — but OFF the launch
-                // window (PERF 2026-07-29, user: "first open is many seconds
-                // and in slow motion, then fine"). `WarmModel.prewarm()` does
-                // two synchronous @MainActor calls — `LanguageModelSession()`
-                // and `session.prewarm()`, which loads the on-device LLM — and
-                // running them the instant the scene activates blocked the main
-                // thread as the opening frames painted, so the feed hung and
-                // the chip strip wouldn't swipe until the model finished
-                // loading ("then fine"). Deferred well past the first
-                // interactive frame on cold launch; the only cost is an Ask
-                // fired in the opening couple of seconds paying the same
-                // one-time load itself, which prewarm merely front-runs.
-                if !skipPrewarm {
-                    let coldLaunch = firstActivation
-                    Task { @MainActor in
-                        try? await Task.sleep(for: .milliseconds(coldLaunch ? 2500 : 300))
-                        OnDeviceModel.prewarm()
-                    }
-                }
-                // The heavier foreground work — polling every connected bridge
-                // (`refreshAllConnected` includes a SYNCHRONOUS Photos fetch),
-                // the embedding backfill, and the insight/kept-ask/whisper
-                // recompute — is deferred past the launch ANIMATION on the
-                // FIRST activation (2026-07-24 perf, user report "loading
-                // hangs / the coins-flip stutters"): running it as the opening
-                // frames paint stalled the main thread mid-animation. A later
-                // foreground has no launch animation to protect, so it runs
-                // immediately.
-                let runForegroundWork: @MainActor () -> Void = {
-                    // Connected bridges are cheap to poll — every foreground
-                    // refreshes them all (one place, reusable from screens).
-                    #if DEBUG
-                    LaunchPerf.time("refreshAllConnected") {
-                        BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges)
-                    }
-                    #else
-                    BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges)
-                    #endif
-                    // Build the on-device semantic index for anything new or
-                    // not yet embedded — a bounded background sweep, so Ask can
-                    // retrieve by meaning, not just shared words.
-                    EmbeddingIndex.backfill(context: modelContext)
-                    // Stamp what each new thing can REACH (a phone number, an
-                    // address) once, instead of re-detecting it per row per
-                    // render — prd §260. Same bounded-sweep shape as the
-                    // embedding backfill above, and deliberately in the same
-                    // deferred block: it is the work the launch window exists
-                    // to keep clear.
-                    VerbDetection.backfill(context: modelContext)
-                    // The "Noticed" line's real trigger (docs/agent-brief.md
-                    // ruling 10). Also refreshes the kept-ask digest cache
-                    // (`KeptAskStore.anyChanged`) the bar's pulse reads from.
-                    Task { @MainActor in
-                        // Bounded (2026-07-24): insight/kept-ask/whisper read
-                        // only recent activity, so this needn't materialize the
-                        // whole corpus on the main actor at launch.
-                        var d = FetchDescriptor<Thing>(
-                            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
-                        d.fetchLimit = 600
-                        #if DEBUG
-                        let surfaced = LaunchPerf.time("insightFetch600") {
-                            Corpus.surfaced((try? modelContext.fetch(d)) ?? [])
-                        }
-                        LaunchPerf.time("HomeInsight.refresh") { HomeInsightStore.shared.refresh(from: surfaced) }
-                        await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
-                        LaunchPerf.time("refreshWhisper") { refreshWhisper(things: surfaced) }
-                        #else
-                        let surfaced = Corpus.surfaced((try? modelContext.fetch(d)) ?? [])
-                        HomeInsightStore.shared.refresh(from: surfaced)
-                        await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
-                        // The whisper's compose rides the same corpus walk this
-                        // Task already paid for — never its own fetch.
-                        refreshWhisper(things: surfaced)
-                        #endif
-                    }
-                }
-                if firstActivation {
-                    Task { @MainActor in
-                        try? await Task.sleep(for: .milliseconds(800))
-                        runForegroundWork()
-                    }
-                } else {
-                    runForegroundWork()
-                }
-                // Resnapshot hand-off state so the thing sheet's "Add to <app>"
-                // verbs only show apps the person connected AND has installed.
-                HandOffState.refresh(connected: Set(
-                    bridges.bridges.filter { $0.status == .connected }
-                        .map { $0.name.lowercased() }))
-                // Control Center's button left a flag — open the composer.
-                let group = UserDefaults(suiteName: SharedStore.appGroup)
-                if group?.bool(forKey: "compose.request") == true {
-                    group?.removeObject(forKey: "compose.request")
-                    composerOpen = true
-                }
-                // A share-extension capture landed while we were away. Its
-                // write IS in the store file, but @Query never hears a
-                // foreign process's save (SwiftData; Apple's pattern is a
-                // foreground reconcile — forums thread 764290), so shared
-                // things stayed invisible until relaunch (2026-07-11).
-                if group?.bool(forKey: "capture.landed") == true {
-                    group?.removeObject(forKey: "capture.landed")
-                    nudgeAfterExternalCapture()
-                }
+                // The phone's activation door. On Mac Catalyst the LAUNCH
+                // transition never arrives here — the scene is already
+                // .active before SwiftUI attaches this observer (measured
+                // 2026-08-01: no Mac run's log ever carried the activation
+                // spans — no bridge refresh, no whisper, no pane brief,
+                // ever). Later transitions DO deliver on Catalyst, so this
+                // branch is gated rather than trusted: the Mac takes the
+                // UIKit notification door below for every activation, and
+                // each platform having exactly one door is what keeps the
+                // work from double-running.
+                guard !ProcessInfo.processInfo.isMacCatalystApp else { return }
+                handleActivation()
             } else {
-                if hasBeenActive && hidePreviews { redactNow = true }
-                if phase == .background {
-                    // The away clock starts — the next foreground reads it.
-                    AppVisit.markClosed()
-                    // Ask iOS to sample wallet holdings while we're away, so
-                    // the value line densifies between opens (no-op without a
-                    // watched wallet; the OS decides if it ever runs).
-                    WalletBackgroundRefresh.schedule()
-                    // The widget's new-ring boundary: everything after this
-                    // stamp is "new since you left" on the home screen too
-                    // (delight 2026-07-13). Reload so the widget re-reads.
-                    UserDefaults(suiteName: SharedStore.appGroup)?
-                        .set(Date.now.timeIntervalSince1970, forKey: "widget.lastSeen")
-                    WidgetCenter.shared.reloadTimelines(ofKind: "casberi.hero")
-                    // Give the model's memory back when we're not in use; the
-                    // next foreground reloads it.
-                    OnDeviceModel.teardown()
-                }
+                handleDeactivation(phase: phase)
             }
+        }
+        // The Mac's activation door (2026-08-01): AppKit posts this on every
+        // focus-in — launch included, cmd-tab back included — and it is the
+        // only activation signal that reliably reaches a Catalyst scene (see
+        // the scenePhase note above). Focus-in is also the Mac's natural
+        // refresh cadence, standing in for the phone's constant foregrounds.
+        .onReceive(NotificationCenter.default.publisher(
+            for: UIApplication.didBecomeActiveNotification)) { _ in
+            guard ProcessInfo.processInfo.isMacCatalystApp else { return }
+            handleActivation()
+        }
+        // Launch coverage for the same door: if activation happened before
+        // the subscription above existed (the exact failure mode that hid
+        // the scenePhase transition), the state is already .active at attach
+        // and the notification will never re-post — read it directly once.
+        .task {
+            guard ProcessInfo.processInfo.isMacCatalystApp,
+                  UIApplication.shared.applicationState == .active else { return }
+            handleActivation()
+        }
+    }
+
+    /// Everything one foreground/activation runs — split from the scenePhase
+    /// observer (2026-08-01) so the Mac's notification door and the phone's
+    /// scenePhase door share one body. Debounced because the Mac has two
+    /// launch-time doors (the `.task` fallback and the notification) and a
+    /// window that can flip focus rapidly; one activation per couple of
+    /// seconds is plenty, and on the phone the debounce is invisible.
+    @MainActor
+    private func handleActivation() {
+        guard Date.now.timeIntervalSince(lastActivation) > 2 else { return }
+        lastActivation = .now
+        let firstActivation = !hasBeenActive
+        hasBeenActive = true
+        // Freeze the away window (librarian, prd §67 ⑥) — "while you
+        // were away" grounds on it; things landing from here on are
+        // arriving while you're present.
+        AppVisit.markOpened()
+        // Returning crossfades from placeholder to content (§14);
+        // leaving redacts instantly — the snapshot must already hide.
+        withAnimation(.easeOut(duration: 0.2)) { redactNow = false }
+        // Warm the model so the first Ask is fast — but OFF the launch
+        // window (PERF 2026-07-29, user: "first open is many seconds
+        // and in slow motion, then fine"). `WarmModel.prewarm()` does
+        // two synchronous @MainActor calls — `LanguageModelSession()`
+        // and `session.prewarm()`, which loads the on-device LLM — and
+        // running them the instant the scene activates blocked the main
+        // thread as the opening frames painted, so the feed hung and
+        // the chip strip wouldn't swipe until the model finished
+        // loading ("then fine"). Deferred well past the first
+        // interactive frame on cold launch; the only cost is an Ask
+        // fired in the opening couple of seconds paying the same
+        // one-time load itself, which prewarm merely front-runs.
+        if !skipPrewarm {
+            let coldLaunch = firstActivation
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(coldLaunch ? 2500 : 300))
+                OnDeviceModel.prewarm()
+            }
+        }
+        // The heavier foreground work — polling every connected bridge
+        // (`refreshAllConnected` includes a SYNCHRONOUS Photos fetch),
+        // the embedding backfill, and the insight/kept-ask/whisper
+        // recompute — is deferred past the launch ANIMATION on the
+        // FIRST activation (2026-07-24 perf, user report "loading
+        // hangs / the coins-flip stutters"): running it as the opening
+        // frames paint stalled the main thread mid-animation. A later
+        // foreground has no launch animation to protect, so it runs
+        // immediately.
+        let runForegroundWork: @MainActor () -> Void = {
+            // Connected bridges are cheap to poll — every foreground
+            // refreshes them all (one place, reusable from screens).
+            #if DEBUG
+            LaunchPerf.time("refreshAllConnected") {
+                BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges)
+            }
+            #else
+            BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges)
+            #endif
+            // Build the on-device semantic index for anything new or
+            // not yet embedded — a bounded background sweep, so Ask can
+            // retrieve by meaning, not just shared words.
+            EmbeddingIndex.backfill(context: modelContext)
+            // Stamp what each new thing can REACH (a phone number, an
+            // address) once, instead of re-detecting it per row per
+            // render — prd §260. Same bounded-sweep shape as the
+            // embedding backfill above, and deliberately in the same
+            // deferred block: it is the work the launch window exists
+            // to keep clear.
+            VerbDetection.backfill(context: modelContext)
+            // The "Noticed" line's real trigger (docs/agent-brief.md
+            // ruling 10). Also refreshes the kept-ask digest cache
+            // (`KeptAskStore.anyChanged`) the bar's pulse reads from.
+            Task { @MainActor in
+                // Bounded (2026-07-24): insight/kept-ask/whisper read
+                // only recent activity, so this needn't materialize the
+                // whole corpus on the main actor at launch.
+                var d = FetchDescriptor<Thing>(
+                    sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+                d.fetchLimit = 600
+                #if DEBUG
+                let surfaced = LaunchPerf.time("insightFetch600") {
+                    Corpus.surfaced((try? modelContext.fetch(d)) ?? [])
+                }
+                LaunchPerf.time("HomeInsight.refresh") { HomeInsightStore.shared.refresh(from: surfaced) }
+                await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
+                LaunchPerf.time("refreshWhisper") { refreshWhisper(things: surfaced) }
+                #else
+                let surfaced = Corpus.surfaced((try? modelContext.fetch(d)) ?? [])
+                HomeInsightStore.shared.refresh(from: surfaced)
+                await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
+                // The whisper's compose rides the same corpus walk this
+                // Task already paid for — never its own fetch.
+                refreshWhisper(things: surfaced)
+                #endif
+            }
+        }
+        if firstActivation {
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(800))
+                runForegroundWork()
+            }
+        } else {
+            runForegroundWork()
+        }
+        // Resnapshot hand-off state so the thing sheet's "Add to <app>"
+        // verbs only show apps the person connected AND has installed.
+        HandOffState.refresh(connected: Set(
+            bridges.bridges.filter { $0.status == .connected }
+                .map { $0.name.lowercased() }))
+        // Control Center's button left a flag — open the composer.
+        let group = UserDefaults(suiteName: SharedStore.appGroup)
+        if group?.bool(forKey: "compose.request") == true {
+            group?.removeObject(forKey: "compose.request")
+            composerOpen = true
+        }
+        // A share-extension capture landed while we were away. Its
+        // write IS in the store file, but @Query never hears a
+        // foreign process's save (SwiftData; Apple's pattern is a
+        // foreground reconcile — forums thread 764290), so shared
+        // things stayed invisible until relaunch (2026-07-11).
+        if group?.bool(forKey: "capture.landed") == true {
+            group?.removeObject(forKey: "capture.landed")
+            nudgeAfterExternalCapture()
+        }
+    }
+
+    /// The leaving half of the scenePhase observer. Unlike the ACTIVATION
+    /// transition, Catalyst DOES deliver these (measured 2026-08-01: a
+    /// headless launch that lost focus redacted its pane to placeholder
+    /// bars) — only the launch-time activation precedes the observer.
+    @MainActor
+    private func handleDeactivation(phase: ScenePhase) {
+        // Redaction is an app-switcher-snapshot concern. A Mac window stays
+        // VISIBLE while unfocused, so blanking it on every focus-out reads
+        // as the app breaking — and before the 2026-08-01 activation fix it
+        // never happened there (`hasBeenActive` could not become true), so
+        // skipping Catalyst also preserves the Mac's long-standing behavior.
+        if hasBeenActive && hidePreviews
+            && !ProcessInfo.processInfo.isMacCatalystApp { redactNow = true }
+        if phase == .background {
+            // The away clock starts — the next foreground reads it.
+            AppVisit.markClosed()
+            // Ask iOS to sample wallet holdings while we're away, so
+            // the value line densifies between opens (no-op without a
+            // watched wallet; the OS decides if it ever runs).
+            WalletBackgroundRefresh.schedule()
+            // The widget's new-ring boundary: everything after this
+            // stamp is "new since you left" on the home screen too
+            // (delight 2026-07-13). Reload so the widget re-reads.
+            UserDefaults(suiteName: SharedStore.appGroup)?
+                .set(Date.now.timeIntervalSince1970, forKey: "widget.lastSeen")
+            WidgetCenter.shared.reloadTimelines(ofKind: "casberi.hero")
+            // Give the model's memory back when we're not in use; the
+            // next foreground reloads it.
+            OnDeviceModel.teardown()
         }
     }
 
