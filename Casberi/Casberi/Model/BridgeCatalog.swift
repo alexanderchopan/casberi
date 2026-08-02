@@ -560,7 +560,7 @@ enum BridgeCatalog {
                          "No account and no key — the export is a file you already have"],
               needsSetup: true, added: day(2026, 8, 2)),
         // The fourth import-grade social seat, and the one with the least
-        // choice behind it (2026-08-02, prd §277). Instagram and TikTok at
+        // choice behind it (2026-08-02, prd §280). Instagram and TikTok at
         // least have a theoretical API; X discontinued its free tier for new
         // developers on 2026-02-06 and now charges per post read, so there is
         // no keyless door and no cheap one. The archive is all of it.

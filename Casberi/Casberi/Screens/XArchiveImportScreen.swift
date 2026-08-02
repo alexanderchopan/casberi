@@ -15,7 +15,7 @@ private let xRecentDescriptor: FetchDescriptor<Thing> = {
 }()
 
 /// X, connected — by import, the ChatGPT grade, because X has no free read of
-/// any kind left (prd §270).
+/// any kind left (prd §280).
 ///
 /// The folder pick and its two-level search are Instagram's, for Instagram's
 /// reason: an archive scatters its categories across several files under

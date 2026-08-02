@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-/// The X archive importer (2026-08-02, prd §270) — the Instagram pattern, with
+/// The X archive importer (2026-08-02, prd §280) — the Instagram pattern, with
 /// three quirks that belong to this export alone and must not be smoothed over.
 ///
 /// WHY AN IMPORT AND NOT A BRIDGE. X discontinued its free API tier for new

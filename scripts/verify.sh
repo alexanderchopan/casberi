@@ -68,6 +68,17 @@ step "SwiftData liveness audit"
 "$ROOT/scripts/swiftdata-liveness-audit.py" || fail "a Thing is read without a liveness guard — see the output above"
 print -P "%F{green}✓ swiftdata liveness audit%f"
 
+# Pure-logic self-test for the X work (prd §280). Static, no build, no
+# network: the archive importer was authored against no real X archive, and
+# its failure mode is a silent wrong answer — a misdated like, a file that
+# parses to zero rows and reads as an empty account. Runs here with the rest
+# of the static head so it's part of `verify.sh` rather than something to
+# remember (the reach-audit lesson, 2026-07-31).
+step "X pure-logic self-test"
+"$ROOT/scripts/x-selftest.sh" >/dev/null \
+  || fail "the X logic self-test failed — run scripts/x-selftest.sh"
+print -P "%F{green}✓ x self-test%f"
+
 # ── 1. Build ────────────────────────────────────────────────────────
 step "Building Casberi (derivedData: $DD)"
 xcodebuild -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \

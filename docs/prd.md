@@ -14053,3 +14053,30 @@ category is looked up against candidate paths), and **field case is not
 consistent within a single file** (`CommentsList` spells `date`/`comment`/`url`
 lower, `VideoList` spells `Date`/`Link`/`Title` upper), so every field read tries
 both cases. A missing or renamed category is a skip, never a failure.
+
+## §280 — X: the free door is one endpoint wide, and the archive is the rest of it (user: "does X offer anything for free we could use", then "what is the userflow for the oEmbed entry? and if we can do the archive export isn't that useful?", then "do all that you can", 2026-08-02)
+
+**The question was whether X has a free tier worth taking. It doesn't, and the measurement that mattered wasn't about the API at all.**
+
+X discontinued its free tier for new developers on 2026-02-06 and moved to pay-per-usage — $0.005 per post read, $0.010 per user read, no free allowance of any size, capped at 2M post reads before Enterprise. There is no keyless read, no RSS, and `cdn.syndication.twimg.com/tweet-result` — which used to answer a post without a key — now returns `{}` (measured). So a live X bridge is not a decision, it's an absence.
+
+Two free things remain, and they are worth different amounts.
+
+**1. `publish.x.com/oembed`, and the measurement that made it load-bearing.** An x.com post URL fetched with the app's own `safariUserAgent` answers 200 with ~210KB of markup carrying **zero `og:` tags and no `<title>` element at all**. So the generic enrichment path names an X link *nothing* — the row keeps the naked URL it was born with. The oEmbed endpoint answers the same link keylessly with the author, the handle, and the post's own words.
+
+This is the exact inverse of §245's Instagram finding, and the contrast is the whole ruling. Instagram's `<head>` served a real `og:title` all along, so its oEmbed entry was never load-bearing and was removed on 2026-08-02 for answering with none of the fields `parse` reads. X's `<head>` serves nothing, so its entry is the only face an X link will ever have. **Two payloads that look alike — both an `html` blockquote with no `title` — and opposite verdicts, because the difference is what the blockquote HOLDS.** Instagram's is a skeleton whose only text is "View this post on Instagram" (the caption is filled in client-side by `embeds.js`). X writes the post itself into the `<p>`. That is why `parse` gained a blockquote fallback for X after refusing to gain one for Instagram: the same code shape, justified by a different fact.
+
+**The userflow is that there isn't one.** No screen, no seat, no connect, no tap — §244's rule, unchanged. An X link lands, `LinkTitle.enrich` fires, the allowlist hits, one keyless request, and about a second later the row that said `https://x.com/…/status/2044919…` says what the post said, findable by those words. It also reaches links arriving through Farcaster and Bluesky ingest, which is where most X links in this corpus actually come from.
+
+**2. The archive, and the hole it has.** The export is free, arrives in ~24h, and splits the §245 way: what you MADE (posts, replies) arrives as full text with real timestamps, and what you TAPPED (likes) arrives **better than Instagram's saves ever did** — X stores each liked post's `fullText`, so a like lands wearing the words it was liked for rather than a bare handle. It is worse in one way, and the copy says so: `like.js` carries no author, so this room cannot rank who you like the way Instagram's ranks who you save.
+
+**Bookmarks are not in the export, and the offer says that before the tap.** They never have been. Bookmarks are the pile an X user would most expect this seat to hold — the read-later stack is close to this app's whole thesis — so an offer that let "your saves" imply them would be selling something it can't deliver. Naming an absence is cheaper than a person discovering it and concluding the importer is broken.
+
+**Rulings, with the reasons:**
+
+1. **Reposts are skipped, not landed.** The archive stores a retweet as *your* row whose text is `RT @someone: …`, truncated by X's own exporter at the old 140-character limit. Landing it would put half of somebody else's sentence in the corpus under your name — the §83 fake-status ban wearing a different hat. They're counted, and the screen says how many it passed over, because a total that silently shrank reads as rows going missing.
+2. **A liked post is dated from its own id.** `like.js` carries no timestamp of any kind, so there is no alternative — every X id since November 2010 is a snowflake whose top bits are a millisecond offset from epoch 1288834974657. This is exact, not an estimate: id 2044919377544261979 decodes to 2026-04-16, which is independently what `publish.x.com` reports for that post. Ids from before the snowflake era are refused rather than dated, because id 20 decodes to the epoch itself (2010-11-04) — a confident wrong answer, which is worse than none.
+3. **The archive's files are JavaScript, not JSON.** Each is `window.YTD.tweets.part0 = [ … ]`, meant for the export's own offline viewer. Handed straight to `JSONSerialization` it fails on the first character — a failure that reads as an empty account rather than a format mismatch.
+4. **DMs stay out** (§245's abstention, unchanged), and so do followers/following (a tally).
+
+**UNMEASURED against a real archive** — authored against no export, with no egress to any X host beyond the two oEmbed probes. So the pure logic is harnessed instead (`scripts/x-selftest.sh`, wired into `verify.sh`): `blockquoteText`, `snowflakeDate`, `parseArray`, `clean`, `identifier` and `created`, all extracted FROM THE SHIPPED SOURCE rather than copied, 32 assertions, mutation-tested three ways. **One of those mutations is the reason the harness is worth its length:** a first pass asserted the snowflake date only to the DAY, and a mutation moving the epoch by 657ms passed it clean — the constant could have been meaningfully wrong with nothing to catch it. The assertion is to the millisecond now. Every failure path returns nil to existing behaviour, so a drifted or missing category is a skip, never a wrong number.

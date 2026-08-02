@@ -57,7 +57,7 @@ enum BridgeRouter {
         /// X, the same file-pick shape and the hardest reason of the three:
         /// the free API tier was discontinued for new developers on
         /// 2026-02-06 and there is no keyless read left at any price worth
-        /// taking. The archive is the only door (prd §277).
+        /// taking. The archive is the only door (prd §280).
         case x
         case pinterest
         case steam
