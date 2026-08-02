@@ -13727,6 +13727,69 @@ single `.sheet(item:)` over a `PrivacySubPage` enum rather than growing a second
 same presenting controller and the second tears the first down mid-transition,
 the half-opening sheet this codebase has paid for three times.
 
+**What the review caught (same day, before any of it ran).** Seven real
+defects, recorded because each one is a lesson the next pass would otherwise
+re-learn:
+
+1. **The redaction leaked.** Overlapping findings resolved by POSITION, so
+   "Your login code: 4111 1111 1111 1111" — a one-time code whose capture is
+   the first four digits, and a Luhn-valid card covering all nineteen — hid
+   the four and left twelve digits of a live card in the text bound for
+   Spotlight and the keyed agent. Overlaps resolve by WIDEST SPAN now, which
+   can only ever hide more than either finding alone; ties break
+   deterministically, since `Array.sorted` promises no stability and a
+   redaction that varies run to run is untestable.
+2. **The keychain migration could destroy a key.** It read each item, DELETED
+   it, and re-added it under the new policy — so any failure of the add (a
+   relock between the two calls is enough) lost the person's live API key and
+   counted it as "kept", while the doc claimed a failure "leaves the item
+   exactly as it was". It runs unattended at launch. `kSecAttrAccessible` is
+   updatable, so it is one atomic `SecItemUpdate` now: never deletes, never
+   holds the secret in memory.
+3. **A transient keychain read retired the migration forever.** A background
+   launch before the first unlock after a reboot reads nothing, and that was
+   treated as "empty vault, done". Only a real answer retires it now, and a
+   partial pass retries.
+4. **The receipts screen's coverage claim was false** — the honesty failure
+   this feature exists to prevent, in the feature itself. It said "the shared
+   connection every app connection uses" while ~27 bridges (RSS, Reddit,
+   Spotify, Dropbox, the exchanges…) held their own `URLSession` and were
+   invisible. All 27 are instrumented, and
+   `scripts/receipts-coverage-audit.py` now fails the build on a network call
+   with no recorder above it — because the mistake cannot be seen at runtime:
+   the screen looks complete either way.
+5. **`sk-` was unanchored**, so a saved link to
+   `github.com/acme/task-management-system-v2` had "sk-management-system-v2"
+   redacted out of its Spotlight title — precisely the "Spotlight quietly
+   stops finding an ordinary note" failure rule 3 exists to prevent. Anchored,
+   with all three measured false positives now fixtures.
+6. **The image gate was driven by a 300-character excerpt.** The comment
+   promised a scrubbed candidate drops its picture; `note` is
+   `answerSnippet`'s excerpt, so a screenshot whose phrase sat past character
+   300 kept a clean note and shipped its JPEG to the provider with the phrase
+   legible. `Candidate` carries a `carriesSecret` computed from the FULL text
+   now.
+7. **`ThingEntity.displayRepresentation` was never redacted** — the attribute
+   set feeds the semantic INDEX, but this is what the Siri/Shortcuts/Visual
+   Intelligence card SHOWS. Hiding it in one and not the other put the secret
+   on screen while congratulating itself.
+
+Also: the one-time-code detector's bare `code is …` branch read "Zip code:
+94107" and "Error code: 40412" as secrets and was REMOVED (a code expires in
+minutes; a postcode redacted out of Spotlight is permanent and
+undiagnosable); the Mastercard prefix narrowed from the whole 22–27 band to
+the real 2221–2720; the ledger's flush claim is taken under its own lock so a
+sweep coalesces to one write instead of dozens; and the probe no longer echoes
+its input on a MISS, which was the one case that printed a sample secret into
+the log.
+
+A note on the run-length floor, since it reads like a bug and isn't: a run of
+11 or 13 (OCR dropped or split a word) is caught only by the context rule, not
+by the exact-length rule. **Do not "fix" that with ±1** — the measured list of
+common verbs is a 19-run at 100% density, and 19 is within one of the standard
+length 18, so ±1 flags an ordinary vocabulary list as somebody's recovery
+phrase.
+
 **UNMEASURED**: authored on Linux with no Xcode and no simulator — nothing here
 has been compiled or run. The static audits (catalog sync, network reach,
 keychain, secret scan, SwiftData liveness) all pass, and the pure detection

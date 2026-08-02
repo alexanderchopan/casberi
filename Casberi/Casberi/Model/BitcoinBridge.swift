@@ -668,6 +668,7 @@ enum BitcoinBridge {
         guard let u = URL(string: url) else { return nil }
         var request = URLRequest(url: u)
         request.timeoutInterval = 15
+        NetworkLedger.shared.record(request)
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200,
               let text = String(data: data, encoding: .utf8)?

@@ -293,6 +293,7 @@ enum AppleMusicIngest {
 
         if let first = candidates.first, let url = URL(string: first) {
             do {
+                NetworkLedger.shared.record(url)
                 let (data, urlResponse) = try await URLSession.shared.data(from: url)
                 let code = (urlResponse as? HTTPURLResponse)?.statusCode ?? -1
                 if UIImage(data: data) != nil {

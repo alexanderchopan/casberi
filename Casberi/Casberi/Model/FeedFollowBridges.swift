@@ -263,6 +263,7 @@ enum FeedFetch {
         var request = URLRequest(url: url)
         request.setValue("Mozilla/5.0 (compatible; Casberi/1.0; +https://casberi.app)",
                          forHTTPHeaderField: "User-Agent")
+        NetworkLedger.shared.record(request)
         guard let (data, response) = try? await URLSession.shared.data(for: request) else { return nil }
         if let code = (response as? HTTPURLResponse)?.statusCode, !(200..<300).contains(code) { return nil }
         return data

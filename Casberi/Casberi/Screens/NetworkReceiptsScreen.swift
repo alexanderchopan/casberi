@@ -105,7 +105,7 @@ struct NetworkReceiptsScreen: View {
     /// everything. These are the request paths that don't ride an
     /// instrumented transport — see `NetworkLedger`'s own doc.
     private var ceiling: String {
-        "Recorded from the shared connection every app connection uses, plus your agent key and saved-link lookups. Not recorded: pictures loaded into rows as you scroll, and live wallet-app connections, which use their own connections."
+        "Recorded from every connected app's own requests, plus your agent key and saved-link lookups. Not recorded: pictures loaded into rows as you scroll, and live wallet-app connections, which use their own connections."
     }
 
     private func row(_ receipt: Receipt) -> some View {

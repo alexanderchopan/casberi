@@ -113,6 +113,7 @@ enum RSSIngest {
     /// that specific call.
     private static func fetchAndParse(_ feed: RSSStore.Feed) async -> Fetched? {
         guard let url = URL(string: feed.url) else { return nil }
+        NetworkLedger.shared.record(url)
         guard let (data, _) = try? await URLSession.shared.data(from: url) else { return nil }
         var parsed = FeedParser.parse(data)
         var resolvedURL: String?
@@ -296,6 +297,7 @@ enum FeedDiscovery {
     }
 
     private static func fetch(_ url: URL) async -> FeedParser.Parsed? {
+        NetworkLedger.shared.record(url)
         guard let (data, _) = try? await URLSession.shared.data(from: url) else { return nil }
         return FeedParser.parse(data)
     }

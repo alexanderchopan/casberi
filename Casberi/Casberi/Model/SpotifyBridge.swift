@@ -129,6 +129,7 @@ enum SpotifyAuth {
             .map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? $0.value)" }
             .joined(separator: "&")
             .data(using: .utf8)
+        NetworkLedger.shared.record(request)
         guard let (data, response) = try? await URLSession.shared.data(for: request)
         else { return .unreachable }
         guard (response as? HTTPURLResponse)?.statusCode == 200,

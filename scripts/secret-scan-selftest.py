@@ -160,7 +160,7 @@ def issuer_prefix(digits):
     if len(digits) < 4:
         return False
     one, two, four = digits[0], int(digits[:2]), int(digits[:4])
-    return (one == "4" or 51 <= two <= 55 or 22 <= two <= 27
+    return (one == "4" or 51 <= two <= 55 or 2221 <= four <= 2720
             or two in (34, 37, 35, 65) or four == 6011)
 
 
@@ -208,6 +208,43 @@ def phrase_span(text, run_floor=None, density_floor=None, lengths=None):
     return words[best_start].start(), words[best_start + best_len - 1].end()
 
 
+def all_findings(text, **kw):
+    """Every (start, end, kind) span, mirroring SecretScan.scan."""
+    out = []
+    for kind, key, group in (("apiKey", "apiKeyPattern", 0),
+                             ("password", "passwordPattern", 1),
+                             ("oneTimeCode", "oneTimeCodePattern", 1)):
+        for m in COMPILED[key].finditer(text):
+            s_, e_ = m.span(group) if group else m.span()
+            if s_ >= 0 and e_ > s_:
+                out.append((s_, e_, kind))
+    out += [(s_, e_, "cardNumber") for s_, e_ in card_spans(text)]
+    span = phrase_span(text, **kw)
+    if span:
+        out.append((span[0], span[1], "recoveryPhrase"))
+    return out
+
+
+MARKERS = {"recoveryPhrase": "[recovery phrase hidden]", "apiKey": "[key hidden]",
+           "password": "[password hidden]", "cardNumber": "[card number hidden]",
+           "oneTimeCode": "[code hidden]"}
+
+
+def redacted(text, **kw):
+    """Mirrors SecretScan.redacted, including widest-wins overlap resolution."""
+    found = sorted(all_findings(text, **kw), key=lambda f: (f[0], -(f[1] - f[0]), f[2]))
+    kept, covered = [], -1
+    for s_, e_, kind in found:
+        if s_ < covered:
+            continue
+        kept.append((s_, e_, kind))
+        covered = e_
+    out = text
+    for s_, e_, kind in reversed(kept):
+        out = out[:s_] + MARKERS[kind] + out[e_:]
+    return out
+
+
 def kinds_found(text, **kw):
     found = set()
     if COMPILED["apiKeyPattern"].search(text):
@@ -248,7 +285,6 @@ SHOULD_FLAG = [
     ("amex", "3782 822463 10005", "cardNumber"),
     ("verification code", "Your verification code is 481920", "oneTimeCode"),
     ("one-time code", "one-time code: 8172", "oneTimeCode"),
-    ("code is, bare form", "Casberi code is 4821 — expires in 10 minutes", "oneTimeCode"),
     ("wifi password note", "wifi password: SunnyDay2026!", "password"),
 ]
 
@@ -283,6 +319,13 @@ SHOULD_NOT_FLAG = [
     ("international phone", "call me on +44 7700 900123 tomorrow"),
     ("calendar entry", "Standup with Sam at 9:30, then dentist 2026-08-14 at 4:15"),
     ("social post", "gm everyone, shipping the new build today — feedback in /design"),
+    # Every one of these was a real false positive found in review.
+    ("github repo link", "https://github.com/acme/task-management-system-v2"),
+    ("risk-free-rate note", "Our risk-free-rate-calculation notes"),
+    ("disk utility note", "A disk-utility-troubleshooting guide"),
+    ("zip code", "Zip code: 94107"),
+    ("error code", "Error code: 40412"),
+    ("code in the repo", "the code is in the repo, see line 1234 for details"),
 ]
 
 
@@ -311,6 +354,23 @@ def run_units():
     # fixture, so assert the span is a span.
     span = phrase_span("Recovery phrase " + FIRST12)
     check("phrase span starts after its label", span is not None and span[0] > 0, True)
+
+
+def run_redaction():
+    """Overlapping findings must never leave part of a secret behind — the
+    defect this section exists for left twelve digits of a live card in the
+    text because a narrower one-time-code span won the overlap."""
+    print("Redaction (widest span wins)")
+    cases = [
+        ("code label over a card", "Your login code: 4111 1111 1111 1111", "4111"),
+        ("password label over a card", "Password: 4111 1111 1111 1111", "1111"),
+    ]
+    for name, text, leak in cases:
+        out = redacted(text)
+        check(f"{name} leaves no digits", leak in out, False)
+    # And a plain case still redacts exactly one span.
+    check("ordinary password line still redacts",
+          redacted("Password: hunter2000"), "Password: [password hidden]")
 
 
 def run_mutations():
@@ -342,6 +402,7 @@ print(f"SecretScan self-test — {len(PATTERNS)} patterns, "
       f"lengths={sorted(PHRASE_LENGTHS)}")
 run_units()
 run_fixtures()
+run_redaction()
 run_mutations()
 
 if failures:

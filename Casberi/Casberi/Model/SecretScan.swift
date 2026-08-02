@@ -70,8 +70,18 @@ enum SecretScan {
     // number here fails the harness rather than silently re-tuning the
     // detector.
 
-    /// A run of consecutive wordlist words long enough to be a phrase whose
-    /// OCR dropped a word. Below this, nothing is ever flagged.
+    /// The floor below which nothing is ever considered. It is a PRE-FILTER,
+    /// not a detector: a run this long still has to satisfy rule A or rule B
+    /// below.
+    ///
+    /// Note what that means for a phrase whose OCR dropped or split a word,
+    /// leaving a run of 11 or 13 — rule A wants an exact standard length, so
+    /// such a run is caught only by rule B, i.e. only when the text also says
+    /// what it is. **Do not "fix" this by letting rule A accept ±1.** The
+    /// measured list of common verbs is a 19-word run at 100% density, and 19
+    /// is within one of the standard length 18 — so ±1 flags an ordinary
+    /// vocabulary list as somebody's recovery phrase. The exact-length rule is
+    /// the only thing standing between that fixture and a false positive.
     static let phraseRunFloor = 11
 
     /// How much of the text the run has to BE. Measured 2026-08-02: ordinary
@@ -91,8 +101,16 @@ enum SecretScan {
     /// Vendor key prefixes with a fixed, distinctive shape. An allowlist by
     /// design — "long random-looking string" as a rule would flag every
     /// transaction hash in a wallet-shaped corpus.
+    /// The leading lookbehind is load-bearing, not decoration. Unanchored,
+    /// `sk-` matched the tail of any hyphenated word — a saved link to
+    /// `github.com/acme/task-management-system-v2` had "sk-management-system-v2"
+    /// redacted out of its Spotlight title, which is precisely the "Spotlight
+    /// quietly stops finding an ordinary note" failure rule 3 exists to
+    /// prevent. Every alternative is fixed-width at its left edge, so the
+    /// lookbehind is cheap.
     static let apiKeyPattern =
-        "(?:sk-ant-|sk-|sk_live_|sk_test_|rk_live_|pk_live_|ghp_|gho_|ghu_|ghs_"
+        "(?<![A-Za-z0-9_\\-])"
+        + "(?:sk-ant-|sk-|sk_live_|sk_test_|rk_live_|pk_live_|ghp_|gho_|ghu_|ghs_"
         + "|github_pat_|xai-|xoxb-|xoxp-|xoxa-|xoxs-|ocv_|glpat-|dop_v1_|AKIA|AIza)"
         + "[A-Za-z0-9_\\-]{16,}"
 
@@ -106,12 +124,20 @@ enum SecretScan {
     /// regex alone is far too broad for this corpus.
     static let cardCandidatePattern = "(?:\\d[ -]?){12,18}\\d"
 
-    /// One-time codes, both shapes: "verification code … 123456" and
-    /// "code is 123456". Group 1 is the digits.
+    /// One-time codes. Group 1 is the digits.
+    ///
+    /// The word "code" must carry a security qualifier. A bare `code is …` /
+    /// `code: …` branch was tried and REMOVED: it read "Zip code: 94107" and
+    /// "Error code: 40412" as secrets, and its 32-character skip let it reach
+    /// an unrelated number half a line away ("the code is in the repo, see
+    /// line 1234"). The cost is that "Casberi code is 4821" goes undetected,
+    /// and that is the right trade — a one-time code expires in minutes,
+    /// while a postcode redacted out of Spotlight is permanent and
+    /// undiagnosable. The skip is bounded tight for the same reason.
     static let oneTimeCodePattern =
-        "(?i)(?:\\b(?:one[- ]time|verification|security|login|sign[- ]?in"
-        + "|authentication|confirmation)[ \\t]+code\\b|\\bcode\\b[ \\t]*(?:is|:))"
-        + "[^0-9]{0,32}?(\\d{4,8})\\b"
+        "(?i)\\b(?:one[- ]time|verification|security|login|sign[- ]?in"
+        + "|authentication|confirmation)[ \\t]+code\\b"
+        + "[^0-9]{0,16}?(\\d{4,8})\\b"
 
     /// The words that accompany a real phrase. This is the second rule: a
     /// phrase wrapped in wallet UI ("Write down your secret recovery
@@ -161,19 +187,49 @@ enum SecretScan {
         !scan(text).isEmpty
     }
 
-    /// `text` with every found span replaced by its marker. Returns the input
-    /// unchanged when nothing was found, so the clean path allocates nothing.
+    /// `text` with every found span replaced by its marker, or the input
+    /// unchanged when nothing was found. (`scan` still runs — the "clean"
+    /// path costs six regex passes and a tokenisation, not nothing.)
+    ///
+    /// **Overlaps resolve in favour of the WIDEST span, and that is a
+    /// correctness rule, not a tidiness one.** Two detectors can fire at the
+    /// same place with very different reach: "Your login code: 4111 1111 1111
+    /// 1111" is a one-time code whose capture group is the first four digits
+    /// AND a Luhn-valid card number covering all nineteen. Resolving by
+    /// position — keeping whichever the sort happened to reach first — hid
+    /// the four digits and left twelve digits of a live card in the text that
+    /// goes to Spotlight and to the keyed agent. Widest-wins can only ever
+    /// hide more than either finding alone.
     static func redacted(_ text: String) -> String {
         let findings = scan(text)
         guard !findings.isEmpty else { return text }
+
+        // Earliest first, and at the same start the longest first, so the
+        // sweep meets the widest span before anything nested inside it. The
+        // secondary sort on `kind` keeps ties deterministic — `Array.sorted`
+        // makes no stability promise, and a redaction that varies run to run
+        // is untestable.
+        let ordered = findings.sorted {
+            if $0.range.location != $1.range.location { return $0.range.location < $1.range.location }
+            if $0.range.length != $1.range.length { return $0.range.length > $1.range.length }
+            return $0.kind.rawValue < $1.kind.rawValue
+        }
+
+        var kept: [Finding] = []
+        var coveredEnd = -1
+        for finding in ordered {
+            // Anything starting before the last kept span ended is contained
+            // in it or overlaps it; the wider one already hides those
+            // characters.
+            guard finding.range.location >= coveredEnd else { continue }
+            kept.append(finding)
+            coveredEnd = finding.range.location + finding.range.length
+        }
+
         let out = NSMutableString(string: text)
-        var lastStart = Int.max
         // Back to front, so each replacement leaves earlier offsets valid.
-        for finding in findings.sorted(by: { $0.range.location > $1.range.location }) {
-            let end = finding.range.location + finding.range.length
-            guard end <= lastStart else { continue }   // drop overlaps
+        for finding in kept.reversed() {
             out.replaceCharacters(in: finding.range, with: finding.kind.marker)
-            lastStart = finding.range.location
         }
         return out as String
     }
@@ -267,7 +323,10 @@ enum SecretScan {
         let four = Int(String(d[0...3])) ?? -1
         if one == "4" { return true }                        // Visa
         if (51...55).contains(two) { return true }            // Mastercard
-        if (22...27).contains(two) { return true }            // Mastercard 2-series
+        // The real 2-series range, not the whole 22–27 band: every extra
+        // prefix admitted here is a decade of ordinary long numbers that
+        // only Luhn (a 1-in-10 filter) then stands between and a redaction.
+        if (2221...2720).contains(four) { return true }       // Mastercard 2-series
         if two == 34 || two == 37 { return true }             // Amex
         if two == 35 { return true }                          // JCB
         if two == 65 { return true }                          // Discover

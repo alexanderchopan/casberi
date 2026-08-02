@@ -39,6 +39,16 @@ step "Keychain policy audit"
 "$ROOT/scripts/keychain-audit.py" || fail "a keychain write isn't device-only — see the output above"
 print -P "%F{green}✓ keychain audit%f"
 
+# Keeps the receipts screen's coverage claim true (prd §277). A new bridge
+# written with its own URLSession is invisible to the ledger, and the screen
+# goes on implying it saw everything — which is exactly how the first version
+# of this feature shipped.
+step "Receipts coverage audit"
+"$ROOT/scripts/receipts-coverage-audit.py" --self-test >/dev/null \
+  || fail "the receipts audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/receipts-coverage-audit.py" || fail "a network call isn't recorded — see the output above"
+print -P "%F{green}✓ receipts coverage audit%f"
+
 # The credential tripwire's fixtures (prd §277) — that the shipped patterns and
 # thresholds still hide a recovery phrase and still leave an ordinary shopping
 # list alone. Reads both out of the Swift source, so re-tuning a number here

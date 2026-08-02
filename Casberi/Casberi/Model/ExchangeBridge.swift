@@ -145,6 +145,7 @@ enum ExchangeBridge {
         request.setValue(signature, forHTTPHeaderField: "API-Sign")
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.httpBody = body.data(using: .utf8)
+        NetworkLedger.shared.record(request)
         guard let (data, _) = try? await URLSession.shared.data(for: request),
               let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { return nil }
@@ -227,6 +228,7 @@ enum ExchangeBridge {
         else { return .unverifiable(String(localized: "Couldn't reach Coinbase to check this key.")) }
         var request = URLRequest(url: url)
         request.setValue("Bearer \(jwt)", forHTTPHeaderField: "Authorization")
+        NetworkLedger.shared.record(request)
         guard let (data, _) = try? await URLSession.shared.data(for: request),
               let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { return .unverifiable(String(localized: "Couldn't reach Coinbase to check this key.")) }
@@ -282,6 +284,7 @@ enum ExchangeBridge {
         else { return nil }
         var request = URLRequest(url: url)
         request.setValue("Bearer \(jwt)", forHTTPHeaderField: "Authorization")
+        NetworkLedger.shared.record(request)
         guard let (data, _) = try? await URLSession.shared.data(for: request),
               let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let accounts = root["accounts"] as? [[String: Any]] else { return nil }
@@ -329,8 +332,10 @@ enum ExchangeBridge {
     private static func binanceHost() async -> String {
         if let cached = UserDefaults.standard.string(forKey: binanceHostKey) { return cached }
         let host: String
-        if let url = URL(string: "https://api.binance.com/api/v3/ping"),
-           let (_, response) = try? await URLSession.shared.data(from: url),
+        let ping = URL(string: "https://api.binance.com/api/v3/ping")
+        if let ping { NetworkLedger.shared.record(ping) }
+        if let ping,
+           let (_, response) = try? await URLSession.shared.data(from: ping),
            (response as? HTTPURLResponse)?.statusCode == 200 {
             host = "https://api.binance.com"
         } else {
@@ -358,6 +363,7 @@ enum ExchangeBridge {
         else { return nil }
         var request = URLRequest(url: url)
         request.setValue(key, forHTTPHeaderField: "X-MBX-APIKEY")
+        NetworkLedger.shared.record(request)
         guard let (data, _) = try? await URLSession.shared.data(for: request),
               let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { return nil }
@@ -451,6 +457,7 @@ enum ExchangeBridge {
         request.setValue(payload, forHTTPHeaderField: "X-GEMINI-PAYLOAD")
         request.setValue(signature, forHTTPHeaderField: "X-GEMINI-SIGNATURE")
         request.setValue("0", forHTTPHeaderField: "Content-Length")
+        NetworkLedger.shared.record(request)
         guard let (data, _) = try? await URLSession.shared.data(for: request),
               let root = try? JSONSerialization.jsonObject(with: data)
         else { return nil }

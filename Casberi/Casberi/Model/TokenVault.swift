@@ -27,11 +27,18 @@ import Security
 enum TokenVault {
     private static let service = "com.casberi.app.tokens"
 
+    /// The accessibility every item must carry. Spelled ONCE — `writePolicy`,
+    /// the migration's "is this already right?" test and `policyCensus` all
+    /// read it, so changing it can't leave one of the three behind silently
+    /// re-writing (or mis-reporting) every item forever.
+    private static let requiredAccessible =
+        kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly as String
+
     /// The one place the write policy is spelled, so `set` and `migrate`
     /// cannot drift apart on it.
     private static var writePolicy: [String: Any] {
         [
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+            kSecAttrAccessible as String: requiredAccessible,
             kSecAttrSynchronizable as String: false,
         ]
     }
@@ -58,7 +65,9 @@ enum TokenVault {
             kSecAttrAccount as String: key,
             kSecValueData as String: Data(token.utf8),
         ]
-        add.merge(writePolicy) { current, _ in current }
+        // The POLICY wins a conflict, not the caller — a call site that set
+        // its own accessibility would otherwise silently opt out of it.
+        add.merge(writePolicy) { _, policy in policy }
         SecItemAdd(add as CFDictionary, nil)
     }
 
@@ -89,58 +98,76 @@ enum TokenVault {
 
     private static let migratedKey = "keychain.hardened.v1"
 
-    /// Re-write every existing item under the current write policy.
+    /// Re-write every existing item under the current accessibility policy.
     ///
     /// Keychain accessibility is fixed when an item is ADDED, so keys stored
     /// by an earlier build keep the old, backup-restorable policy until they
-    /// are written again — which for a key you set once and never touch is
-    /// never. This runs once, reads each item's own data back, and re-adds it.
+    /// are written again — which for a key you paste once and never touch is
+    /// never.
     ///
-    /// Deliberately silent and best-effort: a failure here leaves the item
-    /// exactly as it was (still readable, still working), which is why it is
-    /// safe to run at launch. It reports what it did so `-keychainProbe` can
-    /// say so out loud.
+    /// **It updates in place and never deletes, and that is not a style
+    /// choice.** The first version read each item's data, `delete`d it and
+    /// re-`add`ed it under the new policy — so ANY failure of the add
+    /// (`errSecInteractionNotAllowed` if the device relocked between the two
+    /// calls, a residual duplicate, a missing entitlement) destroyed the
+    /// person's live API key outright, and counted it as "kept". This runs
+    /// unattended at launch. `kSecAttrAccessible` is updatable, so
+    /// `SecItemUpdate` does the same job atomically, never holds the secret
+    /// in memory, and leaves the item untouched when it fails — which is what
+    /// the old comment claimed and the old code did not do.
+    ///
+    /// Synchronizable items are reported by `policyCensus` rather than
+    /// converted here: no version of this vault ever wrote one, and the only
+    /// way to un-sync an item IS the destructive delete/add above.
     @discardableResult
-    static func migrateToDeviceOnly(force: Bool = false) -> (moved: Int, kept: Int) {
-        if !force && UserDefaults.standard.bool(forKey: migratedKey) { return (0, 0) }
+    static func migrateToDeviceOnly(force: Bool = false)
+    -> (hardened: Int, alreadyRight: Int, failed: Int) {
+        if !force && UserDefaults.standard.bool(forKey: migratedKey) { return (0, 0, 0) }
 
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
             kSecReturnAttributes as String: true,
-            kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitAll,
         ]
         var result: CFTypeRef?
-        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-              let items = result as? [[String: Any]] else {
-            UserDefaults.standard.set(true, forKey: migratedKey)
-            return (0, 0)
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+
+        // Only a real ANSWER retires the migration. `errSecInteractionNotAllowed`
+        // — a background launch before the first unlock after a reboot, when
+        // every after-first-unlock item is unreadable — is not "nothing to
+        // do", and treating it as done would leave the keys loose for the
+        // life of the install with nothing anywhere to say so.
+        guard status == errSecSuccess || status == errSecItemNotFound else { return (0, 0, 0) }
+        guard status == errSecSuccess, let items = result as? [[String: Any]] else {
+            UserDefaults.standard.set(true, forKey: migratedKey)   // empty vault, nothing to carry
+            return (0, 0, 0)
         }
 
-        var moved = 0, kept = 0
+        var hardened = 0, alreadyRight = 0, failed = 0
         for item in items {
-            guard let account = item[kSecAttrAccount as String] as? String,
-                  let data = item[kSecValueData as String] as? Data else { kept += 1; continue }
-            let accessible = item[kSecAttrAccessible as String] as? String
-            let synced = (item[kSecAttrSynchronizable as String] as? Bool) ?? false
-            let alreadyRight =
-                accessible == (kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly as String) && !synced
-            if alreadyRight { kept += 1; continue }
-
-            delete(account)
-            var add: [String: Any] = [
+            guard let account = item[kSecAttrAccount as String] as? String else { failed += 1; continue }
+            if item[kSecAttrAccessible as String] as? String == requiredAccessible {
+                alreadyRight += 1
+                continue
+            }
+            let locate: [String: Any] = [
                 kSecClass as String: kSecClassGenericPassword,
                 kSecAttrService as String: service,
                 kSecAttrAccount as String: account,
-                kSecValueData as String: data,
+                kSecAttrSynchronizable as String: kSecAttrSynchronizableAny,
             ]
-            add.merge(writePolicy) { current, _ in current }
-            if SecItemAdd(add as CFDictionary, nil) == errSecSuccess { moved += 1 } else { kept += 1 }
+            let change: [String: Any] = [kSecAttrAccessible as String: requiredAccessible]
+            if SecItemUpdate(locate as CFDictionary, change as CFDictionary) == errSecSuccess {
+                hardened += 1
+            } else {
+                failed += 1
+            }
         }
-        UserDefaults.standard.set(true, forKey: migratedKey)
-        return (moved, kept)
+        // A partial pass retries next launch rather than declaring victory.
+        if failed == 0 { UserDefaults.standard.set(true, forKey: migratedKey) }
+        return (hardened, alreadyRight, failed)
     }
 
     /// What the vault currently holds, by policy — the honest input to
@@ -158,8 +185,7 @@ enum TokenVault {
               let items = result as? [[String: Any]] else { return (0, 0, 0) }
         var deviceOnly = 0, synced = 0
         for item in items {
-            if item[kSecAttrAccessible as String] as? String
-                == (kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly as String) { deviceOnly += 1 }
+            if item[kSecAttrAccessible as String] as? String == requiredAccessible { deviceOnly += 1 }
             if (item[kSecAttrSynchronizable as String] as? Bool) ?? false { synced += 1 }
         }
         return (items.count, deviceOnly, synced)

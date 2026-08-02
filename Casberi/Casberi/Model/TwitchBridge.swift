@@ -125,6 +125,7 @@ enum TwitchAuth {
             .map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? $0.value)" }
             .joined(separator: "&")
             .data(using: .utf8)
+        NetworkLedger.shared.record(request)
         guard let (data, _) = try? await URLSession.shared.data(for: request) else { return nil }
         return (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
     }

@@ -111,6 +111,7 @@ enum OEmbed {
     static func resolve(_ url: URL) async -> Response? {
         guard let endpoint = endpoint(for: url), let request = request(endpoint, for: url)
         else { return nil }
+        NetworkLedger.shared.record(request)
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200,
               data.count <= 512_000,        // an oEmbed answer is small; a page isn't

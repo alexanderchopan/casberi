@@ -147,6 +147,7 @@ enum DropboxAuth {
             .map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? $0.value)" }
             .joined(separator: "&")
             .data(using: .utf8)
+        NetworkLedger.shared.record(request)
         guard let (data, response) = try? await URLSession.shared.data(for: request)
         else { return .unreachable }
         guard (response as? HTTPURLResponse)?.statusCode == 200,
@@ -392,6 +393,7 @@ enum DropboxIngest {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue(argString, forHTTPHeaderField: "Dropbox-API-Arg")
         request.setValue("bytes=0-2047", forHTTPHeaderField: "Range")
+        NetworkLedger.shared.record(request)
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               let http = response as? HTTPURLResponse,
               (200...206).contains(http.statusCode) else { return nil }

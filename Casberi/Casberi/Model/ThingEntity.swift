@@ -24,7 +24,13 @@ struct ThingEntity: AppEntity, IndexedEntity {
     var displayRepresentation: DisplayRepresentation {
         // The kind's own SF Symbol (KindGlyph's mapping) — Spotlight, Shortcuts,
         // and Visual Intelligence result cards show a mark, not a bare row.
-        DisplayRepresentation(title: "\(title)", subtitle: "\(subtitle)",
+        // Redacted here as well as in `attributeSet` (prd §277). The attribute
+        // set is what the semantic INDEX ingests; this is what the Siri,
+        // Shortcuts and Visual Intelligence result cards actually SHOW, and a
+        // screenshot's title is OCR-derived — so hiding it in one and not the
+        // other would put the secret on screen while congratulating itself.
+        DisplayRepresentation(title: "\(SecretScan.redacted(title))",
+                              subtitle: "\(subtitle)",
                               image: .init(systemName: kind.symbol))
     }
 

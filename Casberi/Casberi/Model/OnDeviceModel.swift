@@ -65,6 +65,14 @@ enum OnDeviceModel {
         /// on-device model and `numberedCandidates` stay text-only, so it
         /// carries no @Guide/prompt weight there.
         var imageData: Data? = nil
+        /// Whether the SOURCE thing carried a secret anywhere in its full
+        /// text (prd §277). Computed by whoever builds the candidate, from
+        /// `thing.content` — NOT from `note`, which is a 300-character
+        /// excerpt. That distinction is the whole point: a recovery phrase
+        /// or key appearing past character 300 leaves `note` clean, and the
+        /// keyed agent would then have posted the screenshot's PICTURE with
+        /// the secret plainly legible in it.
+        var carriesSecret: Bool = false
     }
 
     /// The model's answer, grounded strictly on the candidates it was handed:

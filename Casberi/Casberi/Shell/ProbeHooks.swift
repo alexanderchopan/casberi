@@ -42,6 +42,9 @@ enum ProbeHooks {
     /// before it — half the credential this function exists to hide.
     private static func redactedValue(for flag: String, _ value: String) -> String {
         let redacted = "‹redacted›"
+        // `-secretScanProbe corpus` names a MODE, not a sample — hiding it
+        // made the log unable to say which of the two the run did.
+        if flag == "-secretScanProbe", value == "corpus" { return value }
         guard let colon = value.firstIndex(of: ":") else { return redacted }
         let prefix = String(value[value.startIndex..<colon])
         let prefixIsKnownName: Bool
@@ -113,7 +116,14 @@ enum ProbeHooks {
             let findings = SecretScan.scan(spec)
             NSLog("secretScanProbe: found=%d kinds=%@", findings.count,
                   Set(findings.map(\.kind.rawValue)).sorted().joined(separator: ","))
-            NSLog("secretScanRedacted| %@", SecretScan.redacted(spec))
+            // On a MISS `redacted` returns the input untouched — printing it
+            // would write the sample secret verbatim into the sim log, which
+            // is the one thing this flag's denylist entry exists to prevent.
+            // A false negative is exactly when that happens, so the miss
+            // branch says nothing.
+            NSLog("secretScanRedacted| %@", findings.isEmpty
+                  ? "(nothing found — not echoing the input)"
+                  : SecretScan.redacted(spec))
         },
         // `-keychainProbe YES` reports the vault's STORAGE POLICY — how many
         // items are device-only and how many are synchronizable — then forces
@@ -126,7 +136,8 @@ enum ProbeHooks {
             NSLog("keychainProbe| before: total=%d deviceOnly=%d syncable=%d",
                   before.total, before.deviceOnly, before.synchronizable)
             let moved = TokenVault.migrateToDeviceOnly(force: true)
-            NSLog("keychainProbe| migrate: rewrote=%d untouched=%d", moved.moved, moved.kept)
+            NSLog("keychainProbe| migrate: hardened=%d alreadyRight=%d failed=%d",
+                  moved.hardened, moved.alreadyRight, moved.failed)
             let after = TokenVault.policyCensus()
             NSLog("keychainProbe| after: total=%d deviceOnly=%d syncable=%d",
                   after.total, after.deviceOnly, after.synchronizable)

@@ -71,6 +71,7 @@ struct ProductMeta {
         var request = URLRequest(url: url)
         request.setValue(IngestSupport.safariUserAgent, forHTTPHeaderField: "User-Agent")
         request.timeoutInterval = 8
+        NetworkLedger.shared.record(request)
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
         let html = String(decoding: data.prefix(400_000), as: UTF8.self)

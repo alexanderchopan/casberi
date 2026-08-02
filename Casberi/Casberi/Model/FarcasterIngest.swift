@@ -1075,6 +1075,7 @@ enum FarcasterIngest {
     /// bug in our own request can't masquerade as a real deletion.
     private static func castIsGone(fid: Int, hash: String) async -> Bool {
         guard let url = URL(string: "\(node)/v1/castById?fid=\(fid)&hash=\(hash)") else { return false }
+        NetworkLedger.shared.record(url)
         guard let (data, response) = try? await URLSession.shared.data(from: url),
               (response as? HTTPURLResponse)?.statusCode == 400,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],

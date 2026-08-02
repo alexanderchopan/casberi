@@ -110,6 +110,7 @@ enum GitHubDeviceFlow {
             .joined(separator: "&")
             .data(using: .utf8)
         request.timeoutInterval = 30
+        NetworkLedger.shared.record(request)
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200,
               let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any]

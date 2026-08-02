@@ -163,6 +163,7 @@ enum OpenSeaKey {
         guard let url = URL(string: "https://api.opensea.io/api/v2/auth/keys") else { return nil }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
+        NetworkLedger.shared.record(request)
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],

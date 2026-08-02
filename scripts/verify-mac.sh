@@ -130,11 +130,14 @@ step "Static audits"
 "$ROOT/scripts/keychain-audit.py" --self-test >/dev/null \
   || fail "the keychain audit's own self-test failed — the check is broken, not the code"
 "$ROOT/scripts/keychain-audit.py" >/dev/null || fail "a keychain write isn't device-only — run scripts/keychain-audit.py"
+"$ROOT/scripts/receipts-coverage-audit.py" --self-test >/dev/null \
+  || fail "the receipts audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/receipts-coverage-audit.py" >/dev/null || fail "a network call isn't recorded — run scripts/receipts-coverage-audit.py"
 "$ROOT/scripts/secret-scan-selftest.py" >/dev/null || fail "the credential tripwire changed behaviour — run scripts/secret-scan-selftest.py"
 "$ROOT/scripts/swiftdata-liveness-audit.py" --self-test >/dev/null \
   || fail "the liveness audit's own self-test failed — the check is broken, not the code"
 "$ROOT/scripts/swiftdata-liveness-audit.py" >/dev/null || fail "a Thing is read without a liveness guard — run scripts/swiftdata-liveness-audit.py"
-ok "catalog sync · network reach · keychain · secret scan · swiftdata liveness"
+ok "catalog sync · network reach · keychain · secret scan · receipts · swiftdata liveness"
 
 # ── 1. Build ───────────────────────────────────────────────────────────────
 step "Building Casberi (Mac Catalyst, derivedData: $DD)"

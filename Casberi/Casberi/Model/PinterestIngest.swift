@@ -48,8 +48,9 @@ enum PinterestIngest {
         running = true
         defer { running = false }
 
-        guard let url = URL(string: "https://www.pinterest.com/\(username)/feed.rss"),
-              let (data, _) = try? await URLSession.shared.data(from: url) else { return nil }
+        guard let url = URL(string: "https://www.pinterest.com/\(username)/feed.rss") else { return nil }
+        NetworkLedger.shared.record(url)
+        guard let (data, _) = try? await URLSession.shared.data(from: url) else { return nil }
         let parsed = FeedParser.parse(data)
         // A wrong username serves an HTML page, not a feed — nothing parses.
         guard !parsed.items.isEmpty || !parsed.title.isEmpty else { return nil }

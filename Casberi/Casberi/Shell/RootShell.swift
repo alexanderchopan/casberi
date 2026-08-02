@@ -2302,7 +2302,12 @@ struct RootShell: View {
             OnDeviceModel.Candidate(title: $0.title, kind: $0.kind.typeTag,
                                     source: $0.source, when: shortTime($0.capturedAt),
                                     note: answerSnippet($0),
-                                    imageData: $0.kind == .screenshot ? $0.previewImageData : nil)
+                                    imageData: $0.kind == .screenshot ? $0.previewImageData : nil,
+                                    // Read the FULL text, not the excerpt below
+                                    // (prd §277) — this is what lets the keyed
+                                    // path withhold a screenshot whose secret
+                                    // sits past `answerSnippet`'s 300-char cap.
+                                    carriesSecret: SecretScan.carriesSecret($0.title + "\n" + $0.content))
         }
     }
 

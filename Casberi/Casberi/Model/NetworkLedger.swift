@@ -15,15 +15,24 @@ import Foundation
 /// 1. **Hosts, counts and times — never payloads, never paths.** What was
 ///    asked is not recorded, because a log of that would be a more sensitive
 ///    artifact than the thing it audits.
-/// 2. **It records where it can see, which is not everywhere.** The
-///    instrumented paths are `IngestSupport`'s shared transport (every bridge
-///    — ~167 call sites through one funnel), `AgentAnswer` (the keyed agent,
-///    the request that carries typed thought off the device) and `LinkTitle`
-///    (a saved link's page fetch). NOT covered: images loaded straight into
-///    rows, the two WebSocket paths (`NostrRelay`, `WalletConnectSocket`),
-///    and the WalletConnect SDK's own hosts, which are inside a vendored
-///    dependency and invisible to source-level instrumentation. Those are
-///    named in the registry and named again on the screen.
+/// 2. **It records where it can see, which is not everywhere.** Covered:
+///    `IngestSupport`'s shared transport (~167 bridge call sites through one
+///    funnel), `AgentAnswer` (the keyed agent — the request that carries
+///    typed thought off the device), `LinkTitle`, and the ~27 bridges that
+///    hold their own `URLSession` (RSS, Reddit, Spotify, Dropbox, the
+///    exchanges, and the rest). NOT covered: images loaded straight into rows
+///    as you scroll, the two WebSocket paths (`NostrRelay`,
+///    `WalletConnectSocket`), and the WalletConnect SDK's own hosts, which
+///    live in a vendored dependency and are invisible to source-level
+///    instrumentation. Those are named in the registry and again on the
+///    screen.
+///
+///    **This list shipped WRONG once** — it claimed "every bridge" while
+///    those ~27 direct-`URLSession` bridges silently bypassed the funnel, so
+///    a person with RSS and Reddit connected would have opened the screen and
+///    seen neither. `scripts/receipts-coverage-audit.py` now fails the build
+///    on a network call with no recorder above it, because the mistake is
+///    invisible at runtime: the screen looks complete either way.
 ///
 /// **Why aggregate rather than a per-request log.** A timestamped list of
 /// every request is a behavioural timeline — when you woke up, when you
@@ -80,7 +89,13 @@ final class NetworkLedger: @unchecked Sendable {
         } else {
             entries[clean] = Entry(host: clean, count: 1, first: now, last: now)
         }
+        // Claim the flush HERE, while the lock is held. Advancing `lastFlush`
+        // inside `flush()` instead let every concurrent request in a
+        // foreground sweep observe `due == true` before any of them moved the
+        // stamp — dozens of JSON encodes and `UserDefaults` writes where the
+        // coalescing was supposed to give one.
         let due = now.timeIntervalSince(lastFlush) > flushInterval
+        if due { lastFlush = now }
         lock.unlock()
         if due { flush() }
     }
@@ -88,6 +103,11 @@ final class NetworkLedger: @unchecked Sendable {
     /// Convenience for the call sites that hold a request rather than a host.
     func record(_ request: URLRequest) {
         if let host = request.url?.host() { record(host: host) }
+    }
+
+    /// …and for the ones that hand `URLSession` a bare URL.
+    func record(_ url: URL) {
+        if let host = url.host() { record(host: host) }
     }
 
     // MARK: - Reading
@@ -111,17 +131,21 @@ final class NetworkLedger: @unchecked Sendable {
 
     // MARK: - Persistence
 
+    /// Prune, then persist. The `UserDefaults` write stays INSIDE the lock:
+    /// outside it, two flushes racing could persist out of order and leave
+    /// the older snapshot on disk.
     private func flush() {
         lock.lock()
+        defer { lock.unlock() }
         let cutoff = Date().addingTimeInterval(-Self.retention)
         entries = entries.filter { $0.value.last > cutoff }
         if entries.count > Self.maxHosts {
             let keep = entries.values.sorted { $0.last > $1.last }.prefix(Self.maxHosts)
             entries = Dictionary(uniqueKeysWithValues: keep.map { ($0.host, $0) })
         }
-        let payload = try? JSONEncoder().encode(entries)
         lastFlush = Date()
-        lock.unlock()
-        if let payload { UserDefaults.standard.set(payload, forKey: storeKey) }
+        if let payload = try? JSONEncoder().encode(entries) {
+            UserDefaults.standard.set(payload, forKey: storeKey)
+        }
     }
 }

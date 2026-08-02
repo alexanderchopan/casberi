@@ -543,11 +543,18 @@ enum AgentAnswer {
         let candidates = candidates.map { candidate -> OnDeviceModel.Candidate in
             let title = SecretScan.redacted(candidate.title)
             let note = SecretScan.redacted(candidate.note)
-            let clean = title == candidate.title && note == candidate.note
+            // `carriesSecret` reads the thing's FULL text; `note` is only a
+            // 300-character excerpt, so testing the excerpt alone would let a
+            // screenshot whose phrase sits past character 300 keep its
+            // picture — the exact hole this gate exists to close.
+            let clean = title == candidate.title
+                && note == candidate.note
+                && !candidate.carriesSecret
             return OnDeviceModel.Candidate(
                 title: title, kind: candidate.kind, source: candidate.source,
                 when: candidate.when, note: note,
-                imageData: clean ? candidate.imageData : nil)
+                imageData: clean ? candidate.imageData : nil,
+                carriesSecret: candidate.carriesSecret)
         }
 
         // Bankr diverges twice, both sanctioned (2026-07-16): it answers
