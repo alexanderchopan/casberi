@@ -411,6 +411,15 @@ enum WalletIngest {
                                                               addresses: evmAddresses,
                                                               existing: existing)
         added += privacyPoolsAdded ?? 0
+        // Railgun rides the same pass (prd §268) — two filtered ERC-20
+        // Transfer reads per wallet on mainnet (into the pool, and back out),
+        // landing "Shielded 1.2 WETH into Railgun" and "Received 500 USDC
+        // from Railgun". Inside the running guard like everything above; not
+        // seat-gated (see the Peer note).
+        let railgunAdded = await RailgunBridge.sync(context: context,
+                                                     addresses: evmAddresses,
+                                                     existing: existing)
+        added += railgunAdded ?? 0
         // Gnosis Pay card spends ride the same pass (prd §222) — one filtered
         // settlement-transfer read per wallet on Gnosis Chain, landing "Spent
         // €42.50 with Gnosis Pay" things. Inside the running guard like

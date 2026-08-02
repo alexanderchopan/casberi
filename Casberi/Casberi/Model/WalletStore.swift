@@ -54,6 +54,10 @@ final class WalletStore {
                 // plus a stale pending entry would alert for a wallet no
                 // longer watched.
                 PrivacyPoolsBridge.clearState(address: old.address)
+                // Railgun's cursor and its evidence mark leave too (prd §268)
+                // — same back-fill reason, plus a stale mark would keep the
+                // seat lit for a wallet that's gone.
+                RailgunBridge.clearState(address: old.address)
                 // Gnosis Pay's cursor and its card-account mark leave too
                 // (prd §222) — same back-fill reason, plus a stale mark would
                 // keep the seat lit for a card whose wallet is gone.
@@ -121,6 +125,7 @@ final class WalletStore {
                     WalletApprovals.clearCursors(address: hex)
                     PeerBridge.clearCursor(address: hex)
                     PrivacyPoolsBridge.clearState(address: hex)
+                    RailgunBridge.clearState(address: hex)
                     GnosisPayBridge.clearState(address: hex)
                     MorphoDeFi.clearState(address: hex)
                     UniswapLiquidity.clearState(address: hex)

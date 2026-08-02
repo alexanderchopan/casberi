@@ -13023,3 +13023,134 @@ Two smaller honesty points. Typing a name the book already uses case-folded ADDS
 - **A fourth sibling sheet, avoided.** The address card and the new-group sheet share one `.sheet(item:)` route rather than hanging off `WalletScreen` as another sibling. FeedScreen's lesson is on the record — sibling `.sheet` modifiers on one screen start silently self-dismissing each other's first tap — and this screen already carries two token sheets. A route costs one enum and takes the class off the table.
 
 **Unverified:** authored with no Xcode and no simulator on the build host, so the three static gates (catalog-sync, network-reach — no new host — and the SwiftData liveness audit) pass and nothing was compiled or run. The model half is probeable (`-addressGroup`, `-addressBookProbe`); the sheet is not, and no hook can open it, so it wants a look on the simulator before it ships.
+## §268 — Railgun: read the two doors, never the room (user: "what if anything could we do with Railgun", then "synthesize this shorter. what is the user flow", then "ok lets do it", then "make sure you update the app catalogue and also the 'what this reaches' in settings", 2026-08-01)
+
+**The ruling: Railgun is a Wallet seat beside 0xBow Privacy Pools, riding the
+watched wallets. It lands SHIELDS and UNSHIELDS, and claims nothing about the
+pool's inside.**
+
+Railgun is a shielded pool: you shield tokens in, move them privately as
+encrypted notes, and unshield back out to a public address. Railgun's own docs
+are explicit that shields and unshields are the only interactions carrying
+public information — everything between them is readable only by the holder of
+a spending or viewing key. So the seat reads exactly those two doors.
+
+**Why this file looks like Gnosis Pay and not like its own sibling.** 0xBow's
+Entrypoint indexes the depositor, so one filtered read of its OWN event answers
+"did this wallet deposit". Railgun's events (`Shield`, `Unshield`, `Transact`,
+`Nullified`) index NOTHING — there is no wallet topic to filter on. But that
+turns out not to matter, because a shield MOVES A TOKEN: it emits a plain
+ERC-20 `Transfer(from: wallet, to: railgun)`, indexed on both sides. That is
+the same exact two-topic server-side filter §222 uses for card spends. The
+lesson generalises: when a protocol's own events are unfilterable, look at what
+the protocol MOVES rather than what it announces.
+
+**The unshield is the reason to build this, and the reason it needed a ruling.**
+An unshield arriving at a watched wallet has two indistinguishable causes — you
+withdrawing your own funds, or someone paying you — and the chain cannot tell
+them apart. That is the product working, not a gap in the read. So the title
+states only what is observable ("Received 500 USDC from Railgun") and never
+"You unshielded". A title claiming otherwise would be the §83 fake-status ban
+in the one domain where believing it costs money. The honesty note rides
+`enrichedText`, the §228 anonymity-set precedent: context, never a claim.
+
+Read the other way, this is the seat's whole pitch. Every other inbound row in
+this app can name its sender. This is the one shape where someone can pay you
+privately and the money still shows up — so the sender being unknowable is the
+feature, and the copy should read as a statement of how privacy works rather
+than an apology for a missing field.
+
+**Three ceilings, named in the catalog summary, on the setup screen, and in the
+seat's own capability lines.**
+
+1. **Nothing inside the pool is read.** Private balances and transfers are
+   never estimated or implied. Reading them means scanning every `Transact`
+   commitment ever emitted and trial-decrypting each against a viewing key —
+   Railgun's own engine, in TypeScript, ported to Swift. That is a project, not
+   a bridge; and a viewing key in this app would undercut "watching can never
+   move funds", which is the thing people actually trust here.
+2. **An unshield never names a sender** (above).
+3. **Only a DIRECT move is attributable — and that is about half of them.**
+   Measured 2026-08-01 and the most important fact about this seat: 51.5% of
+   shields (3,245 of 6,306 over 500k blocks) reach the pool from Railgun's
+   RelayAdapt contract, not from the person's address — every native-ETH
+   shield (the ETH arrives as `msg.value`, so no user→adapter transfer log
+   exists at all) plus every multicall/relayer shield. There the depositor is
+   only `tx.from`, which is in no topic and unfilterable at any price;
+   recovering it costs one `eth_getTransactionByHash` per candidate over an
+   unscoped read of everyone's shields, which is thousands of calls a pass and
+   hopeless for a backfill. So the seat reads the direct half and the copy says
+   so in those words. **Showing half of someone's history while implying it is
+   all of it was the outcome to avoid**, and naming it is what avoids it.
+
+**Decisions with reasons, don't "simplify" without reading them.** (a) There is
+deliberately NO `address` filter on the `eth_getLogs` — Railgun takes any
+ERC-20, so constraining the token list (which Gnosis Pay does, because a card
+spends exactly three stablecoins) would silently drop every token not in the
+table; the two topics are what make the read selective. (b) Decimals are READ,
+never assumed — a single pass sees 18-decimal WETH beside 6-decimal USDC and
+8-decimal WBTC, and hardcoding 18 renders a dollar as ~$0.000000000001, which
+is the SOL/USDCe bug on its third outing. (c) Token metadata is CACHED across
+passes, unlike `WalletApprovals`' and `PeerBridge`'s, precisely because this
+token set is unbounded where theirs are fixed; a contract that answers nothing
+is NOT cached, since that's a host hiccup as often as a strange token. (d)
+RelayAdapt legs are excluded on both topics — they're Railgun's own plumbing,
+not the person's money moving. (e) First sight backfills from the deploy block
+(the §162 divergence, not §222's 6-day window): shields are rare per wallet, so
+the honest first landing is the real history, capped at the newest 10 like
+every sibling wallet path. (f) Money ARRIVING rains (the §250 precedent) and
+only for rows that really inserted; shields don't rain — sending your own money
+into a pool is not a moment, receiving it is.
+
+**Mainnet only.** Railgun also runs on BSC, Polygon and Arbitrum. Each has its
+own addresses and its own host reliability, and the §162 precedent is to add a
+chain only after measuring it the way mainnet was — never by pattern-matching
+an address table.
+
+**Status of the read: MEASURED live 2026-08-01, and the measurement corrected
+three things the documentation would have shipped wrong.** (1) The address most
+widely published as Railgun's smart wallet,
+`0xc0bef2d373a1efade8b952f33c1370e486f209cc`, is INERT — code, but zero
+transfers over 500k blocks; the live core is `0xfa7093cd…`, whose Etherscan tag
+misleadingly reads "Railgun: Relay". (2) There are TWO RelayAdapt contracts, not
+one — the current adapter and a Jan-2023 V3.1 never retired, both still sending.
+(3) Railgun's fee TREASURY rides 100% of unshield transactions and is 50% of
+that direction's transfer logs. Contaminations (2) and (3) turn out to be
+excluded structurally rather than by a de-noising pass, because every query here
+pins BOTH topics — which is also why the read needs no allowlist of tokens. The
+`Gnosis Pay` silent-truncation trap is ABSENT on these hosts: the limit is
+10,000 RESULTS, not blocks, and crossing it is a loud error naming the range to
+retry, so a range that's too big is retried rather than read as "never used
+this". Decimals divergence is the COMMON case here, not an edge: stablecoins are
+38% of all shields (USDT/USDC at 6), with WBTC and HEX at 8 and WQUBIC at 0. `-railgunProbe <blocksBack|YES>`
+runs the whole sweep headlessly and NSLogs one line PER ROW with the amount it
+actually wrote, because a landed count alone cannot separate a correct amount
+from one off by twelve decimal places, which is this bridge's most exposed
+trap. Re-measure against a real Railgun user's wallet before hardening.
+
+**Proofs of Innocence: a live keyless API EXISTS, and is still deliberately not
+built.** The two POI nodes published in Railgun's own docs are dead (NXDOMAIN /
+connection refused). A live one was found — but only by reverse-engineering
+ppoi.info's JavaScript bundle: `POST https://ppoi.fdi.network`, JSON-RPC 2.0, no
+key, measured 200. `ppoi_blocked_shields` returns the whole blocked set, which
+is just **1,008 rows** — small enough to cache locally and check offline rather
+than query per shield. It's keyed by commitment hash, and an undocumented
+Subsquid indexer closes the join to a transaction and its depositor.
+
+That is a real phase-2 feature — "your shield was flagged" means the funds can
+only exit back to their origin address, which is exactly the kind of news §162's
+ASP poll exists to deliver. **It is held anyway, and the reason is the §242
+rule.** Both hosts are undocumented and were discovered inside a frontend
+bundle; the ones that WERE documented are already dead, which is evidence about
+this dependency class rather than bad luck. A privacy alert that silently stops
+firing is worse than one that was never promised, so nothing user-facing claims
+it exists until there's a supported endpoint. Two traps recorded for whoever
+builds it: POI returns the hash as HEX while the indexer stores it as a DECIMAL
+BigInt string (convert, or every lookup silently misses), and the API's methods
+live at the ROOT — `/api`, `/api/v1/status` and friends all return the SPA's
+HTML shell with a 200, which will fool a naive probe.
+
+**Railgun v3 does not threaten this.** Measured: the v3 indexer 404s, Ethereum's
+own SDK config carries `supportsV3: false` with empty mainnet addresses, and v2
+took shields minutes before measurement. v3 is designed to share v2's anonymity
+set with optional migration, so a bridge built on v2 today does not go stale.

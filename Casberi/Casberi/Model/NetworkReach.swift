@@ -115,6 +115,15 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "0xBow Privacy Pools"),
                  purpose: "Reads your Privacy Pools deposits from the public chain and their review status from 0xBow's public API, for the wallets you watch.",
                  hosts: ["api.0xbow.io", "rpc.mevblocker.io"]),
+        // Reach is WALLET, not "Railgun" — Gnosis Pay's reason below: the seat
+        // appears only once a shield has been seen, but the read that
+        // discovers one runs for every watched wallet, so declaring it under
+        // its own seat would say this host is reached only after connecting,
+        // which is false.
+        Endpoint(service: "Railgun",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "Reads what you shield into Railgun and what comes back out, off Ethereum's public chain, for the wallets you watch — the two public doors, never anything inside the pool.",
+                 hosts: ["rpc.mevblocker.io", "eth.api.onfinality.io"]),
         Endpoint(service: "Peer",
                  reach: .whenConnected(bridge: "Peer"),
                  purpose: "Reads your settled Peer trades off Base's public chain, for the wallets you watch.",

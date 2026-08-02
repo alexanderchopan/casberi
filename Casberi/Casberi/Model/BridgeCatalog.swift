@@ -110,7 +110,7 @@ enum BridgeCatalog {
         /// already carries live status).
         var qualifier: String? {
             if connectable && !needsSetup { return "One tap" }
-            let keyless: Set<String> = ["Wallet", "Tokens", "Peer", "0xBow Privacy Pools", "Safe", "Reddit", "YouTube",
+            let keyless: Set<String> = ["Wallet", "Tokens", "Peer", "0xBow Privacy Pools", "Railgun", "Safe", "Reddit", "YouTube",
                 "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster",
                 "Bluesky", "Nostr", "OpenSea", "Kalshi", "Shopify", "GeckoTerminal", "Deals",
                 "Open Food Facts", "Stocktwits"]
@@ -166,6 +166,22 @@ enum BridgeCatalog {
         Offer(name: "0xBow Privacy Pools", tagline: "Know when your deposit clears",       group: "Wallet",    connectable: true,
               summary: "Privacy Pools (by 0xBow) lets you move crypto with privacy and a compliance screen: you deposit, their screening reviews it, and once cleared you can withdraw to a fresh address privately. Connect and your deposits land in your feed — and Casberi tells you the moment a deposit clears review and is ready to withdraw privately, or if it's declined.\n\nRead from Ethereum's public chain and 0xBow's public API for the wallets you already watch.\n\nNo account, no key, read-only: nothing here deposits, withdraws, or moves funds.",
               needsSetup: true, added: day(2026, 7, 21)),
+        // Wallet group, beside Privacy Pools — the same category for the same
+        // reason (prd §268): Railgun trades nothing, it's your own funds
+        // wearing a privacy status, and it rides the watched wallets with no
+        // account and no key.
+        //
+        // The summary names all three ceilings plainly, because the obvious
+        // expectation of a privacy-tool feed is that it shows your private
+        // balance, and this one can't and shouldn't: nothing inside the pool
+        // is read; an unshield can never name its sender; and native ETH
+        // shields route through a wrapper that leaves the wallet in no log.
+        // The middle one is the interesting half, not an apology — it's the
+        // only shape in this app where someone can pay you privately and the
+        // money still shows up.
+        Offer(name: "Railgun", tagline: "See what you shield, and what comes back", group: "Wallet", connectable: true,
+              summary: "Railgun is a shielded pool on Ethereum: you shield tokens in, move them privately inside, and unshield back out to a public address. Watch a wallet and both doors land in your feed — what you shielded, and what arrived back.\n\nRead from Ethereum's public chain for the wallets you already watch. No account, no key.\n\nThree honest limits. Nothing inside the pool is ever read — your private balance and transfers stay private, which is the whole point. An unshield can never name who sent it, so Casberi shows the money arriving and doesn't guess whether it was you or a payment. And only moves made straight from your own wallet carry your address publicly — shields sent through Railgun's relayer, including any ETH shield, leave no trace of who made them, so those can't appear here.",
+              needsSetup: true, added: day(2026, 8, 1)),
         // Wallet group by ruling (prd §222, 2026-07-26): a Gnosis Pay account
         // IS a Safe holding your own balance, so it belongs beside the wallets
         // whose total it joins — not Shopping, where Privacy.com's card
