@@ -13476,3 +13476,58 @@ the no-hairlines law broken with a background. The rail now pours only while
 the feed is beside it (`route.path.isEmpty`, animated); the stack root's own
 pour is untouched since a pushed room covers it. This was inherited iPad
 behavior, fixed for both.
+
+# §275 — Web search and Tor: both assessed, both declined in their general form (user: "could Casberi search Google… would that require a server?", then "adding brave… break any of our other honesty policies?", then "what about adding TOR", then "ya save these / i'm not seeing benefit then of adding brave", 2026-08-02)
+
+Two rulings from one thread, sharing a spine: neither feature needs a server
+(a search/proxy server exists only to hide a SHARED api key, and BYOK removes
+that reason), and neither breaks a shipped promise — but each was declined on
+product grounds, recorded here so "why not just add web search/Tor?" doesn't
+re-litigate from zero.
+
+**1. No dedicated web-search seat (Brave/Google CSE) — the agent keys already
+cover the need.** If web answers ever ship, they ride the keys in the vault:
+Venice's `enable_web_search` and OpenRouter's `:online` are one-flag changes
+on the exact chat-completions request `AgentAnswer` already sends; OpenAI and
+Anthropic expose provider-side search tools on their own wire shapes; Grok's
+X-search stays unbuilt per `AgentAnswer.swift`'s standing note (three
+disagreeing doc shapes). A dedicated seat (Brave was the best candidate:
+structurally read-only key, one header, free tier) would add only a RAW
+RESULTS LIST — and a ranked list of other people's pages is a browser's job,
+not the corpus's; nobody asked for Google's index by name. Keyless general
+web search does not exist (DDG's keyless API is instant-answers only;
+scraping/SearXNG is ToS-fragile and unmeasurable), so there is no
+Dexscreener-shaped door here. Apple note, correcting an assumption: App
+Review is NOT the blocker — BYOK web search adds no review risk beyond the
+agent keys already shipped (key-paste apps and even Tor browsers are on the
+store); the decline is product fit, not policy. Standing obligations if this
+ever revisits: web search NEVER wears Find's badge ("Matched on this iPhone —
+nothing was written" would be false — it needs its own honest badge naming
+the provider the query went to); the host lands in `NetworkReach` with a
+purpose line saying plainly that ARBITRARY TYPED THOUGHT leaves the device
+(the most sensitive payload class the app would send — a wallet address is
+public, a query is a thought); a quota/429 reads as "couldn't search," never
+as an empty result; and a web ask is never keepable under the
+`search:<query>` kind, whose contract is deterministic on-device re-runs —
+either results are kept as things or the ask isn't keepable at all.
+
+**2. No general Tor.** Feasible (embedded Arti + `URLSession
+.proxyConfigurations`, iOS 17+ SOCKSv5; store-allowed — Onion Browser
+ships), and still wrong here, for a reason that is an HONESTY finding: Tor
+hides the IP, but nearly every request this app makes carries stronger
+identity in the PAYLOAD — the BYOK key, the wallet address being asked
+about, the handle, the query text — so a "routed through Tor" badge would be
+the app's first structurally misleading claim (the ADP don't-overclaim
+lesson, §83's spirit). It would also break the measured layer wholesale
+(Farcaster's per-connection pacing, Yahoo's UA-fragile 429s, Gnosis's ~25s
+scan budget, and Tor exits are blocked/throttled by exactly the CDNs these
+hosts sit behind — every measured quirk would need re-measuring over exits),
+cost a 5–30s circuit bootstrap against a foreground sweep that runs on every
+open, and the appexes (share extension, widgets) can't participate at all —
+so the claim would carry silent exceptions by construction. The ONE coherent
+scoped version, buildable only if a user asks for it by name: an
+off-by-default "route wallet reads over Tor" toggle — unlinking home IP from
+queried wallet addresses is a real doxxing vector and this app already
+serves Privacy Pools users — failing CLOSED (no silent clearnet fallback
+while on, even if that reads as broken), with copy stating the addresses
+themselves still go out.
