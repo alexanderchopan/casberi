@@ -73,8 +73,14 @@ enum Retriever {
         // model is unavailable — the keyword engine then stands alone (zero
         // regression). The query norm is computed once, not per thing.
         let ask = query.trimmingCharacters(in: CharacterSet(charactersIn: "? ").union(.whitespaces))
-        let queryVec: [Float]? = (!isPoolRefinement && !terms.isEmpty)
-            ? EmbeddingIndex.vector(for: ask) : nil
+        // The ask's own language decides which sentence model embeds it, and a
+        // thing embedded in a different one is excluded rather than compared
+        // (2026-08-02, prd §282) — so a Spanish ask reaches Spanish things and
+        // never scores noise against an English vector.
+        let queried = (!isPoolRefinement && !terms.isEmpty)
+            ? EmbeddingIndex.queryVector(for: ask) : nil
+        let queryVec = queried?.vector
+        let queryLanguage = queried?.language
         let queryNorm = queryVec.map(EmbeddingIndex.norm) ?? 0
         // Similarity above the boost floor refines ranking; but a thing with NO
         // keyword score must clear the higher QUALIFY floor to answer at all —
@@ -116,8 +122,9 @@ enum Retriever {
             // Semantic lift: meaning-match adds to the score and can qualify a
             // thing that shares no words at all — but only a STRONG match
             // (>= qualify floor) may answer without a keyword hit.
-            if let queryVec, let data = thing.embedding, !data.isEmpty {
-                let sim = EmbeddingIndex.similarity(query: queryVec, queryNorm: queryNorm, packed: data)
+            if let queryVec, let queryLanguage, let data = thing.embedding, !data.isEmpty {
+                let sim = EmbeddingIndex.similarity(query: queryVec, queryNorm: queryNorm,
+                                                    packed: data, language: queryLanguage)
                 if sim >= semanticBoostFloor, score > 0 || sim >= semanticQualifyFloor {
                     score += semanticWeight * (sim - semanticBoostFloor) / (1 - semanticBoostFloor)
                 }

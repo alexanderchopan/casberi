@@ -79,6 +79,20 @@ step "X pure-logic self-test"
   || fail "the X logic self-test failed — run scripts/x-selftest.sh"
 print -P "%F{green}✓ x self-test%f"
 
+# Pure-logic self-test for the on-device-intelligence pass (prd §282). Static,
+# no build, no network — and the ONLY automated check that pass can have: the
+# simulator ships no on-device language model, so every model path there runs
+# its unavailable branch and a sim sweep exercises none of them. What it covers
+# is the deterministic logic around the model, where every failure is a silent
+# wrong answer: a vector header off by a byte makes every cosine 0 (which reads
+# as "no related things" forever), an accepted status-bar clock puts "9:41
+# today" on nearly every screenshot's calendar hand-off, and a permissive
+# grounding check turns §218's honesty rail off while still logging that it ran.
+step "On-device pure-logic self-test"
+"$ROOT/scripts/ondevice-selftest.sh" >/dev/null \
+  || fail "the on-device logic self-test failed — run scripts/ondevice-selftest.sh"
+print -P "%F{green}✓ on-device self-test%f"
+
 # ── 1. Build ────────────────────────────────────────────────────────
 step "Building Casberi (derivedData: $DD)"
 xcodebuild -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \

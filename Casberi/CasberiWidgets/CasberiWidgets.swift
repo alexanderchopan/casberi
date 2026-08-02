@@ -123,6 +123,24 @@ struct HeroEntry: TimelineEntry {
     /// and useful thing for a home-screen tile to say — so the dot stayed and
     /// the number went.
     var hasNew: Bool = false
+
+    /// What the Smart Stack sorts on (prd §282, 2026-08-02). A stacked widget
+    /// only surfaces itself if it says how much it currently deserves the slot,
+    /// and this one never did — so it rotated on nothing but position, showing
+    /// the day's lede at 3am and hiding it at 8am when the brief is the whole
+    /// point.
+    ///
+    /// Three rungs, in the order the tile's own content already ranks by:
+    /// something landed while you were away (the news case), the brief has
+    /// published a lede (the morning case), or the tile is merely showing the
+    /// newest thing (which is true all day and worth no promotion).
+    var relevance: TimelineEntryRelevance? {
+        TimelineEntryRelevance(score: hasNew ? 90 : (isLede ? 55 : 10))
+    }
+
+    /// Whether the title is the brief's own sentence rather than the fallback
+    /// rungs — set by the provider, since only it knows which rung answered.
+    var isLede: Bool = false
 }
 
 struct HeroProvider: TimelineProvider {
@@ -170,7 +188,8 @@ struct HeroProvider: TimelineProvider {
             // days running" would date a line that isn't about this week.
             return HeroEntry(date: .now, eyebrow: "", title: lede,
                              subline: "What's going on",
-                             hasNew: hasNew(since: lastSeen))
+                             hasNew: hasNew(since: lastSeen),
+                             isLede: true)
         }
 
         guard let container = try? SharedStore.extensionContainer() else {

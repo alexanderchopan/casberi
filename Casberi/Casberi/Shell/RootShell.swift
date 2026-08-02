@@ -1048,6 +1048,16 @@ struct RootShell: View {
             // deferred block: it is the work the launch window exists
             // to keep clear.
             VerbDetection.backfill(context: modelContext)
+            // The two model-fed sweeps (prd §282, 2026-08-02) — both bounded
+            // to a handful of rows per foreground, both no-ops without Apple
+            // Intelligence, and both deliberately behind the cheap
+            // deterministic sweeps above: a long transcript's digest and a
+            // screenshot's name are worth having, never worth delaying the
+            // index everything else reads.
+            Task { @MainActor in
+                await ThreadDigest.sweep(context: modelContext)
+                await ScreenshotNaming.sweep(context: modelContext)
+            }
             // The "Noticed" line's real trigger (docs/agent-brief.md
             // ruling 10). Also refreshes the kept-ask digest cache
             // (`KeptAskStore.anyChanged`) the bar's pulse reads from.

@@ -1981,6 +1981,155 @@ enum ProbeHooks {
             let n = ScreenshotIngest.ingest(context: context)
             NSLog("Photos re-ingest probe: %d new", n)
         },
+        // ── The on-device intelligence pass (prd §282, 2026-08-02) ──────────
+        //
+        // `-embeddingProbe YES` — the semantic index's LANGUAGE census. The
+        // one view that shows whether multilingual keying is actually doing
+        // anything: how many stored vectors are legacy (untagged, English by
+        // definition), how many carry each language tag, and which language a
+        // query would be embedded in. A count of embedded things alone can't
+        // tell "the corpus is English" from "every Spanish note is still
+        // wearing an English vector nothing will ever match" — which is the
+        // exact failure this feature exists to end, and it is invisible at
+        // runtime because retrieval degrades silently rather than erroring.
+        Hook(key: "embeddingProbe") { _, context in
+            Task { @MainActor in
+                let things = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
+                var tagged: [String: Int] = [:]
+                var unembedded = 0, empty = 0
+                for thing in things where thing.isLive {
+                    guard let data = thing.embedding else { unembedded += 1; continue }
+                    guard !data.isEmpty else { empty += 1; continue }
+                    let language = EmbeddingIndex.Header.language(of: data)?.rawValue ?? "unreadable"
+                    tagged[language, default: 0] += 1
+                }
+                // One NSLog per line — a joined multi-line message is
+                // truncated by the log reader (the `-todayProbe` lesson).
+                NSLog("embeddingProbe: corpus=%d embedded=%d pending=%d unembeddable=%d",
+                      things.count, tagged.values.reduce(0, +), unembedded, empty)
+                for (language, n) in tagged.sorted(by: { $0.value > $1.value }) {
+                    NSLog("embeddingLang| %@ = %d", language, n)
+                }
+                NSLog("embeddingProbe: dominant=%@ queryLanguageForShortAsk=%@",
+                      EmbeddingIndex.dominantLanguage?.rawValue ?? "—",
+                      EmbeddingIndex.queryLanguage(for: "travel plans").rawValue)
+                let fixed = await EmbeddingIndex.remedyMistagged(context: context)
+                NSLog("embeddingProbe: remedyCleared=%d", fixed)
+            }
+        },
+        // `-relatedProbe "<title prefix>"` — what the thing sheet would show
+        // UNDER a thing: the earlier copy of it (deterministic), then its
+        // semantic neighbours. Keyed on a title prefix, not a UUID, for the
+        // `-openThing` reason: a UUID changes every install, a title doesn't.
+        //
+        // The two halves are logged separately because they answer differently
+        // and fail differently — a missing "kept before" is usually correct
+        // (most things are kept once), while empty neighbours on an embedded
+        // corpus means the vectors aren't comparable, which is a bug.
+        Hook(key: "relatedProbe") { prefix, context in
+            Task { @MainActor in
+                var descriptor = FetchDescriptor<Thing>(
+                    sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+                descriptor.fetchLimit = 300
+                let all = (try? context.fetch(descriptor)) ?? []
+                guard let subject = all.first(where: {
+                    $0.isLive && $0.title.lowercased().hasPrefix(prefix.lowercased())
+                }) else {
+                    NSLog("relatedProbe: no thing whose title starts with %@", prefix)
+                    return
+                }
+                NSLog("relatedProbe: subject=%@ · %@ embedded=%@", subject.title, subject.source,
+                      (subject.embedding.map { !$0.isEmpty } ?? false) ? "YES" : "NO")
+                if let earlier = RelatedThings.keptBefore(subject, in: all) {
+                    NSLog("relatedKept| %@ · %@ · %@", earlier.title, earlier.source,
+                          earlier.capturedAt.formatted(date: .abbreviated, time: .omitted))
+                } else {
+                    NSLog("relatedKept| none")
+                }
+                let near = RelatedThings.neighbours(of: subject, in: all)
+                NSLog("relatedProbe: neighbours=%d", near.count)
+                for t in near { NSLog("relatedNear| %@ · %@", t.title, t.source) }
+            }
+        },
+        // `-factsProbe "<title prefix>"` — the upcoming moments a screenshot's
+        // own OCR text names, and where each half came from. Logs the
+        // DETERMINISTIC dates and the MODEL's label separately, on purpose:
+        // the whole design rests on the date never being the model's, and a
+        // combined line couldn't show that the split held.
+        Hook(key: "factsProbe") { prefix, context in
+            Task { @MainActor in
+                var descriptor = FetchDescriptor<Thing>(
+                    sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+                descriptor.fetchLimit = 300
+                let all = (try? context.fetch(descriptor)) ?? []
+                guard let subject = all.first(where: {
+                    $0.isLive && $0.title.lowercased().hasPrefix(prefix.lowercased())
+                }) else {
+                    NSLog("factsProbe: no thing whose title starts with %@", prefix)
+                    return
+                }
+                let dates = ScreenshotFacts.dates(in: subject.content)
+                NSLog("factsProbe: subject=%@ ocrChars=%d detectedDates=%d",
+                      subject.title, subject.content.count, dates.count)
+                for d in dates {
+                    NSLog("factsDate| %@", d.formatted(date: .abbreviated, time: .shortened))
+                }
+                let label = await ScreenshotFacts.label(for: subject.content)
+                NSLog("factsProbe: modelLabel=%@", label ?? "(declined or unavailable)")
+                let facts = await ScreenshotFacts.facts(for: subject)
+                for f in facts {
+                    NSLog("factsRow| %@ · %@", f.label,
+                          f.date.formatted(date: .abbreviated, time: .shortened))
+                }
+            }
+        },
+        // `-digestProbe YES` — run the thread-summary sweep and show what it
+        // wrote. The per-thread lines matter more than the count: a summary
+        // lands in `enrichedText`, which is retrieval-only and therefore
+        // invisible on every screen, so this is the ONLY way to see whether
+        // the model wrote something useful or something generic.
+        Hook(key: "digestProbe") { _, context in
+            Task { @MainActor in
+                let n = await ThreadDigest.sweep(context: context)
+                let all = (try? context.fetch(FetchDescriptor<Thing>(
+                    sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []
+                let threads = all.filter { $0.isLive && $0.kind == .chat }
+                let pending = threads.filter(ThreadDigest.wants).count
+                NSLog("digestProbe: modelAvailable=%@ summarized=%d threads=%d stillPending=%d",
+                      OnDeviceModel.isAvailable ? "YES" : "NO", n, threads.count, pending)
+                for t in threads.prefix(8) where t.enrichedText != nil {
+                    NSLog("digestRow| %@ → %@", t.title, t.enrichedText ?? "")
+                }
+            }
+        },
+        // `-nameProbe YES` — run the screenshot-naming sweep. Logs each row's
+        // BEFORE title beside what the model proposed and whether the
+        // grounding check accepted it, because a rejected name is the
+        // interesting case: it is the rail doing its job, and a run that
+        // silently named nothing looks identical to a run where the model
+        // never answered.
+        Hook(key: "nameProbe") { _, context in
+            Task { @MainActor in
+                let descriptor = FetchDescriptor<Thing>(
+                    predicate: #Predicate { $0.source == "Photos" && $0.ocrAt != nil },
+                    sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+                let weak = ((try? context.fetch(descriptor)) ?? []).filter {
+                    $0.isLive && $0.kind == .screenshot && !$0.content.isEmpty
+                        && ScreenshotNaming.isWeak($0.title)
+                }
+                NSLog("nameProbe: modelAvailable=%@ weaklyTitled=%d",
+                      OnDeviceModel.isAvailable ? "YES" : "NO", weak.count)
+                for thing in weak.prefix(3) where thing.isLive {
+                    let before = thing.title
+                    let proposed = await ScreenshotNaming.name(text: thing.content)
+                    let ok = proposed.map { ScreenshotNaming.grounded($0, in: thing.content) } ?? false
+                    NSLog("nameRow| was=%@ proposed=%@ grounded=%@", before,
+                          proposed ?? "(declined)", ok ? "YES" : "NO")
+                }
+                let n = await ScreenshotNaming.sweep(context: context)
+                NSLog("nameProbe: named=%d", n)
+            }
+        },
         // `-photoVerbProbe YES` — what a screenshot's thing sheet OFFERS, and
         // whether each offer can actually land (2026-08-02).
         //

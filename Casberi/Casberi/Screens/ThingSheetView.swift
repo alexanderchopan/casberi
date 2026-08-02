@@ -97,6 +97,13 @@ struct ThingSheetView: View {
     /// this same sheet over the target, the recursive shape already used
     /// elsewhere in this app (e.g. `-agentThingProbe`'s Stack push).
     @State private var walkingToNote: KeyedThing?
+    /// The earlier copy of this thing, when there is one (prd §282) — keyed,
+    /// not raw, because it is a `Thing` held in `@State` and a heal landing
+    /// under this open sheet must never leave the row reading a dead model.
+    @State private var keptBefore: KeyedThing?
+    /// Upcoming moments this thing's own text names (prd §282). Plain values,
+    /// not model references — read once off a live `Thing` and safe to hold.
+    @State private var facts: [ScreenshotFacts.Fact] = []
     /// Translate verb (2026-07-17): the system Translation sheet, shown over
     /// the thing's own words — no custom UI, Apple's picker does the rest.
     @State private var showTranslate = false
@@ -407,6 +414,13 @@ struct ThingSheetView: View {
         .onAppear {
             streamRelated()
             Task { replies = await SocialThread.replies(for: thing) }
+            // The deadline hiding in a screenshot's own OCR text (prd §282).
+            // Scoped to the kinds whose text is machine-read and therefore
+            // never looked at by a person: a note you typed needs no help
+            // finding its own date.
+            if thing.kind == .screenshot {
+                Task { facts = await ScreenshotFacts.facts(for: thing) }
+            }
             // `CrossSourceEcho.find` itself gates on `.link` (returns nil
             // instantly otherwise), but checking here too skips even
             // constructing the Task for the common non-link case.
@@ -1080,6 +1094,8 @@ struct ThingSheetView: View {
 
     private var relatedShelf: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
+            factRows
+            keptBeforeRow
             if !relatedStream.els.isEmpty {
                 Text(LocalizedStringKey(relatedTitle))
                     .dsText(.label12)
@@ -1090,20 +1106,112 @@ struct ThingSheetView: View {
         }
     }
 
+    // MARK: - What this is about to make you do (prd §282, 2026-08-02)
+
+    /// An upcoming moment this screenshot's own text names — the appointment in
+    /// the confirmation you screenshotted, the time somebody sent you. The DATE
+    /// is `NSDataDetector`'s, never the model's (`ScreenshotFacts` says why);
+    /// the label is the model's few words, or the thing's title.
+    ///
+    /// The tap is a HAND-OFF, not a write: it copies the words and opens
+    /// Calendar on that day, the same contract every Calendar verb in this app
+    /// keeps. Nothing puts an event in anybody's calendar off the back of a
+    /// picture.
+    @ViewBuilder
+    private var factRows: some View {
+        ForEach(facts) { fact in
+            Button {
+                let copied = fact.label
+                let when = fact.date
+                Task {
+                    do {
+                        try await HandOff.openCalendar(at: when, copying: copied)
+                    } catch {
+                        verbResultIsError = true
+                        verbResult = error.localizedDescription
+                    }
+                }
+            } label: {
+                HStack(spacing: DS.Space.s2) {
+                    Image(systemName: "calendar.badge.plus")
+                        .accessibilityHidden(true)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(DS.textTertiary)
+                    Text("\(fact.label) · \(fact.date.formatted(date: .abbreviated, time: .shortened))")
+                        .dsText(.callout15)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .dsHover()
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.bottom, DS.Space.s2)
+        }
+    }
+
+    // MARK: - Kept before (prd §282, 2026-08-02)
+
+    /// "You kept this in April" — the earlier copy of this exact thing, saved
+    /// from another app or on another day, as a door to it. Deterministic
+    /// (`RelatedThings.keptBefore`): same title in the same kind, or the same
+    /// link with the tracking junk off it. Never a semantic guess, because this
+    /// row makes a CLAIM and §83 forbids a claim we can't stand behind.
+    ///
+    /// Walks through `walkingToNote`, the sheet's existing re-presentation of
+    /// itself — no new `.sheet` on this screen (the one-screen-one-sheet rule).
+    @ViewBuilder
+    private var keptBeforeRow: some View {
+        if let earlier = keptBefore, let copy = earlier.live {
+            Button {
+                walkingToNote = earlier
+            } label: {
+                HStack(spacing: DS.Space.s2) {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .accessibilityHidden(true)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(DS.textTertiary)
+                    Text("You kept this \(copy.capturedAt.formatted(.relative(presentation: .named))) · \(copy.source)")
+                        .dsText(.callout15)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .dsHover()
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.bottom, DS.Space.s2)
+        }
+    }
+
     private func streamRelated() {
-        // A thing that can't have related items costs no fetch — the old
-        // invariant, kept: only a watched token (mentions) or a tagged thing
-        // (overlap) has anything to look for.
+        // A thing that can't have related items costs no fetch. A watched token
+        // has mentions and a tagged thing has overlap — the old invariant — and
+        // since 2026-08-02 an EMBEDDED thing has neighbours, which is most of
+        // the corpus once the sweep has run. That third arm is the fix for a
+        // real gap: a note or screenshot with no tags got no shelf at all, even
+        // though its vector could always have found company.
         let typeTags = Set(ThingKind.allCases.map(\.typeTag))
         let myTags = Set(thing.tags).subtracting(typeTags)
         let isToken = thing.source == "Tokens"
-        guard isToken || !myTags.isEmpty else { return }
+        let isEmbedded = thing.embedding.map { !$0.isEmpty } ?? false
+        guard isToken || !myTags.isEmpty || isEmbedded else { return }
 
         var descriptor = FetchDescriptor<Thing>(
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
         )
         descriptor.fetchLimit = 300   // relatedness lives in the recent past
         let all = (try? modelContext.fetch(descriptor)) ?? []
+
+        // Have you kept this exact thing before? Deterministic, and asked over
+        // the same fetch — so the answer costs nothing extra.
+        if let earlier = RelatedThings.keptBefore(thing, in: all) {
+            keptBefore = KeyedThing(earlier)
+        }
 
         // A watched token's relatedness is MENTION, not tags (2026-07-14) —
         // every watchlist thing shares the Watchlist tag, so tag overlap only
@@ -1116,18 +1224,21 @@ struct ThingSheetView: View {
             relatedTitle = "In your things"
             related = mentions
         } else {
-            guard !myTags.isEmpty else { return }
             // Meaning first (2026-07-14): rank the recent corpus by semantic
             // similarity to this thing, so a GitHub PR reaches the Linear
             // ticket, the chat, the note that share NO tag — the cross-source
             // weaving tag overlap can't find (a feed tag like "Stars" only ever
             // reaches other GitHub things). Tag overlap stays the fallback when
             // the on-device embedding is unavailable or this thing isn't
-            // embedded yet.
-            related = semanticRelated(in: all)
-                ?? Array(all.filter { other in
-                    other.id != thing.id && !myTags.isDisjoint(with: other.tags)
+            // embedded yet — and where there are no tags either, the shelf
+            // simply stays empty, as it did before it could be reached at all.
+            let near = RelatedThings.neighbours(of: thing, in: all)
+            related = near.isEmpty
+                ? Array(all.filter { other in
+                    other.isLive && other.id != thing.id
+                        && !myTags.isEmpty && !myTags.isDisjoint(with: other.tags)
                 }.prefix(6))
+                : near
         }
         guard !related.isEmpty else { return }
 
@@ -1137,30 +1248,6 @@ struct ThingSheetView: View {
             doc.append("c\(i) = Chip(\"\(t.source)\", \"\(title)\")")
         }
         relatedStream.stream(doc)
-    }
-
-    /// The recent corpus ranked by on-device semantic similarity to this thing
-    /// — the meaning-based Related set (EmbeddingIndex, the same vectors the
-    /// answer path scores). Cross-source by nature: it scores by meaning, not
-    /// source or tag. nil when the model is unavailable, this thing can't be
-    /// embedded, or nothing clears the floor — the caller then falls back to
-    /// tag overlap. The 0.5 cosine floor keeps it to genuine relations (looser
-    /// than the answer path's 0.62 qualify floor — "related", not "answers").
-    private func semanticRelated(in all: [Thing]) -> [Thing]? {
-        guard EmbeddingIndex.isAvailable,
-              let query = EmbeddingIndex.vector(for: EmbeddingIndex.indexText(for: thing))
-        else { return nil }
-        let qNorm = EmbeddingIndex.norm(query)
-        guard qNorm > 0 else { return nil }
-        let scored = all.compactMap { other -> (Thing, Double)? in
-            guard other.id != thing.id, let data = other.embedding, !data.isEmpty else { return nil }
-            let sim = EmbeddingIndex.similarity(query: query, queryNorm: qNorm, packed: data)
-            return sim >= 0.5 ? (other, sim) : nil
-        }
-        .sorted { $0.1 > $1.1 }
-        .prefix(6)
-        .map(\.0)
-        return scored.isEmpty ? nil : Array(scored)
     }
 
     /// Corpus things that MENTION this watched token — a cashtag ($PEPE,

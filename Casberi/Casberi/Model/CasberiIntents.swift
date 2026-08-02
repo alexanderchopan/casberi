@@ -1,5 +1,6 @@
 import AppIntents
 import SwiftData
+import SwiftUI
 
 /// App Intents — the capture and the synthesis, reachable from Shortcuts,
 /// Siri phrasing, and the Action Button without opening the app. The same
@@ -97,17 +98,86 @@ struct SearchCasberiIntent: AppIntent {
         Summary("Search Casberi for \(\.$query)")
     }
 
-    func perform() async throws -> some IntentResult & ReturnsValue<[ThingEntity]> & ProvidesDialog {
+    func perform() async throws -> some IntentResult & ReturnsValue<[ThingEntity]> & ProvidesDialog & ShowsSnippetView {
         let hits = try IntentCorpus.match(query, limit: 5)
         guard !hits.isEmpty else {
-            return .result(value: [], dialog: "Nothing in your things matches that.")
+            return .result(value: [], dialog: "Nothing in your things matches that.",
+                           view: IntentRowsSnippet(rows: []))
         }
         let entities = hits.map(ThingEntity.init)
         let lines = hits.map { "\($0.title) — \($0.source)" }
         let joined = lines.joined(separator: "\n")
+        // The rows are built here, off the live models, and handed to the
+        // snippet as plain values — a view that held `Thing`s would be reading
+        // SwiftData from the system's process on the system's schedule.
+        // Redaction applies for the same reason it does in the dialog (prd
+        // §277): a snippet is shown outside the app.
+        let rows = hits.map(IntentRowsSnippet.Row.init)
         return .result(value: entities,
                        dialog: IntentDialog(full: "\(hits.count) thing\(hits.count == 1 ? "" : "s"):\n\(joined)",
-                                            supporting: "From your things."))
+                                            supporting: "From your things."),
+                       view: IntentRowsSnippet(rows: rows))
+    }
+}
+
+/// What Siri and Shortcuts SHOW for a search or an ask (prd §282,
+/// 2026-08-02) — the matched things as rows, instead of the titles glued into
+/// one spoken paragraph. The intents have grounded their answers in real
+/// things since they shipped; until now the person could only hear about them.
+///
+/// Plain values, never `Thing`s: a snippet view is rendered by the system, in
+/// its own process and on its own schedule, and handing it live SwiftData
+/// models would be the held-reference crash class (`ThingRowKeying`) reached
+/// from the one place the app cannot see it happen.
+struct IntentRowsSnippet: View {
+    struct Row: Identifiable {
+        let id: UUID
+        let title: String
+        let subtitle: String
+        let symbol: String
+
+        init(_ thing: Thing) {
+            id = thing.id
+            // The credential tripwire, at the boundary that matters: this
+            // leaves the app the same way a Spotlight donation does, and a
+            // screenshot's title is OCR-derived.
+            title = SecretScan.redacted(thing.title)
+            subtitle = thing.kind.typeTag + " · " + thing.source
+            symbol = thing.kind.symbol
+        }
+    }
+
+    var answer: String? = nil
+    let rows: [Row]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if let answer, !answer.isEmpty {
+                Text(answer)
+                    .font(.system(size: 17, weight: .regular))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            ForEach(rows) { row in
+                HStack(spacing: 10) {
+                    Image(systemName: row.symbol)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 18)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(row.title)
+                            .font(.system(size: 15, weight: .medium))
+                            .lineLimit(1)
+                        Text(row.subtitle)
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(4)
     }
 }
 
@@ -126,10 +196,11 @@ struct AskCasberiIntent: AppIntent {
         Summary("Ask Casberi \(\.$question)")
     }
 
-    func perform() async throws -> some IntentResult & ReturnsValue<String> & ProvidesDialog {
+    func perform() async throws -> some IntentResult & ReturnsValue<String> & ProvidesDialog & ShowsSnippetView {
         let hits = try IntentCorpus.match(question, limit: 10)
         guard !hits.isEmpty else {
-            return .result(value: "", dialog: "Nothing in your things matches that.")
+            return .result(value: "", dialog: "Nothing in your things matches that.",
+                           view: IntentRowsSnippet(rows: []))
         }
         // The credential tripwire (prd §277): an intent result is spoken by
         // Siri and pipeable anywhere by Shortcuts, so it leaves the app the
@@ -142,12 +213,21 @@ struct AskCasberiIntent: AppIntent {
                                     when: $0.capturedAt.formatted(.relative(presentation: .named)))
         }
         if let answer = await OnDeviceModel.compose(query: question, candidates: candidates) {
-            return .result(value: answer.insight, dialog: IntentDialog(stringLiteral: answer.insight))
+            // The snippet shows the sentence AND the things it rests on — the
+            // same grounding the in-app answer paints beneath its prose, which
+            // a spoken-only result could never carry.
+            let cited = answer.picks.compactMap { hits.indices.contains($0) ? hits[$0] : nil }
+            let shown = (cited.isEmpty ? Array(hits.prefix(3)) : cited).prefix(4)
+            return .result(value: answer.insight,
+                           dialog: IntentDialog(stringLiteral: answer.insight),
+                           view: IntentRowsSnippet(answer: answer.insight,
+                                                   rows: shown.map(IntentRowsSnippet.Row.init)))
         }
         // No model (or it declined) — the matched things ARE the answer.
         let line = "Found: " + hits.prefix(3)
             .map { SecretScan.redacted($0.title) }.joined(separator: " · ")
-        return .result(value: line, dialog: IntentDialog(stringLiteral: line))
+        return .result(value: line, dialog: IntentDialog(stringLiteral: line),
+                       view: IntentRowsSnippet(rows: hits.prefix(3).map(IntentRowsSnippet.Row.init)))
     }
 }
 

@@ -10,13 +10,151 @@ import SwiftData
 /// Vectors are DERIVED, so they're built by a lazy backfill sweep, never at the
 /// ~35 capture sites — which also embeds CloudKit-synced and pre-existing
 /// things. The vector rides the thing as packed Float32 bytes (`Thing.embedding`).
+///
+/// **Multilingual (2026-08-02, prd §282).** The index was pinned to
+/// `.english` from the day it shipped, so a corpus in any other language got
+/// NOTHING from it — every Bluesky/Farcaster/note/screenshot in Spanish,
+/// German or Japanese scored 0 on the semantic pass and fell back to keyword
+/// overlap, silently. Now each thing is embedded with the sentence model for
+/// ITS OWN detected language, and a vector carries the language it was made
+/// with (see `Header`), so a Spanish ask reaches Spanish things and can never
+/// be cosine'd against an English vector — different models put different
+/// meanings at the same coordinates, and comparing across them isn't a weaker
+/// match, it's a wrong one.
+///
+/// **Why not `NLContextualEmbedding`** — the genuinely cross-lingual option,
+/// and the obvious reach. Its per-token vectors mean-pool into a sentence
+/// vector whose similarity DISTRIBUTION is nothing like `NLEmbedding`'s: the
+/// shared component across unrelated sentences is large, so ordinary pairs sit
+/// far higher than the floors every caller here was tuned against (`Retriever`'s
+/// 0.55 boost / 0.62 qualify, the Related shelf's 0.5). Swapping the model
+/// without re-measuring those three numbers would not degrade retrieval
+/// visibly — it would make almost everything "related", which reads as the app
+/// getting worse at answering while every log line says it's working. Language
+/// keying buys the same fix for the corpus people actually have (one or two
+/// languages, not fifty) at zero risk to the measured floors. Revisit with a
+/// measured distribution, not from intuition.
 enum EmbeddingIndex {
-    /// Apple's on-device sentence embedding. nil on runtimes/locales without
-    /// one — every path guards, and retrieval falls back to keyword scoring
-    /// (zero regression when this is absent).
-    private static let model = NLEmbedding.sentenceEmbedding(for: .english)
 
-    static var isAvailable: Bool { model != nil }
+    // MARK: - Models, per language
+
+    /// Every language Apple ships a sentence embedding for is discovered by
+    /// ASKING, not by carrying a list: `sentenceEmbedding(for:)` returns nil
+    /// where there's no model, and the set differs by OS version. Cached
+    /// because loading one is not free and retrieval asks per query.
+    private static let modelLock = NSLock()
+    nonisolated(unsafe) private static var models: [NLLanguage: NLEmbedding?] = [:]
+
+    private static func model(for language: NLLanguage) -> NLEmbedding? {
+        modelLock.lock()
+        defer { modelLock.unlock() }
+        if let cached = models[language] { return cached }
+        let loaded = NLEmbedding.sentenceEmbedding(for: language)
+        models[language] = loaded
+        return loaded
+    }
+
+    /// English stays the default and the fallback — it's the only language the
+    /// index has ever had, so every vector written before this existed is
+    /// English by definition (see `Header.language(of:)`).
+    static let fallbackLanguage: NLLanguage = .english
+
+    static var isAvailable: Bool { model(for: fallbackLanguage) != nil }
+
+    /// The language a piece of text is written in, when we're confident enough
+    /// to key a vector on it. Confidence matters: `NLLanguageRecognizer` will
+    /// name a language for three words of anything, and a mis-keyed vector is
+    /// invisible — it just never matches. Below the floor the caller falls back
+    /// (to the corpus's own dominant language for a query, to English for a
+    /// thing), which is the pre-existing behaviour.
+    static func language(of text: String, minimumConfidence: Double = 0.55) -> NLLanguage? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 12 else { return nil }
+        let recognizer = NLLanguageRecognizer()
+        recognizer.processString(trimmed)
+        guard let top = recognizer.languageHypotheses(withMaximum: 1).max(by: { $0.value < $1.value }),
+              top.value >= minimumConfidence,
+              model(for: top.key) != nil        // no model → not a language we can key on
+        else { return nil }
+        return top.key
+    }
+
+    /// What most of this person's embedded things are written in — read by the
+    /// query side when an ask is too short to detect (which is most asks:
+    /// "travel plans" is three words). Without it a Spanish corpus would be
+    /// searched in English forever, since a two-word Spanish query never clears
+    /// the confidence floor. Written by the sweep, so it costs the query path
+    /// nothing.
+    private static let dominantKey = "embedding.dominantLanguage"
+
+    static var dominantLanguage: NLLanguage? {
+        guard let raw = UserDefaults.standard.string(forKey: dominantKey) else { return nil }
+        let language = NLLanguage(rawValue: raw)
+        return model(for: language) != nil ? language : nil
+    }
+
+    /// The language a QUERY should be embedded in: what it plainly is, else
+    /// what the corpus mostly is, else English.
+    static func queryLanguage(for text: String) -> NLLanguage {
+        language(of: text) ?? dominantLanguage ?? fallbackLanguage
+    }
+
+    // MARK: - Header
+
+    /// A stored vector's 12-byte preamble: a magic word, then the language tag
+    /// the vector was made with. It exists because two sentence models can
+    /// produce the SAME dimension while meaning different things by it — a
+    /// length check (which is all the old `similarity` had) would call those
+    /// comparable and score pure noise as a match.
+    ///
+    /// Vectors written before this existed carry no header at all, and are
+    /// English by definition — that's what the magic distinguishes, and it's
+    /// why this change re-embeds nothing on upgrade: an English corpus keeps
+    /// every vector it has.
+    enum Header {
+        /// Little-endian, deliberately not a plausible Float32 bit pattern for
+        /// a first coordinate.
+        static let magic: UInt32 = 0xCA5B_E001
+        /// 4 magic + 8 language tag. Eight bytes because four would fold
+        /// `zh-Hans` and `zh-Hant` onto the same tag — two different models.
+        static let size = 12
+        private static let tagSize = 8
+
+        /// The language of a packed blob: its tag when it carries one, English
+        /// when it's a pre-header vector. nil only for a blob too short to be
+        /// either (a corrupt or empty record).
+        static func language(of packed: Data) -> NLLanguage? {
+            guard packed.count >= MemoryLayout<UInt32>.size else { return nil }
+            let stamped = packed.withUnsafeBytes {
+                $0.loadUnaligned(fromByteOffset: 0, as: UInt32.self)
+            }
+            guard stamped == magic else { return .english }   // legacy vector
+            guard packed.count >= size else { return nil }
+            let raw = packed[(packed.startIndex + 4)..<(packed.startIndex + size)]
+            let text = String(decoding: raw.prefix(while: { $0 != 0 }), as: UTF8.self)
+            return text.isEmpty ? nil : NLLanguage(rawValue: text)
+        }
+
+        /// Where the floats start — 0 for a legacy vector, `size` for a
+        /// tagged one.
+        static func offset(in packed: Data) -> Int {
+            guard packed.count >= MemoryLayout<UInt32>.size else { return 0 }
+            let stamped = packed.withUnsafeBytes {
+                $0.loadUnaligned(fromByteOffset: 0, as: UInt32.self)
+            }
+            return stamped == magic ? size : 0
+        }
+
+        static func bytes(for language: NLLanguage) -> Data {
+            var out = withUnsafeBytes(of: magic.littleEndian) { Data($0) }
+            var tag = Data(language.rawValue.utf8.prefix(tagSize))
+            tag.append(contentsOf: [UInt8](repeating: 0, count: tagSize - tag.count))
+            out.append(tag)
+            return out
+        }
+    }
+
+    // MARK: - Text
 
     /// The text an answer would match on — the title carries most of the
     /// signal; a short body slice adds substance, and a link's fetched article
@@ -43,19 +181,36 @@ enum EmbeddingIndex {
         return String(parts.joined(separator: ". ").prefix(800))
     }
 
-    /// An embedding vector for arbitrary text, as Float. nil when the model is
-    /// absent or the text is empty/unembeddable.
-    static func vector(for text: String) -> [Float]? {
+    // MARK: - Vectors
+
+    /// An embedding vector for arbitrary text, as Float, in a NAMED language.
+    /// nil when that language has no model or the text is empty/unembeddable.
+    static func vector(for text: String, language: NLLanguage) -> [Float]? {
         let trimmed = String(text.trimmingCharacters(in: .whitespacesAndNewlines).prefix(500))
-        guard let model, !trimmed.isEmpty,
+        guard let model = model(for: language), !trimmed.isEmpty,
               let v = model.vector(for: trimmed) else { return nil }
         return v.map(Float.init)
     }
 
-    // MARK: Packing
+    /// A query vector plus the language it was made in — the pair every caller
+    /// needs, since a vector may only be compared against things embedded the
+    /// same way. nil when nothing could be embedded.
+    static func queryVector(for text: String) -> (vector: [Float], language: NLLanguage)? {
+        let language = queryLanguage(for: text)
+        if let v = vector(for: text, language: language) { return (v, language) }
+        // The detected/dominant language had no usable answer — English is the
+        // fallback the index has always had.
+        guard language != fallbackLanguage,
+              let v = vector(for: text, language: fallbackLanguage) else { return nil }
+        return (v, fallbackLanguage)
+    }
 
-    static func pack(_ vector: [Float]) -> Data {
-        vector.withUnsafeBufferPointer { Data(buffer: $0) }
+    // MARK: - Packing
+
+    static func pack(_ vector: [Float], language: NLLanguage) -> Data {
+        var out = Header.bytes(for: language)
+        out.append(vector.withUnsafeBufferPointer { Data(buffer: $0) })
+        return out
     }
 
     /// Euclidean norm of a vector — computed once per query so `similarity`
@@ -66,23 +221,32 @@ enum EmbeddingIndex {
         return sum.squareRoot()
     }
 
-    // MARK: Similarity
+    // MARK: - Similarity
 
     /// Cosine of a query vector against a thing's PACKED stored vector, read in
     /// place — no intermediate `[Float]` allocation, since retrieval scores this
     /// against every thing on the (main-thread) Ask path. `queryNorm` is the
-    /// query's precomputed magnitude. Returns 0 for a zero/degenerate or
-    /// length-mismatched vector (a cross-revision `NLEmbedding` blob of a
-    /// different dimension is simply excluded, never a crash). `loadUnaligned`
-    /// tolerates `Data` that isn't 4-byte aligned.
-    static func similarity(query: [Float], queryNorm: Float, packed: Data) -> Double {
+    /// query's precomputed magnitude.
+    ///
+    /// Returns 0 — never a match, never a crash — for a zero/degenerate vector,
+    /// a length mismatch (a cross-revision `NLEmbedding` blob of a different
+    /// dimension), or a vector embedded in a DIFFERENT LANGUAGE than the query.
+    /// That last one is the 2026-08-02 addition and the reason the header
+    /// exists: two sentence models can share a dimension while disagreeing
+    /// about what those coordinates mean, so a length check alone would have
+    /// scored noise as similarity. `loadUnaligned` tolerates `Data` that isn't
+    /// 4-byte aligned.
+    static func similarity(query: [Float], queryNorm: Float, packed: Data,
+                           language: NLLanguage) -> Double {
+        guard Header.language(of: packed) == language else { return 0 }
+        let offset = Header.offset(in: packed)
         let stride = MemoryLayout<Float>.stride
-        let count = packed.count / stride
+        let count = (packed.count - offset) / stride
         guard count == query.count, count > 0, queryNorm > 0 else { return 0 }
         return packed.withUnsafeBytes { raw -> Double in
             var dot: Float = 0, nb: Float = 0
             for i in 0..<count {
-                let y = raw.loadUnaligned(fromByteOffset: i * stride, as: Float.self)
+                let y = raw.loadUnaligned(fromByteOffset: offset + i * stride, as: Float.self)
                 dot += query[i] * y
                 nb += y * y
             }
@@ -91,7 +255,7 @@ enum EmbeddingIndex {
         }
     }
 
-    // MARK: Backfill
+    // MARK: - Backfill
 
     private static var isSweeping = false
 
@@ -106,6 +270,12 @@ enum EmbeddingIndex {
             defer { isSweeping = false }
             let n = await indexPending(context: context)
             if n > 0 { NSLog("[Casberi] EmbeddingIndex: embedded %d things", n) }
+            // Only once the new work is done: retire vectors written in the
+            // wrong language (see `remedyMistagged`). Bounded and cursored, so
+            // this is a few hundred cheap language checks per foreground, not
+            // a corpus walk.
+            let fixed = await remedyMistagged(context: context)
+            if fixed > 0 { NSLog("[Casberi] EmbeddingIndex: re-queued %d mis-keyed vectors", fixed) }
         }
     }
 
@@ -119,6 +289,7 @@ enum EmbeddingIndex {
         guard isAvailable else { return 0 }
         let batchSize = 32
         var total = 0
+        var landed: [NLLanguage: Int] = [:]
         while true {
             var descriptor = FetchDescriptor<Thing>(
                 predicate: #Predicate { $0.embedding == nil },
@@ -136,22 +307,102 @@ enum EmbeddingIndex {
             // awaits (suspends, doesn't block) while it happens.
             let texts = batch.map(indexText(for:))
             let packed = await packedVectors(for: texts)
-            for (thing, data) in zip(batch, packed) {
-                thing.embedding = data
+            for (thing, result) in zip(batch, packed) {
+                thing.embedding = result.data
+                if let language = result.language {
+                    landed[language, default: 0] += 1
+                }
             }
             context.saveHonestly()
             total += batch.count
             await Task.yield()
         }
+        if !landed.isEmpty { recordDominant(landed) }
         return total
     }
 
     /// Off-main-actor inference for a batch of texts — see `indexPending`.
-    /// Stamps an empty vector for unembeddable text so the sweep doesn't
-    /// re-select the thing forever.
-    private static func packedVectors(for texts: [String]) async -> [Data] {
+    /// Each text is embedded in its OWN detected language (English when it's
+    /// too short or too ambiguous to tell, which is what every vector written
+    /// before 2026-08-02 assumed). Stamps an empty vector for unembeddable text
+    /// so the sweep doesn't re-select the thing forever.
+    private static func packedVectors(for texts: [String]) async -> [(data: Data, language: NLLanguage?)] {
         await Task.detached(priority: .utility) {
-            texts.map { vector(for: $0).map(pack) ?? Data() }
+            texts.map { text in
+                let language = self.language(of: text) ?? fallbackLanguage
+                guard let v = vector(for: text, language: language) else {
+                    // A language we detected but couldn't embed falls back to
+                    // English rather than leaving the thing unindexed.
+                    guard language != fallbackLanguage,
+                          let english = vector(for: text, language: fallbackLanguage)
+                    else { return (Data(), nil) }
+                    return (pack(english, language: fallbackLanguage), fallbackLanguage)
+                }
+                return (pack(v, language: language), language)
+            }
         }.value
+    }
+
+    /// Keep a running tally of which languages this corpus embeds in, and
+    /// publish the leader — `queryLanguage` reads it so a short ask in a
+    /// Spanish corpus is searched in Spanish. Counts persist so a single quiet
+    /// foreground can't flip the answer.
+    private static func recordDominant(_ landed: [NLLanguage: Int]) {
+        let key = "embedding.languageCounts"
+        var counts = (UserDefaults.standard.dictionary(forKey: key) as? [String: Int]) ?? [:]
+        for (language, n) in landed { counts[language.rawValue, default: 0] += n }
+        UserDefaults.standard.set(counts, forKey: key)
+        if let top = counts.max(by: { $0.value != $1.value ? $0.value < $1.value : $0.key > $1.key }) {
+            UserDefaults.standard.set(top.key, forKey: dominantKey)
+        }
+    }
+
+    // MARK: - Remedy
+
+    /// The corpus that existed BEFORE language keying is the whole reason this
+    /// pass exists: every one of its vectors was made with the English model,
+    /// including the Spanish notes and the Japanese posts, and those vectors
+    /// are not weak matches — they're meaningless coordinates that a Spanish
+    /// query would now (correctly) refuse to compare against, leaving those
+    /// things permanently unreachable by meaning.
+    ///
+    /// So: walk the corpus ONCE, bounded per foreground, and nil the embedding
+    /// of anything whose text plainly isn't the language its vector claims.
+    /// `indexPending` re-embeds it properly on the next sweep. The cursor is
+    /// persisted and the walk stops for good when it reaches the end — the
+    /// language check is cheap, but it is not free, and this is a one-time
+    /// repair, not a standing cost.
+    private static let remedyCursorKey = "embedding.remedyCursor"
+    private static let remedyDoneKey = "embedding.remedyDone.v1"
+
+    @MainActor
+    @discardableResult
+    static func remedyMistagged(context: ModelContext, window: Int = 200) async -> Int {
+        guard isAvailable, !UserDefaults.standard.bool(forKey: remedyDoneKey) else { return 0 }
+        let offset = UserDefaults.standard.integer(forKey: remedyCursorKey)
+        var descriptor = FetchDescriptor<Thing>(
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        descriptor.fetchOffset = offset
+        descriptor.fetchLimit = window
+        let batch = (try? context.fetch(descriptor)) ?? []
+        guard !batch.isEmpty else {
+            UserDefaults.standard.set(true, forKey: remedyDoneKey)
+            return 0
+        }
+        var cleared = 0
+        for thing in batch where thing.isLive {
+            guard let packed = thing.embedding, !packed.isEmpty,
+                  let stamped = Header.language(of: packed) else { continue }
+            // Only a CONFIDENT disagreement clears a vector — an undetectable
+            // text (short, mixed, numeric) leaves the vector exactly as it is.
+            guard let actual = language(of: indexText(for: thing)),
+                  actual != stamped else { continue }
+            thing.embedding = nil
+            cleared += 1
+        }
+        if cleared > 0 { context.saveHonestly() }
+        UserDefaults.standard.set(offset + batch.count, forKey: remedyCursorKey)
+        if batch.count < window { UserDefaults.standard.set(true, forKey: remedyDoneKey) }
+        return cleared
     }
 }

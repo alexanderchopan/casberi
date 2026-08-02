@@ -473,6 +473,23 @@ enum HandOff {
         try await jump(thing, to: URL(string: "x-apple-reminderkit://"))
     }
 
+    /// Open Calendar ON a date read out of a thing's own text — the hand-off
+    /// half of `ScreenshotFacts` (prd §282, 2026-08-02). Same contract as
+    /// `addToCalendar`: the words go on the clipboard FIRST and
+    /// unconditionally, then Calendar opens on the day, and the person writes
+    /// the event. Nothing here creates one — "We don't write" still holds, and
+    /// a date read off a picture is exactly the input that shouldn't get an
+    /// exception.
+    @MainActor
+    static func openCalendar(at date: Date, copying text: String) async throws {
+        DSPasteboard.copy(text)
+        let url = URL(string: "calshow:\(Int(date.timeIntervalSinceReferenceDate))")
+        guard let url, UIApplication.shared.canOpenURL(url),
+              await UIApplication.shared.open(url) else {
+            throw HandOffError.unavailable
+        }
+    }
+
     /// Copy the thing's own words, then open the app. The copy happens FIRST
     /// and unconditionally: neither scheme can carry text, so the clipboard is
     /// the only thing that makes the jump useful, and a jump that succeeded

@@ -14211,3 +14211,151 @@ The app already holds the right word for one of them: `Verb.shortLabel` for
 collision — and would need a real verb ("Schedule"). Left for a copy ruling
 rather than taken: the user rules on design, and this is two words on a control
 that appears on every thing in the corpus.
+
+## §282 — What else Apple's own silicon can do: eight reads the corpus was already holding (user: "how else can we use apple on device intelligence and make the app smarter", then "ok lets do all of these", 2026-08-02)
+
+The app had used the on-device model as an ANSWERER since §67 — a question
+arrives, retrieval hands it candidates, it composes. Everything below is the
+model (and Apple's other on-device engines) used as a LIBRARIAN instead:
+reading what is already stored, at rest, so the corpus is better organized
+before anybody asks it anything. Nothing here reaches a network, and every one
+of the eight degrades to exactly the pre-existing behaviour where Apple
+Intelligence is off or the device can't run it.
+
+**1. The semantic index was English-only, and silently so.** `EmbeddingIndex`
+was pinned to `NLEmbedding.sentenceEmbedding(for: .english)` from the day it
+shipped, so a corpus in any other language scored 0 on the semantic pass and
+fell back to keyword overlap — with no error, no log line, and no way to tell
+from inside the app. Each thing is now embedded with the sentence model for its
+OWN detected language, and a stored vector carries a 12-byte header naming that
+language.
+
+The header is the load-bearing part, not the language detection. Two sentence
+models can produce the SAME dimension while meaning different things by those
+coordinates, and the old `similarity` compared any two vectors of equal length
+— so without a tag, keying by language would have turned a silent miss into a
+confident wrong match, which is worse. `similarity` now refuses a
+cross-language comparison outright (returns 0). Vectors written before the
+header existed carry no magic word and are English BY DEFINITION, so an English
+corpus re-embeds nothing on upgrade.
+
+**`NLContextualEmbedding` was the obvious reach and was declined.** It is
+genuinely cross-lingual, which language keying is not. But its mean-pooled
+sentence vectors have a similarity DISTRIBUTION nothing like `NLEmbedding`'s —
+the shared component across unrelated sentences is large, so ordinary pairs sit
+far above the three floors every caller was tuned against (`Retriever`'s 0.55
+boost and 0.62 qualify, the Related shelf's 0.5). Swapping it in without
+re-measuring those numbers would not have looked like a regression: it would
+have made nearly everything "related" and nearly everything "an answer", which
+reads as the app getting worse at answering while every log line says it works.
+Language keying buys the fix for the corpus people actually have — one or two
+languages, not fifty — at zero risk to measured floors. Revisit with a measured
+distribution, never from intuition.
+
+A one-time cursored repair (`remedyMistagged`) walks the corpus once, clearing
+the vector of anything whose text plainly isn't the language its vector claims,
+so the pre-existing Spanish notes get re-embedded properly rather than keeping
+coordinates from the wrong model forever.
+
+**The known edge, recorded rather than hidden.** A SHORT ask ("travel plans")
+is below the confidence floor language detection needs, so it falls back to the
+corpus's dominant language. In a mixed corpus that is sometimes the wrong
+guess: a mostly-Spanish corpus searched with a short English phrase embeds the
+ask in Spanish and reaches no English things. The failure is a MISS, never a
+wrong match — the header guarantees that much — and the keyword engine still
+answers underneath it, which is exactly what every non-English speaker got for
+the whole preceding year. Fixing it properly means embedding the ask in two
+languages and scoring both, which doubles the retrieval scan; not worth it
+until someone reports it.
+
+**2. "You kept this before."** A thing you have saved twice — the article that
+came in from RSS and again from a paste — now says so, with a door to the first
+copy. **Deterministic, and deliberately not the embedding**: same normalized
+title in the same kind, or the same link once the tracking parameters are off
+it. A cosine of 0.95 means "these are about the same thing", which is a fine
+basis for a shelf and a bad one for a CLAIM — two write-ups of one launch would
+trip it, and a row asserting you already kept something you didn't is the fake
+status §83 bans. `sourceRef` equality is excluded on purpose: two rows sharing
+a ref are a dedupe BUG (what `-corpusDupeProbe` hunts), and showing it to a
+person as "you kept this before" would launder our bug into a feature.
+
+**3. The Related shelf reached tagged things only.** Its guard was `isToken ||
+!myTags.isEmpty`, so a note or screenshot with no tags got no shelf at all,
+even though its vector could always have found company. An embedded thing now
+qualifies too.
+
+**4. A screenshot's own text names a deadline nobody reads.** The OCR has been
+in `content` since §67 ⑤; nothing ever read it for a DATE. `ScreenshotFacts`
+does, and **the split is the design: the date is `NSDataDetector`'s, the label
+is the model's.** A model that hallucinates a date puts someone at the wrong
+place on the wrong day; one that hallucinates a label is merely unhelpful, and
+the thing's own title is right there as a fallback. So the risky half is never
+the model's to answer. A bare clock ("9:41" — the status bar of nearly every
+iOS screenshot) is rejected on the MATCHED TEXT, not on the resulting date: by
+the time it is a `Date` it looks exactly like a real 9:41 meeting. The tap is a
+HAND-OFF — copy the words, open Calendar on the day — because "We don't write"
+holds, and a date read off a picture is precisely the input that should not get
+an exception.
+
+**5. Naming the screenshots the heuristic can't.** §218's three-word rule fixed
+the case it was written for and leaves two behind: no line qualifies (a
+settings pane, a chart, a receipt in columns — the row wears "Screenshot"
+forever), or the qualifying line is a nav header. The model reads the whole
+text at once, which is the one thing a first-N-lines rule structurally cannot
+do, since the answer is usually a relationship between lines. **The §218
+honesty rail is now enforced rather than assumed**: a proposed title is
+REJECTED unless two thirds of its words really appear in the OCR text
+(`grounded`). Fluency is exactly what makes a wrong title unnoticeable, so the
+check is on evidence, not on plausibility. A row is asked once, ever
+(a UserDefaults id ledger), so a decline is not re-asked every foreground.
+
+**6. Long transcripts were the worst-retrieved things in the corpus**, for a
+structural reason. An imported ChatGPT/Claude thread is thousands of words
+whose title is whatever the first message opened with, and the index window is
+800 characters — so a two-hour debugging session is indexed by its opening
+pleasantries. `ThreadDigest` writes two or three sentences into `enrichedText`,
+which is retrieval-only by the 2026-07-15 ruling: read by
+`EmbeddingIndex.indexText` and the content scan, never shown as a title, a tag,
+or a row. **Nothing a model wrote is displayed by this feature.** The person
+reads their own transcript; the model's words only help find it.
+
+**7. Vision reads structure on iOS 26.** `RecognizeDocumentsRequest` returns a
+reading-ordered transcript — paragraphs held together, table cells kept in
+their rows — where `VNRecognizeTextRequest` returns loose regions we join with
+newlines. Not cosmetic: the join order is what §218's title rule picks from and
+what the sentence embedding reads as one sentence, so a receipt whose columns
+interleaved into nonsense now lands as text that says what it says. Same stored
+contract, so nothing downstream can tell which recognizer ran.
+
+**8. Siri could only ever TALK about the things it found.** Search and Ask have
+grounded their answers in real things since they shipped, and returned them as
+a spoken paragraph of glued-together titles. They now also return a snippet
+view — the rows themselves, with the answer above them for Ask. Plain values,
+never `Thing`s: a snippet is rendered by the system in its own process, and
+handing it live SwiftData models would be the held-reference crash class
+(`ThingRowKeying`) reached from the one place the app cannot watch it happen.
+`SecretScan` redaction applies, for the same reason it applies to a Spotlight
+donation — this leaves the app.
+
+**9. The widget never told the Smart Stack when it mattered.** No
+`TimelineEntryRelevance` meant it rotated on position alone — showing the day's
+lede at 3am and hiding it at 8am, when the brief is the entire point. Three
+rungs, in the order the tile's own content already ranks by: something landed
+while you were away (90), the brief has published a lede (55), the tile is
+merely showing the newest thing, which is true all day and worth no promotion
+(10).
+
+**Unverified, and stated as such.** All nine compile and the static audit head
+is green; none has been run against a real corpus on a device with Apple
+Intelligence enabled, and the simulator has no on-device model — so every model
+path here has executed its unavailable branch only. Five probes exist for
+exactly this reason and each is built to distinguish the two failures a count
+cannot: `-embeddingProbe` (a per-language census — a count of embedded things
+cannot tell "the corpus is English" from "every Spanish note still wears an
+English vector"), `-relatedProbe`, `-factsProbe` (dates and label logged
+SEPARATELY, so the deterministic/model split is visible as a test rather than a
+promise), `-digestProbe` (the summaries themselves — `enrichedText` is
+invisible on every screen, so a count would say nothing about quality), and
+`-nameProbe` (proposed title beside the grounding verdict, since a rejected
+name is the rail working and a run that named nothing looks identical to one
+where the model never answered).
