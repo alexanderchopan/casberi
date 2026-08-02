@@ -513,6 +513,17 @@ struct MainSurface: View {
     /// swipes both come here, so direction, the tag reset, and tap-learning
     /// cannot drift between them.
     private func go(to label: String) {
+        // Picking a source means the WHOLE of that source — a kind filter never
+        // survives the tap. Two changes from the old rule (2026-08-01), both
+        // forced by the "× Links" chip's removal, which was the only way out:
+        // it clears for EVERY label (a specific source used to "keep its own
+        // tag", which silently emptied the room you swiped into), and it clears
+        // BEFORE the same-source guard, so re-tapping the source already showing
+        // is the one gesture that drops the filter — the chip's job, minus the
+        // chip. The old rule pre-dates the tag being agent-set only.
+        if filter.tag != "All" {
+            withAnimation(DS.Motion.standard) { filter.tag = "All" }
+        }
         guard label != filter.source else { return }
         let labels = feedLabels
         let from = labels.firstIndex(of: filter.source) ?? 0
@@ -520,8 +531,6 @@ struct MainSurface: View {
         slideEdge = to >= from ? .trailing : .leading
         withAnimation(DS.Motion.standard) {
             filter.source = label
-            // Entering "All" means all; a specific source keeps its own tag.
-            if label == "All" { filter.tag = "All" }
         }
     }
 

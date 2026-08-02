@@ -836,13 +836,17 @@ struct RootShell: View {
                 // onto the same room it was opened from, having visibly done
                 // nothing.
                 HomeRoute.shared.path = []
+                // A pick means the whole source — the kind filter clears for
+                // every label, and BEFORE the same-source guard, so a re-tap
+                // drops it. The chip strip's own rule (`MainSurface.go(to:)`),
+                // restated rather than shared because the two call sites still
+                // differ on what the re-tap branch does with the source itself.
+                if filter.tag != "All" {
+                    withAnimation(DS.Motion.standard) { filter.tag = "All" }
+                }
                 guard label != filter.source else { return }
                 withAnimation(DS.Motion.standard) {
                     filter.source = label
-                    // Entering "All" means all; a source keeps its own tag.
-                    // The chip strip's own rule, restated rather than shared,
-                    // because the two call sites differ on the re-tap branch.
-                    if label == "All" { filter.tag = "All" }
                 }
                 // A pick here teaches the strip exactly as a chip tap does —
                 // this is the same act, reached by a different gesture.

@@ -304,7 +304,6 @@ struct GenRender: View {
             }
 
         case "Hero":        GenHero(el: el).mountIn()
-        case "KindPills":   GenKindPills(el: el).mountIn()
         case "Insight":     GenInsight(el: el).mountIn()
         case "Widget":      GenWidget(id: id, el: el, els: els).mountIn()
         case "Row":         GenRow(id: id, el: el).mountIn()
@@ -350,7 +349,12 @@ struct GenRender: View {
         // One retiring teaching line (Feed's coach grammar) — plain tinted
         // words, no overlays, no arrows.
         case "Coach":       GenCoach(el: el).mountIn()
-        case "KindBar":     GenKindBar(el: el).mountIn()
+        // "KindBar" and "KindPills" retired here 2026-08-01 — no composer had
+        // emitted either name in months, and both were chip rows whose tap set
+        // the feed's kind filter. Their shared ref parser lives on as
+        // `KindCountRow`. Every doc in this app is built by a deterministic
+        // composer (the model writes prose, never element names), so a retired
+        // element name can never arrive from a synthesis.
 
         // Shaped-feed grammar (docs/handoff-shaped-feeds.md) — display forms
         // of the shaped rows, so compositions can paint them; the interactive
@@ -2667,72 +2671,6 @@ private struct GenTagMap: View {
 
 }
 
-/// KindBar(eyebrow, ["Tag N", ...]) — the corpus's composition as one
-/// stacked strip (what your things ARE; the treemap left Feed — a feed is a
-/// feed). Segments carry magnitude by width; a tap lands in the Feed
-/// filtered to that kind. Labels ride a legend, not the segments.
-private struct GenKindBar: View {
-    let el: GenEl
-    @Environment(\.openURL) private var openURL
-
-
-    private var items: [KindCountRow.Item] { KindCountRow.parse(el.refs(1)) }
-
-    var body: some View {
-        let total = max(1, items.map(\.n).reduce(0, +))
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            if !el.str(0).isEmpty {
-                Text(el.str(0))
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textSecondary)
-            }
-            GeometryReader { geo in
-                let gap: CGFloat = 3
-                let usable = geo.size.width - gap * CGFloat(items.count - 1)
-                HStack(spacing: gap) {
-                    ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .fill(hue(item.tag).opacity(0.85))
-                            .frame(width: max(14, usable * CGFloat(item.n) / CGFloat(total)))
-                            .onTapGesture { open(item.tag) }
-                    }
-                }
-            }
-            .frame(height: 28)
-            // The legend — names and counts; tap works here too.
-            FlowLayout(spacing: DS.Space.s2) {
-                ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-                    HStack(spacing: DS.Space.s1) {
-                        Circle()
-                            .fill(hue(item.tag))
-                            .frame(width: 8, height: 8)
-                        Text(ThingKind.from(typeTag: item.tag)?.typeTagPlural ?? item.tag)
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                        Text("\(item.n)")
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                            .contentTransition(.numericText())
-                            .animation(DS.Motion.standard, value: item.n)
-                    }
-                    .onTapGesture { open(item.tag) }
-                    .accessibilityLabel("\(item.n) \(item.tag)")
-                }
-            }
-        }
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s4)
-    }
-
-    private func hue(_ tag: String) -> Color {
-        ThingKind.from(typeTag: tag)?.hue ?? DS.tint
-    }
-
-    private func open(_ tag: String) {
-        DSHaptic.selection()
-        FeedFilter.shared.tag = tag
-        if let url = URL(string: "casberi://feed") { openURL(url) }
-    }
-}
-
 /// AppsInvite(title, subline) — the quiet day's door: a card inviting more
 /// apps, with a few of the catalog's icons and a chevron. Tap opens the
 /// Apps page (the "@apps" marker through projectTap, same routing move as
@@ -4332,20 +4270,22 @@ private struct GenSourceMix: View {
     }
 }
 
-// MARK: - Kind pills (replaces KindBar on Home — identity color, one row)
+// MARK: - Kind-count refs
 
-/// One row of kind-count chips — hue capsule, glyph in the kind's color,
-/// count in `ink`. A tap opens the Feed filtered to that kind — the chips
-/// are navigation. Used by `GenKindPills` (page ink) — the old Home cover's
-/// own kind-chip variant retired with the board, 2026-07-20.
-private struct KindCountRow: View {
+/// The parser for the `[Tag N, ...]` ref idiom every count-bearing element
+/// reads — TagMap, the holdings and themes maps, the token strips.
+///
+/// It was a chip ROW too until 2026-08-01, when the only two elements that
+/// rendered those chips (`KindBar`, `KindPills`) were deleted: no composer
+/// had emitted either name in months, and their taps set the feed's kind
+/// filter through a chip the person was never meant to manage (user: "i do
+/// not want to see the x chips those are supposed to be internal only").
+/// The parsing is untouched — it is the live half, and always was.
+private enum KindCountRow {
     struct Item { let tag: String; let n: Int; var route: String? = nil; var value: String? = nil }
-    let items: [Item]
-    var ink: Color = DS.textPrimary
-    @Environment(\.openURL) private var openURL
 
     /// "[Tag N, ...]" refs → items, count-ordered upstream. The one parser
-    /// for the idiom — TagMap and KindBar read it too. `requireCount` drops
+    /// for the idiom — every map and strip reads it. `requireCount` drops
     /// refs with no trailing count: the cover uses it so a tag truncated by
     /// the stream never flashes a fallback chip (composed chips always carry
     /// counts, so nothing real is lost); bare tags elsewhere still count 1.
@@ -4392,80 +4332,5 @@ private struct KindCountRow: View {
             }
             return requireCount ? nil : Item(tag: body, n: 1, route: route, value: value)
         }
-    }
-
-    /// The entrance plays once per appearance (§3's rule): each chip pops
-    /// in with a small spring, 50ms after the last — the day's counts
-    /// arriving one by one (2026-07-10).
-    @State private var settled = false
-
-    var body: some View {
-        // Scrolls when the labels outgrow the row — the words stay (2026-07-13
-        // polish: a bare icon + number was illegible to a new user; the chip
-        // says what it counts).
-        ScrollView(.horizontal) {
-            HStack(spacing: DS.Space.s2) {
-                ForEach(Array(items.enumerated()), id: \.offset) { i, item in
-                    let kind = ThingKind.from(typeTag: item.tag)
-                    let hue = kind?.hue ?? DS.tint
-                    let word = (item.n == 1 ? kind?.typeTag : kind?.typeTagPlural)
-                        ?? item.tag
-                    Button {
-                        DSHaptic.selection()
-                        FeedFilter.shared.tag = item.tag
-                        if let url = URL(string: "casberi://feed") { openURL(url) }
-                    } label: {
-                        HStack(spacing: DS.Space.s1) {
-                            Image(systemName: kind?.symbol ?? "circle.dashed")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(hue)
-                            Text("\(item.n)")
-                                .dsText(.label12)
-                                .foregroundStyle(ink)
-                                .contentTransition(.numericText())
-                                .animation(DS.Motion.standard, value: item.n)
-                            Text(word.lowercased())
-                                .dsText(.label12)
-                                .foregroundStyle(ink.opacity(0.6))
-                        }
-                        .padding(.horizontal, DS.Space.s3)
-                        .frame(minHeight: 34)
-                        .background(hue.opacity(0.15), in: Capsule(style: .continuous))
-                        .contentShape(Capsule())
-                    }
-                    .buttonStyle(PressSpring())
-                    .scaleEffect(settled ? 1 : 0.6)
-                    .opacity(settled ? 1 : 0)
-                    .animation(.spring(response: 0.35, dampingFraction: 0.6)
-                        .delay(Double(i) * 0.05), value: settled)
-                    .accessibilityLabel("\(item.n) \(word)")
-                }
-            }
-        }
-        .scrollIndicators(.hidden)
-        // A horizontal ScrollView is greedy on the cross axis under a
-        // flexible proposal — pin it to its content height so the chip row
-        // never stretches apart the cover stack it sits in.
-        .fixedSize(horizontal: false, vertical: true)
-        .onAppear { settled = true }
-    }
-}
-
-/// KindPills(eyebrow, [Tag N, ...]) — one pill per kind, count-ordered, max 5.
-/// Stays in the vocabulary; Home's counts now ride the Cover's chip row.
-private struct GenKindPills: View {
-    let el: GenEl
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            if !el.str(0).isEmpty {
-                Text(el.str(0))
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textSecondary)
-            }
-            KindCountRow(items: KindCountRow.parse(el.refs(1)))
-        }
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s4)
     }
 }
