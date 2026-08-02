@@ -13492,7 +13492,7 @@ on the exact chat-completions request `AgentAnswer` already sends; OpenAI and
 Anthropic expose provider-side search tools on their own wire shapes; Grok's
 X-search stays unbuilt per `AgentAnswer.swift`'s standing note (three
 disagreeing doc shapes). A dedicated seat (Brave was the best candidate:
-structurally read-only key, one header, free tier) would add only a RAW
+structurally read-only key, one header) would add only a RAW
 RESULTS LIST — and a ranked list of other people's pages is a browser's job,
 not the corpus's; nobody asked for Google's index by name. Keyless general
 web search does not exist (DDG's keyless API is instant-answers only;
@@ -13510,6 +13510,14 @@ public, a query is a thought); a quota/429 reads as "couldn't search," never
 as an empty result; and a web ask is never keepable under the
 `search:<query>` kind, whose contract is deterministic on-device re-runs —
 either results are kept as things or the ask isn't keepable at all.
+MEASURED 2026-08-02 (secondary sources; brave.com 403s scripted fetches):
+Brave KILLED its free tier in February 2026 — new signups require a card,
+get ~$5/month in credits (~1,000 queries), then bill pay-as-you-go (~$5 per
+1,000) with NO default spending cap; old free-plan accounts grandfathered.
+So the per-user funnel is now literally "put a card on file for a metered
+service," which closes the question harder than the ruling above did: the
+BYOK story that works for agent keys (a key people may already have, spend
+they already accepted) does not exist for Brave.
 
 **2. No general Tor.** Feasible (embedded Arti + `URLSession
 .proxyConfigurations`, iOS 17+ SOCKSv5; store-allowed — Onion Browser
