@@ -317,8 +317,12 @@ final class Thing {
     /// leading/trailing hex, different address), the address-poisoning scam's
     /// whole mechanism. `"symbol"` (2026-07-21, prd §160): the transferred
     /// token's SYMBOL is a confusable copy of a well-known one ("ÚЅDС" for
-    /// USDC) — see `SymbolConfusables`. Either way the thing still lands
-    /// honestly as a transfer; a flag only adds the warning.
+    /// USDC) — see `SymbolConfusables`. `"spam"` (2026-08-02): an OUTBOUND
+    /// transfer of a token this wallet has never held and that nobody will
+    /// price — a spam contract emitting `Transfer(you → attacker)` to buy
+    /// itself a seat in your history; see `WalletSafety.flagFakeTransfer`.
+    /// Any of the three, the thing still lands honestly as a transfer; a flag
+    /// only adds the warning.
     ///
     /// It became a set the day the second flag existed: one transfer can be
     /// both a lookalike address AND a lookalike symbol, and a single-valued

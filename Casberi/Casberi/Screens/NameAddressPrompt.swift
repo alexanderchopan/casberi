@@ -56,7 +56,12 @@ enum AddressNudge {
         // have no `knownLabel` by construction. Both tests are cheap and
         // deterministic — the flag `WalletSafety` already stamped at ingest,
         // and the book's own record of what this address is pretending to be.
-        guard !thing.hasSecurityFlag("poisoning"),
+        // The `"spam"` flag earns its seat here for the same reason: a fake
+        // transfer event names an attacker's address as your counterparty, and
+        // a wallet gets dozens of them, so `threshold` is met just as trivially
+        // — offering to NAME that address would file the attacker in the book
+        // under a name you chose.
+        guard !thing.hasSecurityFlag("poisoning"), !thing.hasSecurityFlag("spam"),
               AddressBook.shared.lookalikes(of: address).isEmpty
         else { return nil }
 

@@ -19,7 +19,7 @@ struct WalletWarning: Identifiable, Equatable {
     /// own words — a specific address is detail for the page behind the tap,
     /// not for a 150pt tile (user, 2026-07-20).
     enum Kind: Hashable {
-        case liquidation, poisoning, spoofedSymbol, approval, safe, delegation
+        case liquidation, poisoning, spoofedSymbol, fakeTransfer, approval, safe, delegation
 
         func label(_ n: Int) -> String {
             switch self {
@@ -29,6 +29,8 @@ struct WalletWarning: Identifiable, Equatable {
                                       : String(localized: "flagged transfers")
             case .spoofedSymbol: n == 1 ? String(localized: "fake symbol")
                                         : String(localized: "fake symbols")
+            case .fakeTransfer: n == 1 ? String(localized: "spam transfer")
+                                       : String(localized: "spam transfers")
             case .approval:    n == 1 ? String(localized: "active approval")
                                       : String(localized: "active approvals")
             case .safe:        n == 1 ? String(localized: "signature") : String(localized: "signatures")
@@ -45,6 +47,7 @@ struct WalletWarning: Identifiable, Equatable {
             case .liquidation:   "chart.line.downtrend.xyaxis"
             case .poisoning:     "eye.trianglebadge.exclamationmark.fill"
             case .spoofedSymbol: "doc.on.doc.fill"
+            case .fakeTransfer:  "trash.fill"
             case .approval:      "key.fill"
             case .safe:          "signature"
             case .delegation:    "arrow.triangle.branch"
@@ -64,7 +67,7 @@ struct WalletWarning: Identifiable, Equatable {
         var isActionable: Bool {
             switch self {
             case .liquidation, .approval, .delegation, .safe: true
-            case .poisoning, .spoofedSymbol: false
+            case .poisoning, .spoofedSymbol, .fakeTransfer: false
             }
         }
     }
@@ -304,6 +307,7 @@ enum WalletWatch {
         }
         let poisoningCount = inScope.filter { $0.hasSecurityFlag("poisoning") }.count
         let symbolCount = inScope.filter { $0.hasSecurityFlag("symbol") }.count
+        let fakeTransferCount = inScope.filter { $0.hasSecurityFlag("spam") }.count
 
         // Same belt-and-suspenders as `warnings()`'s own dedup: these two
         // also feed a `ForEach` (one row per `Thing`) directly, so a
@@ -325,6 +329,7 @@ enum WalletWatch {
                                safePending: safePending,
                                delegations: delegations, poisoningCount: poisoningCount,
                                spoofedSymbolCount: symbolCount,
+                               fakeTransferCount: fakeTransferCount,
                                approvalCount: dedupedApprovals.count,
                                owner: owner),
             flagged: dedupedFlagged,
@@ -347,6 +352,7 @@ enum WalletWatch {
                          delegations: [WalletSafety.Delegation],
                          poisoningCount: Int,
                          spoofedSymbolCount: Int,
+                         fakeTransferCount: Int = 0,
                          approvalCount: Int = 0,
                          owner: [String: String] = [:]) -> [WalletWarning] {
         let wallet = WalletStore.shared
@@ -397,6 +403,24 @@ enum WalletWatch {
                                          ? String(localized: "1 transfer uses a fake token symbol")
                                          : String(localized: "\(spoofedSymbolCount) transfers use fake token symbols"),
                                      subtitle: nil, count: spoofedSymbolCount, address: nil))
+        }
+        // NOTICE, not critical — deliberately unlike its two neighbours. A
+        // spoofed symbol is a claim about what you HOLD and believing it is
+        // how the money goes; a fake transfer event claims something already
+        // happened that didn't, and there is nothing to lose by it and nothing
+        // to do about it. It is also the only one of the three that arrives by
+        // the hundred (a measured whale wallet: 30 in one read), so ranking it
+        // critical would spend all the red in the tray on noise and bury the
+        // live approval underneath — the exact failure the Act/Aware reframe
+        // was written to stop.
+        if fakeTransferCount > 0 {
+            out.append(WalletWarning(id: "fakeTransfer", severity: .notice,
+                                     kind: .fakeTransfer,
+                                     title: fakeTransferCount == 1
+                                         ? String(localized: "1 transfer you didn't make")
+                                         : String(localized: "\(fakeTransferCount) transfers you didn't make"),
+                                     subtitle: String(localized: "Spam tokens announcing transfers from your address."),
+                                     count: fakeTransferCount, address: nil))
         }
         // Notice, not critical: approving a spender is an everyday DeFi/NFT
         // action, not inherently dangerous the way poisoning/spoofing is —

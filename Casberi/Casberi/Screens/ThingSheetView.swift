@@ -923,6 +923,12 @@ struct ThingSheetView: View {
             if let verdict = WalletSafety.spoofVerdict(for: thing) {
                 warningLine(verdict.sentence)
             }
+            // Says what it ISN'T before what it is: the row above already
+            // asserts "Sent", in the app's own voice, and the correction has
+            // to land before any explanation of the mechanism.
+            if thing.hasSecurityFlag("spam") {
+                warningLine(String(localized: "You didn't send this. A spam token can announce any transfer it likes, including one from your address — it's advertising, not money that moved."))
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Space.s3)

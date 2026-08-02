@@ -572,6 +572,11 @@ enum ThingVoice {
         if thing.hasSecurityFlag("symbol") {
             parts.append(String(localized: "Warning, this token's symbol imitates another"))
         }
+        // Sighted or not, the row's own words say "Sent" — and this is the
+        // only thing that says it didn't happen.
+        if thing.hasSecurityFlag("spam") {
+            parts.append(String(localized: "Warning, this transfer is spam, you did not send it"))
+        }
         if thing.mark == .done { parts.append(String(localized: "done")) }
         if live { parts.append(String(localized: "live now")) }
         else if let countdown, !countdown.isEmpty { parts.append(countdown) }

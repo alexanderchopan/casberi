@@ -242,6 +242,16 @@ enum WalletIngest {
         var reachedAny = false
         var fresh: [Leg] = []
         var seenThisPass = Set<String>()
+        // Legs this pass re-read that are ALREADY landed (2026-08-02). The
+        // read carries facts the stored thing may predate — what the leg was
+        // worth, and whether it's a contract's fiction — so it heals on the
+        // dedupe hit rather than reaching only transfers landed from today on.
+        // The social bridges' own pattern, and mandatory here for the same
+        // reason `healSpoofedSymbols` exists: `refresh` dedupes on `sourceRef`,
+        // so a transfer landed yesterday is never rebuilt and never
+        // re-examined, and without this the flag would ship doing nothing for
+        // the very wallet that revealed the attack.
+        var healLegs: [Leg] = []
         for (address, chain, received, transfers) in results {
             guard let transfers else { continue }
             reachedAny = true
@@ -250,8 +260,14 @@ enum WalletIngest {
                 let ref = "wallet:\(uid)"
                 // A transfer between two watched addresses comes back from
                 // BOTH queries with the same uniqueId — land it once.
-                guard !existing.contains(ref), seenThisPass.insert(ref).inserted
-                else { continue }
+                if existing.contains(ref) {
+                    if !received, seenThisPass.insert("heal:\(ref)").inserted {
+                        healLegs.append(Leg(t: t, chain: chain, received: received,
+                                            ref: ref, address: address))
+                    }
+                    continue
+                }
+                guard seenThisPass.insert(ref).inserted else { continue }
                 let leg = Leg(t: t, chain: chain, received: received, ref: ref, address: address)
                 // Already folded into a landed swap — never re-land its legs.
                 if !leg.hash.isEmpty,
@@ -348,10 +364,16 @@ enum WalletIngest {
             for leg in legs {
                 // A received token/NFT the wallet doesn't actually hold (a junk
                 // airdrop pushed at you) is dropped from the feed, mirroring the
-                // holdings dust rule. Sends are never spam (you don't spam-send);
-                // native coins always pass. Both arms fail OPEN — a failed
-                // holdings/NFT read leaves the key/set nil, so a hiccup never
-                // eats real activity.
+                // holdings dust rule; native coins always pass. Both arms fail
+                // OPEN — a failed holdings/NFT read leaves the key/set nil, so a
+                // hiccup never eats real activity.
+                //
+                // The SENT side is handled below, not here, and it FLAGS rather
+                // than drops. This comment used to read "sends are never spam
+                // (you don't spam-send)" — true of a transfer you signed, false
+                // of one a contract merely claimed you did. See
+                // `WalletSafety.flagFakeTransfer` for the attack and for why
+                // dropping an outbound leg would eat real history.
                 if leg.received, let contract = leg.contract {
                     // Spam TOKEN: a received ERC-20 not held above the floor.
                     if leg.category == "erc20", let heldPriced,
@@ -368,6 +390,16 @@ enum WalletIngest {
                     if leg.received {
                         let knownGood = knownGoodByOwner[leg.address.lowercased()] ?? []
                         WalletSafety.flagPoisoning(thing, knownGood: knownGood)
+                    } else {
+                        // The outbound half of the spam rule (2026-08-02): a
+                        // token you've never held that nobody will price, sent
+                        // by "you" — a contract's own fiction. Lands, wears the
+                        // flag, and stops counting as a flow.
+                        WalletSafety.flagFakeTransfer(thing, contract: leg.contract,
+                                                      category: leg.category,
+                                                      held: heldPriced,
+                                                      pricedUSD: leg.pricedUSD,
+                                                      priceWasRead: leg.priceWasRead)
                     }
                     // Both directions: a spoofed symbol lies on the way out
                     // too (see `flagSpoofedSymbol`).
@@ -391,6 +423,10 @@ enum WalletIngest {
         // before advancing" lesson `WalletApprovals` already learned.
         let saved = added == 0 || context.saveHonestly()
         if saved, !gasJobs.isEmpty { await WalletGas.accumulate(jobs: gasJobs) }
+        // Then the already-landed legs this pass re-read (2026-08-02): backfill
+        // the price the row may predate, and flag the fictions among them.
+        // Separate save — a heal must never be able to lose a landing.
+        healLandedTransfers(context: context, legs: healLegs, heldPriced: heldPriced)
         // New token approvals ride the same pass (2026-07-16, prd §84) — an
         // incremental filtered-log read per wallet per chain, landing
         // "Approved X to spend unlimited Y" things whose link is the wallet's
@@ -614,6 +650,11 @@ enum WalletIngest {
         var contract: String? {
             ((t["rawContract"] as? [String: Any])?["address"] as? String)?.lowercased()
         }
+        /// What the leg was worth when it moved — Zerion only, nil elsewhere.
+        var pricedUSD: Double? { t["zerionValueUSD"] as? Double }
+        /// Whether this leg came off the arm that ASKS for a price, so a nil
+        /// `pricedUSD` can be read as "declined" rather than "never asked".
+        var priceWasRead: Bool { (t["zerionPriceRead"] as? Bool) == true }
     }
 
     /// A trade folded from a matched send+receive on one hash — "Swapped 0.5
@@ -948,6 +989,14 @@ enum WalletIngest {
         // signal that this leg came from the fallback path and has no price
         // rather than a price of zero.
         if let usd = t.valueUSD { d["zerionValueUSD"] = usd }
+        // That a price was ASKED FOR, separately from whether one came back
+        // (2026-08-02, the fake-transfer flag). `zerionValueUSD`'s absence is
+        // two different facts — "Zerion declined to price this token" on this
+        // arm, "no price exists on this arm at all" on the Alchemy one — and
+        // `WalletSafety.isFakeOutboundTransfer` may only read the first as
+        // evidence. Set unconditionally, which is the whole point: it marks
+        // the ARM, not the outcome.
+        d["zerionPriceRead"] = true
         return d
     }
 
@@ -1072,6 +1121,63 @@ enum WalletIngest {
         // a single direction could be named for it.
         thing.transferUSD = t["zerionValueUSD"] as? Double
         return thing
+    }
+
+    /// Heals transfers already in the corpus from the same read that just
+    /// landed the new ones (2026-08-02).
+    ///
+    /// Two facts, both of which a stored row can predate:
+    ///
+    /// - **`transferUSD`** — the field only exists since 2026-08-01, so every
+    ///   transfer landed before it carries no price forever. That is what makes
+    ///   the flow band decline on a corpus with any history ("only 7 of 40
+    ///   moves are priced"), and it is a data gap rather than a quiet week.
+    ///   Filling it from the read the wallet already performs costs nothing.
+    /// - **The `"spam"` flag** — same reason `WalletSafety.healSpoofedSymbols`
+    ///   exists: the ingest-time flag only ever sees NEW transfers.
+    ///
+    /// SENT legs only, matching the flag's own scope, and each fact is applied
+    /// independently: a leg that gains a price is not thereby innocent, and a
+    /// leg that gains a flag may still be worth something on a later read.
+    /// Never UNFLAGS — a token can enter the held set long after the fiction
+    /// landed (buying the real thing an impostor copied doesn't retire the
+    /// impostor), so absence of evidence this pass is not evidence of absence.
+    @MainActor
+    @discardableResult
+    private static func healLandedTransfers(context: ModelContext, legs: [Leg],
+                                            heldPriced: Set<String>?) -> Int {
+        guard !legs.isEmpty else { return 0 }
+        // One fetch, indexed by ref — the alternative is a fetch per leg, and
+        // a busy wallet re-reads hundreds per pass.
+        let byRef = Dictionary(
+            ((try? context.fetch(FetchDescriptor<Thing>(predicate: #Predicate {
+                $0.source == "Wallet" && $0.sourceRef != nil
+            }))) ?? []).compactMap { t -> (String, Thing)? in
+                guard t.isLive, let ref = t.sourceRef else { return nil }
+                return (ref, t)
+            },
+            uniquingKeysWith: { first, _ in first })
+        var healed = 0
+        for leg in legs {
+            guard let thing = byRef[leg.ref], thing.isLive else { continue }
+            var touched = false
+            if thing.transferUSD == nil, let usd = leg.pricedUSD {
+                thing.transferUSD = usd
+                touched = true
+            }
+            if !thing.hasSecurityFlag("spam"),
+               WalletSafety.isFakeOutboundTransfer(contract: leg.contract,
+                                                   category: leg.category,
+                                                   held: heldPriced,
+                                                   pricedUSD: leg.pricedUSD,
+                                                   priceWasRead: leg.priceWasRead) {
+                thing.addSecurityFlag("spam")
+                touched = true
+            }
+            if touched { healed += 1 }
+        }
+        if healed > 0 { _ = context.saveHonestly() }
+        return healed
     }
 
     /// One watched wallet's holdings — a label (name or short address) paired

@@ -370,6 +370,76 @@ enum WalletSafety {
         return healed
     }
 
+    // MARK: - Fake transfer events
+
+    /// Flags `thing` when its transfer is a token contract's own fiction — a
+    /// `Transfer` event naming YOU as the sender of a token you have never
+    /// held and that nobody will price (2026-08-02).
+    ///
+    /// ## The attack, and the premise it broke
+    ///
+    /// `Transfer` is just an event. Any contract can emit one saying anything,
+    /// and a spam contract emits `Transfer(you → attacker)` so its token
+    /// appears in your history wearing your own address as the sender. It
+    /// costs the attacker one log line and buys them a permanent seat in your
+    /// activity feed, next to real money.
+    ///
+    /// The received-side filter in `WalletIngest` has always dropped junk
+    /// airdrops on the rule that a token you don't hold was never really
+    /// yours. It skipped the sent side under an explicit premise — "sends are
+    /// never spam (you don't spam-send)" — which is true of transfers you
+    /// SIGNED and false of transfers a contract merely CLAIMED. Measured on a
+    /// real watched wallet (vitalik.eth, 2026-08-02): 40 landed transfers, 30
+    /// of them outbound fictions, none flagged, including one whose token name
+    /// is a phishing URL ("$ USD65k.com - Visit to claim").
+    ///
+    /// ## Why this FLAGS where the received side DROPS
+    ///
+    /// A received junk token can be dropped safely: you never held it, so
+    /// nothing real is lost. An outbound transfer cannot — "you don't hold it
+    /// now" is the expected state after genuinely selling your last of
+    /// something, and a rule that dropped those would silently eat real
+    /// history. So the transfer lands, honestly, and wears its flag: the same
+    /// grammar as poisoning and spoofed symbols, and for the same reason.
+    ///
+    /// ## The conjunction, and why each half is load-bearing
+    ///
+    /// Both must hold, and the flag FAILS CLOSED on either being unknown:
+    ///
+    /// 1. **The wallet doesn't hold the token** — against a successfully READ
+    ///    held set. A nil set is a failed holdings read, not an empty wallet
+    ///    (`WalletApprovals`' own lesson, one file over), and flagging on it
+    ///    would mark every real transfer as spam the moment Zerion hiccups.
+    /// 2. **Nobody would price it** — the price read RAN and returned nothing.
+    ///    This is what protects a genuine divestment: sell your last 500 USDC
+    ///    and you hold none, but Zerion prices the leg, so rule 2 spares it.
+    ///    `priceWasRead` is the fail-closed half — on the Alchemy fallback arm
+    ///    no leg carries a price at all, so without it every unheld outbound
+    ///    token on that path would be flagged.
+    ///
+    /// Native coins are never flagged (no contract, always priced, and a fake
+    /// ETH transfer isn't expressible — the chain itself is the ledger).
+    static func isFakeOutboundTransfer(contract: String?, category: String,
+                                       held: Set<String>?, pricedUSD: Double?,
+                                       priceWasRead: Bool) -> Bool {
+        // Fail closed: no contract (native), not a token transfer, no held set
+        // to check against, or no price read to trust the absence of.
+        guard let contract, category == "erc20", let held, priceWasRead else { return false }
+        return !held.contains(contract) && pricedUSD == nil
+    }
+
+    /// Applies `isFakeOutboundTransfer` to a landed thing. Only ever called
+    /// for a SENT leg — a received one is already handled by the drop rule.
+    @MainActor
+    static func flagFakeTransfer(_ thing: Thing, contract: String?, category: String,
+                                 held: Set<String>?, pricedUSD: Double?,
+                                 priceWasRead: Bool) {
+        guard isFakeOutboundTransfer(contract: contract, category: category, held: held,
+                                     pricedUSD: pricedUSD, priceWasRead: priceWasRead)
+        else { return }
+        thing.addSecurityFlag("spam")
+    }
+
     /// `-symbolProbe YES` — the read-only twin of `poisoningProbe`: runs the
     /// confusable rule over ALREADY-LANDED wallet things and reports what it
     /// finds, so the rule can be verified against a real corpus without
