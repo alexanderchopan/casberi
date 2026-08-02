@@ -1,0 +1,303 @@
+import SwiftUI
+
+/// Where the money actually went — the flow band, in its ruled form
+/// (2026-08-01, `design/wallet-viz/sankey-cashapp-mocks.html`, option B:
+/// "the bleed band").
+///
+/// The balance line says the total moved. This says through whom: inflows
+/// left, the wallet as a spine, outflows right, every lane sized by what it
+/// was worth when it moved. Money moving is the module doctrine's standing
+/// exception to "never a tally", and every slab here is a real landed
+/// transfer rather than a count of them.
+///
+/// ## The drawing grammar, and why it looks like nothing else in the room
+///
+/// Solid slabs of colour mass run EDGE TO EDGE through the card's own
+/// padding; the connectors are straight tapers with square shoulders (no
+/// bezier softness); the money type sits dark-on-green the way a Cash App
+/// balance pill does. That's deliberate rule-breaking with a precedent — the
+/// treemap's own Cash App exercise ruled that when every element on a screen
+/// is a rounded capsule, the standout move is BREAKING the shape grammar
+/// rather than adding one more capsule. This card is the one non-capsule
+/// object in the room, and the card's own clip supplies the only curve.
+///
+/// The v1 form (rounded slabs, gradient ribbons, a bright full-height spine)
+/// was rejected on sight: the bars were the heroes, the ribbons were leftovers
+/// nobody could see, and the spine was the loudest object on the card while
+/// meaning the least.
+///
+/// ## Rules kept
+///
+/// **In is green, out is neutral slab — never red.** Arriving money is this
+/// app's one green moment (`SourceMoments` rains for it). Painting outflow red
+/// would make every deliberate payment an alarm, which is the ruling
+/// `WalletCompositionStrip` already keeps for "Owed": a debt you opened on
+/// purpose isn't an emergency, and neither is rent.
+///
+/// **One scale across both sides** — see `WalletFlow.Band.scaleUSD` for why
+/// per-side normalising would break the band's only real claim.
+///
+/// **The spine is you.** Your wallet's face on its own identity tint when the
+/// room is scoped (or a single wallet is watched); the combined view draws the
+/// app tint and NO face, because a face that isn't anyone's would be fake
+/// identity — the honesty rule applied to a portrait.
+///
+/// **Nothing is tappable.** A lane is usually several transfers folded
+/// together, so a tap would have to pick one to open, and picking is the sort
+/// of quiet lie the honesty rule exists to stop. The band is a read; the rows
+/// below it are the door.
+///
+/// **Static by ruling** (user, 2026-08-01: "we don't need the motion") — the
+/// draw-on and drift-dot delight died in review before it was built.
+///
+/// No `Thing` is stored — `WalletFlowSource` reduced them to values at the
+/// boundary — so the liveness rules have nothing to bite on here.
+struct WalletFlowBand: View {
+    let band: WalletFlow.Band
+    /// "This week" / "This month" / "Since you started watching" — the window
+    /// the band was built from, named so the card can never be read against
+    /// the wrong period.
+    let windowLabel: String
+    /// The wallet whose face rides the spine — the scoped wallet, or the sole
+    /// watched one. nil (several wallets, unscoped) draws the app tint alone.
+    var spineAddress: String? = nil
+
+    private let bandHeight: CGFloat = 138
+    private let laneGap: CGFloat = 2
+    private let spineWidth: CGFloat = 12
+    /// One line of `label12` fits a 14pt slab; the floor keeps every lane
+    /// nameable (the v1 lesson, measured: at a 6pt floor a real $340 outflow
+    /// drew 17pt and fell under every label threshold, so the card showed one
+    /// named bar and two anonymous ones).
+    private static let minSlabHeight: CGFloat = 14
+    /// Above this a slab carries name AND value on two lines; below, one
+    /// joined line, because the bar's own height is already stating the size.
+    private static let twoLineHeight: CGFloat = 34
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                WalletSectionLabel(title: String(localized: "Where it moved"))
+                Text(summary)
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+                netLine
+                if band.unpricedCount > 0 {
+                    // Stated, never swallowed — a band drawn from six of nine
+                    // moves is a different claim from one drawn from all nine.
+                    Text(unpricedNote)
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
+                        .lineLimit(2)
+                }
+            }
+            .padding(.horizontal, DS.Space.s3)
+            .padding(.top, DS.Space.s3)
+            .padding(.bottom, DS.Space.s2)
+
+            // The band itself takes no horizontal padding: the bleed IS the
+            // design, and the card's clip below supplies the only rounding.
+            GeometryReader { geo in
+                diagram(width: geo.size.width)
+            }
+            .frame(height: bandHeight)
+        }
+        .background(DS.fillFaint,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+    }
+
+    private var summary: String {
+        "\(windowLabel) · in \(TokenStats.compact(band.inUSD)) · out \(TokenStats.compact(band.outUSD))"
+    }
+
+    /// "Kept +$1.0K" — the one-sentence outcome, the move Cash App would make
+    /// before any drawing. A net that rounds to nothing draws no line at all
+    /// (the `isFlat` rule: no direction, no sentence), and a down week stays
+    /// in plain ink rather than red, for the same reason the out slabs do.
+    @ViewBuilder
+    private var netLine: some View {
+        let net = band.netUSD
+        if abs(net) >= 1 {
+            if net > 0 {
+                Text("Kept +\(TokenStats.compact(net))")
+                    .dsText(.label12).fontWeight(.bold)
+                    .foregroundStyle(DS.confirm)
+            } else {
+                Text("Down −\(TokenStats.compact(-net))")
+                    .dsText(.label12).fontWeight(.bold)
+                    .foregroundStyle(DS.textSecondary)
+            }
+        }
+    }
+
+    private var unpricedNote: String {
+        band.unpricedCount == 1
+            ? String(localized: "1 move couldn't be priced, so it isn't drawn")
+            : String(localized: "\(band.unpricedCount) moves couldn't be priced, so they aren't drawn")
+    }
+
+    // MARK: - Geometry
+
+    private struct Seg {
+        let lane: WalletFlow.Lane
+        let rank: Int
+        let slabTop: CGFloat
+        let spineTop: CGFloat
+        let height: CGFloat
+    }
+
+    private func diagram(width: CGFloat) -> some View {
+        let slabWidth = width * 0.36
+        let spineX = width / 2 - spineWidth / 2
+        let inSegs = segments(band.inLanes, sideTotal: band.inUSD)
+        let outSegs = segments(band.outLanes, sideTotal: band.outUSD)
+
+        return ZStack(alignment: .topLeading) {
+            // Connectors first — straight tapers, square shoulders.
+            ForEach(inSegs.indices, id: \.self) { i in
+                connector(fromX: slabWidth, fromTop: inSegs[i].slabTop,
+                          toX: spineX, toTop: inSegs[i].spineTop,
+                          height: inSegs[i].height)
+                    .fill(DS.confirm.opacity(0.22))
+            }
+            ForEach(outSegs.indices, id: \.self) { i in
+                connector(fromX: spineX + spineWidth, fromTop: outSegs[i].spineTop,
+                          toX: width - slabWidth, toTop: outSegs[i].slabTop,
+                          height: outSegs[i].height)
+                    .fill(DS.textPrimary.opacity(0.10))
+            }
+
+            // The slabs — SOLID, square, running into the card's edges.
+            ForEach(inSegs.indices, id: \.self) { i in
+                slab(inSegs[i], width: slabWidth, incoming: true)
+                    .offset(y: inSegs[i].slabTop)
+            }
+            ForEach(outSegs.indices, id: \.self) { i in
+                slab(outSegs[i], width: slabWidth, incoming: false)
+                    .offset(x: width - slabWidth, y: outSegs[i].slabTop)
+            }
+
+            // The spine — you.
+            RoundedRectangle(cornerRadius: spineWidth / 2, style: .continuous)
+                .fill(spineTint.opacity(0.65))
+                .frame(width: spineWidth, height: bandHeight - 4)
+                .offset(x: spineX, y: 2)
+            if let spineAddress {
+                WalletFace(address: spineAddress, size: 28, circular: true)
+                    .overlay(Circle().stroke(DS.page, lineWidth: 3))
+                    .position(x: width / 2, y: bandHeight * 0.42)
+            }
+        }
+    }
+
+    private var spineTint: Color {
+        spineAddress.map(WalletFace.tint(for:)) ?? DS.tint
+    }
+
+    /// One side's segments. Slabs stack with the model's own budgeted gap;
+    /// spine ends stack CONTIGUOUSLY, which is what makes the connectors
+    /// converge into the wallet. Heights come from `WalletFlow.laneHeights`
+    /// rather than being computed here — that arithmetic is the one part of
+    /// this card that fails invisibly (it clips off the bottom and reads as a
+    /// missing counterparty), so it lives where the self-test can reach it.
+    private func segments(_ lanes: [WalletFlow.Lane], sideTotal: Double) -> [Seg] {
+        guard !lanes.isEmpty else { return [] }
+        let inner = Double(bandHeight - 4)
+        let layout = WalletFlow.laneHeights(
+            lanes: lanes, sideTotal: sideTotal, scaleUSD: band.scaleUSD,
+            bandHeight: inner, laneGap: Double(laneGap),
+            minHeight: Double(Self.minSlabHeight))
+        guard layout.heights.count == lanes.count else { return [] }
+
+        var out: [Seg] = []
+        var slabY: CGFloat = 2 + CGFloat(inner - layout.used) / 2
+        var spineY: CGFloat = 2 + CGFloat(inner - layout.heights.reduce(0, +)) / 2
+        for (rank, pair) in zip(lanes, layout.heights).enumerated() {
+            let (lane, rawHeight) = pair
+            let height = CGFloat(rawHeight)
+            out.append(Seg(lane: lane, rank: rank, slabTop: slabY,
+                           spineTop: spineY, height: height))
+            slabY += height + CGFloat(layout.gap)
+            spineY += height
+        }
+        return out
+    }
+
+    private func connector(fromX: CGFloat, fromTop: CGFloat,
+                           toX: CGFloat, toTop: CGFloat, height: CGFloat) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: fromX, y: fromTop))
+        path.addLine(to: CGPoint(x: toX, y: toTop))
+        path.addLine(to: CGPoint(x: toX, y: toTop + height))
+        path.addLine(to: CGPoint(x: fromX, y: fromTop + height))
+        path.closeSubpath()
+        return path
+    }
+
+    /// Rank-stepped opacity on a solid fill. The height already carries
+    /// magnitude; this carries HIERARCHY, and it's what makes the band read as
+    /// colour mass rather than a stack of identical tints. Deliberate, and
+    /// noted in the mock's own law check.
+    /// The top step is 0.82, not 1.0, and that is a COLOUR decision rather
+    /// than a transparency one: `DS.confirm` at full strength is a neon block
+    /// at this size, while at 0.82 over the card it composites to roughly
+    /// `#2BAF4C` — the deeper money green the approved mock drew, and the one
+    /// that dark label type actually sits on. Routing it through the token at
+    /// reduced strength keeps the design law's "zero raw hex in components".
+    private func slabOpacity(rank: Int, incoming: Bool) -> Double {
+        let steps: [Double] = incoming ? [0.82, 0.66, 0.52, 0.42]
+                                       : [1.00, 0.85, 0.70, 0.55]
+        return steps[min(rank, steps.count - 1)]
+    }
+
+    private func slab(_ seg: Seg, width: CGFloat, incoming: Bool) -> some View {
+        Rectangle()
+            .fill(incoming
+                  ? DS.confirm.opacity(slabOpacity(rank: seg.rank, incoming: true))
+                  : DS.gray100.opacity(slabOpacity(rank: seg.rank, incoming: false)))
+            .frame(width: width, height: seg.height)
+            .overlay(
+                label(seg.lane, incoming: incoming,
+                      twoLine: seg.height >= Self.twoLineHeight)
+                    .padding(.horizontal, DS.Space.s3)
+                    .frame(width: width, height: seg.height,
+                           alignment: incoming ? .leading : .trailing)
+            )
+    }
+
+    @ViewBuilder
+    private func label(_ lane: WalletFlow.Lane, incoming: Bool, twoLine: Bool) -> some View {
+        // Dark-on-green is a fixed pairing — the confirm green is the same in
+        // both themes, so these two are this file's one deliberate step
+        // outside the adaptive ink ramp (the Cash App balance-pill treatment
+        // the mock ruled in). The out slabs ride `gray100`, which DOES theme,
+        // so they stay on the ramp.
+        let primary: Color = incoming ? .black.opacity(0.82) : DS.textPrimary
+        let secondary: Color = incoming ? .black.opacity(0.60) : DS.textSecondary
+        if twoLine {
+            VStack(alignment: incoming ? .leading : .trailing, spacing: 1) {
+                Text(lane.name)
+                    .dsText(.label12).fontWeight(.bold)
+                    .foregroundStyle(primary)
+                    .lineLimit(1).minimumScaleFactor(0.8)
+                Text(valueText(lane))
+                    .dsText(.label12).fontWeight(.semibold)
+                    .foregroundStyle(secondary)
+                    .lineLimit(1).minimumScaleFactor(0.8)
+            }
+        } else {
+            Text("\(lane.name) · \(TokenStats.compact(lane.usd))")
+                .dsText(.label12).fontWeight(.bold)
+                .foregroundStyle(primary)
+                .lineLimit(1).minimumScaleFactor(0.75)
+        }
+    }
+
+    /// "$2.1K · 2 moves" — the count appears only where it explains why one
+    /// slab stands for more than one thing.
+    private func valueText(_ lane: WalletFlow.Lane) -> String {
+        let money = TokenStats.compact(lane.usd)
+        guard lane.count > 1 else { return money }
+        return "\(money) · \(lane.count) moves"
+    }
+}

@@ -1,0 +1,217 @@
+<title>Wallet — flow band & liquidity, v2</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #1673e6; --confirm: #32d74b; --down: #ff5a5f; --attn: #ff9f0a;
+    --slab: #16181d; --well: #101216; --card: rgba(28,30,37,.82);
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  svg text { font-family: var(--money); }
+  html { background: var(--page); }
+  body { font-family: var(--text); color: var(--ink);
+         background: radial-gradient(900px 420px at 18% -8%, rgba(22,115,230,.10), transparent 62%), var(--page);
+         padding: 48px 28px 72px; }
+  .wrap { max-width: 1140px; margin: 0 auto; }
+  header { max-width: 800px; margin-bottom: 34px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: #4d8dff; margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.4vw,36px); font-weight: 800; letter-spacing: -.02em; line-height: 1.1; margin-bottom: 12px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 70ch; margin-bottom: 8px; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 36px; align-items: flex-start; justify-content: center; margin-bottom: 20px; }
+  .option { width: 360px; }
+  .cardMock { background: var(--card); border-radius: 20px; padding: 14px; box-shadow: 0 24px 60px rgba(0,0,0,.5); }
+  .cardMock h4 { font-family: var(--money); font-size: 13.5px; font-weight: 700; }
+  .cardMock .sub { font-size: 11px; color: var(--faint); margin: 2px 0 8px; }
+  .inout { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; margin-bottom: 5px; }
+  .inout .i { color: var(--confirm); } .inout .o { color: var(--muted); }
+
+  /* ribbons draw on, then dots drift — the two delight moments */
+  .rib { clip-path: inset(0 100% 0 0); animation: sweep .55s cubic-bezier(.32,.72,0,1) forwards; }
+  @keyframes sweep { to { clip-path: inset(0 0 0 0); } }
+  .dot { offset-rotate: 0deg; animation: drift 2.6s linear infinite; opacity: 0; }
+  @keyframes drift { 6% { opacity: 1; } 88% { opacity: 1; } 100% { offset-distance: 100%; opacity: 0; } }
+
+  .lanelab { font-family: var(--money); font-weight: 700; font-size: 11px; fill: #f2f4f8; }
+  .laneval { font-family: var(--money); font-weight: 600; font-size: 10.5px; fill: rgba(242,244,248,.62); }
+
+  /* liquidity */
+  .liq { display: flex; align-items: center; gap: 10px; padding: 7px 0 3px; }
+  .pair { position: relative; width: 34px; height: 24px; flex: none; }
+  .pair span { position: absolute; top: 0; width: 24px; height: 24px; border-radius: 50%;
+               display: flex; align-items: center; justify-content: center;
+               font-family: var(--money); font-weight: 800; font-size: 9px; color: #fff; }
+  .pair span:first-child { left: 0; z-index: 2; }
+  .pair span:last-child { left: 12px; box-shadow: 0 0 0 2px var(--slab); }
+  .liq .t b { display: block; font-family: var(--money); font-size: 14px; font-weight: 700; }
+  .liq .t s { text-decoration: none; font-size: 10.5px; color: var(--faint); }
+  .liq .v { margin-left: auto; text-align: right; }
+  .liq .v em { font-style: normal; display: block; font-family: var(--money); font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .liq .v u { text-decoration: none; display: block; font-size: 10.5px; font-family: var(--money); font-weight: 700; color: var(--confirm); }
+  .liq .v u.q { color: var(--faint); font-weight: 600; }
+
+  .track { position: relative; height: 14px; margin: 2px 0 10px 44px; }
+  .track .well { position: absolute; inset: 4px 0; border-radius: 999px; background: var(--well); }
+  .track .range { position: absolute; top: 2px; bottom: 2px; border-radius: 999px; background: rgba(22,115,230,.30); overflow: hidden; }
+  .track .range.off { background: rgba(255,255,255,.07); }
+  .track .range i { position: absolute; inset: 0; border-radius: 999px;
+        background: linear-gradient(100deg, transparent 30%, rgba(120,180,255,.35) 50%, transparent 70%);
+        animation: shimmer 3.2s linear infinite; }
+  @keyframes shimmer { from { transform: translateX(-110%); } to { transform: translateX(110%); } }
+  .track .px { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%;
+               transform: translate(-50%,-50%); background: #fff; box-shadow: 0 0 0 3px var(--slab); z-index: 2; }
+  .track .px.out { background: var(--attn); }
+
+  .caption { margin-top: 16px; padding: 0 4px; }
+  .caption h2 { font-size: 16.5px; font-weight: 700; margin-bottom: 6px; }
+  .caption h2 span { color: var(--faint); font-weight: 600; }
+  .caption p { font-size: 13px; line-height: 1.55; color: var(--muted); }
+  .caption p + p { margin-top: 7px; }
+  .caption b { color: var(--ink); font-weight: 650; }
+  .law { font-size: 12.5px; line-height: 1.65; color: var(--faint); max-width: 80ch; margin: 26px auto 0; }
+  .law b { color: var(--muted); font-weight: 600; }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · Wallet · flow band &amp; liquidity, v2</div>
+  <h1>The ribbon is the quantity</h1>
+  <p>V1's mistake, named: the endpoint bars were the heroes and the ribbons were leftovers —
+     a wall of green slab, two sides of different species, a spine meaning nothing. V2 inverts it:
+     <b>thin ports at the edges, ribbons carry the picture, and the labels are written on the
+     ribbons</b> where there's finally room for them. The animations below are the actual delight
+     spec, not decoration for this page.</p>
+</header>
+
+<div class="row">
+  <!-- ═════════ FLOW BAND V2 ═════════ -->
+  <div class="option">
+    <div class="cardMock">
+      <h4>Where it moved</h4>
+      <div class="sub">This week · in $3.0K · out $2.0K</div>
+      <div class="inout"><span class="i">In</span><span class="o">Out</span></div>
+      <svg width="332" height="124" viewBox="0 0 332 124" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="gin" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0" stop-color="rgba(50,215,75,.30)"/><stop offset="1" stop-color="rgba(50,215,75,.10)"/>
+          </linearGradient>
+          <linearGradient id="gout" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0" stop-color="rgba(242,244,248,.07)"/><stop offset="1" stop-color="rgba(242,244,248,.17)"/>
+          </linearGradient>
+          <radialGradient id="face" cx=".34" cy=".3" r=".9">
+            <stop offset="0" stop-color="#e86a6a"/><stop offset=".6" stop-color="#7d6adf"/><stop offset="1" stop-color="#3a3160"/>
+          </radialGradient>
+        </defs>
+
+        <!-- in ribbons: port(8) → spine(158) -->
+        <path class="rib" style="animation-delay:.05s" d="M8,2 C83,2 83,24 158,24 L158,96 C83,96 83,76 8,76 Z" fill="url(#gin)"/>
+        <path class="rib" style="animation-delay:.13s" d="M8,80 C83,80 83,96 158,96 L158,118 C83,118 83,102 8,102 Z" fill="url(#gin)"/>
+        <path class="rib" style="animation-delay:.21s" d="M8,106 C83,106 83,118 158,118 L158,129 C83,129 83,117 8,117 Z" fill="url(#gin)"/>
+        <!-- out ribbons: spine(174) → port(324) -->
+        <path class="rib" style="animation-delay:.29s" d="M174,29 C249,29 249,8 324,8 L324,40 C249,40 249,62 174,62 Z" fill="url(#gout)"/>
+        <path class="rib" style="animation-delay:.37s" d="M174,62 C249,62 249,46 324,46 L324,65 C249,65 249,81 174,81 Z" fill="url(#gout)"/>
+        <path class="rib" style="animation-delay:.45s" d="M174,81 C249,81 249,71 324,71 L324,83 C249,83 249,93 174,93 Z" fill="url(#gout)"/>
+        <path class="rib" style="animation-delay:.53s" d="M174,93 C249,93 249,89 324,89 L324,97 C249,97 249,101 174,101 Z" fill="url(#gout)"/>
+
+        <!-- refresh delight: one dot per lane drifts with the money -->
+        <circle class="dot" r="2.4" fill="rgba(50,215,75,.9)"  style="offset-path:path('M8,39 C83,39 83,60 158,60'); animation-delay:.9s"/>
+        <circle class="dot" r="2"   fill="rgba(50,215,75,.8)"  style="offset-path:path('M8,91 C83,91 83,107 158,107'); animation-delay:1.7s"/>
+        <circle class="dot" r="2.2" fill="rgba(242,244,248,.75)" style="offset-path:path('M174,45 C249,45 249,24 324,24'); animation-delay:1.3s"/>
+        <circle class="dot" r="2"   fill="rgba(242,244,248,.65)" style="offset-path:path('M174,71 C249,71 249,55 324,55'); animation-delay:2.1s"/>
+
+        <!-- ports: thin, both sides the same species -->
+        <rect x="0" y="2" width="8" height="74" rx="4" fill="rgba(50,215,75,.75)"/>
+        <rect x="0" y="80" width="8" height="22" rx="4" fill="rgba(50,215,75,.55)"/>
+        <rect x="0" y="106" width="8" height="11" rx="4" fill="rgba(50,215,75,.40)"/>
+        <rect x="324" y="8" width="8" height="32" rx="4" fill="rgba(242,244,248,.40)"/>
+        <rect x="324" y="46" width="8" height="19" rx="4" fill="rgba(242,244,248,.32)"/>
+        <rect x="324" y="71" width="8" height="12" rx="4" fill="rgba(242,244,248,.26)"/>
+        <rect x="324" y="89" width="8" height="8"  rx="4" fill="rgba(242,244,248,.20)"/>
+
+        <!-- the wallet: your color, your face -->
+        <rect x="158" y="20" width="16" height="98" rx="8" fill="rgba(22,115,230,.55)"/>
+        <circle cx="166" cy="58" r="13" fill="url(#face)"/>
+        <circle cx="166" cy="58" r="13" fill="none" stroke="#16181d" stroke-width="3"/>
+
+        <!-- labels ON the ribbons -->
+        <text class="lanelab" x="16" y="30">Coinbase</text>
+        <text class="laneval" x="16" y="43">$2.1K · 2 moves</text>
+        <text class="lanelab" x="16" y="93">Kraken · $640</text>
+        <text class="laneval" x="16" y="115">Peer · $300</text>
+        <text class="lanelab" x="316" y="22" text-anchor="end">Aave</text>
+        <text class="laneval" x="316" y="35" text-anchor="end">$1K</text>
+        <text class="lanelab" x="316" y="59" text-anchor="end">Rent · $620</text>
+        <text class="laneval" x="316" y="81" text-anchor="end">Card · $340</text>
+        <text class="laneval" x="316" y="97" text-anchor="end">Other</text>
+      </svg>
+    </div>
+    <div class="caption">
+      <h2>Flow band v2 <span>· ports, not slabs</span></h2>
+      <p><b>The inversion:</b> bars shrink to 8pt ports at the card's edges — magnitude survives as
+         segment height — and the ribbons take the whole middle. Labels move ONTO the ribbons
+         (name + value in one line, icon optional), which kills v1's cramped in-slab captions and
+         makes both sides the same species at last.</p>
+      <p><b>The spine is you now:</b> the wallet's own face sits on it, and scoped to one wallet the
+         spine wears that wallet's identity tint — "a wallet is a color in this app," finally applied
+         to the card about your money moving. On All it stays the app tint.</p>
+      <p><b>Delight, two moments:</b> on mount the ribbons <b>draw on</b> left-to-right, staggered —
+         the sparkline's own draw-on precedent, money arriving the way it accrued. On
+         pull-to-refresh, <b>one dot per lane drifts along its ribbon</b> (the animation above) —
+         CALayer offset-path, the BerryRain class, because decorative motion during a refresh must
+         be CoreAnimation. Never both at once: one animation per moment.</p>
+    </div>
+  </div>
+
+  <!-- ═════════ LIQUIDITY V2 ═════════ -->
+  <div class="option">
+    <div class="cardMock">
+      <h4 style="margin-bottom:6px">Liquidity</h4>
+
+      <div class="liq">
+        <div class="pair"><span style="background:#8247e5">DG</span><span style="background:#627eea">WE</span></div>
+        <div class="t"><b>DGENV2/WETH</b><s>In range · 0.05% · Ethereum · v3</s></div>
+        <div class="v"><em>$80</em><u>+$59 fees</u></div>
+      </div>
+      <div class="track">
+        <div class="well"></div>
+        <div class="range" style="left:22%; width:58%"><i></i></div>
+        <span class="px" style="left:56%"></span>
+      </div>
+
+      <div class="liq">
+        <div class="pair"><span style="background:#627eea">WE</span><span style="background:#2775ca">US</span></div>
+        <div class="t"><b>WETH/USDC</b><s>Out of range 3d · 1.00% · Ethereum · v3</s></div>
+        <div class="v"><em>$412</em><u class="q">$0 fees</u></div>
+      </div>
+      <div class="track">
+        <div class="well"></div>
+        <div class="range off" style="left:14%; width:34%"></div>
+        <span class="px out" style="left:76%"></span>
+      </div>
+    </div>
+    <div class="caption">
+      <h2>Liquidity v2 <span>· the range reads as a range</span></h2>
+      <p><b>The bar's grammar, fixed:</b> a recessed track is the whole price world, the raised
+         tinted segment is YOUR range, and the white dot is the price now. In range: the dot sits
+         inside the lit segment and the segment carries a slow <b>earning shimmer</b> — alive
+         because it's working. Out of range: the segment goes cold gray, the dot sits outside it
+         wearing attention, and the gap between dot and segment IS the picture. V1's dot-at-the-end
+         read as a slider handle; this can't.</p>
+      <p><b>Fees are the delight:</b> uncollected fees are the one number here that's money
+         arriving, so they wear confirm and <b>count up</b> on mount (numericText) — while a $0-fee
+         row stays quiet gray, because zero earning is not a green moment. Pair icons replace the
+         "UN" monogram (already in code); rows tighten to title + one subline + the 14pt track.</p>
+    </div>
+  </div>
+</div>
+
+<p class="law"><b>Law check:</b> no hairlines — the track is a recessed well, the dot's ring is the card
+   showing through, the range segment is tone; color stays identity (wallet tint, pair brands),
+   state (attention dot, cold segment), magnitude (port heights, ribbon widths — in wears confirm
+   because arriving money is the app's green moment, out stays ink per the "Owed" ruling); sentence
+   case; motion is 250ms-family, one animation per moment, and anything that runs during a refresh
+   is CALayer (the BerryRain lesson). The shimmer is ambient state ("earning"), not a transition,
+   and is killed by Reduce Motion along with the drift dots and the draw-on.</p>
+</div>

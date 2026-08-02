@@ -13199,3 +13199,71 @@ re-tapping the active chip was a no-op.
 The `casberi://feed/type/<Tag>` route stays as internal/debug plumbing. It has
 zero producers in the app, scripts, or skills — it never had any — so it costs
 nothing and remains the only way to drive this state headlessly.
+
+## §270 — The wallet room learns where money went, and how close it is to the edge (2026-08-01)
+
+Three reads shipped from `design/wallet-viz`. The room already answered *what
+you hold* (treemap, composition strip, concentration) and *what's risky*
+(lending card, warnings, the melt); these answer **where money moved**, **which
+leveraged position is closest to liquidation**, and **how exposed the book is**.
+
+**The flow band ("Where it moved").** The sparkline says the total moved;
+nothing said through whom. Inflows left, the wallet as a spine, outflows right,
+every lane sized by what it was worth *when it moved*. Ruled through three
+rounds: v1 (rounded slabs, gradient ribbons, bright spine) was rejected on
+sight — "it doesn't look great" — and a Cash App exercise produced three
+options, of which **B, "the bleed band"**, was chosen: solid slabs of colour
+mass running edge-to-edge through the card's padding, straight-taper connectors
+with square shoulders, money type dark-on-green. That is the treemap's own
+ruling reapplied — when everything on screen is a rounded capsule, the standout
+move is breaking the shape grammar. The spine carries the wallet's face and
+identity tint when the room is scoped or a single wallet is watched, and
+deliberately no face when several are merged (a face that isn't anyone's is
+fake identity). Motion was designed and then **cut by ruling** ("we don't need
+the motion") — the card is static.
+
+Prices are READ, never computed: Zerion's `/transactions` has always carried
+`currency=usd` and the parser discarded the per-leg `value`. Landing it costs no
+request. Old transfers never gain a price (they dedupe out), and the Alchemy
+fallback arm has none — so `WalletFlow.minPricedShare` (0.5) makes the band
+DECLINE rather than draw a confident picture of a tenth of the window. That
+threshold exists because the first on-device render did exactly that: five
+lanes from 10 priced moves with 84 unpriced beneath it, and the honest footnote
+did not undo the picture above it.
+
+**The risk strip ("Distance to liquidation").** Aave/Spark and Morpho carry a
+health factor; Hyperliquid carries a percentage of mark and has no HF at all —
+so "which of these is closest to the edge" was arithmetic across three scales.
+The shared axis is HEADROOM, the fraction the price can move against you before
+liquidation: a perp states it directly, and a health factor implies it
+(`1 − 1/HF`, exact when the debt is stable-denominated, an approximation when
+both sides move together — which is why every dot still wears its protocol's
+own number and none claims a drawdown figure). **There is no shared danger
+threshold on the track**: `DeFiRisk.floor` is 33% of headroom and
+`HyperliquidDeFi.riskProximity` is 15%, so any single painted crossing point
+would have to disagree with one of the two shipped sweeps. Each dot's alarm
+state comes from its own protocol's rule. Declines under two positions.
+
+**The stable share.** One line in `concentrationLine`'s idiom — "21% is in
+stablecoins" — answering how exposed the whole book is, which the treemap can't
+show because stablecoins scatter across its cells by symbol. It is the
+surviving half of a two-bar "splits" card; the other half (by-chain) was **cut
+as trivia**: where the book lives changes no decision. `WalletStables.symbols`
+is an explicit set and never a `hasPrefix("USD")` rule, because this app already
+knows spoofed symbols are real.
+
+**Liquidity got the same treatment** in the same pass: the generic "UN" monogram
+became the pair's real token marks (`AssetMark`/`AssetPairMark`, bundled brand
+assets with an honest monogram fallback — nothing fetches), and the status moved
+off the subline into an **outcome pill** — "Earning +$59" in the money green,
+"Idle 3d" in attention. The range bar now renders ONLY on an idle row, where it
+explains what the pill can't; on an earning row, being in range is what
+"Earning" means and drawing it twice is the tally instinct wearing geometry.
+
+All the pure logic is harness-tested against the shipped source
+(`scripts/wallet-viz-selftest.sh`, 153 assertions, mutation-tested ten ways —
+including the band's slab geometry, which is the one part that fails invisibly:
+it clips off the bottom and reads as a missing counterparty). Probes:
+`-flowProbe <days|YES>`, `-riskStripProbe YES`, and `-seedFlow` to plant priced
+transfers, since the card's real inputs need a keyed sync against a wallet that
+actually moved money.

@@ -923,6 +923,12 @@ enum WalletIngest {
         // is exactly the signal that this leg came from the fallback path and
         // has to be decoded from shape instead (WalletVerbs).
         if let op = t.operationType { d["zerionOperation"] = op }
+        // What the leg was WORTH when it moved (2026-08-01, the flow band).
+        // Under a Zerion-only key beside the operation type, for the same
+        // reason: the Alchemy arm can't supply it, so its absence is the
+        // signal that this leg came from the fallback path and has no price
+        // rather than a price of zero.
+        if let usd = t.valueUSD { d["zerionValueUSD"] = usd }
         return d
     }
 
@@ -1042,6 +1048,10 @@ enum WalletIngest {
         thing.transferDirection = direction
         thing.transferAmount = amountText
         thing.transferCounterparty = counterpartyName
+        // Set on every arm, including the swap/self-move ones that carry no
+        // direction — the value is a fact about the leg regardless of whether
+        // a single direction could be named for it.
+        thing.transferUSD = t["zerionValueUSD"] as? Double
         return thing
     }
 

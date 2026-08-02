@@ -1726,7 +1726,11 @@ struct FeedScreen: View {
             // safeAreaInset — a scoping control has to stay reachable when
             // you're deep in the transactions it scopes.)
             walletTilesSection(visible)
+            // Answers the question the balance card's own delta pill raises,
+            // before the map changes the subject to composition (2026-08-01).
+            walletFlowSection
             holdingsBlockSection
+            walletRiskSection
             walletDeFiSection
             walletLiquiditySection
             walletPerpsSection
@@ -2644,6 +2648,70 @@ struct FeedScreen: View {
                                          change: nil, venueLabel: $0.label) }
     }
 
+    /// Where the money moved (2026-08-01, `WalletFlowBand`) — inflows, the
+    /// wallet, outflows, sized by what each was worth when it moved.
+    ///
+    /// Sits directly under the balance card ON PURPOSE, ahead of the treemap:
+    /// the crown number's own delta pill and sparkline raise the question
+    /// ("it moved — where to?") and this is the answer, so putting the
+    /// composition map between cause and effect would separate them for no
+    /// gain. It follows the balance card's own window, so the two can never
+    /// describe different periods on one screen.
+    ///
+    /// Nothing renders without a band worth drawing — `WalletFlow.band`
+    /// declines on an unpriceable or single-lane window.
+    @ViewBuilder
+    private var walletFlowSection: some View {
+        if let band = WalletFlowSource.band(from: visible, since: flowWindowStart) {
+            Section {
+                WalletFlowBand(band: band, windowLabel: balanceRange.flowLabel,
+                               spineAddress: spineWalletAddress)
+                    .modifier(RowEntrance(index: 1, wave: shapeWave, style: entranceStyle))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
+                                              bottom: 0, trailing: DS.Space.s4))
+            }
+        }
+    }
+
+    /// The cutoff the flow band reads back to — nil for `.watched`, which
+    /// means the whole record.
+    private var flowWindowStart: Date? {
+        balanceRange.span.map { Date.now.addingTimeInterval(-$0) }
+    }
+
+    /// Whose face rides the flow band's spine: the scoped wallet, or the sole
+    /// watched one. nil when several wallets are merged — the band is then
+    /// about all of them, and a face belonging to one would claim the flows
+    /// were that wallet's (the honesty rule, applied to a portrait).
+    private var spineWalletAddress: String? {
+        if let selectedWallet { return selectedWallet }
+        let watched = wallet.addresses
+        return watched.count == 1 ? watched.first?.address : nil
+    }
+
+    /// Every leveraged position on one axis (2026-08-01, `WalletRiskStrip`),
+    /// directly ABOVE the lending card it summarises — the cards below state
+    /// each position in its own protocol's units, and this is the one view
+    /// that puts them in an order. Declines under two positions, where the
+    /// cards already say it better.
+    @ViewBuilder
+    private var walletRiskSection: some View {
+        if let entries = WalletRiskScaleSource.strip(aave: walletLive.positions,
+                                                     morpho: walletLive.morpho,
+                                                     hyperliquid: walletLive.hyperliquid) {
+            Section {
+                WalletRiskStrip(entries: entries)
+                    .modifier(RowEntrance(index: 2, wave: shapeWave, style: entranceStyle))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
+                                              bottom: 0, trailing: DS.Space.s4))
+            }
+        }
+    }
+
     /// Lending — Aave and Morpho for the wallets in scope, in ONE card as two
     /// rows (prd §212, 2026-07-25). They were two full cards until this pass;
     /// they were never two subjects, just two providers of one. The treemap
@@ -3106,6 +3174,19 @@ struct FeedScreen: View {
                             onOpen: portfolio.walletCount > 1 && selectedWallet == nil
                                 ? { feedSheet = .allocation } : nil)
                             .padding(.horizontal, DS.Space.s4)
+                        // And how much of it can move (2026-08-01). Concentration
+                        // says the book is lopsided; this says how exposed the
+                        // whole of it is — the one thing the map can't show,
+                        // since stablecoins are scattered across its cells by
+                        // symbol. A line, not a card: the surviving half of the
+                        // cut "splits" pair (see `WalletPortfolio.stableLine`).
+                        if let stable = portfolio.stableLine {
+                            Text(stable)
+                                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                                .lineLimit(1)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, DS.Space.s4)
+                        }
                     }
                 }
                 // The holdings CARD (prd §160) — title, map, and the

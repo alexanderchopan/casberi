@@ -202,6 +202,23 @@ struct WalletPortfolio: Equatable {
         guard pct > 0, pct < 100 else { return nil }
         return String(localized: "\(top.symbol) is \(pct)% of everything")
     }
+
+    /// "21% is in stablecoins" — the exposure whisper (2026-08-01).
+    ///
+    /// A sibling to `concentrationLine`, deliberately in its exact idiom
+    /// rather than a card: this survived design review as one line while its
+    /// original other half (a by-chain bar) was cut as trivia — where the book
+    /// lives changes no decision, how much of it can move does.
+    ///
+    /// The rule about what counts, and the reason it's a set and not a prefix
+    /// test, lives in `WalletStables`. Nil-ing is delegated there too, so the
+    /// two lines can't disagree about when a share is too small to state.
+    var stableLine: String? {
+        let held = positions.map { (symbol: $0.symbol, usd: $0.usd) }
+        guard let share = WalletStables.share(positions: held, totalUSD: totalUSD)
+        else { return nil }
+        return String(localized: "\(Int((share * 100).rounded()))% is in stablecoins")
+    }
 }
 
 /// The balance line's window (2026-07-21). "Watched" — the whole record — is
@@ -226,6 +243,17 @@ enum WalletRange: String, CaseIterable {
 
     /// What the delta pill says its number is measured over.
     var deltaLabel: String { rawValue }
+
+    /// How the flow band names this window in a sentence (2026-08-01). The
+    /// pill's "7d" is fine as a chip beside a number; a card whose whole claim
+    /// is "this is the period I'm describing" says it in words.
+    var flowLabel: String {
+        switch self {
+        case .week:    return String(localized: "This week")
+        case .month:   return String(localized: "This month")
+        case .watched: return String(localized: "Since you started watching")
+        }
+    }
 
     /// The samples inside this window — everything, for `.watched`.
     func clip(_ samples: [WalletStore.ValueSample]) -> [WalletStore.ValueSample] {

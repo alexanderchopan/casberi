@@ -30,7 +30,11 @@ struct WalletLiquidityCard: View {
 
     var body: some View {
         if !book.positions.isEmpty {
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
+            // Tightened 2026-08-01 (user: "it's pretty large right now"):
+            // s3 → s2 between rows and s4 → s3 around the card. Each position
+            // already carries two lines plus a range bar, so the air between
+            // them was doing the work of a separator nothing here needs.
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
                 WalletSectionLabel(title: String(localized: "Liquidity"))
                 // `Position` is a plain value type (never a `Thing`), keyed
                 // on its own on-chain identity. The key spans VERSION and
@@ -41,7 +45,7 @@ struct WalletLiquidityCard: View {
                     positionRow(position)
                 }
             }
-            .padding(DS.Space.s4)
+            .padding(DS.Space.s3)
             .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
         }
     }
@@ -55,29 +59,73 @@ struct WalletLiquidityCard: View {
         }
     }
 
+    /// One position (2026-08-01, the Cash App pass): the pair's real token
+    /// marks, the pair, the mechanism demoted to a subline, and the OUTCOME as
+    /// a pill on the trailing edge.
+    ///
+    /// The outcome pill is the whole ruling. "Is it working" is the question
+    /// this card exists to answer, and a range bar makes the reader derive it
+    /// from geometry — so the answer became a word: **Earning +$59** in the
+    /// money green (the fees finally wear the colour of money arriving), or
+    /// **Idle 3d** in attention.
+    ///
+    /// And the range bar now appears ONLY on an idle row, where it explains
+    /// something the pill can't — your range gone cold with the price sitting
+    /// outside it, which is *why* it's idle. On an earning row it's deleted:
+    /// being in range is what "Earning" MEANS, and drawing it a second time is
+    /// the tally instinct wearing geometry.
     @ViewBuilder
     private func positionRow(_ position: UniswapLiquidity.Position) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
-            WalletRow(mark: .monogram("UN", tint: position.inRange ? DS.tint : DS.attention),
+            WalletRow(mark: .pair(position.token0Symbol, position.token1Symbol),
                      title: "\(position.token0Symbol)/\(position.token1Symbol)",
                      subtitle: Self.line(position)) {
-                // The money leads on the trailing edge (the Lending card's
-                // own ranking), with fees as its caption when there are any —
-                // "what's it worth" beats "what fee tier is it" every time,
-                // and the fee tier already rides the subline.
-                if let value = position.valueUSD, value > 0 {
-                    WalletRowValue(value: TokenStats.compact(value),
-                                   caption: Self.feesCaption(position))
-                } else if let fees = position.uncollectedFeeUSD, fees > 0.01 {
-                    WalletRowValue(value: TokenStats.compact(fees), caption: String(localized: "fees"))
-                } else {
-                    WalletRowValue(value: Self.feeTierLabel(position.feeTier), caption: nil)
+                VStack(alignment: .trailing, spacing: 3) {
+                    if let value = position.valueUSD, value > 0 {
+                        Text(TokenStats.compact(value))
+                            .dsText(.price16).foregroundStyle(DS.textPrimary)
+                            .monospacedDigit().lineLimit(1)
+                    }
+                    outcomePill(position)
                 }
             }
-            UniswapRangeBar(tickLower: position.tickLower, tickUpper: position.tickUpper,
-                            currentTick: position.currentTick, inRange: position.inRange)
-                .padding(.leading, 42)   // aligns under the row's title, past the 34pt mark
+            if !position.inRange {
+                UniswapRangeBar(tickLower: position.tickLower, tickUpper: position.tickUpper,
+                                currentTick: position.currentTick, inRange: position.inRange)
+                    .padding(.leading, 42)   // aligns under the title, past the 34pt mark
+            }
         }
+    }
+
+    /// "Earning +$59" / "In range" / "Idle 3d" — what the position is DOING,
+    /// in one word plus its number.
+    ///
+    /// A position in range with no fees yet says "In range" quietly rather
+    /// than "Earning +$0": zero earned is not a green moment, and claiming one
+    /// would be the fake-status rule in miniature.
+    @ViewBuilder
+    private func outcomePill(_ position: UniswapLiquidity.Position) -> some View {
+        if position.inRange, let fees = position.uncollectedFeeUSD, fees > 0.01 {
+            pill(String(localized: "Earning +\(TokenStats.compact(fees))"), tone: DS.confirm)
+        } else if position.inRange {
+            pill(String(localized: "In range"), tone: DS.textSecondary)
+        } else if let days = UniswapLiquidity.daysOutOfRange(
+                    address: position.address, network: position.network,
+                    version: position.version, tokenId: position.tokenId) {
+            pill(String(localized: "Idle \(days)d"), tone: DS.attention)
+        } else {
+            pill(String(localized: "Idle"), tone: DS.attention)
+        }
+    }
+
+    private func pill(_ text: String, tone: Color) -> some View {
+        Text(text)
+            .dsText(.label12).fontWeight(.bold)
+            .foregroundStyle(tone)
+            .lineLimit(1)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(tone.opacity(0.16), in: Capsule())
     }
 
     /// "In range · 0.30% · Base · v4" — status, the fee tier it earns at,
@@ -89,15 +137,12 @@ struct WalletLiquidityCard: View {
     /// different positions.
     private static func line(_ position: UniswapLiquidity.Position) -> String {
         var parts: [String] = []
-        if position.inRange {
-            parts.append(String(localized: "In range"))
-        } else {
-            let since = UniswapLiquidity.timeOutOfRange(address: position.address,
-                                                         network: position.network,
-                                                         version: position.version,
-                                                         tokenId: position.tokenId)
-            parts.append(since ?? String(localized: "Out of range"))
-        }
+        // The STATUS moved to the outcome pill (2026-08-01) and is deliberately
+        // not repeated here — it led this line for a year, and saying "In
+        // range" twice on one row is the thing the pill was introduced to stop.
+        // What's left is pure mechanism: the rate it earns at, where it lives,
+        // which version.
+        //
         // A V4 dynamic-fee pool carries a flag, not a rate — printing 838.86%
         // would be a fake number, so it says nothing instead.
         if position.feeTier != Self.dynamicFeeFlag {

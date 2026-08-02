@@ -254,6 +254,23 @@ final class Thing {
     /// every non-Wallet thing and for transfers landed before this field —
     /// those parse the title.
     var transferCounterparty: String? = nil
+    /// What the moved amount was WORTH, in USD, at the moment it moved
+    /// (2026-08-01) — the unit the flow band needs to put a 0.5 ETH receipt
+    /// and a 300 USDC payment on one scale.
+    ///
+    /// Read, never computed: Zerion already prices every transfer leg it hands
+    /// over (the request has always carried `currency=usd`) and the parser
+    /// simply threw the number away. So this costs no extra request, and it is
+    /// the price AT THE TIME rather than today's — repricing an old transfer
+    /// at the current rate would quietly restate history every time the market
+    /// moved.
+    ///
+    /// nil for: the Alchemy fallback arm (which carries no price at all), any
+    /// token Zerion couldn't price, and every transfer landed before this
+    /// field. `WalletFlow` counts those as unpriced and says so rather than
+    /// treating them as zero. Optional + default nil keeps CloudKit mirroring
+    /// happy and needs no migration (additive, per the schema-versioning rule).
+    var transferUSD: Double? = nil
     /// The wallet safety signals on a landed transfer — a comma-joined SET,
     /// read through `securityFlags`/`hasSecurityFlag`, never compared as a
     /// whole string.

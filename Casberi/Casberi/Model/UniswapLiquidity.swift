@@ -554,14 +554,25 @@ enum UniswapLiquidity {
     /// or before a full day has passed.
     static func timeOutOfRange(address: String, network: String,
                                version: Int, tokenId: Int) -> String? {
+        guard let days = daysOutOfRange(address: address, network: network,
+                                        version: version, tokenId: tokenId)
+        else { return nil }
+        return days == 1 ? String(localized: "out of range for a day")
+                          : String(localized: "out of range for \(days) days")
+    }
+
+    /// The same record as a bare number (2026-08-01) — the liquidity card's
+    /// "Idle 3d" pill wants the fact without the sentence. nil under a day,
+    /// same as the sentence form, so the two can never disagree about when
+    /// idleness starts being worth stating.
+    static func daysOutOfRange(address: String, network: String,
+                               version: Int, tokenId: Int) -> Int? {
         let key = sinceKey(address, network, version, tokenId)
         guard UserDefaults.standard.object(forKey: key) != nil else { return nil }
         let since = UserDefaults.standard.double(forKey: key)
         let elapsed = Date.now.timeIntervalSince1970 - since
         guard elapsed >= 86_400 else { return nil }
-        let days = Int(elapsed / 86_400)
-        return days == 1 ? String(localized: "out of range for a day")
-                          : String(localized: "out of range for \(days) days")
+        return Int(elapsed / 86_400)
     }
 
     // MARK: - Settled activity (blocks, the WalletApprovals cursor shape)

@@ -1217,6 +1217,89 @@ enum ProbeHooks {
                 for line in composition.probeLines { NSLog("compositionProbe| %@", line) }
             }
         },
+        // `-seedFlow "in:Coinbase:2100,out:Aave:1000[,…]"` plants priced
+        // transfer things so the flow band draws headlessly (2026-08-01).
+        //
+        // It exists because the band's inputs are the most expensive in the
+        // room to come by honestly: a landed transfer carrying a USD value
+        // needs a keyed Zerion sync against a wallet that actually moved money
+        // in the window. Without this the card could only ever be seen by
+        // waiting for real money to move — the same reason `-posthogSeed`
+        // plants a reading and `-seedWalletHistory` plants a line.
+        //
+        // Declared BEFORE `-flowProbe` (hooks run in list order), so one
+        // launch can seed and then report. Spaced an hour apart so a window
+        // narrower than a day still contains them.
+        Hook(key: "seedFlow") { spec, context in
+            let entries = spec.split(separator: ",")
+            // Deduped on sourceRef like every real bridge, because re-running
+            // a seed is the normal way to use it and a second run otherwise
+            // silently DOUBLES every lane — which reads as the band computing
+            // wrong rather than as the seed running twice (observed, 2026-08-01).
+            let existing = Set(
+                ((try? context.fetch(FetchDescriptor<Thing>())) ?? [])
+                    .compactMap { $0.sourceRef })
+            var planted = 0
+            for (index, entry) in entries.enumerated() {
+                // Split on the LAST TWO colons so a counterparty may carry its
+                // own (the `-keepAskProbe` lesson).
+                let parts = entry.split(separator: ":")
+                guard parts.count >= 3, let usd = Double(parts[parts.count - 1]) else { continue }
+                let received = parts[0] == "in"
+                let name = parts[1..<(parts.count - 1)].joined(separator: ":")
+                let ref = "seedflow:\(index):\(name):\(usd)"
+                if existing.contains(ref) { continue }
+                let thing = Thing(
+                    kind: .transaction,
+                    title: received ? "Received from \(name)" : "Sent to \(name)",
+                    content: "https://etherscan.io/tx/0xseed\(index)",
+                    source: "Wallet",
+                    capturedAt: Date.now.addingTimeInterval(-Double(index + 1) * 3600),
+                    sourceRef: ref)
+                thing.transferDirection = received ? "received" : "sent"
+                thing.transferCounterparty = name
+                thing.transferAmount = String(format: "%.2f USDC", usd)
+                thing.transferUSD = usd
+                context.insert(thing)
+                planted += 1
+            }
+            try? context.save()
+            NSLog("seedFlow: planted %d transfer(s)", planted)
+        },
+        // `-flowProbe <days|YES>` NSLogs the flow band (2026-08-01) — the
+        // window's in/out totals, every lane either side with what it was
+        // worth and how many moves folded into it, and how many moves reached
+        // us unpriced. A bare YES reads the whole record; a number bounds it
+        // to that many days, which is how the room's own week/month windows
+        // are exercised headlessly.
+        //
+        // Prices ride the transfer read itself (Zerion's `value`), so this
+        // spends NOTHING beyond the corpus already on disk — but a corpus
+        // synced before that field existed has no prices at all, and the
+        // probe's `priced=` count is how that reads rather than an empty card
+        // with no explanation.
+        Hook(key: "flowProbe") { spec, context in
+            Task { @MainActor in
+                let days = Int(spec)
+                for line in WalletFlowSource.probeLines(context: context, days: days) {
+                    NSLog("flowProbe| %@", line)
+                }
+            }
+        },
+        // `-riskStripProbe YES` NSLogs the distance-to-liquidation strip
+        // (2026-08-01) — each book's size, both protocol thresholds, and every
+        // dot with its headroom, its axis position and its own protocol's
+        // verdict. Reads the same live state the feed reads, so it exercises
+        // the real gather rather than a parallel one; pair with
+        // `-walletAddress <a wallet that actually borrows>`.
+        Hook(key: "riskStripProbe") { _, context in
+            Task { @MainActor in
+                let live = await WalletWatch.liveState(context: context)
+                let lines = WalletRiskScaleSource.probeLines(
+                    aave: live.positions, morpho: live.morpho, hyperliquid: live.hyperliquid)
+                for line in lines { NSLog("riskStripProbe| %@", line) }
+            }
+        },
         // `-safeProbe YES` NSLogs which watched wallets are detected Safes
         // per chain and their pending queue counts (or the honest
         // unreachable/none). Pairs with `-walletAddress` (a Safe address, to

@@ -37,6 +37,8 @@ struct WalletRow<Trailing: View>: View {
         case symbol(String, tint: Color)
         case face(String)
         case monogram(String, tint: Color)
+        /// Two assets overlapped — a liquidity pool's own pair.
+        case pair(String, String)
         case kind(ThingKind, flagged: Bool = false)
     }
 
@@ -90,6 +92,14 @@ struct WalletRow<Trailing: View>: View {
                 .frame(width: Self.markSize, height: Self.markSize)
                 .background(Circle().fill(tint.opacity(0.16)))
                 .accessibilityHidden(true)
+        case .pair(let first, let second):
+            // A liquidity position is TWO assets, so its mark is two — real
+            // brand discs where the app bundles them (2026-08-01). It replaced
+            // a literal "UN" monogram on every Uniswap row, which named the
+            // protocol the card's own header already names and said nothing
+            // about which pool you were looking at.
+            AssetPairMark(first: first, second: second, size: Self.markSize * 0.78)
+                .frame(width: Self.markSize, height: Self.markSize)
         case .kind(let kind, let flagged):
             KindGlyph(kind: kind, size: Self.markSize)
                 .overlay(alignment: .bottomTrailing) {

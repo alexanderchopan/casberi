@@ -1,0 +1,184 @@
+<title>Wallet — the Cash App take on flow & liquidity</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #1673e6; --confirm: #32d74b; --attn: #ff9f0a;
+    --slab: #16181d; --well: #101216; --card: rgba(28,30,37,.82);
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body { font-family: var(--text); color: var(--ink);
+         background: radial-gradient(900px 420px at 18% -8%, rgba(22,115,230,.10), transparent 62%), var(--page);
+         padding: 48px 28px 72px; }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  header { max-width: 800px; margin-bottom: 34px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: #4d8dff; margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.4vw,36px); font-weight: 800; letter-spacing: -.02em; line-height: 1.1; margin-bottom: 12px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 70ch; margin-bottom: 8px; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 36px; align-items: flex-start; justify-content: center; }
+  .option { width: 360px; }
+  .cardMock { background: var(--card); border-radius: 20px; padding: 16px; box-shadow: 0 24px 60px rgba(0,0,0,.5); }
+  .cardMock h4 { font-family: var(--money); font-size: 13.5px; font-weight: 700; }
+  .cardMock .sub { font-size: 11px; color: var(--faint); margin: 2px 0 12px; }
+
+  /* the split bar — the whole diagram, reduced to one honest mark */
+  .split { display: flex; height: 34px; gap: 3px; border-radius: 11px; overflow: hidden; margin-bottom: 6px; }
+  .split div { display: flex; align-items: center; padding: 0 12px; font-family: var(--money);
+               font-weight: 800; font-size: 13px; white-space: nowrap; }
+  .split .in  { background: var(--confirm); color: #04250e; }
+  .split .out { background: rgba(242,244,248,.14); color: var(--ink); justify-content: flex-end; flex: 1; }
+  .net { font-size: 11.5px; color: var(--faint); margin-bottom: 12px; font-family: var(--money); font-weight: 600; }
+  .net b { color: var(--confirm); }
+
+  /* fat rows — the activity list IS the product */
+  .r { display: flex; align-items: center; gap: 11px; padding: 8px 0; }
+  .r .a { width: 34px; height: 34px; border-radius: 50%; flex: none; display: flex; align-items: center;
+          justify-content: center; font-family: var(--money); font-weight: 800; font-size: 12px; color: #fff; }
+  .r .t b { display: block; font-family: var(--money); font-size: 14.5px; font-weight: 700; }
+  .r .t s { text-decoration: none; font-size: 10.5px; color: var(--faint); }
+  .r .v { margin-left: auto; font-family: var(--money); font-weight: 800; font-size: 14.5px;
+          font-variant-numeric: tabular-nums; }
+  .r .v.plus { color: var(--confirm); }
+
+  /* liquidity rows: outcome pill, mechanism demoted */
+  .pair { position: relative; width: 46px; height: 34px; flex: none; }
+  .pair span { position: absolute; top: 0; width: 34px; height: 34px; border-radius: 50%;
+               display: flex; align-items: center; justify-content: center;
+               font-family: var(--money); font-weight: 800; font-size: 11px; color: #fff; }
+  .pair span:first-child { left: 0; z-index: 2; }
+  .pair span:last-child { left: 16px; box-shadow: 0 0 0 2.5px #1d2027; }
+  .pill { font-family: var(--money); font-size: 11px; font-weight: 800; padding: 4px 9px;
+          border-radius: 999px; white-space: nowrap; }
+  .pill.earn { background: rgba(50,215,75,.16); color: var(--confirm); }
+  .pill.idle { background: rgba(255,159,10,.16); color: var(--attn); }
+  .lv { margin-left: auto; text-align: right; }
+  .lv em { font-style: normal; display: block; font-family: var(--money); font-size: 14.5px;
+           font-weight: 800; font-variant-numeric: tabular-nums; }
+  .lv .pill { display: inline-block; margin-top: 3px; }
+  .microrange { position: relative; height: 10px; margin: 0 0 6px 57px; }
+  .microrange .w { position: absolute; inset: 3px 0; border-radius: 999px; background: var(--well); }
+  .microrange .seg { position: absolute; top: 1px; bottom: 1px; border-radius: 999px; background: rgba(255,255,255,.09); }
+  .microrange .dot { position: absolute; top: 50%; width: 9px; height: 9px; border-radius: 50%;
+                     transform: translate(-50%,-50%); background: var(--attn); box-shadow: 0 0 0 2.5px #1d2027; }
+
+  .caption { margin-top: 16px; padding: 0 4px; }
+  .caption h2 { font-size: 16.5px; font-weight: 700; margin-bottom: 6px; }
+  .caption h2 span { color: var(--faint); font-weight: 600; }
+  .caption p { font-size: 13px; line-height: 1.55; color: var(--muted); }
+  .caption p + p { margin-top: 7px; }
+  .caption b { color: var(--ink); font-weight: 650; }
+  .law { font-size: 12.5px; line-height: 1.65; color: var(--faint); max-width: 80ch; margin: 26px auto 0; }
+  .law b { color: var(--muted); font-weight: 600; }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · Wallet · the Cash App take</div>
+  <h1>Kill the mechanism, state the outcome</h1>
+  <p>Cash App's whole design ethos in one sentence: <b>the list is the product, money is the only
+     bold thing, and a diagram never survives when a sentence and a list can say it.</b> Applied to
+     both cards: the Sankey dies into a split bar plus fat avatar rows; the range bar demotes to an
+     outcome pill, appearing only where something is wrong.</p>
+</header>
+
+<div class="row">
+  <!-- ═════════ FLOW, CASH APP STYLE ═════════ -->
+  <div class="option">
+    <div class="cardMock">
+      <h4>Where it moved</h4>
+      <div class="sub">This week</div>
+      <div class="split">
+        <div class="in" style="width:60%">In $3.0K</div>
+        <div class="out">Out $2.0K</div>
+      </div>
+      <div class="net">Kept <b>+$1.0K</b></div>
+
+      <div class="r">
+        <span class="a" style="background:#0052ff">C</span>
+        <div class="t"><b>Coinbase</b><s>2 moves</s></div>
+        <span class="v plus">+$2.1K</span>
+      </div>
+      <div class="r">
+        <span class="a" style="background:#5741d9">K</span>
+        <div class="t"><b>Kraken</b></div>
+        <span class="v plus">+$640</span>
+      </div>
+      <div class="r">
+        <span class="a" style="background:#9a6adf">A</span>
+        <div class="t"><b>Aave</b></div>
+        <span class="v">−$1.0K</span>
+      </div>
+      <div class="r">
+        <span class="a" style="background:rgba(255,255,255,.14);color:#99a1b4">RE</span>
+        <div class="t"><b>Rent</b></div>
+        <span class="v">−$620</span>
+      </div>
+      <div class="r" style="padding-bottom:0">
+        <span class="a" style="background:rgba(255,255,255,.10);color:#99a1b4">···</span>
+        <div class="t"><b style="color:#99a1b4;font-weight:650">Other</b><s>3 moves</s></div>
+        <span class="v" style="color:#99a1b4">−$376</span>
+      </div>
+    </div>
+    <div class="caption">
+      <h2>Flow, reduced <span>· a bar, a sentence, a list</span></h2>
+      <p><b>The Sankey dies.</b> One split bar carries the whole picture — in vs out, to scale,
+         green vs ink — and a one-word sentence states the outcome ("Kept +$1.0K", which is the
+         only thing Cash App would put there). Below it, the counterparties as fat avatar rows,
+         biggest first, signed amounts bold: exactly the lanes the band computed, worn as the list
+         this app already knows how to draw. Every row is a real landed thing, so taps come free.</p>
+      <p><b>What's gained:</b> instant read, no geometry to squint at, half the height, and the
+         rows inherit every existing behavior (icons, naming, sheets). <b>What's given up:</b> the
+         ribbon picture of sources converging into you — the one thing v2 does that this can't.
+         My lean: this one. The model (`WalletFlow`) is unchanged either way; only the view
+         simplifies.</p>
+    </div>
+  </div>
+
+  <!-- ═════════ LIQUIDITY, CASH APP STYLE ═════════ -->
+  <div class="option">
+    <div class="cardMock">
+      <h4 style="margin-bottom:10px">Liquidity</h4>
+
+      <div class="r" style="padding-top:0">
+        <div class="pair"><span style="background:#8247e5">DG</span><span style="background:#627eea">WE</span></div>
+        <div class="t"><b>DGENV2/WETH</b><s>0.05% · Ethereum · v3</s></div>
+        <div class="lv"><em>$80</em><span class="pill earn">Earning +$59</span></div>
+      </div>
+
+      <div class="r">
+        <div class="pair"><span style="background:#627eea">WE</span><span style="background:#2775ca">US</span></div>
+        <div class="t"><b>WETH/USDC</b><s>1.00% · Ethereum · v3</s></div>
+        <div class="lv"><em>$412</em><span class="pill idle">Idle 3d</span></div>
+      </div>
+      <div class="microrange">
+        <div class="w"></div>
+        <div class="seg" style="left:12%; width:34%"></div>
+        <span class="dot" style="left:74%"></span>
+      </div>
+    </div>
+    <div class="caption">
+      <h2>Liquidity, reduced <span>· outcome pill, mechanism on demand</span></h2>
+      <p><b>"Is it working" becomes a word.</b> Every row states its outcome as a pill —
+         <b>Earning +$59</b> in the money green, <b>Idle 3d</b> in attention — because that's the
+         question the card exists to answer, and a range bar makes the reader derive it. The fees
+         join the pill, so the earning number finally wears the earning color.</p>
+      <p><b>The range bar survives only where it explains something:</b> an idle row keeps a micro
+         version (your range cold, the price dot outside it — WHY it's idle, at a glance), an
+         earning row drops it entirely — in-range-ness is what "Earning" means, and drawing it
+         twice is the tally instinct wearing geometry. Rows shrink to activity-list height; the
+         card halves.</p>
+    </div>
+  </div>
+</div>
+
+<p class="law"><b>Law check:</b> color is state and money only (green = earning/arriving, attention =
+   idle, ink = spending — deliberate spending still isn't an alarm, per the "Owed" ruling); the
+   split bar's two widths are magnitude; sentence case; no hairlines (the micro-range's ring is the
+   card showing through); no dead controls — flow rows open their things, liquidity rows stay
+   terminal reads as today. The "Other" row keeps the no-silent-caps rule: the folded tail is named
+   and counted, never dropped. Nothing here animates.</p>
+</div>

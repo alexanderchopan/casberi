@@ -1,0 +1,496 @@
+<title>Wallet — seven new reads</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #1673e6; --tint-hi: #4d8dff; --confirm: #32d74b; --down: #ff5a5f; --attn: #ff9f0a;
+    --slab: #16181d; --well: #101216; --card: rgba(28,30,37,.82);
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  svg text { font-family: var(--money); }
+  html { background: var(--page); }
+  body { font-family: var(--text); color: var(--ink);
+         background: radial-gradient(900px 420px at 18% -8%, rgba(22,115,230,.10), transparent 62%), var(--page);
+         padding: 48px 28px 72px; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  header { max-width: 820px; margin-bottom: 38px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: var(--tint-hi); margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.4vw,36px); font-weight: 800; letter-spacing: -.02em; line-height: 1.1; margin-bottom: 12px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 70ch; margin-bottom: 8px; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 36px; align-items: flex-start; justify-content: center; margin-bottom: 26px; }
+  .option { width: 340px; }
+  .phone { width: 340px; border-radius: 46px; padding: 10px; background: #15171c; box-shadow: 0 30px 70px rgba(0,0,0,.55); }
+  .screen { border-radius: 38px; overflow: hidden; padding: 18px 14px 22px; min-height: 430px;
+            background: linear-gradient(180deg, rgba(22,115,230,.14) 0%, rgba(22,115,230,.04) 40%, transparent 78%) top/100% 300px no-repeat, #000; }
+
+  /* shared chrome */
+  .cap  { font-size: 10.5px; font-weight: 600; color: var(--faint); }
+  .big  { font-family: var(--money); font-size: 40px; font-weight: 800; letter-spacing: -.03em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+  .pill { font-family: var(--money); font-size: 12px; font-weight: 800; padding: 3px 8px; border-radius: 999px;
+          background: rgba(50,215,75,.16); color: var(--confirm); font-variant-numeric: tabular-nums; }
+  .pill.dn { background: rgba(255,90,95,.16); color: var(--down); }
+  .pill.flat { background: rgba(255,255,255,.08); color: var(--faint); }
+  .card { background: var(--card); border-radius: 20px; padding: 14px; margin-top: 12px; }
+  .card h4 { font-family: var(--money); font-size: 13.5px; font-weight: 700; margin-bottom: 2px; }
+  .card .sub { font-size: 11px; color: var(--faint); margin-bottom: 10px; }
+  .quiet { font-size: 10.5px; color: var(--faint); margin-top: 9px; line-height: 1.45; }
+  .quiet b { color: var(--muted); font-weight: 650; }
+
+  /* 1 · flow band */
+  .flowlab { display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; color: var(--faint); margin-bottom: 4px; }
+  .flowlab .in  { color: var(--confirm); }
+  .fl { display: flex; justify-content: space-between; font-size: 10.5px; margin-top: 3px; }
+  .fl b { font-weight: 650; color: var(--muted); }
+  .fl em { font-style: normal; font-family: var(--money); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  /* 2 · attribution */
+  .attr { display: flex; align-items: center; height: 26px; gap: 2px; margin: 10px 0 8px; }
+  .attr div { height: 100%; border-radius: 6px; }
+  .attr .neg { background: rgba(255,90,95,.75); }
+  .attr .pos { background: rgba(50,215,75,.75); }
+  .attr .pos.dim { background: rgba(50,215,75,.45); }
+  .attr .zero { width: 2px; height: 34px; border-radius: 2px; background: rgba(255,255,255,.35); }
+  .attrKey { display: flex; flex-wrap: wrap; gap: 5px 12px; font-size: 10.5px; color: var(--faint); }
+  .attrKey b { font-family: var(--money); font-weight: 700; color: var(--muted); }
+  .attrKey .up b { color: var(--confirm); } .attrKey .dn b { color: var(--down); }
+
+  /* 3 · risk strip */
+  .riskTrack { position: relative; height: 12px; border-radius: 999px; margin: 34px 4px 6px;
+               background: linear-gradient(90deg, rgba(50,215,75,.55), rgba(255,159,10,.55) 62%, rgba(255,90,95,.7)); }
+  .riskDot { position: absolute; top: 50%; width: 16px; height: 16px; border-radius: 50%;
+             transform: translate(-50%,-50%); background: #fff; box-shadow: 0 0 0 3px rgba(0,0,0,.85); }
+  .riskTag { position: absolute; bottom: 16px; transform: translateX(-50%); text-align: center; white-space: nowrap; }
+  .riskTag b { display: block; font-family: var(--money); font-size: 10.5px; font-weight: 700; }
+  .riskTag s { text-decoration: none; font-size: 9.5px; color: var(--faint); }
+  .riskEnds { display: flex; justify-content: space-between; font-size: 9.5px; color: var(--faint); padding: 0 4px; }
+
+  /* 4 · horizon */
+  .hz { position: relative; height: 96px; margin-top: 6px; }
+  .hzTrack { position: absolute; left: 0; right: 0; top: 50%; height: 8px; border-radius: 999px;
+             background: var(--well); transform: translateY(-50%); }
+  .hzDot { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%;
+           transform: translate(-50%,-50%); background: var(--tint); }
+  .hzDot.now  { background: #fff; width: 8px; height: 8px; }
+  .hzDot.soon { background: var(--attn); }
+  .hzTag { position: absolute; transform: translateX(-50%); text-align: center; white-space: nowrap; }
+  .hzTag.up { bottom: 62px; } .hzTag.dnn { top: 62px; }
+  .hzTag b { display: block; font-family: var(--money); font-size: 10.5px; font-weight: 700; }
+  .hzTag s { text-decoration: none; font-size: 9.5px; color: var(--faint); }
+  .hzEnds { display: flex; justify-content: space-between; font-size: 9.5px; color: var(--faint); }
+
+  /* 5 · slope board */
+  .sl { display: flex; align-items: center; gap: 10px; padding: 8px 2px; }
+  .sl .n b { display: block; font-family: var(--money); font-size: 13px; font-weight: 700; }
+  .sl .n s { text-decoration: none; font-size: 10px; color: var(--faint); }
+  .sl svg { margin-left: auto; flex: none; }
+  .sl .p { flex: none; width: 62px; text-align: right; }
+
+  /* 6 · blast radius */
+  .bl { padding: 8px 2px; }
+  .bl .t { display: flex; align-items: baseline; gap: 8px; }
+  .bl .t b { font-family: var(--money); font-size: 13px; font-weight: 700; }
+  .bl .t s { text-decoration: none; font-size: 10.5px; color: var(--faint); margin-left: auto; font-variant-numeric: tabular-nums; }
+  .bl .bar { height: 14px; border-radius: 6px; margin-top: 5px; background: var(--well); overflow: hidden; }
+  .bl .bar i { display: block; height: 100%; border-radius: 6px; }
+  .bl .why { font-size: 10px; color: var(--faint); margin-top: 4px; }
+  .bl .why u { text-decoration: none; color: var(--attn); font-weight: 650; }
+
+  /* 7 · splits */
+  .split { display: flex; height: 30px; gap: 2px; border-radius: 8px; overflow: hidden; margin: 8px 0 6px; }
+  .split div { display: flex; align-items: center; justify-content: center;
+               font-family: var(--money); font-size: 10.5px; font-weight: 800; color: #fff; }
+  .splitKey { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 10.5px; color: var(--faint); }
+  .splitKey b { color: var(--muted); font-weight: 650; font-family: var(--money); }
+
+  .caption { margin-top: 16px; padding: 0 4px; }
+  .caption h2 { font-size: 16.5px; font-weight: 700; margin-bottom: 6px; }
+  .caption h2 span { color: var(--faint); font-weight: 600; }
+  .caption p { font-size: 13px; line-height: 1.55; color: var(--muted); }
+  .caption p + p { margin-top: 7px; }
+  .caption b { color: var(--ink); font-weight: 650; }
+
+  .census { max-width: 900px; margin: 44px auto 0; }
+  .census h3 { font-size: 16px; font-weight: 700; margin-bottom: 12px; }
+  .census table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .census td { padding: 9px 12px 9px 0; color: var(--muted); vertical-align: top; line-height: 1.5; }
+  .census td:first-child { color: var(--faint); white-space: nowrap; font-weight: 600; width: 150px; }
+  .census b { color: var(--ink); font-weight: 650; }
+  .law { font-size: 12.5px; line-height: 1.65; color: var(--faint); max-width: 80ch; margin-top: 22px; }
+  .law b { color: var(--muted); font-weight: 600; }
+  .law + .law { margin-top: 12px; }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · Wallet · seven new reads</div>
+  <h1>Where it moved, what changed, what's coming</h1>
+  <p>The room already answers <b>what you hold</b> (treemap, composition strip, concentration) and
+     <b>what's risky</b> (lending card, warnings, the melt). These seven fill the three remaining
+     questions: <b>where money moved</b>, <b>what changed since you started watching</b>, and
+     <b>what's coming due</b>. Every one rides reads the app already lands — no new hosts, nothing
+     for the reach registry. One demo wallet throughout: $48,650 across main.eth, a Base wallet, toly.sol.</p>
+  <p>Color stays inside the law: identity by <b>label</b>, magnitude by <b>tint opacity</b>, state by the
+     three semantic colors wearing words. No categorical palette exists on this page to validate.</p>
+</header>
+
+<!-- ═══════════ 1 · FLOW BAND ═══════════ -->
+<div class="row">
+  <div class="option">
+    <div class="phone"><div class="screen">
+      <div class="cap">Across your wallets</div>
+      <div class="big">$48,650</div>
+      <div style="display:flex;gap:6px;align-items:center;margin-top:2px">
+        <span class="pill">+$1,240</span><span class="cap">this week · Mostly ETH</span>
+      </div>
+
+      <div class="card">
+        <h4>Where it moved</h4>
+        <div class="sub">This week · in $2,600 · out $1,358</div>
+        <div class="flowlab"><span class="in">In</span><span>Out</span></div>
+        <svg width="292" height="128" viewBox="0 0 292 128">
+          <!-- inflow bars -->
+          <rect x="0" y="6"  width="86" height="72" rx="7" fill="rgba(50,215,75,.30)"/>
+          <rect x="0" y="84" width="86" height="22" rx="7" fill="rgba(50,215,75,.30)"/>
+          <!-- ribbons in -->
+          <path d="M86,10 C112,10 112,26 136,26 L136,96 C112,96 112,74 86,74 Z" fill="rgba(50,215,75,.14)"/>
+          <path d="M86,88 C112,88 112,98 136,98 L136,112 C112,112 112,102 86,102 Z" fill="rgba(50,215,75,.14)"/>
+          <!-- the wallet spine -->
+          <rect x="136" y="14" width="16" height="104" rx="8" fill="rgba(22,115,230,.85)"/>
+          <!-- ribbons out -->
+          <path d="M152,22 C178,22 178,10 204,10 L204,52 C178,52 178,62 152,62 Z" fill="rgba(255,255,255,.10)"/>
+          <path d="M152,66 C178,66 178,62 204,62 L204,80 C178,80 178,82 152,82 Z" fill="rgba(255,255,255,.10)"/>
+          <path d="M152,86 C178,86 178,88 204,88 L204,98 C178,98 178,94 152,94 Z" fill="rgba(255,255,255,.10)"/>
+          <!-- outflow bars -->
+          <rect x="204" y="6"  width="88" height="48" rx="7" fill="rgba(255,255,255,.16)"/>
+          <rect x="204" y="60" width="88" height="21" rx="7" fill="rgba(255,255,255,.16)"/>
+          <rect x="204" y="87" width="88" height="12" rx="6" fill="rgba(255,255,255,.16)"/>
+          <!-- labels sit ON the bars -->
+          <text x="8"   y="36" font-size="10.5" font-weight="700" fill="#d9f7e1" font-family="ui-rounded,-apple-system">Coinbase</text>
+          <text x="8"   y="50" font-size="9.5"  fill="rgba(217,247,225,.7)" font-family="ui-rounded,-apple-system">$2,100</text>
+          <text x="8"   y="99" font-size="9.5"  font-weight="700" fill="#d9f7e1" font-family="ui-rounded,-apple-system">Peer · Venmo $500</text>
+          <text x="212" y="24" font-size="10.5" font-weight="700" fill="#e8ebf2" font-family="ui-rounded,-apple-system">Aave deposit</text>
+          <text x="212" y="38" font-size="9.5"  fill="rgba(232,235,242,.65)" font-family="ui-rounded,-apple-system">$1,000</text>
+          <text x="212" y="74" font-size="9.5"  font-weight="700" fill="#e8ebf2" font-family="ui-rounded,-apple-system">Card $340</text>
+          <text x="212" y="96" font-size="8.5"  fill="rgba(232,235,242,.6)"  font-family="ui-rounded,-apple-system">Fees $18</text>
+        </svg>
+        <div class="quiet">Every ribbon is a landed thing — tap opens its row. Names come from
+          your address book; an unnamed counterparty shows its short hex.</div>
+      </div>
+    </div></div>
+    <div class="caption">
+      <h2>1 · The flow band <span>· "where did it go?"</span></h2>
+      <p><b>The question the sparkline can't answer.</b> The line says the total moved; this says through
+         whom. Money moving is the doctrine's one blessed exception, and every ribbon here is already a
+         landed thing (EVM transfers, Solana activity, Peer fills, Gnosis Pay spends) — the band is an
+         arrangement of the corpus, not a new read.</p>
+      <p><b>In wears confirm, out wears ink.</b> Arriving money is the app's one green moment
+         (SourceMoments already rains for it). Outflow is deliberately <b>not red</b> — spending you did
+         on purpose isn't an alarm; that's the composition strip's own "Owed" ruling extended. Slots as
+         its own card after the balance card, replacing nothing.</p>
+    </div>
+  </div>
+
+<!-- ═══════════ 2 · ATTRIBUTION BAR ═══════════ -->
+  <div class="option">
+    <div class="phone"><div class="screen">
+      <div class="cap">Across your wallets</div>
+      <div class="big">$48,650</div>
+      <svg class="spark" width="292" height="44" viewBox="0 0 292 44" style="margin:8px 0 0">
+        <path d="M0,34 C40,32 60,28 90,29 C130,30 150,20 190,18 C230,16 260,12 288,10"
+              fill="none" stroke="#32d74b" stroke-width="2.6" stroke-linecap="round"/>
+        <circle cx="288" cy="10" r="3.4" fill="#32d74b"/>
+      </svg>
+      <div style="display:flex;gap:6px;align-items:center;margin-top:6px">
+        <span class="pill">+$1,240</span><span class="cap">this week</span>
+      </div>
+
+      <div class="card">
+        <h4>What moved it</h4>
+        <div class="sub">Each asset's share of the week's change</div>
+        <div class="attr">
+          <div class="neg" style="width:22px" title="AERO −$95"></div>
+          <div class="neg" style="width:10px" title="USDC −$40"></div>
+          <div class="zero"></div>
+          <div class="pos" style="width:158px" title="ETH +$980"></div>
+          <div class="pos dim" style="width:50px" title="HYPE +$310"></div>
+          <div class="pos dim" style="width:14px" title="SOL +$85"></div>
+        </div>
+        <div class="attrKey">
+          <span class="up">ETH <b>+$980</b></span>
+          <span class="up">HYPE <b>+$310</b></span>
+          <span class="up">SOL <b>+$85</b></span>
+          <span class="dn">AERO <b>−$95</b></span>
+          <span class="dn">USDC <b>−$40</b></span>
+        </div>
+        <div class="quiet">Signed and to scale: the eye checks the sum against the delta pill above.
+          Differences come from the same per-token snapshots the mover line already reads.</div>
+      </div>
+    </div></div>
+    <div class="caption">
+      <h2>2 · The attribution bar <span>· §208's whisper, drawn</span></h2>
+      <p><b>"Mostly ETH · +$310" as a picture.</b> The prose mover line computes exactly this and then
+         says only its largest term. The bar says all of them, signed around a zero spine, so a week
+         where two assets fought (ETH up, AERO down) stops reading as "ETH did it."</p>
+      <p><b>No new data.</b> The 60/40 per-token snapshots inside every <b>ValueSample</b> already carry
+         the pair to difference — this is the combined sheet's "What moved" list, folded into one glance.
+         Lives inside the balance card, directly under the sparkline; the prose whisper stays as its
+         caption. Green/red is legal here: the segments ARE direction, and a change that rounds to zero
+         draws nothing (the isFlat rule).</p>
+    </div>
+  </div>
+
+<!-- ═══════════ 3 · RISK STRIP ═══════════ -->
+  <div class="option">
+    <div class="phone"><div class="screen">
+      <div class="cap" style="margin-bottom:4px">Lending &amp; leverage</div>
+      <div class="card" style="margin-top:6px">
+        <h4>Distance to liquidation</h4>
+        <div class="sub">Every leveraged position, one scale</div>
+        <div class="riskTrack">
+          <span class="riskTag" style="left:16%"><b>Aave</b><s>HF 2.4</s></span>
+          <span class="riskDot" style="left:16%"></span>
+          <span class="riskTag" style="left:56%"><b>Morpho</b><s>HF 1.62</s></span>
+          <span class="riskDot" style="left:56%"></span>
+          <span class="riskTag" style="left:82%"><b>HL · ETH</b><s>18% away</s></span>
+          <span class="riskDot" style="left:82%"></span>
+        </div>
+        <div class="riskEnds"><span>comfortable</span><span>liquidation</span></div>
+        <div class="quiet">Tap a dot → the position's own card below. The strip appears only when
+          ≥ 2 leveraged positions exist; with one, the lending card alone already says this.</div>
+      </div>
+
+      <div class="card">
+        <h4 style="color:#99a1b4">Lending</h4>
+        <div class="sub">Aave · supplied $8.2k · borrowed $2.1k · health 2.4<br>
+             Morpho · WETH/USDC · borrowed $3.4k · health 1.62</div>
+      </div>
+    </div></div>
+    <div class="caption">
+      <h2>3 · The one-scale risk strip <span>· four protocols, one axis</span></h2>
+      <p><b>The lending card states health per protocol in its own units</b> — Aave/Morpho HF, Hyperliquid's
+         %-to-mark. This normalizes them onto one <i>distance-to-liquidation</i> axis, so "which position is
+         closest to the edge" stops being arithmetic. Hyperliquid's 15%-of-mark alert scale already proves
+         normalizing without an HF is possible.</p>
+      <p><b>Gradient is state, not decoration:</b> confirm → attention → destructive is the exact bucket
+         ramp the risk-crossing alerts already use, and each dot wears its own number in words. No new
+         reads — positions all sit in WalletDeFi/HyperliquidDeFi's books. Slots directly above the
+         lending card; a nil strip (0–1 positions) declines the slot.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 4 · HORIZON ═══════════ -->
+<div class="row">
+  <div class="option">
+    <div class="phone"><div class="screen">
+      <div class="cap" style="margin-bottom:4px">Worth doing</div>
+      <div class="card" style="margin-top:6px">
+        <h4>Coming due</h4>
+        <div class="sub">The next 30 days</div>
+        <div class="hz">
+          <div class="hzTrack"></div>
+          <span class="hzDot now" style="left:2%"></span>
+          <span class="hzTag up" style="left:16%"><b>Aero vote closes</b><s>Wed Aug 5</s></span>
+          <span class="hzDot soon" style="left:16%"></span>
+          <span class="hzTag dnn" style="left:38%"><b>HYPE unlocks</b><s>Aug 12</s></span>
+          <span class="hzDot" style="left:38%"></span>
+          <span class="hzTag up" style="left:62%"><b>casberi.eth renews</b><s>Aug 19</s></span>
+          <span class="hzDot" style="left:62%"></span>
+          <span class="hzTag dnn" style="left:90%;transform:translateX(-68%)"><b>Lock #2 ends</b><s>Aug 28</s></span>
+          <span class="hzDot" style="left:90%"></span>
+        </div>
+        <div class="hzEnds"><span>today</span><span>+30d</span></div>
+        <div class="quiet">Each dot is a landed <b>dueAt</b> thing — tap opens it. Inside 7 days a dot
+          wears attention. Distance is to scale; two dots on one day merge and say "2".</div>
+      </div>
+    </div></div>
+    <div class="caption">
+      <h2>4 · The coming-due horizon <span>· "what's next" as space</span></h2>
+      <p><b>Every wallet sweep already lands the ENSExpiry shape:</b> Aerodrome vote deadlines and lock
+         expiries, staked HYPE unlocks, ENS renewals, 1Claw grant expiries. They render today as rows in
+         "Worth doing," which answers <i>what</i> but hides <i>how bunched</i>. A timeline makes the next
+         month's obligations one glance — the gap between dots is the information.</p>
+      <p><b>Doctrine-clean:</b> this is WHAT'S NEXT as a visualization, and the track is a recessed well,
+         not a hairline. Slots at the head of "Worth doing"; declines below 2 dated items (one row says
+         itself better).</p>
+    </div>
+  </div>
+
+<!-- ═══════════ 5 · SLOPE BOARD ═══════════ -->
+  <div class="option">
+    <div class="phone"><div class="screen">
+      <div class="cap" style="margin-bottom:4px">Watching</div>
+      <div class="card" style="margin-top:6px">
+        <h4>Since you watched</h4>
+        <div class="sub">Then → now, from the day each watch began</div>
+
+        <div class="sl">
+          <div class="n"><b>HYPE</b><s>watched Jul 12</s></div>
+          <svg width="96" height="30" viewBox="0 0 96 30">
+            <line x1="8" y1="24" x2="88" y2="7" stroke="rgba(50,215,75,.6)" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="8" cy="24" r="4" fill="rgba(255,255,255,.35)"/><circle cx="88" cy="7" r="4.5" fill="#32d74b"/>
+          </svg>
+          <div class="p"><span class="pill">+29%</span></div>
+        </div>
+        <div class="sl">
+          <div class="n"><b>AERO</b><s>watched Jul 12</s></div>
+          <svg width="96" height="30" viewBox="0 0 96 30">
+            <line x1="8" y1="22" x2="88" y2="9" stroke="rgba(50,215,75,.6)" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="8" cy="22" r="4" fill="rgba(255,255,255,.35)"/><circle cx="88" cy="9" r="4.5" fill="#32d74b"/>
+          </svg>
+          <div class="p"><span class="pill">+31%</span></div>
+        </div>
+        <div class="sl">
+          <div class="n"><b>DEGEN</b><s>watched Jul 20</s></div>
+          <svg width="96" height="30" viewBox="0 0 96 30">
+            <line x1="8" y1="9" x2="88" y2="23" stroke="rgba(255,90,95,.6)" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="8" cy="9" r="4" fill="rgba(255,255,255,.35)"/><circle cx="88" cy="23" r="4.5" fill="#ff5a5f"/>
+          </svg>
+          <div class="p"><span class="pill dn">−25%</span></div>
+        </div>
+        <div class="sl">
+          <div class="n"><b>KTA</b><s>watched Jul 28</s></div>
+          <svg width="96" height="30" viewBox="0 0 96 30">
+            <line x1="8" y1="16" x2="88" y2="16" stroke="rgba(255,255,255,.3)" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="8" cy="16" r="4" fill="rgba(255,255,255,.35)"/><circle cx="88" cy="16" r="4.5" fill="rgba(255,255,255,.55)"/>
+          </svg>
+          <div class="p"><span class="pill flat">0%</span></div>
+        </div>
+        <div class="quiet">Two honest points, deliberately not a curve — the app observed the watch
+          moment and now; it never recorded the path between and won't draw one.</div>
+      </div>
+    </div></div>
+    <div class="caption">
+      <h2>5 · The slope board <span>· grounded in first-seen</span></h2>
+      <p><b>The Hyperliquid rule as a chart:</b> never fabricate history you didn't observe. Each watch
+         already stamps its own moment and price (the TokenWatch thing); the dumbbell draws exactly the
+         two facts the app holds. The same primitive serves Kalshi/Polymarket positions — odds at save →
+         odds now.</p>
+      <p><b>Why not sparklines?</b> Per-token curves exist one tap away (TokenChartView). The board's job
+         is comparison at the moment that's personal — <i>since you cared</i> — which no exchange chart
+         shows. Slots at the head of the watchlist section. Slope angle is normalized per row (the % pill
+         carries magnitude); a flat row draws gray and signless, per the isFlat rule.</p>
+    </div>
+  </div>
+
+<!-- ═══════════ 6 · BLAST RADIUS ═══════════ -->
+  <div class="option">
+    <div class="phone"><div class="screen">
+      <div class="cap" style="margin-bottom:4px">Just so you know</div>
+      <div class="card" style="margin-top:6px">
+        <h4>What approvals can reach</h4>
+        <div class="sub">Allowance × what the wallet actually holds</div>
+
+        <div class="bl">
+          <div class="t"><b>Permit2 · Uniswap</b><s>$9,840 · unlimited</s></div>
+          <div class="bar"><i style="width:92%;background:rgba(255,159,10,.65)"></i></div>
+          <div class="why">Can move <u>all your USDC</u> · approved Mar 2026 · Prepare revoke ›</div>
+        </div>
+        <div class="bl">
+          <div class="t"><b>Aave pool</b><s>$1,000 · bounded</s></div>
+          <div class="bar"><i style="width:10%;background:rgba(22,115,230,.6)"></i></div>
+          <div class="why">Up to 0.27 ETH · approved this week</div>
+        </div>
+        <div class="bl">
+          <div class="t" style="opacity:.55"><b>SushiSwap router</b><s>$0 · spent</s></div>
+          <div class="bar"><i style="width:2%;background:rgba(255,255,255,.18)"></i></div>
+          <div class="why" style="opacity:.55">Allowance used up — nothing left to move</div>
+        </div>
+        <div class="quiet">Sized by money at risk, so the top bar is always the revoke that shrinks
+          exposure most. Live allowance read at render — a spent approval says so instead of alarming.</div>
+      </div>
+    </div></div>
+    <div class="caption">
+      <h2>6 · The approval blast radius <span>· the spam filter, inverted</span></h2>
+      <p><b>WalletApprovals already computes both factors:</b> the allowance (from the landed event +
+         the prepare path's live <i>eth_call</i> read) and what the wallet holds (the same holdings that
+         filter spam approvals). Multiplying them turns a list of contract names into a ranked answer to
+         "which single revoke matters."</p>
+      <p><b>Attention, not destructive:</b> an unlimited approval you granted on purpose is exposure, not
+         an attack — destructive stays reserved for the liquidation bucket. Rows keep the existing
+         prepare door (reads and previews in-app, signatures elsewhere, prd §112). Slots above the aware
+         pile; declines when no active approval survives the holdings filter.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 7 · SPLITS ═══════════ -->
+<div class="row">
+  <div class="option">
+    <div class="phone"><div class="screen">
+      <div class="cap" style="margin-bottom:4px">Holdings</div>
+      <div class="card" style="margin-top:6px">
+        <h4>How exposed</h4>
+        <div class="sub">Stable vs volatile, across everything priced</div>
+        <div class="split">
+          <div style="width:21%;background:rgba(22,115,230,.85)">21%</div>
+          <div style="width:79%;background:rgba(22,115,230,.28);color:#c9d6ee">volatile 79%</div>
+        </div>
+        <div class="splitKey"><span>Stable <b>$10.3k</b> · USDC, EURe</span><span>Volatile <b>$38.3k</b></span></div>
+      </div>
+
+      <div class="card">
+        <h4>Where it lives</h4>
+        <div class="sub">By chain</div>
+        <div class="split">
+          <div style="width:46%;background:rgba(22,115,230,.85)">46%</div>
+          <div style="width:27%;background:rgba(22,115,230,.60)">27%</div>
+          <div style="width:15%;background:rgba(22,115,230,.42)">15%</div>
+          <div style="width:9%;background:rgba(22,115,230,.28)"></div>
+          <div style="width:3%;background:rgba(22,115,230,.18)"></div>
+        </div>
+        <div class="splitKey">
+          <span>Ethereum <b>46%</b></span><span>Base <b>27%</b></span>
+          <span>Hyperliquid <b>15%</b></span><span>Solana <b>9%</b></span><span>Gnosis <b>3%</b></span>
+        </div>
+        <div class="quiet">One hue, stepped by share — magnitude, not decoration. Identity lives in
+          the key, matching how the treemap already labels its cells.</div>
+      </div>
+    </div></div>
+    <div class="caption">
+      <h2>7 · The two splits <span>· cheapest of the seven</span></h2>
+      <p><b>Two segmented bars from the holdings read the room already pays for.</b> Stable-vs-volatile
+         answers "how exposed am I" in one number the treemap only implies; by-chain answers "where do I
+         live." A stablecoin list (USDC/USDT/DAI/EURe/GBPe…) is a static table, and chain is already on
+         every holding.</p>
+      <p><b>Placement question for ruling:</b> inside the allocation tray (keeps the room lean, but
+         hides them behind a door) or under the treemap in the room (visible, but the room grows).
+         Mocked as room cards; my lean is the tray — the treemap already carries composition at a
+         glance, and these are its second sentence, not a new subject.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ CENSUS ═══════════ -->
+<div class="census">
+  <h3>What each rides on</h3>
+  <table>
+    <tr><td>Flow band</td><td><b>Zero new reads.</b> Landed transfer/fill/spend things + address book names. The work is grouping a window of the corpus by counterparty and drawing it.</td></tr>
+    <tr><td>Attribution bar</td><td><b>Zero new reads.</b> ValueSample's per-token snapshots — the mover line's own arithmetic, all terms kept. Verifies with -seedWalletHistory.</td></tr>
+    <tr><td>Risk strip</td><td><b>Zero new reads.</b> WalletDeFi + MorphoDeFi + HyperliquidDeFi books, already fetched for the lending card. Needs one normalization function (HF → distance, %-to-mark → distance) — pure, harness-testable.</td></tr>
+    <tr><td>Horizon</td><td><b>Zero new reads.</b> Query: wallet-sourced things with dueAt in the next 30 days. Verifies with -aerodromeProbe / -hyperliquidProbe landing real dueAt rows.</td></tr>
+    <tr><td>Slope board</td><td><b>Needs one additive field:</b> price-at-watch on the TokenWatch thing (stamped at watch time, backfilled nil — old watches honestly show "since Jul 31" from first sync). The only one touching Thing; purely additive, no migration.</td></tr>
+    <tr><td>Blast radius</td><td><b>Reuses the prepare path's live allowance read</b> (currently fired per-sheet, would fire per-render of the card — worth a §216-style window). Holdings factor is already computed for spam filtering.</td></tr>
+    <tr><td>Splits</td><td><b>Zero new reads.</b> Holdings + a static stablecoin symbol set + the chain each holding already carries.</td></tr>
+  </table>
+
+  <p class="law"><b>Law check:</b> no hairlines — the horizon's track and the blast-radius bars are recessed
+     wells, the attribution zero-spine is a mark, not a rule; sentence case throughout; glass stays floating;
+     color is identity-by-label, magnitude-by-tint-opacity, state-by-the-three-semantics wearing words
+     (in = confirm because arriving money is the app's green moment; out = ink because deliberate spending
+     isn't an alarm — the "Owed" precedent; approval exposure = attention, never destructive). Every hero
+     declines its slot with nil under its floor, and every dot/ribbon/bar is a door to a real thing or a
+     read — no dead controls.</p>
+  <p class="law"><b>Doctrine check:</b> flow band and attribution are money moving (the blessed exception);
+     the horizon is WHAT'S NEXT; risk strip, blast radius and splits are visualizations of held state;
+     the slope board draws only observed moments (first-seen grounding, the Hyperliquid rule) — two points,
+     never a fabricated curve. Nothing here is a tally wearing a chart.</p>
+  <p class="law"><b>Build order if approved (cheapest → dearest):</b> splits → horizon → attribution →
+     slope board → risk strip → blast radius → flow band. Each is its own commit with its own headless
+     probe (the -roomInsightProbe lesson: the failure mode is a card silently owning another's slot, so
+     each new card's decline conditions get logged, not just its happy path).</p>
+</div>
+</div>

@@ -295,6 +295,14 @@ enum ZerionAPI {
         /// deposit/withdraw. Consumed by `WalletVerbs.operationVerb`; nil when
         /// absent so the caller degrades to its old sentence.
         let operationType: String?
+        /// What this leg was worth in USD when it moved — Zerion's own `value`,
+        /// which the request has always asked for (`currency=usd`) and this
+        /// parser used to discard (2026-08-01, for the flow band). nil when
+        /// Zerion couldn't price the token, which is a real and common answer
+        /// for a long-tail asset; never defaulted to zero, since "worth
+        /// nothing" and "nobody knows" are different facts and the band draws
+        /// them differently.
+        let valueUSD: Double?
     }
 
     /// A wallet's recent fungible activity across the EVM chains Casberi
@@ -346,16 +354,23 @@ enum ZerionAPI {
                 let contract = implementationAddress(info["implementations"], chainId: zid)
                 let sender = (t["sender"] as? String)?.lowercased()
                 let recipient = (t["recipient"] as? String)?.lowercased()
+                // Through the same finite/positive guard every other number
+                // off this API takes — an infinite or negative "value" would
+                // otherwise reach the flow band's own scale and flatten every
+                // ribbon beside it.
+                let value = doubleValue(t["value"]).flatMap { $0 > 0 ? $0 : nil }
 
                 if direction == "in" || direction == "self" {
                     out.append(Transfer(hash: hash, network: network, received: true,
                                         symbol: clean(symbol), contract: contract, amount: amount,
-                                        counterparty: sender, when: when, operationType: operation))
+                                        counterparty: sender, when: when, operationType: operation,
+                                        valueUSD: value))
                 }
                 if direction == "out" || direction == "self" {
                     out.append(Transfer(hash: hash, network: network, received: false,
                                         symbol: clean(symbol), contract: contract, amount: amount,
-                                        counterparty: recipient, when: when, operationType: operation))
+                                        counterparty: recipient, when: when, operationType: operation,
+                                        valueUSD: value))
                 }
             }
         }
