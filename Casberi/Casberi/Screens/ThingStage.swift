@@ -205,25 +205,26 @@ struct TransferStageView: View {
 
     // MARK: - Faces (identity on the solid crown — ringed to hold their edge)
 
-    /// This wallet's own face: the profile avatar when set, else the
-    /// wallet's own identicon (deterministic — the same face WalletFace
-    /// gives it everywhere). Round, not squircle (2026-07-23, user: "the
-    /// avatar is supposed to be a circle" / "contacts and people are
-    /// circles") — the same "a who wears a round face" rule
-    /// `AddressBook.Kind.glyph` already draws on (a wallet is a who; a
-    /// contract or Safe is a what and keeps the square mark). A watched
-    /// wallet is definitionally always a who.
-    @ViewBuilder private var youFace: some View {
-        if let avatar = ProfileStore.shared.avatar {
-            Image(uiImage: avatar)
-                .resizable().scaledToFill()
-                .frame(width: 50, height: 50)
-                .clipShape(Circle())
-                .overlay(faceRing)
-        } else {
-            WalletFace(address: thing.walletAddress ?? "you", size: 50, circular: true)
-                .overlay(faceRing)
-        }
+    /// The watched wallet's face — the address's OWN identity, never the
+    /// person's profile photo (2026-08-02, user: "transfers to vitalik …
+    /// showing my own avatar instead of his"). This is the face half of the
+    /// ruling `youLabel` below already carries: a watched wallet is read-only
+    /// and nothing here distinguishes the person's own wallet from a public
+    /// address they're just tracking, so painting their profile photo over it
+    /// claims a wallet is theirs when the app can't know that — and got it
+    /// flatly wrong on every transfer landed by a watched wallet that isn't
+    /// (vitalik.eth wearing the person's picture). `WalletFace` answers the
+    /// same way it does everywhere else: the resolved ENS avatar when the
+    /// address published one, else its deterministic identicon.
+    ///
+    /// Round, not squircle (2026-07-23, user: "the avatar is supposed to be a
+    /// circle" / "contacts and people are circles") — the same "a who wears a
+    /// round face" rule `AddressBook.Kind.glyph` already draws on (a wallet is
+    /// a who; a contract or Safe is a what and keeps the square mark). A
+    /// watched wallet is definitionally always a who.
+    private var youFace: some View {
+        WalletFace(address: thing.walletAddress ?? "you", size: 50, circular: true)
+            .overlay(faceRing)
     }
 
     /// The counterparty's face — WalletFace's identicon seeded from whatever
