@@ -4384,14 +4384,14 @@ struct FeedScreen: View {
             Task {
                 do {
                     try await HandOff.addToCalendar(thing)
-                    chrome.flash("On your calendar", tone: .success)
+                    chrome.flash(String(localized: "Copied — paste it in Calendar"), tone: .success)
                 } catch { chrome.flash(error.localizedDescription, tone: .failure) }
             }
         case .addToReminders:
             Task {
                 do {
                     try await HandOff.addToReminders(thing)
-                    chrome.flash("On your list", tone: .success)
+                    chrome.flash(String(localized: "Copied — paste it in Reminders"), tone: .success)
                 } catch { chrome.flash(error.localizedDescription, tone: .failure) }
             }
         case .copyText:

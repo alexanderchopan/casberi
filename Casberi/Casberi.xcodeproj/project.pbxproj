@@ -549,7 +549,6 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "Casberi reads what you've recently played so it lands in your feed.";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Casberi reads your events so your day lands as things.";
-				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "Casberi adds events to your calendar when you ask.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Casberi scans a product's barcode so its item lands in your feed.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "Casberi reads your contacts so the people you know become findable — search-only, never shown in your feed.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Casberi reads your workouts so they land in your feed.";
@@ -558,7 +557,7 @@
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Casberi reads your location once to show today's weather in Coming up — never in the background.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Casberi records your voice notes when you tap the mic.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Casberi reads screenshots you take so they land as things.";
-				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Casberi adds reminders to your list when you ask.";
+				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Casberi reads your reminders so your list lands as things.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Casberi transcribes your voice notes so they stay findable.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -602,7 +601,6 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "Casberi reads what you've recently played so it lands in your feed.";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Casberi reads your events so your day lands as things.";
-				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "Casberi adds events to your calendar when you ask.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Casberi scans a product's barcode so its item lands in your feed.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "Casberi reads your contacts so the people you know become findable — search-only, never shown in your feed.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Casberi reads your workouts so they land in your feed.";
@@ -611,7 +609,7 @@
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Casberi reads your location once to show today's weather in Coming up — never in the background.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Casberi records your voice notes when you tap the mic.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Casberi reads screenshots you take so they land as things.";
-				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Casberi adds reminders to your list when you ask.";
+				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Casberi reads your reminders so your list lands as things.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Casberi transcribes your voice notes so they stay findable.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

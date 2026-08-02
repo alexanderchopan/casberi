@@ -510,7 +510,7 @@ struct VerbDial: View {
     /// Open Open" — the destination is the differentiator, so it's what the
     /// disc says.
     static func dialLabel(for verb: Verb) -> String {
-        for prefix in ["Open in ", "Add to "] where verb.label.hasPrefix(prefix) {
+        for prefix in ["Open in ", "Send to ", "Add to "] where verb.label.hasPrefix(prefix) {
             return String(verb.label.dropFirst(prefix.count))
         }
         if verb.label.hasPrefix("Open") { return "Open" }

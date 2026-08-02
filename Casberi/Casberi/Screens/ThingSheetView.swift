@@ -1133,12 +1133,14 @@ struct ThingSheetView: View {
         case .addToCalendar:
             do {
                 try await HandOff.addToCalendar(thing)
-                verbResult = "On your calendar"
+                verbResult = String(localized: "Copied — paste it in Calendar")
             } catch { verbResult = error.localizedDescription; verbResultIsError = true }
         case .addToReminders:
             do {
                 try await HandOff.addToReminders(thing)
-                verbResult = "On your list"
+                // Names both halves: the app opened, and the words are on the
+                // clipboard waiting to be pasted. Casberi did not file it.
+                verbResult = String(localized: "Copied — paste it in Reminders")
             } catch { verbResult = error.localizedDescription; verbResultIsError = true }
         case .copyText:
             DSPasteboard.copy(thing.content.isEmpty ? thing.title : thing.content)

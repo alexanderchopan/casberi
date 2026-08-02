@@ -21,12 +21,12 @@ struct Verb: Identifiable {
     let label: String
     let icon: String
     let action: Action
-    var isWrite: Bool {
-        switch action {
-        case .addToCalendar, .addToReminders: return true
-        default: return false
-        }
-    }
+    /// Nothing in this app writes into another app any more (2026-08-02 — see
+    /// `HandOff`), so every verb is a read or a hand-off and none of them needs
+    /// a confirmation. Kept as a constant rather than deleted: the gate it
+    /// feeds is the thing that made "ask before acting" mechanical, and a verb
+    /// that ever DID write again should have to flip this deliberately.
+    var isWrite: Bool { false }
     /// Compact form for swipe buttons.
     var shortLabel: String {
         switch action {
@@ -71,7 +71,7 @@ enum VerbDerivation {
             out.append(thing.source == "Calendar"
                 ? Verb(label: "Open in Calendar", icon: "calendar",
                        action: .openURL(URL(string: "calshow://")!))
-                : Verb(label: "Add to Calendar", icon: "calendar.badge.plus",
+                : Verb(label: "Send to Calendar", icon: "calendar.badge.plus",
                        action: .addToCalendar))
         case .reminder:
             // A real reminder (Reminders source) is READ-ONLY (ruling
@@ -82,7 +82,7 @@ enum VerbDerivation {
             // added by the source-hand-off step below. A reminder captured
             // elsewhere can still be added to the real list.
             if thing.source != "Reminders" {
-                out.append(Verb(label: "Add to Reminders", icon: "checklist",
+                out.append(Verb(label: "Send to Reminders", icon: "checklist",
                                 action: .addToReminders))
             }
             if let v = externalVerb(for: thing, apps: [.todoist]) { out.append(v) }
@@ -144,7 +144,7 @@ enum VerbDerivation {
         case .note:
             // A note's next action: it becomes a reminder (S4 — captures
             // become outcomes). The write confirms; copy follows.
-            out.append(Verb(label: "Add to Reminders", icon: "checklist",
+            out.append(Verb(label: "Send to Reminders", icon: "checklist",
                             action: .addToReminders))
             if let v = externalVerb(for: thing, apps: [.todoist]) { out.append(v) }
             out.append(Verb(label: "Copy text", icon: "doc.on.doc", action: .copyText))
@@ -388,58 +388,68 @@ enum HandOffState {
     }
 }
 
-/// Rung 2 hand-off writes through EventKit. Each write is invoked only after
-/// the ask-before-acting confirmation.
+/// Hand-offs. Casberi COPIES and OPENS — it never writes into another app
+/// (user ruling, restated 2026-08-02: "we shouldn't write to reminders it
+/// should copy and open there"; originally 2026-07-16, "no matter what we
+/// should jump, we don't write").
+///
+/// These two used to be the exception, and it was never a deliberate one. The
+/// composer's Send-to chips have honoured the ruling since the day it was made
+/// — copy where a URL can't carry the text, jump, and say so in the flash —
+/// while the thing sheet's dial quietly built an `EKReminder`/`EKEvent` and
+/// `store.save(…, commit: true)`'d it into the person's real list. Two
+/// surfaces, opposite behaviour, one of them wrong. It surfaced from the far
+/// end: the disc read "Reminders", a bare noun among Copy/Translate/Share, and
+/// no honest word existed for it because the thing it did was the problem.
+///
+/// The permissions follow, and were checked rather than assumed:
+/// `NSCalendarsWriteOnlyAccessUsageDescription` is DELETED, because after this
+/// no code path requests calendar write access at all. The two FULL-access
+/// keys stay — `ScheduleIngest` needs them to READ your events and reminders
+/// in, which is the whole Calendar/Reminders bridge — but the Reminders string
+/// was rewritten: it said "Casberi adds reminders to your list when you ask",
+/// which as of today is a promise the app makes to the system and then
+/// doesn't keep.
 enum HandOff {
 
     static func addToCalendar(_ thing: Thing) async throws {
-        let store = EKEventStore()
-        guard try await store.requestWriteOnlyAccessToEvents() else {
-            throw HandOffError.declined
-        }
-        let event = EKEvent(eventStore: store)
-        event.title = thing.title
-        event.notes = thing.content.isEmpty ? nil : thing.content
-        // This verb only ever derives for `.event` things (VerbDerivation),
-        // whose `capturedAt` IS the real start time ScheduleIngest stamped —
-        // so the real date is always in hand here; `defaultStart()` stays
-        // only as the honest fallback for a kind this verb doesn't actually
-        // reach today.
-        event.startDate = thing.kind == .event ? thing.capturedAt : defaultStart()
-        event.endDate = event.startDate.addingTimeInterval(3600)
-        event.calendar = store.defaultCalendarForNewEvents
-        try store.save(event, span: .thisEvent)
+        // The event's own time where it has one, so Calendar opens ON that day
+        // rather than today — the same `calshow:` trick the composer's chip
+        // uses, and the reason this passes a date at all.
+        let date = thing.kind == .event ? thing.capturedAt : thing.dueAt
+        let url = date.map { URL(string: "calshow:\(Int($0.timeIntervalSinceReferenceDate))") }
+            ?? URL(string: "calshow://")
+        try await jump(thing, to: url)
     }
 
     static func addToReminders(_ thing: Thing) async throws {
-        let store = EKEventStore()
-        guard try await store.requestFullAccessToReminders() else {
-            throw HandOffError.declined
-        }
-        let reminder = EKReminder(eventStore: store)
-        reminder.title = thing.title
-        reminder.notes = thing.content.isEmpty ? nil : thing.content
-        reminder.calendar = store.defaultCalendarForNewReminders()
-        // A real `dueAt` (a landed 1Claw grant's expiry, say) rides over —
-        // never invented for a thing that doesn't carry one.
-        if let due = thing.dueAt {
-            reminder.dueDateComponents = Calendar.current.dateComponents(
-                [.year, .month, .day, .hour, .minute], from: due)
-        }
-        try store.save(reminder, commit: true)
+        try await jump(thing, to: URL(string: "x-apple-reminderkit://"))
     }
 
-    /// Tomorrow 9:00 — a sane default until the parse carries dates (M6).
-    private static func defaultStart() -> Date {
-        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: .now) ?? .now
-        return Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: tomorrow) ?? tomorrow
+    /// Copy the thing's own words, then open the app. The copy happens FIRST
+    /// and unconditionally: neither scheme can carry text, so the clipboard is
+    /// the only thing that makes the jump useful, and a jump that succeeded
+    /// with an empty clipboard would be the worse failure — the person lands in
+    /// Reminders with nothing to paste and no way to know why.
+    @MainActor
+    private static func jump(_ thing: Thing, to url: URL?) async throws {
+        let text = thing.content.isEmpty ? thing.title : thing.content
+        DSPasteboard.copy(text)
+        guard let url, UIApplication.shared.canOpenURL(url) else {
+            throw HandOffError.unavailable
+        }
+        guard await UIApplication.shared.open(url) else {
+            throw HandOffError.unavailable
+        }
     }
 
     enum HandOffError: LocalizedError {
-        case declined
-        // After a system denial iOS never re-asks — Settings is the only
-        // honest route, so the message names it.
-        var errorDescription: String? { "No access — allow Casberi in \(DS.settingsAppName)" }
+        case unavailable
+        var errorDescription: String? {
+            // The copy DID happen — say so, because it's the half the person
+            // can still use.
+            String(localized: "Copied — couldn't open the app")
+        }
     }
 }
 
