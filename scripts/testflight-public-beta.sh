@@ -145,8 +145,38 @@ HTTP=$(curl -s -g -o /dev/null -w "%{http_code}" -X POST \
 echo "  OK: assigned"
 
 echo "-- Submitting for Beta App Review..."
-SUBMIT=$(api_checked POST "/betaAppReviewSubmissions" \
+# NOT `api_checked` — this one call is allowed to fail without failing the
+# ship (2026-07-30, ported from the Mac sibling script 2026-08-01). Apple
+# rate-limits beta-review submissions across a rolling window, and once it
+# trips, every later build lands "Ready to Submit": assigned to the group,
+# notes written, but never sent for review, so external testers don't get it.
+# Four builds went out that way before anyone noticed (183, 185, 203, 205),
+# because `api_checked` aborted the script AFTER the assignment had already
+# succeeded — the ship looked failed, so the one recoverable step nobody knew
+# to retry.
+#
+# The submission is the ONLY thing missing at that point, and it re-runs
+# standalone, so say exactly that and hand over the command instead of dying.
+SUBMIT=$(api POST "/betaAppReviewSubmissions" \
   "{\"data\":{\"type\":\"betaAppReviewSubmissions\",\"relationships\":{\"build\":{\"data\":{\"type\":\"builds\",\"id\":\"$BUILD_ID\"}}}}}")
-STATE=$(echo "$SUBMIT" | jq -r '.data.attributes.betaReviewState // "unknown"')
-echo "  betaReviewState: $STATE"
-echo "OK: Public Beta handoff complete for build $VERSION."
+STATE=$(echo "$SUBMIT" | jq -r '.data.attributes.betaReviewState // empty')
+CODE=$(echo "$SUBMIT" | jq -r '.errors[0].code // empty')
+if [ -n "$STATE" ]; then
+  echo "  betaReviewState: $STATE"
+  echo "OK: Public Beta handoff complete for build $VERSION."
+elif [ "$CODE" = "ENTITY_UNPROCESSABLE.SUBMISSION_LIMIT_REACHED" ]; then
+  cat <<MSG
+  ⚠ Apple's beta-review submission limit is reached — NOT submitted.
+    Build $VERSION is uploaded, processed, has its notes, and is assigned to
+    Casberi Public Beta. It shows "Ready to Submit" and external testers do
+    NOT have it yet. The limit is a rolling window; retry later with:
+
+      scripts/testflight-retry-review.sh $BUILD_ID
+
+    (or press Submit for Review on the build in App Store Connect.)
+MSG
+else
+  echo "  ⚠ Submission failed and was not rate-limited — build $VERSION is"
+  echo "    assigned but NOT submitted. Response:"
+  echo "$SUBMIT" | head -20
+fi
