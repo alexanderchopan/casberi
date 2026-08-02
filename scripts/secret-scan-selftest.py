@@ -248,6 +248,8 @@ SHOULD_FLAG = [
     ("amex", "3782 822463 10005", "cardNumber"),
     ("verification code", "Your verification code is 481920", "oneTimeCode"),
     ("one-time code", "one-time code: 8172", "oneTimeCode"),
+    ("code is, bare form", "Casberi code is 4821 — expires in 10 minutes", "oneTimeCode"),
+    ("wifi password note", "wifi password: SunnyDay2026!", "password"),
 ]
 
 SHOULD_NOT_FLAG = [
@@ -275,6 +277,12 @@ SHOULD_NOT_FLAG = [
     ("order number", "Order #100048372910 shipped"),
     ("price and phone", "Total 1,299.00 — call 555 0134 to confirm"),
     ("pin word, no value", "pin: up"),
+    # Rows this app's own bridges land, which must never be redacted.
+    ("card last four on a receipt", "Netflix.com · $12.99 charged to card ending 4242"),
+    ("stripe payout", "Payout of £1,204.50 paid to account ending 8891"),
+    ("international phone", "call me on +44 7700 900123 tomorrow"),
+    ("calendar entry", "Standup with Sam at 9:30, then dentist 2026-08-14 at 4:15"),
+    ("social post", "gm everyone, shipping the new build today — feedback in /design"),
 ]
 
 
