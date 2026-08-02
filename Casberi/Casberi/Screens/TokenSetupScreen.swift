@@ -283,7 +283,7 @@ struct TokenSetupScreen: View {
     }
 
     private func copyCode(_ code: String) {
-        UIPasteboard.general.string = code
+        DSPasteboard.copySensitive(code)
         DSHaptic.tap()
         withAnimation(DS.Motion.standard) { codeCopied = true }
         Task { @MainActor in

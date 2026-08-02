@@ -324,7 +324,7 @@ struct CopyAddressButton: View {
 
     var body: some View {
         Button {
-            UIPasteboard.general.string = address
+            DSPasteboard.copySensitive(address)
             DSHaptic.success()
             withAnimation(DS.Motion.standard) { copied = true }
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) {

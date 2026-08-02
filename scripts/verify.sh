@@ -29,6 +29,24 @@ step "Network-reach audit"
 "$ROOT/scripts/network-reach-audit.sh" || fail "a network host isn't disclosed — see scripts/network-reach-audit.sh"
 print -P "%F{green}✓ network-reach audit%f"
 
+# Keeps every Keychain write device-only and non-syncing (prd §276). Static,
+# no build. The failure it catches is invisible at runtime — a key stored with
+# the wrong accessibility works perfectly and also rides an encrypted backup
+# onto another device — so it can only ever be caught mechanically.
+step "Keychain policy audit"
+"$ROOT/scripts/keychain-audit.py" --self-test >/dev/null \
+  || fail "the keychain audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/keychain-audit.py" || fail "a keychain write isn't device-only — see the output above"
+print -P "%F{green}✓ keychain audit%f"
+
+# The credential tripwire's fixtures (prd §276) — that the shipped patterns and
+# thresholds still hide a recovery phrase and still leave an ordinary shopping
+# list alone. Reads both out of the Swift source, so re-tuning a number here
+# fails rather than silently changing what the app hides.
+step "Secret-scan self-test"
+"$ROOT/scripts/secret-scan-selftest.py" || fail "the credential tripwire changed behaviour — see the output above"
+print -P "%F{green}✓ secret-scan self-test%f"
+
 # The recurring "reads a dead Thing" crash class (builds 137/138/139/142/150 —
 # five TestFlight-found crashes, one defect). The rule was written down and
 # re-broken twice because memory was enforcing it; this makes it mechanical.

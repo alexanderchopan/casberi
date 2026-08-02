@@ -4391,7 +4391,7 @@ struct FeedScreen: View {
                 } catch { chrome.flash(error.localizedDescription, tone: .failure) }
             }
         case .copyText:
-            UIPasteboard.general.string = thing.content.isEmpty ? thing.title : thing.content
+            DSPasteboard.copy(thing.content.isEmpty ? thing.title : thing.content)
             chrome.flash("Copied")
         case .markDone:
             // Rung-1 local mark only — app-owned things (a note turned to-do,

@@ -19,11 +19,19 @@ enum SpotlightIndex {
     /// index surfaces never drift apart on what a thing says about itself.
     static func attributeSet(for thing: Thing) -> CSSearchableItemAttributeSet {
         let attrs = CSSearchableItemAttributeSet(contentType: .text)
-        attrs.title = thing.title
+        // The credential tripwire (prd §276, 2026-08-02). This donation is the
+        // widest surface the corpus has — system-wide Spotlight plus the
+        // semantic index Siri and Apple Intelligence ground on — and all of it
+        // sits OUTSIDE the app. A screenshot's OCR lands on `content`
+        // (ScreenshotIngest.heal) and can name the title too, so a recovery
+        // phrase or a password becomes system-searchable text nobody chose to
+        // publish. Spans are hidden HERE and only here: the stored thing keeps
+        // its real text, so Find and `Retriever` still match on it in-app.
+        attrs.title = SecretScan.redacted(thing.title)
         attrs.contentDescription = thing.content.isEmpty
             ? "A \(thing.kind.typeTag.lowercased()) in Casberi"
-            : thing.content
-        attrs.keywords = thing.tags + [thing.source, "Casberi"]
+            : SecretScan.redacted(thing.content)
+        attrs.keywords = SecretScan.safeTags(thing.tags) + [thing.source, "Casberi"]
         return attrs
     }
 

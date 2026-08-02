@@ -71,7 +71,7 @@ struct ApprovalPrepareCard: View {
     /// `copyCode` shape, reset included (a button stuck on "Copied" forever
     /// reads as state it no longer has).
     private func copy(_ json: String) {
-        UIPasteboard.general.string = json
+        DSPasteboard.copySensitive(json)
         DSHaptic.tap()
         withAnimation(DS.Motion.standard) { copied = true }
         Task { @MainActor in

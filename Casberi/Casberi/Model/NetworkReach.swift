@@ -361,4 +361,31 @@ enum NetworkReach {
     static var accountedHosts: Set<String> {
         Set(endpoints.flatMap(\.hosts).filter { $0.contains(".") })
     }
+
+    /// Which declared service a host belongs to, or nil if this registry
+    /// never claimed it (prd §276). The receipts screen reads this to sort a
+    /// host it actually observed into "declared" or "not declared" — the
+    /// runtime counterpart to `scripts/network-reach-audit.sh`, which can
+    /// only see host LITERALS in source and is therefore blind to a host
+    /// built at runtime from a person's own input.
+    ///
+    /// Matching is on the label boundary — exact, or a subdomain of a
+    /// declared host — never `contains`, so `api.stripe.com.attacker.example`
+    /// can never present itself as Stripe (the `OEmbed` rule).
+    static func service(forHost host: String) -> String? {
+        let needle = host.lowercased()
+        var best: (service: String, length: Int)?
+        for endpoint in endpoints {
+            for declared in endpoint.hosts where declared.contains(".") {
+                let candidate = declared.lowercased()
+                guard needle == candidate || needle.hasSuffix("." + candidate) else { continue }
+                // Longest declared host wins, so a specific subdomain entry
+                // beats a broader one that also matches.
+                if best == nil || candidate.count > best!.length {
+                    best = (endpoint.service, candidate.count)
+                }
+            }
+        }
+        return best?.service
+    }
 }

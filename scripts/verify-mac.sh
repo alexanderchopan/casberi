@@ -122,15 +122,19 @@ app_pid() { pgrep -f "$DD/Build/Products/Debug-maccatalyst/Casberi.app" | head -
 
 # ── 0. Static audits (shared with verify.sh, seconds, no build) ────────────
 # Run here too so a Mac-only nightly still certifies the whole tree — these
-# are the three checks that were each made mechanical after a real regression
+# are the checks that were each made mechanical after a real regression
 # shipped (see CLAUDE.md). Cheap enough that duplication beats a gap.
 step "Static audits"
 "$ROOT/scripts/catalog-sync.sh" >/dev/null || fail "catalog surfaces drifted — run scripts/catalog-sync.sh"
 "$ROOT/scripts/network-reach-audit.sh" >/dev/null || fail "a network host isn't disclosed — run scripts/network-reach-audit.sh"
+"$ROOT/scripts/keychain-audit.py" --self-test >/dev/null \
+  || fail "the keychain audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/keychain-audit.py" >/dev/null || fail "a keychain write isn't device-only — run scripts/keychain-audit.py"
+"$ROOT/scripts/secret-scan-selftest.py" >/dev/null || fail "the credential tripwire changed behaviour — run scripts/secret-scan-selftest.py"
 "$ROOT/scripts/swiftdata-liveness-audit.py" --self-test >/dev/null \
   || fail "the liveness audit's own self-test failed — the check is broken, not the code"
 "$ROOT/scripts/swiftdata-liveness-audit.py" >/dev/null || fail "a Thing is read without a liveness guard — run scripts/swiftdata-liveness-audit.py"
-ok "catalog sync · network reach · swiftdata liveness"
+ok "catalog sync · network reach · keychain · secret scan · swiftdata liveness"
 
 # ── 1. Build ───────────────────────────────────────────────────────────────
 step "Building Casberi (Mac Catalyst, derivedData: $DD)"

@@ -455,7 +455,12 @@ enum WalletConnectBridge {
             kSecUseDataProtectionKeychain: true,
             kSecAttrService: "casberi.wc.preflight",
             kSecAttrAccessGroup: appGroup,
-            kSecAttrAccount: "probe"
+            kSecAttrAccount: "probe",
+            // Stated rather than left to the default (prd §276), so
+            // `scripts/keychain-audit.py` can see the policy. `false` IS the
+            // default, so the probe still mirrors the SDK's query exactly and
+            // still matches the same items on the way out.
+            kSecAttrSynchronizable: false
         ]
         query[kSecValueData] = Data([1])
         let status = SecItemAdd(query as CFDictionary, nil)

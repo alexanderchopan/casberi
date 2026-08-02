@@ -96,7 +96,7 @@ SKIP_BUMP=1 \
    A bare `xcodebuild … build` used to be step 3, and that is what let build 214
    ship with an **undisclosed network host** (2026-07-31). Compiling proves the
    code is valid, not that it's honest. `verify.sh` runs the static audits
-   FIRST, before it builds anything, and two of them are ship gates in a way a
+   FIRST, before it builds anything, and four of them are ship gates in a way a
    compiler can never be:
 
    - **`network-reach-audit.sh`** — every host literal in the app must appear in
@@ -109,8 +109,18 @@ SKIP_BUMP=1 \
      already on testers' devices by the time anyone notices.
    - **`catalog-sync.sh`** — the app catalog, the website shelf and the
      onboarding tiles are ONE set.
+   - **`keychain-audit.py`** (prd §276) — every `SecItemAdd` must be
+     `…ThisDeviceOnly` and non-synchronizable. Same shape of gate: a key
+     stored with the wrong accessibility works perfectly and also rides an
+     encrypted backup onto whatever device restores it, so no build, launch
+     or screen sweep can ever see it.
+   - **`secret-scan-selftest.py`** (prd §276) — the credential tripwire still
+     hides a recovery phrase and still leaves an ordinary shopping list
+     alone. Its thresholds were measured against real fixtures; a silent
+     re-tune would either leak a phrase to Spotlight or quietly stop
+     Spotlight finding people's notes.
 
-   Running these two individually is not a substitute for `verify.sh`, and
+   Running these individually is not a substitute for `verify.sh`, and
    picking the audits you happen to remember is exactly the failure mode: the
    Stripe ship ran `catalog-sync.sh` and the liveness audit by hand, both
    passed, and the reach audit — the one that would have caught the real gap —

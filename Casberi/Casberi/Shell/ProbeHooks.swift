@@ -23,6 +23,12 @@ enum ProbeHooks {
     /// flag lands here. Add the flag in the same commit as the probe.
     private static let secretArgKeys: Set<String> = [
         "-byokKey", "-openSeaKey", "-tokenBridge", "-wcProjectID", "-ghClientID",
+        // Not a credential the app USES, but by construction the value is a
+        // sample secret — the whole point of the probe is to hand it one.
+        // Printing it verbatim in `probeArgs:` would put a real key in the
+        // sim log while testing the feature that exists to keep keys out of
+        // logs (prd §276).
+        "-secretScanProbe",
     ]
 
     /// `-byokKey venice:vk-abc` → `-byokKey venice:‹redacted›`, but
@@ -78,6 +84,72 @@ enum ProbeHooks {
     }
 
     private static let hooks: [Hook] = [
+        // `-secretScanProbe "<text>"|corpus` runs the credential tripwire
+        // (prd §276) and reports what it found: the KINDS, and the REDACTED
+        // rendering — never the secret itself, which is the point of the
+        // feature and so also the rule for its probe. `corpus` walks the
+        // stored things instead and names the ones whose Spotlight/Siri
+        // donation and keyed-agent grounding would carry hidden spans, which
+        // is the only way to see the tripwire's real-world hit rate without
+        // reading anyone's screenshots.
+        Hook(key: "secretScanProbe") { spec, context in
+            guard spec != "corpus" else {
+                let things = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
+                var flagged = 0
+                for thing in things where thing.isLive {
+                    let kinds = Set(SecretScan.scan(thing.title + "\n" + thing.content)
+                        .map(\.kind.rawValue))
+                    guard !kinds.isEmpty else { continue }
+                    flagged += 1
+                    // One NSLog per row — a joined multi-line message gets
+                    // truncated by the log reader (the -todayProbe lesson).
+                    NSLog("secretScanRow| %@ · %@ → %@", thing.source,
+                          SecretScan.redacted(thing.title),
+                          kinds.sorted().joined(separator: ","))
+                }
+                NSLog("secretScanProbe: corpus=%d flagged=%d", things.count, flagged)
+                return
+            }
+            let findings = SecretScan.scan(spec)
+            NSLog("secretScanProbe: found=%d kinds=%@", findings.count,
+                  Set(findings.map(\.kind.rawValue)).sorted().joined(separator: ","))
+            NSLog("secretScanRedacted| %@", SecretScan.redacted(spec))
+        },
+        // `-keychainProbe YES` reports the vault's STORAGE POLICY — how many
+        // items are device-only and how many are synchronizable — then forces
+        // the hardening migration and reports again (prd §276). Counts only:
+        // it never reads or logs a secret's value. The before/after pair is
+        // the check that the migration actually re-writes old items, which is
+        // invisible otherwise since a wrongly-stored key works perfectly.
+        Hook(key: "keychainProbe") { _, _ in
+            let before = TokenVault.policyCensus()
+            NSLog("keychainProbe| before: total=%d deviceOnly=%d syncable=%d",
+                  before.total, before.deviceOnly, before.synchronizable)
+            let moved = TokenVault.migrateToDeviceOnly(force: true)
+            NSLog("keychainProbe| migrate: rewrote=%d untouched=%d", moved.moved, moved.kept)
+            let after = TokenVault.policyCensus()
+            NSLog("keychainProbe| after: total=%d deviceOnly=%d syncable=%d",
+                  after.total, after.deviceOnly, after.synchronizable)
+            NSLog("keychainProbe: %@",
+                  after.total == after.deviceOnly && after.synchronizable == 0
+                  ? "every item device-only and non-syncing"
+                  : "STILL LOOSE — see the counts above")
+        },
+        // `-receiptsProbe YES` dumps the network receipts ledger (prd §276):
+        // one line per host actually reached, with whether the "What this app
+        // reaches" registry declares it. A host reading NOT-DECLARED is the
+        // runtime form of the audit failure that shipped in build 214.
+        Hook(key: "receiptsProbe") { _, _ in
+            let rows = NetworkLedger.shared.snapshot()
+            var undeclared = 0
+            for row in rows {
+                let service = NetworkReach.service(forHost: row.host)
+                if service == nil { undeclared += 1 }
+                NSLog("receipt| %@ · %d requests · %@", row.host, row.count,
+                      service ?? "NOT-DECLARED")
+            }
+            NSLog("receiptsProbe: hosts=%d undeclared=%d", rows.count, undeclared)
+        },
         // `-chatgptImport <path>` imports a conversations.json from disk.
         Hook(key: "chatgptImport") { path, context in
             guard let data = FileManager.default.contents(atPath: path) else { return }

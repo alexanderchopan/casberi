@@ -326,7 +326,7 @@ struct RootShell: View {
                 // One-time migrations run once per install (bump the version
                 // when adding one) — steady-state launches skip the scans.
                 let migrationsKey = "migrations.version"
-                let migrationsCurrent = 4
+                let migrationsCurrent = 5
                 let migrationsStored = UserDefaults.standard.integer(forKey: migrationsKey)
                 if migrationsStored < migrationsCurrent {
                     if migrationsStored < 1 {
@@ -394,6 +394,14 @@ struct RootShell: View {
                         // markdown-special punctuation ("4\.8"); the import never
                         // undid that until now. Re-clean what's already landed.
                         _ = DayOneImport.healEscapedText(context: modelContext)
+                    }
+                    if migrationsStored < 5 {
+                        // One-time re-write (prd §276, 2026-08-02): keychain
+                        // accessibility is fixed when an item is ADDED, so keys
+                        // stored by an earlier build keep the old
+                        // backup-restorable policy until they're written again —
+                        // which, for a key you paste once, is never.
+                        _ = TokenVault.migrateToDeviceOnly()
                     }
                     modelContext.saveHonestly()
                     UserDefaults.standard.set(migrationsCurrent, forKey: migrationsKey)

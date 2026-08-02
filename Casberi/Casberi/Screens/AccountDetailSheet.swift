@@ -15,6 +15,21 @@ enum AccountDetail: String, Identifiable {
     var id: String { rawValue }
 }
 
+/// The Privacy home's sub-pages, presented through ONE `.sheet(item:)`.
+///
+/// Deliberately an enum rather than a second `@State` flag (prd §276): two
+/// sibling `.sheet(isPresented:)` modifiers on one view resolve to the same
+/// presenting controller, and the second tears the first down mid-transition
+/// — the half-opening sheet this codebase has now paid for three times. One
+/// screen, one presentation.
+enum PrivacySubPage: String, Identifiable {
+    /// What this app MAY reach — the curated registry (prd §205).
+    case reach
+    /// What it ACTUALLY reached — the observed ledger (prd §276).
+    case receipts
+    var id: String { rawValue }
+}
+
 struct AccountDetailSheet: View {
     let detail: AccountDetail
     @Environment(\.modelContext) private var modelContext
@@ -34,7 +49,7 @@ struct AccountDetailSheet: View {
     /// story (what LEAVES this iPhone), a sub-page of this one Privacy home so
     /// it sits beside the at-rest half (on device / iCloud) instead of
     /// competing as a second privacy row.
-    @State private var reachOpen = false
+    @State private var privacyPage: PrivacySubPage?
     /// Your key (prd §67) — draft, outcome line, and a mirrored configured
     /// flag (AgentKey isn't observable; actions refresh it by hand). The
     /// picker chooses which agent the key belongs to (ruling 2026-07-14:
@@ -71,8 +86,13 @@ struct AccountDetailSheet: View {
             if detail == .color { BerryRain(trigger: bleedPulse, hue: bleedHue) }
         }
         .onAppear { if detail == .data { exportURL = buildExport() } }
-        .sheet(isPresented: $reachOpen) {
-            NavigationStack { NetworkReachScreen() }
+        .sheet(item: $privacyPage) { page in
+            NavigationStack {
+                switch page {
+                case .reach: NetworkReachScreen()
+                case .receipts: NetworkReceiptsScreen()
+                }
+            }
         }
         // The export's other half — the file comes back in whole (dedupe by id).
         .fileImporter(isPresented: $importing,
@@ -167,12 +187,14 @@ struct AccountDetailSheet: View {
 
     private var sheetHeight: CGFloat {
         switch detail {
-        // Now the one privacy home: + the "What this app reaches" row always,
-        // the ADP nudge (~3 lines) when sync is on (prd §205), and the sync
-        // error detail line (2026-07-27) on top of that when the mirror is
-        // actually failing. DSTray clips at a fixed detent, so the tallest
-        // reachable state must be sized for.
-        case .data: icloudSync ? (syncHasLiveError ? 700 : 660) : 600
+        // Now the one privacy home: + the two sub-page doors always ("What
+        // this app reaches" §205, "What it actually reached" §276), the ADP
+        // nudge when sync is on — two sentences since §276, so ~5 lines, not
+        // 3 — and the sync error detail line (2026-07-27) on top of that when
+        // the mirror is actually failing. DSTray clips at a fixed detent, so
+        // the tallest reachable state must be sized for; +62 for the second
+        // door, +36 for the longer nudge.
+        case .data: icloudSync ? (syncHasLiveError ? 800 : 760) : 665
         case .key: 500   // +40 for the per-agent capability line (2026-07-21)
         case .color: 400   // aliveRow + one swatch row + a footnote (prd §204)
         }
@@ -254,8 +276,13 @@ struct AccountDetailSheet: View {
             // there's no iCloud copy to encrypt). Points the person at the
             // one thing that upgrades their sync to true end-to-end, which
             // is theirs to enable, not ours: Advanced Data Protection.
+            // Amended prd §276: it named what ADP ADDS without ever naming
+            // where sync stands WITHOUT it, which let "encrypted" be read as
+            // "end-to-end". The baseline goes first now — the standing rule is
+            // that an end-to-end claim requires ADP, and the honest way to
+            // keep it is to say what today is.
             if icloudSync {
-                Text("Turn on Advanced Data Protection (Settings › your name › iCloud) and only your devices can read the iCloud copy — not even Apple.")
+                Text("Your iCloud copy is encrypted in transit and on Apple's servers, but Apple holds the keys. Turn on Advanced Data Protection (Settings › your name › iCloud) and only your devices can read it — not even Apple.")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.leading, 38 + DS.Space.s3)
@@ -268,26 +295,41 @@ struct AccountDetailSheet: View {
             // above are your copy AT REST (on device / iCloud); this opens the
             // full list of every service the app talks to. Same privacy home,
             // one tap deeper.
-            Button {
-                DSHaptic.tap()
-                reachOpen = true
-            } label: {
-                HStack(spacing: DS.Space.s3) {
-                    badge("network", DS.tint)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("What this app reaches").dsText(.body17).foregroundStyle(DS.textPrimary)
-                        Text("Every service, straight from \(DS.device)")
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    }
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(DS.textTertiary)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
+            door("network", "What this app reaches",
+                 "Every service, straight from \(DS.device)") { privacyPage = .reach }
+            // The same question asked of BEHAVIOUR rather than of a list
+            // (prd §276). The row above is what the app may reach and is
+            // hand-maintained; this is what it actually did reach, recorded
+            // as it happened — so the claim can be checked rather than
+            // trusted, and a host nobody declared shows up as one.
+            door("checklist", "What it actually reached",
+                 "Receipts from the last seven days") { privacyPage = .receipts }
         }
+    }
+
+    /// A row that opens a privacy sub-page. Two of them now, so the shape
+    /// lives in one place.
+    private func door(_ glyph: String, _ title: String, _ subtitle: String,
+                      action: @escaping () -> Void) -> some View {
+        Button {
+            DSHaptic.tap()
+            action()
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                badge(glyph, DS.tint)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title).dsText(.body17).foregroundStyle(DS.textPrimary)
+                    Text(subtitle)
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(DS.textTertiary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     /// Your key (prd §67) — the BYO escape hatch, stated honestly: answers run

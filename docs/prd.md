@@ -13539,3 +13539,129 @@ queried wallet addresses is a real doxxing vector and this app already
 serves Privacy Pools users — failing CLOSED (no silent clearnet fallback
 while on, even if that reads as broken), with copy stating the addresses
 themselves still go out.
+
+# §276 — Five privacy passes: the credential tripwire, device-only keys, network receipts, clipboard etiquette, and what sync actually means (user: "what are other privacy things we could add?" then "let's do 3,4,5,6,7", 2026-08-02)
+
+Assessed after §275 declined web search and Tor. The thread behind all five: this
+app's NETWORK story was already strong (no server, BYOK, the §205 registry) and
+its weakest layer was the DEVICE — the corpus leaking out through Apple's own
+system surfaces, which no amount of network discipline touches.
+
+**1. The credential tripwire (`Model/SecretScan.swift`).** Vision OCRs whatever
+is in a screenshot and `ScreenshotIngest.heal` writes it to `Thing.content`, so
+a screenshot of a recovery phrase, an API key or a password becomes searchable
+text that then leaves on two surfaces nobody chose: the Spotlight/Siri donation
+(system-wide, and OUTSIDE any app lock) and the keyed agent's prompt (posted to
+a third-party API). Detection is deterministic — the Find bar, no model — over
+five kinds: recovery phrases, vendor API keys, labelled password lines, Luhn
+card numbers, one-time codes.
+
+Rules it keeps, none of them incidental:
+
+- **Spans are redacted, never documents.** A screenshot with one password line
+  stays findable by every other word on it. Blanking whole items would be a
+  search index that silently forgets things.
+- **The stored `Thing` is never touched.** Find and `Retriever` still match the
+  real text, so "where's that password screenshot" still works IN the app. This
+  hides secrets from the surfaces that LEAVE; it doesn't delete anyone's data.
+- **The on-device model is deliberately NOT redacted.** It never leaves, and
+  "what's my wifi password?" is a fair question to ask your own corpus.
+  Redacting there would be theatre that costs the person the answer. The scrub
+  happens at `AgentAnswer.synthesize`, the boundary where text actually goes to
+  somebody else — and a candidate whose text was scrubbed also drops its
+  PICTURE, since a screenshot of a phrase would otherwise sail past every text
+  rule straight into a multimodal request.
+- **A false positive is the expensive failure, except once.** Every detector is
+  narrow, because a false positive means Spotlight quietly stops finding an
+  ordinary note. The recovery-phrase detector is the exception, and its
+  thresholds were MEASURED rather than guessed: ordinary prose tops out at a
+  2–3 word BIP39 run, but a shopping list hit 12 consecutive wordlist words and
+  a list of common verbs hit 19 — so run length alone would redact people's
+  lists. Two rules cover each other's blind spot: (A) a standard phrase length
+  AND ≥60% density catches a phrase pasted bare and rejects the 12-word
+  shopping list; (B) a long run AND context words ("recovery phrase", "never
+  share this") catches a phrase wrapped in wallet chrome, which measured only
+  47% density and would slip past (A). Neither alone classifies all the
+  fixtures correctly.
+- **Card numbers need an issuer prefix, not just Luhn.** This corpus is full of
+  long integers that aren't cards (a ms timestamp is 13 digits, a wei amount
+  19) and one in ten passes Luhn by chance. A raw 64-hex "private key" detector
+  was considered and REJECTED for the same reason inverted: a transaction hash
+  is byte-identical in shape, and this corpus is full of those.
+
+The BIP39 wordlist ships as its own file with the source URL and SHA-256
+recorded, so a future edit is checkable rather than trusted.
+`scripts/secret-scan-selftest.py` reads the patterns, thresholds and wordlist
+OUT of the Swift and re-runs 28 fixtures plus a mutation pass; it MIRRORS the
+algorithm in Python and says so, because there is no Swift toolchain on the
+authoring host.
+
+**2. Keys are device-only (`TokenVault`, `MCPPairing`).** The vault wrote
+`kSecAttrAccessibleAfterFirstUnlock` — which is restorable from an encrypted
+backup onto a second device — and never named `kSecAttrSynchronizable`. Both
+are stated now: `…ThisDeviceOnly` (keeps live API keys out of a restored
+backup; `AfterFirstUnlock` is KEPT rather than `WhenUnlocked` because bridges
+sync while the screen is locked — the ThisDeviceOnly variant changes the backup
+rule, not when the app can read) and non-synchronizable (already the default;
+stated so the audit can see it). Deletes now ask for
+`kSecAttrSynchronizableAny`, or "Delete access" would silently skip any synced
+item an older build left behind. Accessibility is fixed when an item is ADDED,
+so a one-time migration re-writes existing items — without it, a key you paste
+once keeps the old policy forever. `scripts/keychain-audit.py` makes it
+mechanical, with a self-test, because the failure is invisible: the wrong
+policy still stores the key, still reads it back, still works.
+
+**3. Network receipts (`Model/NetworkLedger.swift`).** §205's registry is
+CURATED — a list somebody has to remember to update, which is exactly how an
+undisclosed host shipped in build 214. This is the runtime counterpart: what
+the app ACTUALLY reached, so the privacy claim is checkable against behaviour.
+A host observed without a registry entry gets its own section reading "Not on
+the list", which is the failure made visible from the other side.
+
+Two limits, both stated in the screen's own copy, because a receipts page that
+looks complete while missing whole classes of request is worse than none:
+(a) **hosts, counts and times only — never payloads or paths**, since a log of
+what was asked would be a more sensitive artifact than the thing it audits;
+(b) **it records where it can see**, which is `IngestSupport`'s transport
+(~167 bridge call sites, which is WHY a single `send` funnel was introduced —
+`run`/`getJSONStatus`/`postJSONStatus` each called the session themselves, so
+no one place could observe a host), `AgentAnswer` and `LinkTitle`. Not covered
+and named on the screen: images loaded into rows, the two WebSocket paths, and
+the WalletConnect SDK's own hosts, which are inside a vendored dependency.
+Deliberately AGGREGATED per host rather than a per-request log: a timestamped
+list of every request is a behavioural timeline — when you woke up, when you
+checked your wallet — sitting in cleartext `UserDefaults`. One row per host
+with a count and first/last seen is strictly less data and answers the actual
+question.
+
+**4. Clipboard etiquette (`Design/DSPasteboard.swift`).** A plain
+`UIPasteboard.general.string =` writes an item with no expiry that also travels
+to every device on the iCloud account. Two verbs now: `copy` EXPIRES (10 min)
+but stays shareable across devices, because copying a note on the phone and
+pasting on the Mac is real and this app runs on both — taking that away to look
+private would cost a feature and protect nobody, since the person chose to
+copy; `copySensitive` (addresses, sign-in codes, calldata, the address-book
+export) is `.localOnly` with a 2-minute expiry. **Deliberately NOT built**:
+auto-upgrading `copy` to `copySensitive` when `SecretScan` fires. A false
+positive there means the Mac silently refuses to paste with nothing on screen
+to explain why — the "silently broken" failure this codebase keeps paying for.
+
+**5. What iCloud sync actually means.** The ADP nudge already shipped, but it
+named what Advanced Data Protection ADDS without ever naming where sync stands
+WITHOUT it — which lets "encrypted" be read as "end-to-end". The baseline goes
+first now: encrypted in transit and on Apple's servers, but Apple holds the
+keys. The standing rule is that an end-to-end claim requires ADP; the honest
+way to keep it is to say what today is.
+
+**One structural note.** The Privacy tray now has two sub-pages, so it went to a
+single `.sheet(item:)` over a `PrivacySubPage` enum rather than growing a second
+`.sheet(isPresented:)` — two sibling sheet modifiers on one view resolve to the
+same presenting controller and the second tears the first down mid-transition,
+the half-opening sheet this codebase has paid for three times.
+
+**UNMEASURED**: authored on Linux with no Xcode and no simulator — nothing here
+has been compiled or run. The static audits (catalog sync, network reach,
+keychain, secret scan, SwiftData liveness) all pass, and the pure detection
+logic is harness-verified against the shipped source, but the Swift itself is
+unbuilt. Run `scripts/verify.sh` plus `-secretScanProbe corpus`,
+`-keychainProbe YES` and `-receiptsProbe YES` before trusting any of it.

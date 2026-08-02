@@ -533,7 +533,7 @@ struct WalletScreen: View {
         }
         .contextMenu {
             Button {
-                UIPasteboard.general.string = addr.address
+                DSPasteboard.copySensitive(addr.address)
                 DSHaptic.success()
             } label: {
                 Label("Copy Address", systemImage: "doc.on.doc")
@@ -827,7 +827,7 @@ struct WalletScreen: View {
                         // becoming a block on a page §212 fought to shorten.
                         Section {
                             Button {
-                                UIPasteboard.general.string = book.exportText()
+                                DSPasteboard.copySensitive(book.exportText())
                                 DSHaptic.success()
                             } label: {
                                 Label("Copy all as text", systemImage: "doc.on.doc")
@@ -943,7 +943,7 @@ struct WalletScreen: View {
         .contentShape(Rectangle())
         .contextMenu {
             Button {
-                UIPasteboard.general.string = entry.address
+                DSPasteboard.copySensitive(entry.address)
                 DSHaptic.success()
             } label: {
                 Label("Copy Address", systemImage: "doc.on.doc")

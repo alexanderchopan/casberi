@@ -2624,7 +2624,7 @@ struct Composer: View {
         guard !text.isEmpty, let url = tool.makeURL(text, detectedDate) else { return }
         DSHaptic.tap()
         if tool.copiesFirst {
-            UIPasteboard.general.string = text
+            DSPasteboard.copy(text)
             chrome.flash("Copied — paste it in \(tool.label)")
         }
         openURL(url)

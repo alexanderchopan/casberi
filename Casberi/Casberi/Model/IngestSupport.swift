@@ -302,10 +302,9 @@ enum IngestSupport {
         guard let u = URL(string: url) else { return (nil, 0) }
         var request = URLRequest(url: u)
         apply(auth: auth, headers: headers, to: &request)
-        guard let (data, response) = try? await session.data(for: request) else { return (nil, 0) }
-        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-        guard status == 200 else { return (nil, status) }
-        return (try? JSONSerialization.jsonObject(with: data), status)
+        guard let (data, http) = await send(request) else { return (nil, 0) }
+        guard http.statusCode == 200 else { return (nil, http.statusCode) }
+        return (try? JSONSerialization.jsonObject(with: data), http.statusCode)
     }
 
     /// Like `postJSON`, but hands back the HTTP status alongside the decoded
@@ -325,10 +324,9 @@ enum IngestSupport {
         request.httpBody = payload
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         apply(auth: auth, headers: headers, to: &request)
-        guard let (data, response) = try? await session.data(for: request) else { return (nil, 0) }
-        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-        guard status == 200 else { return (nil, status) }
-        return (try? JSONSerialization.jsonObject(with: data), status)
+        guard let (data, http) = await send(request) else { return (nil, 0) }
+        guard http.statusCode == 200 else { return (nil, http.statusCode) }
+        return (try? JSONSerialization.jsonObject(with: data), http.statusCode)
     }
 
     /// A JSON-RPC BATCH: an ARRAY of calls in one request, answered with an
@@ -358,9 +356,21 @@ enum IngestSupport {
     }
 
     private static func run(_ request: URLRequest) async -> Any? {
-        guard let (data, response) = try? await session.data(for: request),
-              (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        guard let (data, http) = await send(request), http.statusCode == 200 else { return nil }
         return try? JSONSerialization.jsonObject(with: data)
+    }
+
+    /// The ONE transport every helper above rides (prd §276). It exists so
+    /// there is a single place that sees every bridge request — `run`,
+    /// `getJSONStatus` and `postJSONStatus` each used to call
+    /// `session.data(for:)` themselves, which meant no single point could
+    /// observe the host. Nothing about the request or the response is
+    /// recorded except which host was contacted; see `NetworkLedger`.
+    private static func send(_ request: URLRequest) async -> (Data, HTTPURLResponse)? {
+        NetworkLedger.shared.record(request)
+        guard let (data, response) = try? await session.data(for: request),
+              let http = response as? HTTPURLResponse else { return nil }
+        return (data, http)
     }
 
     // MARK: - Bounded concurrent fan-out

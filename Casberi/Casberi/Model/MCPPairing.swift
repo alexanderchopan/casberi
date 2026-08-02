@@ -67,13 +67,22 @@ enum MCPPairing {
     }
 
     private static func save(_ token: String) {
+        delete()
         var query = baseQuery()
-        SecItemDelete(query as CFDictionary)
         query[kSecValueData as String] = Data(token.utf8)
+        // Same storage policy as `TokenVault` (prd §276): out of encrypted
+        // backups, off iCloud Keychain. `WhenUnlocked` rather than the
+        // vault's `AfterFirstUnlock` because a pairing token is only ever
+        // used while the person is actually at the device.
+        query[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        query[kSecAttrSynchronizable as String] = false
         SecItemAdd(query as CFDictionary, nil)
     }
 
     private static func delete() {
-        SecItemDelete(baseQuery() as CFDictionary)
+        var query = baseQuery()
+        // Match a synced item too, or an older one would survive the wipe.
+        query[kSecAttrSynchronizable as String] = kSecAttrSynchronizableAny
+        SecItemDelete(query as CFDictionary)
     }
 }

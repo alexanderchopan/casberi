@@ -1060,7 +1060,7 @@ struct ThingSheetView: View {
                 verbResult = "On your list"
             } catch { verbResult = error.localizedDescription; verbResultIsError = true }
         case .copyText:
-            UIPasteboard.general.string = thing.content.isEmpty ? thing.title : thing.content
+            DSPasteboard.copy(thing.content.isEmpty ? thing.title : thing.content)
             verbResult = "Copied"
         case .markDone:
             // Rung-1 local mark only — app-owned things (a note turned to-do,

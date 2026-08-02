@@ -131,8 +131,13 @@ struct AskCasberiIntent: AppIntent {
         guard !hits.isEmpty else {
             return .result(value: "", dialog: "Nothing in your things matches that.")
         }
+        // The credential tripwire (prd §276): an intent result is spoken by
+        // Siri and pipeable anywhere by Shortcuts, so it leaves the app the
+        // same way a Spotlight donation does. Titles are the whole payload
+        // here, and a screenshot's title is OCR-derived.
         let candidates = hits.map {
-            OnDeviceModel.Candidate(title: $0.title, kind: $0.kind.typeTag,
+            OnDeviceModel.Candidate(title: SecretScan.redacted($0.title),
+                                    kind: $0.kind.typeTag,
                                     source: $0.source,
                                     when: $0.capturedAt.formatted(.relative(presentation: .named)))
         }
@@ -140,7 +145,8 @@ struct AskCasberiIntent: AppIntent {
             return .result(value: answer.insight, dialog: IntentDialog(stringLiteral: answer.insight))
         }
         // No model (or it declined) — the matched things ARE the answer.
-        let line = "Found: " + hits.prefix(3).map(\.title).joined(separator: " · ")
+        let line = "Found: " + hits.prefix(3)
+            .map { SecretScan.redacted($0.title) }.joined(separator: " · ")
         return .result(value: line, dialog: IntentDialog(stringLiteral: line))
     }
 }

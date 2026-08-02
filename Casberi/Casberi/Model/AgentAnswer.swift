@@ -456,6 +456,7 @@ enum AgentAnswer {
             request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         }
         request.timeoutInterval = 15
+        NetworkLedger.shared.record(request)
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               let http = response as? HTTPURLResponse else { return .unreachable }
         // Bankr's bogus job id: a good key gets 404, which is the whole trick
@@ -526,6 +527,28 @@ enum AgentAnswer {
     async -> Result<AgentAnswerResult, AgentAnswerFailure> {
         guard let provider = AgentKey.active,
               let key = TokenVault.get(provider.vaultKey) else { return .failure(.noKey) }
+
+        // The credential tripwire (prd §276, 2026-08-02). Everything past this
+        // line leaves the device for somebody else's API, so the corpus text
+        // that grounds the answer is scrubbed FIRST — and a candidate whose
+        // text was scrubbed also drops its PICTURE, since a screenshot of a
+        // recovery phrase would sail past every text rule straight into a
+        // multimodal request. Before the Bankr fork on purpose: it posts the
+        // same candidates.
+        //
+        // The on-device path deliberately does NOT do this. It never leaves,
+        // and "what's my wifi password?" is a fair question to ask your own
+        // corpus — hiding it there would be privacy theatre that costs the
+        // person the answer.
+        let candidates = candidates.map { candidate -> OnDeviceModel.Candidate in
+            let title = SecretScan.redacted(candidate.title)
+            let note = SecretScan.redacted(candidate.note)
+            let clean = title == candidate.title && note == candidate.note
+            return OnDeviceModel.Candidate(
+                title: title, kind: candidate.kind, source: candidate.source,
+                when: candidate.when, note: note,
+                imageData: clean ? candidate.imageData : nil)
+        }
 
         // Bankr diverges twice, both sanctioned (2026-07-16): it answers
         // through an async job (submit → poll), and it may ground on the
@@ -757,6 +780,7 @@ enum AgentAnswer {
                                    onPartial: ((String) -> Void)?,
                                    parse: @escaping ([String: Any]) -> StreamDelta)
     async -> Result<StreamOutcome, AgentAnswerFailure> {
+        NetworkLedger.shared.record(request)
         guard let (bytes, response) = try? await URLSession.shared.bytes(for: request) else {
             return .failure(.unreachable)
         }
@@ -947,6 +971,7 @@ enum AgentAnswer {
         submit.httpBody = try? JSONSerialization.data(withJSONObject: ["prompt": prompt])
         submit.timeoutInterval = 30
 
+        NetworkLedger.shared.record(submit)
         guard let (data, response) = try? await URLSession.shared.data(for: submit),
               let http = response as? HTTPURLResponse else {
             NSLog("[Casberi] AgentAnswer(bankr): network failure")
@@ -972,6 +997,7 @@ enum AgentAnswer {
             var poll = URLRequest(url: URL(string: "https://api.bankr.bot/agent/job/\(jobId)")!)
             poll.setValue(key, forHTTPHeaderField: "X-API-Key")
             poll.timeoutInterval = 15
+            NetworkLedger.shared.record(poll)
             guard let (data, response) = try? await URLSession.shared.data(for: poll),
                   (response as? HTTPURLResponse)?.statusCode == 200,
                   let job = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
