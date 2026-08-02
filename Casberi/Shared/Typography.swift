@@ -63,6 +63,23 @@ extension DSTextStyle {
     /// would flatten the hierarchy this exists to make.
     static let heading28 = DSTextStyle(size: 28, weight: .bold,     tracking: 0,    lineHeight: 34, relative: .title1, rounded: true)
     static let heading22 = DSTextStyle(size: 22, weight: .bold,     tracking: 0,    lineHeight: 28, relative: .title2, rounded: true)
+    /// The LONG-POST rung (2026-08-02) — a social post's own words when there
+    /// are enough of them to be a paragraph rather than a statement, and
+    /// nothing else.
+    ///
+    /// It is the one rung ABOVE the reading band that is not display type, and
+    /// that's the whole point. A post leads the sheet in the title's slot
+    /// (`ThingSheetView.titleBlock`), so it wants to sit above `body17`; but
+    /// `heading22` — the rung it used to fall back to, with no upper bound —
+    /// is bold SF Rounded, a title face, and a 900-character cast set end to
+    /// end in it reads as a wall: sustained bold flattens word shapes, and
+    /// this file's own 2026-07-09 rule already says rounded is the display
+    /// tier while running text stays SF Pro Text. So: 20pt REGULAR, SF Pro
+    /// Text, with the reading band's open leading (`body17` is 18/26; a post
+    /// is the whole screen's payload, so it gets one more point and two more
+    /// of line height). Hierarchy still by size alone — nothing here is a
+    /// trick the ramp doesn't already use.
+    static let reading20 = DSTextStyle(size: 20, weight: .regular,  tracking: 0,    lineHeight: 30, relative: .title3)
     // Reading-band pass (2026-07-25). The app leaned on 13/15/17 for nearly
     // all its running text — a lot of real sentences (row sublines, wallet
     // metadata, DeFi stats) sat at 13pt, which read dense and document-like

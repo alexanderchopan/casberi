@@ -62,6 +62,31 @@ enum Capture {
         return linkDetector?.firstMatch(in: text, range: range)?.url
     }
 
+    /// The same text with every URL in it carrying a `.link` attribute, so a
+    /// `Text` renders them as real links instead of inert characters.
+    ///
+    /// Attributes only — no colour, no underline. This file is compiled into
+    /// the extension targets too and can't see the design tokens; the view
+    /// that displays it paints the link runs (see `ThingSheetView.postWords`).
+    ///
+    /// EVERY match, not `firstMatch`: a post that ends in two links would
+    /// otherwise have one live and one dead, which is the honesty rule's dead
+    /// control in miniature. Ranges come back as UTF-16 offsets into the same
+    /// string the `AttributedString` was built from, so they map across
+    /// directly; a range that somehow doesn't map is skipped rather than
+    /// forced.
+    static func linkified(_ text: String) -> AttributedString {
+        var attributed = AttributedString(text)
+        guard let detector = linkDetector else { return attributed }
+        let full = NSRange(text.startIndex..., in: text)
+        for match in detector.matches(in: text, range: full) {
+            guard let url = match.url,
+                  let range = Range(match.range, in: attributed) else { continue }
+            attributed[range].link = url
+        }
+        return attributed
+    }
+
     /// A link's title: the text minus the URL if there is prose, else the host.
     private static func linkTitle(url: URL, text: String) -> String {
         let prose = text

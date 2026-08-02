@@ -146,7 +146,7 @@ struct ThingSheetView: View {
         // half-height with its own words below the fold (2026-07-16).
         let bodyLength = max(thing.content.count, (thing.postText ?? "").count)
         _detent = State(initialValue:
-            hasMedia || bodyLength > 280 ? .large : .medium)
+            hasMedia || bodyLength > Self.readingLength ? .large : .medium)
     }
 
     @ViewBuilder
@@ -522,22 +522,62 @@ struct ThingSheetView: View {
     /// clamp here and the full text below would stutter; rendering only the
     /// clamp is what lost the words in the first place.
     ///
-    /// The size follows the length, the way every social client's does: a
-    /// one-liner gets the full display size and the drama that comes with it,
-    /// a paragraph steps down to a size you can actually read a paragraph in.
-    /// Both are the type ramp — hierarchy by size, no other trick (design law).
+    /// The size follows the length, the way every social client's does — in
+    /// THREE steps since 2026-08-02, not two. A one-liner gets the full
+    /// display size and the drama that comes with it; a tweet-length post gets
+    /// the pull-quote rung; and past `readingLength` the words leave the
+    /// display tier altogether for `reading20` — SF Pro Text, REGULAR weight,
+    /// open leading.
+    ///
+    /// That third step is the fix. `heading22` had no upper bound, so a
+    /// 900-character cast was set end to end in bold SF Rounded — a title face
+    /// doing a paragraph's job, which flattens word shapes and reads as a wall
+    /// rather than as writing. Dropping the weight and the rounded face at
+    /// paragraph length is the rule Typography already states (rounded/bold is
+    /// the display tier, running text is SF Pro Text), and the hierarchy is
+    /// still carried by size alone — no other trick (design law).
+    ///
+    /// Reading rungs also cap their MEASURE. At phone width the sheet's own
+    /// padding gives ~45–55 characters a line, which is the band you want; on
+    /// iPad and Catalyst the sheet is far wider, and a paragraph run full
+    /// width makes the eye lose its place returning to each next line.
     @ViewBuilder private var titleBlock: some View {
         if isSocialPost {
             let words = postWords
-            Text(words)
-                .dsText(words.count > 100 ? .heading22 : .heading34)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
+            if words.count > Self.readingLength {
+                Text(linkedWords(words))
+                    .dsText(.reading20)
+                    .foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: Self.readingMeasure, alignment: .leading)
+                    // A post's words are what people copy a phrase out of. The
+                    // framed-photo title already allowed it; this didn't.
+                    .textSelection(.enabled)
+            } else {
+                Text(linkedWords(words))
+                    .dsText(words.count > 100 ? .heading22 : .heading34)
+                    .foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+            }
         } else {
             Text(thing.title)
                 .dsText(.heading34).foregroundStyle(DS.textPrimary)
+                .textSelection(.enabled)
         }
     }
+
+    /// Past this many characters a post is a paragraph, not a statement, and
+    /// is set in `reading20` instead of the display tier. 280 is deliberate:
+    /// it's the same length `init` uses to decide the sheet opens full-height,
+    /// so a post tall enough to need the whole sheet is exactly the post that
+    /// gets read-type — one threshold, two consequences that agree.
+    private static let readingLength = 280
+    /// The reading measure. Wide enough to keep the phone case unchanged
+    /// (nothing on a phone reaches it), narrow enough that a paragraph on iPad
+    /// or Catalyst stays inside the ~45–75 characters a line that running text
+    /// wants.
+    private static let readingMeasure: CGFloat = 560
 
     /// The post's own words — the full text when the record carries it, else
     /// the title (posts landed before `postText` existed, until a refresh heals
@@ -545,6 +585,29 @@ struct ThingSheetView: View {
     private var postWords: String {
         let full = (thing.postText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         return full.isEmpty ? thing.title : full
+    }
+
+    /// The post's words with their URLs live (2026-08-02). A post that says
+    /// "read this: example.com/thing" was printing that address as inert
+    /// characters — the one door the writer actually put in their own sentence,
+    /// and the sheet's "Open" verb can only ever offer the FIRST link it finds,
+    /// so a post with two carried one and swallowed the other.
+    ///
+    /// Only in the SHEET, never in a feed row: a row is a read with one
+    /// gesture (ruling 2026-07-16), so a second tap target inside it would be
+    /// the same half-open trap the sibling-`.sheet` bug was.
+    ///
+    /// Colour is the whole signal — no underline, which would be a hairline
+    /// through running text. `openURL` comes from the environment, so an inline
+    /// link inherits the same "leaving is a verb" wrapper Composer installs for
+    /// the agent's Stack that every `.openURL` verb here already gets.
+    private func linkedWords(_ words: String) -> AttributedString {
+        var attributed = Capture.linkified(words)
+        // Collect first, then paint: mutating `attributed` inside its own
+        // `runs` iteration walks a collection while it's being rebuilt.
+        let linkRanges = attributed.runs.compactMap { $0.link == nil ? nil : $0.range }
+        for range in linkRanges { attributed[range].foregroundColor = DS.tint }
+        return attributed
     }
 
     /// The post this one answers — "Replying to @alice", above the words, where
