@@ -535,7 +535,14 @@ enum KeptAskComposers {
             if let handle = bestHandle(matching: name, things: things) {
                 return (.handle(handle), synth)
             }
-            if let source = Set(things.map(\.source)).first(where: { $0.lowercased() == name }) {
+            // `Corpus.earnsRoom` gates it (ruling 2026-08-02): this intent's
+            // whole payload is "land on that source's room", and a source
+            // without one would mint a `context:` ask — keepable, pinned, and
+            // permanently landing on All. The only producer of `.source`, so
+            // guarding here retires the destination rather than papering over
+            // it at the navigation end.
+            if let source = Set(things.map(\.source))
+                .first(where: { $0.lowercased() == name && Corpus.earnsRoom($0) }) {
                 return (.source(source), synth)
             }
             if let cat = BridgeCatalog.categories.first(where: { $0.name.lowercased() == name })?.name {

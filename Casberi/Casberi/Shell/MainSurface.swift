@@ -57,10 +57,6 @@ struct MainSurface: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var surfaceWidth: CGFloat = 0
     @Bindable private var detail = PadDetailSelection.shared
-    /// The rendered appearance, for the pane brief's own gain/loss accent —
-    /// Mac follows the SYSTEM's mode (`RootShell`'s `.preferredColorScheme(nil)`
-    /// under Catalyst), so the accent has to read the trait it actually got.
-    @Environment(\.colorScheme) private var paneScheme
 
     private var isRegular: Bool { horizontalSizeClass == .regular }
     private var showsPane: Bool { isRegular && surfaceWidth >= PadLayout.minWidthForPane }
@@ -108,6 +104,46 @@ struct MainSurface: View {
     /// watcher's `onChange(of:)` value asked for it on every body evaluation.
     /// See `liveChips` and the watcher below for the two fixes.
     private var feedThings: [Thing] { perfAccum("MainSurface.feedThings") { Corpus.surfaced(things) } }
+
+    /// The pane's resting companion to the day (2026-08-02): the newest thing
+    /// the All feed would show, rendered as the record it IS rather than named
+    /// in a row. See `paneRest`.
+    ///
+    /// A deliberate exception to the chip corpus's "nothing faults" invariant
+    /// above — the card renders a real body, so SwiftData faults the heavy
+    /// inline columns back in for exactly ONE object, once. That is precisely
+    /// why this isn't a second `@Query`: a fully-hydrated fetch would
+    /// materialize a window of records on every write, on every device,
+    /// including the phone, where this pane is never rendered and nobody reads
+    /// the result. One fault on the surface that shows it beats a standing
+    /// cost on the surface that doesn't.
+    ///
+    /// The eligibility rule is All's own (`Corpus.showsInAll`), so the pane and
+    /// the column beside it can never disagree about what just landed — plus
+    /// the import receipt, which All keeps and this drops: a receipt is a fact
+    /// about the pile, and §249 keeps those off the app's resting surfaces.
+    ///
+    /// A FUTURE `capturedAt` is skipped, which is the one place this parts from
+    /// All's order on purpose. A calendar event carries the event's own time as
+    /// its `capturedAt` (that is what lets the agenda lead with what's next), so
+    /// the top of All is routinely something that hasn't happened — and a card
+    /// captioned "Latest" over "Evening run · in 45 minutes" is a wrong word,
+    /// not a debatable one. What's ahead is the DAY's job, one card up.
+    ///
+    /// `first` on a newest-first array short-circuits, so this walks a handful
+    /// of elements, and only `source` is read for a non-bulk thing (both
+    /// `Corpus` checks guard on it before reaching `sourceRef`, which is NOT in
+    /// the fetch set above).
+    private var latestArrival: Thing? {
+        let now = Date.now
+        return things.first {
+            $0.isLive
+                && $0.capturedAt <= now
+                && !Corpus.searchOnlySources.contains($0.source)
+                && Corpus.showsInAll($0)
+                && !Corpus.isImportReceipt($0)
+        }
+    }
 
     /// First-ever thing from a source blooms its hue across the header once.
     @State private var bloomHue: Color?
@@ -214,7 +250,12 @@ struct MainSurface: View {
     private var computedChipLabels: [String] {
         var seen: Set<String> = []
         var ordered: [String] = []
-        for thing in feedThings where seen.insert(thing.source).inserted {
+        // `Corpus.chiplessSources` skips "You" (ruling 2026-08-02) — its things
+        // stay in All and keep their stamp, it just isn't a room. Filtered on
+        // the way IN rather than out of the finished list, so the learned sort
+        // below can't hold a slot for something with nowhere to go.
+        for thing in feedThings where Corpus.earnsRoom(thing.source)
+            && seen.insert(thing.source).inserted {
             ordered.append(thing.source)
         }
         // A LIVE-room source earns its chip by being CONNECTED, not by having
@@ -368,32 +409,79 @@ struct MainSurface: View {
         .onChange(of: things.count) { _, _ in detail.pruneIfDead() }
     }
 
-    /// The pane at rest — the DAY (2026-07-31), not a placeholder sentence.
+    /// The pane at rest — the largest single area the app shows when nothing is
+    /// selected: up to 560pt of the widest column, for the whole session.
     ///
-    /// This is the largest single area the app shows at rest: up to 560pt of
-    /// the widest column, for the whole session, previously holding a mark and
-    /// the words "Pick something to open it here." A sentence that describes
-    /// the layout is not content, and on a Mac window it is most of what you
-    /// see. §249 already ruled that the agent's room leads with the day; the
-    /// pane leads with the same line, which is what makes the desktop's extra
-    /// width worth having rather than merely wide.
+    /// It held a mark and "Pick something to open it here" until §248 (a
+    /// sentence describing the layout is not content), then the DAY as a card
+    /// (2026-07-31), and now the newest record itself.
     ///
-    /// It reads `chrome.paneBrief` — composed by the same `DayBrief` pass the
-    /// whisper capsule uses, published ungated (see `ShellChrome.paneBrief`),
-    /// so the pane and the capsule can never state different days. On a day
-    /// with nothing to say it composes nil and the quiet mark stands, exactly
-    /// as before: the honesty law forbids manufacturing a headline to fill a
-    /// column.
+    /// The day line reads `chrome.paneBrief` — composed by the same `DayBrief`
+    /// pass the whisper capsule uses, published ungated (see
+    /// `ShellChrome.paneBrief`), so the pane and the capsule can never state
+    /// different days. On a day with nothing to say it composes nil and the
+    /// line simply doesn't draw: the honesty law forbids manufacturing a
+    /// headline to fill a column.
     ///
-    /// No berry inside the brief — §249's ruling ("i like our logo in the
+    /// No berry anywhere in here — §249's ruling ("i like our logo in the
     /// search / whisper bar, but not inside the daily brief itself"). The mark
-    /// survives only in the nothing-to-say branch, where there is no brief for
-    /// it to be inside of.
-    private var paneRest: some View {
-        VStack(spacing: DS.Space.s3) {
-            if let brief = chrome.paneBrief {
-                paneBriefCard(brief)
-            } else {
+    /// survives only in the nothing-landed branch, which has no brief and no
+    /// record for it to be inside of.
+    ///
+    /// **The pane at rest holds the newest RECORD, open (2026-08-02).** A brief
+    /// is three or four lines and the pane is a full-height column, so leading
+    /// with the day still left most of it empty — the same complaint §248 was
+    /// answering, one size down. What fills a reading column is something to
+    /// read, so the pane opens the newest thing exactly as a selection would:
+    /// the real `ThingSheetView`, real body, real verbs. This is the shape Mail
+    /// and Notes keep, and the reason it isn't duplication of the column beside
+    /// it is that the column lists ENTRIES and this shows a BODY.
+    ///
+    /// The day keeps its lead (§248) as one line above it — the capsule's own
+    /// sentence (§165) rather than a card, opening the same Today brief through
+    /// the same door (§132). Nothing about what the day says changes; only how
+    /// much of the column it occupies.
+    ///
+    /// **`detail.thing` stays nil.** This is deliberately NOT a selection made
+    /// on your behalf: `pruneIfDead`, `clear()` and above all the Mac's
+    /// `displaced` hand-off (narrowing the window re-opens the pane's thing as
+    /// a sheet) all describe something the person chose, and firing them for a
+    /// record nobody picked would open sheets out of nowhere. So the rest
+    /// branch RENDERS the record without selecting it, and the "Latest" marker
+    /// says which of the two states you're looking at — the honesty law applied
+    /// to a state rather than to a control.
+    ///
+    /// The ink comes with the record, and the §248 objection it was avoiding
+    /// ("painting it at rest put a hard black column beside the poured feed")
+    /// no longer applies: that was ink under a PLACEHOLDER. With a record here
+    /// the pane wears exactly the background it wears the moment you click
+    /// anything, so there is no state where the seam is new information.
+    ///
+    /// The nothing-landed branch (a fresh install) is UNCHANGED — no ink, no
+    /// strip, the centered mark on the shell's own poured page.
+    @ViewBuilder private var paneRest: some View {
+        if let latest = latestArrival {
+            VStack(alignment: .leading, spacing: 0) {
+                if let brief = chrome.paneBrief {
+                    paneDayStrip(brief)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s4)
+                }
+                Text("Latest")
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.top, chrome.paneBrief == nil ? DS.Space.s4 : DS.Space.s6)
+                // `.id` so switching to a newer arrival rebuilds the record
+                // rather than re-theming the old one in place — the same
+                // reason the selection branch above carries one.
+                ThingSheetView(thing: latest, inlineRest: true)
+                    .id(latest.id)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .dsInk()
+        } else {
+            VStack(spacing: DS.Space.s3) {
                 CasberiMark(size: 44)
                     .opacity(0.32)
                 Text("Pick something to open.")
@@ -401,34 +489,39 @@ struct MainSurface: View {
                     .foregroundStyle(DS.textTertiary)
                     .multilineTextAlignment(.center)
             }
+            .padding(DS.Space.s6)
         }
-        .padding(DS.Space.s6)
     }
 
-    /// The day as the pane's lead. Tapping opens the real Today brief, routed
-    /// through `chrome.askRequest` — the same door the whisper capsule, the
-    /// bar's own tap and a typed "how's my day" all use (§132), so a fourth
-    /// entry point can't drift into a fourth presentation of one screen.
-    private func paneBriefCard(_ brief: DayBrief.Whisper) -> some View {
+    /// The day as one line above the record. Tapping opens the real Today
+    /// brief, routed through `chrome.askRequest` — the same door the whisper
+    /// capsule, the bar's own tap and a typed "how's my day" all use (§132),
+    /// so a fourth entry point can't drift into a fourth presentation of one
+    /// screen.
+    ///
+    /// The accent is read against DARK explicitly, not off the environment:
+    /// this line renders inside `dsInk`, which forces `.colorScheme(.dark)`,
+    /// while `@Environment(\.colorScheme)` on this surface is measured OUTSIDE
+    /// that background — in light mode the two disagree, and the one that
+    /// decides whether a gain reads green is this one.
+    private func paneDayStrip(_ brief: DayBrief.Whisper) -> some View {
         Button {
             DSHaptic.tap()
             chrome.ask(TodayBrief.title)
             chrome.openComposer()
         } label: {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(spacing: DS.Space.s2) {
                 Text(brief.title)
-                    .dsText(.heading22)
-                    .foregroundStyle(DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                brief.detailText(scheme: paneScheme)
-                    .dsText(.body17)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text("Open your day")
                     .dsText(.subhead13)
-                    .foregroundStyle(DS.tint)
-                    .padding(.top, DS.Space.s1)
+                    .foregroundStyle(DS.textPrimary)
+                brief.detailText(scheme: .dark)
+                    .dsText(.subhead13)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(DS.textTertiary)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .lineLimit(1)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

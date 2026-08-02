@@ -1398,7 +1398,12 @@ struct RootShell: View {
             if parts.count == 2, parts[0] == "type" {
                 FeedFilter.shared.tag = parts[1]
             } else if parts.count == 2, parts[0] == "source" {
-                FeedFilter.shared.source = parts[1]
+                // A source with no room lands on All rather than on a page
+                // nothing can light (ruling 2026-08-02, `Corpus.chiplessSources`).
+                // Nothing in the app mints such a link any more — the sheet's
+                // eyebrow stopped being a door for these — but an old one, or a
+                // hand-typed one, must not strand the strip with no chip lit.
+                FeedFilter.shared.source = Corpus.earnsRoom(parts[1]) ? parts[1] : "All"
             }
         // Apps is reached through the shared doors now — push it directly,
         // wherever the chip header currently sits (back-compat for

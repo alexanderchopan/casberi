@@ -71,6 +71,43 @@ enum ThingKind: String, Codable, CaseIterable {
 enum Corpus {
     static let searchOnlySources: Set<String> = ["Contacts", "HomeKit"]
 
+    /// Sources that keep their STAMP but earn no chip and no room (user
+    /// ruling 2026-08-02: "i say get rid of the you chip and room").
+    ///
+    /// "You" is the first, and for now the only one. It is `source`'s own
+    /// default — the honest provenance of anything you captured yourself: the
+    /// share sheet, a drop, a note — but it is not an app, and the strip is a
+    /// row of apps. Three things made its room wrong rather than merely thin:
+    ///
+    ///   • **The rail already carries a person.** `AvatarDoor` renders
+    ///     `person.crop.circle` for Settings at the head of the strip, and the
+    ///     chip drew `person` (`KindGlyph`) a few slots along — one
+    ///     silhouette, two meanings, on one rail. It read as "profile".
+    ///   • **The room had no face and could not get one.** `FeedScreen`'s
+    ///     `.you` shape is assigned and matched by nothing, so it fell through
+    ///     to a plain list. §247 gave every room a hero; this room's contents
+    ///     are a link, a note, a PDF and a dropped file — heterogeneous by
+    ///     definition, which is the one thing a map can't be made of.
+    ///   • **Nothing was reachable only there.** Unlike `searchOnlySources`
+    ///     (hidden from the feed) or `bulkImportSources` (kept out of All),
+    ///     every "You" thing already shows in All — so the room added scoping
+    ///     and no reach, and scoping is already done better three ways: the
+    ///     `.saved` mark, projects, and Find (§215).
+    ///
+    /// Deliberately NOT `searchOnlySources`: that hides a source from the feed
+    /// altogether, and your own captures belong in All more than anything a
+    /// bridge pours in. The stamp stays on the record too, where the sheet's
+    /// spec table already reads "From — written by you" in plain words. This
+    /// removes a ROOM, not a fact.
+    static let chiplessSources: Set<String> = ["You"]
+
+    /// Does this source get a chip in the strip, a room behind it, and a
+    /// `casberi://feed/source/…` door pointing at it? Read by every surface
+    /// that offers a source as a destination, so the answer is declared once.
+    static func earnsRoom(_ source: String) -> Bool {
+        !chiplessSources.contains(source) && !searchOnlySources.contains(source)
+    }
+
     /// Sources that arrive in BULK from a file you exported yourself —
     /// thousands of things in one pass, dated across years (2026-07-31).
     ///

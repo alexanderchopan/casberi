@@ -24,6 +24,15 @@ struct ThingSheetView: View {
     /// the "dead top zone" a pushed presentation otherwise leaves (2026-07-23,
     /// user critique of the Worth-a-look detail screen).
     var onBack: (() -> Void)? = nil
+    /// True when this view is rendered IN PLACE rather than presented — the
+    /// detail pane at rest, which holds the newest record with no selection
+    /// behind it (`MainSurface.paneRest`, 2026-08-02). It carries no back
+    /// handler because there is nowhere to go back TO, which is exactly why it
+    /// can't ride `onBack != nil` for the toolbar rule below: without this it
+    /// would take the `.automatic` branch and hand the shell's own
+    /// NavigationStack a nav bar over the FEED, which is not even the column
+    /// this view is in.
+    var inlineRest: Bool = false
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -102,9 +111,10 @@ struct ThingSheetView: View {
     /// clock `dismissWhenSettled` reads to tell a fast tap from a settled one.
     private let presentedAt = Date()
 
-    init(thing: Thing, onBack: (() -> Void)? = nil) {
+    init(thing: Thing, onBack: (() -> Void)? = nil, inlineRest: Bool = false) {
         self.thing = thing
         self.onBack = onBack
+        self.inlineRest = inlineRest
         // The same crash guard `FeedScreen.standsAlone` earned (2026-07-24,
         // live TestFlight crash): a `Thing` a concurrent delete-sync heal
         // pass (SyncReconcile, BridgeRefresh) removes between the row's tap
@@ -381,7 +391,10 @@ struct ThingSheetView: View {
         // Only when pushed (`onBack` set): the eyebrow carries its own back
         // chevron now, so the system's default pushed-view nav bar (and the
         // back button it would ALSO draw) is redundant chrome on top of it.
-        .toolbar(onBack != nil ? .hidden : .automatic, for: .navigationBar)
+        // `inlineRest` joins it for the same reason from the other direction —
+        // rendered in place, there is no presentation for a nav bar to belong
+        // to, and `.automatic` would hand one to the shell's stack instead.
+        .toolbar(onBack != nil || inlineRest ? .hidden : .automatic, for: .navigationBar)
         .onAppear {
             streamRelated()
             Task { replies = await SocialThread.replies(for: thing) }
@@ -595,26 +608,43 @@ struct ThingSheetView: View {
                 // the eyebrow correctly drops the whole agent and lands on
                 // the source feed, not just pops the pushed thing-view.
                 // Verified live via `-agentThingProbe` (2026-07-21).
-                Button {
-                    DSHaptic.tap()
-                    dismissWhenSettled {
-                        if let url = URL(string: "casberi://feed/source/\(sourcePathComponent)") {
-                            openURL(url)
+                // …but only when there IS a room to leave for. "You" keeps its
+                // stamp and lost its room (ruling 2026-08-02,
+                // `Corpus.chiplessSources`), and a door onto a room that no
+                // longer exists is precisely the dead control the honesty law
+                // bans — so for those sources the same line renders as a plain
+                // label, mark and all.
+                if Corpus.earnsRoom(thing.source) {
+                    Button {
+                        DSHaptic.tap()
+                        dismissWhenSettled {
+                            if let url = URL(string: "casberi://feed/source/\(sourcePathComponent)") {
+                                openURL(url)
+                            }
                         }
+                    } label: {
+                        sourceLine
+                            .contentShape(Rectangle())
                     }
-                } label: {
-                    HStack(spacing: DS.Space.s2) {
-                        BridgeIcon(name: thing.source, size: 18, circular: true)
-                            // The mark coin-flips as the sheet opens (delight, 2026-07-12).
-                            .coinFlip(trigger: thing.id)
-                        Text("\(thing.kind.typeTag) · \(shortTime(thing.capturedAt)) ago")
-                            .dsText(.label12)
-                            .foregroundStyle(DS.textTertiary)
-                    }
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                } else {
+                    sourceLine
                 }
-                .buttonStyle(.plain)
             }
+        }
+    }
+
+    /// The eyebrow's mark-and-words, shared by the door and the plain-label
+    /// branch above so the two can never drift on what the line SAYS — only on
+    /// whether it goes anywhere.
+    private var sourceLine: some View {
+        HStack(spacing: DS.Space.s2) {
+            BridgeIcon(name: thing.source, size: 18, circular: true)
+                // The mark coin-flips as the sheet opens (delight, 2026-07-12).
+                .coinFlip(trigger: thing.id)
+            Text("\(thing.kind.typeTag) · \(shortTime(thing.capturedAt)) ago")
+                .dsText(.label12)
+                .foregroundStyle(DS.textTertiary)
         }
     }
 

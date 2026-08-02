@@ -14080,3 +14080,134 @@ This is the exact inverse of §245's Instagram finding, and the contrast is the 
 4. **DMs stay out** (§245's abstention, unchanged), and so do followers/following (a tally).
 
 **UNMEASURED against a real archive** — authored against no export, with no egress to any X host beyond the two oEmbed probes. So the pure logic is harnessed instead (`scripts/x-selftest.sh`, wired into `verify.sh`): `blockquoteText`, `snowflakeDate`, `parseArray`, `clean`, `identifier` and `created`, all extracted FROM THE SHIPPED SOURCE rather than copied, 32 assertions, mutation-tested three ways. **One of those mutations is the reason the harness is worth its length:** a first pass asserted the snowflake date only to the DAY, and a mutation moving the epoch by 657ms passed it clean — the constant could have been meaningfully wrong with nothing to catch it. The assertion is to the millisecond now. Every failure path returns nil to existing behaviour, so a drifted or missing category is a skip, never a wrong number.
+
+## §281 — The pane at rest holds a record, and "You" loses its room (user: "the empty state of the desktop app, when nothing is selected just looks not good. what are three options we can do there", then "2 seems the best" → "when you said newest item there i thought you mean it would have the actual newest item expanded in the panel"; then, on the source chip, "what is this category of You? where do these come from" → "WHy even have it tbh" → "i say get rid of the you chip and room", 2026-08-02)
+
+Two changes that arrived together because one exposed the other: filling the
+desktop's resting pane meant looking hard at what the app puts in front of
+someone who hasn't clicked anything yet, and the source strip beside it turned
+out to be carrying a room nobody could name.
+
+### 1. The pane at rest opens the newest record (`MainSurface.paneRest`)
+
+§248 gave the resting pane the DAY because the column had been standing empty
+behind "Pick something to open it here", and a sentence describing the layout is
+not content. That was right and it did not go far enough: a brief is three or
+four lines, the pane is a full-height column, and the result was a caption
+floating in 560pt of air — the same complaint one size down.
+
+So the pane now opens the newest thing exactly as a selection would: the real
+`ThingSheetView`, real body, real verbs. This is the shape Mail and Notes keep,
+and it is NOT duplication of the column beside it — that column lists ENTRIES,
+this one shows a BODY. The day keeps its lead as one line above it, the capsule's
+own sentence (§165) rather than a card, opening the same Today brief through the
+same door (§132). Nothing about what the day says changed; only how much of the
+column it occupies.
+
+**`detail.thing` stays nil, and that is the load-bearing decision.** The pane
+RENDERS the record without SELECTING it, because `clear()`, `pruneIfDead` and
+above all the Mac's `displaced` hand-off — narrowing the window re-opens the
+pane's thing as a sheet — every one of them describes something the person
+chose. Firing them for a record nobody picked would open sheets out of nowhere.
+The quiet "Latest" marker is what tells the two states apart: the honesty law
+applied to a STATE rather than to a control, since without it the record is
+indistinguishable from a selection you made and forgot making.
+
+Three details worth not re-deriving:
+
+- **The ink is fine now, and §248's objection is retired rather than ignored.**
+  That note refused to paint the pane at rest because "a hard black column
+  beside the poured feed" is the no-hairlines law broken with a background
+  instead of a stroke. True — of ink under a PLACEHOLDER. With a record here the
+  pane wears exactly the background it wears the moment you click anything, so
+  there is no state in which the seam is new information. The nothing-landed
+  branch (a fresh install) keeps the poured window and the centered mark.
+- **`ThingSheetView` gained `inlineRest`**, and it is not cosmetic. The toolbar
+  rule was `onBack != nil ? .hidden : .automatic`; a record rendered in place
+  carries no back handler (there is nowhere to go back TO), so it took
+  `.automatic` and handed the shell's own NavigationStack a nav bar — over the
+  FEED column, which is not even the column the view is in.
+- **A future `capturedAt` is skipped**, the one place this parts from All's
+  order on purpose. A calendar event carries the event's own time as
+  `capturedAt` (that is what lets the agenda lead with what's next), so the top
+  of All is routinely something that hasn't happened, and "Latest · in 45
+  minutes" is a wrong word rather than a debatable one. What's ahead is the day
+  line's job, one row up.
+
+`latestArrival` reads the chip corpus rather than minting a second `@Query`, a
+deliberate exception to that query's "nothing faults" invariant: the card
+renders a real body, so SwiftData faults the heavy inline columns back for
+exactly ONE object, once. A hydrated fetch would instead materialize a window of
+records on every write, on every device — including the phone, where this pane
+is never rendered and nobody reads the result.
+
+### 2. "You" keeps its stamp and loses its room (`Corpus.chiplessSources`)
+
+RULING (user): the "You" chip and its room are gone. The SOURCE stays — it is
+`Thing.source`'s own default, the honest provenance of anything captured by
+hand (share sheet, drop, a note) as against a bridge's sync, and removing it
+would make every self-capture lie about where it came from. What goes is the
+chip, the room behind it, and every door pointing at them.
+
+The user's own question is the finding: *"what is this category of You? where do
+these come from"* — asked by the person who built it. Three reasons it was wrong
+rather than merely thin:
+
+- **The rail already carries a person.** `AvatarDoor` renders
+  `person.crop.circle` for Settings at the head of the strip, and the chip drew
+  `person` (`KindGlyph`) a few slots along. One silhouette, two meanings, on one
+  rail — and the chips are icon-only by the 2026-07-09 ruling, which works only
+  because every other chip is a logo you already know.
+- **The room had no face and could not get one.** `FeedScreen.Shape.you` is
+  assigned and matched by nothing, so it fell through to a plain list. §247 gave
+  every room a hero; this room's contents are a link, a note, a PDF and a
+  dropped file — heterogeneous by definition, which is the one thing a map can't
+  be made of.
+- **Nothing was reachable only there.** Unlike `searchOnlySources` (hidden from
+  the feed) or `bulkImportSources` (kept out of All), every "You" thing already
+  shows in All. The room added scoping and no reach — and scoping is already
+  done better three ways: the `.saved` mark, projects, and Find (§215).
+
+Deliberately NOT `searchOnlySources`, which would hide the things too: your own
+captures belong in All more than anything a bridge pours in. The stamp survives
+on the record, where the sheet's spec table already reads "From — written by
+you" in plain words. **This removes a room, not a fact.**
+
+Four doors closed, and the fourth is the one that would have rotted quietly:
+
+1. `MainSurface.computedChipLabels` filters on the way IN, so the learned sort
+   can't hold a slot for something with nowhere to go. The sources tray and
+   ⌘1–⌘9 both read `chrome.chipOrder` downstream of it and need no change.
+2. `casberi://feed/source/You` lands on All. Nothing mints such a link any more,
+   but an old or hand-typed one must not strand the strip with no chip lit.
+3. The thing sheet's eyebrow stops being a door for a roomless source and
+   renders the identical line as a plain label — a door onto a room that no
+   longer exists is exactly the dead control the honesty law bans. Both branches
+   share one `sourceLine` so they can't drift on what the line SAYS.
+4. `KeptAskComposers` no longer resolves a roomless source into a `.source`
+   intent. That intent's entire payload is "land on that source's room", so
+   without this you could KEEP a `context:You` ask — pinned, persistent, and
+   permanently landing on All. It is the only producer, so the destination is
+   retired rather than papered over at the navigation end.
+
+### Held, not done: "Add to Reminders" renders as a location
+
+The bug that started the second half. `ThingStage.dialLabel` strips the
+`"Add to "` prefix, so a note's verb row reads **Reminders · Copy · Translate ·
+Share** — one noun among three verbs, and the noun is the name of a source room
+in this same app. It reads as filing, which is exactly how it was reported
+("this category has a reminder in it").
+
+The stripping rule is right for what it was written for: `shortLabel` collapses
+every hand-off to "Open", so a sheet with Directions + Photos + Call would read
+"Open Open Open", and for `Open in X` the destination genuinely is the
+differentiator. But `Add to X` is a WRITE — `Verb.isWrite` is true for exactly
+`.addToCalendar` and `.addToReminders` — and stripping the verb off a write
+turns an action into a location. Both survivors ("Reminders", "Calendar") name
+rooms, so both discs read as provenance.
+
+The app already holds the right word for one of them: `Verb.shortLabel` for
+`.addToReminders` is "Remind". `.addToCalendar`'s is "Calendar" — the identical
+collision — and would need a real verb ("Schedule"). Left for a copy ruling
+rather than taken: the user rules on design, and this is two words on a control
+that appears on every thing in the corpus.
