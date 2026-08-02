@@ -40,7 +40,13 @@
 	     and SwiftUI's `openURL` report SUCCESS for an unhandled `wc:` URI while
 	     LaunchServices fails it asynchronously in its own daemon
 	     (LSApplicationWorkspaceErrorDomain 115 in the log), so the opened-Bool
-	     cannot tell "no wallet" from "opened fine". -->
+	     cannot tell "no wallet" from "opened fine". photos-redirect → a
+	     screenshot's "Open in Photos" disc (2026-08-02). Same reasoning as wc,
+	     and the same failure it had shipped as: the verb opened that scheme
+	     unconditionally, so on a system where nothing claims it the disc did
+	     nothing at all and reported nothing (user: it "doesn't go to the Photos
+	     app"). Declared here so `canOpenURL` can answer, and the verb is now
+	     gated on that answer — the picture itself opens in-app instead. -->
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>todoist</string>
@@ -48,6 +54,7 @@
 		<string>claude</string>
 		<string>googlegmail</string>
 		<string>wc</string>
+		<string>photos-redirect</string>
 	</array>
 	<!-- Claims the org.opml.opml UTI (the de facto identifier every OPML-
 	     capable reader, e.g. NetNewsWire, declares — there is no Apple-owned

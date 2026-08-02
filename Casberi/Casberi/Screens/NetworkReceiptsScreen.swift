@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// "What it actually reached" (prd §276) — the runtime half of §205's
+/// "What it actually reached" (prd §277) — the runtime half of §205's
 /// registry. `NetworkReachScreen` lists what the app MAY reach; this lists
 /// what it DID, read off `NetworkLedger`.
 ///

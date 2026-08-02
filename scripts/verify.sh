@@ -29,7 +29,7 @@ step "Network-reach audit"
 "$ROOT/scripts/network-reach-audit.sh" || fail "a network host isn't disclosed — see scripts/network-reach-audit.sh"
 print -P "%F{green}✓ network-reach audit%f"
 
-# Keeps every Keychain write device-only and non-syncing (prd §276). Static,
+# Keeps every Keychain write device-only and non-syncing (prd §277). Static,
 # no build. The failure it catches is invisible at runtime — a key stored with
 # the wrong accessibility works perfectly and also rides an encrypted backup
 # onto another device — so it can only ever be caught mechanically.
@@ -39,7 +39,7 @@ step "Keychain policy audit"
 "$ROOT/scripts/keychain-audit.py" || fail "a keychain write isn't device-only — see the output above"
 print -P "%F{green}✓ keychain audit%f"
 
-# The credential tripwire's fixtures (prd §276) — that the shipped patterns and
+# The credential tripwire's fixtures (prd §277) — that the shipped patterns and
 # thresholds still hide a recovery phrase and still leave an ordinary shopping
 # list alone. Reads both out of the Swift source, so re-tuning a number here
 # fails rather than silently changing what the app hides.

@@ -396,7 +396,7 @@ struct RootShell: View {
                         _ = DayOneImport.healEscapedText(context: modelContext)
                     }
                     if migrationsStored < 5 {
-                        // One-time re-write (prd §276, 2026-08-02): keychain
+                        // One-time re-write (prd §277, 2026-08-02): keychain
                         // accessibility is fixed when an item is ADDED, so keys
                         // stored by an earlier build keep the old
                         // backup-restorable policy until they're written again —

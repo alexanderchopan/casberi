@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Harness for the credential tripwire (prd §276).
+"""Harness for the credential tripwire (prd §277).
 
 WHAT THIS PROVES, AND WHAT IT DOESN'T.
 

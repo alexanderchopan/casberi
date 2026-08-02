@@ -4,7 +4,7 @@ import Security
 /// Personal-access tokens live in the Keychain — never UserDefaults, never a
 /// server. One generic-password item per bridge, readable only by this app.
 ///
-/// **Storage policy (prd §276, 2026-08-02).** Every item this vault writes is
+/// **Storage policy (prd §277, 2026-08-02).** Every item this vault writes is
 /// `…ThisDeviceOnly` and explicitly non-synchronizable. Both matter, and they
 /// stop different things:
 ///

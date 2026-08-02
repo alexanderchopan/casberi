@@ -360,7 +360,7 @@ enum IngestSupport {
         return try? JSONSerialization.jsonObject(with: data)
     }
 
-    /// The ONE transport every helper above rides (prd §276). It exists so
+    /// The ONE transport every helper above rides (prd §277). It exists so
     /// there is a single place that sees every bridge request — `run`,
     /// `getJSONStatus` and `postJSONStatus` each used to call
     /// `session.data(for:)` themselves, which meant no single point could

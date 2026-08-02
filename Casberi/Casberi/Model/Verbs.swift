@@ -16,6 +16,7 @@ struct Verb: Identifiable {
         case approve                  // S10: the person's yes — IS the consent
         case deny                     // S10: the person's no
         case translate                // read: system Translation sheet over the thing's own text
+        case viewImage                // read: the picture itself, full screen and zoomable
     }
     let label: String
     let icon: String
@@ -37,6 +38,7 @@ struct Verb: Identifiable {
         case .approve:        return "Approve"
         case .deny:           return "Deny"
         case .translate:      return "Translate"
+        case .viewImage:      return "Zoom"
         }
     }
     var id: String { label }
@@ -106,8 +108,39 @@ enum VerbDerivation {
                 out.append(Verb(label: "Open in store", icon: "bag", action: .openURL(url)))
             }
         case .screenshot:
-            out.append(Verb(label: "Open in Photos", icon: "photo",
-                            action: .openURL(URL(string: "photos-redirect://")!)))
+            // The picture itself, full screen and zoomable, IN the app
+            // (2026-08-02 — user: tapping Photos "doesn't go to the Photos app
+            // or actual photo").
+            //
+            // "Open in Photos" was the only verb here, and it could never do
+            // what its name promised. iOS publishes no URL that opens a
+            // SPECIFIC asset, so `photos-redirect://` lands on the Photos app's
+            // root at best; and when nothing claims that scheme the tap does
+            // nothing at all, silently, because neither `UIApplication.open`'s
+            // completion nor SwiftUI's `openURL` reports a refusal (the same
+            // blindness the WalletConnect `wc:` read paid for — see the
+            // measured note in CLAUDE.md). A disc that reads live and is inert
+            // is the dead control the honesty rule bans.
+            //
+            // The app already holds the pixels — the corpus's own healed copy
+            // and the asset behind it — so the photo opens where it cannot
+            // fail. `sourceRef` is the cheap gate: it's a plain string column
+            // every real screenshot carries, and reading `previewImageData`
+            // here instead would fault an externalStorage blob per row, in a
+            // function the feed already calls from a non-escaping context-menu
+            // builder (prd §260).
+            if thing.sourceRef != nil {
+                out.append(Verb(label: "Zoom", icon: "arrow.up.left.and.arrow.down.right",
+                                action: .viewImage))
+            }
+            // The hand-off stays for the people who want the library — but only
+            // when something actually claims the scheme, so it can't be a disc
+            // that does nothing. It opens the Photos app, never this photo, and
+            // its label promises only that.
+            if HandOffState.installedSchemes.contains("photos-redirect"),
+               let url = URL(string: "photos-redirect://") {
+                out.append(Verb(label: "Open in Photos", icon: "photo", action: .openURL(url)))
+            }
         case .note:
             // A note's next action: it becomes a reminder (S4 — captures
             // become outcomes). The write confirms; copy follows.
@@ -291,7 +324,12 @@ enum VerbDerivation {
         switch source.lowercased() {
         case "calendar":  return URL(string: "calshow://")
         case "reminders": return URL(string: "x-apple-reminderkit://")
-        case "photos":    return URL(string: "photos-redirect://")
+        // Gated like the screenshot verb above (2026-08-02): an unclaimed
+        // scheme opens nothing and reports nothing back, so this hand-off only
+        // exists while something answers for it.
+        case "photos":
+            return HandOffState.installedSchemes.contains("photos-redirect")
+                ? URL(string: "photos-redirect://") : nil
         case "gmail":     return URL(string: "googlegmail://")
         case "chatgpt":   return URL(string: "chatgpt://")
         // Music apps — the per-track universal link opens the exact song; this
@@ -333,7 +371,10 @@ enum HandOffState {
         return _connectedBridges
     }
 
-    private static let candidates = ["todoist", "googlegmail"]
+    /// `photos-redirect` joined the probe list on 2026-08-02: the Photos
+    /// hand-off is the one verb here that is NOT tied to a connected bridge, so
+    /// nothing else could tell whether it would open anything.
+    private static let candidates = ["todoist", "googlegmail", "photos-redirect"]
 
     @MainActor static func refresh(connected: Set<String>) {
         let schemes = Set(candidates.filter {

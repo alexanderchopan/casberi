@@ -363,7 +363,7 @@ enum NetworkReach {
     }
 
     /// Which declared service a host belongs to, or nil if this registry
-    /// never claimed it (prd §276). The receipts screen reads this to sort a
+    /// never claimed it (prd §277). The receipts screen reads this to sort a
     /// host it actually observed into "declared" or "not declared" — the
     /// runtime counterpart to `scripts/network-reach-audit.sh`, which can
     /// only see host LITERALS in source and is therefore blind to a host

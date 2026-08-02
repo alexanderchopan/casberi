@@ -109,12 +109,12 @@ SKIP_BUMP=1 \
      already on testers' devices by the time anyone notices.
    - **`catalog-sync.sh`** — the app catalog, the website shelf and the
      onboarding tiles are ONE set.
-   - **`keychain-audit.py`** (prd §276) — every `SecItemAdd` must be
+   - **`keychain-audit.py`** (prd §277) — every `SecItemAdd` must be
      `…ThisDeviceOnly` and non-synchronizable. Same shape of gate: a key
      stored with the wrong accessibility works perfectly and also rides an
      encrypted backup onto whatever device restores it, so no build, launch
      or screen sweep can ever see it.
-   - **`secret-scan-selftest.py`** (prd §276) — the credential tripwire still
+   - **`secret-scan-selftest.py`** (prd §277) — the credential tripwire still
      hides a recovery phrase and still leaves an ordinary shopping list
      alone. Its thresholds were measured against real fixtures; a silent
      re-tune would either leak a phrase to Spotlight or quietly stop

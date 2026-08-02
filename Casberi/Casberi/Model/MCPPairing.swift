@@ -70,7 +70,7 @@ enum MCPPairing {
         delete()
         var query = baseQuery()
         query[kSecValueData as String] = Data(token.utf8)
-        // Same storage policy as `TokenVault` (prd §276): out of encrypted
+        // Same storage policy as `TokenVault` (prd §277): out of encrypted
         // backups, off iCloud Keychain. `WhenUnlocked` rather than the
         // vault's `AfterFirstUnlock` because a pairing token is only ever
         // used while the person is actually at the device.

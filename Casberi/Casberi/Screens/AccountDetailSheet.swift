@@ -17,7 +17,7 @@ enum AccountDetail: String, Identifiable {
 
 /// The Privacy home's sub-pages, presented through ONE `.sheet(item:)`.
 ///
-/// Deliberately an enum rather than a second `@State` flag (prd §276): two
+/// Deliberately an enum rather than a second `@State` flag (prd §277): two
 /// sibling `.sheet(isPresented:)` modifiers on one view resolve to the same
 /// presenting controller, and the second tears the first down mid-transition
 /// — the half-opening sheet this codebase has now paid for three times. One
@@ -25,7 +25,7 @@ enum AccountDetail: String, Identifiable {
 enum PrivacySubPage: String, Identifiable {
     /// What this app MAY reach — the curated registry (prd §205).
     case reach
-    /// What it ACTUALLY reached — the observed ledger (prd §276).
+    /// What it ACTUALLY reached — the observed ledger (prd §277).
     case receipts
     var id: String { rawValue }
 }
@@ -188,8 +188,8 @@ struct AccountDetailSheet: View {
     private var sheetHeight: CGFloat {
         switch detail {
         // Now the one privacy home: + the two sub-page doors always ("What
-        // this app reaches" §205, "What it actually reached" §276), the ADP
-        // nudge when sync is on — two sentences since §276, so ~5 lines, not
+        // this app reaches" §205, "What it actually reached" §277), the ADP
+        // nudge when sync is on — two sentences since §277, so ~5 lines, not
         // 3 — and the sync error detail line (2026-07-27) on top of that when
         // the mirror is actually failing. DSTray clips at a fixed detent, so
         // the tallest reachable state must be sized for; +62 for the second
@@ -276,7 +276,7 @@ struct AccountDetailSheet: View {
             // there's no iCloud copy to encrypt). Points the person at the
             // one thing that upgrades their sync to true end-to-end, which
             // is theirs to enable, not ours: Advanced Data Protection.
-            // Amended prd §276: it named what ADP ADDS without ever naming
+            // Amended prd §277: it named what ADP ADDS without ever naming
             // where sync stands WITHOUT it, which let "encrypted" be read as
             // "end-to-end". The baseline goes first now — the standing rule is
             // that an end-to-end claim requires ADP, and the honest way to
@@ -298,7 +298,7 @@ struct AccountDetailSheet: View {
             door("network", "What this app reaches",
                  "Every service, straight from \(DS.device)") { privacyPage = .reach }
             // The same question asked of BEHAVIOUR rather than of a list
-            // (prd §276). The row above is what the app may reach and is
+            // (prd §277). The row above is what the app may reach and is
             // hand-maintained; this is what it actually did reach, recorded
             // as it happened — so the claim can be checked rather than
             // trusted, and a host nobody declared shows up as one.

@@ -29,6 +29,9 @@ struct ThingSheetView: View {
     @Environment(\.openURL) private var openURL
 
     @State private var confirmingVerb: Verb?
+    /// The screenshot, opened full screen and zoomable (2026-08-02) — the Zoom
+    /// disc, and a tap on the framed shot itself.
+    @State private var zoomingPhoto = false
     @State private var verbResult: String?
     /// A bridge's no must READ as a no — green success styling on a failure
     /// would claim a write that didn't happen (honesty rule).
@@ -233,9 +236,21 @@ struct ThingSheetView: View {
                     // its pixels. The title drops below at reading size: for a
                     // screenshot the picture is the identity, the words the
                     // caption.
+                    //
+                    // Tapping the picture opens it full screen (2026-08-02) —
+                    // the gesture people try first, and the same destination
+                    // the Zoom disc reaches. Not a `Button`: the frame is
+                    // content, not a control, so it takes the tap without
+                    // gaining a button's press styling.
                     ThingContentView(thing: thing)
                         .shadow(color: DS.cardShadow, radius: 18, y: 10)
                         .padding(.top, DS.Space.s3)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if thing.sourceRef != nil { zoomingPhoto = true }
+                        }
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityHint(Text("Opens the photo full screen"))
                         .settleIn(delay: 0.06)
                     Text(thing.title)
                         .dsText(.heading22).foregroundStyle(DS.textPrimary)
@@ -424,6 +439,25 @@ struct ThingSheetView: View {
         // re-presentation of this same sheet over the linked note.
         .sheet(item: $walkingToNote) { note in
             ThingSheetView(thing: note.thing)
+        }
+        // The screenshot at full size (2026-08-02). A cover, not a sheet, for
+        // two reasons: the picture IS the screen here and a detented sheet
+        // would letterbox the one surface whose whole job is showing every
+        // pixel — and it keeps the standing one-screen-one-`.sheet` rule
+        // intact. That rule is about SIBLINGS of the same modifier (the feed's
+        // five `.sheet`s, paid for three times); this is the only
+        // `fullScreenCover` on the view, so it adds no fourth `.sheet` to the
+        // three above it.
+        //
+        // Reads the model's values HERE and hands the viewer plain ones, so a
+        // heal deleting this row while the viewer is open can't trap on a dead
+        // reference (`ThingRowKeying.swift`, corollary 5).
+        .fullScreenCover(isPresented: $zoomingPhoto) {
+            if thing.isLive {
+                PhotoViewer(assetRef: thing.sourceRef,
+                            stored: thing.previewImageData,
+                            title: thing.title)
+            }
         }
         // Translate: the system sheet, over the thing's own words. Unavailable
         // on Mac Catalyst (no Translation UI presentation there).
@@ -1075,6 +1109,9 @@ struct ThingSheetView: View {
             verbResult = nil
             translateText = thing.postText ?? thing.content
             showTranslate = true
+        case .viewImage:
+            verbResult = nil
+            zoomingPhoto = true
         case .approve:
             // Demo bridge: the decision lands locally; the gateway wire is M5.
             thing.mark = .done

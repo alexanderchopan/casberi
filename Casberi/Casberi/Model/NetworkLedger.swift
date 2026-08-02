@@ -1,6 +1,6 @@
 import Foundation
 
-/// Network receipts (prd §276, 2026-08-02) — the runtime half of §205.
+/// Network receipts (prd §277, 2026-08-02) — the runtime half of §205.
 ///
 /// `NetworkReach` is a CURATED registry: a hand-written list of what the app
 /// *may* reach, kept honest by a static audit over host literals. This is the

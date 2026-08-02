@@ -27,7 +27,7 @@ enum ProbeHooks {
         // sample secret — the whole point of the probe is to hand it one.
         // Printing it verbatim in `probeArgs:` would put a real key in the
         // sim log while testing the feature that exists to keep keys out of
-        // logs (prd §276).
+        // logs (prd §277).
         "-secretScanProbe",
     ]
 
@@ -85,7 +85,7 @@ enum ProbeHooks {
 
     private static let hooks: [Hook] = [
         // `-secretScanProbe "<text>"|corpus` runs the credential tripwire
-        // (prd §276) and reports what it found: the KINDS, and the REDACTED
+        // (prd §277) and reports what it found: the KINDS, and the REDACTED
         // rendering — never the secret itself, which is the point of the
         // feature and so also the rule for its probe. `corpus` walks the
         // stored things instead and names the ones whose Spotlight/Siri
@@ -117,7 +117,7 @@ enum ProbeHooks {
         },
         // `-keychainProbe YES` reports the vault's STORAGE POLICY — how many
         // items are device-only and how many are synchronizable — then forces
-        // the hardening migration and reports again (prd §276). Counts only:
+        // the hardening migration and reports again (prd §277). Counts only:
         // it never reads or logs a secret's value. The before/after pair is
         // the check that the migration actually re-writes old items, which is
         // invisible otherwise since a wrongly-stored key works perfectly.
@@ -135,7 +135,7 @@ enum ProbeHooks {
                   ? "every item device-only and non-syncing"
                   : "STILL LOOSE — see the counts above")
         },
-        // `-receiptsProbe YES` dumps the network receipts ledger (prd §276):
+        // `-receiptsProbe YES` dumps the network receipts ledger (prd §277):
         // one line per host actually reached, with whether the "What this app
         // reaches" registry declares it. A host reading NOT-DECLARED is the
         // runtime form of the audit failure that shipped in build 214.
@@ -1920,6 +1920,70 @@ enum ProbeHooks {
         Hook(key: "reingestPhotos") { _, context in
             let n = ScreenshotIngest.ingest(context: context)
             NSLog("Photos re-ingest probe: %d new", n)
+        },
+        // `-photoVerbProbe YES` — what a screenshot's thing sheet OFFERS, and
+        // whether each offer can actually land (2026-08-02).
+        //
+        // Built for the bug it verifies: the sheet's only screenshot verb was
+        // "Open in Photos" and it did nothing at all on the reporter's device.
+        // Nothing could see that, because the failure is INVISIBLE at the call
+        // site — LaunchServices refuses an unclaimed scheme asynchronously in
+        // its own daemon, and both `UIApplication.open`'s completion and
+        // SwiftUI's `openURL` report success anyway (measured 2026-07-16 for
+        // `wc:`). So the probe asks the only question that answers it —
+        // `canOpenURL`, which needs the scheme declared in
+        // LSApplicationQueriesSchemes — and prints the disc row beside it.
+        //
+        // One NSLog per line (the `-todayProbe` truncation lesson). The pixel
+        // lines are the other half: a Zoom disc is only honest if a picture is
+        // reachable, and `stored` vs `asset` separates "the corpus kept its own
+        // copy" from "the original is still in the library" — the viewer needs
+        // either, and a row with neither should be reporting that it's gone.
+        Hook(key: "photoVerbProbe") { _, context in
+            // Deliberately delayed: `HandOffState.installedSchemes` — the
+            // snapshot the verb is GATED on — is written by the first
+            // foreground pass, which has not run when `runAll` fires. Reading
+            // it at launch would report an empty set and print a disc row
+            // nobody will ever see. `claimed` is ground truth either way; the
+            // two are logged separately so a disagreement is legible rather
+            // than mysterious.
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(2))
+                let claimed = URL(string: "photos-redirect://").map {
+                    UIApplication.shared.canOpenURL($0)
+                } ?? false
+                NSLog("[Casberi] photoVerb: photos-redirect claimed=%@ · inHandOffSet=%@",
+                      claimed ? "YES" : "NO",
+                      HandOffState.installedSchemes.contains("photos-redirect") ? "YES" : "NO")
+                let shots = (try? context.fetch(FetchDescriptor<Thing>(
+                    predicate: #Predicate { $0.source == "Photos" },
+                    sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []
+                guard let shot = shots.first(where: { $0.kind == .screenshot }) else {
+                    NSLog("[Casberi] photoVerb: no screenshot in the corpus to derive from")
+                    return
+                }
+                NSLog("[Casberi] photoVerb: over %@", shot.title)
+                for verb in VerbDerivation.verbs(for: shot) {
+                    let destination: String
+                    switch verb.action {
+                    case .openURL(let url): destination = url.absoluteString
+                    case .viewImage:        destination = "in-app viewer"
+                    default:                destination = "\(verb.action)"
+                    }
+                    NSLog("[Casberi] photoVerbDisc| %@ → %@",
+                          VerbDial.dialLabel(for: verb), destination)
+                }
+                let ref = shot.sourceRef ?? ""
+                let assetAlive = ref.isEmpty || ref.hasPrefix("sample:")
+                    ? false
+                    : PHAsset.fetchAssets(
+                        withLocalIdentifiers: [ref.replacingOccurrences(of: "phasset:", with: "")],
+                        options: nil).firstObject != nil
+                NSLog("[Casberi] photoVerbPixels| ref=%@ stored=%d bytes · assetInLibrary=%@",
+                      ref.isEmpty ? "(none)" : ref,
+                      shot.previewImageData?.count ?? 0,
+                      assetAlive ? "YES" : "NO")
+            }
         },
         // `-topicMapProbe YES` — the Photos feed's OCR treemap (2026-07-30),
         // headless. Runs the `ocrTopics` backfill first (reads the OCR text

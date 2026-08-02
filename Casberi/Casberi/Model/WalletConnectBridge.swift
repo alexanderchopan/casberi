@@ -456,7 +456,7 @@ enum WalletConnectBridge {
             kSecAttrService: "casberi.wc.preflight",
             kSecAttrAccessGroup: appGroup,
             kSecAttrAccount: "probe",
-            // Stated rather than left to the default (prd §276), so
+            // Stated rather than left to the default (prd §277), so
             // `scripts/keychain-audit.py` can see the policy. `false` IS the
             // default, so the probe still mirrors the SDK's query exactly and
             // still matches the same items on the way out.

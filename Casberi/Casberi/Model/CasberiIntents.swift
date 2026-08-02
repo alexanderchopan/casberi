@@ -131,7 +131,7 @@ struct AskCasberiIntent: AppIntent {
         guard !hits.isEmpty else {
             return .result(value: "", dialog: "Nothing in your things matches that.")
         }
-        // The credential tripwire (prd §276): an intent result is spoken by
+        // The credential tripwire (prd §277): an intent result is spoken by
         // Siri and pipeable anywhere by Shortcuts, so it leaves the app the
         // same way a Spotlight donation does. Titles are the whole payload
         // here, and a screenshot's title is OCR-derived.

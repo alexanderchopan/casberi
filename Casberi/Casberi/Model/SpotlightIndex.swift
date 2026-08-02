@@ -19,7 +19,7 @@ enum SpotlightIndex {
     /// index surfaces never drift apart on what a thing says about itself.
     static func attributeSet(for thing: Thing) -> CSSearchableItemAttributeSet {
         let attrs = CSSearchableItemAttributeSet(contentType: .text)
-        // The credential tripwire (prd §276, 2026-08-02). This donation is the
+        // The credential tripwire (prd §277, 2026-08-02). This donation is the
         // widest surface the corpus has — system-wide Spotlight plus the
         // semantic index Siri and Apple Intelligence ground on — and all of it
         // sits OUTSIDE the app. A screenshot's OCR lands on `content`

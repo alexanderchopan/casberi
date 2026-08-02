@@ -130,7 +130,7 @@ struct ThingContentView: View {
     @ViewBuilder private var kindContent: some View {
         switch thing.kind {
         case .screenshot:
-            ScreenshotContent(assetID: thing.sourceRef)
+            ScreenshotContent(assetID: thing.sourceRef, stored: thing.previewImageData)
         case .link:
             // A charted link leads with its curve (the chart is the link's
             // "media", like a screenshot leads with its image); everything
@@ -292,6 +292,12 @@ struct ThingContentView: View {
 /// states what it is instead of pretending.
 private struct ScreenshotContent: View {
     let assetID: String?
+    /// The corpus's own healed copy (`ScreenshotIngest.heal` since 2026-07-10).
+    /// Added 2026-08-02: this loader was the ONLY one of the four that skipped
+    /// this rung, so with Photos access denied or limited-out — or the original
+    /// deleted — the sheet painted the "In your photos" placeholder while the
+    /// feed row it opened from happily drew the stored thumbnail.
+    let stored: Data?
     @State private var image: UIImage?
 
     var body: some View {
@@ -331,21 +337,32 @@ private struct ScreenshotContent: View {
             image = UIImage.demoSample(for: assetID)
             return
         }
+        // The corpus's own copy first — instant, and it outlives both the
+        // Photos original and the grant. Same order as `PhotoWell` and
+        // `ThingShareLink`; this loader is no longer the odd one out.
+        if let stored, let saved = UIImage(data: stored) { image = saved }
         guard let assetID,
               PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized
                 || PHPhotoLibrary.authorizationStatus(for: .readWrite) == .limited,
-              let asset = PHAsset.fetchAssets(withLocalIdentifiers: [assetID], options: nil)
-                .firstObject
+              let asset = PHAsset.fetchAssets(
+                withLocalIdentifiers: [assetID.replacingOccurrences(of: "phasset:", with: "")],
+                options: nil).firstObject
         else { return }
         let options = PHImageRequestOptions()
-        options.deliveryMode = .opportunistic
+        options.deliveryMode = .highQualityFormat
         options.isNetworkAccessAllowed = true   // iCloud-optimized originals
         PHImageManager.default().requestImage(
             for: asset,
             targetSize: CGSize(width: 800, height: 800),
             contentMode: .aspectFit,
             options: options
-        ) { result, _ in
+        ) { result, info in
+            // Waiting past a network asset's degraded placeholder so the real
+            // download isn't discarded — and, now that a stored copy may
+            // already be on screen, so a blurry stand-in never REPLACES it
+            // (the fix PhotoWell / ThingShareLink / GenCover each carry).
+            let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+            if degraded { return }
             if let result { image = result }
         }
     }

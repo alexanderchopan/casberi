@@ -1,7 +1,7 @@
 import UIKit
 import UniformTypeIdentifiers
 
-/// What Casberi puts on the clipboard, and for how long (prd §276, 2026-08-02).
+/// What Casberi puts on the clipboard, and for how long (prd §277, 2026-08-02).
 ///
 /// A plain `UIPasteboard.general.string = …` writes an item with no expiry and
 /// no device limit: it sits there until something else replaces it, and on a

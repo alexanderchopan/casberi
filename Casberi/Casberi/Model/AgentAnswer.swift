@@ -528,7 +528,7 @@ enum AgentAnswer {
         guard let provider = AgentKey.active,
               let key = TokenVault.get(provider.vaultKey) else { return .failure(.noKey) }
 
-        // The credential tripwire (prd §276, 2026-08-02). Everything past this
+        // The credential tripwire (prd §277, 2026-08-02). Everything past this
         // line leaves the device for somebody else's API, so the corpus text
         // that grounds the answer is scrubbed FIRST — and a candidate whose
         // text was scrubbed also drops its PICTURE, since a screenshot of a

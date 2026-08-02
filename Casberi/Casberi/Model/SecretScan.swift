@@ -1,6 +1,6 @@
 import Foundation
 
-/// The credential tripwire (prd §276, 2026-08-02).
+/// The credential tripwire (prd §277, 2026-08-02).
 ///
 /// Vision OCRs whatever is in a screenshot, and `ScreenshotIngest.heal` writes
 /// that text straight onto `Thing.content` — so a screenshot of a recovery

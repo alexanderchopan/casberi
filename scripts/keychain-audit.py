@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Keychain storage policy audit (prd §276).
+"""Keychain storage policy audit (prd §277).
 
 Every secret this app writes to the Keychain must be stored so that it cannot
 ride an encrypted device backup onto another phone, and cannot ride iCloud
