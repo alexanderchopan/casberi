@@ -101,8 +101,9 @@ enum NetworkReach {
         // network needs an entry written by hand, exactly like this one.
         Endpoint(service: "Connect a wallet app",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Only when you tap “Connect a wallet app”. Casberi relays one connection request to your wallet — the relay carries an encrypted handshake it can't read. The request asks for your address and NOTHING else: no signing, no transactions. Nothing is sent when you type or paste an address instead.",
-                 hosts: ["relay.walletconnect.org", "verify.walletconnect.org",
+                 purpose: "Only when you tap “Connect a wallet app”. Casberi asks WalletConnect for the list of wallets and their icons, then relays one connection request to the wallet you pick — the relay carries an encrypted handshake it can't read. The request asks for your address and NOTHING else: no signing, no transactions. Nothing is sent when you type or paste an address instead.",
+                 hosts: ["relay.walletconnect.org", "api.web3modal.org",
+                         "explorer-api.walletconnect.com", "verify.walletconnect.org",
                          "pulse.walletconnect.com"]),
         Endpoint(service: "Wallet names",
                  reach: .whenConnected(bridge: "Wallet"),

@@ -200,6 +200,7 @@
 			name = Casberi;
 			packageProductDependencies = (
 				CE0000000000000000000002 /* WalletConnect */,
+				CE0000000000000000000004 /* ReownAppKit */,
 			);
 			productName = Casberi;
 			productReference = CA0000000000000000000004 /* Casberi.app */;
@@ -842,6 +843,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = CE0000000000000000000003 /* XCRemoteSwiftPackageReference "reown-swift" */;
 			productName = WalletConnect;
+		};
+		CE0000000000000000000004 /* ReownAppKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CE0000000000000000000003 /* XCRemoteSwiftPackageReference "reown-swift" */;
+			productName = ReownAppKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

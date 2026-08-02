@@ -1214,14 +1214,13 @@ struct WalletScreen: View {
 
             let outcome: Result<WalletConnectBridge.ConnectOutcome, Error>
             do {
-                outcome = .success(try await WalletConnectBridge.connect(
-                    open: openWalletApp,
-                    offerManualPairing: { url in
-                        // Still the current handshake? A cancelled one must not
-                        // paint its URI over a fresh attempt.
-                        guard connectGeneration == generation else { return }
-                        pairingURI = url
-                    }))
+                // WalletConnect's own modal (2026-08-01) — the full wallet
+                // directory with real icons and correct deep links. It replaced
+                // a paste-the-link card that was the honest answer to "nothing
+                // claimed `wc:`" and still a dead end for anyone with a wallet
+                // on their home screen. See `connectViaModal`; the read-only
+                // proposal is unchanged.
+                outcome = .success(try await WalletConnectBridge.connectViaModal())
             } catch {
                 outcome = .failure(error)
             }

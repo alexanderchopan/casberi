@@ -5,6 +5,11 @@ import WalletConnectSign
 import WalletConnectPairing
 import WalletConnectNetworking
 import WalletConnectSigner
+// WalletConnect's own wallet chooser. NOTE: this module is literally named
+// `AppKit`, which shadows Apple's framework — see the project-level
+// ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO, without
+// which the SDK's generated asset symbols fail to compile for Mac Catalyst.
+import ReownAppKit
 
 /// Connect a wallet instead of typing its address (prd 84, 2026-07-16).
 ///
@@ -86,15 +91,35 @@ enum WalletConnectBridge {
                              projectId: projectID,
                              socketFactory: WalletConnectSocketFactory())
 
-        Pair.configure(metadata: AppMetadata(
+        let metadata = AppMetadata(
             name: "Casberi",
             description: "Watch a wallet's activity — read-only.",
             url: "https://casberi.app",
             icons: [],
             redirect: redirect
-        ))
+        )
 
-        Sign.configure(crypto: UnusedCryptoProvider())
+        // AppKit does `Pair.configure` and `Sign.configure` ITSELF, so this
+        // replaces both rather than sitting beside them — calling ours too
+        // would configure the same singletons twice.
+        //
+        // `sessionParams` is the load-bearing argument. AppKit's `.default`
+        // asks for the full `eth_*` method set; ours asks for NOTHING, from the
+        // same `readOnlyNamespaces()` the probe path uses — so there is one
+        // definition of what Casberi proposes and the modal cannot quietly
+        // propose more than the screen promises. `scripts/wc-handshake.sh`
+        // still asserts `methods=0 events=0` from the WALLET's side.
+        //
+        // `authRequestParams: nil` — no SIWE, which is why the crypto provider
+        // stays the unused one: `recoverPubKey` is reached only by an auth
+        // request we never make.
+        AppKit.configure(
+            projectId: projectID,
+            metadata: metadata,
+            crypto: UnusedCryptoProvider(),
+            sessionParams: SessionParams(namespaces: readOnlyNamespaces()),
+            authRequestParams: nil
+        )
 
         // Last, not first: an early return above must leave this false, or
         // every later call short-circuits on the guard while `Sign.instance`
@@ -268,6 +293,49 @@ enum WalletConnectBridge {
     ///   for pasting into a wallet directly. The handshake keeps listening
     ///   after this fires; it is an alternative route to the same approval,
     ///   not a failure report.
+    /// The screen's route: present WalletConnect's OWN modal and wait for a
+    /// session (2026-08-01).
+    ///
+    /// Modern wallets no longer claim the bare `wc:` scheme, so `open(uri)`
+    /// silently did nothing on a phone with MetaMask on its home screen. There
+    /// is no system chooser to fall back on — the familiar WalletConnect picker
+    /// is a WEB component — so either this app maintains a wallet directory by
+    /// hand, or it uses the one the protocol already ships. AppKit brings the
+    /// full directory (496+), each wallet's real icon and its correct deep
+    /// link, current without a release.
+    ///
+    /// What does NOT change: the proposal is still `readOnlyNamespaces()`, the
+    /// session is still read and then torn down before any address reaches the
+    /// caller, and the teardown still runs detached.
+    ///
+    /// The sibling `connect(open:)` stays exactly as it was — it is what
+    /// `-wcConnectProbe` and `scripts/wc-handshake.sh` drive, because proving
+    /// the promise needs a URI in hand and AppKit mints its own internally.
+    static func connectViaModal(timeout: Duration = .seconds(300)) async throws -> ConnectOutcome {
+        guard isAvailable else { throw ConnectError.unavailable }
+        if let refusal = keychainRefusal() {
+            NSLog("WalletConnect: keychain refused the app-group write (OSStatus %d)", refusal)
+            throw ConnectError.keychainUnavailable(refusal)
+        }
+        configureIfNeeded()
+        // Re-stated per attempt: the watched chain set is a live setting, and a
+        // proposal built at first-configure would name yesterday's chains.
+        AppKit.set(sessionParams: SessionParams(namespaces: readOnlyNamespaces()))
+
+        // Subscribe BEFORE presenting, for the reason the other path documents
+        // at length: a wallet with a remembered pairing can settle inside the
+        // window between presenting and subscribing.
+        async let settled = firstSettledSession(timeout: timeout)
+        await MainActor.run { AppKit.present() }
+
+        guard let session = await settled else { return .timedOut }
+        let found = accounts(from: session)
+        if let failure = await tearDownShielded(topic: session.topic) {
+            throw ConnectError.tearDownFailed(topic: session.topic, underlying: failure)
+        }
+        return .connected(found)
+    }
+
     static func connect(timeout: Duration = .seconds(300),
                         open: @MainActor (URL) async -> Bool,
                         offerManualPairing: @MainActor (URL) -> Void = { _ in }) async throws -> ConnectOutcome {
