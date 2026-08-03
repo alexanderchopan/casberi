@@ -37,9 +37,22 @@ enum AddressKind {
             AddressBook.shared.setKind(.safe, for: address)
             return
         }
-        if let isContract = await hasCode(address) {
-            AddressBook.shared.setKind(isContract ? .contract : .wallet, for: address)
+        guard let isContract = await hasCode(address) else {
+            // Both reads failing leaves the kind `.unknown` — the honest
+            // resting state. A row that hasn't been checked never claims to
+            // be a wallet.
+            return
         }
+        guard isContract else {
+            AddressBook.shared.setKind(.wallet, for: address)
+            return
+        }
+        // It has code — but "contract" is the least useful true thing you can
+        // say about somebody's own smart wallet (2026-08-03, prd §294). Asked
+        // only for addresses that got this far, so an EOA (the common case)
+        // still costs exactly the reads it always did.
+        let smart = await WalletActingParties.detectSmartAccount(address)
+        AddressBook.shared.setKind(smart != nil ? .smartAccount : .contract, for: address)
         // Both reads failing leaves the kind `.unknown` — the honest resting
         // state. A row that hasn't been checked never claims to be a wallet.
     }
@@ -48,6 +61,9 @@ enum AddressKind {
     /// bookful of new entries doesn't fan five RPCs out per row at once.
     @MainActor
     static func detectPending(limit: Int = 8) async {
+        // Re-opens the contracts filed before smart accounts had a kind — runs
+        // once ever, and is a no-op on every pass after that.
+        recheckContractsOnce()
         let pending = AddressBook.shared.all.filter { $0.kind == .unknown }.prefix(limit)
         for entry in pending { await detect(entry.address) }
     }
@@ -78,5 +94,30 @@ enum AddressKind {
             // have.
         }
         return answered ? false : nil
+    }
+}
+
+/// A one-off re-check for addresses already filed as `.contract` before smart
+/// accounts had a kind of their own (2026-08-03, prd §294).
+///
+/// Without it the fix only reaches addresses added from today on: every smart
+/// account already in the book carries a persisted `.contract` and nothing
+/// would ever ask again. The same shape as `AddressBook`'s own
+/// `kindRecheck.7702` migration, which existed for the same reason one
+/// mechanism over.
+extension AddressKind {
+    private static let smartAccountRecheckKey = "wallet.addressBook.kindRecheck.smartAccount"
+
+    /// Clears the stored kind for every `.contract` entry, ONCE, so the normal
+    /// `detectPending` sweep re-asks them with the new question. Cheap: it
+    /// re-reads only contracts, never the EOAs that make up most of a book.
+    @MainActor
+    static func recheckContractsOnce() {
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: smartAccountRecheckKey) else { return }
+        defaults.set(true, forKey: smartAccountRecheckKey)
+        for entry in AddressBook.shared.all where entry.kind == .contract {
+            AddressBook.shared.setKind(.unknown, for: entry.address)
+        }
     }
 }

@@ -99,6 +99,16 @@ enum WalletSafety {
         "0x0000fb7702036ff9f76044a501ac1aa74cbab16b": "Dynamic",
     ]
 
+    /// The registry's own name for a delegate implementation, or nil when it
+    /// isn't one this app has independently confirmed (2026-08-03) — exposed
+    /// so `WalletActingParties` names a delegate by the SAME table the
+    /// delegation alert uses. A second lookup chain would be free to disagree
+    /// with this one, and on a permissions notice that means naming the wrong
+    /// contract.
+    static func delegateName(for address: String) -> String? {
+        knownDelegateImplementations[address.lowercased()]
+    }
+
     /// One CURRENTLY delegated (wallet, chain) pair — live state, like
     /// `WalletDeFi.positions`/`SafeBridge.pendingCounts`, deliberately
     /// separate from `sync`'s land-on-change alert. A delegation isn't

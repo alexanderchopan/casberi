@@ -543,9 +543,14 @@ struct AddressCard: View {
     /// A wallet is a who and owns a hue; a contract or a Safe is machinery and
     /// borrows the app's. Mirrors the mark's own round-vs-square rule, so the
     /// card's color says the same thing its face does.
+    ///
+    /// A SMART ACCOUNT sits with the whos (2026-08-03, prd §294) — it's
+    /// somebody's wallet that happens to be made of code, and it keeps its
+    /// identicon face for exactly that reason (see `AddressBook.Kind.glyph`).
+    /// Colour has to agree with the face, or the card would say two things.
     private var pourHue: Color {
         switch current.kind {
-        case .wallet, .unknown: return WalletFace.tint(for: current.address)
+        case .wallet, .unknown, .smartAccount: return WalletFace.tint(for: current.address)
         case .contract, .safe:  return DS.tint
         }
     }

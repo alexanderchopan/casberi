@@ -26,7 +26,10 @@ cd "$(dirname "$0")/.."
 FLOW="Casberi/Casberi/Model/WalletFlow.swift"
 RISK="Casberi/Casberi/Model/WalletRiskScale.swift"
 STABLE="Casberi/Casberi/Model/WalletStables.swift"
-for f in "$FLOW" "$RISK" "$STABLE"; do
+EXPOSURE="Casberi/Casberi/Model/WalletApprovalExposure.swift"
+USEROPS="Casberi/Casberi/Model/WalletUserOps.swift"
+PARTIES="Casberi/Casberi/Model/WalletActingParties.swift"
+for f in "$FLOW" "$RISK" "$STABLE" "$EXPOSURE" "$USEROPS"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -46,6 +49,21 @@ grep -q 'static let riskProximity = 0.15' Casberi/Casberi/Model/HyperliquidDeFi.
 # silently starts comparing two different quantities again.
 grep -q 'return abs(markPx - liq) / markPx' Casberi/Casberi/Model/HyperliquidDeFi.swift \
   || { echo "✗ liquidationProximity changed shape — re-derive the axis in $RISK"; exit 1; }
+
+# The exposure card's "unlimited" line is OWNED by WalletApprovals — the same
+# number decides whether a ROW's title says "unlimited", and the pure function
+# takes it as a parameter precisely so the two can never disagree (see
+# `atStake`'s doc). The cases below hard-code it; if the constant moves and
+# this harness keeps asserting 1e40, it would certify a card that prices a
+# grant the row calls unlimited as if it were capped.
+grep -q 'static let unlimitedThreshold: Double = 1e40' Casberi/Casberi/Model/WalletApprovals.swift \
+  || { echo "✗ WalletApprovals.unlimitedThreshold changed — update the expectations in $0"; exit 1; }
+# The card prices a capped grant as a SHARE of what's held, which needs the
+# token count `HeldToken` only started carrying on 2026-08-03. If that field
+# goes away the capped arm silently returns nil for every row and the card
+# quietly becomes unlimited-only.
+grep -q 'var amount: Double? = nil' Casberi/Casberi/Model/WalletIngest.swift \
+  || { echo "✗ HeldToken.amount is gone — the capped arm of $EXPOSURE cannot work"; exit 1; }
 
 TMP=$(mktemp -d /tmp/wallet-viz-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT
@@ -400,6 +418,302 @@ eq(WalletStables.share(positions: [("ETH", 1_000), ("AERO", 500)], totalUSD: 1_5
 eq(WalletStables.share(positions: [("ETH", 1_000), ("USDC", 100)], totalUSD: 0), nil,
    "an empty book has no share")
 
+// ═══════════════════════════════════════════════════════════════════════════
+// WalletApprovalExposure — what someone else can still move (prd §292)
+// ═══════════════════════════════════════════════════════════════════════════
+print("\nApproval exposure")
+
+let UNLIMITED = 1e40   // WalletApprovals.unlimitedThreshold, guarded above
+
+func stake(_ allowance: Double, dec: Int? = 6,
+           usd: Double? = 6_200, tokens: Double? = 6_200) -> Double? {
+    WalletApprovalExposure.atStake(allowanceRaw: allowance, decimals: dec,
+                                   heldUSD: usd, heldTokens: tokens,
+                                   unlimitedAt: UNLIMITED)
+}
+
+// The headline case: an unlimited grant reaches the WHOLE balance. Not the
+// allowance — pricing 2^256-1 USDC would print a figure in the trillions.
+eq(stake(1.157e77), 6_200, "an unlimited grant reaches the whole balance")
+// The boundary is INCLUSIVE, and proving that needs a case where the two arms
+// disagree: at the threshold with no decimals, `>=` answers the balance and
+// `>` falls through to the capped arm and answers nil. Asserting it with
+// decimals present would pass either way (a cap of 1e34 clamps to the balance
+// too), which is how a `>=`→`>` mutation first survived this harness.
+eq(stake(UNLIMITED, dec: nil, tokens: nil), 6_200, "the threshold itself counts as unlimited")
+eq(stake(UNLIMITED * 0.999, dec: nil, tokens: nil), nil, "just under it does not")
+// …and it does so WITHOUT decimals, which is the whole reason nil decimals
+// isn't fatal here: the answer is the balance either way.
+eq(stake(1.157e77, dec: nil, tokens: nil), 6_200, "unlimited needs no decimals")
+
+// A capped grant reaches the smaller of the cap and the balance.
+eq(stake(500e6, dec: 6, usd: 6_200, tokens: 6_200), 500, "a 500 cap on 6,200 held reaches 500")
+eq(stake(500e6, dec: 6, usd: 80, tokens: 80), 80, "the same cap on 80 held reaches only 80")
+eq(stake(9_000e6, dec: 6, usd: 6_200, tokens: 6_200), 6_200, "a cap above the balance is clamped")
+// Decimals really are per-token — the Gnosis Pay lesson (EURe 18, USDCe 6) in
+// a new place. The SAME raw word means 500 tokens at 18dp and 500 trillion at
+// 6dp, so reading the wrong scale either prices a real cap at nothing or
+// clamps a small one to the whole balance.
+eq(stake(500e18, dec: 18, usd: 6_200, tokens: 6_200), 500, "a 500 cap at 18dp reaches 500")
+eq(stake(500e18, dec: 6, usd: 6_200, tokens: 6_200), 6_200,
+   "the same word read at 6dp would clamp to the whole balance")
+
+// Price is carried through the SHARE, so a token whose dollars and units
+// disagree still prices correctly (held 2 ETH worth $6,000; a 1 ETH cap).
+eq(stake(1e18, dec: 18, usd: 6_000, tokens: 2), 3_000, "a half-balance cap is half the dollars")
+
+// "Can't be known" is nil, and nil is NOT zero — the distinction the whole
+// unpriced list exists for. A zero here sorts the most dangerous grant last.
+eq(stake(500e6, dec: nil), nil, "a capped grant with no decimals can't be priced")
+eq(stake(500e6, dec: 6, usd: 6_200, tokens: nil), nil, "…nor one with no token count")
+eq(stake(500e6, dec: 6, usd: nil, tokens: nil), nil, "…nor one on an unread holding")
+eq(stake(500e6, dec: 6, usd: 6_200, tokens: 0), nil, "…nor one against a zero balance")
+// But a REVOKED grant is a real zero, not an unknown.
+eq(stake(0), 0, "a spent allowance reaches nothing")
+
+// Untrusted numbers off a malformed reply — the `holdingFloor` .isFinite
+// lesson. Every one of these renders as a plausible card if it gets through.
+// A value we couldn't parse is NOT evidence that a live grant reaches nothing.
+// Both of these read as "we don't know" and land in the unpriced list — the
+// first cut of `atStake` folded them in with the genuine zero and answered
+// "$0", printing reassurance on the row that had earned it least.
+eq(stake(.nan), nil, "a NaN allowance can't be known")
+eq(stake(.infinity), nil, "an infinite allowance can't be known either")
+eq(stake(-1), nil, "a negative allowance is a parse failure, not a revoke")
+eq(stake(500e6, dec: 6, usd: .nan, tokens: 6_200), nil, "a NaN balance can't be priced")
+eq(stake(500e6, dec: 6, usd: .infinity, tokens: 6_200), nil, "an infinite balance can't be priced")
+eq(stake(500e6, dec: 6, usd: -5, tokens: 6_200), nil, "a negative balance is refused")
+eq(stake(500e6, dec: 400, usd: 6_200, tokens: 6_200), nil, "an absurd decimals is refused")
+
+// ── the shape of the card ──────────────────────────────────────────────────
+func g(_ spender: String, usd: Double?, unlimited: Bool = true,
+       forAll: Bool = false, ago: Double? = nil,
+       symbol: String = "USDC", cap: Double? = nil) -> WalletApprovalExposure.Grant {
+    WalletApprovalExposure.Grant(
+        thingID: UUID(), spender: spender, named: !spender.hasPrefix("0x"),
+        symbol: symbol, forAll: forAll, unlimited: unlimited, usd: usd,
+        capTokens: cap, grantedAt: ago.map { Date(timeIntervalSinceNow: -$0) })
+}
+let DAY = 86_400.0
+
+do {
+    let e = WalletApprovalExposure(
+        priced: [g("Uniswap", usd: 6_200), g("1inch", usd: 2_140, symbol: "WETH"),
+                 g("Aave", usd: 500, unlimited: false, cap: 500)],
+        unpriced: [g("OpenSea", usd: nil, forAll: true, symbol: "Doodles")])
+    eq(e.total, 8_840, "the total sums only the priced rows")
+    check(e.spenderCount == 3, "the count is of spenders, not of rows")
+    check(e.all.count == 4, "unpriced rows still appear, after the priced ones")
+    check(e.unpricedNote != nil, "an unpriced grant earns its footnote")
+}
+// One spender holding three grants is ONE party who can move your money.
+do {
+    let e = WalletApprovalExposure(priced: [g("Uniswap", usd: 10, symbol: "A"),
+                                            g("Uniswap", usd: 20, symbol: "B"),
+                                            g("Uniswap", usd: 30, symbol: "C")])
+    check(e.spenderCount == 1, "three grants to one spender is one spender")
+    check(WalletApprovalExposure.headline(spenders: e.spenderCount, total: e.total)
+            .hasPrefix("1 spender can move"), "and the headline says so, singular")
+}
+// Nothing unpriced, no footnote — the card grows the line only when it owes one.
+check(WalletApprovalExposure(priced: [g("Uniswap", usd: 10)]).unpricedNote == nil,
+      "a fully priced card owes no footnote")
+check(WalletApprovalExposure().isEmpty, "an empty exposure is empty")
+
+// ── the button ─────────────────────────────────────────────────────────────
+// It points at the OLDEST UNLIMITED grant — never the biggest, which is
+// already the top row.
+do {
+    let e = WalletApprovalExposure(priced: [
+        g("Uniswap", usd: 6_200, ago: 400 * DAY),
+        g("1inch",   usd: 2_140, ago: 30 * DAY),
+        g("0x4f2b",  usd: 84,    ago: 1_400 * DAY)])
+    check(e.oldestWorthReviewing?.spender == "0x4f2b", "the button picks the oldest, not the biggest")
+}
+// A capped grant is older, but unlimited is what a revoke list is for.
+do {
+    let e = WalletApprovalExposure(priced: [
+        g("Aave",    usd: 500,   unlimited: false, ago: 2_000 * DAY, cap: 500),
+        g("Uniswap", usd: 6_200, ago: 400 * DAY)])
+    check(e.oldestWorthReviewing?.spender == "Uniswap", "unlimited outranks merely old")
+}
+// With no unlimited grant at all it falls back to the oldest of any kind…
+do {
+    let e = WalletApprovalExposure(priced: [
+        g("Aave",  usd: 500, unlimited: false, ago: 90 * DAY, cap: 500),
+        g("Curve", usd: 900, unlimited: false, ago: 900 * DAY, cap: 900)])
+    check(e.oldestWorthReviewing?.spender == "Curve", "with no unlimited grant, the oldest wins")
+}
+// …and with no dates at all it still never returns nil while rows exist: a
+// dead button on a card full of rows is the honesty rule's own example.
+do {
+    let e = WalletApprovalExposure(priced: [g("Uniswap", usd: 10), g("1inch", usd: 20)])
+    check(e.oldestWorthReviewing != nil, "undated rows still give the button a target")
+}
+check(WalletApprovalExposure().oldestWorthReviewing == nil, "no rows, no target")
+
+// ── the words ──────────────────────────────────────────────────────────────
+check(g("U", usd: 1).stateLine == "Unlimited USDC", "an unlimited grant names its token")
+check(g("U", usd: nil, forAll: true, symbol: "Doodles").stateLine == "Manages all Doodles",
+      "an operator grant reads as managing, not spending")
+check(g("A", usd: 1, unlimited: false, cap: 500).stateLine == "Capped at 500 USDC",
+      "a capped grant states its cap")
+// A FRACTIONAL cap is the case that catches a formatter rounding to whole
+// units: a real quarter-ETH allowance printed as "Capped at 0 WETH" reads as
+// a revoked grant. (This is the assertion `money`'s own cases can't make —
+// dollars are rounded whole before they reach the formatter.)
+check(g("A", usd: 1, unlimited: false, symbol: "WETH", cap: 0.25).stateLine
+        == "Capped at 0.25 WETH", "a fractional cap keeps its fraction")
+// A cap we couldn't scale must not print a raw-unit number as if it were tokens.
+check(g("A", usd: 1, unlimited: false, cap: nil).stateLine == "Limited USDC",
+      "a cap with no decimals states no number")
+
+// Money is exact, because the card's job is ranking.
+check(WalletApprovalExposure.money(8_924) == "$8,924", "dollars group and keep their resolution")
+check(WalletApprovalExposure.money(84) == "$84", "small amounts stay small")
+check(WalletApprovalExposure.money(0) == "$0", "zero is zero")
+check(WalletApprovalExposure.money(.nan) == "$0", "a NaN total never renders as NaN")
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WalletUserOps — who actually paid (prd §293)
+// ═══════════════════════════════════════════════════════════════════════════
+print("\nUserOperation attribution")
+
+let ME     = "0x1111111111111111111111111111111111111111"
+let OTHER  = "0x2222222222222222222222222222222222222222"
+let PAYMR  = "0x3333333333333333333333333333333333333333"
+let EP07   = "0x0000000071727de22e5e9d8baf0edac6f37da032"
+let FAKE_EP = "0x9999999999999999999999999999999999999999"
+let UOTOPIC = WalletUserOps.userOperationEventTopic
+
+func pad(_ addr: String) -> String {
+    "0x000000000000000000000000" + String(addr.dropFirst(2))
+}
+func w(_ v: String) -> String { String(repeating: "0", count: 64 - v.count) + v }
+/// nonce | success | actualGasCost | actualGasUsed
+func uoData(costWei: String) -> String { "0x" + w("1") + w("1") + w(costWei) + w("5208") }
+
+func uoLog(sender: String, paymaster: String, costWei: String,
+           emitter: String = EP07) -> [String: Any] {
+    ["address": emitter,
+     "topics": [UOTOPIC, "0x" + String(repeating: "a", count: 64), pad(sender), pad(paymaster)],
+     "data": uoData(costWei: costWei)]
+}
+let ZERO = "0x0000000000000000000000000000000000000000"
+// 0x2386f26fc10000 wei = 0.01 ETH
+let TENTH = "2386f26fc10000"
+
+func attr(_ logs: [[String: Any]], from: String?, fallback: Double = 0.5)
+    -> WalletUserOps.Attribution {
+    WalletUserOps.attribution(logs: logs, from: from, wallet: ME, fallbackNative: fallback)
+}
+
+// Rule 1 — our own operation, self-paid. The bundle's whole receipt cost 0.5;
+// our operation cost 0.01, and 0.01 is what we owe.
+check(attr([uoLog(sender: ME, paymaster: ZERO, costWei: TENTH)], from: OTHER)
+        == .paid(native: 0.01),
+      "our own UserOperation is charged its own actualGasCost, not the bundle's")
+
+// Rule 1 — SPONSORED. The whole point of the feature.
+check(attr([uoLog(sender: ME, paymaster: PAYMR, costWei: TENTH)], from: OTHER)
+        == .sponsored(paymaster: PAYMR, native: 0.01),
+      "a paymaster-backed operation costs us nothing and names the sponsor")
+
+// The bundle case that motivated all this: a bundler sent it, and the bundle
+// also carried a stranger's operation. We must not be charged for theirs.
+check(attr([uoLog(sender: OTHER, paymaster: ZERO, costWei: TENTH)], from: OTHER)
+        == .notYours,
+      "a stranger's operation in the same bundle is not ours to pay")
+do {
+    let bundle = [uoLog(sender: OTHER, paymaster: ZERO, costWei: "de0b6b3a7640000"),
+                  uoLog(sender: ME,    paymaster: ZERO, costWei: TENTH)]
+    check(attr(bundle, from: OTHER) == .paid(native: 0.01),
+          "…and ours is found beside theirs, charged only its own share")
+}
+
+// Rule 2 — a plain EOA. Unchanged behaviour, which is the point: the fix must
+// not disturb the case that was already right.
+check(attr([], from: ME, fallback: 0.5) == .paid(native: 0.5),
+      "an ordinary EOA still pays its whole receipt")
+
+// Rule 3 — a Safe. The owner executed it; the Safe pays nothing. This needs no
+// 4337 at all, and it is the half that fixes every executed-by-someone-else
+// account.
+check(attr([], from: OTHER, fallback: 0.5) == .notYours,
+      "a transaction somebody else sent costs us nothing")
+check(attr([], from: nil, fallback: 0.5) == .notYours,
+      "a receipt with no `from` is never charged to us")
+
+// A FORGED event. Any contract can emit any log; only a known EntryPoint's
+// word is taken, or a fake sponsorship could zero out real gas we paid.
+check(attr([uoLog(sender: ME, paymaster: PAYMR, costWei: TENTH, emitter: FAKE_EP)],
+           from: ME, fallback: 0.5) == .paid(native: 0.5),
+      "an unknown emitter's event is ignored — we fall back, never trust it")
+check(WalletUserOps.unknownEmitters(
+        logs: [uoLog(sender: ME, paymaster: ZERO, costWei: TENTH, emitter: FAKE_EP)])
+        == [FAKE_EP],
+      "…and the unknown emitter is reported, so a new EntryPoint is visible")
+check(WalletUserOps.unknownEmitters(
+        logs: [uoLog(sender: ME, paymaster: ZERO, costWei: TENTH)]).isEmpty,
+      "a known EntryPoint is not reported as drift")
+
+// Every canonical EntryPoint is trusted, not just the one above.
+for ep in WalletUserOps.knownEntryPoints {
+    check(attr([uoLog(sender: ME, paymaster: ZERO, costWei: TENTH, emitter: ep)], from: OTHER)
+            == .paid(native: 0.01),
+          "EntryPoint \(ep.prefix(10)) is trusted")
+}
+
+// Malformed replies. Each renders as a plausible number if it gets through.
+check(attr([["address": EP07, "topics": [UOTOPIC, "0x00", pad(ME)], "data": "0x"]], from: OTHER)
+        == .notYours,
+      "an event missing its paymaster topic is not read")
+check(attr([["address": EP07,
+             "topics": [UOTOPIC, "0x00", pad(ME), pad(ZERO)], "data": "0x1234"]], from: OTHER)
+        == .paid(native: 0),
+      "a truncated data blob reads as zero cost, never as a guess")
+check(attr([["topics": [UOTOPIC, "0x00", pad(ME), pad(ZERO)], "data": uoData(costWei: TENTH)]],
+           from: ME, fallback: 0.5) == .paid(native: 0.5),
+      "an event with no emitter address at all is ignored")
+
+// ── smart-account vendor naming (prd §294) ────────────────────────────────
+// A contract can return ANY string from `accountId()`, so the vendor badge is
+// only rendered when the answer is plainly a name — otherwise attacker-chosen
+// text lands in the app's own chrome.
+func vendor(_ id: String?) -> String? {
+    WalletUserOps.SmartAccount(accountID: id, entryPoint: nil).vendor
+}
+check(vendor("biconomy.nexus.1.0.0") == "Biconomy", "an account names its own vendor")
+check(vendor("ZeroDev.Kernel.v3") == "Zerodev", "casing is normalised, never echoed raw")
+check(vendor("safe.core.1.4.1") == "Safe", "…and the shortest real vendor still passes")
+check(vendor(nil) == nil, "no accountId, no vendor")
+check(vendor("") == nil, "an empty id names nobody")
+check(vendor("a.b.c") == nil, "a one-letter vendor is not a name")
+// SHORT hostile strings — the ones that matter. The first draft of these
+// cases used a 25-character sentence and a 25-character <script> tag, so both
+// were rejected by the LENGTH guard and neither exercised the character check
+// at all; dropping `allSatisfy` entirely left the harness green. Every case
+// below is inside the length window on purpose.
+check(vendor("a<b>c.x.1") == nil, "markup inside the length window is refused")
+check(vendor("send eth.x.1") == nil, "a spaced phrase is refused")
+check(vendor("ev/il.x.1") == nil, "a slash is refused")
+// A slash in a LATER component is not this parser's business — only the first
+// dot-component is ever rendered, and "evil" is a plain word, not an injection.
+check(vendor("evil.com/x.a.1") == "Evil", "only the first component is read")
+check(vendor("me\u{200b}ta.x.1") == nil, "an invisible character is refused")
+check(vendor("Ω.x.1") == nil, "a one-character symbol is refused")
+check(vendor("<script>alert(1)</script>.x.1") == nil, "…and long markup is refused too")
+check(vendor("drain your wallet at evil.com.account.1") == nil, "…as is a sentence")
+check(vendor(String(repeating: "x", count: 40) + ".a.1") == nil, "an overlong vendor is refused")
+
+// The ABI readers.
+check(WalletUserOps.addressFromTopic(pad(ME)) == ME, "an address is read from its topic")
+check(WalletUserOps.addressFromTopic("0xdead").isEmpty,
+      "a short topic yields no address — never a partial one that could collide")
+eq(WalletUserOps.word(uoData(costWei: TENTH), at: 2), 1e16, "the cost word is read at index 2")
+eq(WalletUserOps.word(uoData(costWei: TENTH), at: 9), 0, "a word past the end reads zero")
+eq(WalletUserOps.word(nil, at: 0), 0, "absent data reads zero")
+
 print("")
 if failures == 0 {
     print("✓ wallet-viz self-test: \(checks) checks passed")
@@ -415,5 +729,5 @@ SWIFT
 # `swiftc` to a binary, NOT `swift file1 file2 …` — that form runs the FIRST
 # file as a script and passes the rest as command-line ARGUMENTS to it, so the
 # sources were never compiled and the run exited 0 having tested nothing.
-swiftc -O -o "$TMP/selftest" "$FLOW" "$RISK" "$STABLE" "$DRIVER"
+swiftc -O -o "$TMP/selftest" "$FLOW" "$RISK" "$STABLE" "$EXPOSURE" "$USEROPS" "$DRIVER"
 "$TMP/selftest"

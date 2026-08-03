@@ -150,7 +150,12 @@ enum WalletApprovals {
     /// already rides the same foreground-refresh cadence as the DeFi/Safe/
     /// delegation reads beside it.
     @MainActor
-    static func activeApprovals(hexAddresses: [String], context: ModelContext) async -> [Thing] {
+    /// Returns each still-active grant WITH the check that proved it active
+    /// (2026-08-03) — the live allowance, the token contract and the chain.
+    /// Handing the check back is what lets `WalletApprovalExposure` price the
+    /// grant without re-running the two RPC reads this loop just paid for.
+    static func activeApprovals(hexAddresses: [String], context: ModelContext)
+        async -> [(thing: Thing, check: WalletPrepare.Check)] {
         let all = (try? context.fetch(FetchDescriptor<Thing>(
             predicate: #Predicate<Thing> { $0.source == "Wallet" }
         ))) ?? []
@@ -158,10 +163,13 @@ enum WalletApprovals {
             WalletPrepare.applies(to: thing)
                 && hexAddresses.contains { WalletWatch.sameAddress($0, thing.walletAddress ?? "") }
         }
-        var active: [Thing] = []
+        var active: [(thing: Thing, check: WalletPrepare.Check)] = []
         for thing in candidates {
+            // Corollary 6: `check` awaits, so a Thing this loop deleted
+            // out from under us must not be read on the next turn.
+            guard thing.isLive else { continue }
             if let check = await WalletPrepare.check(for: thing), check.active {
-                active.append(thing)
+                active.append((thing, check))
             }
         }
         return active
@@ -506,7 +514,7 @@ enum WalletApprovals {
         // The unlimited approval is THE thing worth knowing about — 2^256-1 in
         // practice (or Permit2's own uint160 max), but any astronomically-
         // over-supply value means the same.
-        if e.rawValue >= 1e40 {
+        if e.rawValue >= unlimitedThreshold {
             return String(localized: "Approved \(spender) to spend unlimited \(asset)\(via)")
         }
         if let decimals = meta?.decimals {
@@ -571,6 +579,42 @@ enum WalletApprovals {
         var s = data.lowercased(); if s.hasPrefix("0x") { s.removeFirst(2) }
         guard s.count >= 64 else { return 0 }
         return WalletIngest.hexToDouble("0x" + s.prefix(64))
+    }
+
+    /// Where "unlimited" starts, in a token's raw units (2026-08-03). Named
+    /// rather than spelled twice: the row title and `WalletApprovalExposure`
+    /// must agree on which grants are unlimited, or the card would price a
+    /// grant the row calls unlimited as if it were capped. (`DeFiRisk`'s
+    /// lesson: a threshold must not be able to disagree with itself across
+    /// files.) 2^256-1 in practice, or Permit2's uint160 max — any value
+    /// astronomically past a real supply means the same thing.
+    static let unlimitedThreshold: Double = 1e40
+
+    /// Symbol + decimals for ONE token, cached forever (2026-08-03) — the
+    /// exposure card's other half. Neither value can change for a deployed
+    /// ERC-20, so a contract is asked once per install and never again; the
+    /// card's marginal cost is one `eth_call` pair the first time a token
+    /// appears in an approval, and nothing thereafter.
+    ///
+    /// A read that answers with nothing is NOT cached: a flaky public host
+    /// would otherwise pin "we don't know this token's decimals" for the life
+    /// of the install, and a missing `decimals` is what makes a capped grant
+    /// unpriceable.
+    static func tokenFacts(network: String, contract: String)
+        async -> (symbol: String?, decimals: Int?) {
+        let key = "wallet.tokenfacts.\(network).\(contract.lowercased())"
+        let defaults = UserDefaults.standard
+        if let cached = defaults.dictionary(forKey: key) {
+            return (cached["symbol"] as? String, cached["decimals"] as? Int)
+        }
+        guard let chain = allChains.first(where: { $0.network == network }) else { return (nil, nil) }
+        let facts = await tokenMetadata(contracts: [contract], chain: chain)[contract]
+        guard let facts, facts.symbol != nil || facts.decimals != nil else { return (nil, nil) }
+        var store: [String: Any] = [:]
+        if let s = facts.symbol { store["symbol"] = s }
+        if let d = facts.decimals { store["decimals"] = d }
+        defaults.set(store, forKey: key)
+        return facts
     }
 
     /// Symbol + decimals for the approved tokens — keyless (2026-07-19,

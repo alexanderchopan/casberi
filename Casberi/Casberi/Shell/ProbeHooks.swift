@@ -1533,6 +1533,80 @@ enum ProbeHooks {
                 for line in lines { NSLog("riskStripProbe| %@", line) }
             }
         },
+        // `-exposureProbe YES` NSLogs the approvals card's whole reading
+        // (2026-08-03, prd §292): the headline, then one `exposureRow|` line
+        // per grant naming the four fields every shaping decision rests on —
+        // the live allowance's verdict (unlimited/capped/forAll), the dollars
+        // at stake, whether they could be known at all, and the grant's age.
+        //
+        // One NSLog per line, not one joined message (the `-todayProbe`
+        // truncation lesson). Reads the same live state the room reads, so it
+        // exercises the real gather rather than a parallel one.
+        //
+        // It exists because an empty or wrong-looking card has FOUR causes
+        // that render identically — no watched wallet, no live grant, a
+        // holdings read that didn't price the token, or a `decimals()` that
+        // didn't answer — and only the last two are bugs. The `usd=unknown`
+        // and `dec=?` fields are what separate them in one launch. Pair with
+        // `-walletAddress` and `-approvalProbe <blocksBack>` to land grants
+        // first.
+        Hook(key: "exposureProbe") { _, context in
+            Task { @MainActor in
+                let live = await WalletWatch.liveState(context: context)
+                let e = live.exposure
+                NSLog("exposureProbe| %@", WalletApprovalExposure.headline(
+                    spenders: e.spenderCount, total: e.total))
+                NSLog("exposureProbe| priced=%d unpriced=%d total=%@",
+                      e.priced.count, e.unpriced.count,
+                      WalletApprovalExposure.money(e.total))
+                for g in e.all {
+                    NSLog("exposureRow| %@ | %@ | usd=%@ | granted=%@",
+                          g.spender, g.stateLine,
+                          g.usd.map(WalletApprovalExposure.money) ?? "unknown",
+                          g.grantedAt.map { WalletApprovalAge.text($0) } ?? "unread")
+                }
+                if let target = e.oldestWorthReviewing {
+                    NSLog("exposureProbe| button→ %@ (%@)", target.spender, target.stateLine)
+                }
+                if let note = e.unpricedNote { NSLog("exposureProbe| note: %@", note) }
+            }
+        },
+        // `-userOpProbe YES` — who actually paid (2026-08-03, prd §293). Walks
+        // the wallet's recent outgoing transactions, re-reads each receipt and
+        // NSLogs one `userOp|` line per transaction naming the attribution the
+        // gas total now uses: paid / sponsored (with the paymaster) / not
+        // yours. Plus any UNKNOWN EntryPoint emitter, which is the drift line
+        // — a new EntryPoint version shows up as gas we decline to correct
+        // rather than as a wrong number.
+        //
+        // It exists because the old behaviour was invisible: a running total
+        // renders perfectly whatever is in it, and a smart account was being
+        // charged a whole bundle's gas (or a paymaster's) with nothing on any
+        // screen to say so.
+        Hook(key: "userOpProbe") { _, context in
+            Task { @MainActor in
+                for line in await WalletGas.attributionProbeLines(context: context) {
+                    NSLog("userOp| %@", line)
+                }
+            }
+        },
+        // `-actingPartiesProbe YES` — what else can act as your account
+        // (2026-08-03, prd §293): Safe modules (which move funds with NO
+        // signature), the EIP-7702 delegate that runs as your wallet, and the
+        // ERC-7579 `accountId()` naming what the address is. One NSLog per
+        // line (the `-todayProbe` truncation lesson).
+        //
+        // `modulesUnreadable=YES` is the interesting field: a 7579 account's
+        // installed modules structurally cannot be enumerated (the standard
+        // has `isModuleInstalled` and no listing call), so an empty party list
+        // on a smart account means "we can't see", never "nothing installed".
+        Hook(key: "actingPartiesProbe") { _, _ in
+            Task { @MainActor in
+                for line in await WalletActingParties.probeLines() {
+                    NSLog("actingParties| %@", line)
+                }
+            }
+        },
         // `-safeProbe YES` NSLogs which watched wallets are detected Safes
         // per chain and their pending queue counts (or the honest
         // unreachable/none). Pairs with `-walletAddress` (a Safe address, to

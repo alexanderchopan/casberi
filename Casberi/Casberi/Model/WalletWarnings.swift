@@ -179,11 +179,17 @@ struct WalletLiveState: Equatable {
     /// prd §196: approvals used to land as plain feed things with no seat in
     /// this roll-up at all).
     var activeApprovals: [Thing] = []
+    /// Those same grants, priced and ranked (2026-08-03, prd §292) — what each
+    /// spender can actually move, which is the fact the count above can't
+    /// carry. Built from the checks `activeApprovals` already ran, so it costs
+    /// no read of its own.
+    var exposure: WalletApprovalExposure = WalletApprovalExposure()
 
     static func == (a: WalletLiveState, b: WalletLiveState) -> Bool {
         a.warnings == b.warnings
             && a.flagged.map(\.id) == b.flagged.map(\.id)
             && a.activeApprovals.map(\.id) == b.activeApprovals.map(\.id)
+            && a.exposure == b.exposure
             && a.morpho == b.morpho
             && a.uniswap == b.uniswap
             && a.hyperliquid == b.hyperliquid
@@ -313,7 +319,11 @@ enum WalletWatch {
         // also feed a `ForEach` (one row per `Thing`) directly, so a
         // duplicate `id` here traps a view exactly the same way.
         var seenApprovalIDs = Set<Thing.ID>()
-        let dedupedApprovals = activeApprovals.filter { seenApprovalIDs.insert($0.id).inserted }
+        let dedupedChecked = activeApprovals.filter { seenApprovalIDs.insert($0.thing.id).inserted }
+        let dedupedApprovals = dedupedChecked.map(\.thing)
+        // Priced from the checks just read — no second pass over the chain
+        // (2026-08-03, prd §292).
+        let exposure = await WalletApprovalExposure.from(checked: dedupedChecked)
         var seenFlaggedIDs = Set<Thing.ID>()
         let dedupedFlagged = inScope.filter { seenFlaggedIDs.insert($0.id).inserted }
 
@@ -333,7 +343,8 @@ enum WalletWatch {
                                approvalCount: dedupedApprovals.count,
                                owner: owner),
             flagged: dedupedFlagged,
-            activeApprovals: dedupedApprovals)
+            activeApprovals: dedupedApprovals,
+            exposure: exposure)
     }
 
     /// Hex compares case-insensitively (EIP-55 case is a checksum), base58

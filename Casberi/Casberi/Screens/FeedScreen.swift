@@ -1758,6 +1758,9 @@ struct FeedScreen: View {
             walletDeFiSection
             walletLiquiditySection
             walletPerpsSection
+            // Last of the state cards: everything above is what your money is
+            // doing, this is who else can reach it (prd §292).
+            walletApprovalsSection
             // What's still AHEAD, before the history (2026-07-31). The stream
             // below reads backwards from today; these rows are dated forwards,
             // and nothing else in the app shows them any more — see
@@ -2732,6 +2735,36 @@ struct FeedScreen: View {
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
                                               bottom: 0, trailing: DS.Space.s4))
+            }
+        }
+    }
+
+    /// Approvals — what someone else can still move (2026-08-03, prd §292).
+    ///
+    /// Sits with the risk reads rather than the holdings ones, because that's
+    /// what it is: every card above says what your money is doing, and this
+    /// says who else can reach it. Nothing renders without a live grant, which
+    /// on most wallets is most of the time.
+    ///
+    /// The tap resolves the grant back to its `Thing` HERE rather than in the
+    /// card, and re-checks `isLive` at the moment of the tap: a foreground
+    /// heal can delete an approval row between the card being built and the
+    /// finger landing (corollary 4's stale-array window, one layer up).
+    @ViewBuilder
+    private var walletApprovalsSection: some View {
+        if !walletLive.exposure.isEmpty {
+            Section {
+                WalletApprovalExposureCard(exposure: walletLive.exposure) { grant in
+                    guard let thing = walletLive.activeApprovals
+                        .first(where: { $0.isLive && $0.id == grant.thingID })
+                    else { return }
+                    feedSheet = .thing(thing)
+                }
+                .modifier(RowEntrance(index: 2, wave: shapeWave, style: entranceStyle))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
+                                          bottom: 0, trailing: DS.Space.s4))
             }
         }
     }

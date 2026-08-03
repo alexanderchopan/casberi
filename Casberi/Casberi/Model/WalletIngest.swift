@@ -1581,6 +1581,14 @@ enum WalletIngest {
         let contract: String?
         let network: String
         let usd: Double
+        /// How many TOKENS, not dollars (2026-08-03, prd §292) — the divisor
+        /// that turns an allowance into a share of what's actually there, for
+        /// `WalletApprovalExposure`. Optional so a cache entry written before
+        /// this field existed still decodes (synthesized `Codable` uses
+        /// `decodeIfPresent` for optionals — the `ValueSample.holdings`
+        /// precedent); those entries simply price no capped grant until the
+        /// ten-minute window turns over.
+        var amount: Double? = nil
         /// The wallet that holds it, lowercased — the Portfolio endpoint names
         /// each token's owner, so a multi-address read stays attributable
         /// (the approvals spam filter is per-owner; a pooled set would let a
@@ -1767,7 +1775,8 @@ enum WalletIngest {
             // total and dominate the allocation bar.
             guard usd.isFinite, usd >= holdingFloor, usd < holdingCeiling else { return nil }
             return HeldToken(symbol: c.symbol, contract: c.contract,
-                             network: c.network, usd: usd, owner: c.owner)
+                             network: c.network, usd: usd, amount: c.amount,
+                             owner: c.owner)
         }
     }
 
@@ -2092,6 +2101,42 @@ enum WalletIngest {
             out[token.owner, default: []].insert(normalized)
         }
         return out
+    }
+
+    /// What one wallet actually holds of one token — symbol, dollars and token
+    /// units (2026-08-03, prd §292). `WalletApprovalExposure`'s pricing half:
+    /// an unlimited grant reaches all of `usd`, a capped one reaches the share
+    /// its allowance covers, and a token the wallet doesn't hold reaches
+    /// nothing.
+    ///
+    /// Rides `fetchHeldTokens`, so it is served by the SAME ten-minute
+    /// `HoldingsCache` window the treemap and the spam filter already share —
+    /// the exposure card costs no metered `/positions` read of its own inside a
+    /// pass. nil means "we don't know", never "zero": the token is absent from
+    /// a read that succeeded, absent because the read failed, or under
+    /// `holdingFloor` — and a card that printed $0 for all three would rank a
+    /// live unlimited grant last on the day the network was worst.
+    struct HeldPosition: Sendable {
+        let symbol: String
+        let usd: Double
+        /// nil for an entry cached before the field existed (see `HeldToken`)
+        /// — enough to price an unlimited grant, not enough for a capped one.
+        let amount: Double?
+    }
+
+    static func heldPosition(owner: String, network: String, contract: String)
+        async -> HeldPosition? {
+        guard let tokens = await fetchHeldTokens(addresses: [owner]) else { return nil }
+        // Normalised per family like every sibling here: EVM lowercased, Solana
+        // mints case-PRESERVED (base58 is case-sensitive — lowercasing folds
+        // distinct mints together).
+        let solana = network == SolanaActivity.network
+        let wanted = solana ? contract : contract.lowercased()
+        return tokens.first { token in
+            guard let c = token.contract, token.network == network,
+                  WalletWatch.sameAddress(token.owner, owner) else { return false }
+            return (solana ? c : c.lowercased()) == wanted
+        }.map { HeldPosition(symbol: $0.symbol, usd: $0.usd, amount: $0.amount) }
     }
 
     /// The NON-spam NFT contracts each wallet holds, keyed "address|network"

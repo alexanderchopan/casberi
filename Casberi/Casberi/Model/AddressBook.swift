@@ -37,22 +37,43 @@ final class AddressBook {
     /// been checked never claims to be a plain wallet.
     enum Kind: String, Codable {
         case unknown, wallet, contract, safe
+        /// An ERC-4337 / ERC-7579 smart account (2026-08-03, prd §294).
+        ///
+        /// It has bytecode, so every read in this app called it a `contract` —
+        /// which is true the way "a house is a building" is true, and just as
+        /// unhelpful when the house is yours. Someone watching their own
+        /// Coinbase Smart Wallet or Biconomy account saw the row labelled
+        /// "Contract" wearing the machinery mark.
+        ///
+        /// This is the EXACT complaint the 7702 fix answered on 2026-07-25,
+        /// one mechanism over: a delegated EOA was reading as a contract and
+        /// losing its face. That fix is why `hasCode` skips a `0xef0100`
+        /// prefix; this is the same ruling applied to accounts whose code is
+        /// real.
+        case smartAccount
 
         /// The mark's glyph. Only a WALLET is a "who" — it wears the round
         /// identicon face; everything else gets a square mark, so a book of
         /// fifty rows separates people from machinery without any grouping UI.
+        ///
+        /// A SMART ACCOUNT is a who. That's the whole point of the kind: it's
+        /// somebody's wallet that happens to be made of code, and taking its
+        /// face away to file it with routers and token contracts is the
+        /// mislabelling this case exists to undo. It keeps the face and says
+        /// what it is in the label instead.
         var glyph: String? {
             switch self {
             case .contract: return "curlybraces"
             case .safe:     return "shield.lefthalf.filled"
-            case .wallet, .unknown: return nil
+            case .wallet, .unknown, .smartAccount: return nil
             }
         }
 
         var label: String? {
             switch self {
-            case .contract: return String(localized: "Contract")
-            case .safe:     return String(localized: "Safe")
+            case .contract:     return String(localized: "Contract")
+            case .safe:         return String(localized: "Safe")
+            case .smartAccount: return String(localized: "Smart account")
             case .wallet, .unknown: return nil
             }
         }

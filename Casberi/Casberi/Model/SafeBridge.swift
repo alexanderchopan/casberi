@@ -307,6 +307,36 @@ enum SafeBridge {
         return out
     }
 
+    /// One detected Safe's currently-enabled modules, read straight off the
+    /// config snapshots `syncConfig` already persists (2026-08-03, prd §293)
+    /// — so this costs no network at all, exactly like `knownCoSigners`.
+    ///
+    /// `syncConfig` has always ALERTED on a module being enabled, and that
+    /// alert scrolls away with the rest of the stream. Nothing has ever stated
+    /// the standing inventory: which modules can move this Safe's funds
+    /// WITHOUT a signature, right now. That's what `WalletActingParties` asks
+    /// for.
+    struct SafeModules {
+        let seg: String
+        let safeAddress: String
+        let modules: [String]
+        let threshold: Int
+        let ownerCount: Int
+    }
+
+    static func knownModules() -> [SafeModules] {
+        let detected = (UserDefaults.standard.array(forKey: detectedKey) as? [String]) ?? []
+        return detected.compactMap { entry in
+            let parts = entry.split(separator: ":", maxSplits: 1).map(String.init)
+            guard parts.count == 2,
+                  let data = UserDefaults.standard.data(forKey: configSnapshotKey(parts[0], parts[1])),
+                  let config = try? JSONDecoder().decode(SafeConfig.self, from: data)
+            else { return nil }
+            return SafeModules(seg: parts[0], safeAddress: parts[1], modules: config.modules,
+                               threshold: config.threshold, ownerCount: config.owners.count)
+        }
+    }
+
     /// Every Safe worth reading this pass for `addresses`: each address
     /// directly, PLUS every Safe it's a signer on that clears the spam
     /// filter (non-empty pending queue AND `nonce > 0` — a decoy naming a

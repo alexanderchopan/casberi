@@ -38,6 +38,25 @@ enum WalletPrepare {
         let active: Bool
         /// An operator grant (ApprovalForAll) vs an ERC-20 allowance.
         let forAll: Bool
+        /// The live allowance, in the token's RAW units (2026-08-03, prd §292).
+        ///
+        /// This read has always happened — `active` is literally this number
+        /// tested against zero — and the amount was discarded on the way out.
+        /// `WalletApprovalExposure` needs it to answer "how much can they
+        /// actually move", which is the difference between a grant you should
+        /// look at and one you shouldn't. Zero for a `forAll` grant: an
+        /// operator approval has no amount, and reporting 0 as if it were a
+        /// small allowance would rank the most dangerous grant in the list
+        /// last. Callers must branch on `forAll` first.
+        var allowanceRaw: Double = 0
+        /// The approved token's contract, lowercased — refetched from the log
+        /// on every check (it isn't stored on the thing) and passed out so the
+        /// exposure read can price the grant without repeating the receipt
+        /// read. nil for a check that failed before the log was resolved.
+        var contract: String?
+        /// The chain the grant lives on, as this app names it ("base-mainnet")
+        /// — carried for the same reason as `contract`.
+        var network: String?
         /// "~0.00042 ETH" — the fee to revoke, nil when unreadable.
         let feeLine: String?
         /// The prepared revoke as a wallet-ready JSON object — nil when the
@@ -157,9 +176,17 @@ enum WalletPrepare {
         // expiration, nonce) — only the first says whether the grant is
         // live, so reading the whole reply as one number would be wrong
         // (unlike the single-word ERC-20/ForAll replies).
-        let active = viaPermit2 ? firstWord(stateHex) > 0 : WalletIngest.hexToDouble(stateHex) > 0
+        //
+        // The amount is kept, not just its sign (2026-08-03) — see
+        // `Check.allowanceRaw`. A `forAll` grant's state reply is a BOOL word
+        // (`isApprovedForAll`), so its "1" is a flag and not an allowance of
+        // one wei; it stays 0 here and callers branch on `forAll`.
+        let allowanceRaw = forAll ? 0 : (viaPermit2 ? firstWord(stateHex)
+                                                    : WalletIngest.hexToDouble(stateHex))
+        let active = forAll ? WalletIngest.hexToDouble(stateHex) > 0 : allowanceRaw > 0
         guard active else {
-            return .ok(Check(active: false, forAll: forAll, feeLine: nil,
+            return .ok(Check(active: false, forAll: forAll, allowanceRaw: 0,
+                             contract: contract, network: network, feeLine: nil,
                              transactionJSON: nil, revokeURL: revokeURL))
         }
 
@@ -198,7 +225,8 @@ enum WalletPrepare {
                 feeLine = "~\(WalletIngest.format(fee)) \(symbol)"
             }
         }
-        return .ok(Check(active: true, forAll: forAll, feeLine: feeLine,
+        return .ok(Check(active: true, forAll: forAll, allowanceRaw: allowanceRaw,
+                         contract: contract, network: network, feeLine: feeLine,
                          transactionJSON: json, revokeURL: revokeURL))
     }
 

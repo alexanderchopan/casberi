@@ -15082,3 +15082,420 @@ Not an error state (`resultIsError` stays false): nothing failed. This is the
 honesty rule in its quietest form — the screen is not allowed to look broken
 when it isn't, and it is not allowed to look fine when there is something the
 person needs to do.
+
+## §292 — Approvals get an order: what someone else can still move (user: "what are more visualizations we could add to the wallet that are useful?", then "mock up approval exposure, give me three variations. one like cash app, one like apple, and one like uber", then "C", then "but don't use these yellow vars", "and the word Approvals should be Yellow", "DO NOT USES THESE BARS ON THE RAIL IT IS TOO AI", "honestly, the unlimited should be Yellow", 2026-08-03)
+
+The room has listed approvals since §196 — as rows in the stream, and as a
+tray line COUNTING them. Neither answers the only question an approval raises:
+**which one do I revoke first?** A count can't, because approvals aren't equal.
+An unlimited USDC grant to a contract nobody can name is a different object
+from a capped grant to Aave made this morning, and a list sorted by arrival
+puts them in whatever order the chain happened to emit.
+
+**The ruling: rank them by what each spender can move right now.**
+`min(allowance, balance) × price` — an unlimited grant reaches your whole
+balance of that token (not the allowance: pricing 2^256-1 would print a figure
+in the trillions), a capped one reaches the smaller of the cap and the balance.
+
+It follows that the number MOVES with the balance, which is correct rather than
+unfortunate — spend the token and your exposure really does fall to nothing
+while the grant stays live. The card says "can move", present tense, for
+exactly that reason: it is not a record of what you approved, it's a reading of
+what that approval currently reaches.
+
+**Not a tally, and the distinction is the whole design.** "You have 12
+approvals" is the banned shape. "$8,924 of your tokens is reachable by four
+spenders" is money's magnitude — the module doctrine's standing exception. The
+headline counts SPENDERS, not grants: one spender holding three approvals is
+one party who can move your money, and saying "3" inflates the finding by
+counting the same trust three times.
+
+**What is stated and never counted.** An operator grant (`setApprovalForAll` —
+"OpenSea can manage all your Doodles") has no amount and this app prices no
+NFT, so it cannot join the total; it gets its own line instead of a $0, because
+$0 would sort the most dangerous grant in the list LAST. Same for a token the
+holdings read didn't price and one it couldn't reach: `nil` means "we don't
+know", never "nothing". That is `WalletFlow.minPricedShare`'s reasoning in a
+second place — except here the card still draws, because a partial list is
+still correctly ordered; what it must never do is drop the unpriceable rows out
+of the story.
+
+### The form, ruled over four rounds
+
+Three mocks (`design/wallet-viz/approval-exposure-mocks.html`): Cash App's
+(hero numeral + the §270 bleed band as one stacked bar), Apple's (Screen Time's
+ranked list with tracks), and **Uber's, which was chosen** — receipt anatomy: a
+heavy two-line headline stating the whole finding as a sentence, rows ranked by
+money, one full-width action. Then three things were ruled OUT and are not to
+be reinstated without a new ruling:
+
+- **The coloured rail down each row is gone** ("it is too AI"). It was also
+  redundant — the state word sat two millimetres away.
+- **The card spends exactly one hue, and it is YELLOW** (`#ffd60a`, already in
+  the tree as `KindGlyph`'s note yellow): the card's own name, and the word
+  `Unlimited`. `DS.attention`'s orange was tried first across the rails and
+  read as an alarm.
+- **Unlimited is marked, but never as an alarm.** It is the only fact on a row
+  that changes what you'd do about it — a capped grant can only reach its cap,
+  an unlimited one reaches whatever you hold, today and every day after,
+  including tokens you haven't bought. But an unlimited approval to Uniswap is
+  ORDINARY; nearly every wallet with history has several. A card that painted
+  them all red would be ignored inside a week, and would leave nothing louder
+  for the day something is genuinely wrong. (`DS.destructive` was mocked and
+  declined on exactly that argument.)
+
+**The button points at the OLDEST unlimited grant, never the biggest.** The
+biggest is already the top row, and a button pointing at what the eye is on
+says nothing. A years-old blanket allowance to a forgotten contract is what a
+revoke list exists for.
+
+**Not black.** The mock's card is Uber's pure-black field; the shipped card
+uses the room's own surface like every sibling. What was chosen is the ANATOMY
+— a card that hard-coded black would be unreadable in light mode, the exact bug
+the cover's white ink shipped as once already.
+
+### No read here is new
+
+`WalletWatch.liveState` has run `WalletPrepare.check` over every landed
+approval on every foreground pass since §196 — **that check IS the live
+allowance read, and it discarded the amount and kept only its sign**
+(`hexToDouble(stateHex) > 0`). `Check` now carries `allowanceRaw`, the contract
+and the network, and `activeApprovals` hands the checks back rather than just
+the things, so nothing is read twice. Prices ride the holdings read the treemap
+already pays for behind its ten-minute window (`WalletIngest.heldPosition`,
+riding `fetchHeldTokens`; `HeldToken` gained an optional `amount` — the token
+count a capped grant's share needs — decoding nil for entries cached before it
+existed, the `ValueSample.holdings` precedent). The only marginal cost is
+`WalletApprovals.tokenFacts`: one `eth_call` pair the first time a token
+appears in an approval, cached for the life of the install because neither a
+symbol nor a decimals can change for a deployed contract. **A read that answers
+with nothing is not cached** — a flaky public host would otherwise pin "we
+don't know this token's decimals" forever, and that is exactly what makes a
+capped grant unpriceable.
+
+`unlimitedThreshold` (1e40) is now NAMED on `WalletApprovals` and PASSED IN to
+the pure function, rather than spelled twice: the same number decides whether a
+row's own title says "unlimited", and a local copy could drift and make the
+card price a grant the row calls unlimited as if it were capped (`DeFiRisk`'s
+lesson, `WalletRiskScale`'s shape).
+
+### Verification
+
+Split Foundation-only (`WalletApprovalExposure`) from the reading half
+(`WalletApprovalExposureSource`), the `WalletRiskScale` split, because every
+failure here is a WRONG NUMBER that renders perfectly — a capped grant priced
+as unlimited looks exactly like a large approval. The pure half is compiled AS
+SHIPPED by `scripts/wallet-viz-selftest.sh` (now 201 assertions), with drift
+guards on `unlimitedThreshold` and on `HeldToken.amount`, and mutation-tested
+eight ways.
+
+**The harness found a real defect the hour it was written**: `atStake` folded
+a non-finite allowance in with a genuine zero and answered **$0** — printing
+"this grant reaches nothing" for a grant it had simply failed to parse, which
+is reassurance on the row that earned it least. A value we couldn't read is now
+nil ("we don't know") and lands in the unpriced list; only a real revoke is 0.
+Two mutations initially SURVIVED and both were coverage gaps rather than dead
+code: the `>=` boundary needed a case where the two arms disagree (at the
+threshold with no decimals, since a cap of 1e34 clamps to the balance anyway),
+and the formatter's fraction tiers needed a FRACTIONAL cap — a quarter-ETH
+allowance printed as "Capped at 0 WETH" reads as a revoked grant.
+
+`-exposureProbe YES` NSLogs the headline then one `exposureRow|` line per grant
+(the `-todayProbe` truncation lesson) naming the four fields every shaping
+decision rests on. It exists because an empty or wrong-looking card has FOUR
+causes that render identically — no watched wallet, no live grant, a holdings
+read that didn't price the token, or a `decimals()` that didn't answer — and
+only the last two are bugs; `usd=unknown` is what separates them in one launch.
+
+**UNMEASURED against a real wallet**: no approval has been landed and priced
+end to end. Every read fails closed (nil → the unpriced list), and the pure
+arithmetic is harnessed, but the pricing path has never run against a live
+grant. Pair `-walletAddress` with `-approvalProbe <blocksBack>` and then
+`-exposureProbe` before trusting a number on this card.
+
+## §293 — Account abstraction: who actually paid, and what else can act as you (user: "what more can we do with account abstraction?", then "do 2, 3, 4", 2026-08-03)
+
+Three items were scoped. **One of them was already built and the proposal was
+wrong** — that correction is recorded below rather than quietly dropped.
+
+### The bug: a smart account was charged somebody else's gas
+
+`WalletGas` has charged every watched wallet the FULL receipt cost of any
+transaction that moved tokens out of it (`gasUsed × effectiveGasPrice` from
+`eth_getTransactionReceipt`). Right for an EOA. For a smart account it is wrong
+in both directions at once:
+
+- **A 4337 account never sends its own transaction.** A bundler does, and one
+  bundle carries several unrelated people's UserOperations — so the wallet was
+  charged the whole bundle, *including strangers' operations*.
+- **A paymaster may have paid all of it**, making the real cost zero.
+- **A Safe is executed by an owner**, so the Safe was charged gas the owner paid.
+
+Invisible, because a running total renders perfectly whatever is in it. Same
+class as the Gnosis Pay decimals bug: the read succeeded, the arithmetic was
+confident, and the answer was somebody else's.
+
+**The rule (`WalletUserOps`): you paid a transaction's gas only if you actually
+sent it**, with one refinement where 4337 gives an exact per-operation figure.
+(1) A `UserOperationEvent` in this receipt names you as `sender` → your cost is
+that operation's own `actualGasCost`, and **zero if a paymaster is named**.
+(2) Otherwise the receipt's `from` is you → the whole receipt, as before.
+(3) Otherwise → nothing; somebody else sent this. **Rule 3 alone fixes Safes
+and every other executed-by-someone-else account**; rule 1 buys the exact
+number and the sponsorship fact on top.
+
+**It costs zero extra requests.** `eth_getTransactionReceipt` already returns
+the transaction's `logs`, and `WalletGas` already fetches that receipt — the
+event has been sitting in a reply this app read and discarded all along.
+
+### Sponsorship is a fact worth keeping
+
+Somebody else paying your gas is money moving, which is the module doctrine's
+standing exception, so it gets its own running total beside the gas one and the
+gas ask states both: *"0.031 ETH in gas since you started watching, plus $4.20
+somebody else paid for you."* Nil for everyone who has never used a paymaster,
+so the sentence grows only when there's something to say. No new `Thing` field,
+so no CloudKit Production deploy.
+
+**Version-agnostic by construction, and a forged event is not believed.** Logs
+are matched by TOPIC and sender, never by EntryPoint address, so v0.6/v0.7/v0.8
+all match one keccak-derived topic with no address list to keep current. But an
+event is only trusted when a KNOWN EntryPoint emitted it — any contract can emit
+any log, and a forged UserOperationEvent naming your wallet with a paymaster
+would zero out real gas you really paid. An unknown emitter falls through to
+rules 2/3 (under-report, never trust a stranger) and `-userOpProbe` names it, so
+a new EntryPoint reads as a line to fix rather than a silent drift. The
+EntryPoint addresses are **doc-derived and UNMEASURED**, which is survivable
+precisely because of that direction: a wrong entry costs a correction we don't
+make, never a wrong number we assert.
+
+### What else can act as you (`WalletActingParties`)
+
+§292 answers who can move your TOKENS. This answers the version account
+abstraction introduces: who can act as the ACCOUNT. It is §239's Farcaster
+signers ("which apps can post as you") pointed at money, and wears that pass's
+shape — an inventory with a door, never a control.
+
+Three mechanisms, three reads, two of them free: a **Safe MODULE** (the
+highest-stakes fact here, and `SafeBridge`'s own alert copy already says why —
+it moves funds *without a signature*, bypassing the owner threshold), read off
+config snapshots already on disk; an **EIP-7702 DELEGATE**, from the read
+`WalletSafety` already makes each pass; and the account's **own kind**, via
+ERC-7579's `accountId()`.
+
+Both of the first two existed only as CHANGE ALERTS — `syncConfig` has flagged
+a newly enabled module since 2026-07-30 and `WalletSafety` a changed delegate
+since 2026-07-20 — and an alert scrolls away with the stream. Nothing ever
+stated the standing inventory: what can move your funds *right now*.
+
+**The ceiling is real and the copy states it: a 7579 account's installed modules
+cannot be enumerated.** The standard gives `isModuleInstalled(type, module,
+context)` — a question you can only ask about a module you already know — and no
+listing call; Safe's `getModulesPaginated` exists because Safe defined it, not
+because the standard did. So this lists a Safe's modules in full, names a 7702
+delegate in full, and for every other smart account says what KIND it is and
+declines to claim it can see what's installed (`modulesUnreadable`). A surface
+that listed nothing and looked complete would be worse than one that says it
+can't see.
+
+### The correction: Safe depth was already shipped
+
+The third item proposed adding owners, threshold and "3 of 5 signed, waiting on
+you" to `SafeBridge`. **All of it already ships** and has since 2026-07-30:
+`SafeConfig` carries owners/threshold/modules/guard, `Signer`/`roster` gives the
+full per-transaction signer list with who signed and when, the landed title
+already reads "2 of 3 signatures collected on a transfer — your signature is
+needed", and `Check` adds nonce conflicts, stranded transactions and a door to
+the Safe app. Nothing was built for it. The one genuine gap it named — the
+standing module inventory — is `WalletActingParties` above.
+
+### Verification
+
+`WalletUserOps` is Foundation-only and compiled AS SHIPPED by
+`scripts/wallet-viz-selftest.sh` (now 222 assertions), covering both rules, the
+bundle case that motivated it, every canonical EntryPoint, the forged-emitter
+refusal, and four malformed replies. Mutation-tested four ways — dropping the
+emitter allowlist, inverting the paymaster test, reading the cost word one
+index over, and removing rule 3 are each caught.
+
+Probes: `-userOpProbe YES` (per transaction: paid / sponsored-by-whom / not
+yours, each printed BESIDE what the old behaviour would have charged, plus any
+unknown EntryPoint) and `-actingPartiesProbe YES` (per account: kind, parties,
+`modulesUnreadable`).
+
+**UNMEASURED against a live smart account.** No 4337 wallet, Safe module or
+7702-delegated account has been read end to end from this machine; the bug
+itself was found by reading `WalletGas.addFee` against `WalletIngest`'s job
+construction, not observed. Every path fails toward the old behaviour or toward
+silence, and the arithmetic is harnessed — but run both probes against a real
+smart account before trusting a number.
+
+## §294 — Virtuals: the agents' wallets are empty, so there is nothing to follow (user: "Is there anythign we can do wtih Virtuals? https://os.virtuals.io/", then "is there a way to 'watch' virtuals wallets?", then "sort of like 'follow an agent'", 2026-08-03)
+
+**DECLINED, all four shapes.** Recorded with the numbers because the instinct was
+right and only the measurement kills it — if agent wallets ever start moving,
+this is a five-minute re-check rather than a whole session again.
+
+### What Virtuals exposes (all keyless, all measured 2026-08-03)
+
+| Endpoint | Result |
+| --- | --- |
+| `api.virtuals.io/api/virtuals` | 200, ~75 fields/agent — image CDN, token address, holder count, mcap, `socials` |
+| `acpx.virtuals.io/api/agents` | 200, the hireable-agent registry with wallet addresses |
+| ACP Core `0x238E541BfefD82238730D00a2208E5497F1832E0` (Base) | 200, live, 7 distinct event types, all indexed |
+
+Two call quirks: `api/virtuals` **400s without a `filters[status]`** (the error is
+the unrelated-looking `Cannot set properties of undefined (setting 'chain')`), and
+`mainnet.base.org` **403s urllib's default UA** while serving curl fine — the
+Yahoo-UA lesson (§80) on a new host.
+
+### The finding: every agent wallet is deployed and abandoned
+
+An agent's onchain identity is its `tbaAddress` (ERC-6551). Sampled the top 22
+agents by market cap — TIBBIR, TOSHI, AIXBT, REPPO, CAS, AIDOG, LUNA, MAMO,
+GAME, KEYCAT, VEX, ALTT, SR, TRSA, YUNAI, SCL, 1000X, PRXVT, WIRE, WAVE, GRID,
+KARMA:
+
+- **22 of 22: nonce 0 or 1, balance ≤ 0.000002 ETH.** The nonce of 1 *is* the
+  deployment. Not one has ever transacted.
+- **7 of 7 readable ACP registry wallets: nonce 1, ~0 ETH** (oldAxr holds
+  0.038 and has still never sent anything).
+
+**The only live address is the trap.** `walletAddress` on aixbt reads nonce 463
+and 0.031 ETH — but that is the **creator's personal EOA**, not the agent.
+Rendering a wallet screen titled "aixbt" over a founder's private wallet is §83
+fake status in its most expensive form: mislabeling a human being.
+
+### Why the other three shapes fail
+
+1. **ACP jobs on watched wallets** — the best-*shaped* read here, the Peer
+   pattern exactly (keyless, rides watched wallets, no account, no key, indexed
+   topics). But **43 logs in 9,999 blocks (~5.5h) protocol-wide, ≈190/day across
+   every ACP user on earth**. Peer earned its seat because a watched wallet was
+   plausibly a Peer user; here the odds round to zero, so the sweep reads empty
+   forever. `mainnet.base.org` also caps `eth_getLogs` at a 10,000-block range
+   (and JSON-RPC batches at 10 calls), making backfill expensive on top.
+2. **An agent-token discovery feed** — buildable, but it is the app's *third*
+   market firehose after OpenSea drops and GeckoTerminal trending, and sorted
+   newest-first it is launchpad slop (the five most recent were `UNDERGRAD`,
+   no token address, named "FUCKOF", "SWAMP", "CYCLOPS"). Market noise is the
+   weakest kind of thing, and the feed is the product.
+3. **A name resolver for the Tokens bridge** — proposed, then **withdrawn the
+   same session: it already works.** Virtuals names its tokens `<name> by
+   Virtuals`, so Dexscreener resolves them by plain name today —
+   `aixbt` → `aixbt by Virtuals`, base `0x4F9Fd6Be4a90f2620860d680c0d4d5Fb53d1A825`;
+   `TIBBIR` → `Ribbita by Virtuals`. **"Follow an agent" is already shipped; it
+   is spelled `-watchToken`.** The only marginal gain would be disambiguating
+   generic names (`luna` puts two Robinhood-chain junk tokens above "Luna by
+   Virtuals") and a nicer thumbnail — not worth a bridge.
+
+### The one that would have been good, and can't be
+
+`socials` carries verified handles for nearly every agent — `@Mamo_agent`,
+`@caspius_ai`, `@luna_virtuals`, `@ribbita2012`. These are *posting* agents, so
+their words are the real thing worth following, and words are what this app is
+for. They are overwhelmingly on **X**, the one network with no live read left
+(§280: free tier discontinued, no RSS, `cdn.syndication.twimg.com` now returns
+`{}`). Farcaster/Bluesky handles would drop straight into the existing watch;
+Virtuals agents aren't there. Nothing to build until that changes.
+
+### EconomyOS (os.virtuals.io) is the wrong direction
+
+It wires a wallet, a card and an email inbox into an agent so it can spend.
+Casberi's wallet promise is structurally the opposite — "watching can never
+trade or move funds", asserted as a test by `scripts/wc-handshake.sh`. Hosting
+an economic actor is a different product, not a bridge.
+
+### Re-checking cheaply
+
+Two commands settle whether anything changed:
+
+```sh
+# 1. Have agent identity wallets started moving? (any nonce > 1 is news)
+curl -s "https://api.virtuals.io/api/virtuals?filters%5Bstatus%5D=AVAILABLE&sort%5B0%5D=mcapInVirtual%3Adesc&pagination%5BpageSize%5D=25" \
+  | python3 -c "import json,sys; [print(r['symbol'], r['tbaAddress']) for r in json.load(sys.stdin)['data'] if r.get('tbaAddress')]"
+# then eth_getTransactionCount each against https://mainnet.base.org (curl, not urllib)
+
+# 2. Has ACP volume climbed? (43 per 10k blocks was the 2026-08-03 reading)
+curl -s -X POST https://mainnet.base.org -H 'content-type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"eth_getLogs","params":[{"address":"0x238E541BfefD82238730D00a2208E5497F1832E0","fromBlock":"<latest-9999>","toBlock":"latest"}]}'
+```
+
+**The threshold for revisiting is ACP, not the tokens.** A job completing is the
+only genuinely thing-shaped event Virtuals has — "your agent got hired" is news,
+where a price is a tally. If that 190/day climbs an order of magnitude *and*
+agent wallets carry balances, the Peer-shaped sweep becomes worth building.
+
+## §294 — Your own smart wallet was filed as "Contract" (user: "oh, sorry i wanted to do 1 also", 2026-08-03)
+
+The fourth item from the account-abstraction pass, added after §293 shipped.
+
+`AddressKind` decides what an address IS by asking `eth_getCode`, and anything
+with bytecode is a `contract`. True of a smart account the way "a house is a
+building" is true — and just as unhelpful when the house is yours. Someone
+watching their own Coinbase Smart Wallet, Safe-less Biconomy account or Kernel
+account saw the row labelled **"Contract"**, wearing the square machinery mark
+and the app's own tint instead of an identicon face.
+
+**This is the same complaint the 7702 fix answered on 2026-07-25**, one
+mechanism over: a delegated EOA was reading as a contract and losing its face,
+caught on vitalik.eth. That fix is why `hasCode` skips a `0xef0100` prefix. This
+is the same ruling applied to accounts whose bytecode is real rather than a
+delegation pointer.
+
+**`AddressBook.Kind` gains `.smartAccount`, and it sits with the WHOS.** It
+keeps the round identicon face and its own hue, because a smart account is
+somebody's wallet that happens to be made of code; filing it beside routers and
+token contracts is exactly the mislabelling being undone. What it is gets said
+in the label instead.
+
+### Detection: two questions, and neither is allowed to guess
+
+Asked ONLY of addresses that already answered "yes" to `hasCode`, so an EOA —
+the common case — costs exactly the reads it always did.
+
+1. **`accountId()` (ERC-7579).** The account names itself, in the standard's
+   own `vendorname.accountname.semver` form, so detection and vendor arrive in
+   one call and nothing has to infer a vendor out of bytecode.
+2. **`entryPoint()` (ERC-4337).** A 4337 account points at its EntryPoint, and
+   **the answer must be one we recognise.** Any contract can expose a method by
+   that name returning anything; "it answered something" is not evidence.
+
+A nil answer leaves the address `.contract` — what the app said before this
+existed — so a missed detection costs the old behaviour and never a wrong
+claim.
+
+### The vendor string is attacker-controlled, and is treated that way
+
+`accountId()` returns whatever the remote contract wants. Rendering its first
+component as a vendor badge puts that string in the app's own chrome, wearing
+the app's voice — so `SmartAccount.vendor` is a SANITIZER, not a formatter:
+letters and digits only, 2–24 characters, title-cased, else nil. Refusing to
+name something is always available; un-saying it is not.
+
+It lives in `WalletUserOps` rather than beside its reader precisely so the
+harness can compile it as shipped.
+
+**The harness caught the tests being wrong before it caught any code being
+wrong.** Dropping `allSatisfy` entirely left the run green: both "hostile"
+fixtures — a `<script>` tag and a sentence — happened to be 25 characters, so
+the LENGTH guard rejected them and the character check was never exercised.
+Every hostile case is now inside the length window on purpose. One expectation
+was also simply wrong (`evil.com/x.a.1` yields "Evil", because only the first
+dot-component is ever read, and "evil" is a plain word rather than an
+injection); it's now asserted as the behaviour it actually has.
+
+### The migration, without which the fix reaches nobody
+
+A kind is detected once and persisted, so every smart account ALREADY in the
+book carries `.contract` forever and nothing would re-ask.
+`recheckContractsOnce` clears the stored kind for `.contract` entries exactly
+once, letting the normal `detectPending` sweep re-ask with the new question —
+the same shape as `AddressBook`'s existing `kindRecheck.7702` key, which exists
+for the identical reason. Cheap: it re-reads only contracts, never the EOAs
+that are most of a book.
+
+231 → 237 harness assertions; the sanitizer's character and length guards are
+each mutation-proven load-bearing. **UNMEASURED against a live smart account**
+— no `accountId()` or `entryPoint()` has been read from this machine, and both
+fail toward `.contract`.

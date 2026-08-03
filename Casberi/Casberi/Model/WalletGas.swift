@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 /// Gas spent (2026-07-20) — a forward-only running total per (wallet,
 /// chain), in the chain's own native units. Rides `WalletIngest.refresh`'s
@@ -20,6 +21,7 @@ enum WalletGas {
     static func clearTotals(address: String) {
         for network in WalletChainStore.allNetworkIDs {
             UserDefaults.standard.removeObject(forKey: totalKey(network, address))
+            UserDefaults.standard.removeObject(forKey: sponsoredKey(network, address))
         }
     }
 
@@ -49,11 +51,65 @@ enum WalletGas {
               // or a pre-1559 chain may only answer the legacy `gasPrice`.
               let priceHex = (receipt["effectiveGasPrice"] as? String) ?? (receipt["gasPrice"] as? String)
         else { return }
-        let fee = WalletIngest.hexToDouble(gasUsedHex) * WalletIngest.hexToDouble(priceHex) / 1e18
-        guard fee > 0, fee.isFinite else { return }
-        let key = totalKey(job.network, job.address)
-        let running = UserDefaults.standard.double(forKey: key)
-        UserDefaults.standard.set(running + fee, forKey: key)
+        let whole = WalletIngest.hexToDouble(gasUsedHex) * WalletIngest.hexToDouble(priceHex) / 1e18
+        // WHO ACTUALLY PAID (2026-08-03, prd §293). This used to charge the
+        // wallet `whole` unconditionally, which is right for an EOA and wrong
+        // for every smart account: a 4337 bundle's receipt covers several
+        // people's operations, and a Safe's is paid by the owner who executed
+        // it. `WalletUserOps` reads the receipt's OWN logs — already in this
+        // reply, no extra request — and answers what it really cost us.
+        switch WalletUserOps.attribution(logs: (receipt["logs"] as? [[String: Any]]) ?? [],
+                                         from: receipt["from"] as? String,
+                                         wallet: job.address, fallbackNative: whole) {
+        case .paid(let native):
+            add(native, to: totalKey(job.network, job.address))
+        case .sponsored(_, let native):
+            // Zero into the gas total — the wallet paid nothing — and into the
+            // SPONSORED total, which is the fact worth having: somebody else
+            // paying for you is money moving, and the doctrine's standing
+            // exception covers it.
+            add(native, to: sponsoredKey(job.network, job.address))
+        case .notYours:
+            break
+        }
+    }
+
+    private static func add(_ amount: Double, to key: String) {
+        guard amount > 0, amount.isFinite else { return }
+        UserDefaults.standard.set(UserDefaults.standard.double(forKey: key) + amount, forKey: key)
+    }
+
+    private static func sponsoredKey(_ network: String, _ address: String) -> String {
+        "wallet.gas.sponsored.\(network).\(address.lowercased())"
+    }
+
+    /// What somebody else paid on this wallet's behalf, per chain's native
+    /// symbol (2026-08-03) — the mirror of `totals`, and empty for a wallet
+    /// nobody has sponsored, never a fabricated zero row.
+    static func sponsoredTotals(address: String) -> [(symbol: String, amount: Double)] {
+        WalletChainStore.allNetworkIDs.compactMap { network in
+            let amount = UserDefaults.standard.double(forKey: sponsoredKey(network, address))
+            guard amount > 0, let symbol = WalletIngest.nativeSymbol(forNetwork: network) else { return nil }
+            return (symbol, amount)
+        }
+    }
+
+    /// The sponsored running total across the given addresses, in USD — nil
+    /// when nobody has been sponsored, so the ask can stay silent rather than
+    /// print "$0 sponsored" at everyone who has never used a paymaster.
+    @MainActor
+    static func sponsoredUSD(addresses: [String]) async -> Double? {
+        var sum = 0.0
+        var any = false
+        for address in addresses {
+            for network in WalletChainStore.allNetworkIDs {
+                let amount = UserDefaults.standard.double(forKey: sponsoredKey(network, address))
+                guard amount > 0, let price = await nativePrice(network: network) else { continue }
+                sum += amount * price
+                any = true
+            }
+        }
+        return any ? sum : nil
     }
 
     /// The running total for one watched address, per chain's native symbol
@@ -145,9 +201,80 @@ enum WalletGas {
                 .map { "\(WalletIngest.format($0.amount)) \($0.symbol)" }
                 .joined(separator: ", ")
             let usd = await totalUSD(address: w.address)
+            let sponsored = sponsoredTotals(address: w.address)
+                .map { "\(WalletIngest.format($0.amount)) \($0.symbol)" }
+                .joined(separator: ", ")
             lines.append("\(w.short): \(perChain.isEmpty ? "none yet" : perChain)"
-                + (usd.map { " (~$\(WalletIngest.format($0)))" } ?? ""))
+                + (usd.map { " (~$\(WalletIngest.format($0)))" } ?? "")
+                + (sponsored.isEmpty ? "" : " | sponsored: \(sponsored)"))
         }
         return lines.joined(separator: " | ")
+    }
+
+    /// `-userOpProbe YES` (2026-08-03, prd §293) — re-reads the receipts
+    /// behind this wallet's recent outgoing transactions and reports the
+    /// attribution the gas total now uses, one line each.
+    ///
+    /// It reads LANDED transaction things rather than re-walking the chain:
+    /// the point is to check the rule against transactions this app has
+    /// actually seen, and a fresh transfer sweep would cost Alchemy credits to
+    /// answer a question about arithmetic. Spends one `eth_getTransactionReceipt`
+    /// per row, on the keyless public hosts, and writes NOTHING — the running
+    /// totals are untouched, so a probe can't inflate them.
+    @MainActor
+    static func attributionProbeLines(context: ModelContext) async -> [String] {
+        let watched = WalletStore.shared.addresses.map(\.address)
+        let resolved = await WalletIngest.resolvedAddresses(watched).filter { ENS.isHexAddress($0) }
+        guard !resolved.isEmpty else { return ["no EVM wallets watched"] }
+        var descriptor = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == "Wallet" },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        descriptor.fetchLimit = 200
+        let things = ((try? context.fetch(descriptor)) ?? []).filter(\.isLive)
+
+        var lines: [String] = []
+        var seen = Set<String>()
+        for thing in things {
+            // "wallet:tx:<network>:<hash>" and friends — only a ref carrying a
+            // real transaction hash can be re-read.
+            guard let ref = thing.sourceRef else { continue }
+            let parts = ref.split(separator: ":").map(String.init)
+            guard parts.count >= 4, parts[0] == "wallet",
+                  let hash = parts.last, hash.hasPrefix("0x"), hash.count == 66,
+                  let owner = thing.walletAddress,
+                  resolved.contains(where: { WalletWatch.sameAddress($0, owner) }),
+                  seen.insert(hash).inserted else { continue }
+            let network = parts[2]
+            guard let receipt = await WalletApprovals.rpcRead(
+                    network: network, method: "eth_getTransactionReceipt",
+                    params: [hash]) as? [String: Any] else {
+                lines.append("\(WalletStore.shortAddress(hash)) \(network): receipt unreadable")
+                continue
+            }
+            let logs = (receipt["logs"] as? [[String: Any]]) ?? []
+            let gasUsed = WalletIngest.hexToDouble((receipt["gasUsed"] as? String) ?? "0x0")
+            let price = WalletIngest.hexToDouble(
+                (receipt["effectiveGasPrice"] as? String) ?? (receipt["gasPrice"] as? String) ?? "0x0")
+            let whole = gasUsed * price / 1e18
+            let verdict: String
+            switch WalletUserOps.attribution(logs: logs, from: receipt["from"] as? String,
+                                             wallet: owner, fallbackNative: whole) {
+            case .paid(let n):
+                verdict = "PAID \(WalletIngest.format(n))"
+                    + (abs(n - whole) > 1e-18 ? " (receipt said \(WalletIngest.format(whole)))" : "")
+            case .sponsored(let paymaster, let n):
+                verdict = "SPONSORED by \(WalletStore.shortAddress(paymaster))"
+                    + " — they paid \(WalletIngest.format(n)), you paid 0"
+                    + " (old behaviour charged you \(WalletIngest.format(whole)))"
+            case .notYours:
+                verdict = "NOT YOURS — someone else sent it"
+                    + " (old behaviour charged you \(WalletIngest.format(whole)))"
+            }
+            let unknown = WalletUserOps.unknownEmitters(logs: logs)
+            lines.append("\(WalletStore.shortAddress(hash)) \(network): \(verdict)"
+                + (unknown.isEmpty ? "" : " | UNKNOWN EntryPoint: \(unknown.joined(separator: ","))"))
+            if lines.count >= 25 { break }
+        }
+        return lines.isEmpty ? ["no re-readable wallet transactions landed yet"] : lines
     }
 }
