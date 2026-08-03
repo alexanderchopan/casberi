@@ -14571,7 +14571,79 @@ Its rows record only `source: "OpenSea"` and `tags: ["NFT"]` — the chain a
 collection came from is never stored, so there is nothing to prune on. Left
 alone rather than guessed at.
 
-## §287 — The brief is a document, so it opens at the top and it composes on what arrived (user: "what's going on daily? Brief takes too long to load and when it finishes, it leaves you at the bottom of the page. It should keep you at the top", 2026-08-03)
+## §287 — The empty room blamed the network, and the screenshot disproved it (user: "kalshi says can't reach order book", 2026-08-03)
+
+The report was one screenshot: the Kalshi room, "Couldn't reach the market
+book just now." and a Try again link — sitting directly under a category
+strip reading **All · Elections · Politics · Sports**.
+
+Those chips are the tell. `PredictionBrowseSection.loadIfNeeded` commits
+`kalshiCategories` and `kalshiRows` in the SAME pass, past the same
+cancellation guard, and `KalshiWatch.categories()` reads the `category` field
+of the very listing `search` reads `event_ticker` from. Populated chips are
+therefore proof the discovery read SUCCEEDED. The room was asserting a
+network failure it had not measured, over a book it had demonstrably
+reached.
+
+**Ruling: the empty state names what it observed.** `search` gained a sibling
+`book(_:limit:category:)` returning rows plus a `BookOutcome` — `unreached`
+(no listing AND no per-event read answered), `noMatch` (read fine, the filter
+matched nothing), `noQuote` (events hydrated, not one quoting a price).
+"Couldn't reach" is now reserved for `unreached`. This is prd §83's
+no-fake-status rule pointed at an error message rather than a control: a
+sentence that blames the connection when the connection is fine sends a
+person to their wifi over an exchange that is simply quoting nothing, and it
+costs a debugging round every time it fires.
+
+`markets(inEvent:)` returns `(rows, reached)` rather than a bare array,
+because "every book is empty" and "every request failed" are the same row
+count and different bugs. Polymarket has no failure channel yet and keeps
+the old sentence — a verdict from one venue's read must not be printed over
+the other's.
+
+**What could not be settled from the code, and why.** An empty Kalshi room
+has three causes and the room renders one sentence for all of them:
+discovery didn't answer; discovery answered but no event carries
+`event_ticker` (phase 1 matches nothing); events hydrated but no market
+quotes a price. Each is one field, each empties the book completely, and
+`markets(inEvent:)` DROPS every market whose quote it can't read — so a
+rename is silent everywhere. The host this was written on has no egress to
+`api.elections.kalshi.com`, so which one fired is UNMEASURED. Hence
+`-kalshiBookProbe`, which reports each phase's HTTP status separately and
+prints the price-shaped keys actually on the wire; the `fields=` line settles
+it in one launch.
+
+**Hardening, in the direction the evidence points.** `liveProbability` read
+`yes_bid_dollars`/`yes_ask_dollars` and nothing else — a single point of
+failure for the whole room, on an API this app has already caught
+mid-migration (2026-07-28: `volume` measured null while `volume_fp` carried
+the number, and sorting on the null field ordered the entire book at zero).
+It now falls back to the integer-cent `yes_bid`/`yes_ask`, normalising to
+0...1 BEFORE the empty-book test — scaling after it would read a 0¢/100¢
+empty book as a live 50%. `volume_fp` falls back to `volume` the same way.
+The `_dollars` pair still wins wherever present, so no number moves on a
+payload shaped the way it was last measured.
+
+`Cache.get()` also stopped walking discovery twice. An actor suspends at
+every `await`, so it does not serialize a method that does I/O — and
+`loadIfNeeded` starts `search` and `categories` as siblings, so on a cold
+cache both entered, both saw no `fetchedAt`, and both ran the full walk: six
+requests for three pages, doubling the burst at exactly the moment a rate
+limit is the likeliest thing biting. One shared in-flight task now serves
+both, UNSTRUCTURED on purpose — `.task(id:)` cancels the previous load the
+instant the query changes, and a walk owned by the structured tree would be
+killed by whichever browse gave up first, handing the newer load an empty
+book.
+
+**The mechanical half.** `scripts/live-integrations.sh` exists to catch
+dependency drift, and had no Kalshi row at all. It now asserts all three
+load-bearing fields nightly, discovering the event ticker at runtime (a
+pinned one goes red the day its market settles and says nothing about the
+app). Losing the `_dollars` pair is an AMBER while the fallback holds, not a
+pass: that is the migration finishing, and the fallback is then the only
+thing between the book and empty.
+
+## §288 — The brief is a document, so it opens at the top and it composes on what arrived (user: "what's going on daily? Brief takes too long to load and when it finishes, it leaves you at the bottom of the page. It should keep you at the top", 2026-08-03)
 
 Two complaints, one root: the brief was being treated as a conversational
 reply on both axes — how it scrolls, and how long it is allowed to take.

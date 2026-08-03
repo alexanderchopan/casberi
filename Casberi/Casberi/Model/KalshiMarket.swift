@@ -83,7 +83,10 @@ struct KalshiMarket {
             closeTime: IngestSupport.isoDate(market["close_time"]),
             result: market["result"] as? String,
             url: "https://kalshi.com/markets/\(series.lowercased())/\(event.lowercased())",
-            volume: num(market["volume_fp"]) ?? 0)
+            // `volume_fp` first, plain `volume` behind it — same fallback
+            // KalshiWatch.volume(_:) uses, for the same reason: a volume that
+            // silently reads 0 marks a busy market "Thin book".
+            volume: num(market["volume_fp"]) ?? num(market["volume"]) ?? 0)
     }
 
     private static func num(_ any: Any?) -> Double? {

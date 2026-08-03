@@ -185,6 +185,53 @@ http_ping "GeckoTerminal"  "https://api.geckoterminal.com/api/v2/networks/eth/tr
 http_ping "Jupiter"        "https://lite-api.jup.ag/tokens/v2/search?query=SOL"
 http_ping "Bluesky public" "https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=bsky.app"
 
+# Kalshi (KalshiWatch) — http_ping can't cover it: the browse room's failure
+# mode is a 200 with the WRONG SHAPE, not an unreachable host. Reported
+# 2026-08-03 as "Kalshi says can't reach order book" on a screen whose category
+# strip was fully populated — i.e. the listing answered, and something between
+# it and a quoted price had moved. Three fields carry the whole room and each
+# one is a single point of failure, so each is asserted on its own:
+#
+#   * `event_ticker` on the listing  — phase 1's only key; without it there are
+#     no candidates to hydrate and the book is empty with the categories intact
+#     (categories read `category`, a different field on the same payload).
+#   * `markets` on the per-event read — phase 2's payload.
+#   * a yes bid/ask pair on a market  — `markets(inEvent:)` DROPS every market
+#     whose quote it can't read, so a rename here empties the book silently.
+#
+# The event ticker is discovered at runtime rather than pinned: Kalshi's open
+# events turn over constantly, and a hardcoded one would go red the day its
+# market settled and say nothing about the app.
+KALSHI_API='https://api.elections.kalshi.com/trade-api/v2'
+kresp=$(curl -s --max-time "$TIMEOUT" -H 'Accept: application/json' \
+  "$KALSHI_API/events?status=open&limit=20&with_nested_markets=false" 2>/dev/null)
+if [[ -z "$kresp" ]]; then
+  fail "Kalshi discovery (unreachable)"
+elif [[ "$kresp" != *'"event_ticker"'* ]]; then
+  fail "Kalshi discovery — 200 but no \`event_ticker\`: phase 1 matches nothing, book goes empty"
+else
+  pass "Kalshi discovery — open events listing carries event_ticker"
+  KTICKER=$(print -r -- "$kresp" | sed -E 's/.*"event_ticker":"([^"]*)".*/\1/' | head -1)
+  kmkt=$(curl -s --max-time "$TIMEOUT" -H 'Accept: application/json' \
+    "$KALSHI_API/events/$KTICKER?with_nested_markets=true" 2>/dev/null)
+  if [[ -z "$kmkt" ]]; then
+    fail "Kalshi event hydration $KTICKER (unreachable)"
+  elif [[ "$kmkt" != *'"markets"'* ]]; then
+    fail "Kalshi event hydration $KTICKER — 200 but no \`markets\` array"
+  # The app reads `yes_bid_dollars`/`yes_ask_dollars` first and falls back to
+  # the integer-cent `yes_bid`/`yes_ask`. Either pair keeps the room alive;
+  # LOSING THE DOLLARS PAIR is worth an amber even while the fallback holds,
+  # because that is the migration finishing and the fallback is all that is
+  # left between the book and empty.
+  elif [[ "$kmkt" == *'"yes_bid_dollars"'* && "$kmkt" == *'"yes_ask_dollars"'* ]]; then
+    pass "Kalshi market quotes — yes_bid_dollars/yes_ask_dollars present ($KTICKER)"
+  elif [[ "$kmkt" == *'"yes_bid"'* && "$kmkt" == *'"yes_ask"'* ]]; then
+    warn "Kalshi market quotes — \`_dollars\` pair GONE, running on the yes_bid/yes_ask fallback ($KTICKER)"
+  else
+    fail "Kalshi market quotes — neither yes_bid_dollars nor yes_bid on $KTICKER; every market drops, book empties silently"
+  fi
+fi
+
 # Morpho (MorphoDeFi) — POST GraphQL, so http_ping can't cover it. This sends
 # the SAME field/enum shape the app's position + activity queries use against a
 # neutral address, so schema drift (the class already caught once: market txs
