@@ -80,6 +80,17 @@ SKIP_BUMP=1 \
 1. **Work only in `~/Developer/casberi`** — the canonical repo. Never the iCloud
    copy (its xattrs break codesign).
 
+   **`git fetch` FIRST, and read the ahead/behind count** (2026-08-02). A bare
+   `git status` prints a clean tree whether or not the branch is current, and
+   `git log` shows only what this machine already has — so a repo six commits
+   behind `origin/main` looks exactly like a repo with nothing new to ship. That
+   is not hypothetical: this session was handed "we made more updates", found
+   HEAD sitting on nothing but two build-number bumps, and was one command away
+   from uploading 248/249 as byte-identical copies of 246/247. The auto-push
+   hook means another session's work reaches `origin` the moment it commits, and
+   never reaches this working copy until someone pulls. `git status -sb` after a
+   fetch is the whole check — the `[behind N]` is the tell.
+
 2. **Commit everything you want in the build** to `main`. The script archives
    from the working tree, so any uncommitted files go into the build — do NOT
    sweep in another session's WIP. Check `git status` and confirm the tree is
