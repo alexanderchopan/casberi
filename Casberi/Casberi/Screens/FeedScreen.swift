@@ -407,11 +407,11 @@ struct FeedScreen: View {
             case "Reminders", "Todoist": self = .reminders
             case "Safari":              self = .safari
             // Obsidian joins the notes room — the vault is notes (prd §59).
-            // Files joins it too (2026-07-27) — its content is a short text
-            // preview or a size line either way, so the same excerpt-row
-            // shape fits, even though its CATALOG group is Life, not Notes
-            // (its folder's contents are too unpredictable to call "notes").
-            case "Notes", "Day One", "Apple Journal", "Obsidian", "Files": self = .notes
+            // Files LEFT this group on 2026-08-02 (see `.files` above): the
+            // excerpt row it shared here draws title + text + time and no
+            // image at all, so a connected folder of screenshots rendered as
+            // pure text while its thumbnails sat in the store undrawn.
+            case "Notes", "Day One", "Apple Journal", "Obsidian": self = .notes
             case "You", "Voice":        self = .you
             case "Apple Music", "Spotify": self = .music
             // The media room (prd §219, 2026-07-25): art at the medium's own

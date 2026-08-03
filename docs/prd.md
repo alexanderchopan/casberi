@@ -14362,9 +14362,11 @@ where the model never answered).
 
 ## §283 — A folder of screenshots deserves the Photos treatment (user: "the Folders does't show screenshots well if a user points their folder at a folder of screenshots tho", then "ok lets do the fix re the topic map ok lets try it", 2026-08-02)
 
-The Files room was `.plain` — every row a `FileChip` (filename + preview
-note) — while `FilesIngest.heal` had been thumbnailing, OCRing and retitling
-the folder's images since 2026-07-27. Point the "Show me my files" onboarding
+The Files room shared the `.notes` shape — an `ExcerptRow`, which draws title
++ excerpt text + timestamp and NO image — while `FilesIngest.heal` had been
+thumbnailing, OCRing and retitling the folder's images since 2026-07-27. (It
+joined `.notes` that same day on the reasoning that "its content is a short
+text preview or a size line either way"; true of a PDF, false of a picture.) Point the "Show me my files" onboarding
 card at a screenshots folder and you got a wall of text rows wearing pixels
 the store held but never drew. Fixed as the app's SECOND mixed room, the
 Snapchat split verbatim: images whose heal has landed a thumbnail lead as a
