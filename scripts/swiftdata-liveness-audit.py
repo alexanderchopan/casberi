@@ -413,13 +413,31 @@ def audit_file(path: pathlib.Path, findings: list[str]) -> None:
             break                                     # one finding per held array
 
     # ── Check 2: held Thing refs read without an isLive guard ────────
-    if path.name in KNOWN_UNGUARDED or "isLive" in text or ".live" in text:
+    if path.name in KNOWN_UNGUARDED:
         return
     for lineno, line in enumerate(text.splitlines(), 1):
         m = HELD_DECL.search(line)
         if not m:
             continue
         name = m.group(1)
+        # Is THIS identifier guarded anywhere in the file?
+        #
+        # Scoped PER IDENTIFIER, not per file. It used to be per file — any
+        # `isLive`/`.live` anywhere returned early and skipped the whole file —
+        # which quietly decayed into no check at all: 68 files carry a guard
+        # today, so 68 files were exempt, and a NEW held `Thing` added beside a
+        # guarded one could never be flagged. Check 5 already scopes to the
+        # enclosing struct; this is the same tightening one level down.
+        #
+        # Still deliberately coarse: a guard ANYWHERE in the file clears this
+        # identifier, because the reads are matched by line and there is no
+        # control-flow analysis here — the real guard is usually the `if let
+        # recent, recent.isLive` wrapping the read, which no line-wise match
+        # can see. Demanding proximity would fire on
+        # `BridgeDetailScreen.recent`, which is correctly guarded, and a lint
+        # that cries wolf gets turned off within a week (see this file's head).
+        if re.search(rf"\b{re.escape(name)}\b\??\.(?:isLive|live)\b", text):
+            continue
         # Does the file read a STORED property off exactly this held name?
         reads = [
             (n, l)
@@ -504,6 +522,20 @@ def self_test() -> int:
             "    @ViewBuilder private var liveBody: some View { Text(thing.title) }\n"
             "}\n",
             None,
+        ),
+        # The regression the OLD file-scoped exemption allowed: one held Thing
+        # correctly guarded, a second one beside it not. Any `isLive` in the
+        # file used to clear both, so this shape was unflaggable in every file
+        # that had ever been guarded — which, after the corollary-5 sweep, was
+        # most of them.
+        "held-unguarded-beside-a-guarded-one": (
+            "@State private var openThing: Thing?\n"
+            "@State private var pending: Thing?\n"
+            "var body: some View {\n"
+            "  if let openThing, openThing.isLive { Text(openThing.title) }\n"
+            "  Text(pending?.title ?? \"\")\n"
+            "}\n",
+            "is a held Thing, read unguarded",
         ),
         "clean-held-guarded": (
             "@State private var openThing: Thing?\n"
