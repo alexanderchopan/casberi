@@ -71,16 +71,28 @@ struct AccountDetailSheet: View {
     @State private var bleedHue: Color?
 
     var body: some View {
-        DSTray(title: title, height: sheetHeight) {
-            switch detail {
-            case .data:
-                dataCard
-                controls
-            case .key:
-                keyCard
-            case .color:
-                bleedCard
+        DSTray(title: title, height: sheetHeight, detents: sheetDetents) {
+            // The house pattern (`DSTray { ScrollView { … } }`): these cards
+            // are sized by copy that grows with Dynamic Type, a live sync
+            // error line, and — on Your key — a row per provider, so the
+            // detent is where they START, not a ceiling they must fit under.
+            // `basedOnSize` keeps a card that already fits behaving exactly as
+            // it did: no scroll, no bounce.
+            ScrollView {
+                VStack(alignment: .leading, spacing: DS.Space.s4) {
+                    switch detail {
+                    case .data:
+                        dataCard
+                        controls
+                    case .key:
+                        keyCard
+                    case .color:
+                        bleedCard
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .scrollBounceBehavior(.basedOnSize)
         }
         .overlay {
             if detail == .color { BerryRain(trigger: bleedPulse, hue: bleedHue) }
@@ -195,9 +207,23 @@ struct AccountDetailSheet: View {
         // the tallest reachable state must be sized for; +62 for the second
         // door, +36 for the longer nudge.
         case .data: icloudSync ? (syncHasLiveError ? 800 : 760) : 665
-        case .key: 500   // +40 for the per-agent capability line (2026-07-21)
+        // Seven provider rows are the body of this sheet (prd §243), and 500
+        // never held them — it held the prose ABOVE them, so the list started
+        // below the sheet and the paragraphs overflowed out of the top edge
+        // (2026-08-03). Sized for the summary + the whole list now; the field
+        // and the small print are one short scroll under it, and `.large` is
+        // there to be dragged.
+        case .key: 680
         case .color: 400   // aliveRow + one swatch row + a footnote (prd §204)
         }
+    }
+
+    /// Your key can't be sized honestly for every case — seven rows today,
+    /// eight tomorrow, each one taller at large Dynamic Type — so it ships the
+    /// draggable set `DSTray.detents` exists for. The other two are sized copy
+    /// and keep their single detent.
+    private var sheetDetents: Set<PresentationDetent>? {
+        detail == .key ? [.height(sheetHeight), .large] : nil
     }
 
     // MARK: - iCloud sync status (2026-07-27)
@@ -353,25 +379,32 @@ struct AccountDetailSheet: View {
                      "Agent API key",
                      AgentKey.active.map { String(localized: "Answers run on \($0.agent) when you tap") }
                         ?? String(localized: "Answers run on \(DS.device) until you add one"))
-            Text("The question and its matched things go straight to the provider. They bill you directly.")
-                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-            // What THIS agent adds beyond a plain text answer — changes with
-            // the picker below it, so the choice is informed before a key is
-            // even saved (honesty rule: capability copy per agent, not one
-            // line pretending they're all the same).
-            if let capability = keyProvider.capabilityLine {
-                Text(capability)
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
             // A list, not a segmented control (prd §243) — see
             // `AgentKeyPicker` for why seven providers broke the old one in
             // three ways, of which width was only the most visible.
+            //
+            // It leads the card now (2026-08-03). Three paragraphs used to sit
+            // between the summary and the list: two of them general small
+            // print, one describing whichever provider was selected — so the
+            // door to seven agents opened on prose, and the rows people came
+            // to tap began below the sheet's own bottom edge. Order follows
+            // the gesture instead: pick the agent, read what THAT agent adds,
+            // paste its key. The small print keeps its say at the foot, where
+            // this card already put half of it.
             AgentKeyPicker(selection: $keyProvider) {
                 keyConfigured = AgentKey.isConfigured(keyProvider)
                 keyResult = nil
                 keyDraft = ""
+            }
+            // What THIS agent adds beyond a plain text answer — it changes
+            // with the selection, so it sits WITH the selection now rather
+            // than above a list it was silently describing one row of
+            // (honesty rule: capability copy per agent, not one line
+            // pretending they're all the same).
+            if let capability = keyProvider.capabilityLine {
+                Text(capability)
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             HStack(spacing: DS.Space.s3) {
                 SecureField(keyProvider.placeholder, text: $keyDraft)
@@ -424,13 +457,23 @@ struct AccountDetailSheet: View {
                     .foregroundStyle(keyResultIsError ? DS.attention : DS.textSecondary)
                     .settleIn()
             }
-            // Derived from the providers themselves (2026-07-31) rather than
-            // hand-listed: the old sentence named six consoles and silently
-            // went stale the moment a seventh provider landed. `console` is
-            // already a property on every case, so this can't drift again.
-            Text("Get a key from the agent's own console. It stays in \(DS.device)'s Keychain and goes only to that provider.")
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
+            // The consent and the custody, together at the foot (2026-08-03).
+            // They were two paragraphs in two places answering one question —
+            // what leaves this iPhone, and what stays on it. Neither is a step
+            // in the gesture above, so neither interrupts it; both are
+            // load-bearing enough to keep every word.
+            //
+            // The second is derived from the providers themselves (2026-07-31)
+            // rather than hand-listed: the old sentence named six consoles and
+            // silently went stale the moment a seventh provider landed.
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                Text("The question and its matched things go straight to the provider. They bill you directly.")
+                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("Get a key from the agent's own console. It stays in \(DS.device)'s Keychain and goes only to that provider.")
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 
