@@ -49,6 +49,20 @@ step "Receipts coverage audit"
 "$ROOT/scripts/receipts-coverage-audit.py" || fail "a network call isn't recorded — see the output above"
 print -P "%F{green}✓ receipts coverage audit%f"
 
+# Every stored `Thing` property has a CloudKit field (docs/cloudkit-deploy.md).
+# A TestFlight/App Store build mirrors to PRODUCTION and CloudKit never
+# auto-creates schema there, so an undeployed field doesn't fail loudly — plain
+# notes keep syncing while every voice note, social post and screenshot fails
+# its export forever. Found 25 fields behind on 2026-08-01, invisible for
+# months. Static: it proves the model matches the checked-in snapshot, which
+# makes the deploy impossible to FORGET; `--live production` is what proves it
+# HAPPENED, and stays out of here because it needs network.
+step "CloudKit schema audit"
+"$ROOT/scripts/cloudkit-schema-audit.py" --self-test >/dev/null \
+  || fail "the CloudKit schema audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/cloudkit-schema-audit.py" || fail "a Thing property has no CloudKit field — see the output above"
+print -P "%F{green}✓ cloudkit schema audit%f"
+
 # The credential tripwire's fixtures (prd §277) — that the shipped patterns and
 # thresholds still hide a recovery phrase and still leave an ordinary shopping
 # list alone. Reads both out of the Swift source, so re-tuning a number here

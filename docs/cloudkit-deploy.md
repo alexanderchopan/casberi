@@ -30,7 +30,27 @@ fields, no type mismatches, the two environments level. That clears the last
 server-side blocker; what remains unproven is a real device round-trip, which
 needs build 231+ installed with sync switched on.
 
-## The drift is invisible — check it, don't assume it
+## The drift is invisible — so it's checked, not remembered
+
+`scripts/cloudkit-schema-audit.py` runs in `verify.sh`'s static head and fails
+the build when a stored `Thing` property has no `CD_<name>` field — or has one
+of the wrong type — in `docs/cloudkit-schema.ckdb`. Self-tested, no network,
+no build. An EXTRA field in the schema is reported and never fails, because a
+field deployed to Production cannot be removed (below).
+
+Its ceiling, stated plainly: it proves the model matches the checked-in
+snapshot, which makes the deploy impossible to **forget**. It cannot prove the
+snapshot matches what is really deployed — someone can edit the file without
+running the import or pressing Deploy. That is what `--live` is for, and why
+it stays out of `verify.sh` (network + credentials, against `verify.sh`'s
+all-local deterministic contract — the `live-integrations.sh` reasoning):
+
+```sh
+scripts/cloudkit-schema-audit.py --live production
+```
+
+Run that before a release, and after any promotion, to confirm the ship really
+landed. The raw export it wraps:
 
 ```sh
 xcrun cktool export-schema --team-id 35428TQK3S \
