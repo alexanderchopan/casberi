@@ -131,6 +131,14 @@ enum TodayBrief {
         // sequential, so each new read added its full latency to the rise;
         // `async let` makes the brief pay the slowest rather than the sum,
         // which is what left room for the risk read the lede's top rung needs.
+        //
+        // …and each is now BOUNDED (2026-08-03, user: "Brief takes too long to
+        // load"). Paying the slowest instead of the sum only helps when the
+        // slowest is fast: the whole document composes atomically, so nothing
+        // paints until all three return, and none of them had a ceiling. One
+        // unreachable RPC host owned the screen for minutes. See
+        // `liveReadBudget` — the block now costs at most that, and a read that
+        // misses it simply doesn't contribute its module.
         async let holdingsRead = liveHoldings()
         async let movesRead = liveMoves(context: context)
         // Gated on `presenting` (2026-07-25): the risk rung only ever reaches
@@ -852,12 +860,78 @@ enum TodayBrief {
     /// claims a stale number is current (§83).
     private static func liveHoldings() async -> [WalletIngest.HoldingsGroup] {
         guard !WalletStore.shared.addresses.isEmpty else { return [] }
-        let live = await WalletIngest.topHoldingsByWallet()
+        let read: [WalletIngest.HoldingsGroup]? = await bounded {
+            await WalletIngest.topHoldingsByWallet()
+        }
+        // A read that timed out and a read that came back empty are the same
+        // thing to the hero — it falls to the last-known holdings either way,
+        // marked "as of Xh ago" so it never claims a stale number is current.
+        let live = read ?? []
         return live.isEmpty ? WalletIngest.lastKnownHoldingsByWallet() : live
     }
 
     private static func liveMoves(context: ModelContext) async -> [TokensAsk.Move] {
-        TokensAsk.watched(context).isEmpty ? [] : await TokensAsk.moves(context: context)
+        guard !TokensAsk.watched(context).isEmpty else { return [] }
+        let moves: [TokensAsk.Move]? = await bounded {
+            await TokensAsk.moves(context: context)
+        }
+        return moves ?? []
+    }
+
+    // MARK: - The read budget (2026-08-03)
+
+    /// The ceiling on how long the brief waits for ANY ONE live read before
+    /// composing without it. A ceiling, not a target: on a network that is
+    /// working, none of the three reads comes anywhere near it, so this
+    /// changes nothing about a normal open.
+    ///
+    /// It exists because the brief's load time was, structurally, "as slow as
+    /// the worst third-party host of the day." Every live read here funnels
+    /// into `WalletApprovals.call`, which walks a chain's hosts SEQUENTIALLY,
+    /// each with `IngestSupport`'s 15s request timeout — so one unreachable
+    /// RPC host multiplied by pools × wallets is minutes, not seconds, and
+    /// the whole document is composed atomically, so nothing paints until the
+    /// slowest of them returns. There was no bound anywhere on that path.
+    ///
+    /// Timing out is HONEST here, and that is what makes the bound safe rather
+    /// than a shortcut: every module this feeds is already nil-able and
+    /// already degrades by simply not being there. The hero falls to
+    /// last-known holdings (labelled stale, §83); no movers means no movers
+    /// tile; and the lede's risk rung yields to the next rung, exactly as it
+    /// does on the overwhelming majority of days when nothing is at risk.
+    /// Nothing is padded to fill a slot and nothing claims a number it didn't
+    /// read — the brief's own module doctrine, applied to arrival time.
+    ///
+    /// The risk rung specifically is not LOST by a timeout, only this
+    /// sentence about it: `WalletDeFi.sync` and `MorphoDeFi` land a thing on a
+    /// new crossing into risk during `WalletIngest.refresh`, and the Wallet
+    /// room states health per protocol. This is the convenience surfacing of a
+    /// fact that lives in three other places.
+    private static let liveReadBudget: TimeInterval = 8
+
+    /// `read`'s answer, or nil if it hasn't arrived within `liveReadBudget`.
+    ///
+    /// The read is started UNSTRUCTURED on purpose: losing the race must not
+    /// cancel it. It shares `WalletDeFi`/`MorphoDeFi`'s 60s coalescing caches
+    /// with the Wallet room and `WalletWarnings`, so cancelling mid-flight
+    /// would hand a nil to whichever of them happened to be waiting on the
+    /// same primitive — and `CoalescingCache` awaits an unstructured task
+    /// itself, so a cancel wouldn't even land promptly. Letting the loser run
+    /// to completion costs nothing and warms that cache, so the next open (or
+    /// the Wallet screen a moment later) reads it free.
+    private static func bounded<Value>(
+        _ read: @escaping () async -> Value?
+    ) async -> Value? {
+        let gate = FirstArrival<Value>()
+        Task {
+            let value = await read()
+            await gate.settle(value)
+        }
+        Task {
+            try? await Task.sleep(for: .seconds(liveReadBudget))
+            await gate.settle(nil)
+        }
+        return await gate.wait()
     }
 
     /// The worst borrow across both lending protocols, and only when it has
@@ -865,12 +939,19 @@ enum TodayBrief {
     /// in `DeFiRisk`, so this can't call a position dangerous on a screen
     /// where the Wallet room calls it fine. Reads nothing when no EVM wallet
     /// is watched.
+    /// Bounded like the other two live reads (2026-08-03), and it is the one
+    /// that most needed it: `DeFiRisk.atRisk` walks `WalletDeFi.positions`,
+    /// which is a call per (pool, wallet) — six pools against five watched
+    /// wallets is thirty `eth_call`s. Those now run concurrently per network
+    /// (see `WalletDeFi.positions`), which fixes the sum but not the tail: one
+    /// dead RPC host still spends 15s a call. See `liveReadBudget` for why
+    /// yielding the rung is honest rather than a silent loss.
     private static func worstDebt() async -> DeFiRisk.Debt? {
         let watched = WalletStore.shared.addresses.map(\.address)
         guard !watched.isEmpty else { return nil }
         let addresses = await WalletIngest.resolvedAddresses(watched).filter { ENS.isHexAddress($0) }
         guard !addresses.isEmpty else { return nil }
-        return await DeFiRisk.atRisk(addresses: addresses)
+        return await bounded { await DeFiRisk.atRisk(addresses: addresses) }
     }
 
     // MARK: - The joins (§214)
@@ -1350,5 +1431,33 @@ enum TodayBrief {
         if previous != text {
             WidgetCenter.shared.reloadTimelines(ofKind: WidgetLede.kind)
         }
+    }
+}
+
+/// Whichever arm of a race arrives first, delivered exactly once — the read or
+/// the deadline (`TodayBrief.bounded`). `settle` is idempotent, so the losing
+/// arm is a no-op rather than a double-resume of the same continuation; `wait`
+/// has a single caller, which is why one waiter slot is enough.
+private actor FirstArrival<Value> {
+    private var settled = false
+    private var arrived: Value?
+    private var waiter: CheckedContinuation<Value?, Never>?
+
+    func settle(_ value: Value?) {
+        guard !settled else { return }
+        settled = true
+        arrived = value
+        if let waiter {
+            self.waiter = nil
+            waiter.resume(returning: value)
+        }
+    }
+
+    /// The continuation is installed INSIDE the actor, so an arm that settles
+    /// before the wait begins is read back off `arrived` instead of being lost
+    /// to a continuation that was never stored.
+    func wait() async -> Value? {
+        if settled { return arrived }
+        return await withCheckedContinuation { self.waiter = $0 }
     }
 }

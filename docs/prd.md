@@ -14570,3 +14570,76 @@ CASE-SENSITIVE, and lowercasing those folds distinct wallets together — the
 Its rows record only `source: "OpenSea"` and `tags: ["NFT"]` — the chain a
 collection came from is never stored, so there is nothing to prune on. Left
 alone rather than guessed at.
+
+## §287 — The brief is a document, so it opens at the top and it composes on what arrived (user: "what's going on daily? Brief takes too long to load and when it finishes, it leaves you at the bottom of the page. It should keep you at the top", 2026-08-03)
+
+Two complaints, one root: the brief was being treated as a conversational
+reply on both axes — how it scrolls, and how long it is allowed to take.
+
+**The scroll.** The composer's answer view anchors to the BOTTOM on iOS and
+follows the typewriter down on every tick (`onChange(of: answerStream
+.progress)`). Both are correct for a reply: they put the answer's verbs — Keep,
+Save, Try with your key — under the thumb that just typed the question, and
+they keep the newest line of a long prose answer in view instead of letting it
+write itself off the screen. §274's Mac carve-out had already spotted half of
+this ("a document read from its own footer") and fixed it on the wrong axis:
+it read the split as Mac-vs-phone when the real split is **reply-vs-document**.
+
+The brief is a document. It has a masthead, an eyebrow naming the window it
+covers, a money hero as its crown, and — because that is the compose order —
+its LEAST important modules arrive last. So the bottom anchor plus the
+progress-follow together scrolled it past everything it leads with and parked
+the reader at the final observation. Both now yield for the brief turn, on
+every platform; every other answer keeps the thumb rule untouched. Scrolling
+down through the brief is the reader's own gesture again.
+
+The condition is `briefInView` (`turns.isEmpty && TodayBrief.matches
+(currentQuestion)`), NOT the existing `briefLanding` — that one waits on
+`answerStream.completed`, so it is blind to the entire window where the
+document is painting, which is the window that had to be fixed.
+
+**The load.** Nothing painted until all three live reads returned, and none of
+them had a ceiling. `WalletDeFi.positions` — the read behind the lede's risk
+rung — was a flat nested loop over (pool × watched wallet): six pools against
+five wallets is **thirty sequential `eth_call`s**, each able to spend
+`IngestSupport`'s 15s timeout walking a chain's host fallbacks. One dead RPC
+host owned the screen for minutes. Two fixes, and they are different in kind:
+
+  1. **Structural.** `positions` now runs its networks CONCURRENTLY while
+     keeping each network's own calls sequential. Where the split falls is the
+     point: these are public hosts, `mainnet.base.org` is the only one
+     `WalletApprovals` carries for base-mainnet, and an unpaced burst against
+     it 429s (the measured Aerodrome lesson — five sequential `eth_call`s there
+     needed a 200ms pacer). Per-network chains hold the per-host rate exactly
+     where it is while paying the slowest chain instead of the sum: thirty
+     round trips become ten, since Ethereum is the only network carrying two
+     pools. Output order is byte-identical, so no caller can tell.
+
+  2. **A ceiling** (`TodayBrief.liveReadBudget`, 8s). Parallelism fixes the sum,
+     not the tail. Each live read is now raced against a deadline, and a read
+     that misses it simply doesn't contribute its module.
+
+**The ceiling is honest, which is what makes it a fix and not a shortcut.**
+Every module this feeds is already nil-able and already degrades by absence:
+the hero falls to last-known holdings, labelled "as of Xh ago" (§83); no
+movers means no movers tile; the lede's risk rung yields to the next rung,
+exactly as it does on the overwhelming majority of days when nothing is at
+risk. Nothing is padded to fill a slot and nothing claims a number it didn't
+read — the module doctrine, applied to arrival time. And the risk CROSSING is
+not lost, only this sentence about it: `WalletDeFi.sync` and `MorphoDeFi` land
+a thing on a new crossing during `WalletIngest.refresh`, and the Wallet room
+states health per protocol.
+
+The losing read is deliberately NOT cancelled (`FirstArrival`, unstructured
+`Task`). It shares `WalletDeFi`/`MorphoDeFi`'s 60s coalescing caches with the
+Wallet room and `WalletWarnings`, so cancelling mid-flight would hand a nil to
+whichever of them was waiting on the same primitive — and `CoalescingCache`
+awaits an unstructured task itself, so the cancel wouldn't land promptly
+anyway. Letting it finish warms the cache instead, so the next open reads free.
+
+**Unmeasured**, and stated plainly: authored with no Xcode and no simulator, so
+the static audits ran (liveness, reach, catalog) and nothing was built or
+timed. The numbers above are counted round trips, not measured seconds. Both
+failure modes are safe — the scroll change is a pure anchor swap, and every
+bounded read already had a nil path — but `-todayProbe`/`-uiAnswerProbe "How's
+my day?"` should confirm before this ships.

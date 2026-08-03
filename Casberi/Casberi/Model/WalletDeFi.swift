@@ -127,8 +127,19 @@ enum WalletDeFi {
     /// one real network read.
     private static let cache = CoalescingCache<AccountData>()
 
+    /// The key carries the POOL, not just the chain (fixed 2026-08-03). It was
+    /// `network|address`, which was correct while Aave was the only pool — and
+    /// silently wrong the day Spark landed (2026-07-30) as a second pool on
+    /// eth-mainnet. Both pools share that network, so both shared one cache
+    /// entry: whichever read ran first won the 60s slot and the other was
+    /// served ITS numbers, then labelled with its own `protocolName`. That
+    /// reports a Spark position a wallet may not hold, wearing an Aave health
+    /// factor — a fake status (§83) in the one place the app warns about
+    /// liquidation. `riskKey` right below already learned exactly this lesson
+    /// ("Aave and Spark both run on Ethereum, so the protocol must be in the
+    /// key"); the cache key predates Spark and never caught up.
     private static func accountData(pool: Pool, address: String) async -> AccountData? {
-        await cache.value(key: "\(pool.network)|\(address.lowercased())", ttl: 60) {
+        await cache.value(key: "\(pool.network)|\(pool.address)|\(address.lowercased())", ttl: 60) {
             await fetchAccountData(pool: pool, address: address)
         }
     }
@@ -168,22 +179,67 @@ enum WalletDeFi {
     /// Every Aave position across the given addresses and active EVM chains
     /// — live state for the Wallet screen, not landed as things. Skips a
     /// (wallet, chain) with no collateral at all (nothing to show).
+    ///
+    /// CONCURRENT PER NETWORK (2026-08-03), and where the split falls is the
+    /// whole point. This was one flat nested loop awaiting every (pool,
+    /// address) pair in turn — six pools against five watched wallets is
+    /// **thirty sequential `eth_call`s** before it returns a single position,
+    /// each one able to spend `IngestSupport`'s 15s request timeout across a
+    /// chain's host fallbacks. That made it the slowest read in the Today
+    /// brief by a wide margin (see `TodayBrief.compose`, which awaits it for
+    /// the lede's risk rung), and the brief's load time was mostly this.
+    ///
+    /// Networks now run concurrently while each network's own calls stay
+    /// SEQUENTIAL, rather than firing all thirty at once. That is deliberate,
+    /// and it is the measured lesson from `AerodromeDeFi`: these are public
+    /// RPC hosts, `mainnet.base.org` is the ONLY host `WalletApprovals`
+    /// carries for base-mainnet, and an unpaced burst against it 429s — five
+    /// sequential `eth_call`s there needed a 200ms pacer. Per-network chains
+    /// leave the per-host request rate exactly where it is today while paying
+    /// the slowest chain instead of the sum of all of them: worst case drops
+    /// from (pools × addresses) round trips to (pools-on-the-busiest-network
+    /// × addresses) — thirty to ten, since Ethereum is the only network
+    /// carrying two pools (Aave and Spark).
+    ///
+    /// Output order is byte-identical to the old loop's (pool-major,
+    /// address-minor): each job is indexed before the split and reassembled
+    /// by that index, so no caller can tell this changed except in latency.
     static func positions(addresses: [String]) async -> [Position] {
         guard !addresses.isEmpty else { return [] }
         let active = Set(WalletChainStore.activeNetworkIDs())
-        var out: [Position] = []
+        var byNetwork: [String: [(index: Int, pool: Pool, address: String)]] = [:]
+        var jobCount = 0
         for pool in pools where active.contains(pool.network) {
             for address in addresses {
-                guard let data = await accountData(pool: pool, address: address),
-                      data.totalCollateralUSD > 0 else { continue }
-                out.append(Position(network: pool.network, address: address,
-                                    protocolName: pool.protocolName,
-                                    totalCollateralUSD: data.totalCollateralUSD,
-                                    totalDebtUSD: data.totalDebtUSD,
-                                    healthFactor: data.healthFactor))
+                byNetwork[pool.network, default: []].append((jobCount, pool, address))
+                jobCount += 1
             }
         }
-        return out
+        guard jobCount > 0 else { return [] }
+
+        var slots = [Position?](repeating: nil, count: jobCount)
+        await withTaskGroup(of: [(Int, Position)].self) { group in
+            for chain in byNetwork.values {
+                group.addTask {
+                    var found: [(Int, Position)] = []
+                    for job in chain {
+                        guard let data = await accountData(pool: job.pool, address: job.address),
+                              data.totalCollateralUSD > 0 else { continue }
+                        found.append((job.index,
+                                      Position(network: job.pool.network, address: job.address,
+                                               protocolName: job.pool.protocolName,
+                                               totalCollateralUSD: data.totalCollateralUSD,
+                                               totalDebtUSD: data.totalDebtUSD,
+                                               healthFactor: data.healthFactor)))
+                    }
+                    return found
+                }
+            }
+            for await chainResults in group {
+                for (index, position) in chainResults { slots[index] = position }
+            }
+        }
+        return slots.compactMap { $0 }
     }
 
     private static func riskKey(_ protocolName: String, _ network: String, _ address: String) -> String {

@@ -516,6 +516,16 @@ struct Composer: View {
             && TodayBrief.matches(currentQuestion)
     }
 
+    /// The brief as the turn being answered RIGHT NOW — true from the moment it
+    /// commits, through the whole assembly and paint, until a follow-up makes it
+    /// an ordinary conversation. Distinct from `briefLanding`, which is the
+    /// SETTLED state (it waits on `answerStream.completed`) and so can't speak
+    /// for the window where the document is still painting — which is exactly
+    /// the window the scroll behaviour below has to get right.
+    private var briefInView: Bool {
+        turns.isEmpty && TodayBrief.matches(currentQuestion)
+    }
+
     /// The ask kinds the Today brief ALREADY answers on screen — its money hero
     /// is "how's my wallet", its movers tile is "how's my watchlist", its next
     /// tile is "what's overdue", and the whole screen is "what landed today".
@@ -1444,7 +1454,20 @@ struct Composer: View {
                     // which is a document read from its own footer. A brief
                     // opens at its masthead instead; a long conversation
                     // scrolls exactly as before either way.
-                    .defaultScrollAnchor(DS.isMac ? .top : .bottom)
+                    //
+                    // …and the brief anchors to its top on EVERY platform
+                    // (2026-08-03, user: "when it finishes, it leaves you at
+                    // the bottom of the page. It should keep you at the top").
+                    // The Mac comment above already had the argument; it was
+                    // scoped to the wrong axis. Bottom-anchoring is a REPLY
+                    // argument, not a Mac-vs-phone one — it puts a conversational
+                    // answer's verbs under the thumb that just typed the
+                    // question. The brief isn't a reply: it's a composed
+                    // document with a masthead, an eyebrow naming its window,
+                    // and a money hero as its crown, and a document read from
+                    // its own footer is the same mistake on a phone as on a
+                    // Mac. Every other answer keeps the thumb rule exactly.
+                    .defaultScrollAnchor(DS.isMac || briefInView ? .top : .bottom)
                     // `.wide` is the CONTAINER's cap, not any turn's (§274):
                     // each turn caps itself just above — prose at the reading
                     // column, a front-page doc at the wide one — so this
@@ -1477,7 +1500,23 @@ struct Composer: View {
                         guard done, TodayBrief.matches(currentQuestion) else { return }
                         DSHaptic.selection()
                     }
+                    // Follow the typewriter down as prose arrives — so a long
+                    // answer keeps its newest line in view instead of writing
+                    // itself off the bottom of the screen.
+                    //
+                    // NOT for the brief (2026-08-03). The anchor above is only
+                    // half the fix: a top anchor sets where the document STARTS,
+                    // and this handler then dragged the reader away from it on
+                    // every tick, so the brief scrolled itself past its own
+                    // masthead, hero and themes map and parked at the last thing
+                    // it composed. Following the cursor is right for a reply
+                    // being written to you and wrong for a document being
+                    // assembled for you — the brief is read top-down, and the
+                    // modules that arrive last are the least important ones
+                    // (that's the compose order). It stays put now; scrolling
+                    // down through it is the reader's own gesture.
                     .onChange(of: answerStream.progress) { _, _ in
+                        guard !briefInView else { return }
                         withAnimation(DS.Motion.standard) { proxy.scrollTo("bottom", anchor: .bottom) }
                     }
                     .onChange(of: turns.count) { _, _ in
