@@ -51,6 +51,14 @@ struct TokenSetupScreen: View {
     /// The credentials door, open (prd §186).
     @State private var showConnection = false
 
+    /// Trello only — the API-key stage (2026-08-03). Trello is the one bridge
+    /// on this screen whose API takes TWO values on every request, so its form
+    /// is two stages: paste the key that names a Power-Up, then authorize a
+    /// token against it. Mirrored into `@State` rather than read from the
+    /// Keychain inside `body`, so storing it actually re-renders the form.
+    @State private var trelloKeyField = ""
+    @State private var trelloKey: String? = TrelloAuth.storedKey
+
     var body: some View {
         List {
             if bridge.connected {
@@ -128,9 +136,78 @@ struct TokenSetupScreen: View {
             if !manualPathOpen { statusSection }
             manualPathToggleSection
         }
-        if manualPathOpen || !deviceFlowOffered {
+        // Trello's two stages. The token stage only appears once a key is
+        // stored, because its door — the authorize link — cannot be built
+        // without one, and a door that goes nowhere is a dead control.
+        if bridge == .trello {
+            trelloKeySection
+            if trelloKey != nil { setupSection }
+        } else if manualPathOpen || !deviceFlowOffered {
             setupSection
         }
+    }
+
+    /// Trello only — stage one. The key names a Power-Up, not a person: it is
+    /// public by design (it ships in the client-side JavaScript of every
+    /// Trello Power-Up), which is exactly why it can be pasted here and then
+    /// used to build a `scope=read` authorize link on your behalf.
+    private var trelloKeySection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                if let url = bridge.setupURL {
+                    DSSlabButton(title: "Open \(bridge.setupURLLabel)",
+                                 systemImage: "arrow.up.right") {
+                        DSHaptic.tap()
+                        openURL(url)
+                    }
+                }
+                BridgeStepLines(steps: [
+                    String(localized: "Create a Power-Up — name it Casberi. Its API key is on the page."),
+                    String(localized: "Paste the key below."),
+                ], startingAt: 2)
+                DSSlabField(placeholder: String(localized: "API key"),
+                            text: $trelloKeyField,
+                            actionLabel: trelloKey == nil
+                                ? String(localized: "NEXT") : String(localized: "REPLACE"),
+                            action: saveTrelloKey)
+                DSSlabNote(text: "This key names the Power-Up, not you. It's public by design and does nothing on its own — the token below is what reads your cards.")
+            }
+        }
+        .dsSlabSection()
+    }
+
+    private func saveTrelloKey() {
+        let key = trelloKeyField.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !key.isEmpty else { return }
+        // A token is minted AGAINST a key, so a different key invalidates the
+        // one already stored. Retiring it here is what keeps the screen
+        // honest: leaving a connected state up over a token that can no longer
+        // authenticate would fail silently on the next foreground instead.
+        if key != trelloKey, bridge.connected {
+            TokenVault.delete(bridge.tokenKey)
+            store.bridges.removeAll { $0.id == bridge.bridgeID }
+            result = String(localized: "New key stored — authorize again below to finish.")
+            resultIsError = false
+        }
+        TrelloAuth.setKey(key)
+        trelloKey = key
+        trelloKeyField = ""
+        DSHaptic.tap()
+    }
+
+    /// The door above the token field. Every bridge but Trello has one fixed
+    /// page; Trello's is built here from the key stored a stage earlier, which
+    /// is what lets Casberi pin `scope=read` rather than ask someone to tick
+    /// read-only on somebody else's settings page.
+    private var doorURL: URL? {
+        if bridge == .trello { return trelloKey.flatMap(TrelloAuth.authorizeURL) }
+        return bridge.setupURL
+    }
+
+    private var doorLabel: String {
+        bridge == .trello
+            ? String(localized: "Authorize read-only access")
+            : bridge.setupURLLabel
     }
 
     /// Door, steps, field, proof, one sentence — in that order, because that
@@ -138,19 +215,20 @@ struct TokenSetupScreen: View {
     private var setupSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                if let url = bridge.setupURL {
+                if let url = doorURL {
                     // Step one, doing itself (prd §218). This screen used to
                     // say "Open readwise.io/access_token" in body text and
                     // then leave you to retype it — an instruction the app
                     // could have followed on your behalf the whole time.
-                    DSSlabButton(title: "Open \(bridge.setupURLLabel)",
+                    DSSlabButton(title: bridge == .trello
+                                    ? doorLabel : String(localized: "Open \(doorLabel)"),
                                  systemImage: "arrow.up.right") {
                         DSHaptic.tap()
                         openURL(url)
                     }
                 }
                 BridgeStepLines(steps: bridge.steps,
-                                startingAt: bridge.setupURL == nil ? 1 : 2)
+                                startingAt: doorURL == nil ? 1 : 2)
                 DSSlabField(placeholder: bridge.placeholder, text: $tokenField,
                             actionLabel: bridge.connected ? "UPDATE" : "CONNECT",
                             secure: true, action: connect)
@@ -414,6 +492,7 @@ struct TokenSetupScreen: View {
             Button("Remove token", role: .destructive) {
                 TokenVault.delete(bridge.tokenKey)
                 bridge.onRemove()
+                trelloKey = nil   // Trello's key goes with it (see `onRemove`)
                 store.bridges.removeAll { $0.id == bridge.bridgeID }
                 result = String(localized: "Token removed — your things stay.")
                 resultIsError = false
@@ -433,12 +512,31 @@ struct TokenSetupScreen: View {
         // Pasting over an existing token is a reconnect: drop the prior key's
         // cached readings (balance, vault reach) BEFORE storing, or a paste
         // whose first sync fails leaves the new key wearing the old key's
-        // numbers as if they were its own.
-        bridge.onRemove()
+        // numbers as if they were its own. `reconnecting` spares the one piece
+        // of state the paste itself depends on — Trello's API key, which the
+        // token being pasted was minted against.
+        bridge.onRemove(reconnecting: true)
         TokenVault.set(token, for: bridge.tokenKey)
         tokenField = ""
         DSHaptic.tap()
         Task { await sync(justConnected: true) }
+    }
+
+    /// The empty-read explanation (`TokenBridge.emptyReadNote`), but only when
+    /// this bridge has genuinely never landed anything. Gated on the CORPUS,
+    /// not on this pass: a sync that adds 0 is the normal case for a connected
+    /// bridge with no news, and showing "no cards are assigned to you" to
+    /// someone whose forty cards are already in their feed would be a lie the
+    /// screen tells every single sync.
+    private func emptyReadNote() -> String? {
+        guard let note = bridge.emptyReadNote else { return nil }
+        let source = bridge.rawValue
+        let landed = (try? modelContext.fetchCount(
+            FetchDescriptor<Thing>(predicate: #Predicate { $0.source == source })))
+            // A fetch that failed is not evidence of an empty account — stay
+            // quiet and let the ordinary "Up to date" stand.
+            ?? 1
+        return landed == 0 ? note : nil
     }
 
     private func sync(justConnected: Bool = false) async {
@@ -479,7 +577,9 @@ struct TokenSetupScreen: View {
             }
             connecting = false
             resultIsError = false
-            result = added > 0 ? String(localized: "\(added) \(bridge.noun) in") : String(localized: "Up to date")
+            result = added > 0
+                ? String(localized: "\(added) \(bridge.noun) in")
+                : (emptyReadNote() ?? String(localized: "Up to date"))
             let proof = added > 0 ? "\(added) \(bridge.noun) in" : "Synced just now"
             if store.registerConnected(id: bridge.bridgeID, name: bridge.rawValue,
                                        proof: proof, can: [bridge.canLine]) {

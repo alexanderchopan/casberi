@@ -20,6 +20,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     case oneclaw  = "1Claw"
     case posthog  = "PostHog"
     case stripe   = "Stripe"
+    case trello   = "Trello"
 
     var id: String { rawValue }
 
@@ -39,6 +40,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .oneclaw:  "oneclaw"
         case .posthog:  "posthog"
         case .stripe:   "stripe"
+        case .trello:   "trello"
         }
     }
 
@@ -69,6 +71,11 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .oneclaw:   URL(string: "https://1claw.xyz")
         case .posthog:   URL(string: "https://us.posthog.com/settings/user-api-keys")
         case .stripe:    URL(string: "https://dashboard.stripe.com/apikeys")
+        // Trello's FIRST door only (the API key). Its second door — the
+        // authorize page that mints the token — can't live here: it has to
+        // carry the key you just pasted, so `TokenSetupScreen` builds it from
+        // `TrelloAuth.authorizeURL(key:)` instead. See `TrelloAuth`.
+        case .trello:    URL(string: "https://trello.com/power-ups/admin")
         }
     }
 
@@ -90,6 +97,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .oneclaw:   "1claw.xyz"
         case .posthog:   "posthog.com → personal API keys"
         case .stripe:    "dashboard.stripe.com → API keys"
+        case .trello:    "trello.com → Power-Ups admin"
         }
     }
 
@@ -152,6 +160,15 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .stripe: [
             "Create a RESTRICTED key with only these reads:",
             "Copy it and paste it below."]
+        // Trello's steps are the SECOND stage only — the key stage carries its
+        // own (`TokenSetupScreen.trelloKeySection`), because this bridge is the
+        // one here that needs two pastes. The scope is not named in a step: the
+        // authorize link above it is one Casberi builds with `scope=read`, and
+        // the note under the field says so once (§220 — a step never re-types
+        // what is already on screen).
+        case .trello: [
+            "Allow — Trello shows a token on the page.",
+            "Copy it and paste it below."]
         }
     }
 
@@ -170,6 +187,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .oneclaw:  "ocv_…"
         case .posthog:  "phx_…"
         case .stripe:   "rk_live_…"
+        case .trello:   "Token"
         }
     }
 
@@ -193,6 +211,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .oneclaw:  "agent key"
         case .posthog:  "personal API key"
         case .stripe:   "restricted key"
+        case .trello:   "token"
         }
     }
 
@@ -212,6 +231,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .oneclaw:  "grants"
         case .posthog:  "updates"
         case .stripe:   "updates"
+        case .trello:   "cards"
         }
     }
 
@@ -235,6 +255,36 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .oneclaw:  "Reads which vaults and secret paths the key can reach — names and permissions only. Nothing here ever reads a secret's value, signs, or spends."
         case .posthog:  "Reads the metrics you watch and your project's annotations. The key is scoped read-only — it cannot ship a flag, edit a dashboard, or write anything back."
         case .stripe:   "Reads disputes, payouts, canceled subscriptions, failed payments, and your balance. The restricted key is read-only — it cannot refund, charge, or pay out."
+        // The read-only promise here is the strongest of any bridge in this
+        // file, because Casberi MINTS it rather than asking you to: the
+        // authorize link is built with `scope=read`, so Trello itself issues a
+        // token that has no write permission to give. Every other keyed bridge
+        // depends on the person ticking the right box on someone else's page.
+        case .trello:   "Reads the cards assigned to you and when they're due. Casberi asks Trello for a read-only token — it cannot move a card, comment, or write anything back."
+        }
+    }
+
+    /// What an EMPTY but SUCCESSFUL read means, for the bridges where empty is
+    /// a state worth explaining rather than good news (2026-08-03, prd §291).
+    ///
+    /// "Up to date" is perfectly true of a Trello account with nothing assigned
+    /// to you, and perfectly useless: the token worked, the read worked, and
+    /// the screen is indistinguishable from a broken connection. Trello earns
+    /// this because its emptiness has a CAUSE the person can act on —
+    /// `/members/me/cards` returns only cards you are a member of, and plenty
+    /// of boards never use member assignment at all, so a working connection
+    /// really can land nothing.
+    ///
+    /// Nil for every other bridge on purpose. An empty Todoist means you have
+    /// no open tasks, which is self-evident and arguably the point; a sentence
+    /// there would be explaining nothing. Add a case only when empty is
+    /// genuinely ambiguous.
+    var emptyReadNote: String? {
+        switch self {
+        case .trello:
+            String(localized: "Trello answered — no cards are assigned to you. Casberi reads cards you're a member of, so add yourself to one and sync again.")
+        default:
+            nil
         }
     }
 
@@ -242,14 +292,131 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     /// path calls so a bridge that caches non-thing state (a reading, not a
     /// Thing) drops it when disconnected, and a reconnected DIFFERENT account
     /// never wears the prior one's cache. Most bridges hold nothing extra.
-    func onRemove() {
+    ///
+    /// `reconnecting` distinguishes the two callers, which until Trello landed
+    /// wanted exactly the same thing (2026-08-03). Pasting a fresh token calls
+    /// this FIRST, to drop the old key's cached readings before the new one is
+    /// stored — but Trello's API key is not a per-token reading, it identifies
+    /// the Power-Up the token is minted against, and the paste that follows is
+    /// worthless without it. Clearing it on a reconnect would delete the
+    /// credential the very next line depends on. An explicit Remove still
+    /// takes both.
+    func onRemove(reconnecting: Bool = false) {
         switch self {
         case .bitrefill: BitrefillBalance.clear()
         case .oneclaw:   OneClawAccess.clear()
         case .posthog:   PostHogAccount.clear()
         case .stripe:    StripeAccount.clear()
+        case .trello:    if !reconnecting { TrelloAuth.clear() }
         default:         break
         }
+    }
+}
+
+/// Trello's two credentials, and the read-only mint (2026-08-03).
+///
+/// Every other bridge in this file is one paste. Trello's REST API takes TWO
+/// values on every request — an API key identifying a Power-Up, and a token
+/// identifying you — and neither works alone. That shapes the setup screen
+/// into two stages, and it is also what makes the read-only promise here
+/// STRUCTURAL rather than an instruction: because Casberi holds the key, it
+/// builds the authorize URL itself and pins `scope=read`, so Trello mints a
+/// token that has no write permission to give. Ask a person to pick read-only
+/// on someone else's settings page and the promise is only as good as the box
+/// they ticked.
+///
+/// The key is PUBLIC by design — it ships in the client-side JavaScript of
+/// every Trello Power-Up, exactly like the Reown project id and the Dropbox
+/// app key already in this tree. It lives in the Keychain anyway, beside the
+/// token it is useless without, rather than in cleartext UserDefaults.
+///
+/// **UNMEASURED (2026-08-03)**: authored against Atlassian's published REST
+/// docs with no Trello key stored and no egress to `api.trello.com` from this
+/// host. Every read is a GET and every failure path returns nil, so it fails
+/// safe — a wrong field name finds nothing rather than landing something
+/// wrong. Verify with `-trelloKey` + `-tokenBridge "Trello:<token>"` before
+/// trusting it.
+enum TrelloAuth {
+    /// The Keychain slot for the API key. The TOKEN rides `TokenBridge.trello.
+    /// tokenKey` ("token.trello"), so this deliberately does NOT sit under
+    /// that prefix as a suffix that could collide with it.
+    static let keyVaultKey = "trello.apikey"
+
+    static var storedKey: String? { TokenVault.get(keyVaultKey) }
+
+    static func setKey(_ key: String) { TokenVault.set(key, for: keyVaultKey) }
+    static func clear() { TokenVault.delete(keyVaultKey) }
+
+    /// Trello's documented header form. The alternative — `?key=…&token=…` on
+    /// the query string — is what most of its examples show and is avoided on
+    /// purpose: a credential in a URL is a credential in every log, cache key
+    /// and crash report that ever holds that URL.
+    static func header(key: String, token: String) -> String {
+        "OAuth oauth_consumer_key=\"\(key)\", oauth_token=\"\(token)\""
+    }
+
+    /// The mint. `scope=read` is the whole point (see above);
+    /// `expiration=never` matches every other bridge here, which store a
+    /// credential that keeps working until it's removed — the alternative is
+    /// a connection that silently dies after 30 days and reads as a bug.
+    /// `response_type=token` prints the token on the page for copying, which
+    /// is the only option without a server to receive a redirect.
+    /// The measure tool for a bridge built from docs and never run (see the
+    /// UNMEASURED note above). Reports the RAW shape, phase by phase, because
+    /// an empty Trello room has causes that all render as the same sentence:
+    /// no key stored, a token Trello rejects (401), a key/token pair minted
+    /// against different Power-Ups, or a perfectly good read of an account
+    /// whose cards are simply not assigned to anyone. One NSLog per line — a
+    /// joined multi-line message gets truncated by the log reader (the
+    /// `-todayProbe` lesson).
+    @MainActor
+    static func diagnose() async {
+        guard let key = storedKey else {
+            NSLog("[Casberi] trello| no API key stored — paste one first (-trelloKey <key>)")
+            return
+        }
+        guard let token = TokenVault.get(TokenBridge.trello.tokenKey) else {
+            NSLog("[Casberi] trello| key stored, no token — authorize first (-tokenBridge \"Trello:<token>\")")
+            NSLog("[Casberi] trello| authorize: %@",
+                  authorizeURL(key: key)?.absoluteString ?? "(couldn't build)")
+            return
+        }
+        let auth = header(key: key, token: token)
+        let cards = await IngestSupport.getJSONStatus(
+            "https://api.trello.com/1/members/me/cards?filter=open", auth: auth)
+        NSLog("[Casberi] trello| cards HTTP %d", cards.status)
+        guard let list = cards.json as? [[String: Any]] else {
+            NSLog("[Casberi] trello| cards payload was not an array — shape drift, or the token was refused")
+            return
+        }
+        NSLog("[Casberi] trello| %d open cards assigned to you", list.count)
+        let boards = await IngestSupport.getJSONStatus(
+            "https://api.trello.com/1/members/me/boards", auth: auth)
+        NSLog("[Casberi] trello| boards HTTP %d, %d boards", boards.status,
+              (boards.json as? [[String: Any]])?.count ?? -1)
+        // The decisive line: which fields are ACTUALLY on the wire. Every
+        // shaping decision in `trello()` rests on five of them, and a rename
+        // empties the room with no error anywhere.
+        for card in list.prefix(10) {
+            NSLog("[Casberi] trelloCard| name=%@ due=%@ dueComplete=%@ closed=%@ board=%@ url=%@",
+                  (card["name"] as? String) ?? "—",
+                  (card["due"] as? String) ?? "nil",
+                  String(describing: card["dueComplete"] ?? "MISSING"),
+                  String(describing: card["closed"] ?? "MISSING"),
+                  (card["idBoard"] as? String) ?? "MISSING",
+                  (card["shortUrl"] as? String) ?? "MISSING")
+        }
+    }
+
+    static func authorizeURL(key: String) -> URL? {
+        var c = URLComponents(string: "https://trello.com/1/authorize")
+        c?.queryItems = [
+            URLQueryItem(name: "key", value: key),
+            URLQueryItem(name: "scope", value: "read"),
+            URLQueryItem(name: "expiration", value: "never"),
+            URLQueryItem(name: "response_type", value: "token"),
+        ]
+        return c?.url
     }
 }
 
@@ -298,6 +465,10 @@ enum TokenIngest {
         // rather than arriving marked done. A separate completed-tasks read,
         // same loop-closer shape (delight pass 2026-07-28).
         if bridge == .todoist { await todoistCompletions(token, context: context) }
+        // A card's due-checkbox is the one field here that CHANGES after
+        // landing, the Linear shape exactly — dedupe never revisits a known
+        // ref, so without this the state stamped at first sight is frozen.
+        if bridge == .trello { reconcileTrello(incoming, context: context) }
 
         var existing = IngestSupport.existingSourceRefs(context)
         // One backfill per source string the items actually carry — no
@@ -339,6 +510,7 @@ enum TokenIngest {
         case .bitrefill: await BitrefillFetch.things(token: token)
         case .privacy:  await PrivacyFetch.things(token: token)
         case .oneclaw:  await OneClawFetch.things(token: token, context: context)
+        case .trello:   await trello(token)
         // Unreachable — `refresh` routes these two to their own sweeps above.
         // Present so the switch stays exhaustive rather than defaulted, which
         // is what makes a future bridge impossible to add without deciding.
@@ -728,6 +900,128 @@ enum TokenIngest {
             if justClosed {
                 SourceMoments.shared.fire(
                     String(localized: "Done: \(thing.title)"), source: "Linear")
+            }
+        }
+        if changed { context.saveHonestly() }
+    }
+
+    /// Trello — the cards assigned to you, across every board, newest 30 by
+    /// last activity. Two GETs (the Calendly shape): the cards, then the board
+    /// names, so a card can say WHICH board it came from — a Trello card name
+    /// on its own is usually a fragment ("Ship v1") that means nothing in a
+    /// feed beside everything else.
+    ///
+    /// `filter=open` is the whole read: cards you are carrying. An ARCHIVED
+    /// card simply stops arriving, and `reconcileTrello` deliberately does not
+    /// mark those done — see its own note.
+    private static func trello(_ token: String) async -> [Thing]? {
+        // No key, no requests. This is the honest nil: `refresh` words it as
+        // "check the token", which is right — half a credential is a broken
+        // connection, and the setup screen can't reach the token stage without
+        // the key anyway.
+        guard let key = TrelloAuth.storedKey else { return nil }
+        let auth = TrelloAuth.header(key: key, token: token)
+        guard let cards = await IngestSupport.getJSON(
+            "https://api.trello.com/1/members/me/cards?filter=open",
+            auth: auth) as? [[String: Any]] else { return nil }
+
+        // Board names, id → name. A failure here is NOT a failure of the pass:
+        // the cards already read fine, and a card without its board prefix is
+        // worse-labelled, not wrong. Landing nothing because a second,
+        // decorative request blipped would be the wrong trade.
+        var boards: [String: String] = [:]
+        if let list = await IngestSupport.getJSON(
+            "https://api.trello.com/1/members/me/boards", auth: auth) as? [[String: Any]] {
+            for board in list {
+                guard let id = board["id"] as? String,
+                      let name = (board["name"] as? String)?
+                        .trimmingCharacters(in: .whitespacesAndNewlines),
+                      !name.isEmpty else { continue }
+                boards[id] = name
+            }
+        }
+
+        let sorted = cards.sorted {
+            (($0["dateLastActivity"] as? String) ?? "") > (($1["dateLastActivity"] as? String) ?? "")
+        }
+        return sorted.prefix(30).compactMap { card in
+            guard let id = card["id"] as? String,
+                  let name = (card["name"] as? String)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty
+            else { return nil }
+            // The board leads the title, the way a Linear issue's identifier
+            // does — same separator, same reason: it is the context that makes
+            // the rest of the line legible.
+            let board = (card["idBoard"] as? String).flatMap { boards[$0] }
+            let thing = Thing(
+                kind: .reminder,
+                title: board.map { "\($0) · \(name)" } ?? name,
+                content: (card["shortUrl"] as? String) ?? (card["url"] as? String) ?? "",
+                source: "Trello",
+                capturedAt: IngestSupport.isoDate(card["dateLastActivity"]) ?? .now,
+                sourceRef: "trello:\(id)"
+            )
+            // Trello's `due` is a full timestamp, so it needs none of the
+            // all-day handling Todoist's `due.date` and Linear's `dueDate` do.
+            // A card with no due date stays honestly nil.
+            thing.dueAt = IngestSupport.isoDate(card["due"])
+            thing.mark = trelloMark(card)
+            if let desc = (card["desc"] as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines), !desc.isEmpty {
+                thing.summary = desc
+            }
+            return thing
+        }
+    }
+
+    /// A Trello card's state, from the only two fields Trello itself owns.
+    ///
+    /// **The list a card sits in is NOT read, on purpose** — this is the Linear
+    /// `state { type }` ruling in a product that has no such enum. Trello lists
+    /// are user-named and user-created ("Doing", "In review", "Shipped",
+    /// "Icebox", "Done ✅"), so inferring completion from a list name would
+    /// mean pattern-matching somebody's private vocabulary and getting it
+    /// wrong for anyone whose board isn't in English or doesn't use the word.
+    /// `dueComplete` is Trello's own fixed field — the checkbox beside the due
+    /// date — and `closed` is its archive flag. Neither can drift with a
+    /// workflow.
+    ///
+    /// A card with no due date and no archive is `.todo`, not `.none`: it is
+    /// on your board and assigned to you, which is what todo means here.
+    private static func trelloMark(_ card: [String: Any]) -> Mark {
+        if (card["dueComplete"] as? Bool) == true { return .done }
+        if (card["closed"] as? Bool) == true { return .done }
+        return .todo
+    }
+
+    /// Re-marks Trello cards already in the corpus on every sync — a card you
+    /// ticked off in Trello has to stop reading as open here (the
+    /// `reconcileLinear` shape, and the same loop-closer moment).
+    ///
+    /// Scoped to the cards this pass actually SAW. A card that stopped arriving
+    /// is left exactly as it was, which is the deliberately conservative call:
+    /// `filter=open` drops a card for three different reasons — you archived
+    /// it, someone unassigned you, or it fell past the newest 30 — and only one
+    /// of those means done. Marking on absence would quietly retire cards
+    /// somebody is still carrying, and per Linear's own note a mark we can't
+    /// justify is worse than no mark.
+    @MainActor
+    static func reconcileTrello(_ fresh: [Thing], context: ModelContext) {
+        let byRef = Dictionary(fresh.map { ($0.sourceRef ?? "", $0) },
+                               uniquingKeysWith: { a, _ in a })
+        guard !byRef.isEmpty else { return }
+        let existing = (try? context.fetch(FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == "Trello" }))) ?? []
+        var changed = false
+        for thing in existing {
+            guard let ref = thing.sourceRef, let now = byRef[ref],
+                  now.mark != thing.mark else { continue }
+            let justClosed = now.mark == .done && thing.mark != .done
+            thing.mark = now.mark
+            changed = true
+            if justClosed {
+                SourceMoments.shared.fire(
+                    String(localized: "Done: \(thing.title)"), source: "Trello")
             }
         }
         if changed { context.saveHonestly() }

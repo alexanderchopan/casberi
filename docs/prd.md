@@ -14906,3 +14906,141 @@ than a normal risk. Same tier as Weights & Biases: right shape, wrong size.
 Held, with **Limitless** (lifelogs — the most Casberi-native data that exists),
 **Replicate**/**ElevenLabs** (your own generations), and **arXiv / HF Daily
 Papers standalone** — the last of which this seat now covers.
+
+## §291 — Trello joins the catalog, and Casberi mints the read-only token itself (user: "should we add any of these: trello, bear, evernote, Agenda, things3, paypal honey, canva, fomo, chronicle", then "for trello, ok, lets build it", 2026-08-03)
+
+Nine names, one build. The eight declines are recorded here because the reasons
+are reusable, not because the apps are interesting:
+
+- **Bear, Agenda** — no cloud read API; both are x-callback-url only, which
+  needs the app FOREGROUNDED and so can never sync. Both export or mirror
+  Markdown to a folder, which the **Files** seat already reads. The Obsidian
+  call, twice.
+- **Things 3** — no read path at all. Its one door is an *add* URL scheme, and
+  this app never writes.
+- **PayPal Honey** — a coupon extension: no API, no export, and a coupon is not
+  a thing. PayPal *itself* is a real candidate but not as a bridge: the
+  Transactions API takes **client credentials**, so the secret can't ship in a
+  public repo and the grant acts on the app owner's own (business) account.
+  Its door is the CSV export — the Instagram/TikTok/X grade, held for later.
+- **Fomo (fomo.family)** — a social-first crypto trading app. No API, no docs,
+  no export; and the one Casberi-shaped part of it (your own fills) is already
+  read straight off the chain by the Wallet seat, keylessly.
+- **Chronicle** — a bill organizer with CSV export and no API, whose rows are
+  due dates **you typed in yourself**. Every dated row in this app comes from a
+  source that knows something you don't; importing your own bill list is
+  re-typing. This is the module doctrine ("a thing is never a tally") wearing
+  a new face: it's also never something you already told us.
+- **Evernote** — a genuine YES, deliberately not built in this pass. The API is
+  shut in every practical sense (sandbox dead since 2023, dev tokens "only for
+  proven necessity", new keys a manual review, EDAM deprecated), so `.enex` is
+  the only door — the ChatGPT/Instagram/X grade, and the exodus year makes the
+  timing good.
+- **Canva** — possible (Connect API is OAuth + PKCE, so a public client works),
+  but "designs I made" is a list with thumbnails, not news. Ranked below the
+  two above.
+
+**What Trello is.** The cards assigned to you, across every board, with the
+board's name leading the title, the due date on `dueAt`, and the card's back
+on `summary`. It sits in **Work** beside Linear/Notion/Todoist and it is the
+straightforward member of that family — a fetch-a-list-and-land bridge, so it
+rides `TokenIngest`'s generic path rather than owning a sweep the way PostHog
+and Stripe do.
+
+**Ruling 1 — Casberi mints the token, so read-only is structural.** Trello's
+API takes TWO values on every request: an API key naming a Power-Up, and a
+token naming you. That is a cost (two pastes, a two-stage form — the only one
+on `TokenSetupScreen`) and it buys the strongest read-only promise in the whole
+catalog. Because the app holds the key, it builds the `/1/authorize` link
+itself and pins `scope=read`, so **Trello issues a token with no write
+permission to give**. Every other keyed bridge here depends on the person
+ticking the right box on somebody else's settings page — Privacy.com keeps its
+promise by CONDUCT, PostHog and Stripe by a scope the user selects. This one is
+kept by construction, and the catalog copy says so in those words.
+
+The key is public by design (it ships in the client-side JavaScript of every
+Trello Power-Up — the Reown project id and Dropbox app key precedent). It lives
+in the Keychain anyway, beside the token it is useless without.
+
+**Ruling 2 — the list a card sits in is never read.** This is §the Linear
+`state { type }` ruling in a product that has no such enum. Trello lists are
+user-named and user-created ("Doing", "In review", "Shipped", "Icebox",
+"Done ✅"), so inferring completion from a list name means pattern-matching
+somebody's private vocabulary — and getting it wrong for anyone whose board
+isn't in English. `dueComplete` (the checkbox beside the due date) and `closed`
+(the archive flag) are Trello's OWN fixed fields and neither can drift with a
+workflow. They are the whole of `trelloMark`.
+
+**Ruling 3 — a card that stops arriving is left alone.** `reconcileTrello`
+re-marks only cards the pass actually SAW. `filter=open` drops a card for three
+different reasons — you archived it, someone unassigned you, or it fell past
+the newest 30 — and only one of those means done. Marking on absence would
+quietly retire cards somebody is still carrying. Linear's own note already
+states the principle: a mark we can't justify is worse than no mark.
+
+**Ruling 4 — credentials ride the header, never the query string.** Trello's
+own examples mostly show `?key=…&token=…`; the documented
+`Authorization: OAuth oauth_consumer_key="…", oauth_token="…"` form is used
+instead. A credential in a URL is a credential in every log, cache key and
+crash report that ever holds that URL.
+
+**One shared-code change, and the bug it prevents.** `TokenBridge.onRemove()`
+gained a `reconnecting:` flag. Both of its callers previously wanted the same
+thing, so it had no parameter — but pasting a fresh token calls it FIRST, to
+drop the prior key's cached readings, and Trello's API key is not a cached
+reading: it is the credential the very next line depends on. Without the flag,
+pasting a Trello token would delete the key that token was minted against. An
+explicit Remove still takes both.
+
+**UNMEASURED (2026-08-03)** — authored against Atlassian's published REST docs
+with no Trello key stored and no egress to `api.trello.com` from the build
+host. Every read is a GET and every failure returns nil, so it fails safe: a
+renamed field finds nothing rather than landing something wrong. Two probes
+exist to close that gap: `-trelloKey <key|clear>` (declared BEFORE
+`-tokenBridge "Trello:<token>"` — hooks run in list order) and `-trelloProbe
+YES`, which reports the read PHASE BY PHASE plus one `trelloCard|` line per
+card naming the five fields every shaping decision rests on. That split is the
+`-kalshiBookProbe` lesson: an empty Trello room has four causes (no key, a
+refused token, a key/token pair minted against different Power-Ups, or an
+account whose cards are genuinely unassigned) and they all render as one
+sentence on screen.
+
+### §291 follow-up — the empty read explains itself (user: "from what you said it seems that trello is useless", then "ok keep it. add the empty read state if you think it improves the experience", 2026-08-03)
+
+The challenge was fair and the answer to it was NOT about user counts, which is
+what the conversation had drifted into. Registered-user totals are a bad test
+for a seat here — every bridge is judged on whether a connected account
+produces things worth keeping, and Trello being 50M or 5M barely moves that.
+
+**The real objection, which should have been raised while building:**
+`/members/me/cards` returns only cards you are a MEMBER of, and plenty of
+people use Trello without ever adding themselves to a card — solo boards used
+as lists, team boards where assignment is implied by the column it sits in,
+boards where only the lead is assigned. For those accounts the bridge connects
+successfully, authenticates correctly, reads correctly, and lands **zero
+cards**. On screen that was indistinguishable from a broken connection: the
+generic "Up to date" is perfectly true and completely useless there.
+
+So `TokenBridge.emptyReadNote` — a per-bridge sentence shown in place of "Up to
+date" when a read genuinely succeeds and finds nothing. Trello's names the
+cause and the fix: "Trello answered — no cards are assigned to you. Casberi
+reads cards you're a member of, so add yourself to one and sync again."
+
+Three constraints, each load-bearing:
+
+1. **Nil for every other bridge, on purpose.** An empty Todoist means you have
+   no open tasks, which is self-evident and arguably the point; a sentence
+   there explains nothing and trains people to ignore the row. A case is added
+   only when empty is genuinely AMBIGUOUS.
+2. **Gated on the CORPUS, not on the pass.** A sync that adds 0 is the normal
+   case for any connected bridge with no news. Keying the note to this pass
+   would tell someone whose forty cards are already in their feed that no cards
+   are assigned to them — every single sync, forever.
+3. **A failed count is not evidence.** The fetch defaults to 1 on error, so a
+   fetch that couldn't run leaves the ordinary "Up to date" standing rather
+   than inventing an explanation.
+
+Not an error state (`resultIsError` stays false): nothing failed. This is the
+honesty rule in its quietest form — the screen is not allowed to look broken
+when it isn't, and it is not allowed to look fine when there is something the
+person needs to do.

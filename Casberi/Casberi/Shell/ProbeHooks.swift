@@ -23,6 +23,10 @@ enum ProbeHooks {
     /// flag lands here. Add the flag in the same commit as the probe.
     private static let secretArgKeys: Set<String> = [
         "-byokKey", "-openSeaKey", "-tokenBridge", "-wcProjectID", "-ghClientID",
+        // Public by design (it names a Power-Up, not a person) — redacted for
+        // the same reason `-wcProjectID` is: anything credential-shaped stays
+        // out of the log, so nobody has to remember which ones are safe.
+        "-trelloKey",
         // Not a credential the app USES, but by construction the value is a
         // sample secret — the whole point of the probe is to hand it one.
         // Printing it verbatim in `probeArgs:` would put a real key in the
@@ -318,6 +322,20 @@ enum ProbeHooks {
             NSLog("Bookmarks probe: %d imported, %d skipped, failed=%d, readingList=%d",
                   summary.imported, summary.skipped, summary.failed ? 1 : 0, parsed.readingListCount)
         },
+        // `-trelloKey <key>` stores Trello's API key — the FIRST of its two
+        // credentials. Declared BEFORE `-tokenBridge "Trello:<token>"`, since
+        // hooks run in list order and the token's sync reads a stored key.
+        Hook(key: "trelloKey") { spec, _ in
+            let key = spec.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !key.isEmpty else { return }
+            if key == "clear" {
+                TrelloAuth.clear()
+                NSLog("[Casberi] trelloKey: cleared")
+            } else {
+                TrelloAuth.setKey(key)
+                NSLog("[Casberi] trelloKey: stored (%d chars)", key.count)
+            }
+        },
         // `-tokenBridge "<Name>:<token>"` connects a token bridge headlessly.
         Hook(key: "tokenBridge") { spec, context in
             guard let colon = spec.firstIndex(of: ":"),
@@ -328,6 +346,12 @@ enum ProbeHooks {
                 NSLog("Token probe (%@): %@ new things", bridge.rawValue,
                       n.map(String.init) ?? "FAILED")
             }
+        },
+        // `-trelloProbe YES` reports Trello's read phase by phase with the
+        // STORED credentials — the measure tool for a bridge authored against
+        // the docs and never run live (see `TrelloAuth`'s UNMEASURED note).
+        Hook(key: "trelloProbe") { _, _ in
+            Task { @MainActor in await TrelloAuth.diagnose() }
         },
         // `-oneclawProbe YES` walks the 1Claw access read with the STORED key
         // (connect first via `-tokenBridge "1Claw:<key>"`), logging each step
