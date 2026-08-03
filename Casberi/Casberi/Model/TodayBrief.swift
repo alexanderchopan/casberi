@@ -180,6 +180,7 @@ enum TodayBrief {
         // about claiming "I already told you this", and a widget line is the
         // telling, not a claim about it.
         publishLedeToWidget(lede.text)
+        publishThemesToWidget(things: things, now: now)
 
         // 2. The money hero — the CROWN (2026-07-25), the day's one fused
         // visualization and the only read where a number is itself the event.
@@ -1482,6 +1483,32 @@ enum TodayBrief {
         if previous != text {
             WidgetCenter.shared.reloadTimelines(ofKind: WidgetLede.kind)
         }
+    }
+
+    /// Mirrors `themesMap`'s own clustering (same 30-day horizon, same
+    /// two-cluster floor) into the App Group as plain cells — never the
+    /// `TagMap(...)` doc-string `themesMap` composes, which is GenUI's
+    /// format, not the widget's. Recomputed independently rather than
+    /// threading `themesMap`'s result through: it's a pure, cheap read
+    /// (`HomeComposition.projectClusters`, no async/NLTagger dependency),
+    /// and the two callers wanting different shapes of the same clustering
+    /// is cheaper than one contorting its return type for the other.
+    private static func publishThemesToWidget(things: [Thing], now: Date) {
+        guard let group = UserDefaults(suiteName: SharedStore.appGroup) else { return }
+        let horizon = Calendar.current.date(byAdding: .day, value: -30, to: now) ?? now
+        let clusters = HomeComposition.projectClusters(things: things.filter { $0.capturedAt >= horizon })
+        guard clusters.count >= 2 else {
+            group.removeObject(forKey: WidgetLede.themesKey)
+            group.removeObject(forKey: WidgetLede.themesStampKey)
+            return
+        }
+        // Three, not `themesMap`'s six — the medium widget has room for
+        // three legible cells before a fourth reads as clutter (mockup,
+        // 2026-08-03).
+        let cells = clusters.prefix(3).map { WidgetThemeCell(name: $0.name, weight: $0.things.count) }
+        guard let data = try? JSONEncoder().encode(Array(cells)) else { return }
+        group.set(data, forKey: WidgetLede.themesKey)
+        group.set(Date.now.timeIntervalSince1970, forKey: WidgetLede.themesStampKey)
     }
 }
 

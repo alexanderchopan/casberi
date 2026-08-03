@@ -141,6 +141,18 @@ struct HeroEntry: TimelineEntry {
     /// Whether the title is the brief's own sentence rather than the fallback
     /// rungs — set by the provider, since only it knows which rung answered.
     var isLede: Bool = false
+
+    /// The month-wide theme cells (2026-08-03), largest first, capped at 3 —
+    /// empty when there's nothing fresh or too few to tile. Only the medium
+    /// family draws them; small/lock-screen stay on the sentence above.
+    var themes: [WidgetThemeCell] = []
+
+    /// The most recent thing's title/source, fetched independently of which
+    /// rung answered `title`/`subline` above — the medium widget's treemap
+    /// layout pins this as its own footer row even when the lede answered,
+    /// so it can't just reuse `title` the way the non-lede rungs do.
+    var recentTitle: String = ""
+    var recentSource: String = ""
 }
 
 struct HeroProvider: TimelineProvider {
@@ -174,12 +186,24 @@ struct HeroProvider: TimelineProvider {
     ///   2. the most recent THING itself — the module doctrine's own second
     ///      shape, and never a count of them,
     ///   3. the empty-corpus invitation.
+    ///
+    /// The medium widget's theme cells (2026-08-03) ride alongside whichever
+    /// rung answers rather than being a fourth rung of their own — an
+    /// unlabeled area, mirroring the brief's own themes card, not a tally.
     private func compose() -> HeroEntry {
         let group = UserDefaults(suiteName: SharedStore.appGroup)
 
         // Something landed while the app was closed? The app stamps this
         // boundary on background. Presence only — never how much (§213).
         let lastSeen = group?.double(forKey: "widget.lastSeen") ?? 0
+        let themes = WidgetLede.themes(defaults: group) ?? []
+
+        // Fetched unconditionally now (2026-08-03), not just on the rung-2
+        // fallback path: the medium widget's treemap layout pins the newest
+        // thing as its own footer row even when rung 1 (the lede) answers
+        // the headline, so both need it in hand at once. Still exactly one
+        // bounded row — the extension's ~30MB budget hasn't moved.
+        let recent = recentThing()
 
         // ── 1. The brief's own sentence ──────────────────────────────
         if let lede = WidgetLede.current(defaults: group) {
@@ -189,38 +213,42 @@ struct HeroProvider: TimelineProvider {
             return HeroEntry(date: .now, eyebrow: "", title: lede,
                              subline: "What's going on",
                              hasNew: hasNew(since: lastSeen),
-                             isLede: true)
+                             isLede: true, themes: themes,
+                             recentTitle: recent?.title ?? "",
+                             recentSource: recent?.source ?? "")
         }
-
-        guard let container = try? SharedStore.extensionContainer() else {
-            return HeroEntry(date: .now, eyebrow: "",
-                             title: String(localized: "Your things, one place"),
-                             subline: "Casberi")
-        }
-        let context = ModelContext(container)
-        // The extension runs in a tight (~30MB) budget — an unbounded fetch
-        // hydrated every Thing, inline strings and all (2026-07-21 audit).
-        // Now that the tag histogram is gone this needs exactly ONE row, so
-        // the fetch is limited to it instead of walking the whole corpus.
-        var descriptor = FetchDescriptor<Thing>(
-            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-        )
-        descriptor.propertiesToFetch = [\.title, \.source, \.capturedAt]
-        descriptor.fetchLimit = 1
 
         // ── 2. The most recent thing, as itself ──────────────────────
-        if let newest = (try? context.fetch(descriptor))?.first {
+        if let newest = recent {
             return HeroEntry(date: .now, eyebrow: "",
                              title: newest.title,
                              subline: newest.source,
                              hasNew: newest.capturedAt.timeIntervalSince1970 > lastSeen
-                                     && lastSeen > 0)
+                                     && lastSeen > 0,
+                             themes: themes,
+                             recentTitle: newest.title,
+                             recentSource: newest.source)
         }
 
         // ── 3. Nothing yet ───────────────────────────────────────────
         return HeroEntry(date: .now, eyebrow: "",
                          title: String(localized: "Your things go here"),
                          subline: String(localized: "Save one in Casberi"))
+    }
+
+    /// One bounded row — the extension's ~30MB budget hasn't got room for
+    /// more (2026-07-21 audit). Shared by both the lede rung (which needs it
+    /// for the medium widget's footer row) and the plain rung-2 fallback.
+    private func recentThing() -> (title: String, source: String, capturedAt: Date)? {
+        guard let container = try? SharedStore.extensionContainer() else { return nil }
+        let context = ModelContext(container)
+        var descriptor = FetchDescriptor<Thing>(
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+        )
+        descriptor.propertiesToFetch = [\.title, \.source, \.capturedAt]
+        descriptor.fetchLimit = 1
+        guard let t = (try? context.fetch(descriptor))?.first else { return nil }
+        return (t.title, t.source, t.capturedAt)
     }
 
     /// Whether anything at all landed since the app went to background — one
@@ -303,6 +331,25 @@ struct HeroWidgetView: View {
                         .lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+            case .systemMedium where !entry.themes.isEmpty:
+                // Themes + the newest thing (2026-08-03) — the sentence lede
+                // steps aside here; there isn't room for a headline, a
+                // 3-cell map, AND a footer row, and the map is itself an
+                // answer to "what's going on" (§213's own themes card
+                // reasoning), not a second unrelated fact competing with one.
+                VStack(alignment: .leading, spacing: 8) {
+                    ThemesTreemap(cells: entry.themes, accent: accent)
+                    RecentItemRow(title: entry.recentTitle, source: entry.recentSource)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .overlay(alignment: .topTrailing) {
+                    if entry.hasNew {
+                        Circle()
+                            .fill(accent)
+                            .frame(width: 9, height: 9)
+                            .accessibilityLabel(Text("Something new"))
+                    }
+                }
             default:
                 VStack(alignment: .leading, spacing: 4) {
                     if !entry.eyebrow.isEmpty {
@@ -342,5 +389,70 @@ struct HeroWidgetView: View {
         // opened — rather than the feed. A headline you can't open is the
         // dead control the honesty rule forbids.
         .widgetURL(URL(string: "casberi://brief"))
+    }
+}
+
+/// Up to 3 theme cells, largest first — a fixed two-column layout rather than
+/// a general treemap algorithm, since the medium widget caps at exactly 3
+/// cells (a 4th reads as clutter at this size, mockup 2026-08-03). Area is
+/// the only magnitude signal a cell carries; none ever prints its weight as a
+/// number (§213 — see `WidgetThemeCell`'s own header).
+private struct ThemesTreemap: View {
+    let cells: [WidgetThemeCell]
+    let accent: Color
+
+    var body: some View {
+        HStack(spacing: 3) {
+            if let lead = cells.first {
+                cell(lead, fill: AnyShapeStyle(LinearGradient(
+                    colors: [accent, accent.opacity(0.72)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing)))
+            }
+            let rest = cells.dropFirst().prefix(2)
+            if !rest.isEmpty {
+                VStack(spacing: 3) {
+                    ForEach(Array(rest), id: \.name) { c in
+                        cell(c, fill: AnyShapeStyle(Color.white.opacity(0.12)))
+                    }
+                }
+                .frame(width: 100)
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func cell(_ c: WidgetThemeCell, fill: AnyShapeStyle) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Spacer(minLength: 0)
+            Text(c.name)
+                .dsText(.widgetTreemapTerm12)
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .padding(.horizontal, 9)
+                .padding(.bottom, 7)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+        .background(fill)
+    }
+}
+
+/// The newest thing, pinned as the medium widget's footer row under the
+/// treemap — same fact the small widget's rung-2 fallback shows, just
+/// alongside the map instead of alone.
+private struct RecentItemRow: View {
+    let title: String
+    let source: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(title)
+                .dsText(.widgetRecentTitle12)
+                .foregroundStyle(.white)
+                .lineLimit(1)
+            Text(source)
+                .dsText(.widgetSubline11)
+                .foregroundStyle(.white.opacity(0.6))
+                .lineLimit(1)
+        }
     }
 }

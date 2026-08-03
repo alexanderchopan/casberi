@@ -173,6 +173,11 @@ extension DSTextStyle {
     static let widgetTitle17   = DSTextStyle(size: 17, weight: .bold, tracking: 0, lineHeight: 22, relative: .callout)
     /// The default-family hero widget's subline.
     static let widgetSubline12 = DSTextStyle(size: 12, weight: .regular, tracking: 0, lineHeight: 16, relative: .caption1)
+    /// The medium widget's treemap cell terms (2026-08-03) — semibold so a
+    /// one-word theme reads against its own cell's fill at a glance.
+    static let widgetTreemapTerm12 = DSTextStyle(size: 12, weight: .semibold, tracking: 0, lineHeight: 15, relative: .caption1)
+    /// The medium widget's recent-item row title, under the treemap.
+    static let widgetRecentTitle12 = DSTextStyle(size: 12, weight: .semibold, tracking: 0, lineHeight: 16, relative: .caption1)
 }
 
 private struct DSTextModifier: ViewModifier {
