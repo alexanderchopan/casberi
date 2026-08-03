@@ -91,6 +91,14 @@ extension DSTextStyle {
     // Names keep their original pixel suffix as stable identifiers (the ~485
     // call sites are unchanged); the comment above the ramp already says "names
     // read as intent, not pixel counts".
+    /// Also the app's ROW TITLE — a row's name is a heading for the line it
+    /// leads, and the wallet room's own `rowTitle17` folded into this on
+    /// 2026-08-03 (see the note where it used to live, below the money rungs).
+    /// SF Pro Text, NOT rounded: prd §190 fixed the complaint *"we have
+    /// different fonts"* with ONE font, and Typography's 2026-07-09 rule keeps
+    /// rounded in the display tier while body, rows and labels stay Text. So a
+    /// row title says "tappable" by WEIGHT — semibold against the subline's
+    /// regular — never by a second typeface.
     static let heading17 = DSTextStyle(size: 18, weight: .semibold, tracking: 0,    lineHeight: 24, relative: .headline)
     static let body17    = DSTextStyle(size: 18, weight: .regular,  tracking: 0,    lineHeight: 26, relative: .body)
     static let callout15 = DSTextStyle(size: 16, weight: .regular,  tracking: 0,    lineHeight: 23, relative: .subheadline)
@@ -127,22 +135,25 @@ extension DSTextStyle {
     static let price40 = DSTextStyle(size: 40, weight: .bold, tracking: 0, lineHeight: 44, relative: .largeTitle, rounded: true)
     static let stat24  = DSTextStyle(size: 24, weight: .bold, tracking: 0, lineHeight: 28, relative: .title2, rounded: true)
     static let price16 = DSTextStyle(size: 16, weight: .bold, tracking: 0, lineHeight: 20, relative: .callout, rounded: true)
-    /// The wallet room's ROW TITLE (prd §212, 2026-07-25) — the one rung every
-    /// row in that room titles itself at, so a lending row, a transaction, a
-    /// holder and a warning are visibly the same kind of statement.
-    ///
-    /// SF Pro Text, NOT rounded, and that's the interesting part. The Cash App
-    /// pass this rung comes from wanted the rounded money face on every row
-    /// title ("tappable" registering before the words are read) — but prd §190
-    /// already ruled that question, in the conversation that produced the slab:
-    /// the complaint being fixed was *"we have different fonts"*, so the fix
-    /// was ONE font, and it's SF Pro Text (Typography's own 2026-07-09 rule:
-    /// rounded is the display tier; body, rows and labels stay Text). Setting
-    /// row titles in rounded beside SF Pro slab labels would hand back the
-    /// exact complaint. So the "tappable" signal is carried by WEIGHT instead
-    /// — semibold against the subline's regular — and the rounded face stays
-    /// where §190 left it: display headings and the money rungs below.
-    static let rowTitle17 = DSTextStyle(size: 17, weight: .semibold, tracking: 0, lineHeight: 23, relative: .body)
+    // `rowTitle17` lived here and is GONE (2026-08-03). It was the wallet
+    // room's private row-title rung (prd §212, 2026-07-25) at size 17 — and it
+    // was authored at its literal NAME on the same day the reading-band pass
+    // moved `body17` and `heading17` from 17 to 18, so it shipped a full point
+    // under the room's own body text. A wallet-manager row's name sat 1pt below
+    // the field above it and the door below it: invisible as hierarchy, visible
+    // as a mistake, and read by the user as the screen having "three different
+    // sizes" when 17 and 18 don't separate, they wobble.
+    //
+    // Correcting it to 18 made it byte-identical to `heading17` — same size,
+    // same semibold, same SF Pro Text — which is a duplicate rung, exactly the
+    // drift a named ramp exists to prevent. So it folded into `heading17`,
+    // which the app ALREADY titles rows with: a person in `FollowImportSheet`,
+    // a language, a starter pack, and — decisively — `entry.name` in
+    // `AddressBookViews`, the same address-book entry the wallet manager was
+    // rendering one point smaller two screens away.
+    //
+    // Its one piece of reasoning worth keeping is recorded on `heading17`
+    // above: SF Pro Text, never the rounded money face, per prd §190.
 
     // Small decorative accents (2026-07-24 drift fix) — each already existed
     // as a raw `.system(size:)` on real Text, unscaled and unnamed.

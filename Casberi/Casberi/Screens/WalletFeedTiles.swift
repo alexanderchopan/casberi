@@ -384,7 +384,7 @@ struct WalletCompositionStrip: View {
             .joined(separator: " · ")
     }
 
-    /// `callout15`, not `WalletRow`'s `rowTitle17`: these sit INSIDE the
+    /// `callout15`, not `WalletRow`'s `heading17`: these sit INSIDE the
     /// balance card under a 48pt number, and a row-weight title here would
     /// argue with the crown instead of supporting it. Same reasoning that
     /// stepped the headline's own caption back (prd §157).

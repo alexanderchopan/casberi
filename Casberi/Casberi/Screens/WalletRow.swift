@@ -21,8 +21,11 @@ import SwiftUI
 /// in CLAUDE.md, paid three times).
 ///
 /// ONE FONT, per prd §190 — the title's weight is what says "tappable", not a
-/// second typeface. See `DSTextStyle.rowTitle17` for why the rounded face the
-/// Cash App borrow wanted here was the one part of it that got refused.
+/// second typeface. See `DSTextStyle.heading17` for why the rounded face the
+/// Cash App borrow wanted here was the one part of it that got refused. (That
+/// reasoning arrived on a wallet-only `rowTitle17` rung; it folded into the
+/// app's shared row-title rung on 2026-08-03 — same size, same weight, same
+/// face, one name.)
 struct WalletRow<Trailing: View>: View {
     /// The leading 34pt mark. Four kinds, because the room has exactly four
     /// kinds of subject: a state (glyph), a wallet (its face — a wallet is a
@@ -58,7 +61,7 @@ struct WalletRow<Trailing: View>: View {
             markView
             VStack(alignment: .leading, spacing: 1) {
                 Text(title)
-                    .dsText(.rowTitle17).foregroundStyle(DS.textPrimary)
+                    .dsText(.heading17).foregroundStyle(DS.textPrimary)
                     .lineLimit(titleWraps ? nil : 1)
                     .fixedSize(horizontal: false, vertical: titleWraps)
                 if let subtitle {

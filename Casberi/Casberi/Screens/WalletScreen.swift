@@ -151,6 +151,10 @@ struct WalletScreen: View {
 
     private let rosterFaceSize: CGFloat = 60
     private let rosterSlotWidth: CGFloat = 74
+    /// The two label lines under a roster face, height-locked so a watched
+    /// slot and an empty one line up. Named rather than written twice: the
+    /// two call sites MUST agree or a half-full shelf steps.
+    private let rosterLabelHeight: CGFloat = 28
 
     var body: some View {
         List {
@@ -503,6 +507,15 @@ struct WalletScreen: View {
         VStack(spacing: 6) {
             WalletFace(address: addr.address, size: rosterFaceSize, circular: true)
             VStack(spacing: 0) {
+                // Stays at `label12`, deliberately (considered and rejected
+                // 2026-08-03). This is a CAPTION under a 60pt face, not a row
+                // title: the face carries the identity and the words label it,
+                // which is why every platform face shelf captions small. It
+                // reads at the same size as the value beneath it because
+                // weight and color carry that step — the ramp's own method.
+                // Stepping it to `subhead13` to "match" the book row below
+                // compares two different jobs, and at a 74pt slot it costs
+                // about two characters of every name to truncation.
                 Text(wallet.displayName(for: addr))
                     .dsText(.label12).fontWeight(.semibold)
                     .foregroundStyle(DS.textPrimary)
@@ -524,7 +537,7 @@ struct WalletScreen: View {
                         .lineLimit(1)
                 }
             }
-            .frame(height: 28, alignment: .top)
+            .frame(height: rosterLabelHeight, alignment: .top)
         }
         .frame(width: rosterSlotWidth)
         .contentShape(Rectangle())
@@ -576,8 +589,10 @@ struct WalletScreen: View {
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(DS.textTertiary)
                 }
+            // Sits in the NAME's slot, so it takes the name's rung — a filled
+            // face and an empty one have to read as one shelf.
             Text("Watch").dsText(.label12).foregroundStyle(DS.textTertiary)
-                .frame(height: 28, alignment: .top)
+                .frame(height: rosterLabelHeight, alignment: .top)
         }
         .frame(width: rosterSlotWidth)
         .contentShape(Rectangle())
@@ -922,7 +937,7 @@ struct WalletScreen: View {
             AddressMark(entry: entry, size: 34)
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: DS.Space.s1) {
-                    Text(entry.name).dsText(.rowTitle17).foregroundStyle(DS.textPrimary)
+                    Text(entry.name).dsText(.heading17).foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                         // The name reveal (2026-08-01), the list's quieter
                         // form: a bare-added row renamed by reverse ENS
