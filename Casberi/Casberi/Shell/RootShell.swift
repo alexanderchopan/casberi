@@ -1074,11 +1074,24 @@ struct RootShell: View {
                 }
                 LaunchPerf.time("HomeInsight.refresh") { HomeInsightStore.shared.refresh(from: surfaced) }
                 await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
+                // The widget's rung-1 content (its brief headline) is
+                // published as a side effect of composing "today" — but
+                // refreshDigests only composes it for someone who has
+                // KEPT that ask. Most people never do, so the widget
+                // silently sat on rung 2 (the newest thing) forever.
+                // Compose it here too, unconditionally, so the widget
+                // stops being stale for everyone else (2026-08-03).
+                if !KeptAskStore.shared.order.contains("today") {
+                    _ = await TodayBrief.compose(things: surfaced, context: modelContext)
+                }
                 LaunchPerf.time("refreshWhisper") { refreshWhisper(things: surfaced) }
                 #else
                 let surfaced = Corpus.surfaced((try? modelContext.fetch(d)) ?? [])
                 HomeInsightStore.shared.refresh(from: surfaced)
                 await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
+                if !KeptAskStore.shared.order.contains("today") {
+                    _ = await TodayBrief.compose(things: surfaced, context: modelContext)
+                }
                 // The whisper's compose rides the same corpus walk this
                 // Task already paid for — never its own fetch.
                 refreshWhisper(things: surfaced)
