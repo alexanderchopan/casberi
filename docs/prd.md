@@ -13979,6 +13979,44 @@ amendment is contingent on the entitlement; §67 stands unchanged today.
 cannot be requested for an unshipped app), then the category decision, then
 roughly a day of code.
 
+### Amendment (2026-08-03) — criterion 1 is MET as a secondary category, and it cost nothing (user: "we could change one to Finance if that is all it takes", then "I just changed it to Finance for the secondary category. saved it, no need for another submission")
+
+**Casberi is listed Productivity (primary) + Finance (secondary) as of
+2026-08-03.** Utilities was the slot that got spent; Productivity was never in
+question.
+
+Three things this settles, and one it does not:
+
+- **The category was NEVER the immovable object §278 called it.** The above
+  reads criterion 1 as "recategorize the whole product", but App Store Connect
+  gives every app TWO category slots and the second one was holding
+  **Utilities** — a default nobody browses, costing nothing to give up. The
+  blocker was a false dichotomy, not a trade.
+- **Editing it needed no resubmission**, with the release still pending review.
+  Apple's own [required-localizable-and-editable-properties] table marks
+  Primary/Secondary Category as not "Editable", which is TRUE OF A LIVE APP —
+  it means "not changeable without shipping a version" — and false of a version
+  that hasn't shipped, whose app information is still open. Measured by the
+  user against the real console; do not re-derive this from the table.
+- **Social was ruled out**, not merely passed over: Casberi cannot post, it
+  READS other people's posts, and a Social Networking listing invites the
+  UGC-moderation, blocking and reporting expectations this app doesn't
+  implement. Finance was the only one of the three that buys anything.
+- **UNSETTLED — does a SECONDARY listing satisfy Apple?** Their wording is
+  "listed in the Finance category in App Store Connect", which does not say
+  primary, and nothing published resolves it either way. The cheap test is the
+  entitlement request itself: a refusal costs a re-request, not a resubmission,
+  and only THEN does the real §278 trade (misfiling the product for one bridge)
+  need making.
+
+**Order of operations, restated**: approval → request the entitlement as
+Account Holder against `com.casberi.app` → roughly a day of code. The category
+step is done. The residual risk of doing it mid-review, accepted knowingly, is
+that a Finance listing puts the watched-wallet features in front of a reviewer
+primed for guideline 3.1.5(b) — the answer being that Casberi watches
+addresses, holds no keys and can never move funds (`-wcConnectProbe`'s
+`methods=0 events=0` is that promise as a test).
+
 ## §279 — TikTok, imported: the expiry is the argument FOR it (user: "we talked about tiktok before it takes four days to get and your data expires in four days but if you can import it wouldn't it last longer", then "yes lets do tiktok", 2026-08-02)
 
 **The user was right, and the codebase already agreed with them twice.** §36
