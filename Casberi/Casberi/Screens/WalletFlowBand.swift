@@ -82,10 +82,10 @@ struct WalletFlowBand: View {
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
                     .lineLimit(1)
                 netLine
-                if band.unpricedCount > 0 {
+                if let note = coverageNote {
                     // Stated, never swallowed — a band drawn from six of nine
                     // moves is a different claim from one drawn from all nine.
-                    Text(unpricedNote)
+                    Text(note)
                         .dsText(.label12).foregroundStyle(DS.textTertiary)
                         .lineLimit(2)
                 }
@@ -130,10 +130,28 @@ struct WalletFlowBand: View {
         }
     }
 
-    private var unpricedNote: String {
-        band.unpricedCount == 1
-            ? String(localized: "1 move couldn't be priced, so it isn't drawn")
-            : String(localized: "\(band.unpricedCount) moves couldn't be priced, so they aren't drawn")
+    /// What this band does NOT cover, in one line — nil when it covers
+    /// everything.
+    ///
+    /// Two causes, kept as separate clauses rather than summed into one number
+    /// (2026-08-03): a move that COULDN'T be priced says the read fell short,
+    /// while a move OLDER than price data says nothing about the read at all
+    /// and will never change. Adding them would produce a number that reads as
+    /// an accusation against the price read on any corpus with history.
+    private var coverageNote: String? {
+        var parts: [String] = []
+        if band.unpricedCount > 0 {
+            parts.append(band.unpricedCount == 1
+                ? String(localized: "1 move couldn't be priced")
+                : String(localized: "\(band.unpricedCount) moves couldn't be priced"))
+        }
+        if band.predatingCount > 0 {
+            parts.append(band.predatingCount == 1
+                ? String(localized: "1 is older than price data")
+                : String(localized: "\(band.predatingCount) are older than price data"))
+        }
+        guard !parts.isEmpty else { return nil }
+        return String(localized: "\(parts.joined(separator: " · ")) — not drawn")
     }
 
     // MARK: - Geometry

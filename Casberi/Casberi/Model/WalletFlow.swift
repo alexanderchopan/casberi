@@ -66,6 +66,12 @@ enum WalletFlow {
         /// drawn from 6 of 9 moves is a different claim from one drawn from
         /// all 9, and the no-silent-caps rule says the drawing has to say so.
         let unpricedCount: Int
+        /// Legs older than price data itself — see `WalletFlowSource.pricingEra`.
+        /// Counted apart from `unpricedCount` because they are a different
+        /// fact: those COULD have been priced and weren't, these never can be,
+        /// and only the first kind says anything about how well the read is
+        /// working. Still disclosed, for the same no-silent-caps reason.
+        var predatingCount: Int = 0
 
         /// The dollars-per-point both sides share. ONE scale on purpose — if
         /// each side normalised to its own total, a $200 week of outflow would
@@ -95,12 +101,24 @@ enum WalletFlow {
     /// picture above it. A band claiming to be "where it moved" while covering
     /// a tenth of the window is the fake-status rule wearing a chart.
     ///
-    /// This is a real state, not a hypothetical: transfers landed before
-    /// `Thing.transferUSD` existed carry no price and never will (they dedupe
-    /// out of every later pass), and the Alchemy fallback arm carries none at
-    /// all. Both cases resolve on their own — old moves leave a 7- or 30-day
-    /// window, and new ones arrive priced — so declining now costs a card
-    /// today rather than trust permanently.
+    /// The share is measured over legs that COULD have been priced. Legs older
+    /// than price data itself are removed before this applies
+    /// (`WalletFlowSource.pricingEra`) rather than counted as failures —
+    /// **that distinction is the whole reason this floor was reachable at
+    /// all** (2026-08-03).
+    ///
+    /// It wasn't, before. The original reasoning said the decline "resolves on
+    /// its own — old moves leave a 7- or 30-day window", which is true of those
+    /// two ranges and false of the DEFAULT one: `WalletRange.watched` has a nil
+    /// span, so its window is the entire corpus and nothing ever leaves it. On
+    /// any wallet with real history the unpriceable rows outnumbered the
+    /// priceable ones permanently, the floor never cleared, and the card was
+    /// invisible — reported by the user as "I have never seen it", which is
+    /// exactly right and had nothing to do with their four wallets.
+    ///
+    /// The floor itself was never the bug and is unchanged: a band claiming to
+    /// be "where it moved" while covering a tenth of what it could see is the
+    /// fake-status rule wearing a chart. Only its denominator was wrong.
     static let minPricedShare = 0.5
 
     /// A lane this small can't be drawn honestly (it would round to a
@@ -117,7 +135,10 @@ enum WalletFlow {
     /// scale is not a smaller band, it's a different claim — or when fewer
     /// than two lanes survive, since one lane is a sentence and this is a
     /// comparison.
-    static func band(legs: [Leg]) -> Band? {
+    /// `predating` is how many legs the adapter dropped as older than price
+    /// data — they never reach the floor, and are carried only so the card can
+    /// say they exist.
+    static func band(legs: [Leg], predating: Int = 0) -> Band? {
         let unpriced = legs.filter { $0.usd == nil }.count
         let priced = legs.compactMap { leg -> (Leg, Double)? in
             guard let usd = leg.usd, usd > 0, usd.isFinite else { return nil }
@@ -139,7 +160,8 @@ enum WalletFlow {
         let outLanes = lanes(from: priced.filter { !$0.0.received },
                              side: "out", scale: scale)
         let band = Band(inLanes: inLanes, outLanes: outLanes,
-                        inUSD: inTotal, outUSD: outTotal, unpricedCount: unpriced)
+                        inUSD: inTotal, outUSD: outTotal, unpricedCount: unpriced,
+                        predatingCount: predating)
         guard band.laneCount >= 2 else { return nil }
         return band
     }

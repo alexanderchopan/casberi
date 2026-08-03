@@ -261,7 +261,17 @@ enum WalletIngest {
                 // A transfer between two watched addresses comes back from
                 // BOTH queries with the same uniqueId — land it once.
                 if existing.contains(ref) {
-                    if !received, seenThisPass.insert("heal:\(ref)").inserted {
+                    // BOTH directions (2026-08-03). This was `!received`,
+                    // inherited from the spam flag's own outbound-only scope —
+                    // but the heal carries TWO facts now, and the price half
+                    // has no reason to be outbound. The result was that every
+                    // RECEIVED transfer landed before `transferUSD` existed
+                    // stayed unpriced forever, which is most of an established
+                    // corpus's inflow side, which is what kept the flow band
+                    // permanently under its priced-share floor. The flag
+                    // itself is still sent-only — gated inside the heal now,
+                    // where its own reason lives.
+                    if seenThisPass.insert("heal:\(ref)").inserted {
                         healLegs.append(Leg(t: t, chain: chain, received: received,
                                             ref: ref, address: address))
                     }
@@ -1146,9 +1156,14 @@ enum WalletIngest {
     /// - **The `"spam"` flag** — same reason `WalletSafety.healSpoofedSymbols`
     ///   exists: the ingest-time flag only ever sees NEW transfers.
     ///
-    /// SENT legs only, matching the flag's own scope, and each fact is applied
-    /// independently: a leg that gains a price is not thereby innocent, and a
-    /// leg that gains a flag may still be worth something on a later read.
+    /// BOTH directions are healed for PRICE; the spam flag stays SENT-only,
+    /// gated below rather than at the call site (2026-08-03). The two facts
+    /// used to share the caller's `!received` filter, which silently made the
+    /// price backfill outbound-only — so an established corpus kept its whole
+    /// received side unpriced forever and the flow band never cleared its
+    /// floor. Each fact is applied independently: a leg that gains a price is
+    /// not thereby innocent, and a leg that gains a flag may still be worth
+    /// something on a later read.
     /// Never UNFLAGS — a token can enter the held set long after the fiction
     /// landed (buying the real thing an impostor copied doesn't retire the
     /// impostor), so absence of evidence this pass is not evidence of absence.
@@ -1175,7 +1190,10 @@ enum WalletIngest {
                 thing.transferUSD = usd
                 touched = true
             }
-            if !thing.hasSecurityFlag("spam"),
+            // Sent legs only — `isFakeOutboundTransfer` is a claim about
+            // OUTBOUND fictions, and asking it about an inbound leg would be
+            // asking a different question than the one it answers.
+            if !leg.received, !thing.hasSecurityFlag("spam"),
                WalletSafety.isFakeOutboundTransfer(contract: leg.contract,
                                                    category: leg.category,
                                                    held: heldPriced,

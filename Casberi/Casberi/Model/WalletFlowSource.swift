@@ -12,12 +12,50 @@ import SwiftData
 /// it: there is no stored property left to read after a delete lands.
 enum WalletFlowSource {
 
+    /// When per-transfer prices started existing at all.
+    ///
+    /// `Thing.transferUSD` landed 2026-08-01 (prd §270). A transfer stored
+    /// before that carries no price and CANNOT gain one: the read that would
+    /// fill it dedupes on `sourceRef`, so an old row is only ever re-seen
+    /// while it is still inside the wallet's re-read window, and after that
+    /// it is permanently unpriceable.
+    ///
+    /// Deliberately the START of that day, UTC, not the commit's own
+    /// timestamp: the boundary only has to be conservative in the direction of
+    /// treating a genuinely-failed price as a failure, and midnight puts a few
+    /// hours of real failures on the strict side of the line rather than
+    /// excusing them.
+    static let pricingEra = Date(timeIntervalSince1970: 1_785_542_400)
+
     /// Builds the band for a window, or nil when there's nothing to draw.
     ///
     /// `since` bounds the window (nil = everything the corpus holds, which is
     /// what the room's "watched" range means).
     static func band(from things: [Thing], since: Date?) -> WalletFlow.Band? {
-        WalletFlow.band(legs: legs(from: things, since: since))
+        let split = partition(from: things, since: since)
+        return WalletFlow.band(legs: split.legs, predating: split.predating)
+    }
+
+    /// The window's legs, split from the ones that can never carry a price.
+    ///
+    /// The split is what makes `minPricedShare` mean "how well is pricing
+    /// working" instead of "how old is this corpus" — see that constant for
+    /// the bug this fixes. A leg is set aside ONLY when it is both unpriced
+    /// and older than `pricingEra`: an old leg that DID get a price (the heal
+    /// reached it while it was still being re-read) is a perfectly good leg,
+    /// and a new leg with no price is a real failure that must still count.
+    static func partition(from things: [Thing],
+                          since: Date?) -> (legs: [WalletFlow.Leg], predating: Int) {
+        var kept: [WalletFlow.Leg] = []
+        var predating = 0
+        for (leg, capturedAt) in datedLegs(from: things, since: since) {
+            if leg.usd == nil, capturedAt < pricingEra {
+                predating += 1
+                continue
+            }
+            kept.append(leg)
+        }
+        return (kept, predating)
     }
 
     /// `-flowProbe <days|YES>` — one line per fact, never joined (the
@@ -33,25 +71,35 @@ enum WalletFlowSource {
         let window = days.map { "\($0)d" } ?? "all"
         let things = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
         let wallet = things.filter { $0.isLive && $0.source == "Wallet" && $0.kind == .transaction }
-        let legs = legs(from: things, since: since)
+        let split = partition(from: things, since: since)
+        let legs = split.legs
         var out = [
             "window=\(window) walletThings=\(wallet.count) legs=\(legs.count) "
-                + "priced=\(legs.filter { $0.usd != nil }.count)",
+                + "priced=\(legs.filter { $0.usd != nil }.count) "
+                // Reported separately from `priced` on purpose: these two
+                // numbers moving together vs apart is what tells you whether
+                // a blank card is a broken price read or just an old corpus.
+                + "predatingPriceData=\(split.predating)",
         ]
-        guard let band = band(from: things, since: since) else {
+        guard let band = WalletFlow.band(legs: legs, predating: split.predating) else {
             // Each decline names itself, so a blank card is diagnosable from
             // the log alone.
             let pricedCount = legs.filter { $0.usd != nil }.count
             if legs.isEmpty {
                 out.append("DECLINED: no directional transfers in the window "
-                            + "(swaps and self-moves carry no direction, and spam is excluded)")
+                            + "(swaps and self-moves carry no direction, and spam is excluded)"
+                            + (split.predating > 0
+                                ? " — \(split.predating) were set aside as older than price data"
+                                : ""))
             } else if pricedCount == 0 {
                 out.append("DECLINED: nothing in the window could be priced")
             } else if Double(pricedCount) / Double(legs.count) < WalletFlow.minPricedShare {
+                // Legs older than price data are already out of this ratio, so
+                // unlike before it really does mean "the price read is
+                // failing" rather than "this corpus has history".
                 out.append(String(format:
-                    "DECLINED: only %d of %d moves are priced (%.0f%%, floor %.0f%%) — "
-                        + "transfers landed before Thing.transferUSD existed never gain a price, "
-                        + "so this clears as they age out of the window",
+                    "DECLINED: only %d of %d PRICEABLE moves are priced (%.0f%%, floor %.0f%%) — "
+                        + "these could have been priced and weren't, so suspect the read",
                     pricedCount, legs.count,
                     Double(pricedCount) / Double(legs.count) * 100,
                     WalletFlow.minPricedShare * 100))
@@ -77,7 +125,15 @@ enum WalletFlowSource {
     /// The legs a window contributes. Reads every stored property behind a
     /// liveness check, at the boundary, once.
     static func legs(from things: [Thing], since: Date?) -> [WalletFlow.Leg] {
-        var out: [WalletFlow.Leg] = []
+        datedLegs(from: things, since: since).map(\.leg)
+    }
+
+    /// Each leg with the date it landed — the same walk, keeping the one fact
+    /// `WalletFlow.Leg` deliberately doesn't carry (it is a value type about
+    /// money, not a row) but the pricing-era split needs.
+    private static func datedLegs(from things: [Thing],
+                                  since: Date?) -> [(leg: WalletFlow.Leg, capturedAt: Date)] {
+        var out: [(leg: WalletFlow.Leg, capturedAt: Date)] = []
         for thing in things where thing.isLive {
             guard thing.source == "Wallet", thing.kind == .transaction else { continue }
             if let since, thing.capturedAt < since { continue }
@@ -111,8 +167,9 @@ enum WalletFlowSource {
             let key = thing.transferCounterparty?.lowercased()
                 ?? address
                 ?? "unknown:\(thing.id.uuidString)"
-            out.append(WalletFlow.Leg(received: received, name: name,
-                                      key: key, usd: thing.transferUSD))
+            out.append((WalletFlow.Leg(received: received, name: name,
+                                       key: key, usd: thing.transferUSD),
+                        thing.capturedAt))
         }
         return out
     }
