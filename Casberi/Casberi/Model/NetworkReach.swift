@@ -15,6 +15,23 @@ import Foundation
 /// code that isn't listed here fails the build. That makes this provable
 /// where a log would only be plausible.
 ///
+/// **"Every host literal" is narrower than it sounds, and it cost a real gap
+/// (2026-08-03).** A host BUILT at runtime is not a literal: the wallet's RPC
+/// URLs interpolate the chain's name as their first component, so the audit's
+/// `https://[a-z.-]+` scan matched nothing at all there and five Alchemy RPC
+/// hosts the wallet reaches on every sweep were never disclosed. The receipts
+/// screen (`NetworkLedger`, prd §277) is what found them — it records what was
+/// actually reached, which is exactly the check a source scan can't be. The
+/// audit now also reads interpolated forms with a literal tail; the class to
+/// remember is that anything assembled at runtime needs a HAND-WRITTEN entry,
+/// the same rule the vendored WalletConnect SDK's own hosts have below.
+///
+/// The other half of that class can never be listed here: a host that comes
+/// out of the PERSON's input — a feed they follow, a store, their own
+/// self-hosted PostHog. Those entries carry a prose host ("the feeds you
+/// follow"), and the call sites name their service to `NetworkLedger` instead
+/// so the receipts screen can attribute them.
+///
 /// Grouped by the SERVICE a person recognizes, not by raw host — one service
 /// often spans several hosts (its API, its image CDN, its auth host). Each
 /// entry says plainly what the calls are for, and which bridge owns them so
@@ -115,10 +132,21 @@ enum NetworkReach {
 
         // MARK: Wallet & onchain — only while you watch a wallet or token
 
+        // The per-chain Alchemy hosts were added 2026-08-03, and they had been
+        // reached since the wallet shipped: the transfer, NFT and Solana reads
+        // build their host out of the chain's own name, so the URL begins with
+        // an interpolation, the audit's literal scan never saw one, and only
+        // `api.g.alchemy.com` — the one host written out in full — was ever
+        // disclosed. Listed one by one rather than as a bare `g.alchemy.com`
+        // so the row names the chains it really talks to.
         Endpoint(service: "Wallet",
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Reads the public onchain activity, balances, approvals, and DeFi positions of the wallets you watch — across Ethereum, Base, Arbitrum, Optimism, Polygon and Solana. Each request carries only a public address you chose to watch. Block explorers open in your browser, not from here.",
-                 hosts: ["api.g.alchemy.com", "api.zerion.io", "coins.llama.fi",
+                 hosts: ["api.g.alchemy.com", "eth-mainnet.g.alchemy.com",
+                         "base-mainnet.g.alchemy.com", "arb-mainnet.g.alchemy.com",
+                         "opt-mainnet.g.alchemy.com", "matic-mainnet.g.alchemy.com",
+                         "solana-mainnet.g.alchemy.com", "robinhood-mainnet.g.alchemy.com",
+                         "api.zerion.io", "coins.llama.fi",
                          "rpc.mevblocker.io", "mainnet.base.org", "mainnet.optimism.io",
                          "arb1.arbitrum.io", "eth.api.onfinality.io", "polygon.api.onfinality.io"]),
         // Disclosed 2026-08-01, and it should have been here all along: these
@@ -241,10 +269,17 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Polymarket"),
                  purpose: "Fetches the live odds and price history of the markets you watch on Polymarket. Public data, read-only.",
                  hosts: ["gamma-api.polymarket.com", "clob.polymarket.com"]),
+        // Yahoo's two chart hosts joined 2026-08-03, the same runtime-built
+        // blind spot as the Alchemy row above: `StockChart` tries
+        // `"https://\(host).finance.yahoo.com/…"` with host = query1 then
+        // query2, so neither was ever a literal the audit could read. It is
+        // the curve behind a watched ticker's chart — keyless, and it carries
+        // the ticker alone.
         Endpoint(service: "Stocktwits",
                  reach: .whenConnected(bridge: "Stocktwits"),
-                 purpose: "Fetches the posts and price of the tickers you watch. Public data — a watched ticker never sees your portfolio.",
-                 hosts: ["api.stocktwits.com"]),
+                 purpose: "Fetches the posts and price of the tickers you watch, and each ticker's public price history from Yahoo Finance to draw its chart on \(DS.device). Public data — a watched ticker never sees your portfolio.",
+                 hosts: ["api.stocktwits.com",
+                         "query1.finance.yahoo.com", "query2.finance.yahoo.com"]),
         Endpoint(service: "OpenSea",
                  reach: .whenConnected(bridge: "OpenSea"),
                  purpose: "Fetches the newest NFT collections on the chains you watch. Public data, read-only.",
@@ -265,6 +300,15 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Reddit"),
                  purpose: "Reads your saved posts. Connects through Reddit's own sign-in.",
                  hosts: ["oauth.reddit.com", "www.reddit.com"]),
+        // Nostr's own hosts are WebSocket relays, so no `https://` literal
+        // exists for the audit to find and this entry — like WalletConnect's
+        // above — is hand-written. The NIP-05 check is the person-named half:
+        // verifying `you@example.com` asks example.com, a domain that arrives
+        // in someone's profile, so it can only ever be prose here.
+        Endpoint(service: "Nostr",
+                 reach: .whenConnected(bridge: "Nostr"),
+                 purpose: "Reads the public notes, profiles and follows of the accounts you follow, straight from two public relays. Checking a name like you@example.com asks that domain's own public file. No account, no key, nothing signed.",
+                 hosts: ["nos.lol", "relay.damus.io", "the domain in a name you check"]),
         Endpoint(service: "Pinterest",
                  reach: .whenConnected(bridge: "Pinterest"),
                  purpose: "Reads a public Pinterest profile's pins.",
@@ -289,10 +333,26 @@ enum NetworkReach {
                  purpose: "Reads your public Steam profile — games and achievements — with a Steam API key.",
                  hosts: ["api.steampowered.com", "steamcommunity.com", "store.steampowered.com",
                          "cdn.cloudflare.steamstatic.com"]),
+        // "The shows you follow" is a real host at runtime and can't be one
+        // here: a podcast feed lives on whatever host the show publishes from
+        // (`ethdaily.io`, say), learned from Apple's directory when you pick
+        // the show. `FeedFetch` names this service to `NetworkLedger` so the
+        // receipts screen files that host under Podcasts rather than reading
+        // it as an undisclosed reach.
         Endpoint(service: "Podcasts",
                  reach: .whenConnected(bridge: "Podcasts"),
-                 purpose: "Finds a show in Apple's public podcast directory and reads its feed for new episodes.",
-                 hosts: ["itunes.apple.com"]),
+                 purpose: "Finds a show in Apple's public podcast directory and reads its feed for new episodes. The feed request goes to that show's own site.",
+                 hosts: ["itunes.apple.com", "the shows you follow"]),
+        // Apple Music's own reads go through Apple's Music framework on this
+        // iPhone rather than a URL we build, so nothing about them is a host
+        // here. The cover art IS ours to name: song artwork is fetched from
+        // Apple's artwork CDN, which shards across is1-…is5-ssl, hence the
+        // bare domain. Podcast and show art rides the same CDN when a row
+        // draws it.
+        Endpoint(service: "Apple Music",
+                 reach: .whenConnected(bridge: "Apple Music"),
+                 purpose: "Reads what you recently played through Apple's own Music framework on \(DS.device), then fetches each song's cover from Apple's artwork CDN. The request carries only the artwork's address.",
+                 hosts: ["mzstatic.com"]),
 
         // MARK: Work
 
@@ -342,10 +402,14 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "RSS"),
                  purpose: "Fetches the feeds you follow for new posts. Each request goes to that feed's own site.",
                  hosts: ["the feeds you follow", "feeds.feedburner.com"]),
+        // `substack.com` is listed as well as the prose, because a publication
+        // you name by slug is fetched at `<slug>.substack.com` — a real host
+        // this entry can declare, matched by subdomain. A publication on its
+        // own custom domain stays prose, and is attributed at the call site.
         Endpoint(service: "Substack",
                  reach: .whenConnected(bridge: "Substack"),
                  purpose: "Fetches a publication's public feed for new posts.",
-                 hosts: ["the publication you follow"]),
+                 hosts: ["substack.com", "the publication you follow"]),
 
         // MARK: Shopping
 
@@ -400,6 +464,17 @@ enum NetworkReach {
     /// Matching is on the label boundary — exact, or a subdomain of a
     /// declared host — never `contains`, so `api.stripe.com.attacker.example`
     /// can never present itself as Stripe (the `OEmbed` rule).
+    /// Whether this registry really carries a service by that name — the
+    /// guard on `NetworkLedger`'s caller-supplied attribution (2026-08-03).
+    /// A call site may say "this host is the RSS feed you follow", and the
+    /// receipts screen believes it only for a service that has an entry here
+    /// saying what RSS reaches and why. Without this check an attribution
+    /// would be a way to move a host out of "not on the list" by naming
+    /// anything at all, which is the opposite of what that section is for.
+    static func declares(service: String) -> Bool {
+        endpoints.contains { $0.service == service }
+    }
+
     static func service(forHost host: String) -> String? {
         let needle = host.lowercased()
         var best: (service: String, length: Int)?

@@ -123,8 +123,12 @@ enum ShopifyIngest {
     /// isn't a Shopify store, or its WAF refused the fetch). A Safari-shaped UA
     /// (shared, in IngestSupport) gets through a store's bot-WAF more often.
     private static func meta(_ host: String) async -> (name: String, currency: String)? {
+        // Attributed for the receipts screen: a store's host is the person's
+        // own input, so the reach registry lists it as "the store you follow"
+        // and can't name it (see NetworkLedger.Entry.service).
         guard let json = await IngestSupport.getJSON(
-            "https://\(host)/meta.json", headers: ["User-Agent": IngestSupport.safariUserAgent]
+            "https://\(host)/meta.json", headers: ["User-Agent": IngestSupport.safariUserAgent],
+            service: "Shopify"
         ) as? [String: Any] else { return nil }
         // A real Shopify meta.json always carries a currency; its absence means
         // this host answered but isn't a Shopify store.
@@ -138,7 +142,9 @@ enum ShopifyIngest {
     /// nothing new worth landing this pass.
     private static func fetch(_ host: String, currency: String) async -> [Product]? {
         let url = "https://\(host)/products.json?limit=50"
-        guard let root = await IngestSupport.getJSON(url, headers: ["User-Agent": IngestSupport.safariUserAgent]) as? [String: Any],
+        guard let root = await IngestSupport.getJSON(
+                url, headers: ["User-Agent": IngestSupport.safariUserAgent],
+                service: "Shopify") as? [String: Any],
               let raw = root["products"] as? [[String: Any]]
         else { return nil }
         return raw.compactMap { Product(json: $0, host: host, currency: currency) }

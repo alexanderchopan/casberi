@@ -245,8 +245,12 @@ enum PostHogFetch {
     /// then stare at an empty screen wondering why (the `BridgeFieldRow`
     /// lesson from Cal.com), and the key already knows the answer.
     static func projects(host: String, key: String) async -> [Project]? {
+        // Attributed throughout this file: `host` is `us.posthog.com` by
+        // default (declared in the reach registry) but self-hosting is
+        // supported, and a self-hosted host is one the person typed — so
+        // only the caller can name the service for it.
         let (json, status) = await IngestSupport.getJSONStatus(
-            "https://\(host)/api/users/@me/", auth: auth(key))
+            "https://\(host)/api/users/@me/", auth: auth(key), service: "PostHog")
         guard status == 200, let root = json as? [String: Any] else { return nil }
 
         // The documented shape carries the current org inline, with `teams`
@@ -274,7 +278,8 @@ enum PostHogFetch {
                            query: String, limit: Int = 6) async -> [EventDef] {
         let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         let url = "https://\(host)/api/projects/\(project)/event_definitions/?search=\(encoded)&limit=\(limit)"
-        guard let root = await IngestSupport.getJSON(url, auth: auth(key)) as? [String: Any],
+        guard let root = await IngestSupport.getJSON(url, auth: auth(key),
+                                                     service: "PostHog") as? [String: Any],
               let results = root["results"] as? [[String: Any]] else { return [] }
         return results.compactMap { row in
             guard let name = row["name"] as? String, !name.isEmpty else { return nil }
@@ -296,7 +301,7 @@ enum PostHogFetch {
                                    "values": ["event": event]]
         let (json, status) = await IngestSupport.postJSONStatus(
             "https://\(host)/api/projects/\(project)/query/",
-            auth: auth(key), body: ["query": body])
+            auth: auth(key), body: ["query": body], service: "PostHog")
         guard status == 200, let root = json as? [String: Any] else { return nil }
         return (root["results"] as? [[Any]]) ?? []
     }
@@ -362,7 +367,8 @@ enum PostHogFetch {
     static func annotations(host: String, project: String, key: String,
                             limit: Int = 25) async -> [Annotation]? {
         let url = "https://\(host)/api/projects/\(project)/annotations/?limit=\(limit)"
-        let (json, status) = await IngestSupport.getJSONStatus(url, auth: auth(key))
+        let (json, status) = await IngestSupport.getJSONStatus(url, auth: auth(key),
+                                                               service: "PostHog")
         guard status == 200, let root = json as? [String: Any],
               let results = root["results"] as? [[String: Any]] else { return nil }
         return results.compactMap { row in

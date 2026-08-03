@@ -325,7 +325,8 @@ enum NostrIngest {
               let encodedName = name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
         else { return nil }
         guard let root = await IngestSupport.getJSON(
-            "https://\(domain)/.well-known/nostr.json?name=\(encodedName)") as? [String: Any],
+            "https://\(domain)/.well-known/nostr.json?name=\(encodedName)",
+            service: "Nostr") as? [String: Any],
               let names = root["names"] as? [String: Any] else { return nil }
         if let exact = names[name] as? String, isHex64Pubkey(exact.lowercased()) {
             return exact.lowercased()

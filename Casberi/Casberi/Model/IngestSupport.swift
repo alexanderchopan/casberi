@@ -266,21 +266,30 @@ enum IngestSupport {
 
     // MARK: - JSON over HTTP (200 with a JSON body, or nil)
 
+    /// `service` names the caller for the receipts screen, and is needed
+    /// only where the HOST comes from the person's own input — a Shopify
+    /// store they named, their own self-hosted PostHog, the domain in a
+    /// Nostr name. Every other caller leaves it nil and is matched against
+    /// `NetworkReach` by host, which is the stronger check. See
+    /// `NetworkLedger.Entry.service`.
     static func getJSON(_ url: String, auth: String? = nil,
-                        headers: [String: String] = [:]) async -> Any? {
+                        headers: [String: String] = [:],
+                        service: String? = nil) async -> Any? {
         guard let u = URL(string: url) else { return nil }
-        return await getJSON(u, auth: auth, headers: headers)
+        return await getJSON(u, auth: auth, headers: headers, service: service)
     }
 
     static func getJSON(_ url: URL, auth: String? = nil,
-                        headers: [String: String] = [:]) async -> Any? {
+                        headers: [String: String] = [:],
+                        service: String? = nil) async -> Any? {
         var request = URLRequest(url: url)
         apply(auth: auth, headers: headers, to: &request)
-        return await run(request)
+        return await run(request, service: service)
     }
 
     static func postJSON(_ url: String, auth: String? = nil, body: [String: Any],
-                         headers: [String: String] = [:]) async -> Any? {
+                         headers: [String: String] = [:],
+                         service: String? = nil) async -> Any? {
         guard let u = URL(string: url),
               let payload = try? JSONSerialization.data(withJSONObject: body) else { return nil }
         var request = URLRequest(url: u)
@@ -288,7 +297,7 @@ enum IngestSupport {
         request.httpBody = payload
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         apply(auth: auth, headers: headers, to: &request)
-        return await run(request)
+        return await run(request, service: service)
     }
 
     /// Like `getJSON`, but also hands back the HTTP status — for a caller
@@ -298,11 +307,12 @@ enum IngestSupport {
     /// address a Safe at all" detection, which must never cache a transient
     /// outage as a permanent "no").
     static func getJSONStatus(_ url: String, auth: String? = nil,
-                              headers: [String: String] = [:]) async -> (json: Any?, status: Int) {
+                              headers: [String: String] = [:],
+                              service: String? = nil) async -> (json: Any?, status: Int) {
         guard let u = URL(string: url) else { return (nil, 0) }
         var request = URLRequest(url: u)
         apply(auth: auth, headers: headers, to: &request)
-        guard let (data, http) = await send(request) else { return (nil, 0) }
+        guard let (data, http) = await send(request, service: service) else { return (nil, 0) }
         guard http.statusCode == 200 else { return (nil, http.statusCode) }
         return (try? JSONSerialization.jsonObject(with: data), http.statusCode)
     }
@@ -316,7 +326,8 @@ enum IngestSupport {
     /// response at all — offline, DNS, connection reset). The body is nil
     /// unless the status was 200, exactly like `postJSON`.
     static func postJSONStatus(_ url: String, auth: String? = nil, body: [String: Any],
-                               headers: [String: String] = [:]) async -> (json: Any?, status: Int) {
+                               headers: [String: String] = [:],
+                               service: String? = nil) async -> (json: Any?, status: Int) {
         guard let u = URL(string: url),
               let payload = try? JSONSerialization.data(withJSONObject: body) else { return (nil, 0) }
         var request = URLRequest(url: u)
@@ -324,7 +335,7 @@ enum IngestSupport {
         request.httpBody = payload
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         apply(auth: auth, headers: headers, to: &request)
-        guard let (data, http) = await send(request) else { return (nil, 0) }
+        guard let (data, http) = await send(request, service: service) else { return (nil, 0) }
         guard http.statusCode == 200 else { return (nil, http.statusCode) }
         return (try? JSONSerialization.jsonObject(with: data), http.statusCode)
     }
@@ -335,7 +346,8 @@ enum IngestSupport {
     /// reason a Solana wallet costs two requests rather than eleven: ten
     /// `getTransaction` calls come back in a single ~0.4s round trip.
     static func postJSONArray(_ url: String, auth: String? = nil, body: [[String: Any]],
-                              headers: [String: String] = [:]) async -> [[String: Any]]? {
+                              headers: [String: String] = [:],
+                              service: String? = nil) async -> [[String: Any]]? {
         guard let u = URL(string: url),
               let payload = try? JSONSerialization.data(withJSONObject: body) else { return nil }
         var request = URLRequest(url: u)
@@ -343,7 +355,7 @@ enum IngestSupport {
         request.httpBody = payload
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         apply(auth: auth, headers: headers, to: &request)
-        return await run(request) as? [[String: Any]]
+        return await run(request, service: service) as? [[String: Any]]
     }
 
     private static func apply(auth: String?, headers: [String: String],
@@ -355,8 +367,9 @@ enum IngestSupport {
         }
     }
 
-    private static func run(_ request: URLRequest) async -> Any? {
-        guard let (data, http) = await send(request), http.statusCode == 200 else { return nil }
+    private static func run(_ request: URLRequest, service: String? = nil) async -> Any? {
+        guard let (data, http) = await send(request, service: service),
+              http.statusCode == 200 else { return nil }
         return try? JSONSerialization.jsonObject(with: data)
     }
 
@@ -366,8 +379,9 @@ enum IngestSupport {
     /// `session.data(for:)` themselves, which meant no single point could
     /// observe the host. Nothing about the request or the response is
     /// recorded except which host was contacted; see `NetworkLedger`.
-    private static func send(_ request: URLRequest) async -> (Data, HTTPURLResponse)? {
-        NetworkLedger.shared.record(request)
+    private static func send(_ request: URLRequest,
+                             service: String? = nil) async -> (Data, HTTPURLResponse)? {
+        NetworkLedger.shared.record(request, as: service)
         guard let (data, response) = try? await session.data(for: request),
               let http = response as? HTTPURLResponse else { return nil }
         return (data, http)

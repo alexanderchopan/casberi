@@ -27,6 +27,15 @@ import Foundation
 ///    instrumentation. Those are named in the registry and again on the
 ///    screen.
 ///
+/// 3. **Some hosts can only be named by the caller.** A followed feed, a
+///    Shopify store, a self-hosted PostHog, a saved link's own site: those
+///    hosts come out of the person's own input, so no hand-written registry
+///    could contain them and `NetworkReach.service(forHost:)` will never match
+///    one. Those call sites pass their service name to `record(host:as:)`, and
+///    the receipts screen falls back to it — see `Entry.service`. A host with
+///    neither a registry entry nor an attribution is the real finding, which
+///    is the whole point of keeping the "not on the list" section.
+///
 ///    **This list shipped WRONG once** — it claimed "every bridge" while
 ///    those ~27 direct-`URLSession` bridges silently bypassed the funnel, so
 ///    a person with RSS and Reddit connected would have opened the screen and
@@ -49,6 +58,22 @@ final class NetworkLedger: @unchecked Sendable {
         var count: Int
         var first: Date
         var last: Date
+        /// Which service asked, when the CALLER knows and the registry
+        /// structurally cannot (2026-08-03). A feed you follow, a Shopify
+        /// store you named, your own self-hosted PostHog, a link you saved:
+        /// the host comes out of your own input, so no hand-written list
+        /// could ever have contained it. Without this the receipts screen
+        /// read every such host as "not on the list — that's a bug, please
+        /// report it", which is both wrong and alarming: `ethdaily.io` is a
+        /// feed the person themselves added.
+        ///
+        /// Optional, and only a FALLBACK: `NetworkReach` stays the authority
+        /// for every host it declares, and a name here is honoured only if
+        /// the registry really carries a service by that name — so a caller
+        /// can't launder an undisclosed host by inventing an attribution.
+        /// Missing on rows written before this shipped, which decode as nil
+        /// (`Optional` uses `decodeIfPresent`) and simply sort as they used to.
+        var service: String?
         var id: String { host }
     }
 
@@ -77,7 +102,12 @@ final class NetworkLedger: @unchecked Sendable {
 
     // MARK: - Recording
 
-    func record(host: String) {
+    /// `service` names the caller for a host the registry can't declare in
+    /// advance — see `Entry.service`. Pass it ONLY where the host comes from
+    /// the person's own input (a feed, a store, a saved link); a host that is
+    /// fixed in code belongs in `NetworkReach`, where the static audit can
+    /// keep it honest.
+    func record(host: String, as service: String? = nil) {
         let clean = host.lowercased()
         guard !clean.isEmpty else { return }
         let now = Date()
@@ -85,9 +115,16 @@ final class NetworkLedger: @unchecked Sendable {
         if var existing = entries[clean] {
             existing.count += 1
             existing.last = now
+            // Learn an attribution the first time one is offered, and don't
+            // let a later unattributed call erase it: one host can be reached
+            // by both an attributed path and a generic one (a saved link
+            // whose site you also follow as a feed), and the name is more
+            // useful than its absence.
+            if existing.service == nil { existing.service = service }
             entries[clean] = existing
         } else {
-            entries[clean] = Entry(host: clean, count: 1, first: now, last: now)
+            entries[clean] = Entry(host: clean, count: 1, first: now, last: now,
+                                   service: service)
         }
         // Claim the flush HERE, while the lock is held. Advancing `lastFlush`
         // inside `flush()` instead let every concurrent request in a
@@ -101,13 +138,13 @@ final class NetworkLedger: @unchecked Sendable {
     }
 
     /// Convenience for the call sites that hold a request rather than a host.
-    func record(_ request: URLRequest) {
-        if let host = request.url?.host() { record(host: host) }
+    func record(_ request: URLRequest, as service: String? = nil) {
+        if let host = request.url?.host() { record(host: host, as: service) }
     }
 
     /// …and for the ones that hand `URLSession` a bare URL.
-    func record(_ url: URL) {
-        if let host = url.host() { record(host: host) }
+    func record(_ url: URL, as service: String? = nil) {
+        if let host = url.host() { record(host: host, as: service) }
     }
 
     // MARK: - Reading

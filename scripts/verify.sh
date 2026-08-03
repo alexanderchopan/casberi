@@ -26,6 +26,8 @@ print -P "%F{green}✓ catalog sync%f"
 # the app calls must be disclosed in NetworkReach.swift or the explicit
 # non-reach denylist — an undisclosed fetch host fails here.
 step "Network-reach audit"
+"$ROOT/scripts/network-reach-audit.sh" --self-test >/dev/null \
+  || fail "the network-reach audit's own self-test failed — the check is broken, not the code"
 "$ROOT/scripts/network-reach-audit.sh" || fail "a network host isn't disclosed — see scripts/network-reach-audit.sh"
 print -P "%F{green}✓ network-reach audit%f"
 

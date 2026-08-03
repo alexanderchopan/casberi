@@ -259,11 +259,17 @@ enum FeedFetch {
     /// A feed GET with a real User-Agent. Reddit answers the default URLSession
     /// agent with a 429; YouTube and Substack don't care, so one path serves
     /// all four. A non-2xx is a failed fetch, not empty data.
-    static func data(_ url: URL) async -> Data? {
+    ///
+    /// `service` is which of the four asked (2026-08-03). Two of them fetch a
+    /// host the reach registry structurally cannot name — a Substack on its
+    /// own domain, and a podcast feed on whatever site the show publishes
+    /// from — so the caller passes its own name and the receipts screen files
+    /// the host under it. See `NetworkLedger.Entry.service`.
+    static func data(_ url: URL, as service: String? = nil) async -> Data? {
         var request = URLRequest(url: url)
         request.setValue("Mozilla/5.0 (compatible; Casberi/1.0; +https://casberi.app)",
                          forHTTPHeaderField: "User-Agent")
-        NetworkLedger.shared.record(request)
+        NetworkLedger.shared.record(request, as: service)
         guard let (data, response) = try? await URLSession.shared.data(for: request) else { return nil }
         if let code = (response as? HTTPURLResponse)?.statusCode, !(200..<300).contains(code) { return nil }
         return data
@@ -351,7 +357,7 @@ enum FeedFollowIngest {
             resolvedFeedURL = built
         }
         guard let url = URL(string: feedURL) else { return nil }
-        guard let data = await FeedFetch.data(url) else {
+        guard let data = await FeedFetch.data(url, as: kind.source) else {
             // The resolution (if any) is still worth returning and
             // persisting even though this pass never reached the feed's
             // actual content (review 2026-07-13 — see the struct doc above).

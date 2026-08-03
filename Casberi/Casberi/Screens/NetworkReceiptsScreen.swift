@@ -21,8 +21,27 @@ struct NetworkReceiptsScreen: View {
         var id: String { entry.host }
     }
 
+    /// Registry first, then the recorder's own attribution (2026-08-03).
+    ///
+    /// Some hosts can never be in the registry: a feed you follow, a Shopify
+    /// store you named, a link you saved, your own self-hosted PostHog. The
+    /// host comes out of YOUR input, so `service(forHost:)` misses it and
+    /// every one of them landed under "not on the list — that's a bug, please
+    /// report it", which was both wrong and alarming. Those call sites now
+    /// name their service when they record (`NetworkLedger.Entry.service`).
+    ///
+    /// The name is honoured only when the registry really carries a service
+    /// by that name, so an attribution can move a host from one honest place
+    /// to another and never OUT of the finding — and the host match always
+    /// wins, because it's the one a static audit can prove.
     private var receipts: [Receipt] {
-        entries.map { Receipt(entry: $0, service: NetworkReach.service(forHost: $0.host)) }
+        entries.map { entry in
+            let byHost = NetworkReach.service(forHost: entry.host)
+            let named = entry.service.flatMap {
+                NetworkReach.declares(service: $0) ? $0 : nil
+            }
+            return Receipt(entry: entry, service: byHost ?? named)
+        }
     }
 
     /// Rows whose host the registry declares, and rows it doesn't. The second
@@ -105,7 +124,7 @@ struct NetworkReceiptsScreen: View {
     /// everything. These are the request paths that don't ride an
     /// instrumented transport — see `NetworkLedger`'s own doc.
     private var ceiling: String {
-        "Recorded from every connected app's own requests, plus your agent key and saved-link lookups. Not recorded: pictures loaded into rows as you scroll, and live wallet-app connections, which use their own connections."
+        "Recorded from every connected app's own requests, plus your agent key and saved-link lookups. Some of these hosts are ones you named yourself — a feed, a store, a site you saved — so they're filed under the app that asked for them. Not recorded: pictures loaded into rows as you scroll, and live wallet-app connections, which use their own connections."
     }
 
     private func row(_ receipt: Receipt) -> some View {

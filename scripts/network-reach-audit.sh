@@ -122,4 +122,141 @@ if (( ${#missing[@]} > 0 )); then
   exit 1
 fi
 
+# ── Hosts BUILT at runtime (2026-08-03) ────────────────────────────────────
+# The scan above reads literals, and `"https://\(chain.network)" + ".g" + …`
+# is not one: it starts with an interpolation, so `https://[a-z.-]+` matched
+# NOTHING and five Alchemy RPC hosts the wallet reaches on every sweep went
+# undisclosed until the receipts screen caught them in the field. Same class as
+# the vendored WalletConnect SDK's hosts — a reach the source scan structurally
+# cannot see — so it gets its own checks. Two, because one isn't enough:
+#
+#   A. Every interpolated form must name a family the registry declares. This
+#      is coarse ON PURPOSE and its ceiling is real: it proves SOME host in the
+#      family is disclosed, not that every host the code can build is. It could
+#      not have caught the shipped bug on its own — `api.g.alchemy.com` was
+#      declared, and it is a one-label child of the same tail as the five that
+#      weren't. It catches a whole family nobody named at all.
+#   B. …so the family that actually drifted is checked against its own source
+#      of truth: the wallet's chain table. Every `Chain(network: "x")` there
+#      becomes `x.g.alchemy.com`, so a new chain must disclose its host the day
+#      it lands — the SwiftData-liveness-audit trick of parsing the model
+#      instead of remembering it.
+#
+# A FULLY dynamic build (`https://\(host)/…`, no literal tail at all) can be
+# checked by neither and declared by nobody: the host is the person's own
+# input. Those are reported as info — each one's record call names its service
+# to NetworkLedger instead, which is what the receipts screen reads.
+declared_hosts=$(grep -oE '"[a-z0-9-]+(\.[a-z0-9-]+)+"' "$REGISTRY" | tr -d '"' | sort -u)
+
+# Is one interpolated tail (e.g. ".g.alchemy.com") covered by the registry?
+# Either the tail is itself a declared host (a parent domain, which covers
+# every subdomain exactly as NetworkReach.service(forHost:) does), or some
+# declared host is the tail plus ONE label — the label the interpolation
+# fills. The label count is the part that matters: without it a single
+# `query1.finance.yahoo.com` entry would silently vouch for a code path
+# building any `\(x).yahoo.com` it liked.
+tail_disclosed() {
+  local tail="$1" bare="${1#.}" h
+  local want=$(( $(tr -cd '.' <<< "$bare" | wc -c) + 1 ))
+  for h in $declared_hosts; do
+    [[ "$h" == "$bare" ]] && return 0
+    case "$h" in
+      *"$tail") [[ $(tr -cd '.' <<< "$h" | wc -c) -eq $want ]] && return 0 ;;
+    esac
+  done
+  return 1
+}
+
+# Check B's source of truth: the chain table every Alchemy URL is built from.
+CHAINS_FILE="Casberi/Casberi/Model/WalletIngest.swift"
+alchemy_hosts() {
+  grep -oE 'Chain\(network: "[a-z0-9-]+"' "$CHAINS_FILE" \
+    | sed -E 's|.*"(.*)"|\1.g.alchemy.com|' | sort -u
+}
+
+if [[ "${1:-}" == "--self-test" ]]; then
+  # A check that can't fail proves nothing.
+  fails=0
+  declared_hosts="substack.com eth-mainnet.g.alchemy.com query1.finance.yahoo.com"
+  for good in .substack.com .g.alchemy.com .finance.yahoo.com; do
+    tail_disclosed "$good" || { echo "self-test ✗ $good should be disclosed"; fails=1; }
+  done
+  for bad in .g.alchemy.co .yahoo.com .example.com substack.com.evil.example; do
+    tail_disclosed "$bad" && { echo "self-test ✗ $bad should NOT be disclosed"; fails=1; }
+  done
+  # Check A's stated ceiling, asserted rather than assumed: the one-label rule
+  # CANNOT tell the declared `api` child from an undeclared `eth-mainnet` one.
+  # If this ever starts failing, check A got stronger and check B may be
+  # redundant — which is a good day, not a broken test.
+  declared_hosts="api.g.alchemy.com"
+  tail_disclosed ".g.alchemy.com" || { echo "self-test ✗ check A's ceiling changed"; fails=1; }
+
+  # Check B on the real bug: a chain table with a chain the registry never
+  # named must fail, and the same table fully declared must pass.
+  CHAINS_FILE=$(mktemp); REGISTRY_REAL="$REGISTRY"; REGISTRY=$(mktemp)
+  printf 'Chain(network: "eth-mainnet", explorer: "x")\nChain(network: "base-mainnet", explorer: "y")\n' > "$CHAINS_FILE"
+  printf '"api.g.alchemy.com", "eth-mainnet.g.alchemy.com"\n' > "$REGISTRY"
+  grep -q "base-mainnet.g.alchemy.com" "$REGISTRY" && { echo "self-test ✗ fixture is wrong"; fails=1; }
+  undeclared=$(alchemy_hosts | while read -r h; do grep -q "\"$h\"" "$REGISTRY" || echo "$h"; done)
+  [[ "$undeclared" == "base-mainnet.g.alchemy.com" ]] || {
+    echo "self-test ✗ check B missed an undeclared chain (saw: ${undeclared:-none})"; fails=1; }
+  printf '"eth-mainnet.g.alchemy.com", "base-mainnet.g.alchemy.com"\n' > "$REGISTRY"
+  undeclared=$(alchemy_hosts | while read -r h; do grep -q "\"$h\"" "$REGISTRY" || echo "$h"; done)
+  [[ -z "$undeclared" ]] || { echo "self-test ✗ check B flagged a declared chain: $undeclared"; fails=1; }
+  rm -f "$CHAINS_FILE" "$REGISTRY"; REGISTRY="$REGISTRY_REAL"
+
+  (( fails )) && exit 1
+  echo "network-reach-audit: self-test OK"
+  exit 0
+fi
+
+# The registry is excluded: it makes no calls, and its own prose describes
+# these very URL shapes (a comment that wraps mid-host would otherwise read
+# as a half-host nobody declared).
+BUILT=$(
+  grep -rohE 'https://\\\([^)]*\)[a-zA-Z0-9.-]+' --include="*.swift" \
+    --exclude="$(basename "$REGISTRY")" \
+    Casberi/Casberi Casberi/Shared \
+    | sed -E 's|https://\\\([^)]*\)||' \
+    | sort -u
+)
+
+undisclosed_tails=()
+for tail in $BUILT; do
+  tail_disclosed "$tail" || undisclosed_tails+=("$tail")
+done
+
+if (( ${#undisclosed_tails[@]} > 0 )); then
+  echo "network-reach-audit: ✗ ${#undisclosed_tails[@]} host family(ies) built at runtime aren't disclosed."
+  echo "  A host assembled from a variable is invisible to the literal scan above."
+  echo "  Name the real hosts in NetworkReach.swift (list them out, or the parent"
+  echo "  domain when any subdomain is fair game):"
+  for t in "${undisclosed_tails[@]}"; do echo "    · *$t"; done
+  exit 1
+fi
+
+undeclared_chains=()
+while read -r host; do
+  [[ -z "$host" ]] && continue
+  grep -q "\"$host\"" "$REGISTRY" || undeclared_chains+=("$host")
+done <<< "$(alchemy_hosts)"
+
+if (( ${#undeclared_chains[@]} > 0 )); then
+  echo "network-reach-audit: ✗ ${#undeclared_chains[@]} Alchemy chain host(s) aren't disclosed."
+  echo "  Every chain in $CHAINS_FILE builds its own RPC host; add each to the"
+  echo "  Wallet entry in NetworkReach.swift:"
+  for h in "${undeclared_chains[@]}"; do echo "    · $h"; done
+  exit 1
+fi
+
+DYNAMIC=$(
+  grep -rlE 'https://\\\([a-zA-Z0-9_.]+\)(/|"|\?)' --include="*.swift" \
+    Casberi/Casberi Casberi/Shared | sort -u
+)
+if [[ -n "$DYNAMIC" ]]; then
+  echo "network-reach-audit: info — host comes from the person's own input in:"
+  echo "$DYNAMIC" | sed 's|^|    · |'
+  echo "    (not declarable; each must name its service to NetworkLedger.record)"
+fi
+
 echo "network-reach-audit: OK — every host is disclosed in the reach registry or the non-reach denylist."

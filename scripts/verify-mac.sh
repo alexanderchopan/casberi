@@ -126,6 +126,8 @@ app_pid() { pgrep -f "$DD/Build/Products/Debug-maccatalyst/Casberi.app" | head -
 # shipped (see CLAUDE.md). Cheap enough that duplication beats a gap.
 step "Static audits"
 "$ROOT/scripts/catalog-sync.sh" >/dev/null || fail "catalog surfaces drifted — run scripts/catalog-sync.sh"
+"$ROOT/scripts/network-reach-audit.sh" --self-test >/dev/null \
+  || fail "the network-reach audit's own self-test failed — the check is broken, not the code"
 "$ROOT/scripts/network-reach-audit.sh" >/dev/null || fail "a network host isn't disclosed — run scripts/network-reach-audit.sh"
 "$ROOT/scripts/keychain-audit.py" --self-test >/dev/null \
   || fail "the keychain audit's own self-test failed — the check is broken, not the code"

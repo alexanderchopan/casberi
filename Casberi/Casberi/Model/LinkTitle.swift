@@ -13,7 +13,9 @@ enum LinkTitle {
         var request = URLRequest(url: url)
         request.timeoutInterval = 5
         request.setValue("text/html", forHTTPHeaderField: "Accept")
-        NetworkLedger.shared.record(request)
+        // Attributed to the registry's "Saved links" entry: the host is the
+        // site you saved, which is why that entry's host reads as prose.
+        NetworkLedger.shared.record(request, as: "Saved links")
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               (response as? HTTPURLResponse).map({ (200..<300).contains($0.statusCode) }) ?? false
         else { return nil }
@@ -44,7 +46,7 @@ enum LinkTitle {
         request.timeoutInterval = 8
         request.setValue("text/html", forHTTPHeaderField: "Accept")
         request.setValue(IngestSupport.safariUserAgent, forHTTPHeaderField: "User-Agent")
-        NetworkLedger.shared.record(request)
+        NetworkLedger.shared.record(request, as: "Saved links")
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               (response as? HTTPURLResponse).map({ (200..<300).contains($0.statusCode) }) ?? false
         else { return nil }

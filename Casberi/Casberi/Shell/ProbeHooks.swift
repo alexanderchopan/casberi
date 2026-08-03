@@ -150,14 +150,33 @@ enum ProbeHooks {
         // one line per host actually reached, with whether the "What this app
         // reaches" registry declares it. A host reading NOT-DECLARED is the
         // runtime form of the audit failure that shipped in build 214.
+        //
+        // Each line says HOW the host was accounted for, because the two ways
+        // are not equally strong (2026-08-03). `by-host` is the registry
+        // matching a declared host, which a static audit can prove. `named-by`
+        // is the call site's own attribution, the only thing possible for a
+        // host that comes out of the person's input (a feed, a store) — so a
+        // row that ought to be `by-host` quietly turning into `named-by` is a
+        // registry entry someone dropped, and it would be invisible in a
+        // declared/undeclared tally alone.
         Hook(key: "receiptsProbe") { _, _ in
             let rows = NetworkLedger.shared.snapshot()
             var undeclared = 0
             for row in rows {
-                let service = NetworkReach.service(forHost: row.host)
-                if service == nil { undeclared += 1 }
-                NSLog("receipt| %@ · %d requests · %@", row.host, row.count,
-                      service ?? "NOT-DECLARED")
+                let byHost = NetworkReach.service(forHost: row.host)
+                let named = row.service.flatMap {
+                    NetworkReach.declares(service: $0) ? $0 : nil
+                }
+                let verdict: String
+                if let byHost {
+                    verdict = "\(byHost) (by-host)"
+                } else if let named {
+                    verdict = "\(named) (named-by-caller)"
+                } else {
+                    undeclared += 1
+                    verdict = "NOT-DECLARED"
+                }
+                NSLog("receipt| %@ · %d requests · %@", row.host, row.count, verdict)
             }
             NSLog("receiptsProbe: hosts=%d undeclared=%d", rows.count, undeclared)
         },

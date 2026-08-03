@@ -14715,3 +14715,66 @@ timed. The numbers above are counted round trips, not measured seconds. Both
 failure modes are safe — the scroll change is a pure anchor swap, and every
 bounded read already had a nil path — but `-todayProbe`/`-uiAnswerProbe "How's
 my day?"` should confirm before this ships.
+## §289 — The receipts screen accused itself, and it was half right (user: a screenshot of "Not on the list" holding seven hosts, "bug", 2026-08-03)
+
+The receipts screen (§277) exists to catch exactly one thing: a host this app
+reached that the "What this app reaches" registry (§205) never disclosed. It
+caught seven, and its footer told the person to report a bug in the list. Two
+different failures were wearing one label, and only one of them was a bug in
+the list.
+
+**The real gap: a host BUILT at runtime is not a host LITERAL.** The reach
+audit's whole guarantee is a `grep` for `https://[a-zA-Z0-9.-]+` over the
+source, and the wallet's RPC URLs interpolate the chain's own name as their
+first component — so the regex matched NOTHING there, not even a partial. Five
+Alchemy hosts (`eth-`, `base-`, `arb-`, `opt-`, `matic-mainnet.g.alchemy.com`)
+have been reached on every wallet sweep since the wallet shipped, hundreds of
+requests per session, and only `api.g.alchemy.com` — the one URL written out
+in full — was ever disclosed. Same shape found two more: Yahoo's chart hosts
+behind a watched ticker (`query1`/`query2.finance.yahoo.com`, built the same
+way) and Apple's artwork CDN for Apple Music covers, whose service had no
+registry entry at all. Nostr's relays are a third variant — WebSocket, so
+there is no `https://` literal to find and no entry existed either.
+
+**This is the audit's structural blind spot, and the receipts screen is the
+only thing that could have found it.** A source scan can't see a string that
+isn't in the source; a record of what was actually reached can. §277 said the
+screen "earns its keep the day that section isn't empty" — this is that day,
+and the finding is that the static half needed the runtime half, not that the
+runtime half needed a better list.
+
+**The other half was not a bug at all.** `ethdaily.io` is a feed the person
+themselves follows. A followed feed, a Shopify store, a Substack on its own
+domain, a self-hosted PostHog, the site behind a saved link, a Snapchat
+export's own links: the host comes out of the PERSON's input, so no
+hand-written registry could ever have contained it — those entries carry prose
+("the feeds you follow") precisely because a real host is impossible there.
+Telling someone their own feed is an undisclosed reach they should report is
+wrong, and it is the kind of wrong that erodes a privacy screen fastest: cry
+wolf once and the section that matters gets scrolled past.
+
+So the ledger learns WHO ASKED. `NetworkLedger.record(host:as:)` takes an
+optional service name, passed only at the call sites whose host is the
+person's own (RSS, Deals, the four feed-follows, Shopify, PostHog, Nostr's
+NIP-05 check, saved-link enrichment, Snapchat's media fetch), and the screen
+falls back to it. Three rules keep that from becoming a laundering route:
+the registry's host match always WINS (it's the half a static audit can
+prove), an attribution is honoured only if the registry really carries a
+service by that name (`NetworkReach.declares(service:)`), and a host with
+neither stays in "Not on the list", which is now a genuinely rare finding
+rather than a standing accusation. The probe says which of the two applied
+per row (`by-host` vs `named-by-caller`), so a registry entry someone drops
+can't hide behind an attribution.
+
+The audit gained two checks and states the ceiling of each, because they are
+not equally strong. **A** — every interpolated form must name a family the
+registry declares — is coarse by construction and could NOT have caught this
+bug on its own: `api.g.alchemy.com` was declared, and it is a one-label child
+of the same tail as the five that weren't. So **B** drives off the source of
+truth that actually drifted: every `Chain(network:)` in the wallet's own table
+must have its `<network>.g.alchemy.com` disclosed, so a new chain discloses
+its host the day it lands. Self-tested both ways, including a fixture that
+asserts check A's ceiling rather than pretending it isn't there. A fully
+dynamic host (`https://\(host)/…`) can be checked by neither and declared by
+nobody — those are reported as info, and their call sites are the attribution
+above.

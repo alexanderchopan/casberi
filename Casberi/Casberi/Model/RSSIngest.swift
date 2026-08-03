@@ -113,7 +113,11 @@ enum RSSIngest {
     /// that specific call.
     private static func fetchAndParse(_ feed: RSSStore.Feed) async -> Fetched? {
         guard let url = URL(string: feed.url) else { return nil }
-        NetworkLedger.shared.record(url)
+        // Attributed: a feed URL is whatever the person pasted, so this host
+        // can never be in the reach registry (prd §205 lists "the feeds you
+        // follow"). Naming the service here is what keeps the receipts
+        // screen from reading your own feed as an undisclosed reach.
+        NetworkLedger.shared.record(url, as: "RSS")
         guard let (data, _) = try? await URLSession.shared.data(from: url) else { return nil }
         var parsed = FeedParser.parse(data)
         var resolvedURL: String?
@@ -297,7 +301,7 @@ enum FeedDiscovery {
     }
 
     private static func fetch(_ url: URL) async -> FeedParser.Parsed? {
-        NetworkLedger.shared.record(url)
+        NetworkLedger.shared.record(url, as: "RSS")
         guard let (data, _) = try? await URLSession.shared.data(from: url) else { return nil }
         return FeedParser.parse(data)
     }

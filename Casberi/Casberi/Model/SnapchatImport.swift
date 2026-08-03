@@ -458,14 +458,16 @@ enum SnapchatImport {
         request.httpMethod = "POST"
         request.timeoutInterval = 20
 
-        NetworkLedger.shared.record(request)
+        // Both hosts come out of your own export file, which is exactly
+        // what the registry entry says ("the links in your own export").
+        NetworkLedger.shared.record(request, as: "Snapchat Memories")
         guard let (body, response) = try? await URLSession.shared.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200,
               let text = String(data: body, encoding: .utf8)?.trimmed,
               text.hasPrefix("http"), let media = URL(string: text)
         else { return nil }
 
-        NetworkLedger.shared.record(media)
+        NetworkLedger.shared.record(media, as: "Snapchat Memories")
         guard let (bytes, mediaResponse) = try? await URLSession.shared.data(from: media),
               (mediaResponse as? HTTPURLResponse)?.statusCode == 200
         else { return nil }

@@ -111,7 +111,9 @@ enum DealsIngest {
     /// One source's parsed feed, or nil when it couldn't be reached.
     private static func fetch(_ source: DealSource) async -> FeedParser.Parsed? {
         guard let url = URL(string: source.feedURL) else { return nil }
-        NetworkLedger.shared.record(url)
+        // Attributed — the deal sites are a list the person enables, and the
+        // registry lists them as "the deal sites you follow" (see RSSIngest).
+        NetworkLedger.shared.record(url, as: "Deals")
         guard let (data, _) = try? await URLSession.shared.data(from: url) else { return nil }
         let parsed = FeedParser.parse(data)
         return parsed.items.isEmpty ? nil : parsed
