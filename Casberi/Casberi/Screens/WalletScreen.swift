@@ -128,6 +128,16 @@ struct WalletScreen: View {
     /// on appear and after each sync instead; the corpus doesn't change
     /// between those without one of them firing.
     @State private var activityCounts: [String: Int] = [:]
+    /// Which of the book's addresses are connected (prd §295) — rebuilt on the
+    /// same two beats as `activityCounts` above and for the same reason: it is
+    /// a corpus fetch plus a walk, and the corpus doesn't change between an
+    /// appear and a sync without one of them firing.
+    @State private var connections: AddressConnections.Map?
+    /// The connected address being named, and the draft. Naming here is the
+    /// same act as naming from a transfer's sheet — it rewrites every landed
+    /// transfer carrying that address (`CounterpartyRetitle`).
+    @State private var namingAddress: String?
+    @State private var namingDraft = ""
     /// The group being viewed, or nil for the whole book (2026-08-01).
     @State private var selectedGroup: String?
     /// The entry a brand-new group is being created for — group creation only
@@ -239,6 +249,7 @@ struct WalletScreen: View {
             statusSection
             groupChipsSection
             bookSection
+            connectionsSection
             // The connection plumbing, at the foot of the page — chains and
             // teardown are the one thing here nobody revisits, so it sits after
             // the list rather than between the verbs and the names.
@@ -287,8 +298,22 @@ struct WalletScreen: View {
         } message: {
             Text("A blank name shows the address instead.")
         }
+        // Naming a connected address (prd §295) — the connections card's one
+        // action. Same alert grammar as the wallet rename above it, and the
+        // same consequence: the name rides every transfer with this address,
+        // past and future.
+        .alert("Name this address",
+               isPresented: Binding(get: { namingAddress != nil },
+                                    set: { if !$0 { namingAddress = nil } })) {
+            TextField("Name (e.g. Mom)", text: $namingDraft)
+            Button("Save") { nameConnected() }
+            Button("Cancel", role: .cancel) { namingAddress = nil }
+        } message: {
+            Text("Your name for this address rides every transfer with it. A blank name clears it.")
+        }
         .onAppear {
             refreshActivityCounts()
+            refreshConnections()
             if !wallet.addresses.isEmpty {
                 sync()
                 Task { await wallet.loadAvatars() }
@@ -413,6 +438,7 @@ struct WalletScreen: View {
             // read this, and a refresh that lands 12 things while the numbers
             // beside them stay put reads as stale.
             refreshActivityCounts()
+            refreshConnections()
             // Keep what the read already cost us (prd §212) — the roster slots
             // and the shelf note draw off this. Groups with no address are the
             // combined one; it would double every total if counted.
@@ -653,6 +679,26 @@ struct WalletScreen: View {
         activityCounts = AddressActivity.counts(in: modelContext)
     }
 
+    /// The book's own summary (prd §295). Nil below two watched wallets — a
+    /// connection can't exist there, so the card doesn't render rather than
+    /// rendering empty.
+    private func refreshConnections() {
+        connections = AddressConnections.map(context: modelContext)
+    }
+
+    /// Names a connected address, then brings its landed transfers into line —
+    /// the same pair the thing sheet's own naming flow runs, so a name given
+    /// here and a name given there mean exactly the same thing afterwards.
+    private func nameConnected() {
+        guard let address = namingAddress else { return }
+        namingAddress = nil
+        AddressBook.shared.setName(namingDraft, for: address)
+        _ = CounterpartyRetitle.applyCurrentName(for: address, in: modelContext)
+        refreshActivityCounts()
+        refreshConnections()
+        DSHaptic.success()
+    }
+
     /// Matched through the resolution cache, not by raw string (2026-07-25):
     /// a book entry holds the RESOLVED address while a watch may hold the
     /// spelling it was added under ("vitalik.eth"), so a plain compare left
@@ -790,6 +836,30 @@ struct WalletScreen: View {
             .dsText(.label12).foregroundStyle(DS.textTertiary)
             .monospacedDigit()
             .padding(.horizontal, DS.Space.s4)
+    }
+
+    /// The book's own summary (prd §295) — last card on the page, after the
+    /// rows it describes and before the connection plumbing nobody revisits.
+    ///
+    /// It declines twice, quietly: no card at all below two watched wallets
+    /// (`map` returns nil — a connection cannot exist), and one sentence when
+    /// two or more are watched and nothing connects them. The second is a real
+    /// answer and worth printing; the first is a question the person hasn't
+    /// asked yet.
+    @ViewBuilder
+    private var connectionsSection: some View {
+        if let connections {
+            Section {
+                AddressConnectionsCard(map: connections) { node in
+                    namingAddress = node.id
+                    namingDraft = ""
+                }
+            }
+            .listRowInsets(EdgeInsets(top: DS.Space.s6, leading: DS.Space.s4,
+                                      bottom: 0, trailing: DS.Space.s4))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        }
     }
 
     @ViewBuilder

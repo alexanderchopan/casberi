@@ -744,6 +744,16 @@ enum WalletIngest {
         "0x283af0b28c62c092c9727f1ee09c02ca627eb7f5": "ENS",
     ]
 
+    /// Is this one of the canonical contracts above?
+    ///
+    /// Distinct from `knownLabel != nil`, which also answers for an address the
+    /// PERSON named — so it can't be used to ask "is this machinery": naming a
+    /// wallet "Mom" would make Mom a contract. The connections card (prd §295)
+    /// needs the narrow question.
+    static func isKnownContract(_ address: String) -> Bool {
+        knownContracts[address.lowercased()] != nil
+    }
+
     /// A synchronously-known name for a counterparty address — the person's own
     /// label, a watched Farcaster handle, or a canonical contract (no async ENS).
     /// The thing sheet's "Who" row shows this over the raw hex.

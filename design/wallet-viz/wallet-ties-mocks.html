@@ -1,0 +1,224 @@
+<title>Wallet — connected addresses, bottom of the address book</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --yellow: #ffd60a;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body { font-family: var(--text); color: var(--ink);
+         background: radial-gradient(900px 420px at 18% -8%, rgba(255,214,10,.07), transparent 62%), var(--page);
+         padding: 48px 28px 72px; }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  header { max-width: 780px; margin-bottom: 26px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: var(--yellow); margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.4vw,36px); font-weight: 800; letter-spacing: -.02em; line-height: 1.1; margin-bottom: 12px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 72ch; }
+  header p + p { margin-top: 10px; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 44px; align-items: flex-start; margin-top: 38px; }
+  .option { width: 368px; }
+
+  /* the Wallet screen, insetGrouped — book rows then the card */
+  .screen { background: #0e0f13; border-radius: 22px; padding: 16px 12px 18px; overflow: hidden;
+            box-shadow: 0 24px 60px rgba(0,0,0,.5); }
+  .screen .nav { font-size: 12px; color: #6b7280; font-weight: 600; padding: 0 6px 12px; }
+  .sect { font-size: 12px; color: #6b7280; font-weight: 600; padding: 0 8px 8px; }
+  .group { background: #16181d; border-radius: 14px; overflow: hidden; }
+  .arow { display: flex; align-items: center; gap: 10px; padding: 11px 12px; }
+  .arow + .arow { box-shadow: 0 -1px 0 rgba(255,255,255,.045); }
+  .mark { width: 30px; height: 30px; border-radius: 50%; flex: none; display: grid; place-items: center;
+          font-size: 12px; font-weight: 800; background: #23262d; color: #d6dae2; }
+  .mark.you { background: #2b2f38; }
+  .mark.cp  { background: #3a2f14; color: var(--yellow); }
+  .arow .an { font-size: 14px; font-weight: 650; }
+  .arow .as { font-size: 11.5px; color: #6b7280; margin-top: 1px; }
+  .arow .star { margin-left: auto; font-size: 13px; color: var(--yellow); }
+  .arow .star.off { color: #3a3f4a; }
+  .faded { opacity: .42; }
+
+  .card { background: #16181d; border-radius: 14px; padding: 16px 14px 14px; margin-top: 14px; }
+  .card .ct { font-size: 12px; color: #6b7280; font-weight: 600; margin-bottom: 7px; }
+  .card h4 { font-size: 21px; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; }
+  .card .csub { font-size: 12.5px; color: #9aa0a6; margin-top: 6px; line-height: 1.45; }
+  .card .note { font-size: 11.5px; color: #6b7280; margin-top: 14px; line-height: 1.5; }
+  .card .btn { margin-top: 14px; background: #fff; color: #000; text-align: center;
+               font-size: 14.5px; font-weight: 700; padding: 12px; border-radius: 8px; }
+
+  .spine { display: flex; align-items: center; gap: 6px; margin-top: 18px; }
+  .spine .side { width: 118px; }
+  .spine .mid { flex: 1; }
+  .spine .n { padding: 6px 0; }
+  .spine .nn { font-size: 13px; font-weight: 700; }
+  .spine .ns { font-size: 11px; color: #6b7280; margin-top: 1px; font-variant-numeric: tabular-nums; }
+  .spine .nn.cp { color: var(--yellow); }
+  .spine .side.right { text-align: right; }
+
+  .caption { margin-top: 16px; padding: 0 4px; }
+  .caption h3 { font-size: 16.5px; font-weight: 700; margin-bottom: 6px; }
+  .caption h3 span { color: var(--faint); font-weight: 600; }
+  .caption p { font-size: 13px; line-height: 1.55; color: var(--muted); }
+  .caption p + p { margin-top: 7px; }
+  .caption b { color: var(--ink); font-weight: 650; }
+  .law { font-size: 12.5px; line-height: 1.68; color: var(--faint); max-width: 84ch; margin: 40px auto 0; }
+  .law b { color: var(--muted); font-weight: 600; }
+  .law code { color: var(--muted); font-size: 12px; }
+  .law h3 { font-size: 14px; color: var(--ink); font-weight: 700; margin: 22px 0 8px; }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · Wallet · address book · v4</div>
+  <h1>3 of your addresses are connected</h1>
+  <p>One card, the spine. It counts and it draws — <b>no ranking, no "most of all", no reading of
+     what any of it means.</b> Every line on it is either a number the corpus holds or a name you
+     gave something.</p>
+  <p><b>Connected means they transacted.</b> Not "both used Uniswap", not a shared counterparty —
+     an edge is drawn only where a real transfer between those two addresses landed. The count is
+     addresses that reach <i>more than one</i> of your wallets, since every counterparty in the
+     book reaches at least one by definition and counting those would just be the book's own
+     length.</p>
+</header>
+
+<div class="row">
+
+  <div class="option">
+    <div class="screen">
+      <div class="nav">Wallet · Address book</div>
+      <div class="sect">10 addresses</div>
+      <div class="group faded">
+        <div class="arow"><div class="mark you">M</div>
+          <div><div class="an">Main</div><div class="as">Wallet · 0x4f2b…c19a</div></div>
+          <div class="star">★</div></div>
+        <div class="arow"><div class="mark cp">M</div>
+          <div><div class="an">Mom</div><div class="as">Wallet · 6 transactions</div></div>
+          <div class="star off">☆</div></div>
+        <div class="arow"><div class="mark">U</div>
+          <div><div class="an">Uniswap</div><div class="as">Contract · 41 transactions</div></div>
+          <div class="star off">☆</div></div>
+        <div class="arow"><div class="mark">9</div>
+          <div><div class="an">0x9c41…7d2e</div><div class="as">Wallet · 3 transactions</div></div>
+          <div class="star off">☆</div></div>
+      </div>
+
+      <div class="card">
+        <div class="ct">Connected</div>
+        <h4>3 of your addresses<br>are connected</h4>
+        <div class="csub">Each has transacted with more than one of your wallets.</div>
+
+        <div class="spine">
+          <div class="side">
+            <div class="n"><div class="nn cp">Mom</div><div class="ns">6 transactions</div></div>
+            <div class="n"><div class="nn cp">Coinbase</div><div class="ns">8 transactions</div></div>
+            <div class="n"><div class="nn cp">0x9c41…7d2e</div><div class="ns">3 transactions</div></div>
+          </div>
+          <div class="mid">
+            <svg viewBox="0 0 100 112" width="100%" height="112" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M0,18 C50,18 50,26 100,26" fill="none" stroke="#7a8296" stroke-width="3" opacity=".85"/>
+              <path d="M0,18 C50,18 50,66 100,66" fill="none" stroke="#7a8296" stroke-width="3" opacity=".85"/>
+              <path d="M0,56 C50,56 50,66 100,66" fill="none" stroke="#7a8296" stroke-width="3" opacity=".85"/>
+              <path d="M0,56 C50,56 50,100 100,100" fill="none" stroke="#7a8296" stroke-width="3" opacity=".85"/>
+              <path d="M0,94 C50,94 50,26 100,26" fill="none" stroke="#7a8296" stroke-width="3" opacity=".85"/>
+              <path d="M0,94 C50,94 50,66 100,66" fill="none" stroke="#7a8296" stroke-width="3" opacity=".85"/>
+            </svg>
+          </div>
+          <div class="side right">
+            <div class="n"><div class="nn">Main</div><div class="ns">$10,320</div></div>
+            <div class="n"><div class="nn">Trading</div><div class="ns">$8,020</div></div>
+            <div class="n"><div class="nn">Savings</div><div class="ns">$2,200</div></div>
+          </div>
+        </div>
+
+        <div class="note">Since you started watching each wallet. Cold isn't shown — nothing in
+          the book has transacted with it.</div>
+      </div>
+    </div>
+
+    <div class="caption">
+      <h3>The card <span>— counts, names, amounts</span></h3>
+      <p>Left is the address, right is your wallet, one line per real transfer relationship. Every
+         ribbon is the same weight: <b>a connection either exists or it doesn't</b>, and varying
+         the thickness by volume would be the card making a point.</p>
+      <p>Amounts and counts are stated, never compared. Nothing is sorted by "importance" — the
+         order is the book's own.</p>
+    </div>
+  </div>
+
+  <div class="option">
+    <div class="screen">
+      <div class="nav">Wallet · Address book</div>
+      <div class="sect">10 addresses</div>
+      <div class="group faded">
+        <div class="arow"><div class="mark you">M</div>
+          <div><div class="an">Main</div><div class="as">Wallet · 0x4f2b…c19a</div></div>
+          <div class="star">★</div></div>
+        <div class="arow"><div class="mark cp">M</div>
+          <div><div class="an">Mom</div><div class="as">Wallet · 6 transactions</div></div>
+          <div class="star off">☆</div></div>
+        <div class="arow"><div class="mark">U</div>
+          <div><div class="an">Uniswap</div><div class="as">Contract · 41 transactions</div></div>
+          <div class="star off">☆</div></div>
+      </div>
+
+      <div class="card">
+        <div class="ct">Connected</div>
+        <h4>1 of your addresses<br>is connected</h4>
+        <div class="csub">0x9c41…7d2e has transacted with Main and Trading. It has no name.</div>
+
+        <div class="spine">
+          <div class="side">
+            <div class="n"><div class="nn cp">0x9c41…7d2e</div><div class="ns">3 transactions</div></div>
+          </div>
+          <div class="mid">
+            <svg viewBox="0 0 100 56" width="100%" height="56" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M0,28 C50,28 50,12 100,12" fill="none" stroke="#7a8296" stroke-width="3" opacity=".85"/>
+              <path d="M0,28 C50,28 50,44 100,44" fill="none" stroke="#7a8296" stroke-width="3" opacity=".85"/>
+            </svg>
+          </div>
+          <div class="side right">
+            <div class="n"><div class="nn">Main</div><div class="ns">$620</div></div>
+            <div class="n"><div class="nn">Trading</div><div class="ns">$220</div></div>
+          </div>
+        </div>
+
+        <div class="btn">Name this address</div>
+        <div class="note">Since you started watching each wallet.</div>
+      </div>
+    </div>
+
+    <div class="caption">
+      <h3>Two states it has to have <span>— one, and none</span></h3>
+      <p>At one connection the spine still draws and the card offers the only action it ever
+         offers: <b>name the address</b>, when the connected one has no name. That's not a
+         suggestion about what it might be — it's the book's own naming flow, reachable from the
+         row that just became interesting.</p>
+      <p>At zero the card is one sentence — <i>"None of your addresses are connected."</i> — and
+         with one watched wallet, or no landed transfers, it doesn't render at all.</p>
+    </div>
+  </div>
+</div>
+
+<div class="law">
+  <h3>What the card says, exactly</h3>
+  <p>A headline count. Each connected address with its transaction count. Each of your wallets with
+     the total that moved. One line saying since when. Nothing else — no ranking, no superlative,
+     no inference about what a connection implies.</p>
+
+  <h3>What "connected" is defined as</h3>
+  <p>An address in the book that has landed transfers with <b>two or more</b> of your watched
+     wallets. Purely the corpus: every edge is a real transaction that already exists as a thing.
+     Shared counterparties are deliberately <i>not</i> an edge — "these two both dealt with someone
+     else" is an inference, and this card doesn't make any.</p>
+  <p>Excluded: flagged transfers (a duster who hits four of your wallets from one address would
+     otherwise land himself at the top of this card) and contracts the app can already name
+     (Uniswap is connected to all four of your wallets and that fact is worth nothing).</p>
+
+  <h3>Placement and cost</h3>
+  <p>Last card in the Wallet screen's list, after the book rows, before the agent-bar inset. Free —
+     no request, no new field. <code>AddressActivity.history(for:in:)</code> already gathers one
+     address's transactions for the address card; this is the same walk aggregated across the book,
+     with totals from <code>transferUSD</code>.</p>
+</div>
+</div>

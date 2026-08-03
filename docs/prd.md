@@ -15499,3 +15499,96 @@ that are most of a book.
 each mutation-proven load-bearing. **UNMEASURED against a live smart account**
 — no `accountId()` or `entryPoint()` has been read from this machine, and both
 fail toward `.contract`.
+
+## §295 — The address book reads itself: N of your addresses are connected (user: "would it be possible to show some visualization for connections between watched wallets? eg you watch 4 wallets and we show if they ever transacted together some how?", then "i think below the addresses at bottom of sheet would be cool", "this is less about who knows what wallet is yours and more about interacting", "i didn't mean at bottom of transfer sheet, i meant bottom of address book", "i don't want who you deal with most of all i want it to say N of your addresses are connected. you can pick which visualization you want, but limit the 'analysis' b/c it should be factual", 2026-08-03)
+
+The book has been a flat list of names that never said how any two of its
+entries relate. This is the card at the foot of the Wallet manager that says
+it: a count, and a spine — the connected address on the left, your wallets on
+the right, one ribbon per landed relationship.
+
+### The ruling that shaped every line of it
+
+*Limit the analysis, it should be factual.* Three consequences, none of which
+are to be "improved" without a new ruling:
+
+- **Every ribbon is the same weight.** A connection exists or it doesn't.
+  Scaling one by volume would be the card claiming which relationship matters.
+  (The flow band next door DOES scale its ribbons, correctly — there the whole
+  claim is that one side is bigger than the other. Here there is no such claim.)
+- **No hue at all**, not even the single mark §292's approvals card spends.
+  Nothing here is a state, a warning or a gain; it is an inventory.
+- **Order is the order you first dealt with each address**, never count and
+  never dollars. Sorting by size would be the ranking the ruling forbids. It's
+  also deterministic across launches, which a "most active" order is not.
+
+Two earlier framings were ruled out on the way and should not come back. The
+first cut drew wallet-to-wallet LINKAGE — a privacy question nobody asked
+("less about who knows what wallet is yours and more about interacting"). The
+second led with *who you deal with most*, which is a superlative, i.e. exactly
+the analysis this card was told not to do.
+
+### Connected means they transacted
+
+An edge exists ONLY where a transfer between those two addresses actually
+landed. A shared counterparty — "these two both dealt with someone else" — is
+deliberately NOT an edge: that is an inference, and this card makes none.
+
+**The bar is TWO of your wallets**, and it has to be. Every counterparty in the
+book reaches at least one by definition — that is how it got into the corpus —
+so counting those would print the book's own length back at you wearing a new
+word. An address that reaches two or more is the one fact the book cannot
+already show.
+
+### What it excludes, and why each exclusion is honesty rather than taste
+
+- **Flagged transfers.** An address-poisoning duster who hits four of your
+  wallets from one address would otherwise land himself at the top of this card
+  — on the screen where a person is deciding whether an address is trustworthy,
+  which is the worst place in the app to hand an attacker a claim about you.
+- **Machinery.** Uniswap is connected to every wallet anybody owns; a card that
+  counted it would top out at the same three names for everyone. Two sources,
+  both already in the tree: `WalletIngest.isKnownContract` (the canonical
+  table) and the book's own chain-read kind. `.smartAccount` is explicitly NOT
+  machinery — that is §294's whole point, one file over.
+- **Self-transfers and unwatched wallets.** A transfer to yourself is not a
+  relationship, and an edge to a wallet you stopped watching keeps a dead watch
+  alive in a picture captioned "your wallets".
+
+### The two declines are different states
+
+`map` returns **nil** below two watched wallets — a connection cannot exist, so
+the card doesn't render at all rather than rendering empty; that's a question
+the person hasn't asked yet. It returns an **empty map** when two or more are
+watched and nothing connects them, and the card prints *"None of your addresses
+are connected."* That is a real answer and worth the space. Collapsing the two
+would either hide the answer or show a permanently blank card to the majority
+who watch one wallet.
+
+### One action, and it is the book's own
+
+The card offers **Name this address**, and only when a connected address has
+none. An address that has moved real money with two of your wallets and still
+reads as hex is the best naming prompt this app can show — and naming it
+rewrites every landed transfer that carries it (`CounterpartyRetitle`), so one
+tap fixes the past as well as the future. It targets the FIRST unnamed one;
+picking the busiest would be a ranking.
+
+### Cost: nothing
+
+No request, no new field, no CloudKit deploy. `AddressActivity.history` already
+walks one address's transactions for the address card; this is the same walk
+aggregated across the book, with totals from `transferUSD` (which has been on
+every transfer since 2026-08-01 and was read by nothing but the flow band).
+Rebuilt on the same two beats as `activityCounts` — appear, and after a sync.
+
+### Verified
+
+`AddressConnections.swift` is pure and Foundation-only so
+`scripts/wallet-viz-selftest.sh` compiles it AS SHIPPED (222 → 276 assertions).
+Mutation-proven five ways, each a silent wrong answer: one wallet counting as a
+connection, a self-edge surviving, nodes ordered by count, per-wallet totals
+computed over only the DRAWN nodes (a display cap is not an accounting rule),
+and an unpriced leg contributing `$0` instead of nothing. `-connectionsProbe
+YES` reports the read phase by phase with the excluded tallies — an empty card
+has four causes that render as the same silence and only one of them is a bug.

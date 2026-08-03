@@ -1571,6 +1571,27 @@ enum ProbeHooks {
                 if let note = e.unpricedNote { NSLog("exposureProbe| note: %@", note) }
             }
         },
+        // `-connectionsProbe YES` — the address book's connections card
+        // (2026-08-03, prd §295), phase by phase: how many wallets are
+        // watched, how many transfers survived each exclusion, the headline,
+        // then one `connRow|` line per connected address and one
+        // `connWallet|` per wallet it reaches.
+        //
+        // One NSLog per line (the `-todayProbe` truncation lesson). It exists
+        // because an empty card has FOUR causes that render as the same
+        // silence — fewer than two wallets watched, no landed transfers, every
+        // address reaching exactly one wallet (the honest common case), or an
+        // exclusion eating them — and only the last is a bug. The
+        // `excludedFlagged`/`excludedMachinery` tallies are what separate them
+        // in one launch. Pair with `-walletAddress` (twice, on two launches —
+        // the hook fires once per run).
+        Hook(key: "connectionsProbe") { _, context in
+            Task { @MainActor in
+                for line in AddressConnections.probeLines(context: context) {
+                    NSLog("connections| %@", line)
+                }
+            }
+        },
         // `-userOpProbe YES` — who actually paid (2026-08-03, prd §293). Walks
         // the wallet's recent outgoing transactions, re-reads each receipt and
         // NSLogs one `userOp|` line per transaction naming the attribution the

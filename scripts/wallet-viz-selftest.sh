@@ -29,7 +29,8 @@ STABLE="Casberi/Casberi/Model/WalletStables.swift"
 EXPOSURE="Casberi/Casberi/Model/WalletApprovalExposure.swift"
 USEROPS="Casberi/Casberi/Model/WalletUserOps.swift"
 PARTIES="Casberi/Casberi/Model/WalletActingParties.swift"
-for f in "$FLOW" "$RISK" "$STABLE" "$EXPOSURE" "$USEROPS"; do
+CONNECTIONS="Casberi/Casberi/Model/AddressConnections.swift"
+for f in "$FLOW" "$RISK" "$STABLE" "$EXPOSURE" "$USEROPS" "$CONNECTIONS"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -216,6 +217,28 @@ do {
     let legs = [leg(true, "A", 100), leg(false, "B", 100),
                 leg(true, "C", nil), leg(false, "D", nil)]
     check(WalletFlow.band(legs: legs) != nil, "exactly half priced still draws")
+}
+
+// THE REPORTED BUG (2026-08-03, user: "I have never seen the sankey").
+// Same 84 old moves as the case above — but set aside by the adapter as older
+// than price data instead of counted as failures. They must not reach the
+// floor: on the DEFAULT `.watched` range the window is the whole corpus and
+// nothing ever ages out, so counting them made the floor permanently
+// unclearable and the card permanently invisible.
+do {
+    let legs = [leg(true, "Coinbase", 2100), leg(false, "Aave", 1000)]
+    let band = WalletFlow.band(legs: legs, predating: 84)
+    check(band != nil, "legs older than price data don't block the band")
+    check(band?.predatingCount == 84, "and they're carried so the card can say so")
+    check(band?.unpricedCount == 0, "counted apart from a real pricing failure")
+}
+// …but being old is not a licence: a read that IS failing still declines, and
+// the set-aside rows can't rescue it.
+do {
+    var legs = [leg(true, "A", 100), leg(false, "B", 100)]
+    legs += (0..<84).map { leg(true, "New\($0)", nil) }
+    check(WalletFlow.band(legs: legs, predating: 40) == nil,
+          "unpriceable history never excuses an unpriced present")
 }
 
 // Declines: nothing priced at all is not a smaller band, it's no band.
@@ -714,6 +737,142 @@ eq(WalletUserOps.word(uoData(costWei: TENTH), at: 2), 1e16, "the cost word is re
 eq(WalletUserOps.word(uoData(costWei: TENTH), at: 9), 0, "a word past the end reads zero")
 eq(WalletUserOps.word(nil, at: 0), 0, "absent data reads zero")
 
+// ===========================================================================
+// AddressConnections — which of your addresses are connected (prd §295)
+// ===========================================================================
+// The failure mode is a WRONG COUNT under a confident headline, which renders
+// perfectly. Two of these cases are the ones that would ship a lie: an address
+// reaching ONE wallet counted as connected (which would print the book's own
+// length back at you), and a total that moves when the display cap moves.
+
+typealias Conn = AddressConnections
+
+func edge(_ address: String, _ wallet: String,
+          usd: Double? = nil, named: Bool = false,
+          name: String? = nil) -> Conn.Edge {
+    Conn.Edge(addressKey: address, addressName: name ?? address,
+              named: named, walletKey: wallet, usd: usd)
+}
+func watched(_ keys: String...) -> [Conn.WatchedWallet] {
+    keys.map { Conn.WatchedWallet(key: $0, name: $0.uppercased()) }
+}
+
+// ── the decline, and the empty answer ─────────────────────────────────────
+// Two different states, deliberately not one: nil is "this card can never say
+// anything for you", empty is "it can, and the answer is none". Collapsing
+// them would either hide a real answer or show a card to someone watching one
+// wallet forever.
+check(Conn.map(edges: [edge("mom", "main")], watched: watched("main")) == nil,
+      "one watched wallet — no card at all, a connection cannot exist")
+check(Conn.minWallets == 2, "…and the bar for that is two")
+let none = Conn.map(edges: [edge("mom", "main"), edge("shop", "trading")],
+                    watched: watched("main", "trading"))
+check(none?.isEmpty == true, "everyone reaching exactly ONE wallet is not a connection")
+check(none?.connectedCount == 0, "…and the count says zero rather than two")
+check(none?.untouchedWalletNames == ["MAIN", "TRADING"],
+      "…with every wallet named as unreached")
+check(none?.columns.isEmpty == true, "…and no wallet column is drawn")
+
+// ── the connection itself ──────────────────────────────────────────────────
+let one = Conn.map(edges: [edge("mom", "main"), edge("mom", "trading"),
+                           edge("shop", "trading")],
+                   watched: watched("main", "trading"))
+check(one?.connectedCount == 1, "an address reaching TWO wallets is connected")
+check(one?.nodes.first?.id == "mom", "…and it is the one that reached both")
+check(one?.nodes.first?.count == 2, "the count is transactions, not wallets")
+check(one?.nodes.first?.walletKeys == ["main", "trading"], "…and it names both")
+check(one?.columns.map(\.id) == ["main", "trading"],
+      "both wallets get a column — `shop` is not connected but `trading` is still reached")
+check(one?.untouchedWalletNames.isEmpty == true, "nothing is unreached here")
+check(one?.isEmpty == false, "…so the map is not empty")
+
+// A self-transfer is not a relationship, and neither is a wallet we stopped
+// watching. Both would otherwise inflate the headline with something the
+// person cannot act on.
+check(Conn.map(edges: [edge("main", "main"), edge("main", "trading")],
+               watched: watched("main", "trading"))?.connectedCount == 0,
+      "a self-edge is dropped, so `main` reaches only one real wallet")
+check(Conn.map(edges: [edge("mom", "main"), edge("mom", "old")],
+               watched: watched("main", "trading"))?.connectedCount == 0,
+      "an edge to an unwatched wallet cannot make a connection")
+
+// ── order is first-appearance, never a ranking (the user ruling) ───────────
+let ordered = Conn.map(edges: [edge("first", "main"), edge("first", "trading"),
+                               edge("second", "main"), edge("second", "trading"),
+                               edge("second", "savings"), edge("second", "main")],
+                       watched: watched("main", "trading", "savings"))
+check(ordered?.nodes.map(\.id) == ["first", "second"],
+      "nodes are in the order you first dealt with them, NOT by transaction count")
+check(ordered?.nodes.last?.count == 4, "…even though the later one is busier")
+// Wallet order is YOUR watch order on every node, so two nodes' ribbons never
+// cross for no reason.
+check(Conn.map(edges: [edge("mom", "savings"), edge("mom", "main")],
+               watched: watched("main", "trading", "savings"))?
+        .nodes.first?.walletKeys == ["main", "savings"],
+      "a node's wallets read in watch order, not the order the transfers landed")
+
+// ── names ─────────────────────────────────────────────────────────────────
+let named = Conn.map(edges: [edge("mom", "main"),
+                             edge("mom", "trading", named: true, name: "Mom")],
+                     watched: watched("main", "trading"))
+check(named?.nodes.first?.named == true,
+      "a name found on ANY of an address's transfers names the node")
+check(named?.nodes.first?.name == "Mom", "…and the node wears it")
+check(named?.firstUnnamed == nil, "…so there is nothing left to name")
+let unnamed = Conn.map(edges: [edge("aaa", "main", named: true, name: "Aaa"),
+                               edge("aaa", "trading", named: true, name: "Aaa"),
+                               edge("bbb", "main"), edge("bbb", "trading"),
+                               edge("bbb", "savings")],
+                       watched: watched("main", "trading", "savings"))
+check(unnamed?.firstUnnamed?.id == "bbb",
+      "the button targets the first unnamed address, not the busiest")
+
+// ── money ─────────────────────────────────────────────────────────────────
+// An unpriced leg contributes NOTHING rather than zero: a $0 would understate
+// a wallet's total while looking like a measurement.
+let priced = Conn.map(edges: [edge("mom", "main", usd: 100),
+                              edge("mom", "trading", usd: nil),
+                              edge("mom", "main", usd: 50),
+                              edge("shop", "main", usd: 999)],
+                      watched: watched("main", "trading"))
+eq(priced?.columns.first?.usd, 150, "a wallet's total sums only its connected, priced legs")
+check(priced?.columns.last?.usd == nil,
+      "a wallet whose connected legs were never priced states nothing, not $0")
+check(priced?.columns.first?.id == "main", "…and `shop` never contributed, being unconnected")
+
+// ── the display cap does not change what a number means ───────────────────
+// Every connected address counts and contributes its money; only the drawn
+// rows are capped, and the gap is stated. A cap that silently shrank the total
+// would be the no-silent-caps rule broken by a layout decision.
+var many: [Conn.Edge] = []
+for i in 0..<(Conn.nodeLimit + 1) {
+    many.append(edge("a\(i)", "main", usd: 10))
+    many.append(edge("a\(i)", "trading", usd: 10))
+}
+let capped = Conn.map(edges: many, watched: watched("main", "trading"))
+check(capped?.connectedCount == Conn.nodeLimit + 1, "every connected address is counted")
+check(capped?.nodes.count == Conn.nodeLimit, "…only `nodeLimit` are drawn")
+check(capped?.hiddenCount == 1, "…and the gap is stated")
+eq(capped?.columns.first?.usd, Double(Conn.nodeLimit + 1) * 10,
+   "the total covers the undrawn ones too — a display cap is not an accounting rule")
+
+// ── the words ─────────────────────────────────────────────────────────────
+check(Conn.headline(count: 0).contains("None"), "zero says none")
+check(Conn.headline(count: 1).contains("is connected"), "one is singular")
+check(Conn.headline(count: 3).contains("3 of your addresses are connected"),
+      "…and the headline states the count itself")
+check(Conn.subhead(count: 0) == nil,
+      "no definition under a negative — the headline is already the whole answer")
+check(Conn.subhead(count: 1) != nil && Conn.subhead(count: 2) != nil,
+      "…but it is said whenever there IS something connected")
+check(Conn.hiddenNote(0) == nil, "nothing hidden, nothing said")
+check(Conn.hiddenNote(1) != nil && Conn.hiddenNote(4) != nil, "…otherwise always said")
+check(Conn.untouchedNote(["COLD"], connectedCount: 0) == nil,
+      "at zero connections the wallet list is the headline repeated, so it is silent")
+check(Conn.untouchedNote([], connectedCount: 2) == nil, "nothing unreached, nothing said")
+check(Conn.untouchedNote(["COLD"], connectedCount: 2)?.contains("COLD") == true,
+      "…and an unreached wallet is NAMED, never drawn as an empty node")
+
 print("")
 if failures == 0 {
     print("✓ wallet-viz self-test: \(checks) checks passed")
@@ -729,5 +888,5 @@ SWIFT
 # `swiftc` to a binary, NOT `swift file1 file2 …` — that form runs the FIRST
 # file as a script and passes the rest as command-line ARGUMENTS to it, so the
 # sources were never compiled and the run exited 0 having tested nothing.
-swiftc -O -o "$TMP/selftest" "$FLOW" "$RISK" "$STABLE" "$EXPOSURE" "$USEROPS" "$DRIVER"
+swiftc -O -o "$TMP/selftest" "$FLOW" "$RISK" "$STABLE" "$EXPOSURE" "$USEROPS" "$CONNECTIONS" "$DRIVER"
 "$TMP/selftest"
