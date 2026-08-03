@@ -65,11 +65,42 @@ enum KalshiWatch {
         var events: [[String: Any]] = []
         var truncated = false
         var fetchedAt: Date?
+        /// The walk currently in flight, shared by every concurrent caller
+        /// (2026-08-03). An actor SUSPENDS at each `await`, so it does not
+        /// serialize a method that does I/O — and `search` and `categories`
+        /// are started as siblings by `PredictionBrowseSection.loadIfNeeded`,
+        /// so both used to walk into `get()` on a cold cache, both see no
+        /// `fetchedAt`, and both run the full discovery walk: 6 requests for
+        /// 3 pages of data, doubling the burst at exactly the moment a rate
+        /// limit is the thing most likely to be biting.
+        ///
+        /// UNSTRUCTURED on purpose. `.task(id:)` cancels the previous load
+        /// the instant the query or category changes, and a cancelled
+        /// `URLSession.data(for:)` throws — so a shared walk owned by the
+        /// STRUCTURED task tree would be killed by whichever browse gave up
+        /// first, handing the newer load (which is waiting on it) an empty
+        /// book. Detached from any one caller, the walk finishes for whoever
+        /// is still listening.
+        private var inFlight: Task<(events: [[String: Any]], truncated: Bool), Never>?
+        /// Bumped by `invalidate()` so a walk that was already in the air
+        /// when a pull-to-refresh landed can't commit its pre-pull batch
+        /// over the fresh one and re-stamp `fetchedAt` with it.
+        private var generation = 0
 
         func get() async -> (events: [[String: Any]], truncated: Bool) {
             if let fetchedAt, Date().timeIntervalSince(fetchedAt) < 120, !events.isEmpty {
                 return (events, truncated)
             }
+            if let inFlight { return await inFlight.value }
+            let gen = generation
+            let task = Task { await self.walk(generation: gen) }
+            inFlight = task
+            let result = await task.value
+            if generation == gen { inFlight = nil }
+            return result
+        }
+
+        private func walk(generation gen: Int) async -> (events: [[String: Any]], truncated: Bool) {
             var fetched: [[String: Any]] = []
             var cursor = ""
             var more = false
@@ -85,7 +116,9 @@ enum KalshiWatch {
                 more = !cursor.isEmpty
                 if cursor.isEmpty { break }
             }
-            guard !fetched.isEmpty else { return (events, truncated) }  // keep the stale batch over nothing
+            // Keep the stale batch over nothing — and never commit a walk a
+            // pull-to-refresh has already superseded.
+            guard !fetched.isEmpty, generation == gen else { return (events, truncated) }
             events = fetched
             truncated = more
             fetchedAt = Date()
@@ -97,7 +130,7 @@ enum KalshiWatch {
         /// already holds for the wallet's own TTL cache: the window is for
         /// the automatic browse, not the gesture that explicitly asks for
         /// fresh.
-        func invalidate() { fetchedAt = nil }
+        func invalidate() { fetchedAt = nil; generation &+= 1; inFlight = nil }
 
         var age: TimeInterval? { fetchedAt.map { Date().timeIntervalSince($0) } }
     }
@@ -122,9 +155,43 @@ enum KalshiWatch {
     /// insensitive. Combines with a query (a category AND a search term both
     /// narrow the same candidate list) rather than replacing it.
     static func search(_ query: String, limit: Int = 8, category: String? = nil) async -> [Resolved] {
+        await book(query, limit: limit, category: category).rows
+    }
+
+    /// Why a browse came back with nothing (2026-08-03). The room used to
+    /// print "Couldn't reach the market book just now." for EVERY empty
+    /// result, which is a claim about the network that nothing here had
+    /// measured — and the reported failure was a screenshot showing that
+    /// line above a fully populated category strip, i.e. above proof that
+    /// the book HAD been reached. A dead control and a fake status are the
+    /// same offence (prd §83), so the room now says which of these it is.
+    enum BookOutcome {
+        /// Rows came back.
+        case rows
+        /// The discovery listing is empty AND no per-event read answered —
+        /// the only case that is genuinely "couldn't reach".
+        case unreached
+        /// The book was read fine; the query/category simply matched no open
+        /// event.
+        case noMatch
+        /// Events matched and their markets were read, but not one of them
+        /// is quoting a price — every book we opened was empty or its quote
+        /// fields were unreadable. Reads as a live exchange with nothing to
+        /// say, never as a network failure.
+        case noQuote
+    }
+
+    struct Book {
+        let rows: [Resolved]
+        let outcome: BookOutcome
+    }
+
+    /// `search`, plus the reason an empty result is empty.
+    static func book(_ query: String, limit: Int = 8, category: String? = nil) async -> Book {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let cat = category?.lowercased()
         let (events, _) = await cache.get()
+        guard !events.isEmpty else { return Book(rows: [], outcome: .unreached) }
 
         // Phase 1 — match on the cheap listing (title + subtitle + category).
         var candidates: [[String: Any]] = []
@@ -140,28 +207,45 @@ enum KalshiWatch {
                 if hay.contains(q) { candidates.append(event) }
             }
         }
+        guard !candidates.isEmpty else { return Book(rows: [], outcome: .noMatch) }
+
         // Phase 2 — hydrate only the matches, and only a handful of them: one
         // small per-event fetch each, bounded so a broad query ("the") can't
         // turn into hundreds of requests. Over-fetch past `limit` because an
         // event can hold many markets and the volume sort happens after.
         let hydrate = Array(candidates.prefix(max(limit, 12)))
-        let hydrated = await IngestSupport.boundedGather(hydrate, maxConcurrent: 4) { event -> [Resolved] in
-            guard let ticker = event["event_ticker"] as? String else { return [] }
+        let hydrated = await IngestSupport.boundedGather(hydrate, maxConcurrent: 4) { event -> Hydrated in
+            guard let ticker = event["event_ticker"] as? String else { return Hydrated(rows: [], reached: false) }
             return await markets(inEvent: ticker,
                                  category: (event["category"] as? String) ?? "",
                                  query: q)
         }
-        return Array(hydrated.flatMap(\.self).sorted { $0.volume > $1.volume }.prefix(limit))
+        let rows = Array(hydrated.flatMap(\.rows).sorted { $0.volume > $1.volume }.prefix(limit))
+        if !rows.isEmpty { return Book(rows: rows, outcome: .rows) }
+        // Not one event answered — the listing was cached, so this is still a
+        // reachability failure even though phase 1 succeeded.
+        guard hydrated.contains(where: \.reached) else { return Book(rows: [], outcome: .unreached) }
+        return Book(rows: [], outcome: .noQuote)
+    }
+
+    /// One event's hydration: its rows, and whether the fetch itself
+    /// answered at all. The pair is what lets `book` tell "every book is
+    /// empty" from "every request failed" — indistinguishable from a bare
+    /// row count, and the difference between an honest empty state and a
+    /// wrong one.
+    private struct Hydrated {
+        let rows: [Resolved]
+        let reached: Bool
     }
 
     /// One event's open markets, as watchable rows. The query is re-applied
     /// against each market's OWN title/side — an event matched on its
     /// category alone shouldn't hand back every candidate in the race.
     private static func markets(inEvent eventTicker: String, category: String,
-                                query q: String) async -> [Resolved] {
+                                query q: String) async -> Hydrated {
         guard let root = await IngestSupport.getJSON(
             "https://api.elections.kalshi.com/trade-api/v2/events/\(eventTicker.uppercased())?with_nested_markets=true")
-            as? [String: Any] else { return [] }
+            as? [String: Any] else { return Hydrated(rows: [], reached: false) }
         let event = (root["event"] as? [String: Any]) ?? root
         let seriesTicker = (event["series_ticker"] as? String) ?? ""
         let eventTitle = (event["title"] as? String) ?? ""
@@ -179,21 +263,109 @@ enum KalshiWatch {
                 title: title.isEmpty ? eventTitle : title, subtitle: subtitle,
                 probability: prob,
                 previousProbability: previousProbability(market),
-                volume: num(market["volume_fp"]) ?? 0,
+                volume: volume(market),
                 category: category,
                 closeTime: IngestSupport.isoDate(market["close_time"])))
         }
         // A query that named a SIDE ("Chiefs") keeps only that side; one that
         // named the race keeps the field. Applied after the fetch because the
         // side's name lives on the market, not on the listing.
-        guard !q.isEmpty else { return rows }
+        guard !q.isEmpty else { return Hydrated(rows: rows, reached: true) }
         let sideMatches = rows.filter { "\($0.title) \($0.subtitle)".lowercased().contains(q) }
-        return sideMatches.isEmpty ? rows : sideMatches
+        return Hydrated(rows: sideMatches.isEmpty ? rows : sideMatches, reached: true)
     }
 
     /// Resolves a query to its busiest matching market — the Watch button's path.
     static func resolve(_ query: String) async -> Resolved? {
         await search(query, limit: 1).first
+    }
+
+    // MARK: - Diagnosis
+
+    /// What `-kalshiBookProbe` prints (2026-08-03). Three separate reads,
+    /// reported separately, because an empty book has three causes that look
+    /// identical from the room and need three different fixes:
+    ///
+    ///   1. discovery didn't answer          → the exchange or the network
+    ///   2. discovery answered, no candidates → `event_ticker` moved/renamed
+    ///   3. candidates hydrated, no quotes    → the price fields moved/renamed
+    ///
+    /// The reported failure could not be narrowed past "one of these" from
+    /// the code alone, and it can't be narrowed from a screenshot either: the
+    /// room renders the same sentence for all three. So this names the HTTP
+    /// status of each phase and, decisively, the price keys the payload
+    /// actually carries — a rename shows up as a `fields=` line missing the
+    /// name the app reads, in one launch, with no debugger.
+    ///
+    /// Bypasses the 120s cache (`invalidate()` first) so a probe run is
+    /// always a live measurement rather than a re-serve of the read that may
+    /// itself be the problem.
+    static func diagnose(limit: Int = 5) async -> [String] {
+        var out: [String] = []
+        await cache.invalidate()
+
+        let listing = await IngestSupport.getJSONStatus(
+            "https://api.elections.kalshi.com/trade-api/v2/events?status=open&limit=200&with_nested_markets=false")
+        let root = listing.json as? [String: Any]
+        let events = (root?["events"] as? [[String: Any]]) ?? []
+        let ticketed = events.filter { $0["event_ticker"] is String }
+        out.append("discovery status=\(listing.status) events=\(events.count) with_event_ticker=\(ticketed.count) hasMore=\((root?["cursor"] as? String)?.isEmpty == false)")
+        if listing.status != 200 {
+            // 0 is a transport failure, 429 a rate limit, 4xx a moved
+            // endpoint — three different fixes wearing one empty room.
+            out.append("discovery FAILED — nothing below could have run")
+            return out
+        }
+        // Two different failures, said differently: an empty list is an
+        // exchange with nothing open (or a moved `events` envelope), a
+        // populated list with no tickers is the `event_ticker` rename. They
+        // look identical from the room and neither is a network problem.
+        if events.isEmpty {
+            out.append("phase 1 FAILED — 200 but the `events` array is empty or absent")
+            out.append("listing keys: \(Array((root ?? [:]).keys).sorted().joined(separator: ","))")
+            return out
+        }
+        if ticketed.isEmpty {
+            out.append("phase 1 FAILED — \(events.count) events, NOT ONE carrying `event_ticker`; the field moved")
+            out.append("event keys: \(Array((events.first ?? [:]).keys).sorted().joined(separator: ","))")
+            return out
+        }
+        var cats: [String: Int] = [:]
+        for e in events { if let c = e["category"] as? String, !c.isEmpty { cats[c, default: 0] += 1 } }
+        out.append("categories=\(cats.count): \(cats.sorted { $0.value > $1.value }.map(\.key).joined(separator: ", "))")
+
+        var quoted = 0
+        for event in ticketed.prefix(limit) {
+            let ticker = (event["event_ticker"] as? String) ?? "?"
+            let hit = await IngestSupport.getJSONStatus(
+                "https://api.elections.kalshi.com/trade-api/v2/events/\(ticker.uppercased())?with_nested_markets=true")
+            let body = hit.json as? [String: Any]
+            let nested = (body?["event"] as? [String: Any])
+            // Named `onWire`, not `markets` — a local called `markets` would
+            // shadow `markets(inEvent:category:query:)` for the rest of this
+            // scope, which is a trap for the next edit rather than a bug today.
+            let onWire = (body?["markets"] as? [[String: Any]])
+                ?? (nested?["markets"] as? [[String: Any]]) ?? []
+            let priced = onWire.filter { liveProbability($0) != nil }
+            quoted += priced.count
+            // The decisive line: the price-shaped keys really on the wire,
+            // beside the ones the app reads. Only the first market's — the
+            // shape is per-payload, not per-row, and one is enough to see a
+            // rename.
+            let keys = Array((onWire.first ?? [:]).keys)
+                .filter { $0.contains("bid") || $0.contains("ask") || $0.contains("volume") || $0.contains("price") }
+                .sorted().joined(separator: ",")
+            out.append("event \(ticker) status=\(hit.status) markets=\(onWire.count) quoted=\(priced.count) fields=[\(keys)]")
+        }
+        out.append(quoted > 0
+                   ? "phase 2 OK — \(quoted) quoted market(s) across \(min(limit, ticketed.count)) event(s)"
+                   : "phase 2 FAILED — events hydrated but NOT ONE quotes a price; compare `fields=` against yes_bid_dollars/yes_ask_dollars (and the yes_bid/yes_ask fallback)")
+
+        // The room's own read, end to end — what the browse section would
+        // have shown, and which empty-state sentence it would have printed.
+        let browse = await book("", limit: 24, category: nil)
+        out.append("book(\"\") rows=\(browse.rows.count) outcome=\(browse.outcome)")
+        return out
     }
 
     /// The categories actually present in the open-events cache right now,
@@ -263,23 +435,59 @@ enum KalshiWatch {
     /// listed after its book empties, and the residual trade left behind
     /// (often a tenth of a cent) is what printed "0%" against the USA to win
     /// a World Cup it hasn't played. A stale trade is not a price (prd §83 ②).
-    private static func bookMid(_ market: [String: Any], bid bidKey: String,
-                               ask askKey: String) -> Double? {
-        guard let bid = num(market[bidKey]), let ask = num(market[askKey]),
-              bid > 0 || ask < 1 else { return nil }
-        return (bid + ask) / 2
+    /// The `_dollars` pair is read FIRST and wins whenever it is present, so
+    /// this changes no number on a payload shaped the way 2026-07-28 measured
+    /// one. The integer-CENT pair beneath it is a fallback, added 2026-08-03:
+    /// those two fields were the app's single point of failure for the entire
+    /// book — every market whose quote can't be read is dropped by
+    /// `markets(inEvent:)`, so if Kalshi ever stops sending `yes_bid_dollars`
+    /// the room goes completely empty with no error anywhere, which is
+    /// exactly the shape of the reported failure (categories populated, book
+    /// blank). The app was already living with this API mid-migration —
+    /// `volume` measured null while `volume_fp` carried the number — and a
+    /// read with one source and no fallback is what makes that drift fatal
+    /// instead of cosmetic. UNMEASURED against the live API (no egress from
+    /// the host this was written on); it fails to today's exact behaviour.
+    private static func bookMid(_ market: [String: Any],
+                                dollars: (bid: String, ask: String),
+                                cents: (bid: String, ask: String)) -> Double? {
+        if let mid = mid(num(market[dollars.bid]), num(market[dollars.ask]), per: 1) { return mid }
+        return mid(num(market[cents.bid]), num(market[cents.ask]), per: 100)
+    }
+
+    /// The book brackets the answer, normalised to 0...1 before the empty-book
+    /// test so the cents path applies the SAME rule the dollars path does —
+    /// scaling after the guard would read a 0¢/100¢ empty book as a live 50%.
+    private static func mid(_ bid: Double?, _ ask: Double?, per scale: Double) -> Double? {
+        guard let bid, let ask else { return nil }
+        let b = bid / scale, a = ask / scale
+        guard b > 0 || a < 1 else { return nil }
+        return (b + a) / 2
     }
 
     /// Now.
     static func liveProbability(_ market: [String: Any]) -> Double? {
-        bookMid(market, bid: "yes_bid_dollars", ask: "yes_ask_dollars")
+        bookMid(market,
+                dollars: ("yes_bid_dollars", "yes_ask_dollars"),
+                cents: ("yes_bid", "yes_ask"))
     }
 
     /// The prior close, read the SAME way — a "vs last" delta has to subtract
     /// like for like, and a mid minus a last trade invents a move out of half
     /// the spread.
     static func previousProbability(_ market: [String: Any]) -> Double? {
-        bookMid(market, bid: "previous_yes_bid_dollars", ask: "previous_yes_ask_dollars")
+        bookMid(market,
+                dollars: ("previous_yes_bid_dollars", "previous_yes_ask_dollars"),
+                cents: ("previous_yes_bid", "previous_yes_ask"))
+    }
+
+    /// Contracts traded. `volume_fp` (a STRING) is the field that carries the
+    /// number today and `volume` measured null beside it (2026-07-28) — read
+    /// in that order, with the plain field as the fallback for the same
+    /// reason the cent quotes are one: sorting the whole book at zero is how
+    /// the long tail looked inseparable from the real book last time.
+    private static func volume(_ market: [String: Any]) -> Double {
+        num(market["volume_fp"]) ?? num(market["volume"]) ?? 0
     }
 
     /// Adds a resolved market to the watchlist. Returns the new thing, or

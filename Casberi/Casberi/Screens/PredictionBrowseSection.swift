@@ -182,6 +182,9 @@ struct PredictionBrowseSection: View {
     @State private var kalshiCategories: [String] = []
     @State private var polymarketCategories: [String] = []
     @State private var kalshiRows: [KalshiWatch.Resolved] = []
+    /// Why Kalshi's read came back empty, when it did — what `emptyLine`
+    /// reads instead of asserting a network failure it never observed.
+    @State private var kalshiOutcome: KalshiWatch.BookOutcome?
     @State private var polymarketRows: [PolymarketBridge.Resolved] = []
     @State private var disagreements: [PredictionDisagreement.Pair] = []
     /// sourceRefs already in the corpus, across BOTH venues — read once per
@@ -417,8 +420,9 @@ struct PredictionBrowseSection: View {
         // event's own `category` inside its cached listing, Polymarket
         // matches event tags; both narrow BEFORE the per-event hydration,
         // which is what keeps a category browse the same cost as a plain one.
-        async let k: [KalshiWatch.Resolved] = (scope == .kalshi || scope == .all)
-            ? KalshiWatch.search(q, limit: 24, category: category) : []
+        async let k: KalshiWatch.Book = (scope == .kalshi || scope == .all)
+            ? KalshiWatch.book(q, limit: 24, category: category)
+            : KalshiWatch.Book(rows: [], outcome: .rows)
         async let p: [PolymarketBridge.Resolved] = (scope == .polymarket || scope == .all)
             ? PolymarketBridge.search(q, limit: 24, category: category) : []
         async let kc: [String] = (scope == .kalshi || scope == .all) ? KalshiWatch.categories() : []
@@ -426,7 +430,8 @@ struct PredictionBrowseSection: View {
         // Gathered into LOCALS, not committed yet — see the cancellation
         // guard below for why (2026-07-30, the "couldn't pull the market
         // book" report).
-        let kRows = await k
+        let kBook = await k
+        let kRows = kBook.rows
         let pRows = await p
         let kCats = await kc
         let pCats = await pc
@@ -459,6 +464,7 @@ struct PredictionBrowseSection: View {
         followedRefs = IngestSupport.existingSourceRefs(modelContext, source: "Kalshi")
             .union(IngestSupport.existingSourceRefs(modelContext, source: "Polymarket"))
         kalshiRows = kRows
+        kalshiOutcome = kBook.outcome
         polymarketRows = pRows
         kalshiCategories = kCats
         polymarketCategories = pCats
@@ -789,6 +795,17 @@ struct PredictionBrowseSection: View {
 
     /// Says WHICH read came back empty, so a too-narrow filter doesn't read
     /// as a dead exchange.
+    ///
+    /// The last branch used to be "Couldn't reach the market book just now."
+    /// unconditionally (2026-08-03) — a claim about the network that nothing
+    /// here had measured. The reported failure was a screenshot of that line
+    /// sitting directly under a fully populated category strip, and those
+    /// chips are read from the SAME cached listing in the SAME pass, so the
+    /// screenshot was itself proof the book had been reached. A sentence that
+    /// blames the connection when the connection is fine is a fake status
+    /// (prd §83): it sends a person to their wifi over an exchange that is
+    /// simply quoting nothing, and it costs a debugging round every time.
+    /// Now the venue's own read says which it was.
     private var emptyLine: String {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         if !q.isEmpty, let category {
@@ -796,7 +813,23 @@ struct PredictionBrowseSection: View {
         }
         if !q.isEmpty { return String(localized: "No open market matches “\(q)”.") }
         if let category { return String(localized: "Nothing open in \(category) right now.") }
-        return String(localized: "Couldn't reach the market book just now.")
+        // Only Kalshi reports a reason today — Polymarket's `search` has no
+        // failure channel, so a Polymarket-only empty keeps the old sentence
+        // rather than inheriting a verdict from the other venue's read.
+        guard scope == .kalshi, let kalshiOutcome else {
+            return String(localized: "Couldn't reach the market book just now.")
+        }
+        switch kalshiOutcome {
+        case .unreached:
+            return String(localized: "Couldn't reach the market book just now.")
+        case .noMatch:
+            return String(localized: "Nothing open on Kalshi right now.")
+        case .noQuote, .rows:
+            // `.rows` can't reach here (the book isn't empty), but stating
+            // the quoting case for it keeps the switch exhaustive without a
+            // default that would silently swallow a future case.
+            return String(localized: "Kalshi's open markets aren't quoting a price right now.")
+        }
     }
 
     private var bookSkeleton: some View {

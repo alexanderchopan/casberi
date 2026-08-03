@@ -1030,6 +1030,21 @@ enum ProbeHooks {
                       added != nil ? "watched" : "already")
             }
         },
+        // `-kalshiBookProbe YES` walks the browse room's read PHASE BY PHASE
+        // and NSLogs one `kalshiBook|` line each — discovery status, the
+        // categories it parsed, then per hydrated event the market count, the
+        // quoted count, and the price-shaped keys actually on the wire.
+        //
+        // One NSLog per line on purpose (the `-todayProbe` truncation lesson).
+        // Built for the 2026-08-03 report — "Kalshi says can't reach order
+        // book" above a fully populated category strip, i.e. above proof the
+        // book HAD been reached — where the room's single sentence covered
+        // three different causes and no launch could tell them apart.
+        Hook(key: "kalshiBookProbe") { _, _ in
+            Task { @MainActor in
+                for line in await KalshiWatch.diagnose() { NSLog("kalshiBook| %@", line) }
+            }
+        },
         // `-userSearch "<bluesky|farcaster>:<query>"` runs the find-a-person
         // search and logs the hits — headless test of the search endpoints.
         Hook(key: "userSearch") { spec, _ in
