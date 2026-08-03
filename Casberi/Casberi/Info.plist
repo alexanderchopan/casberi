@@ -33,10 +33,13 @@
 	     installed (canOpenURL). Without the scheme here the check always returns
 	     false, so the honest verb/tile would never appear. todoist → thing-sheet
 	     "Add to Todoist"; chatgpt/claude → the + tray tool launcher (open the
-	     app, never a website). wc → the Wallet screen's Connect button: EVERY
-	     WalletConnect wallet registers `wc:`, so one entry covers all of them
-	     and none need naming here. It is the only reliable read of "is a wallet
-	     installed" — measured 2026-07-16, both `UIApplication.open`'s completion
+	     app, never a website). wc → the Wallet screen's Connect button. This
+	     entry read as "one scheme covers every wallet" until 2026-08-01, when a
+	     phone with MetaMask on its home screen answered canOpenURL(wc:) FALSE —
+	     modern wallets register universal links and no longer claim the bare
+	     scheme, which is why Connect presents ReownAppKit's own directory now.
+	     It survives as the Mac's honest read and as the SDK's own no-wallet
+	     check — measured 2026-07-16, both `UIApplication.open`'s completion
 	     and SwiftUI's `openURL` report SUCCESS for an unhandled `wc:` URI while
 	     LaunchServices fails it asynchronously in its own daemon
 	     (LSApplicationWorkspaceErrorDomain 115 in the log), so the opened-Bool
@@ -46,7 +49,17 @@
 	     unconditionally, so on a system where nothing claims it the disc did
 	     nothing at all and reported nothing (user: it "doesn't go to the Photos
 	     app"). Declared here so `canOpenURL` can answer, and the verb is now
-	     gated on that answer — the picture itself opens in-app instead. -->
+	     gated on that answer — the picture itself opens in-app instead.
+
+	     The last four are the recommended wallets' OWN schemes, and they are
+	     what makes the modal's "installed" state real: the SDK's
+	     `fetchAllWalletMetadata` calls canOpenURL on each wallet's `ios_schema`
+	     and flags the matches, so an UNDECLARED scheme reads false and every
+	     wallet renders as if it weren't installed. They must stay in step with
+	     `WalletConnectBridge.recommendedWalletIDs` — a wallet swapped there and
+	     not here still shows, it just can never say it's already on the phone.
+	     Query-only, as with every entry above: nothing here opens a wallet, the
+	     SDK's own deep link does that after the person picks one. -->
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>todoist</string>
@@ -55,6 +68,10 @@
 		<string>googlegmail</string>
 		<string>wc</string>
 		<string>photos-redirect</string>
+		<string>metamask</string>
+		<string>rainbow</string>
+		<string>rabby</string>
+		<string>safe</string>
 	</array>
 	<!-- Claims the org.opml.opml UTI (the de facto identifier every OPML-
 	     capable reader, e.g. NetNewsWire, declares — there is no Apple-owned

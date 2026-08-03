@@ -94,6 +94,47 @@ enum WalletConnectBridge {
 
     // MARK: - Configuration
 
+    /// The four wallets the modal leads with (user, 2026-08-03). Reown explorer
+    /// ids, each resolved by name against `api.web3modal.com/getWallets` that
+    /// day — they are opaque hashes, so a guessed id fails as a silently missing
+    /// row rather than an error, and a rename upstream never invalidates one.
+    ///
+    /// RECOMMEND, not restrict: the SDK feeds this list to the featured fetch as
+    /// its `include` filter AND sorts the result by it, so the first screen is
+    /// exactly these four in this order — while every other wallet stays
+    /// reachable behind "All wallets". `includedWalletIds` would have been the
+    /// restricting form, and it makes a wallet we didn't list unconnectable.
+    ///
+    /// FOUR IS THE CEILING, not a preference: `W3MAPIInteractor`'s featured
+    /// fetch hardcodes `entries: 4`, and the API fills those four by its OWN
+    /// `order` field before the SDK re-sorts them. Measured with a fifth id
+    /// (OKX, order 60) in the list: the API returned MetaMask/OKX/Safe/Rainbow
+    /// and dropped **Rabby** (order 1190) off the screen entirely. So a fifth
+    /// entry doesn't append, it evicts — and it evicts whichever wallet the
+    /// explorer ranks worst, not the one we put last.
+    ///
+    /// Three names the user asked for are deliberately absent because they
+    /// cannot be expressed here (measured 2026-08-03, re-measure before
+    /// re-litigating): **Ambire** and **Nunchuk** are in no registry at all —
+    /// searched every case variant, then swept all three lists to completion
+    /// (496 iOS / 598 unfiltered on `api.web3modal.com`, 629 on the legacy
+    /// `explorer-api.walletconnect.com`) and grepped the raw payloads, with a
+    /// `search=rainbow` control proving search itself worked. **Phantom** IS
+    /// listed but carries `supports_wc: false` and no `mobile_link`, so it is
+    /// filtered out of every iOS result and this list has nothing to point at.
+    /// The only route for any of them is `customWallets` (a hand-authored name,
+    /// image and deep-link scheme), which needs a verified WC-capable iOS app.
+    private static let recommendedWalletIDs = [
+        // MetaMask
+        "c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96",
+        // Rainbow
+        "1ae92b26df02f0abca6304df07debccd18262fdf5fe82daa81593582dac9a369",
+        // Rabby
+        "18388be9ac2d02726dbac9777c96efaac06d744b2f6d580fccdd4127a6d01fd1",
+        // Safe — safe.global's, NOT the explorer's SafePal/SafeWallet/SafeMoon.
+        "225affb176778569276e484e1b92637ad061b01e13a048b35a9d280c3b58970f",
+    ]
+
     /// The app group the SDK stores its pairing keys under — the same group
     /// the SwiftData store shares with the extensions. Named once: the
     /// keychain preflight below must probe EXACTLY the group the SDK will
@@ -152,7 +193,8 @@ enum WalletConnectBridge {
             metadata: metadata,
             crypto: UnusedCryptoProvider(),
             sessionParams: SessionParams(namespaces: readOnlyNamespaces()),
-            authRequestParams: nil
+            authRequestParams: nil,
+            recommendedWalletIds: recommendedWalletIDs
         )
         #endif
 
