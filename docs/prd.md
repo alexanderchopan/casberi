@@ -14570,3 +14570,45 @@ CASE-SENSITIVE, and lowercasing those folds distinct wallets together — the
 Its rows record only `source: "OpenSea"` and `tags: ["NFT"]` — the chain a
 collection came from is never stored, so there is nothing to prune on. Left
 alone rather than guessed at.
+
+## §287 — The tray that spilled out of its own sheet (user: "badly designed. need to improve this can see the words in the bring your own agent header", 2026-08-03)
+
+A screenshot of Settings → Your key with the sheet's own paragraphs floating
+ABOVE its rounded top edge, drawn across the Settings rows behind it, sliced
+by the grabber. The title "Your key" was nowhere on screen; the card began
+mid-sentence with Claude's capability line, and the seven-row provider list
+ran off the bottom.
+
+**Two separate faults, and the second is the one worth writing down.**
+
+**1. The card outgrew its detent.** `AccountDetailSheet.sheetHeight` gave
+`.key` 500pt, last adjusted when the picker was a segmented control. §243
+replaced that control with a row per provider — right, and about 400pt tall
+at seven providers — while three paragraphs still sat between the summary and
+the list. The content wants ~770pt. Sized at 680 now, with `[.height, .large]`
+so it can be dragged, and scrolling underneath (the house pattern every other
+long tray already used, `DSTray { ScrollView { … } }`).
+
+**2. `DSTray` had no overflow behaviour at all, so overflow left the sheet.**
+This is the general fault: content taller than the detent does not compress —
+a `Text` with `fixedSize`, a 44pt field and a list of rows each report their
+ideal height — and the oversized stack was centred in the sheet with nothing
+clipping it. So it overflowed BOTH ways, and the half that went UP was drawn
+over the app behind. Any tray in the app was one paragraph of Dynamic Type
+away from the same picture; this one just got there first.
+
+Every tray now anchors its content to the top and clips to the sheet's bounds.
+A tray that overflows anyway degrades honestly — title and summary stay put,
+the tail is cut at the bottom edge, which reads as "there is more here" — and
+can no longer bleed over the screen behind it. **A floor, not a licence:**
+content that can outgrow its detent still belongs in a `ScrollView`.
+
+**Order follows the gesture.** Fixing the height alone would have left a door
+to seven agents that opens on prose. The three paragraphs are two general
+small print (what leaves, what stays) and one describing whichever provider is
+selected — none of them a step in the task. So: summary, the list, what THAT
+agent adds, the field. The per-agent line moved to sit WITH the selection it
+describes rather than above the list it was silently describing one row of;
+the two small-print paragraphs joined at the foot, where this card already
+kept half of them. Nothing was cut — the same words, where they answer a
+question the person is actually asking at that moment.
