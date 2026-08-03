@@ -1,0 +1,33 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b6fd6"/><stop offset="1" stop-color="#123a7a"/>
+    </linearGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f2c9a0"/><stop offset="1" stop-color="#c98f61"/>
+    </linearGradient>
+    <linearGradient id="shirt" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#e0345c"/><stop offset="1" stop-color="#9c1e3c"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- shoulders -->
+  <path d="M60 512 C70 400 150 356 256 356 C362 356 442 400 452 512 Z" fill="url(#shirt)"/>
+  <!-- neck -->
+  <rect x="216" y="290" width="80" height="90" rx="34" fill="#c98f61"/>
+  <!-- head -->
+  <ellipse cx="256" cy="212" rx="108" ry="126" fill="url(#skin)"/>
+  <!-- hair -->
+  <path d="M148 208 C148 110 196 66 256 66 C316 66 364 110 364 208 C364 176 340 150 320 154 C300 120 212 120 192 154 C172 150 148 176 148 208 Z" fill="#20161a"/>
+  <!-- brows -->
+  <rect x="196" y="186" width="46" height="11" rx="5" fill="#2a1d20"/>
+  <rect x="270" y="186" width="46" height="11" rx="5" fill="#2a1d20"/>
+  <!-- eyes -->
+  <ellipse cx="219" cy="216" rx="17" ry="19" fill="#ffffff"/>
+  <ellipse cx="293" cy="216" rx="17" ry="19" fill="#ffffff"/>
+  <circle cx="221" cy="218" r="9" fill="#2e2016"/>
+  <circle cx="295" cy="218" r="9" fill="#2e2016"/>
+  <!-- nose + mouth -->
+  <path d="M256 226 L246 262 L266 262 Z" fill="#b87c52" opacity=".75"/>
+  <path d="M222 292 Q256 320 290 292" stroke="#8e4b45" stroke-width="12" fill="none" stroke-linecap="round"/>
+</svg>
