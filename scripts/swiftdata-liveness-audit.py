@@ -95,6 +95,10 @@ SOURCES = [
     "Casberi/Casberi/Design",
     # GenUI renders Things too — it was outside the audit until 2026-07-28.
     "Casberi/Casberi/GenUI",
+    # Model/ joined 2026-08-03: build 250 crashed in `TodayBrief.compose`,
+    # async MODEL code holding a [Thing] across an await. Checks 1–5 are all
+    # view-shaped and simply find nothing here; CHECK 6 is the one that bites.
+    "Casberi/Casberi/Model",
 ]
 
 # Files that legitimately hold Things in @State with no isLive guard. Adding
@@ -123,6 +127,12 @@ HELD_DECL = re.compile(r"@State[^\n]*?\bvar\s+([A-Za-z_]\w*)\s*:\s*(?:\[Thing\]|
 # Check 5: `struct X: View {` (possibly with other conformances/generics), and
 # a STORED `Thing` property on it. The struct extent is found by scanning to the
 # next top-level declaration — crude, but these are all file-scope value types.
+# Check 6: an `async` func that takes a `[Thing]` — the shape that can hold a
+# model across a suspension.
+ASYNC_THING_FUNC = re.compile(
+    r"^\s*(?:@\w+\s+)*(?:private |static |public |final )*func\s+(\w+)\s*\([^)]*\[Thing\][^)]*\)[^\n{]*\basync\b[^\n{]*\{",
+    re.M | re.S)
+
 VIEW_STRUCT = re.compile(r"^(?:private |public )?struct (\w+)[^\n{]*:\s*[^\n{]*\bView\b[^\n{]*\{", re.M)
 STORED_THING_PROP = re.compile(r"^\s{0,8}(?:let|var)\s+(\w*[Tt]hing\w*)\s*:\s*Thing\b", re.M)
 
@@ -356,6 +366,33 @@ def audit_file(path: pathlib.Path, findings: list[str]) -> None:
             f"guard it, don't rely on the parent"
         )
 
+    # ── Check 6: a [Thing] held across an AWAIT ──────────────────────
+    # Build 250 (2026-08-03), and the first of this class outside the view
+    # layer. `TodayBrief.compose` took a `[Thing]`, suspended on three live
+    # reads bounded at 8s, then read `.kind`/`.source` off the SAME array —
+    # and the app's own foreground heals delete Things in exactly that window.
+    # No view-side guard can help: there is no ForEach, no leaf body, no @State.
+    # An async function handed a `[Thing]` must re-filter `.live` after it
+    # suspends (or on entry, if its caller awaited before handing it over).
+    for m in ASYNC_THING_FUNC.finditer(text):
+        name, start = m.group(1), m.end()
+        nxt = re.search(r"\n    (?:@\w+\s+)?(?:private |static |public |final )*func\s", text[start:])
+        body = text[start:start + (nxt.start() if nxt else min(len(text) - start, 20000))]
+        if "await" not in body:
+            continue
+        after = body[body.rindex("await"):]
+        # Something read off a model AFTER the last suspension?
+        reads = re.search(rf"\.({'|'.join(sorted(STORED))})\b", after)
+        if not reads:
+            continue
+        if ".live" in body or "isLive" in body:
+            continue
+        findings.append(
+            f"✗ {rel}:{text[:m.start()].count(chr(10)) + 1} — async '{name}' holds a "
+            f"[Thing] across an await, then reads a stored property\n"
+            f"      re-filter `.live` after the suspension — a heal can delete during it"
+        )
+
     # ── Check 4: a held [Thing] handed onward without .live ──────────
     # Build 177. `@State private var debouncedAllSnapshot: [Thing]?` — the All
     # room's perf snapshot, raw model refs held across a debounce window, so
@@ -514,6 +551,25 @@ def self_test() -> int:
             "    var body: some View { Text(thing.title) }\n"
             "}\n",
             "stores a Thing but its body has no isLive guard",
+        ),
+        # Build 250's shape: async model code holding a [Thing] across a
+        # suspension, then reading it. No view guard can reach this.
+        "async-holds-thing-across-await": (
+            "static func compose(things: [Thing], context: ModelContext) async -> String? {\n"
+            "    let landed = DayBrief.landed(things)\n"
+            "    let holdings = await liveHoldings()\n"
+            "    return landed.filter { $0.kind == .transaction }.first?.title\n"
+            "}\n",
+            "holds a [Thing] across an await",
+        ),
+        "clean-async-refiltered-after-await": (
+            "static func compose(things: [Thing], context: ModelContext) async -> String? {\n"
+            "    var landed = DayBrief.landed(things)\n"
+            "    let holdings = await liveHoldings()\n"
+            "    landed = landed.live\n"
+            "    return landed.filter { $0.kind == .transaction }.first?.title\n"
+            "}\n",
+            None,
         ),
         "clean-leaf-view-guarded": (
             "struct BandRow: View {\n"

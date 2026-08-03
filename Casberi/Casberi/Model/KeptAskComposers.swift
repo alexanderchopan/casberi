@@ -35,6 +35,16 @@ enum KeptAskComposers {
     /// composer is silent by construction.
     static func compose(_ kind: String, things: [Thing], context: ModelContext,
                         presenting: Bool = false) async -> Result? {
+        // `.live` at this ONE door, so every composer below is handed a valid
+        // array (crash fix, build 250 — see `TodayBrief.compose`). The caller
+        // that matters is `KeptAskStore.refreshDigests`, which awaits this
+        // function once PER KIND in a loop while holding a single `things`
+        // array: each await is a suspension in which the app's own foreground
+        // heals can delete, so by the third kind the array it keeps passing can
+        // hold tombstoned models. Filtering here re-validates on every call,
+        // and this enum is `@MainActor`, so what a composer receives can't be
+        // invalidated underneath it before it reads.
+        let things = things.live
         if kind == "today" {
             return await TodayBrief.compose(things: things, context: context,
                                             presenting: presenting)

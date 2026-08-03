@@ -116,8 +116,15 @@ enum TodayBrief {
     /// three funnel through `RootShell.answerDocument`) pass true.
     static func compose(things: [Thing], context: ModelContext,
                         presenting: Bool = false) async -> KeptAskComposers.Result? {
+        // Filtered on ENTRY as well as after the awaits below (crash fix,
+        // build 250). The caller's array can ALREADY be stale: `RootShell`
+        // fetches it, then awaits `KeptAskStore.refreshDigests` before handing
+        // it here — a suspension of its own, in which a heal can delete. So
+        // `DayBrief.landed` on the next line would read a tombstoned model
+        // before this function ever suspends.
+        var things = things.live
         let now = Date.now
-        let landed = DayBrief.landed(things, now: now)
+        var landed = DayBrief.landed(things, now: now)
         let move = DayBrief.walletMove(now: now)
         let windowStart = DayBrief.windowStart(now: now)
         // The ledger is read ONCE here and threaded through every module that
@@ -156,6 +163,32 @@ enum TodayBrief {
         let holdings = await holdingsRead
         let moves = await movesRead
         let risk = await riskRead
+
+        // CRASH FIX (build 250, 2026-08-03) — the "never read a dead Thing"
+        // class, reached from ASYNC MODEL CODE rather than a view, where none
+        // of the view-side guards (keying, the leaf-body check, the boundary
+        // filter) can help.
+        //
+        // `things` and `landed` were captured BEFORE the three live reads
+        // above, and those reads suspend for up to `liveReadBudget` (8s). The
+        // app's own foreground bridge sweep runs heals that DELETE Things in
+        // exactly that window, so on resume this array can hold tombstoned
+        // models — and every module below (`ledeLine`, `moneyHero`, `nextTile`,
+        // `flowBand`, `themesMap`, `observations`, `DayBrief.detail`) reads
+        // stored properties off them. Build 250 trapped in `moneyHero`, on
+        // `$0.kind == .transaction`, five times in ninety minutes.
+        //
+        // It surfaced now because RootShell started composing this
+        // UNCONDITIONALLY on every foreground (2026-08-03, to keep the widget
+        // fresh) — before that it only ran for someone who had KEPT the
+        // "today" ask, which most people never do, so the path was rare.
+        //
+        // Re-filtering HERE is sufficient and airtight: this enum is
+        // `@MainActor` and there is no further `await` in `compose`, so the
+        // whole remainder runs with exclusive main-actor access — no delete can
+        // land between this line and the reads that follow.
+        things = things.live
+        landed = landed.live
 
         var ids: [String] = []
         var lines: [String] = []
