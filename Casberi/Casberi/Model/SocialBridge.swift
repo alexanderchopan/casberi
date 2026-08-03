@@ -432,3 +432,96 @@ struct SocialAccount: Identifiable, Equatable {
         return b.isEmpty ? handle : "\(handle) · \(b)"
     }
 }
+
+/// Unfollowing a topic takes its posts with it (prd §286, 2026-08-02).
+///
+/// `FarcasterStore.removeChannel` and `BlueskyStore.removeFeed` only ever
+/// edited their own list — nothing touched the corpus — so a channel you
+/// unfollowed went on filling the feed forever, with no way to get rid of it
+/// short of Delete everything. Reported 2026-08-02: "i was following a
+/// channel, then i unfollowed the channel but my feed still shows the
+/// channel's contents". Both bridges store the same fields, so this is one
+/// path rather than a per-bridge fork (the `SocialBridge` doctrine).
+///
+/// **It removes only what the topic was the ONLY reason to hold**, which is
+/// the whole difficulty: `channelName` does NOT mean "arrived via the
+/// channel". Both bridges' heal back-fills it onto a post that landed for
+/// another reason and later turned up in a followed channel (see
+/// `FarcasterIngest`/`BlueskyIngest`'s `if thing.channelName == nil`), so
+/// deleting on that field alone would take a watched friend's own post with
+/// it and read as data loss. Two exemptions carry that:
+///
+///   - a `socialContext` (liked / recast / reply / mention) — the post is in
+///     the corpus for a reason that has nothing to do with the topic;
+///   - an author you WATCH — you follow the person, and you'd still have
+///     their post with the channel gone.
+///
+/// Anything left is a stranger's post in a room you left.
+enum SocialTopics {
+    /// Returns how many were removed.
+    @MainActor
+    @discardableResult
+    static func pruneTopic(source: String, channel: String,
+                           watchedHandles: [String], context: ModelContext) -> Int {
+        let name = channel.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty else { return 0 }
+        let watched = Set(watchedHandles.map { $0.lowercased() })
+
+        // `source` is compared in the predicate (a plain String equality
+        // SwiftData can push down); everything else is filtered in Swift —
+        // the corpus-scale narrowing is already done, and a `#Predicate`
+        // reaching into an array attribute crashes at runtime (see CLAUDE.md).
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == source })
+        var removedIDs: [UUID] = []
+        for thing in (try? context.fetch(descriptor)) ?? [] where thing.isLive {
+            guard thing.channelName == name else { continue }
+            guard thing.socialContext == nil else { continue }
+            if let author = thing.authorHandle?.lowercased(), watched.contains(author) { continue }
+            removedIDs.append(thing.id)
+            context.delete(thing)
+        }
+        guard !removedIDs.isEmpty else { return 0 }
+        context.saveHonestly()
+        SpotlightIndex.remove(ids: removedIDs)
+        return removedIDs.count
+    }
+
+    /// Unfollowing a PERSON (or a feed) takes their posts with it — the same
+    /// ruling as `pruneTopic`, one field over (user, 2026-08-02: "if you
+    /// unfollow something it shouldn't show in your corpus"). Every social
+    /// account and every RSS/YouTube/Reddit feed-follow shared ONE
+    /// `removeName`, and none of them touched the corpus.
+    ///
+    /// The exemption is `pruneTopic`'s mirror image: a post of theirs that
+    /// arrived through a topic you STILL follow stays, because that follow
+    /// still explains it. Pass the topics that remain — for a bridge with no
+    /// topic concept (the feed follows) that's simply empty.
+    ///
+    /// `handle` is matched against `authorHandle`, which is what every one of
+    /// these bridges stores: a username on Farcaster, a handle on Bluesky,
+    /// the resolved pubkey hex on Nostr, and the FEED'S OWN NAME on a feed
+    /// follow (`FeedFollowBridges` sets it so several followed feeds stay
+    /// distinguishable) — which is why the caller resolves the display name
+    /// rather than passing the URL that was typed.
+    @MainActor
+    @discardableResult
+    static func pruneAuthor(source: String, handle: String,
+                            remainingTopics: [String], context: ModelContext) -> Int {
+        let who = handle.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !who.isEmpty else { return 0 }
+        let keep = Set(remainingTopics.map { $0.lowercased() })
+
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == source })
+        var removedIDs: [UUID] = []
+        for thing in (try? context.fetch(descriptor)) ?? [] where thing.isLive {
+            guard thing.authorHandle?.lowercased() == who else { continue }
+            if let channel = thing.channelName?.lowercased(), keep.contains(channel) { continue }
+            removedIDs.append(thing.id)
+            context.delete(thing)
+        }
+        guard !removedIDs.isEmpty else { return 0 }
+        context.saveHonestly()
+        SpotlightIndex.remove(ids: removedIDs)
+        return removedIDs.count
+    }
+}

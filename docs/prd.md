@@ -14469,3 +14469,40 @@ it UNDIAGNOSABLE:
 
 Latch behaviour verified six ways, including the stuck-pass bypass and the
 stale-clear it must not do.
+
+## §286 — Unfollowing takes its posts with it (user: "on farcater i was following a channel, then i unfollowed the channel but my feed still shows the channel's contents and shoudln't", then "what about rss does same apply there too? basically if you unfollow something it shouldn't show in your corpus", 2026-08-02)
+
+Every unfollow verb in the app edited a LIST and never touched the corpus.
+`FarcasterStore.removeChannel` was one line — `channels.removeAll { … }` — and
+so were `BlueskyStore.removeFeed`, `NostrStore.removeHashtag`, and the shared
+`removeName` behind every social account AND every RSS/Substack/Reddit/
+YouTube/Podcasts feed follow. So a channel you left went on filling the feed
+forever, and the only way to be rid of it was Delete everything. The existing
+Farcaster delete pass only ever removed casts deleted UPSTREAM (`castIsGone`),
+which is a different question.
+
+**The ruling is general** and stated by the user in its general form: if you
+unfollow something it should not be in your corpus. Two prunes, one shared
+path for all three social bridges plus the feed follows (`SocialTopics`),
+since they already store the same fields.
+
+**The difficulty is that neither field means what it looks like it means.**
+`channelName` does NOT mean "arrived via that channel": all three bridges
+back-fill it onto a post that landed for another reason and later turned up
+in a followed topic (`if thing.channelName == nil` in each ingest). So
+deleting on it alone would take a watched friend's own post with it and read
+as data loss. The rule that survives is: **keep what a REMAINING follow still
+explains.**
+
+  - Unfollowing a TOPIC keeps a post that carries a `socialContext`
+    (liked / recast / reply / mention — in the corpus for its own reason) or
+    whose author you still watch. What's left is a stranger's post in a room
+    you left.
+  - Unfollowing a PERSON or a FEED keeps a post that arrived through a topic
+    you still follow — the mirror image.
+
+Two identity traps, both resolved BEFORE the store mutates: Nostr keys
+`authorHandle` on the resolved pubkey hex while `remove` accepts either that
+or what was typed, and a feed item carries the FEED'S OWN name (not the URL
+typed), so the caller resolves `display(for:)` while the entry still exists.
+Twelve cases verified against both predicates, including every exemption.

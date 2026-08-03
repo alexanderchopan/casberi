@@ -148,14 +148,48 @@ enum HandleBridge: String {
         }
     }
 
-    func removeName(_ name: String) {
+    /// Unfollowing takes their posts with it (user ruling, 2026-08-02: "if
+    /// you unfollow something it shouldn't show in your corpus", prd §286).
+    /// This used to only edit the store's own list, so an account or feed you
+    /// removed went on filling the feed forever with no way to clear it short
+    /// of Delete everything.
+    ///
+    /// The identity is resolved BEFORE the store mutates — Nostr's rows are
+    /// keyed on the resolved pubkey hex while `remove` accepts either that or
+    /// what was typed, so reading it afterwards would find nothing to match.
+    @MainActor
+    func removeName(_ name: String, context: ModelContext) {
+        // `rawValue` IS the source name on every case here.
+        let source = rawValue
+        var handle = name
+        var remainingTopics: [String] = []
+
         switch self {
-        case .bluesky:   BlueskyStore.shared.remove(name)
-        case .farcaster: FarcasterStore.shared.remove(name)
-        case .nostr:     NostrStore.shared.remove(name)
-        case .pinterest: PinterestStore.shared.username = ""
-        default:         feedKind?.store.remove(input: name)
+        case .bluesky:
+            remainingTopics = BlueskyStore.shared.feeds.map(\.name)
+            BlueskyStore.shared.remove(name)
+        case .farcaster:
+            remainingTopics = FarcasterStore.shared.channels.map(\.name)
+            FarcasterStore.shared.remove(name)
+        case .nostr:
+            handle = NostrStore.shared.accounts.first {
+                $0.input == name || $0.pubkeyHex == name
+            }?.pubkeyHex ?? name
+            remainingTopics = NostrStore.shared.hashtags.map(\.tag)
+            NostrStore.shared.remove(name)
+        case .pinterest:
+            handle = PinterestStore.shared.username
+            PinterestStore.shared.username = ""
+        default:
+            // A feed item carries the FEED'S name in `authorHandle`, not the
+            // URL that was typed — resolve the display name while the entry
+            // still exists.
+            handle = feedKind?.store.display(for: name) ?? name
+            feedKind?.store.remove(input: name)
         }
+
+        SocialTopics.pruneAuthor(source: source, handle: handle,
+                                 remainingTopics: remainingTopics, context: context)
     }
 
     /// What the field shows for an existing connection — for the single
@@ -539,7 +573,7 @@ struct HandleSetupScreen: View {
                 }
                 .swipeActions(edge: .trailing) {
                     Button(role: .destructive) {
-                        bridge.removeName(name)
+                        bridge.removeName(name, context: modelContext)
                         accountNames = bridge.names
                         DSHaptic.tap()
                     } label: { Label("Remove", systemImage: "minus.circle") }
@@ -548,7 +582,7 @@ struct HandleSetupScreen: View {
                 // (Mac polish, 2026-07-28).
                 .contextMenu {
                     Button(role: .destructive) {
-                        bridge.removeName(name)
+                        bridge.removeName(name, context: modelContext)
                         accountNames = bridge.names
                         DSHaptic.tap()
                     } label: { Label("Remove", systemImage: "minus.circle") }
@@ -629,7 +663,7 @@ struct HandleSetupScreen: View {
         }
         .contextMenu {
             Button(role: .destructive) {
-                bridge.removeName(account.key)
+                bridge.removeName(account.key, context: modelContext)
                 DSHaptic.tap()
             } label: {
                 Label("Remove", systemImage: "trash")
@@ -668,6 +702,13 @@ struct HandleSetupScreen: View {
                     topicRow(imageURL: channel.imageURL, title: "/\(channel.name)",
                             kind: String(localized: "Channel")) {
                         FarcasterStore.shared.removeChannel(channel.name)
+                        // Unfollowing takes the channel's casts with it —
+                        // leaving them made the feed unfixable short of
+                        // Delete everything (prd §286).
+                        SocialTopics.pruneTopic(
+                            source: "Farcaster", channel: channel.name,
+                            watchedHandles: FarcasterStore.shared.usernames,
+                            context: modelContext)
                         DSHaptic.tap()
                     }
                 }
@@ -682,6 +723,12 @@ struct HandleSetupScreen: View {
                     topicRow(imageURL: feed.imageURL, title: feed.name,
                             kind: String(localized: "Feed")) {
                         BlueskyStore.shared.removeFeed(feed.uri)
+                        // Keyed on the feed's NAME, not its uri — `landFeed`
+                        // stores `channel: feed.name` (prd §286).
+                        SocialTopics.pruneTopic(
+                            source: "Bluesky", channel: feed.name,
+                            watchedHandles: BlueskyStore.shared.handles,
+                            context: modelContext)
                         DSHaptic.tap()
                     }
                 }
@@ -696,6 +743,12 @@ struct HandleSetupScreen: View {
                     topicRow(imageURL: nil, title: "#\(hashtag.tag)",
                             kind: String(localized: "Hashtag")) {
                         NostrStore.shared.removeHashtag(hashtag.tag)
+                        // Nostr keys `authorHandle` on the pubkey hex, so the
+                        // watched set is the resolved keys (prd §286).
+                        SocialTopics.pruneTopic(
+                            source: "Nostr", channel: hashtag.tag,
+                            watchedHandles: NostrStore.shared.accounts.map(\.pubkeyHex),
+                            context: modelContext)
                         DSHaptic.tap()
                     }
                 }
