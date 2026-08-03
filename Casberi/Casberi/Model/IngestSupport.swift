@@ -436,3 +436,90 @@ final class ArtlessBackfill {
         any = true
     }
 }
+
+/// Unfollowing takes its things with it — the general form (prd §286, user
+/// ruling 2026-08-02: "all things if you unfollow them should remove from
+/// your all b/c you are no longer following them").
+///
+/// Every removal verb in the app edited its own list and left the corpus
+/// alone, so an unwatched wallet's whole transaction history, an unfollowed
+/// channel's casts and a disabled deal source's deals all stayed forever,
+/// clearable only by Delete everything. This is the one place that removes
+/// them, so a new bridge's unfollow is a one-liner rather than a new chance
+/// to forget.
+///
+/// **This overturns the older reading for FOLLOWS.** The 2026-07-13 "two
+/// verbs" ruling (delete things and delete access are separate choices) is
+/// still right about ACCESS — disconnecting a bridge doesn't erase what it
+/// brought — but a follow is different in kind: its rows are a mirror of an
+/// upstream you chose to watch, and once you stop watching, nothing explains
+/// them. `StocktwitsBridge.unwatchAll` was the one place that had already
+/// reasoned about this and landed on keeping the posts; it now matches.
+enum FollowPrune {
+    /// Deletes the things of `source` that `matches` claims, saving and
+    /// de-indexing once. Returns how many went.
+    ///
+    /// `matches` runs in Swift, not a `#Predicate` — the source equality has
+    /// already narrowed the fetch, and a `#Predicate` reaching into an array
+    /// attribute crashes at runtime (see CLAUDE.md). Rows are liveness-checked
+    /// here so every caller doesn't have to.
+    @MainActor
+    @discardableResult
+    static func remove(source: String, context: ModelContext,
+                       matching: (Thing) -> Bool) -> Int {
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == source })
+        var removedIDs: [UUID] = []
+        for thing in (try? context.fetch(descriptor)) ?? [] where thing.isLive {
+            guard matching(thing) else { continue }
+            removedIDs.append(thing.id)
+            context.delete(thing)
+        }
+        guard !removedIDs.isEmpty else { return 0 }
+        context.saveHonestly()
+        SpotlightIndex.remove(ids: removedIDs)
+        return removedIDs.count
+    }
+
+    /// Unwatching a wallet takes every row attributed to it — deliberately
+    /// NOT scoped to one source. `walletAddress` is stamped by sixteen
+    /// different files (plain transfers and approvals, but also Peer fills,
+    /// Privacy Pools deposits, Gnosis Pay spends, Aerodrome locks, Uniswap
+    /// positions, EtherFi, Bitcoin), so a source-scoped prune would leave
+    /// most of an unwatched wallet's history sitting in the feed.
+    ///
+    /// `stillWatched` is checked first: removing one entry must not clear a
+    /// wallet the list still holds.
+    @MainActor
+    @discardableResult
+    static func removeWallet(address: String, stillWatched: [String],
+                             context: ModelContext) -> Int {
+        let target = address.trimmingCharacters(in: .whitespaces)
+        guard !target.isEmpty else { return 0 }
+        guard !stillWatched.contains(where: { sameAddress($0, target) }) else { return 0 }
+
+        let descriptor = FetchDescriptor<Thing>()
+        var removedIDs: [UUID] = []
+        for thing in (try? context.fetch(descriptor)) ?? [] where thing.isLive {
+            guard sameAddress(thing.walletAddress, target) else { continue }
+            removedIDs.append(thing.id)
+            context.delete(thing)
+        }
+        guard !removedIDs.isEmpty else { return 0 }
+        context.saveHonestly()
+        SpotlightIndex.remove(ids: removedIDs)
+        return removedIDs.count
+    }
+
+    /// One watched address, compared the way its own chain spells addresses:
+    /// EVM is case-insensitive (EIP-55 case is a checksum, not identity),
+    /// while base58 (Solana) and bech32 are CASE-SENSITIVE — lowercasing
+    /// those folds distinct wallets together (the `heldPricedContracts`
+    /// lesson, CLAUDE.md).
+    static func sameAddress(_ a: String?, _ b: String) -> Bool {
+        guard let a else { return false }
+        if a.hasPrefix("0x") && b.hasPrefix("0x") {
+            return a.caseInsensitiveCompare(b) == .orderedSame
+        }
+        return a == b
+    }
+}

@@ -119,15 +119,24 @@ enum StockWatch {
     /// follow the person's own "remove its things too" choice. Without this,
     /// a kept watchlist row would quietly re-register the seat on the next
     /// screen visit.
+    /// AMENDED 2026-08-02 (prd §286): the posts go too. This used to keep
+    /// them — "landed posts are history and follow the person's own 'remove
+    /// its things too' choice" — which was the 2026-07-13 two-verbs ruling
+    /// applied to a FOLLOW. That ruling still governs ACCESS (disconnecting a
+    /// bridge doesn't erase what it brought), but a watchlist is a follow:
+    /// its posts are a mirror of tickers you chose to watch, and once you
+    /// stop watching, nothing explains them (user: "all things if you
+    /// unfollow them should remove from your all b/c you are no longer
+    /// following them"). Leaving them made this the one bridge whose unwatch
+    /// disagreed with every other.
     @MainActor
     static func unwatchAll(context: ModelContext) {
         let descriptor = FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.source == "Stocktwits" && $0.sourceRef != nil })
-        let watches = ((try? context.fetch(descriptor)) ?? [])
-            .filter { $0.sourceRef?.hasPrefix("stocktwits:sym:") == true }
-        guard !watches.isEmpty else { return }
-        SpotlightIndex.remove(ids: watches.map(\.id))
-        for thing in watches { context.delete(thing) }
+            predicate: #Predicate { $0.source == "Stocktwits" })
+        let rows = ((try? context.fetch(descriptor)) ?? []).filter(\.isLive)
+        guard !rows.isEmpty else { return }
+        SpotlightIndex.remove(ids: rows.map(\.id))
+        for thing in rows { context.delete(thing) }
         context.saveHonestly()
     }
 

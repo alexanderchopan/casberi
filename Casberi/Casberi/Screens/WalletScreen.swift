@@ -542,9 +542,18 @@ struct WalletScreen: View {
             }
             Button(role: .destructive) {
                 if let i = wallet.addresses.firstIndex(where: { $0.id == addr.id }) {
+                    let gone = wallet.addresses[i].address
                     wallet.remove(at: IndexSet(integer: i))
                     // Unwatching the last wallet drops the riding seats (§207).
                     store.reconcileWalletSeats()
+                    // …and its rows leave with it (prd §286): every bridge
+                    // that rides the watched wallets stamps `walletAddress`,
+                    // so this reaches the transfers, approvals, Peer fills,
+                    // pool deposits and card spends alike.
+                    FollowPrune.removeWallet(
+                        address: gone,
+                        stillWatched: wallet.addresses.map(\.address),
+                        context: modelContext)
                 }
             } label: {
                 Label("Remove Wallet", systemImage: "trash")
@@ -998,7 +1007,14 @@ struct WalletScreen: View {
             if let i = wallet.addresses.firstIndex(where: {
                 wallet.scopeMatches(entry.address, scope: $0.address)
             }) {
+                let gone = wallet.addresses[i].address
                 wallet.remove(at: IndexSet(integer: i))
+                // Its rows leave with it (prd §286) — same as the roster's
+                // own Remove Wallet above.
+                FollowPrune.removeWallet(
+                    address: gone,
+                    stillWatched: wallet.addresses.map(\.address),
+                    context: modelContext)
             }
             return
         }

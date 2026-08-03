@@ -96,6 +96,11 @@ struct GeckoTerminalScreen: View {
     private func toggle(_ chain: TrendingChain) {
         if gecko.isWatching(chain) {
             gecko.remove(chain)
+            // Its trending rows leave with it (prd §286). The chain is in
+            // each row's own sourceRef ("gecko:<chain>:<token>").
+            FollowPrune.remove(source: "GeckoTerminal", context: modelContext) {
+                $0.sourceRef?.hasPrefix("gecko:\(chain.gecko):") == true
+            }
         } else {
             gecko.add(chain)
         }

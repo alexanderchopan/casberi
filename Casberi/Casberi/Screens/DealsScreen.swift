@@ -84,7 +84,16 @@ struct DealsScreen: View {
     }
 
     private func toggle(_ source: DealSource) {
-        if deals.isOn(source) { deals.remove(source) } else { deals.add(source) }
+        if deals.isOn(source) {
+            deals.remove(source)
+            // Its deals leave with it (prd §286) — the publisher is stamped
+            // on each row's `authorHandle` at land time.
+            FollowPrune.remove(source: "Deals", context: modelContext) {
+                $0.authorHandle == source.publisher
+            }
+        } else {
+            deals.add(source)
+        }
         DSHaptic.tap()
         Task { await sync() }
     }

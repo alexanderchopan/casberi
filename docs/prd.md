@@ -14537,3 +14537,36 @@ lesson from Mail (§284) and Photos (§231):
     them on.
 
 Eight cases verified, including the empty-store guard and the reported one.
+
+### §286 second follow-up — the ruling is general, and it overturns the older reading for follows (user: "yes uwatching should prune ofc. i think all things if you unfollow them shold remove from your all b/c you are no longer following them", 2026-08-02)
+
+The survey found the same gap in every remaining removal verb, the largest
+being the WALLET: unwatching one left its entire history — transfers,
+approvals, Peer fills, Privacy Pools deposits, Gnosis Pay spends, Aerodrome
+locks, Uniswap positions, EtherFi, Bitcoin — sitting in the feed forever.
+`FollowPrune` (IngestSupport) is now the one place that removes a follow's
+things, so a new bridge's unfollow is a one-liner rather than a fresh chance
+to forget.
+
+**This overturns the 2026-07-13 "two verbs" reading FOR FOLLOWS.** That
+ruling still governs ACCESS — disconnecting a bridge does not erase what it
+brought — but a follow differs in kind: its rows are a mirror of an upstream
+you chose to watch, and once you stop watching, nothing explains them.
+`StocktwitsBridge.unwatchAll` was the one place that had already reasoned
+about this and chosen to keep the posts; it now matches everything else.
+
+Wired: wallets (both removal sites), GeckoTerminal chains (the chain is in
+each row's own `sourceRef`), Deals sources (the publisher is on
+`authorHandle`), Stocktwits. `removeWallet` is deliberately NOT source-scoped
+— sixteen files stamp `walletAddress`, so scoping to "Wallet" would leave
+most of an unwatched wallet's history behind.
+
+Address comparison is per-chain and load-bearing: EVM is case-insensitive
+(EIP-55 case is a checksum, not identity) while base58 and bech32 are
+CASE-SENSITIVE, and lowercasing those folds distinct wallets together — the
+`heldPricedContracts` lesson in a new place. Seven cases verified.
+
+**Not done, and it needs an ingest change first:** OpenSea chain removal.
+Its rows record only `source: "OpenSea"` and `tags: ["NFT"]` — the chain a
+collection came from is never stored, so there is nothing to prune on. Left
+alone rather than guessed at.
