@@ -121,7 +121,7 @@ struct MailScreen: View {
                 result = String(localized: "Login rejected — check the address and app-specific password.")
             case .connect:
                 result = String(localized: "Couldn't reach the mail server — check your connection.")
-            case .select, .timeout:
+            case .select, .fetch, .timeout:
                 result = String(localized: "Signed in, but couldn't read the inbox — try again.")
             case nil:
                 result = String(localized: "Couldn't sign in — check the address and app-specific password.")

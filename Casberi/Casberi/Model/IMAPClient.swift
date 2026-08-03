@@ -23,7 +23,11 @@ enum IMAPClient {
         let body: String?
     }
 
-    enum IMAPError: Error { case connect, login, select, timeout }
+    /// `fetch` is distinct from `select` on purpose (2026-08-02): the heal's
+    /// presence check fails AFTER a successful SELECT, and logging that as
+    /// "select" would point at the wrong command in the one place this is
+    /// read — the log line that says why a delete-sync did nothing.
+    enum IMAPError: Error { case connect, login, select, fetch, timeout }
 
     /// The raw bytes fetched per message for the body pass — enough for
     /// nearly every real message's readable text (plain or the first HTML
@@ -71,7 +75,14 @@ enum IMAPClient {
     /// was renumbered out from under us and a mass "not found" would be a
     /// false positive, not real deletions — the caller must check it before
     /// trusting `present`.
-    struct PresenceResult { let uidValidity: Int?; let present: Set<String> }
+    /// `exists` is the mailbox's own EXISTS count — what makes an empty
+    /// `present` READABLE. Without it the caller cannot tell "none of the
+    /// UIDs we hold survive" (a real mass deletion, which an emptied mailbox
+    /// genuinely is) from "the fetch told us nothing" — and it used to
+    /// resolve that ambiguity by never deleting, which left an emptied
+    /// mailbox showing stale rows forever. nil means the server never
+    /// reported one; the caller must treat that as unknown, never as zero.
+    struct PresenceResult { let uidValidity: Int?; let present: Set<String>; let exists: Int? }
 
     static func stillPresent(host: String, user: String, password: String,
                              uids: [String]) async throws -> PresenceResult {
@@ -88,7 +99,8 @@ enum IMAPClient {
             present.formUnion(try await conn.uidFetchPresence(chunk))
             i += 400
         }
-        return PresenceResult(uidValidity: conn.uidValidity, present: present)
+        return PresenceResult(uidValidity: conn.uidValidity, present: present,
+                              exists: conn.messageCount)
     }
 }
 
@@ -147,6 +159,16 @@ private final class Session {
     /// mailbox before trusting a presence check's absences as real deletes.
     private(set) var uidValidity: Int?
 
+    /// The SELECT response's `* n EXISTS` — how many messages the mailbox
+    /// actually holds, kept here (rather than only returned) so
+    /// `stillPresent` can report it too. OPTIONAL on purpose, and the
+    /// optionality is the safety property: nil means the server never sent an
+    /// EXISTS line, which must not be confused with a mailbox that really
+    /// holds zero. `heal` deletes on a verified zero, so a defaulted 0 would
+    /// be a mass delete on a malformed response. RFC 3501 §6.3.1 requires the
+    /// line; this does not take the requirement on trust.
+    private(set) var messageCount: Int?
+
     /// Returns the number of messages in the inbox (the EXISTS count).
     func selectInbox() async throws -> Int {
         let t = nextTag()
@@ -158,7 +180,7 @@ private final class Session {
             // "* 1234 EXISTS"
             let parts = line.split(separator: " ")
             if parts.count >= 3, parts[0] == "*", parts[2] == "EXISTS",
-               let n = Int(parts[1]) { total = n }
+               let n = Int(parts[1]) { total = n; messageCount = n }
             // "* OK [UIDVALIDITY 1234567890] UIDs valid"
             if let r = line.range(of: "UIDVALIDITY ") {
                 let digits = line[r.upperBound...].prefix { $0.isNumber }
@@ -175,6 +197,18 @@ private final class Session {
         let t = nextTag()
         send(line: "\(t) UID FETCH \(uids.joined(separator: ",")) (UID)")
         let resp = try await readUntilTagged(t)
+        // A NO/BAD completion must THROW, never read as "none of them
+        // survive" (2026-08-02). This was the silent path behind the
+        // 2026-07-24 "mail connected but gone" report: the tagged result was
+        // parsed for lines but its `ok` was dropped, so a server that balked
+        // at the fetch — a set too long, a transient NO — handed back an
+        // empty set that is byte-identical to "every one of these was
+        // deleted". `MailIngest.heal` then had no way to tell a failure from
+        // a mass deletion, and the blanket "empty means hiccup" guard it grew
+        // in response is what made a genuinely emptied mailbox impossible to
+        // reconcile ever again. Fixing the lie at the source is what lets
+        // that guard narrow to the one case it should have covered.
+        guard resp.ok else { throw IMAPClient.IMAPError.fetch }
         var present = Set<String>()
         for line in resp.lines {
             // "* 12 FETCH (UID 1234)"

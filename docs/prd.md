@@ -14389,3 +14389,41 @@ unchanged (both were already source-generic).
 Deliberately NOT in this pass: no anniversary hero (OnThisDay stays scoped to
 Snapchat's memories by §247's ruling), and no new hero card — the topic map
 slots into the existing chain ahead of the heatmap fallback, same as Photos.
+
+## §284 — Mail: an emptied mailbox could never be reconciled (user: "Mail doesn't pull to refresh, nothing happens... right now it is showing me i have 5 emails when i have none in my actual mail folder", 2026-08-02)
+
+Three reported symptoms, ONE cause. `MailIngest.heal` skipped removal
+whenever the server reported zero surviving UIDs — "an EMPTY presence answer
+to a non-empty query is almost never 'every email was deleted at once'"
+(2026-07-24, after "mail connected but gone"). That guard was right about the
+danger and wrong about the remedy: zero-present is ALSO exactly what a
+genuinely empty mailbox looks like, so once you delete all your mail the
+stale rows become permanently unreconcilable. Pull-to-refresh really did run
+— `force` has ridden through heal's hourly throttle since 2026-07-24 — and
+correctly did nothing, forever, which is precisely why it read as broken.
+"Sometimes the right emails" is the same ghosts: `refresh` only ever ADDS
+(dedupe on `sourceRef`), so the room showed real mail mixed with rows nothing
+could remove.
+
+**The root cause was one layer down.** `IMAPClient.uidFetchPresence` read the
+tagged response's LINES and dropped its `ok`, so a server answering NO/BAD —
+a set too long, a transient failure — returned an empty set byte-identical to
+"every one of these was deleted". Heal could not tell a failed fetch from a
+mass deletion because the client had already thrown that fact away; the
+blanket guard was the only defence available to it. Fixed at the source: the
+fetch now THROWS (`IMAPError.fetch`, distinct from `.select` — the failure is
+after a successful SELECT, and this log line is the diagnostic surface).
+
+**With the lie fixed, the guard narrows to what it should always have been.**
+`stillPresent` now carries the mailbox's own EXISTS count, so an empty answer
+is readable: `exists == 0` is a verifiably empty mailbox (delete — the stuck
+case), `exists > 0` means it holds mail but none of ours came back (skip;
+real when you delete everything we'd landed and receive new mail we haven't,
+but indistinguishable from a server quirk — and self-correcting, since the
+paired `refresh` lands the new mail and the next pass sees a non-empty
+`present`), and `nil` means no EXISTS line at all — unknown, NEVER assumed
+zero. That last one is the safety property, not a nicety: heal deletes on a
+verified zero, so a defaulted 0 on a malformed response would be a mass
+delete. RFC 3501 §6.3.1 requires the line; this does not take it on trust.
+Decision table verified against the shipped guard (five cases, incl. the nil
+one).

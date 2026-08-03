@@ -202,16 +202,34 @@ enum MailIngest {
             }
         }
 
-        // An EMPTY presence answer to a non-empty query is almost never "every
-        // email was deleted at once" — it's a fetch that didn't parse or an
-        // inbox that didn't answer (no throw, just nothing back). Deleting the
-        // whole held set on that wipes a connected inbox out of Casberi's feed
-        // and source chips (reported 2026-07-24: "mail connected but gone").
-        // Skip removal this pass; a real per-message delete still surfaces via
-        // the survivors in `present` on a pass that actually answers.
-        guard !result.present.isEmpty else {
-            NSLog("Mail heal (%@): empty presence for %d held UIDs — skipping delete (treated as a fetch hiccup, not a mass deletion)",
-                  provider.rawValue, uidToThing.count)
+        // An empty presence answer used to skip removal UNCONDITIONALLY —
+        // "almost never every email at once, so treat it as a fetch that
+        // didn't parse" (reported 2026-07-24: "mail connected but gone").
+        // That was right about the danger and wrong about the remedy: it made
+        // an emptied mailbox permanently unreconcilable, because zero-present
+        // is exactly what an empty mailbox looks like too. Reported
+        // 2026-08-02 as "showing me 5 emails when I have none" — pulling to
+        // refresh did run, and correctly did nothing, forever.
+        //
+        // Two fixes let this narrow. `IMAPClient.uidFetchPresence` now THROWS
+        // on a NO/BAD completion instead of returning an empty set (the
+        // actual silent failure behind the original report — we never reach
+        // here on a balked fetch now), and the presence check carries the
+        // mailbox's own EXISTS count. So an empty answer is now readable:
+        //
+        //   exists == 0   the mailbox is verifiably empty — every held UID
+        //                 really is gone, and this is the case that was stuck.
+        //   exists > 0    it holds mail, yet none of OURS came back. Real when
+        //                 you delete everything we'd landed and receive new
+        //                 mail we haven't; but indistinguishable from a server
+        //                 quirk, so still skipped — and self-correcting, since
+        //                 the paired `refresh` lands the new mail and the next
+        //                 pass sees a non-empty `present`.
+        //   nil           no EXISTS line at all. Unknown, never assumed zero.
+        if result.present.isEmpty, result.exists != 0 {
+            NSLog("Mail heal (%@): empty presence for %d held UIDs, mailbox reports %@ — skipping delete",
+                  provider.rawValue, uidToThing.count,
+                  result.exists.map { "\($0) message(s)" } ?? "no EXISTS line")
             return 0
         }
 
