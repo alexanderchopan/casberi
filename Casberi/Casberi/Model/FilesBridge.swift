@@ -221,6 +221,19 @@ enum FilesIngest {
         "jpg", "jpeg", "png", "heic", "heif", "gif", "bmp", "tiff", "tif", "webp",
     ]
 
+    /// Whether a Files/`files:`-ref'd thing is an IMAGE file — the membership
+    /// test the mixed Files room (grid vs rows) and its topic map share with
+    /// the heal above, so "what counts as an image" can never fork between
+    /// the pass that makes the thumbnail and the screens that draw it. Kept
+    /// on the sourceRef's extension rather than `previewImageData != nil` so
+    /// the claim is explicit: a thumbnail proves an image, but an image whose
+    /// heal hasn't reached it yet is still an image.
+    static func isImageRef(_ sourceRef: String?) -> Bool {
+        guard let ref = sourceRef, ref.hasPrefix("files:") else { return false }
+        let rel = String(ref.dropFirst("files:".count))
+        return imageExtensions.contains((rel as NSString).pathExtension.lowercased())
+    }
+
     /// A filename the person never typed — a camera/screenshot naming
     /// convention. The retitle heal only ever overwrites a title that still
     /// IS the raw filename and matches one of these (never a name someone in

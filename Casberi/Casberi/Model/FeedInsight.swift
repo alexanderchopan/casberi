@@ -373,18 +373,33 @@ enum FeedInsight {
         let title: String
         let unit: (one: String, many: String)
         let kind: ThingKind
+        // What the count in the subtitle COUNTS, beyond the kind. Photos and
+        // Instagram never needed this (their kind IS the membership), but a
+        // Files room holds PDFs and text files under the same `.file` kind as
+        // its images, and the map only ever reads the images' OCR — so the
+        // subtitle counts images alone, or "214 files" would claim text the
+        // map never looked at.
+        var belongs: (Thing) -> Bool = { _ in true }
         switch source {
         case "Photos":
             title = "What you screenshot"; unit = ("screenshot", "screenshots"); kind = .screenshot
         case "Instagram":
             title = "What you write about"; unit = ("post", "posts"); kind = .note
+        case "Files":
+            // The connected folder's images, read the Photos way (2026-08-02):
+            // `FilesIngest.heal` already OCRs them into `content` and
+            // `ScreenshotTopics.healTopics` lifts the same deterministic
+            // terms. "Images", not "screenshots" — a folder makes no claim
+            // about where its pictures came from.
+            title = "What your images say"; unit = ("image", "images"); kind = .file
+            belongs = { FilesIngest.isImageRef($0.sourceRef) }
         default:
             return nil
         }
 
         var perShot: [[String]] = []
         var total = 0
-        for thing in things where thing.kind == kind && !Corpus.isImportReceipt(thing) {
+        for thing in things where thing.kind == kind && belongs(thing) && !Corpus.isImportReceipt(thing) {
             total += 1
             if !thing.ocrTopics.isEmpty { perShot.append(thing.ocrTopics) }
         }

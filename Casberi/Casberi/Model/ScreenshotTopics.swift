@@ -177,6 +177,15 @@ enum ScreenshotTopics {
         switch source {
         case "Photos":    return TopicSource(kind: .screenshot, needsOCR: true)
         case "Instagram": return TopicSource(kind: .note, needsOCR: false)
+        // A connected folder is Photos' shape wearing a different kind
+        // (2026-08-02): `FilesIngest.heal` OCRs the folder's images into
+        // `content` exactly the way the screenshot heal does. `needsOCR` is
+        // doubly load-bearing here — beyond the Photos race it guards
+        // against, `ocrAt != nil` is also what scopes the sweep to IMAGE
+        // files: a text file or PDF lands with a byte-preview `content` and
+        // no `ocrAt`, and reading topics off those bytes would put file
+        // previews in a map titled as what your images say.
+        case "Files":     return TopicSource(kind: .file, needsOCR: true)
         default:          return nil
         }
     }

@@ -14359,3 +14359,33 @@ invisible on every screen, so a count would say nothing about quality), and
 `-nameProbe` (proposed title beside the grounding verdict, since a rejected
 name is the rail working and a run that named nothing looks identical to one
 where the model never answered).
+
+## §283 — A folder of screenshots deserves the Photos treatment (user: "the Folders does't show screenshots well if a user points their folder at a folder of screenshots tho", then "ok lets do the fix re the topic map ok lets try it", 2026-08-02)
+
+The Files room was `.plain` — every row a `FileChip` (filename + preview
+note) — while `FilesIngest.heal` had been thumbnailing, OCRing and retitling
+the folder's images since 2026-07-27. Point the "Show me my files" onboarding
+card at a screenshots folder and you got a wall of text rows wearing pixels
+the store held but never drew. Fixed as the app's SECOND mixed room, the
+Snapchat split verbatim: images whose heal has landed a thumbnail lead as a
+photo grid, everything else — PDFs, text files, and images the throttled heal
+(40 thumbnails a pass) hasn't reached — reads as rows until it has pixels to
+show. A tile promises a picture.
+
+The room also gets the topic map ("What your images say" — not
+"screenshots": a folder makes no claim about where its pictures came from),
+riding the existing machinery end to end: `ScreenshotTopics.healTopics`
+gained a Files spec (kind `.file`, `needsOCR: true` — doubly load-bearing
+there, since `ocrAt != nil` is also what keeps a text file's byte-preview
+`content` out of a map titled as image text), the sweep rides the Files
+heal's own throttle in `BridgeRefresh` (topics can only trail the OCR they
+read), and `FeedInsight.topicMap` counts ONLY image files into its subtitle —
+a Files room holds PDFs under the same `.file` kind, and "214 files" would
+claim text the map never looked at. Membership is `FilesIngest.isImageRef`,
+shared between the grid test, the map and the heal, so "what counts as an
+image" cannot fork. `-topicMapProbe Files` and `-roomInsightProbe Files` work
+unchanged (both were already source-generic).
+
+Deliberately NOT in this pass: no anniversary hero (OnThisDay stays scoped to
+Snapchat's memories by §247's ruling), and no new hero card — the topic map
+slots into the existing chain ahead of the heatmap fallback, same as Photos.

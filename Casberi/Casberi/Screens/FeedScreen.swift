@@ -376,7 +376,7 @@ struct FeedScreen: View {
 
     /// The shape a source takes when its chip is in force.
     private enum Shape {
-        case all, photos, wallet, calendar, gmail, chat, social, reminders, safari, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, plain
+        case all, photos, wallet, calendar, gmail, chat, social, reminders, safari, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, plain
         init(source: String) {
             switch source {
             case "All":                 self = .all
@@ -389,6 +389,14 @@ struct FeedScreen: View {
             // its own shape: the memories that have their pixels back as a
             // grid, everything else as rows beneath.
             case "Snapchat":            self = .snapchat
+            // The second mixed room (2026-08-02): a connected folder holds
+            // images beside PDFs and text files, and `FilesIngest.heal` gives
+            // the images real thumbnails + OCR — which `.plain` then rendered
+            // as filename rows, pixels stored but never drawn (a user pointing
+            // the folder card at a screenshots folder saw a wall of text).
+            // Same split as Snapchat: healed images as a grid, the rest as
+            // rows.
+            case "Files":               self = .files
             case "Wallet":              self = .wallet
             case "Calendar", "Cal.com", "Calendly": self = .calendar
             case "Gmail", "iCloud Mail": self = .gmail
@@ -1719,6 +1727,18 @@ struct FeedScreen: View {
             // pretending to be a photograph.
             let rest = visible.live.filter { !Self.isMemoryTile($0) }
             if !memoryTiles.isEmpty { photoGridSection(memoryTiles) }
+            let days = chronoGroups(rest)
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+        case .files:
+            // The Snapchat split for a connected folder (2026-08-02): images
+            // whose heal has landed a thumbnail lead as a grid, everything
+            // else — PDFs, text files, and images the throttled heal (40
+            // thumbnails a pass) hasn't reached yet — reads as rows until it
+            // has pixels to show. Same honesty rule as above: a tile promises
+            // a picture.
+            let imageTiles = visible.live.filter(Self.isFileImageTile)
+            let rest = visible.live.filter { !Self.isFileImageTile($0) }
+            if !imageTiles.isEmpty { photoGridSection(imageTiles) }
             let days = chronoGroups(rest)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .wallet:
@@ -3222,6 +3242,18 @@ struct FeedScreen: View {
     private static func isMemoryTile(_ thing: Thing) -> Bool {
         thing.isLive && thing.source == "Snapchat" && thing.kind == .file
             && thing.previewImageData != nil
+    }
+
+    /// A connected-folder image whose heal has landed a thumbnail — the mixed
+    /// Files room's grid membership (2026-08-02), `isMemoryTile`'s shape with
+    /// one addition: the extension check makes the image claim explicit
+    /// (today only images ever carry `previewImageData` under Files, but that
+    /// is the heal's implementation detail, not this test's contract). Guarded
+    /// internally for the same corollary-4 reason as above.
+    private static func isFileImageTile(_ thing: Thing) -> Bool {
+        thing.isLive && thing.source == "Files" && thing.kind == .file
+            && thing.previewImageData != nil
+            && FilesIngest.isImageRef(thing.sourceRef)
     }
 
     /// What a grid tile says across its foot. A screenshot's title is the text

@@ -365,6 +365,12 @@ enum BridgeRefresh {
                 let s2 = slot(); Task { @MainActor in
                     await BridgeRefresh.stagger(s2)
                     _ = await FilesIngest.heal(context: context)
+                    // Then the treemap terms off whatever OCR text the heal
+                    // (and prior passes) have written — the Photos ordering
+                    // (2026-08-02). Store-only and self-terminating, so
+                    // riding the heal's throttle costs nothing: topics can
+                    // only ever trail the OCR they read.
+                    _ = await ScreenshotTopics.healTopics(source: "Files", context: context)
                 }
             }
         }
