@@ -186,6 +186,13 @@ enum BridgeRefresh {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await BlueskyIngest.refresh(context: context)
+                // Drop what no current follow explains — a topic or account
+                // unfollowed before the tap-time prune existed (prd §286),
+                // which a reinstall can't clear either since the corpus
+                // returns from CloudKit as it was.
+                SocialTopics.reconcile(source: "Bluesky",
+                    watchedHandles: BlueskyStore.shared.handles,
+                    topics: BlueskyStore.shared.feeds.map(\.name), context: context)
                 // A watched account posting again after a real quiet
                 // stretch is its own moment (delight 2026-07-21) — a
                 // read-only pass over what just landed, touching nothing
@@ -203,6 +210,9 @@ enum BridgeRefresh {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await FarcasterIngest.refresh(context: context)
+                SocialTopics.reconcile(source: "Farcaster",
+                    watchedHandles: FarcasterStore.shared.usernames,
+                    topics: FarcasterStore.shared.channels.map(\.name), context: context)
                 SocialMoments.checkFarcasterReturns(context: context)
             }
             let s2 = slot(); Task { @MainActor in
@@ -214,6 +224,9 @@ enum BridgeRefresh {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await NostrIngest.refresh(context: context)
+                SocialTopics.reconcile(source: "Nostr",
+                    watchedHandles: NostrStore.shared.accounts.map(\.pubkeyHex),
+                    topics: NostrStore.shared.hashtags.map(\.tag), context: context)
                 SocialMoments.checkNostrReturns(context: context)
             }
             // Delete-sync: own network round trip and its own hourly

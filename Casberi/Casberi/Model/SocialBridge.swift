@@ -486,6 +486,59 @@ enum SocialTopics {
         return removedIDs.count
     }
 
+    /// Every pass, drop what no current follow explains (prd §286 follow-up,
+    /// 2026-08-02).
+    ///
+    /// `pruneTopic`/`pruneAuthor` fire at the MOMENT you tap unfollow, which
+    /// leaves two holes: anyone who unfollowed BEFORE those existed still has
+    /// the orphans (reported immediately — "the old farcaster channel is
+    /// still showing"), and a reinstall can't clear them either, since the
+    /// corpus comes back down from CloudKit exactly as it was. A tap-time
+    /// prune also can't survive the app being killed mid-write. So the rule
+    /// is enforced continuously instead of at the tap: this runs in the
+    /// bridge's own refresh and removes anything the CURRENT follow lists no
+    /// longer account for.
+    ///
+    /// Three deliberate abstentions, each of them the "never delete on a
+    /// reading you can't trust" lesson from Mail (§284) and Photos (§231):
+    ///
+    ///   - **Nothing configured at all** — no accounts and no topics — is a
+    ///     disconnected or not-yet-loaded store, NOT "you unfollowed
+    ///     everything." Skipped entirely; this is the empty-read guard.
+    ///   - **Anything wearing a `socialContext`** (liked / recast / reply /
+    ///     mention) stays. The schema records THAT a post arrived by someone
+    ///     else's activity but not WHOSE, so a like whose watcher is gone is
+    ///     indistinguishable from one whose watcher remains — and guessing
+    ///     would delete posts that are still earned.
+    ///   - **An unattributable row** — neither `authorHandle` nor
+    ///     `channelName` — is left alone. Those are pre-2026-07 rows landed
+    ///     before the fields existed; there is no evidence to convict them on.
+    @MainActor
+    @discardableResult
+    static func reconcile(source: String, watchedHandles: [String],
+                          topics: [String], context: ModelContext) -> Int {
+        guard !watchedHandles.isEmpty || !topics.isEmpty else { return 0 }
+        let watched = Set(watchedHandles.map { $0.lowercased() })
+        let keep = Set(topics.map { $0.lowercased() })
+
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == source })
+        var removedIDs: [UUID] = []
+        for thing in (try? context.fetch(descriptor)) ?? [] where thing.isLive {
+            guard thing.socialContext == nil else { continue }
+            let author = thing.authorHandle?.lowercased()
+            let channel = thing.channelName?.lowercased()
+            guard author != nil || channel != nil else { continue }
+            if let author, watched.contains(author) { continue }
+            if let channel, keep.contains(channel) { continue }
+            removedIDs.append(thing.id)
+            context.delete(thing)
+        }
+        guard !removedIDs.isEmpty else { return 0 }
+        context.saveHonestly()
+        SpotlightIndex.remove(ids: removedIDs)
+        return removedIDs.count
+    }
+
     /// Unfollowing a PERSON (or a feed) takes their posts with it — the same
     /// ruling as `pruneTopic`, one field over (user, 2026-08-02: "if you
     /// unfollow something it shouldn't show in your corpus"). Every social

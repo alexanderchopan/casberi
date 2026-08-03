@@ -14506,3 +14506,34 @@ Two identity traps, both resolved BEFORE the store mutates: Nostr keys
 or what was typed, and a feed item carries the FEED'S OWN name (not the URL
 typed), so the caller resolves `display(for:)` while the entry still exists.
 Twelve cases verified against both predicates, including every exemption.
+
+### §286 follow-up — the rule has to be continuous, not tap-time (user: "also the old farcaster channel is still showing", then "so these fixes probabaly require net new instal", 2026-08-02)
+
+`pruneTopic`/`pruneAuthor` fire at the moment you tap unfollow, which leaves
+the people who unfollowed BEFORE they existed with orphans nothing will ever
+collect — reported within minutes of the ship. **A reinstall does not fix it
+either**, and that is worth stating because it is the obvious thing to try:
+the corpus comes back down from CloudKit exactly as it was, orphans included
+(the same property that makes a fresh install re-import duplicates, CLAUDE.md).
+
+So the rule moved from the tap to every pass: `SocialTopics.reconcile` runs
+inside each social bridge's own refresh and removes anything the CURRENT
+follow lists no longer explain. The tap-time prunes stay — they make the
+feedback immediate — but they are now an optimization rather than the
+mechanism.
+
+Three abstentions, each the "never delete on a reading you can't trust"
+lesson from Mail (§284) and Photos (§231):
+
+  - **Nothing configured at all** — no accounts, no topics — is a
+    disconnected or not-yet-loaded store, NOT "you unfollowed everything."
+    Skipped. This is the empty-read guard, and without it a store that hasn't
+    hydrated yet would wipe the source.
+  - **Anything wearing a `socialContext`** stays. The schema records THAT a
+    post arrived via someone else's like/recast/reply/mention but never
+    WHOSE, so an orphaned like is indistinguishable from an earned one.
+  - **An unattributable row** — no `authorHandle`, no `channelName` — is left
+    alone: those predate both fields, and there is no evidence to convict
+    them on.
+
+Eight cases verified, including the empty-store guard and the reported one.
