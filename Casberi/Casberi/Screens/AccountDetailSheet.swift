@@ -127,36 +127,38 @@ struct AccountDetailSheet: View {
         }
     }
 
-    /// The actions — Export / Import as real buttons on one row, Delete on
-    /// its own full-width row (destructive stands alone). The settings (sync,
-    /// hide previews) live in the card as toggle rows; only actions live here.
+    /// The actions (restyled 2026-08-03, the "Statement" concept): Export is
+    /// the tray's ONE filled button, full width; Import sits quiet beneath it;
+    /// and the two destructive verbs are red words on one centered line. The
+    /// old stack gave Delete the same full-width gray-slab rank as Export —
+    /// three same-weight slabs was most of what read dated. Red text keeps
+    /// both wipes reachable (each still confirms) without the chrome.
     private var controls: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
-            HStack(spacing: DS.Space.s3) {
-                if let exportURL {
-                    ShareLink(item: exportURL) {
-                        actionLabel("Export", icon: "square.and.arrow.up",
-                                    fg: .white, bg: DS.tint)
-                    }
-                    .buttonStyle(.plain)
-                    .simultaneousGesture(TapGesture().onEnded { DSHaptic.tap() })
+            if let exportURL {
+                ShareLink(item: exportURL) {
+                    actionLabel("Export", icon: "square.and.arrow.up",
+                                fg: .white, bg: DS.tint)
                 }
-                Button { importing = true } label: {
-                    actionLabel("Import", icon: "square.and.arrow.down",
-                                fg: DS.textPrimary, bg: DS.gray100)
+                .buttonStyle(.plain)
+                .simultaneousGesture(TapGesture().onEnded { DSHaptic.tap() })
+            }
+            Button { importing = true } label: {
+                actionLabel("Import", icon: "square.and.arrow.down",
+                            fg: DS.textPrimary, bg: DS.gray100)
+            }
+            .buttonStyle(.plain)
+            HStack(spacing: DS.Space.s8) {
+                Button { confirmDelete = true } label: {
+                    dangerLabel("Delete things")
+                }
+                .buttonStyle(.plain)
+                Button { confirmDeleteAccess = true } label: {
+                    dangerLabel("Delete access")
                 }
                 .buttonStyle(.plain)
             }
-            Button { confirmDelete = true } label: {
-                actionLabel("Delete things", icon: "trash",
-                            fg: DS.destructive, bg: DS.gray100)
-            }
-            .buttonStyle(.plain)
-            Button { confirmDeleteAccess = true } label: {
-                actionLabel("Delete access", icon: "key.slash",
-                            fg: DS.destructive, bg: DS.gray100)
-            }
-            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity)
             // Outcome lines arrive with the settle beat — a result, not a flicker.
             if let importResult {
                 Text(importResult)
@@ -171,7 +173,9 @@ struct AccountDetailSheet: View {
         }
     }
 
-    /// One action button face — full-height capsule, icon + word.
+    /// One action button face — full-height capsule, icon + word. 54pt since
+    /// the Statement pass: with only two capsules left on the tray they carry
+    /// the whole action band, and the chunkier height is the modern read.
     private func actionLabel(_ title: String, icon: String,
                              fg: Color, bg: Color) -> some View {
         HStack(spacing: DS.Space.s2) {
@@ -180,21 +184,35 @@ struct AccountDetailSheet: View {
         }
         .foregroundStyle(fg)
         .frame(maxWidth: .infinity)
-        .frame(height: 44)
+        .frame(height: 54)
         .background(bg, in: Capsule(style: .continuous))
         .contentShape(Capsule(style: .continuous))
+    }
+
+    /// A destructive verb as red words — full 44pt hit target, no slab. The
+    /// honesty rule holds: it's a real button that states exactly what the
+    /// confirm beneath it will offer, it just no longer outranks Export.
+    private func dangerLabel(_ title: String) -> some View {
+        Text(title)
+            .dsText(.callout15).fontWeight(.semibold)
+            .foregroundStyle(DS.destructive)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
     }
 
     private var sheetHeight: CGFloat {
         switch detail {
         // Now the one privacy home: + the two sub-page doors always ("What
         // this app reaches" §205, "What it actually reached" §277), the ADP
-        // nudge when sync is on — two sentences since §277, so ~5 lines, not
-        // 3 — and the sync error detail line (2026-07-27) on top of that when
-        // the mirror is actually failing. DSTray clips at a fixed detent, so
-        // the tallest reachable state must be sized for; +62 for the second
-        // door, +36 for the longer nudge.
-        case .data: icloudSync ? (syncHasLiveError ? 800 : 760) : 665
+        // nudge when sync is on — two sentences since §277 — and the sync
+        // error detail line (2026-07-27) on top of that when the mirror is
+        // actually failing. DSTray clips at a fixed detent, so the tallest
+        // reachable state must be sized for. Retuned for the Statement pass
+        // (2026-08-03): the hero + capsule sit ~48pt under the old stat cards
+        // + alive row, the action band grew 20pt (two 54pt capsules + the red
+        // text line vs three 44pt slabs), and the ADP nudge lost its 50pt
+        // badge indent so it wraps one line fewer.
+        case .data: icloudSync ? (syncHasLiveError ? 760 : 720) : 645
         case .key: 500   // +40 for the per-agent capability line (2026-07-21)
         case .color: 400   // aliveRow + one swatch row + a footnote (prd §204)
         }
@@ -203,19 +221,11 @@ struct AccountDetailSheet: View {
     // MARK: - iCloud sync status (2026-07-27)
     //
     // The toggle's own state is INTENT, not a fact — `CloudSyncStatus` is the
-    // mirror's real last outcome. These three read it into the row above.
+    // mirror's real last outcome. These two read it into the row above. (The
+    // glyph/tone pair that also read it died with the badges, 2026-08-03; the
+    // failing state now colors the subtitle instead.)
 
     private var syncHasLiveError: Bool { CloudSyncStatus.hasLiveError }
-
-    private var syncGlyph: String {
-        icloudSync && syncHasLiveError ? "exclamationmark.icloud.fill"
-            : icloudSync ? "icloud.fill" : "lock.iphone"
-    }
-
-    private var syncTone: Color {
-        icloudSync && syncHasLiveError ? DS.destructive
-            : icloudSync ? DS.tint : DS.confirm
-    }
 
     private var syncStatusLine: String {
         guard icloudSync else {
@@ -233,30 +243,52 @@ struct AccountDetailSheet: View {
 
     // MARK: - Pieces
 
-    /// Data's tray, stat-led — the two numbers tell the story up top (it IS
-    /// data), then each privacy guarantee in its own solid green. Plain "Data"
-    /// title like every tray; the confidence lives in the body, not a banner.
+    /// Data's tray, statement-led (concept ruling 2026-08-03): the thing count
+    /// is the tray's hero — one balance-sized number with storage folded into
+    /// its subline — and the on-device guarantee is a single soft green
+    /// capsule. The solid icon squircles are gone from every row here: rows
+    /// are semibold title + quiet subtitle + trailing control, so color only
+    /// appears where it means something (green = the guarantee, red = a
+    /// failing sync, blue = the one filled button in `controls`).
     private var dataCard: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
-            HStack(spacing: DS.Space.s3) {
-                dataStat("\(thingCount)", "things")
-                dataStat(storeSize, "storage")
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text(thingCount.formatted(.number.grouping(.automatic)))
+                    .dsText(.price40).foregroundStyle(DS.textPrimary)
+                    .monospacedDigit()
+                    .lineLimit(1).minimumScaleFactor(0.6)
+                (Text("things · ")
+                    + Text(storeSize).fontWeight(.semibold)
+                    + Text(" on \(DS.device)"))
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
             }
-            // One plain line for the whole on-device story.
-            aliveRow("sparkles", DS.confirm, "Private", "Answers run on \(DS.device)")
-            // iCloud sync: the badge shows where things live — green lock here,
-            // blue cloud when synced, red when the mirror itself is failing.
-            // The container binds at launch, so a fresh flip says WHEN it
-            // goes live instead of pretending it is. RULE (2026-07-27): this
-            // used to read the toggle's own INTENT ("Synced to your iCloud"
-            // the instant sync was on, whether or not anything had actually
-            // synced) — found honestly wrong diagnosing an outage where the
-            // production CloudKit schema had never been deployed, so every
-            // write had been silently failing since M1 and nothing here said
-            // so. `CloudSyncStatus` now carries the mirror's real last
-            // outcome; this reads that instead of guessing from the toggle.
-            toggleRow(syncGlyph, syncTone, "iCloud sync", syncStatusLine,
-                      Binding(get: { icloudSync }, set: {
+            // The whole on-device story, worn as one quiet capsule — the
+            // guarantee still reads at a glance without a badge painting it.
+            HStack(spacing: DS.Space.s2) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 13, weight: .semibold))
+                Text("Private — answers run on \(DS.device)")
+                    .dsText(.subhead13).fontWeight(.semibold)
+            }
+            .foregroundStyle(DS.confirm)
+            .padding(.horizontal, DS.Space.s4)
+            .frame(height: 34)
+            .background(DS.confirm.opacity(0.13), in: Capsule(style: .continuous))
+            // iCloud sync. The container binds at launch, so a fresh flip says
+            // WHEN it goes live instead of pretending it is. RULE (2026-07-27):
+            // this used to read the toggle's own INTENT ("Synced to your
+            // iCloud" the instant sync was on, whether or not anything had
+            // actually synced) — found honestly wrong diagnosing an outage
+            // where the production CloudKit schema had never been deployed, so
+            // every write had been silently failing since M1 and nothing here
+            // said so. `CloudSyncStatus` now carries the mirror's real last
+            // outcome; the subtitle reads that instead of guessing from the
+            // toggle, and goes red when the mirror is failing (the state the
+            // old badge's tone carried).
+            toggleRow("iCloud sync", syncStatusLine,
+                      subtitleTone: icloudSync && syncHasLiveError
+                          ? DS.destructive : DS.textTertiary,
+                      isOn: Binding(get: { icloudSync }, set: {
                           icloudSync = $0
                           DSHaptic.tap()
                           // The address book rides this same consent (it
@@ -270,7 +302,6 @@ struct AccountDetailSheet: View {
                 Text(detail)
                     .dsText(.subhead13).foregroundStyle(DS.destructive)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.leading, 38 + DS.Space.s3)
             }
             // ADP nudge — only meaningful while sync is ON (with sync off
             // there's no iCloud copy to encrypt). Points the person at the
@@ -285,40 +316,38 @@ struct AccountDetailSheet: View {
                 Text("Your iCloud copy is encrypted in transit and on Apple's servers, but Apple holds the keys. Turn on Advanced Data Protection (Settings › your name › iCloud) and only your devices can read it — not even Apple.")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.leading, 38 + DS.Space.s3)
             }
-            toggleRow(hidePreviews ? "eye.slash.fill" : "eye",
-                      hidePreviews ? DS.confirm : DS.textSecondary,
-                      "Hide previews", "Blur your things in the app switcher",
-                      Binding(get: { hidePreviews }, set: { hidePreviews = $0; DSHaptic.tap() }))
+            toggleRow("Hide previews", "Blur your things in the app switcher",
+                      isOn: Binding(get: { hidePreviews }, set: { hidePreviews = $0; DSHaptic.tap() }))
             // The in-motion half (prd §205): what LEAVES this iPhone. The rows
             // above are your copy AT REST (on device / iCloud); this opens the
             // full list of every service the app talks to. Same privacy home,
             // one tap deeper.
-            door("network", "What this app reaches",
+            door("What this app reaches",
                  "Every service, straight from \(DS.device)") { privacyPage = .reach }
             // The same question asked of BEHAVIOUR rather than of a list
             // (prd §277). The row above is what the app may reach and is
             // hand-maintained; this is what it actually did reach, recorded
             // as it happened — so the claim can be checked rather than
             // trusted, and a host nobody declared shows up as one.
-            door("checklist", "What it actually reached",
+            door("What it actually reached",
                  "Receipts from the last seven days") { privacyPage = .receipts }
         }
     }
 
-    /// A row that opens a privacy sub-page. Two of them now, so the shape
-    /// lives in one place.
-    private func door(_ glyph: String, _ title: String, _ subtitle: String,
+    /// A row that opens a privacy sub-page. Two of them, so the shape lives in
+    /// one place. Badge-less since the Statement pass — the semibold title is
+    /// the wayfinding, the chevron is the affordance.
+    private func door(_ title: String, _ subtitle: String,
                       action: @escaping () -> Void) -> some View {
         Button {
             DSHaptic.tap()
             action()
         } label: {
             HStack(spacing: DS.Space.s3) {
-                badge(glyph, DS.tint)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(title).dsText(.body17).foregroundStyle(DS.textPrimary)
+                    Text(title).dsText(.body17).fontWeight(.semibold)
+                        .foregroundStyle(DS.textPrimary)
                     Text(subtitle)
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 }
@@ -519,24 +548,9 @@ struct AccountDetailSheet: View {
         }
     }
 
-    /// A story number — big and bold, with its plain label beneath. Tabular
-    /// digits so counts don't jitter as they change.
-    private func dataStat(_ value: String, _ label: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(value).dsText(.heading34).foregroundStyle(DS.textPrimary)
-                .monospacedDigit()
-                .lineLimit(1).minimumScaleFactor(0.6)
-            Text(label).dsText(.callout15).foregroundStyle(DS.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, minHeight: 76, alignment: .topLeading)
-        .padding(DS.Space.s4)
-        .background(DS.fillFaint,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-    }
-
-    /// The colored squircle badge — the Apps-page glyph in a solid tone. Shared
-    /// by every alive row and toggle row.
+    /// The colored squircle badge — the Apps-page glyph in a solid tone. The
+    /// key and color trays' `aliveRow` still wears it; the Privacy tray's rows
+    /// dropped it in the Statement pass (2026-08-03).
     private func badge(_ glyph: String, _ tone: Color) -> some View {
         RoundedRectangle(cornerRadius: DS.Radius.appIcon(38), style: .continuous)
             .fill(tone)
@@ -562,15 +576,17 @@ struct AccountDetailSheet: View {
         }
     }
 
-    /// An alive row that also toggles — badge + title/subtitle + a switch, in
-    /// the same row grammar.
-    private func toggleRow(_ glyph: String, _ tone: Color, _ title: String,
-                           _ subtitle: String, _ isOn: Binding<Bool>) -> some View {
+    /// A toggle row in the Statement grammar — semibold title + quiet
+    /// subtitle + the switch, no badge. `subtitleTone` carries the one state
+    /// the old badge's tone did: a failing sync reads red.
+    private func toggleRow(_ title: String, _ subtitle: String,
+                           subtitleTone: Color = DS.textTertiary,
+                           isOn: Binding<Bool>) -> some View {
         HStack(spacing: DS.Space.s3) {
-            badge(glyph, tone)
             VStack(alignment: .leading, spacing: 1) {
-                Text(title).dsText(.body17).foregroundStyle(DS.textPrimary)
-                Text(subtitle).dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                Text(title).dsText(.body17).fontWeight(.semibold)
+                    .foregroundStyle(DS.textPrimary)
+                Text(subtitle).dsText(.subhead13).foregroundStyle(subtitleTone)
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
