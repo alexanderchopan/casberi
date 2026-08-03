@@ -120,6 +120,13 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-grok      { background: #000; }   /* xAI's own black, matching the mark's opaque plate */
 .ai-github    { background: #24292f; font-size: 16px; }
 .ai-linear    { background: #5e6ad2; }
+/* Hugging Face is the PostHog case exactly: full-bleed square artwork
+   carrying its own white field, so the tile is white and the mark fills
+   it — matching BridgeIcon's scaledToFill in the app. The brand yellow
+   (#ffd21e) is the MARK's colour, not the field's, so it isn't the
+   background here any more than PostHog's orange is. */
+.ai-hugging-face { background: #fff; }
+.ai-hugging-face img { width: 100%; height: 100%; border-radius: inherit; }
 .ai-posthog   { background: #fff; }
 /* The PostHog mark is full-bleed square artwork carrying its own white
    field, so it fills its tile like a real app icon instead of floating

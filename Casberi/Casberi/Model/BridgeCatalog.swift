@@ -113,7 +113,7 @@ enum BridgeCatalog {
             let keyless: Set<String> = ["Wallet", "Tokens", "Peer", "0xBow Privacy Pools", "Railgun", "Safe", "Reddit", "YouTube",
                 "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster",
                 "Bluesky", "Nostr", "OpenSea", "Kalshi", "Shopify", "GeckoTerminal", "Deals",
-                "Open Food Facts", "Stocktwits"]
+                "Open Food Facts", "Stocktwits", "Hugging Face"]
             if keyless.contains(name) { return "No account" }
             // Instagram and Snapchat were missed here when they landed
             // (2026-07-31) and TikTok would have been missed the same way:
@@ -422,6 +422,16 @@ enum BridgeCatalog {
         Offer(name: "GitHub",      tagline: "Stars, releases, issues — your GitHub", group: "Work",      connectable: true,
               summary: "Pick the feeds you want — starred repos, new releases, gists, your contributions, watched repos, and the issues and pull requests that involve you. Connects with a read-only token you make in GitHub settings — it stays in \(DS.device)'s Keychain.",
               needsSetup: true),
+        // Work, not Agent (2026-08-03): the Agent group is BYO-key seats that
+        // answer a question. This one publishes nothing and answers nothing —
+        // it's a release feed for the hub AI ships on, which is the GitHub
+        // seat's job three rows up, so it sits beside it.
+        Offer(name: "Hugging Face", tagline: "What the AI world just shipped",       group: "Work",      connectable: true,
+              summary: "Watch an org or a person — meta-llama, google, anyone — and their new models, datasets and Spaces land in your feed as links.\n\nSwitch on Daily Papers and Hugging Face's own curated pick of new research lands too, each with its abstract, so you can search what a paper was about months later.\n\nNo account and no key: fetched straight from the public hub by \(DS.device). Read-only — it never publishes, stars, or downloads weights.",
+              features: ["New models, datasets and Spaces from anyone you watch",
+                         "Daily Papers land with abstracts and cover images",
+                         "Only what's NEW — downloads and likes are counts, not news"],
+              needsSetup: true, added: day(2026, 8, 3)),
         Offer(name: "Linear",      tagline: "Your issues stay in reach",             group: "Work",      connectable: true,
               summary: "The issues assigned to you join your things and surface when they matter. Connects with a personal API key from Linear settings — it stays in \(DS.device)'s Keychain.",
               needsSetup: true),

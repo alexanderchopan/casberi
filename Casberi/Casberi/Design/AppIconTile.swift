@@ -119,6 +119,12 @@ extension DS {
         // carries the signal from `glyphTint`.
         case "openrouter":          return Color.fixed("#000010")
         case "linear":              return Color.fixed("#5e6ad2")   // their documented indigo; the bundled mark samples #5060d0
+        // Hugging Face is the PostHog shape, not the ChatGPT one: a mark on a
+        // white field where the brand is the mark's own colour, not the field.
+        // Their documented yellow, which is also the single most common
+        // saturated pixel in the bundled icon (86k of them) — sampled and
+        // documented agreeing exactly, which is rare enough to note.
+        case "hugging face":        return Color.fixed("#ffd21e")
         case "cal.com":             return Color.fixed("#292929")
         case "calendly":            return Color.fixed("#006bff")
         case "steam":               return Color.fixed("#1b2838")   // their dark navy

@@ -30,6 +30,7 @@ enum BridgeRouter {
         case stocktwits
         case openSea
         case geckoTerminal
+        case huggingFace
         case shopify
         case deals
         case openFoodFacts
@@ -198,6 +199,7 @@ enum BridgeRouter {
             case .stocktwits:     "stocktwits"
             case .openSea:        "opensea"
             case .geckoTerminal:  "geckoterminal"
+            case .huggingFace:    "huggingface"
             case .shopify:        "shopify"
             case .deals:          "deals"
             case .openFoodFacts:  "off"
@@ -300,6 +302,7 @@ enum BridgeRouter {
         Row(offer: "Stocktwits", id: "stocktwits", destination: .stocktwits),
         Row(offer: "OpenSea",    id: "opensea",    destination: .openSea),
         Row(offer: "GeckoTerminal", id: "geckoterminal", destination: .geckoTerminal),
+        Row(offer: "Hugging Face", id: "huggingface", destination: .huggingFace),
         Row(offer: "Shopify",    id: "shopify",    destination: .shopify),
         Row(offer: "Deals",      id: "deals",      destination: .deals),
         Row(offer: "Open Food Facts", id: "off",   destination: .openFoodFacts),
@@ -387,6 +390,7 @@ struct BridgeDestinationView: View {
         case .stocktwits:     StocktwitsScreen()
         case .openSea:        OpenSeaScreen()
         case .geckoTerminal:  GeckoTerminalScreen()
+        case .huggingFace:    HuggingFaceScreen()
         case .shopify:        ShopifyScreen()
         case .deals:          DealsScreen()
         case .openFoodFacts:  OpenFoodFactsScreen()

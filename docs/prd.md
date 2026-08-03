@@ -14840,3 +14840,69 @@ free-text field. What is NOT: the card has never been seen inside the brief. It
 fails CLOSED — a parse failure yields nil and renders nothing, never a crash —
 which is why it ships ahead of that confirmation rather than waiting on a
 priced corpus.
+
+## §290 — Hugging Face joins the catalog, and DeepSeek doesn't (user: "can you think of any other AI products or tools we could integrate… as bridges i mean", then "what does deepseek add… lets add it and huggingface", then "It's chinese made and makes me consider it a potential security vulnerability", 2026-08-03)
+
+The catalog's AI seats were all one of two shapes: a BYO-key agent that answers
+a question (Claude, ChatGPT, Gemini, Venice, Bankr, OpenRouter, Grok) or a chat
+IMPORT (ChatGPT, Claude, Gemini). Nothing read the AI world as a source. The
+gap named in this session is AI tools that produce **artifacts** — generations,
+papers, releases, runs — which are event-shaped and therefore thing-shaped.
+
+**Ruling 1 — DeepSeek and Kimi are both declined, on jurisdiction, not
+capability.** The user asked for DeepSeek, then raised the security concern
+against Kimi; DeepSeek is the same jurisdiction (High-Flyer, Hangzhou;
+`api.deepseek.com` is PRC-hosted), so the concern applies to the thing already
+asked for. Three facts settled it. The risk is NOT the nationality of the
+weights — no code executes, it's a JSON API returning text — it is that a tap
+sends the person's own retrieved things to a server under PRC data law. Both
+models are OPEN-WEIGHTS and already reachable through the shipped OpenRouter
+seat from US-hosted providers, so declining costs the app no capability at all.
+And this app ships `NetworkReach` and the receipts screen precisely so people
+can CHECK the privacy claim — `api.deepseek.com` would appear there by name.
+A first-party seat would have added the jurisdiction and nothing else.
+Corollary worth keeping: when a concern is raised about one candidate, check
+whether it already applies to something the user has just approved.
+
+**Ruling 2 — Hugging Face is a Work seat, not an Agent one.** The Agent group
+is BYO-key seats that answer. This one publishes nothing and answers nothing;
+it's a release feed for the hub AI ships on, which is the GitHub seat's job, so
+it sits beside it.
+
+**Ruling 3 — the module doctrine is the whole design.** Hugging Face is a
+firehose of COUNTS (downloads, likes, trending scores) and a count is never a
+thing here — the PostHog lesson, in a second bridge. So exactly one repo shape
+is an event: it did not exist, and now it does. Hence `createdAt`, never
+`lastModified`, which moves for a README typo.
+
+**Ruling 4 — first sight BACKFILLS, diverging from the cursor-seed rule on
+purpose.** Peer/Morpho/Hyperliquid seed silently because their first read is a
+STATE that would land as fake news. Here the person has just typed an author's
+name and is owed proof the watch works, so the newest three per kind land at
+once — stamped with their REAL `createdAt`, so a 2024 model sorts back to 2024
+and can never read as today. Same split `PrivacyPoolsBridge` makes.
+
+Two reads, both keyless (MEASURED 2026-08-03, curl, no key, no headers):
+watched authors (`api/{models,datasets,spaces}?author=…&sort=createdAt&
+direction=-1`, all three 200 and all three honouring the sort) and Daily Papers
+(`api/daily_papers`, 200, carrying `title`, the FULL abstract, a real CDN
+`thumbnail` and the arXiv id — so a paper row wears a face). The abstract rides
+`enrichedText`, retrieval-only per the 2026-07-15 ruling: findable by what it
+was about, without a paragraph of prose in the row. No new `Thing` field, so
+there is no CloudKit Production deploy to chase.
+
+Deliberately NOT built, so it doesn't read as forgotten: **your own likes**
+(`api/users/<name>/likes` is public and answers 200 — a like IS a save, the
+shape this app is built on — but it needs an HF handle most Casberi users don't
+have, so it would be a field that reads as required and stays blank forever),
+and **following-graph import** (the Farcaster §87 lesson: a follow graph is a
+picker, not a mirror, and that's a screen of its own).
+
+Also weighed and declined this session: **Cognition** — Windsurf has no read
+API at all, and Devin's session API is the right shape (a finished session is a
+PR, a duration and a summary) but subscription-gated, so it could not be
+measured before shipping, which this codebase treats as a loud caveat rather
+than a normal risk. Same tier as Weights & Biases: right shape, wrong size.
+Held, with **Limitless** (lifelogs — the most Casberi-native data that exists),
+**Replicate**/**ElevenLabs** (your own generations), and **arXiv / HF Daily
+Papers standalone** — the last of which this seat now covers.

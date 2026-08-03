@@ -920,6 +920,49 @@ enum ProbeHooks {
                 NSLog("GeckoTerminal probe: %@ trending in", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-hfWatch "<author[,author]>"` — watch Hugging Face orgs/people and
+        // sync. `-hfPapers YES|NO` switches Daily Papers (declare it BEFORE
+        // this hook: hooks run in list order, and the sync must see the
+        // flag already set).
+        Hook(key: "hfPapers") { spec, _ in
+            HuggingFaceStore.shared.dailyPapers = !(spec.lowercased() == "no" || spec == "0")
+        },
+        Hook(key: "hfWatch") { spec, context in
+            for raw in spec.split(separator: ",") {
+                HuggingFaceStore.shared.add(String(raw).trimmingCharacters(in: .whitespaces))
+            }
+            Task { @MainActor in
+                let n = await HuggingFaceIngest.refresh(context: context)
+                NSLog("hfWatch: %@ | papers=%@ | %@ in",
+                      HuggingFaceStore.shared.authors.joined(separator: ","),
+                      HuggingFaceStore.shared.dailyPapers ? "YES" : "NO",
+                      n.map(String.init) ?? "FAILED")
+            }
+        },
+        // `-hfProbe YES` — what the seat actually HOLDS, one NSLog per row (a
+        // joined multi-line message gets truncated by the log reader — the
+        // `-todayProbe` lesson). A landed count alone can't separate "this org
+        // has published nothing new" from "the read never ran", and it can't
+        // show whether a paper kept its abstract, which is the one field
+        // nothing on any screen displays (enrichedText is retrieval-only).
+        Hook(key: "hfProbe") { _, context in
+            Task { @MainActor in
+                let n = await HuggingFaceIngest.refresh(context: context)
+                NSLog("hfProbe: %@ new | watching %d | papers=%@",
+                      n.map(String.init) ?? "FAILED",
+                      HuggingFaceStore.shared.authors.count,
+                      HuggingFaceStore.shared.dailyPapers ? "YES" : "NO")
+                let rows = (try? context.fetch(
+                    FetchDescriptor<Thing>(predicate: #Predicate { $0.source == "Hugging Face" })
+                )) ?? []
+                for thing in rows.filter(\.isLive).sorted(by: { $0.capturedAt > $1.capturedAt }).prefix(30) {
+                    NSLog("hfRow| %@ | ref=%@ | abstract=%d chars | image=%@",
+                          thing.title, thing.sourceRef ?? "-",
+                          thing.enrichedText?.count ?? 0,
+                          thing.previewImageURL == nil ? "NO" : "YES")
+                }
+            }
+        },
         // `-stockWatch "<query[,query]>"` — resolve each on Stocktwits, watch
         // it, then sync the streams; NSLogs tickers + new posts (headless
         // bridge test).

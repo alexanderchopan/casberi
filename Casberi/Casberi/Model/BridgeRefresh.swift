@@ -438,6 +438,12 @@ enum BridgeRefresh {
                 _ = await TrendingIngest.refresh(context: context)
             }
         }
+        if HuggingFaceStore.shared.connected {
+            let s = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await HuggingFaceIngest.refresh(context: context)
+            }
+        }
         // Stocktwits — the watch lives in the corpus (the thing IS the
         // watch); the seat gates the foreground poll so a person who never
         // connected it doesn't pay the watched-tickers fetch every

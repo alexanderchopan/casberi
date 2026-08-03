@@ -179,6 +179,15 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "GeckoTerminal"),
                  purpose: "Fetches the tokens trending on the chains you follow — GeckoTerminal's own public ranking.",
                  hosts: ["api.geckoterminal.com"]),
+        // The thumbnail CDN is listed beside the API because a Daily Paper row
+        // draws its cover image, and an image loaded into a row is a real
+        // reach even though `NetworkLedger` doesn't record it (its own stated
+        // ceiling). Declaring only the API host would make this screen
+        // accurate about requests we log and silent about one we don't.
+        Endpoint(service: "Hugging Face",
+                 reach: .whenConnected(bridge: "Hugging Face"),
+                 purpose: "Reads the new models, datasets and Spaces published by the orgs and people you watch, and — when Daily Papers is on — Hugging Face's own curated daily list with its cover images. Carries only what you watch; there's no account and no key, so nothing identifies you.",
+                 hosts: ["huggingface.co", "cdn-thumbnails.huggingface.co"]),
         Endpoint(service: "0xBow Privacy Pools",
                  reach: .whenConnected(bridge: "0xBow Privacy Pools"),
                  purpose: "Reads your Privacy Pools deposits from the public chain and their review status from 0xBow's public API, for the wallets you watch.",
