@@ -357,7 +357,17 @@ enum BridgeRefresh {
         if FilesStore.shared.connected {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
-                _ = await FilesIngest.refresh(context: context)
+                // nil means the folder couldn't be walked at all — moved,
+                // renamed, or its permission lost. That used to be discarded
+                // (`_ =`), so the room went on showing rows for files that
+                // were no longer there while every pull silently did nothing
+                // and nothing on any screen said why. Say it instead — the
+                // honesty rule, and the same gap that made Mail read as
+                // broken (prd §284).
+                if await FilesIngest.refresh(context: context) == nil {
+                    store.markAttention("files",
+                        statusLine: "Couldn't read that folder — reconnect it to resume")
+                }
             }
             // Thumbnails + OCR for the image files a sync already landed —
             // same throttle contract as Photos' heal above.

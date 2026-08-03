@@ -61,7 +61,24 @@ final class FilesStore {
 
 enum FilesIngest {
 
-    @MainActor private static var running = false
+    /// Single-flight, but TIME-BOXED rather than a bare flag (2026-08-02).
+    ///
+    /// It was `running: Bool`, set before the walk and cleared in a `defer`.
+    /// The walk reads iCloud Drive files, and those reads block with no
+    /// timeout — so one evicted file could park the pass forever, and since
+    /// the `defer` never ran, the flag never cleared. Every later refresh
+    /// then returned at the guard without doing anything, for the rest of
+    /// the app's life: no new files, and — because the prune lives after the
+    /// walk — no deletions either. Reported 2026-08-02 as a folder holding
+    /// two screenshots showing dozens in the app, with pull-to-refresh doing
+    /// nothing. Both halves of that are this one flag.
+    ///
+    /// A stuck pass can't be cancelled (the block is inside synchronous
+    /// FileManager calls, which ignore Task cancellation), so this doesn't
+    /// try: it lets the NEXT pass through once the current one is past
+    /// plausibly-alive, which is what actually restores the feature.
+    @MainActor private static var runningSince: Date?
+    private static let stuckAfter: TimeInterval = 120
 
     /// Extensions worth reading as text for a preview — everything else lands
     /// with just its size as the fact, since a binary's bytes aren't a useful
@@ -87,6 +104,17 @@ enum FilesIngest {
         let name: String
         let modified: Date
         let size: Int64
+        /// False for an iCloud Drive file whose bytes aren't on this device
+        /// yet. READING one blocks — `String(contentsOf:)` and the image
+        /// reads synchronously wait on the download, with no timeout — so
+        /// this is what lets a pass land the row NOW and read it later,
+        /// instead of stalling on a file nobody asked for.
+        ///
+        /// A not-downloaded file is still PRESENT: it stays in the walk and
+        /// therefore in `allRefs`, or the prune would read "not downloaded"
+        /// as "deleted from the folder" and remove a file that is sitting
+        /// right there.
+        let isDownloaded: Bool
     }
 
     /// Walks the folder for every regular file outside dot-directories. Must
@@ -100,7 +128,8 @@ enum FilesIngest {
     private static func walk(_ folder: URL) -> [WalkedFile]? {
         let fm = FileManager.default
         let base = folder.standardizedFileURL.path
-        let keys: [URLResourceKey] = [.contentModificationDateKey, .isRegularFileKey, .fileSizeKey]
+        let keys: [URLResourceKey] = [.contentModificationDateKey, .isRegularFileKey, .fileSizeKey,
+                                      .isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey]
         guard let walker = fm.enumerator(at: folder, includingPropertiesForKeys: keys,
                                          options: [.skipsHiddenFiles]) else { return nil }
         // `allObjects` materializes the walk synchronously — iterating the
@@ -111,10 +140,17 @@ enum FilesIngest {
             guard values?.isRegularFile == true else { continue }
             let std = url.standardizedFileURL
             let rel = String(std.path.dropFirst(base.count))
+            // Metadata reads (size, dates, download status) are LOCAL even
+            // for an evicted iCloud file — it's reading the CONTENTS that
+            // blocks, which is why the flag rides along instead of the walk
+            // trying to avoid these keys.
+            let ubiquitous = values?.isUbiquitousItem == true
+            let status = values?.ubiquitousItemDownloadingStatus
             result.append(WalkedFile(
                 ref: "files:\(rel)", url: std, name: std.lastPathComponent,
                 modified: values?.contentModificationDate ?? .distantPast,
-                size: Int64(values?.fileSize ?? 0)))
+                size: Int64(values?.fileSize ?? 0),
+                isDownloaded: !ubiquitous || status == .current || status == .downloaded))
         }
         return result
     }
@@ -130,9 +166,15 @@ enum FilesIngest {
     @MainActor
     static func refresh(context: ModelContext) async -> Int? {
         let store = FilesStore.shared
-        guard store.connected, !running else { return store.connected ? 0 : nil }
-        running = true
-        defer { running = false }
+        guard store.connected else { return nil }
+        if let since = runningSince, Date.now.timeIntervalSince(since) < Self.stuckAfter {
+            return 0
+        }
+        // Clear only OUR marker: a stuck pass that finally returns must not
+        // clear the marker of the pass that has since taken over.
+        let mine = Date.now
+        runningSince = mine
+        defer { if runningSince == mine { runningSince = nil } }
 
         guard let folder = store.folderURL() else { return nil }
         let existing = IngestSupport.existingSourceRefs(context, source: "Files")
@@ -157,7 +199,14 @@ enum FilesIngest {
 
                 var new: [(file: WalkedFile, preview: String)] = []
                 for file in sorted.prefix(100) where !existing.contains(file.ref) {
-                    new.append((file, Self.preview(of: file.url, size: file.size)))
+                    // An evicted iCloud file lands on its SIZE rather than
+                    // its text — reading it would block this whole pass on a
+                    // download nobody asked for, which is the stall that used
+                    // to latch the single-flight flag forever. `heal` reads
+                    // the text once the bytes are actually here.
+                    new.append((file, file.isDownloaded
+                        ? Self.preview(of: file.url, size: file.size)
+                        : ByteCountFormatter.string(fromByteCount: file.size, countStyle: .file)))
                 }
                 return (new, Set(files.map(\.ref)))
             }.value
@@ -254,11 +303,14 @@ enum FilesIngest {
             || lower.hasPrefix("cleanshot")
     }
 
-    /// Single-flight, same reason as `running` above and as
+    /// Single-flight, same reason as `runningSince` above and as
     /// `ScreenshotIngest.healing`: this loop awaits (thumbnail/OCR) between
     /// fetching `things` and mutating one, so a second overlapping call could
-    /// read/write a `Thing` a first call's save already moved past.
-    @MainActor private static var healing = false
+    /// read/write a `Thing` a first call's save already moved past. TIME-BOXED
+    /// for the same reason `refresh`'s is — this pass reads file CONTENTS
+    /// (thumbnail, OCR) and an evicted iCloud file blocks those with no
+    /// timeout, so a bare flag can latch and never clear.
+    @MainActor private static var healingSince: Date?
 
     /// Thumbnails, OCRs, and retitles the image files a sync already landed —
     /// the same land-fast/heal-later split `ScreenshotIngest.heal` uses,
@@ -267,9 +319,12 @@ enum FilesIngest {
     /// pass so a big folder arrives in waves; returns what it actually did.
     @MainActor
     static func heal(context: ModelContext) async -> (thumbed: Int, ocred: Int) {
-        guard !healing else { return (0, 0) }
-        healing = true
-        defer { healing = false }
+        if let since = healingSince, Date.now.timeIntervalSince(since) < Self.stuckAfter {
+            return (0, 0)
+        }
+        let mine = Date.now
+        healingSince = mine
+        defer { if healingSince == mine { healingSince = nil } }
 
         guard let folder = FilesStore.shared.folderURL() else { return (0, 0) }
 

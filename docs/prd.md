@@ -14429,3 +14429,43 @@ verified zero, so a defaulted 0 on a malformed response would be a mass
 delete. RFC 3501 §6.3.1 requires the line; this does not take it on trust.
 Decision table verified against the shipped guard (five cases, incl. the nil
 one).
+
+## §285 — One evicted iCloud file could switch the Files bridge off for good (user: "The FIles room also needs to refresh, and currently doesn't. it shows me photos i don't have in Screenshots anymore", then "i have two screenshots in my screenshots folder on computer and it shows dozesn in the app", 2026-08-02)
+
+`FilesIngest.refresh` guarded itself with a plain `running: Bool` — set before
+the folder walk, cleared in a `defer`. The walk reads iCloud Drive files, and
+those reads BLOCK on the download with no timeout (the file's own comment
+already said so, which is why the walk was moved off the main actor — but
+moving a blocking read off the main thread stops the UI freezing, it does not
+stop the block). So one evicted file parks the pass forever, the `defer`
+never runs, the flag never clears, and **every later refresh returns at the
+guard doing nothing for the rest of the app's life**. Since the prune added
+2026-07-29 lives AFTER the walk, that killed deletions too: a folder holding
+two screenshots showed dozens, and pull-to-refresh was genuinely running and
+genuinely doing nothing. Both reported symptoms are the one flag.
+
+Three fixes, and the ordering of blame matters — the latch is what made it
+PERMANENT, the blocking read is what made it START, the silence is what made
+it UNDIAGNOSABLE:
+
+1. **The latch is time-boxed** (`runningSince: Date?`, 120s), not a flag. A
+   stuck pass cannot be cancelled — the block is inside synchronous
+   `FileManager`/`String(contentsOf:)` calls, which ignore Task cancellation —
+   so this does not try. It lets the NEXT pass through once the current one is
+   past plausibly-alive, which is what actually restores the feature. The
+   `defer` clears only its OWN marker, so a stuck pass that finally returns
+   can't clear the marker of the pass that took over. `heal` had the identical
+   flag for the identical reason (it reads contents too) and got the same fix.
+2. **A not-yet-downloaded file is landed, not read.** The walk now carries
+   `isDownloaded` (metadata is local even for an evicted file; only CONTENTS
+   block), and such a file lands on its size instead of its text, with `heal`
+   reading it once the bytes are here. **It stays in `allRefs`** — a
+   not-downloaded file is PRESENT, and dropping it would make the prune read
+   "not downloaded" as "deleted" and remove a file sitting right there.
+3. **A failed walk is reported.** `BridgeRefresh` discarded `refresh`'s nil
+   (`_ =`), so an unreachable folder showed stale rows while every pull
+   silently did nothing — the same silence that made Mail read as broken
+   (§284). It now marks the seat as needing attention.
+
+Latch behaviour verified six ways, including the stuck-pass bypass and the
+stale-clear it must not do.
