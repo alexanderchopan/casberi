@@ -418,12 +418,49 @@ echo "$TS,$LAUNCH_MS,$MEM_MB,$ANSWER_MS,$SHA" >> "$HIST"
 
 # ── Cleanup ────────────────────────────────────────────────────────────────
 # Scratch stores are per-PID and would otherwise accumulate one dir per launch
-# forever inside the container.
-# Best-effort only: this path is inside the TCC-protected app container, so
-# under launchd the delete is denied and silently skipped. The scratch dirs
-# live in the app's own tmp, which macOS reclaims on its own schedule, so an
-# unattended run leaving them behind is untidy rather than unbounded.
-rm -rf "$HOME/Library/Containers/com.casberi.app/Data/tmp"/casberi-scratch-* 2>/dev/null
+# forever inside the container. The delete is best-effort AND BOUNDED, and the
+# bound is not defensive decoration — it is the fix for a measured hang.
+#
+# This path sits inside the TCC-protected app container. Under launchd the
+# delete is denied and skipped, which is what the old comment here described.
+# From an interactive or automation shell TCC does NOT return an error: it
+# BLOCKS, waiting on a consent decision that never arrives. Measured
+# 2026-08-02 — `rm -rf` on this path never returned, and so did a bare `ls` of
+# it, which is the part that makes a plain `timeout`-the-rm fix insufficient:
+# the `casberi-scratch-*` GLOB has to read the directory to expand, so the
+# parent shell blocks before `rm` is ever reached. The whole statement, glob
+# included, therefore has to run inside the bounded child.
+#
+# The cost of getting this wrong is invisible and expensive: a run sat here for
+# 39 minutes with every gate already passed, every screenshot and probe log
+# written, and the perf-history row already appended — so it looked from the
+# outside exactly like a verification that failed, when nothing had. The
+# `SUMMARY` line below is what nightly-mac.sh parses, and it never printed.
+#
+# macOS ships no `timeout(1)`, so the watchdog is spelled out.
+cleanup_scratch() {
+  # `(N)` is load-bearing, not style: without it zsh treats a non-matching glob
+  # as an ERROR ("no matches found") and the command never runs, which is
+  # indistinguishable at the exit code from the watchdog killing a blocked
+  # delete. The first cut of this fix reported "TCC blocked it" on a machine
+  # that simply had nothing left to clean.
+  local dirs=("$HOME/Library/Containers/com.casberi.app/Data/tmp"/casberi-scratch-*(N))
+  (( ${#dirs} )) || return 0
+  rm -rf -- "${dirs[@]}" 2>/dev/null
+}
+cleanup_scratch &
+CLEAN_PID=$!
+( sleep 10; kill -9 $CLEAN_PID 2>/dev/null ) >/dev/null 2>&1 &
+CLEAN_WATCHDOG=$!
+wait $CLEAN_PID 2>/dev/null
+CLEAN_RC=$?
+kill $CLEAN_WATCHDOG 2>/dev/null || true
+# Only a SIGNAL death (>128) is the hang — report exactly that case, so the
+# line means "the scratch dirs are still there on purpose" and never appears
+# for the ordinary nothing-to-do run.
+if (( CLEAN_RC > 128 )); then
+  print -r -- "  (scratch cleanup skipped — the app container did not answer in 10s)"
+fi
 quit_app
 
 print -r -- ""
