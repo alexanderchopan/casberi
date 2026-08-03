@@ -397,6 +397,7 @@ struct GenRender: View {
         case "TilePair":     GenTilePair(el: el, els: els).mountIn()
         case "MoversTile":   GenMoversTile(el: el).mountIn()
         case "NextTile":     GenNextTile(el: el).mountIn()
+        case "WalletFlow":   GenWalletFlow(el: el).mountIn()
         case "SourceMix":    GenSourceMix(el: el).mountIn()
         case "LeadRow":      GenLeadRow(el: el).mountIn()
         case "LeadPost":     GenLeadPost(el: el).mountIn()
@@ -4259,6 +4260,59 @@ private struct GenMoversTile: View {
                 // "this one has less to say".
                 .frame(maxHeight: .infinity, alignment: .topLeading)
                 .dsWidgetSurface()
+            }
+        }
+    }
+}
+
+/// WalletFlow(windowLabel, "side|name|usd|count|other;…", inUSD, outUSD,
+/// unpriced, spineAddress) — where the money moved, in the brief (§232).
+///
+/// A thin adapter, deliberately: it rebuilds `WalletFlow.Band` from the values
+/// `TodayBrief.flowBand` serialised and hands it to the SAME `WalletFlowBand`
+/// the wallet room draws, so the two can never diverge in appearance or in
+/// what they claim. Nothing about the band's own rules (one shared scale, in
+/// is green and out is never red, nothing tappable) is re-decided here.
+///
+/// It carries no `Thing` — `WalletFlowSource` reduced them to values at the
+/// composer's boundary — so the liveness rules have nothing to bite on, which
+/// is the same property the room's own card has.
+private struct GenWalletFlow: View {
+    let el: GenEl
+
+    /// Rebuilt from the doc, or nil while the line is still arriving. A lane
+    /// needs all five fields to mean anything (a half-parsed usd would draw a
+    /// wrong-sized slab, which is worse than no slab), so an incomplete row is
+    /// dropped rather than guessed at — and the `.block` slot holds the whole
+    /// module behind a skeleton until its line completes anyway (§199).
+    private var band: WalletFlow.Band? {
+        var inLanes: [WalletFlow.Lane] = []
+        var outLanes: [WalletFlow.Lane] = []
+        for row in el.str(1).split(separator: ";") {
+            let f = row.split(separator: "|", maxSplits: 4, omittingEmptySubsequences: false)
+            guard f.count == 5, let usd = Double(f[2]), let count = Int(f[3]) else { continue }
+            let isOther = f[4] == "1"
+            let side = String(f[0])
+            let lane = WalletFlow.Lane(id: "\(side):\(f[1])\(isOther ? ":other" : "")",
+                                       name: String(f[1]), usd: usd,
+                                       count: count, isOther: isOther)
+            if side == "in" { inLanes.append(lane) } else { outLanes.append(lane) }
+        }
+        guard !inLanes.isEmpty || !outLanes.isEmpty,
+              let inUSD = Double(el.str(2)), let outUSD = Double(el.str(3))
+        else { return nil }
+        return WalletFlow.Band(inLanes: inLanes, outLanes: outLanes,
+                               inUSD: inUSD, outUSD: outUSD,
+                               unpricedCount: Int(el.str(4)) ?? 0)
+    }
+
+    var body: some View {
+        Group {
+            if let band {
+                WalletFlowBand(band: band, windowLabel: el.str(0),
+                               spineAddress: el.str(5).isEmpty ? nil : el.str(5))
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.top, DS.Space.s2)
             }
         }
     }

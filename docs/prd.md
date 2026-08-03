@@ -14778,3 +14778,65 @@ asserts check A's ceiling rather than pretending it isn't there. A fully
 dynamic host (`https://\(host)/…`) can be checked by neither and declared by
 nobody — those are reported as info, and their call sites are the attribution
 above.
+
+## 232. The flow band comes to the brief — where the money moved, not just what it's worth (user: "you know we have different visualizations in our source rooms. how come the daily brief isn't those… sankey diagrams, music listening, document and rss theme treemaps", then "ok do it", 2026-08-03) — BUILT, NEVER SEEN RENDERED
+
+Asked why the brief doesn't use the rooms' visualizations. The answer turned
+out to be structural rather than editorial, and worth writing down.
+
+**Why none of them were reachable.** Every room hero is keyed by source in its
+own signature — `FeedInsight.topicMap(source:things:)` literally `switch`es on
+the source name and returns nil in `default` (only Photos, Instagram, Files are
+wired), and `leaderboard` does the same. They are per-room functions; the brief
+is cross-source. Nobody declined to use them — there was no way to call one
+without first picking a room.
+
+**Why some of them still shouldn't come.** `leaderboard` is a ranked count
+("Who you save most"), which is exactly what §213 outlawed here. That split is
+principled, not accidental: inside a room the subject is already chosen, so
+ranking within it is a real shape; in the brief an arrival count is the noise
+the volume ruling exists to kill. They stay where they are.
+
+**Why the flow band is the exception, and the one worth moving.** Its own
+header already says it: *"Money moving is the module doctrine's standing
+exception to 'never a tally', and every ribbon here is a real landed thing, not
+a count of them."* It was written to satisfy this screen's doctrine. Meanwhile
+the brief's crown is money (§213), and everything the crown says is money as
+STATE — the total, the delta pill, the holdings treemap, the balance curve, all
+"what you have." The band is the only read that says through WHOM it left and
+arrived. That was a real hole in the brief's strongest module.
+
+**The window is a WEEK, deliberately unlike every other module here.** The rest
+read `DayBrief.windowStart` (since you last looked). A band needs two surviving
+lanes and half its moves priced; on a since-you-last-looked window an ordinary
+day holds nought or one transfer, so scoped that way it would decline nearly
+every day and read as broken rather than absent. `WalletRange.week` supplies
+both the span and the wording, so the brief and the room can never name the
+same period differently.
+
+**Nothing is re-gated in the composer.** `WalletFlow.band` already declines on
+an unpriceable window, on fewer than two lanes, and on lanes too thin to draw
+honestly. A second opinion here could disagree with the room's, so there isn't
+one — `flowBand` returns nil and the module is simply absent, like every other.
+
+The band crosses into the doc as VALUES (`WalletFlowSource` reduced the things
+at the composer's boundary), serialised the way `MoversTile`'s rows already
+are, and `GenWalletFlow` rebuilds the struct and hands it to the SAME
+`WalletFlowBand` the room draws — so the two can never diverge in appearance or
+claim. No `Thing` reaches the renderer, which is what makes the module immune
+to the liveness crash class rather than merely guarded against it.
+
+**NOT SEEN RENDERED, and the reason is the honest one.** `-flowProbe` declines
+on every corpus reachable from the simulator: the demo seeds' four wallet things
+are swaps and self-moves (`legs=0` — no direction by construction), and a real
+watched wallet lands 30 directional legs of which `priced=0`, because the
+Alchemy fallback arm carries no `transferUSD` (a state `WalletFlow`'s own
+comment documents and expects to resolve as priced moves arrive). So the card
+correctly draws nothing here, and the brief is byte-identical to before on
+every corpus available for testing. What IS verified: it builds, the gates
+decline as designed and say which decline it is, and the serialise/parse
+round-trip is symmetric field-for-field with `tileSafe` guarding the only
+free-text field. What is NOT: the card has never been seen inside the brief. It
+fails CLOSED — a parse failure yields nil and renders nothing, never a crash —
+which is why it ships ahead of that confirmation rather than waiting on a
+priced corpus.

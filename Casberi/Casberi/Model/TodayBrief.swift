@@ -212,6 +212,18 @@ enum TodayBrief {
             ids.append("tmkt")
             lines.append(resolved)
         }
+        // Where the money MOVED — the flow band (§232), closing the money
+        // block. Everything the crown says above is money as STATE (the total,
+        // its delta, the holdings treemap, the balance curve — all "what you
+        // have"); this is the only read that says through WHOM it left and
+        // arrived. The room already draws it and its own header calls money
+        // moving "the module doctrine's standing exception to never a tally",
+        // so it arrives here already ruled — it just had no way to be called,
+        // being a per-room view rather than a composer.
+        if let flow = flowBand(things) {
+            ids.append("flow")
+            lines.append(flow)
+        }
 
         // 4. The themes map — the second whole-day summary, and the one that
         // replaced "what landed" and "when it landed" outright (2026-07-25,
@@ -1110,6 +1122,45 @@ enum TodayBrief {
                 return "\(tileSafe(m.symbol))|\(value)|\(closes)|\(m.thing.id.uuidString)"
             }
         return "tmov = MoversTile(\"\(String(localized: "Watchlist"))\", \"\(rows.joined(separator: ";"))\")"
+    }
+
+    /// `WalletFlow(windowLabel, "side|name|usd|count|other;…", inUSD, outUSD,
+    /// unpriced, spineAddress)` — where the money moved (§232).
+    ///
+    /// **The window is a WEEK, not the brief's own.** Every other module here
+    /// reads `DayBrief.windowStart` (since you last looked), and that is the
+    /// wrong span for this one specifically: a band needs two surviving lanes
+    /// and half its moves priced, and a since-you-last-looked window on an
+    /// ordinary day holds nought or one transfer — so scoped that way the card
+    /// would decline nearly every day and read as broken rather than absent.
+    /// A week is the room's own default (`WalletRange.week`), and the label is
+    /// that enum's own wording, so the two screens can never name the same
+    /// period differently.
+    ///
+    /// **Nothing is gated here.** `WalletFlow.band` already declines on an
+    /// unpriceable window, on fewer than two lanes, and on lanes too thin to
+    /// draw honestly — re-deciding any of that in the composer would be a
+    /// second opinion that could disagree with the room's.
+    ///
+    /// The band arrives as VALUES (`WalletFlowSource` reduced the things at
+    /// the boundary), so serialising it here costs nothing and keeps the
+    /// renderer free of any `Thing` — which is what makes this module immune
+    /// to the liveness crash class rather than merely guarded against it.
+    private static func flowBand(_ things: [Thing]) -> String? {
+        guard let span = WalletRange.week.span,
+              let band = WalletFlowSource.band(from: things,
+                                               since: Date.now.addingTimeInterval(-span))
+        else { return nil }
+        let lanes = (band.inLanes.map { ("in", $0) } + band.outLanes.map { ("out", $0) })
+            .map { side, lane in
+                "\(side)|\(tileSafe(lane.name))|\(String(format: "%.2f", lane.usd))|\(lane.count)|\(lane.isOther ? 1 : 0)"
+            }
+        // The spine wears a face only when one wallet is unambiguously the
+        // subject — the room's own rule (a face belonging to one of several
+        // merged wallets would claim the flows were that wallet's).
+        let watched = WalletStore.shared.addresses
+        let spine = watched.count == 1 ? (watched.first?.address ?? "") : ""
+        return "flow = WalletFlow(\"\(genSafe(WalletRange.week.flowLabel))\", \"\(lanes.joined(separator: ";"))\", \"\(String(format: "%.2f", band.inUSD))\", \"\(String(format: "%.2f", band.outUSD))\", \"\(band.unpricedCount)\", \"\(spine)\")"
     }
 
     /// `NextTile(label, title, when, alert, thingID)` — the nearest real
