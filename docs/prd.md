@@ -16376,3 +16376,39 @@ forever, and without that sentence it is indistinguishable from a refused one.
 Cursor's own forum contradict each other on: whether an individual on a
 personal plan can mint a Cloud Agents key at all. Every read is a GET returning
 nil on failure, so it fails safe. Run `-cursorProbe YES` before trusting it.
+
+## §304 — The brief's 3-second stall was one read, paid twice (user: "a bit of latency opening the daily brief" → "like 3 seconds before it starts to fill", 2026-08-04)
+
+Measured, not guessed: a `#if DEBUG` timing block around `TodayBrief.compose`'s
+three concurrent reads showed `holdings=7598ms`, `moves=0ms`, `risk=0ms` — the
+wallet holdings network read WAS the stall, in full, every time. Two things
+made it worse than one slow read: the document composes atomically (nothing
+paints until all three land), and it was being paid on the BACKGROUND digest
+refresh too (`KeptAskStore.refreshDigests`, run every foreground for anyone
+who kept the "today" ask) — a pass that keeps only `.digest`
+(`DayBrief.detail` → `whisper` → `walletMove`, all recorded samples) and reads
+holdings for a hero it then throws away.
+
+**Two fixes, both narrow.** `holdingsRead` is now gated on `presenting`, the
+same gate `worstDebt` already used one read below it for the identical
+reason — a background pass with no reader shouldn't pay for a live read. And
+`bounded` (the race-against-a-timeout wrapper every live read in this file
+goes through) took a per-call `budget` parameter, so holdings alone gets a
+tight 2s ceiling instead of the shared 8s `liveReadBudget`: losing that race
+costs almost nothing, since the hero's fallback (`lastKnownHoldingsByWallet()`
+— recorded samples, instant, its own treemap cells, "as of Xh ago") was
+already ruled honest enough to ship, and `bounded` never cancels the loser —
+it runs to completion and warms `HoldingsCache`, so the very next open inside
+its 10-minute window (§216) reads fresh and free. Stale-while-revalidate, not
+a lost read.
+
+**Checked against the thing this session worried about most**: none of the
+hero's delight (the rolling total, the drawn sparkline, the staggering
+treemap cells, the delta pill) reads the live network call — all of it reads
+recorded history or the fallback's own cells — so tightening this timeout
+touches only the wallet number's freshness, never the animation.
+
+The timing block itself is kept, `#if DEBUG`-gated and free in Release, on the
+`LaunchPerf` bargain: "the brief feels slow" is a recurring report whose cause
+is never guessable without a per-read breakdown, since three concurrent reads
+only ever show their slowest.

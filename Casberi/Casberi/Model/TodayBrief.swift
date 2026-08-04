@@ -146,7 +146,16 @@ enum TodayBrief {
         // unreachable RPC host owned the screen for minutes. See
         // `liveReadBudget` — the block now costs at most that, and a read that
         // misses it simply doesn't contribute its module.
-        async let holdingsRead = liveHoldings()
+        // Gated on `presenting` for the same reason `worstDebt` below is
+        // (2026-08-04): holdings reach exactly ONE module, the money hero, and
+        // on the background path the entire document is discarded — the caller
+        // (`KeptAskStore.refreshDigests`) keeps only `.digest`, which is
+        // `DayBrief.detail` → `whisper` → `walletMove`, all recorded samples
+        // and none of them this read. So every foreground was paying a network
+        // portfolio read (measured at 6.8s) to build a hero nobody would ever
+        // see. The lede doesn't touch holdings either, so the widget line it
+        // publishes is unaffected.
+        async let holdingsRead = presenting ? liveHoldings() : []
         async let movesRead = liveMoves(context: context)
         // Gated on `presenting` (2026-07-25): the risk rung only ever reaches
         // the LEDE, and the digest — the one thing the background path uses —
@@ -160,9 +169,24 @@ enum TodayBrief {
         // work with no reader. The cost of the gate: `-todayProbe` composes
         // with `presenting: false`, so it can't show the risk rung.
         async let riskRead = presenting ? worstDebt() : nil
+        // Where an open's wait actually goes, per read (2026-08-04). DEBUG-only
+        // and free in release, the same bargain `LaunchPerf`'s span markers
+        // make — kept rather than deleted because "the brief feels slow" is a
+        // recurring report and the answer is never guessable: the reads run
+        // concurrently, so the total is the slowest one, and only a per-read
+        // breakdown says WHICH. It's what turned this round from a guess into
+        // a one-line fix (holdings 7598ms, moves 0, risk 0).
+        let t0 = Date.now
         let holdings = await holdingsRead
+        let tH = Date.now.timeIntervalSince(t0)
         let moves = await movesRead
+        let tM = Date.now.timeIntervalSince(t0)
         let risk = await riskRead
+        let tR = Date.now.timeIntervalSince(t0)
+        #if DEBUG
+        NSLog("briefPerf| presenting=%@ holdings=%.0fms moves=%.0fms risk=%.0fms TOTAL=%.0fms",
+              String(presenting), tH * 1000, (tM - tH) * 1000, (tR - tM) * 1000, tR * 1000)
+        #endif
 
         // CRASH FIX (build 250, 2026-08-03) — the "never read a dead Thing"
         // class, reached from ASYNC MODEL CODE rather than a view, where none
@@ -906,7 +930,7 @@ enum TodayBrief {
     /// claims a stale number is current (§83).
     private static func liveHoldings() async -> [WalletIngest.HoldingsGroup] {
         guard !WalletStore.shared.addresses.isEmpty else { return [] }
-        let read: [WalletIngest.HoldingsGroup]? = await bounded {
+        let read: [WalletIngest.HoldingsGroup]? = await bounded(budget: holdingsBudget) {
             await WalletIngest.topHoldingsByWallet()
         }
         // A read that timed out and a read that came back empty are the same
@@ -955,7 +979,29 @@ enum TodayBrief {
     /// fact that lives in three other places.
     private static let liveReadBudget: TimeInterval = 8
 
-    /// `read`'s answer, or nil if it hasn't arrived within `liveReadBudget`.
+    /// The HOLDINGS read gets a much tighter ceiling than the other two
+    /// (2026-08-04, user: "a bit of latency opening the daily brief… like 3
+    /// seconds before it starts to fill"). Measured on the sim at the time:
+    /// `holdings=7598ms`, with `moves` and `risk` both at 0 — so this one read
+    /// WAS the brief's open latency, and the document composes atomically, so
+    /// nothing painted until it returned.
+    ///
+    /// Two seconds is safe here in a way it wouldn't be for the risk rung,
+    /// because losing this race costs almost nothing: the hero falls to
+    /// `lastKnownHoldingsByWallet()` — recorded samples, instant, carrying its
+    /// own treemap cells — and says "as of Xh ago" (§83). That fallback was
+    /// already ruled honest enough to ship; it was simply reserved for a read
+    /// that FAILED rather than one that was merely slow. Every animation the
+    /// hero owns (the rolling total, the drawing sparkline, the staggering
+    /// cells, the delta pill) reads recorded history or those cells, so none
+    /// of the delight depends on winning this race.
+    ///
+    /// And `bounded` never cancels the loser: the read runs to completion and
+    /// warms `HoldingsCache`, so the next open inside its 10-minute window
+    /// (§216) reads fresh and free. Stale-while-revalidate, not a lost read.
+    private static let holdingsBudget: TimeInterval = 2
+
+    /// `read`'s answer, or nil if it hasn't arrived within `budget`.
     ///
     /// The read is started UNSTRUCTURED on purpose: losing the race must not
     /// cancel it. It shares `WalletDeFi`/`MorphoDeFi`'s 60s coalescing caches
@@ -966,15 +1012,17 @@ enum TodayBrief {
     /// to completion costs nothing and warms that cache, so the next open (or
     /// the Wallet screen a moment later) reads it free.
     private static func bounded<Value>(
+        budget: TimeInterval? = nil,
         _ read: @escaping () async -> Value?
     ) async -> Value? {
+        let budget = budget ?? liveReadBudget
         let gate = FirstArrival<Value>()
         Task {
             let value = await read()
             await gate.settle(value)
         }
         Task {
-            try? await Task.sleep(for: .seconds(liveReadBudget))
+            try? await Task.sleep(for: .seconds(budget))
             await gate.settle(nil)
         }
         return await gate.wait()
