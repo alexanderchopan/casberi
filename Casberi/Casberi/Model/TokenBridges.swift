@@ -22,6 +22,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     case stripe   = "Stripe"
     case trello   = "Trello"
     case cloudflare = "Cloudflare"
+    case cursor   = "Cursor"
 
     var id: String { rawValue }
 
@@ -43,6 +44,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .stripe:   "stripe"
         case .trello:   "trello"
         case .cloudflare: "cloudflare"
+        case .cursor:   "cursor"
         }
     }
 
@@ -79,6 +81,14 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // `TrelloAuth.authorizeURL(key:)` instead. See `TrelloAuth`.
         case .trello:    URL(string: "https://trello.com/power-ups/admin")
         case .cloudflare: URL(string: "https://dash.cloudflare.com/profile/api-tokens")
+        // The dashboard ROOT, not the API-keys tab, and that is deliberate
+        // imprecision: Cursor's current docs put the key at
+        // `cursor.com/dashboard/api` while an older revision of the same page
+        // says `/dashboard/integrations`, and this bridge has never been run
+        // against a live account (see `CursorFetch`). A door that 404s is worse
+        // than one that needs a tab click, so this opens the page that
+        // certainly exists and `setupURLLabel` names the tab to look for.
+        case .cursor:    URL(string: "https://cursor.com/dashboard")
         }
     }
 
@@ -102,6 +112,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .stripe:    "dashboard.stripe.com → API keys"
         case .trello:    "trello.com → Power-Ups admin"
         case .cloudflare: "dash.cloudflare.com → API tokens"
+        case .cursor:    "cursor.com → Dashboard → API Keys"
         }
     }
 
@@ -184,6 +195,14 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .cloudflare: [
             "Create a token from the Read all resources template — or any token whose permissions are all Read.",
             "Copy it and paste it below."]
+        // No scope to choose, and the steps deliberately don't pretend there
+        // is one: Cursor's keys carry no permissions at all (see
+        // `CursorFetch`). What that means is said once, in `canLine`, which is
+        // the line about trust — not repeated here as an instruction nobody
+        // can act on (§220).
+        case .cursor: [
+            "Create an API key — the one Cloud Agents use.",
+            "Copy it and paste it below."]
         }
     }
 
@@ -204,6 +223,11 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .stripe:   "rk_live_…"
         case .trello:   "Token"
         case .cloudflare: "API token"
+        // No prefix shown. `crsr_` is documented for Cursor's ADMIN keys and
+        // it is unverified whether a Cloud Agents key wears it — a placeholder
+        // that shows the wrong prefix reads as a validation rule and would
+        // have someone believing a perfectly good key is the wrong one.
+        case .cursor:   "API key"
         }
     }
 
@@ -229,6 +253,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .stripe:   "restricted key"
         case .trello:   "token"
         case .cloudflare: "API token"
+        case .cursor:   "API key"
         }
     }
 
@@ -250,6 +275,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .stripe:   "updates"
         case .trello:   "cards"
         case .cloudflare: "alerts"
+        case .cursor:   "runs"
         }
     }
 
@@ -284,6 +310,14 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // every right to wonder whether their visitors' data is about to land
         // in a feed.
         case .cloudflare: "Reads certificate, domain and token expiry dates, and tells you when a DNS record changes. No analytics, nothing about your visitors. A read-only token cannot change a record or purge cache."
+        // The Privacy.com sentence, one rung stronger, because the risk is one
+        // rung higher: Cursor's key carries no scopes at all, and the thing it
+        // could do unasked isn't just spending — it's spending AND writing a
+        // branch to your repository. Naming the four verbs Casberi doesn't use
+        // is the whole promise, so they're listed rather than summarised. If a
+        // write is ever added to `CursorFetch`, this line has to change in the
+        // same commit.
+        case .cursor:   "Reads the cloud agents you've run — what each was asked to do, what it says it did, and the pull request it opened. Cursor's key can't be scoped read-only, so the promise is kept by conduct: Casberi only ever lists your agents, and never starts one, follows one up, stops one, or deletes one."
         }
     }
 
@@ -313,6 +347,13 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // forever without this sentence.
         case .cloudflare:
             String(localized: "Cloudflare answered — nothing needs attention. Casberi only lands certificates, domains and tokens that are close to expiring, so an empty read means everything is current.")
+        // Cursor earns one for the plainest reason of the three: most people
+        // who use Cursor have never launched a CLOUD agent — they use the
+        // editor, which this cannot see and does not claim to. So a perfectly
+        // good key legitimately reads empty forever, and without this sentence
+        // that is indistinguishable from a key Cursor refused.
+        case .cursor:
+            String(localized: "Cursor answered — no finished cloud agents yet. Casberi reads the background agents you launch from Cursor's dashboard or editor, not the edits you make yourself, so run one and sync again.")
         default:
             nil
         }
@@ -557,6 +598,11 @@ enum TokenIngest {
         case .oneclaw:  await OneClawFetch.things(token: token, context: context)
         case .trello:   await trello(token)
         case .cloudflare: await CloudflareFetch.things(token: token)
+        // Only runs that are OVER land, so — unlike Linear/Trello/Cloudflare
+        // above — there is no `reconcile…` call for this bridge at the top of
+        // `refresh`. A finished agent run is finished forever. See
+        // `CursorFetch`.
+        case .cursor:   await CursorFetch.things(token: token)
         // Unreachable — `refresh` routes these two to their own sweeps above.
         // Present so the switch stays exhaustive rather than defaulted, which
         // is what makes a future bridge impossible to add without deciding.

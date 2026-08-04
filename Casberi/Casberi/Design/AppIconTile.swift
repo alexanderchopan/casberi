@@ -112,6 +112,11 @@ extension DS {
         case "posthog":             return Color.fixed("#f54e00")
         case "cloudflare":          return Color.fixed("#f6821f")   // the cloud's orange (their documented brand orange; the bundled mark samples it)
         case "trello":              return Color.fixed("#1169df")   // the mark's own gradient at its midpoint, icon-sampled from the bundled asset (#2381fd → #0054c2)
+        // Cursor's own brand page gives #000000, and the mark really is
+        // monochrome — the Grok/X case, not a logo-on-black lockup. washHue
+        // nils pure black, so the Cursor screens stay pure ink on purpose and
+        // this only stops the tile falling back to gray.
+        case "cursor":              return Color.fixed("#000000")
         // Grok's mark is pure black with ZERO saturated pixels — the X case
         // exactly (and xAI is X). washHue nils this, so the Grok screens stay
         // pure ink ON PURPOSE; the tile just stops falling back to gray.

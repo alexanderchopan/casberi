@@ -16317,3 +16317,62 @@ stays on the dial's Name disc per the 2026-07-23 one-door ruling, and with
 no shared history the row is plain identity with no chevron (no dead
 controls). "N transfers with you" counts the one on screen and only shows
 from 2 up.
+
+## §303 — Cursor is a bridge: the agent runs you launched, once they're over (user: "what can we do with cursor? Can it be a bridge somehow?" → "build door 1", 2026-08-04)
+
+Three doors were surveyed. **Door 1, the Cloud (Background) Agents API, is
+what got built**: a per-user key, one GET, and every finished run lands as a
+thing wearing the repo it ran on, the agent's own account of what it did, and
+the pull request it opened. Door 2 — importing Cursor's local chat history out
+of `state.vscdb` — is the bigger corpus win and is deliberately NOT built this
+pass: the file is undocumented SQLite with two schema eras, routinely exceeds
+2 GB, and lives on a Mac, so it is a Catalyst-first import needing its own
+harness (the X-archive treatment), not a rider on a keyed bridge. Door 3 is
+inverted and needs no code yet: Cursor is one of the largest MCP clients
+alive, so when `MCPPairing.transportReady` finally flips, Cursor — not Claude
+— is probably the pairing story worth leading with.
+
+**Only terminal runs land, and that is the module doctrine, not a shortcut.**
+`CREATING` and `RUNNING` are STATES (§216) — an in-flight agent is on screen
+in Cursor right now, carries no summary and no PR yet, and would land as a row
+that says nothing and is stale within minutes. A finished run is an EVENT.
+The happy consequence: this is the first keyed Work bridge since Linear that
+needs NO `reconcile…` pass, because a finished agent run is finished forever.
+
+**The outcome LEADS an abnormal title** ("Failed · org/repo · fix the flaky
+test"), and the position is the ruling. `titleLine` clamps at 80 characters,
+so an outcome parked at the end is exactly the word the clamp eats — and a
+failed run reading as a successful one is precisely the fake status §83 bans.
+In front, it cannot be cut.
+
+**Read-only is by CONDUCT, and this is the weakest such promise in the
+catalog — one rung below Privacy.com's.** A Cursor key carries no scopes at
+all: a key that can `GET /v0/agents` can equally `POST` one (spending the
+person's money and writing a branch to their repository) or `DELETE` one. So
+`CursorFetch` issues exactly one HTTP verb against exactly one path, and
+`canLine` names the four verbs it does not use rather than summarising them.
+The tripwire is stated in the file: if a write is ever added there, that copy
+becomes a lie and must change in the same commit.
+
+**v0, not v1, deliberately.** Cursor's current docs label v0 legacy and
+document v1 beside it — but v1 splits a durable agent from per-prompt runs and
+its list returns identity fields only, so learning what v0 states in one
+request costs three round trips per agent on a foreground sweep that already
+has ~27 bridges to get through; v1 is also self-described public beta. v0's
+shape is pinned by a verbatim documented example and corroborated by two
+independently shipping clients. The migration is known rather than discovered:
+v1 renames `autoCreatePr` → `autoCreatePR` and moves `prUrl` to
+`run.git.branches[].prUrl` — the silent-rename class that empties a room
+(§287's Kalshi `event_ticker` lesson), which is why `-cursorProbe` prints the
+raw status of every row and names any value this build doesn't know.
+
+Cursor earns an `emptyReadNote` for the plainest reason yet: most people who
+use Cursor have never launched a CLOUD agent — they use the editor, which this
+cannot see and does not claim to. A perfectly good key legitimately reads empty
+forever, and without that sentence it is indistinguishable from a refused one.
+
+**UNMEASURED** against a live account — no key stored, no egress to
+`api.cursor.com` from the build host, and one open question the docs and
+Cursor's own forum contradict each other on: whether an individual on a
+personal plan can mint a Cloud Agents key at all. Every read is a GET returning
+nil on failure, so it fails safe. Run `-cursorProbe YES` before trusting it.
