@@ -1360,3 +1360,34 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
   .berry { display: none; }
   .pourline { transition: none; }
 }
+
+
+/* ---------- Why it exists, then the three lines (2026-08-04) ---------
+   A tester read the page as unclear and "more mental burden, not less".
+   The diagnosis: everything above this said what the RESULT feels like
+   ("in one place", "it keeps landing") and nothing said what you DO, so
+   the reader had to infer the model — and the inference was the burden.
+   These three sentences are the whole product, in the order you meet it,
+   and the slabs below are now just the long version of each. */
+.today { padding-bottom: 26px; }
+.today .m-h2 { font-size: clamp(40px, 5.6vw, 68px); letter-spacing: -.05em;
+  line-height: .98; font-weight: 800; }
+.today-lede { font-size: 18px; line-height: 1.6; color: var(--dim);
+  max-width: 620px; margin: 20px 0 0; }
+.today-turn { font-size: 20px; line-height: 1.5; font-weight: 700; color: #fff;
+  max-width: 620px; margin: 22px 0 40px;
+  padding-left: 18px; border-left: 3px solid var(--blue-bright); }
+.plain3 { list-style: none; padding: 0; margin: 0 0 8px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px;
+  counter-reset: p3; }
+.plain3 li { counter-increment: p3; padding-top: 16px;
+  border-top: 2px solid rgba(255,255,255,.12); }
+.plain3 li::before { content: counter(p3); display: block;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px;
+  font-weight: 800; color: var(--blue-bright); margin-bottom: 10px; }
+.plain3 b { display: block; font-size: 19px; font-weight: 750;
+  letter-spacing: -.01em; margin-bottom: 6px; }
+.plain3 span { display: block; font-size: 15px; line-height: 1.55; color: var(--dim); }
+@media (max-width: 820px) {
+  .plain3 { grid-template-columns: 1fr; gap: 22px; margin-bottom: 34px; }
+}
