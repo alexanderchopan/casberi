@@ -31,6 +31,19 @@ step "Network-reach audit"
 "$ROOT/scripts/network-reach-audit.sh" || fail "a network host isn't disclosed — see scripts/network-reach-audit.sh"
 print -P "%F{green}✓ network-reach audit%f"
 
+# Keeps every catalogued Info.plist key carrying a real source-language value
+# (ITMS-90738). Static, no build — and the only gate that can see this class:
+# a key with no `en` entry compiles to its own key NAME in en.lproj and
+# overrides the target's INFOPLIST_KEY_* string, so builds 267/268 shipped
+# every permission prompt reading "NSPhotoLibraryUsageDescription" and the
+# app name reading "CFBundleDisplayName". xcodebuild succeeded, the sweep
+# passed, and App Store Connect caught it hours after upload, by email.
+step "Info.plist strings audit"
+"$ROOT/scripts/infoplist-strings-audit.py" --self-test >/dev/null \
+  || fail "the Info.plist strings audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/infoplist-strings-audit.py" || fail "a purpose string resolves to its own key name — see the output above"
+print -P "%F{green}✓ infoplist strings audit%f"
+
 # Keeps every Keychain write device-only and non-syncing (prd §277). Static,
 # no build. The failure it catches is invisible at runtime — a key stored with
 # the wrong accessibility works perfectly and also rides an encrypted backup

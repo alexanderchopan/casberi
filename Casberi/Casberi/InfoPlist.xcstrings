@@ -5,6 +5,12 @@
       "comment" : "Bundle display name",
       "extractionState" : "manual",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Casberi"
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -46,6 +52,12 @@
     "NSAppleMusicUsageDescription" : {
       "extractionState" : "manual",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Casberi reads what you've recently played so it lands in your feed."
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -75,6 +87,12 @@
     "NSCalendarsFullAccessUsageDescription" : {
       "extractionState" : "manual",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Casberi reads your events so your day lands as things."
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -104,6 +122,12 @@
     "NSCameraUsageDescription" : {
       "extractionState" : "manual",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Casberi scans a product's barcode so its item lands in your feed."
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -133,6 +157,12 @@
     "NSContactsUsageDescription" : {
       "extractionState" : "manual",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Casberi reads your contacts so the people you know become findable — search-only, never shown in your feed."
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -162,6 +192,12 @@
     "NSHealthShareUsageDescription" : {
       "extractionState" : "manual",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Casberi reads your workouts so they land in your feed."
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -191,6 +227,12 @@
     "NSHealthUpdateUsageDescription" : {
       "extractionState" : "manual",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Casberi only reads your workouts so they land in your feed — it never writes to Health."
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -220,6 +262,12 @@
     "NSHomeKitUsageDescription" : {
       "extractionState" : "manual",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Casberi reads your home's accessories — locks, doors, sensors — so their state lands as things."
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -249,6 +297,12 @@
     "NSLocationWhenInUseUsageDescription" : {
       "extractionState" : "manual",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Casberi reads your location once to show today's weather in Coming up — never in the background."
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -278,6 +332,12 @@
     "NSMicrophoneUsageDescription" : {
       "extractionState" : "manual",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Casberi records your voice notes when you tap the mic."
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -307,6 +367,12 @@
     "NSPhotoLibraryUsageDescription" : {
       "extractionState" : "manual",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Casberi reads screenshots you take so they land as things."
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -336,6 +402,12 @@
     "NSRemindersFullAccessUsageDescription" : {
       "extractionState" : "manual",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Casberi reads your reminders so your list lands as things."
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -365,6 +437,12 @@
     "NSSpeechRecognitionUsageDescription" : {
       "extractionState" : "manual",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Casberi transcribes your voice notes so they stay findable."
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -390,9 +468,6 @@
           }
         }
       }
-    },
-    "OPML feed list" : {
-
     }
   },
   "version" : "1.0"

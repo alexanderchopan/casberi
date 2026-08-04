@@ -129,6 +129,9 @@ step "Static audits"
 "$ROOT/scripts/network-reach-audit.sh" --self-test >/dev/null \
   || fail "the network-reach audit's own self-test failed — the check is broken, not the code"
 "$ROOT/scripts/network-reach-audit.sh" >/dev/null || fail "a network host isn't disclosed — run scripts/network-reach-audit.sh"
+"$ROOT/scripts/infoplist-strings-audit.py" --self-test >/dev/null \
+  || fail "the Info.plist strings audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/infoplist-strings-audit.py" >/dev/null || fail "a purpose string resolves to its own key name — run scripts/infoplist-strings-audit.py"
 "$ROOT/scripts/keychain-audit.py" --self-test >/dev/null \
   || fail "the keychain audit's own self-test failed — the check is broken, not the code"
 "$ROOT/scripts/keychain-audit.py" >/dev/null || fail "a keychain write isn't device-only — run scripts/keychain-audit.py"
@@ -139,7 +142,7 @@ step "Static audits"
 "$ROOT/scripts/swiftdata-liveness-audit.py" --self-test >/dev/null \
   || fail "the liveness audit's own self-test failed — the check is broken, not the code"
 "$ROOT/scripts/swiftdata-liveness-audit.py" >/dev/null || fail "a Thing is read without a liveness guard — run scripts/swiftdata-liveness-audit.py"
-ok "catalog sync · network reach · keychain · secret scan · receipts · swiftdata liveness"
+ok "catalog sync · network reach · infoplist strings · keychain · secret scan · receipts · swiftdata liveness"
 
 # ── 1. Build ───────────────────────────────────────────────────────────────
 step "Building Casberi (Mac Catalyst, derivedData: $DD)"
