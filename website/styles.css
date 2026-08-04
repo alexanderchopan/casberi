@@ -1383,13 +1383,9 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
   max-width: 620px; margin: 20px 0 0; }
 .plain3 { list-style: none; padding: 0; margin: 46px 0 0;
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
-/* three cards, each keyed to the slab it summarizes below:
-   connect = brand blue, the feed = violet, the ask = green */
 .plain3 li { background: rgba(255,255,255,.035); border-radius: 22px;
-  padding: 26px 28px 30px; border-top: 3px solid var(--blue-bright);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.04); }
-.plain3 li:nth-child(2) { border-top-color: #855dcd; }
-.plain3 li:nth-child(3) { border-top-color: #3fb950; }
+  padding: 26px 28px 30px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
 .plain3 b { display: block; font-size: 21px; font-weight: 800;
   letter-spacing: -.02em; margin-bottom: 9px; }
 .plain3 span { display: block; font-size: 15px; line-height: 1.6; color: var(--dim); }
