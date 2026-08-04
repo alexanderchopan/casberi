@@ -1153,3 +1153,66 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 .cta-ink { background: #111 !important; color: #fff !important; font-weight: 800;
   border-radius: 999px; padding: 18px 38px; font-size: 20px; }
 #catalog .m-h2 { font-size: clamp(40px, 5.5vw, 72px); font-weight: 800; letter-spacing: -.04em; }
+
+
+/* ---------- How it works: the real user flow (2026-08-04) --------------
+   A reported confusion — "I don't understand how you connect apps" — fixed
+   the way the App Store set fixes it: real screenshots, one line each, in
+   the order a person actually does them. Steps with several ways in (step
+   02) or several shapes (step 04) carry several shots; the row scrolls
+   horizontally rather than shrinking them past reading size. */
+.flow { padding-top: 10px; }
+.flow-deck { font-size: 17px; color: var(--dim); margin: -6px 0 54px; }
+.fstep { margin-bottom: 76px; }
+.fstep:last-child { margin-bottom: 20px; }
+.fhead { max-width: 620px; margin-bottom: 26px; }
+.fnum { display: inline-block; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 13px; font-weight: 800; letter-spacing: .08em; color: var(--blue-bright);
+  margin-bottom: 10px; }
+.fhead h3 { font-size: clamp(26px, 3.4vw, 38px); font-weight: 800; letter-spacing: -.03em;
+  line-height: 1.08; margin: 0 0 12px; }
+.fhead p { font-size: 16.5px; line-height: 1.6; color: var(--dim); margin: 0; }
+
+.frow { display: flex; gap: 20px; overflow-x: auto; padding: 4px 0 12px;
+  scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; }
+.frow::-webkit-scrollbar { display: none; }
+.fshot { flex: none; width: 232px; margin: 0; scroll-snap-align: start; }
+.fphone { position: relative; border-radius: 26px; overflow: hidden; background: #0b0910;
+  aspect-ratio: 1320 / 2868;
+  box-shadow: 0 0 0 6px #1c1f26, 0 0 0 7px #2b3038, 0 20px 44px rgba(0,0,0,.5); }
+.fphone img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+.fisland { position: absolute; top: 1.6%; left: 50%; transform: translateX(-50%);
+  width: 32%; aspect-ratio: 10 / 3; border-radius: 999px; background: #000; z-index: 2; }
+.fshot figcaption { font-size: 14px; color: var(--dim); margin-top: 14px; line-height: 1.45; }
+
+/* On a wide screen a 2-shot step centres nothing and reads as a gap; let the
+   short rows sit left and simply not scroll. */
+/* Only the 2-up rows are guaranteed to fit; 4- and 5-up keep scrolling so a
+   phone is never cut off mid-frame at a width we didn't measure. */
+@media (min-width: 900px) {
+  .frow[data-n="2"] { overflow-x: visible; }
+  .frow[data-n="2"] .fshot { width: 250px; }
+  .frow[data-n="4"] .fshot { width: 224px; }
+}
+@media (max-width: 560px) {
+  .fshot { width: 196px; }
+  .fstep { margin-bottom: 58px; }
+}
+
+
+/* ---------- Every number gets a shape (2026-08-04) --------------------
+   The visualizations are the differentiator, and in the walkthrough above
+   they're only ever a detail inside a phone. Here they're cropped out of
+   the same real screenshots and shown at reading size. Masonry via CSS
+   columns so the tall ones (connected addresses, receipts) don't force a
+   row height on the short ones (a sparkline, a heatmap). */
+.viz { padding-top: 10px; }
+.vgrid { columns: 2; column-gap: 22px; margin-top: 42px; }
+.vcard { break-inside: avoid; margin: 0 0 22px; display: block; }
+.vcard img { display: block; width: 100%; height: auto; border-radius: 16px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.07), 0 14px 34px rgba(0,0,0,.45); }
+.vcard figcaption { margin-top: 12px; padding: 0 2px; }
+.vcard figcaption b { display: block; font-size: 16px; font-weight: 750; letter-spacing: -.01em; }
+.vcard figcaption span { display: block; font-size: 14.5px; line-height: 1.5; color: var(--dim); margin-top: 3px; }
+@media (max-width: 760px) { .vgrid { columns: 1; } }
