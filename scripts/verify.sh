@@ -106,6 +106,20 @@ step "Cloudflare pure-logic self-test"
   || fail "the Cloudflare logic self-test failed — run scripts/cloudflare-selftest.sh"
 print -P "%F{green}✓ cloudflare self-test%f"
 
+# Pure-logic self-test for the Cursor bridge (prd §303). Stronger reason than
+# the two above: those bridges COULD be measured by someone who mints a key,
+# while Cursor's own docs and forum contradict each other on whether an
+# individual on a personal plan can mint a Cloud Agents key at all — so
+# `-cursorProbe` may be unavailable to this project indefinitely and this is
+# the only proof the bridge will ever have. It also carries the CONDUCT guard:
+# a Cursor key has no scopes, so the catalog's "never starts one, follows one
+# up, stops one, or deletes one" is kept only by that file issuing GET alone.
+# That promise was prose in the source; here it is mechanical.
+step "Cursor pure-logic self-test"
+"$ROOT/scripts/cursor-selftest.sh" >/dev/null \
+  || fail "the Cursor logic self-test failed — run scripts/cursor-selftest.sh"
+print -P "%F{green}✓ cursor self-test%f"
+
 # Pure-logic self-test for the Stripe and PostHog room heads (prd §298). Neither
 # bridge has ever run against a live account from this host, and every failure
 # here is a silent wrong answer: a dispute due tomorrow placed at the far end of

@@ -1,6 +1,6 @@
 import Foundation
 
-/// The Cursor bridge (2026-08-04, prd §301) — what your coding agents actually
+/// The Cursor bridge (2026-08-04, prd §303) — what your coding agents actually
 /// did, landing beside everything else you keep.
 ///
 /// Cursor's Cloud (Background) Agents run on a repository without you watching:
