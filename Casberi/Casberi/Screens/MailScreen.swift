@@ -131,7 +131,9 @@ struct MailScreen: View {
         }
         resultIsError = false
         result = added > 0 ? String(localized: "\(added) in your feed") : String(localized: "Up to date")
-        let proof = added > 0 ? "\(added) mail in" : "Synced just now"
+        let proof = added > 0
+            ? String(localized: "\(added) mail in")
+            : String(localized: "Synced just now")
         if let existing = store.bridges.first(where: { $0.name == provider.source }) {
             store.reconnect(existing.id, proof: proof)
         } else {

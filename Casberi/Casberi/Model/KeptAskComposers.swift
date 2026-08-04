@@ -344,7 +344,7 @@ enum KeptAskComposers {
         }
         let sorted = overdue.sorted { ($0.dueAt ?? .now) < ($1.dueAt ?? .now) }
         let delta = "\(overdue.count), \(overdue.count == 1 ? "1 thing" : "\(overdue.count) things") late"
-        let line = "\(overdue.count) thing\(overdue.count == 1 ? "" : "s") overdue."
+        let line = String(localized: "\(overdue.count) thing overdue.")
         // AgendaRow, not the generic Row — an overdue task has a due date, so
         // it draws on the time rail (the most-overdue leads, emphasized).
         return Result(delta: delta, digest: "\(overdue.count)",
@@ -428,7 +428,7 @@ enum KeptAskComposers {
             thing.tags.contains { $0.caseInsensitiveCompare(tag) == .orderedSame }
         }
         guard !matched.isEmpty else { return nil }
-        let line = "\(matched.count) thing\(matched.count == 1 ? "" : "s") tagged \(tag)."
+        let line = String(localized: "\(matched.count) thing tagged \(tag).")
         return Result(delta: "\(matched.count) things", digest: "\(matched.count)",
                       doc: ["root = Stack([ins, res])", "ins = Insight(\"\(genSafe(line))\")"]
                           + rows(Array(matched.prefix(6)), title: "Tagged \(tag)"))
@@ -637,7 +637,7 @@ enum KeptAskComposers {
                           doc: ["root = Stack([ins])",
                                 "ins = Insight(\"\(genSafe("Nothing new from \(handle) recently."))\")"])
         }
-        let line = "\(pool.count) thing\(pool.count == 1 ? "" : "s") from \(handle) \(windowWords)."
+        let line = String(localized: "\(pool.count) thing from \(handle) \(windowWords).")
         return Result(delta: "\(pool.count) things", digest: "\(pool.count)",
                       doc: recapDoc(line: line, pool: pool,
                                     barsEyebrow: "This week", rowsTitle: "From \(handle)"))
@@ -664,7 +664,7 @@ enum KeptAskComposers {
                           doc: ["root = Stack([ins])",
                                 "ins = Insight(\"\(genSafe("Nothing new from \(source) recently."))\")"])
         }
-        let line = "\(pool.count) thing\(pool.count == 1 ? "" : "s") from \(source) \(windowWords)."
+        let line = String(localized: "\(pool.count) thing from \(source) \(windowWords).")
         return Result(delta: "\(pool.count) things", digest: "\(pool.count)",
                       doc: recapDoc(line: line, pool: pool,
                                     barsEyebrow: "This week", rowsTitle: "From \(source)"))
@@ -694,7 +694,7 @@ enum KeptAskComposers {
                           doc: ["root = Stack([ins])",
                                 "ins = Insight(\"\(genSafe("Nothing new from your \(category) apps recently."))\")"])
         }
-        let line = "\(pool.count) thing\(pool.count == 1 ? "" : "s") from your \(category) apps \(windowWords)."
+        let line = String(localized: "\(pool.count) thing from your \(category) apps \(windowWords).")
         return Result(delta: "\(pool.count) things", digest: "\(pool.count)",
                       doc: recapDoc(line: line, pool: pool,
                                     barsEyebrow: "This week", rowsTitle: category))
@@ -758,7 +758,7 @@ enum KeptAskComposers {
                           doc: ["root = Stack([ins])",
                                 "ins = Insight(\"\(genSafe("Nothing matches anymore."))\")"])
         }
-        let line = "\(hits.count) thing\(hits.count == 1 ? "" : "s") match."
+        let line = String(localized: "\(hits.count) thing match.")
         // Bare count, matching `showtag`/`contextRecap`/`overdue`'s digest
         // shape exactly — the pill renders this digest verbatim as its own
         // trailing signal text (`Composer.keptAskPills`), so it has to be

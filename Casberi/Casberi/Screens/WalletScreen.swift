@@ -463,7 +463,9 @@ struct WalletScreen: View {
                 result = String(localized: "Connected — watching for activity.")
                 resultProminent = false
             }
-            let proof = added > 0 ? "\(added) new" : "Synced just now"
+            let proof = added > 0
+            ? String(localized: "\(added) new")
+            : String(localized: "Synced just now")
             if store.registerConnected(id: "wallet", name: "Wallet", proof: proof,
                                        can: ["Reads your wallet's activity.",
                                              "Read-only — never trades or moves funds."]) {

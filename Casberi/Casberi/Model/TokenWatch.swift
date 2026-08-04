@@ -196,7 +196,7 @@ enum TokenWatch {
     static func registerBridge(store: BridgeStore, context: ModelContext) {
         let count = (try? context.fetchCount(FetchDescriptor<Thing>(
             predicate: #Predicate { $0.source == "Tokens" }))) ?? 0
-        let proof = "\(count) token\(count == 1 ? "" : "s") watched"
+        let proof = String(localized: "\(count) token watched")
         if let existing = store.bridges.first(where: { $0.name == "Tokens" }) {
             store.reconnect(existing.id, proof: proof)
         } else {

@@ -151,6 +151,18 @@ python3 "$ROOT/scripts/design-motion-audit.py" >/dev/null \
   || fail "the design-motion audit failed — run python3 scripts/design-motion-audit.py"
 print -P "%F{green}✓ design-motion audit%f"
 
+# A localization sweep (2026-08-04) found 194 previously-translated strings
+# had regressed into bare Swift literals — unreachable, rendering English in
+# every language — plus missing InfoPlist/AppShortcuts catalogs and 44
+# hand-composed English-only plurals. All three render perfectly in a build
+# or a screen sweep. See scripts/localization-audit.py.
+step "Localization audit"
+python3 "$ROOT/scripts/localization-audit.py" --self-test >/dev/null \
+  || fail "the localization audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/localization-audit.py" >/dev/null \
+  || fail "a translation is unreachable, a catalog is missing, or a plural is hand-composed — see the output above"
+print -P "%F{green}✓ localization audit%f"
+
 # Pure-logic self-test for the on-device-intelligence pass (prd §282). Static,
 # no build, no network — and the ONLY automated check that pass can have: the
 # simulator ships no on-device language model, so every model path there runs

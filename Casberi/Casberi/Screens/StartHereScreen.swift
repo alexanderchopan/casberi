@@ -211,7 +211,9 @@ struct StartHereScreen: View {
                 onStart(nil)
                 return
             }
-            let proof = added > 0 ? "\(added) files in" : "Synced just now"
+            let proof = added > 0
+            ? String(localized: "\(added) files in")
+            : String(localized: "Synced just now")
             _ = store.registerConnected(id: "files", name: "Files", proof: proof,
                                         can: ["Reads the folder you picked.",
                                               "Read-only — never edits a file."])

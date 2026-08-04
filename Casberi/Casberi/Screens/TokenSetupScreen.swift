@@ -580,7 +580,9 @@ struct TokenSetupScreen: View {
             result = added > 0
                 ? String(localized: "\(added) \(bridge.noun) in")
                 : (emptyReadNote() ?? String(localized: "Up to date"))
-            let proof = added > 0 ? "\(added) \(bridge.noun) in" : "Synced just now"
+            let proof = added > 0
+                ? String(localized: "\(added) \(bridge.noun) in")
+                : String(localized: "Synced just now")
             if store.registerConnected(id: bridge.bridgeID, name: bridge.rawValue,
                                        proof: proof, can: [bridge.canLine]) {
                 DSHaptic.success()

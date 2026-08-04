@@ -482,7 +482,7 @@ enum GitHubFeedFetch {
             // (honesty rule); keep the count path for the rare feed that has it.
             let n = (payload["size"] as? Int) ?? (payload["commits"] as? [Any])?.count
             if let n, n > 0 {
-                return "Pushed \(n) commit\(n == 1 ? "" : "s") to \(repo)"
+                return String(localized: "Pushed \(n) commit to \(repo)")
             }
             let branch = (payload["ref"] as? String)?
                 .replacingOccurrences(of: "refs/heads/", with: "") ?? ""

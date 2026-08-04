@@ -75,7 +75,7 @@ struct WeekSynthesisIntent: AppIntent {
         if let top, top.value >= 2 {
             let sources = Set(things.filter { $0.tags.contains(top.key) }.map(\.source)).count
             return .result(dialog:
-                "\(top.key) fills your week — \(top.value) things across \(sources) app\(sources == 1 ? "" : "s").")
+                IntentDialog(LocalizedStringResource("\(top.key) fills your week — \(top.value) things across \(sources) app.")))
         }
         return .result(dialog:
             "Your things are landing — \(things.count) so far.")
@@ -114,7 +114,7 @@ struct SearchCasberiIntent: AppIntent {
         // §277): a snippet is shown outside the app.
         let rows = hits.map(IntentRowsSnippet.Row.init)
         return .result(value: entities,
-                       dialog: IntentDialog(full: "\(hits.count) thing\(hits.count == 1 ? "" : "s"):\n\(joined)",
+                       dialog: IntentDialog(full: LocalizedStringResource("\(hits.count) thing:\n\(joined)"),
                                             supporting: "From your things."),
                        view: IntentRowsSnippet(rows: rows))
     }

@@ -130,7 +130,9 @@ struct TikTokImportScreen: View {
         pending = TikTokImport.pendingFaceCount(context: modelContext)
         result = summary.imported > 0 ? landedLine(summary) : nothingNewLine(summary)
 
-        let proof = summary.imported > 0 ? "\(summary.imported) in" : "Imported just now"
+        let proof = summary.imported > 0
+            ? String(localized: "\(summary.imported) in")
+            : String(localized: "Imported just now")
         store.registerConnected(id: "tiktok", name: "TikTok", proof: proof,
                                 can: ["Imports the export you choose.",
                                       "Read-only — nothing leaves \(DS.device) but the videos' own names."])
@@ -162,17 +164,19 @@ struct TikTokImportScreen: View {
     /// number would hide that the text half may be empty.
     private func landedLine(_ summary: TikTokImport.Summary) -> String {
         var parts: [String] = []
-        if summary.posts > 0    { parts.append("\(summary.posts) posts") }
-        if summary.comments > 0 { parts.append("\(summary.comments) comments") }
-        if summary.saved > 0    { parts.append("\(summary.saved) saved") }
-        if summary.liked > 0    { parts.append("\(summary.liked) liked") }
+        if summary.posts > 0    { parts.append(String(localized: "\(summary.posts) posts")) }
+        if summary.comments > 0 { parts.append(String(localized: "\(summary.comments) comments")) }
+        if summary.saved > 0    { parts.append(String(localized: "\(summary.saved) saved")) }
+        if summary.liked > 0    { parts.append(String(localized: "\(summary.liked) liked")) }
         let landed = parts.joined(separator: " · ")
-        return summary.skipped > 0 ? "\(landed) · \(summary.skipped) already here" : landed
+        return summary.skipped > 0
+            ? String(localized: "\(landed) · \(summary.skipped) already here")
+            : landed
     }
 
     private func nothingNewLine(_ summary: TikTokImport.Summary) -> String {
         summary.skipped > 0
-            ? "Nothing new — all \(summary.skipped) were already here."
+            ? String(localized: "Nothing new — all \(summary.skipped) were already here.")
             : "That export had nothing in it. Check you tapped Select all, and chose JSON."
     }
 }

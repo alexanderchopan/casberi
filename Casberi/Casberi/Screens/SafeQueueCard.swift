@@ -82,7 +82,7 @@ struct SafeQueueCard: View {
             return String(localized: "Yours is the last signature needed")
         }
         if waiting.contains(where: \.isYou) {
-            return String(localized: "Waiting on you and \(waiting.count - 1) other\(waiting.count - 1 == 1 ? "" : "s")")
+            return String(localized: "Waiting on you and \(waiting.count - 1) other")
         }
         guard !waiting.isEmpty else {
             return required > 0
@@ -92,7 +92,7 @@ struct SafeQueueCard: View {
         if waiting.count == 1 {
             return String(localized: "Waiting on \(waiting[0].displayName)")
         }
-        return String(localized: "Waiting on \(waiting[0].displayName) and \(waiting.count - 1) other\(waiting.count - 1 == 1 ? "" : "s")")
+        return String(localized: "Waiting on \(waiting[0].displayName) and \(waiting.count - 1) other")
     }
 
     private func subline(have: Int, required: Int) -> String? {

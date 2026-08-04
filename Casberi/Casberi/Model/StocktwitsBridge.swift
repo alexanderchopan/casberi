@@ -147,7 +147,7 @@ enum StockWatch {
         guard count > 0 else { store.remove("stocktwits"); return }
         store.registerConnected(
             id: "stocktwits", name: "Stocktwits",
-            proof: "\(count) stock\(count == 1 ? "" : "s") watched",
+            proof: String(localized: "\(count) stock watched"),
             can: ["Reads public posts about the tickers you watch.",
                   "Read-only — never trades, never sees a portfolio."])
     }

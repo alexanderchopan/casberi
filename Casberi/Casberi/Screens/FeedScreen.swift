@@ -4271,7 +4271,9 @@ struct FeedScreen: View {
                 guard RSSStore.shared.add("https://www.nasa.gov/feed/") else { return }
                 let added = await RSSIngest.refresh(context: modelContext)
                 bridges.registerConnected(id: "rss", name: "RSS",
-                    proof: (added ?? 0) > 0 ? "\(added ?? 0) posts in" : "Synced just now",
+                    proof: (added ?? 0) > 0
+                        ? String(localized: "\(added ?? 0) posts in")
+                        : String(localized: "Synced just now"),
                     can: ["Reads the feeds you follow."])
             }
         }

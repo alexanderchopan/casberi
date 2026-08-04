@@ -69,7 +69,9 @@ struct KindleImportScreen: View {
         result = summary.imported > 0
             ? "\(summary.imported) highlights in\(summary.skipped > 0 ? " · \(summary.skipped) already here" : "")"
             : "Nothing new — all \(summary.skipped) highlights were already here."
-        let proof = summary.imported > 0 ? "\(summary.imported) highlights in" : "Synced just now"
+        let proof = summary.imported > 0
+            ? String(localized: "\(summary.imported) highlights in")
+            : String(localized: "Synced just now")
         store.registerConnected(id: "kindle", name: "Kindle", proof: proof,
                                 can: ["Imports the highlights you export.",
                                       "Read-only — nothing leaves \(DS.device)."])

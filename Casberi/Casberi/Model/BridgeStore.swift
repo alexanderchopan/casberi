@@ -219,8 +219,14 @@ final class BridgeStore {
             // free, since nothing intersects the empty set.
             let n = seat.count(watched)
             guard n > 0 else { remove(seat.id); continue }
+            let proof: String = switch seat.noun {
+            case "wallet": String(localized: "Watching \(n) wallet")
+            case "card":   String(localized: "Watching \(n) card")
+            case "Safe":   String(localized: "Watching \(n) Safe")
+            default:       String(localized: "Watching \(n) \(seat.noun)")
+            }
             registerConnected(id: seat.id, name: seat.name,
-                              proof: "Watching \(n) \(seat.noun)\(n == 1 ? "" : "s")",
+                              proof: proof,
                               can: seat.can)
         }
     }

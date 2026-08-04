@@ -486,7 +486,7 @@ enum PostHogWatch {
         let project = PostHogAccount.projectName
         store.registerConnected(
             id: TokenBridge.posthog.bridgeID, name: source,
-            proof: "\(count) metric\(count == 1 ? "" : "s") watched"
+            proof: String(localized: "\(count) metric watched")
                 + (project.isEmpty ? "" : " · \(project)"),
             // The read-only promise has ONE home (`TokenBridge.canLine`) —
             // PostHog routes away from TokenSetupScreen, so a second copy here

@@ -233,7 +233,9 @@ struct TwitchScreen: View {
         // "Connected — follows land when they go live." directly beneath the row
         // that already says "Connected — live follows land in your feed."
         result = added > 0 ? String(localized: "\(added) live now") : String(localized: "Up to date")
-        let proof = added > 0 ? "\(added) live now" : "Synced just now"
+        let proof = added > 0
+            ? String(localized: "\(added) live now")
+            : String(localized: "Synced just now")
         if store.registerConnected(id: "twitch", name: "Twitch", proof: proof,
                                    can: ["Reads channels you follow.",
                                          "Read-only — never chats or follows."]) {

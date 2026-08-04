@@ -97,7 +97,7 @@ struct ProjectDetailScreen: View {
         let moving = members.filter { $0.mark == .todo || $0.mark == .doing }
         let insight: String
         if !moving.isEmpty {
-            insight = "\(moving.count) thing\(moving.count == 1 ? "" : "s") in motion."
+            insight = String(localized: "\(moving.count) thing in motion.")
         } else if members.contains(where: { $0.mark == .saved }) {
             insight = "Saved and waiting. Nothing started."
         } else {

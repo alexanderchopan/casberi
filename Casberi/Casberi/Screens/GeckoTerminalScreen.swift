@@ -130,7 +130,9 @@ struct GeckoTerminalScreen: View {
             if let added {
                 lastResult = added > 0 ? String(localized: "\(added) new") : String(localized: "Up to date")
                 lastResultIsError = false
-                let proof = added > 0 ? "\(added) trending in" : "Synced just now"
+                let proof = added > 0
+            ? String(localized: "\(added) trending in")
+            : String(localized: "Synced just now")
                 store.registerConnected(id: "geckoterminal", name: "GeckoTerminal", proof: proof,
                                         can: ["Reads the trending tokens on the chains you watch.",
                                               "Read-only — never buys, sells, or trades."])

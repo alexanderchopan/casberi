@@ -185,7 +185,7 @@ struct WalletPortfolio: Equatable {
     /// from the per-wallet ones it replaced.
     var subline: String {
         let amount = TokenStats.compact(totalUSD)
-        let tokens = "\(tokenCount) token\(tokenCount == 1 ? "" : "s")"
+        let tokens = String(localized: "\(tokenCount) token")
         guard walletCount > 1 else { return "\(amount) across \(tokens)" }
         return String(localized: "\(amount) across \(tokens) in \(walletCount) wallets")
     }

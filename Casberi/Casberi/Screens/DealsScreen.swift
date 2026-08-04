@@ -113,7 +113,9 @@ struct DealsScreen: View {
             return
         }
         lastResult = added > 0 ? String(localized: "\(added) new") : String(localized: "Up to date")
-        let proof = added > 0 ? "\(added) deals in" : "Synced just now"
+        let proof = added > 0
+            ? String(localized: "\(added) deals in")
+            : String(localized: "Synced just now")
         store.registerConnected(id: "deals", name: "Deals", proof: proof,
                                 can: ["Reads the deal feeds you follow.",
                                       "Read-only — never buys anything."])

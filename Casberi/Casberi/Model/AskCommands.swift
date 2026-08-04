@@ -346,12 +346,12 @@ enum StatusAsk {
         let ranked = counts.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
         let shown = ranked.prefix(4)
         var parts = shown.enumerated().map { i, e in
-            i == 0 ? "\(e.value) thing\(e.value == 1 ? "" : "s") from \(e.key)"
+            i == 0 ? String(localized: "\(e.value) thing from \(e.key)")
                    : "\(e.value) from \(e.key)"
         }
         if ranked.count > shown.count {
             let rest = ranked.count - shown.count
-            parts.append("more from \(rest) other app\(rest == 1 ? "" : "s")")
+            parts.append(String(localized: "more from \(rest) other app"))
         }
         let joined = parts.count == 1
             ? parts[0]

@@ -228,20 +228,18 @@ enum StripeSilence {
     /// alarm mean something. A bare "no payments in 14 hours" is unreadable
     /// without knowing whether 14 hours is unusual for THIS account.
     static func rateText(_ gap: TimeInterval) -> String {
-        let (value, unit): (Int, String) = switch gap {
-        case ..<3600:   (max(1, Int(gap / 60)), "minute")
-        case ..<86_400: (max(1, Int(gap / 3600)), "hour")
-        default:        (max(1, Int(gap / 86_400)), "day")
+        switch gap {
+        case ..<3600:   String(localized: "one every \(max(1, Int(gap / 60))) minute")
+        case ..<86_400: String(localized: "one every \(max(1, Int(gap / 3600))) hour")
+        default:        String(localized: "one every \(max(1, Int(gap / 86_400))) day")
         }
-        return "one every \(value) \(unit)\(value == 1 ? "" : "s")"
     }
 
     /// "14 hours" — the same vocabulary, for how long it's been.
     static func sinceText(_ since: TimeInterval) -> String {
-        let (value, unit): (Int, String) = since < 86_400
-            ? (max(1, Int(since / 3600)), "hour")
-            : (max(1, Int(since / 86_400)), "day")
-        return "\(value) \(unit)\(value == 1 ? "" : "s")"
+        since < 86_400
+            ? String(localized: "\(max(1, Int(since / 3600))) hour")
+            : String(localized: "\(max(1, Int(since / 86_400))) day")
     }
 }
 
@@ -891,10 +889,9 @@ enum StripeIngest {
     private static func lasted(from opened: Date, to closed: Date) -> String? {
         let seconds = closed.timeIntervalSince(opened)
         guard seconds >= 3600 else { return nil }
-        let (value, unit): (Int, String) = seconds < 86_400
-            ? (max(1, Int(seconds / 3600)), "hour")
-            : (max(1, Int(seconds / 86_400)), "day")
-        return "\(value) \(unit)\(value == 1 ? "" : "s") after it opened"
+        return seconds < 86_400
+            ? String(localized: "\(max(1, Int(seconds / 3600))) hour after it opened")
+            : String(localized: "\(max(1, Int(seconds / 86_400))) day after it opened")
     }
 
     // MARK: Silence
@@ -1030,11 +1027,11 @@ enum StripeWatch {
         }
         let name = StripeAccount.accountName
         let balance = StripeState.availableText()
-        let proof = [name.isEmpty ? nil : name, balance.map { "\($0) available" }]
+        let proof = [name.isEmpty ? nil : name, balance.map { String(localized: "\($0) available") }]
             .compactMap { $0 }.joined(separator: " · ")
         store.registerConnected(
             id: TokenBridge.stripe.bridgeID, name: source,
-            proof: proof.isEmpty ? "Connected" : proof,
+            proof: proof.isEmpty ? String(localized: "Connected") : proof,
             // The read-only promise has ONE home (`TokenBridge.canLine`), the
             // PostHog contract — a second copy here would be the only reader of
             // a string nothing else renders, and the two would drift.

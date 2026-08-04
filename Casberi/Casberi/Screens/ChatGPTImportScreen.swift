@@ -93,9 +93,13 @@ struct ChatGPTImportScreen: View {
         resultIsError = false
         DSHaptic.success()
         result = summary.imported > 0
-            ? "\(summary.imported) chats in\(summary.skipped > 0 ? " · \(summary.skipped) already here" : "")"
-            : "Nothing new — all \(summary.skipped) chats were already here."
-        let proof = summary.imported > 0 ? "\(summary.imported) chats in" : "Synced just now"
+            ? (summary.skipped > 0
+               ? String(localized: "\(summary.imported) chats in · \(summary.skipped) already here")
+               : String(localized: "\(summary.imported) chats in"))
+            : String(localized: "Nothing new — all \(summary.skipped) chats were already here.")
+        let proof = summary.imported > 0
+            ? String(localized: "\(summary.imported) chats in")
+            : String(localized: "Synced just now")
         store.registerConnected(id: "gpt", name: "ChatGPT", proof: proof,
                                 can: ["Imports the chats you export."])
     }

@@ -139,7 +139,7 @@ enum EthValidatorRead {
         guard count > 0 else { store.remove("ethvalidators"); return }
         store.registerConnected(
             id: "ethvalidators", name: "ETH Validators",
-            proof: "\(count) validator\(count == 1 ? "" : "s") watched",
+            proof: String(localized: "\(count) validator watched"),
             can: ["Reads the balance and status of the validator indices you name.",
                   "Read-only — never stakes, exits, or moves anything."])
     }

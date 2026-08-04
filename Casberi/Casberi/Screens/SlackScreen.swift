@@ -165,7 +165,9 @@ struct SlackScreen: View {
         }
         resultIsError = false
         result = added > 0 ? String(localized: "\(added) new") : String(localized: "Up to date")
-        let proof = added > 0 ? "\(added) new" : "Synced just now"
+        let proof = added > 0
+            ? String(localized: "\(added) new")
+            : String(localized: "Synced just now")
         if store.registerConnected(id: "slack", name: "Slack", proof: proof,
                                    can: ["Looks up mentions of you.",
                                          "Read-only — never posts, reads files, or browses channels."]) {

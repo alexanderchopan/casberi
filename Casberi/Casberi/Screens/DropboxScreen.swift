@@ -196,7 +196,9 @@ struct DropboxScreen: View {
         }
         resultIsError = false
         result = added > 0 ? String(localized: "\(added) new") : String(localized: "Up to date")
-        let proof = added > 0 ? "\(added) new" : "Synced just now"
+        let proof = added > 0
+            ? String(localized: "\(added) new")
+            : String(localized: "Synced just now")
         if store.registerConnected(id: "dropbox", name: "Dropbox", proof: proof,
                                    can: ["Reads the folder you named.",
                                          "Read-only — never edits, shares, or deletes a file."]) {

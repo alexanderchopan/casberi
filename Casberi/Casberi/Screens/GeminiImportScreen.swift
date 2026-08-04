@@ -104,7 +104,9 @@ struct GeminiImportScreen: View {
         result = summary.imported > 0
             ? "\(summary.imported) prompts in\(summary.skipped > 0 ? " · \(summary.skipped) already here" : "")"
             : "Nothing new — all \(summary.skipped) prompts were already here."
-        let proof = summary.imported > 0 ? "\(summary.imported) prompts in" : "Synced just now"
+        let proof = summary.imported > 0
+            ? String(localized: "\(summary.imported) prompts in")
+            : String(localized: "Synced just now")
         store.registerConnected(id: "gemini", name: "Gemini", proof: proof,
                                 can: ["Imports the activity you export."])
     }

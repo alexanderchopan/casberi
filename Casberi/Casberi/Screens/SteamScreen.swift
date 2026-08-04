@@ -160,7 +160,9 @@ struct SteamScreen: View {
         }
         resultIsError = false
         result = added > 0 ? String(localized: "\(added) games in") : String(localized: "Up to date")
-        let proof = added > 0 ? "\(added) games in" : "Synced just now"
+        let proof = added > 0
+            ? String(localized: "\(added) games in")
+            : String(localized: "Synced just now")
         if store.registerConnected(id: "steam", name: "Steam", proof: proof,
                                    can: ["Reads what you've played.",
                                          "Read-only — public profile data."]) {

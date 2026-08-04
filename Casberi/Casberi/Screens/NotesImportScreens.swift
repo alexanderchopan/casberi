@@ -71,9 +71,13 @@ struct DayOneImportScreen: View {
         resultIsError = false
         DSHaptic.success()
         result = summary.imported > 0
-            ? "\(summary.imported) entries in\(summary.skipped > 0 ? " · \(summary.skipped) already here" : "")"
-            : "Nothing new — all \(summary.skipped) entries were already here."
-        let proof = summary.imported > 0 ? "\(summary.imported) entries in" : "Synced just now"
+            ? (summary.skipped > 0
+               ? String(localized: "\(summary.imported) entries in · \(summary.skipped) already here")
+               : String(localized: "\(summary.imported) entries in"))
+            : String(localized: "Nothing new — all \(summary.skipped) entries were already here.")
+        let proof = summary.imported > 0
+            ? String(localized: "\(summary.imported) entries in")
+            : String(localized: "Synced just now")
         store.registerConnected(id: "dayone", name: "Day One", proof: proof,
                                 can: ["Imports the journal you export.",
                                       "Read-only — nothing leaves \(DS.device)."])
@@ -148,9 +152,13 @@ struct JournalImportScreen: View {
         resultIsError = false
         DSHaptic.success()
         result = summary.imported > 0
-            ? "\(summary.imported) entries in\(summary.skipped > 0 ? " · \(summary.skipped) already here" : "")"
-            : "Nothing new — all \(summary.skipped) entries were already here."
-        let proof = summary.imported > 0 ? "\(summary.imported) entries in" : "Synced just now"
+            ? (summary.skipped > 0
+               ? String(localized: "\(summary.imported) entries in · \(summary.skipped) already here")
+               : String(localized: "\(summary.imported) entries in"))
+            : String(localized: "Nothing new — all \(summary.skipped) entries were already here.")
+        let proof = summary.imported > 0
+            ? String(localized: "\(summary.imported) entries in")
+            : String(localized: "Synced just now")
         store.registerConnected(id: "journal", name: "Apple Journal", proof: proof,
                                 can: ["Imports the journal you export.",
                                       "Read-only — nothing leaves \(DS.device)."])
@@ -318,7 +326,9 @@ struct BookmarksImportScreen: View {
         result = summary.imported > 0
             ? "\(summary.imported) bookmarks in\(summary.skipped > 0 ? " · \(summary.skipped) already here" : "")"
             : "Nothing new — all \(summary.skipped) bookmarks were already here."
-        let proof = summary.imported > 0 ? "\(summary.imported) bookmarks in" : "Synced just now"
+        let proof = summary.imported > 0
+            ? String(localized: "\(summary.imported) bookmarks in")
+            : String(localized: "Synced just now")
         store.registerConnected(id: "bookmarks", name: "Bookmarks", proof: proof,
                                 can: ["Imports the bookmarks you export.",
                                       "Read-only — nothing leaves \(DS.device)."])

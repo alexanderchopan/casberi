@@ -176,7 +176,9 @@ struct SpotifyScreen: View {
         // row that already says "Connected — liked songs land in your feed.",
         // so the connection sheet claimed the same thing twice in a row.
         result = added > 0 ? String(localized: "\(added) new") : String(localized: "Up to date")
-        let proof = added > 0 ? "\(added) new" : "Synced just now"
+        let proof = added > 0
+            ? String(localized: "\(added) new")
+            : String(localized: "Synced just now")
         if store.registerConnected(id: "spotify", name: "Spotify", proof: proof,
                                    can: ["Reads your liked songs.",
                                          "Read-only — never plays, adds, or removes."]) {

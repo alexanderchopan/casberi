@@ -1785,13 +1785,13 @@ struct RootShell: View {
         }
         switch ask {
         case .count:
-            let line = "You have \(counts.count) tag\(counts.count == 1 ? "" : "s")."
+            let line = String(localized: "You have \(counts.count) tag.")
             return ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"]
         case .list:
             let n = counts.count
             let line = n > 6
                 ? "\(n) tags — tap one to open it."
-                : "You have \(n) tag\(n == 1 ? "" : "s") — tap one to open it."
+                : String(localized: "You have \(n) tag — tap one to open it.")
             // TagMap caps at 6 cells; hand it the biggest, "Label Count" each.
             let cells = counts.prefix(6).map { "\(tagMapLabel($0.tag)) \($0.count)" }
             return ["root = Stack([ins, map])",
@@ -1819,9 +1819,9 @@ struct RootShell: View {
             if seats.isEmpty {
                 line = emptyLine
             } else {
-                var l = "You've connected \(seats.count) app\(seats.count == 1 ? "" : "s") — \(naturalList(seats.map(\.name)))."
+                var l = String(localized: "You've connected \(seats.count) app — \(naturalList(seats.map(\.name))).")
                 let needs = bridges.attentionCount
-                if needs > 0 { l += " \(needs) need\(needs == 1 ? "s" : "") attention." }
+                if needs > 0 { l += " " + String(localized: "\(needs) need attention.") }
                 line = l
             }
         case .catalog:
@@ -2583,7 +2583,7 @@ struct RootShell: View {
         guard let tag else { return nil }
         let count = things.filter { $0.tags.contains { $0.caseInsensitiveCompare(tag) == .orderedSame } }.count
         guard count > 0 else { return nil }
-        return "tag = ProjectTile(\"2\", \"\(genSafe(tag))\", \"\", \"\(count) thing\(count == 1 ? "" : "s")\", \"\(count) things\", null)"
+        return "tag = ProjectTile(\"2\", \"\(genSafe(tag))\", \"\", \"\(String(localized: "\(count) thing"))\", \"\(count) things\", null)"
     }
 
     /// The existing tag a query names, if any — a query term (minus stopwords

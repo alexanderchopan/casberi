@@ -60,7 +60,7 @@ struct RailgunScreen: View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 if hasWallets {
-                    DSSlabDoor(title: String(localized: "Watching \(walletCount) wallet\(walletCount == 1 ? "" : "s")"),
+                    DSSlabDoor(title: String(localized: "Watching \(walletCount) wallet"),
                                detail: String(localized: "Manage")) {
                         route.pushBridge(.wallet)
                     }

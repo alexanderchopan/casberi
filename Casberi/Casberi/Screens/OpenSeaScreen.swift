@@ -123,7 +123,9 @@ struct OpenSeaScreen: View {
             if let added {
                 lastResult = added > 0 ? String(localized: "\(added) new") : String(localized: "Up to date")
                 lastResultIsError = false
-                let proof = added > 0 ? "\(added) drops in" : "Synced just now"
+                let proof = added > 0
+            ? String(localized: "\(added) drops in")
+            : String(localized: "Synced just now")
                 store.registerConnected(id: "opensea", name: "OpenSea", proof: proof,
                                         can: ["Reads new NFT collections on the chains you watch.",
                                               "Read-only — never buys, sells, or bids."])

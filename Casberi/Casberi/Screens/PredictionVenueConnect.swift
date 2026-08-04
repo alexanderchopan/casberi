@@ -109,7 +109,9 @@ struct PredictionVenueConnect: View {
         let n = followedCount(v)
         return n == 0
             ? String(localized: "Its chip leaves your feed.")
-            : String(localized: "Its chip leaves your feed. The \(n) market\(n == 1 ? "" : "s") you followed \(n == 1 ? "stays" : "stay") unless you remove \(n == 1 ? "it" : "them").")
+            : (n == 1
+               ? String(localized: "Its chip leaves your feed. The market you followed stays unless you remove it.")
+               : String(localized: "Its chip leaves your feed. The \(n) markets you followed stay unless you remove them."))
     }
 
     @ViewBuilder

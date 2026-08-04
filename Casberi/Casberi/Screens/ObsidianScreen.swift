@@ -153,7 +153,9 @@ struct ObsidianScreen: View {
         }
         resultIsError = false
         result = added > 0 ? String(localized: "\(added) notes in") : String(localized: "Up to date")
-        let proof = added > 0 ? "\(added) notes in" : "Synced just now"
+        let proof = added > 0
+            ? String(localized: "\(added) notes in")
+            : String(localized: "Synced just now")
         if store.registerConnected(id: "obsidian", name: "Obsidian", proof: proof,
                                    can: ["Reads the vault you picked.",
                                          "Read-only — never edits a note."]) {

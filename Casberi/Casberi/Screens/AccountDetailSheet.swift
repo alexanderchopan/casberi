@@ -403,7 +403,7 @@ struct AccountDetailSheet: View {
                 keyDraft = ""
             }
             HStack(spacing: DS.Space.s3) {
-                SecureField(keyProvider.placeholder, text: $keyDraft)
+                SecureField(LocalizedStringKey(keyProvider.placeholder), text: $keyDraft)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .dsText(.callout15)
@@ -766,11 +766,11 @@ struct AccountDetailSheet: View {
         // Two counts, stated separately — a file that restored 40 names and no
         // things is a real outcome, and one merged number would hide it.
         let nameLine = names > 0
-            ? "\(names) name\(names == 1 ? "" : "s") came back."
+            ? String(localized: "\(names) name came back.")
             : nil
         let thingLine = added.isEmpty
             ? (names > 0 ? nil : "Nothing new — everything in that file is already here.")
-            : "\(added.count) thing\(added.count == 1 ? "" : "s") came back."
+            : String(localized: "\(added.count) thing came back.")
         importResult = [thingLine, nameLine].compactMap { $0 }.joined(separator: " ")
     }
 

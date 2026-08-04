@@ -1,68 +1,12 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "Recording": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "录音中"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "録音中"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "녹음 중"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Grabando"
-          }
-        }
-      }
-    },
-    "Save a thing": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "保存内容"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "アイテムを保存"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "항목 저장"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Guardar algo"
-          }
-        }
-      }
-    },
     "Opens Casberi's composer.": {
       "localizations": {
-        "zh-Hans": {
+        "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "打开 Casberi 的输入框。"
+            "value": "Abre el editor de Casberi."
           }
         },
         "ja": {
@@ -77,48 +21,20 @@
             "value": "Casberi 입력창을 엽니다."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Abre el editor de Casberi."
-          }
-        }
-      }
-    },
-    "Save to Casberi": {
-      "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "保存到 Casberi"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Casberi に保存"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Casberi에 저장"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Guardar en Casberi"
+            "value": "打开 Casberi 的输入框。"
           }
         }
       }
     },
     "Opens the composer from Control Center.": {
       "localizations": {
-        "zh-Hans": {
+        "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "从控制中心打开输入框。"
+            "value": "Abre el editor desde el Centro de control."
           }
         },
         "ja": {
@@ -133,188 +49,76 @@
             "value": "제어 센터에서 입력창을 엽니다."
           }
         },
-        "es": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Abre el editor desde el Centro de control."
+            "value": "从控制中心打开输入框。"
           }
         }
       }
     },
-    "Synthesis": {
+    "Recording": {
       "localizations": {
-        "zh-Hans": {
+        "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "综述"
+            "value": "Grabando"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "まとめ"
+            "value": "録音中"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "요약"
+            "value": "녹음 중"
           }
         },
-        "es": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Síntesis"
+            "value": "录音中"
           }
         }
       }
     },
-    "One line about what your things are up to.": {
+    "Save a thing": {
       "localizations": {
-        "zh-Hans": {
+        "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "用一句话概括你的内容动态。"
+            "value": "Guardar algo"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "あなたのアイテムの近況を一行で。"
+            "value": "アイテムを保存"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "항목들의 근황을 한 줄로."
+            "value": "항목 저장"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Una línea sobre tus elementos."
-          }
-        }
-      }
-    },
-    "This week": {
-      "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "本周"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "今週"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "이번 주"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Esta semana"
-          }
-        }
-      }
-    },
-    "Now": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "现在"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "今"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "지금"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Ahora"
-          }
-        }
-      }
-    },
-    "Your things, one place": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "你的内容，尽在一处"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "あなたのアイテムを一か所に"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "모든 항목을 한곳에"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Tus elementos, en un lugar"
-          }
-        }
-      }
-    },
-    "Your things go here": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "你的内容会出现在这里"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "ここにあなたのアイテムが表示されます"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "여기에 항목이 표시돼요"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Aquí van tus elementos"
+            "value": "保存内容"
           }
         }
       }
     },
     "Save one in Casberi": {
       "localizations": {
-        "zh-Hans": {
+        "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "在 Casberi 中保存一条"
+            "value": "Guarda uno en Casberi"
           }
         },
         "ja": {
@@ -329,38 +133,178 @@
             "value": "Casberi에 하나 저장해 보세요"
           }
         },
-        "es": {
+        "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Guarda uno en Casberi"
+            "value": "在 Casberi 中保存一条"
           }
         }
       }
     },
-    "Your things are landing": {
+    "Save to Casberi": {
       "localizations": {
-        "zh-Hans": {
+        "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "你的内容正在汇入"
+            "value": "Guardar en Casberi"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "あなたのアイテムが集まっています"
+            "value": "Casberi に保存"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "항목이 들어오고 있어요"
+            "value": "Casberi에 저장"
           }
         },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "保存到 Casberi"
+          }
+        }
+      }
+    },
+    "Something new": {
+      "localizations": {
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Tus elementos están llegando"
+            "value": "Algo nuevo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "新着があります"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "새로운 소식"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "有新内容"
+          }
+        }
+      }
+    },
+    "What's going on": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Qué está pasando"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今どうなってる"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "무슨 일이 있는지"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "近况如何"
+          }
+        }
+      }
+    },
+    "Your day in one line.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tu día en una línea."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "あなたの一日を一行で。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "당신의 하루를 한 줄로."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "一句话看懂你的一天。"
+          }
+        }
+      }
+    },
+    "Your things go here": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Aquí van tus elementos"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ここにあなたのアイテムが表示されます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "여기에 항목이 표시돼요"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的内容会出现在这里"
+          }
+        }
+      }
+    },
+    "Your things, one place": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tus elementos, en un lugar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "あなたのアイテムを一か所に"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "모든 항목을 한곳에"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的内容，尽在一处"
           }
         }
       }

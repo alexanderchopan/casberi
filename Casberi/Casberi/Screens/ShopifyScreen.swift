@@ -187,7 +187,9 @@ struct ShopifyScreen: View {
         }
         lastResult = added > 0 ? String(localized: "\(added) new") : String(localized: "Up to date")
         lastResultIsError = false
-        let proof = added > 0 ? "\(added) drops in" : "Synced just now"
+        let proof = added > 0
+            ? String(localized: "\(added) drops in")
+            : String(localized: "Synced just now")
         store.registerConnected(id: "shopify", name: "Shopify", proof: proof,
                                 can: ["Reads the newest products from the stores you follow.",
                                       "Read-only — never checks out or pays."])

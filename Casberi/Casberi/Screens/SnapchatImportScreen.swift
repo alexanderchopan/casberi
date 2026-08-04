@@ -109,18 +109,20 @@ struct SnapchatImportScreen: View {
         pending = SnapchatImport.pendingMediaCount(context: modelContext)
 
         var parts: [String] = []
-        if summary.chats > 0 { parts.append("\(summary.chats) chats in") }
-        if summary.healed > 0 { parts.append("\(summary.healed) updated") }
-        if summary.memories > 0 { parts.append("\(summary.memories) memories in") }
+        if summary.chats > 0 { parts.append(String(localized: "\(summary.chats) chats in")) }
+        if summary.healed > 0 { parts.append(String(localized: "\(summary.healed) updated")) }
+        if summary.memories > 0 { parts.append(String(localized: "\(summary.memories) memories in")) }
         if parts.isEmpty {
-            parts.append("Nothing new — all \(summary.skipped) were already here")
+            parts.append(String(localized: "Nothing new — all \(summary.skipped) were already here"))
         } else if summary.skipped > 0 {
-            parts.append("\(summary.skipped) already here")
+            parts.append(String(localized: "\(summary.skipped) already here"))
         }
         result = parts.joined(separator: " · ")
 
         let landed = summary.chats + summary.memories
-        let proof = landed > 0 ? "\(landed) in" : "Synced just now"
+        let proof = landed > 0
+            ? String(localized: "\(landed) in")
+            : String(localized: "Synced just now")
         store.registerConnected(id: "snapchat", name: "Snapchat", proof: proof,
                                 can: ["Imports the saved chats and memories you export.",
                                       "Read-only — nothing leaves \(DS.device)."])

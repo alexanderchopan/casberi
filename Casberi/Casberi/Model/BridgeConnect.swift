@@ -61,7 +61,9 @@ enum BridgeConnect {
                 result = nil
             }
             guard let result else { completion?(false); return }
-            let proof = result.proof ?? (result.n > 0 ? "\(result.n) \(result.noun) in" : "Synced just now")
+            let proof = result.proof ?? (result.n > 0
+                ? String(localized: "\(result.n) \(result.noun) in")
+                : String(localized: "Synced just now"))
             store.registerConnected(id: result.id, name: offer.name,
                                     proof: proof, can: [result.can])
             // No haptic here — the caller's landing toast carries it

@@ -1258,7 +1258,7 @@ enum WalletIngest {
                 else { ago = "\(mins / 1_440)d ago" }
                 return String(localized: "\(amount) · as of \(ago)")
             }
-            return "\(amount) across \(tokenCount) token\(tokenCount == 1 ? "" : "s")"
+            return String(localized: "\(amount) across \(tokenCount) token")
         }
     }
 

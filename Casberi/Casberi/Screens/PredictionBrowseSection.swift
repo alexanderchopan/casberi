@@ -128,7 +128,7 @@ func registerPredictionBridge(source: String, id: String, store: BridgeStore, co
     // failed sync rather than an exchange you've just opened the door to.
     let proof = count == 0
         ? String(localized: "Its chip is in your feed — browse every open \(source) market there")
-        : String(localized: "\(count) market\(count == 1 ? "" : "s") followed")
+        : String(localized: "\(count) market followed")
     if let existing = store.bridges.first(where: { $0.name == source }) {
         store.reconnect(existing.id, proof: proof)
     } else {
@@ -637,7 +637,7 @@ struct PredictionBrowseSection: View {
                 }
                 if let lead = card.outcomes.first {
                     let gap = Int((abs(lead.probability - twin) * 100).rounded())
-                    Text("\(gap) point\(gap == 1 ? "" : "s") apart")
+                    Text(String(localized: "\(gap) point apart"))
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 }
             }

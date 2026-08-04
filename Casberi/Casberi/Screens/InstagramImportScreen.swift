@@ -118,7 +118,9 @@ struct InstagramImportScreen: View {
         resultIsError = false
         DSHaptic.success()
         result = summary.imported > 0 ? landedLine(summary) : nothingNewLine(summary)
-        let proof = summary.imported > 0 ? "\(summary.imported) in" : "Imported just now"
+        let proof = summary.imported > 0
+            ? String(localized: "\(summary.imported) in")
+            : String(localized: "Imported just now")
         store.registerConnected(id: "instagram", name: "Instagram", proof: proof,
                                 can: ["Imports the export you choose."])
         // Lift the topic terms off what just landed, so the room's "What you

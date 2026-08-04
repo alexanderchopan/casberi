@@ -314,7 +314,7 @@ struct RSSScreen: View {
         guard let recent = try? modelContext.fetch(descriptor),
               let newest = recent.first(where: { names.contains($0.authorHandle ?? "") })
         else { return }
-        lastResult = "\(addedLine) — newest: \(IngestSupport.titleLine(newest.title))"
+        lastResult = String(localized: "\(addedLine) — newest: \(IngestSupport.titleLine(newest.title))")
     }
 
     /// Fetch + land; the status row carries the proof.
@@ -330,7 +330,9 @@ struct RSSScreen: View {
         }
         resultIsError = false
         lastResult = added > 0 ? String(localized: "\(added) new") : String(localized: "Up to date")
-        let proof = added > 0 ? "\(added) posts in" : "Synced just now"
+        let proof = added > 0
+            ? String(localized: "\(added) posts in")
+            : String(localized: "Synced just now")
         store.registerConnected(id: "rss", name: "RSS", proof: proof,
                                 can: ["Reads the feeds you follow."])
     }

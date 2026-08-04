@@ -197,7 +197,9 @@ struct HuggingFaceScreen: View {
             if let added {
                 lastResult = added > 0 ? String(localized: "\(added) new") : String(localized: "Up to date")
                 lastResultIsError = false
-                let proof = added > 0 ? "\(added) in" : "Synced just now"
+                let proof = added > 0
+            ? String(localized: "\(added) in")
+            : String(localized: "Synced just now")
                 store.registerConnected(id: "huggingface", name: "Hugging Face", proof: proof,
                                         can: ["Reads new models, datasets and Spaces from the authors you watch.",
                                               "Read-only — never publishes, stars, or downloads weights."])
