@@ -33,10 +33,18 @@ enum LaunchClock {
 /// A Home Screen quick action (long-press the icon on iOS/iPadOS) IS a Mac
 /// Dock menu under Catalyst — Apple surfaces the same `UIApplicationShortcutItem`
 /// list both ways, so this one registration reaches both platforms (Mac
-/// polish, 2026-07-28). Reuses the exact "open the composer next foreground"
-/// flag the widget's Control Center button already writes — RootShell's
-/// existing foreground check (`compose.request` in the app group) picks it
-/// up with no new consumer code.
+/// polish, 2026-07-28).
+///
+/// "New Thing" retired 2026-08-03 (user: "we don't really have that as a
+/// feature anymore") — typed text in the composer never saves (things enter
+/// only via capture paths, per the design law), so a shortcut promising a
+/// blank "new thing" opened a composer with nothing it could actually do.
+/// "Daily Brief" replaces it: reuses `RootShell`'s existing `"brief.request"`
+/// foreground flag, the same shape as the widget's Control Center button's
+/// `compose.request` — a flag in the app group, read and cleared on next
+/// foreground, rather than opening the `casberi://brief` URL directly, since
+/// a quick action can COLD-launch the app and `onOpenURL`'s routing isn't
+/// guaranteed live yet at that instant.
 ///
 /// `UIResponder`, not `NSObject` (2026-07-31): `buildMenu(with:)` is declared
 /// on `UIResponder`, and the app delegate is the last link in the responder
@@ -48,10 +56,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         application.shortcutItems = [
             UIApplicationShortcutItem(
-                type: "com.casberi.app.newThing",
-                localizedTitle: "New Thing",
+                type: "com.casberi.app.dailyBrief",
+                localizedTitle: "Daily Brief",
                 localizedSubtitle: nil,
-                icon: UIApplicationShortcutIcon(systemImageName: "plus.circle"))
+                icon: UIApplicationShortcutIcon(systemImageName: "sparkles"))
         ]
         return true
     }
@@ -59,8 +67,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      performActionFor shortcutItem: UIApplicationShortcutItem,
                      completionHandler: @escaping (Bool) -> Void) {
-        if shortcutItem.type == "com.casberi.app.newThing" {
-            UserDefaults(suiteName: SharedStore.appGroup)?.set(true, forKey: "compose.request")
+        if shortcutItem.type == "com.casberi.app.dailyBrief" {
+            UserDefaults(suiteName: SharedStore.appGroup)?.set(true, forKey: "brief.request")
         }
         completionHandler(true)
     }

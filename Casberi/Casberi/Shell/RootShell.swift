@@ -1117,6 +1117,16 @@ struct RootShell: View {
             group?.removeObject(forKey: "compose.request")
             composerOpen = true
         }
+        // The "Daily Brief" quick action (icon long-press / Mac Dock menu)
+        // left this flag — same shape as `compose.request` above, and the
+        // same landing the `casberi://brief` route uses (case "brief" below).
+        if group?.bool(forKey: "brief.request") == true {
+            group?.removeObject(forKey: "brief.request")
+            sceneState.filter.source = "All"
+            sceneState.filter.tag = "All"
+            chrome.askRequest = TodayBrief.title
+            composerOpen = true
+        }
         // A share-extension capture landed while we were away. Its
         // write IS in the store file, but @Query never hears a
         // foreign process's save (SwiftData; Apple's pattern is a
