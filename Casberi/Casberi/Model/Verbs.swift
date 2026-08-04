@@ -460,6 +460,9 @@ enum HandOffState {
 enum HandOff {
 
     static func addToCalendar(_ thing: Thing) async throws {
+        // Build 256: a detached Task runs LATER than it was created, so this
+        // row can already be deleted by the time this line does (prd §297).
+        guard thing.isLive else { return }
         // The event's own time where it has one, so Calendar opens ON that day
         // rather than today — the same `calshow:` trick the composer's chip
         // uses, and the reason this passes a date at all.
@@ -497,6 +500,9 @@ enum HandOff {
     /// Reminders with nothing to paste and no way to know why.
     @MainActor
     private static func jump(_ thing: Thing, to url: URL?) async throws {
+        // Build 256: a detached Task runs LATER than it was created, so this
+        // row can already be deleted by the time this line does (prd §297).
+        guard thing.isLive else { return }
         let text = thing.content.isEmpty ? thing.title : thing.content
         DSPasteboard.copy(text)
         guard let url, UIApplication.shared.canOpenURL(url) else {

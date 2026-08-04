@@ -540,6 +540,9 @@ enum GitHubFeedFetch {
     /// issue/PR conversation is.
     @MainActor
     static func comments(for thing: Thing) async -> [SocialReply] {
+        // Build 256: a detached Task runs LATER than it was created, so this
+        // row can already be deleted by the time this line does (prd §297).
+        guard thing.isLive else { return [] }
         guard thing.kind == .link,
               let (path, number) = issuePath(thing.content),
               let token = TokenVault.get(TokenBridge.github.tokenKey)
@@ -598,6 +601,9 @@ enum GitHubFeedFetch {
     /// field a view renders directly, so this follows the star-count/social-
     /// engagement precedent instead: live, and simply absent if unreachable.
     static func releaseBody(thing: Thing, token: String) async -> String? {
+        // Build 256: a detached Task runs LATER than it was created, so this
+        // row can already be deleted by the time this line does (prd §297).
+        guard thing.isLive else { return nil }
         guard let ref = thing.sourceRef, ref.hasPrefix("gh:release:") else { return nil }
         let id = ref.dropFirst("gh:release:".count)
         guard let path = repoPath(fromWebURL: thing.content) else { return nil }

@@ -851,6 +851,9 @@ enum SafeBridge {
     /// instead of conflating both into one "resolved" state.
     @MainActor
     static func outcome(for thing: Thing) async -> Outcome {
+        // Build 256: a detached Task runs LATER than it was created, so this
+        // row can already be deleted by the time this line does (prd §297).
+        guard thing.isLive else { return .fail("That thing is no longer here.") }
         guard applies(to: thing), let ref = thing.sourceRef, let address = thing.walletAddress
         else { return .fail("not a safe thing") }
         let parts = ref.split(separator: ":", maxSplits: 3).map(String.init)

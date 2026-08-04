@@ -65,6 +65,9 @@ struct PredictionMarket {
     /// thing's own sourceRef/content — PredictionPulse's only call, so it
     /// never needs to know which bridge landed a given row.
     static func fetch(for thing: Thing) async -> PredictionMarket? {
+        // Build 256: a detached Task runs LATER than it was created, so this
+        // row can already be deleted by the time this line does (prd §297).
+        guard thing.isLive else { return nil }
         switch thing.source {
         case PredictionSource.kalshi.rawValue:
             guard let route = KalshiMarket.route(from: thing.content) else { return nil }

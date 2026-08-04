@@ -93,6 +93,9 @@ enum WalletPrepare {
     /// only the RPC awaits hop off.
     @MainActor
     static func outcome(for thing: Thing) async -> Outcome {
+        // Build 256: a detached Task runs LATER than it was created, so this
+        // row can already be deleted by the time this line does (prd §297).
+        guard thing.isLive else { return .fail("That thing is no longer here.") }
         // sourceRef: "wallet:approval:<network>:<txHash>:<logIndex>" or
         // "wallet:permit2:<network>:<txHash>:<logIndex>".
         guard applies(to: thing),

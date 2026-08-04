@@ -169,8 +169,32 @@ enum LinkTitle {
     /// like the URL it was born with). A pasted PRODUCT page goes further: it
     /// becomes a `.product`, its price captured so a re-check can catch a drop
     /// (2026-07-14).
+    /// **Every read of `thing` below is guarded, at entry and after each
+    /// suspension** — the build-256 crash, and the async half of the
+    /// never-read-a-dead-Thing rule (corollary 6).
+    ///
+    /// All four callers spell this the same way:
+    /// `Task { @MainActor in await LinkTitle.enrich(thing, context: context) }`
+    /// — detached on purpose, so an 8-second page fetch never serializes the
+    /// landing loop behind it. But a detached task does not run at the moment
+    /// it is created: it is scheduled, the pass that created it carries on, and
+    /// only then does this body start. §286's `SocialTopics.reconcile` deletes
+    /// unexplained social rows on EVERY refresh pass, so a link landed at the
+    /// top of a Farcaster sweep could be deleted before its own enrichment task
+    /// had run a single line — and the first thing this function did was read
+    /// `thing.kind`, which traps on a detached backing store.
+    ///
+    /// That is what crashed the Mac at launch from 2026-08-02 (`Fatal error:
+    /// This backing data was detached from a context without resolving
+    /// attribute faults … \Thing.kind`). `applyOEmbed` already carried this
+    /// guard for the oEmbed branch, with a comment naming the exact hazard; the
+    /// lesson simply never reached the function above it or the two fetches
+    /// below.
     @MainActor
     static func enrich(_ thing: Thing, context: ModelContext) async {
+        // Entry: the task was scheduled, not run, and the row may already be
+        // gone. This is the crashing read.
+        guard thing.isLive else { return }
         guard thing.kind == .link,
               let url = URL(string: thing.content.trimmingCharacters(in: .whitespacesAndNewlines))
                 ?? firstURL(in: thing.content),
@@ -192,7 +216,10 @@ enum LinkTitle {
         // A product's page is a store listing, not an article, so it gets no
         // readable-body pass.
         var namedFromMeta = false
-        if let meta = await ProductMeta.fetch(url) {
+        let meta = await ProductMeta.fetch(url)
+        // The product fetch is an await, and this row can be deleted under it.
+        guard thing.isLive else { return }
+        if let meta {
             if meta.isProduct {
                 upgradeToProduct(thing, meta: meta)
                 thing.embedding = nil
@@ -207,6 +234,9 @@ enum LinkTitle {
         }
         // One fetch pulls the page's title and its readable lede.
         let page = await fetchPage(url)
+        // The longest await in this function — up to 8 seconds, and every
+        // write below touches the row.
+        guard thing.isLive else { return }
         var changed = namedFromMeta
         // Take the raw <title> only when meta didn't already give a cleaner
         // name — meta's og:title beats "Article — SiteName" (review 2026-07-15).

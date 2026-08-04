@@ -972,7 +972,7 @@ enum FarcasterIngest {
     @MainActor
     private static func heal(_ thing: Thing?, body: [String: Any], images: [String],
                              why: String?, channel: String?) async {
-        guard let thing else { return }
+        guard let thing, thing.isLive else { return }
         // WHY it's here heals too — else the marker would only ever reach casts
         // landed from today on, and a corpus that already holds your likes and
         // your channels would show none of them. Accurate, not a guess: this
@@ -1393,6 +1393,9 @@ enum FarcasterIngest {
     /// one cast at a time is a fetch the ingest can't afford per page.
     @MainActor
     static func engagement(for thing: Thing) async -> SocialEngagement? {
+        // Build 256: a detached Task runs LATER than it was created, so this
+        // row can already be deleted by the time this line does (prd §297).
+        guard thing.isLive else { return nil }
         guard thing.source == "Farcaster", let ref = thing.sourceRef, ref.hasPrefix("fc:"),
               let handle = thing.authorHandle,
               let fid = await fid(forName: handle) else { return nil }

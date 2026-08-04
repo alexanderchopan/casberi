@@ -93,6 +93,9 @@ enum SocialThread {
 
     @MainActor
     static func replies(for thing: Thing) async -> [SocialReply] {
+        // Build 256: a detached Task runs LATER than it was created, so this
+        // row can already be deleted by the time this line does (prd §297).
+        guard thing.isLive else { return [] }
         // GitHub isn't a social source (no author eyebrow, no context label)
         // but an issue/PR's comment thread is the identical "read live when
         // the sheet opens" shape, so it rides the same section (2026-07-16).
@@ -136,6 +139,9 @@ enum SocialThread {
     /// nothing we'd stand behind.
     @MainActor
     static func engagement(for thing: Thing) async -> SocialEngagement? {
+        // Build 256: a detached Task runs LATER than it was created, so this
+        // row can already be deleted by the time this line does (prd §297).
+        guard thing.isLive else { return nil }
         switch thing.source {
         case "Farcaster": return await FarcasterIngest.engagement(for: thing)
         case "Bluesky":   return await BlueskyIngest.engagement(for: thing)

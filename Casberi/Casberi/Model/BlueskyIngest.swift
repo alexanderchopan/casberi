@@ -1077,6 +1077,9 @@ enum BlueskyIngest {
     /// the sheet opens.
     @MainActor
     static func engagement(for thing: Thing) async -> SocialEngagement? {
+        // Build 256: a detached Task runs LATER than it was created, so this
+        // row can already be deleted by the time this line does (prd §297).
+        guard thing.isLive else { return nil }
         guard thing.source == "Bluesky", let ref = thing.sourceRef,
               ref.hasPrefix("bsky:") else { return nil }
         let uri = String(ref.dropFirst("bsky:".count))

@@ -133,6 +133,14 @@ ASYNC_THING_FUNC = re.compile(
     r"^\s*(?:@\w+\s+)*(?:private |static |public |final )*func\s+(\w+)\s*\([^)]*\[Thing\][^)]*\)[^\n{]*\basync\b[^\n{]*\{",
     re.M | re.S)
 
+# Check 7: an `async` func that takes a BARE `Thing` — check 6's sibling, and
+# the gap that let build 256's crash ship. `[^)]*(?<!\[)\bThing\b(?!\])` is the
+# whole difference: one Thing, not an array of them.
+ASYNC_ONE_THING_FUNC = re.compile(
+    r"^\s*(?:@\w+\s+)*(?:private |static |public |final )*func\s+(\w+)\s*"
+    r"\([^)]*(?<!\[)\bThing\b(?!\])[^)]*\)[^\n{]*\basync\b[^\n{]*\{",
+    re.M | re.S)
+
 VIEW_STRUCT = re.compile(r"^(?:private |public )?struct (\w+)[^\n{]*:\s*[^\n{]*\bView\b[^\n{]*\{", re.M)
 STORED_THING_PROP = re.compile(r"^\s{0,8}(?:let|var)\s+(\w*[Tt]hing\w*)\s*:\s*Thing\b", re.M)
 
@@ -393,6 +401,36 @@ def audit_file(path: pathlib.Path, findings: list[str]) -> None:
             f"      re-filter `.live` after the suspension — a heal can delete during it"
         )
 
+    # ── Check 7: ONE Thing handed to an async func ──────────────────
+    # Build 256 (2026-08-03). `LinkTitle.enrich(_ thing: Thing, …) async` read
+    # `thing.kind` on its FIRST line and trapped — "backing data was detached
+    # from a context without resolving attribute faults". Check 6 could not see
+    # it: the parameter is one Thing, not `[Thing]`.
+    #
+    # The trap is the CALLER's shape, which all four of enrich's call sites
+    # share: `Task { @MainActor in await LinkTitle.enrich(thing, …) }`. A
+    # detached task is SCHEDULED, not run — the pass that created it carries on,
+    # and §286's reconcile deletes unexplained social rows on every refresh, so
+    # the row can be gone before the task's first line executes.
+    #
+    # So unlike check 6 this does NOT look only after the last `await`: the
+    # crashing read was before any suspension at all. The rule is simply that a
+    # function handed one Thing asynchronously must establish it is still live
+    # before reading it — on entry, and again after each suspension.
+    for m in ASYNC_ONE_THING_FUNC.finditer(text):
+        name, start = m.group(1), m.end()
+        nxt = re.search(r"\n    (?:@\w+\s+)?(?:private |static |public |final )*func\s", text[start:])
+        body = text[start:start + (nxt.start() if nxt else min(len(text) - start, 20000))]
+        if not re.search(rf"\.({'|'.join(sorted(STORED))})\b", body):
+            continue
+        if ".live" in body or "isLive" in body:
+            continue
+        findings.append(
+            f"✗ {rel}:{text[:m.start()].count(chr(10)) + 1} — async '{name}' takes one "
+            f"Thing and reads a stored property with no liveness guard\n"
+            f"      guard `thing.isLive` on entry — a detached Task runs LATER, and the row can already be deleted"
+        )
+
     # ── Check 4: a held [Thing] handed onward without .live ──────────
     # Build 177. `@State private var debouncedAllSnapshot: [Thing]?` — the All
     # room's perf snapshot, raw model refs held across a debounce window, so
@@ -568,6 +606,36 @@ def self_test() -> int:
             "    let holdings = await liveHoldings()\n"
             "    landed = landed.live\n"
             "    return landed.filter { $0.kind == .transaction }.first?.title\n"
+            "}\n",
+            None,
+        ),
+        # Build 256's shape: ONE Thing handed to an async func, read on entry.
+        # Deliberately has NO await before the read — that is the whole point,
+        # and why check 6's after-the-last-await rule could not have caught it.
+        "async-one-thing-unguarded": (
+            "static func enrich(_ thing: Thing, context: ModelContext) async {\n"
+            "    guard thing.kind == .link else { return }\n"
+            "    let page = await fetchPage(url)\n"
+            "    thing.title = page.title\n"
+            "}\n",
+            "takes one Thing and reads a stored property",
+        ),
+        "clean-async-one-thing-guarded": (
+            "static func enrich(_ thing: Thing, context: ModelContext) async {\n"
+            "    guard thing.isLive else { return }\n"
+            "    guard thing.kind == .link else { return }\n"
+            "    let page = await fetchPage(url)\n"
+            "    guard thing.isLive else { return }\n"
+            "    thing.title = page.title\n"
+            "}\n",
+            None,
+        ),
+        # An ARRAY parameter must stay check 6's business, not get double-flagged
+        # by the new one — `(?<!\[)Thing(?!\])` is what keeps them apart.
+        "clean-async-array-is-check-sixs-job": (
+            "static func compose(things: [Thing], context: ModelContext) async -> String? {\n"
+            "    let landed = things.live\n"
+            "    return landed.first?.title\n"
             "}\n",
             None,
         ),

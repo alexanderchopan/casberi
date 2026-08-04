@@ -600,7 +600,7 @@ enum NostrIngest {
     @MainActor
     private static func heal(_ thing: Thing?, event: [String: Any], images: [String],
                              why: String?, hashtag: String?) async {
-        guard let thing else { return }
+        guard let thing, thing.isLive else { return }
         if thing.socialContext == nil, let why {
             thing.socialContext = why
             healed = true
@@ -929,6 +929,9 @@ enum NostrIngest {
     /// total), so a full page means "at least this many".
     @MainActor
     static func engagement(for thing: Thing) async -> SocialEngagement? {
+        // Build 256: a detached Task runs LATER than it was created, so this
+        // row can already be deleted by the time this line does (prd §297).
+        guard thing.isLive else { return nil }
         guard thing.source == "Nostr", let ref = thing.sourceRef,
               ref.hasPrefix("nostr:") else { return nil }
         let id = String(ref.dropFirst("nostr:".count))
