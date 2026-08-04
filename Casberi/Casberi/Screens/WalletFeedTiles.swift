@@ -554,6 +554,9 @@ struct WalletDepositsTray: View {
         let share = total > 0 ? deposit.usd / total : 0
         return VStack(alignment: .leading, spacing: DS.Space.s1) {
             HStack(spacing: DS.Space.s2) {
+                // The protocol's own mark (2026-08-04) — this tray names five
+                // venues the app ships logos for and drew none of them.
+                AssetMark(name: deposit.place, size: 22)
                 Text(deposit.place)
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
@@ -613,6 +616,10 @@ struct WalletLocksTray: View {
     private func row(_ lock: WalletComposition.Lock, index: Int) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
             HStack(spacing: DS.Space.s2) {
+                // The locked TOKEN, not the venue: the venue is already on
+                // this row's trailing edge, and AERO and HYPE are what the
+                // amount beside it counts.
+                AssetMark(name: lock.symbol, size: 22)
                 Text("\(WalletIngest.format(lock.amount)) \(lock.symbol)")
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .monospacedDigit()
@@ -838,7 +845,7 @@ struct WalletLendingCard: View {
     private var aavePositions: [WalletDeFi.Position] { aave.filter { $0.protocolName == "Aave" } }
     private var sparkPositions: [WalletDeFi.Position] { aave.filter { $0.protocolName == "Spark" } }
 
-    private func lendingRow(_ positions: [WalletDeFi.Position], title: String, monogram: String) -> some View {
+    private func lendingRow(_ positions: [WalletDeFi.Position], title: String) -> some View {
         let collateral = positions.reduce(0) { $0 + $1.totalCollateralUSD }
         let debt = positions.reduce(0) { $0 + $1.totalDebtUSD }
         // The riskiest health factor across positions — nil when nothing is
@@ -847,7 +854,10 @@ struct WalletLendingCard: View {
         let health = positions.compactMap(\.healthFactor).min()
         let atRisk = (health ?? .infinity) < Self.riskMargin
         let borrowing = debt > 0
-        return WalletRow(mark: .monogram(monogram, tint: atRisk ? DS.attention : DS.tint),
+        // The protocol's own mark — Aave ships one, Spark doesn't, and the
+        // fallback says so honestly rather than inventing artwork.
+        return WalletRow(mark: .asset(title, tint: atRisk ? DS.attention : DS.tint,
+                                      atRisk: atRisk),
                          title: title,
                          subtitle: Self.line(health: health, atRisk: atRisk,
                                              chains: positions.map(\.network))) {
@@ -858,11 +868,11 @@ struct WalletLendingCard: View {
     }
 
     private var aaveRow: some View {
-        lendingRow(aavePositions, title: "Aave", monogram: "AA")
+        lendingRow(aavePositions, title: "Aave")
     }
 
     private var sparkRow: some View {
-        lendingRow(sparkPositions, title: "Spark", monogram: "SP")
+        lendingRow(sparkPositions, title: "Spark")
     }
 
     // MARK: - Morpho
@@ -898,7 +908,8 @@ struct WalletLendingCard: View {
             ? Self.line(health: morphoHealth, atRisk: atRisk,
                         chains: morpho.positions.map(\.network), trend: trend)
             : Self.earning(vaults: morpho.vaults.count, markets: morpho.positions.count)
-        return WalletRow(mark: .monogram("MO", tint: atRisk ? DS.attention : DS.tint),
+        return WalletRow(mark: .asset("Morpho", tint: atRisk ? DS.attention : DS.tint,
+                                      atRisk: atRisk),
                          title: "Morpho", subtitle: subtitle) {
             WalletRowValue(value: TokenStats.compact(borrowing ? morphoDebt : morphoDeposits),
                            caption: borrowing ? String(localized: "borrowed")
@@ -1014,6 +1025,9 @@ struct WalletAllocationTray: View {
     private func row(_ position: WalletPortfolio.Position) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
             HStack(spacing: DS.Space.s2) {
+                // The same coin mark the treemap above draws — this tray IS
+                // that treemap's list form, and it wore no artwork at all.
+                AssetMark(name: position.symbol, size: 22)
                 Text(position.symbol)
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .lineLimit(1)

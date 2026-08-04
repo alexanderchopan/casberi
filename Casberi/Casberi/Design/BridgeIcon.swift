@@ -71,18 +71,16 @@ struct BridgeIcon: View {
 /// back null for nearly everything, including WETH and USDC — too sparse to
 /// build on). Renders nothing at all for a symbol outside the bundled set —
 /// text-only stays the honest fallback, never a wrong or generic mark.
+///
+/// Resolution is `BrandMark`'s, shared with `AssetMark` since 2026-08-04: this
+/// file used to alias only `btc`, so the treemap drew nothing for wstETH, POL
+/// or wSOL while the rows beneath it wore real marks for the same holdings.
 struct TokenIcon: View {
     let symbol: String
     var size: CGFloat = 20
 
-    /// "btc" borrows WBTC's bundled mark — same Bitcoin logo, and there's no
-    /// separate `brand-btc` asset to ship (2026-07-27).
-    private var lookupSymbol: String {
-        symbol.lowercased() == "btc" ? "wbtc" : symbol.lowercased()
-    }
-
     var body: some View {
-        if let ui = UIImage(named: "brand-" + lookupSymbol) {
+        if let ui = BrandMark.image(for: symbol) {
             Image(uiImage: ui)
                 .resizable()
                 .scaledToFit()

@@ -74,6 +74,14 @@ KNOWN_EXEMPT = {
     # no release build and nobody using Reduce Motion will ever reach it.
     # A conscious ruling, not a snooze.
     "RootShell.swift:RootShell": "the -openAppsDelay probe hook, DEBUG-only",
+    # `size * 0.3` on the state badge is a FIXED proportion of the mark's own
+    # size parameter, not a magnitude read off data — the same shape
+    # `WalletFace`'s identicon blobs already draw (`d * 0.5`, `d * 0.42`),
+    # which passes only because an unrelated `.animation(` elsewhere in that
+    # struct happens to satisfy `has_entrance`. AssetMark has no such call to
+    # borrow. A mark's badge size doesn't communicate anything by growing —
+    # it's a fixed dot, always the same fraction of the disc it sits on.
+    "AssetMark.swift:AssetMark": "badge size is a fixed proportion of `size`, not data",
 }
 
 ENTRANCE_TOKENS = (

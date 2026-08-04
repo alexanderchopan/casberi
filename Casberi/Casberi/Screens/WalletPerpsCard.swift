@@ -72,7 +72,13 @@ struct WalletPerpsCard: View {
     }
 
     private func positionRow(_ position: HyperliquidDeFi.Position) -> some View {
-        WalletRow(mark: .monogram("HL", tint: position.isNearLiquidation ? DS.attention : DS.tint),
+        // The COIN's mark, not the venue's (2026-08-04): every row here is
+        // Hyperliquid, so a repeated venue mark names what the card already
+        // is and says nothing about which position you're looking at — the
+        // exact reasoning that retired `WalletLiquidityCard`'s "UN" monogram.
+        WalletRow(mark: .asset(position.coin,
+                               tint: position.isNearLiquidation ? DS.attention : DS.tint,
+                               atRisk: position.isNearLiquidation),
                   title: Self.title(position),
                   subtitle: Self.line(position)) {
             // Notional leads on the trailing edge, the Lending card's own

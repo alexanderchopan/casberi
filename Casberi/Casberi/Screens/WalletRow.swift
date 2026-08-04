@@ -27,19 +27,31 @@ import SwiftUI
 /// app's shared row-title rung on 2026-08-03 — same size, same weight, same
 /// face, one name.)
 struct WalletRow<Trailing: View>: View {
-    /// The leading 34pt mark. Four kinds, because the room has exactly four
+    /// The leading 34pt mark. Five kinds, because the room has exactly five
     /// kinds of subject: a state (glyph), a wallet (its face — a wallet is a
-    /// color in this app), a protocol (its initials, since Aave and Morpho
-    /// have no SF Symbol and shipping a remote logo would be the one external
-    /// image request the site rule already bans elsewhere), and a landed thing
-    /// (its own `KindGlyph`, the same mark that thing wears in every other
-    /// feed — the one case that keeps the app-icon squircle rather than the
-    /// circle, because a thing is an object and the other three are people or
-    /// states).
+    /// color in this app), a token or protocol (its REAL brand mark, 2026-08-04
+    /// — see `.asset`), and a landed thing (its own `KindGlyph`, the same mark
+    /// that thing wears in every other feed — the one case that keeps the
+    /// app-icon squircle rather than the circle, because a thing is an object
+    /// and the other three are people or states).
     enum Mark {
         case symbol(String, tint: Color)
         case face(String)
         case monogram(String, tint: Color)
+        /// A token or protocol by name — its bundled brand mark where one
+        /// exists, an honest monogram where it doesn't (`AssetMark`).
+        ///
+        /// It replaced hand-written initials on 2026-08-04: Aave read "AA",
+        /// Morpho "MO", Hyperliquid "HL", while the app had shipped
+        /// `brand-aave`, `brand-morpho` and `brand-hyperliquid` for months —
+        /// so the room was drawing initials for logos it already owned. The
+        /// old case survives for a subject that genuinely has no artwork
+        /// anywhere (Spark, today).
+        ///
+        /// `tint` colours only the monogram fallback; `atRisk` puts the state
+        /// on a badge, because re-tinting a real brand mark would be a lie
+        /// about the brand.
+        case asset(String, tint: Color, atRisk: Bool = false)
         /// Two assets overlapped — a liquidity pool's own pair.
         case pair(String, String)
         case kind(ThingKind, flagged: Bool = false)
@@ -95,6 +107,9 @@ struct WalletRow<Trailing: View>: View {
                 .frame(width: Self.markSize, height: Self.markSize)
                 .background(Circle().fill(tint.opacity(0.16)))
                 .accessibilityHidden(true)
+        case .asset(let name, let tint, let atRisk):
+            AssetMark(name: name, size: Self.markSize, tint: tint,
+                      badge: atRisk ? DS.attention : nil)
         case .pair(let first, let second):
             // A liquidity position is TWO assets, so its mark is two — real
             // brand discs where the app bundles them (2026-08-01). It replaced

@@ -11,14 +11,24 @@ import SwiftUI
 /// unnamed thing in this app wears, and half a row of real logos beside half a
 /// row of neutral discs is the honest picture of what we actually know.
 ///
-/// Nothing here fetches. Both surfaces that use it (the flow band and the
-/// Liquidity card) are scrolling lists, and per-row image requests would mean
-/// a new host in `NetworkReach` plus network traffic on a scroll — refused for
-/// the same reason the website inlines its icons.
+/// Nothing here fetches. Every surface that uses it is a scrolling list, and
+/// per-row image requests would mean a new host in `NetworkReach` plus network
+/// traffic on a scroll — refused for the same reason the website inlines its
+/// icons. When a symbol has no bundled mark the answer is to BUNDLE one, not
+/// to reach for it at render time.
 struct AssetMark: View {
-    /// A token symbol ("ETH", "USDC") or a counterparty name ("Coinbase").
+    /// A token symbol ("ETH", "USDC") or a counterparty/protocol name
+    /// ("Coinbase", "Aave").
     let name: String
     var size: CGFloat = 20
+    /// Colours the MONOGRAM branch only — a real brand mark is the brand's own
+    /// colours and never gets re-tinted. nil keeps the neutral disc.
+    var tint: Color? = nil
+    /// A small filled dot on the trailing edge, for a row whose mark used to
+    /// carry its state in its tint (`WalletLendingCard`'s at-risk orange).
+    /// Real artwork can't be tinted without lying about the brand, so the
+    /// state moves to a badge — `WalletRow`'s own flagged-badge grammar.
+    var badge: Color? = nil
 
     /// Whether a real brand asset exists for this name. `BridgeIcon` already
     /// resolves and falls back on its own; this is asked separately so the
@@ -26,24 +36,7 @@ struct AssetMark: View {
     /// `BridgeIcon`'s app-shaped glyph fallback, which reads as "this is an
     /// app we know" for a name we don't.
     static func hasAsset(_ name: String) -> Bool {
-        UIImage(named: assetName(name)) != nil
-    }
-
-    /// Wrapped and bridged forms wear their underlying asset's mark — the
-    /// `TokenHue` rule ("a wrapper is a representation, not a different
-    /// identity") applied to artwork. Only forms whose target asset is
-    /// actually bundled are listed; anything else falls through to the
-    /// monogram honestly.
-    private static let alias: [String: String] = [
-        "usdbc": "usdc", "usdce": "usdc", "usdte": "usdt",
-        "steth": "eth", "wsteth": "eth", "cbbtc": "wbtc", "btc": "wbtc",
-    ]
-
-    private static func assetName(_ name: String) -> String {
-        let slug = name.lowercased()
-            .replacingOccurrences(of: " ", with: "-")
-            .replacingOccurrences(of: ".", with: "")
-        return "brand-" + (alias[slug] ?? slug)
+        BrandMark.image(for: name) != nil
     }
 
     /// One or two letters — enough to tell two lanes apart, never enough to
@@ -63,20 +56,78 @@ struct AssetMark: View {
     }
 
     var body: some View {
-        if Self.hasAsset(name) {
-            BridgeIcon(name: name, size: size, circular: true)
-        } else {
-            Circle()
-                .fill(DS.fillStrong)
-                .frame(width: size, height: size)
-                .overlay(
-                    Text(monogram)
-                        .font(.system(size: size * 0.40, weight: .semibold, design: .rounded))
-                        .foregroundStyle(DS.textSecondary)
-                        .minimumScaleFactor(0.7)
-                        .lineLimit(1)
-                )
+        Group {
+            if let ui = BrandMark.image(for: name) {
+                Image(uiImage: ui)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: size, height: size)
+                    .clipShape(Circle())
+            } else {
+                Circle()
+                    .fill(tint.map { $0.opacity(0.16) } ?? DS.fillStrong)
+                    .frame(width: size, height: size)
+                    .overlay(
+                        Text(monogram)
+                            .font(.system(size: size * 0.40, weight: .semibold, design: .rounded))
+                            .foregroundStyle(tint ?? DS.textSecondary)
+                            .minimumScaleFactor(0.7)
+                            .lineLimit(1)
+                    )
+            }
         }
+        .overlay(alignment: .bottomTrailing) {
+            if let badge {
+                Circle()
+                    .fill(badge)
+                    .frame(width: size * 0.3, height: size * 0.3)
+                    // The page showing through, not a stroke — a hairline by
+                    // another name is still a hairline.
+                    .overlay(Circle().stroke(DS.page, lineWidth: size * 0.06))
+            }
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+/// Which bundled `brand-*` image a token symbol or protocol name resolves to —
+/// the ONE resolver, shared by `AssetMark` (which falls back to a monogram)
+/// and `TokenIcon` (which falls back to nothing).
+///
+/// It was two tables until 2026-08-04, and they disagreed: `AssetMark` aliased
+/// wrapped forms while `TokenIcon` aliased only `btc`, so the holdings treemap
+/// drew nothing at all for wstETH and cbBTC while the same symbol wore a real
+/// mark one card below. One table means a mark added for either surface lands
+/// on both.
+enum BrandMark {
+    /// Wrapped, bridged and staked forms wear their underlying asset's mark —
+    /// the `TokenHue` rule ("a wrapper is a representation, not a different
+    /// identity") applied to artwork. Only forms whose target asset is
+    /// actually bundled are listed; anything else falls through honestly.
+    ///
+    /// stETH and wstETH are NOT here: they have their own bundled marks now,
+    /// and Lido's mark is a different thing from Ethereum's.
+    private static let alias: [String: String] = [
+        "usdbc": "usdc", "usdce": "usdc", "usdte": "usdt",
+        "cbbtc": "wbtc", "btc": "wbtc",
+        "wsol": "sol", "msol": "sol", "jitosol": "sol",
+        "pol": "matic",
+        // A protocol's token and the protocol share one mark — `HYPE` is
+        // Hyperliquid's own logo, and the composition strip names the venue
+        // "ether.fi Cash" where the roster names it "ether.fi".
+        "hype": "hyperliquid", "aave-token": "aave",
+        "etherfi-cash": "etherfi", "etherfi-liquid": "etherfi",
+    ]
+
+    static func slug(for name: String) -> String {
+        let cleaned = name.lowercased()
+            .replacingOccurrences(of: " ", with: "-")
+            .replacingOccurrences(of: ".", with: "")
+        return alias[cleaned] ?? cleaned
+    }
+
+    static func image(for name: String) -> UIImage? {
+        UIImage(named: "brand-" + slug(for: name))
     }
 }
 

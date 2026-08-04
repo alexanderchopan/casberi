@@ -121,21 +121,30 @@ struct WalletApprovalExposureCard: View {
             DSHaptic.selection()
             onOpen(grant)
         } label: {
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Text(grant.spender)
-                        .dsText(.heading17)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                    Spacer(minLength: DS.Space.s2)
-                    // An unpriceable grant states a dash, never "$0" — the
-                    // whole reason it sits outside the total (see the model).
-                    Text(grant.usd.map(WalletApprovalExposure.money) ?? "—")
-                        .dsText(.price16)
-                        .foregroundStyle(grant.usd == nil ? DS.textTertiary : DS.textPrimary)
-                        .monospacedDigit()
+            HStack(alignment: .top, spacing: DS.Space.s2) {
+                // WHO can spend it (2026-08-04). The spender is what this card
+                // ranks and what you go and revoke, and Uniswap, Aave and
+                // Morpho all ship marks the row was drawing as bare text.
+                AssetMark(name: grant.spender, size: 26)
+                    // Optically centred on the title line rather than the
+                    // whole two-line block.
+                    .padding(.top, 1)
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        Text(grant.spender)
+                            .dsText(.heading17)
+                            .foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                        Spacer(minLength: DS.Space.s2)
+                        // An unpriceable grant states a dash, never "$0" — the
+                        // whole reason it sits outside the total (see the model).
+                        Text(grant.usd.map(WalletApprovalExposure.money) ?? "—")
+                            .dsText(.price16)
+                            .foregroundStyle(grant.usd == nil ? DS.textTertiary : DS.textPrimary)
+                            .monospacedDigit()
+                    }
+                    metaLine(grant)
                 }
-                metaLine(grant)
             }
             .contentShape(Rectangle())
         }
