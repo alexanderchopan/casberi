@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Casberi Mac — alive, v2</title>
+<style>
+  /* ── tokens (DesignTokens.swift) ─────────────────────────────── */
+  :root {
+    --page:#000; --sheet:#111113; --well:#080809;
+    --text-1:#fff; --text-2:rgba(235,235,245,.60); --text-3:rgba(235,235,245,.49);
+    --tint:#0A84FF; --confirm:#30d158; --attention:#ff9f0a; --destructive:#ff453a;
+    --r-card:10px; --r-sheet:16px;
+    --ease:cubic-bezier(.32,.72,0,1); --dur:250ms;
+    --card-shadow:0 8px 24px rgba(0,0,0,.55);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+    color:var(--text-1); -webkit-font-smoothing:antialiased;
+    display:flex; flex-direction:column; align-items:center;
+    padding:40px 24px 56px; min-height:100vh;
+    background:
+      radial-gradient(1200px 700px at 20% -10%, #1b2a4a 0%, transparent 60%),
+      radial-gradient(1000px 600px at 95% 110%, #3a1b3f 0%, transparent 55%),
+      #0b0d12;
+  }
+
+  .window {
+    width:1240px; max-width:100%; height:780px; border-radius:12px; overflow:hidden;
+    display:grid; grid-template-columns:224px 1fr 380px;
+    background:var(--page);
+    box-shadow:0 32px 80px rgba(0,0,0,.6), 0 2px 8px rgba(0,0,0,.4);
+    transition:box-shadow var(--dur) var(--ease);
+    position:relative;
+  }
+  /* drop-capture: the whole window answers a drag */
+  .window.dropping { box-shadow:0 32px 80px rgba(0,0,0,.6), inset 0 0 0 2px rgba(10,132,255,.55), inset 0 0 60px rgba(10,132,255,.10); }
+
+  /* ── sidebar ─────────────────────────────────────────────────── */
+  .sidebar {
+    background:rgba(24,24,28,.62);
+    backdrop-filter:blur(28px) saturate(1.4); -webkit-backdrop-filter:blur(28px) saturate(1.4);
+    padding:14px 10px 12px; display:flex; flex-direction:column;
+  }
+  .lights { display:flex; gap:8px; padding:4px 6px 18px; }
+  .light { width:12px; height:12px; border-radius:50%; }
+  .light.r{background:#ff5f57} .light.y{background:#febc2e} .light.g{background:#28c840}
+  .side-label { font-size:12px; color:var(--text-3); padding:2px 10px 8px; }
+  .src {
+    display:flex; align-items:center; gap:9px; padding:6px 10px; border-radius:7px;
+    font-size:13px; color:var(--text-2); cursor:default;
+    transition:background var(--dur) var(--ease), color var(--dur) var(--ease);
+  }
+  .src:hover { background:rgba(255,255,255,.06); color:var(--text-1); }
+  .src.on { background:rgba(255,255,255,.10); color:var(--text-1); }
+  .src .tile { width:20px; height:20px; border-radius:5px; display:grid; place-items:center;
+    font-size:10px; font-weight:700; color:#fff; flex:none; }
+  .src .ring { margin-left:auto; width:7px; height:7px; border-radius:50%; background:var(--tint);
+    box-shadow:0 0 0 3px rgba(10,132,255,.22); opacity:0; transform:scale(.4);
+    transition:opacity var(--dur) var(--ease), transform var(--dur) var(--ease); }
+  .src .ring.lit { opacity:1; transform:scale(1); }
+  .src .ring.bloom { animation:bloom .9s var(--ease); }
+  @keyframes bloom {
+    0% { box-shadow:0 0 0 0 rgba(10,132,255,.55); transform:scale(.4); opacity:0; }
+    45% { box-shadow:0 0 0 9px rgba(10,132,255,.18); transform:scale(1.25); opacity:1; }
+    100% { box-shadow:0 0 0 3px rgba(10,132,255,.22); transform:scale(1); }
+  }
+  .side-foot { margin-top:auto; padding:10px 10px 2px; display:flex; align-items:center; gap:9px; cursor:default; }
+  .avatar { width:26px; height:26px; border-radius:50%;
+    background:conic-gradient(from 210deg,#0A84FF,#5e5ce6,#0A84FF); }
+  .avatar.spin { animation:doorspin .8s var(--ease); }
+  @keyframes doorspin { from { transform:rotate(0) scale(1); } 50% { transform:rotate(200deg) scale(1.12); } to { transform:rotate(360deg) scale(1); } }
+  .side-foot span { font-size:12.5px; color:var(--text-2); }
+
+  /* ── feed ────────────────────────────────────────────────────── */
+  .feed { background:var(--page); overflow:hidden; position:relative; padding:16px 22px 0;
+    display:flex; flex-direction:column; }
+  .feed-head { display:flex; align-items:baseline; gap:10px; padding:6px 4px 14px; }
+  .feed-head h1 { font-family:"SF Pro Rounded",-apple-system,sans-serif; font-size:22px; font-weight:700; }
+  .feed-head .meta { font-size:13px; color:var(--text-3); }
+  .feed-scroll { overflow-y:auto; scrollbar-width:none; display:flex; flex-direction:column; gap:8px; padding-bottom:110px; }
+  .feed-scroll::-webkit-scrollbar { display:none; }
+  .day { font-size:13px; color:var(--text-3); padding:14px 4px 4px; }
+
+  /* wallet card + scrubbable sparkline */
+  .wallet { background:var(--sheet); border-radius:var(--r-card); box-shadow:var(--card-shadow);
+    padding:14px 16px 12px; display:grid; grid-template-columns:1fr auto; gap:4px 12px; flex:none; }
+  .wallet .cap { font-size:12px; color:var(--text-3); }
+  .wallet .sum { font-family:"SF Pro Rounded",-apple-system,sans-serif; font-size:26px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .wallet .whisper { font-size:12.5px; color:var(--text-2); }
+  .wallet .delta { align-self:end; font-size:13px; font-weight:600; color:var(--confirm); font-variant-numeric:tabular-nums; }
+  .sparkwrap { grid-column:2; grid-row:1/3; align-self:center; position:relative; cursor:crosshair; }
+  .spark path { fill:none; stroke:var(--confirm); stroke-width:1.6; stroke-linecap:round; }
+  .spark .fill { fill:url(#sg); stroke:none; }
+  .spark .dot { fill:var(--confirm); animation:tick 2.4s var(--ease) infinite; transform-origin:center; transform-box:fill-box; }
+  @keyframes tick { 0%,100%{opacity:.55; transform:scale(1);} 50%{opacity:1; transform:scale(1.5);} }
+  .scrubline { position:absolute; top:0; bottom:8px; width:1.5px; background:rgba(255,255,255,.35); border-radius:1px;
+    opacity:0; pointer-events:none; }
+  .scrubdot { position:absolute; width:7px; height:7px; border-radius:50%; background:#fff; opacity:0;
+    pointer-events:none; transform:translate(-50%,-50%); box-shadow:0 0 0 3px rgba(255,255,255,.18); }
+  .scrubtip { position:absolute; top:-30px; transform:translateX(-50%); background:rgba(28,28,30,.92);
+    backdrop-filter:blur(10px); border-radius:7px; padding:4px 9px; font-size:11.5px; white-space:nowrap;
+    opacity:0; pointer-events:none; font-variant-numeric:tabular-nums; box-shadow:0 6px 18px rgba(0,0,0,.4); }
+  .scrubtip b { font-weight:600; } .scrubtip span { color:var(--text-3); margin-left:6px; }
+  .sparkwrap:hover .scrubline, .sparkwrap:hover .scrubdot, .sparkwrap:hover .scrubtip { opacity:1; }
+
+  /* topic treemap — draws itself on first paint */
+  .tmap { background:var(--sheet); border-radius:var(--r-card); box-shadow:var(--card-shadow);
+    padding:13px 14px 14px; flex:none; }
+  .tmap .cap { font-size:12px; color:var(--text-3); margin-bottom:9px; }
+  .tmap .grid { display:grid; grid-template-columns:2fr 1.1fr 1fr; grid-template-rows:44px 40px; gap:6px; }
+  .cell { border-radius:7px; display:flex; align-items:flex-end; padding:7px 10px; font-size:12.5px; font-weight:600;
+    opacity:0; transform:scale(.92); animation:settle .55s var(--ease) forwards; }
+  @keyframes settle { to { opacity:1; transform:scale(1); } }
+  .cell.c1 { grid-row:1/3; background:rgba(10,132,255,.26); font-size:14px; }
+  .cell.c2 { background:rgba(10,132,255,.19); }
+  .cell.c3 { background:rgba(10,132,255,.14); }
+  .cell.c4 { background:rgba(10,132,255,.11); }
+  .cell.c5 { background:rgba(10,132,255,.08); color:var(--text-2); }
+
+  /* rows — calm at rest, lift under the cursor. No hover verbs. */
+  .row { display:flex; align-items:center; gap:12px; background:var(--sheet);
+    border-radius:var(--r-card); padding:11px 14px; cursor:default; position:relative; flex:none;
+    transition:transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease), background var(--dur) var(--ease); }
+  .row:hover { transform:translateY(-1px); background:#16161a; box-shadow:0 10px 28px rgba(0,0,0,.6); }
+  .row.sel { background:#17191f; box-shadow:inset 0 0 0 1.5px rgba(10,132,255,.55), var(--card-shadow); }
+  .row.landing { animation:land .6s var(--ease); }
+  @keyframes land {
+    0% { opacity:0; transform:translateY(-16px) scale(.98); }
+    55% { opacity:1; transform:translateY(3px) scale(1.004); }
+    100% { opacity:1; transform:none; }
+  }
+  .row.flash-up { animation:flashUp 1s var(--ease); }
+  .row.flash-dn { animation:flashDn 1s var(--ease); }
+  @keyframes flashUp { 0%{background:rgba(48,209,88,.10);} 100%{background:var(--sheet);} }
+  @keyframes flashDn { 0%{background:rgba(255,69,58,.10);} 100%{background:var(--sheet);} }
+  .glyph { width:34px; height:34px; border-radius:8px; flex:none; display:grid; place-items:center;
+    font-size:13px; font-weight:700; color:#fff; }
+  .face-sm { width:34px; height:34px; border-radius:50%; flex:none; background:linear-gradient(135deg,#7b5cff,#3b2c8f); }
+  .thumb { width:44px; height:34px; border-radius:6px; flex:none;
+    background:linear-gradient(135deg,#2a3f5c,#1a2438);
+    transition:transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease); cursor:grab; }
+  .thumb:hover { transform:scale(1.5); box-shadow:0 10px 30px rgba(0,0,0,.7); }
+  .row .tx { min-width:0; flex:1; }
+  .row .t1 { font-size:15px; line-height:1.35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row .t2 { font-size:12.5px; color:var(--text-3); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row .when { font-size:12px; color:var(--text-3); flex:none; font-variant-numeric:tabular-nums; }
+
+  /* live pulse — only when genuinely live */
+  .livedot { width:7px; height:7px; border-radius:50%; background:var(--destructive); flex:none;
+    animation:breathe-dot 2.2s ease-in-out infinite; }
+  @keyframes breathe-dot { 0%,100%{opacity:.6; box-shadow:0 0 0 0 rgba(255,69,58,.3);} 50%{opacity:1; box-shadow:0 0 0 4px rgba(255,69,58,.12);} }
+
+  /* price row — digits tick like an instrument */
+  .price { font-size:14px; font-weight:600; font-variant-numeric:tabular-nums; flex:none; display:flex; }
+  .price .d { display:inline-block; }
+  .price .d.roll { animation:roll .35s var(--ease); }
+  @keyframes roll { from { transform:translateY(55%); opacity:0; } to { transform:none; opacity:1; } }
+  .chg { font-size:12px; font-weight:600; flex:none; font-variant-numeric:tabular-nums; width:52px; text-align:right; }
+  .chg.up { color:var(--confirm); } .chg.dn { color:var(--destructive); }
+
+  /* person popover — hover a face, meet the person */
+  .facewrap { position:relative; flex:none; }
+  .pop { position:absolute; left:0; top:42px; width:238px; z-index:6;
+    background:rgba(24,24,28,.92); backdrop-filter:blur(24px) saturate(1.4);
+    border-radius:12px; padding:13px 14px; box-shadow:0 18px 50px rgba(0,0,0,.65);
+    opacity:0; transform:translateY(-4px) scale(.98); pointer-events:none;
+    transition:opacity var(--dur) var(--ease) .18s, transform var(--dur) var(--ease) .18s; }
+  .facewrap:hover .pop { opacity:1; transform:none; }
+  .pop .p-head { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .pop .face-lg { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#7b5cff,#3b2c8f); }
+  .pop .nm { font-size:13.5px; font-weight:600; } .pop .hd { font-size:11.5px; color:var(--text-3); }
+  .pop .bio { font-size:12px; line-height:1.45; color:var(--text-2); }
+
+  /* the agent bar — orb breathes, thinks, settles */
+  .askbar { position:absolute; left:50%; bottom:18px; transform:translateX(-50%);
+    width:420px; max-width:calc(100% - 44px); display:flex; align-items:center; gap:10px;
+    background:rgba(28,28,30,.62); backdrop-filter:blur(24px) saturate(1.5);
+    border-radius:999px; padding:10px 16px; z-index:2; cursor:default;
+    box-shadow:0 12px 36px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.08); }
+  .orb { width:22px; height:22px; border-radius:50%; flex:none;
+    background:conic-gradient(from 210deg,#0A84FF,#5e5ce6,#30d158,#0A84FF);
+    animation:breathe 5s ease-in-out infinite; }
+  @keyframes breathe { 0%,100%{filter:saturate(1); transform:scale(1) rotate(0);} 50%{filter:saturate(1.35); transform:scale(1.06) rotate(12deg);} }
+  .orb.think { animation:think .7s linear infinite; }
+  @keyframes think { from{transform:rotate(0) scale(1.05); filter:saturate(1.5);} to{transform:rotate(360deg) scale(1.05); filter:saturate(1.5);} }
+  .orb.settle { animation:settleflash .6s var(--ease); }
+  @keyframes settleflash { 0%{transform:scale(1.4); filter:saturate(2) brightness(1.4);} 100%{transform:scale(1); filter:none;} }
+  .askbar .ph { font-size:14px; color:var(--text-3); flex:1; }
+  .kbd { font-size:11.5px; color:var(--text-2); background:rgba(255,255,255,.08); padding:3px 7px; border-radius:5px; }
+  .feed::after { content:""; position:absolute; left:0; right:0; bottom:0; height:110px;
+    background:linear-gradient(transparent, var(--page) 70%); pointer-events:none; }
+
+  /* berry rain — dealt on refresh, render-server style */
+  .berry { position:absolute; top:-12px; border-radius:50%; pointer-events:none; z-index:3;
+    animation:fall 1.15s cubic-bezier(.45,.05,.6,1) forwards; }
+  @keyframes fall { 0%{transform:translateY(0); opacity:0;} 12%{opacity:1;} 82%{opacity:.9;} 100%{transform:translateY(560px); opacity:0;} }
+
+  /* kept toast */
+  .toast { position:absolute; left:50%; bottom:72px; transform:translateX(-50%) translateY(8px);
+    background:rgba(28,28,30,.85); backdrop-filter:blur(16px); border-radius:999px; padding:7px 15px;
+    font-size:12.5px; color:var(--text-1); opacity:0; z-index:4; pointer-events:none;
+    transition:opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+    box-shadow:0 10px 30px rgba(0,0,0,.5); }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  .toast b { color:var(--confirm); font-weight:600; }
+
+  /* ── inspector ───────────────────────────────────────────────── */
+  .inspector { background:var(--well); padding:18px 18px 16px; overflow:hidden;
+    display:flex; flex-direction:column; gap:12px; }
+  .insp-head { display:flex; align-items:center; gap:8px; }
+  .insp-head .src-chip { display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--text-2); }
+  .insp-head .src-chip .tile { width:18px; height:18px; border-radius:5px; font-size:9px;
+    display:grid; place-items:center; font-weight:700; color:#fff; }
+  .insp-head .close { margin-left:auto; font-size:12px; color:var(--text-3); }
+  .post { background:var(--sheet); border-radius:var(--r-sheet); box-shadow:var(--card-shadow);
+    padding:16px; display:flex; flex-direction:column; gap:12px; }
+  .who { display:flex; align-items:center; gap:10px; }
+  .who .nm { font-size:14.5px; font-weight:600; } .who .hd { font-size:12.5px; color:var(--text-3); }
+  .who .ch { margin-left:auto; font-size:12px; color:var(--tint); background:rgba(10,132,255,.12);
+    padding:3px 9px; border-radius:999px; }
+  .face { width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,#7b5cff,#3b2c8f); }
+  .post .body { font-size:16px; line-height:1.5; }
+  .quote { background:var(--well); border-radius:var(--r-card); padding:11px 13px;
+    display:flex; flex-direction:column; gap:6px; }
+  .quote .q-who { display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--text-2); }
+  .quote .q-face { width:18px; height:18px; border-radius:50%; background:linear-gradient(135deg,#ff8b5c,#8f3b2c); }
+  .quote .q-tx { font-size:13.5px; line-height:1.45; color:var(--text-2); }
+  .post .meta { font-size:12.5px; color:var(--text-3); display:flex; gap:14px; font-variant-numeric:tabular-nums; }
+  .insp-verbs { display:flex; gap:8px; }
+  .insp-verbs .verb { font-size:13px; padding:8px 14px; border-radius:999px; font-weight:600;
+    background:rgba(255,255,255,.08); transition:background var(--dur) var(--ease); }
+  .insp-verbs .verb:hover { background:rgba(255,255,255,.16); }
+  .insp-verbs .verb.k { background:var(--tint); }
+  .shelf-label { font-size:13px; color:var(--text-3); padding:4px 2px 0; }
+  .rel { display:flex; align-items:center; gap:10px; background:var(--sheet); border-radius:var(--r-card);
+    padding:9px 12px; transition:transform var(--dur) var(--ease), background var(--dur) var(--ease); }
+  .rel:hover { transform:translateY(-1px); background:#16161a; }
+  .rel .glyph { width:28px; height:28px; border-radius:7px; font-size:11px; }
+  .rel .t1 { font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .rel .t2 { font-size:11.5px; color:var(--text-3); }
+  .peek-hint { margin-top:auto; font-size:12px; color:var(--text-3); display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+
+  /* ── try-it strip ────────────────────────────────────────────── */
+  .notes { width:1240px; max-width:100%; display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:26px; }
+  .note { font-size:12.5px; line-height:1.5; color:rgba(235,235,245,.66); }
+  .note b { color:#fff; display:block; font-size:13px; margin-bottom:3px; font-weight:600; }
+</style>
+</head>
+<body>
+
+<div class="window" id="window">
+
+  <aside class="sidebar">
+    <div class="lights"><div class="light r"></div><div class="light y"></div><div class="light g"></div></div>
+    <div class="side-label">Sources</div>
+    <div class="src on"><div class="tile" style="background:#0A84FF">A</div>All<span class="ring"></span></div>
+    <div class="src"><div class="tile" style="background:#5e5ce6">P</div>Photos<span class="ring lit"></span></div>
+    <div class="src"><div class="tile" style="background:#2b2b30">W</div>Wallet<span class="ring" id="ring-w"></span></div>
+    <div class="src"><div class="tile" style="background:#7b5cff">F</div>Farcaster<span class="ring lit" id="ring-f"></span></div>
+    <div class="src"><div class="tile" style="background:#1185fe">B</div>Bluesky<span class="ring"></span></div>
+    <div class="src"><div class="tile" style="background:#f26522">R</div>RSS<span class="ring" id="ring-r"></span></div>
+    <div class="src"><div class="tile" style="background:#24292f">G</div>GitHub<span class="ring"></span></div>
+    <div class="src"><div class="tile" style="background:#d64541">C</div>Calendar<span class="ring"></span></div>
+    <div class="src"><div class="tile" style="background:#ffb02e;color:#1a1a1a">H</div>Hugging Face<span class="ring"></span></div>
+    <div class="side-foot" id="refresh" title="Click me — refresh"><div class="avatar" id="avatar"></div><span>Alexander</span></div>
+  </aside>
+
+  <main class="feed" id="feed">
+    <div class="feed-head"><h1>Today</h1><span class="meta">Sunday, August 3</span></div>
+    <div class="feed-scroll" id="scroll">
+
+      <div class="wallet">
+        <div>
+          <div class="cap">Wallets</div>
+          <div class="sum">$24,318</div>
+          <div class="whisper">Mostly ETH · combined across 3 wallets</div>
+        </div>
+        <div class="sparkwrap" id="sparkwrap">
+          <svg class="spark" id="spark" width="150" height="52" viewBox="0 0 150 52">
+            <defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="rgba(48,209,88,.22)"/><stop offset="1" stop-color="rgba(48,209,88,0)"/>
+            </linearGradient></defs>
+            <path class="fill" id="sparkfill"/>
+            <path id="sparkline"/>
+            <circle class="dot" id="sparkdot" r="3"/>
+          </svg>
+          <div class="scrubline" id="scrubline"></div>
+          <div class="scrubdot" id="scrubdot"></div>
+          <div class="scrubtip" id="scrubtip"><b>$24,318</b><span>now</span></div>
+        </div>
+        <div class="delta">+1.8% today</div>
+      </div>
+
+      <div class="tmap">
+        <div class="cap">Photos · what your screenshots say</div>
+        <div class="grid">
+          <div class="cell c1" style="animation-delay:.1s">design</div>
+          <div class="cell c2" style="animation-delay:.22s">flights</div>
+          <div class="cell c3" style="animation-delay:.34s">receipts</div>
+          <div class="cell c4" style="animation-delay:.46s">recipes</div>
+          <div class="cell c5" style="animation-delay:.58s">figma.com</div>
+        </div>
+      </div>
+
+      <div class="row sel">
+        <div class="facewrap">
+          <div class="face-sm"></div>
+          <div class="pop">
+            <div class="p-head"><div class="face-lg"></div>
+              <div><div class="nm">Maya Chen</div><div class="hd">@mayachen · Farcaster</div></div></div>
+            <div class="bio">Posts in /design · you’ve kept 3 things from her, last in June</div>
+          </div>
+        </div>
+        <div class="tx">
+          <div class="t1">Shipping the new grid system today — every card finally sits on the same rhythm</div>
+          <div class="t2">/design · quoting @linear</div>
+        </div>
+        <div class="when">9:41 AM</div>
+      </div>
+
+      <div class="row">
+        <div class="glyph" style="background:#9146ff">T</div>
+        <div class="tx">
+          <div class="t1">emilyships is live — design review, week 31</div>
+          <div class="t2">Twitch · started 24 min ago</div>
+        </div>
+        <div class="livedot"></div>
+      </div>
+
+      <div class="row">
+        <div class="glyph" style="background:#2b2b30">S</div>
+        <div class="tx">
+          <div class="t1">SOL</div>
+          <div class="t2">Watching · Solana</div>
+        </div>
+        <div class="price" id="solprice"></div>
+        <div class="chg up" id="solchg">+2.1%</div>
+      </div>
+
+      <div class="row">
+        <div class="thumb" draggable="true" id="dragthumb" title="Drag me anywhere"></div>
+        <div class="tx">
+          <div class="t1">Flight confirmation — SFO → JFK, Nov 12</div>
+          <div class="t2">Screenshot · has a date</div>
+        </div>
+        <div class="when">9:12 AM</div>
+      </div>
+
+      <div class="row">
+        <div class="glyph" style="background:#24292f">G</div>
+        <div class="tx">
+          <div class="t1">casberi #142 merged — treemap settles on first paint</div>
+          <div class="t2">GitHub · alexanderchopan</div>
+        </div>
+        <div class="when">8:40 AM</div>
+      </div>
+
+      <div class="row">
+        <div class="glyph" style="background:#f26522">R</div>
+        <div class="tx">
+          <div class="t1">The display tech Apple has been quietly buying for three years</div>
+          <div class="t2">The Verge · 6 min read</div>
+        </div>
+        <div class="when">7:58 AM</div>
+      </div>
+
+      <div class="day">Yesterday</div>
+
+      <div class="row">
+        <div class="glyph" style="background:#2b2b30">W</div>
+        <div class="tx">
+          <div class="t1">Bought 25 USDC with Venmo on Peer</div>
+          <div class="t2">Wallet · Base</div>
+        </div>
+        <div class="when">9:04 PM</div>
+      </div>
+
+      <div class="row">
+        <div class="glyph" style="background:#1185fe">B</div>
+        <div class="tx">
+          <div class="t1">New follower — @maria.dev started following you</div>
+          <div class="t2">Bluesky</div>
+        </div>
+        <div class="when">6:31 PM</div>
+      </div>
+
+    </div>
+
+    <div class="askbar" id="askbar" title="Click me — the orb thinks">
+      <div class="orb" id="orb"></div>
+      <div class="ph" id="askph">Ask or find anything…</div>
+      <span class="kbd">⌘K</span>
+    </div>
+    <div class="toast" id="toast"><b>Kept</b> · apple.com/newsroom</div>
+  </main>
+
+  <aside class="inspector">
+    <div class="insp-head">
+      <div class="src-chip"><div class="tile" style="background:#7b5cff">F</div>Farcaster · /design</div>
+      <div class="close">esc to close</div>
+    </div>
+    <div class="post">
+      <div class="who">
+        <div class="facewrap">
+          <div class="face"></div>
+          <div class="pop">
+            <div class="p-head"><div class="face-lg"></div>
+              <div><div class="nm">Maya Chen</div><div class="hd">@mayachen · Farcaster</div></div></div>
+            <div class="bio">Posts in /design · you’ve kept 3 things from her, last in June</div>
+          </div>
+        </div>
+        <div><div class="nm">Maya Chen</div><div class="hd">@mayachen</div></div>
+        <div class="ch">/design</div>
+      </div>
+      <div class="body">Shipping the new grid system today — every card finally sits on the same rhythm. Two years of drift, undone in one pass.</div>
+      <div class="quote">
+        <div class="q-who"><div class="q-face"></div>@linear</div>
+        <div class="q-tx">Consistency isn’t a component library. It’s a spacing scale everyone actually uses.</div>
+      </div>
+      <div class="meta"><span>128 likes</span><span>31 recasts</span><span>14 replies</span><span>9:41 AM</span></div>
+    </div>
+    <div class="insp-verbs">
+      <div class="verb">Open</div><div class="verb">Replies</div><div class="verb k">Keep</div>
+    </div>
+    <div class="shelf-label">Related on this Mac</div>
+    <div class="rel">
+      <div class="glyph" style="background:#f26522">R</div>
+      <div class="tx"><div class="t1">Why every design system dies at the spacing scale</div><div class="t2">Saved 3 weeks ago</div></div>
+    </div>
+    <div class="rel">
+      <div class="glyph" style="background:#5e5ce6">P</div>
+      <div class="tx"><div class="t1">Grid rhythm sketch — whiteboard</div><div class="t2">Screenshot · May 14</div></div>
+    </div>
+    <div class="peek-hint"><span class="kbd">space</span> peek · <span class="kbd">j</span><span class="kbd">k</span> move · <span class="kbd">r</span> refresh</div>
+  </aside>
+
+</div>
+
+<div class="notes">
+  <div class="note"><b>Things arrive</b> Wait ~6s — new rows land with a settle and the source’s sidebar ring blooms. Sync is watchable, never counted.</div>
+  <div class="note"><b>Cursor as instrument</b> Scrub the wallet sparkline for a readout. Hover Maya’s face for the person card. Hover the screenshot thumb — it blooms.</div>
+  <div class="note"><b>Moments</b> Drag the screenshot thumb (or any file) over the window — the edge glows; drop it and it’s kept. Click the avatar (or press r): refresh rain + door spin. Click the ask bar: the orb thinks, then settles.</div>
+  <div class="note"><b>Live, honestly</b> The SOL price ticks with real digit rolls and a low-opacity direction flash. The Twitch dot breathes only while the stream is live. The treemap drew itself once, on first paint.</div>
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+
+  /* ── sparkline: real points, scrubbable ── */
+  const pts = [];
+  (function(){
+    let v = 22600;
+    for (let i=0;i<30;i++){ v += (Math.sin(i*0.7)*140) + (i%5===0?-160:95); pts.push(Math.round(v)); }
+  })();
+  const W=150, H=52, PAD=4;
+  const min=Math.min(...pts), max=Math.max(...pts);
+  const X=i=>2+(i/(pts.length-1))*(W-4), Y=v=>H-PAD-((v-min)/(max-min))*(H-PAD*2-6);
+  let d='M'+X(0)+','+Y(pts[0]);
+  for(let i=1;i<pts.length;i++) d+=' L'+X(i)+','+Y(pts[i]);
+  $('sparkline').setAttribute('d',d);
+  $('sparkfill').setAttribute('d',d+' L'+X(pts.length-1)+','+H+' L'+X(0)+','+H+' Z');
+  $('sparkdot').setAttribute('cx',X(pts.length-1)); $('sparkdot').setAttribute('cy',Y(pts[pts.length-1]));
+
+  const wrap=$('sparkwrap');
+  wrap.addEventListener('mousemove', e=>{
+    const r=wrap.getBoundingClientRect();
+    const x=Math.max(2,Math.min(W-2,e.clientX-r.left));
+    const i=Math.round(((x-2)/(W-4))*(pts.length-1));
+    const days=pts.length-1-i;
+    $('scrubline').style.left=X(i)+'px';
+    $('scrubdot').style.left=X(i)+'px'; $('scrubdot').style.top=Y(pts[i])+'px';
+    const tip=$('scrubtip');
+    tip.style.left=Math.max(34,Math.min(W-34,X(i)))+'px';
+    tip.innerHTML='<b>$'+pts[i].toLocaleString()+'</b><span>'+(days===0?'now':days+'d ago')+'</span>';
+  });
+
+  /* ── price ticks: digit rolls + direction flash ── */
+  let sol=158.42;
+  const priceEl=$('solprice'), chgEl=$('solchg'), solRow=priceEl.closest('.row');
+  function renderPrice(str, changed){
+    priceEl.innerHTML='';
+    for(let i=0;i<str.length;i++){
+      const s=document.createElement('span');
+      s.className='d'+(changed.has(i)?' roll':''); s.textContent=str[i];
+      priceEl.appendChild(s);
+    }
+  }
+  renderPrice('$'+sol.toFixed(2), new Set());
+  setInterval(()=>{
+    const delta=(Math.random()-0.46)*0.9;
+    const old='$'+sol.toFixed(2);
+    sol=Math.max(1,sol+delta);
+    const now='$'+sol.toFixed(2);
+    const changed=new Set();
+    for(let i=0;i<now.length;i++) if(now[i]!==old[i]) changed.add(i);
+    renderPrice(now,changed);
+    const up=delta>=0;
+    chgEl.textContent=(up?'+':'−')+Math.abs(delta/sol*100+2.1).toFixed(1)+'%';
+    chgEl.className='chg '+(up?'up':'dn');
+    solRow.classList.remove('flash-up','flash-dn'); void solRow.offsetWidth;
+    solRow.classList.add(up?'flash-up':'flash-dn');
+  }, 3400);
+
+  /* ── arrivals: rows land, rings bloom ── */
+  const queue=[
+    {glyph:'F', bg:'#7b5cff', t1:'@maya replied to you — “the rhythm holds on mobile too”', t2:'Farcaster · Mentions you', ring:'ring-f'},
+    {glyph:'R', bg:'#f26522', t1:'Stratechery — Aggregation and the personal corpus', t2:'RSS · 9 min read', ring:'ring-r'},
+    {glyph:'W', bg:'#2b2b30', t1:'Privacy Pools — your deposit cleared, ready to withdraw', t2:'Wallet · Ethereum', ring:'ring-w'},
+  ];
+  const scroll=$('scroll');
+  const anchor=scroll.querySelector('.row.sel');
+  function land(item){
+    const row=document.createElement('div');
+    row.className='row landing';
+    row.innerHTML='<div class="glyph" style="background:'+item.bg+'">'+item.glyph+'</div>'+
+      '<div class="tx"><div class="t1">'+item.t1+'</div><div class="t2">'+item.t2+'</div></div>'+
+      '<div class="when">now</div>';
+    scroll.insertBefore(row, anchor);
+    const ring=$(item.ring);
+    if(ring){ ring.classList.add('lit'); ring.classList.remove('bloom'); void ring.offsetWidth; ring.classList.add('bloom'); }
+  }
+  queue.forEach((item,i)=> setTimeout(()=>land(item), 6000+i*7000));
+
+  /* ── refresh: berry rain + door spin ── */
+  const feed=$('feed');
+  function rain(){
+    const av=$('avatar');
+    av.classList.remove('spin'); void av.offsetWidth; av.classList.add('spin');
+    const w=feed.clientWidth;
+    for(let i=0;i<26;i++){
+      const b=document.createElement('div');
+      b.className='berry';
+      const s=4+Math.random()*6;
+      b.style.width=b.style.height=s+'px';
+      b.style.left=(8+Math.random()*(w-16))+'px';
+      b.style.background='rgba(10,132,255,'+(0.35+Math.random()*0.5)+')';
+      b.style.animationDelay=(Math.random()*0.4)+'s';
+      feed.appendChild(b);
+      setTimeout(()=>b.remove(),1800);
+    }
+  }
+  $('refresh').addEventListener('click', rain);
+  document.addEventListener('keydown', e=>{ if(e.key==='r' && !e.metaKey) rain(); });
+
+  /* ── orb: idle breathe → think → settle ── */
+  const orb=$('orb'), ph=$('askph');
+  $('askbar').addEventListener('click', ()=>{
+    if(orb.classList.contains('think')) return;
+    orb.classList.add('think'); ph.textContent='Thinking on this Mac…';
+    setTimeout(()=>{
+      orb.classList.remove('think'); orb.classList.add('settle');
+      ph.textContent='Ask or find anything…';
+      setTimeout(()=>orb.classList.remove('settle'),700);
+    },2200);
+  });
+
+  /* ── drop capture: edge glow, then the thing falls in ── */
+  const win=$('window');
+  let dragDepth=0;
+  ['dragenter'].forEach(ev=>win.addEventListener(ev,e=>{ e.preventDefault(); dragDepth++; win.classList.add('dropping'); }));
+  win.addEventListener('dragover', e=>e.preventDefault());
+  win.addEventListener('dragleave', e=>{ dragDepth=Math.max(0,dragDepth-1); if(!dragDepth) win.classList.remove('dropping'); });
+  win.addEventListener('drop', e=>{
+    e.preventDefault(); dragDepth=0; win.classList.remove('dropping');
+    land({glyph:'L', bg:'#0A84FF', t1:'Apple unveils the M5 MacBook Pro — newsroom', t2:'Link · dropped just now', ring:null});
+    const toast=$('toast');
+    toast.classList.add('show');
+    setTimeout(()=>toast.classList.remove('show'),2200);
+  });
+  $('dragthumb').addEventListener('dragstart', e=>{ e.dataTransfer.setData('text/plain','screenshot'); });
+})();
+</script>
+
+</body>
+</html>

@@ -64,6 +64,10 @@ struct RootShell: View {
     /// Never set directly by a door: they all go through `openSources()`, so
     /// the tray's own feel can't depend on which one you reached it by.
     @State private var sourcesOpen = false
+    /// A drag is over the window and a drop would land (one flag per payload
+    /// type `dropDestination` accepts) — drives `DropGlow`'s edge answer.
+    @State private var dropTargetedURL = false
+    @State private var dropTargetedText = false
     @Environment(\.scenePhase) private var scenePhase
     @State private var hasBeenActive = false
     /// Debounce for `handleActivation`'s two Mac launch-time doors — see its
@@ -1189,11 +1193,18 @@ struct RootShell: View {
                         saveDropped(url.absoluteString)
                     }
                     return true
-                }
+                } isTargeted: { dropTargetedURL = $0 }
                 .dropDestination(for: String.self) { strings, _ in
                     guard let text = strings.first else { return false }
                     saveDropped(text)
                     return true
+                } isTargeted: { dropTargetedText = $0 }
+                // The window answers the drag (Mac delight, 2026-08-03): a
+                // soft tint glow at the edges while a drop would land — the
+                // drop target saying so BEFORE release, where the old flow's
+                // first feedback was the toast after. See `DropGlow`.
+                .overlay {
+                    DropGlow(active: dropTargetedURL || dropTargetedText)
                 }
 
             if let toast = chrome.toast { toastView(toast) }

@@ -162,6 +162,16 @@ struct TokenChartPlot: View {
     /// (prd §171). 0 lands them immediately — the default everywhere that
     /// draws no line of its own.
     var markDelay: Double = 0
+    /// Mac hover-scrub (delight, 2026-08-03): the cursor interrogating the
+    /// line. Given a handler, a Catalyst pointer resting on the plot reports
+    /// the sample index under it (nil on exit) and `cursorIndex` draws the
+    /// scrub cursor at the caller's chosen index — the caller owns the state
+    /// so it can also roll its own headline number to the hovered sample
+    /// (see `WalletBalanceHeadline`). Both inert everywhere off Mac: the
+    /// hover catcher only compiles on Catalyst, so a touch build draws no
+    /// cursor and pays nothing.
+    var cursorIndex: Int? = nil
+    var onScrub: ((Int?) -> Void)? = nil
     @State private var pulsing = false
     @State private var marksLanded = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -227,6 +237,45 @@ struct TokenChartPlot: View {
                         .frame(width: 7, height: 7)
                         .position(x: plot.minX + x, y: plot.minY + y)
                 }
+                // The scrub cursor + hover catcher (Mac, 2026-08-03) — drawn
+                // BEFORE the marks so a mark's tap target stays on top and
+                // clickable. Same cursor grammar as the sheet's touch scrub
+                // (`TokenChartView.overlayContent`): a quiet vertical line,
+                // the accent dot riding the curve.
+                if let i = cursorIndex, !chart.coarse,
+                   i >= 0, i < chart.closes.count,
+                   let plotAnchor = proxy.plotFrame,
+                   let x = proxy.position(forX: Double(i)),
+                   let y = proxy.position(forY: chart.closes[i]) {
+                    let plot = geo[plotAnchor]
+                    Capsule(style: .continuous)
+                        .fill(DS.textTertiary.opacity(0.5))
+                        .frame(width: 2, height: max(plot.height - 8, 0))
+                        .position(x: plot.minX + x, y: plot.midY)
+                    Circle()
+                        .fill(accent)
+                        .frame(width: 9, height: 9)
+                        .position(x: plot.minX + x, y: plot.minY + y)
+                }
+                #if targetEnvironment(macCatalyst)
+                if let onScrub, !chart.coarse, chart.closes.count > 1,
+                   let plotAnchor = proxy.plotFrame {
+                    let plot = geo[plotAnchor]
+                    Rectangle()
+                        .fill(.clear)
+                        .contentShape(Rectangle())
+                        .frame(width: plot.width, height: plot.height)
+                        // BEFORE `.position`, deliberately: the hover's
+                        // `.local` space is then the rectangle's own bounds
+                        // (0…width), not the overlay's — the touch gesture
+                        // below attaches after `.position` and has to
+                        // subtract `plot.minX` for exactly this reason.
+                        .modifier(ChartHoverScrub(count: chart.closes.count,
+                                                  width: plot.width,
+                                                  onScrub: onScrub))
+                        .position(x: plot.midX, y: plot.midY)
+                }
+                #endif
                 if !marks.isEmpty, let plotAnchor = proxy.plotFrame {
                     markLayer(proxy: proxy, plot: geo[plotAnchor])
                         .onAppear {
@@ -634,6 +683,19 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
                     .fill(.clear)
                     .contentShape(Rectangle())
                     .frame(width: plot.width, height: plot.height)
+                    // Mac hover-scrub (delight, 2026-08-03): a cursor is not
+                    // a finger — press-then-drag is touch grammar (the press
+                    // disambiguates from scroll, which a hover never needs),
+                    // so on Catalyst simply RESTING on the line scrubs it.
+                    // The touch gesture below stays too: a trackpad drag
+                    // still works, and the two write the same state. No
+                    // haptic — hover is continuous, and a tick per sample
+                    // would buzz the whole traverse. Attached BEFORE
+                    // `.position` so the hover's `.local` space is the
+                    // rectangle's own 0…width (the gesture below attaches
+                    // after and subtracts `plot.minX` instead).
+                    .modifier(ChartHoverScrub(count: closes.count,
+                                              width: plot.width) { scrubIndex = $0 })
                     .position(x: plot.midX, y: plot.midY)
                     .gesture(
                         LongPressGesture(minimumDuration: 0.15)
@@ -726,5 +788,32 @@ extension TokenChartView {
         self.init(memoryKey: "token.range.\(chain).\(address)",
                   fetch: { await TokenChart.fetch(chain: chain, address: address, range: $0) },
                   since: since, hero: hero, fallback: fallback)
+    }
+}
+
+/// Mac hover-scrub (delight, 2026-08-03) — the shared catcher both charts
+/// use: the sheet's scrub rectangle and `TokenChartPlot`'s own. A cursor
+/// resting on the plot maps to the sample under it; leaving reports nil.
+/// Compiles to a no-op off Catalyst, so touch builds carry no hover plumbing.
+struct ChartHoverScrub: ViewModifier {
+    let count: Int
+    let width: CGFloat
+    let onScrub: (Int?) -> Void
+
+    func body(content: Content) -> some View {
+        #if targetEnvironment(macCatalyst)
+        content.onContinuousHover { phase in
+            switch phase {
+            case .active(let p):
+                guard count > 1 else { return }
+                let i = Int((p.x / max(width, 1) * CGFloat(count - 1)).rounded())
+                onScrub(min(max(i, 0), count - 1))
+            case .ended:
+                onScrub(nil)
+            }
+        }
+        #else
+        content
+        #endif
     }
 }

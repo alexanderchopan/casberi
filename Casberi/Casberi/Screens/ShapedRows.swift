@@ -353,6 +353,8 @@ struct BandRow: View {
                     .frame(width: 104, height: 58)
                     .clipShape(RoundedRectangle(cornerRadius: DS.Radius.control,
                                                 style: .continuous))
+                    // The picture notices the cursor (Mac delight, 2026-08-03).
+                    .macHoverBloom()
                 Spacer(minLength: 0)
             } else {
             Text(titleText)
@@ -1643,6 +1645,11 @@ struct PhotoCell: View {
                         .padding(DS.Space.s2)
                 }
             }
+            // The picture notices the cursor (Mac delight, 2026-08-03) —
+            // LAST in the chain so the caption scrim and day pill bloom with
+            // the tile instead of floating still over a scaled picture; the
+            // bloomed tile rises over its grid neighbours (`zIndex` inside).
+            .macHoverBloom()
     }
 }
 

@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Casberi Mac — three-pane + hover, v1</title>
+<style>
+  /* ── tokens (ported from DesignTokens.swift) ─────────────────── */
+  :root {
+    --page: #000000;
+    --sheet: #111113;
+    --well: #080809;
+    --bg100: #1c1c1e;
+    --text-1: #ffffff;
+    --text-2: rgba(235,235,245,.60);
+    --text-3: rgba(235,235,245,.49);
+    --fill-faint: rgba(255,255,255,.04);
+    --fill-strong: rgba(255,255,255,.16);
+    --tint: #0A84FF;
+    --confirm: #30d158;
+    --attention: #ff9f0a;
+    --r-card: 10px;
+    --r-sheet: 16px;
+    --r-control: 12px;
+    --ease: cubic-bezier(.32,.72,0,1);
+    --dur: 250ms;
+    --card-shadow: 0 8px 24px rgba(0,0,0,.55);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { background:#0b0d12; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    color: var(--text-1);
+    -webkit-font-smoothing: antialiased;
+    display:flex; flex-direction:column; align-items:center;
+    padding: 48px 24px 64px;
+    /* a desktop behind the window so the sidebar material reads */
+    background:
+      radial-gradient(1200px 700px at 20% -10%, #1b2a4a 0%, transparent 60%),
+      radial-gradient(1000px 600px at 95% 110%, #3a1b3f 0%, transparent 55%),
+      #0b0d12;
+    min-height:100vh;
+  }
+
+  /* ── the Mac window ─────────────────────────────────────────── */
+  .window {
+    width: 1240px; max-width: 100%;
+    height: 780px;
+    border-radius: 12px;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 224px 1fr 380px;
+    background: var(--page);
+    box-shadow: 0 32px 80px rgba(0,0,0,.6), 0 2px 8px rgba(0,0,0,.4);
+  }
+
+  /* ── sidebar: sources as a real sidebar, translucent material ── */
+  .sidebar {
+    background: rgba(24,24,28,.62);
+    backdrop-filter: blur(28px) saturate(1.4);
+    -webkit-backdrop-filter: blur(28px) saturate(1.4);
+    padding: 14px 10px 12px;
+    display:flex; flex-direction:column;
+  }
+  .lights { display:flex; gap:8px; padding: 4px 6px 18px; }
+  .light { width:12px; height:12px; border-radius:50%; }
+  .light.r { background:#ff5f57; } .light.y { background:#febc2e; } .light.g { background:#28c840; }
+
+  .side-label { font-size:12px; color:var(--text-3); padding: 2px 10px 8px; }
+  .src {
+    display:flex; align-items:center; gap:9px;
+    padding: 6px 10px;
+    border-radius: 7px;
+    font-size: 13px;
+    color: var(--text-2);
+    cursor: default;
+    transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+    position: relative;
+  }
+  .src:hover { background: rgba(255,255,255,.06); color: var(--text-1); }
+  .src.on { background: rgba(255,255,255,.10); color: var(--text-1); }
+  .src .tile {
+    width:20px; height:20px; border-radius:5px;
+    display:grid; place-items:center;
+    font-size:10px; font-weight:700; color:#fff;
+    flex:none;
+  }
+  .src .n {
+    margin-left:auto; font-size:11px; color:var(--text-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .src .ring {
+    margin-left:auto; width:7px; height:7px; border-radius:50%;
+    background: var(--tint);
+    box-shadow: 0 0 0 3px rgba(10,132,255,.22);
+  }
+  .side-foot { margin-top:auto; padding: 10px 10px 2px; display:flex; align-items:center; gap:9px; }
+  .avatar {
+    width:26px; height:26px; border-radius:50%;
+    background: conic-gradient(from 210deg, #0A84FF, #5e5ce6, #0A84FF);
+  }
+  .side-foot span { font-size:12.5px; color:var(--text-2); }
+
+  /* ── center: the feed, at a reading measure ─────────────────── */
+  .feed {
+    background: var(--page);
+    overflow: hidden;
+    position: relative;
+    padding: 16px 22px 0;
+    display:flex; flex-direction:column;
+  }
+  .feed-head { display:flex; align-items:baseline; gap:10px; padding: 6px 4px 14px; }
+  .feed-head h1 { font-family: "SF Pro Rounded", -apple-system, sans-serif; font-size:22px; font-weight:700; }
+  .feed-head .meta { font-size:13px; color:var(--text-3); }
+  .feed-scroll { overflow:hidden; display:flex; flex-direction:column; gap:8px; padding-bottom:96px; }
+
+  .day { font-size:13px; color:var(--text-3); padding: 14px 4px 4px; }
+
+  /* wallet card — ambient motion at rest */
+  .wallet {
+    background: var(--sheet);
+    border-radius: var(--r-card);
+    box-shadow: var(--card-shadow);
+    padding: 14px 16px 12px;
+    display:grid; grid-template-columns: 1fr auto; gap: 4px 12px;
+  }
+  .wallet .cap { font-size:12px; color:var(--text-3); }
+  .wallet .sum { font-family:"SF Pro Rounded",-apple-system,sans-serif; font-size:26px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .wallet .whisper { font-size:12.5px; color:var(--text-2); }
+  .wallet .delta { align-self:end; font-size:13px; font-weight:600; color:var(--confirm); font-variant-numeric:tabular-nums; }
+  .spark { grid-column: 2; grid-row: 1 / 3; align-self:center; }
+  .spark path { fill:none; stroke:var(--confirm); stroke-width:1.6; stroke-linecap:round; }
+  .spark .fill { fill:url(#sg); stroke:none; }
+  .spark .dot { fill:var(--confirm); }
+  .spark .dot { animation: tick 2.4s var(--ease) infinite; transform-origin: center; transform-box: fill-box; }
+  @keyframes tick { 0%,100% { opacity:.55; transform:scale(1);} 50% { opacity:1; transform:scale(1.5);} }
+
+  /* rows — calm at rest, alive under the cursor */
+  .row {
+    display:flex; align-items:center; gap:12px;
+    background: var(--sheet);
+    border-radius: var(--r-card);
+    padding: 11px 14px;
+    cursor: default;
+    transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease), background var(--dur) var(--ease);
+    position: relative;
+  }
+  .row:hover {
+    transform: translateY(-1px);
+    background: #16161a;
+    box-shadow: 0 10px 28px rgba(0,0,0,.6);
+  }
+  .row.sel {
+    background: #17191f;
+    box-shadow: inset 0 0 0 1.5px rgba(10,132,255,.55), var(--card-shadow);
+  }
+  .glyph {
+    width:34px; height:34px; border-radius:8px; flex:none;
+    display:grid; place-items:center; font-size:13px; font-weight:700; color:#fff;
+  }
+  .thumb { width:44px; height:34px; border-radius:6px; flex:none; object-fit:cover;
+    background:linear-gradient(135deg,#2a3f5c,#1a2438); }
+  .row .tx { min-width:0; flex:1; }
+  .row .t1 { font-size:15px; line-height:1.35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row .t2 { font-size:12.5px; color:var(--text-3); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row .when { font-size:12px; color:var(--text-3); flex:none; font-variant-numeric:tabular-nums; transition: opacity var(--dur) var(--ease); }
+
+  /* verbs materialize on hover — the timestamp steps aside */
+  .verbs {
+    position:absolute; right:12px; top:50%; transform: translateY(-50%) translateX(6px);
+    display:flex; gap:6px; opacity:0; pointer-events:none;
+    transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+  }
+  .row:hover .verbs { opacity:1; transform: translateY(-50%) translateX(0); pointer-events:auto; }
+  .row:hover .when { opacity:0; }
+  .verb {
+    font-size:12px; font-weight:600; color:var(--text-1);
+    background: rgba(255,255,255,.10);
+    backdrop-filter: blur(8px);
+    padding: 5px 11px; border-radius: 999px;
+    transition: background var(--dur) var(--ease);
+  }
+  .verb:hover { background: rgba(255,255,255,.18); }
+  .verb.k { color:#fff; background: var(--tint); }
+
+  /* the agent bar — floating glass, summonable */
+  .askbar {
+    position:absolute; left:50%; bottom:18px; transform:translateX(-50%);
+    width: 420px; max-width: calc(100% - 44px);
+    display:flex; align-items:center; gap:10px;
+    background: rgba(28,28,30,.62);
+    backdrop-filter: blur(24px) saturate(1.5);
+    -webkit-backdrop-filter: blur(24px) saturate(1.5);
+    border-radius: 999px;
+    padding: 10px 16px;
+    box-shadow: 0 12px 36px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.08);
+  }
+  .askbar .orb { width:22px; height:22px; border-radius:50%;
+    background: conic-gradient(from 210deg, #0A84FF, #5e5ce6, #30d158, #0A84FF);
+    animation: breathe 5s ease-in-out infinite; }
+  @keyframes breathe { 0%,100%{ filter:saturate(1); transform:scale(1);} 50%{ filter:saturate(1.35); transform:scale(1.06);} }
+  .askbar .ph { font-size:14px; color:var(--text-3); flex:1; }
+  .kbd { font-size:11.5px; color:var(--text-2); background:rgba(255,255,255,.08);
+    padding:3px 7px; border-radius:5px; font-family:inherit; }
+
+  /* fade at the bottom of the scroll, under the bar */
+  .feed::after { content:""; position:absolute; left:0; right:0; bottom:0; height:110px;
+    background:linear-gradient(transparent, var(--page) 70%); pointer-events:none; }
+  .askbar { z-index:2; }
+
+  /* ── inspector: the thing, open beside the feed ─────────────── */
+  .inspector {
+    background: var(--well);
+    padding: 18px 18px 16px;
+    overflow:hidden;
+    display:flex; flex-direction:column; gap:12px;
+  }
+  .insp-head { display:flex; align-items:center; gap:8px; }
+  .insp-head .src-chip { display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--text-2); }
+  .insp-head .src-chip .tile { width:18px; height:18px; border-radius:5px; font-size:9px; }
+  .insp-head .close { margin-left:auto; font-size:12px; color:var(--text-3); }
+
+  .post {
+    background: var(--sheet);
+    border-radius: var(--r-sheet);
+    box-shadow: var(--card-shadow);
+    padding: 16px;
+    display:flex; flex-direction:column; gap:12px;
+  }
+  .who { display:flex; align-items:center; gap:10px; }
+  .face { width:38px; height:38px; border-radius:50%;
+    background: linear-gradient(135deg,#7b5cff,#3b2c8f); }
+  .who .nm { font-size:14.5px; font-weight:600; }
+  .who .hd { font-size:12.5px; color:var(--text-3); }
+  .who .ch { margin-left:auto; font-size:12px; color:var(--tint); background:rgba(10,132,255,.12);
+    padding:3px 9px; border-radius:999px; }
+  .post .body { font-size:16px; line-height:1.5; }
+  .quote {
+    background: var(--well);
+    border-radius: var(--r-card);
+    padding: 11px 13px;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .quote .q-who { display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--text-2); }
+  .quote .q-face { width:18px; height:18px; border-radius:50%; background:linear-gradient(135deg,#ff8b5c,#8f3b2c); }
+  .quote .q-tx { font-size:13.5px; line-height:1.45; color:var(--text-2); }
+  .post .meta { font-size:12.5px; color:var(--text-3); display:flex; gap:14px; font-variant-numeric:tabular-nums; }
+
+  .insp-verbs { display:flex; gap:8px; }
+  .insp-verbs .verb { font-size:13px; padding:8px 14px; background:rgba(255,255,255,.08); }
+  .insp-verbs .verb.k { background:var(--tint); }
+
+  .shelf-label { font-size:13px; color:var(--text-3); padding: 4px 2px 0; }
+  .rel {
+    display:flex; align-items:center; gap:10px;
+    background: var(--sheet);
+    border-radius: var(--r-card);
+    padding: 9px 12px;
+    transition: transform var(--dur) var(--ease), background var(--dur) var(--ease);
+  }
+  .rel:hover { transform: translateY(-1px); background:#16161a; }
+  .rel .glyph { width:28px; height:28px; border-radius:7px; font-size:11px; }
+  .rel .t1 { font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .rel .t2 { font-size:11.5px; color:var(--text-3); }
+  .peek-hint { margin-top:auto; font-size:12px; color:var(--text-3); display:flex; align-items:center; gap:8px; }
+
+  /* ── annotations under the window ───────────────────────────── */
+  .notes {
+    width:1240px; max-width:100%;
+    display:grid; grid-template-columns: repeat(4, 1fr); gap:14px;
+    margin-top: 26px;
+  }
+  .note { font-size:12.5px; line-height:1.5; color:rgba(235,235,245,.66); }
+  .note b { color:#fff; display:block; font-size:13px; margin-bottom:3px; font-weight:600; }
+</style>
+</head>
+<body>
+
+<div class="window">
+
+  <!-- sidebar -->
+  <aside class="sidebar">
+    <div class="lights"><div class="light r"></div><div class="light y"></div><div class="light g"></div></div>
+    <div class="side-label">Sources</div>
+    <div class="src on"><div class="tile" style="background:#0A84FF">A</div>All<span class="n">1,284</span></div>
+    <div class="src"><div class="tile" style="background:#5e5ce6">P</div>Photos<span class="ring"></span></div>
+    <div class="src"><div class="tile" style="background:#2b2b30">W</div>Wallet<span class="n">92</span></div>
+    <div class="src"><div class="tile" style="background:#7b5cff">F</div>Farcaster<span class="ring"></span></div>
+    <div class="src"><div class="tile" style="background:#1185fe">B</div>Bluesky<span class="n">210</span></div>
+    <div class="src"><div class="tile" style="background:#f26522">R</div>RSS<span class="n">318</span></div>
+    <div class="src"><div class="tile" style="background:#24292f">G</div>GitHub<span class="n">57</span></div>
+    <div class="src"><div class="tile" style="background:#d64541">C</div>Calendar<span class="n">44</span></div>
+    <div class="src"><div class="tile" style="background:#ffb02e; color:#1a1a1a">H</div>Hugging Face<span class="n">31</span></div>
+    <div class="side-foot"><div class="avatar"></div><span>Alexander</span></div>
+  </aside>
+
+  <!-- feed -->
+  <main class="feed">
+    <div class="feed-head"><h1>Today</h1><span class="meta">14 new · 3 sources</span></div>
+    <div class="feed-scroll">
+
+      <div class="wallet">
+        <div>
+          <div class="cap">Wallets</div>
+          <div class="sum">$24,318</div>
+          <div class="whisper">Mostly ETH · combined across 3 wallets</div>
+        </div>
+        <svg class="spark" width="150" height="52" viewBox="0 0 150 52">
+          <defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="rgba(48,209,88,.22)"/><stop offset="1" stop-color="rgba(48,209,88,0)"/>
+          </linearGradient></defs>
+          <path class="fill" d="M2,40 C22,36 34,42 50,30 C66,18 78,26 96,20 C114,14 128,18 148,8 L148,52 L2,52 Z"/>
+          <path d="M2,40 C22,36 34,42 50,30 C66,18 78,26 96,20 C114,14 128,18 148,8"/>
+          <circle class="dot" cx="148" cy="8" r="3"/>
+        </svg>
+        <div class="delta">+1.8% today</div>
+      </div>
+
+      <!-- selected row: its detail is the inspector -->
+      <div class="row sel">
+        <div class="glyph" style="background:#7b5cff">F</div>
+        <div class="tx">
+          <div class="t1">Shipping the new grid system today — every card finally sits on the same rhythm</div>
+          <div class="t2">/design · quoting @linear</div>
+        </div>
+        <div class="when">9:41 AM</div>
+        <div class="verbs"><div class="verb">Open</div><div class="verb k">Keep</div></div>
+      </div>
+
+      <div class="row">
+        <div class="thumb"></div>
+        <div class="tx">
+          <div class="t1">Flight confirmation — SFO → JFK, Nov 12</div>
+          <div class="t2">Screenshot · has a date</div>
+        </div>
+        <div class="when">9:12 AM</div>
+        <div class="verbs"><div class="verb">Zoom</div><div class="verb">Calendar</div><div class="verb k">Keep</div></div>
+      </div>
+
+      <div class="row">
+        <div class="glyph" style="background:#24292f">G</div>
+        <div class="tx">
+          <div class="t1">casberi #142 merged — treemap settles on first paint</div>
+          <div class="t2">GitHub · alexanderchopan</div>
+        </div>
+        <div class="when">8:40 AM</div>
+        <div class="verbs"><div class="verb">Open</div><div class="verb k">Keep</div></div>
+      </div>
+
+      <div class="row">
+        <div class="glyph" style="background:#f26522">R</div>
+        <div class="tx">
+          <div class="t1">The display tech Apple has been quietly buying for three years</div>
+          <div class="t2">The Verge · 6 min read</div>
+        </div>
+        <div class="when">7:58 AM</div>
+        <div class="verbs"><div class="verb">Read</div><div class="verb k">Keep</div></div>
+      </div>
+
+      <div class="day">Yesterday</div>
+
+      <div class="row">
+        <div class="glyph" style="background:#2b2b30">W</div>
+        <div class="tx">
+          <div class="t1">Bought 25 USDC with Venmo on Peer</div>
+          <div class="t2">Wallet · Base</div>
+        </div>
+        <div class="when">9:04 PM</div>
+        <div class="verbs"><div class="verb">Receipt</div><div class="verb k">Keep</div></div>
+      </div>
+
+      <div class="row">
+        <div class="glyph" style="background:#1185fe">B</div>
+        <div class="tx">
+          <div class="t1">New follower — @maria.dev started following you</div>
+          <div class="t2">Bluesky</div>
+        </div>
+        <div class="when">6:31 PM</div>
+        <div class="verbs"><div class="verb">Profile</div><div class="verb k">Keep</div></div>
+      </div>
+
+    </div>
+
+    <div class="askbar">
+      <div class="orb"></div>
+      <div class="ph">Ask or find anything…</div>
+      <span class="kbd">⌘K</span>
+    </div>
+  </main>
+
+  <!-- inspector -->
+  <aside class="inspector">
+    <div class="insp-head">
+      <div class="src-chip"><div class="tile glyph" style="background:#7b5cff">F</div>Farcaster · /design</div>
+      <div class="close">esc to close</div>
+    </div>
+
+    <div class="post">
+      <div class="who">
+        <div class="face"></div>
+        <div>
+          <div class="nm">Maya Chen</div>
+          <div class="hd">@mayachen</div>
+        </div>
+        <div class="ch">/design</div>
+      </div>
+      <div class="body">Shipping the new grid system today — every card finally sits on the same rhythm. Two years of drift, undone in one pass.</div>
+      <div class="quote">
+        <div class="q-who"><div class="q-face"></div>@linear</div>
+        <div class="q-tx">Consistency isn’t a component library. It’s a spacing scale everyone actually uses.</div>
+      </div>
+      <div class="meta"><span>128 likes</span><span>31 recasts</span><span>14 replies</span><span>9:41 AM</span></div>
+    </div>
+
+    <div class="insp-verbs">
+      <div class="verb">Open</div>
+      <div class="verb">Replies</div>
+      <div class="verb k">Keep</div>
+    </div>
+
+    <div class="shelf-label">Related on this Mac</div>
+    <div class="rel">
+      <div class="glyph" style="background:#f26522">R</div>
+      <div class="tx"><div class="t1">Why every design system dies at the spacing scale</div><div class="t2">Saved 3 weeks ago</div></div>
+    </div>
+    <div class="rel">
+      <div class="glyph" style="background:#5e5ce6">P</div>
+      <div class="tx"><div class="t1">Grid rhythm sketch — whiteboard</div><div class="t2">Screenshot · May 14</div></div>
+    </div>
+
+    <div class="peek-hint"><span class="kbd">space</span> peek any row · <span class="kbd">j</span><span class="kbd">k</span> to move</div>
+  </aside>
+
+</div>
+
+<div class="notes">
+  <div class="note"><b>Inspector, not a sheet</b> A thing opens beside the feed, never over it. Selection stays visible; esc closes; j/k walks the feed with the pane following.</div>
+  <div class="note"><b>Hover is the haptic</b> Rows lift 1px and deepen their shadow; verb chips materialize where the timestamp was. Calm at rest — nothing renders until the cursor asks.</div>
+  <div class="note"><b>⌘K summons the agent</b> The composer becomes a floating glass bar — ask, find, jump. The orb breathes slowly; it is the only ambient motion in the chrome.</div>
+  <div class="note"><b>Ambient motion at rest</b> The wallet sparkline's live dot ticks; treemap cells settle on first paint. Slow, small, continuous — content moves, chrome doesn't.</div>
+</div>
+
+</body>
+</html>

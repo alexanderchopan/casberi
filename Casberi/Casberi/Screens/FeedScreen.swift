@@ -3806,6 +3806,12 @@ struct FeedScreen: View {
             // cursor crossed with nothing lighting up. One call, one place —
             // every shape (`shapedRow`'s dozen anatomies) inherits it.
             .dsHover()
+            // …and the lift on top of the highlight (Mac delight, 2026-08-03,
+            // user: "I like the rows lifting and shadow deepening"): the row
+            // rises 1pt with a deepened shadow under the cursor. Same one
+            // call site, so every row anatomy inherits it; compiles away off
+            // Catalyst.
+            .macHoverLift()
             // V3b (2026-07-07, supersedes the kind-color wash): rows are
             // NEUTRAL cards — the translucent kind wash read as murk. Color
             // moved into the tag text: the project's own stable hue.

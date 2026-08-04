@@ -1133,6 +1133,12 @@ struct CalendarHeatmapHero: View {
     /// the feed's one-hero-per-source slot. nil renders nothing extra.
     var onThisDay: OnThisDay.Echo? = nil
     var onTapOnThisDay: (() -> Void)? = nil
+    /// The year's draw-on (delight, 2026-08-03): a 0 → 1 mask sweeps the
+    /// grid left to right, so the year fills the way it accrued — the
+    /// balance sparkline's own draw-on grammar, at the heatmap's dose.
+    /// Reduce Motion renders the full grid on the first frame.
+    @State private var drawn: CGFloat = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         InsightCard {
@@ -1150,6 +1156,16 @@ struct CalendarHeatmapHero: View {
                 .accessibilityLabel("Share")
             }
             ContributionGraph(year: year, minColumns: minColumns)
+                .mask(alignment: .leading) {
+                    GeometryReader { geo in
+                        Rectangle().frame(width: geo.size.width * drawn)
+                    }
+                }
+                .onAppear {
+                    if reduceMotion { drawn = 1 } else {
+                        withAnimation(.easeOut(duration: 0.6)) { drawn = 1 }
+                    }
+                }
             // `isLive` because this card HOLDS the echo's model across renders
             // and a heal can delete under it (COROLLARY 5 — a leaf view is
             // re-evaluated on the model's own observation, with no help from
@@ -1201,6 +1217,13 @@ struct CalendarHeatmapHero: View {
 /// group, the count sits at the trailing edge.
 struct LeaderboardHero: View {
     let board: FeedInsight.Leaderboard
+    /// The bars' grow-on (delight, 2026-08-03): each bar grows from its
+    /// seed width to its real share, staggered top to bottom — the chart
+    /// drawing the ranking rather than presenting it pre-drawn. The same
+    /// per-appearance contract as `RowEntrance` and the sparkline draw-on;
+    /// Reduce Motion renders the final widths on the first frame.
+    @State private var grown = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let rows = board.rows
@@ -1213,7 +1236,7 @@ struct LeaderboardHero: View {
                 let valueW: CGFloat = 40
                 let barW = max(w - labelW - valueW - DS.Space.s2 * 2, 24)
                 VStack(spacing: 8) {
-                    ForEach(rows) { row in
+                    ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
                         HStack(spacing: DS.Space.s2) {
                             Text(row.label)
                                 .dsText(.callout15).foregroundStyle(DS.textPrimary)
@@ -1222,7 +1245,13 @@ struct LeaderboardHero: View {
                             ZStack(alignment: .leading) {
                                 Capsule().fill(DS.surfaceWell).frame(height: 8)
                                 Capsule().fill(DS.tint.opacity(0.85))
-                                    .frame(width: max(barW * CGFloat(row.value) / CGFloat(maxV), 4), height: 8)
+                                    .frame(width: grown
+                                           ? max(barW * CGFloat(row.value) / CGFloat(maxV), 4)
+                                           : 4,
+                                           height: 8)
+                                    .animation(reduceMotion ? nil
+                                               : DS.Motion.standard.delay(Double(i) * 0.05),
+                                               value: grown)
                             }
                             .frame(width: barW)
                             Text(row.detail)
@@ -1235,6 +1264,7 @@ struct LeaderboardHero: View {
                 }
             }
             .frame(height: CGFloat(rows.count) * 28)
+            .onAppear { grown = true }
         }
     }
 }
@@ -1435,6 +1465,11 @@ struct TopicMapHero: View {
                             .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
                         }
                         .offset(x: CGFloat(f.0) * (uw + gap), y: CGFloat(f.1) * (uh + gap))
+                        // The map settles in cell by cell, biggest first
+                        // (delight, 2026-08-03) — the entrance grammar the
+                        // feed's rows already speak (`settleIn` respects the
+                        // 250ms curve; plays per appearance, like RowEntrance).
+                        .settleIn(delay: Double(i) * 0.06)
                     }
                 }
             }
@@ -1505,7 +1540,14 @@ struct LiveStreamHero: View {
                 .overlay(alignment: .bottomLeading) {
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 5) {
+                            // The dot breathes (delight, 2026-08-03) — lawful
+                            // looping motion because this card only EXISTS
+                            // while the broadcast is live (`TwitchIngest.
+                            // liveRefs` derives it; an ended stream doesn't
+                            // fade, it stops existing), so the pulse can
+                            // never claim liveness the card doesn't have.
                             Circle().fill(DS.confirm).frame(width: 7, height: 7)
+                                .breathing()
                             Text("Live").dsText(.label12).foregroundStyle(.white)
                         }
                         Text(thing.title)

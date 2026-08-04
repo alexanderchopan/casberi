@@ -78,6 +78,12 @@ struct WalletBalanceHeadline: View {
     /// whenever the data itself changes (a scope switch is a new line, and
     /// a new line deserves its own draw).
     @State private var drawn: CGFloat = 0
+    /// Mac hover-scrub (delight, 2026-08-03): the sample under the cursor.
+    /// While set, the crown number ROLLS to that sample (the same
+    /// `numericText` roll a scope switch already plays) and the plot draws
+    /// the scrub cursor; leaving rolls it back to the live total. Only ever
+    /// written on Catalyst (`ChartHoverScrub`), so a phone never observes it.
+    @State private var scrubIndex: Int?
 
     private var accent: Color {
         TokenChartStyle.accent(change: chart?.change ?? 0, scheme: scheme)
@@ -86,8 +92,15 @@ struct WalletBalanceHeadline: View {
     /// The number in the headline seat: the live total when the holdings read
     /// has landed, else the last sampled value. nil renders nothing at all —
     /// the caller's own guard, kept here too so this view can't paint a $0
-    /// portfolio it doesn't know about.
-    private var displayed: Double? { total ?? chart?.price }
+    /// portfolio it doesn't know about. A Mac cursor scrubbing the line
+    /// temporarily shows the hovered sample instead — one number, one place,
+    /// the sheet chart's own rule.
+    private var displayed: Double? {
+        if let scrubIndex, let chart, chart.closes.indices.contains(scrubIndex) {
+            return chart.closes[scrubIndex]
+        }
+        return total ?? chart?.price
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
@@ -124,7 +137,13 @@ struct WalletBalanceHeadline: View {
                                marks: marks,
                                onTapMark: marks.isEmpty ? nil : { onOpenMark($0.id) },
                                // Wait out the draw-on below, then land (§171).
-                               markDelay: 0.95)
+                               markDelay: 0.95,
+                               // Mac hover-scrub (2026-08-03): resting the
+                               // cursor on the line rolls the crown number to
+                               // that sample — the sheet chart's scrub, at
+                               // the headline's dose. Inert off Catalyst.
+                               cursorIndex: scrubIndex,
+                               onScrub: { scrubIndex = $0 })
                     .mask(alignment: .leading) {
                         GeometryReader { geo in
                             Rectangle().frame(width: geo.size.width * drawn)
