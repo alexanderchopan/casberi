@@ -577,8 +577,10 @@ p.lede strong { color: var(--ink); font-weight: 600; }
 /* ---------- Product shots (first scroll beat) ----------
    Real screenshots of the running app, sitting between "All of this lands
    here" and the What-you-can-do switcher. Three different screens on purpose
-   — one screen shown three times proves nothing. Static, not video: the page
-   already animates above and the motion story is carried by the clips below.
+   — one screen shown three times proves nothing. Animated UI renders since
+   2026-08-03 (user call): the visualizations are the differentiator, so the
+   screens show them moving — wallet tour on the phone, split view on the
+   iPad, the feed-and-viz strip on the Mac.
    Each screenshot sits in its own device shell (phone / iPad / Mac) so the
    platform reads at a glance — no captions, the images carry it. */
 .shots { padding-top: 8px; }
@@ -593,7 +595,8 @@ p.lede strong { color: var(--ink); font-weight: 600; }
   padding: 26px 0 8px;
 }
 .shotgrid .shotdev { position: relative; flex: none; }
-.shotgrid .shotdev img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+.shotgrid .shotdev img,
+.shotdev video { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top center; }
 .shotgrid .shotdev-pad   { margin-right: -72px; margin-bottom: -4px; z-index: 2; }
 .shotgrid .shotdev-mac   { z-index: 1; }
 .shotgrid .shotdev-phone { order: 3; margin-left: -64px; margin-bottom: -4px; z-index: 2; }
@@ -1121,3 +1124,31 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
   font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 14px;
   color: var(--ink); background: rgba(255,255,255,.06); padding: 1px 5px; border-radius: 5px;
 }
+
+
+/* ---------- Device shells inside the how-it-works sections (2026-08-03) ----
+   The standalone three-device #shots family is gone; each section now carries
+   ONE device whose screen is an animated UI render — phone for Just connect,
+   Mac for Keep tabs (the visualization gallery), iPad for One agent. */
+.b-hero .secdev { align-self: center; margin: 18px auto 4px; }
+.b-hero .secdev.shotdev-phone { width: 228px; }
+.b-hero .secdev.shotdev-mac { width: min(100%, 620px); }
+.b-hero .secdev.shotdev-pad { width: 320px; }
+@media (max-width: 800px) {
+  .b-hero .secdev.shotdev-phone { width: 190px; }
+  .b-hero .secdev.shotdev-pad { width: 260px; }
+}
+
+
+/* ---------- Cash App-language CTA slab + catalog heading (2026-08-03) ----
+   The page is hero + catalog now; the close is a full-bleed green slab with
+   ink type — one loud moment, everything else stays quiet. */
+.slab-get { background: #2E63FF; color: #fff; text-align: center;
+  padding: 96px 24px 104px; margin-top: 90px; }
+.slab-get h2 { font-size: clamp(52px, 8vw, 104px); font-weight: 800;
+  letter-spacing: -.045em; line-height: .95; }
+.slab-get .slab-sub { font-size: 21px; font-weight: 650; margin-top: 18px; color: rgba(255,255,255,.85); }
+.slab-get .cta-row { margin-top: 34px; }
+.cta-ink { background: #111 !important; color: #fff !important; font-weight: 800;
+  border-radius: 999px; padding: 18px 38px; font-size: 20px; }
+#catalog .m-h2 { font-size: clamp(40px, 5.5vw, 72px); font-weight: 800; letter-spacing: -.04em; }

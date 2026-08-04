@@ -9,7 +9,7 @@
 <meta property="og:description" content="What Casberi is, why it exists, and how to use it.">
 <meta property="og:type" content="article">
 <link rel="icon" href="icons/casberi-logo.png">
-<link rel="stylesheet" href="styles.css?v=202608031800">
+<link rel="stylesheet" href="styles.css?v=202608032011">
 <style>
   /* ---------- docs page styles (page-scoped) ---------- */
   /* SF Rounded for display type — ui-rounded resolves to SF Rounded on Apple
@@ -273,6 +273,39 @@
   #faq details p { margin: 10px 0 2px; color: var(--muted); }
   @media (prefers-reduced-motion: reduce) { a.glance { transition: none; } a.glance:hover { transform: none; } }
 </style>
+
+<style>
+#every-app .appcols{columns:2;column-gap:36px;}
+#every-app .appcol{break-inside:avoid;margin-bottom:26px;}
+#every-app h4{font-size:15px;letter-spacing:.06em;text-transform:none;color:var(--blue-bright);font-weight:700;margin-bottom:10px;}
+#every-app ul{list-style:none;padding:0;margin:0;}
+#every-app li{font-size:15px;line-height:1.6;color:rgba(255,255,255,.65);padding:3px 0;}
+#every-app li b{color:#fff;font-weight:650;}
+@media (max-width:700px){#every-app .appcols{columns:1;}}
+</style>
+
+<style>
+.nothere{list-style:none;padding:0;margin:14px 0 0;}
+.nothere li{padding:10px 0;font-size:inherit;color:rgba(255,255,255,.62);border-bottom:1px solid rgba(255,255,255,.07);line-height:1.55;}
+.nothere li:last-child{border-bottom:none;}
+.nothere strong{color:#fff;font-weight:650;}
+</style>
+
+<style>
+.gps{margin-top:18px;}
+.gps-row{display:grid;grid-template-columns:120px 1fr 34px 1fr;gap:18px;align-items:start;padding:22px 0;border-bottom:1px solid rgba(255,255,255,.08);}
+.gps-row:last-child{border-bottom:none;}
+.gps-goal{font-size:13px;font-weight:800;letter-spacing:.03em;color:var(--blue-bright);text-transform:uppercase;padding-top:4px;}
+.gps-prob i,.gps-sol i{display:block;font-style:normal;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:5px;}
+.gps-prob b,.gps-sol b{display:block;font-size:16.5px;font-weight:700;color:#fff;}
+.gps-prob span,.gps-sol span{display:block;font-size:14px;line-height:1.55;color:rgba(255,255,255,.55);margin-top:5px;}
+.gps-arrow{color:rgba(255,255,255,.3);font-size:20px;font-weight:700;padding-top:22px;text-align:center;}
+.gps-sol + .gps-sol{margin-top:16px;}
+@media (max-width:760px){
+  .gps-row{grid-template-columns:1fr;gap:10px;}
+  .gps-arrow{display:none;}
+}
+</style>
 </head>
 <body>
 
@@ -293,8 +326,7 @@
 <nav class="docrail" aria-label="On this page">
   <a class="top" href="#features">Features</a>
   <a class="top" href="#about">About</a>
-  <a class="sub" href="#problems">The problems</a>
-  <a class="sub" href="#solution">The solution</a>
+  <a class="sub" href="#problems">Problems &amp; solutions</a>
   <a class="top" href="#how-to-use">How to use</a>
   <a class="sub" href="#one-screen">One screen</a>
   <a class="sub" href="#apps">Apps</a>
@@ -303,6 +335,7 @@
   <a class="sub" href="#open">Open a thing</a>
   <a class="sub" href="#agent">The agent</a>
   <a class="sub" href="#settings">Settings</a>
+  <a class="top" href="#every-app">Every app</a>
   <a class="top" href="#faq">Questions</a>
 </nav>
 
@@ -311,7 +344,7 @@
 
   <header class="doc-hero">
     <p class="part-eyebrow">Docs</p>
-    <h1>Your apps, one feed.</h1>
+    <h1>Your apps, in one place.</h1>
     <p class="sub">What Casberi is, why it exists, and how to use it.</p>
     <div class="toc">
       <a href="#features"><span>1</span>Features</a>
@@ -412,83 +445,64 @@
       </div>
     </div>
 
-    <h3>What you’ve trying to do</h3>
-    <ul class="goal-list">
-      <li><b>Stay mobile</b><span>Your phone finishes the job.</span></li>
-      <li><b>Capture things</b><span>Save any thought, image, or link the moment it happens.</span></li>
-      <li><b>Organize things</b><span>Keep order without doing the filing.</span></li>
-      <li><b>Find things</b><span>Search by what something is, not where you left it.</span></li>
-      <li><b>Do things</b><span>Plan, book, draft, schedule — all the way to done.</span></li>
-      <li><b>Own things</b><span>Your things stay on your phone and leave only when you choose.</span></li>
-    </ul>
-
-    <h3>How it works today</h3>
-    <p>Right now, your stuff lives in two separate worlds. There’s the <strong>Apple world</strong>: you screenshot things, jot notes, text yourself, set reminders with Siri — and each app keeps its own pile, with its own search. Then there’s the <strong>AI world</strong>: chats, threads, and memories inside an assistant app. The two don’t talk. Your assistant can’t put anything on your calendar, and no search covers both.</p>
-    <div class="dia" aria-hidden="true">
-      <div class="world">
-        <b>Your apps</b>
-        <div class="wtile" style="background: rgba(48,209,88,.30)"></div>
-        <div class="wtile" style="background: rgba(255,69,58,.30)"></div>
-        <div class="wtile" style="background: rgba(255,159,10,.30)"></div>
-        <div class="wtile" style="background: rgba(255,214,10,.26)"></div>
-      </div>
-      <span class="nobridge"></span>
-      <div class="world">
-        <b>Your AI</b>
-        <div class="wtile" style="background: rgba(191,90,242,.30)"></div>
-        <div class="wtile" style="background: rgba(255,255,255,.08)"></div>
-      </div>
-    </div>
-    <p class="dia-cap">Two worlds — and nothing crosses the gap.</p>
-    <p>If you run agents, it’s four worlds. Your phone, your AI apps, the machines where agents actually work (their output stays there), and the dashboard that supervises them. One job leaves pieces in all four places — the prompt in one, the result in another, the approval in a third. Putting the story back together is your job.</p>
-
-    <h3>What actually happens</h3>
-    <p class="evi-label">For casual users</p>
-    <ul class="evidence">
-      <li>You save a recipe in Notes with no title — and never find it again. Your travel plan sits 40 messages deep in a chat; at the airport you ask again, and the new answer is missing the hotel address.</li>
-      <li>A dentist reminder gets snoozed six times, because booking takes a call. A dinner plan gets copied by hand into Calendar, Messages, and Safari — and the guest list never leaves the chat.</li>
-      <li>You open your assistant’s settings once, connect nothing, and close it. You try a second assistant, end up with two of everything, and delete it within a week.</li>
-    </ul>
-    <p class="evi-label">For power users</p>
-    <ul class="evidence">
-      <li>A run finishes at 11pm. You find out at 8am, and the follow-up starts a day late. You approve a change bigger than its notification on trust — and it breaks a config.</li>
-      <li>You rebuild in June a skill you wrote in March, because the March version lives in a folder on a machine you retired. A new laptop costs two days of keys and setup.</li>
-      <li>A scheduled job dies quietly. You notice a week later — from the silence.</li>
-    </ul>
-
-    <h3 id="problems">The problems</h3>
-    <p>The same problems hit everyone — casual users across their apps, power users across their machines and agents:</p>
-    <div class="prob-grid">
-      <div class="prob"><i>PROBLEM 1</i><b>Everything takes copy-paste</b><span>To finish anything, you copy, switch apps, and paste. And if agents do your work, your phone can’t reach them at all.</span></div>
-      <div class="prob"><i>PROBLEM 2</i><b>Saving scatters your stuff</b><span>Where something ends up depends on how you saved it — and you’ve stuck with that choice.</span></div>
-      <div class="prob"><i>PROBLEM 3</i><b>Organizing never ends</b><span>Keeping things tidy means doing the same filing in every app, forever.</span></div>
-      <div class="prob"><i>PROBLEM 4</i><b>Finding means remembering</b><span>You have to recall which app holds the thing — and you find out it’s lost right when you need it.</span></div>
-      <div class="prob"><i>PROBLEM 5</i><b>Nothing gets finished</b><span>An assistant’s answer still has to be moved into the real app by hand. That’s where it stalls.</span></div>
-      <div class="prob"><i>PROBLEM 6</i><b>Setup doesn’t stick</b><span>Casual users skip it. Power users redo it for every machine and agent. Either way, none of it carries forward.</span></div>
-      <div class="prob"><i>PROBLEM 7</i><b>Every AI app starts from zero</b><span>A new assistant brings its own history, memory, and settings. Nothing is shared with the last one.</span></div>
-      <div class="prob"><i>PROBLEM 8</i><b>You don’t find out</b><span>What you saved doesn’t speak up when it matters, and your agents finish or fail in silence.</span></div>
-    </div>
-
-    <h3 id="solution">The solution</h3>
-    <p><strong>Casberi is one assistant that works across your apps — not another app that runs separate from them.</strong> It gives everything you make one home. Notes, links, screenshots, events, chats, voice notes — they all become <strong>things</strong> in one feed. Here’s how that fixes each problem:</p>
-    <div class="mech">
-      <div class="mech-row"><i>SOLUTION 1</i><b>One home for your things.</b><span>Everything lands in one place. For power users, one job — its prompt, its output, its approval — is one thing, not four scattered pieces.</span></div>
-      <div class="mech-row"><i>SOLUTION 2</i><b>Find by what it is.</b><span>One search covers everything. You get the thing itself — not the chat it was buried in. Power users can also search by which agent, run, or machine made it.</span></div>
-      <div class="mech-row"><i>SOLUTION 3</i><b>Capture in one gesture.</b><span>Save from anywhere in one step — no folder to pick, no title to type. Connected apps and machines send their things in on their own.</span></div>
-      <div class="mech-row"><i>SOLUTION 4</i><b>Captures become outcomes.</b><span>A saved thing carries its next step. An event can go on your calendar, a task can become a reminder — right from the thing.</span></div>
-      <div class="mech-row"><i>SOLUTION 5</i><b>Setup adds up.</b><span>Casberi is useful before you set up anything, and asks for permissions only when they unlock something. What power users set up once is kept — secrets live only in the Keychain — so a new machine picks up where the old one left off.</span></div>
-      <div class="mech-row"><i>SOLUTION 6</i><b>Not another AI app.</b><span>Casberi looks and feels like an organizer, not a chatbot. No model picker, no memory panel. Your agents show up as rows in Apps, and their work shows up in your feed.</span></div>
-      <div class="mech-row"><i>SOLUTION 7</i><b>Feels like an Apple product.</b><span>It follows iOS in type, motion, and touch. It should feel like it came with your phone.</span></div>
-      <div class="mech-row"><i>SOLUTION 8</i><b>Apps are bridges.</b><span>Connecting an app builds a bridge. Apple apps connect through iOS itself. Services connect with a login or a pasted token. Agents and machines connect with a key. Every app’s page tells you which kind it is.</span></div>
-      <div class="mech-row"><i>SOLUTION 9</i><b>Approvals carry context.</b><span>When an agent asks to do something, the request shows you what you need to judge it — the exact command, who’s asking, what it touches. Approve or deny with one tap.</span></div>
-      <div class="mech-row"><i>SOLUTION 10</i><b>Status arrives in your feed.</b><span>Run finished, run failed, scheduled job died — each shows up as a row in your feed. Even something that should have arrived but didn’t.</span></div>
-    </div>
+    <h3 id="problems">Goals, problems, solutions</h3>
+    <p>Six things you're trying to do, the ways today's setup breaks each one — and what Casberi does about it.</p>
+    <p id="solution"><strong>Casberi is one assistant that works across your apps</strong> — not another app that runs separate from them. Everything you make becomes a <em>thing</em> in one feed. Row by row:</p>
+    <div class="gps"><div class="gps-row">
+      <div class="gps-goal">Stay mobile</div>
+      <div class="gps-prob"><i>Problem</i><b>Everything takes copy-paste</b><span>To finish anything, you copy, switch apps, and paste. And if agents do your work, your phone can’t reach them at all.</span></div>
+      <div class="gps-arrow">→</div>
+      <div class="gps-sols"><div class="gps-sol"><i>Solution</i><b>Captures become outcomes.</b><span>A saved thing carries its next step. An event can go on your calendar, a task can become a reminder — right from the thing.</span></div></div>
+    </div><div class="gps-row">
+      <div class="gps-goal">Capture things</div>
+      <div class="gps-prob"><i>Problem</i><b>Saving scatters your stuff</b><span>Where something ends up depends on how you saved it — and you’ve stuck with that choice.</span></div>
+      <div class="gps-arrow">→</div>
+      <div class="gps-sols"><div class="gps-sol"><i>Solution</i><b>One home for your things.</b><span>Everything lands in one place. For power users, one job — its prompt, its output, its approval — is one thing, not four scattered pieces.</span></div><div class="gps-sol"><i>Solution</i><b>Capture in one gesture.</b><span>Save from anywhere in one step — no folder to pick, no title to type. Connected apps and machines send their things in on their own.</span></div></div>
+    </div><div class="gps-row">
+      <div class="gps-goal">Organize things</div>
+      <div class="gps-prob"><i>Problem</i><b>Organizing never ends</b><span>Keeping things tidy means doing the same filing in every app, forever.</span></div>
+      <div class="gps-arrow">→</div>
+      <div class="gps-sols"><div class="gps-sol"><i>Solution</i><b>One home for your things.</b><span>Everything lands in one place. For power users, one job — its prompt, its output, its approval — is one thing, not four scattered pieces.</span></div></div>
+    </div><div class="gps-row">
+      <div class="gps-goal">Find things</div>
+      <div class="gps-prob"><i>Problem</i><b>Finding means remembering</b><span>You have to recall which app holds the thing — and you find out it’s lost right when you need it.</span></div>
+      <div class="gps-arrow">→</div>
+      <div class="gps-sols"><div class="gps-sol"><i>Solution</i><b>Find by what it is.</b><span>One search covers everything. You get the thing itself — not the chat it was buried in. Power users can also search by which agent, run, or machine made it.</span></div></div>
+    </div><div class="gps-row">
+      <div class="gps-goal">Do things</div>
+      <div class="gps-prob"><i>Problem</i><b>Nothing gets finished</b><span>An assistant’s answer still has to be moved into the real app by hand. That’s where it stalls.</span></div>
+      <div class="gps-arrow">→</div>
+      <div class="gps-sols"><div class="gps-sol"><i>Solution</i><b>Apps are bridges.</b><span>Connecting an app builds a bridge. Apple apps connect through iOS itself. Services connect with a login or a pasted token. Agents and machines connect with a key. Every app’s page tells you which kind it is.</span></div><div class="gps-sol"><i>Solution</i><b>Approvals carry context.</b><span>When an agent asks to do something, the request shows you what you need to judge it — the exact command, who’s asking, what it touches. Approve or deny with one tap.</span></div></div>
+    </div><div class="gps-row">
+      <div class="gps-goal">Set up once</div>
+      <div class="gps-prob"><i>Problem</i><b>Setup doesn’t stick</b><span>Casual users skip it. Power users redo it for every machine and agent. Either way, none of it carries forward.</span></div>
+      <div class="gps-arrow">→</div>
+      <div class="gps-sols"><div class="gps-sol"><i>Solution</i><b>Setup adds up.</b><span>Casberi is useful before you set up anything, and asks for permissions only when they unlock something. What power users set up once is kept — secrets live only in the Keychain — so a new machine picks up where the old one left off.</span></div><div class="gps-sol"><i>Solution</i><b>Feels like an Apple product.</b><span>It follows iOS in type, motion, and touch. It should feel like it came with your phone.</span></div></div>
+    </div><div class="gps-row">
+      <div class="gps-goal">One assistant</div>
+      <div class="gps-prob"><i>Problem</i><b>Every AI app starts from zero</b><span>A new assistant brings its own history, memory, and settings. Nothing is shared with the last one.</span></div>
+      <div class="gps-arrow">→</div>
+      <div class="gps-sols"><div class="gps-sol"><i>Solution</i><b>Not another AI app.</b><span>Casberi looks and feels like an organizer, not a chatbot. No model picker, no memory panel. Your agents show up as rows in Apps, and their work shows up in your feed.</span></div></div>
+    </div><div class="gps-row">
+      <div class="gps-goal">Stay aware</div>
+      <div class="gps-prob"><i>Problem</i><b>You don’t find out</b><span>What you saved doesn’t speak up when it matters, and your agents finish or fail in silence.</span></div>
+      <div class="gps-arrow">→</div>
+      <div class="gps-sols"><div class="gps-sol"><i>Solution</i><b>Status arrives in your feed.</b><span>Run finished, run failed, scheduled job died — each shows up as a row in your feed. Even something that should have arrived but didn’t.</span></div></div>
+    </div></div>
 
     <h3>Your things stay yours</h3>
-    <p>Casberi is a native iPhone app. Your things live in a database on your phone — no Casberi server holds them. iCloud sync is off until you turn it on. Reading and saving work offline. No analytics, no trackers. Answers are written on your own phone — and stay there unless you add your own agent key and tap to use it.</p>
+    <p>Casberi is a native app — iPhone, iPad, and Mac. Your things live in a database on your phone — no Casberi server holds them. iCloud sync is off until you turn it on. Reading and saving work offline. No analytics, no trackers. Answers are written on your own phone — and stay there unless you add your own agent key and tap to use it.</p>
 
     <h3 id="not-here">What’s deliberately not here</h3>
-    <p>Some things are missing on purpose. There’s no separate actions or to-do tab — you act on a thing where the thing is. No automations yet. No chatbot persona and no model picker in the way of an answer — Casberi shows results, not a character (choosing an agent happens once, in Settings, only if you bring your own key). No note editor — Casberi collects and connects; your apps stay the editors. No streaks, goals, or guilt mechanics. And no trading, ever.</p>
+    <p>Some things are missing on purpose.</p>
+    <ul class="nothere">
+      <li><strong>No to-do tab.</strong> You act on a thing where the thing is.</li>
+      <li><strong>No chatbot persona.</strong> No model picker in the way of an answer — results, not a character.</li>
+      <li><strong>No note editor.</strong> Casberi collects and connects; your apps stay the editors.</li>
+      <li><strong>No streaks, goals, or guilt mechanics.</strong></li>
+      <li><strong>No automations yet.</strong></li>
+      <li><strong>No trading, ever.</strong></li>
+    </ul>
   </section>
 
   <div class="divider"></div>
@@ -509,7 +523,6 @@
     </div>
 
     <h4 class="walk-group">Just connect</h4>
-    <div class="walk-demo"><div class="viddoc"><video src="videos/clip1-just-connect.mp4?v=8" poster="videos/clip1-just-connect-poster.jpg?v=8" preload="metadata" autoplay muted loop playsinline></video></div></div>
     <h3 id="one-screen">One screen</h3>
     <p>Casberi is one screen — no tabs to learn, no account to make. Open it and it’s yours. A row of chips across the top stays put wherever you scroll: <strong>All</strong> (everything you’ve saved), then one chip for each app you’ve connected — the app you just heard from sits up front. Tap a chip to switch.</p>
     <p>Along the bottom, a glass bar reading <strong>Ask your things…</strong> — that’s the agent, and it rides above whatever you’re looking at. And two small doors up top: your avatar opens Settings, the grid opens your apps. That’s the whole app: your things, and the agent that reads them.</p>
@@ -526,9 +539,10 @@
     <div class="pager"><a href="#wallet"><span>Next</span>Wallets →</a></div>
 
     <h3 id="wallet">Wallets</h3>
-    <p>Add a wallet by address, ENS or <code>.sol</code> name, or by connecting a wallet app — no key, no sign-in. Name as many as you like in the address book; watch up to five. A watched wallet gets its own feed: what it holds, drawn as a map you can tap, a balance line that fills in as history builds, and its activity as ordinary rows.</p>
-    <p><strong>Worth a look</strong> gathers what deserves your attention and sorts it by whether you can actually do something — a token approval still open, a delegation, a position drifting toward risk — with everything spammy folded into a pile you can mute. Casberi reads and shows; anything that would move funds happens in your own wallet app.</p>
-    <p>Exchange balances, lending positions, onramp purchases, and privacy-pool deposits read the same way, in the same feed.</p>
+    <p>Add a wallet by address, ENS, <code>.sol</code> or basename — or connect a wallet app. The connection proposes <strong>zero methods and zero events</strong>: watching can never trade or move funds. Name as many as you like in the address book; watch up to five. Then the wallet room draws what other apps make you dig for:</p>
+    <p><strong>What you hold</strong> — one treemap across every wallet and chain, with the plain sentence under it ("ETH is 50% of everything") and where each token is held. <strong>In protocols</strong> — Deposited, Locked, Owed: Aave and Morpho health, Uniswap positions in or out of range, Hyperliquid perps with liquidation distance, Aerodrome locks melting toward their end date, staked ETH and HYPE. <strong>Where it moved</strong> — a flow band, inflows left, outflows right, every lane sized by what it was worth when it moved. <strong>Connected addresses</strong> — which counterparties reach more than one of your wallets, drawn from real transfers, never inferred.</p>
+    <p><strong>Worth a look</strong> ranks what deserves attention by whether you can act on it — open approvals sorted by what they could actually reach, delegations, positions drifting toward risk — with revoke prepared in-app (live allowance, fee quoted) and the signature happening in your own wallet app. Spam is folded into a pile you can mute.</p>
+    <p>And the doors most trackers can't see land as ordinary rows: Peer onramp fills, Gnosis Pay card spends settling onchain, 0xBow privacy-pool deposits clearing, Railgun shields and unshields. Exchange balances and ETH validators join the same total; a Safe reads as a Safe — owners, threshold, signature queue — not as an anonymous contract.</p>
     <div class="pager"><a href="#open"><span>Next</span>Open a thing →</a></div>
 
     <h3 id="open">Open a thing, act on it</h3>
@@ -537,7 +551,6 @@
     <div class="pager"><a href="#agent"><span>Next</span>The agent →</a></div>
 
     <h4 class="walk-group">Take action</h4>
-    <div class="walk-demo"><div class="viddoc"><video src="videos/clip3-take-action.mp4?v=9" poster="videos/clip3-take-action-poster.jpg?v=9" preload="metadata" autoplay muted loop playsinline></video></div></div>
     <h3 id="agent">The agent</h3>
     <p>The glass bar along the bottom is the agent. It rides above every screen — your feed, an app’s page, a settings sheet — so it’s always one tap away. Tap it and it rises to fill the screen; lower it and you’re back exactly where you were, mid-scroll and all. There is no second tab and no separate home screen to come back to: your things are the feed, and the agent is how you ask about them.</p>
     <p>Tapping it opens on <strong>“What’s going on”</strong> — a brief built from your own things, right now: what landed and from where, how your money is doing, what’s on your watchlist, what’s next, and one plain read across the lot. It’s a screen to take in, so the keyboard stays down and your asks sit docked underneath, ready when you are.</p>
@@ -557,13 +570,20 @@
     <p><strong>Your key</strong> is the one door out. Answers are written on your phone by default. Save your own key — Claude, ChatGPT, Gemini, Venice, Bankr, OpenRouter, or Grok — and every answer offers “Try with your key”: the question and the few matched things go from your phone straight to that provider, only when you tap, billed to your key. The key lives in the Keychain. There is no Casberi server in between.</p>
   </section>
 
+  
+  <section class="doc-section" id="every-app">
+    <h2>Every app, one line</h2>
+    <p class="doc-lede">The catalog's own words — what each connection puts in your feed.</p>
+    <div class="appcols"><div class="appcol"><h4>Wallet</h4><ul><li><b>Wallet</b> — Track any wallet's activity</li><li><b>0xBow Privacy Pools</b> — Know when your deposit clears</li><li><b>Railgun</b> — See what you shield, and what comes back</li><li><b>Gnosis Pay</b> — Card spending, straight off the chain</li><li><b>Coinbase</b> — Your exchange balance, in your total</li><li><b>Kraken</b> — Your exchange balance, in your total</li><li><b>Binance</b> — Your exchange balance, in your total</li><li><b>Gemini Exchange</b> — Your exchange balance, in your total</li><li><b>ETH Validators</b> — Your validator balance, in your total</li><li><b>Peer</b> — Your Peer trades, as they settle</li><li><b>Safe</b> — Your Safe's signature queue, live</li><li><b>Aave</b> — Your lending position, watched</li><li><b>Morpho</b> — Your markets and vaults, watched</li><li><b>Uniswap</b> — Your liquidity, in or out of range</li><li><b>Hyperliquid</b> — Your positions, as they turn</li><li><b>Aerodrome</b> — Never miss the weekly vote</li><li><b>ether.fi</b> — Your staked ETH, and the card</li></ul></div><div class="appcol"><h4>Markets</h4><ul><li><b>Tokens</b> — Track any token</li><li><b>Kalshi</b> — Watch real-event odds</li><li><b>Polymarket</b> — Watch any prediction market</li><li><b>Stocktwits</b> — Watch any stock</li><li><b>GeckoTerminal</b> — Trending tokens, per chain</li><li><b>OpenSea</b> — New NFT drops in your feed</li></ul></div><div class="appcol"><h4>Social & network</h4><ul><li><b>Farcaster</b> — Track any Farcaster account</li><li><b>Bluesky</b> — Track any Bluesky account</li><li><b>Nostr</b> — Track any Nostr account</li><li><b>Instagram</b> — Your posts and saves, findable</li><li><b>Snapchat</b> — Import your saved chats and memories</li><li><b>TikTok</b> — Your saves, before the link expires</li><li><b>X</b> — Your posts and likes, searchable</li></ul></div><div class="appcol"><h4>Mail</h4><ul><li><b>Gmail</b> — Your inbox, findable</li><li><b>iCloud Mail</b> — Your @icloud.com inbox, findable</li></ul></div><div class="appcol"><h4>Agents</h4><ul><li><b>ChatGPT</b> — Import your chats, keep them findable</li><li><b>Claude</b> — Import your chats, keep them findable</li><li><b>Gemini</b> — Import your chats, keep them findable</li><li><b>Venice</b> — Private answers with your key</li><li><b>Bankr</b> — Answers that know your wallet</li><li><b>1Claw</b> — What your agent's key can reach</li><li><b>OpenRouter</b> — One key, whichever model fits</li><li><b>Grok</b> — Try with your key, on Grok</li></ul></div><div class="appcol"><h4>Work</h4><ul><li><b>GitHub</b> — Stars, releases, issues — your GitHub</li><li><b>Hugging Face</b> — What the AI world just shipped</li><li><b>Linear</b> — Your issues stay in reach</li><li><b>Notion</b> — Pages join your things</li><li><b>PostHog</b> — The numbers behind what you ship</li><li><b>Slack</b> — Never miss a mention</li><li><b>Trello</b> — The cards you're carrying</li><li><b>Cloudflare</b> — The dates behind the sites you run</li><li><b>Stripe</b> — What your money did today</li></ul></div><div class="appcol"><h4>Photos & images</h4><ul><li><b>Photos</b> — Screenshots, straight to your feed</li><li><b>Pinterest</b> — Your pins, in your feed</li></ul></div><div class="appcol"><h4>Schedule</h4><ul><li><b>Calendar</b> — Events join your things</li><li><b>Reminders</b> — Lists stay in reach</li><li><b>Cal.com</b> — Bookings land in your feed</li><li><b>Calendly</b> — Meetings join your things</li><li><b>Todoist</b> — Tasks beside your lists</li></ul></div><div class="appcol"><h4>Notes</h4><ul><li><b>Apple Journal</b> — Your entries, findable</li><li><b>Day One</b> — Import your journal</li><li><b>Apple Notes</b> — Share notes in</li><li><b>Obsidian</b> — Your vault, beside your things</li></ul></div><div class="appcol"><h4>Reading & saves</h4><ul><li><b>Readwise</b> — Highlights stay with you</li><li><b>RSS</b> — Any site with a feed</li><li><b>Substack</b> — Follow any publication</li><li><b>Kindle</b> — Import your highlights</li><li><b>Bookmarks</b> — Import your bookmarks</li><li><b>Reddit</b> — Follow subreddits and people</li><li><b>Raindrop</b> — Bookmarks become findable</li></ul></div><div class="appcol"><h4>Media</h4><ul><li><b>Apple Music</b> — What you play stays in reach</li><li><b>Spotify</b> — Liked songs join your things</li><li><b>Podcasts</b> — Follow any show</li><li><b>YouTube</b> — Follow any channel</li><li><b>Twitch</b> — Live follows land in your feed</li><li><b>Steam</b> — What you play, in your feed</li></ul></div><div class="appcol"><h4>Life</h4><ul><li><b>Apple Health</b> — Workouts land in your feed</li><li><b>Strava</b> — Every activity, one record</li><li><b>Contacts</b> — The people you know, findable</li><li><b>HomeKit</b> — Your home's accessories, at a glance</li></ul></div><div class="appcol"><h4>Shopping</h4><ul><li><b>Bitrefill</b> — Your gift cards, in reach</li><li><b>Privacy</b> — Your card purchases, in reach</li><li><b>Shopify</b> — Follow any store's new drops</li><li><b>Deals</b> — The best deals, as they drop</li><li><b>Open Food Facts</b> — Scan a grocery barcode</li></ul></div><div class="appcol"><h4>Files & storage</h4><ul><li><b>Files</b> — Any folder, findable</li><li><b>Dropbox</b> — Your Dropbox, without the notifications</li></ul></div></div>
+  </section>
+
   <section id="faq">
     <p class="part-eyebrow">Questions</p>
     <h2>Questions, answered</h2>
     <details><summary>Do I need an account?</summary><p>No. There’s nothing to sign up for — Casberi works the moment it’s installed.</p></details>
     <details><summary>Where do my things live?</summary><p>In a database on your phone. No Casberi server holds them, and iCloud sync stays off until you turn it on. Deleting is two clear choices: <strong>Delete things</strong> wipes your data (this iPhone and iCloud), <strong>Delete access</strong> removes every token and key Casberi holds.</p></details>
     <details><summary>What does it cost?</summary><p>It’s free on TestFlight while it heads to the App Store.</p></details>
-    <details><summary>What do I need to run it?</summary><p>An iPhone. Answers are written on your phone with Apple Intelligence — nothing is billed, and no answer is sent away unless you add your own key and tap “Try with your key.” Connected apps do reach their own services to fetch your things; that traffic goes from your phone to them, never through a Casberi server.</p></details>
+    <details><summary>What do I need to run it?</summary><p>An iPhone, iPad, or Mac. Answers are written on your device with Apple Intelligence — nothing is billed, and no answer is sent away unless you add your own key and tap “Try with your key.” Connected apps do reach their own services to fetch your things; that traffic goes from your phone to them, never through a Casberi server.</p></details>
     <details><summary>Can it act without asking?</summary><p>No. Typed text never saves silently, any write that leaves the app waits for a tap, and connected wallets are read-only — Casberi can never trade or move funds.</p></details>
   </section>
 
@@ -577,7 +597,7 @@
 
 <footer>
   <div class="wrap">
-    <p class="tagline">One place for your apps, with an agent that keeps tabs on what matters. No account, no server, all on device.</p>
+    <p class="tagline">Your apps, in one place. No account, no server, all on device.</p>
     <p>© 2026 Casberi · <a href="/">Home</a> · <a href="privacy.html">Privacy</a> · <a href="brand.html">Brand</a> · <a href="mailto:privacy@casberi.app">Contact</a> · <a href="https://x.com/casberi_app">@casberi_app</a></p>
     <p>Made by <a href="https://linktr.ee/alexanderchopan">Alexander Chopan</a> · <a href="https://www.linkedin.com/in/alexanderchopan">LinkedIn</a> · <a href="https://x.com/alexanderchopan">X</a></p>
     <p>Or <a href="blocks.html">play a game</a> made of app icons.</p>
