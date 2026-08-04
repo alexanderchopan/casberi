@@ -142,6 +142,12 @@ enum BridgeGlyph {
         case "safari":    return "globe"
         case "github":    return "curlybraces"
         case "linear":    return "list.bullet.rectangle"
+        // The lists ARE the mark — a board read as columns. Both this and the
+        // hue exist so a seat whose bundled art ever fails to load still reads
+        // as itself rather than as the gray "app" default (report 2026-08-03:
+        // Trello had neither, so its tile rendered as a generic gray square on
+        // the simulator and on TestFlight).
+        case "trello":    return "rectangle.split.3x1"
         case "notion":    return "doc.richtext"
         case "x", "twitter": return "bookmark"
         case "instagram": return "camera"

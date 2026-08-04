@@ -113,6 +113,11 @@ enum CloudflareFetch {
     static func things(token: String) async -> [Thing]? {
         var covered: Set<String> = []
         var out: [Thing] = []
+        // What the pass SAW, whether or not it landed anything — the runway's
+        // reading (prd §296). Written only on a pass that got far enough to
+        // mean something: both early returns below leave the last good
+        // snapshot alone rather than replacing it with an unread account.
+        var estate = CloudflareEstate()
 
         // 1. The token itself. This is the validation request as well as a
         // reading: it is the only endpoint that answers 401 rather than 403 for
@@ -127,6 +132,9 @@ enum CloudflareFetch {
 
         covered.insert("cloudflare:token")
         if let expiring = tokenRow(tokenInfo) { out.append(expiring) }
+        if let expiry = IngestSupport.isoDate(tokenInfo["expires_on"]) {
+            estate.consider(expiry, name: "", kind: .token)
+        }
 
         // 2. The zones. A failure here IS a failure of the pass — with no zone
         // list there is nothing else to read, and reporting "nothing needs
@@ -137,10 +145,15 @@ enum CloudflareFetch {
               let zones = zonesBody["result"] as? [[String: Any]]
         else { return nil }
 
+        estate.zonesSeen = zones.count
         for zone in zones {
             guard let id = zone["id"] as? String,
                   let name = zone["name"] as? String, !name.isEmpty else { continue }
             covered.insert("cloudflare:zone:\(id)")
+            // The id→name table the runway names its rows from. A certificate
+            // row's ref carries the zone ID and its title carries the name, and
+            // a title is localized prose, not data.
+            estate.zoneNames[id] = name
             if let stalled = zoneRow(zone, id: id, name: name) { out.append(stalled) }
         }
 
@@ -156,6 +169,10 @@ enum CloudflareFetch {
                   let packs = body["result"] as? [[String: Any]]
             else { continue }
             covered.insert("cloudflare:cert:\(id)")
+            estate.zonesCovered += 1
+            if let expiry = earliestActiveExpiry(packs) {
+                estate.consider(expiry, name: name, kind: .certificate)
+            }
             if let soon = certRow(packs, zoneID: id, zoneName: name,
                                   dashboard: dashboardURL(zone: zone, name: name)) {
                 out.append(soon)
@@ -189,6 +206,10 @@ enum CloudflareFetch {
                 for domain in domains {
                     guard let name = domain["name"] as? String, !name.isEmpty else { continue }
                     covered.insert("cloudflare:domain:\(name)")
+                    estate.autoRenew[name] = (domain["auto_renew"] as? Bool) ?? false
+                    if let expiry = IngestSupport.isoDate(domain["expires_at"] ?? domain["expires_on"]) {
+                        estate.consider(expiry, name: name, kind: .registration)
+                    }
                     if let due = domainRow(domain, name: name, accountID: accountID) {
                         out.append(due)
                     }
@@ -197,6 +218,7 @@ enum CloudflareFetch {
         }
 
         lastCovered = covered
+        CloudflareEstateStore.save(estate)
         return out
     }
 
@@ -260,22 +282,7 @@ enum CloudflareFetch {
     /// thinking about twice.
     static func certRow(_ packs: [[String: Any]], zoneID: String, zoneName: String,
                         dashboard: String) -> Thing? {
-        var earliest: Date?
-        for pack in packs {
-            if let status = pack["status"] as? String,
-               status.lowercased() != "active" { continue }
-            var packDates: [Date] = []
-            if let top = IngestSupport.isoDate(pack["expires_on"]) { packDates.append(top) }
-            for cert in (pack["certificates"] as? [[String: Any]]) ?? [] {
-                if let d = IngestSupport.isoDate(cert["expires_on"]) { packDates.append(d) }
-            }
-            if let primary = pack["primary_certificate"] as? [String: Any],
-               let d = IngestSupport.isoDate(primary["expires_on"]) { packDates.append(d) }
-            if let soonest = packDates.min() {
-                earliest = min(earliest ?? soonest, soonest)
-            }
-        }
-        guard let expiry = earliest,
+        guard let expiry = earliestActiveExpiry(packs),
               let days = daysUntil(expiry), days <= certWindow else { return nil }
         let thing = Thing(
             kind: .reminder,
@@ -291,6 +298,35 @@ enum CloudflareFetch {
         thing.mark = .todo
         thing.summary = String(localized: "Certificates normally renew on their own about a month out. Seeing this means the renewal hasn't happened yet.")
         return thing
+    }
+
+    /// The earliest expiry across a zone's ACTIVE certificate packs, whatever
+    /// the window — `certRow` tests it against `certWindow`, and the estate
+    /// snapshot records it regardless (prd §296: the runway's quiet state names
+    /// a date no row holds, because a healthy account has no rows).
+    ///
+    /// The pack shape is handled two ways on purpose. Cloudflare documents the
+    /// expiry on the certificates INSIDE a pack, but has also returned it at
+    /// pack level; reading both costs one `??` and makes the difference between
+    /// a working feature and a silently empty one, which is not a trade worth
+    /// thinking about twice.
+    static func earliestActiveExpiry(_ packs: [[String: Any]]) -> Date? {
+        var earliest: Date?
+        for pack in packs {
+            if let status = pack["status"] as? String,
+               status.lowercased() != "active" { continue }
+            var packDates: [Date] = []
+            if let top = IngestSupport.isoDate(pack["expires_on"]) { packDates.append(top) }
+            for cert in (pack["certificates"] as? [[String: Any]]) ?? [] {
+                if let d = IngestSupport.isoDate(cert["expires_on"]) { packDates.append(d) }
+            }
+            if let primary = pack["primary_certificate"] as? [String: Any],
+               let d = IngestSupport.isoDate(primary["expires_on"]) { packDates.append(d) }
+            if let soonest = packDates.min() {
+                earliest = min(earliest ?? soonest, soonest)
+            }
+        }
+        return earliest
     }
 
     /// A Cloudflare Registrar domain approaching renewal.
@@ -650,6 +686,57 @@ enum CloudflareFetch {
             return "https://dash.cloudflare.com/"
         }
         return "https://dash.cloudflare.com/\(id)/\(name)"
+    }
+}
+
+/// The runway's estate snapshot (`CloudflareEstate`) lives in
+/// `CloudflareRunway.swift` — it is pure Foundation and is compiled AS SHIPPED
+/// by `scripts/cloudflare-selftest.sh` there, rather than text-extracted from
+/// this file. Only its STORE lives here, because a store touches UserDefaults.
+enum CloudflareEstateStore {
+    private static let key = "cloudflare.estate"
+
+    /// The decoded snapshot, held in memory.
+    ///
+    /// Not a micro-optimisation: `load()` is reached from
+    /// `CloudflareRunwaySource.compose`, which the Cloudflare room calls from a
+    /// SwiftUI BODY EVALUATION — so an un-memoized read is a UserDefaults hit
+    /// plus a fresh `JSONDecoder` over two unbounded dictionaries on every
+    /// render of the feed. No sibling card in that chain does I/O per render.
+    /// Written only by `save`/`clear`, both of which sit on this type, so the
+    /// cache cannot go stale behind its own store.
+    ///
+    /// `.some(nil)` is a real answer — "we looked, there is no snapshot" —
+    /// which is why the cache is doubly optional rather than using nil as
+    /// "unread". Without that, an unconnected account re-reads and re-fails
+    /// the decode on every render, which is the one case that renders most
+    /// often.
+    ///
+    /// Plain static state, like `CloudflareFetch.lastCovered` above it: the
+    /// writers are the pass (`@MainActor`) and `TokenBridge.onRemove` (called
+    /// from the UI), and the reader is `compose` (`@MainActor`). The store is
+    /// deliberately NOT `@MainActor` itself — `onRemove` is synchronous and
+    /// nonisolated, and a store that couldn't be cleared from there would
+    /// leave a disconnected account's zone names in memory.
+    private static var cached: CloudflareEstate??
+
+    static func load() -> CloudflareEstate? {
+        if let cached { return cached }
+        let decoded = UserDefaults.standard.data(forKey: key)
+            .flatMap { try? JSONDecoder().decode(CloudflareEstate.self, from: $0) }
+        cached = .some(decoded)
+        return decoded
+    }
+
+    static func save(_ estate: CloudflareEstate) {
+        guard let data = try? JSONEncoder().encode(estate) else { return }
+        UserDefaults.standard.set(data, forKey: key)
+        cached = .some(estate)
+    }
+
+    static func clear() {
+        UserDefaults.standard.removeObject(forKey: key)
+        cached = .some(nil)
     }
 }
 

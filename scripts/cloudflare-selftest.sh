@@ -8,6 +8,11 @@
 #     — dnsTitle    (what the row says)
 #     — daysUntil   (every deadline row's window test)
 #
+#   Casberi/Casberi/Model/CloudflareRunway.swift — the room's hero card, and
+#   `CloudflareEstate` beside it. Foundation-only by design, so it is compiled
+#   WHOLE AND UNMODIFIED rather than extracted: the strongest form of "the
+#   harness ran the shipped logic".
+#
 # WHY A HARNESS AND NOT A LIVE CHECK. The bridge was authored against
 # Cloudflare's published API reference with no token stored and no
 # authenticated access from this host, and every failure mode in `diffDNS` is a
@@ -34,6 +39,12 @@ cd "$(dirname "$0")/.."
 
 CF="Casberi/Casberi/Model/CloudflareBridge.swift"
 [[ -f "$CF" ]] || { echo "✗ $CF not found"; exit 1; }
+# The runway (prd §296) is Foundation-only by design, so it is compiled WHOLE
+# and unmodified — not extracted, not copied. A card whose rail places a
+# certificate at the wrong point, or whose quiet headline claims four months on
+# an account expiring tomorrow, renders perfectly either way.
+RUNWAY="Casberi/Casberi/Model/CloudflareRunway.swift"
+[[ -f "$RUNWAY" ]] || { echo "✗ $RUNWAY not found"; exit 1; }
 
 # --- drift guards -----------------------------------------------------------
 # Wiring facts the extracted functions cannot prove on their own. A perfect
@@ -47,8 +58,24 @@ grep -q 'if ref.hasPrefix("cloudflare:dns:") { continue }' "$CF" \
   || { echo "✗ the reconcile no longer exempts DNS event rows — each would close one pass after landing"; exit 1; }
 grep -q 'out += await dnsPass(' "$CF" \
   || { echo "✗ the pass no longer runs the DNS diff at all"; exit 1; }
-grep -q 'case .cloudflare: CloudflareDNSLedger.clear()' Casberi/Casberi/Model/TokenBridges.swift \
+grep -q 'CloudflareDNSLedger.clear()' Casberi/Casberi/Model/TokenBridges.swift \
   || { echo "✗ disconnecting no longer clears the DNS ledger — a new account would diff against the old one's records"; exit 1; }
+grep -q 'CloudflareEstateStore.clear()' Casberi/Casberi/Model/TokenBridges.swift \
+  || { echo "✗ disconnecting no longer clears the estate — the runway would name a new account's rows after the old account's zones"; exit 1; }
+grep -q 'CloudflareEstateStore.save(estate)' "$CF" \
+  || { echo "✗ the pass no longer records the estate — the runway loses its zone names and its quiet-state date"; exit 1; }
+# The rail's default length and the widest landing window are the same number
+# for a reason: widen the window without widening the rail and every distant
+# registration piles up on the rail's last pixel.
+grep -q 'static let domainWindow = 60' "$CF" \
+  || { echo "✗ domainWindow moved — CloudflareRunway.span's 60-day default no longer matches the widest landing window"; exit 1; }
+grep -q 'guard furthest > 60 else { return 60 }' "$RUNWAY" \
+  || { echo "✗ the runway's default span no longer matches domainWindow"; exit 1; }
+# The card's whole reason to exist is that it draws on an EMPTY room.
+grep -q 'CloudflareRunway.quietHeadline' Casberi/Casberi/Screens/CloudflareRunwayCard.swift \
+  || { echo "✗ the runway card no longer has a quiet state — a healthy account is back to a blank room"; exit 1; }
+grep -q 'CloudflareRunwaySource.compose' Casberi/Casberi/Screens/FeedScreen.swift \
+  || { echo "✗ the Cloudflare room no longer composes the runway at all"; exit 1; }
 
 TMP=$(mktemp -d /tmp/cf-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT
@@ -222,16 +249,142 @@ check("today reads as 0", CF.daysUntil(now.addingTimeInterval(3600), from: now) 
 check("already past reads negative, so it still lands",
       (CF.daysUntil(now.addingTimeInterval(-2 * 86_400), from: now) ?? 99) < 0)
 
+// ===========================================================================
+// The runway (prd §296) — what the Cloudflare room LEADS with.
+// ===========================================================================
+
+typealias Runway = CloudflareRunway
+
+func item(_ id: String, _ name: String, _ kind: Runway.Kind, days: Int?,
+          named: Bool = true, auto: Bool? = nil) -> Runway.Item {
+    .init(id: id, name: name, named: named, kind: kind, days: days, autoRenews: auto)
+}
+
+let cert6 = item("cloudflare:cert:z1", "casberi.app", .certificate, days: 6)
+let cert24 = item("cloudflare:cert:z2", "casberi.dev", .certificate, days: 24)
+let token28 = item("cloudflare:token", "API token", .token, days: 28)
+let domAuto = item("cloudflare:domain:casberi.app", "casberi.app", .registration, days: 41, auto: true)
+let domManual = item("cloudflare:domain:alexchopan.com", "alexchopan.com", .registration, days: 58, auto: false)
+let stalled = item("cloudflare:zone:z3", "casberi.xyz", .zone, days: nil)
+
+print("runway — order")
+let ranked = Runway.rank([domManual, cert24, stalled, cert6, token28, domAuto])
+check("soonest first", ranked.map(\.name).prefix(2) == ["casberi.xyz", "casberi.app"])
+// A zone that isn't being served is not a warning about the future — the site
+// is down right now, so it cannot sort behind a date two months out.
+check("an already-true row leads everything with a date", ranked.first?.days == nil)
+check("the rest are in date order",
+      ranked.dropFirst().compactMap(\.days) == [6, 24, 28, 41, 58])
+let tie = Runway.rank([item("b", "b.com", .certificate, days: 5),
+                       item("a", "a.com", .certificate, days: 5)])
+check("a tie breaks on name, so the order is stable between passes",
+      tie.map(\.name) == ["a.com", "b.com"])
+
+print("runway — the rail")
+check("the default span is the widest landing window", Runway.span(for: ranked) == 60)
+check("a row past the window widens the rail to a whole month",
+      Runway.span(for: [item("x", "x.com", .certificate, days: 71)]) == 90)
+check("today sits at the left edge", Runway.position(days: 0, span: 60) == 0)
+check("the span sits at the right edge", Runway.position(days: 60, span: 60) == 1)
+check("halfway is halfway", Runway.position(days: 30, span: 60) == 0.5)
+// There is no negative room on a runway. An overdue certificate that placed
+// itself off the left edge would silently vanish from the card.
+check("overdue pins to now, never off the axis", Runway.position(days: -9, span: 60) == 0)
+check("an already-true row pins to now", Runway.position(days: nil, span: 60) == 0)
+check("a row past its own span is clamped inside", Runway.position(days: 400, span: 60) == 1)
+
+print("runway — the headline")
+check("many dated rows are counted and the window named",
+      Runway.headline(items: [cert6, cert24, token28], span: 60)
+        == "3 things you own come due in the next 60 days")
+// A stalled zone has no date. Folding it into "come due in the next 60 days"
+// would say something false about the one row that is already true.
+check("a stalled zone is never counted as a deadline",
+      Runway.headline(items: [stalled, cert6, cert24], span: 60)
+        .contains("isn't being served"))
+check("…and the dated rows are still counted beside it",
+      Runway.headline(items: [stalled, cert6, cert24], span: 60).contains("2 more things"))
+check("stalled zones alone read as their own sentence",
+      Runway.headline(items: [stalled, item("z", "b.com", .zone, days: nil)], span: 60)
+        == "2 of your zones aren't being served")
+check("a single row is named instead of counted",
+      Runway.headline(items: [cert6], span: 60) == "casberi.app's certificate expires in 6 days")
+check("a single expired row says so",
+      Runway.headline(items: [item("c", "casberi.app", .certificate, days: -1)], span: 60)
+        .contains("has expired"))
+check("an auto-renewing registration renews rather than expires",
+      Runway.sentence(domAuto).contains("renews in 41 days"))
+check("a manual one expires",
+      Runway.sentence(domManual).contains("expires in 58 days"))
+
+print("runway — the row")
+check("nothing reads as a fake zero when there is no date",
+      Runway.value(days: nil) == "Now")
+check("overdue says overdue", Runway.value(days: -3) == "Overdue")
+check("today says today", Runway.value(days: 0) == "Today")
+check("one day is singular", Runway.value(days: 1) == "1 day")
+check("many days are counted", Runway.value(days: 24) == "24 days")
+// The one chip, and it is the one fact that changes what you'd do.
+check("auto-renew off is chipped", Runway.chip(domManual) == "No auto-renew")
+check("auto-renew on is not", Runway.chip(domAuto) == nil)
+check("a certificate is never chipped", Runway.chip(cert6) == nil)
+check("a thing that renews itself is dimmed", Runway.isQuiet(domAuto))
+check("a thing you must act on is not", !Runway.isQuiet(domManual) && !Runway.isQuiet(cert6))
+// When the estate can't name the object, `name` IS the landed row's whole
+// title — repeating "TLS certificate" under it would read as a stutter.
+check("an unnamed row states no kind line",
+      Runway.kindLine(item("cloudflare:cert:z9", "casberi.app — TLS certificate expires in 6 days",
+                           .certificate, days: 6, named: false)) == nil)
+check("a named row does", Runway.kindLine(cert6) == "TLS certificate")
+
+print("runway — the quiet state")
+check("far out is stated in months", Runway.quietHeadline(days: 118).contains("4 months"))
+check("inside two months is stated in days", Runway.quietHeadline(days: 47).contains("47 days"))
+check("tomorrow is not called a month", Runway.quietHeadline(days: 1).contains("before tomorrow"))
+let next = Runway.Next(days: 118, date: Date(timeIntervalSince1970: 1_810_000_000),
+                       name: "casberi.app", kind: .certificate)
+check("the quiet card names what the next date actually is",
+      Runway.quietNote(next).contains("casberi.app's certificate"))
+check("…and when", Runway.quietNote(next).contains(Runway.quietDate(next.date)))
+
+print("runway — what it refuses to speak for")
+check("a fully read account carries no coverage note",
+      Runway.coverageNote(uncovered: 0, zonesSeen: 4) == nil)
+check("an unread zone is declared", Runway.coverageNote(uncovered: 2, zonesSeen: 12)?
+        .contains("2 of your 12 zones") == true)
+check("one unread zone is singular",
+      Runway.coverageNote(uncovered: 1, zonesSeen: 11)?.hasPrefix("1 of your 11") == true)
+check("a note without an estate says nothing", Runway.coverageNote(uncovered: 3, zonesSeen: 0) == nil)
+
+print("estate — the next date the room never lands")
+var estate = CloudflareEstate()
+let t0 = Date(timeIntervalSince1970: 1_800_000_000)
+estate.consider(t0.addingTimeInterval(90 * 86_400), name: "late.com", kind: .registration, now: t0)
+estate.consider(t0.addingTimeInterval(40 * 86_400), name: "soon.com", kind: .certificate, now: t0)
+check("the earliest future date wins", estate.nextName == "soon.com")
+check("…and carries its kind as a raw value, never a rendered sentence",
+      estate.nextKind == "certificate")
+// A date already past is not "next" — it is a row that already landed, and
+// letting it win would freeze the quiet card on a certificate that expired
+// in March.
+estate.consider(t0.addingTimeInterval(-5 * 86_400), name: "gone.com", kind: .certificate, now: t0)
+check("a date in the past is refused", estate.nextName == "soon.com")
+estate.zonesSeen = 12
+estate.zonesCovered = 10
+check("uncovered is the gap the cap leaves", estate.uncovered == 2)
+estate.zonesCovered = 14
+check("a covered count past the seen count never goes negative", estate.uncovered == 0)
+
 print("")
 if failures > 0 { print("cloudflare-selftest: ✗ \(failures) assertion(s) failed"); exit(1) }
 print("cloudflare-selftest: OK — every assertion passed against the shipped source.")
 SWIFT
 
 build() {
-  swiftc -O -o "$TMP/cf-selftest" "$1" "$TMP/main.swift" 2>"$TMP/build.log"
+  swiftc -O -o "$TMP/cf-selftest" "$1" "$2" "$TMP/main.swift" 2>"$TMP/build.log"
 }
 
-if ! build "$TMP/extracted.swift"; then
+if ! build "$TMP/extracted.swift" "$RUNWAY"; then
   echo "✗ harness failed to compile against the shipped source"
   grep -E 'error:' "$TMP/build.log" | head -20
   exit 1
@@ -249,7 +402,24 @@ mutate() {
   local label="$1" sedexpr="$2"
   sed "$sedexpr" "$TMP/extracted.swift" > "$TMP/mutant.swift"
   if ! cmp -s "$TMP/extracted.swift" "$TMP/mutant.swift"; then
-    if build "$TMP/mutant.swift" && "$TMP/cf-selftest" >/dev/null 2>&1; then
+    if build "$TMP/mutant.swift" "$RUNWAY" && "$TMP/cf-selftest" >/dev/null 2>&1; then
+      echo "  ✗ $label — mutation survived, the rule is untested"
+      exit 1
+    fi
+    echo "  ✓ $label"
+  else
+    echo "  ✗ $label — mutation did not apply, the harness is stale"
+    exit 1
+  fi
+}
+
+# The same, against the runway — which is compiled whole rather than extracted,
+# so its mutant is a throwaway copy and the real build never reads it.
+mutate_runway() {
+  local label="$1" sedexpr="$2"
+  sed "$sedexpr" "$RUNWAY" > "$TMP/runway-mutant.swift"
+  if ! cmp -s "$RUNWAY" "$TMP/runway-mutant.swift"; then
+    if build "$TMP/extracted.swift" "$TMP/runway-mutant.swift" && "$TMP/cf-selftest" >/dev/null 2>&1; then
       echo "  ✗ $label — mutation survived, the rule is untested"
       exit 1
     fi
@@ -272,6 +442,35 @@ mutate "dropping removal detection is caught" \
 # Forget the previous value, keeping the change itself.
 mutate "losing the previous value is caught" \
   's/previousContent: was.count > 2 ? was\[2\] : nil/previousContent: nil/'
+
+# --- the runway -------------------------------------------------------------
+# Sort a stalled zone by its (absent) date like everything else — the shape
+# where a site that is DOWN RIGHT NOW sorts behind a renewal two months out.
+mutate_runway "burying an already-true row is caught" \
+  's/case (nil, _): return true/case (nil, _): return false/'
+# Let the rail run negative — an overdue certificate placed off the left edge
+# disappears from the card entirely.
+mutate_runway "an unclamped rail position is caught" \
+  's|return min(max(Double(days) / Double(span), 0), 1)|return Double(days) / Double(span)|'
+# Never widen the rail — every distant row piles up on the last pixel.
+mutate_runway "a rail that cannot widen is caught" \
+  's/guard furthest > 60 else { return 60 }/guard false else { return 60 }/'
+# Count a stalled zone as a deadline, which is the false sentence.
+mutate_runway "counting a stalled zone as due is caught" \
+  's/let stalled = items.filter { \$0.days == nil }.count/let stalled = 0/'
+# Round everything into months, so tomorrow reads as "0 months".
+mutate_runway "a quiet headline that always speaks in months is caught" \
+  's/if days >= 60 {/if days >= 0 {/'
+# Chip every registration, so the one fact that changes what you would do stops
+# distinguishing anything.
+mutate_runway "chipping every registration is caught" \
+  's/item.kind == .registration \&\& item.autoRenews == false/item.kind == .registration/'
+# Let a past date be "next" — the quiet card then counts down to March.
+mutate_runway "a stale next date being accepted is caught" \
+  's/guard date > now else { return }/guard true else { return }/'
+# Report a coverage note the card cannot support.
+mutate_runway "a coverage note without an estate is caught" \
+  's/guard uncovered > 0, zonesSeen > 0 else { return nil }/guard uncovered > 0 else { return nil }/'
 
 echo ""
 echo "cloudflare-selftest: OK — assertions pass and every mutation was caught."

@@ -8610,6 +8610,23 @@ Verified end to end on sim, all three arms: greeting → Try it → fork → scr
 screenshots and the cover lifted onto the All feed showing them grouped by day; wallet landed on
 the manager; follow landed 23 things from a real Bluesky handle. `-startPick` / `-startFollow`.
 
+**Amendment (user, 2026-08-03): a DEMO arm was considered and declined — the fork stays three
+cards.** The proposal was a fourth way in: pre-picked examples ("see vitalik.eth", "see
+nasa.gov") so a new person could watch the app work without connecting anything of their own.
+Declined at the fork level for the reason the fork exists: three verbs is a question you answer
+in a second, and a fourth option that competes with the three real answers adds a decision
+before anyone has done anything — it also reframes the product as something you preview rather
+than something you fill. Two costs made it worse than neutral: a tapped wallet example spends
+one of the five watch slots (§170) with no "this was only a demo" tier to take it back, and it
+makes the first feed a STRANGER'S — cheap proof of the wrong thing, since the whole pitch is
+your own corpus. Held open, deliberately unbuilt: an example as a PLACEHOLDER inside an arm
+already chosen (a greyed `nasa.gov` in the Follow form's Feed field) is a different shape —
+it removes a decision rather than adding one, since the real stall is the empty field after the
+card, not the card. The Follow arm is the only honest home for it ("someone to follow" already
+means a stranger); the Files arm can't have one at all (it opens the system picker). Read
+alongside the toggle tripwire above: both are the same rule — an arm may not grow a second
+question.
+
 ## 218. The All feed says what things are (user: "how if at all would you change our 'all' feed", then "i like all these", "what else would you add for surprise and delight", "do it", 2026-07-25) — VERIFIED
 
 Six changes to the landing screen, from one root cause: **the feed was titled by convention, and
@@ -15603,3 +15620,77 @@ computed over only the DRAWN nodes (a display cap is not an accounting rule),
 and an unpriced leg contributing `$0` instead of nothing. `-connectionsProbe
 YES` reports the read phase by phase with the excluded tallies — an empty card
 has four causes that render as the same silence and only one of them is a bug.
+
+## §296 — Cloudflare: the dates behind a site you run (2026-08-03)
+
+The bridge landed first (`Model/CloudflareBridge.swift`, seat `cloudflare`,
+group **Work**), and the discipline is PostHog's: Cloudflare's API is
+overwhelmingly a firehose of counts — requests, bandwidth, cache hit ratio,
+threats blocked — and **not one of them lands**. What Cloudflare knows that is
+thing-shaped is every date on which something you own stops working: a TLS
+certificate that hasn't renewed 30 days out, a registration coming up at 60, a
+zone that isn't active (no date — it's already true), the API token's own
+expiry, and a DNS record added, changed or removed with what it used to point
+at. Read-only STRUCTURALLY (the token's permissions are chosen at mint time),
+and its reconcile INVERTS Trello's rule — absence means the condition cleared,
+but only over ground the pass actually read, which is what `lastCovered` is for.
+
+### §296 follow-up — the room was all alarms and no estate (user: "how would you enrich the cloudflare source feed? are there and visualizations we could do that would make sense?", then "mock up the three visualizations", then "I like A", 2026-08-03)
+
+Three were mocked (`design/cloudflare-viz/cloudflare-room-mocks.html`) and they
+split time three ways: **A the runway** (what breaks next), **B the surface
+map** (one dot per DNS record, orange where it answers straight from your
+origin), **C the change spine** (one tick per change that really happened, on
+Cloudflare's own `modified_on`). A was ruled in. B and C stay on the page —
+both cost nothing, since `CloudflareDNSLedger` already persists `proxied` for
+every record and `modified_on` is read on every pass and thrown away.
+
+**The problem A solves is not that the dates were unranked, it is that a
+healthy account rendered as a blank screen** — indistinguishable from a broken
+token, a lapsed permission, or a bridge that silently stopped reading. Every
+row this bridge lands is an alarm, so the room had no way to say "everything
+is fine", which is what it should say most of the time.
+
+So the card's EMPTY state is the reason to build it, not a fallback: *"Nothing
+you own expires for four months. The next date is casberi.app's certificate, on
+14 December."* That date is one **no `Thing` holds** — the bridge lands nothing
+outside its own 30/60-day windows — so `CloudflareEstate` records it during the
+pass, alongside the two other facts a landed row cannot carry: the zone NAME
+behind a certificate's ref (a title is localized prose, not data) and whether a
+registration auto-renews (which survives on a row only as the difference
+between the words "renews" and "expires").
+
+**The form.** One axis, drawn ONCE, with a mark where each deadline actually
+falls; the rows underneath carry the names. Not a bar per row — §292 ruled
+those out ("too AI") and they were redundant beside the number two millimetres
+away. The anatomy is `WalletApprovalExposureCard`'s: a kicker in the card's one
+hue, a heavy headline stating the whole finding as a sentence, ranked rows, one
+chip. The chip is **No auto-renew**, the single fact that changes what you'd do
+— auto-renew is stated rather than filtered on, because it is exactly the
+domains set to renew automatically that lapse when the card behind them expires.
+
+**The hue is Cloudflare orange (`#f6821f`), not `DS.attention`.** They sit
+close, and that is the tension worth naming: this is an identity, not an alarm,
+and on a healthy account it heads a card saying everything is fine.
+
+**Three refusals, each the §295 ruling in a new room.** A stalled zone is never
+counted as a deadline (it has no date; folding it into "come due in the next 60
+days" would say something false about the one row that is already true) — it
+leads the rail instead, at position zero, because the site is down *now*.
+Overdue pins to now rather than running off the left edge, where it would
+vanish. And `uncovered` is declared: the pass reads certificates for at most
+`zoneCap` zones, so a card drawing a confident runway over an estate it only
+partly read would be `lastCovered`'s own lie one surface up.
+
+**Cost: nothing.** No request, no new `Thing` field, no CloudKit deploy.
+
+**Verified.** `CloudflareRunway.swift` is Foundation-only, so
+`scripts/cloudflare-selftest.sh` compiles it WHOLE and unmodified (46 new
+assertions) and mutation-proves eight rules, each a silent wrong answer that
+renders perfectly: a stalled zone buried under a renewal two months out, an
+unclamped rail hiding an overdue certificate off its left edge, a rail that
+cannot widen, a stalled zone counted as due, a quiet headline that speaks in
+months for tomorrow, a chip on every registration, a past date accepted as
+"next", and a coverage note claimed without an estate. `-cloudflareRunwayProbe
+YES` reports the reading line by line — a missing runway has five causes that
+render as the same nothing and only two are bugs.

@@ -1635,6 +1635,15 @@ struct FeedScreen: View {
         let rosterAccounts: [SocialAccount] = liveStream == nil && shape == .social
             ? (source == "Farcaster" ? FarcasterStore.shared.socialAccounts : BlueskyStore.shared.socialAccounts)
             : []
+        // The Cloudflare runway (2026-08-03, prd §296) — every row that room
+        // lands is a date something you own stops working, and nothing drew
+        // them together. It sits directly under the live exception because
+        // nothing else can claim this room: no registry below names Cloudflare,
+        // so the chain would fall through to a blank head. It is also the one
+        // card here that renders on an EMPTY room, which is the whole reason
+        // it exists — see `CloudflareRunway`.
+        let runway = liveStream == nil && source == "Cloudflare"
+            ? CloudflareRunwaySource.compose(things: visible) : nil
         // The anniversary, when it's a PICTURE (2026-07-31). Scoped to the
         // memories room on purpose: everywhere else `OnThisDay` rides inside
         // the heatmap card, where a title represents the thing perfectly, and
@@ -1655,14 +1664,14 @@ struct FeedScreen: View {
         // and since 2026-07-31 what an Instagram export's own captions and
         // comments are about. When there's too little text to say anything it
         // returns nil and the next card down takes the head.
-        let topicMap = liveStream == nil && anniversary == nil && rosterAccounts.isEmpty
+        let topicMap = liveStream == nil && runway == nil && anniversary == nil && rosterAccounts.isEmpty
             ? FeedInsight.topicMap(source: source, things: visible) : nil
-        let leaderboard = liveStream == nil && anniversary == nil && topicMap == nil && rosterAccounts.isEmpty
+        let leaderboard = liveStream == nil && runway == nil && anniversary == nil && topicMap == nil && rosterAccounts.isEmpty
             ? FeedInsight.leaderboard(source: source, things: visible) : nil
-        let distribution = liveStream == nil && anniversary == nil && topicMap == nil
+        let distribution = liveStream == nil && runway == nil && anniversary == nil && topicMap == nil
             && leaderboard == nil && rosterAccounts.isEmpty
             ? FeedInsight.distribution(source: source, things: visible) : nil
-        let mosaic = liveStream == nil && anniversary == nil && topicMap == nil
+        let mosaic = liveStream == nil && runway == nil && anniversary == nil && topicMap == nil
             && leaderboard == nil && distribution == nil && rosterAccounts.isEmpty
             ? FeedInsight.mosaic(source: source, things: visible) : nil
         // The heatmap sits LAST (moved 2026-07-31), not third. It answers
@@ -1679,12 +1688,24 @@ struct FeedScreen: View {
         // the role it already plays for Photos under the treemap.
         let heatmapLabel = liveStream == nil && rosterAccounts.isEmpty && anniversary == nil
             && topicMap == nil && leaderboard == nil && distribution == nil && mosaic == nil
+            && runway == nil
             ? FeedHeatmap.label(for: source) : nil
         let heroShown = liveStream != nil || anniversary != nil || topicMap != nil
-            || heatmapLabel != nil || leaderboard != nil
+            || heatmapLabel != nil || leaderboard != nil || runway != nil
             || distribution != nil || mosaic != nil || !rosterAccounts.isEmpty
         if let liveStream {
             insightSection { LiveStreamHero(thing: liveStream) { openThing(liveStream) } }
+        } else if let runway {
+            insightSection {
+                CloudflareRunwayCard(runway: runway) { item in
+                    // The card holds no `Thing` — it hands back its own value
+                    // and the lookup happens here, against the live corpus, in
+                    // the view that owns the sheet.
+                    if let match = visible.first(where: {
+                        $0.isLive && $0.sourceRef == item.id
+                    }) { openThing(match) }
+                }
+            }
         } else if let anniversary {
             insightSection {
                 OnThisDayHero(echo: anniversary) { feedSheet = .thing(anniversary.thing) }

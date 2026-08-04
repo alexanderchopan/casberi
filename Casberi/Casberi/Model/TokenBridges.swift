@@ -283,7 +283,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // traffic numbers, and someone connecting an infrastructure account has
         // every right to wonder whether their visitors' data is about to land
         // in a feed.
-        case .cloudflare: "Reads the dates behind the sites you run — certificate expiry, domain renewals, your token's own expiry — and tells you when a DNS record changes. No analytics, no logs, nothing about your visitors. A read-only token cannot change a DNS record, purge cache, or write anything back."
+        case .cloudflare: "Reads certificate, domain and token expiry dates, and tells you when a DNS record changes. No analytics, nothing about your visitors. A read-only token cannot change a record or purge cache."
         }
     }
 
@@ -343,7 +343,11 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // may name a different Cloudflare account. Diffing a new account's DNS
         // against the old one's snapshot would report a stranger's records as
         // yours, added and removed.
-        case .cloudflare: CloudflareDNSLedger.clear()
+        case .cloudflare:
+            CloudflareDNSLedger.clear()
+            // Same reasoning one surface up: the runway would otherwise name a
+            // new account's certificate rows after the old account's zones.
+            CloudflareEstateStore.clear()
         default:         break
         }
     }

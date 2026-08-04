@@ -457,7 +457,7 @@ enum BridgeCatalog {
                          "Read-only by construction — never a write"],
               needsSetup: true, added: day(2026, 8, 3)),
         Offer(name: "Cloudflare",  tagline: "The dates behind the sites you run",    group: "Work",      connectable: true,
-              summary: "Every date on which something you run stops working — a TLS certificate that hasn't renewed, a domain coming up for renewal, a zone that isn't being served, and the API token's own expiry.\n\nAnd when a DNS record changes, you're told what it was and what it is now.\n\nNothing else lands, so a quiet feed means everything is current.\n\nNo analytics, no logs, nothing about your visitors. Connects with a read-only token: it cannot change a DNS record, purge cache, or write anything back.",
+              summary: "The dates something you run stops working — a certificate that hasn't renewed, a domain coming up, a zone that isn't being served — land in your feed before they bite.\n\nAnd when a DNS record changes, you're told what it used to point at.\n\nConnects with a read-only token: no analytics, nothing about your visitors, and it cannot change a record or purge cache.",
               features: ["A DNS record changes — with what it used to point at",
                          "A certificate that hasn't renewed, before the browser warning",
                          "Domains coming up for renewal, auto-renew or not",

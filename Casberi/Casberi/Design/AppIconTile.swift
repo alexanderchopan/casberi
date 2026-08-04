@@ -110,6 +110,8 @@ extension DS {
         // is the orange. Their documented primary; the mark's own saturated
         // pixels sample #e03000–#f0b000 across the hedgehog.
         case "posthog":             return Color.fixed("#f54e00")
+        case "cloudflare":          return Color.fixed("#f6821f")   // the cloud's orange (their documented brand orange; the bundled mark samples it)
+        case "trello":              return Color.fixed("#1169df")   // the mark's own gradient at its midpoint, icon-sampled from the bundled asset (#2381fd → #0054c2)
         // Grok's mark is pure black with ZERO saturated pixels — the X case
         // exactly (and xAI is X). washHue nils this, so the Grok screens stay
         // pure ink ON PURPOSE; the tile just stops falling back to gray.

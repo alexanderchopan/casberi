@@ -362,6 +362,19 @@ enum ProbeHooks {
         Hook(key: "cloudflareProbe") { _, _ in
             Task { @MainActor in await CloudflareFetch.diagnose() }
         },
+        // `-cloudflareRunwayProbe YES` — what the Cloudflare room LEADS with
+        // (2026-08-03, prd §296): the estate snapshot, then the card's own
+        // headline, then one `cfRunwayRow|` line per deadline. One NSLog per
+        // line (the `-todayProbe` truncation lesson). Reads the corpus and the
+        // stored snapshot only — no network, so it costs nothing and works
+        // against whatever the last real sync left behind.
+        Hook(key: "cloudflareRunwayProbe") { _, context in
+            Task { @MainActor in
+                for line in CloudflareRunwaySource.probeLines(context: context) {
+                    NSLog("[Casberi] cfRunway| %@", line)
+                }
+            }
+        },
         // `-oneclawProbe YES` walks the 1Claw access read with the STORED key
         // (connect first via `-tokenBridge "1Claw:<key>"`), logging each step
         // — scopes, vaults, per-vault grant counts or the honest "unreadable"
@@ -2475,29 +2488,41 @@ enum ProbeHooks {
                     if line != nil, leader == nil { leader = name }
                 }
 
-                // 1. the anniversary — memories room only, and only with pixels
+                // 1. the runway — Cloudflare only, and it outranks everything
+                // below (2026-08-03, prd §296). Mirrored here the day it
+                // landed: this probe's whole job is naming what really leads a
+                // room, and a card added to `shapedSections` without a line
+                // here would make the probe confidently report "leads with
+                // NOTHING" about a room that leads with a card — the §219
+                // failure inverted, which is the one this probe exists to stop.
+                note("runway", CloudflareRunwaySource.compose(things: things).map {
+                    $0.items.isEmpty
+                        ? "quiet · \($0.next.map { n in CloudflareRunway.quietHeadline(days: n.days) } ?? "—")"
+                        : "\(CloudflareRunway.headline(items: $0.items, span: $0.span)) · \($0.items.count) rows"
+                })
+                // 2. the anniversary — memories room only, and only with pixels
                 let echo = source == "Snapchat"
                     ? OnThisDay.find(in: things.filter {
                         $0.kind == .file && $0.previewImageData != nil })
                     : nil
                 note("anniversary", echo.map { "\($0.label) → \($0.thing.title)" })
-                // 2. the treemap
+                // 3. the treemap
                 let map = FeedInsight.topicMap(source: source, things: things)
                 note("topicMap", map.map { "\($0.title) · \($0.subtitle) · \($0.cells.count) cells" })
                 for cell in map?.cells ?? [] {
                     NSLog("[Casberi] roomInsightCell| %@ = %d", cell.label, cell.count)
                 }
-                // 3. the bars
+                // 4. the bars
                 let board = FeedInsight.leaderboard(source: source, things: things)
                 note("leaderboard", board.map { "\($0.title) · \($0.subtitle) · \($0.rows.count) rows" })
                 for row in board?.rows ?? [] {
                     NSLog("[Casberi] roomInsightRow| %@ = %@", row.label, row.detail)
                 }
-                // 4. the split bar, 5. the wall
+                // 5. the split bar, 6. the wall
                 note("distribution", FeedInsight.distribution(source: source, things: things)?.title)
                 note("mosaic", FeedInsight.mosaic(source: source, things: things)
                         .map { "\($0.title) · \($0.tiles.count) tiles" })
-                // 6. the grid — last, and reported with what it actually counts
+                // 7. the grid — last, and reported with what it actually counts
                 if let label = FeedHeatmap.label(for: source) {
                     let counted = FeedHeatmap.counted(things, label: label)
                     let year = ContributionYear.from(dates: counted.map(\.capturedAt),

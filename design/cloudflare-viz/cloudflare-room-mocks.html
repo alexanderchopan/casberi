@@ -1,0 +1,395 @@
+<title>Cloudflare — three ways to lead the room</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --cf: #f6821f;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body { font-family: var(--text); color: var(--ink);
+         background: radial-gradient(900px 420px at 18% -8%, rgba(246,130,31,.07), transparent 62%), var(--page);
+         padding: 48px 28px 72px; }
+  .wrap { max-width: 1240px; margin: 0 auto; }
+  header { max-width: 820px; margin-bottom: 26px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: var(--cf); margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.4vw,36px); font-weight: 800; letter-spacing: -.02em; line-height: 1.1; margin-bottom: 12px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 74ch; }
+  header p + p { margin-top: 10px; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start; margin-top: 38px; }
+  .option { width: 360px; }
+
+  /* the Cloudflare room */
+  .screen { background: #0e0f13; border-radius: 22px; padding: 16px 12px 16px; overflow: hidden;
+            box-shadow: 0 24px 60px rgba(0,0,0,.5); }
+  .nav { font-size: 12px; color: #6b7280; font-weight: 600; padding: 0 6px 12px; }
+  .chips { display: flex; gap: 6px; padding: 0 4px 14px; }
+  .chip { font-size: 11.5px; font-weight: 600; padding: 5px 10px; border-radius: 999px;
+          background: #16181d; color: #8b93a3; }
+  .chip.on { background: #23262d; color: var(--ink); }
+
+  /* the hero card */
+  .card { background: #16181d; border-radius: 14px; padding: 16px 14px 14px; }
+  .card .kicker { font-size: 12px; font-weight: 700; color: var(--cf); }
+  .card h4 { font-size: 21px; font-weight: 800; letter-spacing: -.021em; line-height: 1.2; margin-top: 8px; }
+  .card .csub { font-size: 12.5px; color: #9aa0a6; margin-top: 6px; line-height: 1.45; }
+  .card .note { font-size: 11.5px; color: #6b7280; margin-top: 14px; line-height: 1.5; }
+
+  /* A — the runway rail */
+  .rail { margin: 20px 2px 4px; position: relative; height: 34px; }
+  .rail .axis { position: absolute; left: 0; right: 0; top: 11px; height: 2px; background: #23262d; border-radius: 2px; }
+  .rail .now { position: absolute; top: 4px; width: 2px; height: 16px; background: #4b515e; border-radius: 2px; }
+  .rail .m { position: absolute; top: 6px; width: 12px; height: 12px; border-radius: 50%;
+             margin-left: -6px; background: #3a3f4a; }
+  .rail .m.lead { background: var(--cf); top: 4px; width: 16px; height: 16px; margin-left: -8px;
+                  box-shadow: 0 0 0 4px rgba(246,130,31,.16); }
+  .rail .t { position: absolute; top: 22px; font-size: 10.5px; color: #5b6272; transform: translateX(-50%);
+             font-variant-numeric: tabular-nums; }
+  .rail .t.first { transform: none; }
+  .rail .t.last { transform: translateX(-100%); }
+
+  /* ranked rows */
+  .rrow { display: flex; align-items: baseline; gap: 10px; padding: 9px 0; }
+  .rrow .rn { font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
+  .rrow .rk { font-size: 11.5px; color: #6b7280; margin-top: 2px; }
+  .rrow .rv { margin-left: auto; font-size: 15.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .rrow .rv.dim { color: #6b7280; font-weight: 600; }
+  .tag { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 2px 6px; border-radius: 5px;
+         background: var(--cf); color: #101114; vertical-align: 1px; margin-right: 6px; }
+  .tag.quiet { background: #23262d; color: #99a1b4; }
+  .col { display: flex; flex-direction: column; }
+
+  /* B — the record grid */
+  .zone { padding: 11px 0 3px; }
+  .zone .zn { font-size: 15px; font-weight: 700; }
+  .zone .zm { font-size: 11.5px; color: #6b7280; margin-top: 2px; }
+  .dots { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #2b2f38; }
+  .dot.open { background: var(--cf); }
+  .key { display: flex; gap: 14px; margin-top: 16px; font-size: 11px; color: #6b7280; align-items: center; }
+  .key i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 5px;
+           vertical-align: -1px; background: #2b2f38; font-style: normal; }
+  .key i.open { background: var(--cf); }
+
+  /* C — the change spine */
+  .strip { position: relative; height: 22px; margin-top: 8px; }
+  .strip .base { position: absolute; left: 0; right: 0; top: 10px; height: 2px; background: #1d2027; border-radius: 2px; }
+  .strip .tick { position: absolute; top: 3px; width: 2px; height: 16px; border-radius: 2px; background: #3a3f4a; }
+  .strip .tick.hot { background: var(--cf); height: 18px; top: 2px; }
+  .srow { padding: 10px 0 2px; }
+  .srow .sn { font-size: 15px; font-weight: 700; display: flex; align-items: baseline; }
+  .srow .sv { margin-left: auto; font-size: 11.5px; color: #6b7280; font-variant-numeric: tabular-nums; }
+  .axislabel { display: flex; justify-content: space-between; font-size: 10.5px; color: #5b6272; margin-top: 10px; }
+
+  /* the feed rows under the card */
+  .feed { margin-top: 14px; }
+  .frow { display: flex; gap: 10px; padding: 11px 4px; align-items: flex-start; }
+  .frow .fm { width: 26px; height: 26px; border-radius: 7px; flex: none; background: #23262d;
+              display: grid; place-items: center; font-size: 11px; }
+  .frow .ft { font-size: 13.5px; font-weight: 600; line-height: 1.35; }
+  .frow .fs { font-size: 11.5px; color: #6b7280; margin-top: 3px; }
+  .frow + .frow { box-shadow: 0 -1px 0 rgba(255,255,255,.045); }
+
+  /* quiet-state variant */
+  .quietcard { background: #16181d; border-radius: 14px; padding: 16px 14px; margin-top: 14px; }
+
+  .caption { margin-top: 16px; padding: 0 4px; }
+  .caption h3 { font-size: 16.5px; font-weight: 700; margin-bottom: 6px; }
+  .caption h3 span { color: var(--faint); font-weight: 600; }
+  .caption p { font-size: 13px; line-height: 1.55; color: var(--muted); }
+  .caption p + p { margin-top: 7px; }
+  .caption b { color: var(--ink); font-weight: 650; }
+  .cost { font-size: 12px; color: var(--faint); margin-top: 9px; line-height: 1.5; }
+  .cost b { color: var(--muted); font-weight: 650; }
+
+  .law { font-size: 12.5px; line-height: 1.68; color: var(--faint); max-width: 86ch; margin: 46px auto 0; }
+  .law b { color: var(--muted); font-weight: 600; }
+  .law code { color: var(--muted); font-size: 12px; }
+  .law h3 { font-size: 14px; color: var(--ink); font-weight: 700; margin: 24px 0 8px; }
+  .law ul { margin: 8px 0 0 18px; }
+  .law li { margin-bottom: 6px; }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · Cloudflare room · v1</div>
+  <h1>The room is all alarms and no estate</h1>
+  <p>Every row this bridge lands is something about to break, so a healthy account renders as an
+     empty screen and an unhealthy one as an undifferentiated list of warnings. All three cards
+     below fix the same thing: <b>show what you own, not only what's wrong with it.</b></p>
+  <p>They share one idiom and split time three ways — <b>A is the future</b> (what breaks next),
+     <b>B is the present</b> (what's exposed right now), <b>C is the past</b> (when any of it last
+     moved). Every mark on every card is one real object: a certificate, a DNS record, a change
+     that happened. Nothing is normalised, ranked by inference, or interpreted.</p>
+</header>
+
+<div class="row">
+
+  <!-- ================= A — THE RUNWAY ================= -->
+  <div class="option">
+    <div class="screen">
+      <div class="nav">Cloudflare</div>
+      <div class="chips"><span class="chip on">All</span><span class="chip">Cloudflare</span><span class="chip">GitHub</span></div>
+
+      <div class="card">
+        <div class="kicker">Cloudflare</div>
+        <h4>Five things you own come due in the next 60 days</h4>
+        <div class="csub">The nearest is a certificate that should have renewed itself already.</div>
+
+        <div class="rail">
+          <div class="axis"></div>
+          <div class="now" style="left:0"></div>
+          <div class="m lead" style="left:6.6%"></div>
+          <div class="m" style="left:26.6%"></div>
+          <div class="m" style="left:31.1%"></div>
+          <div class="m" style="left:45.5%"></div>
+          <div class="m" style="left:64.4%"></div>
+          <div class="t first" style="left:0">Today</div>
+          <div class="t" style="left:33.3%">30d</div>
+          <div class="t" style="left:66.6%">60d</div>
+          <div class="t last" style="left:100%">90d</div>
+        </div>
+
+        <div class="rrow">
+          <div class="col">
+            <div class="rn">casberi.app</div>
+            <div class="rk">TLS certificate · hasn't renewed</div>
+          </div>
+          <div class="rv">6 days</div>
+        </div>
+        <div class="rrow">
+          <div class="col">
+            <div class="rn">casberi.dev</div>
+            <div class="rk">TLS certificate</div>
+          </div>
+          <div class="rv">24 days</div>
+        </div>
+        <div class="rrow">
+          <div class="col">
+            <div class="rn">API token</div>
+            <div class="rk">Casberi stops reading when it lapses</div>
+          </div>
+          <div class="rv">28 days</div>
+        </div>
+        <div class="rrow">
+          <div class="col">
+            <div class="rn">casberi.app</div>
+            <div class="rk">Registration · renews automatically</div>
+          </div>
+          <div class="rv dim">41 days</div>
+        </div>
+        <div class="rrow">
+          <div class="col">
+            <div class="rn">alexchopan.com</div>
+            <div class="rk"><span class="tag">No auto-renew</span>Registration</div>
+          </div>
+          <div class="rv">58 days</div>
+        </div>
+
+        <div class="note">Two zones weren't read this pass, so nothing here speaks for them.</div>
+      </div>
+
+      <div class="feed">
+        <div class="frow"><div class="fm">⏳</div><div><div class="ft">casberi.app — TLS certificate expires in 6 days</div><div class="fs">Cloudflare · today</div></div></div>
+        <div class="frow"><div class="fm">⏳</div><div><div class="ft">alexchopan.com expires in 58 days</div><div class="fs">Cloudflare · today</div></div></div>
+      </div>
+    </div>
+
+    <div class="quietcard">
+      <div class="kicker" style="font-size:12px;font-weight:700;color:var(--cf)">Cloudflare</div>
+      <h4 style="font-size:21px;font-weight:800;letter-spacing:-.021em;line-height:1.2;margin-top:8px">Nothing you own expires for four months</h4>
+      <div class="csub">Three certificates, two domains and the token, all current. The next date is 14 December.</div>
+      <div class="rail" style="margin-bottom:0">
+        <div class="axis"></div>
+        <div class="now" style="left:0"></div>
+        <div class="t first" style="left:0">Today</div>
+        <div class="t" style="left:33.3%">30d</div>
+        <div class="t" style="left:66.6%">60d</div>
+        <div class="t last" style="left:100%">90d</div>
+      </div>
+    </div>
+
+    <div class="caption">
+      <h3>A — The runway <span>· what breaks next</span></h3>
+      <p>One shared 90-day axis, drawn <b>once</b>, with a mark where each deadline actually falls —
+         not a bar per row (§292 ruled those out, "too AI"). The rows underneath carry the names, so
+         the rail never needs labels of its own.</p>
+      <p>The empty state is the reason to build it: <b>"nothing expires for four months" is a real
+         answer</b>, where today's room shows a blank screen that could equally mean the token is
+         broken. The §291 empty-read ruling, in the room that needs it most.</p>
+      <p>A certificate reads differently from a registration on purpose: one is supposed to renew
+         itself, so lateness <i>is</i> the fault; the other is a decision you make. The only chip is
+         <b>No auto-renew</b> — the single fact that changes what you'd do.</p>
+      <div class="cost"><b>Costs nothing.</b> Every date is already on a landed row. The card is a
+         second reading of what the room holds.</div>
+    </div>
+  </div>
+
+  <!-- ================= B — THE SURFACE MAP ================= -->
+  <div class="option">
+    <div class="screen">
+      <div class="nav">Cloudflare</div>
+      <div class="chips"><span class="chip on">All</span><span class="chip">Cloudflare</span><span class="chip">GitHub</span></div>
+
+      <div class="card">
+        <div class="kicker">Cloudflare</div>
+        <h4>9 of your 34 DNS records point straight at your origin</h4>
+        <div class="csub">Those requests skip Cloudflare, so the server's real address is public.</div>
+
+        <div class="zone">
+          <div class="zn">casberi.app</div>
+          <div class="zm">14 records · 2 unproxied · reaches 3 addresses</div>
+          <div class="dots">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="dot open"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="dot"></span><span class="dot open"></span><span class="dot"></span><span class="dot"></span>
+            <span class="dot"></span><span class="dot"></span>
+          </div>
+        </div>
+
+        <div class="zone">
+          <div class="zn">casberi.dev</div>
+          <div class="zm">8 records · 6 unproxied · reaches 2 addresses</div>
+          <div class="dots">
+            <span class="dot open"></span><span class="dot open"></span><span class="dot"></span><span class="dot open"></span>
+            <span class="dot open"></span><span class="dot"></span><span class="dot open"></span><span class="dot open"></span>
+          </div>
+        </div>
+
+        <div class="zone">
+          <div class="zn">alexchopan.com</div>
+          <div class="zm">12 records · 1 unproxied · reaches 1 address</div>
+          <div class="dots">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="dot"></span><span class="dot"></span><span class="dot open"></span><span class="dot"></span>
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          </div>
+        </div>
+
+        <div class="key"><span><i></i>Behind Cloudflare</span><span><i class="open"></i>Straight to your server</span></div>
+        <div class="note">MX and TXT records can't be proxied and aren't counted here.</div>
+      </div>
+
+      <div class="feed">
+        <div class="frow"><div class="fm">🔗</div><div><div class="ft">casberi.dev — DNS changed: A api → 203.0.113.42</div><div class="fs">Was: 198.51.100.7 · Cloudflare · 2h ago</div></div></div>
+        <div class="frow"><div class="fm">⏳</div><div><div class="ft">casberi.app — TLS certificate expires in 6 days</div><div class="fs">Cloudflare · today</div></div></div>
+      </div>
+    </div>
+
+    <div class="caption">
+      <h3>B — The surface map <span>· what's exposed now</span></h3>
+      <p><b>One dot per real record</b>, never a bar: 34 dots because there are 34 records. A filled
+         orange one is a record answering from your own server with Cloudflare stepped out of the
+         way — which is exactly the state your own diff already treats as worth reporting when it
+         flips.</p>
+      <p>This is the estate the room is missing. It's also the only card here that says something
+         about a <b>healthy</b> account: three domains, thirty-four records, nine of them direct.</p>
+      <p>The honest ceiling belongs in the copy: MX and TXT records can never be proxied, so
+         counting them as "exposed" would inflate the number every account on earth shows.</p>
+      <div class="cost"><b>Costs nothing.</b> <code>CloudflareDNSLedger</code> already persists
+         <code>[type, name, content, proxied, ttl]</code> for every record in every zone. One small
+         change: it stores zone <i>ids</i>, so the zone name has to be written alongside.</div>
+    </div>
+  </div>
+
+  <!-- ================= C — THE CHANGE SPINE ================= -->
+  <div class="option">
+    <div class="screen">
+      <div class="nav">Cloudflare</div>
+      <div class="chips"><span class="chip on">All</span><span class="chip">Cloudflare</span><span class="chip">GitHub</span></div>
+
+      <div class="card">
+        <div class="kicker">Cloudflare</div>
+        <h4>Your DNS moved once in 90 days, two hours ago</h4>
+        <div class="csub">casberi.dev — the A record for api now points somewhere else.</div>
+
+        <div class="srow">
+          <div class="sn">casberi.dev <span class="sv">2 hours ago</span></div>
+          <div class="strip">
+            <div class="base"></div>
+            <div class="tick hot" style="left:99%"></div>
+          </div>
+        </div>
+
+        <div class="srow">
+          <div class="sn">casberi.app <span class="sv">62 days ago</span></div>
+          <div class="strip">
+            <div class="base"></div>
+            <div class="tick" style="left:31%"></div>
+            <div class="tick" style="left:33%"></div>
+          </div>
+        </div>
+
+        <div class="srow">
+          <div class="sn">alexchopan.com <span class="sv">4 years ago</span></div>
+          <div class="strip">
+            <div class="base"></div>
+          </div>
+        </div>
+
+        <div class="axislabel"><span>90 days ago</span><span>Today</span></div>
+        <div class="note">Dated by Cloudflare's own record of when each one changed, not by when
+          Casberi first saw it.</div>
+      </div>
+
+      <div class="feed">
+        <div class="frow"><div class="fm">🔗</div><div><div class="ft">casberi.dev — DNS changed: A api → 203.0.113.42</div><div class="fs">Was: 198.51.100.7 · Cloudflare · 2h ago</div></div></div>
+        <div class="frow"><div class="fm">🔗</div><div><div class="ft">casberi.app — DNS record added: TXT _dmarc</div><div class="fs">Cloudflare · 62 days ago</div></div></div>
+      </div>
+    </div>
+
+    <div class="quietcard">
+      <div class="kicker" style="font-size:12px;font-weight:700;color:var(--cf)">Cloudflare</div>
+      <h4 style="font-size:21px;font-weight:800;letter-spacing:-.021em;line-height:1.2;margin-top:8px">Nothing in your DNS has moved in 90 days</h4>
+      <div class="csub">Three zones, 34 records, all sitting exactly where you left them.</div>
+    </div>
+
+    <div class="caption">
+      <h3>C — The change spine <span>· when it last moved</span></h3>
+      <p>One tick per change that really happened, on a shared 90-day axis, one strip per zone. The
+         idiom is the address book's spine, and the reading is <b>stability</b>: a domain that hasn't
+         moved in four years and one that moved this morning are two very different objects, and the
+         room currently shows them identically.</p>
+      <p>It is dated from <b>Cloudflare's own <code>modified_on</code></b>, not from the app's
+         first-seen — so it's honest on the day you connect, instead of claiming a quiet 90 days on
+         an account it met an hour ago.</p>
+      <p>The weakest of the three on a healthy account: an estate that never changes draws an empty
+         card, and unlike A that emptiness isn't news, it's the normal state of DNS.</p>
+      <div class="cost"><b>Costs nothing new.</b> <code>modified_on</code> is already read on every
+         DNS pass and thrown away — the ledger keeps five fields per record and that isn't one of
+         them. Landed change rows carry the rest.</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="law">
+  <h3>What holds across all three</h3>
+  <ul>
+    <li><b>One hue, and it's Cloudflare orange</b> — the §292 ruling applied here. The tension worth
+      calling: <code>#f6821f</code> sits next to <code>DS.attention</code> (<code>#ff9f0a</code>),
+      so a brand mark can read as an alarm. The alternative is no hue at all and the plain text
+      ramp, which every one of these still works in.</li>
+    <li><b>No bars, no rails down rows, no green/red.</b> Nothing here is a gain or a loss; every
+      card is a reading.</li>
+    <li><b>No inference.</b> No risk score, no "your most exposed domain", no ranking of zones by
+      how many problems they have. Each card counts things the corpus already holds and draws one
+      mark per thing (the §295 ruling: limit the analysis, it should be factual).</li>
+    <li><b>Each says what it didn't cover.</b> The 10-zone cap and a failed registrar read are
+      already reported by the probe; a card that silently spoke for zones it never read would be the
+      same lie <code>lastCovered</code> exists to prevent.</li>
+    <li><b>Flat by law</b> — a plain VStack like <code>WalletApprovalExposureCard</code>, no generic
+      <code>Widget</code>/<code>Row</code> mount, and no stored <code>Thing</code> in the view
+      (value types only, so liveness corollary 5 has nothing to guard).</li>
+  </ul>
+
+  <h3>If only one ships</h3>
+  <p><b>A.</b> It's the card the bridge was built for — every row it lands is a date, and nothing
+     currently draws them together. It's also the only one whose empty state is worth reading, which
+     matters because <i>most accounts are healthy most of the time</i>, and a room that's blank when
+     everything is fine is a room nobody opens twice. B is the natural second: it's free, it's the
+     only picture of the estate, and it answers a question the alarms never do.</p>
+</div>
+</div>
