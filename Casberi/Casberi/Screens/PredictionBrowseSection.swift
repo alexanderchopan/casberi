@@ -84,12 +84,25 @@ private struct BrowseCard: Identifiable {
     /// number this is.
     let venueBadge: String?
     let title: String
+    /// The WHOLE field, leader first — but only `.first` is DRAWN (prd §298).
+    /// A yes/no question and a twelve-way race used to render as two
+    /// different objects (a big number, versus a stack of per-outcome bars),
+    /// so the list carried two visual grammars. Now every card shows its
+    /// leader and nothing else; the rest is held here so "14 others" can
+    /// open in place rather than being a count with nowhere to go.
     let outcomes: [BrowseOutcome]
     let others: Int
     let closeTime: Date?
     let previousProbability: Double?
     let deltaLabel: String
     let isThin: Bool
+    /// The OTHER exchange's price for this same question, when both price it
+    /// (prd §298) — drawn as a second bar on the ordinary card, which is what
+    /// replaced the separate "They disagree" section. Disagreement became a
+    /// PROPERTY, so the comparison is ambient instead of somewhere you scroll
+    /// to find, and a header, a card shape and the `.all` scope's one special
+    /// behaviour all went away with it.
+    let twinProbability: Double?
     /// The Tokens-watchlist name this question crosses, if any (2026-07-30)
     /// — "You're already watching ETH" surfaced BEFORE following, the same
     /// join `PredictionMoments.checkCrossings` fires as a post-follow moment.
@@ -177,6 +190,15 @@ struct PredictionBrowseSection: View {
     /// sit (prd §234): it's a way of moving through the room's own content,
     /// not a step in connecting.
     @State private var query = ""
+    /// Search is an ICON that expands (prd §298) — it was a permanent
+    /// full-width field, one of three stacked narrowing controls. Browsing is
+    /// the common case and typing the rare one, so the rare one folds away
+    /// until it's asked for.
+    @State private var searching = false
+    /// Which card has its full field open. One at a time — expanding a
+    /// second collapses the first, so the list can't quietly become the
+    /// stacked-rows layout §298 just removed.
+    @State private var expandedCard: String? = nil
     @State private var category: String? = nil
     @State private var order: PredictionOrder = .busiest
     @State private var kalshiCategories: [String] = []
@@ -186,7 +208,10 @@ struct PredictionBrowseSection: View {
     /// reads instead of asserting a network failure it never observed.
     @State private var kalshiOutcome: KalshiWatch.BookOutcome?
     @State private var polymarketRows: [PolymarketBridge.Resolved] = []
-    @State private var disagreements: [PredictionDisagreement.Pair] = []
+    /// The other venue's price, keyed by the market's own sourceRef — the
+    /// same `PredictionDisagreement.find` read, resolved onto the cards that
+    /// have a counterpart instead of into a section of its own (prd §298).
+    @State private var twinPrices: [String: Double] = [:]
     /// sourceRefs already in the corpus, across BOTH venues — read once per
     /// load so each row can mark itself followed without its own fetch.
     @State private var followedRefs: Set<String> = []
@@ -197,18 +222,13 @@ struct PredictionBrowseSection: View {
     /// race the id already covers) had no way to try again short of leaving
     /// and re-entering the room. Folded into that same id string below.
     @State private var retryToken = 0
-    /// Kalshi's own cache age (2026-07-30) — Polymarket's `search` never
-    /// caches (every call is already live), so only Kalshi has a staleness
-    /// to disclose. Shown only past a few seconds; under that, saying
-    /// "updated just now" is noise nobody asked for.
-    @State private var kalshiAge: TimeInterval? = nil
     /// The Tokens watchlist, read once per load — what the corpus-crossing
     /// line below matches against.
     @State private var watchedTokens: [Thing] = []
 
     /// The other exchange's price for the market just followed (prd §234) —
     /// the ON-RAMP to the comparison, and the only path to it for someone
-    /// who has connected ONE venue. `disagreements` above needs `.all`
+    /// who has connected ONE venue. The `twinPrices` map above needs `.all`
     /// scope, which needs both venues connected; this needs neither, because
     /// the other exchange's book is public whether or not it's a seat here.
     /// So a Kalshi-only user follows a market and finds out, right there,
@@ -232,15 +252,46 @@ struct PredictionBrowseSection: View {
         }
     }
 
+    /// ONE chip row, ONE selection (prd §298). Order and category used to be
+    /// two independent controls — a menu and a chip strip — so two things
+    /// could be lit at once and the reader had to hold both in mind. They
+    /// collapse into a single list of VIEWS, because "Closing soon" and
+    /// "Politics" are the same act to the person tapping: narrow this down.
+    /// Exactly one is selected, always.
+    private enum BookView: Equatable {
+        case all
+        case closingSoon
+        case category(String)
+    }
+
+    private var bookView: BookView {
+        if order == .closingSoon { return .closingSoon }
+        if let category { return .category(category) }
+        return .all
+    }
+
+    private func select(_ view: BookView) {
+        DSHaptic.selection()
+        switch view {
+        case .all: order = .busiest; category = nil
+        case .closingSoon: order = .closingSoon; category = nil
+        case .category(let c): order = .busiest; category = c
+        }
+    }
+
     private var cards: [BrowseCard] {
         // Rows arrive already category-filtered (`loadIfNeeded` passes it to
         // each bridge's own search) — nothing to re-filter here.
+        //
+        // The WHOLE field is grouped (`maxOutcomes: .max`, §298) — a card
+        // DRAWS only its leader, but holds the rest so "N others" can expand
+        // in place instead of pointing nowhere.
         var out: [BrowseCard] = []
         if scope == .kalshi || scope == .all {
-            out += KalshiWatch.grouped(order.sorted(kalshiRows)).map(kalshiCard)
+            out += KalshiWatch.grouped(order.sorted(kalshiRows), maxOutcomes: .max).map(kalshiCard)
         }
         if scope == .polymarket || scope == .all {
-            out += PolymarketBridge.grouped(order.sorted(polymarketRows)).map(polymarketCard)
+            out += PolymarketBridge.grouped(order.sorted(polymarketRows), maxOutcomes: .max).map(polymarketCard)
         }
         // Busiest deliberately does NOT cross-merge — Kalshi counts
         // contracts, Polymarket counts dollars, and ranking one against the
@@ -248,15 +299,8 @@ struct PredictionBrowseSection: View {
         // already refuses to commit (comparing incomparable units). Closing
         // soon and biggest move ARE comparable across venues (a date, a
         // probability-point delta), so only those two re-sort the merged list.
-        if scope == .all {
-            switch order {
-            case .closingSoon:
-                out.sort { ($0.closeTime ?? .distantFuture) < ($1.closeTime ?? .distantFuture) }
-            case .biggestMove:
-                out.sort { moveSize($0) > moveSize($1) }
-            case .busiest:
-                break
-            }
+        if scope == .all, order == .closingSoon {
+            out.sort { ($0.closeTime ?? .distantFuture) < ($1.closeTime ?? .distantFuture) }
         }
         return out
     }
@@ -280,10 +324,6 @@ struct PredictionBrowseSection: View {
         closeTime.timeIntervalSinceNow < 30 * 24 * 3600
     }
 
-    private func moveSize(_ card: BrowseCard) -> Double {
-        guard let previous = card.previousProbability, let lead = card.outcomes.first?.probability else { return 0 }
-        return abs(lead - previous)
-    }
 
     var body: some View {
         // Computed ONCE per body evaluation and threaded into both the lede
@@ -306,51 +346,45 @@ struct PredictionBrowseSection: View {
             // and a card.
             if let lede = lede(in: visible) { ledeLine(lede.card, lede.outcome) }
 
-            DSSlabField(placeholder: String(localized: "Find a team, player, or question"),
-                        text: $query, actionLabel: "", action: {})
-            if let freshnessLine {
-                Text(freshnessLine).dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    .padding(.horizontal, DS.Space.s1)
-            }
-            // Order + categories share ONE scrolling row: the order menu is a
-            // chip like the rest, since "Busiest" and "Politics" are both
-            // just ways of narrowing what you're looking at.
+            // ONE control row (prd §298): a search icon that expands, then
+            // the views. The freshness line went with it — it disclosed a
+            // cache age nobody had asked about, and pull-to-refresh already
+            // forces a live read.
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: DS.Space.s2) {
-                    Menu {
-                        Picker("", selection: $order) {
-                            ForEach(PredictionOrder.allCases) { o in Text(o.rawValue).tag(o) }
+                    Button {
+                        DSHaptic.selection()
+                        withAnimation(DS.Motion.standard) {
+                            searching.toggle()
+                            if !searching { query = "" }
                         }
                     } label: {
-                        HStack(spacing: 4) {
-                            Text(order.rawValue).dsText(.subhead13).fontWeight(.semibold)
-                            Image(systemName: "chevron.down").font(.system(size: 10, weight: .bold))
-                        }
-                        .foregroundStyle(DS.textPrimary)
-                        .padding(.horizontal, DS.Space.s3).padding(.vertical, 7)
-                        .background(Capsule().fill(DS.fillStrong))
+                        Image(systemName: searching ? "xmark" : "magnifyingglass")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(searching ? .white : DS.textSecondary)
+                            .frame(width: 34, height: 30)
+                            .background(Capsule().fill(searching ? DS.tint : DS.fillFaint))
                     }
-                    if !categoryOptions.isEmpty {
-                        categoryChip(nil, label: "All")
-                        ForEach(categoryOptions, id: \.self) { cat in
-                            categoryChip(cat, label: cat)
-                        }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(searching ? "Close search" : "Search markets")
+
+                    viewChip(.all, label: String(localized: "All"))
+                    viewChip(.closingSoon, label: String(localized: "Closing soon"))
+                    ForEach(categoryOptions, id: \.self) { cat in
+                        viewChip(.category(cat), label: cat)
                     }
                 }
+            }
+
+            if searching {
+                DSSlabField(placeholder: String(localized: "Find a team, player, or question"),
+                            text: $query, actionLabel: "", action: {})
             }
 
             // The just-followed market's counterpart on the other exchange.
             // Sits ABOVE the book because it's about what you just did, and
             // it's transient — the next load clears it.
             if let twin { twinOfferCard(twin) }
-
-            if scope == .all, !disagreements.isEmpty {
-                Text("They disagree").dsText(.label12).foregroundStyle(DS.textTertiary)
-                    .padding(.top, DS.Space.s1)
-                ForEach(disagreements) { pair in
-                    disagreementCard(pair)
-                }
-            }
 
             // The book takes real time to arrive — Kalshi hydrates one small
             // fetch PER matching event (see `KalshiWatch.search`'s two-phase
@@ -390,11 +424,10 @@ struct PredictionBrowseSection: View {
         .task(id: "\(scope.rawValue)|\(category ?? "")|\(query)|\(retryToken)|\(chrome.refreshPulse)") { await loadIfNeeded() }
     }
 
-    private func categoryChip(_ value: String?, label: String) -> some View {
-        let isOn = category == value || (value == nil && category == nil)
+    private func viewChip(_ value: BookView, label: String) -> some View {
+        let isOn = bookView == value
         return Button {
-            DSHaptic.selection()
-            category = value
+            select(value)
         } label: {
             Text(label)
                 .dsText(.subhead13).fontWeight(.semibold)
@@ -435,8 +468,11 @@ struct PredictionBrowseSection: View {
         let pRows = await p
         let kCats = await kc
         let pCats = await pc
+        // Same disagreement read, resolved onto the cards that have a
+        // counterpart rather than into a section of its own (prd §298).
         let pairs = scope == .all ? await PredictionDisagreement.find(among: kRows) : []
-        let age = (scope == .kalshi || scope == .all) ? await KalshiWatch.cacheAge() : nil
+        let twins = Dictionary(pairs.map { ("kalshi:\($0.kalshi.ticker)", $0.polymarket.probability) },
+                               uniquingKeysWith: { first, _ in first })
         let tokens = PredictionCrossings.watchedTokens(context: modelContext)
 
         // The bug this fixes: `.task(id:)` cancels the PREVIOUS
@@ -468,25 +504,9 @@ struct PredictionBrowseSection: View {
         polymarketRows = pRows
         kalshiCategories = kCats
         polymarketCategories = pCats
-        disagreements = pairs
-        kalshiAge = age
+        twinPrices = twins
         watchedTokens = tokens
         loaded = true
-    }
-
-    /// "Updated 2m ago" — only past a few seconds (2026-07-30). Most loads
-    /// just fetched live, so age reads ~0 and the line stays hidden; it only
-    /// appears when Kalshi's own 120s cache served a still-warm read instead
-    /// of refetching (switching categories, say, inside that window), which
-    /// is exactly the case where the displayed odds are genuinely dated and
-    /// worth disclosing. Pull-to-refresh (`FeedScreen.refreshFeed`)
-    /// invalidates the cache outright, so a pull always clears this.
-    private var freshnessLine: String? {
-        guard let kalshiAge, kalshiAge > 10 else { return nil }
-        let then = Date(timeIntervalSinceNow: -kalshiAge)
-        // Same `.formatted(.relative(...))` every close-time line in this
-        // room already uses — one date-phrasing convention, not two.
-        return String(localized: "Kalshi updated \(then.formatted(.relative(presentation: .named)))")
     }
 
     // MARK: - Card construction
@@ -501,11 +521,14 @@ struct PredictionBrowseSection: View {
         }
         return BrowseCard(id: "kalshi:\(race.eventTicker)",
                           venueBadge: scope == .all ? "Kalshi" : nil,
-                          title: race.title, outcomes: outcomes, others: race.others,
+                          title: race.title, outcomes: outcomes,
+                          others: max(0, outcomes.count - 1),
                           closeTime: race.closeTime,
                           previousProbability: race.outcomes.first?.previousProbability,
                           deltaLabel: "vs yesterday",
                           isThin: race.outcomes.first?.isThin ?? false,
+                          twinProbability: race.outcomes.first
+                              .flatMap { twinPrices["kalshi:\($0.ticker)"] },
                           crossing: PredictionCrossings.crossing(for: race.title, tokens: watchedTokens.live))
     }
 
@@ -519,11 +542,13 @@ struct PredictionBrowseSection: View {
         }
         return BrowseCard(id: "polymarket:\(race.slug)",
                           venueBadge: scope == .all ? "Polymarket" : nil,
-                          title: race.title, outcomes: outcomes, others: race.others,
+                          title: race.title, outcomes: outcomes,
+                          others: max(0, outcomes.count - 1),
                           closeTime: race.closeTime,
                           previousProbability: race.outcomes.first?.previousProbability,
                           deltaLabel: "vs last week",
                           isThin: race.outcomes.first?.isThin ?? false,
+                          twinProbability: nil,
                           crossing: PredictionCrossings.crossing(for: race.title, tokens: watchedTokens.live))
     }
 
@@ -593,18 +618,53 @@ struct PredictionBrowseSection: View {
                     .dsText(.subhead13).foregroundStyle(DS.tint)
             }
 
-            if card.outcomes.count > 1 {
-                ForEach(Array(card.outcomes.enumerated()), id: \.element.id) { index, outcome in
-                    outcomeRow(outcome, isLead: index == 0, thin: card.isThin)
+            // ONE shape, always (prd §298) — the leader, whether this is a
+            // yes/no market or a twelve-way race.
+            if let lead = card.outcomes.first {
+                leadRow(lead, card: card)
+            }
+
+            // The other exchange, when it prices the same question — what
+            // replaced the "They disagree" section (prd §298).
+            if let twin = card.twinProbability {
+                HStack(spacing: DS.Space.s2) {
+                    BridgeIcon(name: "Polymarket", size: 16, circular: true)
+                    PredictionOddsBar(probability: twin).frame(height: 8)
+                    Text("\(Int((twin * 100).rounded()))%")
+                        .dsText(.callout15).fontWeight(.semibold).monospacedDigit()
+                        .foregroundStyle(DS.textSecondary)
+                        .frame(width: 40, alignment: .trailing)
                 }
-            } else if let only = card.outcomes.first {
-                binaryRow(only, card: card)
+                if let lead = card.outcomes.first {
+                    let gap = Int((abs(lead.probability - twin) * 100).rounded())
+                    Text("\(gap) point\(gap == 1 ? "" : "s") apart")
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                }
+            }
+
+            // The rest of the field, opened in place — never a dead count.
+            if expandedCard == card.id {
+                ForEach(Array(card.outcomes.dropFirst())) { outcome in
+                    outcomeRow(outcome, isLead: false, thin: card.isThin)
+                }
             }
 
             if card.others > 0 || card.isThin || (card.closeTime.map(isNearTerm) ?? false) {
                 HStack(spacing: DS.Space.s2) {
                     if card.others > 0 {
-                        Text("\(card.others) more").dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        Button {
+                            DSHaptic.selection()
+                            withAnimation(DS.Motion.standard) {
+                                expandedCard = expandedCard == card.id ? nil : card.id
+                            }
+                        } label: {
+                            Text(expandedCard == card.id
+                                 ? String(localized: "Hide the field")
+                                 : String(localized: "\(card.others) others"))
+                                .dsText(.subhead13).fontWeight(.semibold)
+                                .foregroundStyle(DS.tint)
+                        }
+                        .buttonStyle(.plain)
                     }
                     // Time is WEIGHTED (prd §235) and now GATED (density
                     // pass, 2026-07-29): "Closes Aug 2028" cost a line on
@@ -670,16 +730,27 @@ struct PredictionBrowseSection: View {
         .buttonStyle(.plain)
     }
 
-    private func binaryRow(_ only: BrowseOutcome, card: BrowseCard) -> some View {
+    /// The card's ONE row (prd §298) — the leader, whatever the market is.
+    ///
+    /// It names WHO leads before the number, because on a race "31%" alone
+    /// is meaningless and on a yes/no market the side ("Yes") is the whole
+    /// question restated. That one label is the only difference between the
+    /// two kinds now; everything else — the number, the bar, the delta, the
+    /// capsule — is identical, which is what collapsed two card grammars
+    /// into one.
+    private func leadRow(_ lead: BrowseOutcome, card: BrowseCard) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Button { preview(only) } label: {
+                Button { preview(lead) } label: {
                     HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                        Text("\(Int((only.probability * 100).rounded()))%")
+                        Text(leadLabel(lead, card: card))
+                            .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                            .lineLimit(1)
+                        Text("\(Int((lead.probability * 100).rounded()))%")
                             .dsText(.heading22).fontWeight(.bold).monospacedDigit()
                             .foregroundStyle(card.isThin ? DS.textSecondary : DS.textPrimary)
                         if let previous = card.previousProbability {
-                            TokenDeltaPill(change: only.probability - previous,
+                            TokenDeltaPill(change: lead.probability - previous,
                                            label: card.deltaLabel, points: true)
                         }
                     }
@@ -687,12 +758,22 @@ struct PredictionBrowseSection: View {
                 }
                 .buttonStyle(.plain)
                 Spacer(minLength: DS.Space.s2)
-                followCapsule(only)
+                // The one capsule this card gets — §236's rule still holds
+                // (a capsule where there is exactly ONE thing to follow), and
+                // the leader is that one thing. The rest of the field follows
+                // from its own expanded row's preview.
+                followCapsule(lead)
             }
-            PredictionOddsBar(probability: only.probability,
-                              previous: only.previousProbability)
+            PredictionOddsBar(probability: lead.probability,
+                              previous: lead.previousProbability)
                 .frame(height: 8)
         }
+    }
+
+    /// "Yes" for a two-sided market; "Newsom leads" for a field.
+    private func leadLabel(_ lead: BrowseOutcome, card: BrowseCard) -> String {
+        guard card.others > 0 else { return lead.name.isEmpty ? String(localized: "Yes") : lead.name }
+        return String(localized: "\(lead.name) leads")
     }
 
     /// The write target. Reads as a state once followed rather than
@@ -740,10 +821,12 @@ struct PredictionBrowseSection: View {
     /// Takes the ALREADY-COMPUTED cards rather than reading `cards` itself —
     /// that property groups and sorts the whole book, and reaching for it
     /// twice per body evaluation would double that work inside a List row.
-    /// Suppressed under `.biggestMove` ordering, where the lede would be
-    /// the first card restated an inch above itself.
+    ///
+    /// It used to be suppressed under a `.biggestMove` ordering, where it
+    /// would restate the first card an inch above itself. That ordering is
+    /// gone (prd §298) precisely BECAUSE this line already answers it, so
+    /// there is nothing left to suppress against.
     private func lede(in cards: [BrowseCard]) -> (card: BrowseCard, outcome: BrowseOutcome)? {
-        guard order != .biggestMove else { return nil }
         let moved = cards.flatMap { card in
             card.outcomes.compactMap { o -> (BrowseCard, BrowseOutcome, Double)? in
                 guard let prev = o.previousProbability else { return nil }
@@ -869,68 +952,4 @@ struct PredictionBrowseSection: View {
         .padding(.top, DS.Space.s2)
     }
 
-    /// The disagreement card is a DIFFERENT SHAPE, not the browse card in a
-    /// different colour (prd §235). It used to render identically to every
-    /// other card, which buried the one comparison neither exchange's own
-    /// app can ever show. So the GAP is the headline — the fact that only
-    /// exists because both books are being read at once — and the two venue
-    /// bars sit beneath it wearing their own brand hues, so which crowd is
-    /// which is readable without parsing a label.
-    ///
-    /// The gap is stated, never judged: no spread computed, neither side
-    /// called right, nothing suggesting an action (`PredictionTwin`'s own
-    /// restraint, held here too).
-    ///
-    /// Both venue bars are READ targets now (2026-07-29, the density pass) —
-    /// two capsules stacked on one card was the same clutter the race rows
-    /// carried, and just as ambiguous (follow WHICH one, at a glance). Tap
-    /// either bar to preview that venue's market; follow from there, same as
-    /// a race outcome.
-    @ViewBuilder
-    private func disagreementCard(_ pair: PredictionDisagreement.Pair) -> some View {
-        let gap = Int((abs(pair.kalshi.probability - pair.polymarket.probability) * 100).rounded())
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(gap) point\(gap == 1 ? "" : "s") apart")
-                    .dsText(.heading22).fontWeight(.bold)
-                    .foregroundStyle(DS.textPrimary)
-                Text(pair.kalshi.title)
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                    .lineLimit(2)
-            }
-            venueBar(name: "Kalshi", probability: pair.kalshi.probability) {
-                onPreview(PredictionPreview(kalshi: pair.kalshi))
-            }
-            venueBar(name: "Polymarket", probability: pair.polymarket.probability) {
-                onPreview(PredictionPreview(polymarket: pair.polymarket))
-            }
-        }
-        .padding(DS.Space.s4)
-        .dsWidgetSurface()
-        .padding(.top, DS.Space.s2)
-    }
-
-    /// One venue's price inside a disagreement card — tinted to the
-    /// exchange's own hue, tapping through to that market's preview.
-    private func venueBar(name: String, probability: Double, preview: @escaping () -> Void) -> some View {
-        Button { DSHaptic.selection(); preview() } label: {
-            HStack(spacing: DS.Space.s3) {
-                BridgeIcon(name: name, size: 18, circular: true)
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(DS.fillFaint)
-                        Capsule().fill(DS.washHue(for: name) ?? DS.tint)
-                            .frame(width: max(0, min(1, probability)) * geo.size.width)
-                    }
-                }
-                .frame(height: 10)
-                Text("\(Int((probability * 100).rounded()))%")
-                    .dsText(.body17).fontWeight(.semibold).monospacedDigit()
-                    .foregroundStyle(DS.textPrimary)
-                    .frame(width: 42, alignment: .trailing)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
 }

@@ -94,10 +94,17 @@ protocol PredictionOdds {
     var closeTime: Date? { get }
 }
 
+/// TWO orderings, not three (prd §298, 2026-08-03). `biggestMove` was
+/// dropped: the room's own lede line already names the single biggest move
+/// in the book, so offering it as an ORDERING made the reader adopt a
+/// browsing theory to reach something the screen was already telling them.
+/// What survives is the default and the one genuinely different question —
+/// "what's about to settle?" — which is why `closingSoon` is now a chip
+/// beside the categories rather than a menu of its own
+/// (`PredictionBrowseSection.BookView`).
 enum PredictionOrder: String, CaseIterable, Identifiable {
     case busiest = "Busiest"
     case closingSoon = "Closing soon"
-    case biggestMove = "Biggest move"
     var id: String { rawValue }
 
     func sorted<Row: PredictionOdds>(_ rows: [Row]) -> [Row] {
@@ -109,13 +116,6 @@ enum PredictionOrder: String, CaseIterable, Identifiable {
             // than first, so a market with an unknown close doesn't crowd
             // out the ones that actually are closing.
             return rows.sorted { ($0.closeTime ?? .distantFuture) < ($1.closeTime ?? .distantFuture) }
-        case .biggestMove:
-            return rows.sorted { moveSize($0) > moveSize($1) }
         }
-    }
-
-    private func moveSize<Row: PredictionOdds>(_ row: Row) -> Double {
-        guard let previous = row.previousProbability else { return 0 }
-        return abs(row.probability - previous)
     }
 }

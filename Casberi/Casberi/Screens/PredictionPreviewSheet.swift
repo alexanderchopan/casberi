@@ -147,12 +147,14 @@ struct PredictionPreviewSheet: View {
                 // The curve only Polymarket can serve. Absent for Kalshi by
                 // ruling, not by omission — its candlestick data is too thin
                 // to draw honestly, and a fallback stops pretending (§51).
+                //
+                // The one-line SHAPE summary that sat under this went with
+                // §298's trim: a sentence describing a picture, directly
+                // beneath the picture, is the reader doing the same work
+                // twice. The curve says "steady" or "one jump" on its own.
                 if curve.count >= 2 {
                     Sparkline(closes: curve, up: (delta ?? 0) >= 0)
                         .frame(height: 56)
-                    if let curveShape {
-                        Text(curveShape).dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    }
                 }
 
                 VStack(alignment: .leading, spacing: DS.Space.s1) {
@@ -177,36 +179,6 @@ struct PredictionPreviewSheet: View {
             }
         }
         .task { await loadCurve() }
-    }
-
-    /// How the crowd got here — steady, one jump, or genuinely mixed
-    /// (2026-07-30). The curve loads either way, but until now it only ever
-    /// decorated the sheet; nothing described the SHAPE of it, which is the
-    /// actual question a curve answers ("did this move gradually or all at
-    /// once?"). Silent by default rather than forcing a read on a choppy or
-    /// near-flat week — the same restraint `PredictionDisagreement`'s
-    /// notable-gap floor and the lede's five-point floor already hold: a
-    /// weak signal dressed up as a clean story is worse than no line at all.
-    private var curveShape: String? {
-        guard curve.count >= 4 else { return nil }
-        let steps = zip(curve, curve.dropFirst()).map { $1 - $0 }
-        let total = curve.last! - curve.first!
-        // Under 3 points of net movement over the whole window, there's no
-        // real story to characterize either way.
-        guard abs(total) >= 0.03 else { return nil }
-        let maxStep = steps.map(abs).max() ?? 0
-        // One step carries most of the whole week's move.
-        if maxStep >= abs(total) * 0.6 {
-            return total > 0 ? String(localized: "Jumped on one move this week")
-                             : String(localized: "Dropped on one move this week")
-        }
-        // Most individual steps agree with the overall direction.
-        let agreeing = steps.filter { ($0 >= 0) == (total >= 0) }.count
-        if Double(agreeing) / Double(steps.count) >= 0.7 {
-            return total > 0 ? String(localized: "Climbed steadily this week")
-                             : String(localized: "Fell steadily this week")
-        }
-        return nil  // genuinely choppy — no honest one-line summary of that
     }
 
     private func loadCurve() async {
