@@ -22,7 +22,7 @@ if [ "${1:-}" = "--preview" ]; then
   exit 0
 fi
 
-node render-frames.js clip-viz-reel.html --size=1920x1080 --fps=30 --poster=4.6
+node render-frames.js clip-viz-reel.html --size=1920x1080 --fps=30 --poster=3.7
 mkdir -p out-viz
 python3 frames-to-mp4.py frames-viz out-viz/casberi-viz-reel.mp4 30
 cp frames-viz/poster.jpg out-viz/casberi-viz-reel-poster.jpg
