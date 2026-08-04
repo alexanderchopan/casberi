@@ -1189,6 +1189,13 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 
    Pure CSS, so it can't drift or depend on JS, and it stops dead under
    Reduce Motion: the first slide is a complete picture on its own. */
+/* The section-level scroll reveal (app.js, threshold 0.18) CANNOT fire for
+   a section this tall: at ~5000px it never reaches 18% of a viewport, so it
+   stayed at opacity 0 and the whole walkthrough rendered as a black void
+   between the hero and the catalog. Any section taller than ~5x the viewport
+   has the same problem. This one opts out and is simply always visible --
+   its own steps carry enough motion. */
+.m-section.flow, .m-section.flow.in { opacity: 1; transform: none; }
 .flow { padding-top: 10px; }
 .flow-deck { font-size: 17px; color: var(--dim); margin: -6px 0 54px; }
 .fstep { display: grid; grid-template-columns: 1fr 340px; gap: 54px;
