@@ -464,7 +464,7 @@ enum BridgeCatalog {
                          "A zone sitting at pending instead of serving",
                          "The token warns you before it expires itself"],
               needsSetup: true, added: day(2026, 8, 3)),
-        Offer(name: "Cursor",      tagline: "What your coding agents did",          group: "Work",      connectable: true,
+        Offer(name: "Cursor",      tagline: "What your coding agents did",          group: "Agent",     connectable: true,
               summary: "The cloud agents you launch in Cursor land in your feed once they're done — what each one was asked to do, what it says it did, and the pull request it opened.\n\nA run that failed or expired says so in its own title.\n\nConnects with a Cursor API key. Cursor has no read-only option, so the promise is kept by conduct: Casberi only ever lists your agents — it never starts one, follows one up, stops one, or deletes one.",
               features: ["Finished runs land named by the repo they ran on",
                          "The agent's own account of what it changed",
