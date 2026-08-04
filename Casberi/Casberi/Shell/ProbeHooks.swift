@@ -390,6 +390,18 @@ enum ProbeHooks {
         Hook(key: "cloudflareProbe") { _, _ in
             Task { @MainActor in await CloudflareFetch.diagnose() }
         },
+        // `-cursorProbe YES` walks the Cursor read phase by phase with the
+        // STORED key (connect first via `-tokenBridge "Cursor:<key>"`), and
+        // dumps one `cursorAgent|` line per run. Same lesson as the two above:
+        // an empty Cursor room has five causes — no key, a refused key, an
+        // account that has genuinely never launched a cloud agent, every agent
+        // still in flight, and shape drift — and only the last is a bug, while
+        // all five render as the same one sentence. It is also the only way to
+        // see a status value this build doesn't know, which lands nothing and
+        // says nothing. See `CursorFetch.diagnose`.
+        Hook(key: "cursorProbe") { _, _ in
+            Task { @MainActor in await CursorFetch.diagnose() }
+        },
         // `-cloudflareRunwayProbe YES` — what the Cloudflare room LEADS with
         // (2026-08-03, prd §296): the estate snapshot, then the card's own
         // headline, then one `cfRunwayRow|` line per deadline. One NSLog per
