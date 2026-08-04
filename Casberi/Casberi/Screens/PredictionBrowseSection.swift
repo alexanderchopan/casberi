@@ -644,8 +644,10 @@ struct PredictionBrowseSection: View {
 
             // The rest of the field, opened in place — never a dead count.
             if expandedCard == card.id {
-                ForEach(Array(card.outcomes.dropFirst())) { outcome in
-                    outcomeRow(outcome, isLead: false, thin: card.isThin)
+                // Enumerated for the bars' entrance stagger only — the field is
+                // already ranked, so the odds bars fill in that order.
+                ForEach(Array(card.outcomes.dropFirst().enumerated()), id: \.element.id) { index, outcome in
+                    outcomeRow(outcome, isLead: false, thin: card.isThin, index: index)
                 }
             }
 
@@ -701,7 +703,8 @@ struct PredictionBrowseSection: View {
     /// preview, and following happens there, on the specific outcome you
     /// opened. Already-followed still says so — a quiet checkmark, not a
     /// button — so the row keeps reporting state without adding a target.
-    private func outcomeRow(_ outcome: BrowseOutcome, isLead: Bool, thin: Bool) -> some View {
+    private func outcomeRow(_ outcome: BrowseOutcome, isLead: Bool, thin: Bool,
+                            index: Int = 0) -> some View {
         Button { preview(outcome) } label: {
             HStack(spacing: DS.Space.s3) {
                 Text(outcome.name).dsText(.callout15)
@@ -710,7 +713,7 @@ struct PredictionBrowseSection: View {
                     .lineLimit(1).frame(width: 96, alignment: .leading)
                 PredictionOddsBar(probability: outcome.probability,
                                   previous: outcome.previousProbability,
-                                  isLead: isLead)
+                                  isLead: isLead, index: index)
                     .frame(height: 8)
                 Text("\(Int((outcome.probability * 100).rounded()))%")
                     .dsText(.body17).fontWeight(.semibold).monospacedDigit()

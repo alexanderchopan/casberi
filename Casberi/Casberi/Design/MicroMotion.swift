@@ -10,12 +10,20 @@ import SwiftUI
 struct SettleIn: ViewModifier {
     var delay: Double = 0
     @State private var on = false
+    /// Added 2026-08-04 (prd §298): this shipped WITHOUT a Reduce Motion guard
+    /// and reaches 40 call sites through `settleIn`/`staggerIn` — including
+    /// every feed row and the topic map's cells — so the one preference the
+    /// whole motion system is supposed to respect was being ignored by the
+    /// app's most-used entrance. Every other modifier in this file already had
+    /// it; this was the gap, found while auditing `ChartEntrance` against it.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         content
             .scaleEffect(on ? 1 : 0.92)
             .opacity(on ? 1 : 0)
             .onAppear {
+                guard !reduceMotion else { on = true; return }
                 withAnimation(DS.Motion.standard.delay(delay)) { on = true }
             }
     }
@@ -117,6 +125,10 @@ extension View {
 struct CountUpText: View {
     let text: String
     @State private var shown = 0
+    /// Reduce Motion lands the final number immediately (2026-08-04, prd §299)
+    /// — the count-up is the animation here, so honouring the preference means
+    /// showing the answer, not counting faster.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The in-flight roll — a new text cancels it so two rolls never
     /// interleave writes to `shown` (review 2026-07-08).
     @State private var roller: Task<Void, Never>?
@@ -142,6 +154,7 @@ struct CountUpText: View {
     /// the previous one; a cancelled roll never writes again.
     private func roll(to n: Int) {
         roller?.cancel()
+        guard !reduceMotion else { shown = n; return }
         shown = 0
         roller = Task { @MainActor in
             let steps = min(n, 6)
@@ -166,6 +179,12 @@ struct SwipeHintNudge: ViewModifier {
     let active: Bool
     var onDone: () -> Void
     @State private var nudge: CGFloat = 0
+    /// Under Reduce Motion the lesson is RETIRED rather than played still
+    /// (2026-08-04, prd §299). The whole teaching device is the movement — a
+    /// nudge that doesn't move teaches nothing, and holding the row hostage for
+    /// 2.6 seconds to teach nothing is worse than skipping it. `onDone` fires
+    /// immediately so the flag is set and no list waits on it again.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         content
@@ -180,6 +199,7 @@ struct SwipeHintNudge: ViewModifier {
             }
             .onAppear {
                 guard active else { return }
+                guard !reduceMotion else { onDone(); return }
                 Task { @MainActor in
                     try? await Task.sleep(for: .milliseconds(1400))
                     withAnimation(.spring(duration: 0.45, bounce: 0.35)) { nudge = -56 }

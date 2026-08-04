@@ -106,6 +106,27 @@ step "Cloudflare pure-logic self-test"
   || fail "the Cloudflare logic self-test failed — run scripts/cloudflare-selftest.sh"
 print -P "%F{green}✓ cloudflare self-test%f"
 
+# Pure-logic self-test for the Stripe and PostHog room heads (prd §298). Neither
+# bridge has ever run against a live account from this host, and every failure
+# here is a silent wrong answer: a dispute due tomorrow placed at the far end of
+# the rail, an overdue window sorted last, a metric that stopped firing ranked
+# below a busy one.
+step "Room-head pure-logic self-test"
+"$ROOT/scripts/room-heads-selftest.sh" >/dev/null \
+  || fail "the room-head logic self-test failed — run scripts/room-heads-selftest.sh"
+print -P "%F{green}✓ room-head self-test%f"
+
+# The design system's first mechanical check (prd §299). Every other rule in
+# this file is enforced by a script; the design system was enforced by memory,
+# which is how fourteen data drawings shipped with no entrance and how the
+# app's two most-used entrances (`SettleIn`, `RowEntrance`) ignored Reduce
+# Motion from the day they shipped. Neither is visible in a build or a
+# screenshot.
+step "Design-motion audit"
+python3 "$ROOT/scripts/design-motion-audit.py" >/dev/null \
+  || fail "the design-motion audit failed — run python3 scripts/design-motion-audit.py"
+print -P "%F{green}✓ design-motion audit%f"
+
 # Pure-logic self-test for the on-device-intelligence pass (prd §282). Static,
 # no build, no network — and the ONLY automated check that pass can have: the
 # simulator ships no on-device language model, so every model path there runs

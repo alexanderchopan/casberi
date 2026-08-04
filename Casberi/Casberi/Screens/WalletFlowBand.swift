@@ -47,8 +47,16 @@ import SwiftUI
 /// of quiet lie the honesty rule exists to stop. The band is a read; the rows
 /// below it are the door.
 ///
-/// **Static by ruling** (user, 2026-08-01: "we don't need the motion") — the
-/// draw-on and drift-dot delight died in review before it was built.
+/// **It draws itself** (user, 2026-08-03: "every visualization we have should
+/// draw itself in some way"), amending 2026-08-01's "we don't need the motion".
+/// What that first ruling killed was a drift-dot loop — money crawling along
+/// the tapers forever, which claims live streaming the way the endpoint pulse
+/// does and is decoration by the §129 test. What it takes instead is ONE
+/// left-to-right wipe (`ChartEntrance`), which is not decoration: this diagram's
+/// whole claim is that money entered on the left, passed through you, and left
+/// on the right, so a reveal along that axis is the claim being made in time.
+/// The out slabs land last because they happened last. Nothing loops; nothing
+/// moves again after the beat.
 ///
 /// No `Thing` is stored — `WalletFlowSource` reduced them to values at the
 /// boundary — so the liveness rules have nothing to bite on here.
@@ -61,6 +69,14 @@ struct WalletFlowBand: View {
     /// The wallet whose face rides the spine — the scoped wallet, or the sole
     /// watched one. nil (several wallets, unscoped) draws the app tint alone.
     var spineAddress: String? = nil
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// One flag for the whole entrance; each element hangs its OWN delayed
+    /// animation off it (`WalletRiskStrip`'s shape). The face pops as the wipe
+    /// reaches the spine, the outcome sentence lands after the money has
+    /// finished moving — two beats off one wipe, not three animations arguing
+    /// for attention.
+    @State private var entered = false
 
     private let bandHeight: CGFloat = 138
     private let laneGap: CGFloat = 2
@@ -82,6 +98,9 @@ struct WalletFlowBand: View {
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
                     .lineLimit(1)
                 netLine
+                    .opacity(entered ? 1 : 0)
+                    .offset(y: entered ? 0 : 3)
+                    .animation(netAnimation, value: entered)
                 if let note = coverageNote {
                     // Stated, never swallowed — a band drawn from six of nine
                     // moves is a different claim from one drawn from all nine.
@@ -100,7 +119,19 @@ struct WalletFlowBand: View {
                 diagram(width: geo.size.width)
             }
             .frame(height: bandHeight)
+            // The money moves through the band once, in the direction it
+            // actually moved. See the type doc's amended ruling.
+            .chartWipe(reduceMotion: reduceMotion)
+            // A `Path` and a stack of rectangles read as NOTHING to VoiceOver,
+            // and this diagram is the only place the app states where the money
+            // came from and where it went (2026-08-04, prd §299). One figure,
+            // one sentence — the treatment `AddressConnectionsCard` already
+            // gives its spine, rather than a dozen stray slab labels.
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(Text(spokenDiagram))
         }
+        // A plain set: each element owns its own delayed animation above.
+        .onAppear { entered = true }
         .background(DS.fillFaint,
                     in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
@@ -128,6 +159,23 @@ struct WalletFlowBand: View {
                     .foregroundStyle(DS.textSecondary)
             }
         }
+    }
+
+    /// The outcome sentence arrives AFTER the band has finished drawing — the
+    /// same ordering `GenMoneyHero` keeps between its rolling total and its
+    /// delta pill (2026-07-22): a summary that lands with the thing it
+    /// summarizes makes the eye choose, and it always chooses wrong.
+    private var netAnimation: Animation? {
+        reduceMotion ? nil
+            : DS.Motion.standard.delay(ChartEntrance.lead + ChartEntrance.wipe * 0.9)
+    }
+
+    /// You arrive as the money reaches you — the wipe uncovers the face at the
+    /// same instant it pops, so the spine reads as what the inflows were
+    /// travelling towards.
+    private var faceAnimation: Animation? {
+        reduceMotion ? nil
+            : ChartEntrance.land(after: ChartEntrance.lead + ChartEntrance.wipe * 0.5)
     }
 
     /// What this band does NOT cover, in one line — nil when it covers
@@ -203,9 +251,33 @@ struct WalletFlowBand: View {
             if let spineAddress {
                 WalletFace(address: spineAddress, size: 28, circular: true)
                     .overlay(Circle().stroke(DS.page, lineWidth: 3))
+                    .scaleEffect(entered ? 1 : 0.4)
+                    .animation(faceAnimation, value: entered)
                     .position(x: width / 2, y: bandHeight * 0.42)
             }
         }
+    }
+
+    /// The diagram as a sentence — the same facts the drawing carries, in the
+    /// order it draws them: in, through you, out.
+    private var spokenDiagram: String {
+        var parts: [String] = []
+        if band.inLanes.isEmpty {
+            parts.append(String(localized: "Nothing came in."))
+        } else {
+            parts.append(String(localized: "In from \(spokenLanes(band.inLanes))."))
+        }
+        if band.outLanes.isEmpty {
+            parts.append(String(localized: "Nothing went out."))
+        } else {
+            parts.append(String(localized: "Out to \(spokenLanes(band.outLanes))."))
+        }
+        return parts.joined(separator: " ")
+    }
+
+    private func spokenLanes(_ lanes: [WalletFlow.Lane]) -> String {
+        lanes.map { "\($0.name), \(TokenStats.compact($0.usd))" }
+            .joined(separator: "; ")
     }
 
     private var spineTint: Color {

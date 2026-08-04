@@ -15694,3 +15694,490 @@ months for tomorrow, a chip on every registration, a past date accepted as
 "next", and a coverage note claimed without an estate. `-cloudflareRunwayProbe
 YES` reports the reading line by line — a missing runway has five causes that
 render as the same nothing and only two are bugs.
+
+## §297 — Every visualization draws itself, and the crown stops pouring where it says nothing (user: "how else can we improve the app design? i want the wallet to wow folks - it has really good features and visualizations but they aren't always displayed like sankey liquidity and so on. i think also every visualization we have should draw itself in some way", then "would the app also be better without the crown pour on the source feeds? i want it to lok sleek and feel cool to use", 2026-08-03)
+
+An audit of the wallet room found an exact split, and it was not a taste split:
+**anything drawn by `TokenChartPlot` or the treemap drew itself; everything
+hand-rolled out of `GeometryReader` + `Capsule`/`Path` painted its final frame
+in one go.** The balance sparkline swept, its marks landed, the treemap
+staggered — and beside them the flow band, the melt bars, the risk axis, the
+range bar, the connections spine and the approvals card simply *were*. The room
+read as two apps stacked.
+
+The cause is mechanical rather than moral: the two animated families both
+inherited their entrance from a shared component, and every hand-rolled drawing
+had to remember one. **So the fix is a shared component too** —
+`Design/ChartEntrance.swift` holds the motion, and a new visualization gets it
+by reaching for a modifier rather than re-deriving spring constants from a
+neighbour. That is the part that outlives this pass: the next drawing arrives
+animated by default instead of by memory.
+
+Note what this pass did NOT find, and therefore did not fix: the Mac's
+"charts that draw themselves" work (2026-08-03, commit `6cf261e`) is not
+Catalyst-gated and already runs on iOS — but every hero it animates
+(heatmap, leaderboard, topic map) is registered for the Photos/Instagram/Files
+rooms and **none of them ever renders in the wallet room**. That commit
+contributed exactly zero motion to any wallet surface.
+
+### The grammar, and the three rules it encodes
+
+- **A drawing reveals in the direction it means.** A line that accrues over time
+  wipes left to right; a bar that is a share grows from its own base; a dot on a
+  scale travels to its reading. Motion that runs against the drawing's own axis
+  is decoration, which is what §129 spent the hue budget removing.
+- **One beat, then done.** Every animation is a one-shot arrival, guarded so a
+  re-render can't replay it. Nothing loops — looping claims live streaming,
+  which the 2026-07-11 endpoint-pulse ruling reserves for things that stream.
+- **Reduce Motion renders the final frame immediately**, never a slower version.
+
+Plain SwiftUI is correct here, and that is not a contradiction of the
+2026-07-28 `BerryRain` ruling (decorative motion during a refresh must be
+CoreAnimation, because every ingest is `@MainActor` and starves the
+interpolation). That ruling is about motion running WHILE the main thread is
+blocked. An entrance fires once, on appear, off the refresh path.
+
+### What each drawing does now, and why that motion and not another
+
+**The flow band — amending "static by ruling" (2026-08-01, "we don't need the
+motion").** What that first ruling killed was a drift-dot loop: money crawling
+along the tapers forever, which claims live streaming and is decoration by the
+§129 test. What it takes instead is ONE left-to-right wipe — not decoration,
+because this diagram's whole claim is that money entered on the left, passed
+through you, and left on the right, so a reveal along that axis is the claim
+made in time. The out slabs land last because they happened last. The face pops
+as the wipe reaches the spine; the "Kept +$1.0K" sentence lands after the money
+has finished moving (`GenMoneyHero`'s own ordering: a summary that arrives with
+the thing it summarizes makes the eye choose, and it chooses wrong).
+
+**The melt goes on stage, and the inversion IS the feature.** An ordinary share
+bar grows from nothing to its fraction — "here is how much". A veAERO lock is
+the opposite fact: it HAD all its voting power and is losing it, linearly, to
+zero at its end. So a melt bar draws FULL and recedes to what's left, which is
+the only entrance that states the mechanic rather than reporting a percentage.
+A permanent lock never decayed and so is never drawn decaying.
+
+**The melt also comes out from behind the tap — but only when it can be
+honest.** It was the room's best drawing and it was two taps deep, visible only
+to someone holding a lock who tapped "Locked". It now draws inline on the
+composition strip's Locked row (`WalletComposition.soleMelt`) **only when there
+is a single lock and it decays**. The strip's own rule is that Locked declines
+to have an accounting opinion, and a mean "power left" across two veNFTs ending
+years apart is exactly such an opinion (the same reason the tray exists: a sum
+of end dates is nothing).
+
+The test is `locks.count == 1`, and the first cut got this wrong in a way worth
+recording: it asked whether exactly one lock *decays*, which passes for a wallet
+holding one veAERO plus one permanent staked HYPE. The bar sits directly under
+`lockedTotals`' own summary, so that wallet would have read "12,977 AERO · 340
+HYPE" with a bar underneath describing a fraction of a number it isn't a
+fraction of — the accounting opinion the rule exists to refuse, wearing a
+different shape. One lock is the only case where the line and the bar describe
+the same thing; the rule now lives in the model beside `lockedTotals` rather
+than in the view, which is where that was visible at all.
+
+**The risk strip's dots travel** from the comfortable end to their readings,
+closest-to-the-edge first (`entries` is already sorted worst-first, so the
+stagger narrates the ranking the card already made — the treemap's largest-first
+rule on a different axis). This is the one entrance here that isn't ornament:
+the card's whole argument is that three incomparable protocol units share one
+axis, and watching a dot travel ALONG that axis is that argument made in time.
+A fade would have said nothing the static frame doesn't. Labels ride WITH their
+dots rather than fading in after — a label that arrives late reads as belonging
+to whichever dot is nearest when it lands, which on the crowded end is the
+wrong one.
+
+**The connections spine strokes itself** — a `trim` across its single `Path`,
+so the ribbons are struck one after another in first-dealt order. It was the
+only wallet visualization with NO motion of any kind: it sits on the Wallet
+manager, which doesn't use `RowEntrance`, so it didn't even inherit the fade
+every feed card gets. A stroke-draw and not a wipe, deliberately: a wipe says
+"a picture is appearing", tracing each curve says "this address reached this
+wallet, and then this one" — the sentence the card exists to make. It stays
+inside §295's factual ruling because the order traced is the order already on
+screen, so the entrance ranks nothing the drawing doesn't.
+
+**The range bar opens from its own centre, then the price dot lands.** The order
+is the reading's own logic — the range is what you chose, the price is what
+happened to it — and it is why the dot does not slide along the bar: sliding
+would imply a path the price took, which this bar has no data for.
+
+**The approvals card's rows land ranked**, which is the exact instruction its
+own subhead gives ("Start at the top").
+
+### The crown number gets the brief's arc, and the line gets a finger
+
+`GenMoneyHero` has staged the full choreography since 2026-07-22 — total
+odometer-rolls from the day's anchor, delta pill pops, line draws, cells settle
+biggest-first — **inside the Today brief, which most people never open**, while
+the wallet room, whose number this actually is, drew its line and left the total
+sitting there already arrived. The headline now rolls from the window's own
+first sample (so the roll says a true thing: this is what it was when this line
+began, and this is what it is) and pops its pill after. A window with nothing to
+travel rolls nothing.
+
+**And the scrub reaches the phone.** Press-then-drag on the headline sparkline
+rolls the crown number to the sample under your finger. The plumbing has existed
+on every device since the Mac pass two days ago and answered only a cursor.
+Sequenced off a long press, so the feed's vertical scroll and its horizontal
+pager still win a plain swipe (the DragGesture-vs-ScrollView law, and the
+grammar the sheet chart has used since it shipped). It is ONE hit surface
+carrying scrub, hover and mark taps together: two stacked rectangles, one with
+`onTapGesture` over one with a sequenced drag, is the arrangement that works on
+a simulator and fails on a finger.
+
+### The crown pour drains where it says nothing
+
+The pour is one owned colour everywhere (§159, §204), which is exactly what
+makes it identity on the rooms that are yours — All, and a wallet you're
+standing inside, where it re-tints to that wallet's own face. On a SOURCE room
+it is the one thing on screen saying nothing: the room belongs to Bluesky or
+Photos or Files, its identity already lives in its chip and icon (the
+2026-07-18 full-ink ruling that killed the per-source wash), and a permanent
+500pt field over it is the borrowed decoration that ruling removed, wearing our
+colour instead of theirs.
+
+So `chrome.pourDose` goes to 0 there and back to 1 on return, written by the
+active page's landing beside `pourHue` so the two can never disagree. It also
+gives the pager something it never had: the crown breathing out as you leave
+home and back in as you arrive.
+
+### What review caught, and what the grammar had to learn
+
+Four things worth keeping, because each is the shared-component argument paying
+for itself (or failing to):
+
+- **The stagger needed the cap `RowEntrance` already had.**
+  `WalletApprovalExposure.all` is UNCAPPED, unlike `AddressConnections.Map.nodes`
+  which prefixes — so a wallet with thirty live grants left its last row
+  invisible for two seconds under a card whose own subhead reads "Start at the
+  top". `ChartEntrance.staggerCap` is the fix, and the point is that the
+  existing shared component had learned this and the new one hadn't.
+- **The odometer arc is now shared, not copied.** `GenMoneyHero`'s doc had
+  claimed since 2026-07-22 that the wallet room already shared its idiom. It
+  didn't — and the first cut of this pass copied the spring constants across
+  rather than lifting them, which is the exact drift the file was written to
+  stop, happening inside the diff that introduced it. Both read
+  `ChartEntrance.roll`/`.pillLand` now.
+- **The roll must not be able to pin the number.** It first held the
+  destination and cleared it on a timer, which meant an unstructured `Task`
+  outliving its own view by 1.4s — and the pager remounts this room on every
+  swipe. It now holds the ANCHOR with a `rollLanded` flag, so the instant the
+  roll lands the number reads the live total again and a holdings read arriving
+  mid-entrance reaches the screen by itself. No timer, nothing to cancel.
+- **One scrub surface, not three.** The touch grammar existed twice
+  byte-for-byte (sheet and plot) and the plot's tap catcher was gated on a
+  sibling's parameter, which left a real hole: both callbacks plus a coarse
+  chart drew marks with nothing catching them — a dead control. `ChartScrubSurface`
+  is now the single owner of the rectangle, the index arithmetic and the haptic
+  policy, and `scrubs` is hoisted so the two branches can't disagree.
+
+One efficiency note recorded for the next person: the pour's dose is a view
+`.opacity`, NOT baked into the gradient stops. The two are arithmetically
+identical (the last stop is already zero, and interpolation is linear in
+alpha), but animating the stops re-rasterizes a full-width 500pt gradient every
+frame on the main thread, during a page transition that is already remounting a
+room. A layer opacity is one property the render server drives out of process.
+
+**Verified:** builds clean; the liveness audit, the reach audit, catalog-sync
+and the 276-assertion wallet-viz self-test all pass. NOT sim-verified — these
+are entrance animations, and the standing instruction is to skip the simulator
+for time and credits. The risk is therefore visual TIMING, not correctness:
+every entrance falls back to its final frame under Reduce Motion, every
+one-shot is guarded against replay, and no drawing's resting state changed.
+
+**Known and deliberately not done:** `CalendarHeatmapHero` and `GenValueSpark`
+still hand-roll the same mask reveal `ChartWipe` now owns and could collapse
+onto it verbatim — left alone because they're outside this pass's rooms and the
+sim is off the table for verifying them. `TokenChartView`'s sheet could also
+drop its own scrub cursor by passing `cursorIndex` to the plot, but its overlay
+sits OUTSIDE the reveal mask and moving it inside would put the hit rectangle
+under a 0.7s clip; that one needs a device before it's touched.
+
+## §298 — The rooms that hold numbers and drew nothing (user: "yes do it", following "the bigger design gap isn't motion — it's absence", 2026-08-04)
+
+§297 fixed the wallet's drawings and, in doing so, surfaced a larger finding:
+**fifteen rooms lead with plain rows and no visualization at all**, and several
+of them hold real numeric state the app already parses. Stripe and PostHog were
+the two worst, and they were worst in opposite ways — Stripe holds money, which
+is the module doctrine's own standing exception, and PostHog *already had* a
+visualization (`MetricDisc`) sitting in two surfaces nobody lives in.
+
+Both heads **spend nothing**: landed rows plus bridge state that is already on
+the device. No request, no new `Thing` field, no CloudKit deploy — the
+`CloudflareRunwaySource` contract, and for its reason: a room's lede must not
+be able to fail differently from the rows beneath it.
+
+### Stripe — what the money is doing, and what needs you by when
+
+The card leads with a balance and draws a rail of the only two things Stripe
+stamps a clock on: a dispute's evidence deadline and an invoice's next retry.
+Its anatomy is `CloudflareRunwayCard`'s, which took it from
+`WalletApprovalExposureCard` — the family now has three members and no shared
+component, which is deliberate: the *rulings* are shared, the pixels are copied.
+
+**The ranking is the judgement**, and it is stated in one place
+(`StripeRoom.headline`): an OVERDUE evidence window leads everything, because
+it is the only state on the card actively costing money; a STOPPED account
+comes next, because the business quietly halting outranks any single dispute;
+then upcoming deadlines; then the balance, which is the everyday case and why
+most people open the room.
+
+**What it may not draw is the more useful half of this entry.** The obvious card
+is a revenue curve and it cannot be built honestly:
+
+- `StripeFetch.chargePulse` buys the last hundred `charge.succeeded` timestamps
+  every balance window, `StripeSilence` reduces them to a verdict, and **the
+  array is discarded**. No payment-rate sparkline exists at zero cost.
+- Building one from the landed rows would be *worse than none*: §250 rules that
+  an individual charge is never a row, so the rows are a biased sample of
+  exactly the events that went WRONG. A curve drawn off disputes and dunning
+  would read as "your revenue" while plotting your problems.
+- Amounts exist only as formatted substrings inside titles (`Thing` carries no
+  numeric field for them — `transferAmount` is Wallet's), and re-parsing prose
+  back into arithmetic is what `Thing`'s own doc argues against.
+
+So the card states money it reads from a structured source, counts events it can
+see, and never crosses between the two. Currencies are never summed.
+
+### PostHog — the disc it already had, at the head
+
+`MetricDisc` shipped with §223 and lived in the setup screen's roster and a
+metric's detail sheet. The FEED room led with plain rows. This is the same disc,
+unchanged, at the room's head — the card introduces no new component at all,
+reusing `AssetRosterSlot` too, so a watched metric wears exactly what a watched
+token does.
+
+**Silent metrics lead.** A metric that stopped firing is the most valuable thing
+analytics can tell someone who ships (§223's own words), and it is precisely the
+one a volume sort buries, because it has no volume left. Ties fall back to the
+name so a roster can't reshuffle between two equal reads.
+
+Three refusals inherited and kept: a metric with no series draws an EMPTY disc,
+never a flat line; no ring at `total == 0` (absent, not zeroed — unread and
+genuinely-empty are indistinguishable, and a ring at 0% claims the latter); and
+silence is a state, not a number, because "silent for 3 days" is not a fact this
+app holds. A watch row whose reading has never landed on this device is COUNTED,
+not drawn — a fresh install syncs rows but not `UserDefaults`, and a roster of
+empty discs would read as "nothing is happening" when the truth is "we haven't
+looked yet".
+
+The head deliberately does NOT say "1,240 events this week". That is the tally
+§223 refuses, and the curve beneath already says it better.
+
+### One slot, not three — the chain's own shape
+
+`FeedScreen.shapedSections` gates each hero by re-stating every predecessor as
+nil, by hand. Adding two cards at the runway's rank would have meant editing
+five gates, and mis-ranking a card by missing one. The three per-source heads
+are now ONE term (`sourceHead`), resolved by a single `switch` on the source.
+They can never compete — each names exactly one room — so one term is also the
+honest shape, and a fourth head is one case rather than five edits.
+
+They exist as a separate mechanism from `FeedInsight` because that enum is pure
+over `[Thing]` by contract: it can only count and group stored fields. A
+certificate's expiry, a Stripe balance and a PostHog reading are bridge state,
+and no registry over the corpus can reach them.
+
+### The static sweep — seven drawings onto §297's grammar
+
+`ChartEntrance` was wallet-only on the day it shipped, despite a doc claiming
+app-wide scope. Now adopted by: the Kalshi/Polymarket odds bar (the fill grows,
+then the prior-level notch lands — the notch means nothing without a fill to
+read it against), `MetricDisc` (the curve strokes on, then the milestone ring
+*winds up* — winding IS the fact it states, where a ring fading in at 40% merely
+asserts 40%), `SafeSignatureDisc` (signatures count themselves in one at a time;
+missing segments appear at once, being the track rather than the reading),
+`DistributionHero` and `GenAllocBar` (a split is proportions of one length, so
+it fills along that length), the Polymarket chart (`TokenChartPlot` never wipes
+itself — the reveal always lives in the caller, and this was the one caller that
+never added it), and the Cloudflare runway rail, which shipped one day before
+the grammar and was the only card in its own family that never adopted it.
+
+**Verified.** Builds clean. `scripts/room-heads-selftest.sh` compiles
+`StripeRoom.swift` and `PostHogRoom.swift` WHOLE and unmodified — 60 assertions,
+9 mutations, each mutation a plausible simplification that must break something
+— plus drift guards for the wiring the compiled functions can't prove (the
+soonest-first sort, both boundary `.live` filters, the unread count, the disc
+cap, and both `-roomInsightProbe` mirror lines). Wired into `verify.sh`. All
+eight existing audits pass; no CloudKit deploy is needed.
+
+The harness caught a defect in its own test on the first run — an assertion
+expecting `"1.0K"` where `compact` correctly yields `"1K"`, with the adjacent
+assertion proving it. **UNMEASURED against a live account**: neither bridge has
+ever run against real credentials from this host, which is exactly why the pure
+judgement was split out and compiled rather than trusted.
+
+### §298 follow-up — three defects review caught, and what each teaches
+
+All three rendered perfectly, which is the class this codebase keeps paying for.
+
+**1. The headline counted the drawn rows, not the window.** `items` is capped at
+four; the headline said `"\(room.items.count) deadlines ahead"`. A nine-deadline
+account would have read **"4 deadlines ahead"** directly above **"5 more further
+out — not drawn"** — a card disagreeing with itself in two adjacent lines. The
+pattern was copied from `CloudflareRunway.headline`, which is safe only because
+that source has no row cap. The uncapped count now lives ON the room
+(`StripeRoom.total`), which also deleted the parallel parameter the card and the
+chain were threading beside it.
+
+**2. Read-and-zero collapsed into never-read.** `StripeState.availableText()`
+filters zero buckets and returns nil, so an account that sweeps its payouts
+daily — a normal way to run a business — was indistinguishable from a device
+that had never fetched a balance. It would have shown "Balance not read yet"
+over a balance fetched two minutes ago, and with no deadline and no outage the
+whole head would have **vanished**, breaking the card's own "a quiet account
+gets the same body" promise. The room carries `asOf`, so it could always tell
+the two apart; `balanceRead` now keys the distinction, and a swept account says
+"Nothing available right now", which is a fact rather than an apology.
+
+**3. The probe reported a Stripe head for every room.** `note("stripeHead", …)`
+was not gated on `source`, and `compose` reads `StripeState` — global
+UserDefaults, not `things` — so on any device with Stripe connected it answered
+for every room and, being first non-nil, was named the leader.
+`-roomInsightProbe Photos` would have reported the Photos room as leading with
+`stripeHead` while it drew a topic map. **That is precisely the §219 failure
+this probe exists to catch, committed by the probe itself.** The runway line
+shipped with the identical hole on 2026-08-03 and is fixed in the same pass.
+
+The general lesson, and the reason the gate is now spelled out in the probe's
+own comment: **a head composed from bridge state must be gated on the source at
+every call site**, because unlike a `FeedInsight` factory — which is pure over
+that room's own rows and answers nil for a room it doesn't serve — bridge state
+answers the same thing everywhere.
+
+Two of the three are now mutations in `scripts/room-heads-selftest.sh`
+(the third is a probe-wiring fact, so it is a drift guard instead), bringing it
+to 66 assertions and 11 mutations.
+
+### §204 amendment — Ink: the pour you can turn off (user: "can you make a setting for the appearance color choice to have one as black / ink, so in case a user doesn't want to see crown pours they don't have to", 2026-08-04)
+
+§159 made the crown pour permanent, §204 made its colour the person's, and
+§297 drained it on the rooms where it says nothing. All three assumed a pour.
+This adds the sixth option, and it is the first one that is an ABSENCE rather
+than a colour: **Ink**, which takes the field to zero.
+
+**It is not a black swatch that pours black, and the difference is the whole
+ruling.** The pour's light-theme dose is 0.16 at its top stop; black at 0.16
+over `#f2f2f7` is a grey stain across the top of every screen — more visible
+than Slate, not less. An absence has to be absent. So `Bleed` gained one field,
+`pours`, false for Ink alone, and `MainSurface.crownPour` folds it into the
+dose rather than gating the view — same view identity through the pager's own
+`.transition(.opacity)`, and picking Ink fades the field out on the same beat a
+colour swap re-tints it.
+
+**A scoped wallet still tints.** That pour is information — which room you are
+standing inside — and it is the same distinction §297 drew when it dropped the
+DOSE on a source room without dropping the hue: decoration goes, identity
+stays. The card's subline says so in words rather than leaving a wallet room's
+crown reading as the setting failing to hold ("No wash — a wallet you open
+still wears its own color").
+
+Three smaller consequences, each the honesty rule applied to a control that
+would otherwise be invisible rather than wrong:
+
+- **The Ink swatch wears the neutral chip, not `#000000`.** Every other swatch
+  wears exactly what it applies; Ink can't, because its own black on the tray's
+  `#111113` is a 44pt control nobody can find. A control invisible by sight is
+  a dead control.
+- **Picking Ink deals no shower.** The `BerryRain` pour answers "what did I
+  just change?" in the colour you chose. A pick that REMOVES the pour must not
+  answer with one — and a black rain on a dark tray would read as broken.
+- **The settings badge falls back to secondary ink** (`DS.bleedMark`, distinct
+  from `DS.bleed` so the pour itself can still legitimately be invisible while
+  its preview never is). The Color row now previews like the Theme row's
+  sun/moon.
+
+**Verified:** builds clean; catalog-sync, the network-reach audit and the
+SwiftData liveness audit all pass. NOT sim-verified — the standing instruction
+is to skip the simulator, and nothing here changes behaviour that a screenshot
+could check beyond the two colour values named above.
+
+## §299 — The design system gets a mechanical check, and a quiet room learns to speak (user: "do all of these", 2026-08-04)
+
+Three things, and the first is the one that outlives the other two.
+
+### The design system had no audit, and it showed exactly where you'd predict
+
+Every load-bearing rule in this repo is enforced by a script in `verify.sh` —
+SwiftData liveness, keychain policy, network receipts, the reach registry, the
+CloudKit schema, the catalog. Each was written after a rule got re-broken from
+memory. **The design system had none**, and was enforced by remembering. The
+result, found by reading rather than by any check:
+
+- fourteen data drawings shipped with no entrance at all (§297/§298);
+- **`SettleIn`** — reached by forty call sites through `settleIn`/`staggerIn`,
+  including the topic map's cells — ignored Reduce Motion from the day it
+  shipped;
+- **`RowEntrance`**, the entrance EVERY feed row in the app wears, had the same
+  gap. A person who asked the system for less motion was getting a fully
+  staggered offset-and-scale cascade on every scroll into a new room.
+
+None of that is visible in a build, a screenshot or a screen sweep. A missing
+entrance renders perfectly. An ignored Reduce Motion renders perfectly for
+everyone who doesn't need it — which is everyone testing it.
+
+`scripts/design-motion-audit.py` makes both mechanical: an appear-triggered
+animation must honour Reduce Motion, and a drawing sized from data must have an
+entrance. Ten findings on the first real run, all fixed (`CountUpText`,
+`SwipeHintNudge`, `RowEntrance`, `MountIn`, `GenRow`, `GenTagMap`,
+`CaptureFlight`, plus `SettleIn` the day before). `GenTagMap` was the worst of
+them: a `repeatForever` breathing loop under a preference asking for less
+motion.
+
+**The audit's own first cut could not have caught the bugs that motivated it,
+and that is the most useful thing in this entry.** It matched `\bView\b`, a word
+boundary, which does NOT match `ViewModifier` — and every shared entrance in
+this codebase is a ViewModifier. It was structurally unable to fail on
+`SettleIn` or `RowEntrance`. Caught by checking the finding list against a
+throwaway prototype's, then fixed and given a self-test case for exactly that
+shape. Two further tunings, each measured rather than guessed: folding in
+non-entrance animations took the count from 10 to 27 (a lint that fires on
+correct code gets turned off within a week — the liveness audit's own lesson),
+and resolving one call hop through an `async` function flagged two setup screens
+whose animation fires when a data load LANDS, which is a different question.
+
+### A quiet room now says what is true
+
+Every empty room in the app said *"Let's fill this feed. Connect an app and
+things start landing on their own."* That is right exactly once — on All, for
+someone who has connected nothing. In a SOURCE room it was wrong three ways:
+
+- **connected and quiet** read as "you haven't connected anything", to someone
+  looking at the room of an app they connected that morning;
+- **paused** read the same way, so the state they chose was invisible;
+- **broken** read the same way too — and that one is a real failure. A bridge
+  whose token was refused rendered as a cheerful invitation to connect an app.
+  The one screen where a failure should be unmissable was the screen hiding it.
+
+`RoomQuiet` (Foundation-only, harness-compiled) is the generalisation of a
+ruling this app already made once, for Trello (§291 follow-up): *a successful
+read that finds NOTHING explains itself*, because a working connection that
+legitimately lands zero is otherwise indistinguishable from a broken one. That
+was a sentence on one setup screen; this is the same sentence where people
+actually stand. A bridge's own `emptyReadNote` still wins where it has one — it
+names the real reason, which no generic sentence can. A connected room offers
+**no** connect door; a broken one does, because the fix lives behind it.
+
+### VoiceOver: a drawing either speaks or is hidden, never silent-and-present
+
+The pure drawings had ZERO accessibility between them. The rule adopted, and it
+is a split rather than a blanket:
+
+- **`WalletFlowBand` and `WalletRiskStrip` get a sentence.** Each is the ONLY
+  statement of its facts — where the money came from and went; which position is
+  closest to liquidation — so a `Path` that reads as nothing is the fact missing
+  entirely. Both speak in the order they draw (in-through-out; closest first),
+  so the drawing and the speech can't disagree.
+- **The Stripe and Cloudflare rails and `PredictionOddsBar` are HIDDEN.** Every
+  mark on those axes is a row below it carrying the name, the kind and the date,
+  and the odds bar sits beside its own percentage. A spoken rail is the same
+  facts a second time in a worse order — the rule `ShareBar` and
+  `UniswapRangeBar` already followed.
+
+**Verified.** Builds clean; all thirteen static checks pass, including the new
+audit (11 self-test cases) and the room-head harness, now at 74 assertions and
+12 mutations covering `RoomQuiet` too — with a drift guard tying `RoomQuiet.Seat`
+to `BridgeApp.Status`, since a status added there without a case here would
+silently restore the generic copy for the very state that needed explaining.
+NOT sim-verified, per the standing instruction.

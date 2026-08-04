@@ -464,16 +464,17 @@ struct AccountDetailSheet: View {
     }
 
     /// The crown pour's color (prd §204) — the permanent gradient behind the
-    /// chip strip. Five curated swatches, not a color well (user ruling
-    /// 2026-07-24): every option but the default sits in `WalletFace.tint`'s
-    /// exact register, so a personal pour and a scoped wallet's pour read as
-    /// one family. Tapping a swatch is the whole interaction — no separate
+    /// chip strip. Six curated swatches, not a color well (user ruling
+    /// 2026-07-24): every colour option sits in `WalletFace.tint`'s exact
+    /// register, so a personal pour and a scoped wallet's pour read as one
+    /// family. Tapping a swatch is the whole interaction — no separate
     /// Save; `ThemeStore.shared.bleed` is the live setting, same as Theme's
-    /// direct toggle.
+    /// direct toggle. Ink leads the row because it is the DEFAULT (2026-08-04):
+    /// it pours nothing, and so it deals no shower either — a pick that removes
+    /// the pour must not answer with one.
     private var bleedCard: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
-            aliveRow("paintbrush.pointed.fill", DS.bleed, "Crown pour",
-                     "\(ThemeStore.shared.bleed.name) washes the top of every screen")
+            aliveRow("paintbrush.pointed.fill", DS.bleedMark, "Crown pour", bleedSubline)
             HStack(spacing: DS.Space.s3) {
                 ForEach(ThemeStore.bleeds) { option in
                     let selected = ThemeStore.shared.bleed.id == option.id
@@ -481,14 +482,21 @@ struct AccountDetailSheet: View {
                         DSHaptic.tap()
                         // A real change pours; re-picking what's already in
                         // force is a no-op and reads as one.
-                        if !selected {
+                        if !selected && option.pours {
                             bleedHue = Color(hex: option.hex)
                             bleedPulse += 1
                         }
                         withAnimation(DS.Motion.standard) { ThemeStore.shared.bleed = option }
                     } label: {
+                        // Every colour swatch wears exactly what it applies.
+                        // Ink can't — what it applies is an ABSENCE, and its
+                        // own `#000000` on this tray's `#111113` is a swatch
+                        // nobody can find (a control invisible by sight is a
+                        // dead control, honesty rule). It wears the neutral
+                        // chip instead, the standard "none" affordance, and
+                        // the row above says so in words.
                         Circle()
-                            .fill(Color(hex: option.hex))
+                            .fill(option.pours ? Color(hex: option.hex) : DS.gray100)
                             .frame(width: 44, height: 44)
                             .overlay(
                                 // The selection ring is always tint (matches
@@ -502,7 +510,10 @@ struct AccountDetailSheet: View {
                                 if selected {
                                     Image(systemName: "checkmark")
                                         .font(.system(size: 15, weight: .bold))
-                                        .foregroundStyle(.white)
+                                        // White reads on the five saturated
+                                        // fills; on the neutral chip it would
+                                        // vanish in the light theme.
+                                        .foregroundStyle(option.pours ? Color.white : DS.textPrimary)
                                 }
                             }
                     }
@@ -516,6 +527,17 @@ struct AccountDetailSheet: View {
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    /// What the pour is doing right now, in words. Ink gets its own sentence
+    /// — "Ink washes the top of every screen" would be false, and it also
+    /// names the one pour Ink does NOT silence, so a wallet room re-tinting
+    /// the crown can't read as the setting failing to hold.
+    private var bleedSubline: String {
+        let bleed = ThemeStore.shared.bleed
+        return bleed.pours
+            ? String(localized: "\(bleed.name) washes the top of every screen")
+            : String(localized: "No wash — a wallet you open still wears its own color")
     }
 
     /// Saves the key only after its provider accepts it — no dead key sitting

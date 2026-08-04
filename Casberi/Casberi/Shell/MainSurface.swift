@@ -315,11 +315,10 @@ struct MainSurface: View {
     //
     // AMENDED prd §204 (2026-07-24, user: "let user choose their tint bleed
     // color"): the fallback is the PERSON's color now, not just ours —
-    // `DS.bleed`, one of five curated options, Casberi blue by default. The
-    // trade is stated on purpose in §204: the pour stops being only Casberi's
-    // and becomes theirs, with ours as the default. The wallet-face carve-out
-    // (`pourHue`) is unchanged and still wins first; `DS.tint`, the pressable
-    // signal at 157 other sites, does not move.
+    // `DS.bleed`, one of six curated options. The trade is stated on purpose in
+    // §204: the pour stops being only Casberi's and becomes theirs. The
+    // wallet-face carve-out (`pourHue`) is unchanged and still wins first;
+    // `DS.tint`, the pressable signal at 157 other sites, does not move.
     //
     // It lives HERE, not on the feed pages, because the first cut lived on the
     // page and taught why that can't work (user screenshot, 2026-07-21): the
@@ -327,12 +326,31 @@ struct MainSurface: View {
     // field stops at the page's edge and the strip zone stays flat black — a
     // hard seam exactly on the no-hairlines law. The shell owns the crown; the
     // field must too.
+    //
+    // AMENDED AGAIN (2026-08-04, user: "one as black / ink, so in case a user
+    // doesn't want to see crown pours they don't have to", then "lets make the
+    // default dark mode be black / ink theme not blue"): Ink is a sixth option
+    // that does not pour, and it is now the DEFAULT — so out of the box this
+    // field is off and the crown is the page. It takes the dose to zero rather
+    // than painting black, because black at the light theme's own 0.16 is a
+    // grey stain across the top of every screen; an absence has to be absent,
+    // not dark. A SCOPED wallet still tints: that pour says which room you're
+    // standing in, which is the same reason §297 drains the dose on a source
+    // room without dropping the hue. So the pour survives exactly where it
+    // carries information and is silent everywhere it was decoration —
+    // which is §159's own argument, arriving at the opposite default.
     private var crownPour: some View {
-        let hue = chrome.pourHue ?? DS.bleed
+        let scoped = chrome.pourHue
+        let hue = scoped ?? DS.bleed
         // Photo themes force the dark treatment (DS.themedPage's own rule);
         // only a true light page halves the dose — the same field that reads
         // as atmosphere on ink reads as a stain on white.
         let light = ThemeStore.shared.isLight && ThemeStore.shared.backgroundPhoto == nil
+        // Folded into the dose rather than gating the view, so picking Ink
+        // fades the field out on the same beat a colour swap re-tints it —
+        // and so `crownPour` keeps ONE view identity through the pager's own
+        // `.transition(.opacity)`.
+        let dose = (scoped == nil && !ThemeStore.shared.bleed.pours) ? 0 : chrome.pourDose
         return LinearGradient(stops: [
             .init(color: hue.opacity(light ? 0.16 : 0.30), location: 0),
             .init(color: hue.opacity(light ? 0.05 : 0.10), location: 0.5),
@@ -340,9 +358,22 @@ struct MainSurface: View {
         ], startPoint: .top, endPoint: .bottom)
             .frame(height: 500)
             .frame(maxHeight: .infinity, alignment: .top)
+            // How much of it this room gets (§297) — full on All and inside a
+            // wallet, drained on a source room, which owns its own identity.
+            //
+            // As a view opacity, NOT baked into the stops. Scaling all three
+            // stop alphas by the dose is arithmetically identical (the third is
+            // already zero, and gradient interpolation is linear in alpha), but
+            // animating it that way makes SwiftUI re-resolve and re-rasterize a
+            // full-width 500pt gradient every frame on the main thread — during
+            // a page transition that is already remounting a room. A layer
+            // opacity is one property the render server drives out of process.
+            .opacity(dose)
             // A scope switch re-tints the crown as one move with the switcher
-            // capsule's slide — not a hard swap.
+            // capsule's slide — not a hard swap. The dose rides the same
+            // motion, so leaving home drains the field rather than cutting it.
             .animation(DS.Motion.standard, value: chrome.pourHue)
+            .animation(DS.Motion.standard, value: dose)
     }
 
     /// The chip strip in whichever orientation this device wears it. One

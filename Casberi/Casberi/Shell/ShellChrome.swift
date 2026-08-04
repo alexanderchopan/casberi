@@ -60,6 +60,44 @@ final class ShellChrome {
     /// next page's landing, so a stale hue can't outlive its room.
     var pourHue: Color?
 
+    /// How much of the crown pour this room actually gets (prd §297,
+    /// 2026-08-03, user: "would the app also be better without the crown pour
+    /// on the source feeds? i want it to look sleek").
+    ///
+    /// The pour is ONE owned colour everywhere (§159, §204), which is exactly
+    /// what makes it identity on the rooms that are yours — All, and a wallet
+    /// you're standing inside, where it re-tints to that wallet's own face. On
+    /// a SOURCE room it is the one thing on screen saying nothing: the room
+    /// belongs to Bluesky or Photos or Files, its identity already lives in the
+    /// chip and the icon (the 2026-07-18 full-ink ruling that killed the
+    /// per-source wash), and a permanent 500pt field over it is the borrowed
+    /// decoration that ruling removed, wearing our colour instead of theirs.
+    ///
+    /// So it drains to nothing there and comes back when you return — which
+    /// also gives the pager something it never had: the crown breathing out as
+    /// you leave home and back in as you arrive. Written by the active feed
+    /// page's landing beside `pourHue`, so the two can never disagree.
+    var pourDose: Double = 1
+
+    /// Which rooms keep the pour — the rule, next to the reasoning above.
+    ///
+    /// It lives here rather than at the write site in `FeedScreen.land()`
+    /// because the doc IS the rule: a predicate one file away from the fifteen
+    /// lines explaining it is a predicate the next person edits without ever
+    /// reading them. Deliberately NOT derived from `FeedScreen.Shape`, which
+    /// looks like the same question and isn't — that's a row-RENDERING
+    /// taxonomy (it folds Cal.com and Calendly together, Farcaster and
+    /// Bluesky together), and hanging the crown off it would mean a future
+    /// rendering merge silently moved the pour.
+    ///
+    /// "You" — your own notes and voice — is a source room and takes the
+    /// drain, on purpose. It reads as an exception to "the rooms that are
+    /// yours", but it wears its own chip in the strip exactly like Photos or
+    /// Files, and the pour is the HOME field: All is where it belongs.
+    static func pourDose(for source: String) -> Double {
+        source == "All" || source == "Wallet" ? 1 : 0
+    }
+
     /// A surface asked the composer to run an ask (the weekend cover's week
     /// synthesis, prd 54) — RootShell opens the bubble on set; the composer
     /// consumes the query and sends it through the real answer path.

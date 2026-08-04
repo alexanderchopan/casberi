@@ -34,6 +34,21 @@ struct AddressConnectionsCard: View {
     /// the alert's title; the card holds no hex of its own.
     var onName: (AddressConnections.Node) -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// **The ribbons draw themselves** (2026-08-03, prd §297) — a `trim` across
+    /// the single `Path`, so the connections are STRUCK one after another, in
+    /// first-dealt order, the same order the rows are already in. This card was
+    /// the only wallet visualization with no motion of any kind: it sits on the
+    /// Wallet manager, which doesn't use `RowEntrance`, so it didn't even
+    /// inherit the fade every feed card gets.
+    ///
+    /// A stroke-draw and not a wipe, deliberately. A wipe would reveal the
+    /// ribbons left-to-right as a group, which says "a picture is appearing";
+    /// tracing each curve from a name to a wallet says "this address reached
+    /// this wallet, and then this one" — the sentence the card exists to make.
+    /// It stays inside the factual ruling: the ORDER traced is the order
+    /// already on screen, so the entrance ranks nothing the drawing doesn't.
+    @State private var drawn: CGFloat = 0
     /// One row of the spine, both sides. Fixed so the ribbon's arithmetic and
     /// the labels' layout can't disagree — the two are computed from the same
     /// number rather than one being measured off the other.
@@ -84,8 +99,12 @@ struct AddressConnectionsCard: View {
         let height = CGFloat(rows) * Self.rowHeight
         return HStack(spacing: DS.Space.s2) {
             VStack(spacing: 0) {
-                ForEach(map.nodes) { node in
+                // Enumerated for the entrance stagger only — the names settle
+                // in the order they're already listed (first dealt with), so
+                // the arrival ranks nothing the card doesn't.
+                ForEach(Array(map.nodes.enumerated()), id: \.element.id) { index, node in
                     nodeRow(node)
+                        .chartArrival(index: index, reduceMotion: reduceMotion)
                 }
             }
             .frame(width: Self.sideWidth, height: height)
@@ -95,8 +114,9 @@ struct AddressConnectionsCard: View {
                 .frame(height: height)
 
             VStack(spacing: 0) {
-                ForEach(map.columns) { column in
+                ForEach(Array(map.columns.enumerated()), id: \.element.id) { index, column in
                     columnRow(column)
+                        .chartArrival(index: index, reduceMotion: reduceMotion)
                 }
             }
             .frame(width: Self.sideWidth, height: height)
@@ -168,8 +188,18 @@ struct AddressConnectionsCard: View {
                     }
                 }
             }
+            // `trim` over the whole path walks its subpaths in order, so the
+            // ribbons are struck one after another rather than all at once.
+            .trim(from: 0, to: drawn)
             .stroke(DS.textTertiary,
                     style: StrokeStyle(lineWidth: 2, lineCap: .round))
+        }
+        .onAppear {
+            guard drawn == 0 else { return }
+            guard !reduceMotion else { drawn = 1; return }
+            // Longer than a wipe: the point is to follow one line at a time,
+            // and at `ChartEntrance.wipe` a busy map is a flicker.
+            withAnimation(.easeInOut(duration: 1.1).delay(ChartEntrance.lead)) { drawn = 1 }
         }
     }
 

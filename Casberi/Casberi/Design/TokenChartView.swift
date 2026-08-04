@@ -162,14 +162,16 @@ struct TokenChartPlot: View {
     /// (prd §171). 0 lands them immediately — the default everywhere that
     /// draws no line of its own.
     var markDelay: Double = 0
-    /// Mac hover-scrub (delight, 2026-08-03): the cursor interrogating the
-    /// line. Given a handler, a Catalyst pointer resting on the plot reports
-    /// the sample index under it (nil on exit) and `cursorIndex` draws the
-    /// scrub cursor at the caller's chosen index — the caller owns the state
-    /// so it can also roll its own headline number to the hovered sample
-    /// (see `WalletBalanceHeadline`). Both inert everywhere off Mac: the
-    /// hover catcher only compiles on Catalyst, so a touch build draws no
-    /// cursor and pays nothing.
+    /// Scrubbing — the line interrogated. Given a handler, a press-then-drag
+    /// (or, on Catalyst, a resting cursor) reports the sample index under it,
+    /// nil on release, and `cursorIndex` draws the scrub cursor at the
+    /// caller's chosen index. The caller owns the state so it can also roll
+    /// its own headline number to that sample (see `WalletBalanceHeadline`).
+    ///
+    /// Touch AND hover since 2026-08-03 (prd §297). For two days this was
+    /// Mac-only, which meant the plumbing sat on every device and answered
+    /// only a cursor; `ChartScrubSurface` now carries both, and states which
+    /// half of it compiles where.
     var cursorIndex: Int? = nil
     var onScrub: ((Int?) -> Void)? = nil
     @State private var pulsing = false
@@ -257,25 +259,6 @@ struct TokenChartPlot: View {
                         .frame(width: 9, height: 9)
                         .position(x: plot.minX + x, y: plot.minY + y)
                 }
-                #if targetEnvironment(macCatalyst)
-                if let onScrub, !chart.coarse, chart.closes.count > 1,
-                   let plotAnchor = proxy.plotFrame {
-                    let plot = geo[plotAnchor]
-                    Rectangle()
-                        .fill(.clear)
-                        .contentShape(Rectangle())
-                        .frame(width: plot.width, height: plot.height)
-                        // BEFORE `.position`, deliberately: the hover's
-                        // `.local` space is then the rectangle's own bounds
-                        // (0…width), not the overlay's — the touch gesture
-                        // below attaches after `.position` and has to
-                        // subtract `plot.minX` for exactly this reason.
-                        .modifier(ChartHoverScrub(count: chart.closes.count,
-                                                  width: plot.width,
-                                                  onScrub: onScrub))
-                        .position(x: plot.midX, y: plot.midY)
-                }
-                #endif
                 if !marks.isEmpty, let plotAnchor = proxy.plotFrame {
                     markLayer(proxy: proxy, plot: geo[plotAnchor])
                         .onAppear {
@@ -289,8 +272,51 @@ struct TokenChartPlot: View {
                             }
                         }
                 }
+                if scrubs || onTapMark != nil, let plotAnchor = proxy.plotFrame {
+                    interaction(plot: geo[plotAnchor], proxy: proxy)
+                }
             }
         }
+    }
+
+    /// Whether this plot can be scrubbed at all — a handler, and a real curve
+    /// under it. Hoisted so the surface below and its gesture can't disagree:
+    /// gating the tap catcher on `onScrub == nil` while gating the surface on
+    /// the full condition left a hole (both callbacks + a coarse chart = marks
+    /// drawn with nothing catching them, a dead control by the honesty rule).
+    private var scrubs: Bool {
+        onScrub != nil && !chart.coarse && chart.closes.count > 1
+    }
+
+    /// ONE surface for every gesture this plot answers (2026-08-03) — the
+    /// scrub, the hover, and the mark taps.
+    ///
+    /// One rectangle rather than two stacked ones on purpose: a
+    /// `.onTapGesture` view directly over a long-press-then-drag view is two
+    /// hit-testable rectangles competing for the same touch, which is the sort
+    /// of arrangement that works on a simulator and fails on a finger.
+    private func interaction(plot: CGRect, proxy: ChartProxy) -> some View {
+        ChartScrubSurface(plot: plot, count: chart.closes.count,
+                          cursorIndex: cursorIndex,
+                          onScrub: scrubs ? { onScrub?($0) } : nil)
+            .onTapGesture { point in
+                guard let onTapMark, let nearest = nearestMark(to: point, plot: plot,
+                                                               proxy: proxy) else { return }
+                DSHaptic.selection()
+                onTapMark(nearest)
+            }
+    }
+
+    /// The mark nearest the tap, within a finger's reach — a 5pt circle is far
+    /// under the 44pt floor, so the plot catches the tap and picks.
+    private func nearestMark(to point: CGPoint, plot: CGRect,
+                             proxy: ChartProxy) -> TokenChartMark? {
+        let hits = marks.compactMap { mark -> (TokenChartMark, CGFloat)? in
+            guard let x = proxy.position(forX: mark.x) else { return nil }
+            return (mark, abs(plot.minX + x - point.x))
+        }
+        guard let nearest = hits.min(by: { $0.1 < $1.1 }), nearest.1 <= 22 else { return nil }
+        return nearest.0
     }
 
     /// The event marks, and (when a handler exists) their tap target. Drawn in
@@ -323,26 +349,10 @@ struct TokenChartPlot: View {
                     .accessibilityLabel(mark.label)
             }
         }
-        if let onTapMark {
-            // One tap surface over the plot rather than a target per dot: a
-            // 5pt circle is far under the 44pt floor, so the nearest mark
-            // within a finger's reach of the tap wins instead.
-            Rectangle()
-                .fill(.clear)
-                .contentShape(Rectangle())
-                .frame(width: plot.width, height: plot.height)
-                .position(x: plot.midX, y: plot.midY)
-                .onTapGesture { point in
-                    let hits = marks.compactMap { mark -> (TokenChartMark, CGFloat)? in
-                        guard let x = proxy.position(forX: mark.x) else { return nil }
-                        return (mark, abs(plot.minX + x - point.x))
-                    }
-                    guard let nearest = hits.min(by: { $0.1 < $1.1 }), nearest.1 <= 22
-                    else { return }
-                    DSHaptic.selection()
-                    onTapMark(nearest.0)
-                }
-        }
+        // The tap catcher lives on `interaction(plot:proxy:)` now — one
+        // surface for taps and scrubbing alike, so the two can never be
+        // stacked rectangles fighting for the same touch. This layer draws
+        // the dots and nothing else.
     }
 
     /// The curve's value at a fractional index — linearly interpolated between
@@ -676,43 +686,10 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
                 }
             }
 
-            // Press, then drag — sequenced so the sheet's scroll still wins
-            // a plain vertical swipe (the DragGesture-vs-ScrollView law).
             if !chart.coarse {
-                Rectangle()
-                    .fill(.clear)
-                    .contentShape(Rectangle())
-                    .frame(width: plot.width, height: plot.height)
-                    // Mac hover-scrub (delight, 2026-08-03): a cursor is not
-                    // a finger — press-then-drag is touch grammar (the press
-                    // disambiguates from scroll, which a hover never needs),
-                    // so on Catalyst simply RESTING on the line scrubs it.
-                    // The touch gesture below stays too: a trackpad drag
-                    // still works, and the two write the same state. No
-                    // haptic — hover is continuous, and a tick per sample
-                    // would buzz the whole traverse. Attached BEFORE
-                    // `.position` so the hover's `.local` space is the
-                    // rectangle's own 0…width (the gesture below attaches
-                    // after and subtracts `plot.minX` instead).
-                    .modifier(ChartHoverScrub(count: closes.count,
-                                              width: plot.width) { scrubIndex = $0 })
-                    .position(x: plot.midX, y: plot.midY)
-                    .gesture(
-                        LongPressGesture(minimumDuration: 0.15)
-                            .sequenced(before: DragGesture(minimumDistance: 0))
-                            .onChanged { value in
-                                guard case .second(true, let drag) = value else { return }
-                                let x = (drag?.location.x ?? plot.maxX) - plot.minX
-                                let i = Int((x / max(plot.width, 1)
-                                             * CGFloat(closes.count - 1)).rounded())
-                                let clamped = min(max(i, 0), closes.count - 1)
-                                if clamped != scrubIndex {
-                                    scrubIndex = clamped
-                                    DSHaptic.selection()
-                                }
-                            }
-                            .onEnded { _ in scrubIndex = nil }
-                    )
+                ChartScrubSurface(plot: plot, count: closes.count,
+                                  cursorIndex: scrubIndex,
+                                  onScrub: { scrubIndex = $0 })
             }
         }
     }
@@ -791,10 +768,71 @@ extension TokenChartView {
     }
 }
 
-/// Mac hover-scrub (delight, 2026-08-03) — the shared catcher both charts
-/// use: the sheet's scrub rectangle and `TokenChartPlot`'s own. A cursor
-/// resting on the plot maps to the sample under it; leaving reports nil.
-/// Compiles to a no-op off Catalyst, so touch builds carry no hover plumbing.
+/// The scrub surface both charts share (2026-08-03, prd §297) — the sheet's
+/// and `TokenChartPlot`'s, which had drifted into two byte-identical copies of
+/// the same rectangle, the same index arithmetic and the same haptic policy.
+/// Every fact below was measured once and is now stated once.
+///
+/// **Press, then drag.** Sequenced off a long press so a plain swipe still
+/// belongs to whatever is scrolling: the sheet's own scroll view, and on the
+/// feed both the vertical list AND the horizontal pager (the
+/// DragGesture-vs-ScrollView law — a bare `DragGesture` in scroll content wins
+/// outright and the surface stops scrolling).
+///
+/// **A cursor is not a finger.** Hover needs no press to disambiguate — there
+/// is nothing to disambiguate from — so on Catalyst simply RESTING on the line
+/// scrubs it (`ChartHoverScrub`, a no-op off Mac). The touch gesture stays
+/// there too: a trackpad drag still works, and the two write the same state.
+/// Hover takes NO haptic: it is continuous, and a tick per sample would buzz
+/// the whole traverse.
+///
+/// `onScrub: nil` makes the whole thing inert but still hit-testable, so a
+/// caller can hang its own tap on it (the plot's mark taps) without a second
+/// rectangle competing for the same touch.
+struct ChartScrubSurface: View {
+    let plot: CGRect
+    let count: Int
+    /// What the caller currently shows, so a drag that lands on the same
+    /// sample doesn't re-report it (and doesn't re-tick the haptic).
+    let cursorIndex: Int?
+    let onScrub: ((Int?) -> Void)?
+
+    var body: some View {
+        Rectangle()
+            .fill(.clear)
+            .contentShape(Rectangle())
+            .frame(width: plot.width, height: plot.height)
+            // BEFORE `.position`, deliberately: the hover's `.local` space is
+            // then the rectangle's own bounds (0…width), not the overlay's.
+            // The drag attaches AFTER `.position` and subtracts `plot.minX`
+            // for exactly this reason.
+            .modifier(ChartHoverScrub(count: count, width: plot.width,
+                                      onScrub: { onScrub?($0) }))
+            .position(x: plot.midX, y: plot.midY)
+            .gesture(
+                LongPressGesture(minimumDuration: 0.15)
+                    .sequenced(before: DragGesture(minimumDistance: 0))
+                    .onChanged { value in
+                        guard let onScrub, count > 1,
+                              case .second(true, let drag) = value else { return }
+                        let x = (drag?.location.x ?? plot.maxX) - plot.minX
+                        let i = Int((x / max(plot.width, 1) * CGFloat(count - 1)).rounded())
+                        let clamped = min(max(i, 0), count - 1)
+                        if clamped != cursorIndex {
+                            onScrub(clamped)
+                            DSHaptic.selection()
+                        }
+                    }
+                    .onEnded { _ in onScrub?(nil) },
+                including: onScrub == nil ? .none : .all
+            )
+    }
+}
+
+/// Mac hover-scrub (delight, 2026-08-03) — the cursor half of
+/// `ChartScrubSurface`. A cursor resting on the plot maps to the sample under
+/// it; leaving reports nil. Compiles to a no-op off Catalyst, so touch builds
+/// carry no hover plumbing.
 struct ChartHoverScrub: ViewModifier {
     let count: Int
     let width: CGFloat

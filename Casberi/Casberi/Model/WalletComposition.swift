@@ -128,6 +128,27 @@ struct WalletComposition: Equatable, Sendable {
         return order.map { ($0, totals[$0] ?? 0) }
     }
 
+    /// The melt the strip's Locked line may draw INLINE, or nil (prd §297,
+    /// 2026-08-03).
+    ///
+    /// The melt is the wallet room's best drawing and it was invisible behind a
+    /// tap most people never make. But the strip's own rule is that Locked
+    /// declines to have an accounting opinion, and a mean "power left" across
+    /// two veNFTs ending years apart is exactly such an opinion — the same
+    /// reason the tray exists at all: a sum of end dates is nothing.
+    ///
+    /// So it draws only when there is a SINGLE lock and it decays. Note the
+    /// test is `locks.count == 1`, NOT "one lock decays": the bar sits directly
+    /// under `lockedTotals`' own summary line, so with one veAERO plus one
+    /// permanent HYPE the value reads "12,977 AERO · 340 HYPE" and a bar
+    /// describing one of them would be a fraction of a number it isn't a
+    /// fraction of. One lock is the only case where the line and the bar
+    /// describe the same thing. Everything else is what the tray is for.
+    var soleMelt: Double? {
+        guard locks.count == 1 else { return nil }
+        return locks[0].remaining
+    }
+
     var hasDeposited: Bool { deposited >= Self.floor }
     var hasOwed: Bool { owed >= Self.floor }
     var hasLocked: Bool { !locks.isEmpty }

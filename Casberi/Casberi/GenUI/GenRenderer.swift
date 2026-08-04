@@ -435,6 +435,10 @@ struct GenRender: View {
 
 private struct MountIn: ViewModifier {
     @State private var shown = false
+    /// The universal entrance honours Reduce Motion (2026-08-04, prd §299) —
+    /// it wraps EVERY component the agent renders, so this one guard covers the
+    /// whole answer column.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// One universal entrance, deliberately plain (prd §198). An earlier
     /// cut special-cased the agent's answer column with a blur+scale
     /// "materialize" — reverted (user: "how would you improve it" → skeleton-
@@ -449,6 +453,7 @@ private struct MountIn: ViewModifier {
             .opacity(shown ? 1 : 0)
             .offset(y: shown ? 0 : 3)
             .onAppear {
+                guard !reduceMotion else { shown = true; return }
                 withAnimation(.timingCurve(0.32, 0.72, 0, 1, duration: 0.18)) {
                     shown = true
                 }
@@ -1274,6 +1279,7 @@ struct LeaderboardHero: View {
 struct DistributionHero: View {
     let dist: FeedInsight.Distribution
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let segments = dist.segments
@@ -1291,6 +1297,10 @@ struct DistributionHero: View {
                 .clipShape(Capsule(style: .continuous))
             }
             .frame(height: 12)
+            // The bar fills left to right (2026-08-04, prd §298) — a split is
+            // read as proportions of one length, so revealing along that length
+            // is the split being stated. The legend below simply follows.
+            .chartWipe(reduceMotion: reduceMotion)
             HStack(spacing: DS.Space.s3) {
                 ForEach(segments) { seg in
                     HStack(spacing: DS.Space.s1) {
@@ -1414,66 +1424,39 @@ struct ImageMosaicHero: View {
 /// Display-only, like `LeaderboardHero` and `DistributionHero`: every cell is a
 /// fact the pixels state, and none is a door — the honesty rule bars a
 /// half-wired scope filter, so the map presents rather than pretends to
-/// navigate. The 4×3 unit-grid `frames` are the same tiling `GenTagMap` uses,
-/// so a 2- to 6-cell map always fills the card with no holes.
+/// navigate. The 4×3 unit-grid tiling lives in `UnitTreemap` (shared with the
+/// receipts screen's reach map since 2026-08-04) — see its doc for why the
+/// slots are rank-ordered rather than area-proportional.
 struct TopicMapHero: View {
     let map: FeedInsight.TopicMap
 
-    private var frames: [(Int, Int, Int, Int)] {
-        switch map.cells.count {
-        case 0, 1: return [(0, 0, 4, 3)]
-        case 2:    return [(0, 0, 2, 3), (2, 0, 2, 3)]
-        case 3:    return [(0, 0, 2, 2), (2, 0, 2, 2), (0, 2, 4, 1)]
-        case 4:    return [(0, 0, 2, 2), (2, 0, 2, 2), (0, 2, 2, 1), (2, 2, 2, 1)]
-        case 5:    return [(0, 0, 2, 2), (2, 0, 2, 2), (0, 2, 2, 1), (2, 2, 1, 1), (3, 2, 1, 1)]
-        default:   return [(0, 0, 2, 2), (2, 0, 2, 1), (2, 1, 1, 1), (3, 1, 1, 2), (0, 2, 2, 1), (2, 2, 1, 1)]
-        }
-    }
-
     var body: some View {
-        let cells = Array(map.cells.prefix(6))
+        let cells = Array(map.cells.prefix(UnitTreemap<EmptyView>.maxCells))
         let maxCount = max(cells.first?.count ?? 1, 1)
         InsightCard {
             InsightHeader(title: map.title, subtitle: map.subtitle)
-            GeometryReader { geo in
-                let gap = DS.Space.s2
-                let uw = (geo.size.width - gap * 3) / 4
-                let uh = (Self.boardHeight - gap * 2) / 3
-                ZStack(alignment: .topLeading) {
-                    ForEach(Array(cells.enumerated()), id: \.offset) { i, cell in
-                        let f = frames[i]
-                        let w = uw * CGFloat(f.2) + gap * CGFloat(f.2 - 1)
-                        let h = uh * CGFloat(f.3) + gap * CGFloat(f.3 - 1)
-                        let share = Double(cell.count) / Double(maxCount)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(cell.label)
-                                .dsText(.callout15).fontWeight(.semibold)
-                                .foregroundStyle(DS.textPrimary)
-                                .lineLimit(2).minimumScaleFactor(0.82)
-                            Text("\(cell.count)")
-                                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                                .monospacedDigit()
-                            Spacer(minLength: 0)
-                        }
-                        .padding(DS.Space.s3)
-                        .frame(width: w, height: h, alignment: .topLeading)
-                        .background {
-                            ZStack {
-                                DS.surfaceSheet
-                                DS.tint(magnitude: share)
-                            }
-                            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-                        }
-                        .offset(x: CGFloat(f.0) * (uw + gap), y: CGFloat(f.1) * (uh + gap))
-                        // The map settles in cell by cell, biggest first
-                        // (delight, 2026-08-03) — the entrance grammar the
-                        // feed's rows already speak (`settleIn` respects the
-                        // 250ms curve; plays per appearance, like RowEntrance).
-                        .settleIn(delay: Double(i) * 0.06)
+            UnitTreemap(count: cells.count, height: Self.boardHeight) { i in
+                let cell = cells[i]
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(cell.label)
+                        .dsText(.callout15).fontWeight(.semibold)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(2).minimumScaleFactor(0.82)
+                    Text("\(cell.count)")
+                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                        .monospacedDigit()
+                    Spacer(minLength: 0)
+                }
+                .padding(DS.Space.s3)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .background {
+                    ZStack {
+                        DS.surfaceSheet
+                        DS.tint(magnitude: Double(cell.count) / Double(maxCount))
                     }
+                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
                 }
             }
-            .frame(height: Self.boardHeight)
         }
     }
 
@@ -2045,6 +2028,7 @@ private struct GenRow: View {
     @Environment(\.genThingHandoff) private var thingHandoff
     @Environment(\.genAppRemove) private var appRemove
     @Environment(\.genCitationGlint) private var glintOn
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// One glint per mount (delight 2026-07-13): a cited row flashes a
     /// whisper of tint as it lands in a live answer, then settles.
     @State private var glinted = false
@@ -2069,6 +2053,9 @@ private struct GenRow: View {
         }
         .onAppear {
             guard glintOn, !glinted else { return }
+            // The glint fades a just-landed row's tint away; under Reduce
+            // Motion it simply starts faded (2026-08-04, prd §299).
+            guard !reduceMotion else { glinted = true; return }
             withAnimation(.easeOut(duration: 0.9).delay(0.2)) { glinted = true }
         }
         return row.pinnedRowActions(id: el.str(4), openable: el.str(5) == "app",
@@ -2356,6 +2343,11 @@ private struct GenTagMap: View {
     /// True inside the agent's own answer column (2026-07-20) — tightens
     /// `boardHeight` below; see `genAgentAnswerContext`'s own doc comment.
     @Environment(\.genAgentAnswerContext) private var inAgentAnswer
+    /// The treemap's cell stagger, its weekend magnitude sweep and the
+    /// preview's breathing loop all honour Reduce Motion (2026-08-04, prd
+    /// §299). The breathe is the one that mattered most: a `repeatForever`
+    /// under a preference asking for less motion is the worst case in the app.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// A cell's tap stays in the agent (§225) rather than a no-op — see the
     /// cell button's own comment. nil off the board, exactly like
     /// `genProjectTap` outside it.
@@ -2482,7 +2474,7 @@ private struct GenTagMap: View {
         .padding(.horizontal, span == .small ? 0 : DS.Space.s4)
         .padding(.top, DS.Space.s4)
         .onAppear {
-            if preview, !error {
+            if preview, !error, !reduceMotion {
                 withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true)) {
                     breathe = true
                 }
@@ -2507,7 +2499,7 @@ private struct GenTagMap: View {
                 let f = frames[i]
                 let w = uw * CGFloat(f.2) + gap * CGFloat(f.2 - 1)
                 let h = uh * CGFloat(f.3) + gap * CGFloat(f.3 - 1)
-                let on = !animated || settled
+                let on = !animated || settled || reduceMotion
                 // An icon rides above the name in "source" (an exact bridge,
                 // via BridgeIcon — no fetch, never wrong) or beside it in
                 // "token" mode (a bundled local mark, or none at all rather
@@ -2622,8 +2614,9 @@ private struct GenTagMap: View {
 
     /// Weekday: 35ms per cell in layout order. Weekend: the fill sweeps
     /// left to right, 600ms total across the four columns.
-    private func entrance(order: Int) -> Animation {
-        isWeekend
+    private func entrance(order: Int) -> Animation? {
+        if reduceMotion { return nil }
+        return isWeekend
             ? DS.Motion.standard.delay(Double(order) * 0.35 / 3)
             : DS.Motion.standard.delay(Double(order) * 0.035)
     }
@@ -3419,6 +3412,7 @@ private struct GenStatRow: View {
 /// rainbow. Labels below name each share ("Main 60% · Cold 40%").
 private struct GenAllocBar: View {
     let el: GenEl
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private struct Seg { let label: String; let usd: Double }
     private var segs: [Seg] {
         el.str(1).split(separator: ",").compactMap { part -> Seg? in
@@ -3450,6 +3444,9 @@ private struct GenAllocBar: View {
                         }
                     }
                     .frame(height: 14)
+                    // Fills along its own axis (2026-08-04, prd §298), like
+                    // every other share-of-a-whole bar in the app.
+                    .chartWipe(reduceMotion: reduceMotion)
                     Text(segs.map { "\($0.label) \(Int(($0.usd / total * 100).rounded()))%" }
                         .joined(separator: " · "))
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary).lineLimit(1)

@@ -1635,15 +1635,24 @@ struct FeedScreen: View {
         let rosterAccounts: [SocialAccount] = liveStream == nil && shape == .social
             ? (source == "Farcaster" ? FarcasterStore.shared.socialAccounts : BlueskyStore.shared.socialAccounts)
             : []
-        // The Cloudflare runway (2026-08-03, prd §296) — every row that room
-        // lands is a date something you own stops working, and nothing drew
-        // them together. It sits directly under the live exception because
-        // nothing else can claim this room: no registry below names Cloudflare,
-        // so the chain would fall through to a blank head. It is also the one
-        // card here that renders on an EMPTY room, which is the whole reason
-        // it exists — see `CloudflareRunway`.
-        let runway = liveStream == nil && source == "Cloudflare"
-            ? CloudflareRunwaySource.compose(things: visible) : nil
+        // THE PER-SOURCE HEADS — the rooms whose lede can only come from that
+        // room's own model, because the registries below are pure over `Thing`
+        // and these facts aren't in the corpus: Cloudflare's certificate dates,
+        // Stripe's balance, PostHog's metric readings all live in bridge state.
+        //
+        // Gathered into ONE term rather than one `let` per card (2026-08-04).
+        // Each gate below re-states every predecessor by hand, so three
+        // separate lets would mean editing five gates to add a card and
+        // silently mis-ranking it if you missed one. They can never compete
+        // with each other — each claims exactly one source — so one term is
+        // also the honest shape.
+        //
+        // These sit directly under the live exception because nothing else can
+        // claim these rooms: no registry below names any of the three, so the
+        // chain would fall through to a blank head. Cloudflare's is also the
+        // one card here that renders on an EMPTY room, which is the whole
+        // reason it exists — see `CloudflareRunway`.
+        let sourceHead = liveStream == nil ? sourceHead(visible) : nil
         // The anniversary, when it's a PICTURE (2026-07-31). Scoped to the
         // memories room on purpose: everywhere else `OnThisDay` rides inside
         // the heatmap card, where a title represents the thing perfectly, and
@@ -1664,14 +1673,14 @@ struct FeedScreen: View {
         // and since 2026-07-31 what an Instagram export's own captions and
         // comments are about. When there's too little text to say anything it
         // returns nil and the next card down takes the head.
-        let topicMap = liveStream == nil && runway == nil && anniversary == nil && rosterAccounts.isEmpty
+        let topicMap = liveStream == nil && sourceHead == nil && anniversary == nil && rosterAccounts.isEmpty
             ? FeedInsight.topicMap(source: source, things: visible) : nil
-        let leaderboard = liveStream == nil && runway == nil && anniversary == nil && topicMap == nil && rosterAccounts.isEmpty
+        let leaderboard = liveStream == nil && sourceHead == nil && anniversary == nil && topicMap == nil && rosterAccounts.isEmpty
             ? FeedInsight.leaderboard(source: source, things: visible) : nil
-        let distribution = liveStream == nil && runway == nil && anniversary == nil && topicMap == nil
+        let distribution = liveStream == nil && sourceHead == nil && anniversary == nil && topicMap == nil
             && leaderboard == nil && rosterAccounts.isEmpty
             ? FeedInsight.distribution(source: source, things: visible) : nil
-        let mosaic = liveStream == nil && runway == nil && anniversary == nil && topicMap == nil
+        let mosaic = liveStream == nil && sourceHead == nil && anniversary == nil && topicMap == nil
             && leaderboard == nil && distribution == nil && rosterAccounts.isEmpty
             ? FeedInsight.mosaic(source: source, things: visible) : nil
         // The heatmap sits LAST (moved 2026-07-31), not third. It answers
@@ -1688,22 +1697,31 @@ struct FeedScreen: View {
         // the role it already plays for Photos under the treemap.
         let heatmapLabel = liveStream == nil && rosterAccounts.isEmpty && anniversary == nil
             && topicMap == nil && leaderboard == nil && distribution == nil && mosaic == nil
-            && runway == nil
+            && sourceHead == nil
             ? FeedHeatmap.label(for: source) : nil
         let heroShown = liveStream != nil || anniversary != nil || topicMap != nil
-            || heatmapLabel != nil || leaderboard != nil || runway != nil
+            || heatmapLabel != nil || leaderboard != nil || sourceHead != nil
             || distribution != nil || mosaic != nil || !rosterAccounts.isEmpty
         if let liveStream {
             insightSection { LiveStreamHero(thing: liveStream) { openThing(liveStream) } }
-        } else if let runway {
+        } else if let sourceHead {
+            // Each card holds no `Thing` — it hands back its own value and the
+            // lookup happens HERE, against the live corpus, in the view that
+            // owns the sheet.
             insightSection {
-                CloudflareRunwayCard(runway: runway) { item in
-                    // The card holds no `Thing` — it hands back its own value
-                    // and the lookup happens here, against the live corpus, in
-                    // the view that owns the sheet.
-                    if let match = visible.first(where: {
-                        $0.isLive && $0.sourceRef == item.id
-                    }) { openThing(match) }
+                switch sourceHead {
+                case .runway(let runway):
+                    CloudflareRunwayCard(runway: runway) { item in
+                        openBySourceRef(item.id, in: visible)
+                    }
+                case .stripe(let room):
+                    StripeRoomCard(room: room) { item in
+                        openBySourceRef(item.id, in: visible)
+                    }
+                case .posthog(let room):
+                    PostHogRoomCard(room: room) { event in
+                        openBySourceRef(PostHogWatch.metricRef(event), in: visible)
+                    }
                 }
             }
         } else if let anniversary {
@@ -2226,6 +2244,12 @@ struct FeedScreen: View {
         // page, so arriving on ANY page resets a scoped tint the wallet page
         // left behind; no leave() bookkeeping to race the pager's ordering.
         chrome.pourHue = source == "Wallet" ? selectedWallet.map(WalletFace.tint) : nil
+        // And how much of it this room gets (prd §297, 2026-08-03) — the rule
+        // and its reasoning live together on `ShellChrome`. Written
+        // unconditionally beside the hue for the same reason: arriving on any
+        // page settles the crown, with no leave() bookkeeping to race the
+        // pager.
+        chrome.pourDose = ShellChrome.pourDose(for: source)
     }
 
     /// The person left this page — stamp what they saw, so the next visit's
@@ -2383,6 +2407,45 @@ struct FeedScreen: View {
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s3)
+    }
+
+    /// A room whose head comes from that room's OWN model rather than from a
+    /// registry over `[Thing]` (2026-08-04, prd §298).
+    ///
+    /// `FeedInsight` is pure over the corpus by contract — it can only count
+    /// and group stored fields. These three rooms lead with facts that are not
+    /// in the corpus at all: a certificate's expiry, a Stripe balance, a
+    /// PostHog reading, each held in bridge state. So they get a head each,
+    /// and they share one slot in the chain because they can never compete —
+    /// every case names exactly one source.
+    private enum SourceHead {
+        case runway(CloudflareRunway)
+        case stripe(StripeRoom)
+        case posthog(PostHogRoom)
+    }
+
+    /// Resolve this room's own head, or nil. One `switch` so adding a fourth
+    /// per-source head is one case here rather than an edit to five gates.
+    private func sourceHead(_ visible: [Thing]) -> SourceHead? {
+        switch source {
+        case "Cloudflare":
+            return CloudflareRunwaySource.compose(things: visible).map { .runway($0) }
+        case "Stripe":
+            return StripeRoomSource.compose(things: visible).map { .stripe($0) }
+        case "PostHog":
+            return PostHogRoomSource.compose(things: visible).map { .posthog($0) }
+        default:
+            return nil
+        }
+    }
+
+    /// Open the row a head card named, by its `sourceRef`. The cards hold no
+    /// `Thing` (corollary 5), so every one of them hands back a value and the
+    /// lookup lands here, against the live corpus.
+    private func openBySourceRef(_ ref: String, in visible: [Thing]) {
+        guard let match = visible.first(where: { $0.isLive && $0.sourceRef == ref })
+        else { return }
+        openThing(match)
     }
 
     /// The list-row chrome every insight hero mounts in (clear background, no
@@ -3988,7 +4051,80 @@ struct FeedScreen: View {
     /// page, so the pile is honest by construction. Rendered FLAT (plain
     /// stacks, no Widget/Row path) — this sits in the eager feed body,
     /// where tree depth is the launch-crash class.
+    /// This room's own quiet words, or nil to use the generic invitation
+    /// (prd §299). Maps the seat's SwiftUI-side status onto `RoomQuiet.Seat`,
+    /// which is the only place the two vocabularies meet.
+    private var quietWords: RoomQuiet.Words? {
+        guard source != "All" else { return nil }
+        let seat = bridges.bridges.first { $0.name == source }
+        let mapped: RoomQuiet.Seat = switch seat?.status {
+        case .connected: .connected
+        case .attention: .attention
+        case .paused:    .paused
+        case nil:        .none
+        }
+        return RoomQuiet.words(source: source, seat: mapped,
+                               statusLine: seat?.statusLine ?? "",
+                               emptyRead: TokenBridge(rawValue: source)?.emptyReadNote)
+    }
+
+    /// The empty room.
+    ///
+    /// A connected room says so and stops inviting you to connect it; a paused
+    /// one names the state you chose; a BROKEN one says it's broken, which the
+    /// generic copy hid behind a cheerful invitation (prd §299). Everything
+    /// else — All, and any room with no seat — keeps the original.
+    @ViewBuilder
     private var emptyState: some View {
+        if let words = quietWords {
+            quietState(words)
+        } else {
+            invitationState
+        }
+    }
+
+    /// A room that is working, paused or broken — and empty. Same anatomy as
+    /// the invitation below (heading, sentence, one door) so the two read as
+    /// one screen in two states rather than two screens, which is the shape
+    /// `CloudflareRunwayCard` settled on for the same problem.
+    private func quietState(_ words: RoomQuiet.Words) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(words.headline)
+                .dsText(.heading34).fontWeight(.heavy)
+                .foregroundStyle(DS.textPrimary)
+                .settleIn()
+            Text(words.detail)
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
+                .padding(.top, DS.Space.s2)
+                .settleIn(delay: 0.05)
+            if words.offersDoor {
+                Button {
+                    DSHaptic.selection()
+                    route.present(.apps)
+                } label: {
+                    HStack(spacing: DS.Space.s1) {
+                        Text("Open \(source)")
+                            .dsText(.callout15).fontWeight(.semibold)
+                        Image(systemName: "chevron.right")
+                            .accessibilityHidden(true)
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundStyle(DS.tint)
+                    .padding(.horizontal, DS.Space.s4)
+                    .frame(height: 36)
+                    .background(DS.tintDim, in: Capsule(style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .padding(.top, DS.Space.s4)
+                .settleIn(delay: 0.1)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s6)
+    }
+
+    private var invitationState: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Let's fill this feed.")
                 .dsText(.heading34).fontWeight(.heavy)
@@ -4696,6 +4832,12 @@ struct RowEntrance: ViewModifier {
     let wave: Int
     let style: Style
     @State private var shown = false
+    /// Added 2026-08-04 (prd §299). This is the entrance EVERY feed row in the
+    /// app wears, and it ignored Reduce Motion from the day it shipped —
+    /// exactly the gap `SettleIn` had, found by the same audit on the same day.
+    /// A person who has asked the system for less motion was getting a fully
+    /// staggered offset-and-scale cascade on every scroll into a new room.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         content
@@ -4710,6 +4852,7 @@ struct RowEntrance: ViewModifier {
     }
 
     private func reveal() {
+        guard !reduceMotion else { shown = true; return }
         withAnimation(DS.Motion.standard.delay(Double(min(index, 12)) * style.step)) {
             shown = true
         }

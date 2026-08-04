@@ -37,6 +37,12 @@ struct CloudflareRunwayCard: View {
     /// call site can say something sensible if the lookup misses.
     var onOpen: (CloudflareRunway.Item) -> Void
 
+    /// **The runway draws itself** (2026-08-04, prd §298). This card shipped a
+    /// day before the entrance grammar and was the only one of its family that
+    /// never adopted it — the axis is time, so it reveals along time, and the
+    /// rows land soonest-first behind it.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     /// The card's one hue: Cloudflare's own orange, read from the brand table
     /// rather than inlined, so the seat's tile, wash and this card can't drift
     /// (`DS.brandHue`'s own rule: components never inline the hex). The
@@ -79,8 +85,11 @@ struct CloudflareRunwayCard: View {
                 .padding(.top, DS.Space.s4)
 
             // Empty in the quiet state, so it needs no branch of its own.
-            ForEach(runway.items) { item in
-                row(item, lead: item.id == runway.items.first?.id)
+            // Enumerated for the entrance stagger only — the items are already
+            // soonest-first, so the arrival narrates the order the card made.
+            ForEach(Array(runway.items.enumerated()), id: \.element.id) { index, item in
+                row(item, lead: index == 0)
+                    .chartArrival(index: index, reduceMotion: reduceMotion)
             }
             .padding(.top, DS.Space.s1)
 
@@ -152,6 +161,12 @@ struct CloudflareRunwayCard: View {
             .overlay(alignment: .bottomTrailing) { tick(CloudflareRunway.spanLabel(span: span)) }
         }
         .frame(height: Self.leadDot + Self.tickRoom)
+        .chartWipe(reduceMotion: reduceMotion)
+        // Hidden from VoiceOver: each mark is a row below, and the rows speak.
+        // On the QUIET card there are no rows — but the headline and note
+        // already say the whole finding ("nothing needs attention"), so a
+        // spoken empty axis would add nothing but confusion.
+        .accessibilityHidden(true)
     }
 
     /// One thing on the axis, centred on the track at `position`.

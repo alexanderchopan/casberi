@@ -17,6 +17,7 @@ struct PolymarketMarketView<Fallback: View>: View {
     @State private var history: [Double] = []
     @State private var phase: Phase = .loading
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var change: Double {
         guard let first = history.first, first > 0, history.count >= 2 else { return 0 }
@@ -61,6 +62,11 @@ struct PolymarketMarketView<Fallback: View>: View {
             if history.count >= 2 {
                 TokenChartPlot(chart: TokenChart(closes: history, price: market.probability, change: change),
                               accent: accent, height: 100, pulses: !market.closed)
+                    // The line draws itself (2026-08-04, prd §298). The plot
+                    // never wipes itself — the reveal always lives in the
+                    // caller, and this was the one caller that never added it,
+                    // so a market's week arrived already drawn.
+                    .chartWipe(reduceMotion: reduceMotion)
             }
             if let closeTime = market.closeTime {
                 Text(!market.closed

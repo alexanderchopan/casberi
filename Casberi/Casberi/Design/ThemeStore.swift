@@ -85,30 +85,50 @@ final class ThemeStore {
     /// the storage total and clears it on Delete everything.
     static var photoFileURL: URL { photoURL }
 
-    // MARK: Bleed (prd §204) — the crown pour's color, five curated, no well
+    // MARK: Bleed (prd §204) — the crown pour's color, six curated, no well
 
-    /// The crown pour (`MainSurface.crownPour`) is the permanent gradient
-    /// behind the chip strip — the largest color surface in the app. It reads
-    /// `chrome.pourHue ?? DS.bleed`: Casberi blue by default, unless a wallet
-    /// room is scoped (that carve-out is untouched). This is NOT the retired
+    /// The crown pour (`MainSurface.crownPour`) is the gradient behind the chip
+    /// strip — the largest color surface in the app when it's on. It reads
+    /// `chrome.pourHue ?? DS.bleed`: **off by default since 2026-08-04**
+    /// (`Ink`), unless a wallet room is scoped, which still re-tints it to that
+    /// wallet's own face (that carve-out is untouched). This is NOT the retired
     /// `Background`/`backgroundPhoto` above — those stay dead (2026-07-06:
     /// appearance is one knob, no solid page colors, no photos). The bleed
     /// only ever paints the pour; it never becomes the page itself.
     struct Bleed: Identifiable, Equatable {
         let name: String
         let hex: String
+        /// Whether this option actually pours. False for Ink alone — the
+        /// opt-out, which drops the field to nothing rather than painting a
+        /// colour (see `bleeds` below and `MainSurface.crownPour`).
+        var pours: Bool = true
         var id: String { name }
     }
 
-    /// Five, not a color well (user ruling 2026-07-24). Every option but the
-    /// default sits in `WalletFace.tint`'s exact register (S 0.68, B 0.78),
-    /// so a personal pour and a scoped wallet's pour read as one family. No
-    /// warm option: red/orange/green are spoken for by
-    /// destructive/attention/confirm, and every hue below clears the nearest
-    /// reserved one by ≥41°. Slate is the default's own hue at low
-    /// saturation — the "almost none" option, keeping the gradient instead of
-    /// reintroducing the flat-black crown §159 replaced.
+    /// Six, not a color well (user ruling 2026-07-24). Every colour option sits
+    /// in `WalletFace.tint`'s exact register (S 0.68, B 0.78), so a personal
+    /// pour and a scoped wallet's pour read as one family. No warm option:
+    /// red/orange/green are spoken for by destructive/attention/confirm, and
+    /// every hue below clears the nearest reserved one by ≥41°. Slate is
+    /// Casberi blue's own hue at low saturation — the quietest colour that
+    /// still keeps the gradient.
+    ///
+    /// **Ink is the opt-out, and it LEADS because it is now the default**
+    /// (user, 2026-08-04: "in case a user doesn't want to see crown pours they
+    /// don't have to", then "lets make the default dark mode be black / ink
+    /// theme not blue"). It is NOT a black swatch that pours black: at the
+    /// light theme's own 0.16 dose black reads as a grey stain across the top
+    /// of every screen, which is the opposite of an absence. `pours == false`
+    /// takes the field to zero instead, so the crown is the page. A scoped
+    /// wallet's face still tints (that pour is information, not decoration —
+    /// see `MainSurface.crownPour`).
+    ///
+    /// The default flip reaches EXISTING installs that never opened the picker
+    /// — `theme.bleed` is unset for them, so they resolve to `bleeds[0]` like
+    /// anyone new. Someone who chose a colour keeps it: their choice is stored
+    /// under its own name and nothing here rewrites it.
     static let bleeds: [Bleed] = [
+        Bleed(name: "Ink",     hex: "#000000", pours: false),
         Bleed(name: "Blue",    hex: accentHex),
         Bleed(name: "Teal",    hex: "#40c7c2"),
         Bleed(name: "Violet",  hex: "#8c40c7"),
@@ -186,6 +206,15 @@ extension DS {
     /// opacity gradient, never a button or a word) and must never gate
     /// whether something reads as pressable.
     static var themedBleed: Color { Color(hex: ThemeStore.shared.bleed.hex) }
+
+    /// The pour's colour where it PREVIEWS the setting rather than paints it —
+    /// the Color row's badge in settings, the pour card's own glyph. Ink has
+    /// no colour to preview, and drawing its `#000000` there would be an
+    /// invisible glyph on a dark card (a dead control by sight, honesty rule),
+    /// so it previews as secondary ink like the Theme row's sun/moon.
+    static var themedBleedMark: Color {
+        ThemeStore.shared.bleed.pours ? themedBleed : textSecondary
+    }
 
     /// The themed page color (photo rendering is the shell's job). A chosen
     /// photo implies the dark treatment regardless of mode.

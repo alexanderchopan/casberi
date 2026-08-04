@@ -2751,6 +2751,11 @@ private struct CaptureFlight: View {
     let target: CGRect
     var onDone: () -> Void
     @State private var flown = false
+    /// Reduce Motion skips the flight entirely (2026-08-04, prd §299): the
+    /// proxy card exists ONLY to travel, so a still one is a card that appears
+    /// over the feed for a third of a second and vanishes. `onDone` still
+    /// fires, so the toast and the corpus behave identically.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { geo in
@@ -2774,6 +2779,7 @@ private struct CaptureFlight: View {
             .opacity(flown ? 0 : 1)
             .position(flown ? end : start)
             .onAppear {
+                guard !reduceMotion else { onDone(); return }
                 withAnimation(DS.Motion.standard) { flown = true }
                 Task {
                     try? await Task.sleep(for: .milliseconds(Int(DS.Motion.duration * 1000) + 50))

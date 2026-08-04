@@ -183,6 +183,34 @@ enum ProbeHooks {
                 NSLog("receipt| %@ · %d requests · %@", row.host, row.count, verdict)
             }
             NSLog("receiptsProbe: hosts=%d undeclared=%d", rows.count, undeclared)
+            // …then the LEAD CARD's own reading (prd §299). One NSLog per cell
+            // (the `-todayProbe` truncation lesson). It exists because the map
+            // groups by SERVICE while the lines above are per HOST, so the two
+            // can disagree in ways neither alone can show: a host whose
+            // attribution the registry refuses lands as its own undeclared
+            // cell, and five per-chain Alchemy hosts collapse into one Wallet
+            // cell. A card that draws six plausible tiles looks correct
+            // whichever happened.
+            let resolved = rows.map { row -> NetworkReceiptsInsight.Row in
+                let byHost = NetworkReach.service(forHost: row.host)
+                let named = row.service.flatMap {
+                    NetworkReach.declares(service: $0) ? $0 : nil
+                }
+                return .init(host: row.host, count: row.count, service: byHost ?? named)
+            }
+            if let reach = NetworkReceiptsInsight.compose(rows: resolved) {
+                NSLog("reachCard| requests=%d services=%d hosts=%d undeclared=%d cells=%d",
+                      reach.requests, reach.services, reach.hosts,
+                      reach.undeclaredHosts, reach.cells.count)
+                for cell in reach.cells {
+                    NSLog("reachCell| %@ · %d · share=%.2f · %@%@",
+                          cell.label, cell.count, cell.share,
+                          cell.declared ? "declared" : "NOT-DECLARED",
+                          cell.isTail ? " · tail" : "")
+                }
+            } else {
+                NSLog("reachCard| (no card — the ledger is empty)")
+            }
         },
         // `-chatgptImport <path>` imports a conversations.json from disk.
         Hook(key: "chatgptImport") { path, context in
@@ -449,6 +477,30 @@ enum ProbeHooks {
         // does NOT advance the cursor, so it can be re-run over one window.
         Hook(key: "stripeProbe") { _, _ in
             Task { await StripeIngest.probe() }
+        },
+        // `-stripeRoomProbe YES` — the Stripe ROOM HEAD's reading, line by line
+        // (2026-08-04, prd §298). One NSLog per line (the `-todayProbe`
+        // truncation lesson). Spends nothing: it composes the card off landed
+        // rows and the stored balance, exactly as the room does.
+        //
+        // It exists because an empty Stripe head has FOUR causes that render as
+        // one nothing — not connected, a balance never read on this device (a
+        // fresh install syncs rows but not UserDefaults), no row carrying a
+        // `dueAt`, or every deadline outside the window — and only two of them
+        // are worth acting on.
+        Hook(key: "stripeRoomProbe") { _, context in
+            for line in StripeRoomSource.probeLines(context: context) {
+                NSLog("[Casberi] stripeRoom| %@", line)
+            }
+        },
+        // `-posthogRoomProbe YES` — the same for PostHog's head. Pairs with
+        // `-posthogSeed "<event>:<c,c,c>[|total]"`, which plants a reading, so
+        // the whole card — discs, ring, silence ordering — verifies with no
+        // account and no network at all.
+        Hook(key: "posthogRoomProbe") { _, context in
+            for line in PostHogRoomSource.probeLines(context: context) {
+                NSLog("[Casberi] posthogRoom| %@", line)
+            }
         },
         // `-stripeShapeProbe YES` — the same five shapes with NO key and NO
         // network, over synthetic payloads in Stripe's documented envelope.
@@ -2488,18 +2540,45 @@ enum ProbeHooks {
                     if line != nil, leader == nil { leader = name }
                 }
 
-                // 1. the runway — Cloudflare only, and it outranks everything
-                // below (2026-08-03, prd §296). Mirrored here the day it
-                // landed: this probe's whole job is naming what really leads a
-                // room, and a card added to `shapedSections` without a line
-                // here would make the probe confidently report "leads with
-                // NOTHING" about a room that leads with a card — the §219
-                // failure inverted, which is the one this probe exists to stop.
-                note("runway", CloudflareRunwaySource.compose(things: things).map {
-                    $0.items.isEmpty
-                        ? "quiet · \($0.next.map { n in CloudflareRunway.quietHeadline(days: n.days) } ?? "—")"
-                        : "\(CloudflareRunway.headline(items: $0.items, span: $0.span)) · \($0.items.count) rows"
-                })
+                // 1. the PER-SOURCE heads — each claims exactly one room, and
+                // together they outrank everything below (`FeedScreen`'s own
+                // `sourceHead`, 2026-08-04 prd §298; the runway 2026-08-03 prd
+                // §296). Mirrored here the day each landed: this probe's whole
+                // job is naming what really leads a room, and a card added to
+                // `shapedSections` without a line here would make the probe
+                // confidently report "leads with NOTHING" about a room that
+                // leads with a card — the §219 failure inverted, which is the
+                // one this probe exists to stop.
+                //
+                // They share rank 1 because they cannot compete: a room is
+                // Cloudflare or Stripe or PostHog, never two. Reported as
+                // separate lines anyway, so a room drawing the wrong one is
+                // visible rather than folded into a single "sourceHead: yes".
+                //
+                // EACH IS GATED ON `source`, exactly as `FeedScreen.sourceHead`
+                // is — and that gate is the whole correctness of these lines,
+                // not a tidiness. These three compose from BRIDGE STATE, not
+                // from `things`: a Stripe balance or a cached Cloudflare estate
+                // is global, so an ungated `compose` answers for EVERY room.
+                // Without the gate, `-roomInsightProbe Photos` on a device with
+                // Stripe connected reported the Photos room as leading with
+                // `stripeHead` — the §219 failure this probe exists to catch,
+                // committed by the probe itself. (The runway line shipped with
+                // that hole on 2026-08-03 and is fixed here too.)
+                note("runway", source == "Cloudflare"
+                     ? CloudflareRunwaySource.compose(things: things).map {
+                        $0.items.isEmpty
+                            ? "quiet · \($0.next.map { n in CloudflareRunway.quietHeadline(days: n.days) } ?? "—")"
+                            : "\(CloudflareRunway.headline(items: $0.items, span: $0.span)) · \($0.items.count) rows"
+                     } : nil)
+                note("stripeHead", source == "Stripe"
+                     ? StripeRoomSource.compose(things: things).map {
+                        "\(StripeRoom.headline($0)) · \($0.total) deadlines"
+                     } : nil)
+                note("posthogHead", source == "PostHog"
+                     ? PostHogRoomSource.compose(things: things).map {
+                        "\(PostHogRoom.headline($0)) · \($0.metrics.count) metrics"
+                     } : nil)
                 // 2. the anniversary — memories room only, and only with pixels
                 let echo = source == "Snapchat"
                     ? OnThisDay.find(in: things.filter {

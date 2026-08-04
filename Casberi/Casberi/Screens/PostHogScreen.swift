@@ -447,6 +447,14 @@ struct MetricDisc: View {
     var size: CGFloat = 56
 
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// **The disc draws itself** (2026-08-04, prd §298): the curve strokes on,
+    /// then the milestone ring winds up to where the metric has actually got
+    /// to. The ring is the one here that had to be a `trim` rather than a fade
+    /// — winding IS the fact it states, and a ring that fades in at 40% just
+    /// asserts 40%. Ordered curve-then-ring because the ring is progress toward
+    /// a rung the curve explains.
+    @State private var entered = false
 
     /// The last seven days, normalised 0…1 for drawing. Fewer than two points
     /// can't make a line — the disc stays empty rather than inventing one.
@@ -486,21 +494,34 @@ struct MetricDisc: View {
                 // all for a colour-blind reader, and this disc is the metric's
                 // whole mark.
                 curve(week)
+                    .trim(from: 0, to: entered ? 1 : 0)
                     .stroke(accent, style: StrokeStyle(lineWidth: 1.8,
                                                        lineCap: .round, lineJoin: .round,
                                                        dash: falling ? [3, 2] : []))
             }
             if progress > 0 {
                 Circle()
-                    .trim(from: 0, to: progress)
+                    .trim(from: 0, to: entered ? progress : 0)
                     .stroke(accent.opacity(0.85),
                             style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
                     .rotationEffect(.degrees(-90))
-                    .animation(DS.Motion.standard, value: progress)
+                    // Still animates on a LATER change too (a sync moving the
+                    // metric on), which is what this modifier was here for.
+                    .animation(reduceMotion ? nil : DS.Motion.standard, value: progress)
             }
         }
         .frame(width: size, height: size)
+        .onAppear(perform: enter)
         .accessibilityLabel(accessibilityLine)
+    }
+
+    private func enter() {
+        guard !entered else { return }
+        guard !reduceMotion else { entered = true; return }
+        // The curve strokes over the wipe's own duration; the ring winds up
+        // behind it, landing just after — see the `entered` doc.
+        withAnimation(.easeOut(duration: ChartEntrance.wipe)
+            .delay(ChartEntrance.lead)) { entered = true }
     }
 
     private var accessibilityLine: Text {

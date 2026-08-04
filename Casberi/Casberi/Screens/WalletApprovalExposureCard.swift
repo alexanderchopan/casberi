@@ -53,6 +53,8 @@ struct WalletApprovalExposureCard: View {
     /// quote, Revoke.cash door). Reads and previews only — prd §112.
     var onOpen: (WalletApprovalExposure.Grant) -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     /// The card's one hue (user ruling, 2026-08-03). `#ffd60a` already exists
     /// in the tree as `KindGlyph`'s note yellow rather than being a new colour
     /// in the system, and it is NOT `DS.attention` (#ff9f0a): that orange was
@@ -83,8 +85,14 @@ struct WalletApprovalExposureCard: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s1)
 
-                ForEach(exposure.all) { grant in
+                // Enumerated for the entrance stagger only (2026-08-03, prd
+                // §297). `exposure.all` is already ranked by what's at stake,
+                // so the grant worth revoking first is also the row that lands
+                // first — the treemap's largest-first rule, and the exact
+                // instruction the subhead above gives ("Start at the top").
+                ForEach(Array(exposure.all.enumerated()), id: \.element.id) { index, grant in
                     row(grant)
+                        .chartArrival(index: index, reduceMotion: reduceMotion)
                 }
                 .padding(.top, DS.Space.s3)
 

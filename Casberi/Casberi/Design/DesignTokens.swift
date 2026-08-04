@@ -111,17 +111,28 @@ enum DS {
     /// Tint at rest-chip opacity.
     static var tintDim: Color { themedTintDim }
 
-    /// The crown pour's color (prd §204) — the person's choice of five,
-    /// Casberi blue by default. `MainSurface.crownPour`'s ONLY consumer;
+    /// The crown pour's color (prd §204) — the person's choice of six, and
+    /// OFF by default since 2026-08-04 (`Ink`, which pours nothing rather than
+    /// pouring black; see `ThemeStore.bleeds`). `MainSurface.crownPour`'s ONLY consumer;
     /// never route a chip, glyph, or state fill through this — those stay on
     /// `DS.tint`, which alone carries the Increase Contrast guarantee.
     static var bleed: Color { themedBleed }
+    /// The bleed as a settings PREVIEW (see `themedBleedMark`) — never the
+    /// pour itself, which is `bleed` and may legitimately be invisible.
+    static var bleedMark: Color { themedBleedMark }
 
     /// Magnitude fill — tint at opacity scaled by a normalized count `t ∈ [0,1]`.
     /// Treemaps and project fills only (color rule: magnitude, not decoration).
-    static func tint(magnitude t: Double) -> Color {
-        let clamped = min(max(t, 0), 1)
-        return tint.opacity(0.06 + 0.22 * clamped)
+    static func tint(magnitude t: Double) -> Color { wash(tint, magnitude: t) }
+
+    /// The same magnitude ramp over a colour that ISN'T the tint — the one
+    /// case being a cell that carries STATE as well as magnitude (an
+    /// undeclared host on the receipts map wears `attention`). Shared rather
+    /// than re-spelled at the call site so the two washes can never land on
+    /// different opacity curves and read as different amounts of the same
+    /// thing.
+    static func wash(_ color: Color, magnitude t: Double) -> Color {
+        color.opacity(0.06 + 0.22 * min(max(t, 0), 1))
     }
 
     // MARK: - Semantic state  — orange attention, red destructive, green confirm

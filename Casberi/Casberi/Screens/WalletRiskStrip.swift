@@ -25,8 +25,23 @@ import SwiftUI
 /// No `Thing` is stored anywhere here — the entries are value types by the
 /// time they arrive — so the liveness rules (CLAUDE.md corollaries 1–5) have
 /// nothing to bite on.
+/// **The dots travel** (2026-08-03, prd §297). Each one starts at the
+/// comfortable end and moves to its reading, closest-to-the-edge FIRST —
+/// `entries` is already sorted worst-first, so following index order for the
+/// stagger makes the entrance narrate the ranking the card already made (the
+/// treemap's largest-first rule, on a different axis). This is the
+/// one entrance on the card that isn't decoration: the whole card is an
+/// argument that three incomparable protocol units share one axis, and watching
+/// a dot travel ALONG that axis is that argument made in time. A fade-in would
+/// have said nothing the static frame doesn't.
+///
+/// It is not an alarm and must not become one — the dots land at their true
+/// positions and stop, with no overshoot past the far end and no repeat.
 struct WalletRiskStrip: View {
     let entries: [WalletRiskScale.Entry]
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var travelled = false
 
     /// Room for the label rows above and below the track.
     private let labelBand: CGFloat = 30
@@ -39,6 +54,11 @@ struct WalletRiskStrip: View {
                 track(width: geo.size.width)
             }
             .frame(height: labelBand * 2 + dotSize)
+            // Dots on a track read as nothing (2026-08-04, prd §299). The
+            // card's whole claim is an ORDER — which position is closest to
+            // liquidation — so the sentence is that order, spoken.
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(Text(spokenAxis))
             HStack {
                 Text("comfortable")
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
@@ -58,6 +78,27 @@ struct WalletRiskStrip: View {
         .padding(DS.Space.s3)
         .background(DS.fillFaint,
                     in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        // A plain set: each dot owns its own delayed spring below, so the
+        // stagger is per-entry rather than one move for the whole set.
+        .onAppear { travelled = true }
+    }
+
+    /// The travel, staggered by rank. `nil` under Reduce Motion so the position
+    /// change lands with no animation at all — the final frame, immediately.
+    private func travel(_ index: Int) -> Animation? {
+        reduceMotion ? nil
+            : .spring(response: 0.75, dampingFraction: 0.9)
+                // The track wipes itself in first: a reading travelling along
+                // an axis that isn't drawn yet is a dot floating in a card.
+                .delay(ChartEntrance.offset(index: index) + 0.25)
+    }
+
+    /// The axis as a sentence, nearest-the-edge first — the order the dots
+    /// are already ranked in, so the drawing and the speech agree.
+    private var spokenAxis: String {
+        guard !entries.isEmpty else { return String(localized: "Nothing leveraged.") }
+        let listed = entries.map { "\($0.label), \($0.detail)" }.joined(separator: "; ")
+        return String(localized: "Distance to liquidation, closest first: \(listed).")
     }
 
     private func track(width: CGFloat) -> some View {
@@ -82,17 +123,29 @@ struct WalletRiskStrip: View {
                 )
                 .frame(height: 9)
                 .offset(y: labelBand + (dotSize - 9) / 2)
+                .chartWipe(reduceMotion: reduceMotion)
 
             ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
-                let x = inset + usable * clamped(entry.axis)
+                // Every reading starts at the comfortable end and travels to
+                // where it actually sits — see the type doc.
+                let x = inset + usable * (travelled ? clamped(entry.axis) : 0)
                 // Alternating sides — see the type doc.
                 let above = index.isMultiple(of: 2)
-                dot(entry)
-                    .position(x: x, y: labelBand + dotSize / 2)
-                label(entry, above: above)
-                    .frame(width: 128)
-                    .position(x: labelPosition(x, width: width),
-                              y: above ? labelBand / 2 : labelBand * 1.5 + dotSize)
+                // The name rides WITH its dot rather than fading in after: a
+                // label that arrives late reads as belonging to whichever dot
+                // is nearest when it lands, which on the crowded end is the
+                // wrong one. A `Group` distributes the pair to both children,
+                // so the two can't drift.
+                Group {
+                    dot(entry)
+                        .position(x: x, y: labelBand + dotSize / 2)
+                    label(entry, above: above)
+                        .frame(width: 128)
+                        .position(x: labelPosition(x, width: width),
+                                  y: above ? labelBand / 2 : labelBand * 1.5 + dotSize)
+                }
+                .opacity(travelled ? 1 : 0)
+                .animation(travel(index), value: travelled)
             }
         }
     }

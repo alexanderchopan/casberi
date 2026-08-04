@@ -211,6 +211,15 @@ struct SafeSignatureDisc: View {
     let required: Int
     var size: CGFloat = 44
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// **The signatures land one at a time** (2026-08-04, prd §298), in the
+    /// order they were collected. The disc's whole claim is that this is a
+    /// COUNT toward a threshold, so counting them in is the claim drawn; a
+    /// ring that faded in whole would state the same fraction and none of the
+    /// accumulation. Segments that are still missing appear immediately —
+    /// they're the track, not the reading.
+    @State private var landed = false
+
     private var met: Bool { required > 0 && have >= required }
 
     var body: some View {
@@ -229,6 +238,11 @@ struct SafeSignatureDisc: View {
                         .stroke(i < have ? (met ? DS.confirm : DS.tint) : DS.textTertiary.opacity(0.28),
                                 style: StrokeStyle(lineWidth: 3, lineCap: .round))
                         .rotationEffect(.degrees(-90))
+                        // A collected signature counts itself in; an empty
+                        // segment is the track and is simply there.
+                        .opacity(i < have && !landed ? 0 : 1)
+                        .animation(reduceMotion ? nil
+                                   : ChartEntrance.arrive(index: i), value: landed)
                 }
             }
             Text(verbatim: required > 0 ? "\(have)/\(required)" : "\(have)")
@@ -237,7 +251,10 @@ struct SafeSignatureDisc: View {
                 .foregroundStyle(met ? DS.confirm : DS.textPrimary)
         }
         .frame(width: size, height: size)
+        // Still animates when a signature actually LANDS later — what this
+        // modifier was here for.
         .animation(DS.Motion.standard, value: have)
+        .onAppear { landed = true }
         .accessibilityElement()
         .accessibilityLabel(required > 0
                             ? Text("\(have) of \(required) signatures collected")

@@ -81,9 +81,27 @@ struct WalletBalanceHeadline: View {
     /// Mac hover-scrub (delight, 2026-08-03): the sample under the cursor.
     /// While set, the crown number ROLLS to that sample (the same
     /// `numericText` roll a scope switch already plays) and the plot draws
-    /// the scrub cursor; leaving rolls it back to the live total. Only ever
-    /// written on Catalyst (`ChartHoverScrub`), so a phone never observes it.
+    /// the scrub cursor; leaving rolls it back to the live total. Written by
+    /// the Mac's hover AND (2026-08-03, prd §297) by a press-then-drag on the
+    /// phone — the sheet chart's own touch scrub, brought to the room's
+    /// headline. It was Mac-only for two days, which meant this plumbing sat on
+    /// every device and answered only a cursor.
     @State private var scrubIndex: Int?
+    /// The crown number's odometer roll (prd §297) — `GenMoneyHero`'s entrance
+    /// arriving in the room the hero was modelled on.
+    ///
+    /// The anchor is held rather than the destination, and `rollLanded` says
+    /// which one to show. That way the roll can never PIN the number: the
+    /// instant it lands, `displayed` reads the live total again, so a holdings
+    /// read arriving mid-entrance reaches the screen on its own. (Holding the
+    /// destination instead needed a fourth timer to clear it, which is how the
+    /// first cut of this got an unstructured `Task` that outlived its view.)
+    @State private var rollAnchor: Double?
+    @State private var rollLanded = false
+    /// The delta pill waits out the roll — a summary that lands with the thing
+    /// it summarizes makes the eye choose, and it chooses wrong (2026-07-22).
+    @State private var pillShown = false
+    @State private var entered = false
 
     private var accent: Color {
         TokenChartStyle.accent(change: chart?.change ?? 0, scheme: scheme)
@@ -99,6 +117,7 @@ struct WalletBalanceHeadline: View {
         if let scrubIndex, let chart, chart.closes.indices.contains(scrubIndex) {
             return chart.closes[scrubIndex]
         }
+        if !rollLanded, let rollAnchor { return rollAnchor }
         return total ?? chart?.price
     }
 
@@ -138,10 +157,10 @@ struct WalletBalanceHeadline: View {
                                onTapMark: marks.isEmpty ? nil : { onOpenMark($0.id) },
                                // Wait out the draw-on below, then land (§171).
                                markDelay: 0.95,
-                               // Mac hover-scrub (2026-08-03): resting the
-                               // cursor on the line rolls the crown number to
-                               // that sample — the sheet chart's scrub, at
-                               // the headline's dose. Inert off Catalyst.
+                               // Scrub (2026-08-03, §297): a press-then-drag —
+                               // or a resting cursor on the Mac — rolls the
+                               // crown number to that sample. The sheet
+                               // chart's own scrub, at the headline's dose.
                                cursorIndex: scrubIndex,
                                onScrub: { scrubIndex = $0 })
                     .mask(alignment: .leading) {
@@ -149,7 +168,10 @@ struct WalletBalanceHeadline: View {
                             Rectangle().frame(width: geo.size.width * drawn)
                         }
                     }
-                    .onAppear { draw() }
+                    // Two entrances, two owners: `draw` owns the line's own
+                    // mask and replays on a range switch; `enter` owns the
+                    // number's roll and fires once ever.
+                    .onAppear { draw(); enter() }
                     .onChange(of: chart.closes) { draw(redraw: true) }
                     .padding(.top, DS.Space.s1)
                 if ranges.count > 1 { rangeChips }
@@ -209,6 +231,8 @@ struct WalletBalanceHeadline: View {
                         if let chart {
                             TokenDeltaPill(change: chart.change,
                                            label: range.deltaLabel, compact: true)
+                                .scaleEffect(pillShown ? 1 : 0.6)
+                                .opacity(pillShown ? 1 : 0)
                         }
                     }
                     if let mover {
@@ -252,6 +276,37 @@ struct WalletBalanceHeadline: View {
         guard !reduceMotion else { drawn = 1; return }
         if redraw { drawn = 0 }
         withAnimation(.easeOut(duration: 0.8).delay(redraw ? 0.05 : 0.25)) { drawn = 1 }
+    }
+
+    /// The room's headline gets the brief's own arc (prd §297): the line draws,
+    /// the total rolls from where the window STARTED to what it is now, then
+    /// the pill lands. `GenMoneyHero` has staged exactly this since 2026-07-22
+    /// — inside the Today brief, which most people never open — while the
+    /// wallet room, whose number this actually is, drew its line and left the
+    /// total sitting there already arrived.
+    ///
+    /// The anchor is the window's own first sample, so the roll says the true
+    /// thing: this is what it was when this line began, and this is what it is.
+    /// A window with nothing to travel (one sample, a flat week, no chart at
+    /// all) rolls nothing and simply lands its pill — the honest static case,
+    /// same guard `fireEntrance` keeps.
+    private func enter() {
+        guard !entered else { return }
+        entered = true
+        let anchor = chart?.closes.first
+        guard !reduceMotion, let anchor, let now = total ?? chart?.price,
+              anchor > 0, abs(now - anchor) / anchor > 0.001
+        else {
+            rollLanded = true
+            withAnimation(DS.Motion.standard.delay(0.35)) { pillShown = true }
+            return
+        }
+        // Both beats are issued NOW as delayed animations — no timer, nothing
+        // to cancel, and nothing capturing this view past its own life. The
+        // same staging `WalletFlowBand` and `UniswapRangeBar` use.
+        rollAnchor = anchor
+        withAnimation(ChartEntrance.roll.delay(ChartEntrance.rollStart)) { rollLanded = true }
+        withAnimation(ChartEntrance.pillLand.delay(ChartEntrance.pillStart)) { pillShown = true }
     }
 }
 
@@ -358,6 +413,7 @@ struct WalletCompositionStrip: View {
     /// render a control that opens nothing).
     var onOpenDeposits: (() -> Void)? = nil
     var onOpenLocks: (() -> Void)? = nil
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         if !composition.isEmpty {
@@ -373,7 +429,8 @@ struct WalletCompositionStrip: View {
                     line(title: String(localized: "Locked"),
                          places: composition.lockedPlaces,
                          value: lockedValue,
-                         onOpen: onOpenLocks)
+                         onOpen: onOpenLocks,
+                         melt: composition.soleMelt)
                 }
                 if composition.hasOwed {
                     // The minus is spelled, never implied by color: red here
@@ -409,11 +466,16 @@ struct WalletCompositionStrip: View {
     /// stepped the headline's own caption back (prd §157).
     @ViewBuilder
     private func line(title: String, places: [String], value: String,
-                      onOpen: (() -> Void)?) -> some View {
+                      onOpen: (() -> Void)?, melt: Double? = nil) -> some View {
         if let onOpen {
             Button(action: onOpen) {
-                lineBody(title: title, places: places, value: value, door: true)
-                    .contentShape(Rectangle())
+                VStack(alignment: .leading, spacing: DS.Space.s1) {
+                    lineBody(title: title, places: places, value: value, door: true)
+                    if let melt {
+                        ShareBar(fraction: melt, melt: true, reduceMotion: reduceMotion)
+                    }
+                }
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         } else {
@@ -468,14 +530,18 @@ struct WalletCompositionStrip: View {
 /// from here, so no row carries a chevron.
 struct WalletDepositsTray: View {
     let composition: WalletComposition
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         DSTray(title: String(localized: "Deposited"),
                height: min(560, CGFloat(170 + composition.deposits.count * 64))) {
             ScrollView {
                 VStack(spacing: DS.Space.s1) {
-                    ForEach(composition.deposits) { deposit in
-                        row(deposit)
+                    // Enumerated for the entrance stagger only — the rows
+                    // arrive in the order the model already sorted them, so
+                    // the biggest deposit's bar grows first.
+                    ForEach(Array(composition.deposits.enumerated()), id: \.element.id) { index, deposit in
+                        row(deposit, index: index)
                     }
                 }
             }
@@ -483,7 +549,7 @@ struct WalletDepositsTray: View {
         }
     }
 
-    private func row(_ deposit: WalletComposition.Deposit) -> some View {
+    private func row(_ deposit: WalletComposition.Deposit, index: Int) -> some View {
         let total = composition.deposited
         let share = total > 0 ? deposit.usd / total : 0
         return VStack(alignment: .leading, spacing: DS.Space.s1) {
@@ -501,7 +567,7 @@ struct WalletDepositsTray: View {
                         .monospacedDigit()
                 }
             }
-            ShareBar(fraction: share, tint: DS.tint)
+            ShareBar(fraction: share, index: index, reduceMotion: reduceMotion)
         }
         .dsCompositionRow()
     }
@@ -528,14 +594,15 @@ struct WalletDepositsTray: View {
 ///   HYPE row states its amount and its unlock date and stops.
 struct WalletLocksTray: View {
     let composition: WalletComposition
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         DSTray(title: String(localized: "Locked"),
                height: min(560, CGFloat(170 + composition.locks.count * 74))) {
             ScrollView {
                 VStack(spacing: DS.Space.s1) {
-                    ForEach(composition.locks) { lock in
-                        row(lock)
+                    ForEach(Array(composition.locks.enumerated()), id: \.element.id) { index, lock in
+                        row(lock, index: index)
                     }
                 }
             }
@@ -543,7 +610,7 @@ struct WalletLocksTray: View {
         }
     }
 
-    private func row(_ lock: WalletComposition.Lock) -> some View {
+    private func row(_ lock: WalletComposition.Lock, index: Int) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
             HStack(spacing: DS.Space.s2) {
                 Text("\(WalletIngest.format(lock.amount)) \(lock.symbol)")
@@ -556,9 +623,16 @@ struct WalletLocksTray: View {
                     .lineLimit(1)
             }
             if let remaining = lock.remaining {
-                ShareBar(fraction: remaining, tint: DS.tint)
+                // THE MELT (2026-08-03, prd §297): the bar draws full, then
+                // recedes to what's left. A lock's fact is that it HAD all its
+                // power and is losing it — the only entrance that states the
+                // mechanic instead of reporting a percentage.
+                ShareBar(fraction: remaining, index: index, melt: true,
+                         reduceMotion: reduceMotion)
             } else if lock.isPermanent {
-                ShareBar(fraction: 1, tint: DS.tint)
+                // Never melts, so it never draws melting — it grows like any
+                // other full bar and stops (the tray's own third honesty rule).
+                ShareBar(fraction: 1, index: index, reduceMotion: reduceMotion)
             }
             Text(subline(lock))
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
@@ -605,26 +679,11 @@ private extension View {
     }
 }
 
-/// A share of a whole, as a filled track — the room's one bar shape, used by
-/// both composition trays. A fill, never a rule: the design law's no-hairlines
-/// ban is about LINES that divide, and this is a quantity with a length.
-private struct ShareBar: View {
-    let fraction: Double
-    let tint: Color
-
-    var body: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                Capsule(style: .continuous).fill(DS.fillFaint)
-                Capsule(style: .continuous)
-                    .fill(tint)
-                    .frame(width: max(2, geo.size.width * min(max(fraction, 0), 1)))
-            }
-        }
-        .frame(height: 6)
-        .accessibilityHidden(true)
-    }
-}
+// `ShareBar` moved to `Design/ChartEntrance.swift` on 2026-08-03 (prd §297),
+// where it grew its entrance — and its melt. It was private here while its only
+// two users were the trays below; the composition strip's own inline melt now
+// needs it too, and a bar shape that draws itself belongs with the rest of the
+// grammar rather than beside the tiles that happened to want it first.
 
 /// The per-wallet split, as CHIPS inside the balance card (prd §212,
 /// 2026-07-25). It was a card of its own until this pass — a face, a name, a

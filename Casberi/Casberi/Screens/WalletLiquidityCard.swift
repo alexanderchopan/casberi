@@ -176,11 +176,22 @@ struct WalletLiquidityCard: View {
 /// price, whichever is wider, so a position drifted far out of range still
 /// shows a meaningful (not vanishingly thin) range segment, the way a
 /// sparkline autoscales rather than plotting against a fixed axis.
+///
+/// **It draws itself** (2026-08-03, prd §297): the range segment expands from
+/// its own centre, then the price dot lands on the tick it's actually at. The
+/// order is the reading's own logic — the range is the thing you chose, the
+/// price is the thing that happened to it — and it's why the dot doesn't slide
+/// along the bar: sliding would imply a path the price took, which this bar has
+/// no data for. It lands where it is and nowhere else.
 struct UniswapRangeBar: View {
     let tickLower: Int
     let tickUpper: Int
     let currentTick: Int
     let inRange: Bool
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var opened = false
+    @State private var dotLanded = false
 
     private var domain: (low: Double, high: Double) {
         let low = Double(min(tickLower, currentTick))
@@ -209,13 +220,25 @@ struct UniswapRangeBar: View {
                 Capsule().fill(tint.opacity(0.35))
                     .frame(width: max(highX - lowX, 3), height: 4)
                     .offset(x: lowX)
+                    // Opens from its own middle — the range grew outward from
+                    // the price it was set around.
+                    .scaleEffect(x: opened ? 1 : 0, anchor: .center)
                 Circle().fill(tint)
                     .frame(width: 8, height: 8)
                     .offset(x: min(max(markX - 4, 0), width - 8))
+                    .scaleEffect(dotLanded ? 1 : 0)
             }
             .frame(height: 8, alignment: .leading)
         }
         .frame(height: 8)
         .accessibilityHidden(true)
+        .onAppear(perform: enter)
+    }
+
+    private func enter() {
+        guard !opened else { return }
+        guard !reduceMotion else { opened = true; dotLanded = true; return }
+        withAnimation(.easeOut(duration: 0.45).delay(ChartEntrance.lead)) { opened = true }
+        withAnimation(ChartEntrance.land(after: ChartEntrance.lead + 0.35)) { dotLanded = true }
     }
 }
