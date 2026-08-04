@@ -251,25 +251,54 @@ enum DS {
         static func appIcon(_ size: CGFloat) -> CGFloat { size * appIconRatio }
     }
 
-    // MARK: - Motion  — 250ms, Apple sheet curve, one animation per moment
+    // MARK: - Motion  — ~250ms, one animation per moment
 
+    /// SPRINGS since 2026-08-04 (the microanimation pass): the original
+    /// `timingCurve(0.32, 0.72, 0, 1)` — the prototype's `--ds-ease` — was a
+    /// fixed-duration curve, which a second transaction mid-flight RESTARTS
+    /// rather than retargets. A spring keeps its velocity when interrupted,
+    /// so a chip tapped mid-slide or a chrome fold reversed halfway feels
+    /// continuous instead of snapping to a new start. `duration:`/`bounce:`
+    /// are tuned to read the same as the old curve at rest (fast out, soft
+    /// landing, no visible overshoot at bounce 0.15) — this is a feel change
+    /// only under interruption, by design. `ChartEntrance` stays its own
+    /// vocabulary on purpose (its doc explains the two-cadence ruling).
     enum Motion {
         static let duration: Double = 0.25
-        /// cubic-bezier(.32, .72, 0, 1) — the prototype's `--ds-ease`.
-        static let standard = Animation.timingCurve(0.32, 0.72, 0, 1, duration: duration)
+        /// The app-wide transition spring (was the prototype's `--ds-ease`).
+        static let standard = Animation.spring(duration: duration, bounce: 0.15)
         /// Slightly longer for the composer bubble (prototype: 260ms).
-        static let bubble = Animation.timingCurve(0.32, 0.72, 0, 1, duration: 0.26)
+        static let bubble = Animation.spring(duration: 0.3, bounce: 0.2)
+        /// Press feedback — faster and livelier than a transition, because a
+        /// finger is on the glass and the response has to feel attached to
+        /// it. One token so every pressed control dips on the same clock.
+        static let press = Animation.spring(duration: 0.2, bounce: 0.4)
     }
 }
 
 
 /// The press feel for tappable tiles and pills: a soft spring dip, matching
-/// iOS's own control feedback (polish 2026-07-07).
+/// iOS's own control feedback (polish 2026-07-07; on `DS.Motion.press` since
+/// the 2026-08-04 spring unification).
 struct PressSpring: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.96 : 1)
-            .animation(.spring(duration: 0.25, bounce: 0.5),
-                       value: configuration.isPressed)
+            .animation(DS.Motion.press, value: configuration.isPressed)
+    }
+}
+
+/// The press feel for a FEED ROW (2026-08-04). Rows can't use `PressSpring`'s
+/// 0.96 dip: their card slab is a `listRowBackground`, which a ButtonStyle
+/// can't reach, so a visible scale would shrink the content inside a
+/// full-size slab. Instead: a near-imperceptible settle plus a dim — the
+/// UIKit cell-highlight grammar, sprung. Shared here (not in FeedScreen) so
+/// any future list of bare rows presses the same way.
+struct RowPress: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.99 : 1)
+            .opacity(configuration.isPressed ? 0.75 : 1)
+            .animation(DS.Motion.press, value: configuration.isPressed)
     }
 }

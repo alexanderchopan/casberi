@@ -87,6 +87,13 @@ struct TokenDeltaPill: View {
             .dsText(compact ? .label12 : .subhead13)
             .fontWeight(solid ? .bold : .regular)
             .monospacedDigit()
+            // A delta that updates ROLLS its digits instead of blinking
+            // (2026-08-04, the microanimation pass) — the crown's own
+            // grammar, one tier down. Inert when a List rebuilds the row's
+            // identity (the WalletScreen:1016 caveat), which is the right
+            // failure: no animation, never a wrong number.
+            .contentTransition(.numericText())
+            .animation(DS.Motion.standard, value: text)
             // A solid pill must hold on ANY backing — the hero sits on the
             // sheet's cover wash, where the quiet 15% fill vanished (review
             // 2026-07-17). Loud = full state ink; solid-but-flat = a neutral

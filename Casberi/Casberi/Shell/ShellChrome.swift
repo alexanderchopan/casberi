@@ -165,6 +165,14 @@ final class ShellChrome {
     /// restored 2026-07-14 — the tab-drop rewire had orphaned it) and the
     /// berry rain (BerryRain, user ask same day).
     var refreshPulse = 0
+    /// LIVE overscroll (points past the top) while a pull is in progress —
+    /// written by FeedScreen's own scroll observer, read by the avatar door,
+    /// which WINDS UP proportionally before the release spin fires
+    /// (microanimation pass 2026-08-04): the pull gets tension instead of a
+    /// silent threshold. Value-driven, no animation — it follows the finger.
+    /// Zero whenever the list is at rest, and never written under Reduce
+    /// Motion (the writer gates, so the door simply never winds).
+    var pullTension: CGFloat = 0
     /// The hue the NEXT `refreshPulse` bump should rain in — a specific
     /// source's own brand hue when the pull happened inside its feed (set by
     /// FeedScreen's `.refreshable`, cleared to nil for "All") or a moment's

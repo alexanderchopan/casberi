@@ -1027,6 +1027,15 @@ struct AppsScreen: View {
                       alignment: .leading, spacing: DS.Space.s3) {
                 ForEach(Array(apps.enumerated()), id: \.element.id) { i, entry in
                     appTile(entry).modifier(StockEntrance(index: i))
+                        // Tiles settle in as they cross the viewport edge —
+                        // scroll-driven, so it costs nothing at rest
+                        // (2026-08-04). Under Reduce Motion only the fade
+                        // survives, the chip strip's own convention.
+                        .scrollTransition(.interactive, axis: .vertical) { content, phase in
+                            content
+                                .scaleEffect(reduceMotion || phase.isIdentity ? 1 : 0.94)
+                                .opacity(phase.isIdentity ? 1 : 0.7)
+                        }
                 }
             }
         }

@@ -1475,6 +1475,19 @@ struct FeedScreen: View {
         .environment(\.defaultMinListHeaderHeight, 0)
         .scrollIndicators(.hidden)
         .minimizesChrome(chrome, active: isActive)
+        // The pull's WIND-UP feed (2026-08-04): raw top overscroll, which
+        // `minimizesChrome`'s observer deliberately filters out (`new > 60`),
+        // so this is its own geometry read. The avatar door rotates with it —
+        // tension before the release spin. Sub-point jitter is dropped, and
+        // Reduce Motion never writes, so the door stays still there.
+        .onScrollGeometryChange(for: CGFloat.self) { geo in
+            max(0, -(geo.contentOffset.y + geo.contentInsets.top))
+        } action: { _, new in
+            guard isActive, !reduceMotion else { return }
+            let clamped = min(new, 140)
+            guard abs(chrome.pullTension - clamped) > 0.5 else { return }
+            chrome.pullTension = clamped
+        }
         .safeAreaInset(edge: .top, spacing: 0) { walletSwitcherBar }
         .dsSoftScrollEdges()
         // Arrival is `isActive`, not `onAppear` (2026-07-16, the pager): a
@@ -3259,6 +3272,14 @@ struct FeedScreen: View {
             .contentShape(Capsule(style: .continuous))
         }
         .buttonStyle(.plain)
+        // Chips ease at the strip's edges instead of clipping flat — the
+        // source strip's own grammar (SourceChips:370), one tier down
+        // (2026-08-04). Under Reduce Motion only the fade survives.
+        .scrollTransition(.interactive, axis: .horizontal) { content, phase in
+            content
+                .scaleEffect(reduceMotion || phase.isIdentity ? 1 : 0.94)
+                .opacity(phase.isIdentity ? 1 : 0.7)
+        }
     }
 
     private func walletChipIsOn(_ address: String?) -> Bool {
@@ -3855,19 +3876,28 @@ struct FeedScreen: View {
                                wideArt: Bool = false,
                                replies: [String: [Thing]] = [:]) -> some View {
         // AnyView: same metadata-depth insurance as GenRender (crash fix).
-        return AnyView(shapedRow(thing, nextEventID: nextEventID, index: index,
-                                 imageOnly: imageOnly, wideArt: wideArt,
-                                 replies: replies))
-            .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
-            .contentShape(Rectangle())
-            // Zoom source removed with the thing-open zoom (prd 232, 2026-07-30).
-            .onTapGesture { openThing(thing) }
-            // Mac/pointer polish (2026-07-31): every feed row is a Button
-            // elsewhere in the app's list screens (`dsListCardRow`'s own
-            // `.hoverEffect`, 27 call sites) but the feed itself renders bare
-            // rows over `onTapGesture`, so this is the one surface a Mac
-            // cursor crossed with nothing lighting up. One call, one place —
-            // every shape (`shapedRow`'s dozen anatomies) inherits it.
+        // A Button since 2026-08-04 (the microanimation pass), not an
+        // `onTapGesture`: the tap gesture gave no touch-down feedback, so a
+        // press read as nothing until the sheet arrived. `RowPress` is the
+        // dim-plus-settle a listRowBackground slab allows (its doc explains
+        // why not `PressSpring`'s dip). Same single choke point, same one
+        // gesture — tap opens the sheet, everything else stays long-press.
+        // Zoom source removed with the thing-open zoom (prd 232, 2026-07-30).
+        return Button {
+            openThing(thing)
+        } label: {
+            AnyView(shapedRow(thing, nextEventID: nextEventID, index: index,
+                              imageOnly: imageOnly, wideArt: wideArt,
+                              replies: replies))
+                .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+            // Mac/pointer polish (2026-07-31): the feed rendered bare rows
+            // over `onTapGesture` until 2026-08-04 (now the Button above),
+            // and this was the one surface a Mac cursor crossed with nothing
+            // lighting up. One call, one place — every shape (`shapedRow`'s
+            // dozen anatomies) inherits it.
             .dsHover()
             // …and the lift on top of the highlight (Mac delight, 2026-08-03,
             // user: "I like the rows lifting and shadow deepening"): the row

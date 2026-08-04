@@ -13,6 +13,12 @@ struct AvatarChip: View {
     /// Bumped by pull-to-refresh — the avatar does one full spin while the
     /// refresh runs: it's the person's own face doing the work.
     var refreshSpin: Int = 0
+    /// Live overscroll points while a pull is in progress
+    /// (`ShellChrome.pullTension`) — the door winds up with the finger
+    /// before the release spin, so the gesture has tension instead of a
+    /// silent threshold (2026-08-04). Zero at rest and under Reduce Motion
+    /// (the writer gates).
+    var pullTension: CGFloat = 0
     /// The zoom transition anchor — Settings grows out of the avatar. Shared
     /// with `SourceChips`'s own `zoomNS` (the catalogue door's "appsDoor"
     /// transition lives in the same namespace under a different id).
@@ -34,12 +40,12 @@ struct AvatarChip: View {
                 if let zoomNS {
                     AvatarDoor()
                         .modifier(DoorBounce(trigger: avatarBounce))
-                        .modifier(DoorSpin(trigger: refreshSpin))
+                        .modifier(DoorSpin(trigger: refreshSpin, tension: pullTension))
                         .matchedTransitionSource(id: "settingsDoor", in: zoomNS)
                 } else {
                     AvatarDoor()
                         .modifier(DoorBounce(trigger: avatarBounce))
-                        .modifier(DoorSpin(trigger: refreshSpin))
+                        .modifier(DoorSpin(trigger: refreshSpin, tension: pullTension))
                 }
             }
             .frame(width: 46, height: 46)
@@ -74,14 +80,22 @@ struct AvatarChip: View {
 }
 
 /// One full turn per refresh — additive, so back-to-back pulls keep
-/// spinning forward instead of unwinding.
+/// spinning forward instead of unwinding. The pull itself WINDS the door
+/// first (2026-08-04): `tension` is live overscroll, mapped to up to 60° of
+/// forward rotation, value-driven with no animation so it tracks the finger
+/// — then the release spin launches from wherever the wind-up left it, in
+/// the same direction. Tension arrives pre-zeroed under Reduce Motion.
 private struct DoorSpin: ViewModifier {
     let trigger: Int
+    var tension: CGFloat = 0
     @State private var angle: Double = 0
+
+    /// 140pt of pull (the writer's clamp) → a 60° wind.
+    private var windUp: Double { Double(min(tension, 140)) / 140 * 60 }
 
     func body(content: Content) -> some View {
         content
-            .rotationEffect(.degrees(angle))
+            .rotationEffect(.degrees(angle + windUp))
             .onChange(of: trigger) {
                 withAnimation(.spring(response: 0.8, dampingFraction: 0.8)) {
                     angle += 360

@@ -175,7 +175,8 @@ struct SourceChips: View {
     /// the catalogue door already had. `AvatarChip` (`TopDoors.swift`) owns
     /// the actual door/bounce/spin — this just wires this screen's params.
     @ViewBuilder private var avatarChip: some View {
-        AvatarChip(onSettings: onSettings, refreshSpin: refreshSpin, zoomNS: zoomNS)
+        AvatarChip(onSettings: onSettings, refreshSpin: refreshSpin,
+                   pullTension: chrome.pullTension, zoomNS: zoomNS)
     }
 
     /// The leading dissolve: transparent where the app icon sits, a soft ramp
