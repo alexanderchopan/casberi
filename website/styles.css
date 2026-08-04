@@ -1372,19 +1372,19 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 .today { padding-bottom: 26px; }
 .today .m-h2 { font-size: clamp(40px, 5.6vw, 68px); letter-spacing: -.05em;
   line-height: .98; font-weight: 800; }
+/* the problem reads muted, the answer reads lit — the section IS the
+   contrast, so the type carries it instead of a decorative bar */
+.why-no { color: rgba(255,255,255,.55); }
+.why-yes { margin-top: 54px; }
+.why-yes em { font-style: normal;
+  background: linear-gradient(100deg, #3b8cf0, #855dcd 55%, #d9376e);
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
 .today-lede { font-size: 18px; line-height: 1.6; color: var(--dim);
   max-width: 620px; margin: 20px 0 0; }
-.today-turn { font-size: 20px; line-height: 1.5; font-weight: 700; color: #fff;
-  max-width: 620px; margin: 22px 0 40px;
-  padding-left: 18px; border-left: 3px solid var(--blue-bright); }
-.plain3 { list-style: none; padding: 0; margin: 0 0 8px;
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px;
-  counter-reset: p3; }
-.plain3 li { counter-increment: p3; padding-top: 16px;
+.plain3 { list-style: none; padding: 0; margin: 44px 0 8px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }
+.plain3 li { padding-top: 18px;
   border-top: 2px solid rgba(255,255,255,.12); }
-.plain3 li::before { content: counter(p3); display: block;
-  font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px;
-  font-weight: 800; color: var(--blue-bright); margin-bottom: 10px; }
 .plain3 b { display: block; font-size: 19px; font-weight: 750;
   letter-spacing: -.01em; margin-bottom: 6px; }
 .plain3 span { display: block; font-size: 15px; line-height: 1.55; color: var(--dim); }
