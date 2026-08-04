@@ -14920,6 +14920,17 @@ name and is owed proof the watch works, so the newest three per kind land at
 once — stamped with their REAL `createdAt`, so a 2024 model sorts back to 2024
 and can never read as today. Same split `PrivacyPoolsBridge` makes.
 
+**What that cap is, precisely, measured on the first real run (2026-08-03):**
+it is a ONE-OPEN DELAY, not a ceiling. Watching two orgs landed 15 rows at
+once and ~35 more on the next pass, because every later pass reads the full
+newest-10 window per kind and lands whatever isn't already saved. A watermark
+(land only what was created after the seed) was offered and DECLINED (user:
+"seems fine as is") — correctly, because nothing about the extra rows is
+false: they are real releases wearing their real dates, so they sort back into
+history instead of flooding today, which is the only thing the news-only rule
+actually protects. Recorded here because the first draft of this section
+described the cap as a limit, which it never was.
+
 Two reads, both keyless (MEASURED 2026-08-03, curl, no key, no headers):
 watched authors (`api/{models,datasets,spaces}?author=…&sort=createdAt&
 direction=-1`, all three 200 and all three honouring the sort) and Daily Papers

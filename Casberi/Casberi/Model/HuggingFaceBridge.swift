@@ -280,9 +280,20 @@ enum HuggingFaceIngest {
         var added = 0
         var reachedAny = false
 
+        // Which authors this pass actually reached, so they can be marked
+        // seeded AFTER every kind is done. Marking inside the loop below
+        // marked the author on their FIRST kind, so kinds two and three read
+        // as already-seeded and landed a full page each — first sight was
+        // 3 models + 10 datasets + 10 Spaces, not the 3-per-kind this
+        // documents (caught by `-hfProbe` on the first real run, 2026-08-03:
+        // a second pass moments later reported exactly 7 more per author,
+        // which is the models the cap had held back).
+        var reachedAuthors: Set<String> = []
+
         for (author, repo, releases) in results {
             guard let releases else { continue }
             reachedAny = true
+            reachedAuthors.insert(author)
             // The backfill cap applies per kind on the author's FIRST pass
             // only; after that the page window is the only bound.
             let fresh = store.hasSeeded(author) ? Array(releases)
@@ -310,8 +321,8 @@ enum HuggingFaceIngest {
                 SpotlightIndex.index([thing])
                 added += 1
             }
-            store.markSeeded(author)
         }
+        for author in reachedAuthors { store.markSeeded(author) }
 
         if let papers {
             reachedAny = true
@@ -344,6 +355,31 @@ enum HuggingFaceIngest {
 
         if added > 0 { context.saveHonestly() }
         return reachedAny ? added : nil
+    }
+
+    /// `refresh`, except a caller that finds a pass already in flight WAITS
+    /// for it rather than taking the guard's 0 (2026-08-03). For the probe
+    /// only — production callers keep the plain guard, which is correct for
+    /// them: the foreground sweep genuinely wants "someone else has this,
+    /// skip", not a queue.
+    ///
+    /// It exists because `-hfWatch` and `-hfProbe` in ONE launch both call
+    /// `refresh`, so the probe took the 0 and dumped the corpus BEFORE the
+    /// landing it was meant to observe had inserted anything — on a fresh
+    /// install that prints `0 new` and zero rows, which reads exactly like a
+    /// broken bridge. That trap is documented for Farcaster ("fire probes ONE
+    /// per launch"); documenting it again is how it gets re-hit, so this
+    /// removes it instead.
+    @MainActor
+    static func refreshWaiting(context: ModelContext) async -> Int? {
+        // Bounded: a wait that can't end would hang the probe with no output
+        // at all, which is a worse failure than the one it's fixing.
+        var ticks = 0
+        while running, ticks < 300 {
+            try? await Task.sleep(for: .milliseconds(100))
+            ticks += 1
+        }
+        return await refresh(context: context)
     }
 
     // MARK: - Helpers

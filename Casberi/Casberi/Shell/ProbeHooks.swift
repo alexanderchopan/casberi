@@ -980,7 +980,12 @@ enum ProbeHooks {
         // nothing on any screen displays (enrichedText is retrieval-only).
         Hook(key: "hfProbe") { _, context in
             Task { @MainActor in
-                let n = await HuggingFaceIngest.refresh(context: context)
+                // `refreshWaiting`, not `refresh` — a `-hfWatch` in the SAME
+                // launch is still in flight here, and the plain guard would
+                // hand this 0 and let it dump an empty corpus (see the
+                // function's own note). So one launch can carry the whole
+                // test, rather than the trap being documented around.
+                let n = await HuggingFaceIngest.refreshWaiting(context: context)
                 NSLog("hfProbe: %@ new | watching %d | papers=%@",
                       n.map(String.init) ?? "FAILED",
                       HuggingFaceStore.shared.authors.count,
