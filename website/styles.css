@@ -903,6 +903,13 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
     box-shadow: inset 0 0 0 1px rgba(255,255,255,.05), 0 18px 42px rgba(0,0,0,.55);
     border-radius: 34px; }
   .vid-live::before { display: none; }
+  /* wide clip — the visualizations reel: a 16:9 screen, not a phone */
+  .vid-wide { position: relative; width: 100%; max-width: 980px; aspect-ratio: 16/9;
+    border-radius: 18px; overflow: hidden; background: #060d18;
+    border: 8px solid #0b0c10; outline: 1px solid rgba(255,255,255,.22);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.05), 0 18px 42px rgba(0,0,0,.45); }
+  .vid-wide video { position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; display: block; }
   /* side buttons — volume on the left, power on the right */
   .vid-full::after { content: ""; position: absolute; left: -11px; top: 84px;
     width: 3px; height: 26px; border-radius: 2px; background: #2c2f37;
