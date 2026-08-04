@@ -1314,3 +1314,48 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
   .fstep, .fphone, .cycshell { transition: none; }
   .fstep:hover { transform: none; }
 }
+
+
+/* ---------- Surprise & delight (2026-08-04) ---------------------------
+   Every one of these echoes a delight the APP already ships — berry rain
+   on a good refresh, the chip coin-flip on source switch, the hue pour —
+   so the site behaves like the product instead of like a website. All of
+   it sits still under Reduce Motion. */
+
+/* the pour: a hairline at the very top that takes the tint of the slab
+   in view (the app pours your hue over the top of every screen) */
+.pourline { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 60;
+  background: transparent; transition: background-color .6s ease; pointer-events: none; }
+
+/* catalog tiles: the chip coin-flip, with the app's tagline as the payoff */
+.mini-cell { position: relative; }
+.mini-cell .ai { backface-visibility: visible; }
+@media (hover: hover) and (pointer: fine) {
+  .mini-cell:hover .ai, .mini-cell .ai.flip { animation: coinflip .55s ease; }
+}
+@keyframes coinflip { from { transform: rotateY(0) } to { transform: rotateY(360deg) } }
+.mini-cell[data-tag]::after {
+  content: attr(data-tag);
+  position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%) translateY(4px);
+  width: max-content; max-width: 190px; padding: 8px 12px; border-radius: 10px;
+  background: #191d26; color: #e8eaf0; font-size: 12px; line-height: 1.4; font-weight: 500;
+  text-align: center; opacity: 0; pointer-events: none; z-index: 40;
+  box-shadow: 0 8px 24px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.07);
+  transition: opacity .18s ease, transform .18s ease; }
+@media (hover: hover) and (pointer: fine) {
+  .mini-cell:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* berries: dealt on the conversion tap, cleaned up by their own animationend */
+.berry { position: fixed; width: 12px; height: 12px; border-radius: 50%; z-index: 90;
+  pointer-events: none; animation: berryfall 1.15s cubic-bezier(.25,.46,.45,.94) forwards; }
+@keyframes berryfall {
+  0%   { transform: translate(0, 0) scale(.4); opacity: 0; }
+  12%  { opacity: 1; transform: translate(var(--bx0), -34px) scale(1); }
+  100% { transform: translate(var(--bx), 46vh) scale(.9); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mini-cell:hover .ai, .mini-cell .ai.flip { animation: none; }
+  .berry { display: none; }
+  .pourline { transition: none; }
+}

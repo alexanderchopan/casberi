@@ -390,3 +390,89 @@
     t.addEventListener('animationend', function () { t.classList.remove('jiggle'); });
   });
 })();
+
+
+// ---------- Surprise & delight (2026-08-04) ----------------------------
+// Each of these mirrors a delight the app itself ships; none run under
+// Reduce Motion, and none move content anyone is reading.
+(function delight() {
+  var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // 1. Berry rain on the conversion tap — the app's good-refresh moment,
+  //    played at the exact instant someone gets the app. The CTA opens in
+  //    a new tab, so the shower is actually seen.
+  var cta = document.getElementById('get-cta');
+  if (cta && !still) {
+    var BERRY = ['#2E63FF', '#855dcd', '#4C7DFF', '#3b8cf0', '#d9376e'];
+    cta.addEventListener('click', function (e) {
+      var r = cta.getBoundingClientRect();
+      for (var i = 0; i < 12; i++) {
+        var b = document.createElement('span');
+        b.className = 'berry';
+        b.style.background = BERRY[i % BERRY.length];
+        b.style.left = (r.left + r.width * Math.random()) + 'px';
+        b.style.top = (r.top + r.height / 2) + 'px';
+        var drift = (Math.random() - 0.5) * 220;
+        b.style.setProperty('--bx0', (drift * 0.25) + 'px');
+        b.style.setProperty('--bx', drift + 'px');
+        b.style.animationDelay = (Math.random() * 0.12) + 's';
+        b.style.width = b.style.height = (9 + Math.random() * 7) + 'px';
+        b.addEventListener('animationend', function () { this.remove(); });
+        document.body.appendChild(b);
+      }
+    });
+  }
+
+  // 2. The hue pour follows the scroll: the top hairline takes the tint of
+  //    the slab in view, and lets go outside the walkthrough.
+  var pour = document.getElementById('pourline');
+  var steps = document.querySelectorAll('.fstep');
+  if (pour && steps.length && 'IntersectionObserver' in window) {
+    var TINT = ['#2E63FF', '#855dcd', '#8a93a6', '#3fb950', '#64748b'];
+    var stepIx = new Map();
+    steps.forEach(function (el, i) { stepIx.set(el, i); });
+    var pio = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) pour.style.backgroundColor = TINT[stepIx.get(en.target) % TINT.length];
+        else if (stepIx.get(en.target) === steps.length - 1 && en.boundingClientRect.top < 0)
+          pour.style.backgroundColor = 'transparent';
+        else if (stepIx.get(en.target) === 0 && en.boundingClientRect.top > 0)
+          pour.style.backgroundColor = 'transparent';
+      });
+    }, { rootMargin: '-40% 0px -40% 0px' });
+    steps.forEach(function (el) { pio.observe(el); });
+  }
+
+  // 3. The tab-title whisper — the product's promise, in a background tab.
+  var realTitle = document.title;
+  document.addEventListener('visibilitychange', function () {
+    document.title = document.hidden ? 'Your things are landing…' : realTitle;
+  });
+
+  // 4. The idle wink: after 20 quiet seconds with the catalog on screen,
+  //    one random tile does a single coin-flip. Once per idle spell.
+  if (!still) {
+    var idleTimer = null, winked = false;
+    var rearm = function () {
+      winked = false;
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(function () {
+        if (winked) return;
+        var cat = document.getElementById('catalog');
+        if (!cat) return;
+        var rc = cat.getBoundingClientRect();
+        if (rc.top > window.innerHeight || rc.bottom < 0) return;
+        var tiles = cat.querySelectorAll('.mini-cell .ai');
+        if (!tiles.length) return;
+        var t = tiles[Math.floor(Math.random() * tiles.length)];
+        t.classList.add('flip');
+        t.addEventListener('animationend', function () { t.classList.remove('flip'); }, { once: true });
+        winked = true;
+      }, 20000);
+    };
+    ['scroll', 'mousemove', 'keydown', 'touchstart'].forEach(function (ev) {
+      window.addEventListener(ev, rearm, { passive: true });
+    });
+    rearm();
+  }
+})();
