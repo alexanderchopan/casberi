@@ -999,12 +999,15 @@ struct ThingSheetView: View {
         }
     }
 
-    /// A wallet transfer's dial verbs: Open (the explorer link, when the
-    /// record carries one) and Copy. Name and Share ride the dial's own slots.
+    /// A wallet transfer's dial verbs: Explorer (the block-explorer link, when
+    /// the record carries one) and Copy. Name and Share ride the dial's own
+    /// slots. "Explorer", not "Open" (2026-08-04): the disc's glyph already
+    /// says it opens something — the word's job is to say WHERE you land,
+    /// the same reasoning `dialLabel` applies to every other hand-off.
     private var walletVerbs: [Verb] {
         var out: [Verb] = []
         if let url = Capture.detectURL(in: thing.content) {
-            out.append(Verb(label: "Open", icon: "arrow.up.right", action: .openURL(url)))
+            out.append(Verb(label: "Explorer", icon: "arrow.up.right", action: .openURL(url)))
         }
         out.append(Verb(label: "Copy link", icon: "doc.on.doc", action: .copyText))
         return out

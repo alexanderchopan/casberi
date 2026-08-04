@@ -1,14 +1,16 @@
 import SwiftUI
 
-/// The stage (thing sheet B1, 2026-07-16): a wallet transfer's hero. The sheet
-/// DEPICTS the transfer instead of describing it — the parties stand on the
-/// solid wash (identity tolerates the hue; type doesn't), and the signed
-/// amount lands at the seam where the hue has faded to near-ink, so the big
-/// number never fights loud color and no film ever covers the wash ("bold,
-/// not a film" survives). Direction reads before the words do: money flows
-/// left-to-right toward whoever received it, a gain's sign wears confirm
-/// green, a send stays white (spending isn't a loss state — red would
-/// editorialize).
+/// The stage (thing sheet B1, 2026-07-16; ledger relayout 2026-08-04): a
+/// wallet transfer's hero. The party/arrow tableau retired for the LEDGER
+/// layout the user picked from mockups — left-aligned and typographic, like a
+/// bank statement done well: the verb line says what happened in a sentence
+/// ("Received from maria.eth"), the signed amount is the headline underneath,
+/// the fiat-at-landing line prices it when Zerion did (`transferUSD`), the
+/// counterparty is one tappable row that discloses your shared history
+/// in place, and the facts sit in one spec slab (Into/From · Network ·
+/// Landed). A gain wears confirm green — the whole amount now, per the
+/// approved mockup, not just its sign — while a send stays white (spending
+/// isn't a loss state; red would editorialize).
 ///
 struct TransferStage {
     enum Direction { case sent, received }
@@ -84,14 +86,28 @@ struct TransferStage {
     }
 }
 
-/// The stage rendered: parties → amount → chain. The faces are pure
-/// identity — naming the counterparty lives on the dial's Name disc (always)
-/// and the "Name this address?" nudge card (while it's showing), so the face
-/// no longer carries its own pencil (2026-07-23, user: three doors to one
-/// action; the pencil was the barely-visible, redundant third).
+/// The stage rendered as a LEDGER (2026-08-04, user-picked mockup): verb line
+/// → amount → fiat → counterparty row → spec slab. Naming still lives on the
+/// dial's Name disc and the "Name this address?" nudge card (2026-07-23, user:
+/// three doors to one action) — the counterparty row here is the door to your
+/// SHARED HISTORY only, disclosed in place rather than presented (the sheet
+/// already carries three sibling `.sheet`s and deliberately refuses a fourth).
 struct TransferStageView: View {
     let thing: Thing
     let stage: TransferStage
+    @Environment(\.modelContext) private var modelContext
+
+    /// The other Wallet transfers with this counterparty (this one excluded —
+    /// you're looking at it), newest first. Read through `AddressActivity`,
+    /// the ONE definition of address activity, then narrowed to Wallet rows
+    /// because the row's claim is "transfers with you" — a Peer fill this
+    /// address made is activity, but it isn't *with* you. Held as `KeyedThing`
+    /// so the disclosure's `ForEach` and row bodies follow the liveness rules.
+    @State private var sharedHistory: [KeyedThing] = []
+    /// Total Wallet transfers with this counterparty, this one included —
+    /// "3 transfers with you" counts the one on screen.
+    @State private var transferCount = 0
+    @State private var historyShown = false
 
     /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
     /// re-evaluates a LEAF view's body on the model's own observation,
@@ -104,34 +120,33 @@ struct TransferStageView: View {
     }
 
     @ViewBuilder private var liveBody: some View {
-        VStack(spacing: 0) {
-            if hasCounterparty {
-                HStack(alignment: .top, spacing: DS.Space.s4) {
-                    if stage.direction == .sent {
-                        party(face: youFace, label: youLabel)
-                        arrow
-                        counterpartyParty
-                    } else {
-                        counterpartyParty
-                        arrow
-                        party(face: youFace, label: youLabel)
-                    }
-                }
-            }
+        VStack(alignment: .leading, spacing: 0) {
+            verbLine
             amountLine
-                .padding(.top, hasCounterparty ? DS.Space.s8 : DS.Space.s3)
-            // Where it happened — the chain (off the explorer link, never
-            // guessed), and the venue when the title carried one.
-            let place = [WalletIngest.chainName(forContent: thing.content),
-                         stage.venue].compactMap(\.self)
-            if !place.isEmpty {
-                Text(verbatim: place.joined(separator: " · "))
+                .padding(.top, DS.Space.s1)
+            if let usd = thing.transferUSD {
+                // Priced AT LANDING (`transferUSD`, read off Zerion's own
+                // leg pricing) — never today's rate, which would restate
+                // history every time the market moved. nil (the Alchemy
+                // fallback arm, unpriced tokens, pre-field transfers) shows
+                // nothing rather than a guess.
+                Text("≈ \(Self.fiat(usd)) when it landed")
                     .dsText(.callout15)
                     .foregroundStyle(DS.textSecondary)
                     .padding(.top, DS.Space.s1)
             }
+            if hasCounterparty {
+                counterpartyCard
+                    .padding(.top, DS.Space.s4)
+            }
+            specSlab
+                .padding(.top, hasCounterparty ? DS.Space.s3 : DS.Space.s4)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .task {
+            guard thing.isLive else { return }
+            loadHistory()
+        }
     }
 
     /// A counterparty exists when there's anything true to draw — a captured
@@ -140,58 +155,221 @@ struct TransferStageView: View {
         !(thing.counterpartyAddress ?? "").isEmpty || stage.titledName != nil
     }
 
-    /// The signed amount at the seam. Only a gain's sign carries color —
-    /// confirm green for received; sent stays white (color = state, never
-    /// decoration, and spending isn't a loss).
-    private var amountLine: some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-            Text(verbatim: stage.direction == .sent ? "−" : "+")
-                .foregroundStyle(stage.direction == .received ? DS.confirm : DS.textPrimary)
-            Text(verbatim: stage.amount)
-                .foregroundStyle(DS.textPrimary)
-                // Clamp to one line (2026-07-23): a spoofed token's "name" is
-                // attacker-controlled text ("4,672 USDT Staked • gitos.org" —
-                // a phishing domain), and rendering it at 34pt across two
-                // wrapped lines amplified exactly the lie the warning below is
-                // calling out. The real amount reads at the front; the full
-                // (untrusted) spelling still lives in Copy and the warning
-                // line, so nothing is hidden — it just never gets the hero
-                // seat. minimumScaleFactor keeps a long-but-honest amount
-                // ("1,240.5000 USDC") legible before it truncates.
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-                .truncationMode(.tail)
+    // MARK: - Verb line + amount
+
+    /// What happened, as a sentence — "Received from maria.eth" / "Sent to
+    /// maria.eth", the name a step heavier than the verb. No counterparty →
+    /// the bare verb.
+    private var verbLine: some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s1 + 1) {
+            if hasCounterparty {
+                Text(stage.direction == .sent ? "Sent to" : "Received from")
+                    .foregroundStyle(DS.textSecondary)
+                Text(verbatim: counterpartyLabel)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            } else {
+                Text(stage.direction == .sent ? "Sent" : "Received")
+                    .foregroundStyle(DS.textSecondary)
+            }
         }
-        .dsText(.heading34)
-        .monospacedDigit()
+        .dsText(.callout15)
     }
 
-    private var arrow: some View {
-        Image(systemName: "arrow.right")
-            .accessibilityHidden(true)
-            .font(.system(size: 20, weight: .semibold))
-            .foregroundStyle(.white.opacity(0.8))
-            // Optically centered on the faces, not the whole party column.
-            .frame(height: 50)
+    /// The signed amount as the headline, on the sheet's hero-money rung. A
+    /// gain wears confirm green — the whole figure now, not just its sign
+    /// (2026-08-04, the approved mockup; green on a gain is still color as
+    /// STATE) — while a send stays white (spending isn't a loss state; red
+    /// would editorialize).
+    private var amountLine: some View {
+        Text(verbatim: (stage.direction == .sent ? "−" : "+") + stage.amount)
+            .foregroundStyle(stage.direction == .received ? DS.confirm : DS.textPrimary)
+            // Clamp to one line (2026-07-23): a spoofed token's "name" is
+            // attacker-controlled text ("4,672 USDT Staked • gitos.org" —
+            // a phishing domain), and rendering it huge across two wrapped
+            // lines amplified exactly the lie the warning below is calling
+            // out. The real amount reads at the front; the full (untrusted)
+            // spelling still lives in Copy and the warning line, so nothing
+            // is hidden — it just never gets the hero seat.
+            // minimumScaleFactor keeps a long-but-honest amount
+            // ("1,240.5000 USDC") legible before it truncates.
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+            .truncationMode(.tail)
+            .dsText(.price40)
+            .monospacedDigit()
     }
 
-    private func party(face: some View, label: String) -> some View {
-        VStack(spacing: DS.Space.s2) {
-            face
+    /// "$3,480" / "$12.99" — cents only where they carry information.
+    private static func fiat(_ usd: Double) -> String {
+        usd.formatted(.currency(code: "USD")
+            .precision(.fractionLength(usd < 100 ? 2 : 0)))
+    }
+
+    // MARK: - Counterparty row (the door to your shared history)
+
+    /// One card: the counterparty's face and name, and — when the corpus
+    /// holds more transfers with them — a disclosure that unfolds that
+    /// history in place. Naming is NOT here (the dial's Name disc is the one
+    /// door); with no further history the row is plain identity, no chevron,
+    /// per the no-dead-controls law.
+    private var counterpartyCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if sharedHistory.isEmpty {
+                counterpartyRowContent
+            } else {
+                Button {
+                    withAnimation(DS.Motion.standard) { historyShown.toggle() }
+                } label: {
+                    counterpartyRowContent
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .dsHover()
+                .accessibilityLabel(Text("\(counterpartyLabel), \(transferCount) transfers with you"))
+                .accessibilityHint(Text("Shows your history together"))
+            }
+            if historyShown {
+                historyRows
+                    .padding(.top, DS.Space.s3)
+            }
+        }
+        .padding(DS.Space.s3)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DS.fillFaint,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+    }
+
+    private var counterpartyRowContent: some View {
+        HStack(spacing: DS.Space.s3) {
+            counterpartyFace
+            VStack(alignment: .leading, spacing: 1) {
+                Text(verbatim: counterpartyLabel)
+                    .dsText(.heading17)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                if let subline = counterpartySubline {
+                    Text(verbatim: subline)
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: 0)
+            if !sharedHistory.isEmpty {
+                Image(systemName: "chevron.down")
+                    .accessibilityHidden(true)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(DS.textTertiary)
+                    .rotationEffect(.degrees(historyShown ? 180 : 0))
+            }
+        }
+    }
+
+    /// The short hex (when captured) and how much history you share — the
+    /// count only once there's a second transfer, since "1 transfer with you"
+    /// is the row you're already reading.
+    private var counterpartySubline: String? {
+        var parts: [String] = []
+        if let cp = thing.counterpartyAddress, !cp.isEmpty {
+            parts.append(WalletStore.shortAddress(cp))
+        }
+        if transferCount >= 2 {
+            parts.append(String(localized: "\(transferCount) transfers with you"))
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    /// The unfolded history — up to six prior transfers, each its signed
+    /// amount (or the title, for pre-field rows) and its day. Content, not
+    /// controls: the walk into any one of them stays a feed job, and rows
+    /// here are a read.
+    private var historyRows: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            ForEach(sharedHistory.prefix(6)) { row in
+                if let past = row.live {
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        Text(verbatim: Self.historyLine(past))
+                            .dsText(.callout15)
+                            .foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                        Text(verbatim: past.capturedAt.formatted(
+                            .dateTime.month(.abbreviated).day()))
+                            .dsText(.label12)
+                            .foregroundStyle(DS.textTertiary)
+                    }
+                }
+            }
+            if sharedHistory.count > 6 {
+                Text("and \(sharedHistory.count - 6) more")
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+            }
+        }
+    }
+
+    private static func historyLine(_ past: Thing) -> String {
+        if let amount = past.transferAmount, !amount.isEmpty {
+            return (past.transferDirection == "sent" ? "−" : "+") + amount
+        }
+        return past.title
+    }
+
+    /// The corpus's record of this counterparty, read once per open through
+    /// `AddressActivity` (the one definition of activity) and narrowed to
+    /// Wallet transfers — the only rows the "with you" claim is true of.
+    /// Keyed on the hex; a name-only counterparty (pre-field, or a native
+    /// send) has no address to match, so its row stays plain identity.
+    private func loadHistory() {
+        guard let cp = thing.counterpartyAddress, !cp.isEmpty else { return }
+        let myID = thing.id
+        let transfers = AddressActivity.history(for: cp, in: modelContext)
+            .filter { $0.source == "Wallet" }
+        transferCount = transfers.count
+        sharedHistory = transfers.filter { $0.id != myID }.keyed
+    }
+
+    // MARK: - Spec slab (the facts, in the sheet's own spec grammar)
+
+    /// Into/From · Network · Venue · Landed — the same quiet card the spec
+    /// table below the stage draws, so the sheet keeps one fact language.
+    /// "Network", not "Chain" (user, 2026-08-04).
+    private var specSlab: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            specRow(stage.direction == .sent ? String(localized: "From")
+                                             : String(localized: "Into"),
+                    youLabel)
+            if let network = WalletIngest.chainName(forContent: thing.content) {
+                specRow(String(localized: "Network"), network)
+            }
+            if let venue = stage.venue {
+                specRow(String(localized: "Venue"), venue)
+            }
+            specRow(String(localized: "Landed"),
+                    thing.capturedAt.formatted(
+                        .dateTime.month(.abbreviated).day().hour().minute()))
+        }
+        .padding(DS.Space.s4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DS.fillFaint,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+    }
+
+    private func specRow(_ label: String, _ value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 0) {
             Text(verbatim: label)
                 .dsText(.label12)
-                .foregroundStyle(.white.opacity(0.95))
-                .lineLimit(1)
+                .foregroundStyle(DS.textTertiary)
+                .frame(width: 80, alignment: .leading)
+            Text(verbatim: value)
+                .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                .lineLimit(2)
+            Spacer(minLength: 0)
         }
-        .frame(maxWidth: 120)
-    }
-
-    /// The counterparty column — pure identity now (2026-07-23). Naming moved
-    /// entirely to the dial's Name disc + the nudge card; the face is just a
-    /// face, so it matches the wallet's own column and no longer offers a
-    /// third, redundant door to the same flow.
-    private var counterpartyParty: some View {
-        party(face: counterpartyFace, label: counterpartyLabel)
     }
 
     /// Your name for the address wins, then the title's clause, then short hex.
@@ -201,30 +379,6 @@ struct TransferStageView: View {
                 ?? WalletStore.shortAddress(cp)
         }
         return stage.titledName ?? ""
-    }
-
-    // MARK: - Faces (identity on the solid crown — ringed to hold their edge)
-
-    /// The watched wallet's face — the address's OWN identity, never the
-    /// person's profile photo (2026-08-02, user: "transfers to vitalik …
-    /// showing my own avatar instead of his"). This is the face half of the
-    /// ruling `youLabel` below already carries: a watched wallet is read-only
-    /// and nothing here distinguishes the person's own wallet from a public
-    /// address they're just tracking, so painting their profile photo over it
-    /// claims a wallet is theirs when the app can't know that — and got it
-    /// flatly wrong on every transfer landed by a watched wallet that isn't
-    /// (vitalik.eth wearing the person's picture). `WalletFace` answers the
-    /// same way it does everywhere else: the resolved ENS avatar when the
-    /// address published one, else its deterministic identicon.
-    ///
-    /// Round, not squircle (2026-07-23, user: "the avatar is supposed to be a
-    /// circle" / "contacts and people are circles") — the same "a who wears a
-    /// round face" rule `AddressBook.Kind.glyph` already draws on (a wallet is
-    /// a who; a contract or Safe is a what and keeps the square mark). A
-    /// watched wallet is definitionally always a who.
-    private var youFace: some View {
-        WalletFace(address: thing.walletAddress ?? "you", size: 50, circular: true)
-            .overlay(faceRing)
     }
 
     /// The counterparty's face — WalletFace's identicon seeded from whatever
@@ -237,13 +391,18 @@ struct TransferStageView: View {
     private var counterpartyFace: some View {
         let address = thing.counterpartyAddress ?? stage.titledName ?? "?"
         let kind = AddressBook.shared.entry(for: address)?.kind ?? .unknown
-        return WalletFace(address: address, size: 50,
-                          circular: kind != .contract && kind != .safe)
-            .overlay(faceRing)
-    }
-
-    private var faceRing: some View {
-        Circle().strokeBorder(.white.opacity(0.25), lineWidth: 3)
+        let circular = kind != .contract && kind != .safe
+        return WalletFace(address: address, size: 40, circular: circular)
+            .overlay {
+                // The ring matches the face's own shape — a round ring on a
+                // contract's squircle would draw a second, disagreeing edge.
+                if circular {
+                    Circle().strokeBorder(.white.opacity(0.25), lineWidth: 2)
+                } else {
+                    RoundedRectangle(cornerRadius: DS.Radius.appIcon(40), style: .continuous)
+                        .strokeBorder(.white.opacity(0.25), lineWidth: 2)
+                }
+            }
     }
 
     /// Never "You" (2026-07-23, user: "we don't know it is 'you', we only
@@ -254,7 +413,8 @@ struct TransferStageView: View {
     /// person actually named it, then the watched spelling itself (an ENS
     /// name reads fine as a label; a raw hex shortens the same way the
     /// counterparty side already does) — an honest identity, never an
-    /// assumed one.
+    /// assumed one. Feeds the slab's Into/From row now that the tableau's
+    /// party column is gone.
     ///
     /// Matches through `scopeMatches` (2026-07-23), the SAME hex↔name
     /// equality the scoped feed uses — a thing stamps the RESOLVED hex, but

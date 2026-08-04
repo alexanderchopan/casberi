@@ -16263,3 +16263,57 @@ host, and the two can disagree in ways neither alone can show.
 
 Builds clean; catalog-sync, the network-reach audit and the SwiftData liveness
 audit pass. NOT sim-verified, per the standing instruction.
+
+## §301 — Treemaps and the brief stay blue (user: "stick with blue. it adds color", 2026-08-04)
+
+The day Ink became the default crown pour (§204 amendment), the natural next
+question was asked: should the magnitude fills — the treemaps (`UnitTreemap`'s
+two callers, `GenTagMap`, the holdings map) and the brief's data graphics
+(sparkline, delta pill, proportion bars) — go ink too? All of them paint
+`DS.tint(magnitude:)`, so the hue carries no information; opacity does the
+work. An HTML side-by-side was built (`prototype/treemap-ink-mock.html`, both
+modes, shipped 6–28% blue ramp vs a proposed 10–40% ink ramp) and the case for
+ink was real: the receipts map's orange "not on the list" cell pops harder
+against gray, and blue would be left meaning only "pressable".
+
+**Ruled: stay on blue.** Two reasons. The user's: it adds color — the one
+tint across every chart reads as a deliberate brand choice where grayscale
+drifts toward "unstyled", and it's more professional as shipped. The
+structural one the mockup surfaced: ink's ramp must start higher so the
+smallest cell separates from the card, which makes the LARGEST cell in light
+mode a ~40% black slab whose label needs flipping to white — the same "black
+at low opacity on light is a grey stain" problem that made Ink pour nothing
+in §204, wearing a fill instead of a gradient.
+
+Standing: magnitude fills stay on `DS.tint(magnitude:)` / `DS.wash(_:magnitude:)`;
+Ink was considered and declined. Don't re-litigate without a new mockup — and
+never split the answer by mode (ink in dark, blue in light), which would make
+the two themes disagree about what color means.
+
+## §302 — The transfer stage is a ledger, not a tableau (user-picked mockup, 2026-08-04)
+
+The transaction detail ("i hate how it looks right now") was re-mocked three
+ways in HTML — a typographic ledger, a bigger flow tableau, a floating
+receipt object — and the user chose the ledger wearing the app's own verb
+dial ("a with b buttons"). `TransferStageView` now renders: verb line
+("Received from maria.eth"), the signed amount left-aligned on `price40`,
+the fiat-at-landing line off `transferUSD` (nil → hidden, never today's
+rate), the counterparty as one tappable row, and an Into/From · Network ·
+Landed spec slab. The party/arrow faces tableau is gone for Sent/Received;
+Moved and Swapped keep their own stages (two legs, no single direction — the
+ledger grammar doesn't fit them yet).
+
+Four rulings inside it: **"Explorer", not "Open"** under the dial's first
+disc — the glyph already says it opens, the word says where you land (and it
+dodges the Network Receipts naming collision; "Open receipt" was considered
+and dropped for exactly that). **"Network", not "Chain"** in the spec slab
+(user, verbatim). **A gain wears green whole** — the full amount now, not
+just its sign, per the approved mockup; a send stays white (spending isn't a
+loss state). And **the counterparty row is the shared-history door only** —
+it discloses the corpus's other transfers with that address IN PLACE
+(`AddressActivity.history` narrowed to Wallet rows, since a Peer fill that
+address made isn't "with you"), never a fourth sibling `.sheet`; naming
+stays on the dial's Name disc per the 2026-07-23 one-door ruling, and with
+no shared history the row is plain identity with no chevron (no dead
+controls). "N transfers with you" counts the one on screen and only shows
+from 2 up.
