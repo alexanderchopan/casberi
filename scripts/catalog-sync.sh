@@ -49,7 +49,8 @@ grep -oE 'Offer\(name: "[^"]+"' "$CATALOG" \
 awk '/id="catalog"/{f=1} f' "$INDEX" \
   | grep 'mini-cell' \
   | grep -oE '<span>[^<]+</span>' \
-  | sed -E 's|<span>([^<]+)</span>|\1|' | sort -u > "$tmp/web_shelf"
+  | sed -E 's|<span>([^<]+)</span>|\1|' | sort > "$tmp/web_shelf_raw"
+sort -u "$tmp/web_shelf_raw" > "$tmp/web_shelf"
 
 # --- 3. Website hero marquee tiles (inside the .rain div) -----------------
 awk '/class="rain">/{f=1} /rain-target/{f=0} f' "$INDEX" \
@@ -71,8 +72,18 @@ info() { printf '  · %s\n' "$*"; }
 
 # === Check 1: website shelf == connectable (strict) ======================
 say "Website catalog shelf ↔ connectable offers"
+# A DUPLICATE tile is invisible to the set comparison below (`sort -u`
+# collapses it), which is exactly how Railgun shipped twice in the Wallet
+# shelf and was found by eye instead. Counted before the sets are compared.
+dupes="$(uniq -d "$tmp/web_shelf_raw")"
+
 missing="$(comm -23 "$tmp/connectable" "$tmp/web_shelf")"
 extra="$(comm -13 "$tmp/connectable" "$tmp/web_shelf")"
+if [ -n "$dupes" ]; then
+  while IFS= read -r n; do
+    [ -n "$n" ] && echo "  ✗ listed more than once on the website shelf: $n" && fail=1
+  done <<< "$dupes"
+fi
 if [ -n "$missing" ]; then
   while IFS= read -r a; do bad "connectable but MISSING from website shelf: $a"; done <<< "$missing"
 fi
