@@ -1185,17 +1185,21 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
    scroll reveal (threshold 0.18 can't fire on a section this tall). */
 .m-section.flow, .m-section.flow.in { opacity: 1; transform: none; }
 .flow { padding-top: 10px; }
-.flow-deck { font-size: 16px; color: var(--dim); margin: -6px 0 30px; }
+.flow .m-h2 { font-size: clamp(44px, 6vw, 76px); letter-spacing: -.05em;
+  line-height: .96; font-weight: 800; }
+.flow-deck { font-size: 13px; letter-spacing: .08em; text-transform: uppercase;
+  font-weight: 700; color: var(--faint); margin: 14px 0 34px; }
 
 .fstep { position: relative; overflow: hidden; border-radius: 30px;
   padding: 44px 52px; margin-bottom: 22px;
+  transition: transform .22s ease, box-shadow .22s ease;
   display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 48px; align-items: center;
-  background: linear-gradient(135deg, #101a3a, #0b1020 62%);
+  background: linear-gradient(135deg, #101d44, #0b1020 62%);   /* connect: brand blue */
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.05); }
-.fstep:nth-of-type(2) { background: linear-gradient(135deg, #241436, #120b1d 62%); }
-.fstep:nth-of-type(3) { background: linear-gradient(135deg, #0d2416, #09120c 62%); }
-.fstep:nth-of-type(4) { background: linear-gradient(135deg, #2a1608, #150b06 62%); }
-.fstep:nth-of-type(5) { background: linear-gradient(135deg, #101622, #0a0d14 62%); }
+.fstep:nth-of-type(2) { background: linear-gradient(135deg, #251538, #120b1d 62%); }  /* rooms: violet */
+.fstep:nth-of-type(3) { background: linear-gradient(135deg, #14161c, #0b0c10 62%); }  /* shapes: ink */
+.fstep:nth-of-type(4) { background: linear-gradient(135deg, #0d2818, #08130c 62%); }  /* wallets: green = money */
+.fstep:nth-of-type(5) { background: linear-gradient(135deg, #0e1118, #090b10 62%); }  /* private: the quietest */
 .fstep:nth-of-type(even) .fhead { order: 2; }
 .fstep:nth-of-type(even) .cyc { order: 1; }
 
@@ -1294,4 +1298,19 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
   15.07% { opacity: 1 }
   16.67% { opacity: 0 }
   100% { opacity: 0 }
+}
+
+
+/* The slab answers the cursor — the site echoing the Mac build's own pass.
+   Desktop pointers only; the tilt straightening is the tell that the tilt
+   was deliberate. Reduce Motion keeps everything still. */
+@media (hover: hover) and (pointer: fine) {
+  .fstep:hover { transform: translateY(-3px);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.09), 0 22px 54px rgba(0,0,0,.4); }
+  .fphone, .cycshell { transition: transform .25s ease; }
+  .fstep:hover .fphone, .fstep:hover .cycshell { transform: rotate(0deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fstep, .fphone, .cycshell { transition: none; }
+  .fstep:hover { transform: none; }
 }
