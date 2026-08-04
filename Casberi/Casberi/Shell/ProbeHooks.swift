@@ -3037,6 +3037,161 @@ enum ProbeHooks {
             context.saveHonestly()
             NSLog("Insight demo: seeded %d things (Reddit leaderboard + OpenSea mosaic)", landed)
         },
+        // `-seedVizDemo YES` — plants everything the ROOM HEADS need so each
+        // visualization can be photographed from an account that isn't
+        // connected to Cloudflare, Stripe or PostHog and holds no DeFi
+        // position (2026-08-04, the website's visualization gallery).
+        //
+        // It is a marketing tool and says so: the wallet half rides
+        // `WalletDemoState` behind the same `viz.demo` flag, which is DEBUG
+        // -only and compiled out of any shipping build, and every thing it
+        // lands carries a `vizdemo:` ref so `-seedVizDemo clear` can take
+        // exactly its own rows back out without touching a real corpus.
+        //
+        // The alternative was mocking these charts in HTML for the website,
+        // which is the thing that keeps getting rejected: a recreation drifts
+        // from the design system the moment either changes, and it can claim
+        // a shape the app never draws. Seeding the real app and photographing
+        // it can't.
+        Hook(key: "seedVizDemo") { spec, context in
+            let clearing = spec.lowercased() == "clear"
+            let all = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
+            if clearing {
+                var gone = 0
+                for t in all where (t.sourceRef ?? "").hasPrefix("vizdemo:")
+                    || (t.sourceRef ?? "").hasPrefix("cloudflare:") {
+                    context.delete(t); gone += 1
+                }
+                CloudflareEstateStore.clear()
+                StripeState.set(StripeState.Balance())
+                UserDefaults.standard.set(false, forKey: "viz.demo")
+                context.saveHonestly()
+                NSLog("[Casberi] seedVizDemo: cleared %d demo things, wallet books off", gone)
+                return
+            }
+            UserDefaults.standard.set(true, forKey: "viz.demo")
+            let existing = Set(all.compactMap(\.sourceRef))
+            var landed = 0
+            func seed(_ ref: String, _ make: () -> Thing) {
+                guard !existing.contains(ref) else { return }
+                context.insert(make()); landed += 1
+            }
+            func days(_ n: Double) -> Date { .now.addingTimeInterval(n * 86_400) }
+
+            // Cloudflare — the four deadline shapes the room ranks, each with
+            // the real `dueAt` the rail is drawn from.
+            // Refs are the bridge's OWN shapes ("cloudflare:cert:<zoneID>",
+            // ":domain:<name>", ":token"), because `CloudflareRunwaySource`
+            // reads the kind off the ref rather than the title — a `vizdemo:`
+            // ref would land rows that the card then refuses to draw.
+            var estate = CloudflareEstate()
+            estate.zoneNames = ["zone-a": "yoursite.com", "zone-b": "staging.yoursite.com"]
+            estate.autoRenew = ["yoursite.com": true]
+            estate.zonesSeen = 2
+            estate.zonesCovered = 2
+            CloudflareEstateStore.save(estate)
+
+            let cf: [(String, String, String, Double)] = [
+                ("cloudflare:cert:zone-a", "yoursite.com — TLS certificate expires in 12 days",
+                 "Certificates normally renew on their own about a month out. Seeing this means the renewal hasn't happened yet.", 12),
+                ("cloudflare:domain:yoursite.com", "yoursite.com renews in 44 days",
+                 "Set to renew automatically — which still fails if the card behind it has expired.", 44),
+                ("cloudflare:token", "Your Cloudflare API token expires in 21 days",
+                 "When it lapses, Casberi stops reading your Cloudflare account.", 21),
+                ("cloudflare:cert:zone-b", "staging.yoursite.com — TLS certificate expires in 3 days",
+                 "Cloudflare isn't serving this domain while it's in this state.", 3),
+            ]
+            for (i, row) in cf.enumerated() {
+                seed(row.0) {
+                    let t = Thing(kind: .reminder, title: row.1,
+                                  content: "https://dash.cloudflare.com/",
+                                  source: "Cloudflare",
+                                  capturedAt: .now.addingTimeInterval(Double(-i) * 900),
+                                  tags: ["Deadline"], sourceRef: row.0)
+                    t.summary = row.2
+                    t.dueAt = days(row.3)
+                    return t
+                }
+            }
+
+            // Stripe — money moving, which is the doctrine's one standing
+            // exception to "a count is never a thing".
+            // Only "Dispute" and "Dunning" carry a clock, and the rail draws
+            // from exactly those two tags — a payout has no deadline and is
+            // deliberately left off it.
+            var bal = StripeState.Balance()
+            bal.available = ["gbp": 812_450]
+            bal.pending = ["gbp": 214_000]
+            bal.arrivesAt = days(2)
+            bal.fetchedAt = .now
+            StripeState.set(bal)
+
+            let stripe: [(String, String, [String], Double?)] = [
+                ("Dispute opened · £49.00", "Evidence due Friday", ["Dispute"], 6),
+                ("Dispute opened · £128.00", "Evidence due in three weeks", ["Dispute"], 19),
+                ("Payment failed · ¥5,000", "Stripe retries in three days", ["Dunning"], 3),
+                ("Paid out £2,140.00", "Arrived in your bank", ["Money"], nil),
+                ("Pro yearly canceled", "The subscription ended", ["Money"], nil),
+            ]
+            for (i, row) in stripe.enumerated() {
+                let ref = "vizdemo:stripe:\(i)"
+                seed(ref) {
+                    let t = Thing(kind: .link, title: row.0,
+                                  content: "https://dashboard.stripe.com/",
+                                  source: "Stripe",
+                                  capturedAt: .now.addingTimeInterval(Double(-i) * 5_400),
+                                  tags: row.2, sourceRef: ref)
+                    t.summary = row.1
+                    if let d = row.3 { t.dueAt = days(d) }
+                    return t
+                }
+            }
+
+            // Photos — the topic map needs six-plus shots carrying stamped
+            // terms, with terms that RECUR (a map of singletons ranks nothing).
+            let shots: [[String]] = [
+                ["figma.com", "Figma"], ["figma.com", "recipes"], ["recipes", "figma.com"],
+                ["receipts", "figma.com"], ["flights", "recipes"], ["receipts", "flights"],
+                ["figma.com", "receipts"], ["recipes", "flights"], ["figma.com", "recipes"],
+                ["receipts", "figma.com"], ["flights", "figma.com"], ["recipes", "receipts"],
+            ]
+            for (i, terms) in shots.enumerated() {
+                let ref = "vizdemo:shot:\(i)"
+                seed(ref) {
+                    let t = Thing(kind: .screenshot, title: terms[0],
+                                  content: terms.joined(separator: " "),
+                                  source: "Photos",
+                                  capturedAt: .now.addingTimeInterval(Double(-i) * 7_200),
+                                  sourceRef: ref)
+                    t.ocrTopics = terms
+                    t.topicsAt = .now
+                    return t
+                }
+            }
+            context.saveHonestly()
+
+            // PostHog — one climbing metric and one that stopped, since the
+            // room's whole ranking rule is that a silent metric leads.
+            var shipped = PostHogState.get("signed_up")
+            shipped.series = [41, 52, 48, 63, 71, 68, 94]
+            shipped.total = 9_420
+            shipped.fetchedAt = .now
+            PostHogState.set("signed_up", shipped)
+            // The watch row IS the watch (the TokenWatch precedent), so the
+            // roster only draws metrics that have one — a reading alone is
+            // invisible.
+            for event in ["signed_up", "checkout_completed"] {
+                PostHogWatch.add(event, context: context)
+            }
+
+            var quiet = PostHogState.get("checkout_completed")
+            quiet.series = [22, 19, 24, 17, 0, 0, 0]
+            quiet.total = 3_180
+            quiet.fetchedAt = .now
+            PostHogState.set("checkout_completed", quiet)
+
+            NSLog("[Casberi] seedVizDemo: landed %d things; wallet books ON; posthog seeded", landed)
+        },
         // `-viProbe "<label,label>"` runs the Visual Intelligence label→corpus
         // matcher headlessly — the exact function the iOS 26 system query
         // calls (VI's own camera UI can't be driven on the sim). NSLogs the

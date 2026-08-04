@@ -235,6 +235,18 @@ enum WalletWatch {
     @MainActor
     static func liveState(scopeTo scope: String? = nil,
                           context: ModelContext) async -> WalletLiveState {
+        #if DEBUG
+        // `-seedVizDemo YES` (ProbeHooks) paints the DeFi cards from synthetic
+        // books instead of the chain. It exists because three of this room's
+        // visualizations — lending health, the veAERO melt bar, the protocol
+        // composition strip — can only be photographed from a wallet that
+        // really holds those positions, and marketing needs them from a wallet
+        // that doesn't. DEBUG-only and gated on a flag no shipping build can
+        // set, so a release binary compiles this away entirely.
+        if UserDefaults.standard.bool(forKey: "viz.demo") {
+            return WalletDemoState.state
+        }
+        #endif
         let watched = WalletStore.shared.addresses.map(\.address)
         let targets = scope.map { s in watched.filter { sameAddress($0, s) } } ?? watched
         guard !targets.isEmpty else { return WalletLiveState() }
@@ -525,3 +537,43 @@ enum WalletWatch {
             .joined(separator: " · ")
     }
 }
+
+
+#if DEBUG
+/// The synthetic wallet books behind `-seedVizDemo` (2026-08-04).
+///
+/// Numbers chosen to be plainly demonstrative rather than plausible-as-real:
+/// a healthy Aave position beside a Morpho one drifting toward risk, and two
+/// veAERO locks — one melting, one permanent — because the melt bar's whole
+/// claim is the DIFFERENCE between locked amount and remaining voting power,
+/// and a single lock can't show it.
+enum WalletDemoState {
+    static var state: WalletLiveState {
+        var s = WalletLiveState()
+        s.positions = [
+            .init(network: "eth-mainnet", address: "0xdemo", protocolName: "Aave",
+                  totalCollateralUSD: 18_200, totalDebtUSD: 6_100, healthFactor: 2.4),
+            .init(network: "base-mainnet", address: "0xdemo", protocolName: "Spark",
+                  totalCollateralUSD: 4_800, totalDebtUSD: 0, healthFactor: nil),
+        ]
+        s.morpho = MorphoDeFi.Book(
+            positions: [.init(network: "eth-mainnet", address: "0xdemo",
+                              marketLabel: "wstETH / WETH", collateralUSD: 9_400,
+                              supplyUSD: 0, borrowUSD: 4_900, healthFactor: 1.32)],
+            vaults: [.init(network: "eth-mainnet", address: "0xdemo",
+                           vaultName: "Steakhouse USDC", assetSymbol: "USDC",
+                           usd: 12_600, vaultAddress: "0xvault",
+                           totalAssetsUsd: 41_000_000, netApy: 0.058, allocation: [])])
+        s.aerodrome = AerodromeDeFi.Book(locks: [
+            .init(owner: "0xdemo", tokenId: 41_882, amountAERO: 12_977,
+                  votingPower: 5_342,
+                  lockEnd: Calendar.current.date(byAdding: .day, value: 612, to: .now),
+                  isPermanent: false, lastVoted: .now.addingTimeInterval(-4 * 86_400)),
+            .init(owner: "0xdemo", tokenId: 52_104, amountAERO: 3_400,
+                  votingPower: 3_400, lockEnd: nil, isPermanent: true,
+                  lastVoted: .now.addingTimeInterval(-2 * 86_400)),
+        ])
+        return s
+    }
+}
+#endif
