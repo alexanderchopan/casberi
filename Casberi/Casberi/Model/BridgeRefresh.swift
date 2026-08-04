@@ -444,6 +444,17 @@ enum BridgeRefresh {
                 _ = await HuggingFaceIngest.refresh(context: context)
             }
         }
+        // npm and PyPI are keyless watch lists, so — like Hugging Face and
+        // GeckoTerminal above — they need their own line here rather than
+        // riding `TokenBridge.allCases`. One slot each: they are separate
+        // seats a person connects independently, and the steady-state cost of
+        // each is one small request per watched package.
+        for registry in PackageRegistry.allCases where PackageStore.shared.connected(registry) {
+            let s = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await PackageIngest.refresh(registry, context: context)
+            }
+        }
         // Stocktwits — the watch lives in the corpus (the thing IS the
         // watch); the seat gates the foreground poll so a person who never
         // connected it doesn't pay the watched-tickers fetch every

@@ -234,6 +234,50 @@ enum StorePreview {
             "r1 = Row(\"your-org/casberi · Add README documentation\", \"Link\", \"Cursor\", \"2h\")",
             "r2 = Row(\"Failed · your-org/casberi · fix the flaky snapshot test\", \"Link\", \"Cursor\", \"Yesterday\")",
         ]
+        // Counts NEVER land — an issue's event total and user count are the
+        // two numbers Sentry's own UI leads with, and both are tallies. The
+        // regression is the row worth having, so it leads the preview; its
+        // outcome LEADS the title for the reason every other outcome here
+        // does, since a stack-frame title is exactly what the clamp eats.
+        case "Sentry": [
+            "root = Stack([w])",
+            "w = Widget(\"Unresolved\", null, [r1, r2])",
+            "r1 = Row(\"Regressed · checkout-web · TypeError: cart is undefined\", \"Link\", \"Sentry\", \"20m\")",
+            "r2 = Row(\"api · KeyError: 'customer_id'\", \"Link\", \"Sentry\", \"3h\")",
+        ]
+        // A successful PREVIEW deploy never lands — that's a git log, and it
+        // is the firehose this bridge exists not to be. Production ships and
+        // broken builds, nothing else.
+        case "Vercel": [
+            "root = Stack([w])",
+            "w = Widget(\"Shipped and broken\", null, [r1, r2])",
+            "r1 = Row(\"casberi-site · Rewrite the pricing page\", \"Link\", \"Vercel\", \"1h\")",
+            "r2 = Row(\"Build failed · casberi-site · bump next to 15.4\", \"Link\", \"Vercel\", \"Yesterday\")",
+        ]
+        // Both halves of an incident's life. The second row is the one worth
+        // keeping — how long it actually lasted, from PagerDuty's own two
+        // timestamps rather than a duration we inferred.
+        case "PagerDuty": [
+            "root = Stack([w])",
+            "w = Widget(\"Incidents\", null, [r1, r2])",
+            "r1 = Row(\"Checkout API · Error rate above 5%\", \"Link\", \"PagerDuty\", \"now\")",
+            "r2 = Row(\"Resolved after 41 min · Payments · Webhook backlog\", \"Link\", \"PagerDuty\", \"Tue\")",
+        ]
+        // Download counts never land — they are the biggest number a registry
+        // publishes and the emptiest. A deprecation is rare, permanent, and
+        // exactly the thing you otherwise learn six months late.
+        case "npm": [
+            "root = Stack([w])",
+            "w = Widget(\"New versions\", null, [r1, r2])",
+            "r1 = Row(\"react 19.2.8\", \"Link\", \"npm\", \"2d\")",
+            "r2 = Row(\"Deprecated · request\", \"Link\", \"npm\", \"Mon\")",
+        ]
+        case "PyPI": [
+            "root = Stack([w])",
+            "w = Widget(\"New versions\", null, [r1, r2])",
+            "r1 = Row(\"requests 2.34.2\", \"Link\", \"PyPI\", \"1d\")",
+            "r2 = Row(\"httpx 0.29.0\", \"Link\", \"PyPI\", \"Thu\")",
+        ]
         case "Reddit": [
             "root = Stack([w])",
             "w = Widget(\"Saved\", null, [r1])",

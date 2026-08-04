@@ -9,7 +9,7 @@
 <meta property="og:description" content="What Casberi is, why it exists, and how to use it.">
 <meta property="og:type" content="article">
 <link rel="icon" href="icons/casberi-logo.png">
-<link rel="stylesheet" href="styles.css?v=202608041511">
+<link rel="stylesheet" href="styles.css?v=202608042030">
 <style>
   /* ---------- docs page styles (page-scoped) ---------- */
   /* SF Rounded for display type — ui-rounded resolves to SF Rounded on Apple
@@ -292,6 +292,29 @@
 </style>
 
 <style>
+/* how-to: the blocks that aren't a numbered stop on the tour */
+.walk h3.plain{counter-increment:none;}
+.walk h3.plain::before{content:none;}
+
+/* start here — four steps, numbered by the list itself */
+.steps{list-style:none;counter-reset:step;padding:0;margin:18px 0 0;}
+.steps li{counter-increment:step;position:relative;padding:11px 0 11px 42px;line-height:1.55;color:var(--muted);}
+.steps li::before{content:counter(step);position:absolute;left:0;top:9px;width:26px;height:26px;
+  border-radius:50%;background:var(--surface-2);color:var(--blue-bright);
+  font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+.steps b{color:#fff;font-weight:650;}
+
+.words li b{color:rgba(255,255,255,.9);font-weight:650;}
+
+/* folded detail — the depth stays available without owning the page */
+.walk details{background:var(--surface);border-radius:var(--radius-sm);padding:14px 18px;margin:18px 0 0;}
+.walk details + details{margin-top:10px;}
+.walk summary{cursor:pointer;font-weight:650;color:var(--ink);font-size:15.5px;}
+.walk details p{margin:10px 0 2px;color:var(--muted);}
+.walk details p + p{margin-top:8px;}
+</style>
+
+<style>
 .gps{margin-top:18px;}
 .gps-row{display:grid;grid-template-columns:120px 1fr 34px 1fr;gap:18px;align-items:start;padding:22px 0;border-bottom:1px solid rgba(255,255,255,.08);}
 .gps-row:last-child{border-bottom:none;}
@@ -328,6 +351,7 @@
   <a class="top" href="#about">About</a>
   <a class="sub" href="#problems">Problems &amp; solutions</a>
   <a class="top" href="#how-to-use">How to use</a>
+  <a class="sub" href="#start">Start here</a>
   <a class="sub" href="#one-screen">One screen</a>
   <a class="sub" href="#apps">Apps</a>
   <a class="sub" href="#feed">All &amp; your apps</a>
@@ -335,6 +359,7 @@
   <a class="sub" href="#open">Open a thing</a>
   <a class="sub" href="#agent">The agent</a>
   <a class="sub" href="#settings">Settings</a>
+  <a class="sub" href="#stuck">If something’s missing</a>
   <a class="top" href="#every-app">Every app</a>
   <a class="top" href="#faq">Questions</a>
 </nav>
@@ -351,7 +376,7 @@
       <a href="#about"><span>2</span>About</a>
       <a href="#how-to-use"><span>3</span>How to use</a>
     </div>
-    <p class="updated">Last updated July 24, 2026</p>
+    <p class="updated">Last updated August 4, 2026</p>
   </header>
 
   <!-- ================= FEATURES AT A GLANCE ================= -->
@@ -511,8 +536,9 @@
   <section id="how-to-use" class="walk">
     <p class="part-eyebrow">How to use</p>
     <h2>The whole app</h2>
-    <p class="deck">One screen, a few gestures. Here’s all of it.</p>
+    <p class="deck">Four steps to start. Then one short page per screen.</p>
     <div class="subtoc">
+      <a href="#start">Start here</a>
       <a href="#one-screen">One screen</a>
       <a href="#apps">Apps</a>
       <a href="#feed">All &amp; your apps</a>
@@ -520,54 +546,102 @@
       <a href="#open">Open a thing</a>
       <a href="#agent">The agent</a>
       <a href="#settings">Settings</a>
+      <a href="#stuck">If something’s missing</a>
     </div>
 
     <h4 class="walk-group">Just connect</h4>
+    <h3 id="start">Start here</h3>
+    <ol class="steps">
+      <li><b>Open it.</b> There’s no account and nothing to sign up for.</li>
+      <li><b>Tap the grid icon, top right.</b> That’s your apps.</li>
+      <li><b>Pick one and tap Connect.</b> Photos is the quickest first proof. A wallet needs only an address.</li>
+      <li><b>Go back.</b> What you connected is now in your feed.</li>
+    </ol>
+    <p>That’s the whole setup. Add more apps whenever you like.</p>
+
+    <h3 id="words" class="plain">Five words we use</h3>
+    <ul class="nothere words">
+      <li><strong>A thing</strong> is one item in your feed: a photo, an email, a post, a payment.</li>
+      <li><strong>A chip</strong> is a button along the top. <b>All</b> shows everything; each app gets its own.</li>
+      <li><strong>A room</strong> is what a chip opens: that one app, on its own.</li>
+      <li><strong>The agent</strong> is the glass bar at the bottom. You ask it things.</li>
+      <li><strong>A kept ask</strong> is a question you saved. It re-answers itself.</li>
+    </ul>
+    <div class="pager"><a href="#one-screen"><span>Next</span>One screen →</a></div>
+
     <h3 id="one-screen">One screen</h3>
-    <p>Casberi is one screen — no tabs to learn, no account to make. Open it and it’s yours. A row of chips across the top stays put wherever you scroll: <strong>All</strong> (everything you’ve saved), then one chip for each app you’ve connected — the app you just heard from sits up front. Tap a chip to switch.</p>
-    <p>Along the bottom, a glass bar reading <strong>Ask your things…</strong> — that’s the agent, and it rides above whatever you’re looking at. And two small doors up top: your avatar opens Settings, the grid opens your apps. That’s the whole app: your things, and the agent that reads them.</p>
+    <p>Casberi is one screen. No tabs to learn.</p>
+    <p>Across the top: a row of chips that stays put as you scroll. Whatever updated last sits first. Tap a chip to switch.</p>
+    <p>Along the bottom: a glass bar reading <strong>Ask your things…</strong> That’s the agent. Two small doors up top — your avatar opens Settings, the grid opens Apps.</p>
     <div class="pager"><a href="#apps"><span>Next</span>Apps →</a></div>
 
     <h3 id="apps">Apps</h3>
-    <p>Open Apps from the grid icon. Search leads the page, then your connected apps, then the catalog — every app you can add, laid out as a wall of category bands: Wallet, Markets, Social, Mail, Agents, Media, and the rest. Each opens a page that says what it does and what shows up in your feed, with one clear button — Connect, Open, Fix, or Soon.</p>
-    <p>There are more than fifty to choose from. The Apple apps you already use connect straight through iOS (Photos, Calendar, Reminders, Health, Music, HomeKit, Contacts). Services connect with a sign-in or a pasted token (Gmail and iCloud Mail, GitHub, Notion, Linear, Todoist, Readwise, Raindrop, Obsidian, Reddit, Spotify, Twitch, Steam, Shopify, and more). Wallets, tokens, and markets connect with nothing at all — just an address or a symbol.</p>
+    <p>Search leads the page, then your connected apps, then the catalog. Every app has a page saying what it does and what lands in your feed, with one button: Connect, Open, Fix, or Soon.</p>
+    <p>More than fifty, connecting three ways:</p>
+    <ul>
+      <li><b>One tap</b> for the Apple apps you already use — Photos, Calendar, Reminders, Health, Music, Contacts, HomeKit.</li>
+      <li><b>A sign-in or a pasted token</b> for services — Gmail, GitHub, Notion, Linear, Spotify, Reddit, and more.</li>
+      <li><b>Nothing at all</b> for wallets, tokens and markets. Type an address or a symbol.</li>
+    </ul>
     <div class="pager"><a href="#feed"><span>Next</span>All &amp; your apps →</a></div>
 
     <h4 class="walk-group">Keep tabs</h4>
     <h3 id="feed">All &amp; your apps</h3>
-    <p>Tap <strong>All</strong> to see everything, newest first. Tap an app’s chip to see just that app — and the feed takes its shape: Calendar reads like an agenda, Photos becomes a grid, a wallet leads with its balance. Everything you keep tabs on, in one place.</p>
+    <p>Tap <strong>All</strong> for everything, newest first. Tap an app’s chip for just that app.</p>
+    <p>Each room takes the shape of what’s in it. Calendar reads like an agenda. Photos becomes a grid. A wallet leads with its balance.</p>
     <div class="pager"><a href="#wallet"><span>Next</span>Wallets →</a></div>
 
     <h3 id="wallet">Wallets</h3>
-    <p>Add a wallet by address, ENS, <code>.sol</code> or basename — or connect a wallet app. The connection proposes <strong>zero methods and zero events</strong>: watching can never trade or move funds. Name as many as you like in the address book; watch up to five. Then the wallet room draws what other apps make you dig for:</p>
-    <p><strong>What you hold</strong> — one treemap across every wallet and chain, with the plain sentence under it ("ETH is 50% of everything") and where each token is held. <strong>In protocols</strong> — Deposited, Locked, Owed: Aave and Morpho health, Uniswap positions in or out of range, Hyperliquid perps with liquidation distance, Aerodrome locks melting toward their end date, staked ETH and HYPE. <strong>Where it moved</strong> — a flow band, inflows left, outflows right, every lane sized by what it was worth when it moved. <strong>Connected addresses</strong> — which counterparties reach more than one of your wallets, drawn from real transfers, never inferred.</p>
-    <p><strong>Worth a look</strong> ranks what deserves attention by whether you can act on it — open approvals sorted by what they could actually reach, delegations, positions drifting toward risk — with revoke prepared in-app (live allowance, fee quoted) and the signature happening in your own wallet app. Spam is folded into a pile you can mute.</p>
-    <p>And the doors most trackers can't see land as ordinary rows: Peer onramp fills, Gnosis Pay card spends settling onchain, 0xBow privacy-pool deposits clearing, Railgun shields and unshields. Exchange balances and ETH validators join the same total; a Safe reads as a Safe — owners, threshold, signature queue — not as an anonymous contract.</p>
+    <p>Add a wallet by address, ENS, <code>.sol</code> or basename. Or connect a wallet app.</p>
+    <p><strong>It’s read-only, always.</strong> The connection asks for zero permissions, so Casberi can never trade or move funds. Name as many wallets as you like; watch up to five.</p>
+    <p>The room draws three things: <b>what you hold</b>, as one map across every wallet and chain; <b>where it moved</b>, in and out; and <b>what’s worth a look</b>.</p>
+    <p>Worth a look is mostly old permissions you once gave to apps, biggest reach first. Tap one and Casberi prepares the cancellation — live amount, fee quoted. Your own wallet app does the signing.</p>
+    <details class="more">
+      <summary>If you use DeFi</summary>
+      <p>The same room also carries Aave and Morpho health, Uniswap positions in or out of range, Hyperliquid liquidation distance, Aerodrome locks and their weekly vote deadline, staked ETH and HYPE, exchange balances and validators — all in one total.</p>
+      <p>A Safe reads as a Safe: owners, threshold, signature queue. Gnosis Pay card spends, Peer onramp fills, 0xBow deposits clearing and Railgun shields land as ordinary rows. Spam folds into a pile you can mute.</p>
+    </details>
     <div class="pager"><a href="#open"><span>Next</span>Open a thing →</a></div>
 
-    <h3 id="open">Open a thing, act on it</h3>
-    <p>Tap any row to open it. From there you do the thing where it belongs — open it in the app it came from, or share it. <strong>Tags</strong> arrive on their own — the app labels what lands, and the agent reads those labels when you ask. There is nothing to file.</p>
-    <p>Some rows let you act in place: start a new email from Gmail, a new event from Calendar, tick a reminder off for real. Casberi keeps tabs; your own apps do the work.</p>
+    <h3 id="open">Open a thing</h3>
+    <p>Tap any row to open it. From there, open it in the app it came from, or share it.</p>
+    <p>Tags arrive on their own, so there is nothing to file.</p>
+    <p>Some rows let you act in place: start an email, make an event, tick a reminder off for real. Casberi keeps tabs; your own apps do the work.</p>
     <div class="pager"><a href="#agent"><span>Next</span>The agent →</a></div>
 
     <h4 class="walk-group">Take action</h4>
     <h3 id="agent">The agent</h3>
-    <p>The glass bar along the bottom is the agent. It rides above every screen — your feed, an app’s page, a settings sheet — so it’s always one tap away. Tap it and it rises to fill the screen; lower it and you’re back exactly where you were, mid-scroll and all. There is no second tab and no separate home screen to come back to: your things are the feed, and the agent is how you ask about them.</p>
-    <p>Tapping it opens on <strong>“What’s going on”</strong> — a brief built from your own things, right now: what landed and from where, how your money is doing, what’s on your watchlist, what’s next, and one plain read across the lot. It’s a screen to take in, so the keyboard stays down and your asks sit docked underneath, ready when you are.</p>
-    <p>Once a day, on your first open, that headline comes to you instead — a single glass card resting above the bar, naming your day in one line. Tap it for the full brief; leave it and it’s gone for the day. It never appears with nothing to say.</p>
+    <p>The glass bar rides above every screen. Tap it and it rises; lower it and you’re back exactly where you were, mid-scroll and all.</p>
+    <p>It opens on <strong>“What’s going on”</strong> — a brief of your own things, right now. What landed, how your money is doing, what’s next, and one plain read across the lot.</p>
     <ul>
-      <li><strong>Ask</strong> a question, answered from your own things (“what did I save this week?”). Follow up, and keep an answer as a note.</li>
-      <li><strong>Keep an ask</strong> — any question worth repeating becomes a chip that carries its own answer, with a dot when it has changed since you last looked.</li>
-      <li><strong>Say what you want</strong> (“show my work stuff”) and it takes you there.</li>
-      <li><strong>Jump to a tool</strong> — create a note, message, email, event, reminder, or web search. The right app opens, ready to go. Nothing is created inside Casberi; you create in the tools you already use.</li>
+      <li><b>Ask</b> a question, answered from your own things. “What did I save this week?”</li>
+      <li><b>Keep an ask</b> and it becomes a chip that carries its own answer, with a dot when it changes.</li>
+      <li><b>Say where to go.</b> “Show my work stuff.”</li>
+      <li><b>Jump to a tool</b> — note, email, event, reminder, search. The right app opens. Nothing is created inside Casberi.</li>
     </ul>
     <p>You can also paste something to save it, or tap the mic and talk.</p>
+    <p>Once a day, your first open puts that headline on a card above the bar. Tap it for the full brief. Leave it and it’s gone for the day. It never appears with nothing to say.</p>
     <div class="pager"><a href="#settings"><span>Next</span>Settings →</a></div>
 
     <h4 class="walk-group">Make it yours</h4>
     <h3 id="settings">Settings</h3>
-    <p>Behind your avatar, one A–Z list: your photo, the color that washes the top of every screen (five to choose from), your data (all on your phone — export or delete anytime), diagnostics, how it works, language, light or dark, and your key. No account, no sign-in — there was never anything to sign up for.</p>
-    <p><strong>Your key</strong> is the one door out. Answers are written on your phone by default. Save your own key — Claude, ChatGPT, Gemini, Venice, Bankr, OpenRouter, or Grok — and every answer offers “Try with your key”: the question and the few matched things go from your phone straight to that provider, only when you tap, billed to your key. The key lives in the Keychain. There is no Casberi server in between.</p>
+    <p>Behind your avatar, one A–Z list: your photo, the color that washes the top of every screen, language, light or dark, diagnostics, your data, and your key.</p>
+    <p><strong>Your data</strong> is all on your phone. Export or delete it anytime.</p>
+    <p><strong>Your key</strong> is the one door out. Answers are written on your phone by default. Add your own key — Claude, ChatGPT, Gemini, Venice, Bankr, OpenRouter or Grok — and every answer offers “Try with your key”. Only then does the question leave, only when you tap, billed to you. The key lives in the Keychain. There is no Casberi server in between.</p>
+
+    <h3 id="stuck" class="plain">If something’s missing</h3>
+    <details>
+      <summary>I connected an app and nothing showed up</summary>
+      <p>Pull down on the feed to refresh. If it’s an Apple app, check iOS Settings → Casberi and make sure you said yes. Some apps are honestly quiet: Trello, for instance, only shows cards actually assigned to you, and the app tells you so.</p>
+    </details>
+    <details>
+      <summary>My screenshots aren’t updating</summary>
+      <p>Photos needs full access, not selected photos. iOS Settings → Casberi → Photos → All Photos. That’s also what lets a screenshot you delete in Photos disappear here.</p>
+    </details>
+    <details>
+      <summary>My wallet shows no balance</summary>
+      <p>Give the first read a moment, then pull to refresh. Check the address is one you meant to watch, in the address book. Naming a wallet is free; watching is capped at five.</p>
+    </details>
   </section>
 
   

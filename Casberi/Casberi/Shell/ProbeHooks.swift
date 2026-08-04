@@ -1030,6 +1030,68 @@ enum ProbeHooks {
                 NSLog("GeckoTerminal probe: %@ trending in", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-sentryHost <host>` — the host to read against (declare it BEFORE
+        // `-tokenBridge "Sentry:<token>"`: hooks run in list order, and the
+        // token's validation must see the host already set). `-sentryOrg
+        // <slug>` picks the organization without driving the picker, which is
+        // the only way to reach a connected state headlessly.
+        Hook(key: "sentryHost") { spec, _ in
+            SentryAccount.host = spec
+            NSLog("sentryHost: %@", SentryAccount.host)
+        },
+        Hook(key: "sentryOrg") { spec, _ in
+            SentryAccount.org = spec.trimmingCharacters(in: .whitespaces)
+            NSLog("sentryOrg: %@", SentryAccount.org)
+        },
+        // `-sentryProbe YES` — the read phase by phase, plus one `sentryIssue|`
+        // line per issue. See `SentryIngest.diagnose` for the six causes of an
+        // empty room that this separates.
+        Hook(key: "sentryProbe") { _, _ in
+            Task { @MainActor in await SentryIngest.diagnose() }
+        },
+        // `-vercelProbe YES` — the read phase by phase, plus one
+        // `vercelDeploy|` line per deployment naming whether it would land.
+        Hook(key: "vercelProbe") { _, _ in
+            Task { @MainActor in await VercelFetch.diagnose() }
+        },
+        // `-pagerdutyProbe YES` — the read phase by phase, plus one
+        // `pdIncident|` line per incident carrying BOTH timestamps, since a
+        // missing `resolved_at` is what silently turns "resolved after 41 min"
+        // into a bare "Resolved".
+        Hook(key: "pagerdutyProbe") { _, _ in
+            Task { @MainActor in await PagerDutyIngest.diagnose() }
+        },
+        // `-packageWatch "<npm|pypi>:<name[,name]>"` — watch packages and sync.
+        // Splits on the FIRST colon, so a scoped npm name keeps its own
+        // characters intact (`npm:@vercel/og`).
+        Hook(key: "packageWatch") { spec, context in
+            let parts = spec.split(separator: ":", maxSplits: 1).map(String.init)
+            guard parts.count == 2,
+                  let registry = PackageRegistry(rawValue: parts[0].lowercased()) else {
+                NSLog("packageWatch: expected \"<npm|pypi>:<name[,name]>\", got %@", spec)
+                return
+            }
+            for raw in parts[1].split(separator: ",") {
+                PackageStore.shared.add(registry, String(raw).trimmingCharacters(in: .whitespaces))
+            }
+            Task { @MainActor in
+                let n = await PackageIngest.refresh(registry, context: context)
+                NSLog("packageWatch: %@ | %@ | %@ in", registry.displayName,
+                      PackageStore.shared.list(registry).joined(separator: ","),
+                      n.map(String.init) ?? "FAILED")
+            }
+        },
+        // `-packageProbe <npm|pypi>` — one `packageRow|` line per watched
+        // package with its latest version, the version we already knew, and
+        // whether a date could be read at all. The `date=` field is what
+        // separates "nothing has been released" from shape drift.
+        Hook(key: "packageProbe") { spec, context in
+            guard let registry = PackageRegistry(rawValue: spec.lowercased()) else {
+                NSLog("packageProbe: expected npm or pypi, got %@", spec)
+                return
+            }
+            Task { @MainActor in await PackageIngest.diagnose(registry, context: context) }
+        },
         // `-hfWatch "<author[,author]>"` — watch Hugging Face orgs/people and
         // sync. `-hfPapers YES|NO` switches Daily Papers (declare it BEFORE
         // this hook: hooks run in list order, and the sync must see the

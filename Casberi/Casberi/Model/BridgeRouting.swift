@@ -90,6 +90,17 @@ enum BridgeRouter {
         /// give it `finishesOnConnect == true` and dismiss the raised sheet the
         /// moment the key registered the seat.
         case stripe
+        /// Sentry is a TokenBridge for its token and seat id, but its screen
+        /// resolves a HOST and an ORGANIZATION before it can read anything —
+        /// so it takes its own Destination for PostHog's reason: riding
+        /// `.token` would give it `finishesOnConnect == true` and drop the
+        /// sheet the moment the token was stored, with no org picked yet.
+        case sentry
+        /// npm and PyPI share one screen and one ingest, parameterised by
+        /// registry — the `.exchange(venue)` shape. They are watch lists, so
+        /// they must not ride `.token` (they have no token at all) and must
+        /// not finish on connect: the first package usually wants a second.
+        case packages(PackageRegistry)
         /// Every wallet transaction, day by day (2026-07-20) — the page behind
         /// the Wallet feed's "See all". Carries the feed's wallet scope so the
         /// door doesn't silently widen it; nil is every watched wallet.
@@ -242,6 +253,10 @@ enum BridgeRouter {
             case .token(let b):   b.bridgeID
             case .posthog:        TokenBridge.posthog.bridgeID
             case .stripe:         TokenBridge.stripe.bridgeID
+            case .sentry:         TokenBridge.sentry.bridgeID
+            // The registry's own raw value IS the seat id ("npm", "pypi"), so
+            // the Row and this can't drift apart — `.exchange`'s rule.
+            case .packages(let r): r.bridgeID
             case .walletHistory(let scope): "wallethistory:\(scope ?? "all")"
             case .walletConnection: "walletconnection"
             case .detail(let id): "detail:\(id)"
@@ -343,7 +358,10 @@ enum BridgeRouter {
         Row(offer: "Bookmarks", id: "bookmarks", destination: .bookmarks),
         Row(offer: "PostHog", id: "posthog", destination: .posthog),
         Row(offer: "Stripe", id: "stripe", destination: .stripe),
-    ] + TokenBridge.allCases.filter { $0 != .posthog && $0 != .stripe }.map {
+        Row(offer: "Sentry", id: "sentry", destination: .sentry),
+        Row(offer: "npm",  id: "npm",  destination: .packages(.npm)),
+        Row(offer: "PyPI", id: "pypi", destination: .packages(.pypi)),
+    ] + TokenBridge.allCases.filter { $0 != .posthog && $0 != .stripe && $0 != .sentry }.map {
         Row(offer: $0.rawValue, id: $0.bridgeID, destination: .token($0))
     }
 
@@ -431,6 +449,8 @@ struct BridgeDestinationView: View {
         case .token(let b):   TokenSetupScreen(bridge: b)
         case .posthog:        PostHogScreen()
         case .stripe:         StripeScreen()
+        case .sentry:         SentryScreen()
+        case .packages(let r): PackageWatchScreen(registry: r)
         case .walletHistory(let scope): WalletHistoryScreen(scope: scope)
         case .walletConnection: WalletConnectionScreen()
         case .detail(let id): BridgeDetailScreen(bridgeID: id)

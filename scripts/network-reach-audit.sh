@@ -46,6 +46,16 @@ KNOWN_NON_REACH=(
   # the restricted key. Never fetched; `api.stripe.com` is the read, and it
   # IS disclosed in NetworkReach.
   dashboard.stripe.com
+  # PagerDuty's and Vercel's own sites — the pages that mint the key, plus
+  # (Vercel) the inspector URL a failed build opens on tap. Never fetched;
+  # `api.pagerduty.com` and `api.vercel.com` are the reads, and both ARE
+  # disclosed in NetworkReach.
+  pagerduty.com vercel.com
+  # An npm package's own page — where a landed release row opens on tap. Never
+  # fetched: the read is `registry.npmjs.org`, which IS disclosed. (PyPI's
+  # permalink host and its read host are the same `pypi.org`, so it needs no
+  # entry here.)
+  www.npmjs.com
   # Mail app-password pages, and the Google Takeout page you download your
   # own Gemini export from — all opened in the browser, none read by us.
   appleid.apple.com myaccount.google.com takeout.google.com

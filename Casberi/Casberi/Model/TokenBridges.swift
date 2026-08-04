@@ -23,6 +23,9 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     case trello   = "Trello"
     case cloudflare = "Cloudflare"
     case cursor   = "Cursor"
+    case sentry   = "Sentry"
+    case vercel   = "Vercel"
+    case pagerduty = "PagerDuty"
 
     var id: String { rawValue }
 
@@ -45,6 +48,9 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .trello:   "trello"
         case .cloudflare: "cloudflare"
         case .cursor:   "cursor"
+        case .sentry:   "sentry"
+        case .vercel:   "vercel"
+        case .pagerduty: "pagerduty"
         }
     }
 
@@ -89,6 +95,16 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // than one that needs a tab click, so this opens the page that
         // certainly exists and `setupURLLabel` names the tab to look for.
         case .cursor:    URL(string: "https://cursor.com/dashboard")
+        // The token page is per-organization and its URL carries the org slug,
+        // which isn't known until after the token exists — so this is the
+        // account-wide page, which is where Sentry's own docs send you and
+        // works whatever your org is called.
+        case .sentry:    URL(string: "https://sentry.io/settings/account/api/auth-tokens/")
+        case .vercel:    URL(string: "https://vercel.com/account/settings/tokens")
+        // PagerDuty's REST keys are an ACCOUNT setting, not a user one, and
+        // the two live on different pages — this is the one where the
+        // read-only checkbox is.
+        case .pagerduty: URL(string: "https://pagerduty.com/api_keys")
         }
     }
 
@@ -113,6 +129,9 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .trello:    "trello.com → Power-Ups admin"
         case .cloudflare: "dash.cloudflare.com → API tokens"
         case .cursor:    "cursor.com → Dashboard → API Keys"
+        case .sentry:    "sentry.io → Settings → Auth Tokens"
+        case .vercel:    "vercel.com → Settings → Tokens"
+        case .pagerduty: "pagerduty.com → Integrations → API Access Keys"
         }
     }
 
@@ -203,6 +222,27 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .cursor: [
             "Create an API key — the one Cloud Agents use.",
             "Copy it and paste it below."]
+        // The three scopes are NOT named here — Sentry owns its own screen and
+        // renders a `DSCheckList` under this step, so naming them twice is
+        // §220's "a step that was already on screen twice" (the PostHog and
+        // Stripe precedent).
+        case .sentry: [
+            "Create a token with only these scopes:",
+            "Copy it and paste it below — then pick which organization to read."]
+        // No scope to choose, and no pretending otherwise: a Vercel token is
+        // account-wide (see `VercelFetch`). What that means is said once, in
+        // `canLine`.
+        case .vercel: [
+            "Create a token — scope it to the team whose deployments you want.",
+            "Copy it and paste it below."]
+        // The read-only box IS named here, unlike PostHog's and Stripe's
+        // checklists, because a `.token` bridge renders `TokenSetupScreen`,
+        // which has no checklist — so this step is the only place it can be
+        // said, and leaving it unsaid means minting a key that can page
+        // everyone in the company (the Cloudflare reasoning).
+        case .pagerduty: [
+            "Create a General Access REST API Key and tick Read-only.",
+            "Copy it and paste it below."]
         }
     }
 
@@ -228,6 +268,12 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // that shows the wrong prefix reads as a validation rule and would
         // have someone believing a perfectly good key is the wrong one.
         case .cursor:   "API key"
+        case .sentry:   "sntryu_…"
+        // No prefix. Vercel's tokens are an opaque random string with no
+        // documented prefix at all, and inventing one would read as a
+        // validation rule (the Cursor reasoning).
+        case .vercel:   "Token"
+        case .pagerduty: "API key"
         }
     }
 
@@ -254,6 +300,9 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .trello:   "token"
         case .cloudflare: "API token"
         case .cursor:   "API key"
+        case .sentry:   "auth token"
+        case .vercel:   "token"
+        case .pagerduty: "API key"
         }
     }
 
@@ -276,6 +325,9 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .trello:   "cards"
         case .cloudflare: "alerts"
         case .cursor:   "runs"
+        case .sentry:   "issues"
+        case .vercel:   "deploys"
+        case .pagerduty: "incidents"
         }
     }
 
@@ -318,6 +370,14 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // write is ever added to `CursorFetch`, this line has to change in the
         // same commit.
         case .cursor:   "Reads the cloud agents you've run — what each was asked to do, what it says it did, and the pull request it opened. Cursor's key can't be scoped read-only, so the promise is kept by conduct: Casberi only ever lists your agents, and never starts one, follows one up, stops one, or deletes one."
+        // What is NOT read is the load-bearing clause. Sentry holds the data
+        // your users generated when something broke — anyone connecting it has
+        // every right to ask whether that is about to land in a feed. It isn't:
+        // this reads the ISSUE list, which is titles and code locations, and
+        // never an event, a stack trace, a request body, or a user.
+        case .sentry:   "Reads your unresolved issues — the error, the project, and where in your code it happened. Never an event, a stack trace, or anything about the person who hit it. The token is scoped read-only: it cannot resolve an issue, comment, or change a project."
+        case .vercel:   "Reads your deployments — the project, whether each one shipped or broke, and its commit message. Vercel's token can't be scoped read-only, so the promise is kept by conduct: Casberi only ever lists deployments, and never deploys, promotes, rolls back, cancels, or deletes one. It never reads your environment variables."
+        case .pagerduty: "Reads your incidents — what fired, on which service, how urgent, and when it was resolved. A read-only key cannot page anyone, acknowledge, resolve, or reassign."
         }
     }
 
@@ -354,6 +414,24 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // that is indistinguishable from a key Cursor refused.
         case .cursor:
             String(localized: "Cursor answered — no finished cloud agents yet. Casberi reads the background agents you launch from Cursor's dashboard or editor, not the edits you make yourself, so run one and sync again.")
+        // Cloudflare's case exactly: here empty is the GOOD outcome and the
+        // common one, and it is precisely as silent as a refused key. Nothing
+        // lands until something fires, so a quiet week reads as a broken
+        // connection without this sentence.
+        case .pagerduty:
+            String(localized: "PagerDuty answered — nothing is on fire. Casberi only lands incidents as they trigger and resolve, so an empty read means your services are quiet.")
+        // Sentry's empty is ambiguous in the way Trello's is, and the cause is
+        // actionable: this reads UNRESOLVED issues only, so an org whose
+        // backlog is entirely resolved or archived legitimately lands nothing
+        // forever, and so does an org that simply isn't the one you meant.
+        case .sentry:
+            String(localized: "Sentry answered — nothing unresolved. Casberi reads open issues only, so an empty read means your backlog is clear. If that's a surprise, check which organization is selected above.")
+        // Vercel's is a WRONG-SCOPE hint rather than a quiet-is-fine one: a
+        // personal token reads your personal account, and someone whose
+        // projects live under a team will otherwise see a working connection
+        // that never lands anything, with nothing anywhere saying why.
+        case .vercel:
+            String(localized: "Vercel answered — no deployments found. A token scoped to your personal account can't see a team's projects, so if your work lives under a team, make the token for that team.")
         default:
             nil
         }
@@ -389,6 +467,13 @@ enum TokenBridge: String, CaseIterable, Identifiable {
             // Same reasoning one surface up: the runway would otherwise name a
             // new account's certificate rows after the old account's zones.
             CloudflareEstateStore.clear()
+        // Cleared on BOTH callers, Cloudflare's reasoning: the host, the org
+        // and the substatus ledger are all readings against one account, and a
+        // fresh token may name a different one. Diffing a new org's issues
+        // against the old org's ledger would announce a stranger's regressions
+        // as yours.
+        case .sentry:    SentryAccount.clear()
+        case .pagerduty: PagerDutyCursor.clear()
         default:         break
         }
     }
@@ -525,6 +610,18 @@ enum TokenIngest {
         // STATE), and it sets `dueAt` on two of its shapes, which the generic
         // path has no notion of.
         if bridge == .stripe { return await StripeIngest.refresh(context: context) }
+        // Sentry owns its whole pass for PostHog's reason: it doesn't mirror a
+        // list, it DERIVES its news from a per-issue substatus ledger, so the
+        // generic dedupe below — which re-derives every known ref each pass —
+        // would be answering a question this bridge has already answered more
+        // precisely. It also needs a resolved organization before it can read
+        // anything at all.
+        if bridge == .sentry { return await SentryIngest.refresh(context: context) }
+        // PagerDuty owns its whole pass for Stripe's reason: it reads a
+        // CURSORED window (`since` the last incident it saw) rather than a
+        // page, and it lands both halves of an incident's life, the second of
+        // which is dated from the app's own record of the first.
+        if bridge == .pagerduty { return await PagerDutyIngest.refresh(context: context) }
         guard let token = TokenVault.get(bridge.tokenKey), !running.contains(bridge) else {
             return running.contains(bridge) ? 0 : nil
         }
@@ -603,11 +700,17 @@ enum TokenIngest {
         // `refresh`. A finished agent run is finished forever. See
         // `CursorFetch`.
         case .cursor:   await CursorFetch.things(token: token)
+        // A deployment that is OVER is over forever, so — like Cursor and
+        // unlike Linear/Trello/Cloudflare — there is no `reconcile…` call for
+        // this bridge at the top of `refresh`. See `VercelFetch`.
+        case .vercel:   await VercelFetch.things(token: token)
         // Unreachable — `refresh` routes these two to their own sweeps above.
         // Present so the switch stays exhaustive rather than defaulted, which
         // is what makes a future bridge impossible to add without deciding.
         case .posthog:  ownSweepUnreachable(.posthog)
         case .stripe:   ownSweepUnreachable(.stripe)
+        case .sentry:   ownSweepUnreachable(.sentry)
+        case .pagerduty: ownSweepUnreachable(.pagerduty)
         }
     }
 

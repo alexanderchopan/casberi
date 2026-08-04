@@ -133,6 +133,36 @@ step "Cursor pure-logic self-test"
   || fail "the Cursor logic self-test failed — run scripts/cursor-selftest.sh"
 print -P "%F{green}✓ cursor self-test%f"
 
+# The four bridges added 2026-08-04. Three of them (Sentry, Vercel, PagerDuty)
+# have never run against a live account from this host, so these harnesses are
+# the only proof their shaping is right — and every failure in them is a silent
+# wrong answer that renders perfectly: a failed build reading as a ship, a
+# resolved incident reading as one still burning, a second regression swallowed
+# by the first. Vercel's also carries a CONDUCT GUARD (its token cannot be
+# scoped read-only, so the catalog's promise is kept only by that file's
+# behaviour) and the package harness carries a COST guard (the obvious npm
+# endpoint is 6.8 MB and is exactly what a future simplification would reach
+# for).
+step "Sentry pure-logic self-test"
+"$ROOT/scripts/sentry-selftest.sh" >/dev/null \
+  || fail "the Sentry logic self-test failed — run scripts/sentry-selftest.sh"
+print -P "%F{green}✓ sentry self-test%f"
+
+step "Vercel pure-logic self-test"
+"$ROOT/scripts/vercel-selftest.sh" >/dev/null \
+  || fail "the Vercel logic self-test failed — run scripts/vercel-selftest.sh"
+print -P "%F{green}✓ vercel self-test%f"
+
+step "PagerDuty pure-logic self-test"
+"$ROOT/scripts/pagerduty-selftest.sh" >/dev/null \
+  || fail "the PagerDuty logic self-test failed — run scripts/pagerduty-selftest.sh"
+print -P "%F{green}✓ pagerduty self-test%f"
+
+step "npm/PyPI pure-logic self-test"
+"$ROOT/scripts/packages-selftest.sh" >/dev/null \
+  || fail "the package-registry logic self-test failed — run scripts/packages-selftest.sh"
+print -P "%F{green}✓ packages self-test%f"
+
 # Pure-logic self-test for the Stripe and PostHog room heads (prd §298). Neither
 # bridge has ever run against a live account from this host, and every failure
 # here is a silent wrong answer: a dispute due tomorrow placed at the far end of

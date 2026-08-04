@@ -209,6 +209,21 @@ enum BridgeGlyph {
         case "coinbase", "kraken", "binance", "gemini exchange": return "building.columns"
         case "eth validators": return "checkmark.shield"
         case "1claw":     return "lock.shield"
+        // An issue that came back is the row this seat exists for, and an
+        // exclamation inside a bubble is what every crash reporter's own UI
+        // uses. Not "ant" (Sentry's own mark is a lantern, which reads as a
+        // lamp at 32pt and says nothing about errors).
+        case "sentry":    return "exclamationmark.bubble"
+        // The mark is a triangle; `triangle.fill` is the closest SF Symbol and
+        // is what a Vercel deploy reads as anywhere it's drawn small.
+        case "vercel":    return "triangle.fill"
+        case "pagerduty": return "bell.badge"
+        // A package is a package on both registries — but they must not share
+        // a glyph, or two seats sitting side by side in the same Work group
+        // read as one thing listed twice (the ether.fi/Gnosis Pay rule, in
+        // reverse: those two ARE the same object, these two are not).
+        case "npm":       return "shippingbox.fill"
+        case "pypi":      return "shippingbox"
         case "homekit":   return "homekit"
         default:          return "app"
         }

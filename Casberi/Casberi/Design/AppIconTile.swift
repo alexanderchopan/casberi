@@ -117,6 +117,23 @@ extension DS {
         // nils pure black, so the Cursor screens stay pure ink on purpose and
         // this only stops the tile falling back to gray.
         case "cursor":              return Color.fixed("#000000")
+        // Sentry's documented purple. Their mark is the lantern in this
+        // colour on white — the PostHog/Hugging Face shape (a logo-on-white
+        // lockup where the brand is the mark), not the ChatGPT one where the
+        // white field IS the identity.
+        case "sentry":              return Color.fixed("#362d59")
+        // Vercel is pure black by their own brand guidance, and the triangle
+        // really is monochrome — the Cursor/Grok/X case, not a lockup.
+        // washHue nils pure black, so the Vercel screens stay ink on purpose
+        // and this only stops the tile falling back to gray.
+        case "vercel":              return Color.fixed("#000000")
+        case "pagerduty":           return Color.fixed("#04ac38")   // icon-sampled from the bundled mark's own field
+        // npm's documented red. PyPI's blue is deliberately DIFFERENT rather
+        // than a shared "package" colour — the two seats sit together in the
+        // Work group, and a shared field plus a near-shared glyph would read
+        // as one app listed twice.
+        case "npm":                 return Color.fixed("#cb3837")
+        case "pypi":                return Color.fixed("#3775a9")   // the python.org blue PyPI's own header uses
         // Grok's mark is pure black with ZERO saturated pixels — the X case
         // exactly (and xAI is X). washHue nils this, so the Grok screens stay
         // pure ink ON PURPOSE; the tile just stops falling back to gray.

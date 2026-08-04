@@ -271,6 +271,32 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "cursor"),
                  purpose: "Lists the cloud agents you've run — the name, the repository, whether each finished, and the pull request it opened. One request, and only ever a read: Cursor's key cannot be scoped read-only, so nothing here starts, stops, follows up, or deletes an agent. Your code is never sent anywhere; the agent already ran on Cursor's side. cursor.com is the page that mints the key — opened in your browser, never called by the app.",
                  hosts: ["api.cursor.com", "cursor.com"]),
+        // Host is user-configurable (Sentry's EU region answers on
+        // de.sentry.io, and self-hosted installs exist) — PostHog's shape
+        // exactly: the default cloud host is what's disclosed, and a host the
+        // person typed themselves in setup is not an undisclosed one. The
+        // reads also name their service to `NetworkLedger`, so a non-default
+        // host still attributes correctly on the receipts screen (prd §289).
+        Endpoint(service: "Sentry",
+                 reach: .whenConnected(bridge: "sentry"),
+                 purpose: "Lists your organizations, then your unresolved issues — the error, the project, and the line of code it came from. Never an event, a stack trace, a request, or anything about the person who hit the error. Read-only: it can't resolve an issue or change a project.",
+                 hosts: ["sentry.io"]),
+        Endpoint(service: "Vercel",
+                 reach: .whenConnected(bridge: "vercel"),
+                 purpose: "Lists your deployments — the project, whether each shipped or broke, its commit message and branch. One request, and only ever a read: nothing here deploys, promotes, rolls back, cancels, or reads an environment variable.",
+                 hosts: ["api.vercel.com"]),
+        Endpoint(service: "PagerDuty",
+                 reach: .whenConnected(bridge: "pagerduty"),
+                 purpose: "Lists your incidents — what fired, on which service, how urgent, and when it resolved. The key is read-only, so it can't page anyone, acknowledge, or resolve.",
+                 hosts: ["api.pagerduty.com"]),
+        Endpoint(service: "npm",
+                 reach: .whenConnected(bridge: "npm"),
+                 purpose: "Asks the public registry for the current version of each package you watch, and — only when one has actually changed — when it was published. Carries the package name and nothing else: there's no account and no key, so nothing identifies you. Download counts are never fetched.",
+                 hosts: ["registry.npmjs.org"]),
+        Endpoint(service: "PyPI",
+                 reach: .whenConnected(bridge: "pypi"),
+                 purpose: "Reads the public release feed of each package you watch. Carries the package name and nothing else: there's no account and no key, so nothing identifies you. Download counts are never fetched.",
+                 hosts: ["pypi.org"]),
         Endpoint(service: "Slack",
                  reach: .whenConnected(bridge: "slack"),
                  purpose: "Looks up mentions of you across Slack. Search-only user token — can't post, read files, or browse channels.",

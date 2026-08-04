@@ -146,6 +146,21 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
    field rather than a flattened white glyph on orange — the Stripe and
    PostHog treatment, for the same reason. */
 .ai-cloudflare img { width: 100%; height: 100%; border-radius: inherit; }
+/* The four bridges added 2026-08-04. Each carries its own field in the
+   artwork — the PostHog/Stripe/Cloudflare treatment — so each fills its tile
+   like a real app icon rather than floating at the 58% the glyph icons use,
+   matching how BridgeIcon renders the same bundled asset in the app. The
+   background colours below are the sampled field of each mark, and only show
+   if the artwork ever fails to load.
+   npm and PyPI carry DIFFERENT fields on purpose: they sit together in the
+   same Work shelf, and a shared colour would read as one app listed twice. */
+.ai-sentry    { background: #fff; }
+.ai-vercel    { background: #000; }
+.ai-pagerduty { background: #04ac38; }
+.ai-npm       { background: #fff; }
+.ai-pypi      { background: #3775a9; }
+.ai-sentry img, .ai-vercel img, .ai-pagerduty img,
+.ai-npm img, .ai-pypi img { width: 100%; height: 100%; border-radius: inherit; }
 .ai-notion    { background: #fff; color: #111; }
 .ai-reddit    { background: #ff4500; }
 .ai-youtube   { background: #ff0000; font-size: 17px; }
