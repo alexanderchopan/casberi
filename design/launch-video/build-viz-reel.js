@@ -1,21 +1,23 @@
-// THE VISUALIZATIONS reel — v3 "one camera", ruled 2026-08-04 after v2 read
-// as a slideshow (user: "it's poor"). What changed and why:
-//   ONE CONTINUOUS CAMERA — a virtual camera (translate+scale on a world
-//     container) opens CROPPED INSIDE the phone screen while the wallet
-//     paints at readable size, pulls back to reveal the hardware, then pans
-//     laterally phone -> iPad -> Mac. No hard cuts through black; nothing is
-//     ever fully still (a small deterministic drift rides every hold).
-//   THE CHIP FLIP IS THE EDIT — switching rooms happens the way it happens
-//     in the app: the source chip in the phone's own header does its one
-//     forward X-axis turn (CoinFlip.swift) and the feed repopulates in
-//     place. Delight is the structure, not a beat at the end.
-//   BERRY RAIN IN CONTEXT — a pull-to-refresh on the feed near the close:
-//     the rows dip, a new post lands on top, and the shower falls INSIDE
-//     the screen over real rows (BerryRain rides ShellChrome.refreshPulse
-//     over the surface, not over a void).
-//   THE NINE EXTRA READS ARE A CONVEYOR — full-size cards sliding through a
-//     center focus, ~0.45s apart, each big enough to actually read; the
-//     grid wall of v2 made every read postage-stamp sized.
+// THE VISUALIZATIONS reel — v4 "full bleed", ruled 2026-08-04. v3's device
+// shells died in review (user: "maybe now we shouldn't have the shells and we
+// just show the visualizations"), and with them every screen that needed
+// FAKE CONTENT — the colored-tile album covers, the invented posts, the mail
+// — because a gradient square pretending to be album art is what read as
+// unreal. What survives is what the reel is named for: the READS, which are
+// abstract data graphics and therefore look real at any size.
+//   One visualization at a time, drawn at cinema scale on black. The only
+//   chrome is the app's own source chip, top-left — and it does its CoinFlip
+//   turn (one forward X-axis rotation, the label swapping at 90°) every time
+//   the scene moves to a different source. Twelve scenes:
+//     Wallet: balance line (leading dot, area wash) -> holdings treemap ->
+//             the flow band (in green, out neutral — never red) -> risk axis
+//     Photos: capture-year heatmap -> topic map
+//     Instagram: leaderboard      Today: hour bars (capsules, no axes)
+//     PostHog: the metric ring    Aerodrome: the melt
+//     Wallet: connections (equal-weight ribbons, drawn on)
+//     Cloudflare: the runway
+//   Finale: BerryRain full-canvas over the chip strip doing a cascade of
+//   coin flips; CasberiMark berry outro.
 // Colors are the app's own tokens: page #000, sheet #111113, accent ink
 // #1673e6, link blue #0a84ff, green #3fb950. No hairlines — depth by tone.
 // Deterministic (window.seek/window.TOTAL) -> design/launch-video/render-viz.sh
@@ -23,7 +25,6 @@ const fs = require('fs'), path = require('path');
 
 const BLUE = '#0a84ff', INK = '#1673e6', GREEN = '#3fb950', RED = '#ff453a',
       AMBER = '#ff9f0a', VIOLET = '#8c40c7';
-const TOTAL = 25.0;
 
 const MARK = [
   [0.654, 0.812, '#cee6ff'], [0.812, 0.469, '#b1d8ff'], [0.337, 0.794, '#b1d8ff'],
@@ -32,208 +33,121 @@ const MARK = [
 ];
 const berrySVG = (s, cls) => `<svg class="${cls || ''}" width="${s}" height="${s}" viewBox="0 0 100 100">${
   MARK.map(([x, y, c]) => `<circle cx="${x * 100}" cy="${y * 100}" r="18.8" fill="${c}"/>`).join('')}</svg>`;
-const HEART = '<svg width="13" height="12" viewBox="0 0 24 22"><path d="M12 21C5 15 1 11 1 6.5 1 3.4 3.4 1 6.5 1 8.6 1 10.6 2 12 3.8 13.4 2 15.4 1 17.5 1 20.6 1 23 3.4 23 6.5 23 11 19 15 12 21z" fill="rgba(235,235,245,.45)"/></svg>';
-const RECAST = '<svg width="14" height="12" viewBox="0 0 24 20"><path d="M6 6h10l-2.5-2.5L15 2l5 5-5 5-1.5-1.5L16 8H8v4H6zM18 14H8l2.5 2.5L9 18l-5-5 5-5 1.5 1.5L8 12h10v-4h2z" fill="rgba(235,235,245,.45)"/></svg>';
-const PLAY = '<svg width="22" height="22" viewBox="0 0 24 24"><path d="M8 5l12 7-12 7z" fill="rgba(255,255,255,.9)"/></svg>';
 
-// ---- world layout: phone | iPad | Mac on one lateral strip ----------------
-const PHONE = { x: 760, y: 146 };   // 378x788 -> center (949, 540)
-const IPAD  = { x: 2200, y: 206 };  // 902x668 -> center (2651, 540)
-const MAC   = { x: 3900, y: 214 };  // 1014x652 -> center (4407, 540)
+// ---- scene table -----------------------------------------------------------
+// [dur, chip, title, accent]
+const SC = [
+  [2.5, 'Wallet',     'Across your wallets',      GREEN],
+  [2.4, 'Wallet',     'Holdings',                 BLUE],
+  [2.5, 'Wallet',     'Where the money went',     GREEN],
+  [2.0, 'Wallet',     'Distance to liquidation',  AMBER],
+  [2.2, 'Photos',     'Your capture year',        BLUE],
+  [2.0, 'Photos',     'What your images say',     BLUE],
+  [2.0, 'Instagram',  'Who you save most',        VIOLET],
+  [1.9, 'Today',      'Your day, hour by hour',   INK],
+  [1.9, 'PostHog',    'signed_up',                INK],
+  [1.8, 'Aerodrome',  'The melt',                 BLUE],
+  [2.0, 'Wallet',     'Connections',              BLUE],
+  [1.8, 'Cloudflare', 'The runway',               BLUE],
+];
+const T0 = SC.reduce((a, s) => (a.push(a[a.length - 1] + s[0]), a), [0.3]); // scene starts
+const FIN = T0[12], TOTAL = FIN + 4.6;   // finale + outro -> 30.0s at these durations
 
-// ---- in-screen data (demo register, same as the other clips) ---------------
-const TREEMAP = [
-  [0, 0, 190, 178, 'ETH',  '$26,180', '#3a6df0'],
-  [194, 0, 126, 86, 'SOL',  '$7,940',  '#8f5bd9'],
-  [194, 90, 126, 88, 'USDC', '$6,120', '#2775ca'],
-  [0, 182, 96, 98, 'BTC',  '$4,310',  '#c8842a'],
-  [100, 182, 92, 98, 'AERO', '$2,140', '#2f66b5'],
-  [196, 182, 124, 98, 'HYPE', '$1,520', '#2e9e8f'],
+const TREEMAP = [   // scaled to a 1300x760 stage
+  [0, 0, 771, 483, 'ETH',  '$26,180', '#3a6df0'],
+  [783, 0, 517, 235, 'SOL',  '$7,940',  '#8f5bd9'],
+  [783, 247, 517, 236, 'USDC', '$6,120', '#2775ca'],
+  [0, 495, 390, 265, 'BTC',  '$4,310',  '#c8842a'],
+  [402, 495, 378, 265, 'AERO', '$2,140', '#2f66b5'],
+  [792, 495, 508, 265, 'HYPE', '$1,520', '#2e9e8f'],
 ];
-const POSTS = [
-  ['#8f5bd9', 'D', 'dwr', '@dwr · 2h', '/design', VIOLET,
-   'the best interfaces disappear — you notice the thing, not the chrome', 128, 24, 0],
-  ['#3a6df0', 'M', 'maya', '@maya · 4h', 'Liked', BLUE,
-   'sunset test shots from the new lens', 64, 9, 1],
-  ['#2e9e8f', 'L', 'linda', '@linda · 6h', 'Mentions you', BLUE,
-   '@you this is exactly the treemap idea we talked about', 12, 2, 0],
+const TOPICS = [    // 1240x560 word map — every label appears in a screenshot
+  [0, 0, 700, 340, 'figma', 64, 0.42], [716, 0, 524, 340, 'recipes', 46, 0.3],
+  [0, 356, 470, 204, 'tokyo', 38, 0.26], [486, 356, 430, 204, 'github.com', 34, 0.22],
+  [932, 356, 308, 204, 'invoice', 30, 0.18],
 ];
-const COVERS = [
-  ['Night Drive', 'linear-gradient(140deg,#8f5bd9,#2c1b4e)'],
-  ['Glasshouse', 'linear-gradient(140deg,#2e9e8f,#0d3330)'],
-  ['Coastline', 'linear-gradient(140deg,#3a6df0,#12224a)'],
-  ['Low Sun', 'linear-gradient(140deg,#c8842a,#4a2c08)'],
-  ['Attic Tapes', 'linear-gradient(140deg,#d94f70,#4a1622)'],
-];
-const SONGS = [['Night Drive', 'Mara Vela', '3:41', '#8f5bd9'], ['Glasshouse', 'The Verdant', '4:12', '#2e9e8f'], ['Coastline', 'Ivo Ray', '2:58', '#3a6df0']];
-const VIDEOS = [['How the pros sharpen film scans', '12:04'], ['Tokyo on 35mm', '8:51'], ['Build log: the desk', '21:17']];
-const MAIL = [
-  ['Ada Lin', 'Re: dinner on Friday', 'perfect — see you at 7, bringing the', '9:41', 1],
-  ['Stripe', 'Your February payout', '$1,204.00 was sent to your bank acco', '8:26', 1],
-  ['GitHub', 'casberi: 2 new reviews', 'alexander pushed 3 commits to main —', '7:58', 0],
-  ['Linear', 'CAS-212 moved to In Progress', 'Treemap cells should stage in — assig', 'Yesterday', 0],
-  ['Sofia Reyes', 'photos from the weekend', 'finally pulled these off the camera,', 'Yesterday', 1],
-];
+const LEADERS = [['maya', 34, '#8f5bd9'], ['dwr', 28, '#3a6df0'], ['jesse', 19, '#2e9e8f'], ['kartik', 12, '#c8842a']];
 const HOURS = [12, 20, 32, 26, 44, 58, 40, 66, 84, 60, 92, 74, 50, 34];
+const MONTHS = ['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov'];
+const CHIPSTRIP = ['All', 'Wallet', 'Photos', 'Farcaster', 'Spotify', 'GitHub'];
 const lcg = seed => () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+const heatR = lcg(7);
+const HEAT = Array.from({ length: 30 * 7 }, () => { const v = heatR(); return v < 0.24 ? 0 : v; });
 const rainR = lcg(20260804);
 const BERRIES = ['#0a84ff', '#3f9fff', '#0a84ff', '#1266c4'];
-// The shower falls INSIDE the phone screen — coordinates are screen-local.
-const DROPS = Array.from({ length: 18 }, (_, i) => ({
-  x: 18 + rainR() * 312, delay: rainR() * 1.3, dur: 0.85 + rainR() * 0.35,
-  r: 4 + rainR() * 6, c: BERRIES[i % 4], drift: (rainR() - 0.5) * 26,
+const DROPS = Array.from({ length: 42 }, (_, i) => ({
+  x: 140 + rainR() * 1640, delay: rainR() * 1.7, dur: 0.95 + rainR() * 0.45,
+  r: 5 + rainR() * 9, c: BERRIES[i % 4], drift: (rainR() - 0.5) * 60,
 }));
-
-// The conveyor — nine more reads, each card sized to be READ.
-const CARDS = [
-  ['In protocols', `<div class="pillrow">
-     <span class="ppill" style="background:rgba(63,185,80,.16);color:${GREEN}">Deposited $9,420</span>
-     <span class="ppill" style="background:rgba(10,132,255,.16);color:${BLUE}">Locked $2,140</span>
-     <span class="ppill" style="background:rgba(255,255,255,.08);color:rgba(235,235,245,.6)">Owed $1,200</span></div>
-     <div class="gl fadein" style="margin-top:22px">what's deposited, locked, and owed — with the protocols it came from</div>`],
-  ['The melt · veAERO', `<div class="track"><div class="grow" style="width:100%;background:rgba(10,132,255,.25)"></div>
-     <div class="grow" style="width:41%;background:${BLUE}"></div></div>
-     <div class="gl fadein" style="margin-top:18px">5,342 votes left of 12,977 locked · ends 2028 —<br>a lock that decays, drawn decaying</div>`],
-  ['Approval exposure', `<div class="exrow fadein"><span class="exs">USDC · $6,120 reachable</span><span class="exchip">Unlimited</span></div>
-     <div class="exrow fadein"><span class="exs">ETH · $310 reachable</span><span class="exchip" style="background:rgba(255,255,255,.08);color:rgba(235,235,245,.6)">Capped</span></div>
-     <div class="gl fadein" style="margin-top:20px">which grant to revoke first, ranked by dollars at stake</div>`],
-  ['Connections', `<svg width="380" height="120" viewBox="0 0 380 120">
-     <g class="fadein"><path d="M50,34 C140,34 230,24 330,24" stroke="rgba(235,235,245,.35)" stroke-width="4" fill="none"/>
-     <path d="M50,34 C140,40 230,80 330,80" stroke="rgba(235,235,245,.35)" stroke-width="4" fill="none"/>
-     <path d="M50,92 C150,92 235,82 330,80" stroke="rgba(235,235,245,.35)" stroke-width="4" fill="none"/></g>
-     <circle cx="42" cy="34" r="12" fill="#55555c"/><circle cx="42" cy="92" r="12" fill="#55555c"/>
-     <circle cx="338" cy="24" r="13" fill="#3a6df0"/><circle cx="338" cy="80" r="13" fill="#8f5bd9"/></svg>
-     <div class="gl fadein">2 counterparties reach two of your wallets — every ribbon the same weight, by ruling</div>`],
-  ['Fed cuts by March?', `<div class="track" style="margin-top:26px"><div class="grow" style="width:62%;background:${BLUE}"></div></div>
-     <div class="exrow fadein" style="margin-top:14px"><span class="gl">Kalshi · the live book's own bracket</span><span style="font-size:26px;font-weight:800;color:#fff">62%</span></div>`],
-  ['LP range · ETH/USDC', `<div class="track" style="margin-top:26px"><div class="grow" style="left:22%;width:46%;background:rgba(10,132,255,.35)"></div></div>
-     <span class="rdot fadein" style="left:calc(30px + 44%)"></span>
-     <div class="gl fadein" style="margin-top:16px">the position's window on the price axis — in range, earning fees</div>`],
-  ['Safe · 2 of 3', `<div style="display:flex;gap:22px;align-items:center;margin-top:10px">
-     <svg width="92" height="92" viewBox="0 0 70 70">
-       <circle cx="35" cy="35" r="28" fill="none" stroke="#26262a" stroke-width="8"/>
-       <circle class="sarc" cx="35" cy="35" r="28" fill="none" stroke="${BLUE}" stroke-width="8" stroke-linecap="round" transform="rotate(-90 35 35)" stroke-dasharray="176" stroke-dashoffset="176"/>
-     </svg><div class="gl" style="flex:1">2 signatures collected —<br><b style="color:#fff">yours is needed</b></div></div>`],
-  ['What lands here', `<div class="track seg" style="margin-top:26px">
-     <div class="grow" style="width:44%;background:${BLUE}"></div><div class="grow" style="left:45%;width:26%;background:${VIOLET}"></div>
-     <div class="grow" style="left:72%;width:16%;background:#2e9e8f"></div><div class="grow" style="left:89%;width:11%;background:#c8842a"></div></div>
-     <div class="gl fadein" style="margin-top:16px">links · posts · screenshots · notes — the corpus in proportion</div>`],
-  ['The runway', `<div class="track thin" style="margin-top:32px"><div class="grow" style="width:100%;background:#26262a"></div></div>
-     <span class="rtick fadein" style="left:calc(30px + 12%)"></span><span class="rtick fadein" style="left:calc(30px + 46%)"></span><span class="rtick fadein" style="left:calc(30px + 82%)"></span>
-     <div class="gl fadein" style="margin-top:18px">cert 12d · domain 44d · invoice 89d — every deadline on one axis</div>`],
-];
 
 const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;transition:none!important}
 html,body{width:1920px;height:1080px;overflow:hidden;background:#000;font-family:-apple-system,"Helvetica Neue","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
 .mono{font-family:ui-monospace,"SF Mono","Menlo",monospace;}
-.stage{position:absolute;inset:0;overflow:hidden;background:radial-gradient(1400px 950px at 50% 46%, #101016, #000 72%);}
-#world{position:absolute;left:0;top:0;width:6000px;height:1080px;transform-origin:0 0;will-change:transform,opacity;}
-.glow{position:absolute;width:1400px;height:1200px;border-radius:50%;background:radial-gradient(closest-side, rgba(18,102,196,.17), transparent 70%);will-change:opacity;}
+.stage{position:absolute;inset:0;overflow:hidden;background:radial-gradient(1500px 1000px at 50% 42%, #0b0b10, #000 74%);}
+.wash{position:absolute;inset:0;opacity:0;will-change:opacity,background;}
 
-/* shells */
-.iphone{position:absolute;width:378px;height:788px;background:#131318;border-radius:62px;padding:11px;box-shadow:0 0 0 1.5px rgba(255,255,255,.18), 0 46px 100px rgba(0,0,0,.88);}
-.iphone .scr{position:relative;width:100%;height:100%;background:#050507;border-radius:52px;overflow:hidden;}
-.island{position:absolute;left:50%;top:13px;transform:translateX(-50%);width:104px;height:30px;border-radius:16px;background:#000;z-index:9;}
-.ipad{position:absolute;width:902px;height:668px;background:#131318;border-radius:44px;padding:21px;box-shadow:0 0 0 1.5px rgba(255,255,255,.18), 0 46px 100px rgba(0,0,0,.88);}
-.ipad .scr{position:relative;width:100%;height:100%;background:#000;border-radius:24px;overflow:hidden;padding:22px;}
-.mac{position:absolute;width:1014px;height:652px;border-radius:18px;overflow:hidden;box-shadow:0 0 0 1.5px rgba(255,255,255,.18), 0 46px 100px rgba(0,0,0,.88);background:#000;}
-.mac .bar{height:44px;background:#1c1c1e;display:flex;align-items:center;padding:0 18px;gap:8px;}
-.mac .bar i{width:13px;height:13px;border-radius:50%;}
-.mac .bar .ttl{flex:1;text-align:center;font-size:15px;color:rgba(255,255,255,.5);font-weight:600;margin-right:55px;}
-.mac .scr{position:relative;height:608px;background:#000;padding:26px 30px;}
-.sweep{position:absolute;inset:-10%;background:linear-gradient(115deg, transparent 42%, rgba(255,255,255,.07) 50%, transparent 58%);transform:translateX(-120%);will-change:transform;pointer-events:none;z-index:20;}
+/* the lockup — the app's own chip, then the read's name */
+.lockup{position:absolute;left:120px;top:86px;z-index:50;}
+.fchipw{perspective:520px;display:inline-block;}
+.fchip{display:inline-block;font-size:24px;font-weight:750;padding:12px 26px;border-radius:100px;background:${INK};color:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 14px 34px rgba(0,0,0,.6);will-change:transform;}
+.ltitle{margin-top:22px;font-size:52px;font-weight:800;letter-spacing:-.03em;color:#fff;will-change:opacity,transform;}
 
-/* phone chrome */
-.appbar{display:flex;align-items:center;gap:8px;padding:58px 18px 10px;}
-.fchipw{perspective:420px;}
-.fchip{display:inline-block;font-size:13px;font-weight:700;padding:7px 14px;border-radius:100px;background:#1c1c1e;color:rgba(255,255,255,.85);will-change:transform,background;}
-.fchip.on{background:${INK};color:#fff;}
-.panel{position:absolute;left:18px;right:18px;top:112px;bottom:14px;will-change:opacity,transform;}
-.cap13{font-size:13px;color:rgba(235,235,245,.49);font-weight:600;}
-.money{font-size:36px;font-weight:800;color:#fff;letter-spacing:-.02em;margin-top:3px;display:flex;align-items:center;gap:12px;}
-.pill{font-size:14px;font-weight:750;color:#04270f;background:${GREEN};padding:4px 11px;border-radius:100px;will-change:transform,opacity;}
-.mover{font-size:13px;color:rgba(235,235,245,.49);font-weight:600;margin-top:8px;}
-.card{background:#111113;border-radius:20px;padding:14px;margin-top:14px;}
-.card .t{font-size:15px;font-weight:700;color:#fff;}
-.tm{position:relative;margin-top:10px;}
-.tmcell{position:absolute;border-radius:12px;padding:10px 12px;will-change:transform,opacity;}
-.tmcell .sym{font-size:15px;font-weight:800;color:#fff;}
-.tmcell .val{font-size:12px;font-weight:650;color:rgba(255,255,255,.72);margin-top:1px;}
-.conc{font-size:12px;color:rgba(235,235,245,.49);font-weight:600;margin-top:10px;}
+/* scenes */
+.scene{position:absolute;inset:0;opacity:0;will-change:opacity,transform;}
+.sstage{position:absolute;left:50%;top:54%;transform:translate(-50%,-50%);}
+.bignum{font-size:150px;font-weight:800;letter-spacing:-.035em;color:#fff;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:36px;}
+.pillL{font-size:30px;font-weight:750;color:#04270f;background:${GREEN};padding:10px 24px;border-radius:100px;will-change:transform,opacity;}
+.subL{font-size:27px;color:rgba(235,235,245,.55);font-weight:600;margin-top:26px;will-change:opacity;}
 
-/* social feed */
-.post{background:#111113;border-radius:20px;padding:14px;margin-top:12px;will-change:opacity,transform;}
-.post .hd{display:flex;align-items:center;gap:10px;}
-.post .av{width:34px;height:34px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;}
-.post .nm{font-size:14px;font-weight:750;color:#fff;}
-.post .mt{font-size:12px;color:rgba(235,235,245,.49);font-weight:600;}
-.post .ctx{margin-left:auto;font-size:11px;font-weight:750;padding:3px 9px;border-radius:100px;background:rgba(255,255,255,.07);}
-.post .tx{font-size:14px;line-height:1.45;color:rgba(255,255,255,.86);font-weight:550;margin-top:9px;}
-.post .imgs{display:flex;gap:8px;margin-top:10px;}
-.post .imgs i{flex:1;height:104px;border-radius:12px;}
-.post .eng{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:12px;font-weight:700;color:rgba(235,235,245,.45);}
-.post .eng .gap{width:10px;}
-.newpost{position:absolute;left:0;right:0;top:0;will-change:opacity,transform;}
-.drop{position:absolute;border-radius:50%;will-change:transform,opacity;z-index:30;}
+.tmcell{position:absolute;border-radius:22px;padding:26px 30px;will-change:transform,opacity;}
+.tmcell .sym{font-size:40px;font-weight:800;color:#fff;letter-spacing:-.01em;}
+.tmcell .val{font-size:26px;font-weight:650;color:rgba(255,255,255,.75);margin-top:4px;font-variant-numeric:tabular-nums;}
 
-/* iPad media */
-.roomh{font-size:17px;font-weight:750;color:#fff;}
-.roomsub{font-size:12px;color:rgba(235,235,245,.49);font-weight:600;margin-top:2px;}
-.shelf{display:flex;gap:14px;margin-top:14px;}
-.cover{width:148px;will-change:transform,opacity;}
-.cover .art{width:148px;height:148px;border-radius:14px;}
-.cover .cl{font-size:12px;font-weight:650;color:rgba(235,235,245,.6);margin-top:7px;white-space:nowrap;overflow:hidden;}
-.mrow2{display:flex;align-items:center;gap:12px;padding:9px 0;will-change:opacity,transform;}
-.mrow2 .art{width:44px;height:44px;border-radius:10px;flex:none;}
-.mrow2 .tt{font-size:14px;font-weight:700;color:#fff;}
-.mrow2 .ar{font-size:12px;color:rgba(235,235,245,.49);font-weight:600;margin-top:2px;}
-.mrow2 .du{margin-left:auto;font-size:12px;color:rgba(235,235,245,.49);font-weight:650;}
-.vthumb{width:196px;will-change:transform,opacity;}
-.vthumb .fr{position:relative;width:196px;height:110px;border-radius:12px;background:linear-gradient(150deg,#23232a,#0c0c10);display:flex;align-items:center;justify-content:center;}
-.vthumb .dur{position:absolute;right:8px;bottom:8px;font-size:10px;font-weight:750;color:#fff;background:rgba(0,0,0,.72);padding:2px 6px;border-radius:6px;}
-.vthumb .vt{font-size:12px;font-weight:650;color:rgba(235,235,245,.6);margin-top:7px;white-space:nowrap;overflow:hidden;}
+.risktrack{position:relative;width:1400px;height:10px;border-radius:5px;background:#232327;}
+.riskcap{position:absolute;right:0;top:0;width:64px;height:10px;border-radius:5px;background:${RED};opacity:.9;}
+.riskdot{position:absolute;top:-9px;width:28px;height:28px;border-radius:50%;box-shadow:0 0 0 7px rgba(17,17,19,.9), 0 0 34px rgba(255,255,255,.12);will-change:transform,opacity;}
+.risklbl{position:absolute;font-size:25px;font-weight:700;color:rgba(255,255,255,.85);white-space:nowrap;will-change:opacity;}
 
-/* Mac mail + brief */
-.mailrow{display:flex;gap:12px;padding:13px 0;will-change:opacity,transform;}
-.mailrow .dot{width:9px;height:9px;border-radius:50%;background:${BLUE};margin-top:6px;flex:none;will-change:transform,opacity;}
-.mailrow .dot.z{background:transparent;}
-.mailrow .snd{font-size:15px;font-weight:750;color:#fff;}
-.mailrow .sub{font-size:13.5px;font-weight:650;color:rgba(255,255,255,.85);margin-top:3px;}
-.mailrow .snp{font-size:12.5px;color:rgba(235,235,245,.49);font-weight:550;margin-top:3px;white-space:nowrap;overflow:hidden;max-width:300px;}
-.mailrow .tm2{margin-left:auto;font-size:12px;color:rgba(235,235,245,.49);font-weight:650;flex:none;}
-.briefR2{position:absolute;right:30px;top:26px;width:390px;}
-.eyebrow{font-size:15px;font-weight:700;color:${BLUE};letter-spacing:.02em;}
-.bignum{font-size:54px;font-weight:800;color:#fff;letter-spacing:-.03em;margin-top:6px;display:flex;align-items:baseline;gap:14px;}
-.bars{display:flex;align-items:flex-end;gap:8px;height:120px;margin-top:26px;}
-.bars i{width:20px;border-radius:10px;background:${INK};opacity:.45;transform-origin:bottom;will-change:transform;}
-.bars i:last-child{opacity:1;}
-.barslbl{font-size:12px;color:rgba(235,235,245,.49);font-weight:600;margin-top:10px;}
-.mcard{background:#111113;border-radius:20px;padding:18px;margin-top:18px;}
-.mcard .t{font-size:15px;font-weight:750;color:#fff;margin-bottom:4px;}
-.ringwrap{display:flex;gap:16px;align-items:center;}
-.ringtxt .n{font-size:24px;font-weight:800;color:#fff;}
-.ringtxt .l{font-size:12px;color:rgba(235,235,245,.49);font-weight:600;margin-top:3px;width:170px;line-height:1.4;}
+.hm2{display:grid;grid-template-columns:repeat(30,34px);grid-auto-rows:34px;gap:7px;}
+.hm2 i{border-radius:8px;background:${BLUE};will-change:opacity,transform;}
+.hm2 i.z{background:#1b1b1f;}
+.hmonths{display:flex;justify-content:space-between;width:1224px;margin-top:22px;font-size:22px;color:rgba(235,235,245,.4);font-weight:650;}
 
-/* the conveyor — screen space */
-#conveyor{position:absolute;inset:0;opacity:0;will-change:opacity;}
-.ccard{position:absolute;top:340px;width:640px;height:400px;background:#111113;border-radius:26px;padding:30px;box-shadow:0 0 0 1.5px rgba(255,255,255,.14), 0 40px 90px rgba(0,0,0,.8);will-change:transform,opacity;}
-.ccard .gt{font-size:24px;font-weight:800;color:#fff;letter-spacing:-.01em;}
-.gl{font-size:16px;color:rgba(235,235,245,.55);font-weight:600;line-height:1.5;}
-.pillrow{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px;}
-.ppill{font-size:15px;font-weight:750;padding:9px 16px;border-radius:100px;}
-.track{position:relative;height:16px;border-radius:8px;background:#1d1d20;margin-top:26px;overflow:hidden;}
-.track.thin{height:8px;border-radius:4px;}
-.track .grow{position:absolute;left:0;top:0;bottom:0;border-radius:8px;transform-origin:left;will-change:transform;}
-.exrow{display:flex;align-items:center;justify-content:space-between;margin-top:18px;}
-.exs{font-size:17px;font-weight:650;color:rgba(255,255,255,.88);}
-.exchip{font-size:13px;font-weight:750;padding:4px 12px;border-radius:100px;background:rgba(255,159,10,.16);color:${AMBER};}
-.rdot{position:absolute;top:84px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 0 0 4px #111113;}
-.rtick{position:absolute;top:88px;width:4px;height:18px;border-radius:2px;background:${BLUE};}
-.fadein{will-change:opacity;}
-.ckick{position:absolute;left:0;right:0;top:212px;text-align:center;font-size:19px;letter-spacing:.14em;color:rgba(255,255,255,.5);font-weight:650;will-change:opacity;}
+.topiccell{position:absolute;border-radius:24px;display:flex;align-items:flex-end;padding:26px;font-weight:800;color:#fff;letter-spacing:-.015em;will-change:transform,opacity;}
 
-/* outro */
+.leadrow2{display:flex;align-items:center;gap:28px;margin-top:38px;will-change:opacity;}
+.leadrow2 .av{width:66px;height:66px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#fff;}
+.leadrow2 .nm{width:170px;font-size:32px;font-weight:750;color:#fff;}
+.leadrow2 .bar{height:30px;border-radius:15px;background:${VIOLET};transform-origin:left;will-change:transform;}
+.leadrow2 .ct{font-size:30px;font-weight:750;color:rgba(235,235,245,.55);margin-left:auto;font-variant-numeric:tabular-nums;}
+
+.bars2{display:flex;align-items:flex-end;gap:20px;height:460px;}
+.bars2 i{width:62px;border-radius:31px;background:${INK};opacity:.42;transform-origin:bottom;will-change:transform;}
+.bars2 i:last-child{opacity:1;}
+
+.ringtxt2 .n{font-size:120px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums;line-height:1;}
+.ringtxt2 .l{font-size:28px;color:rgba(235,235,245,.55);font-weight:600;margin-top:14px;width:420px;line-height:1.5;}
+
+.melttrack{position:relative;width:1300px;height:36px;border-radius:18px;background:#1b1b1f;overflow:hidden;}
+.melttrack .grow{position:absolute;left:0;top:0;bottom:0;border-radius:18px;transform-origin:left;will-change:transform;}
+.meltlbl{display:flex;justify-content:space-between;width:1300px;margin-top:26px;font-size:27px;font-weight:650;color:rgba(235,235,245,.55);}
+.meltlbl b{color:#fff;font-weight:750;}
+
+.conlbl{position:absolute;font-size:25px;font-weight:700;color:rgba(235,235,245,.6);white-space:nowrap;will-change:opacity;}
+
+.runtrack{position:relative;width:1400px;height:8px;border-radius:4px;background:#232327;}
+.runtick{position:absolute;top:-13px;width:6px;height:34px;border-radius:3px;background:${BLUE};box-shadow:0 0 24px rgba(10,132,255,.4);will-change:transform,opacity;}
+.runlbl{position:absolute;top:44px;font-size:25px;font-weight:700;color:rgba(255,255,255,.85);white-space:nowrap;transform:translateX(-50%);will-change:opacity;}
+.runtoday{position:absolute;left:0;top:-40px;font-size:22px;font-weight:650;color:rgba(235,235,245,.4);}
+
+/* finale */
+#finale{position:absolute;inset:0;opacity:0;will-change:opacity;}
+.strip{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:18px;}
+.strip .fchip2w{perspective:560px;}
+.strip .fchip2{display:inline-block;font-size:27px;font-weight:750;padding:15px 32px;border-radius:100px;background:#1c1c1e;color:rgba(255,255,255,.9);box-shadow:0 0 0 1px rgba(255,255,255,.1), 0 18px 40px rgba(0,0,0,.6);will-change:transform,background;}
+.strip .fchip2.on{background:${INK};color:#fff;}
+.drop{position:absolute;border-radius:50%;will-change:transform,opacity;z-index:40;filter:drop-shadow(0 0 10px rgba(10,132,255,.35));}
 .outro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;will-change:opacity;}
 .outro .b{font-size:120px;font-weight:800;letter-spacing:-.045em;color:#fff;line-height:.9;margin-top:30px;}
 .outro .u{font-size:24px;letter-spacing:.1em;color:rgba(255,255,255,.55);margin-top:26px;font-weight:600;}
@@ -241,110 +155,150 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:#000;font-family
 .outro svg{will-change:transform,opacity;}
 </style></head><body>
 <div class="stage">
-<div id="world">
-  <div class="glow" id="glowPhone" style="left:${PHONE.x - 510}px;top:-60px"></div>
-  <div class="glow" id="glowPad" style="left:${IPAD.x - 250}px;top:-60px"></div>
-  <div class="glow" id="glowMac" style="left:${MAC.x - 190}px;top:-60px"></div>
+<div class="wash" id="wash"></div>
 
-  <!-- the protagonist phone -->
-  <div class="iphone" style="left:${PHONE.x}px;top:${PHONE.y}px"><div class="scr" id="phoneScr">
-    <div class="island"></div>
-    <div class="appbar">
-      <span class="fchipw"><span class="fchip on" data-c="0">Wallet</span></span>
-      <span class="fchipw"><span class="fchip" data-c="1">Farcaster</span></span>
-      <span class="fchipw"><span class="fchip" data-c="2">Photos</span></span>
-      <span class="fchipw"><span class="fchip" data-c="3">All</span></span>
-    </div>
-    <div class="panel" id="roomWallet">
-      <div class="cap13">Across your wallets</div>
-      <div class="money"><span id="balnum">$0</span><span class="pill" id="balpill">+2.6%</span></div>
-      <svg id="sparkline" width="320" height="64" viewBox="0 0 320 64" style="margin-top:10px">
-        <path id="sparkpath" d="M2,50 C34,46 52,54 76,44 C104,32 118,40 142,34 C170,27 186,36 210,24 C238,10 258,20 284,14 L318,8" fill="none" stroke="${GREEN}" stroke-width="2.5" stroke-linecap="round"/>
-        <circle id="sparkdot" cx="2" cy="50" r="4" fill="${GREEN}"/>
-      </svg>
-      <div class="mover" id="moverline">Mostly ETH · +$310</div>
-      <div class="card"><div class="t">Holdings</div>
-        <div class="tm" style="height:284px">${TREEMAP.map(([x, y, w, h, s, v, c], k) =>
-          `<div class="tmcell" data-k="${k}" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;background:${c}"><div class="sym">${s}</div><div class="val">${v}</div></div>`).join('')}
-        </div>
-        <div class="conc" id="concline">ETH is 54% of the book</div>
-      </div>
-    </div>
-    <div class="panel" id="roomSocial" style="opacity:0">
-      <div class="newpost" id="newpost" style="opacity:0">
-        <div class="post" style="margin-top:0">
-          <div class="hd"><span class="av" style="background:#c8842a">S</span>
-            <span><span class="nm">sofia</span><br><span class="mt">@sofia · just now</span></span>
-            <span class="ctx" style="color:${BLUE}">New</span></div>
-          <div class="tx">coffee later? found a place with the good light</div>
-        </div>
-      </div>
-      <div id="oldposts">${POSTS.map(([hue, ini, nm, mt, ctx, chue, tx, lk, rc, imgs], k) => `
-        <div class="post" data-k="${k}"${k === 0 ? ' style="margin-top:0"' : ''}>
-          <div class="hd"><span class="av" style="background:${hue}">${ini}</span>
-            <span><span class="nm">${nm}</span><br><span class="mt">${mt}</span></span>
-            <span class="ctx" style="color:${chue}">${ctx}</span></div>
-          <div class="tx">${tx}</div>
-          ${imgs ? `<div class="imgs"><i style="background:linear-gradient(150deg,#d97b2a,#5a2508)"></i><i style="background:linear-gradient(150deg,#d94f70,#2c1140)"></i></div>` : ''}
-          <div class="eng">${HEART}<span class="lk" data-n="${lk}">0</span><span class="gap"></span>${RECAST}<span class="rc" data-n="${rc}">0</span></div>
-        </div>`).join('')}
-      </div>
-    </div>
-    ${DROPS.map((d, k) => `<span class="drop" data-k="${k}" style="width:${(d.r * 2) | 0}px;height:${(d.r * 2) | 0}px;background:${d.c};left:${d.x | 0}px;top:0"></span>`).join('')}
-    <div class="sweep" id="sweepPhone"></div>
-  </div></div>
-
-  <!-- iPad: the media room -->
-  <div class="ipad" style="left:${IPAD.x}px;top:${IPAD.y}px"><div class="scr">
-    <div class="roomh">Media</div><div class="roomsub">Spotify · YouTube · Podcasts — everything you played, kept</div>
-    <div class="shelf">${COVERS.map(([t, g], k) => `<div class="cover" data-k="${k}"><div class="art" style="background:${g}"></div><div class="cl">${t}</div></div>`).join('')}</div>
-    <div style="margin-top:8px">${SONGS.map(([t, a, d, hue], k) => `
-      <div class="mrow2" data-k="${k}"><span class="art" style="background:linear-gradient(140deg,${hue},#111)"></span>
-        <span><span class="tt">${t}</span><br><span class="ar">${a}</span></span><span class="du">${d}</span></div>`).join('')}
-    </div>
-    <div class="shelf" style="margin-top:12px">${VIDEOS.map(([t, d], k) => `
-      <div class="vthumb" data-k="${k}"><div class="fr">${PLAY}<span class="dur">${d}</span></div><div class="vt">${t}</div></div>`).join('')}
-    </div>
-    <div class="sweep" id="sweepPad"></div>
-  </div></div>
-
-  <!-- Mac: Mail beside the brief -->
-  <div class="mac" style="left:${MAC.x}px;top:${MAC.y}px">
-    <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span class="ttl">Casberi</span></div>
-    <div class="scr">
-      <div style="position:absolute;left:30px;top:26px;width:470px">
-        <div class="roomh">Mail</div><div class="roomsub">what landed while you were away</div>
-        <div style="margin-top:8px">${MAIL.map(([snd, sub, snp, tm, un], k) => `
-          <div class="mailrow" data-k="${k}"><span class="dot${un ? '' : ' z'}"></span>
-            <span style="min-width:0"><span class="snd">${snd}</span><br><span class="sub">${sub}</span><br><span class="snp">${snp}…</span></span>
-            <span class="tm2">${tm}</span></div>`).join('')}
-        </div>
-      </div>
-      <div class="briefR2">
-        <div class="eyebrow">Your Tuesday</div>
-        <div class="bignum"><span id="heronum">$0</span><span class="pill" id="heropill">+$1,204 · 2.6%</span></div>
-        <div class="bars" id="hourbars">${HOURS.map(h => `<i style="height:${h}%"></i>`).join('')}</div>
-        <div class="barslbl" id="hourlbl">Your day, hour by hour</div>
-        <div class="mcard"><div class="t">signed_up</div>
-          <div class="ringwrap">
-            <svg width="96" height="96" viewBox="0 0 110 110">
-              <circle cx="55" cy="55" r="46" fill="none" stroke="#26262a" stroke-width="9"/>
-              <circle id="ringarc" cx="55" cy="55" r="46" fill="none" stroke="${INK}" stroke-width="9" stroke-linecap="round" transform="rotate(-90 55 55)" stroke-dasharray="289" stroke-dashoffset="289"/>
-              <polyline id="ringcurve" points="36,66 44,62 50,64 58,56 66,58 74,50" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-            <div class="ringtxt"><div class="n" id="ringnum">0</div><div class="l">of the next 100 — its own week inside the ring</div></div>
-          </div>
-        </div>
-      </div>
-      <div class="sweep" id="sweepMac"></div>
-    </div>
-  </div>
+<div class="lockup" id="lockup">
+  <span class="fchipw"><span class="fchip" id="lchip">Wallet</span></span>
+  <div class="ltitle" id="ltitle">Across your wallets</div>
 </div>
 
-<div id="scrim" style="position:absolute;inset:0;background:#000;opacity:0;will-change:opacity"></div>
-<div id="conveyor">
-  <div class="ckick mono">AND THE REST OF THE READS</div>
-  ${CARDS.map(([t, body], k) => `<div class="ccard" data-k="${k}"><div class="gt">${t}</div>${body}</div>`).join('')}
+<!-- 0 · balance line -->
+<div class="scene" id="s0"><div class="sstage" style="width:1560px">
+  <div class="bignum"><span id="s0num">$0</span><span class="pillL" id="s0pill">+2.6%</span></div>
+  <svg width="1560" height="430" viewBox="0 0 1560 430" style="margin-top:30px;overflow:visible">
+    <defs><linearGradient id="gfill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${GREEN}" stop-opacity=".16"/><stop offset="1" stop-color="${GREEN}" stop-opacity="0"/></linearGradient></defs>
+    <path id="s0area" d="M2,340 C160,320 260,362 380,300 C520,232 600,282 720,240 C860,192 940,252 1060,152 C1180,62 1300,122 1420,92 L1558,62 L1558,430 L2,430 Z" fill="url(#gfill)" opacity="0"/>
+    <path id="s0line" d="M2,340 C160,320 260,362 380,300 C520,232 600,282 720,240 C860,192 940,252 1060,152 C1180,62 1300,122 1420,92 L1558,62" stroke="${GREEN}" stroke-width="5" fill="none" stroke-linecap="round" style="filter:drop-shadow(0 0 14px rgba(63,185,80,.45))"/>
+    <circle id="s0dot" r="9" fill="${GREEN}" style="filter:drop-shadow(0 0 16px rgba(63,185,80,.9))"/>
+  </svg>
+  <div class="subL" id="s0sub">Mostly ETH · +$310 — sampled on device, every four hours</div>
+</div></div>
+
+<!-- 1 · holdings treemap -->
+<div class="scene" id="s1"><div class="sstage" style="width:1300px;height:760px;top:57%">
+  ${TREEMAP.map(([x, y, w, h, s, v, c], k) =>
+    `<div class="tmcell" data-k="${k}" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;background:linear-gradient(155deg,${c},${c}e6)"><div class="sym">${s}</div><div class="val">${v}</div></div>`).join('')}
+</div></div>
+
+<!-- 2 · flow band -->
+<div class="scene" id="s2"><div class="sstage" style="width:1500px">
+  <svg width="1500" height="430" viewBox="0 0 1500 430" style="overflow:visible">
+    <defs>
+      <clipPath id="fclipL"><rect id="fclipLr" x="730" y="0" width="0" height="430"/></clipPath>
+      <clipPath id="fclipR"><rect id="fclipRr" x="744" y="0" width="0" height="430"/></clipPath>
+    </defs>
+    <g clip-path="url(#fclipL)">
+      <rect x="0" y="40" width="300" height="132" fill="${GREEN}"/>
+      <polygon points="300,40 718,120 718,196 300,172" fill="${GREEN}" opacity=".8"/>
+      <rect x="0" y="244" width="300" height="62" fill="${GREEN}" opacity=".85"/>
+      <polygon points="300,244 718,212 718,244 300,306" fill="${GREEN}" opacity=".55"/>
+      <text x="26" y="116" fill="#04270f" font-size="27" font-weight="750">Coinbase</text>
+      <text x="26" y="288" fill="#04270f" font-size="24" font-weight="750">Peer</text>
+    </g>
+    <g clip-path="url(#fclipR)">
+      <rect x="1200" y="66" width="300" height="72" fill="#3a3a3e"/>
+      <polygon points="756,128 1200,66 1200,138 756,176" fill="#3a3a3e" opacity=".8"/>
+      <rect x="1200" y="196" width="300" height="106" fill="#3a3a3e"/>
+      <polygon points="756,186 1200,196 1200,302 756,240" fill="#3a3a3e" opacity=".55"/>
+      <text x="1226" y="112" fill="rgba(255,255,255,.85)" font-size="25" font-weight="700">Gnosis Pay</text>
+      <text x="1226" y="256" fill="rgba(255,255,255,.85)" font-size="25" font-weight="700">Aave</text>
+    </g>
+    <rect x="730" y="106" width="26" height="212" rx="13" fill="${BLUE}" id="fspine" style="filter:drop-shadow(0 0 20px rgba(10,132,255,.5))"/>
+  </svg>
+  <div style="display:flex;justify-content:space-between;margin-top:22px">
+    <span class="subL" style="margin:0;color:${GREEN}">$3,000 in</span>
+    <span class="subL" style="margin:0">$1,210 out — every lane a real transfer</span>
+  </div>
+</div></div>
+
+<!-- 3 · risk axis -->
+<div class="scene" id="s3"><div class="sstage" style="width:1400px;height:220px">
+  <div class="risktrack" style="margin-top:100px"><span class="riskcap"></span>
+    <span class="riskdot" data-k="0" style="left:16%;background:${GREEN}"></span>
+    <span class="riskdot" data-k="1" style="left:44%;background:${BLUE}"></span>
+    <span class="riskdot" data-k="2" style="left:76%;background:${AMBER}"></span>
+    <span class="risklbl" data-k="0" style="left:12%;top:-64px">Aave · hf 2.1</span>
+    <span class="risklbl" data-k="1" style="left:40%;top:44px">Morpho · hf 1.6</span>
+    <span class="risklbl" data-k="2" style="left:69%;top:-64px">Hyperliquid · 15%</span>
+  </div>
+</div></div>
+
+<!-- 4 · capture-year heatmap -->
+<div class="scene" id="s4"><div class="sstage">
+  <div class="hm2">${HEAT.map(v => `<i${v === 0 ? ' class="z"' : ''} data-v="${v.toFixed(2)}"></i>`).join('')}</div>
+  <div class="hmonths">${MONTHS.map(m => `<span>${m}</span>`).join('')}</div>
+</div></div>
+
+<!-- 5 · topic map -->
+<div class="scene" id="s5"><div class="sstage" style="width:1240px;height:560px">
+  ${TOPICS.map(([x, y, w, h, t, fz, a], k) =>
+    `<div class="topiccell" data-k="${k}" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;font-size:${fz}px;background:rgba(10,132,255,${a})">${t}</div>`).join('')}
+</div></div>
+
+<!-- 6 · leaderboard -->
+<div class="scene" id="s6"><div class="sstage" style="width:1340px">
+  ${LEADERS.map(([n, c, hue], k) =>
+    `<div class="leadrow2" data-k="${k}"><span class="av" style="background:${hue}">${n[0].toUpperCase()}</span><span class="nm">${n}</span><span class="bar" data-w="${(c / 34 * 820) | 0}" style="width:${(c / 34 * 820) | 0}px;background:linear-gradient(90deg,${VIOLET},${VIOLET}cc)"></span><span class="ct" data-n="${c}">0</span></div>`).join('')}
+</div></div>
+
+<!-- 7 · hour bars -->
+<div class="scene" id="s7"><div class="sstage">
+  <div class="bars2">${HOURS.map(h => `<i style="height:${h}%"></i>`).join('')}</div>
+</div></div>
+
+<!-- 8 · metric ring -->
+<div class="scene" id="s8"><div class="sstage" style="display:flex;align-items:center;gap:90px">
+  <svg width="380" height="380" viewBox="0 0 380 380" style="overflow:visible">
+    <circle cx="190" cy="190" r="158" fill="none" stroke="#1e1e22" stroke-width="26"/>
+    <circle id="s8arc" cx="190" cy="190" r="158" fill="none" stroke="${INK}" stroke-width="26" stroke-linecap="round" transform="rotate(-90 190 190)" stroke-dasharray="993" stroke-dashoffset="993" style="filter:drop-shadow(0 0 26px rgba(22,115,230,.45))"/>
+    <polyline id="s8curve" points="120,230 152,214 178,222 210,192 242,200 272,168" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="6" stroke-linecap="round"/>
+  </svg>
+  <div class="ringtxt2"><div class="n" id="s8num">0</div><div class="l">of the next 100 — the metric's own week drawn inside its milestone ring</div></div>
+</div></div>
+
+<!-- 9 · the melt -->
+<div class="scene" id="s9"><div class="sstage" style="width:1300px">
+  <div class="melttrack">
+    <div class="grow" id="s9dim" style="width:100%;background:rgba(10,132,255,.22)"></div>
+    <div class="grow" id="s9lit" style="width:41%;background:linear-gradient(90deg,${BLUE},#3f9fff)"></div>
+  </div>
+  <div class="meltlbl"><span><b>5,342 votes</b> still standing</span><span>12,977 locked · ends 2028</span></div>
+</div></div>
+
+<!-- 10 · connections -->
+<div class="scene" id="s10"><div class="sstage" style="width:1300px;height:460px">
+  <svg width="1300" height="420" viewBox="0 0 1300 420" style="overflow:visible">
+    <path class="ribbon" d="M140,120 C420,120 780,90 1140,90" stroke="rgba(235,235,245,.4)" stroke-width="6" fill="none"/>
+    <path class="ribbon" d="M140,120 C420,140 780,300 1140,310" stroke="rgba(235,235,245,.4)" stroke-width="6" fill="none"/>
+    <path class="ribbon" d="M140,320 C460,320 800,314 1140,310" stroke="rgba(235,235,245,.4)" stroke-width="6" fill="none"/>
+    <circle cx="128" cy="120" r="22" fill="#4c4c52"/><circle cx="128" cy="320" r="22" fill="#4c4c52"/>
+    <circle cx="1154" cy="90" r="25" fill="#3a6df0" style="filter:drop-shadow(0 0 18px rgba(58,109,240,.5))"/>
+    <circle cx="1154" cy="310" r="25" fill="#8f5bd9" style="filter:drop-shadow(0 0 18px rgba(143,91,217,.5))"/>
+  </svg>
+  <span class="conlbl" style="left:60px;top:158px">counterparty</span>
+  <span class="conlbl" style="left:60px;top:358px">counterparty</span>
+  <span class="conlbl" style="left:1210px;top:78px;color:#fff">main</span>
+  <span class="conlbl" style="left:1210px;top:298px;color:#fff">vault</span>
+</div></div>
+
+<!-- 11 · the runway -->
+<div class="scene" id="s11"><div class="sstage" style="width:1400px;height:200px">
+  <div class="runtrack" style="margin-top:90px">
+    <span class="runtoday">today</span>
+    <span class="runtick" data-k="0" style="left:12%"></span>
+    <span class="runtick" data-k="1" style="left:46%"></span>
+    <span class="runtick" data-k="2" style="left:82%"></span>
+    <span class="runlbl" data-k="0" style="left:12%">cert · 12d</span>
+    <span class="runlbl" data-k="1" style="left:46%">domain · 44d</span>
+    <span class="runlbl" data-k="2" style="left:82%">invoice · 89d</span>
+  </div>
+</div></div>
+
+<div id="finale">
+  <div class="strip">${CHIPSTRIP.map((c, k) =>
+    `<span class="fchip2w"><span class="fchip2${k === 0 ? ' on' : ''}" data-k="${k}">${c}</span></span>`).join('')}</div>
+  ${DROPS.map((d, k) => `<span class="drop" data-k="${k}" style="width:${(d.r * 2) | 0}px;height:${(d.r * 2) | 0}px;background:${d.c};left:${d.x | 0}px;top:0"></span>`).join('')}
 </div>
 
 <div class="outro" id="outro">${berrySVG(130, 'omark')}<div class="b">Casberi</div><div class="u mono">EVERY READ, ON DEVICE — <b>casberi.app</b></div></div>
@@ -352,178 +306,159 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:#000;font-family
 <script>
 var clamp01=function(v){return Math.max(0,Math.min(1,v));};
 var easeOut=function(p){return 1-Math.pow(1-p,3);};
+var easeO4=function(p){return 1-Math.pow(1-p,4);};
 var easeIO=function(p){return p<0.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2;};
-var back=function(p){var c=1.7;return 1+(c+1)*Math.pow(p-1,3)+c*Math.pow(p-1,2);};
+var back=function(p){var c=1.6;return 1+(c+1)*Math.pow(p-1,3)+c*Math.pow(p-1,2);};
 window.TOTAL=${TOTAL};
-var DROPS=${JSON.stringify(DROPS.map(d => ({ x: d.x | 0, delay: +d.delay.toFixed(3), dur: +d.dur.toFixed(3), drift: +d.drift.toFixed(1) })))};
+var T0=${JSON.stringify(T0.map(t => +t.toFixed(3)))};
+var CHIPS=${JSON.stringify(SC.map(s => s[1]))};
+var TITLES=${JSON.stringify(SC.map(s => s[2]))};
+var ACC=${JSON.stringify(SC.map(s => s[3]))};
+var FIN=${+FIN.toFixed(3)};
+var DROPS=${JSON.stringify(DROPS.map(d => ({ delay: +d.delay.toFixed(3), dur: +d.dur.toFixed(3), drift: +d.drift.toFixed(1) })))};
+var scenes=[];for(var i=0;i<12;i++)scenes.push(document.getElementById('s'+i));
+var lineLen=null,curveLen=null,ribbonLens=null;
 
-// ---- camera keyframes: {t, cx, cy, s} — world point at frame center -------
-var K=[
- {t:0.0, cx:949, cy:410, s:2.35},
- {t:1.35,cx:949, cy:410, s:2.42},
- {t:2.75,cx:949, cy:655, s:2.0},
- {t:3.25,cx:949, cy:655, s:2.04},
- {t:4.15,cx:949, cy:540, s:1.34},
- {t:5.1, cx:949, cy:520, s:1.5},
- {t:6.6, cx:949, cy:645, s:1.52},
- {t:7.0, cx:949, cy:645, s:1.44},
- {t:8.4, cx:2651,cy:505, s:1.8},
- {t:9.7, cx:2651,cy:530, s:1.86},
- {t:10.9,cx:2651,cy:545, s:1.9},
- {t:11.3,cx:2651,cy:545, s:1.84},
- {t:12.5,cx:4165,cy:520, s:1.62},
- {t:13.9,cx:4185,cy:535, s:1.58},
- {t:14.7,cx:4620,cy:540, s:1.62},
- {t:15.9,cx:4620,cy:540, s:1.55},
- {t:20.2,cx:4620,cy:540, s:1.47},
- {t:21.1,cx:949, cy:545, s:1.36},
- {t:23.4,cx:949, cy:560, s:1.44},
- {t:25.0,cx:949, cy:565, s:1.5},
-];
-function camAt(t){
-  if(t<=K[0].t)return K[0];
-  for(var i=0;i<K.length-1;i++){
-    var a=K[i],b=K[i+1];
-    if(t>=a.t&&t<=b.t){
-      var p=easeIO(clamp01((t-a.t)/(b.t-a.t)));
-      return {cx:a.cx+(b.cx-a.cx)*p, cy:a.cy+(b.cy-a.cy)*p, s:a.s+(b.s-a.s)*p};
-    }
-  }
-  return K[K.length-1];
-}
-// smooth on/off window with 0.6s shoulders
-function win(t,a,b){return clamp01((t-a)/0.6)*(1-clamp01((t-b)/0.6));}
-function fmt(n){return '$'+Math.round(n).toLocaleString('en-US');}
-function sweep(id,t,at){var p=clamp01((t-at)/0.9);document.getElementById(id).style.transform='translateX('+(-120+p*260)+'%)';}
-
-var world=document.getElementById('world');
-var sparkLen=null,curveLen=null;
-var T_CONV0=16.5, T_STEP=0.44, CSPACE=690;
+function sceneIdx(t){for(var i=11;i>=0;i--){if(t>=T0[i])return i;}return 0;}
 
 window.seek=function(t){
-  // ---- camera ----
-  var c=camAt(t);
-  var cx=c.cx+4*Math.sin(t*0.62), cy=c.cy+3*Math.cos(t*0.81);  // never fully still
-  world.style.transform='translate('+(960-cx*c.s)+'px,'+(540-cy*c.s)+'px) scale('+c.s+')';
-  // world dims under the conveyor (plus a screen-space scrim), fades for the outro
-  var dim=1-0.7*win(t,15.9,20.1);
-  var outw=1-clamp01((t-23.4)/0.6);
-  world.style.opacity=Math.min(dim,outw);
-  document.getElementById('scrim').style.opacity=0.85*win(t,15.9,20.2);
-  // device glows follow the camera's subject
-  document.getElementById('glowPhone').style.opacity=Math.max(win(t,-1,7.6),win(t,20.4,24))*0.9;
-  document.getElementById('glowPad').style.opacity=win(t,7.6,11.7)*0.9;
-  document.getElementById('glowMac').style.opacity=win(t,11.7,16.2)*0.9;
-  // one reflection sweep per arrival
-  sweep('sweepPhone',t,4.2);sweep('sweepPad',t,8.6);sweep('sweepMac',t,12.7);
-
-  // ---- phone: wallet room ----
-  var np=easeOut(clamp01((t-0.25)/0.8));
-  document.getElementById('balnum').textContent=fmt(48210*np);
-  var pp=clamp01((t-1.05)/0.35);
-  var pill=document.getElementById('balpill');pill.style.opacity=pp;pill.style.transform='scale('+(0.5+0.5*back(pp))+')';
-  var sp=document.getElementById('sparkpath');
-  if(sparkLen===null)sparkLen=sp.getTotalLength();
-  var spp=easeOut(clamp01((t-0.35)/1.15));
-  sp.style.strokeDasharray=sparkLen;sp.style.strokeDashoffset=sparkLen*(1-spp);
-  var pt=sp.getPointAtLength(sparkLen*spp);
-  var sd=document.getElementById('sparkdot');sd.setAttribute('cx',pt.x);sd.setAttribute('cy',pt.y);sd.style.opacity=spp>0.02&&spp<1?1:0;
-  document.getElementById('moverline').style.opacity=clamp01((t-1.6)/0.4);
-  var cells=document.querySelectorAll('#roomWallet .tmcell');
-  for(var k=0;k<cells.length;k++){var cp=clamp01((t-1.5-k*0.16)/0.45);cells[k].style.opacity=cp;cells[k].style.transform='scale('+(0.82+0.18*back(cp))+')';}
-  document.getElementById('concline').style.opacity=clamp01((t-2.85)/0.35);
-
-  // ---- the chip flip IS the edit: Wallet -> Farcaster at 3.45 ----
-  var chips=document.querySelectorAll('.fchip');
-  var fp=clamp01((t-3.45)/0.55);
-  chips[1].style.transform='rotateX('+(360*easeOut(fp))+'deg)';
-  var active=fp>0.5?1:0;
-  for(var c2=0;c2<chips.length;c2++)chips[c2].className='fchip'+(c2===active?' on':'');
-  var swapOut=clamp01((t-3.5)/0.45), swapIn=clamp01((t-3.72)/0.5);
-  var rw=document.getElementById('roomWallet');
-  rw.style.opacity=1-swapOut;rw.style.transform='translateY('+(-swapOut*44)+'px)';
-  var rs=document.getElementById('roomSocial');
-  rs.style.opacity=swapIn;
-
-  // ---- phone: social room (posts land, engagement ticks) ----
-  var posts=document.querySelectorAll('#oldposts .post');
-  for(var p1=0;p1<posts.length;p1++){
-    var pp2=clamp01((t-4.0-p1*0.55)/0.5);
-    posts[p1].style.opacity=pp2;posts[p1].style.transform='translateY('+((1-back(pp2))*46)+'px)';
-    var tick=easeOut(clamp01((t-4.35-p1*0.55)/0.7));
-    var lk=posts[p1].querySelector('.lk'),rc=posts[p1].querySelector('.rc');
-    lk.textContent=Math.round(parseInt(lk.getAttribute('data-n'))*tick);
-    rc.textContent=Math.round(parseInt(rc.getAttribute('data-n'))*tick);
+  var idx=sceneIdx(Math.min(t,FIN-0.01));
+  // ---- lockup: chip flips when the SOURCE changes; title crossfades every scene
+  var lchip=document.getElementById('lchip'),ltitle=document.getElementById('ltitle');
+  var lockOp=Math.min(clamp01((t-0.15)/0.4),1-clamp01((t-(FIN-0.3))/0.3));
+  document.getElementById('lockup').style.opacity=lockOp;
+  var shown=idx;
+  var rot=0;
+  // find the most recent boundary where the chip changed
+  for(var b=1;b<12;b++){
+    if(CHIPS[b]!==CHIPS[b-1]){
+      var fp=clamp01((t-(T0[b]-0.18))/0.5);
+      if(fp>0&&fp<1)rot=360*easeOut(fp);
+      if(t>=T0[b]-0.18&&fp<0.5)shown=b-1;   // label swaps at 90°
+    }
   }
-  // pull-to-refresh at 21.0: the feed dips, a new post lands, rain falls
-  var dipP=clamp01((t-21.0)/0.55);
-  var dip=Math.sin(Math.PI*Math.min(1,dipP))*26;
-  var push=easeOut(clamp01((t-21.35)/0.55));
-  var op=document.getElementById('oldposts');
-  op.style.transform='translateY('+(dip+push*152)+'px)';
-  var npst=document.getElementById('newpost');
-  npst.style.opacity=clamp01((t-21.45)/0.4);
-  npst.style.transform='translateY('+(dip+(1-back(clamp01((t-21.45)/0.5)))*-30)+'px) scale('+(0.94+0.06*back(clamp01((t-21.45)/0.5)))+')';
-  // the shower, inside the screen, motion-stretched by speed
+  lchip.textContent=CHIPS[shown];
+  lchip.style.transform='rotateX('+rot+'deg)';
+  // title: fade at each scene boundary
+  var tb=T0[idx],tin=clamp01((t-tb-0.02)/0.3);
+  ltitle.textContent=TITLES[idx];
+  ltitle.style.opacity=Math.min(tin,lockOp);
+  ltitle.style.transform='translateY('+((1-easeOut(tin))*16)+'px)';
+  // hue wash follows the scene's accent, very quiet
+  var wash=document.getElementById('wash');
+  wash.style.background='radial-gradient(1300px 800px at 50% 46%, '+ACC[idx]+'14, transparent 70%)';
+  wash.style.opacity=(t<FIN)?1:1-clamp01((t-FIN)/0.5);
+
+  // ---- scene visibility: OVERLAPPED crossfades — the incoming scene is
+  // already most of the way in at the boundary, so no frame ever dips to
+  // black (the v4 first cut had a visible black trough at every cut)
+  for(var i2=0;i2<12;i2++){
+    var a=T0[i2],b2=T0[i2+1];
+    var op=clamp01((t-(a-0.22))/0.34)*(1-clamp01((t-(b2-0.12))/0.34));
+    if(t<a-0.27||t>b2+0.4)op=0;
+    scenes[i2].style.opacity=op;
+    var outp=clamp01((t-(b2-0.12))/0.34);
+    scenes[i2].style.transform='translateY('+((1-easeOut(clamp01((t-(a-0.22))/0.55)))*22-outp*20)+'px)';
+    if(op>0)anim(i2,t-a);
+  }
+
+  // ---- finale: the shower, then the strip's cascade of coin flips
+  var fin=document.getElementById('finale');
+  fin.style.opacity=clamp01((t-FIN+0.15)/0.35)*(1-clamp01((t-(FIN+3.3))/0.4));
+  var lf=t-FIN;
   var drops=document.querySelectorAll('.drop');
-  for(var d2=0;d2<drops.length;d2++){var dd=DROPS[d2];var pp3=(t-21.15-dd.delay)/dd.dur;
-    if(pp3<0||pp3>1){drops[d2].style.opacity=0;continue;}
-    var yy=-30+Math.pow(pp3,1.5)*800;
-    var stretch=1+0.9*Math.sin(Math.PI*Math.min(1,pp3));
-    drops[d2].style.transform='translate('+(dd.drift*pp3)+'px,'+yy+'px) scaleY('+stretch+')';
-    drops[d2].style.opacity=Math.min(clamp01(pp3/0.12),1-clamp01((pp3-0.82)/0.18));}
-
-  // ---- iPad: media room (paints as the camera arrives) ----
-  var cvs=document.querySelectorAll('.cover');
-  for(var c1=0;c1<cvs.length;c1++){var cp1=clamp01((t-7.9-c1*0.16)/0.45);cvs[c1].style.opacity=cp1;cvs[c1].style.transform='scale('+(0.84+0.16*back(cp1))+')';}
-  var mr=document.querySelectorAll('.mrow2');
-  for(var m1=0;m1<mr.length;m1++){var mp1=clamp01((t-9.3-m1*0.3)/0.45);mr[m1].style.opacity=mp1;mr[m1].style.transform='translateX('+((1-easeOut(mp1))*36)+'px)';}
-  var vt=document.querySelectorAll('.vthumb');
-  for(var v1=0;v1<vt.length;v1++){var vp1=clamp01((t-10.3-v1*0.2)/0.45);vt[v1].style.opacity=vp1;vt[v1].style.transform='translateY('+((1-back(vp1))*26)+'px)';}
-
-  // ---- Mac: mail lands, then the brief paints as the camera drifts right --
-  var rows=document.querySelectorAll('.mailrow');
-  for(var r1=0;r1<rows.length;r1++){var rp1=clamp01((t-11.9-r1*0.3)/0.48);rows[r1].style.opacity=rp1;rows[r1].style.transform='translateX('+((1-easeOut(rp1))*-34)+'px)';
-    var dt=rows[r1].querySelector('.dot');if(dt&&!dt.classList.contains('z')){var dp1=clamp01((t-12.25-r1*0.3)/0.3);dt.style.transform='scale('+(0.3+0.7*back(dp1))+')';dt.style.opacity=dp1;}}
-  var hp2=easeOut(clamp01((t-14.2)/0.85));
-  document.getElementById('heronum').textContent=fmt(48210*hp2);
-  var hpp=clamp01((t-15.0)/0.3);
-  var hpill=document.getElementById('heropill');hpill.style.opacity=hpp;hpill.style.transform='scale('+(0.5+0.5*back(hpp))+')';
-  var bars=document.querySelectorAll('#hourbars i');
-  for(var k7=0;k7<bars.length;k7++){var bp=clamp01((t-14.5-k7*0.06)/0.45);bars[k7].style.transform='scaleY('+back(bp)+')';}
-  document.getElementById('hourlbl').style.opacity=clamp01((t-15.3)/0.35);
-  var rp3=easeOut(clamp01((t-14.8)/0.9));
-  document.getElementById('ringarc').style.strokeDashoffset=289*(1-0.82*rp3);
-  document.getElementById('ringnum').textContent=Math.round(82*rp3);
-  var rcv=document.getElementById('ringcurve');
-  if(curveLen===null)curveLen=rcv.getTotalLength();
-  var rcp=easeOut(clamp01((t-15.1)/0.7));
-  rcv.style.strokeDasharray=curveLen;rcv.style.strokeDashoffset=curveLen*(1-rcp);
-
-  // ---- the conveyor ----
-  var conv=document.getElementById('conveyor');
-  conv.style.opacity=win(t,15.8,20.3);
-  var ccards=document.querySelectorAll('.ccard');
-  for(var cc=0;cc<ccards.length;cc++){
-    var Tk=T_CONV0+cc*T_STEP;
-    var x=960+(Tk-t)*1560;                              // 686px between cards — wider than a card, so neighbors never stack
-    var f=1-Math.min(1,Math.abs(t-Tk)/0.55);            // focus at center
-    ccards[cc].style.transform='translate('+(x-320)+'px,0) scale('+(0.82+0.18*f)+')';
-    ccards[cc].style.opacity=(0.14+0.86*f)*conv.style.opacity;
-    var prog=clamp01((t-(Tk-0.6))/0.6);
-    var grows=ccards[cc].querySelectorAll('.grow');
-    for(var g2=0;g2<grows.length;g2++){grows[g2].style.transform='scaleX('+easeOut(clamp01((prog-g2*0.12)/0.8))+')';}
-    var fades=ccards[cc].querySelectorAll('.fadein');
-    for(var g3=0;g3<fades.length;g3++){fades[g3].style.opacity=clamp01((prog-0.25-g3*0.08)/0.4);}
-    var sa=ccards[cc].querySelector('.sarc');
-    if(sa)sa.style.strokeDashoffset=176*(1-0.667*easeOut(prog));
+  for(var d2=0;d2<drops.length;d2++){var dd=DROPS[d2];var pp=(lf-0.1-dd.delay)/dd.dur;
+    if(pp<0||pp>1){drops[d2].style.opacity=0;continue;}
+    var yy=-40+Math.pow(pp,1.5)*1140;
+    drops[d2].style.transform='translate('+(dd.drift*pp)+'px,'+yy+'px) scaleY('+(1+0.9*Math.sin(Math.PI*Math.min(1,pp)))+')';
+    drops[d2].style.opacity=Math.min(clamp01(pp/0.12),1-clamp01((pp-0.85)/0.15));}
+  var chips2=document.querySelectorAll('.fchip2');
+  var active2=0;
+  for(var c3=0;c3<chips2.length;c3++){
+    var ft=0.55+c3*0.17;                     // the wave
+    var cp=clamp01((lf-ft)/0.6);
+    chips2[c3].style.transform='rotateX('+(360*easeOut(cp))+'deg)';
+    if(cp>0.5)active2=c3;
   }
-  document.querySelector('.ckick').style.opacity=win(t,16.0,20.0)*0.9;
+  for(var c4=0;c4<chips2.length;c4++)chips2[c4].className='fchip2'+(c4===active2?' on':'');
 
-  // ---- outro ----
-  document.getElementById('outro').style.opacity=easeOut(clamp01((t-23.6)/0.5));
-  var om=document.querySelector('.omark');if(om){var omp=clamp01((t-23.7)/0.6);om.style.transform='scale('+(0.6+0.4*back(omp))+')';om.style.opacity=omp;}
+  document.getElementById('outro').style.opacity=easeOut(clamp01((t-(FIN+3.4))/0.5));
+  var om=document.querySelector('.omark');if(om){var omp=clamp01((t-(FIN+3.5))/0.6);om.style.transform='scale('+(0.6+0.4*back(omp))+')';om.style.opacity=omp;}
 };
+
+function anim(i,lt){
+  if(i===0){
+    document.getElementById('s0num').textContent='$'+Math.round(48210*easeO4(clamp01((lt-0.1)/1.0))).toLocaleString('en-US');
+    var pp=clamp01((lt-1.0)/0.35);
+    var pl=document.getElementById('s0pill');pl.style.opacity=pp;pl.style.transform='scale('+(0.6+0.4*back(pp))+')';
+    var ln=document.getElementById('s0line');
+    if(lineLen===null)lineLen=ln.getTotalLength();
+    var sp=easeIO(clamp01((lt-0.15)/1.5));
+    ln.style.strokeDasharray=lineLen;ln.style.strokeDashoffset=lineLen*(1-sp);
+    var pt=ln.getPointAtLength(lineLen*Math.max(0.001,sp));
+    var dt=document.getElementById('s0dot');dt.setAttribute('cx',pt.x);dt.setAttribute('cy',pt.y);dt.style.opacity=sp>0.01&&sp<0.999?1:0;
+    document.getElementById('s0area').style.opacity=clamp01((lt-1.5)/0.5);
+    document.getElementById('s0sub').style.opacity=clamp01((lt-1.55)/0.4);
+  } else if(i===1){
+    var cells=document.querySelectorAll('#s1 .tmcell');
+    for(var k=0;k<cells.length;k++){var cp=clamp01((lt-0.08-k*0.15)/0.5);cells[k].style.opacity=cp;cells[k].style.transform='scale('+(0.86+0.14*back(cp))+') translateY('+((1-easeOut(cp))*20)+'px)';}
+  } else if(i===2){
+    document.getElementById('fspine').style.opacity=clamp01(lt/0.3);
+    var fl=easeIO(clamp01((lt-0.25)/0.95));
+    var lr=document.getElementById('fclipLr');lr.setAttribute('x',730-730*fl);lr.setAttribute('width',730*fl);
+    var fr=easeIO(clamp01((lt-0.55)/0.95));
+    document.getElementById('fclipRr').setAttribute('width',760*fr);
+    document.querySelector('#s2 .sstage > div').style.opacity=clamp01((lt-1.6)/0.4);
+  } else if(i===3){
+    var dots=document.querySelectorAll('#s3 .riskdot');
+    for(var k3=0;k3<dots.length;k3++){var dp=clamp01((lt-0.15-k3*0.2)/0.45);dots[k3].style.opacity=dp;dots[k3].style.transform='translateY('+((1-back(dp))*-46)+'px)';}
+    var lbls=document.querySelectorAll('#s3 .risklbl');
+    for(var k4=0;k4<lbls.length;k4++){lbls[k4].style.opacity=clamp01((lt-0.4-k4*0.2)/0.4);}
+  } else if(i===4){
+    var hm=document.querySelectorAll('#s4 .hm2 i');
+    for(var h=0;h<hm.length;h++){var col=h%30;var v=parseFloat(hm[h].getAttribute('data-v')||'0');
+      var ap=clamp01((lt-0.05-col*0.038)/0.3);
+      hm[h].style.opacity=hm[h].classList.contains('z')?ap*0.9:ap*(0.2+v*0.8);
+      hm[h].style.transform='scale('+(0.5+0.5*easeOut(ap))+')';}
+    document.querySelector('#s4 .hmonths').style.opacity=clamp01((lt-1.1)/0.4);
+  } else if(i===5){
+    var tc=document.querySelectorAll('#s5 .topiccell');
+    for(var k5=0;k5<tc.length;k5++){var tp=clamp01((lt-0.08-k5*0.14)/0.45);tc[k5].style.opacity=tp;tc[k5].style.transform='scale('+(0.86+0.14*back(tp))+')';}
+  } else if(i===6){
+    var lb=document.querySelectorAll('#s6 .leadrow2');
+    for(var k6=0;k6<lb.length;k6++){var lp=clamp01((lt-0.1-k6*0.16)/0.55);lb[k6].style.opacity=Math.min(1,lp*3);
+      lb[k6].querySelector('.bar').style.transform='scaleX('+easeO4(lp)+')';
+      var ct=lb[k6].querySelector('.ct');ct.textContent=Math.round(parseInt(ct.getAttribute('data-n'))*easeO4(lp));}
+  } else if(i===7){
+    var bars=document.querySelectorAll('#s7 .bars2 i');
+    for(var k7=0;k7<bars.length;k7++){var bp=clamp01((lt-0.05-k7*0.07)/0.5);bars[k7].style.transform='scaleY('+back(bp)+')';}
+  } else if(i===8){
+    var rp=easeIO(clamp01((lt-0.1)/1.1));
+    document.getElementById('s8arc').style.strokeDashoffset=993*(1-0.82*rp);
+    document.getElementById('s8num').textContent=Math.round(82*rp);
+    var rc=document.getElementById('s8curve');
+    if(curveLen===null)curveLen=rc.getTotalLength();
+    var rcp=easeIO(clamp01((lt-0.5)/0.8));
+    rc.style.strokeDasharray=curveLen;rc.style.strokeDashoffset=curveLen*(1-rcp);
+    document.querySelector('#s8 .ringtxt2 .l').style.opacity=clamp01((lt-0.7)/0.4);
+  } else if(i===9){
+    document.getElementById('s9dim').style.transform='scaleX('+easeIO(clamp01((lt-0.1)/0.7))+')';
+    document.getElementById('s9lit').style.transform='scaleX('+easeIO(clamp01((lt-0.5)/0.8))+')';
+    document.querySelector('#s9 .meltlbl').style.opacity=clamp01((lt-1.0)/0.4);
+  } else if(i===10){
+    var ribs=document.querySelectorAll('#s10 .ribbon');
+    if(ribbonLens===null){ribbonLens=[];for(var r0=0;r0<ribs.length;r0++)ribbonLens.push(ribs[r0].getTotalLength());}
+    for(var r1=0;r1<ribs.length;r1++){var rpp=easeIO(clamp01((lt-0.1-r1*0.18)/0.8));
+      ribs[r1].style.strokeDasharray=ribbonLens[r1];ribs[r1].style.strokeDashoffset=ribbonLens[r1]*(1-rpp);}
+    var cls=document.querySelectorAll('#s10 .conlbl');
+    for(var r2=0;r2<cls.length;r2++)cls[r2].style.opacity=clamp01((lt-0.8-r2*0.08)/0.4);
+  } else if(i===11){
+    var tks=document.querySelectorAll('#s11 .runtick');
+    for(var k8=0;k8<tks.length;k8++){var kp=clamp01((lt-0.15-k8*0.18)/0.45);tks[k8].style.opacity=kp;tks[k8].style.transform='translateY('+((1-back(kp))*-40)+'px)';}
+    var rls=document.querySelectorAll('#s11 .runlbl');
+    for(var k9=0;k9<rls.length;k9++)rls[k9].style.opacity=clamp01((lt-0.4-k9*0.18)/0.4);
+  }
+}
 window.seek(0);
 </script></body></html>`;
 fs.writeFileSync(path.join(__dirname, 'clip-viz-reel.html'), html);
