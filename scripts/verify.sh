@@ -95,6 +95,17 @@ step "X pure-logic self-test"
   || fail "the X logic self-test failed — run scripts/x-selftest.sh"
 print -P "%F{green}✓ x self-test%f"
 
+# Pure-logic self-test for the Cloudflare DNS change detector (prd §296). Same
+# reasoning as the X harness above: the bridge was authored against Cloudflare's
+# published API reference with no token and no authenticated access, and every
+# failure in `diffDNS` is a silent wrong answer that renders perfectly — a
+# partial read reporting live records as deleted, a proxy flag flipped off
+# passing as no change, a second change to a record deduping into the first.
+step "Cloudflare pure-logic self-test"
+"$ROOT/scripts/cloudflare-selftest.sh" >/dev/null \
+  || fail "the Cloudflare logic self-test failed — run scripts/cloudflare-selftest.sh"
+print -P "%F{green}✓ cloudflare self-test%f"
+
 # Pure-logic self-test for the on-device-intelligence pass (prd §282). Static,
 # no build, no network — and the ONLY automated check that pass can have: the
 # simulator ships no on-device language model, so every model path there runs

@@ -21,6 +21,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     case posthog  = "PostHog"
     case stripe   = "Stripe"
     case trello   = "Trello"
+    case cloudflare = "Cloudflare"
 
     var id: String { rawValue }
 
@@ -41,6 +42,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .posthog:  "posthog"
         case .stripe:   "stripe"
         case .trello:   "trello"
+        case .cloudflare: "cloudflare"
         }
     }
 
@@ -76,6 +78,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // carry the key you just pasted, so `TokenSetupScreen` builds it from
         // `TrelloAuth.authorizeURL(key:)` instead. See `TrelloAuth`.
         case .trello:    URL(string: "https://trello.com/power-ups/admin")
+        case .cloudflare: URL(string: "https://dash.cloudflare.com/profile/api-tokens")
         }
     }
 
@@ -98,6 +101,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .posthog:   "posthog.com → personal API keys"
         case .stripe:    "dashboard.stripe.com → API keys"
         case .trello:    "trello.com → Power-Ups admin"
+        case .cloudflare: "dash.cloudflare.com → API tokens"
         }
     }
 
@@ -169,6 +173,17 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .trello: [
             "Allow — Trello shows a token on the page.",
             "Copy it and paste it below."]
+        // The permissions ARE named here, unlike PostHog's and Stripe's, and
+        // that is not a §220 slip: those two own their own screens and render a
+        // `DSCheckList` under the step, so naming them twice would be the thing
+        // §220 forbids. A `.token` bridge renders `TokenSetupScreen`, which has
+        // no checklist — so the step is the only place this can be said, and
+        // leaving it unsaid means someone mints a token with the wrong reach.
+        // Cloudflare's own template is named rather than four permission rows
+        // spelled out, because a template is one click and cannot be mistyped.
+        case .cloudflare: [
+            "Create a token from the Read all resources template — or any token whose permissions are all Read.",
+            "Copy it and paste it below."]
         }
     }
 
@@ -188,6 +203,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .posthog:  "phx_…"
         case .stripe:   "rk_live_…"
         case .trello:   "Token"
+        case .cloudflare: "API token"
         }
     }
 
@@ -212,6 +228,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .posthog:  "personal API key"
         case .stripe:   "restricted key"
         case .trello:   "token"
+        case .cloudflare: "API token"
         }
     }
 
@@ -232,6 +249,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .posthog:  "updates"
         case .stripe:   "updates"
         case .trello:   "cards"
+        case .cloudflare: "alerts"
         }
     }
 
@@ -261,6 +279,11 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // token that has no write permission to give. Every other keyed bridge
         // depends on the person ticking the right box on someone else's page.
         case .trello:   "Reads the cards assigned to you and when they're due. Casberi asks Trello for a read-only token — it cannot move a card, comment, or write anything back."
+        // What is NOT read is worth a clause here. Cloudflare's API is mostly
+        // traffic numbers, and someone connecting an infrastructure account has
+        // every right to wonder whether their visitors' data is about to land
+        // in a feed.
+        case .cloudflare: "Reads the dates behind the sites you run — certificate expiry, domain renewals, your token's own expiry — and tells you when a DNS record changes. No analytics, no logs, nothing about your visitors. A read-only token cannot change a DNS record, purge cache, or write anything back."
         }
     }
 
@@ -283,6 +306,13 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         switch self {
         case .trello:
             String(localized: "Trello answered — no cards are assigned to you. Casberi reads cards you're a member of, so add yourself to one and sync again.")
+        // Cloudflare earns one for the opposite reason to Trello's: here empty
+        // is the GOOD outcome and by far the most common one, and it is exactly
+        // as silent as a refused token. Nothing lands until something is close
+        // to expiring, so a healthy account reads as a broken connection
+        // forever without this sentence.
+        case .cloudflare:
+            String(localized: "Cloudflare answered — nothing needs attention. Casberi only lands certificates, domains and tokens that are close to expiring, so an empty read means everything is current.")
         default:
             nil
         }
@@ -308,6 +338,12 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .posthog:   PostHogAccount.clear()
         case .stripe:    StripeAccount.clear()
         case .trello:    if !reconnecting { TrelloAuth.clear() }
+        // Cleared on BOTH callers, unlike Trello's key: this is a cached
+        // reading, which is exactly what this hook is for, and a fresh token
+        // may name a different Cloudflare account. Diffing a new account's DNS
+        // against the old one's snapshot would report a stranger's records as
+        // yours, added and removed.
+        case .cloudflare: CloudflareDNSLedger.clear()
         default:         break
         }
     }
@@ -469,6 +505,11 @@ enum TokenIngest {
         // landing, the Linear shape exactly — dedupe never revisits a known
         // ref, so without this the state stamped at first sight is frozen.
         if bridge == .trello { reconcileTrello(incoming, context: context) }
+        // Cloudflare needs BOTH halves — its rows are states wearing a date,
+        // so a landed row's due date has to keep moving as the date approaches
+        // (the dedupe below never revisits a known ref), and a row whose
+        // condition has cleared has to close. See `reconcileCloudflare`.
+        if bridge == .cloudflare { reconcileCloudflare(incoming, context: context) }
 
         var existing = IngestSupport.existingSourceRefs(context)
         // One backfill per source string the items actually carry — no
@@ -511,6 +552,7 @@ enum TokenIngest {
         case .privacy:  await PrivacyFetch.things(token: token)
         case .oneclaw:  await OneClawFetch.things(token: token, context: context)
         case .trello:   await trello(token)
+        case .cloudflare: await CloudflareFetch.things(token: token)
         // Unreachable — `refresh` routes these two to their own sweeps above.
         // Present so the switch stays exhaustive rather than defaulted, which
         // is what makes a future bridge impossible to add without deciding.

@@ -353,6 +353,15 @@ enum ProbeHooks {
         Hook(key: "trelloProbe") { _, _ in
             Task { @MainActor in await TrelloAuth.diagnose() }
         },
+        // `-cloudflareProbe YES` walks the Cloudflare read phase by phase with
+        // the STORED token (connect first via `-tokenBridge "Cloudflare:<t>"`).
+        // The `-kalshiBookProbe` lesson: an empty Cloudflare room has five
+        // causes — no token, a refused token, a token missing a permission, an
+        // account with no zones, and the healthy common case where everything
+        // is simply current — and all five render as the same one sentence.
+        Hook(key: "cloudflareProbe") { _, _ in
+            Task { @MainActor in await CloudflareFetch.diagnose() }
+        },
         // `-oneclawProbe YES` walks the 1Claw access read with the STORED key
         // (connect first via `-tokenBridge "1Claw:<key>"`), logging each step
         // — scopes, vaults, per-vault grant counts or the honest "unreadable"

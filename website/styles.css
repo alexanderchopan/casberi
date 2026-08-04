@@ -139,6 +139,12 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
    artwork carrying its own purple field — same treatment as PostHog
    above, and the same as BridgeIcon gives it in the app. */
 .ai-stripe img { width: 100%; height: 100%; border-radius: inherit; }
+.ai-cloudflare { background: #fff; }
+/* Cloudflare's mark is two-tone orange and only reads as itself in
+   colour, so the tile carries the artwork full-bleed on its own white
+   field rather than a flattened white glyph on orange — the Stripe and
+   PostHog treatment, for the same reason. */
+.ai-cloudflare img { width: 100%; height: 100%; border-radius: inherit; }
 .ai-notion    { background: #fff; color: #111; }
 .ai-reddit    { background: #ff4500; }
 .ai-youtube   { background: #ff0000; font-size: 17px; }
