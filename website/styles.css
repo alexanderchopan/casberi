@@ -1197,11 +1197,11 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
    its own steps carry enough motion. */
 .m-section.flow, .m-section.flow.in { opacity: 1; transform: none; }
 .flow { padding-top: 10px; }
-.flow-deck { font-size: 17px; color: var(--dim); margin: -6px 0 54px; }
-.fstep { display: grid; grid-template-columns: 1fr 340px; gap: 54px;
-  align-items: center; margin-bottom: 84px; }
+.flow-deck { font-size: 16px; color: var(--dim); margin: -6px 0 38px; }
+.fstep { display: grid; grid-template-columns: 1fr 260px; gap: 44px;
+  align-items: center; margin-bottom: 52px; }
 .fstep:last-child { margin-bottom: 20px; }
-.fstep.is-chart { grid-template-columns: 1fr 520px; }
+.fstep.is-chart { grid-template-columns: 1fr 430px; }
 .fhead { max-width: 560px; }
 .fnum { display: inline-block; font-family: ui-monospace, "SF Mono", Menlo, monospace;
   font-size: 13px; font-weight: 800; letter-spacing: .08em; color: var(--blue-bright);
@@ -1211,19 +1211,19 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 .fhead p { font-size: 16.5px; line-height: 1.6; color: var(--dim); margin: 0; }
 
 .cyc { position: relative; }
-.fphone { position: relative; width: 268px; margin: 0 auto; border-radius: 30px;
+.fphone { position: relative; width: 196px; margin: 0 auto; border-radius: 24px;
   overflow: hidden; background: #0b0910; aspect-ratio: 1320 / 2868;
-  box-shadow: 0 0 0 7px #1c1f26, 0 0 0 8px #2b3038, 0 24px 54px rgba(0,0,0,.55); }
+  box-shadow: 0 0 0 6px #1c1f26, 0 0 0 7px #2b3038, 0 18px 40px rgba(0,0,0,.5); }
 .fisland { position: absolute; top: 1.6%; left: 50%; transform: translateX(-50%);
   width: 32%; aspect-ratio: 10 / 3; border-radius: 999px; background: #000; z-index: 3; }
-.cycshell { position: relative; width: 100%; aspect-ratio: 16 / 11; background: #000;
+.cycshell { position: relative; width: 100%; aspect-ratio: 16 / 10; background: #000;
   border-radius: 22px; overflow: hidden;
   box-shadow: 0 0 0 1px rgba(255,255,255,.09), 0 22px 50px rgba(0,0,0,.5); }
 .fphone img { position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: cover; object-position: top center; opacity: 0;
   animation: var(--kf) var(--dur) linear infinite; }
 .cycshell img { position: absolute; inset: 0; width: 100%; height: 100%;
-  object-fit: contain; background: #000; padding: 20px; opacity: 0;
+  object-fit: contain; background: #000; padding: 14px; opacity: 0;
   animation: var(--kf) var(--dur) linear infinite; }
 .cyccap { position: relative; height: 2.9em; margin-top: 16px; text-align: center; }
 .fstep.is-chart .cyccap { text-align: left; }
@@ -1233,8 +1233,8 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 .cyccap b { color: #fff; font-weight: 700; }
 
 @media (max-width: 900px) {
-  .fstep, .fstep.is-chart { grid-template-columns: 1fr; gap: 26px; margin-bottom: 62px; }
-  .fphone { width: 232px; }
+  .fstep, .fstep.is-chart { grid-template-columns: 1fr; gap: 22px; margin-bottom: 46px; }
+  .fphone { width: 188px; }
   .fstep.is-chart .cyccap { text-align: center; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1269,5 +1269,21 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
   1.20% { opacity: 1 }
   9.51% { opacity: 1 }
   11.11% { opacity: 0 }
+  100% { opacity: 0 }
+}
+
+@keyframes cycfade5 {
+  0% { opacity: 0 }
+  1.20% { opacity: 1 }
+  18.40% { opacity: 1 }
+  20.00% { opacity: 0 }
+  100% { opacity: 0 }
+}
+
+@keyframes cycfade6 {
+  0% { opacity: 0 }
+  1.20% { opacity: 1 }
+  15.07% { opacity: 1 }
+  16.67% { opacity: 0 }
   100% { opacity: 0 }
 }
