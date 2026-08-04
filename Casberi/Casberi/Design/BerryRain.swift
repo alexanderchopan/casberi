@@ -26,6 +26,13 @@ struct BerryRain: View {
     /// one, rains in ITS color instead of the app's default berry blue
     /// (delight pass 2026-07-21: color still only ever carries identity).
     var hue: Color? = nil
+    /// An SF Symbol to rain INSTEAD of the berry circles (2026-08-04): a
+    /// connect lands the app's own glyph, so the payoff is recognisably that
+    /// app's rather than the app's generic shower. Same fall, same timing,
+    /// same seeded deal — only the shape changes, so a connect and a refresh
+    /// stay one family. nil keeps the circles, which every other caller wants:
+    /// a pull-to-refresh belongs to the whole surface and has no one glyph.
+    var glyph: String? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -33,7 +40,7 @@ struct BerryRain: View {
         // Reduce Motion never reaches the view as a pour: the trigger it sees
         // stays 0, so no shower is ever dealt (and flipping the setting off
         // mid-session simply lets the next real bump through).
-        BerryRainLayer(pour: reduceMotion ? 0 : trigger, hue: hue)
+        BerryRainLayer(pour: reduceMotion ? 0 : trigger, hue: hue, glyph: glyph)
             .allowsHitTesting(false)
     }
 
@@ -82,6 +89,45 @@ struct BerryRain: View {
     }
 }
 
+// MARK: - Connect rain (an app's own mark falls as its connection lands)
+
+/// The connect payoff's second half (2026-08-04), riding beside
+/// `.connectBloom` on the two surfaces that already own that moment — the
+/// Apps store and an app's product page. The bloom washes the app's hue; this
+/// deals the app's own GLYPH in it, so the celebration is legibly about the
+/// app you just connected rather than a generic shower.
+///
+/// One modifier so the beat can't drift between the two surfaces (the same
+/// reason `ConnectBloom` is shared), and pointedly NOT wired into
+/// `SourceMoments`: that bus rains on `MainSurface`, which is underneath a
+/// raised connect sheet — a moment fired from a setup form would pour where
+/// nobody could see it. Every `.token` setup screen dismisses on success by
+/// design (§218), handing the payoff back to the page that made the promise,
+/// and that page is exactly where this rains.
+struct ConnectRain: ViewModifier {
+    /// The app whose mark falls, and whose hue tints it.
+    let name: String
+    /// Bump to pour once — the SAME token the bloom uses, so one connect is
+    /// one moment rather than two that could drift apart.
+    let token: Int
+
+    func body(content: Content) -> some View {
+        content.overlay {
+            BerryRain(trigger: token,
+                      hue: BridgeGlyph.signalColor(for: name),
+                      glyph: BridgeGlyph.symbol(for: name))
+        }
+    }
+}
+
+extension View {
+    /// The app's own mark raining once as its connection lands. Pair with
+    /// `.connectBloom(hue:token:)` on the same token.
+    func connectRain(name: String, token: Int) -> some View {
+        modifier(ConnectRain(name: name, token: token))
+    }
+}
+
 /// One dealt circle — where it starts, how it falls.
 fileprivate struct Drop: Identifiable {
     let id: Int
@@ -99,11 +145,12 @@ fileprivate struct BerryRainLayer: UIViewRepresentable {
     /// The pulse to deal. 0 means "never pour" (idle, or Reduce Motion).
     let pour: Int
     let hue: Color?
+    let glyph: String?
 
     func makeUIView(context: Context) -> BerryRainView { BerryRainView() }
 
     func updateUIView(_ view: BerryRainView, context: Context) {
-        view.pour(pour, hue: hue)
+        view.pour(pour, hue: hue, glyph: glyph)
     }
 }
 
@@ -114,7 +161,7 @@ fileprivate final class BerryRainView: UIView {
     /// many times SwiftUI re-runs `updateUIView` for the same value.
     private var dealt = 0
     /// A pulse that arrived before the view had a size (see `layoutSubviews`).
-    private var waiting: (pulse: Int, hue: Color?)?
+    private var waiting: (pulse: Int, hue: Color?, glyph: String?)?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -127,27 +174,45 @@ fileprivate final class BerryRainView: UIView {
 
     required init?(coder: NSCoder) { fatalError("BerryRainView is code-only") }
 
-    func pour(_ pulse: Int, hue: Color?) {
+    func pour(_ pulse: Int, hue: Color?, glyph: String?) {
         guard pulse > 0, pulse != dealt else { return }
         dealt = pulse
         // A pulse can land before the first layout pass (the overlay mounts and
         // a refresh fires in the same beat) — hold it rather than dropping it
         // on the floor, since `dealt` has already claimed the pulse.
         guard bounds.width > 0, bounds.height > 0 else {
-            waiting = (pulse, hue)
+            waiting = (pulse, hue, glyph)
             return
         }
-        deal(pulse, hue: hue)
+        deal(pulse, hue: hue, glyph: glyph)
     }
 
     override func layoutSubviews() {
         super.layoutSubviews()
         guard let held = waiting, bounds.width > 0, bounds.height > 0 else { return }
         waiting = nil
-        deal(held.pulse, hue: held.hue)
+        deal(held.pulse, hue: held.hue, glyph: held.glyph)
     }
 
-    private func deal(_ pulse: Int, hue: Color?) {
+    /// One rendered glyph per (symbol, color, size) — a shower deals up to 48
+    /// drops and rasterising the same symbol 48 times is work the render
+    /// server shouldn't be handed. Sizes are quantised so the cache can't grow
+    /// unbounded across showers; it is only ever read on the main actor.
+    private static var glyphCache: [String: CGImage] = [:]
+
+    private static func glyphImage(_ name: String, color: UIColor, size: CGFloat) -> CGImage? {
+        let step = (size / 4).rounded() * 4
+        let key = "\(name)|\(color.hashValue)|\(step)"
+        if let hit = glyphCache[key] { return hit }
+        let config = UIImage.SymbolConfiguration(pointSize: step, weight: .semibold)
+        guard let symbol = UIImage(systemName: name, withConfiguration: config)?
+                .withTintColor(color, renderingMode: .alwaysOriginal)
+                .cgImage else { return nil }
+        glyphCache[key] = symbol
+        return symbol
+    }
+
+    private func deal(_ pulse: Int, hue: Color?, glyph: String? = nil) {
         let drops = BerryRain.deal(seed: pulse, hue: hue, count: BerryRain.dropCount(for: bounds.width))
         let start = CACurrentMediaTime()
         var batch: [CALayer] = []
@@ -158,9 +223,24 @@ fileprivate final class BerryRainView: UIView {
         CATransaction.setDisableActions(true)
         for drop in drops {
             let dot = CALayer()
-            dot.bounds = CGRect(x: 0, y: 0, width: drop.diameter, height: drop.diameter)
-            dot.cornerRadius = drop.diameter / 2
-            dot.backgroundColor = UIColor(drop.color).cgColor
+            // A glyph drop is dealt a size up from a circle's: a symbol has
+            // interior space a filled circle doesn't, so matched diameters read
+            // visibly smaller and thinner than the shower they replace.
+            let scale = glyph == nil ? 1.0 : 1.5
+            dot.bounds = CGRect(x: 0, y: 0,
+                                width: drop.diameter * scale, height: drop.diameter * scale)
+            if let glyph,
+               let symbol = Self.glyphImage(glyph, color: UIColor(drop.color),
+                                            size: drop.diameter * scale) {
+                dot.contents = symbol
+                dot.contentsGravity = .resizeAspect
+            } else {
+                // No glyph asked for — or a symbol name this OS doesn't have,
+                // which must fall back to the shower that always works rather
+                // than pouring nothing at all.
+                dot.cornerRadius = drop.diameter / 2
+                dot.backgroundColor = UIColor(drop.color).cgColor
+            }
             let x = drop.x * bounds.width
             let from = CGPoint(x: x, y: -30)
             let to = CGPoint(x: x + drop.sway, y: bounds.height + 30)

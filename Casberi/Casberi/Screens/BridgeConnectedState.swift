@@ -101,7 +101,14 @@ struct BridgeConnectedState: View {
             HStack(spacing: DS.Space.s1) {
                 Image(systemName: bridge.status.glyph)
                     .font(.system(size: 9, weight: .bold))
-                Text(bridge.statusLine)
+                // The number ROLLS UP (2026-08-04). This is the one moment a
+                // connect page is allowed to show what landed — §236 ruled the
+                // page is a yes/no and the things themselves live in the feed,
+                // so the proof line is all the arrival there is, and it was
+                // arriving as static text. The Apps catalog's own row has
+                // counted this exact line up since the micro-motion pass; the
+                // screen where you actually watch it happen didn't.
+                CountUpText(text: bridge.statusLine)
                     .dsText(.label12).fontWeight(.semibold)
                     .monospacedDigit()
             }

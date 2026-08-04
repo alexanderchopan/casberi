@@ -29,11 +29,12 @@ struct AppsScreen: View {
     /// one bloom.
     @State private var connectHue: Color = DS.tint
     @State private var connectToken = 0
-    /// The store's first-ever connect rains the app's berries once — the
-    /// milestone the app noticed (sibling to "Your first thing"). Guarded so
-    /// it plays a single time, forever.
-    @AppStorage("apps.storeFirstConnect.done") private var storeFirstConnectDone = false
-    @State private var firstConnectPulse = 0
+    // The store's first-ever connect used to rain the app's generic berries
+    // once, guarded by an `apps.storeFirstConnect.done` flag. Retired
+    // 2026-08-04: every connect now rains the CONNECTED APP's own mark
+    // (`.connectRain` below), which is a better version of the same moment and
+    // made the first-only flag both redundant and a source of two showers at
+    // once on the very first connect.
     /// Bumped when a jump chip lands on a shelf — the header flashes once so
     /// the tap has an arrival, not just a silent scroll.
     @State private var shelfLand: [String: Int] = [:]
@@ -289,27 +290,20 @@ struct AppsScreen: View {
         // The connect payoff blooms the app's hue over the whole store, then
         // recedes — the same beat the product page gives, now on every Connect.
         .connectBloom(hue: connectHue, token: connectToken)
-        // The store's first-ever connect rains the app's berries, once.
-        .overlay { BerryRain(trigger: firstConnectPulse) }
-        // The milestone fires on the first connection by ANY path — the
-        // featured hooks (Wallet/Tokens/Farcaster) connect on their setup
-        // screen, never through `celebrateConnect`, so watch the store itself:
-        // 0 → first connected bridge deals the rain. A user who already has
-        // connections has passed the milestone; mark it done on appear so it
-        // never fires late.
+        // …and the connected app's own mark falls through it (2026-08-04).
+        // Keyed to `connectLiftToken`/`justConnectedName` rather than the
+        // bloom's token, because those are set by `handleConnectChange` for
+        // EVERY connect path — a setup screen's sheet dismisses back onto this
+        // store, and before this only a one-tap connect made from the store
+        // itself got a payoff here.
+        .connectRain(name: justConnectedName ?? "", token: connectLiftToken)
         .onAppear {
-            if connectedCount > 0 { storeFirstConnectDone = true }
             // Seed the connect-count milestone to the highest already-passed
             // threshold so arriving past one never fires a late toast.
             let passed = Self.connectMilestones.filter { $0 <= connectedCount }.max() ?? 0
             if passed > connectMilestoneReached { connectMilestoneReached = passed }
             // Read the corpus once for the taste-driven Discover seats.
             tasteReasons = CatalogTaste.reasons(context: modelContext)
-        }
-        .onChange(of: connectedCount) { old, new in
-            guard !storeFirstConnectDone, old == 0, new > 0 else { return }
-            storeFirstConnectDone = true
-            firstConnectPulse += 1
         }
         // The store's shape after any connect/disconnect — drives the promote
         // lift (which row just took its seat), the count milestones, and the

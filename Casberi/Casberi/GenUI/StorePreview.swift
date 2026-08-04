@@ -34,6 +34,98 @@ enum StorePreview {
             "r1 = TxRow(\"Received\", \"500 USDC\", \"from Railgun · sender private\")",
             "r2 = TxRow(\"Shielded\", \"1.2 WETH\", \"into Railgun\")",
         ]
+        // Amounts and moments, never a shop. The merchant, the MCC and the
+        // original currency live behind Gnosis Pay's authenticated API and
+        // never reach the chain at all, so a preview naming a store would be
+        // inventing the one field this bridge provably cannot read. Refunds
+        // settle off-chain too — these are spends, not a statement.
+        case "Gnosis Pay": [
+            "root = Stack([w])",
+            "w = Widget(\"Card spending\", null, [t1, t2])",
+            "t1 = TxRow(\"Spent\", \"€42.50\", \"with Gnosis Pay\")",
+            "t2 = TxRow(\"Spent\", \"£13.20\", \"with Gnosis Pay\")",
+        ]
+        // The exchanges land NO feed rows at all — `ExchangeBridge` returns
+        // balances, never things. What they actually do is join the combined
+        // total and its one map, so the map IS the honest preview; a row here
+        // would promise a trade history this seat never reads.
+        case "Coinbase", "Kraken", "Binance", "Gemini Exchange": [
+            "root = Stack([map])",
+            "map = TagMap(\"In your combined total\", null, [BTC 5200, ETH 2400, USDC 900])",
+        ]
+        // Balance only, like the exchanges — a validator's balance joins the
+        // total and nothing lands in the feed, not even a status change.
+        case "ETH Validators": [
+            "root = Stack([map])",
+            "map = TagMap(\"In your combined total\", null, [ETH 3210])",
+        ]
+        // Settled fills only — a signaled-but-unfulfilled intent never lands.
+        // The payment app is nameable because the chain carries it; the fiat
+        // side stays private by Peer's design, so no counterparty appears.
+        case "Peer": [
+            "root = Stack([w])",
+            "w = Widget(\"As they settle\", null, [t1, t2])",
+            "t1 = TxRow(\"Bought\", \"25.00 USDC\", \"with Venmo on Peer\")",
+            "t2 = TxRow(\"Sold\", \"100.00 USDC\", \"with Revolut on Peer\")",
+        ]
+        // "Your signature is needed" can only be said when the Safe was
+        // reached through your OWN watched signer — watching a Safe's address
+        // never says which of its owners you are, so the second row carries no
+        // such claim.
+        case "Safe": [
+            "root = Stack([w])",
+            "w = Widget(\"Waiting on signatures\", null, [r1, r2])",
+            "r1 = Row(\"2 of 3 signatures collected on a transfer to maya.eth — your signature is needed\", \"Transaction\", \"Wallet\", \"now\")",
+            "r2 = Row(\"Your Safe gained a new owner (alice.eth)\", \"Transaction\", \"Wallet\", \"Thu\")",
+        ]
+        // The risk crossing is the ONLY Aave row that ever lands — no supply,
+        // borrow, repay or withdraw event becomes a thing, so a preview
+        // showing activity would be fiction.
+        case "Aave": [
+            "root = Stack([w])",
+            "w = Widget(\"Your position\", null, [r1])",
+            "r1 = Row(\"Your Aave position on Base is close to liquidation — health factor 1.31\", \"Transaction\", \"Wallet\", \"now\")",
+        ]
+        case "Morpho": [
+            "root = Stack([w])",
+            "w = Widget(\"Markets and vaults\", null, [r1, r2])",
+            "r1 = Row(\"Lent 5,000 USDC on Morpho\", \"Transaction\", \"Wallet\", \"2h\")",
+            "r2 = Row(\"Your Steakhouse USDC vault moved into wstETH markets — now 41% of the vault\", \"Transaction\", \"Wallet\", \"Yesterday\")",
+        ]
+        case "Uniswap": [
+            "root = Stack([w])",
+            "w = Widget(\"Your liquidity\", null, [r1, r2])",
+            "r1 = Row(\"Your WETH/USDC position on Base drifted out of range — it stopped earning fees\", \"Transaction\", \"Wallet\", \"now\")",
+            "r2 = Row(\"Collected $340 in fees on Uniswap\", \"Transaction\", \"Wallet\", \"Thu\")",
+        ]
+        // Never the fills between: one measured wallet made 2,000 in three and
+        // a half hours. The close row says "last seen up" rather than a
+        // realized PnL, which this API can't hand back honestly.
+        case "Hyperliquid": [
+            "root = Stack([w])",
+            "w = Widget(\"Positions\", null, [r1, r2])",
+            "r1 = Row(\"Opened ETH long on Hyperliquid — 10x, entry $3,412\", \"Transaction\", \"Wallet\", \"now\")",
+            "r2 = Row(\"Closed BTC short on Hyperliquid — held 6 days, last seen up ~$1,240\", \"Transaction\", \"Wallet\", \"Yesterday\")",
+        ]
+        // The vote deadline is read live off the Voter, never computed — and
+        // it carries month+day because a weekday alone was ambiguous for a
+        // date days out. A permanent lock has no expiry and gets no row.
+        case "Aerodrome": [
+            "root = Stack([w])",
+            "w = Widget(\"Your locks\", null, [r1, r2])",
+            "r1 = Row(\"veAERO #64821 hasn't voted — Aerodrome voting closes Wed, Aug 6, 4:00 PM\", \"Link\", \"Wallet\", \"now\")",
+            "r2 = Row(\"veAERO #64821 (2,690 AERO) expires Jul 25\", \"Link\", \"Wallet\", \"2h\")",
+        ]
+        // The queued row names no date on purpose — ether.fi finalizes in
+        // batches at its own pace, so any ETA would be invented; the row
+        // retitles itself the moment it really is claimable. Cash spends carry
+        // no merchant, the Gnosis Pay ceiling.
+        case "ether.fi": [
+            "root = Stack([w])",
+            "w = Widget(\"Staking and the card\", null, [r1, r2])",
+            "r1 = Row(\"5.50 ETH is unstaking from ether.fi — still in the queue\", \"Link\", \"Wallet\", \"now\")",
+            "r2 = Row(\"Spent $21.79 with ether.fi Cash\", \"Transaction\", \"Wallet\", \"Yesterday\")",
+        ]
         case "Gmail": [
             "root = Stack([w])",
             "w = Widget(\"Waiting on you\", null, [m1, m2])",
@@ -78,6 +170,69 @@ enum StorePreview {
             "root = Stack([w])",
             "w = Widget(\"Pages\", null, [r1])",
             "r1 = Row(\"Q3 planning notes\", \"Note\", \"Notion\", \"1d\")",
+        ]
+        // Only a repo that did not exist before — a download total and a like
+        // count are counts, and a repo being UPDATED isn't news either
+        // (lastModified moves for a README typo). Papers land with their
+        // abstract, which no screen shows, so it can't appear here.
+        case "Hugging Face": [
+            "root = Stack([w])",
+            "w = Widget(\"Just shipped\", null, [r1, r2])",
+            "r1 = Row(\"google/gemma-3-27b-it · new model\", \"Link\", \"Hugging Face\", \"3h\")",
+            "r2 = Row(\"DeepSeek-OCR: Contexts Optical Compression\", \"Link\", \"Hugging Face\", \"1d\")",
+        ]
+        // The three shapes a number is allowed to take, and no others: a note
+        // you wrote, a milestone the count IS the event for, and a metric that
+        // stopped. A watched event never re-lands weekly wearing a new tally.
+        case "PostHog": [
+            "root = Stack([w])",
+            "w = Widget(\"What moved\", null, [r1, r2, r3])",
+            "r1 = Row(\"Shipped 2.4.0 · signed_up +18.4% since\", \"Link\", \"PostHog\", \"2d\")",
+            "r2 = Row(\"signed_up crossed 1,000\", \"Link\", \"PostHog\", \"6h\")",
+            "r3 = Row(\"checkout_completed hasn't fired since yesterday\", \"Link\", \"PostHog\", \"now\")",
+        ]
+        // Mentions and nothing else — the token carries one scope, search:read,
+        // so channels and files are never reached and can't be previewed.
+        case "Slack": [
+            "root = Stack([w])",
+            "w = Widget(\"Mentions of you\", null, [r1, r2])",
+            "r1 = PostRow(\"maya\", \"can you take a look at the deploy before standup?\", \"\", \"\", \"\")",
+            "r2 = PostRow(\"sam\", \"staging cert expired again — worth a permanent fix?\", \"\", \"\", \"\")",
+        ]
+        // The BOARD leads the title, because a card name is a fragment written
+        // against a context you had at the time. The list a card sits in is
+        // never read — Trello lists are user-named ("Doing", "Icebox",
+        // "Done ✅"), so no column name can appear in a row.
+        case "Trello": [
+            "root = Stack([w])",
+            "w = Widget(\"Assigned to you\", null, [r1, r2])",
+            "r1 = Row(\"Casberi · Ship the Cloudflare bridge\", \"Reminder\", \"Trello\", \"today\")",
+            "r2 = Row(\"Website · Rewrite the pricing page\", \"Reminder\", \"Trello\", \"Fri\")",
+        ]
+        // Dates and changes, never analytics: requests served, bandwidth and
+        // threats blocked are counts, and not one of them lands.
+        case "Cloudflare": [
+            "root = Stack([w])",
+            "w = Widget(\"Before it bites\", null, [r1, r2])",
+            "r1 = Row(\"casberi.app — TLS certificate expires in 9 days\", \"Reminder\", \"Cloudflare\", \"now\")",
+            "r2 = Row(\"casberi.app — DNS changed: A casberi.app → 104.21.44.19\", \"Link\", \"Cloudflare\", \"Thu\")",
+        ]
+        // An individual charge NEVER lands — a £9 payment is a tally wearing a
+        // currency symbol. Only money whose movement is itself the news.
+        case "Stripe": [
+            "root = Stack([w])",
+            "w = Widget(\"What your money did\", null, [r1, r2])",
+            "r1 = Row(\"Dispute opened · £49.00 — evidence due Aug 14\", \"Link\", \"Stripe\", \"1h\")",
+            "r2 = Row(\"£2,140.00 paid out to your bank\", \"Link\", \"Stripe\", \"Yesterday\")",
+        ]
+        // Terminal runs only — an in-flight agent has no summary and no PR yet.
+        // The outcome LEADS an abnormal title rather than trailing it, since a
+        // trailing "failed" is exactly what the 80-character clamp eats.
+        case "Cursor": [
+            "root = Stack([w])",
+            "w = Widget(\"Runs that finished\", null, [r1, r2])",
+            "r1 = Row(\"your-org/casberi · Add README documentation\", \"Link\", \"Cursor\", \"2h\")",
+            "r2 = Row(\"Failed · your-org/casberi · fix the flaky snapshot test\", \"Link\", \"Cursor\", \"Yesterday\")",
         ]
         case "Reddit": [
             "root = Stack([w])",
@@ -161,6 +316,54 @@ enum StorePreview {
             "w = Widget(\"Accounts and channels\", null, [r1, r2])",
             "r1 = PostRow(\"vitalik.eth\", \"Looks like the options thing is happening already!\", \"https://media.firefly.land/lens/126a045e-f7bb-44cc-80b1-2bd63ce9be58.png\", \"\", \"\")",
             "r2 = PostRow(\"clanker\", \"you have my attention\", \"https://imagedelivery.net/BXluQx4ige9GuW0Ia56BHw/f770987a-9c3a-45fd-eee3-2c0b182f8700/original\", \"\", \"\")",
+        ]
+        // No avatar URLs: a Nostr pubkey resolves a picture only if its author
+        // published a profile, so these fall back to the initial rather than
+        // asserting a face the relays may never answer with.
+        case "Nostr": [
+            "root = Stack([w])",
+            "w = Widget(\"Accounts you watch\", null, [r1, r2])",
+            "r1 = PostRow(\"fiatjaf\", \"relays are the whole protocol, the rest is a client detail\", \"\", \"\", \"\")",
+            "r2 = PostRow(\"jb55\", \"shipped the note threading fix\", \"\", \"\", \"\")",
+        ]
+        // The export's own split, which the copy promises and this must keep:
+        // what you WROTE arrives as text, what you TAPPED arrives as a named
+        // link. Meta leaves other people's captions out entirely and the
+        // oEmbed endpoint answers with nothing, so a save can only ever wear
+        // the handle that made it — named, never quoted.
+        case "Instagram": [
+            "root = Stack([w])",
+            "w = Widget(\"In your Instagram room\", null, [r1, r2])",
+            "r1 = Row(\"@houseofgaming\", \"Link\", \"Instagram\", \"Mar 2\")",
+            "r2 = Row(\"three days in Lisbon and still no bad pastel de nata\", \"Note\", \"Instagram\", \"Jul 14\")",
+        ]
+        // Saved chats only — Snapchat deletes the rest off its own servers, so
+        // there is nothing else to import. A memory is titled by its date
+        // because the export gives it no name of its own.
+        case "Snapchat": [
+            "root = Stack([w])",
+            "w = Widget(\"In your Snapchat room\", null, [r1, r2])",
+            "r1 = Row(\"Chat with sofia.reyes\", \"Chat\", \"Snapchat\", \"Mar 2\")",
+            "r2 = Row(\"Memory · Jul 14, 2025 at 4:32 PM\", \"File\", \"Snapchat\", \"Jul 14\")",
+        ]
+        // A save lands as a bare link and gains its caption and creator only
+        // after the separate naming pass — the export itself carries neither,
+        // so the first row is what a NAMED save looks like, not what imports.
+        case "TikTok": [
+            "root = Stack([w])",
+            "w = Widget(\"In your TikTok room\", null, [r1, r2])",
+            "r1 = Row(\"POV: your sourdough starter has opinions\", \"Link\", \"TikTok\", \"Jun 2\")",
+            "r2 = Row(\"the transition at 0:12 is unreal\", \"Note\", \"TikTok\", \"May 8\")",
+        ]
+        // Posts, replies and likes. Reposts are deliberately skipped — the
+        // archive stores one as YOUR row wearing somebody else's sentence cut
+        // at 140 characters — and bookmarks have never been in the export at
+        // all, so neither may appear here.
+        case "X": [
+            "root = Stack([w])",
+            "w = Widget(\"In your X room\", null, [r1, r2])",
+            "r1 = Row(\"shipped the thing. it works. going to bed.\", \"Note\", \"X\", \"Apr 2\")",
+            "r2 = Row(\"the best debugging tool is a print statement and a bad attitude\", \"Link\", \"X\", \"Jan 8\")",
         ]
         case "OpenSea": [
             "root = Stack([w])",
@@ -283,6 +486,68 @@ enum StorePreview {
             "w = Widget(\"Fresh deals\", null, [r1, r2])",
             "r1 = Row(\"Sony WH-1000XM5 · $278 (was $399)\", \"Product\", \"Deals\", \"1h\")",
             "r2 = Row(\"Anker power bank · $34\", \"Product\", \"Deals\", \"3h\")",
+        ]
+        // No row ever claims "unused" or "expires": the API reports neither a
+        // redemption status (Bitrefill can't know a code was spent at Amazon)
+        // nor an expiry date.
+        case "Bitrefill": [
+            "root = Stack([w])",
+            "w = Widget(\"Your orders\", null, [r1, r2])",
+            "r1 = Row(\"Amazon.com · $50\", \"Link\", \"Bitrefill\", \"2h\")",
+            "r2 = Row(\"Balance refill · $200 in USDC\", \"Link\", \"Bitrefill\", \"Yesterday\")",
+        ]
+        // The merchant descriptor IS readable here — Privacy records it
+        // itself — which is exactly what a card settling onchain can never
+        // have. Approved purchases only; a declined attempt isn't a purchase.
+        case "Privacy": [
+            "root = Stack([w])",
+            "w = Widget(\"Card purchases\", null, [r1, r2])",
+            "r1 = Row(\"NETFLIX.COM · $12.99\", \"Link\", \"Privacy\", \"1d\")",
+            "r2 = Row(\"SQ *BLUE BOTTLE COFFEE · $6.50\", \"Link\", \"Privacy\", \"3d\")",
+        ]
+        // Grants, never secrets: vault, path pattern and permissions. Nothing
+        // here ever reads a secret's VALUE — the endpoints called can't.
+        case "1Claw": [
+            "root = Stack([w])",
+            "w = Widget(\"What the key reaches\", null, [r1, r2])",
+            "r1 = Row(\"Prod · secrets/anthropic/* · read, rotate\", \"Link\", \"1Claw\", \"1d\")",
+            "r2 = Row(\"Staging · secrets/stripe/* · read\", \"Link\", \"1Claw\", \"4d\")",
+        ]
+        // Only the folder you name — never a shared link, never "shared with
+        // me". A text file previews its opening; anything else lands wearing
+        // just its size, which is why the second row shows a bare filename.
+        case "Dropbox": [
+            "root = Stack([w])",
+            "w = Widget(\"From your folder\", null, [r1, r2])",
+            "r1 = Row(\"Q3 offsite notes.md\", \"File\", \"Dropbox\", \"2h\")",
+            "r2 = Row(\"IMG_4821.HEIC\", \"File\", \"Dropbox\", \"1d\")",
+        ]
+        case "Bookmarks": [
+            "root = Stack([w])",
+            "w = Widget(\"Imported\", null, [r1, r2])",
+            "r1 = Row(\"Designing Data-Intensive Applications — Kleppmann\", \"Link\", \"Bookmarks\", \"Mar 2\")",
+            "r2 = Row(\"A visual guide to SSH tunnelling\", \"Link\", \"Bookmarks\", \"Jan 8\")",
+        ]
+        // Search-only (`Corpus.searchOnlySources`): these never enter the feed
+        // at all, so the header says so rather than letting the section's own
+        // "What lands in your feed" go unqualified. A contact row is the name
+        // and nothing else — the reach line isn't part of the title. No times:
+        // neither source stamps a thing with a date it could show.
+        case "Contacts": [
+            "root = Stack([w])",
+            "w = Widget(\"Findable, never in your feed\", null, [r1, r2])",
+            "r1 = Row(\"Sofia Reyes\", \"Contact\", \"Contacts\", \"\")",
+            "r2 = Row(\"Blue Bottle Coffee\", \"Contact\", \"Contacts\", \"\")",
+        ]
+        // Accessories are LIVE STATE refreshed in place, not events — HomeKit
+        // has no historical query at all — and the row is the accessory's own
+        // name, so no lock/on-off state may appear (only reachability is
+        // readable, and it lives off the title).
+        case "HomeKit": [
+            "root = Stack([w])",
+            "w = Widget(\"Findable, never in your feed\", null, [r1, r2])",
+            "r1 = Row(\"Front Door\", \"Accessory\", \"HomeKit\", \"\")",
+            "r2 = Row(\"Kitchen Ceiling\", \"Accessory\", \"HomeKit\", \"\")",
         ]
         case "Open Food Facts": [
             "root = Stack([w])",

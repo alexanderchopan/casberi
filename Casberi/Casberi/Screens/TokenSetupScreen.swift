@@ -51,6 +51,19 @@ struct TokenSetupScreen: View {
     /// The credentials door, open (prd §186).
     @State private var showConnection = false
 
+    /// Whether the "Open <page>" door has been tapped this visit — step one,
+    /// observed rather than assumed (see `tokenStepsDone`). Not persisted: a
+    /// step ticked from a previous session would be a claim about a form the
+    /// person is looking at fresh.
+    @State private var doorOpened = false
+    /// Bumped on a successful connect so the header's icon coin-flips to
+    /// acknowledge the handshake. Wired 2026-08-04: five smaller setup screens
+    /// (Stripe, Bankr, Grok, OpenRouter, Venice) already did this, and the
+    /// screen serving the LARGEST family of bridges — every paste-a-token seat
+    /// — was the one that didn't, so the flagship path had the quietest
+    /// success in the catalog.
+    @State private var flipTrigger = 0
+
     /// Trello only — the API-key stage (2026-08-03). Trello is the one bridge
     /// on this screen whose API takes TWO values on every request, so its form
     /// is two stages: paste the key that names a Power-Up, then authorize a
@@ -125,7 +138,8 @@ struct TokenSetupScreen: View {
     /// It leads the screen before connecting, and lives behind the Connection
     /// door after — same sections either way, never rewritten.
     @ViewBuilder private var connectForm: some View {
-        BridgeSetupHeader(name: bridge.rawValue, connected: bridge.connected)
+        BridgeSetupHeader(name: bridge.rawValue, connected: bridge.connected,
+                          flipTrigger: flipTrigger)
         if deviceFlowOffered {
             // Sign-in is THE path; the token hunt folds away behind a
             // disclosure so the screen leads with one action instead of
@@ -224,11 +238,13 @@ struct TokenSetupScreen: View {
                                     ? doorLabel : String(localized: "Open \(doorLabel)"),
                                  systemImage: "arrow.up.right") {
                         DSHaptic.tap()
+                        doorOpened = true
                         openURL(url)
                     }
                 }
                 BridgeStepLines(steps: bridge.steps,
-                                startingAt: doorURL == nil ? 1 : 2)
+                                startingAt: doorURL == nil ? 1 : 2,
+                                doneThrough: tokenStepsDone)
                 DSSlabField(placeholder: bridge.placeholder, text: $tokenField,
                             actionLabel: bridge.connected ? "UPDATE" : "CONNECT",
                             secure: true, action: connect)
@@ -239,6 +255,19 @@ struct TokenSetupScreen: View {
             }
         }
         .dsSlabSection()
+    }
+
+    /// How far through the token steps we can PROVE someone is (2026-08-04).
+    /// Two observable facts and no inference: the door was tapped, and the
+    /// field carries text. Everything between them happens on somebody else's
+    /// website, so it is deliberately not counted — the middle step ticks only
+    /// when the paste arrives, because that's the first moment we know it
+    /// happened. Every token bridge's `steps` ends in "paste it below", so
+    /// text in the field really does finish the list.
+    private var tokenStepsDone: Int {
+        guard doorURL != nil else { return tokenField.isEmpty ? 0 : bridge.steps.count }
+        if !tokenField.isEmpty { return bridge.steps.count + 1 }
+        return doorOpened ? 1 : 0
     }
 
     /// The screen's one gray sentence (§190's companion rule, finally applied
@@ -586,6 +615,14 @@ struct TokenSetupScreen: View {
             if store.registerConnected(id: bridge.bridgeID, name: bridge.rawValue,
                                        proof: proof, can: [bridge.canLine]) {
                 DSHaptic.success()
+                // The handshake, acknowledged: the icon coin-flips in time with
+                // the haptic. Gated on `registerConnected` returning true — the
+                // seat really changed — so a routine re-sync of a live bridge
+                // never celebrates. (The glyph rain deliberately isn't fired
+                // here: a `.token` screen raised by Connect dismisses on
+                // success, so the shower belongs to the product page that
+                // outlives it — see `ConnectRain`.)
+                flipTrigger += 1
             }
         } while syncPending
     }

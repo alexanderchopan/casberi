@@ -171,19 +171,57 @@ struct BridgeStepLines: View {
     /// 1, and one instruction was never a series of steps. Opt-in, so a screen
     /// that really does have an ordered list keeps its numerals.
     var numbered = true
+    /// How many steps are PROVABLY done, counted in the same numbering the
+    /// lines wear (so a door that did step one passes 1, even though step one
+    /// isn't rendered here). The delight pass, 2026-08-04: a form told you
+    /// what to do and then never acknowledged any of it — the numerals sat
+    /// identical from arrival to success, and success replaced the whole form
+    /// anyway, so nothing on these screens ever said "that worked."
+    ///
+    /// Each done step's numeral becomes a confirm-green check, and the NEXT
+    /// one brightens as the live instruction — a "you are here", not a
+    /// progress bar. Callers pass only what they can OBSERVE (a door tapped,
+    /// a field carrying text); no caller may infer that someone finished a
+    /// step off-screen, which is why "Copy it and paste it below" only counts
+    /// once there is really something in the field. Defaults to 0, so the
+    /// seventeen screens that don't pass it render exactly as before.
+    var doneThrough = 0
+
+    /// Ticks trail `doneThrough` by one cascade so the checks land in
+    /// sequence rather than all at once (set immediately under Reduce Motion).
+    @State private var ticked = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// The step number this line wears.
+    private func number(_ i: Int) -> Int { i + startingAt }
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             ForEach(Array(steps.enumerated()), id: \.offset) { i, text in
+                let done = number(i) <= ticked
+                let live = number(i) == ticked + 1
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
                     if numbered {
-                        Text("\(i + startingAt)")
-                            .dsText(.callout15).fontWeight(.bold)
-                            .foregroundStyle(DS.textTertiary)
-                            .frame(width: 13, alignment: .trailing)
+                        Group {
+                            if done {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundStyle(DS.confirm)
+                                    .transition(.scale.combined(with: .opacity))
+                            } else {
+                                Text("\(number(i))")
+                                    .dsText(.callout15).fontWeight(.bold)
+                                    .foregroundStyle(live ? DS.tint : DS.textTertiary)
+                            }
+                        }
+                        .frame(width: 13, alignment: .trailing)
                     }
                     Text(LocalizedStringKey(text))
-                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                        .dsText(.callout15)
+                        // A finished step recedes; the live one is the sentence
+                        // to read. Neither is ever hidden — §186's "the steps
+                        // stay whole and visible" is what this component is for.
+                        .foregroundStyle(done ? DS.textTertiary : DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
                 }
@@ -191,6 +229,23 @@ struct BridgeStepLines: View {
         }
         .padding(.horizontal, DS.Space.s2)
         .padding(.vertical, DS.Space.s1)
+        .onAppear { ticked = doneThrough }
+        .onChange(of: doneThrough) { old, now in
+            // Backwards (a field cleared, a key replaced) settles at once —
+            // an un-tick is a correction, not an achievement.
+            guard now > old else { ticked = now; return }
+            guard !reduceMotion else { ticked = now; return }
+            Task { @MainActor in
+                for n in (old + 1)...now {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.7)) { ticked = n }
+                    // Only a step that is really ON SCREEN gets a haptic — a
+                    // door's step one is counted here but rendered elsewhere,
+                    // and a tap that ticks nothing visible must not buzz.
+                    if n >= startingAt { DSHaptic.selection() }
+                    try? await Task.sleep(for: .milliseconds(120))
+                }
+            }
+        }
     }
 }
 

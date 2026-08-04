@@ -28,19 +28,42 @@ enum CatalogTaste {
     /// own dedupe + not-connected guard picks whichever seat is still open.
     private struct Signal {
         let kind: ThingKind
-        let eyebrow: String
+        /// The eyebrow, built from the real count. Stating the NUMBER rather
+        /// than "a lot" (2026-08-04): the count was already computed and then
+        /// thrown away on the way to the screen, so five cards asserted a
+        /// vague claim where they could have stated a fact the person can
+        /// check against their own feed. Specific beats emphatic, and it is
+        /// the same instinct as the setup screens' "3 games in" — a number you
+        /// can verify is worth more than an adjective you can't.
+        let eyebrow: (Int) -> String
         let offers: [String]
     }
 
     /// The signals, strongest-intent first. Each names a real capture habit and
     /// the bridge that serves it — never a stretch (a screenshot habit points
     /// at Photos, not at "you might like NFTs").
+    ///
+    /// Widened 2026-08-04 from five kinds to nine: notes, products, reminders
+    /// and files were unreadable signals, so a corpus made mostly of any of
+    /// them got no taste seat at all and fell through to the plain backfill —
+    /// the deck read as knowing you only if you happened to be a link-and-
+    /// screenshot person.
+    /// `String(localized:)` at build time, not a `LocalizedStringKey` at
+    /// render time: the deck renders an eyebrow through
+    /// `Text(LocalizedStringKey(…))`, which for a string built at runtime can
+    /// only ever fall back to the string itself — so an interpolated eyebrow
+    /// has to arrive already localized, the way every other counted line in
+    /// the app does (`"\(added) \(bridge.noun) in"`).
     private static let signals: [Signal] = [
-        Signal(kind: .link,       eyebrow: "You save a lot of links",  offers: ["Readwise", "RSS", "Raindrop"]),
-        Signal(kind: .screenshot, eyebrow: "You screenshot a lot",     offers: ["Photos"]),
-        Signal(kind: .chat,       eyebrow: "You keep a lot of chats",  offers: ["Claude", "ChatGPT"]),
-        Signal(kind: .event,      eyebrow: "Your days fill up",        offers: ["Calendar", "Cal.com"]),
-        Signal(kind: .transaction, eyebrow: "You watch onchain",       offers: ["Tokens", "OpenSea"]),
+        Signal(kind: .link,        eyebrow: { String(localized: "You've saved \($0) links") },      offers: ["Readwise", "RSS", "Raindrop"]),
+        Signal(kind: .screenshot,  eyebrow: { String(localized: "\($0) screenshots in here") },     offers: ["Photos"]),
+        Signal(kind: .chat,        eyebrow: { String(localized: "You've kept \($0) chats") },       offers: ["Claude", "ChatGPT"]),
+        Signal(kind: .event,       eyebrow: { String(localized: "\($0) things on your calendar") }, offers: ["Calendar", "Cal.com"]),
+        Signal(kind: .transaction, eyebrow: { String(localized: "\($0) onchain moves kept") },      offers: ["Tokens", "OpenSea"]),
+        Signal(kind: .note,        eyebrow: { String(localized: "You've written \($0) notes") },    offers: ["Obsidian", "Apple Notes", "Day One"]),
+        Signal(kind: .product,     eyebrow: { String(localized: "You're watching \($0) things") },  offers: ["Deals", "Shopify"]),
+        Signal(kind: .reminder,    eyebrow: { String(localized: "\($0) things to do") },            offers: ["Todoist", "Reminders"]),
+        Signal(kind: .file,        eyebrow: { String(localized: "\($0) files in here") },           offers: ["Dropbox", "Files"]),
     ]
 
     /// A habit has to be a HABIT, not a one-off — five of a kind before the
@@ -64,7 +87,7 @@ enum CatalogTaste {
             // The eyebrow names the offer set's shared reason; the deck resolves
             // which specific offer's seat is still open, so pass them all as
             // candidates ordered by the signal's own preference.
-            return Reason(offerName: offer, eyebrow: signal.eyebrow, weight: n)
+            return Reason(offerName: offer, eyebrow: signal.eyebrow(n), weight: n)
         }
         .sorted { $0.weight > $1.weight }
     }

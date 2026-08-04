@@ -86,6 +86,9 @@ struct AppDetailScreen: View {
         .connectBloom(hue: BridgeGlyph.glyphTint(for: offer.name)
                           ?? DS.brandHue(for: offer.name) ?? DS.tint,
                       token: connectToken)
+        // …and the app's own mark falls through the bloom (2026-08-04). Same
+        // token, so the two halves of the payoff can never drift apart.
+        .connectRain(name: offer.name, token: connectToken)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
