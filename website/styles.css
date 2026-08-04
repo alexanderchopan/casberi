@@ -1178,7 +1178,8 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 /* ---------- How it works: Cash App slabs (2026-08-04) ------------------
    Each step is a tinted slab card: giant numeral bleeding off the corner,
    copy on one side, the cycling shell tilted a degree on the other, and
-   sides alternating so the column doesn't stripe. Phone steps CROP the
+   sides alternating so the column doesn't stripe. (The opt-out below is
+   belt-and-braces now that app.js reveals by position rather than ratio.) Phone steps CROP the
    device at the card's edge — the top two-thirds carry all the
    information, and the cut is what makes the card short. Chart steps show
    the whole shell; the chart IS the content. The section opts out of the

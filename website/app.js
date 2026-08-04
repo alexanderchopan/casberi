@@ -264,7 +264,13 @@
       if (eb) eb.classList.add('in');
       io.unobserve(e.target);
     });
-  }, { threshold: 0.18 });
+    // A RATIO can't work here: a section taller than ~5.5x the viewport can
+    // never occupy 18% of it, so it would never reveal and would sit at
+    // opacity 0 forever. That is exactly what hid the app catalog on phones
+    // — 86 tiles collapse to one column at 390px, making the section
+    // 4,700px against an 844px viewport (17.9%). Trigger on the element's
+    // top crossing 85% of the viewport instead, which is height-independent.
+  }, { threshold: 0, rootMargin: '0px 0px -15% 0px' });
   document.querySelectorAll('.m-section, .m-transition').forEach(function (el) { io.observe(el); });
 
   // Language card says hello in five languages
