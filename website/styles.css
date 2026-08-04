@@ -1175,67 +1175,75 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 
 
 
-/* ---------- How it works: one cycling shell per step (2026-08-04) -----
-   A reported confusion — "I don't understand how you connect apps" —
-   answered the way the App Store set answers it: real screenshots, one
-   line each, in the order a person does them.
-
-   ONE frame per step, its shots fading through, rather than four phones
-   side by side: four bezels in a row argue that everything looks the
-   same, which is the opposite of what steps 04 and 05 claim, and they
-   force each shot down to a size nothing in it can be read at. Steps
-   whose subject is a CHART wear a plain black shell instead of a phone —
-   the crop is the chart, not a screen.
-
-   Pure CSS, so it can't drift or depend on JS, and it stops dead under
-   Reduce Motion: the first slide is a complete picture on its own. */
-/* The section-level scroll reveal (app.js, threshold 0.18) CANNOT fire for
-   a section this tall: at ~5000px it never reaches 18% of a viewport, so it
-   stayed at opacity 0 and the whole walkthrough rendered as a black void
-   between the hero and the catalog. Any section taller than ~5x the viewport
-   has the same problem. This one opts out and is simply always visible --
-   its own steps carry enough motion. */
+/* ---------- How it works: Cash App slabs (2026-08-04) ------------------
+   Each step is a tinted slab card: giant numeral bleeding off the corner,
+   copy on one side, the cycling shell tilted a degree on the other, and
+   sides alternating so the column doesn't stripe. Phone steps CROP the
+   device at the card's edge — the top two-thirds carry all the
+   information, and the cut is what makes the card short. Chart steps show
+   the whole shell; the chart IS the content. The section opts out of the
+   scroll reveal (threshold 0.18 can't fire on a section this tall). */
 .m-section.flow, .m-section.flow.in { opacity: 1; transform: none; }
 .flow { padding-top: 10px; }
-.flow-deck { font-size: 16px; color: var(--dim); margin: -6px 0 38px; }
-.fstep { display: grid; grid-template-columns: 1fr 260px; gap: 44px;
-  align-items: center; margin-bottom: 52px; }
-.fstep:last-child { margin-bottom: 20px; }
-.fstep.is-chart { grid-template-columns: 1fr 430px; }
-.fhead { max-width: 560px; }
-.fnum { display: inline-block; font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 13px; font-weight: 800; letter-spacing: .08em; color: var(--blue-bright);
-  margin-bottom: 10px; }
-.fhead h3 { font-size: clamp(26px, 3.4vw, 38px); font-weight: 800; letter-spacing: -.03em;
-  line-height: 1.08; margin: 0 0 12px; }
-.fhead p { font-size: 16.5px; line-height: 1.6; color: var(--dim); margin: 0; }
+.flow-deck { font-size: 16px; color: var(--dim); margin: -6px 0 30px; }
 
-.cyc { position: relative; }
-.fphone { position: relative; width: 196px; margin: 0 auto; border-radius: 24px;
-  overflow: hidden; background: #0b0910; aspect-ratio: 1320 / 2868;
-  box-shadow: 0 0 0 6px #1c1f26, 0 0 0 7px #2b3038, 0 18px 40px rgba(0,0,0,.5); }
-.fisland { position: absolute; top: 1.6%; left: 50%; transform: translateX(-50%);
-  width: 32%; aspect-ratio: 10 / 3; border-radius: 999px; background: #000; z-index: 3; }
-.cycshell { position: relative; width: 100%; aspect-ratio: 16 / 10; background: #000;
-  border-radius: 22px; overflow: hidden;
-  box-shadow: 0 0 0 1px rgba(255,255,255,.09), 0 22px 50px rgba(0,0,0,.5); }
-.fphone img { position: absolute; inset: 0; width: 100%; height: 100%;
-  object-fit: cover; object-position: top center; opacity: 0;
-  animation: var(--kf) var(--dur) linear infinite; }
-.cycshell img { position: absolute; inset: 0; width: 100%; height: 100%;
-  object-fit: contain; background: #000; padding: 14px; opacity: 0;
-  animation: var(--kf) var(--dur) linear infinite; }
-.cyccap { position: relative; height: 2.9em; margin-top: 16px; text-align: center; }
-.fstep.is-chart .cyccap { text-align: left; }
+.fstep { position: relative; overflow: hidden; border-radius: 30px;
+  padding: 44px 52px; margin-bottom: 22px;
+  display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 48px; align-items: center;
+  background: linear-gradient(135deg, #101a3a, #0b1020 62%);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.05); }
+.fstep:nth-of-type(2) { background: linear-gradient(135deg, #241436, #120b1d 62%); }
+.fstep:nth-of-type(3) { background: linear-gradient(135deg, #0d2416, #09120c 62%); }
+.fstep:nth-of-type(4) { background: linear-gradient(135deg, #2a1608, #150b06 62%); }
+.fstep:nth-of-type(5) { background: linear-gradient(135deg, #101622, #0a0d14 62%); }
+.fstep:nth-of-type(even) .fhead { order: 2; }
+.fstep:nth-of-type(even) .cyc { order: 1; }
+
+.fnum { display: none; }
+.fhead { position: relative; z-index: 1; max-width: 520px; }
+.fhead h3 { font-size: clamp(40px, 5.4vw, 64px); font-weight: 800; letter-spacing: -.05em;
+  line-height: .96; margin: 0 0 18px; }
+.fhead p { font-size: 15.5px; line-height: 1.6; color: var(--dim); margin: 0; max-width: 420px; }
+
+.cyc { position: relative; z-index: 1; display: flex; flex-direction: column; }
+.cyccap { position: relative; height: 2.9em; margin: 0 0 16px; text-align: left; order: -1; }
 .cyccap span { position: absolute; left: 0; right: 0; top: 0; font-size: 14.5px;
   line-height: 1.45; color: var(--dim); opacity: 0;
   animation: var(--kf) var(--dur) linear infinite; }
 .cyccap b { color: #fff; font-weight: 700; }
 
+/* phone steps: the shell is cropped by the slab's edge */
+.fstep.is-phone { padding-bottom: 0; }
+.fstep.is-phone .cyc { height: 380px; }
+.fphone { position: relative; width: 216px; margin: 0 auto; border-radius: 26px 26px 0 0;
+  overflow: hidden; background: #0b0910; aspect-ratio: 1320 / 2100;
+  transform: rotate(-1.6deg); transform-origin: top center;
+  box-shadow: 0 0 0 6px #1c1f26, 0 0 0 7px #2b3038, 0 18px 44px rgba(0,0,0,.5); }
+.fstep:nth-of-type(even) .fphone { transform: rotate(1.6deg); }
+.fisland { position: absolute; top: 2.2%; left: 50%; transform: translateX(-50%);
+  width: 32%; aspect-ratio: 10 / 3; border-radius: 999px; background: #000; z-index: 3; }
+.fphone img { position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: top center; opacity: 0;
+  animation: var(--kf) var(--dur) linear infinite; }
+
+/* chart steps: the whole shell, gently tilted */
+.cycshell { position: relative; width: 100%; aspect-ratio: 16 / 10; background: #000;
+  border-radius: 18px; overflow: hidden; transform: rotate(-1.2deg);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.09), 0 18px 44px rgba(0,0,0,.5); }
+.fstep:nth-of-type(even) .cycshell { transform: rotate(1.2deg); }
+.cycshell img { position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: contain; background: #000; padding: 14px; opacity: 0;
+  animation: var(--kf) var(--dur) linear infinite; }
+.fstep.is-chart { padding-bottom: 44px; }
+
 @media (max-width: 900px) {
-  .fstep, .fstep.is-chart { grid-template-columns: 1fr; gap: 22px; margin-bottom: 46px; }
-  .fphone { width: 188px; }
-  .fstep.is-chart .cyccap { text-align: center; }
+  .fstep, .fstep:nth-of-type(even) { grid-template-columns: 1fr; gap: 18px;
+    padding: 34px 26px; }
+  .fstep:nth-of-type(even) .fhead { order: 1; }
+  .fstep:nth-of-type(even) .cyc { order: 2; }
+  .fstep.is-phone { padding-bottom: 0; }
+  .fstep.is-phone .cyc { height: 330px; }
+  .fphone { width: 196px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .fphone img, .cycshell img, .cyccap span { animation: none; }
