@@ -116,6 +116,16 @@ step "Room-head pure-logic self-test"
   || fail "the room-head logic self-test failed — run scripts/room-heads-selftest.sh"
 print -P "%F{green}✓ room-head self-test%f"
 
+# Pure-logic self-test for the receipts screen's reach map (prd §300). The
+# card's whole job is to be checkable, so a silent wrong answer here is worse
+# than in any other visualization in the app: an undeclared host folded into
+# "3 more" hides the one row the screen exists to surface, and a truncated tail
+# makes a nine-service ledger look exactly like a six-service one.
+step "Receipts-insight pure-logic self-test"
+"$ROOT/scripts/receipts-insight-selftest.sh" >/dev/null \
+  || fail "the receipts-insight logic self-test failed — run scripts/receipts-insight-selftest.sh"
+print -P "%F{green}✓ receipts-insight self-test%f"
+
 # The design system's first mechanical check (prd §299). Every other rule in
 # this file is enforced by a script; the design system was enforced by memory,
 # which is how fourteen data drawings shipped with no entrance and how the

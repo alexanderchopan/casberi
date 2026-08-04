@@ -16181,3 +16181,85 @@ audit (11 self-test cases) and the room-head harness, now at 74 assertions and
 to `BridgeApp.Status`, since a status added there without a case here would
 silently restore the generic copy for the very state that needed explaining.
 NOT sim-verified, per the standing instruction.
+
+## §300 — The receipts screen reads itself: what it actually reached, as one number (user: "in settings for the 'what it actually reached' in privacy, can we create a visual that is at the top that somehow conveys aggregate activity in a useful way? give me three mockups", then "A is best for info", 2026-08-04)
+
+§277 built the receipts ledger and §289 taught it to name a host the registry
+structurally cannot declare. Both made the screen HONEST. Neither made it
+READABLE: it opened on a paragraph and thirty rows, and the three questions a
+person actually brings to it — how much, to whom, and is anything here I did
+not agree to — each took scrolling and arithmetic to answer.
+
+Three mockups (`design/receipts-viz/receipts-hero-mocks.html`): a reach
+treemap, a single proportion rail, and a seven-day recency spine. **A, the
+treemap, was chosen for information density.** Its card carries the statement
+line the rail mock led with, so the pick was A-with-B's-headline in one card.
+
+**Every reading comes from what `NetworkLedger` ALREADY stores** — one row per
+host with a count, and the service the screen already resolved. No new field,
+no new request, nothing added to the ledger, and that restraint is not
+incidental: the ledger's own doc refuses a per-request log ("a behavioural
+timeline in cleartext UserDefaults"), so there is no requests-over-time chart
+to build here and there should never be one. The recency spine was the mockup
+that pushed hardest against that line, and declining it is part of the ruling.
+
+### Four decisions, each the difference between a true card and a convincing one
+
+**It groups by SERVICE, not by host.** The rows below already list hosts, so a
+map of hosts restates them (§208), and it would also lie about proportion: one
+wallet sweep spreads across five per-chain Alchemy hosts (§289), so per-host
+cells draw five medium shares where the truth is one large one. A person can
+act on "the wallet asks most". Nobody can act on `base-mainnet.g.alchemy.com`.
+
+**An undeclared host is never drawn bigger than it is.** It is the finding the
+screen exists for, so the instinct is to make it the largest thing on the card
+— but area and opacity here mean magnitude and only magnitude (§145), and a
+two-request stranger rendered as the biggest cell is a fake number in service
+of a true alarm. Instead it carries STATE in its hue (attention, not tint), the
+verdict pill carries the count in the second-largest type on the card, and the
+"Not on the list" section below carries the row. What it DOES get is
+protection from rank: when the tail is folded, the highest-ranked undeclared
+entry is promoted into the last drawn slot at its real count, so the one row
+this screen exists to surface can never disappear into "4 more".
+
+**The tail is folded, never truncated.** A map that silently drops its seventh
+service looks exactly like a map that only had six. The fold names its own size
+("4 more") and takes a flat neutral fill rather than the magnitude wash —
+"everything else" is a sum, not a thing with a magnitude, and letting it
+out-shout the largest single service would invert the card's whole claim.
+
+**The tiling is rank-ordered, not area-proportional**, and that is a deliberate
+departure from the mockup. A true squarified treemap sizes each cell to its
+exact share, which on a phone card means the tail arrives as slivers too thin
+to label — the cells that most need naming are the ones that cannot be named.
+`UnitTreemap` tiles a fixed 4×3 table by rank and lets opacity carry the real
+magnitude. It is `TopicMapHero`'s own tiling, extracted rather than copied
+(§297's shared-not-copied lesson), so the two maps in the app can never
+disagree about which cell is largest.
+
+### The verdict leads
+
+`NetworkReach` is the promise; the ledger is the proof. So the card's second
+element, before any drawing, is the pill: **"All declared"** in confirm green,
+or **"N not on the list"** in attention. Build 214 shipped `api.stripe.com`
+undisclosed and nothing on any screen said so; that failure now has a place to
+appear in the largest type this screen has.
+
+### Verified
+
+`scripts/receipts-insight-selftest.sh` compiles `NetworkReceiptsInsight.swift`
+WHOLE and unmodified (it is Foundation-only by design), runs 37 assertions and
+proves 8 mutations are caught — the buried undeclared host, the truncated tail,
+shares normalised against the total instead of the largest cell, a dropped
+tie-break (a card nobody's data changed, reshuffling between launches),
+per-host grouping, merged strangers, zero-count rows counted as reached, and an
+unclamped tail share. Plus seven drift guards for the wiring the compiled
+function cannot prove about itself, including one tying the model's `maxCells`
+to `UnitTreemap`'s, which are spelled separately on purpose and can therefore
+drift. Wired into `verify.sh`. `-receiptsProbe` now dumps the composed card
+(`reachCard|`, then `reachCell|` per cell — the `-todayProbe` truncation
+lesson), because the map groups by service while the lines above it are per
+host, and the two can disagree in ways neither alone can show.
+
+Builds clean; catalog-sync, the network-reach audit and the SwiftData liveness
+audit pass. NOT sim-verified, per the standing instruction.
