@@ -1,0 +1,72 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;transition:none!important}
+html,body{width:768px;height:1024px;overflow:hidden;background:#0b0910;
+  font-family:-apple-system,"Helvetica Neue","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:#fff;}
+.mono{font-family:ui-monospace,"SF Mono","Menlo",monospace;}
+
+.left{position:absolute;left:0;top:0;bottom:0;width:57%;border-right:1px solid rgba(255,255,255,.06);}
+.lhd{display:flex;align-items:center;gap:11px;padding:40px 26px 18px;position:relative;z-index:4;background:linear-gradient(to bottom, rgba(21,26,46,.98) 60%, rgba(11,9,16,0));}
+.lcc{width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.09);display:flex;align-items:center;justify-content:center;flex:none;}
+.lcc.av{background:#fff;} .lcc i{width:17px;height:17px;border-radius:50%;display:block;}
+.lcc b{font-size:17px;color:#fff;} .lcc.on{background:rgba(255,255,255,.26);box-shadow:0 0 0 3px rgba(255,255,255,.16);}
+.lscroll{position:absolute;inset:106px 0 0;overflow:hidden;}
+.linner{padding:16px 26px;will-change:transform;}
+.frow{display:flex;align-items:center;gap:13px;padding:13px 0;}
+.fcol{flex:1;min-width:0;}
+.favx{width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.15);flex:none;}
+.fth{width:42px;height:42px;border-radius:11px;background:linear-gradient(140deg,#3b4d70,#1e2a42);flex:none;}
+.fdot{width:11px;height:11px;border-radius:50%;flex:none;margin:0 15px;}
+.fbar{height:10px;border-radius:6px;background:rgba(255,255,255,.24);}
+.fbar.s{height:8px;background:rgba(255,255,255,.12);margin-top:7px;}
+.ftt{font-size:18px;font-weight:650;}
+.fsb{font-size:15px;color:rgba(255,255,255,.44);margin-top:2px;}
+.fam{font-size:19px;font-weight:750;color:#3fb950;}
+.right{position:absolute;right:0;top:0;bottom:0;width:43%;padding:52px 30px 0;background:rgba(255,255,255,.025);}
+.rlbl{font-size:14px;letter-spacing:.13em;color:rgba(255,255,255,.4);font-weight:650;margin-bottom:16px;}
+.rheat{display:grid;grid-template-columns:repeat(12,1fr);gap:6px;}
+.rheat i{aspect-ratio:1;border-radius:4px;display:block;}
+.rmap{display:flex;flex-direction:column;gap:8px;height:300px;}
+.rmap span{border-radius:12px;display:flex;align-items:flex-end;padding:12px;font-size:17px;font-weight:750;}
+.rcap{margin-top:20px;font-size:15px;color:rgba(255,255,255,.42);font-weight:600;line-height:1.4;}
+
+</style></head><body>
+
+<div class="left">
+  <div class="lhd"><span class="lcc av"></span><span class="lcc on"><b>All</b></span><span class="lcc"><i style="background:#855dcd"></i></span><span class="lcc"><i style="background:#2962ef"></i></span></div>
+  <div class="lscroll"><div class="linner">
+<div class="frow"><span class="favx"></span><div class="fcol"><div class="fbar" style="width:78%"></div><div class="fbar s" style="width:50%"></div></div></div>
+<div class="frow"><span class="fdot" style="background:#2962ef"></span><div class="fcol"><div class="fam">+0.42 ETH</div><div class="fsb">$1,284 · Base</div></div></div>
+<div class="frow"><span class="fth"></span><div class="fcol"><div class="ftt">Screenshot · 2:14pm</div><div class="fbar s" style="width:38%"></div></div></div>
+<div class="frow"><span class="favx" style="background:rgba(255,255,255,.08)"></span><div class="fcol"><div class="fbar" style="width:64%"></div><div class="fbar s" style="width:40%"></div></div></div>
+<div class="frow"><span class="fdot" style="background:#ff6719"></span><div class="fcol"><div class="ftt">Why local-first won</div><div class="fsb">RSS</div></div></div>
+<div class="frow"><span class="fth" style="background:linear-gradient(140deg,#b06ab3,#4568dc)"></span><div class="fcol"><div class="ftt">Daily doodle 2018.</div><div class="fsb">Farcaster · /art</div></div></div>
+<div class="frow"><span class="favx"></span><div class="fcol"><div class="fbar" style="width:78%"></div><div class="fbar s" style="width:50%"></div></div></div>
+<div class="frow"><span class="fdot" style="background:#2962ef"></span><div class="fcol"><div class="fam">+0.42 ETH</div><div class="fsb">$1,284 · Base</div></div></div>
+<div class="frow"><span class="fth"></span><div class="fcol"><div class="ftt">Screenshot · 2:14pm</div><div class="fbar s" style="width:38%"></div></div></div>
+<div class="frow"><span class="favx" style="background:rgba(255,255,255,.08)"></span><div class="fcol"><div class="fbar" style="width:64%"></div><div class="fbar s" style="width:40%"></div></div></div>
+<div class="frow"><span class="fdot" style="background:#ff6719"></span><div class="fcol"><div class="ftt">Why local-first won</div><div class="fsb">RSS</div></div></div>
+<div class="frow"><span class="fth" style="background:linear-gradient(140deg,#b06ab3,#4568dc)"></span><div class="fcol"><div class="ftt">Daily doodle 2018.</div><div class="fsb">Farcaster · /art</div></div></div></div></div>
+</div>
+<div class="right">
+  <div class="rlbl mono">POSTING ACTIVITY</div>
+  <div class="rheat"><i style="background:rgba(63,185,80,0.18)"></i><i style="background:rgba(63,185,80,0.35)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.69)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.47)"></i><i style="background:rgba(63,185,80,0.64)"></i><i style="background:rgba(63,185,80,0.19)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.76)"></i><i style="background:rgba(63,185,80,0.31)"></i><i style="background:rgba(63,185,80,0.48)"></i><i style="background:rgba(63,185,80,0.6499999999999999)"></i><i style="background:rgba(63,185,80,0.19999999999999998)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.6)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.32)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.6599999999999999)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.44)"></i><i style="background:rgba(63,185,80,0.61)"></i><i style="background:rgba(63,185,80,0.78)"></i><i style="background:rgba(63,185,80,0.32999999999999996)"></i><i style="background:rgba(63,185,80,0.5)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.73)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.45)"></i><i style="background:rgba(63,185,80,0.62)"></i><i style="background:rgba(63,185,80,0.79)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.51)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.29)"></i><i style="background:rgba(63,185,80,0.46)"></i><i style="background:rgba(63,185,80,0.63)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.35)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.5800000000000001)"></i><i style="background:rgba(63,185,80,0.75)"></i><i style="background:rgba(63,185,80,0.3)"></i><i style="background:rgba(63,185,80,0.47)"></i><i style="background:rgba(63,185,80,0.64)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.42)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.76)"></i><i style="background:rgba(63,185,80,0.06)"></i><i style="background:rgba(63,185,80,0.48)"></i><i style="background:rgba(63,185,80,0.06)"></i></div>
+  <div class="rlbl mono" style="margin-top:34px">WHAT YOUR SCREENSHOTS SAY</div>
+  <div class="rmap">
+    <span style="flex:3.2;background:rgba(74,99,216,.85)">figma.com</span>
+    <span style="flex:2.1;background:rgba(133,93,205,.8)">recipes</span>
+    <span style="flex:1.5;background:rgba(63,185,80,.7)">receipts</span>
+    <span style="flex:1.2;background:rgba(255,159,10,.65)">flights</span>
+  </div>
+  <div class="rcap">Read on-device — the search never leaves it.</div>
+</div>
+<script>
+const clamp01=v=>Math.max(0,Math.min(1,v)),easeOut=p=>1-Math.pow(1-p,3);
+window.TOTAL=14;
+window.seek=function(t){
+  const inner=document.querySelector('.linner');
+  const half=inner.scrollHeight/2;
+  const y=((t/window.TOTAL)*half)%half;
+  inner.style.transform='translateY('+(-y)+'px)';
+};
+window.seek(0);
+</script></body></html>

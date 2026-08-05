@@ -1,0 +1,80 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;transition:none!important}
+html,body{width:720px;height:1280px;overflow:hidden;background:#0b0910;
+  font-family:-apple-system,"Helvetica Neue","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:#fff;}
+.mono{font-family:ui-monospace,"SF Mono","Menlo",monospace;}
+.pour{position:absolute;left:0;right:0;top:0;height:307px;background:linear-gradient(to bottom, rgba(46,99,255,.24), rgba(0,0,0,0));}
+
+.brief{position:absolute;inset:0;padding:100px 44px 0;will-change:opacity;}
+.eyeb{font-size:21px;color:rgba(255,255,255,.42);font-weight:650;will-change:opacity,transform;}
+.bh{font-size:52px;font-weight:800;letter-spacing:-.02em;margin-top:6px;will-change:opacity,transform;}
+.bd{font-size:21px;color:rgba(255,255,255,.42);font-weight:600;margin-top:8px;will-change:opacity,transform;}
+.lede{font-size:34px;font-weight:800;margin-top:18px;will-change:opacity,transform;}
+.card{background:rgba(255,255,255,.055);border-radius:24px;padding:28px;margin-top:26px;will-change:opacity,transform;}
+.mn{font-size:64px;font-weight:800;letter-spacing:-.03em;}
+.mrow{display:flex;gap:12px;margin-top:18px;height:150px;}
+.mtile{border-radius:14px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;padding:14px;}
+.mtile b{font-size:22px;font-weight:800;} .mtile i{font-style:normal;font-size:18px;color:rgba(255,255,255,.75);margin-top:2px;}
+.mcol{flex:1;display:flex;flex-direction:column;gap:10px;}
+.mrowi{flex:1;border-radius:12px;background:rgba(255,255,255,.07);display:flex;flex-direction:column;justify-content:center;padding:0 14px;}
+.mrowi b{font-size:16px;font-weight:750;} .mrowi i{font-style:normal;font-size:14px;color:rgba(255,255,255,.5);}
+.msub{margin-top:16px;font-size:20px;color:rgba(255,255,255,.5);font-weight:600;will-change:opacity;}
+.nlbl{font-size:19px;color:rgba(255,255,255,.42);font-weight:650;}
+.nttl{font-size:27px;font-weight:750;margin-top:8px;}
+.nsub{font-size:20px;color:rgba(255,255,255,.5);margin-top:5px;}
+.nred{font-size:20px;color:#ff453a;font-weight:700;margin-top:12px;}
+.chiprow{display:flex;gap:12px;margin-top:30px;flex-wrap:wrap;will-change:opacity,transform;}
+.ask{font-size:19px;font-weight:650;padding:12px 18px;border-radius:100px;background:rgba(255,255,255,.09);}
+.composer{position:absolute;left:44px;right:44px;bottom:44px;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.1);border-radius:100px;padding:19px 26px;font-size:22px;font-weight:600;color:rgba(255,255,255,.55);box-shadow:inset 0 0 0 2px rgba(255,255,255,.1);will-change:opacity,transform;}
+
+</style></head><body>
+
+<div class="pour"></div>
+<div class="brief">
+  <div class="eyeb" id="eyeb">today so far</div>
+  <div class="bh" id="bh">What's going on</div>
+  <div class="bd" id="bd">Saturday, August 1</div>
+  <div class="lede" id="lede">Book dentist is overdue.</div>
+  <div class="card" id="money">
+    <div class="mn" id="mn">$0</div>
+    <div class="mrow">
+      <span class="mtile" style="flex:2.2;background:linear-gradient(120deg,#3b4dd8,#26327e)"><b>ETH</b><i>$19K</i></span>
+      <span class="mcol">
+        <span class="mrowi"><b>AWETH</b><i>$96</i></span>
+        <span class="mrowi"><b>MATIC</b><i>$85</i></span>
+      </span>
+    </div>
+    <div class="msub" id="msub">20 transactions settled</div>
+  </div>
+  <div class="card" id="next">
+    <div class="nlbl">Up next</div>
+    <div class="nttl">Send Lisbon dates to Sam</div>
+    <div class="nsub">Mon 11:00 AM</div>
+    <div class="nred">3 more overdue</div>
+  </div>
+  <div class="chiprow" id="chiprow">
+    <span class="ask">⊙ Show Book club</span><span class="ask">✦ Noticed</span><span class="ask">▦ What's this week?</span>
+  </div>
+  <div class="composer" id="composer"><span>Ask about this…</span><span class="mic"><svg width="24" height="24" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3" fill="#2E63FF"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3" stroke="#2E63FF" stroke-width="2" fill="none" stroke-linecap="round"/></svg></span></div>
+</div>
+<script>
+const clamp01=v=>Math.max(0,Math.min(1,v)),easeOut=p=>1-Math.pow(1-p,3),back=p=>{const c=1.6;return 1+(c+1)*Math.pow(p-1,3)+c*Math.pow(p-1,2);};
+function pop(el,p,from,dur,dy){const rp=clamp01((p-from)/dur);el.style.opacity=rp;el.style.transform='translateY('+((1-back(rp))*(dy==null?18:dy))+'px)';return rp;}
+window.TOTAL=9.6;
+window.seek=function(t){
+  const out=1-clamp01((t-9.15)/0.45);
+  document.querySelector('.brief').style.opacity=out;
+  pop(document.getElementById('eyeb'),t,0.2,0.4,12);
+  pop(document.getElementById('bh'),t,0.35,0.5,20);
+  pop(document.getElementById('bd'),t,0.55,0.4,12);
+  pop(document.getElementById('lede'),t,0.9,0.5,16);
+  const mp=pop(document.getElementById('money'),t,1.6,0.6,30);
+  const n=Math.round(95000*easeOut(clamp01((t-1.9)/1.1)));
+  document.getElementById('mn').textContent='$'+(n>=1000?Math.round(n/1000)+'K':n);
+  document.getElementById('msub').style.opacity=clamp01((t-2.9)/0.4);
+  pop(document.getElementById('next'),t,3.6,0.6,30);
+  pop(document.getElementById('chiprow'),t,4.7,0.5,20);
+  pop(document.getElementById('composer'),t,5.3,0.5,20);
+};
+window.seek(0);
+</script></body></html>

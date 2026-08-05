@@ -1,0 +1,120 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;transition:none!important}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;font-family:-apple-system,"Helvetica Neue","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+.mono{font-family:ui-monospace,"SF Mono","Menlo",monospace;}
+.stage{position:absolute;inset:0;overflow:hidden;background:#EEEAE1;}
+.grain{position:absolute;inset:0;opacity:.5;background-image:radial-gradient(circle at 20% 30%, rgba(0,0,0,.03) 0 1px, transparent 1px),radial-gradient(circle at 70% 65%, rgba(0,0,0,.025) 0 1px, transparent 1px);background-size:7px 7px, 9px 9px;}
+.mast{position:absolute;left:70px;right:70px;top:74px;display:flex;justify-content:space-between;font-size:27px;letter-spacing:.16em;color:#14110d;font-weight:600;}
+.rule{position:absolute;left:70px;right:70px;top:126px;height:3px;background:#14110d;transform-origin:left;}
+.wm{position:absolute;right:20px;top:150px;font-size:280px;line-height:.82;white-space:nowrap;text-align:right;font-weight:800;letter-spacing:-.04em;opacity:.08;will-change:opacity,transform;}
+.kick{position:absolute;left:74px;top:196px;font-size:32px;letter-spacing:.14em;font-weight:600;will-change:transform,opacity;}
+.tagpill{position:absolute;left:74px;top:238px;font-size:19px;font-weight:800;letter-spacing:.06em;padding:8px 16px;border-radius:100px;will-change:opacity,transform;}
+.head{position:absolute;left:70px;top:288px;right:70px;font-size:88px;line-height:1.0;font-weight:800;letter-spacing:-.045em;color:#14110d;white-space:pre-line;will-change:transform,opacity;}
+.foot{position:absolute;left:74px;right:74px;bottom:70px;display:flex;justify-content:space-between;font-size:26px;letter-spacing:.12em;color:#14110d;font-weight:600;}
+.wipe{position:absolute;top:-12%;left:0;width:135%;height:124%;transform:skewX(-9deg) translateX(160%);will-change:transform;}
+.comp{position:absolute;left:120px;top:800px;width:840px;height:860px;border-radius:34px;overflow:hidden;box-shadow:34px 40px 0 rgba(20,17,13,.13), inset 0 0 0 1px rgba(255,255,255,.05), 0 30px 70px rgba(20,17,13,.26);opacity:0;will-change:transform,opacity;transform-origin:center top;padding:52px;color:#fff;background:#0d0d09;display:flex;flex-direction:column;justify-content:center;}
+.comp > .shd{position:absolute;top:52px;left:52px;right:52px;margin:0;font-size:24px;letter-spacing:.12em;color:rgba(255,255,255,.45);}
+/* shared row grammar */
+.row{display:flex;align-items:center;gap:20px;padding:22px 24px;border-radius:20px;background:rgba(255,255,255,.05);margin-bottom:16px;will-change:opacity,transform;}
+.pill{flex:none;font-size:19px;font-weight:800;padding:9px 16px;border-radius:11px;font-family:ui-monospace,monospace;}
+.rt{font-size:25px;font-weight:750;line-height:1.3;}
+.rs{font-size:20px;color:rgba(255,255,255,.45);margin-top:4px;}
+.note{margin-top:26px;text-align:center;font-size:22px;font-weight:650;color:rgba(255,255,255,.5);line-height:1.45;will-change:opacity;}
+.note em{font-style:normal;font-weight:750;}
+/* the struck-through tally, used by three of the four */
+.cnt{display:flex;align-items:center;justify-content:space-between;padding:19px 6px;border-bottom:1px solid rgba(255,255,255,.07);will-change:opacity,transform;}
+.cnt .l{font-size:25px;font-weight:650;color:rgba(255,255,255,.55);text-decoration:line-through;text-decoration-color:#FF6B4A;text-decoration-thickness:3px;}
+.cnt .r{font-size:19px;font-weight:800;color:#FF6B4A;letter-spacing:.06em;}
+.keep{display:flex;align-items:center;justify-content:space-between;padding:22px 6px;will-change:opacity,transform;}
+.keep .l{font-size:25px;font-weight:800;color:#fff;}
+.keep .r{font-size:19px;font-weight:800;color:#3fb950;letter-spacing:.06em;}
+
+.prev{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.pv{padding:20px 12px;border-radius:16px;background:rgba(255,255,255,.045);text-align:center;font-size:20px;font-weight:650;color:rgba(255,255,255,.4);font-family:ui-monospace,monospace;will-change:opacity,transform;}
+.row.ghost{background:rgba(255,255,255,.025);}
+.outro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:0 74px;opacity:0;will-change:opacity;}
+.outro .b{font-size:200px;font-weight:800;letter-spacing:-.05em;color:#14110d;line-height:.9;}
+.outro .u{font-size:34px;letter-spacing:.1em;color:#14110d;margin-top:40px;font-weight:600;} .outro .u b{color:#fff;background:#111;padding:2px 10px;border-radius:6px;}
+</style></head><body>
+<div class="stage">
+  <div class="grain"></div>
+  <div class="mast mono"><span>CASBERI</span><span>VERCEL</span></div>
+  <div class="rule" id="rule"></div>
+  <div class="wm" id="wm">01</div>
+
+  <div class="comp" id="comp0">
+    <div class="shd mono">A NORMAL WORKING DAY</div>
+    <div class="prev" id="prevwrap">
+      <div class="pv" data-i="0">preview · ✓</div><div class="pv" data-i="1">preview · ✓</div>
+      <div class="pv" data-i="2">preview · ✓</div><div class="pv" data-i="3">preview · ✓</div>
+      <div class="pv" data-i="4">preview · ✓</div><div class="pv" data-i="5">preview · ✓</div>
+      <div class="pv" data-i="6">preview · ✓</div><div class="pv" data-i="7">preview · ✓</div>
+      <div class="pv" data-i="8">preview · ✓</div><div class="pv" data-i="9">preview · ✓</div>
+      <div class="pv" data-i="10">preview · ✓</div><div class="pv" data-i="11">preview · ✓</div>
+    </div>
+    <div class="note" id="note0">Landing every one turns your feed into a git log.<br><em>A successful preview stays out.</em></div>
+  </div>
+  <div class="comp" id="comp1">
+    <div class="shd mono">EXACTLY TWO SHAPES</div>
+    <div class="row" id="r1a"><span class="pill" style="background:rgba(63,185,80,.18);color:#3fb950">Live</span><div><div class="rt">casberi-web · ship the walkthrough</div><div class="rs">Production · your users have it now</div></div></div>
+    <div class="row" id="r1b"><span class="pill" style="background:rgba(255,69,58,.18);color:#ff453a">Build failed</span><div><div class="rt">casberi-web · fix the flaky test</div><div class="rs">Any target — a broken preview is the point</div></div></div>
+    <div class="note" id="note1">The moment your users got the new thing —<br><em>and every build that didn't make it.</em></div>
+  </div>
+  <div class="comp" id="comp2">
+    <div class="shd mono">STILL BUILDING? NOT YET.</div>
+    <div class="row ghost" id="r2a"><span class="pill" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.4)">Building</span><div><div class="rt" style="color:rgba(255,255,255,.42)">casberi-web · wip</div><div class="rs">On screen in Vercel right now</div></div></div>
+    <div class="row" id="r2b"><span class="pill" style="background:rgba(255,69,58,.18);color:#ff453a">Canceled</span><div><div class="rt">casberi-api · bump deps</div><div class="rs">vercel.app/casberi-api</div></div></div>
+    <div class="note" id="note2">An in-flight build carries no outcome and would be<br>stale in ninety seconds. <em>Only what's over lands.</em></div>
+  </div>
+  <div class="comp" id="comp3">
+    <div class="shd mono">WHAT THE TOKEN IS USED FOR</div>
+    <div class="keep" data-k="0"><span class="l">GET the deploy list</span><span class="r">THE ONLY ONE</span></div>
+    <div class="cnt" data-k="1"><span class="l">Deploy or promote</span><span class="r">NEVER</span></div>
+    <div class="cnt" data-k="2"><span class="l">Roll back or cancel</span><span class="r">NEVER</span></div>
+    <div class="cnt" data-k="3"><span class="l">Read environment variables</span><span class="r">NEVER</span></div>
+    <div class="note" id="note3">Vercel tokens can't be scoped read-only, so the promise<br>is kept by conduct: <em>one verb, one path.</em></div>
+  </div>
+  <div class="kick mono" id="kick"></div>
+  <div class="tagpill" id="tagpill"></div>
+  <div class="head" id="head"></div>
+  <div class="foot mono"><span>casberi.app</span><span>—</span></div>
+  <div class="wipe" id="wipe"></div>
+  <div class="outro" id="outro"><div class="b">Casberi</div><div class="u mono"><b>casberi.app</b></div></div>
+</div>
+<script>
+const clamp01=v=>Math.max(0,Math.min(1,v)),easeOut=p=>1-Math.pow(1-p,3),back=p=>{const c=1.7;return 1+(c+1)*Math.pow(p-1,3)+c*Math.pow(p-1,2);};
+const INTRO=0.45,BEAT=3.15,OUT_AT=13.049999999999999,N=4;
+const D=[{"kick":"THE NOISE","head":"A dozen previews\na day. All fine.","accent":"#FF6B4A"},{"kick":"WHAT LANDS","head":"It went live.\nOr it broke.","accent":"#14110d"},{"kick":"THE BRANCH","head":"Which build failed,\nand what was in it.","accent":"#14110d"},{"kick":"READ-ONLY","head":"One verb.\nNever your env vars.","accent":"#3fb950"}];window.TOTAL=14.95;
+const TAGS=["NEW",null,null,null];
+const ACCENT="#111";
+const comps=[...document.querySelectorAll('.comp')];
+function stag(sel,p,st,dur,dy){document.querySelectorAll(sel).forEach((r,k)=>{const rp=clamp01((p-k*st)/dur);r.style.opacity=rp;r.style.transform='translateY('+((1-back(rp))*(dy||20))+'px)';});}
+function pop(el,p,from,dur,dy){if(!el)return 0;const rp=clamp01((p-from)/dur);el.style.opacity=rp;el.style.transform='translateY('+((1-back(rp))*(dy||22))+'px)';return rp;}
+function show(id,p,from,dur){const e=document.getElementById(id);if(e)e.style.opacity=clamp01((p-from)/(dur||0.24));}
+window.seek=function(t){
+  let active=Math.max(0,Math.min(N-1,Math.floor((t-INTRO)/BEAT)));
+  const bs=INTRO+active*BEAT, local=t-bs, acc=D[active].accent, pIn=clamp01((local-0.26)/1.9);
+  let coverAcc=acc,wipeX=200;const bounds=[];for(let k=1;k<N;k++)bounds.push({t:INTRO+k*BEAT,c:D[k].accent});bounds.push({t:OUT_AT,c:'#14110d'});
+  for(const b of bounds){const p=(t-(b.t-0.34))/0.68;if(p>=0&&p<=1){wipeX=(1-p)*135-p*135*1.15;coverAcc=b.c;}}
+  const wp=document.getElementById('wipe');wp.style.background=coverAcc;wp.style.transform='skewX(-9deg) translateX('+wipeX+'%)';
+  document.getElementById('rule').style.transform='scaleX('+easeOut(clamp01(t/0.6))+')';
+  const wm=document.getElementById('wm');wm.textContent=D[active].kick;wm.style.fontSize=Math.max(40,Math.min(240,780/(0.6*D[active].kick.length)))+'px';wm.style.color=acc;wm.style.opacity=0.09*clamp01(local/0.4);wm.style.transform='translateY('+((1-easeOut(clamp01(local/0.5)))*30)+'px)';
+  const ki=document.getElementById('kick');ki.textContent=D[active].kick;ki.style.color=acc;const kin=clamp01(local/0.4);ki.style.opacity=easeOut(kin);ki.style.transform='translateX('+((1-easeOut(kin))*-40)+'px)';
+  const tag=document.getElementById('tagpill');
+  if(TAGS[active]){tag.textContent=TAGS[active];tag.style.background=ACCENT;tag.style.color='#fff';tag.style.opacity=easeOut(kin);tag.style.transform='translateX('+((1-easeOut(kin))*-40)+'px)';}
+  else{tag.style.opacity=0;}
+  const he=document.getElementById('head');he.innerHTML=D[active].head.replace(/\n/g,'<br>');const hin=clamp01((local-0.06)/0.5);he.style.opacity=clamp01(local/0.2);he.style.transform='translateY('+((1-back(hin))*80)+'px)';
+  comps.forEach((c,i)=>{const cbs=INTRO+i*BEAT,cl=t-cbs,cin=clamp01((cl-0.12)/0.6);const beatEnd=INTRO+(i+1)*BEAT,outp=clamp01((t-(beatEnd-0.3))/0.4);let op=(i===active?1:0)*clamp01(cl/0.15);if(t>OUT_AT)op*=(1-clamp01((t-OUT_AT)/0.25));const y=(1-back(cin))*180+outp*200+Math.sin(t*0.9+i)*5;const rot=(-2.2)+(1-easeOut(cin))*-5+outp*4;c.style.opacity=op;c.style.transform='translateY('+y+'px) rotate('+rot+'deg)';});
+  animateComp(active,pIn,t,local);
+  const fo=(t>OUT_AT)?(1-clamp01((t-OUT_AT)/0.25)):1;['kick','head'].forEach(id=>{const e=document.getElementById(id);e.style.opacity=Math.min(+e.style.opacity||1,fo);});
+  document.getElementById('outro').style.opacity=easeOut(clamp01((t-(OUT_AT+0.25))/0.5));
+};
+function animateComp(i,p,t,local){
+
+  if(i===0){document.querySelectorAll('#comp0 .pv').forEach((c,k)=>{const rp=clamp01((p-k*0.045)/0.2);c.style.opacity=rp*0.9;c.style.transform='scale('+(0.86+0.14*back(rp))+')';});show('note0',p,0.66);}
+  else if(i===1){pop(document.getElementById('r1a'),p,0.03,0.28,20);pop(document.getElementById('r1b'),p,0.34,0.28,20);show('note1',p,0.68);}
+  else if(i===2){pop(document.getElementById('r2a'),p,0.03,0.28,20);pop(document.getElementById('r2b'),p,0.34,0.28,20);show('note2',p,0.68);}
+  else if(i===3){stag('#comp3 [data-k]',p,0.12,0.24,16);show('note3',p,0.66);}
+}
+window.seek(0);
+</script></body></html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;transition:none!important}
+html,body{width:1600px;height:1000px;overflow:hidden;background:#0b0910;
+  font-family:-apple-system,"Helvetica Neue","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:#fff;}
+.mono{font-family:ui-monospace,"SF Mono","Menlo",monospace;}
+
+.topbar{position:absolute;top:0;left:0;right:0;height:52px;background:#15121b;display:flex;align-items:center;padding:0 20px;z-index:5;}
+.tl{display:flex;gap:8px;} .tl i{width:13px;height:13px;border-radius:50%;display:block;}
+.twhere{position:absolute;left:0;right:0;text-align:center;font-size:19px;font-weight:600;color:rgba(255,255,255,.55);}
+.scene{position:absolute;inset:52px 0 0;padding:56px 120px 0;will-change:opacity;opacity:0;}
+.stitle{font-size:26px;font-weight:700;color:rgba(255,255,255,.45);margin-bottom:22px;}
+.wrow{display:flex;align-items:baseline;gap:24px;}
+.wn{font-size:110px;font-weight:800;letter-spacing:-.03em;}
+.wpill{font-size:26px;font-weight:750;padding:10px 24px;border-radius:100px;background:rgba(63,185,80,.16);color:#3fb950;}
+.spark{margin:26px 0 34px;display:block;}
+.comp{max-width:900px;}
+.crow{display:flex;align-items:center;gap:24px;margin-top:20px;will-change:opacity;}
+.crow span{width:130px;font-size:24px;font-weight:650;color:rgba(255,255,255,.6);}
+.crow b{width:170px;font-size:24px;font-weight:750;text-align:right;}
+.cbar{flex:1;height:18px;border-radius:10px;background:rgba(255,255,255,.08);overflow:hidden;}
+.cbar i{display:block;height:100%;border-radius:10px;transform-origin:left;}
+.cap{margin-top:36px;font-size:24px;font-weight:650;color:rgba(255,255,255,.5);will-change:opacity;}
+.cap u{text-decoration-color:rgba(255,255,255,.3);}
+.tree{position:relative;height:560px;border-radius:26px;overflow:hidden;}
+.tc{position:absolute;border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:inset 0 0 0 2px rgba(0,0,0,.22);will-change:transform,opacity;}
+.tc b{font-size:38px;font-weight:800;} .tc i{font-style:normal;font-size:24px;color:rgba(255,255,255,.82);margin-top:6px;font-weight:600;}
+.sankey{display:block;}
+.sankey text{font-family:-apple-system,'Helvetica Neue',system-ui,sans-serif;}
+.sankey [data-s]{will-change:opacity;}
+.cfwrap{max-width:1000px;}
+.cf{display:flex;align-items:center;gap:24px;padding:22px 0;will-change:opacity,transform;}
+.dpill{flex:none;min-width:110px;text-align:center;font-size:24px;font-weight:800;padding:12px 14px;border-radius:14px;background:rgba(246,130,31,.16);color:#F6821F;font-family:ui-monospace,monospace;}
+.dpill.red{background:rgba(255,69,58,.14);color:#ff453a;}
+.scheck{flex:none;width:58px;height:58px;border-radius:50%;background:rgba(63,185,80,.18);color:#3fb950;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;margin:0 26px;}
+.cft{font-size:27px;font-weight:700;} .cfs{font-size:21px;color:rgba(255,255,255,.44);margin-top:4px;}
+.duo{display:flex;gap:44px;height:560px;}
+.dmap{flex:1.3;display:flex;flex-direction:column;gap:12px;}
+.dmap>span,.dmaprow span{border-radius:18px;display:flex;align-items:flex-end;padding:20px;font-size:27px;font-weight:800;will-change:opacity;}
+.dmaprow{display:flex;gap:12px;flex:1.4;}
+.dside{flex:1;}
+.dlbl{font-size:18px;letter-spacing:.13em;color:rgba(255,255,255,.4);font-weight:650;margin-bottom:14px;}
+.dheat{display:grid;grid-template-columns:repeat(12,1fr);gap:8px;}
+.dheat i{aspect-ratio:1;border-radius:5px;background:rgba(255,255,255,.06);display:block;}
+.dmedia{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.dmedia i{aspect-ratio:1;border-radius:14px;display:block;will-change:opacity;}
+
+</style></head><body>
+
+<div class="topbar"><span class="tl"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i></span><span class="twhere" id="twhere">Wallet</span></div>
+<div class="scene" id="sA"><div class="stitle">Across your wallets</div>
+  <div class="wrow"><span class="wn" id="wn">$0</span><span class="wpill">▲ 2.1% today</span></div>
+  <svg class="spark" width="760" height="120" viewBox="0 0 760 120" preserveAspectRatio="none"><defs><clipPath id="cpA"><rect id="cpArect" x="0" y="0" width="0" height="120"/></clipPath></defs><path clip-path="url(#cpA)" d="M0 94 L95 82 L190 88 L285 60 L380 68 L475 40 L570 48 L665 22 L760 14" fill="none" stroke="#3fb950" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <div class="comp">
+    <div class="crow" data-c="0"><span>Deposited</span><div class="cbar"><i style="width:72%;background:#9391f7"></i></div><b>$41.6K</b></div>
+    <div class="crow" data-c="1"><span>Locked</span><div class="cbar"><i style="width:41%;background:#0434ff"></i></div><b>12,977 AERO</b></div>
+    <div class="crow" data-c="2"><span>Owed</span><div class="cbar"><i style="width:18%;background:#ff453a"></i></div><b>$6,100</b></div>
+  </div>
+  <div class="cap" id="capA">The lock melts on its own clock — 41% of its voting power left.</div></div>
+<div class="scene" id="sB"><div class="stitle">What you hold</div>
+  <div class="tree">
+    <span class="tc" style="left:0;top:0;width:46%;height:100%;background:#4a63d8"><b>ETH</b><i>$48.2K</i></span>
+    <span class="tc" style="left:47%;top:0;width:29%;height:54%;background:#2775ca"><b>USDC</b><i>$19.4K</i></span>
+    <span class="tc" style="left:77%;top:0;width:23%;height:54%;background:#f7931a"><b>WBTC</b><i>$7.8K</i></span>
+    <span class="tc" style="left:47%;top:57%;width:20%;height:43%;background:#14f195"><b>SOL</b><i>$11.1K</i></span>
+    <span class="tc" style="left:68%;top:57%;width:14%;height:43%;background:#0434ff"><b>AERO</b><i>$4.1K</i></span>
+    <span class="tc" style="left:83%;top:57%;width:17%;height:43%;background:rgba(255,255,255,.14)"><b>+13</b></span>
+  </div>
+  <div class="cap" id="capB">ETH is 50% of everything · <u>Where it's held →</u></div></div>
+<div class="scene" id="sC"><div class="stitle">Where it moved</div>
+  <svg class="sankey" viewBox="0 0 1600 520" width="1600" height="520" style="margin-left:-120px">
+    <!-- inflows: green slabs, edge to edge (the app's one green moment) -->
+    <rect data-s="0" x="0" y="60"  width="430" height="120" fill="rgba(63,185,80,.85)"/>
+    <rect data-s="1" x="0" y="210" width="430" height="64"  fill="rgba(63,185,80,.55)"/>
+    <!-- straight tapers, square shoulders — no bezier softness -->
+    <polygon data-s="0" points="430,60 730,120 730,208 430,180" fill="rgba(63,185,80,.32)"/>
+    <polygon data-s="1" points="430,210 730,214 730,252 430,274" fill="rgba(63,185,80,.2)"/>
+    <!-- the spine is you -->
+    <rect x="730" y="80" width="120" height="360" rx="0" fill="rgba(255,255,255,.1)"/>
+    <!-- outflows: neutral slabs, never red -->
+    <polygon data-s="2" points="850,120 1120,80 1120,190 850,214" fill="rgba(255,255,255,.16)"/>
+    <rect data-s="2" x="1120" y="80" width="480" height="110" fill="rgba(255,255,255,.24)"/>
+    <polygon data-s="3" points="850,240 1120,250 1120,330 850,320" fill="rgba(255,255,255,.12)"/>
+    <rect data-s="3" x="1120" y="250" width="480" height="80" fill="rgba(255,255,255,.2)"/>
+    <g font-family="-apple-system" font-weight="800">
+      <text x="24" y="130" fill="#08210e" font-size="30">Peer fill · $10,030</text>
+      <text x="24" y="248" fill="#0b2a12" font-size="24">Unshield · $2,400</text>
+      <text x="790" y="270" fill="#fff" font-size="24" text-anchor="middle" transform="rotate(-90 790 270)">vitalik.eth</text>
+      <text x="1144" y="142" fill="rgba(255,255,255,.9)" font-size="28">Aave deposit · $8,200</text>
+      <text x="1144" y="298" fill="rgba(255,255,255,.85)" font-size="24">Uniswap · $3,100</text>
+    </g>
+  </svg>
+  <div class="cap" id="capC">Inflows left, outflows right — every lane sized by what it was worth when it moved.</div></div>
+<div class="scene" id="sD"><div class="stitle">2 of your addresses are connected</div>
+  <svg class="sankey" viewBox="0 0 1200 500" width="100%" height="500">
+    <g id="spine">
+      <path data-s="0" fill="none" stroke="rgba(255,255,255,.34)" stroke-width="3" d="M240 120 C 520 120, 680 200, 960 200"/>
+      <path data-s="1" fill="none" stroke="rgba(255,255,255,.34)" stroke-width="3" d="M240 380 C 520 380, 680 220, 960 210"/>
+    </g>
+    <g font-family="-apple-system" font-weight="700" font-size="24">
+      <circle cx="200" cy="120" r="42" fill="hsl(264,62%,58%)"/><text x="270" y="112" fill="#fff">vitalik.eth</text><text x="270" y="140" fill="rgba(255,255,255,.45)" font-size="19">watched</text>
+      <circle cx="200" cy="380" r="42" fill="hsl(152,62%,48%)"/><text x="270" y="372" fill="#fff">lido.eth</text><text x="270" y="400" fill="rgba(255,255,255,.45)" font-size="19">watched</text>
+      <circle cx="1000" cy="205" r="36" fill="rgba(255,255,255,.16)"/><text x="1000" y="286" fill="#fff" text-anchor="middle">0xa5d1…956f</text><text x="1000" y="314" fill="rgba(255,255,255,.45)" font-size="19" text-anchor="middle">reaches both</text>
+    </g>
+  </svg>
+  <div class="cap" id="capD">It has transacted with more than one of your wallets — drawn, never inferred.</div></div>
+<div class="scene" id="sE"><div class="stitle">The dates behind your sites</div>
+  <div class="cfwrap">
+    <div class="cf" data-c="0"><span class="dpill">12d</span><div><div class="cft">yoursite.com — TLS certificate expires in 12 days</div><div class="cfs">Renewal hasn't happened yet</div></div></div>
+    <div class="cf" data-c="1"><span class="dpill">44d</span><div><div class="cft">yoursite.com renews in 44 days</div><div class="cfs">Auto-renew still fails on a dead card</div></div></div>
+    <div class="cf" data-c="2"><span class="dpill red">now</span><div><div class="cft">staging.yoursite.com isn't active — pending</div><div class="cfs">Not being served in this state</div></div></div>
+    <div class="cf sorted" data-c="3"><span class="scheck">✓</span><div><div class="cft" style="color:#3fb950">Sorted: yoursite.com — TLS certificate</div><div class="cfs">The renewal went through — the row closes itself</div></div></div>
+  </div>
+  <div class="cap" id="capE">A quiet feed means everything is current.</div></div>
+<div class="scene" id="sF"><div class="stitle">What your screenshots say</div>
+  <div class="duo">
+    <div class="dmap">
+      <span style="flex:3.4;background:rgba(74,99,216,.85)">figma.com</span>
+      <span style="flex:2.2;background:rgba(133,93,205,.8)">recipes</span>
+      <div class="dmaprow"><span style="flex:1.6;background:rgba(63,185,80,.7)">receipts</span><span style="flex:1.2;background:rgba(255,159,10,.65)">flights</span><span style="flex:1;background:rgba(255,255,255,.14)">+9</span></div>
+    </div>
+    <div class="dside">
+      <div class="dlbl mono">POSTING ACTIVITY</div>
+      <div class="dheat"><i data-h="0"></i><i data-h="1"></i><i data-h="2"></i><i data-h="3"></i><i data-h="4"></i><i data-h="5"></i><i data-h="6"></i><i data-h="7"></i><i data-h="8"></i><i data-h="9"></i><i data-h="10"></i><i data-h="11"></i><i data-h="12"></i><i data-h="13"></i><i data-h="14"></i><i data-h="15"></i><i data-h="16"></i><i data-h="17"></i><i data-h="18"></i><i data-h="19"></i><i data-h="20"></i><i data-h="21"></i><i data-h="22"></i><i data-h="23"></i><i data-h="24"></i><i data-h="25"></i><i data-h="26"></i><i data-h="27"></i><i data-h="28"></i><i data-h="29"></i><i data-h="30"></i><i data-h="31"></i><i data-h="32"></i><i data-h="33"></i><i data-h="34"></i><i data-h="35"></i><i data-h="36"></i><i data-h="37"></i><i data-h="38"></i><i data-h="39"></i><i data-h="40"></i><i data-h="41"></i><i data-h="42"></i><i data-h="43"></i><i data-h="44"></i><i data-h="45"></i><i data-h="46"></i><i data-h="47"></i><i data-h="48"></i><i data-h="49"></i><i data-h="50"></i><i data-h="51"></i><i data-h="52"></i><i data-h="53"></i><i data-h="54"></i><i data-h="55"></i><i data-h="56"></i><i data-h="57"></i><i data-h="58"></i><i data-h="59"></i></div>
+      <div class="dlbl mono" style="margin-top:26px">MEMORIES</div>
+      <div class="dmedia"><i style="background:linear-gradient(120deg,hsl(10,45%,38%),hsl(40,40%,20%))"></i><i style="background:linear-gradient(160deg,hsl(65,45%,38%),hsl(95,40%,20%))"></i><i style="background:linear-gradient(200deg,hsl(120,45%,38%),hsl(150,40%,20%))"></i><i style="background:linear-gradient(240deg,hsl(175,45%,38%),hsl(205,40%,20%))"></i><i style="background:linear-gradient(280deg,hsl(230,45%,38%),hsl(260,40%,20%))"></i><i style="background:linear-gradient(320deg,hsl(285,45%,38%),hsl(315,40%,20%))"></i></div>
+    </div>
+  </div>
+  <div class="cap" id="capF">Every word came off a screenshot, read on-device.</div></div>
+<script>
+const clamp01=v=>Math.max(0,Math.min(1,v)),easeOut=p=>1-Math.pow(1-p,3),back=p=>{const c=1.6;return 1+(c+1)*Math.pow(p-1,3)+c*Math.pow(p-1,2);};
+function pop(el,p,from,dur,dy){const rp=clamp01((p-from)/dur);el.style.opacity=rp;el.style.transform='translateY('+((1-back(rp))*(dy==null?18:dy))+'px)';return rp;}
+window.TOTAL=21;
+const SC=[['sA','Wallet',0,3.5],['sB','Wallet',3.5,7],['sC','Wallet',7,10.5],['sD','Wallet',10.5,14],['sE','Cloudflare',14,17.5],['sF','Photos',17.5,21]];
+window.seek=function(t){
+  let where='Wallet';
+  SC.forEach(([id,ttl,a,b])=>{
+    const el=document.getElementById(id);
+    const inn=clamp01((t-a)/0.4), out=1-clamp01((t-(b-0.4))/0.4);
+    el.style.opacity=Math.min(inn,out);
+    if(t>=a&&t<b)where=ttl;
+    const p=clamp01((t-a-0.15)/(b-a-0.6));
+    if(id==='sA'){
+      const n=Math.round(96812*easeOut(clamp01(p/0.5)));
+      document.getElementById('wn').textContent='$'+n.toLocaleString('en-US');
+      document.getElementById('cpArect').setAttribute('width',String(760*easeOut(clamp01(p/0.7))));
+      document.querySelectorAll('#sA .crow').forEach((r,k)=>{
+        const rp=clamp01((p-0.35-k*0.14)/0.25);r.style.opacity=rp;
+        r.querySelector('.cbar i').style.transform='scaleX('+easeOut(rp)+')';
+      });
+    }
+    if(id==='sB'){document.querySelectorAll('#sB .tc').forEach((c,k)=>{const rp=clamp01((p-k*0.09)/0.3);c.style.opacity=rp;c.style.transform='scale('+(0.75+0.25*back(rp))+')';});}
+    if(id==='sC'){document.querySelectorAll('#sC [data-s]').forEach((r,k)=>{r.style.opacity=clamp01((p-0.03-k*0.09)/0.22);});}
+    if(id==='sD'){document.querySelectorAll('#sD [data-s]').forEach((r,k)=>{
+      const rp=clamp01((p-0.15-k*0.2)/0.35);
+      const len=1300;r.style.strokeDasharray=len;r.style.strokeDashoffset=String(len*(1-easeOut(rp)));});}
+    if(id==='sE'){document.querySelectorAll('#sE .cf').forEach((r,k)=>{pop(r,p,0.05+k*0.16,0.26,20);});}
+    if(id==='sF'){document.querySelectorAll('#sF .dheat i').forEach((c,k)=>{
+      const on=((k*2654435761)>>>0)%97<40;const rp=clamp01((p-(((k*40503)>>>0)%100)/100*0.5)/0.2);
+      c.style.background=on?'rgba(63,185,80,'+(0.16+0.7*rp)+')':'rgba(255,255,255,.06)';});
+      document.querySelectorAll('#sF .dmap span, #sF .dmaprow span').forEach((c,k)=>{const rp=clamp01((p-k*0.08)/0.3);c.style.opacity=rp;});
+      document.querySelectorAll('#sF .dmedia i').forEach((c,k)=>{const rp=clamp01((p-0.2-k*0.07)/0.25);c.style.opacity=rp;});
+    }
+    const cap=el.querySelector('.cap');if(cap)cap.style.opacity=clamp01((p-0.6)/0.25);
+  });
+  document.getElementById('twhere').textContent=where;
+};
+window.seek(0);
+</script></body></html>

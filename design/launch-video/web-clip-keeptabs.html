@@ -1,0 +1,92 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;transition:none!important}
+html,body{width:720px;height:1280px;overflow:hidden;background:#0b0910;
+  font-family:-apple-system,"Helvetica Neue","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:#fff;}
+.mono{font-family:ui-monospace,"SF Mono","Menlo",monospace;}
+.pour{position:absolute;left:0;right:0;top:0;height:307px;background:linear-gradient(to bottom, rgba(46,99,255,.24), rgba(0,0,0,0));}
+
+.chips{display:flex;align-items:center;gap:13px;padding:64px 30px 22px;}
+.cc{width:62px;height:62px;border-radius:50%;background:rgba(255,255,255,.09);display:flex;align-items:center;justify-content:center;flex:none;}
+.cc.av{background:#fff;} .cc i{width:22px;height:22px;border-radius:50%;display:block;}
+.cc.on{box-shadow:0 0 0 3px rgba(255,255,255,.18);}
+.sect{font-size:22px;font-weight:700;color:rgba(255,255,255,.42);margin:20px 32px 6px;}
+.sect em{font-style:normal;color:rgba(255,255,255,.26);margin-left:8px;}
+.row{display:flex;align-items:center;gap:16px;padding:15px 32px;will-change:opacity,transform;}
+.row .col{flex:1;min-width:0;}
+.avx{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.15);flex:none;}
+.thumb{width:52px;height:52px;border-radius:13px;background:linear-gradient(140deg,#3b4d70,#1e2a42);flex:none;}
+.dot{width:13px;height:13px;border-radius:50%;flex:none;margin:0 19px;}
+.bar{height:12px;border-radius:7px;background:rgba(255,255,255,.24);}
+.bar.s{height:10px;background:rgba(255,255,255,.12);margin-top:8px;}
+.ttl{font-size:23px;font-weight:650;}
+.sub2{font-size:19px;color:rgba(255,255,255,.44);margin-top:3px;}
+.amt{font-size:25px;font-weight:750;}
+.src{margin-left:auto;font-size:17px;color:rgba(255,255,255,.32);font-weight:600;flex:none;}
+.time{font-size:20px;font-weight:700;color:rgba(255,255,255,.55);width:56px;flex:none;}
+.vbar{width:6px;height:38px;border-radius:4px;flex:none;}
+
+.scene{position:absolute;inset:0;padding:120px 40px 0;will-change:opacity;}
+.lbl{font-size:20px;letter-spacing:.14em;color:rgba(255,255,255,.4);font-weight:650;margin-bottom:26px;}
+.tree{position:relative;height:560px;border-radius:24px;overflow:hidden;}
+.tc{position:absolute;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:inset 0 0 0 2px rgba(0,0,0,.2);will-change:transform,opacity;}
+.tc b{font-weight:800;color:#fff;} .tc i{font-style:normal;color:rgba(255,255,255,.82);margin-top:5px;font-weight:600;}
+.cap{margin-top:34px;text-align:center;font-size:22px;font-weight:650;color:rgba(255,255,255,.5);line-height:1.45;will-change:opacity;}
+.bign{font-size:96px;font-weight:800;letter-spacing:-.03em;}
+.pill{display:inline-block;margin-top:14px;font-size:23px;font-weight:750;padding:9px 20px;border-radius:100px;background:rgba(63,185,80,.16);color:#3fb950;will-change:opacity;}
+.sparkwrap{margin-top:44px;}
+.heat{display:grid;grid-template-columns:repeat(16,1fr);gap:9px;margin-top:8px;}
+.heat span{aspect-ratio:1;border-radius:5px;background:rgba(255,255,255,.06);display:block;}
+.ap{display:flex;align-items:center;gap:18px;padding:20px 0;will-change:opacity,transform;}
+.warn{width:50px;height:50px;border-radius:50%;background:rgba(255,159,10,.18);color:#ff9f0a;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:26px;flex:none;}
+
+</style></head><body>
+
+<div class="pour" style="background:linear-gradient(to bottom, rgba(63,185,80,.2), rgba(0,0,0,0))"></div>
+<div class="scene" id="s0">
+  <div class="lbl mono">WHAT YOU HOLD</div>
+  <div class="tree"><span class="tc" data-i="0" style="left:0%;top:0%;width:55%;height:100%;background:#4a63d8"><b style="font-size:34px">ETH</b><i style="font-size:21px">$48K</i></span><span class="tc" data-i="1" style="left:56.5%;top:0%;width:43.5%;height:47%;background:#2775ca"><b style="font-size:27px">USDC</b><i style="font-size:17px">$19K</i></span><span class="tc" data-i="2" style="left:56.5%;top:49%;width:24%;height:51%;background:#14f195"><b style="font-size:23px">SOL</b><i style="font-size:14px">$11K</i></span><span class="tc" data-i="3" style="left:81.5%;top:49%;width:18.5%;height:30%;background:#f7931a"><b style="font-size:19px">WBTC</b><i style="font-size:12px">$8K</i></span><span class="tc" data-i="4" style="left:81.5%;top:81%;width:18.5%;height:19%;background:rgba(255,255,255,.16)"><b style="font-size:17px">+14</b></span></div>
+  <div class="cap">Every wallet you watch, one map — read-only.</div>
+</div>
+<div class="scene" id="s1" style="opacity:0">
+  <div class="lbl mono">ACROSS YOUR WALLETS</div>
+  <div class="bign" id="bign">$0</div>
+  <div class="pill" id="pill">▲ 2.1% today</div>
+  <div class="sparkwrap"><svg width="100%" height="150" viewBox="0 0 640 150" preserveAspectRatio="none"><defs><clipPath id="cp"><rect id="cprect" x="0" y="0" width="0" height="150"/></clipPath></defs><path clip-path="url(#cp)" d="M0 118 L80 104 L160 112 L240 78 L320 88 L400 52 L480 62 L560 30 L640 18" fill="none" stroke="#3fb950" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+  <div class="cap">The line starts once a second reading lands.</div>
+</div>
+<div class="scene" id="s2" style="opacity:0">
+  <div class="lbl mono">POSTING ACTIVITY</div>
+  <div class="heat" id="heat"><span data-i="0"></span><span data-i="1"></span><span data-i="2"></span><span data-i="3"></span><span data-i="4"></span><span data-i="5"></span><span data-i="6"></span><span data-i="7"></span><span data-i="8"></span><span data-i="9"></span><span data-i="10"></span><span data-i="11"></span><span data-i="12"></span><span data-i="13"></span><span data-i="14"></span><span data-i="15"></span><span data-i="16"></span><span data-i="17"></span><span data-i="18"></span><span data-i="19"></span><span data-i="20"></span><span data-i="21"></span><span data-i="22"></span><span data-i="23"></span><span data-i="24"></span><span data-i="25"></span><span data-i="26"></span><span data-i="27"></span><span data-i="28"></span><span data-i="29"></span><span data-i="30"></span><span data-i="31"></span><span data-i="32"></span><span data-i="33"></span><span data-i="34"></span><span data-i="35"></span><span data-i="36"></span><span data-i="37"></span><span data-i="38"></span><span data-i="39"></span><span data-i="40"></span><span data-i="41"></span><span data-i="42"></span><span data-i="43"></span><span data-i="44"></span><span data-i="45"></span><span data-i="46"></span><span data-i="47"></span><span data-i="48"></span><span data-i="49"></span><span data-i="50"></span><span data-i="51"></span><span data-i="52"></span><span data-i="53"></span><span data-i="54"></span><span data-i="55"></span><span data-i="56"></span><span data-i="57"></span><span data-i="58"></span><span data-i="59"></span><span data-i="60"></span><span data-i="61"></span><span data-i="62"></span><span data-i="63"></span><span data-i="64"></span><span data-i="65"></span><span data-i="66"></span><span data-i="67"></span><span data-i="68"></span><span data-i="69"></span><span data-i="70"></span><span data-i="71"></span><span data-i="72"></span><span data-i="73"></span><span data-i="74"></span><span data-i="75"></span><span data-i="76"></span><span data-i="77"></span><span data-i="78"></span><span data-i="79"></span><span data-i="80"></span><span data-i="81"></span><span data-i="82"></span><span data-i="83"></span><span data-i="84"></span><span data-i="85"></span><span data-i="86"></span><span data-i="87"></span><span data-i="88"></span><span data-i="89"></span><span data-i="90"></span><span data-i="91"></span><span data-i="92"></span><span data-i="93"></span><span data-i="94"></span><span data-i="95"></span><span data-i="96"></span><span data-i="97"></span><span data-i="98"></span><span data-i="99"></span><span data-i="100"></span><span data-i="101"></span><span data-i="102"></span><span data-i="103"></span><span data-i="104"></span><span data-i="105"></span><span data-i="106"></span><span data-i="107"></span><span data-i="108"></span><span data-i="109"></span><span data-i="110"></span><span data-i="111"></span></div>
+  <div class="cap">Anyone you follow — how they actually show up.</div>
+</div>
+<div class="scene" id="s3" style="opacity:0">
+  <div class="lbl mono">WORTH A LOOK</div>
+  <div class="ap" data-i="0"><span class="warn">!</span><div class="col"><div class="ttl">Unlimited USDC approval</div><div class="sub2">Reaches $12,400 · granted 2026-06-02</div></div></div>
+  <div class="ap" data-i="1"><span class="warn">!</span><div class="col"><div class="ttl">Old router, still approved</div><div class="sub2">Reaches $1,120 · granted 2025-11-18</div></div></div>
+  <div class="ap" data-i="2"><span class="warn" style="opacity:.6">!</span><div class="col"><div class="ttl">NFT operator approval</div><div class="sub2">Reaches nothing it can spend</div></div></div>
+  <div class="cap">Ranked by what each one could actually reach.</div>
+</div>
+<script>
+const clamp01=v=>Math.max(0,Math.min(1,v)),easeOut=p=>1-Math.pow(1-p,3),back=p=>{const c=1.6;return 1+(c+1)*Math.pow(p-1,3)+c*Math.pow(p-1,2);};
+function pop(el,p,from,dur,dy){const rp=clamp01((p-from)/dur);el.style.opacity=rp;el.style.transform='translateY('+((1-back(rp))*(dy==null?18:dy))+'px)';return rp;}
+window.TOTAL=10.4;
+const S=[[0,2.6],[2.6,5.2],[5.2,7.8],[7.8,10.4]];
+window.seek=function(t){
+  S.forEach((w,i)=>{
+    const el=document.getElementById('s'+i);
+    const inn=clamp01((t-w[0])/0.35), out=1-clamp01((t-(w[1]-0.35))/0.35);
+    el.style.opacity=Math.min(inn,out);
+    const p=clamp01((t-w[0]-0.15)/(w[1]-w[0]-0.5));
+    if(i===0){document.querySelectorAll('#s0 .tc').forEach((c,k)=>{const rp=clamp01((p-k*0.1)/0.3);c.style.opacity=rp;c.style.transform='scale('+(0.7+0.3*back(rp))+')';});}
+    if(i===1){const n=Math.round(96812*easeOut(clamp01(p/0.55)));document.getElementById('bign').textContent='$'+n.toLocaleString('en-US');
+      document.getElementById('pill').style.opacity=clamp01((p-0.55)/0.2);
+      document.getElementById('cprect').setAttribute('width',String(640*easeOut(clamp01(p/0.8))));}
+    if(i===2){document.querySelectorAll('#heat span').forEach((c,k)=>{
+      const on=((k*2654435761)>>>0)%97<38;const rp=clamp01((p-(((k*40503)>>>0)%100)/100*0.7)/0.2);
+      c.style.background=on?'rgba(63,185,80,'+(0.15+0.75*rp)+')':'rgba(255,255,255,.06)';});}
+    if(i===3){document.querySelectorAll('#s3 .ap').forEach((r,k)=>{pop(r,p,0.06+k*0.18,0.3,22);});}
+    const cap=el.querySelector('.cap');if(cap)cap.style.opacity=clamp01((p-0.55)/0.25);
+  });
+};
+window.seek(0);
+</script></body></html>

@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Treemap &amp; brief — blue vs ink</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-font-smoothing: antialiased; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    background: #2a2a2e; padding: 28px; color: #fff;
+  }
+  h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .sub { font-size: 13px; opacity: .65; margin-bottom: 24px; max-width: 740px; line-height: 1.45; }
+  .mode-label { font-size: 13px; font-weight: 600; opacity: .55; margin: 26px 0 10px; }
+  .row { display: flex; gap: 20px; flex-wrap: wrap; }
+
+  .phone { width: 360px; border-radius: 28px; padding: 22px 18px 18px; flex-shrink: 0; }
+  .phone.dark  { background: #000000; color: #ffffff; }
+  .phone.light { background: #f2f2f7; color: #000000; }
+  .variant { font-size: 12px; font-weight: 600; opacity: .5; margin-bottom: 14px; }
+
+  .card { border-radius: 18px; padding: 14px; margin-bottom: 14px; }
+  .dark  .card { background: #111113; box-shadow: 0 8px 24px rgba(0,0,0,.55); }
+  .light .card { background: #ffffff; box-shadow: 0 4px 16px rgba(0,0,0,.12); }
+  .card h3 { font-size: 15px; font-weight: 650; margin-bottom: 2px; }
+  .cap { font-size: 12px; margin-bottom: 12px; }
+  .dark  .cap { color: rgba(255,255,255,.55); }
+  .light .cap { color: rgba(0,0,0,.5); }
+  .dark  .att { color: #ff9f0a; font-weight: 600; }
+  .light .att { color: #ff9500; font-weight: 600; }
+
+  /* ---- UnitTreemap: 4x3 grid, frames(6) ---- */
+  .map { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, 1fr);
+         gap: 8px; height: 200px; }
+  .cell { border-radius: 12px; padding: 9px 10px; display: flex; flex-direction: column;
+          justify-content: flex-end; overflow: hidden; }
+  .cell .n { font-size: 13px; font-weight: 600; line-height: 1.15; }
+  .cell .c { font-size: 11px; margin-top: 1px; }
+  .dark  .cell .c { color: rgba(255,255,255,.55); }
+  .light .cell .c { color: rgba(0,0,0,.5); }
+  .cell.sm .n { font-size: 12px; }
+  .cell.sm .c { font-size: 10px; }
+  .s0 { grid-area: 1 / 1 / 3 / 3; }
+  .s1 { grid-area: 1 / 3 / 2 / 5; }
+  .s2 { grid-area: 2 / 3 / 3 / 4; }
+  .s3 { grid-area: 2 / 4 / 4 / 5; }
+  .s4 { grid-area: 3 / 1 / 4 / 3; }
+  .s5 { grid-area: 3 / 3 / 4 / 4; }
+
+  /* magnitude washes — shipped blue ramp: .06 + .22t ; proposed ink ramp: .10 + .30t */
+  .blue .f0 { background: rgba(22,115,230,.280); }
+  .blue .f1 { background: rgba(22,115,230,.196); }
+  .blue .f2 { background: rgba(22,115,230,.159); }
+  .blue .f3 { background: rgba(22,115,230,.126); }
+  .blue .f5 { background: rgba(22,115,230,.082); }
+  .blue.dark  .f4 { background: rgba(255,159,10,.113); }
+  .blue.light .f4 { background: rgba(255,149,0,.113); }
+
+  .ink.dark .f0 { background: rgba(255,255,255,.400); }
+  .ink.dark .f1 { background: rgba(255,255,255,.286); }
+  .ink.dark .f2 { background: rgba(255,255,255,.235); }
+  .ink.dark .f3 { background: rgba(255,255,255,.190); }
+  .ink.dark .f5 { background: rgba(255,255,255,.130); }
+  .ink.dark .f4 { background: rgba(255,159,10,.172); }
+
+  .ink.light .f0 { background: rgba(0,0,0,.400); }
+  .ink.light .f1 { background: rgba(0,0,0,.286); }
+  .ink.light .f2 { background: rgba(0,0,0,.235); }
+  .ink.light .f3 { background: rgba(0,0,0,.190); }
+  .ink.light .f5 { background: rgba(0,0,0,.130); }
+  .ink.light .f4 { background: rgba(255,149,0,.172); }
+  /* the biggest ink cell in light gets heavy — flip its label to keep it legible */
+  .ink.light .f0 .n { color: #fff; }
+  .ink.light .f0 .c { color: rgba(255,255,255,.75); }
+
+  /* ---- brief bits ---- */
+  .hero-line { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+  .hero-line .big { font-size: 22px; font-weight: 700; }
+  .pill { font-size: 12px; font-weight: 650; padding: 3px 9px; border-radius: 999px; }
+  .blue .pill      { color: #1673e6; background: rgba(22,115,230,.16); }
+  .ink.dark .pill  { color: #ffffff; background: rgba(255,255,255,.16); }
+  .ink.light .pill { color: #000000; background: rgba(0,0,0,.10); }
+  svg.spark { width: 100%; height: 44px; display: block; margin-bottom: 12px; }
+
+  .mover { display: flex; align-items: center; gap: 10px; font-size: 13px; margin-bottom: 8px; }
+  .mover .sym { width: 44px; font-weight: 600; }
+  .mover .bar { height: 8px; border-radius: 4px; }
+  .mover .pct { margin-left: auto; font-variant-numeric: tabular-nums; }
+  .dark  .mover .pct { color: rgba(255,255,255,.6); }
+  .light .mover .pct { color: rgba(0,0,0,.55); }
+  /* bar ramp — blue: .3 + .7t ; ink: .25 + .65t */
+  .blue .b0 { background: rgba(22,115,230,1);     width: 150px; }
+  .blue .b1 { background: rgba(22,115,230,.685);  width: 96px; }
+  .blue .b2 { background: rgba(22,115,230,.426);  width: 52px; }
+  .ink.dark .b0 { background: rgba(255,255,255,.90);  width: 150px; }
+  .ink.dark .b1 { background: rgba(255,255,255,.608); width: 96px; }
+  .ink.dark .b2 { background: rgba(255,255,255,.367); width: 52px; }
+  .ink.light .b0 { background: rgba(0,0,0,.90);  width: 150px; }
+  .ink.light .b1 { background: rgba(0,0,0,.608); width: 96px; }
+  .ink.light .b2 { background: rgba(0,0,0,.367); width: 52px; }
+
+  .keep { display: inline-flex; align-items: center; font-size: 13px; font-weight: 600;
+          padding: 6px 14px; border-radius: 999px; margin-top: 4px;
+          color: #1673e6; background: rgba(22,115,230,.16); }
+  .foot { font-size: 11px; line-height: 1.5; margin-top: 8px; }
+  .dark  .foot { color: rgba(255,255,255,.4); }
+  .light .foot { color: rgba(0,0,0,.4); }
+</style>
+</head>
+<body>
+  <h1>Treemaps &amp; the brief — blue vs ink</h1>
+  <p class="sub">Left: shipped (every magnitude fill is DS.tint #1673e6, wash 6–28%). Right: proposed ink
+    (fill base is text-primary — white in dark, black in light — ramp raised to 10–40% so the smallest cell
+    still separates from the card). Orange "not on the list" and the Keep pill are identical in both:
+    orange is state, and blue stays the interaction ink on controls.</p>
+
+  <div class="mode-label">Dark</div>
+  <div class="row">
+
+    <div class="phone dark blue">
+      <div class="variant">Blue — shipped</div>
+      <div class="card">
+        <h3>What it actually reached</h3>
+        <div class="cap">1,995 requests · 8 services · <span class="att">1 not on the list</span></div>
+        <div class="map">
+          <div class="cell s0 f0"><div class="n">Wallet</div><div class="c">1,284 requests</div></div>
+          <div class="cell s1 f1"><div class="n">RSS</div><div class="c">402</div></div>
+          <div class="cell s2 f2 sm"><div class="n">Bluesky</div><div class="c">188</div></div>
+          <div class="cell s3 f3 sm"><div class="n">GitHub</div><div class="c">121</div></div>
+          <div class="cell s4 f4"><div class="n att">unpkg.com</div><div class="c">not on the list</div></div>
+          <div class="cell s5 f5 sm"><div class="n">4 more</div><div class="c">97</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="hero-line"><span class="big">Your Tuesday</span><span class="pill">+1.5%</span></div>
+        <svg class="spark" viewBox="0 0 320 44" preserveAspectRatio="none">
+          <path d="M0 34 L30 30 L60 32 L90 24 L120 26 L150 18 L180 21 L210 14 L240 17 L270 10 L300 12 L320 8"
+            fill="none" stroke="#1673e6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+          <path d="M0 34 L30 30 L60 32 L90 24 L120 26 L150 18 L180 21 L210 14 L240 17 L270 10 L300 12 L320 8 L320 44 L0 44 Z"
+            fill="rgba(22,115,230,.08)"/>
+        </svg>
+        <div class="mover"><span class="sym">ETH</span><span class="bar b0"></span><span class="pct">+2.1%</span></div>
+        <div class="mover"><span class="sym">SOL</span><span class="bar b1"></span><span class="pct">+0.8%</span></div>
+        <div class="mover"><span class="sym">USDC</span><span class="bar b2"></span><span class="pct">0.0%</span></div>
+        <span class="keep">Keep this ask</span>
+        <div class="foot">Sparkline, delta pill and bars follow the map's scheme; the Keep pill is a control and keeps the interaction blue either way.</div>
+      </div>
+    </div>
+
+    <div class="phone dark ink">
+      <div class="variant">Ink — proposed</div>
+      <div class="card">
+        <h3>What it actually reached</h3>
+        <div class="cap">1,995 requests · 8 services · <span class="att">1 not on the list</span></div>
+        <div class="map">
+          <div class="cell s0 f0"><div class="n">Wallet</div><div class="c">1,284 requests</div></div>
+          <div class="cell s1 f1"><div class="n">RSS</div><div class="c">402</div></div>
+          <div class="cell s2 f2 sm"><div class="n">Bluesky</div><div class="c">188</div></div>
+          <div class="cell s3 f3 sm"><div class="n">GitHub</div><div class="c">121</div></div>
+          <div class="cell s4 f4"><div class="n att">unpkg.com</div><div class="c">not on the list</div></div>
+          <div class="cell s5 f5 sm"><div class="n">4 more</div><div class="c">97</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="hero-line"><span class="big">Your Tuesday</span><span class="pill">+1.5%</span></div>
+        <svg class="spark" viewBox="0 0 320 44" preserveAspectRatio="none">
+          <path d="M0 34 L30 30 L60 32 L90 24 L120 26 L150 18 L180 21 L210 14 L240 17 L270 10 L300 12 L320 8"
+            fill="none" stroke="#ffffff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+          <path d="M0 34 L30 30 L60 32 L90 24 L120 26 L150 18 L180 21 L210 14 L240 17 L270 10 L300 12 L320 8 L320 44 L0 44 Z"
+            fill="rgba(255,255,255,.08)"/>
+        </svg>
+        <div class="mover"><span class="sym">ETH</span><span class="bar b0"></span><span class="pct">+2.1%</span></div>
+        <div class="mover"><span class="sym">SOL</span><span class="bar b1"></span><span class="pct">+0.8%</span></div>
+        <div class="mover"><span class="sym">USDC</span><span class="bar b2"></span><span class="pct">0.0%</span></div>
+        <span class="keep">Keep this ask</span>
+        <div class="foot">Sparkline, delta pill and bars follow the map's scheme; the Keep pill is a control and keeps the interaction blue either way.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="mode-label">Light</div>
+  <div class="row">
+
+    <div class="phone light blue">
+      <div class="variant">Blue — shipped</div>
+      <div class="card">
+        <h3>What it actually reached</h3>
+        <div class="cap">1,995 requests · 8 services · <span class="att">1 not on the list</span></div>
+        <div class="map">
+          <div class="cell s0 f0"><div class="n">Wallet</div><div class="c">1,284 requests</div></div>
+          <div class="cell s1 f1"><div class="n">RSS</div><div class="c">402</div></div>
+          <div class="cell s2 f2 sm"><div class="n">Bluesky</div><div class="c">188</div></div>
+          <div class="cell s3 f3 sm"><div class="n">GitHub</div><div class="c">121</div></div>
+          <div class="cell s4 f4"><div class="n att">unpkg.com</div><div class="c">not on the list</div></div>
+          <div class="cell s5 f5 sm"><div class="n">4 more</div><div class="c">97</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="hero-line"><span class="big">Your Tuesday</span><span class="pill">+1.5%</span></div>
+        <svg class="spark" viewBox="0 0 320 44" preserveAspectRatio="none">
+          <path d="M0 34 L30 30 L60 32 L90 24 L120 26 L150 18 L180 21 L210 14 L240 17 L270 10 L300 12 L320 8"
+            fill="none" stroke="#1673e6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+          <path d="M0 34 L30 30 L60 32 L90 24 L120 26 L150 18 L180 21 L210 14 L240 17 L270 10 L300 12 L320 8 L320 44 L0 44 Z"
+            fill="rgba(22,115,230,.08)"/>
+        </svg>
+        <div class="mover"><span class="sym">ETH</span><span class="bar b0"></span><span class="pct">+2.1%</span></div>
+        <div class="mover"><span class="sym">SOL</span><span class="bar b1"></span><span class="pct">+0.8%</span></div>
+        <div class="mover"><span class="sym">USDC</span><span class="bar b2"></span><span class="pct">0.0%</span></div>
+        <span class="keep">Keep this ask</span>
+        <div class="foot">Sparkline, delta pill and bars follow the map's scheme; the Keep pill is a control and keeps the interaction blue either way.</div>
+      </div>
+    </div>
+
+    <div class="phone light ink">
+      <div class="variant">Ink — proposed</div>
+      <div class="card">
+        <h3>What it actually reached</h3>
+        <div class="cap">1,995 requests · 8 services · <span class="att">1 not on the list</span></div>
+        <div class="map">
+          <div class="cell s0 f0"><div class="n">Wallet</div><div class="c">1,284 requests</div></div>
+          <div class="cell s1 f1"><div class="n">RSS</div><div class="c">402</div></div>
+          <div class="cell s2 f2 sm"><div class="n">Bluesky</div><div class="c">188</div></div>
+          <div class="cell s3 f3 sm"><div class="n">GitHub</div><div class="c">121</div></div>
+          <div class="cell s4 f4"><div class="n att">unpkg.com</div><div class="c">not on the list</div></div>
+          <div class="cell s5 f5 sm"><div class="n">4 more</div><div class="c">97</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="hero-line"><span class="big">Your Tuesday</span><span class="pill">+1.5%</span></div>
+        <svg class="spark" viewBox="0 0 320 44" preserveAspectRatio="none">
+          <path d="M0 34 L30 30 L60 32 L90 24 L120 26 L150 18 L180 21 L210 14 L240 17 L270 10 L300 12 L320 8"
+            fill="none" stroke="#000000" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+          <path d="M0 34 L30 30 L60 32 L90 24 L120 26 L150 18 L180 21 L210 14 L240 17 L270 10 L300 12 L320 8 L320 44 L0 44 Z"
+            fill="rgba(0,0,0,.08)"/>
+        </svg>
+        <div class="mover"><span class="sym">ETH</span><span class="bar b0"></span><span class="pct">+2.1%</span></div>
+        <div class="mover"><span class="sym">SOL</span><span class="bar b1"></span><span class="pct">+0.8%</span></div>
+        <div class="mover"><span class="sym">USDC</span><span class="bar b2"></span><span class="pct">0.0%</span></div>
+        <span class="keep">Keep this ask</span>
+        <div class="foot">Sparkline, delta pill and bars follow the map's scheme; the Keep pill is a control and keeps the interaction blue either way.</div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

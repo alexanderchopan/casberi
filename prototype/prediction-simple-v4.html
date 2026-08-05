@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prediction room — three ways to make it simple</title>
+<style>
+  :root {
+    --page:#000; --sheet:#111113; --well:#080809;
+    --text1:#fff; --text2:rgba(235,235,245,.60); --text3:rgba(235,235,245,.30);
+    --faint:rgba(255,255,255,.04); --strong:rgba(255,255,255,.16);
+    --tint:#1673e6; --attention:#ff9f0a; --confirm:#30d158; --down:#ff453a;
+    --kalshi:#4fae7b; --poly:#1652f0;
+    --s1:4px; --s2:8px; --s3:12px; --s4:16px;
+    --shadow:0 10px 30px rgba(0,0,0,.55);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0a0a0c;color:var(--text1);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+    letter-spacing:0;padding:40px 24px 80px}
+  h1{font-size:22px;font-weight:700;margin-bottom:8px}
+  .intro{color:var(--text2);font-size:14px;line-height:1.55;max-width:900px;margin-bottom:32px}
+  .intro b{color:var(--text1);font-weight:600}
+  .intro code{font-size:13px;color:var(--text1);background:rgba(255,255,255,.07);padding:1px 5px;border-radius:4px}
+  .intro p+p{margin-top:10px}
+  .rail{display:flex;gap:36px;flex-wrap:wrap;align-items:flex-start;justify-content:center}
+  .col{width:393px}
+  .dir-title{font-size:17px;font-weight:700;margin-bottom:4px}
+  .dir-sub{font-size:13px;color:var(--tint);font-weight:600;margin-bottom:6px}
+  .dir-note{color:var(--text2);font-size:13px;line-height:1.55;margin-bottom:14px;min-height:150px}
+  .dir-note b{color:var(--text1);font-weight:600}
+
+  .phone{width:393px;height:852px;background:var(--page);border-radius:44px;padding:18px 0 0;
+    box-shadow:0 0 0 1px rgba(255,255,255,.07),0 24px 60px rgba(0,0,0,.6);overflow:hidden;position:relative}
+  .scroll{height:100%;overflow:hidden;padding:0 14px}
+  .fold{position:absolute;left:0;right:0;bottom:0;height:70px;
+    background:linear-gradient(180deg,rgba(0,0,0,0) 0%,rgba(0,0,0,.94) 80%);pointer-events:none}
+  .statusbar{display:flex;justify-content:space-between;padding:2px 12px 8px;font-size:13px;font-weight:600}
+
+  .strip{display:flex;gap:6px;padding:2px 2px 12px;overflow:hidden}
+  .schip{font-size:13px;font-weight:600;color:var(--text2);background:var(--sheet);
+    border-radius:9999px;padding:6px 12px;white-space:nowrap;display:flex;align-items:center;gap:5px}
+  .schip.on{color:#fff;background:var(--tint)}
+  .sdot{width:14px;height:14px;border-radius:50%;flex:none}
+  .sdot.k{background:var(--kalshi)}.sdot.p{background:var(--poly)}
+
+  /* ONE control row */
+  .ctrls{display:flex;gap:var(--s2);padding:0 2px 14px;overflow:hidden;align-items:center}
+  .cchip{font-size:13px;font-weight:600;color:var(--text2);background:var(--faint);
+    border-radius:9999px;padding:7px 12px;white-space:nowrap}
+  .cchip.on{color:#fff;background:var(--tint)}
+  .cchip.ico{padding:7px 10px;color:var(--text2)}
+
+  .ledeline{display:flex;align-items:center;gap:var(--s2);padding:0 var(--s1) 12px}
+  .ledeline .lbl{font-size:12px;color:var(--text3);flex:none}
+  .ledeline .lq{font-size:13px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+
+  .delta{font-size:12px;font-weight:700;padding:2px 6px;border-radius:9999px;font-variant-numeric:tabular-nums;flex:none}
+  .delta.up{color:#04140a;background:var(--confirm)}
+  .delta.dn{color:#fff;background:var(--down)}
+  .delta.sm{font-size:11px;padding:1px 5px}
+  .delta.q{background:rgba(48,209,88,.16);color:var(--confirm)}
+  .delta.qd{background:rgba(255,69,58,.16);color:var(--down)}
+
+  /* ---- A: uniform cards ---- */
+  .card{background:var(--sheet);border-radius:20px;padding:16px;box-shadow:var(--shadow);margin-bottom:14px}
+  .q{font-size:16px;font-weight:600;line-height:1.3;margin-bottom:12px}
+  .lead{display:flex;align-items:baseline;gap:var(--s2);margin-bottom:10px}
+  .lead .who{font-size:15px;color:var(--text2);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lead .pct{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;flex:none}
+  .bar{height:8px;border-radius:9999px;background:var(--faint);position:relative;overflow:hidden}
+  .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:9999px;background:var(--tint)}
+  .bar i.k{background:var(--kalshi)}.bar i.p{background:var(--poly)}
+  .bar u{position:absolute;top:0;bottom:0;width:2px;border-radius:2px}
+  .bar u.up{background:var(--confirm)}.bar u.dn{background:var(--down)}
+  .foot{display:flex;align-items:center;gap:7px;margin-top:10px;font-size:13px;color:var(--text3)}
+  .foot .soon{color:var(--attention);font-weight:600}
+  .foot .warn{color:var(--attention)}
+  .venue{width:16px;height:16px;border-radius:50%;flex:none;display:grid;place-items:center;
+    font-size:9px;font-weight:800;color:#04120e}
+  .venue.k{background:var(--kalshi)}.venue.p{background:var(--poly);color:#fff}
+  .twobar{display:flex;align-items:center;gap:var(--s2);margin-top:8px}
+  .twobar .pct{font-size:14px;font-weight:600;width:38px;text-align:right;flex:none;font-variant-numeric:tabular-nums}
+
+  /* ---- B: rows where the fill IS the odds ---- */
+  .mrow{position:relative;border-radius:12px;background:var(--sheet);overflow:hidden;
+    margin-bottom:6px;padding:13px 14px;display:flex;align-items:center;gap:10px}
+  .mrow .fill{position:absolute;left:0;top:0;bottom:0;background:rgba(22,115,230,.20);pointer-events:none}
+  .mrow .fill.k{background:rgba(79,174,123,.22)}
+  .mrow .fill.p{background:rgba(22,82,240,.26)}
+  .mrow .txt{position:relative;flex:1;min-width:0}
+  .mrow .t{font-size:14px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mrow .s{font-size:12px;color:var(--text3);margin-top:2px}
+  .mrow .n{position:relative;font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;flex:none}
+  .mrow .d{position:relative;flex:none}
+
+  /* ---- C: briefing ---- */
+  .bcard{background:var(--sheet);border-radius:20px;padding:16px;box-shadow:var(--shadow);margin-bottom:14px}
+  .beyebrow{font-size:12px;color:var(--text3);margin-bottom:8px}
+  .bq{font-size:19px;font-weight:700;line-height:1.25;margin-bottom:12px}
+  .door{background:var(--sheet);border-radius:20px;padding:18px 16px;display:flex;align-items:center;
+    gap:10px;box-shadow:var(--shadow)}
+  .door .dt{font-size:16px;font-weight:600}
+  .door .dc{margin-left:auto;color:var(--text3);font-size:15px}
+  .quiet{font-size:13px;color:var(--text3);padding:10px 4px 0;line-height:1.5}
+
+  .secthead{font-size:12px;color:var(--text3);padding:12px 4px 8px}
+  .res{display:flex;align-items:center;gap:var(--s3)}
+  .res .t{font-size:14px;line-height:1.3}
+  .res .r{font-size:12px;color:var(--text3);margin-top:2px}
+  .res .ans{font-size:16px;font-weight:700;margin-left:auto;flex:none}
+  .cap-note{font-size:12px;color:var(--text3);text-align:center;margin-top:10px;line-height:1.5}
+  .cap-note b{color:var(--text2)}
+</style>
+</head>
+<body>
+
+<h1>Three ways to make it stupid simple</h1>
+<div class="intro">
+  <p>All three cut the same chrome: <b>one control row</b> (order folded in as chips beside categories, search as an icon), <b>no freshness line</b>, and <b>one card shape</b> — a race no longer renders differently from a yes/no market, it just shows its leader and you tap for the field.</p>
+  <p>They differ in <b>how much of the book they show you at once</b>. A is a tidier version of what exists. B stops using cards at all. C stops showing you the book by default.</p>
+</div>
+
+<div class="rail">
+
+  <!-- ============ A — TRIM ============ -->
+  <div class="col">
+    <div class="dir-title">A — Trim</div>
+    <div class="dir-sub">Same shape, less of it</div>
+    <div class="dir-note">
+      Cards stay, but every card is <b>identical</b>: question, leading answer, one big number, one bar. A twelve-way race and a yes/no market are now the same object. Disagreement is a <b>property</b>, not a section — a question priced on both venues just shows two bars, wherever it happens to sit in the list. Eleven elements down to five.
+    </div>
+    <div class="phone"><div class="scroll">
+      <div class="statusbar"><span>9:41</span><span>▮▮▮</span></div>
+      <div class="strip">
+        <div class="schip">All</div>
+        <div class="schip on"><span class="sdot k"></span>Kalshi</div>
+        <div class="schip"><span class="sdot p"></span>Polymarket</div>
+      </div>
+
+      <div class="ledeline">
+        <span class="lbl">Biggest move</span>
+        <span class="lq">Fed cuts rates in March</span>
+        <span class="delta up sm">+9</span>
+      </div>
+
+      <div class="ctrls">
+        <div class="cchip ico">⌕</div>
+        <div class="cchip on">All</div>
+        <div class="cchip">Closing soon</div>
+        <div class="cchip">Politics</div>
+        <div class="cchip">Crypto</div>
+      </div>
+
+      <div class="card">
+        <div class="q">Fed cuts rates at the March meeting?</div>
+        <div class="lead"><span class="who">Yes</span><span class="pct">68%</span><span class="delta up">+9</span></div>
+        <div class="bar"><i style="width:68%"></i><u class="up" style="left:59%"></u></div>
+        <div class="twobar">
+          <div class="venue p">P</div>
+          <div class="bar" style="flex:1"><i class="p" style="width:77%"></i></div>
+          <span class="pct">77%</span>
+        </div>
+        <div class="foot"><span>9 points apart</span><span>·</span><span class="soon">Closes in 2 days</span></div>
+      </div>
+
+      <div class="card">
+        <div class="q">Who wins the 2028 Democratic nomination?</div>
+        <div class="lead"><span class="who">Newsom leads</span><span class="pct">31%</span><span class="delta up">+5</span></div>
+        <div class="bar"><i style="width:31%"></i><u class="up" style="left:26%"></u></div>
+        <div class="foot"><span>14 others</span></div>
+      </div>
+
+      <div class="card">
+        <div class="q">Government shutdown before April 1?</div>
+        <div class="lead"><span class="who">Yes</span><span class="pct">23%</span><span class="delta dn">−14</span></div>
+        <div class="bar"><i style="width:23%"></i><u class="dn" style="left:37%"></u></div>
+        <div class="foot"><span class="soon">Closes tomorrow</span></div>
+      </div>
+
+      <div class="card">
+        <div class="q">Bitcoin above $150k this year?</div>
+        <div class="lead"><span class="who">Yes</span><span class="pct">41%</span></div>
+        <div class="bar"><i style="width:41%"></i></div>
+        <div class="foot"><span style="color:var(--tint)">You're already watching BTC</span></div>
+      </div>
+
+      <div class="fold"></div>
+    </div></div>
+    <div class="cap-note">Lowest risk · <b>~5 elements</b> · closest to what's built</div>
+  </div>
+
+  <!-- ============ B — THE LIST ============ -->
+  <div class="col">
+    <div class="dir-title">B — The list</div>
+    <div class="dir-sub">No cards at all</div>
+    <div class="dir-note">
+      The book is a <b>list</b>, in the app's own native grammar. Each market is one row, and <b>the row's fill IS the probability</b> — no separate bar element, no card, no padding stack. Nine markets fit where three cards did. Colour tells you the venue without a badge. Everything else lives one tap away in the preview.
+    </div>
+    <div class="phone"><div class="scroll">
+      <div class="statusbar"><span>9:41</span><span>▮▮▮</span></div>
+      <div class="strip">
+        <div class="schip">All</div>
+        <div class="schip on"><span class="sdot k"></span>Kalshi</div>
+        <div class="schip"><span class="sdot p"></span>Polymarket</div>
+      </div>
+
+      <div class="ctrls">
+        <div class="cchip ico">⌕</div>
+        <div class="cchip on">All</div>
+        <div class="cchip">Closing soon</div>
+        <div class="cchip">Politics</div>
+        <div class="cchip">Crypto</div>
+      </div>
+
+      <div class="mrow"><div class="fill k" style="width:68%"></div>
+        <div class="txt"><div class="t">Fed cuts rates at the March meeting?</div>
+        <div class="s">Polymarket says 77% · closes in 2 days</div></div>
+        <div class="n">68%</div><div class="d delta q">+9</div></div>
+
+      <div class="mrow"><div class="fill k" style="width:31%"></div>
+        <div class="txt"><div class="t">Who wins the 2028 nomination?</div>
+        <div class="s">Newsom leads · 14 others</div></div>
+        <div class="n">31%</div><div class="d delta q">+5</div></div>
+
+      <div class="mrow"><div class="fill k" style="width:23%"></div>
+        <div class="txt"><div class="t">Government shutdown before April 1?</div>
+        <div class="s">Closes tomorrow</div></div>
+        <div class="n">23%</div><div class="d delta qd">−14</div></div>
+
+      <div class="mrow"><div class="fill k" style="width:41%"></div>
+        <div class="txt"><div class="t">Bitcoin above $150k this year?</div>
+        <div class="s">You're already watching BTC</div></div>
+        <div class="n">41%</div></div>
+
+      <div class="mrow"><div class="fill k" style="width:82%"></div>
+        <div class="txt"><div class="t">Will the Chiefs make the playoffs?</div></div>
+        <div class="n">82%</div><div class="d delta q">+3</div></div>
+
+      <div class="mrow"><div class="fill k" style="width:12%"></div>
+        <div class="txt"><div class="t">Greenland becomes a US territory in 2026?</div>
+        <div class="s">Thin book</div></div>
+        <div class="n">4%</div></div>
+
+      <div class="mrow"><div class="fill k" style="width:55%"></div>
+        <div class="txt"><div class="t">Powell out as Fed chair before July?</div></div>
+        <div class="n">55%</div><div class="d delta qd">−6</div></div>
+
+      <div class="mrow"><div class="fill k" style="width:73%"></div>
+        <div class="txt"><div class="t">US recession declared in 2026?</div></div>
+        <div class="n">73%</div><div class="d delta q">+11</div></div>
+
+      <div class="mrow"><div class="fill k" style="width:38%"></div>
+        <div class="txt"><div class="t">SpaceX Starship reaches orbit again by June?</div></div>
+        <div class="n">38%</div></div>
+
+      <div class="secthead">How they turned out</div>
+      <div class="mrow"><div class="txt"><div class="t">Fed holds rates in January?</div>
+        <div class="s">You followed at 34%</div></div>
+        <div class="n" style="font-size:16px">Yes</div></div>
+
+      <div class="fold"></div>
+    </div></div>
+    <div class="cap-note"><b>3× the density</b> · the fill is the odds · no bar, no card</div>
+  </div>
+
+  <!-- ============ C — THE BRIEFING ============ -->
+  <div class="col">
+    <div class="dir-title">C — The briefing</div>
+    <div class="dir-sub">Don't show the book by default</div>
+    <div class="dir-note">
+      The most radical, and the most Casberi: the room opens with <b>what's worth knowing</b>, not a browsable index. Three facts the app can only produce because it reads both books and your corpus — biggest move, a real disagreement, something closing today. The full 2,400-market book is <b>one tap away</b>, not the landing state.
+      <br><br>No controls at all on the landing screen.
+    </div>
+    <div class="phone"><div class="scroll">
+      <div class="statusbar"><span>9:41</span><span>▮▮▮</span></div>
+      <div class="strip">
+        <div class="schip">All</div>
+        <div class="schip on"><span class="sdot k"></span>Kalshi</div>
+        <div class="schip"><span class="sdot p"></span>Polymarket</div>
+      </div>
+
+      <div class="bcard">
+        <div class="beyebrow">Biggest move today</div>
+        <div class="bq">Fed cuts rates at the March meeting?</div>
+        <div class="lead"><span class="who">Yes</span><span class="pct">68%</span><span class="delta up">+9</span></div>
+        <div class="bar"><i style="width:68%"></i><u class="up" style="left:59%"></u></div>
+      </div>
+
+      <div class="bcard">
+        <div class="beyebrow">The two crowds disagree</div>
+        <div class="bq">Bitcoin above $150k this year?</div>
+        <div class="twobar" style="margin-top:0">
+          <div class="venue k">K</div>
+          <div class="bar" style="flex:1"><i class="k" style="width:41%"></i></div>
+          <span class="pct" style="font-size:15px;font-weight:600">41%</span>
+        </div>
+        <div class="twobar">
+          <div class="venue p">P</div>
+          <div class="bar" style="flex:1"><i class="p" style="width:52%"></i></div>
+          <span class="pct" style="font-size:15px;font-weight:600">52%</span>
+        </div>
+        <div class="foot"><span>11 points apart</span><span>·</span>
+          <span style="color:var(--tint)">you watch BTC</span></div>
+      </div>
+
+      <div class="bcard">
+        <div class="beyebrow">Closing today</div>
+        <div class="bq">Government shutdown before April 1?</div>
+        <div class="lead"><span class="who">Yes</span><span class="pct">23%</span><span class="delta dn">−14</span></div>
+        <div class="bar"><i style="width:23%"></i><u class="dn" style="left:37%"></u></div>
+      </div>
+
+      <div class="door">
+        <div class="dt">Browse all markets</div>
+        <div class="dc">2,400 open ›</div>
+      </div>
+
+      <div class="quiet">Public odds only — nothing here places a trade.</div>
+
+      <div class="secthead">How they turned out</div>
+      <div class="bcard" style="margin-bottom:8px">
+        <div class="res">
+          <div><div class="t">Fed holds rates in January?</div>
+          <div class="r">You followed at 34%</div></div>
+          <div class="ans">Yes</div>
+        </div>
+      </div>
+
+      <div class="fold"></div>
+    </div></div>
+    <div class="cap-note">Zero controls on landing · the book is <b>a door</b>, not the room</div>
+  </div>
+
+</div>
+
+</body>
+</html>

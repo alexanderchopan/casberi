@@ -1,0 +1,120 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;transition:none!important}
+html,body{width:720px;height:1558px;overflow:hidden;background:#0b0910;
+  font-family:-apple-system,"Helvetica Neue","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:#fff;}
+.mono{font-family:ui-monospace,"SF Mono","Menlo",monospace;}
+
+.chips{position:absolute;top:0;left:0;right:0;z-index:4;display:flex;align-items:center;gap:14px;padding:80px 34px 22px;background:linear-gradient(to bottom, rgba(21,26,46,.98) 55%, rgba(11,9,16,0));}
+.cc{width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.09);display:flex;align-items:center;justify-content:center;flex:none;}
+.cc.av{background:#fff;} .cc i{width:22px;height:22px;border-radius:50%;display:block;background:#fff;}
+.cc b{font-size:22px;color:rgba(255,255,255,.8);}
+.cc.on{box-shadow:0 0 0 3px rgba(255,255,255,.2);}
+.scroller{position:absolute;inset:150px 0 0;overflow:hidden;}
+.inner{padding:40px 34px;will-change:transform;}
+.pc{background:rgba(255,255,255,.055);border-radius:26px;padding:30px;margin-bottom:30px;}
+.plbl{font-size:21px;font-weight:700;color:rgba(255,255,255,.42);margin-bottom:14px;}
+.pbig{font-size:56px;font-weight:800;letter-spacing:-.025em;margin-bottom:16px;}
+.ppill{font-size:21px;font-weight:750;padding:8px 16px;border-radius:100px;background:rgba(63,185,80,.16);color:#3fb950;vertical-align:middle;}
+.ptree{position:relative;height:330px;border-radius:18px;overflow:hidden;}
+.ptree span{position:absolute;border-radius:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:inset 0 0 0 2px rgba(0,0,0,.2);}
+.ptree b{font-size:26px;font-weight:800;} .ptree i{font-style:normal;font-size:18px;color:rgba(255,255,255,.8);margin-top:4px;}
+.prow{display:flex;justify-content:space-between;font-size:22px;font-weight:650;margin-top:16px;}
+.prow span{color:rgba(255,255,255,.6);} .prow b{font-weight:750;}
+.pbar{height:14px;border-radius:8px;background:rgba(255,255,255,.08);margin-top:10px;overflow:hidden;}
+.pbar i{display:block;height:100%;border-radius:8px;}
+.psub{font-size:18px;color:rgba(255,255,255,.42);margin-top:8px;}
+.pap{display:flex;align-items:center;gap:16px;padding:14px 0;}
+.pwarn{width:46px;height:46px;border-radius:50%;background:rgba(255,159,10,.18);color:#ff9f0a;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:24px;flex:none;}
+.pdot{width:15px;height:15px;border-radius:50%;flex:none;margin:0 15px;}
+.pttl{font-size:23px;font-weight:700;}
+.psub2{font-size:18px;color:rgba(255,255,255,.44);margin-top:3px;}
+.fade{position:absolute;left:0;right:0;height:90px;z-index:3;pointer-events:none;}
+.fade.top{top:150px;background:linear-gradient(to bottom,#0b0910,rgba(11,9,16,0));}
+.fade.bot{bottom:0;background:linear-gradient(to top,#0b0910,rgba(11,9,16,0));}
+
+</style></head><body>
+
+<div class="chips">
+  <span class="cc av"></span><span class="cc"><b>All</b></span><span class="cc on" style="background:#2962ef"><i></i></span><span class="cc"><i style="background:#855dcd"></i></span><span class="cc"><i style="background:#0a84ff"></i></span>
+</div>
+<div class="scroller"><div class="inner">
+<div class="pc">
+  <div class="plbl">Across your wallets</div>
+  <div class="pbig">$96,812 <span class="ppill">▲ 2.1%</span></div>
+  <svg width="100%" height="90" viewBox="0 0 600 90" preserveAspectRatio="none"><path d="M0 70 L75 62 L150 66 L225 46 L300 52 L375 30 L450 36 L525 16 L600 10" fill="none" stroke="#3fb950" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</div>
+<div class="pc">
+  <div class="plbl">What you hold</div>
+  <div class="ptree">
+    <span style="left:0;top:0;width:55%;height:100%;background:#4a63d8"><b>ETH</b><i>$48K</i></span>
+    <span style="left:56.5%;top:0;width:43.5%;height:47%;background:#2775ca"><b>USDC</b><i>$19K</i></span>
+    <span style="left:56.5%;top:49%;width:24%;height:51%;background:#14f195"><b>SOL</b><i>$11K</i></span>
+    <span style="left:81.5%;top:49%;width:18.5%;height:51%;background:#f7931a"><b>WBTC</b><i>$8K</i></span>
+  </div>
+</div>
+<div class="pc">
+  <div class="plbl">In protocols</div>
+  <div class="prow"><span>Deposited</span><b>$41.6K</b></div>
+  <div class="pbar"><i style="width:72%;background:#9391f7"></i></div>
+  <div class="prow"><span>Locked</span><b>12,977 AERO</b></div>
+  <div class="pbar"><i style="width:41%;background:#0434ff"></i></div>
+  <div class="psub">veAERO melts — 41% voting power left</div>
+  <div class="prow"><span>Owed</span><b>$6,100</b></div>
+  <div class="pbar"><i style="width:18%;background:#ff453a"></i></div>
+</div>
+<div class="pc">
+  <div class="plbl">Worth a look</div>
+  <div class="pap"><span class="pwarn">!</span><div><div class="pttl">Unlimited USDC approval</div><div class="psub2">Reaches $12,400 · revoke</div></div></div>
+  <div class="pap"><span class="pwarn">!</span><div><div class="pttl">Old router, still approved</div><div class="psub2">Reaches $1,120</div></div></div>
+</div>
+<div class="pc">
+  <div class="plbl">Lending health</div>
+  <div class="pap"><span class="pdot" style="background:#9391f7"></span><div><div class="pttl">Aave · health 2.4</div><div class="psub2">$18,200 supplied</div></div></div>
+  <div class="pap"><span class="pdot" style="background:#2a73ff"></span><div><div class="pttl">Morpho · health 1.9</div><div class="psub2">$9,400 in the ETH vault</div></div></div>
+</div>
+<div class="pc">
+  <div class="plbl">Across your wallets</div>
+  <div class="pbig">$96,812 <span class="ppill">▲ 2.1%</span></div>
+  <svg width="100%" height="90" viewBox="0 0 600 90" preserveAspectRatio="none"><path d="M0 70 L75 62 L150 66 L225 46 L300 52 L375 30 L450 36 L525 16 L600 10" fill="none" stroke="#3fb950" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</div>
+<div class="pc">
+  <div class="plbl">What you hold</div>
+  <div class="ptree">
+    <span style="left:0;top:0;width:55%;height:100%;background:#4a63d8"><b>ETH</b><i>$48K</i></span>
+    <span style="left:56.5%;top:0;width:43.5%;height:47%;background:#2775ca"><b>USDC</b><i>$19K</i></span>
+    <span style="left:56.5%;top:49%;width:24%;height:51%;background:#14f195"><b>SOL</b><i>$11K</i></span>
+    <span style="left:81.5%;top:49%;width:18.5%;height:51%;background:#f7931a"><b>WBTC</b><i>$8K</i></span>
+  </div>
+</div>
+<div class="pc">
+  <div class="plbl">In protocols</div>
+  <div class="prow"><span>Deposited</span><b>$41.6K</b></div>
+  <div class="pbar"><i style="width:72%;background:#9391f7"></i></div>
+  <div class="prow"><span>Locked</span><b>12,977 AERO</b></div>
+  <div class="pbar"><i style="width:41%;background:#0434ff"></i></div>
+  <div class="psub">veAERO melts — 41% voting power left</div>
+  <div class="prow"><span>Owed</span><b>$6,100</b></div>
+  <div class="pbar"><i style="width:18%;background:#ff453a"></i></div>
+</div>
+<div class="pc">
+  <div class="plbl">Worth a look</div>
+  <div class="pap"><span class="pwarn">!</span><div><div class="pttl">Unlimited USDC approval</div><div class="psub2">Reaches $12,400 · revoke</div></div></div>
+  <div class="pap"><span class="pwarn">!</span><div><div class="pttl">Old router, still approved</div><div class="psub2">Reaches $1,120</div></div></div>
+</div>
+<div class="pc">
+  <div class="plbl">Lending health</div>
+  <div class="pap"><span class="pdot" style="background:#9391f7"></span><div><div class="pttl">Aave · health 2.4</div><div class="psub2">$18,200 supplied</div></div></div>
+  <div class="pap"><span class="pdot" style="background:#2a73ff"></span><div><div class="pttl">Morpho · health 1.9</div><div class="psub2">$9,400 in the ETH vault</div></div></div>
+</div></div></div>
+<div class="fade top"></div><div class="fade bot"></div>
+<script>
+const clamp01=v=>Math.max(0,Math.min(1,v)),easeOut=p=>1-Math.pow(1-p,3);
+window.TOTAL=16;
+window.seek=function(t){
+  const inner=document.querySelector('.inner');
+  const half=inner.scrollHeight/2;
+  const y=((t/window.TOTAL)*half)%half;
+  inner.style.transform='translateY('+(-y)+'px)';
+};
+window.seek(0);
+</script></body></html>
