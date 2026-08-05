@@ -23,6 +23,18 @@ struct SettingsScreen: View {
     @State private var languageOpen = false
     @State private var howItWorksOpen = false
     @State private var detail: AccountDetail?
+
+    /// What the Notifications row says without being opened. Names the classes
+    /// that are ON rather than a count — "2 of 3" tells you nothing about
+    /// whether a dispute would reach you.
+    private var notifySummary: String {
+        let s = Notifications.settings
+        var on: [String] = []
+        if s.alarms { on.append(String(localized: "Alarms")) }
+        if s.arrivals { on.append(String(localized: "Arrivals")) }
+        if s.whisper { on.append(String(localized: "Whisper")) }
+        return on.isEmpty ? String(localized: "Off") : on.joined(separator: ", ")
+    }
     @State private var avatarPickerOpen = false
     @State private var avatarDialogOpen = false
     @State private var avatarSelection: PhotosPickerItem?
@@ -186,6 +198,13 @@ struct SettingsScreen: View {
                     value: ThemeStore.shared.bleed.name,
                     badge: ("paintbrush.pointed.fill", DS.bleedMark),
                     action: { detail = .color }),
+            // Notifications (prd §306) — three classes, not a per-bridge list.
+            // The trailing fact names what is actually on, so the row answers
+            // "will this thing interrupt me" without opening it.
+            RowSpec(title: "Notifications",
+                    value: notifySummary,
+                    badge: ("bell.badge.fill", DS.tint),
+                    action: { detail = .notifications }),
             // The app's own language — an override that switches Casberi live,
             // on top of the device language (LanguageStore). One tap opens the
             // tray; the trailing fact states the language in force.

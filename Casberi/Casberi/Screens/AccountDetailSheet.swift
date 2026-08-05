@@ -12,6 +12,7 @@ enum AccountDetail: String, Identifiable {
     case data
     case key
     case color
+    case notifications
     var id: String { rawValue }
 }
 
@@ -67,6 +68,11 @@ struct AccountDetailSheet: View {
     /// in its own colour, so a swatch tap answers "what did I just change?"
     /// before you close the tray and look. Re-tapping the colour already in
     /// force pours nothing: one pick, one shower.
+    /// Mirrored rather than read live: `Notifications.settings` is a computed
+    /// UserDefaults pair, which SwiftUI cannot observe, so a toggle bound
+    /// straight to it would not redraw its own switch.
+    @State private var notifySettings = Notifications.settings
+    @State private var notifyAuthorized = false
     @State private var bleedPulse = 0
     @State private var bleedHue: Color?
 
@@ -80,6 +86,8 @@ struct AccountDetailSheet: View {
                 keyCard
             case .color:
                 bleedCard
+            case .notifications:
+                notifyCard
             }
         }
         .overlay {
@@ -124,6 +132,7 @@ struct AccountDetailSheet: View {
         case .data: "Privacy"   // the ONE privacy home (user, 2026-07-24)
         case .key: "Your key"
         case .color: "Color"
+        case .notifications: "Notifications"
         }
     }
 
@@ -215,6 +224,9 @@ struct AccountDetailSheet: View {
         case .data: icloudSync ? (syncHasLiveError ? 760 : 720) : 645
         case .key: 500   // +40 for the per-agent capability line (2026-07-21)
         case .color: 400   // aliveRow + one swatch row + a footnote (prd §204)
+        // Status row + three class toggles + the whisper's time + quiet hours
+        // + the ceiling footnote (prd §306).
+        case .notifications: notifyAuthorized ? 660 : 600
         }
     }
 
@@ -586,6 +598,76 @@ struct AccountDetailSheet: View {
 
     /// An alive row — badge + title + live value. The Apps-page grammar, shared
     /// by every dressed-up Account sheet.
+
+    // MARK: - Notifications (prd §306)
+
+    /// Three switches, one per CLASS — never one per bridge. A per-source list
+    /// would be a settings screen that grows every time the catalog does, and
+    /// it would ask the wrong question: nobody wants "notify me about Stripe",
+    /// they want "tell me when money is challenged". The classes are the answer
+    /// to that, and there are only ever three.
+    private var notifyCard: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s4) {
+            aliveRow("bell.badge.fill", DS.tint, "Notifications", notifyStatusLine)
+            toggleRow("Alarms", "A dispute, a new approval on your wallet, a deadline inside three days.",
+                      isOn: Binding(get: { notifySettings.alarms },
+                                    set: { notifySettings.alarms = $0; saveNotify() }))
+            toggleRow("Arrivals", "Money in, and likes or replies on your own posts.",
+                      isOn: Binding(get: { notifySettings.arrivals },
+                                    set: { notifySettings.arrivals = $0; saveNotify() }))
+            toggleRow("The daily whisper", whisperSubtitle,
+                      isOn: Binding(get: { notifySettings.whisper },
+                                    set: { notifySettings.whisper = $0; saveNotify() }))
+            if notifySettings.whisper {
+                DatePicker("Whisper at",
+                           selection: Binding(get: { whisperDate }, set: { setWhisper($0) }),
+                           displayedComponents: .hourAndMinute)
+                    .dsText(.body17)
+                    .tint(DS.tint)
+            }
+            toggleRow("Quiet hours", "Anything that arrives at night waits until morning.",
+                      isOn: Binding(get: { notifySettings.quiet.enabled },
+                                    set: { notifySettings.quiet.enabled = $0; saveNotify() }))
+            // The ceiling, stated rather than hidden. There is no server, so
+            // there is no push: the app looks when iOS lets it look.
+            Text("Casberi has no server, so nothing is pushed to you — it looks while iOS lets it, then tells you what it found. Each one says when the thing happened, not when it reached you.")
+                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .task { notifyAuthorized = await Notifications.authorized() }
+    }
+
+    private var notifyStatusLine: String {
+        if notifyAuthorized { return "On for this \(DS.device)." }
+        return Notifications.hasAsked
+            ? "Turned off in iOS Settings — Casberi can't turn it back on."
+            : "We'll ask the first time something actually needs you."
+    }
+
+    private var whisperSubtitle: String {
+        "One line a day. Nothing to say means nothing arrives."
+    }
+
+    private var whisperDate: Date {
+        let s = notifySettings
+        return Calendar.current.date(bySettingHour: s.whisperMinute / 60,
+                                     minute: s.whisperMinute % 60,
+                                     second: 0, of: .now) ?? .now
+    }
+
+    private func setWhisper(_ date: Date) {
+        let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
+        notifySettings.whisperMinute = (parts.hour ?? 7) * 60 + (parts.minute ?? 30)
+        saveNotify()
+    }
+
+    /// Written straight through on every change — the sheet can be dismissed by
+    /// a swipe with no "done" to hang a save on.
+    private func saveNotify() {
+        Notifications.settings = notifySettings
+        Task { await WalletBackgroundRefresh.runNotifySweep() }
+    }
+
     private func aliveRow(_ glyph: String, _ tone: Color, _ title: String, _ value: String) -> some View {
         HStack(spacing: DS.Space.s3) {
             badge(glyph, tone)

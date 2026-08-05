@@ -1131,6 +1131,18 @@ struct RootShell: View {
             chrome.askRequest = TodayBrief.title
             composerOpen = true
         }
+        // A notification was tapped (prd §306). The tap left the link rather
+        // than opening it, because a notification can COLD-LAUNCH the app and
+        // `onOpenURL` routing isn't guaranteed live at that instant — the same
+        // reason the quick action above uses a flag.
+        if let link = Notifications.pendingLink() {
+            route(link)
+        }
+        // Sweep for anything worth telling them about. Runs on foreground as
+        // well as in the background task so the two can't drift, and because a
+        // person who opens the app rarely may never get a background run at
+        // all — this is what makes the whisper re-arm on their schedule.
+        Task { @MainActor in await WalletBackgroundRefresh.runNotifySweep() }
         // A share-extension capture landed while we were away. Its
         // write IS in the store file, but @Query never hears a
         // foreign process's save (SwiftData; Apple's pattern is a

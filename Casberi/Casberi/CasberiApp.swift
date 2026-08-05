@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 /// Cold-launch stopwatch. `start` is stamped the instant the first line of
 /// `CasberiApp.init` runs — the earliest app-owned code — so RootShell can log
@@ -119,6 +120,15 @@ struct CasberiApp: App {
         // finishes (BGTaskScheduler's requirement). One call, no work — the
         // OS decides if it ever runs; scheduling happens when we background.
         WalletBackgroundRefresh.register()
+        // Publish the container so the background task can sweep the corpus
+        // for notifications (prd §306) with no view above it. Must be the SAME
+        // container the UI runs on — see `SharedStore.live`.
+        SharedStore.adopt(container)
+        // The notification delegate has to be set before the app finishes
+        // launching, or a tap that COLD-LAUNCHES the app is delivered before
+        // anything is listening and the deep link is lost — the one case a
+        // notification most needs to route correctly.
+        UNUserNotificationCenter.current().delegate = NotifyDelegate.shared
     }
 
     /// Reads RootShell's per-window `chrome` back through `FocusedValues`

@@ -163,6 +163,17 @@ step "npm/PyPI pure-logic self-test"
   || fail "the package-registry logic self-test failed — run scripts/packages-selftest.sh"
 print -P "%F{green}✓ packages self-test%f"
 
+# Pure-logic self-test for notifications (prd §306). The ONLY automated check
+# this feature can have: the simulator never runs a BGAppRefreshTask, so the
+# pass that decides what fires cannot be exercised there by any means, and on a
+# device the wrong answer arrives hours later on a lock screen with nobody
+# watching. A 3am buzz because quiet hours failed to wrap past midnight, a
+# dispute that never fires, eleven alarms where there should be one and a count.
+step "Notification pure-logic self-test"
+"$ROOT/scripts/notify-selftest.sh" >/dev/null \
+  || fail "the notification logic self-test failed — run scripts/notify-selftest.sh"
+print -P "%F{green}✓ notify self-test%f"
+
 # Pure-logic self-test for the Stripe and PostHog room heads (prd §298). Neither
 # bridge has ever run against a live account from this host, and every failure
 # here is a silent wrong answer: a dispute due tomorrow placed at the far end of

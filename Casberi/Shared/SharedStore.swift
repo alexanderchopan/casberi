@@ -112,6 +112,22 @@ enum SharedStore {
     /// Written before any SwiftUI view exists, so it's a static, not state.
     nonisolated(unsafe) private(set) static var degradeReason: String?
 
+    /// The container the APP is actually running on, published so code with no
+    /// view above it can read the corpus — today that is the background refresh
+    /// task, which needs to sweep for notifications (prd §306) while no
+    /// SwiftUI environment exists.
+    ///
+    /// A published reference rather than a second `containerWithFallback()`
+    /// call, and the distinction is load-bearing: opening the same store twice
+    /// gives two independent contexts over one SQLite file, so a background
+    /// write would be invisible to the live UI until relaunch and the two could
+    /// disagree about what exists. Set once from `CasberiApp.init` before any
+    /// concurrency starts, exactly like `degradeReason` above; nil in the
+    /// extensions, which open their own by design.
+    nonisolated(unsafe) private(set) static var live: ModelContainer?
+
+    static func adopt(_ container: ModelContainer) { live = container }
+
     /// The open-failure recovery ladder (S0: the app must always launch).
     /// A `ModelContainer(for:)` failure almost always means the on-disk store
     /// no longer matches the compiled schema — most commonly a non-lightweight

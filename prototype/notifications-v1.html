@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Casberi · Notifications v1</title>
+<style>
+  :root {
+    --sheet: #111113;
+    --tint: #0A84FF;
+    --t1: rgba(255,255,255,1);
+    --t2: rgba(255,255,255,.6);
+    --t3: rgba(255,255,255,.3);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:#000; color:var(--t1);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    padding: 48px 40px 80px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .display { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Rounded", "SF Pro Display", sans-serif; }
+
+  h1 { font-size:34px; font-weight:700; margin-bottom:6px; }
+  .sub { font-size:16px; color:var(--t2); margin-bottom:44px; max-width:640px; line-height:1.45; }
+
+  .stage { display:flex; gap:56px; flex-wrap:wrap; align-items:flex-start; }
+  .column { width: 400px; }
+  .col-label { font-size:18px; font-weight:600; margin-bottom:4px; }
+  .col-note { font-size:13px; color:var(--t2); line-height:1.5; margin-bottom:18px; min-height:58px; }
+
+  /* ------ phone ------ */
+  .phone {
+    width:400px; height:830px; border-radius:56px; overflow:hidden; position:relative;
+    background: radial-gradient(120% 90% at 20% 0%, #1b2340 0%, #0c0f1e 46%, #05060c 100%);
+    box-shadow: 0 30px 80px rgba(0,0,0,.7), inset 0 0 0 1.5px rgba(255,255,255,.09);
+  }
+  .phone::after { /* island */
+    content:""; position:absolute; top:16px; left:50%; transform:translateX(-50%);
+    width:112px; height:32px; border-radius:20px; background:#000;
+  }
+  .wallglow { position:absolute; inset:0; pointer-events:none;
+    background: radial-gradient(60% 34% at 72% 78%, rgba(160,90,255,.16), transparent 70%),
+                radial-gradient(50% 30% at 22% 60%, rgba(10,132,255,.13), transparent 70%);
+  }
+  .clock { text-align:center; margin-top:84px; }
+  .clock .day { font-size:16px; font-weight:600; color:rgba(255,255,255,.85); }
+  .clock .time { font-size:84px; font-weight:700; letter-spacing:-2px; color:rgba(255,255,255,.92); line-height:1.02; }
+
+  .notifs { position:absolute; left:14px; right:14px; bottom:88px; display:flex; flex-direction:column; gap:10px; }
+
+  /* ------ notification bubble (system compact) ------ */
+  .notif {
+    border-radius:24px; padding:13px 14px;
+    background: rgba(40,40,46,.66);
+    backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+    display:flex; gap:11px; align-items:flex-start;
+    box-shadow: 0 8px 24px rgba(0,0,0,.28);
+  }
+  .appicon {
+    width:38px; height:38px; border-radius:9px; flex:none; position:relative;
+    background: radial-gradient(120% 120% at 28% 22%, #ff5fa2 0%, #a24bff 48%, #1f4bff 100%);
+  }
+  .appicon::after { content:""; position:absolute; inset:0; border-radius:9px;
+    background: radial-gradient(45% 45% at 68% 30%, rgba(255,255,255,.55), transparent 70%); }
+  .n-body { flex:1; min-width:0; }
+  .n-top { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .n-title { font-size:15px; font-weight:600; }
+  .n-when { font-size:12px; color:rgba(235,235,245,.55); flex:none; }
+  .n-text { font-size:14.5px; line-height:1.32; color:rgba(235,235,245,.82); margin-top:1px; }
+  .n-text b { font-weight:600; color:#fff; }
+  .thumb {
+    width:38px; height:38px; border-radius:8px; flex:none; overflow:hidden; position:relative;
+  }
+
+  /* thumbnail faces, all drawn */
+  .thumb.chart { background:#0c1220; }
+  .thumb.chart svg { position:absolute; inset:0; }
+  .thumb.shot { background: linear-gradient(160deg, #2a2f45 0%, #171a28 100%); }
+  .thumb.shot::after { content:""; position:absolute; left:6px; right:6px; top:7px; height:4px; border-radius:2px; background:rgba(255,255,255,.5); box-shadow: 0 8px 0 rgba(255,255,255,.22), 0 15px 0 rgba(255,255,255,.22), 0 22px 0 rgba(255,255,255,.12); }
+  .thumb.face { background: radial-gradient(100% 100% at 30% 25%, #59d1ff 0%, #2f6bff 55%, #16244d 100%); }
+  .thumb.face::after { content:""; position:absolute; left:50%; top:50%; width:18px; height:18px; transform:translate(-50%,-58%); border-radius:50%; background:rgba(255,255,255,.85); box-shadow:0 14px 0 -2px rgba(255,255,255,.85); }
+  .thumb.pool { background: radial-gradient(120% 120% at 50% 15%, #38e8c2 0%, #0f7f8f 60%, #0a2b3a 100%); }
+  .thumb.pool::after { content:"✓"; position:absolute; inset:0; display:grid; place-items:center; font-size:18px; font-weight:700; color:rgba(255,255,255,.95); }
+
+  .stackhint { text-align:center; font-size:13px; font-weight:600; color:rgba(235,235,245,.6); padding-top:2px; }
+
+  /* ------ expanded (long-press) ------ */
+  .dim { position:absolute; inset:0; background:rgba(0,0,0,.44); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .expanded { position:absolute; left:14px; right:14px; top:150px; display:flex; flex-direction:column; gap:10px; }
+  .bigcard {
+    border-radius:28px; overflow:hidden;
+    background: rgba(28,28,34,.88);
+    backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+    box-shadow: 0 24px 60px rgba(0,0,0,.5);
+  }
+  .bigcard .head { display:flex; gap:11px; align-items:center; padding:14px 16px 0; }
+  .bigcard .head .n-title { font-size:15px; }
+  .bigcard .head .n-when { margin-left:auto; }
+
+  .rich { padding:14px 16px 16px; }
+  .hero-line { font-size:26px; font-weight:700; line-height:1.15; letter-spacing:-.3px; }
+  .hero-line small { display:block; font-size:14px; font-weight:500; color:rgba(235,235,245,.6); margin-top:4px; letter-spacing:0; }
+  .duepill {
+    display:inline-flex; align-items:center; gap:7px; margin-top:12px;
+    background: rgba(255,90,80,.16); color:#ff8a80;
+    font-size:13px; font-weight:600; padding:7px 12px; border-radius:999px;
+  }
+  .duepill .dot { width:7px; height:7px; border-radius:50%; background:#ff5a50; }
+  .spark { margin-top:14px; }
+  .rowset { margin-top:12px; display:flex; flex-direction:column; gap:8px; }
+  .mini-row { display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.05); border-radius:12px; padding:9px 11px; }
+  .mini-row .k { font-size:13.5px; color:rgba(235,235,245,.6); }
+  .mini-row .v { margin-left:auto; font-size:13.5px; font-weight:600; }
+  .v.bad { color:#ff8a80; }
+  .v.good { color:#5be49b; }
+
+  .actions { display:flex; gap:10px; }
+  .action {
+    flex:1; text-align:center; border-radius:20px; padding:14px 0;
+    background: rgba(40,40,46,.72); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+    font-size:15px; font-weight:600; color:#fff;
+  }
+  .action.primary { background: rgba(10,132,255,.85); }
+
+  /* whisper expanded — sources strip */
+  .chips { display:flex; gap:8px; margin-top:13px; flex-wrap:wrap; }
+  .chip { display:flex; align-items:center; gap:7px; background:rgba(255,255,255,.06); border-radius:999px; padding:6px 12px 6px 7px; font-size:13px; font-weight:600; }
+  .chip i { width:20px; height:20px; border-radius:6px; display:block; }
+  .i-farcaster { background:#8a63d2; } .i-photos { background: conic-gradient(#ff5f57, #febc2e, #28c840, #0A84FF, #ff5f57); } .i-stripe { background:#635bff; } .i-rss { background:#f78422; }
+  .chip .cnt { color:rgba(235,235,245,.55); font-weight:500; }
+
+  .footer-note { margin-top:56px; font-size:13px; color:var(--t3); max-width:760px; line-height:1.6; }
+</style>
+</head>
+<body>
+
+<h1 class="display">Notifications</h1>
+<p class="sub">Local, scheduled by the app's own background sweep — no server, so the privacy line stays true. Only the alarm class and one morning whisper ever fire; a landed row is never a notification.</p>
+
+<div class="stage">
+
+  <!-- ============ COLUMN 1 : lock screen ============ -->
+  <div class="column">
+    <div class="col-label">On the lock screen</div>
+    <div class="col-note">System chrome, our voice. Every one carries the thing's own face as the thumbnail — a chart for money, the shot for a screenshot, the person for social. Copy is the feed's copy: a verb and a fact, no "You have a new notification."</div>
+    <div class="phone">
+      <div class="wallglow"></div>
+      <div class="clock">
+        <div class="day">Wednesday, August 5</div>
+        <div class="time display">9:41</div>
+      </div>
+      <div class="notifs">
+
+        <div class="notif">
+          <div class="appicon"></div>
+          <div class="n-body">
+            <div class="n-top"><span class="n-title">Money challenged</span><span class="n-when">2m ago</span></div>
+            <div class="n-text">A <b>$220</b> payment was disputed. Evidence is due <b>Friday</b>.</div>
+          </div>
+          <div class="thumb chart">
+            <svg viewBox="0 0 38 38"><path d="M3 26 L10 22 L16 24 L23 14 L30 17 L36 8" fill="none" stroke="#ff5a50" stroke-width="2.4" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+
+        <div class="notif">
+          <div class="appicon"></div>
+          <div class="n-body">
+            <div class="n-top"><span class="n-title">Something new can move your USDC</span><span class="n-when">1h ago</span></div>
+            <div class="n-text">main.eth approved a spender. Review it — revoking is one tap away.</div>
+          </div>
+          <div class="thumb face"></div>
+        </div>
+
+        <div class="notif">
+          <div class="appicon"></div>
+          <div class="n-body">
+            <div class="n-top"><span class="n-title">Clear to withdraw</span><span class="n-when">3h ago</span></div>
+            <div class="n-text">Your <b>0.07 ETH</b> passed review in Privacy Pools.</div>
+          </div>
+          <div class="thumb pool"></div>
+        </div>
+
+        <div class="notif">
+          <div class="appicon"></div>
+          <div class="n-body">
+            <div class="n-top"><span class="n-title">Your Wednesday</span><span class="n-when">7:30</span></div>
+            <div class="n-text">14 new while you were away · wallet <b>+1.5%</b>, mostly ETH.</div>
+          </div>
+          <div class="thumb shot"></div>
+        </div>
+
+        <div class="stackhint">Notification Center</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ COLUMN 2 : long-press, alarm ============ -->
+  <div class="column">
+    <div class="col-label">Pressed open — an alarm</div>
+    <div class="col-note">The fabulous half. A long-press mounts our own content extension: the dispute renders like a thing sheet — the amount as the hero, the deadline as a pill, the facts as rows. Actions are reads ("Open"), never writes.</div>
+    <div class="phone">
+      <div class="wallglow"></div>
+      <div class="dim"></div>
+      <div class="expanded">
+        <div class="bigcard">
+          <div class="head">
+            <div class="appicon" style="width:30px;height:30px;border-radius:7px;"></div>
+            <span class="n-title">Money challenged</span>
+            <span class="n-when">2m ago</span>
+          </div>
+          <div class="rich">
+            <div class="hero-line display">$220.00
+              <small>Amex chargeback · product not received</small>
+            </div>
+            <div class="duepill"><span class="dot"></span>Evidence due Friday, Aug 8 — 3 days</div>
+            <div class="spark">
+              <svg viewBox="0 0 340 54" width="100%" height="54">
+                <path d="M0 40 C 30 38, 55 30, 85 32 S 150 20, 185 24 S 250 10, 285 14 S 325 6, 340 8"
+                      fill="none" stroke="rgba(255,90,80,.9)" stroke-width="2.5" stroke-linecap="round"/>
+                <path d="M0 40 C 30 38, 55 30, 85 32 S 150 20, 185 24 S 250 10, 285 14 S 325 6, 340 8 L340 54 L0 54 Z"
+                      fill="url(#g1)" opacity=".35"/>
+                <defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#ff5a50"/><stop offset="1" stop-color="#ff5a50" stop-opacity="0"/>
+                </linearGradient></defs>
+              </svg>
+            </div>
+            <div class="rowset">
+              <div class="mini-row"><span class="k">Payment</span><span class="v">Jul 28 · card ending 0341</span></div>
+              <div class="mini-row"><span class="k">Held from balance</span><span class="v bad">−$235.00 with fee</span></div>
+              <div class="mini-row"><span class="k">Your win rate on disputes</span><span class="v good">4 of 5</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="actions">
+          <div class="action primary">Open in Casberi</div>
+          <div class="action">Later today</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ COLUMN 3 : long-press, whisper ============ -->
+  <div class="column">
+    <div class="col-label">Pressed open — the whisper</div>
+    <div class="col-note">The morning whisper expands into the brief's own lede: the wallet line with its real sparkline, then who landed while you slept. Tap anywhere and the app opens on the Today brief — the notification and the capsule are one feature.</div>
+    <div class="phone">
+      <div class="wallglow"></div>
+      <div class="dim"></div>
+      <div class="expanded">
+        <div class="bigcard">
+          <div class="head">
+            <div class="appicon" style="width:30px;height:30px;border-radius:7px;"></div>
+            <span class="n-title">Your Wednesday</span>
+            <span class="n-when">7:30</span>
+          </div>
+          <div class="rich">
+            <div class="hero-line display">+1.5% overnight
+              <small>ETH did the lifting — seven days running</small>
+            </div>
+            <div class="spark">
+              <svg viewBox="0 0 340 54" width="100%" height="54">
+                <path d="M0 44 C 40 42, 70 34, 100 36 S 160 26, 200 28 S 260 14, 300 16 S 330 10, 340 11"
+                      fill="none" stroke="rgba(91,228,155,.9)" stroke-width="2.5" stroke-linecap="round"/>
+                <path d="M0 44 C 40 42, 70 34, 100 36 S 160 26, 200 28 S 260 14, 300 16 S 330 10, 340 11 L340 54 L0 54 Z"
+                      fill="url(#g2)" opacity=".3"/>
+                <defs><linearGradient id="g2" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#5be49b"/><stop offset="1" stop-color="#5be49b" stop-opacity="0"/>
+                </linearGradient></defs>
+              </svg>
+            </div>
+            <div class="chips">
+              <span class="chip"><i class="i-farcaster"></i>Farcaster <span class="cnt">6</span></span>
+              <span class="chip"><i class="i-photos"></i>Photos <span class="cnt">4</span></span>
+              <span class="chip"><i class="i-rss"></i>RSS <span class="cnt">3</span></span>
+              <span class="chip"><i class="i-stripe"></i>Stripe <span class="cnt">1</span></span>
+            </div>
+          </div>
+        </div>
+        <div class="actions">
+          <div class="action primary">Read the brief</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="footer-note">
+Doctrine, mirroring §216: a notification is an EVENT with a consequence — money challenged, something gained power over your funds, a review cleared, a deadline inside 72h — plus exactly one scheduled whisper. States never fire (a balance, a count, a landed post). Everything else waits in the feed, which is the product. Quiet hours honored; the dispute class alone is time-sensitive.
+</p>
+
+</body>
+</html>

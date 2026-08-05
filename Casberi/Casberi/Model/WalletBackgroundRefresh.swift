@@ -1,5 +1,6 @@
 import BackgroundTasks
 import Foundation
+import SwiftData
 
 /// Opportunistic wallet sampling (2026-07-15) — the value line is only ever as
 /// dense as how often you open the app (holdings sample at most once per 4h,
@@ -31,16 +32,28 @@ enum WalletBackgroundRefresh {
     /// on background (RootShell scenePhase) and after each run (self-chaining).
     /// `earliestBeginDate` mirrors the 4h sample throttle: a sooner run would
     /// only be throttled out by recordSample anyway.
+    @MainActor
     static func schedule() {
-        guard !WalletStore.shared.addresses.isEmpty else { return }
+        // Widened for notifications (prd §306): this task is no longer only
+        // about the wallet's value line, so a wallet is no longer the only
+        // reason to want it. Someone with Stripe connected and no wallet at all
+        // still needs the pass that finds a dispute while they are away.
+        guard !WalletStore.shared.addresses.isEmpty || Notifications.settings.anyOn else { return }
         let request = BGAppRefreshTaskRequest(identifier: taskID)
-        request.earliestBeginDate = Date(timeIntervalSinceNow: 4 * 3600)
+        // Notifications want a tighter cadence than the 4h holdings throttle —
+        // a deadline three days out is no use announced two days late. This is
+        // a FLOOR, not a promise: iOS runs the task when it decides to, which
+        // is the ceiling §306 states rather than hides.
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 60 * 60)
         try? BGTaskScheduler.shared.submit(request)
     }
 
     private static func handle(_ task: BGAppRefreshTask) {
         // Chain the next run first, so a crash mid-work still leaves one queued.
-        schedule()
+        // Hops to the main actor because the gate now reads `Notifications`
+        // settings and `WalletStore`, both main-isolated — the submit itself is
+        // thread-safe, and BGTaskScheduler delivers this handler off-main.
+        Task { @MainActor in schedule() }
         // The expiration handler is armed BEFORE the work starts (an early OS
         // expiration must still find a cancel hook), and completion runs
         // exactly once — either the work finishes (success unless cancelled) or
@@ -56,8 +69,37 @@ enum WalletBackgroundRefresh {
             // checks the combined/single new high). Any moment it detects queues
             // on SourceMoments and shows on the next foreground.
             _ = await WalletIngest.topHoldingsByWallet()
+            // …and then the notification sweep (prd §306). It runs on whatever
+            // has ALREADY landed rather than driving a full bridge refresh:
+            // this task's budget is seconds, a full sweep is dozens of network
+            // reads, and an expired task is one iOS throttles next time. The
+            // bridges land rows on foreground and through their own paths; this
+            // asks what among them deserves telling.
+            await runNotifySweep()
             state.complete(task, success: !Task.isCancelled)
         }
+    }
+
+    /// Sweep the corpus, schedule what deserves it, and re-arm the whisper
+    /// (prd §306). Shared by the background task and the foreground pass, so
+    /// the two can never drift into deciding different things.
+    ///
+    /// Reads `SharedStore.live` rather than opening its own container — two
+    /// containers over one store file is two contexts that disagree.
+    @MainActor
+    static func runNotifySweep() async {
+        guard let context = SharedStore.live?.mainContext else { return }
+        guard let things = try? context.fetch(FetchDescriptor<Thing>()) else { return }
+        let (plans, photos) = NotifySweep.plans(things: things)
+        await Notifications.submit(plans, photos: photos)
+        // The whisper is re-scheduled on every sweep so its content is as fresh
+        // as the last run before it fires — see `Notifications.scheduleWhisper`
+        // for why a repeating trigger would be wrong.
+        // `detail` is the two-fact form ("14 new while you were away, wallet
+        // +1.5%") — the same line the capsule shows. Nil whisper means nil
+        // line, which pulls any pending one: nothing to say, nothing fires.
+        await Notifications.scheduleWhisper(
+            line: DayBrief.whisper(things: things.filter(\.isLive))?.detail)
     }
 
     /// One-shot completion + a slot for the work handle, so the expiration

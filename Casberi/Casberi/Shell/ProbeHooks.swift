@@ -514,6 +514,74 @@ enum ProbeHooks {
                 NSLog("[Casberi] posthogRoom| %@", line)
             }
         },
+        // `-notifyProbe YES` — what would notify, WITHOUT notifying (prd §306).
+        //
+        // Runs the real sweep over the real corpus in `dryRun`, so it needs no
+        // permission grant and fires nothing: one `notifyPlan|` line per plan
+        // naming its class, kind, the id it dedupes on, whether the ledger has
+        // already spent it, what the right-hand slot resolved to, and whether
+        // quiet hours would hold it. Then the whisper line, then the settings.
+        //
+        // It exists because an empty lock screen has SIX causes that all look
+        // identical from outside — permission never asked, a class switched
+        // off, the ledger already spent every id, nothing inside the news
+        // window, a classify that matched nothing, or iOS simply never running
+        // the background task — and only two of those are bugs. The simulator
+        // NEVER runs a BGAppRefreshTask at all, so this is the only way to
+        // exercise the sweep there.
+        //
+        // One NSLog per line, not one joined message: the `-todayProbe`
+        // truncation lesson.
+        Hook(key: "notifyProbe") { _, context in
+            Task { @MainActor in
+                let things = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
+                let (plans, photos) = NotifySweep.plans(things: things)
+                let s = Notifications.settings
+                NSLog("[Casberi] notify| corpus=%d planned=%d alarms=%@ arrivals=%@ whisper=%@ asked=%@",
+                      things.count, plans.count,
+                      s.alarms ? "on" : "off", s.arrivals ? "on" : "off",
+                      s.whisper ? "on" : "off", Notifications.hasAsked ? "YES" : "NO")
+                // Why nothing planned, when nothing planned. One NSLog per
+                // line (the `-todayProbe` truncation lesson).
+                for line in NotifySweep.skipCensus(things: things) {
+                    NSLog("[Casberi] notifySkip| %@", line)
+                }
+                let ledger = Notifications.ledger
+                let cal = Calendar.current
+                for plan in plans {
+                    let hold = NotifyRules.holdUntil(plan: plan, now: .now,
+                                                     quiet: s.quiet, calendar: cal)
+                    // Which rung of the ladder the right-hand slot landed on.
+                    // `photo` means real bytes are in hand; `remote` means a
+                    // URL we would try and may still fall back from; `mark`
+                    // means rung 2 outright.
+                    let art: String
+                    switch plan.art {
+                    case .thing: art = photos[plan.id] != nil ? "photo" : "mark(photo-missing)"
+                    case .remote: art = "remote→\(plan.source ?? "none")"
+                    case .none: art = plan.source.map { "mark:\($0)" } ?? "none"
+                    }
+                    NSLog("[Casberi] notifyPlan| %@ %@ spent=%@ ts=%@ hold=%@ art=%@ id=%@ · %@",
+                          plan.cls.rawValue, plan.kind.rawValue,
+                          ledger.hasFired(plan.id) ? "YES" : "no",
+                          plan.isTimeSensitive ? "YES" : "no",
+                          hold.map { "\($0)" } ?? "no",
+                          art, plan.id, plan.title)
+                }
+                // What `submit` would REALLY schedule — after the settings
+                // filter, the ledger and the batching collapse. The gap between
+                // this count and `planned=` above is the whole point: it is
+                // where "and N more" happened, and where an already-spent id
+                // dropped out.
+                let live = await Notifications.submit(plans, photos: photos, dryRun: true)
+                for plan in live {
+                    NSLog("[Casberi] notifySend| %@ · %@ · %@",
+                          plan.kind.rawValue, plan.title, plan.body)
+                }
+                NSLog("[Casberi] notifyWhisper| %@",
+                      DayBrief.whisper(things: things.filter(\.isLive))?.detail ?? "(nothing to say)")
+            }
+        },
         // `-stripeShapeProbe YES` — the same five shapes with NO key and NO
         // network, over synthetic payloads in Stripe's documented envelope.
         // It exists because this bridge was authored against docs alone: the

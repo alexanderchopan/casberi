@@ -1,0 +1,230 @@
+import Foundation
+import SwiftData
+
+/// Reads the corpus and says what deserves a notification (prd §306).
+///
+/// **Why a sweep rather than a hook in every bridge.** Every event §306 names
+/// already lands as a `Thing` — the bridges do that work and this feature adds
+/// nothing to it. So the classification lives in ONE file that reads what
+/// landed, rather than a call site scattered across eight bridges that each
+/// have to remember the rules. The bridges stay unaware notifications exist,
+/// which is also what keeps the never-fires list enforceable: this file is the
+/// only place that can decide something fires, so the whole decision is
+/// reviewable in one screen.
+///
+/// **Classification is by `sourceRef` PREFIX, never by title.** A title is
+/// display copy — several are `String(localized:)`, so matching one would work
+/// in English and silently stop classifying anything on a Spanish device, which
+/// is a notification that never arrives and no error anywhere. A `sourceRef` is
+/// a stable machine key each bridge already builds to dedupe on.
+@MainActor
+enum NotifySweep {
+
+    /// How far back a landed row may be and still be news. A background pass
+    /// that has not run for two days must not announce two days of history at
+    /// once — the alerts-are-news doctrine every bridge here already follows
+    /// (`SocialInbound.newsWindow`, Privacy Pools §228).
+    static let newsWindow: TimeInterval = 36 * 3600
+
+    /// Everything worth telling someone about, given the corpus as it stands.
+    /// Pure over its inputs and side-effect free — it does not consult the
+    /// ledger and does not schedule; `Notifications.submit` does both, so this
+    /// stays trivially re-runnable (which is what `-notifyProbe` needs).
+    ///
+    /// Returns the plans plus the real photo bytes for any plan whose art is a
+    /// `.thing` — resolved here because this is where the models are in hand.
+    static func plans(things: [Thing], now: Date = Date()) -> (plans: [NotifyPlan],
+                                                               photos: [String: Data]) {
+        // Liveness at the boundary (corollary 4): this walks stored properties
+        // off every row, and a sweep can run while a bridge heal is deleting.
+        let live = things.filter(\.isLive)
+        var out: [NotifyPlan] = []
+        var photos: [String: Data] = [:]
+        let fresh = live.filter { $0.capturedAt > now.addingTimeInterval(-newsWindow) }
+
+        for thing in fresh {
+            guard let kind = classify(thing, now: now) else { continue }
+            guard let id = thing.sourceRef else { continue }
+            out.append(NotifyPlan(
+                id: "row:" + id,
+                kind: kind,
+                title: headline(kind),
+                body: thing.title,
+                link: "casberi://thing/\(thing.id.uuidString)",
+                occurredAt: thing.capturedAt,
+                deadline: thing.dueAt,
+                source: thing.source,
+                art: art(for: thing)))
+        }
+
+        // Deadlines are a WINDOW scan, not a landing scan — the row that
+        // carries a deadline landed whenever it landed, and the news is the
+        // clock reaching three days out, which happens on some later day with
+        // nothing arriving at all. So this reads the whole live corpus rather
+        // than `fresh`, and it is the one class that can fire about an old row.
+        for thing in live {
+            guard let due = thing.dueAt,
+                  NotifyRules.deadlineIsNear(due, now: now) else { continue }
+            // The row's OWN id when it carries no `sourceRef`, which is the
+            // normal case for anything the person created rather than a bridge
+            // landed — a reminder, a calendar event, a note with a date.
+            // Requiring a `sourceRef` here (as the landing scan above must,
+            // since that is its classification key) silently excluded exactly
+            // the rows most likely to carry a real deadline. Caught by
+            // `-notifyProbe` reporting `insideDeadlineWindow=1` beside
+            // `planned=0` — a bare zero would have looked correct.
+            let ref = thing.sourceRef ?? thing.id.uuidString
+            // A dispute already alarmed on the day it opened, wearing its own
+            // deadline. Alarming again as a generic deadline would be the same
+            // news twice in two voices.
+            guard classify(thing, now: now) != .disputeOpened else { continue }
+            let phrase = NotifyRules.deadlinePhrase(due, now: now, calendar: .current)
+            out.append(NotifyPlan(
+                id: "due:" + ref,
+                kind: .deadlineNear,
+                title: headline(.deadlineNear),
+                body: "\(thing.title) — due \(phrase).",
+                link: "casberi://thing/\(thing.id.uuidString)",
+                occurredAt: thing.capturedAt,
+                deadline: due,
+                source: thing.source,
+                art: art(for: thing)))
+        }
+
+        for plan in out where plan.art != .none {
+            if case .thing(let id) = plan.art,
+               let match = live.first(where: { $0.id.uuidString == id }),
+               let data = match.previewImageData {
+                photos[plan.id] = data
+            }
+        }
+        return (out, photos)
+    }
+
+    /// Why rows did NOT become plans — for `-notifyProbe` only.
+    ///
+    /// `planned=0` is the normal, healthy answer for most corpora, and it has
+    /// at least four causes: nothing landed inside the news window, nothing
+    /// classified, every candidate was dust, or the deadline scan found no row
+    /// with a clock. Only one of those is a bug, and a bare zero cannot tell
+    /// them apart — the same reason `-kalshiBookProbe` and `-cursorProbe` exist.
+    static func skipCensus(things: [Thing], now: Date = Date()) -> [String] {
+        let live = things.filter(\.isLive)
+        let fresh = live.filter { $0.capturedAt > now.addingTimeInterval(-newsWindow) }
+        let received = live.filter { $0.transferDirection == "received" }
+        let dusted = received.filter { thing in
+            if thing.isFlagged { return true }
+            if let usd = thing.transferUSD, usd < WalletIngest.holdingFloor { return true }
+            return false
+        }
+        let dated = live.filter { $0.dueAt != nil }
+        return [
+            "live=\(live.count) inNewsWindow=\(fresh.count) (window=\(Int(newsWindow / 3600))h)",
+            "received=\(received.count) filteredAsDust=\(dusted.count) "
+                + "(flagged=\(received.filter(\.isFlagged).count) "
+                + "belowFloor=\(received.filter { ($0.transferUSD ?? .infinity) < WalletIngest.holdingFloor }.count) "
+                + "unpriced=\(received.filter { $0.transferUSD == nil }.count))",
+            "withDueAt=\(dated.count) insideDeadlineWindow="
+                + "\(dated.filter { NotifyRules.deadlineIsNear($0.dueAt!, now: now) }.count)",
+        ]
+    }
+
+    /// The one place an event becomes a class. Anything this returns nil for
+    /// stays in the feed and waits, which is the normal outcome for the
+    /// overwhelming majority of rows.
+    static func classify(_ thing: Thing, now: Date) -> NotifyKind? {
+        guard let ref = thing.sourceRef else { return nil }
+
+        // — Wallet: something gained the power to move funds.
+        if ref.hasPrefix("wallet:approval:") || ref.hasPrefix("wallet:permit2:") {
+            return .approvalGranted
+        }
+        // — Privacy Pools: the two status flips, and only those. A deposit and
+        //   a ragequit are things that happened because YOU did them; being
+        //   told about your own tap is noise.
+        if ref.hasPrefix("privacypools:status:") { return .poolCleared }
+        if ref.hasPrefix("privacypools:poi:") { return .poolProofNeeded }
+
+        // — Social: a named person is an event (the module doctrine's own
+        //   phrasing). Likes never reach here — they are counts and never land
+        //   as rows; their notification is composed at the read site, where the
+        //   NAMES exist. See `Notifications.likes`.
+        if thing.socialContext == "follow" { return .followersGained }
+        // A reply DOES land as a row (it has words of its own), unlike a like.
+        // "recast" and "mention" are deliberately absent: an amplification is
+        // not addressed to you, and a mention already reaches the feed as the
+        // post it is.
+        if thing.socialContext == "reply" { return .repliesReceived }
+
+        // — Money in. `transferDirection` is the bridge's own stored answer, so
+        //   this needs no re-derivation from addresses.
+        //
+        //   DUST IS NOT NEWS, and this is not a nicety — it is what the feature
+        //   is for. `-notifyProbe` on a real corpus planned four separate
+        //   "Money arrived" notifications on its first run, for 0.0000 ETH,
+        //   0.0010 ETH, 0.0010 USDT0 and 0.0001 USDC.e: dusting, which is a
+        //   thing STRANGERS DO TO YOUR WALLET, so an unfiltered rule hands any
+        //   passer-by the power to buzz your phone at will. Two gates, and the
+        //   flag one matters most: a duster is usually also a spoofed symbol,
+        //   and the corpus already knows.
+        if thing.transferDirection == "received" {
+            if thing.isFlagged { return nil }
+            // Priced: the wallet's own dust line, reused rather than invented.
+            // Unpriced: fall through and notify — `transferUSD` is nil for
+            // every transfer landed before the field existed and whenever
+            // Zerion is unreachable, and staying silent about real money
+            // because we couldn't price it is the worse failure.
+            if let usd = thing.transferUSD, usd < WalletIngest.holdingFloor { return nil }
+            return .moneyIn
+        }
+
+        // — Stripe. Tags, because `StripeShape` assigns exactly one per event
+        //   and they are machine values rather than sentences.
+        if thing.source == StripeWatch.source {
+            if thing.tags.contains("Silence") { return .paymentsSilent }
+            // Opened carries the evidence deadline; closed does not. That is
+            // the only persisted difference between the two halves of a
+            // dispute, and it is a reliable one — a dispute without a deadline
+            // is one Stripe already settled.
+            if thing.tags.contains("Dispute") && thing.dueAt != nil { return .disputeOpened }
+            // NOT WIRED, deliberately: `payout.paid` and `payout.failed` share
+            // the tag "Payout" and differ only in `StripeShape.celebrates`,
+            // which is not persisted on the thing — so nothing here can tell an
+            // arrival from an alarm, and guessing from the title would be the
+            // localized-string trap this file exists to avoid. A payout
+            // announced as good news when it FAILED is exactly the §83 fake
+            // status, so neither fires until the shape carries a marker.
+        }
+        return nil
+    }
+
+    /// The title line — deliberately a small closed set of plain sentences, so
+    /// the lock screen reads as one voice rather than eight bridges each
+    /// shouting their own noun. The row's own title is the body.
+    static func headline(_ kind: NotifyKind) -> String {
+        switch kind {
+        case .disputeOpened:    return String(localized: "Money challenged")
+        case .deadlineNear:     return String(localized: "Due soon")
+        case .approvalGranted:  return String(localized: "Something new can move your funds")
+        case .poolProofNeeded:  return String(localized: "Privacy Pools needs a response")
+        case .poolCleared:      return String(localized: "Clear to withdraw")
+        case .paymentsSilent:   return String(localized: "Payments went quiet")
+        case .moneyIn:          return String(localized: "Money arrived")
+        case .payoutPaid:       return String(localized: "Paid out")
+        case .likesReceived:    return String(localized: "Liked your post")
+        case .repliesReceived:  return String(localized: "Someone replied")
+        case .followersGained:  return String(localized: "New follower")
+        case .whisper:          return String(localized: "Your day")
+        }
+    }
+
+    /// Rung 1 of the attachment ladder, and it asks only for what a row really
+    /// holds. A social row's avatar is remote and already hydrated; a
+    /// screenshot's thumbnail is bytes we stored. Everything else declines, and
+    /// `Notifications` falls to the source mark.
+    private static func art(for thing: Thing) -> NotifyArt {
+        if let avatar = thing.authorAvatarURL, !avatar.isEmpty { return .remote(avatar) }
+        if thing.previewImageData != nil { return .thing(thing.id.uuidString) }
+        return .none
+    }
+}

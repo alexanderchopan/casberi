@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Casberi · Notifications v3</title>
+<style>
+  :root { --t1:#fff; --t2:rgba(255,255,255,.6); --t3:rgba(255,255,255,.3); --tint:#0A84FF; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#000; color:var(--t1);
+    font-family:-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    padding:48px 40px 90px; -webkit-font-smoothing:antialiased; }
+  .display { font-family:-apple-system, BlinkMacSystemFont, "SF Pro Rounded", "SF Pro Display", sans-serif; }
+  h1 { font-size:34px; font-weight:700; margin-bottom:6px; }
+  .sub { font-size:16px; color:var(--t2); max-width:760px; line-height:1.5; margin-bottom:30px; }
+
+  /* the ruling banner */
+  .ruling { display:flex; gap:38px; flex-wrap:wrap; max-width:1300px; margin-bottom:44px; }
+  .rblock { flex:1; min-width:300px; }
+  .rblock h3 { font-size:15px; font-weight:600; margin-bottom:7px; }
+  .rblock p { font-size:13.5px; color:var(--t2); line-height:1.6; }
+  .rblock b { color:#fff; font-weight:600; }
+  .fixed { color:#ff8a80; } .ours { color:#5be49b; }
+
+  .stage { display:flex; gap:52px; flex-wrap:wrap; align-items:flex-start; }
+  .column { width:404px; }
+  .col-label { font-size:18px; font-weight:600; margin-bottom:4px; }
+  .col-note { font-size:13px; color:var(--t2); line-height:1.55; margin-bottom:18px; min-height:74px; }
+
+  .phone { width:404px; height:880px; border-radius:56px; overflow:hidden; position:relative;
+    background:radial-gradient(120% 90% at 20% 0%, #1b2340 0%, #0c0f1e 46%, #05060c 100%);
+    box-shadow:0 30px 80px rgba(0,0,0,.7), inset 0 0 0 1.5px rgba(255,255,255,.09); }
+  .phone::after { content:""; position:absolute; top:16px; left:50%; transform:translateX(-50%);
+    width:112px; height:32px; border-radius:20px; background:#000; z-index:5; }
+  .wallglow { position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(60% 34% at 72% 78%, rgba(160,90,255,.15), transparent 70%),
+               radial-gradient(50% 30% at 22% 60%, rgba(10,132,255,.12), transparent 70%); }
+  .clock { text-align:center; margin-top:80px; }
+  .clock .day { font-size:16px; font-weight:600; color:rgba(255,255,255,.85); }
+  .clock .time { font-size:80px; font-weight:700; letter-spacing:-2px; color:rgba(255,255,255,.92); line-height:1.02; }
+
+  .notifs { position:absolute; left:13px; right:13px; bottom:70px; display:flex; flex-direction:column; gap:12px; }
+
+  .wrap { position:relative; }
+  .notif { border-radius:24px; padding:13px 14px; background:rgba(40,40,46,.66);
+    backdrop-filter:blur(30px); -webkit-backdrop-filter:blur(30px);
+    display:flex; gap:11px; align-items:flex-start; box-shadow:0 8px 24px rgba(0,0,0,.28); }
+  .appicon { width:38px; height:38px; border-radius:9px; flex:none; overflow:hidden; background:#000; }
+  .appicon svg { display:block; width:100%; height:100%; }
+  .n-body { flex:1; min-width:0; }
+  .n-top { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .n-title { font-size:15px; font-weight:600; }
+  .n-when { font-size:12px; color:rgba(235,235,245,.55); flex:none; }
+  .n-text { font-size:14.5px; line-height:1.34; color:rgba(235,235,245,.82); margin-top:1px; }
+  .n-text b { font-weight:600; color:#fff; }
+
+  .att { width:38px; height:38px; border-radius:8px; flex:none; overflow:hidden; position:relative; }
+  .att.round { border-radius:50%; }
+  .att svg { display:block; width:100%; height:100%; }
+
+  .prov { display:flex; gap:7px; align-items:flex-start; margin:6px 0 0 52px; font-size:11.5px; line-height:1.4; }
+  .prov .tag { flex:none; font-weight:700; font-size:9.5px; letter-spacing:.3px; padding:2.5px 7px; border-radius:6px; white-space:nowrap; }
+  .tag.photo { background:rgba(91,228,155,.16); color:#5be49b; }
+  .tag.mark  { background:rgba(10,132,255,.18); color:#5aabff; }
+  .prov .txt { color:rgba(255,255,255,.42); }
+
+  .dim { position:absolute; inset:0; background:rgba(0,0,0,.46); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); }
+  .expanded { position:absolute; left:13px; right:13px; top:140px; display:flex; flex-direction:column; gap:10px; }
+  .bigcard { border-radius:28px; overflow:hidden; background:rgba(28,28,34,.9);
+    backdrop-filter:blur(40px); -webkit-backdrop-filter:blur(40px); box-shadow:0 24px 60px rgba(0,0,0,.5); }
+  .bigcard .head { display:flex; gap:11px; align-items:center; padding:14px 16px 0; }
+  .bigcard .head .appicon { width:30px; height:30px; border-radius:7px; }
+  .bigcard .head .n-when { margin-left:auto; }
+  .rich { padding:14px 16px 17px; }
+  .hero-line { font-size:27px; font-weight:700; line-height:1.14; letter-spacing:-.4px; }
+  .hero-line small { display:block; font-size:14px; font-weight:500; color:rgba(235,235,245,.6); margin-top:5px; letter-spacing:0; }
+  .hero-line .up { color:#5be49b; }
+
+  .facepile { display:flex; align-items:center; margin-top:15px; }
+  .facepile .f { width:46px; height:46px; border-radius:50%; overflow:hidden; margin-right:-11px;
+     box-shadow:0 0 0 3px rgba(28,28,34,1); }
+  .facepile .f svg { display:block; width:100%; height:100%; }
+  .facepile .more { margin-left:22px; font-size:14px; color:rgba(235,235,245,.6); }
+
+  .quote { margin-top:15px; background:rgba(255,255,255,.05); border-radius:14px; padding:12px 13px;
+     font-size:14.5px; line-height:1.4; color:rgba(235,235,245,.85); }
+  .quote .meta { font-size:12.5px; color:rgba(235,235,245,.5); margin-top:7px; }
+
+  .rowset { margin-top:13px; display:flex; flex-direction:column; gap:8px; }
+  .mini-row { display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.05); border-radius:12px; padding:10px 12px; }
+  .mini-row .k { font-size:13.5px; color:rgba(235,235,245,.6); }
+  .mini-row .v { margin-left:auto; font-size:13.5px; font-weight:600; }
+  .v.good { color:#5be49b; }
+  .duepill { display:inline-flex; align-items:center; gap:7px; margin-top:13px;
+    background:rgba(255,90,80,.16); color:#ff8a80; font-size:13px; font-weight:600; padding:7px 12px; border-radius:999px; }
+  .duepill .dot { width:7px; height:7px; border-radius:50%; background:#ff5a50; }
+  .actions { display:flex; gap:10px; }
+  .action { flex:1; text-align:center; border-radius:20px; padding:14px 0; background:rgba(40,40,46,.74);
+    backdrop-filter:blur(30px); -webkit-backdrop-filter:blur(30px); font-size:15px; font-weight:600; }
+  .action.primary { background:rgba(10,132,255,.85); }
+
+  .ledger { margin-top:64px; max-width:1300px; }
+  .ledger h2 { font-size:22px; font-weight:700; margin-bottom:16px; }
+  .grid { display:grid; grid-template-columns:150px 1fr 1fr; }
+  .grid > div { padding:12px 16px 12px 0; font-size:13.5px; line-height:1.55; }
+  .grid .hd { font-size:11px; font-weight:700; color:var(--t3); letter-spacing:.4px; padding-bottom:8px; }
+  .grid .cls { font-weight:600; }
+  .grid .dim2 { color:var(--t2); }
+  .cls .swatch { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:8px; vertical-align:middle; }
+  .s-alarm { background:#ff5a50; } .s-arrive { background:#5be49b; } .s-whisper { background:var(--tint); }
+  .never { margin-top:26px; font-size:13.5px; color:var(--t2); line-height:1.7; max-width:900px; }
+  .never b { color:#fff; font-weight:600; }
+</style>
+</head>
+<body>
+
+<h1 class="display">Notifications v3</h1>
+<p class="sub">One change from v2, and it’s yours: the right-hand slot now <i>always</i> carries something real — a photo when the thing holds one, and the source’s own mark when it doesn’t. Nothing is drawn by us.</p>
+
+<div class="ruling">
+  <div class="rblock">
+    <h3><span class="fixed">Left — not a choice</span></h3>
+    <p>iOS renders the <b>sending app’s icon</b> there on every notification. There is no API to change it, so the berry is fixed. The one exception is a “communication notification”, where a donated messaging intent replaces it with the sender’s face — Apple reserves that for real messaging apps, and claiming it for likes is an App Review risk. <b>Not worth it.</b> The repetition is also less of a problem than it looks: iOS stacks notifications by app, and the whole design keeps volume low — alarms plus one whisper.</p>
+  </div>
+  <div class="rblock">
+    <h3><span class="ours">Right — entirely ours</span></h3>
+    <p>This is the slot you were reaching for, and it does the job you wanted: <b>the left says who is telling you, the right says what it is about.</b> A ladder, and it never invents: <b>1.</b> a real photo the thing already holds — the liker’s avatar, a screenshot’s stored thumbnail. <b>2.</b> failing that, the source’s own mark, the same asset the Apps catalog already ships. <b>3.</b> if the source has no mark either, nothing — an honest blank, never a drawing.</p>
+  </div>
+</div>
+
+<div class="stage">
+
+<!-- ============ 1. LOCK SCREEN ============ -->
+<div class="column">
+  <div class="col-label">On the lock screen</div>
+  <div class="col-note">Berry down the left, source down the right. At a glance the right rail alone tells you: social, money, chain, money, your own day — before you’ve read a word.</div>
+  <div class="phone">
+    <div class="wallglow"></div>
+    <div class="clock">
+      <div class="day">Wednesday, August 5</div>
+      <div class="time display">9:41</div>
+    </div>
+    <div class="notifs">
+
+      <div class="wrap">
+        <div class="notif">
+          <div class="appicon"><svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#000"/><circle cx="598" cy="708" r="108" fill="rgb(2,26,51)"/><circle cx="684" cy="548" r="108" fill="rgb(3,42,82)"/><circle cx="426" cy="708" r="108" fill="rgb(3,42,82)"/><circle cx="512" cy="548" r="108" fill="rgb(5,59,115)"/><circle cx="598" cy="388" r="108" fill="rgb(6,79,153)"/><circle cx="340" cy="548" r="108" fill="rgb(6,79,153)"/><circle cx="426" cy="388" r="108" fill="rgb(10,132,255)"/></svg></div>
+          <div class="n-body">
+            <div class="n-top"><span class="n-title">Liked by paulg and 4 others</span><span class="n-when">12m</span></div>
+            <div class="n-text">On “The thing about small tools is that they…”</div>
+          </div>
+          <div class="att round"><svg viewBox="0 0 40 40"><rect width="40" height="40" fill="#3a4a6b"/><circle cx="20" cy="15.5" r="6.4" fill="rgba(255,255,255,.86)"/><path d="M6.5 40c1.6-8 7-11.6 13.5-11.6S32 32 33.5 40z" fill="rgba(255,255,255,.86)"/></svg></div>
+        </div>
+        <div class="prov"><span class="tag photo">PHOTO</span><span class="txt">paulg’s real avatar — the Bluesky inbound read already hydrates it</span></div>
+      </div>
+
+      <div class="wrap">
+        <div class="notif">
+          <div class="appicon"><svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#000"/><circle cx="598" cy="708" r="108" fill="rgb(2,26,51)"/><circle cx="684" cy="548" r="108" fill="rgb(3,42,82)"/><circle cx="426" cy="708" r="108" fill="rgb(3,42,82)"/><circle cx="512" cy="548" r="108" fill="rgb(5,59,115)"/><circle cx="598" cy="388" r="108" fill="rgb(6,79,153)"/><circle cx="340" cy="548" r="108" fill="rgb(6,79,153)"/><circle cx="426" cy="388" r="108" fill="rgb(10,132,255)"/></svg></div>
+          <div class="n-body">
+            <div class="n-top"><span class="n-title">Money challenged</span><span class="n-when">1h</span></div>
+            <div class="n-text">A <b>$220</b> payment was disputed. Evidence is due <b>Friday</b>.</div>
+          </div>
+          <div class="att"><svg viewBox="0 0 40 40"><rect width="40" height="40" rx="9" fill="#635bff"/><path d="M18.6 16.1c0-1 .84-1.4 2.2-1.4 1.98 0 4.5.6 6.5 1.68v-6.1C25.1 9.4 23 9 20.8 9c-5.3 0-8.8 2.77-8.8 7.4 0 7.2 9.9 6.05 9.9 9.15 0 1.2-1.04 1.58-2.5 1.58-2.16 0-4.94-.9-7.1-2.1v6.2c2.4 1.03 4.83 1.47 7.1 1.47 5.43 0 9.14-2.7 9.14-7.37 0-7.8-9.94-6.4-9.94-9.23z" fill="#fff"/></svg></div>
+        </div>
+        <div class="prov"><span class="tag mark">SOURCE MARK</span><span class="txt">Stripe serves no image for a dispute — its own mark stands in</span></div>
+      </div>
+
+      <div class="wrap">
+        <div class="notif">
+          <div class="appicon"><svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#000"/><circle cx="598" cy="708" r="108" fill="rgb(2,26,51)"/><circle cx="684" cy="548" r="108" fill="rgb(3,42,82)"/><circle cx="426" cy="708" r="108" fill="rgb(3,42,82)"/><circle cx="512" cy="548" r="108" fill="rgb(5,59,115)"/><circle cx="598" cy="388" r="108" fill="rgb(6,79,153)"/><circle cx="340" cy="548" r="108" fill="rgb(6,79,153)"/><circle cx="426" cy="388" r="108" fill="rgb(10,132,255)"/></svg></div>
+          <div class="n-body">
+            <div class="n-top"><span class="n-title">Something new can move your USDC</span><span class="n-when">3h</span></div>
+            <div class="n-text">main.eth approved a spender with no limit.</div>
+          </div>
+          <div class="att"><svg viewBox="0 0 40 40"><rect width="40" height="40" rx="9" fill="#151a2e"/><g fill="#8ba2e8"><path d="M20 7.5l-6.6 11 6.6 3.9 6.6-3.9z" opacity=".75"/><path d="M20 7.5v14.9l6.6-3.9z"/><path d="M20 24l-6.6-3.9L20 32.5l6.6-12.4z" opacity=".75"/></g></svg></div>
+        </div>
+        <div class="prov"><span class="tag mark">SOURCE MARK</span><span class="txt">a contract address has no face — the chain’s mark, never an invented one</span></div>
+      </div>
+
+      <div class="wrap">
+        <div class="notif">
+          <div class="appicon"><svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#000"/><circle cx="598" cy="708" r="108" fill="rgb(2,26,51)"/><circle cx="684" cy="548" r="108" fill="rgb(3,42,82)"/><circle cx="426" cy="708" r="108" fill="rgb(3,42,82)"/><circle cx="512" cy="548" r="108" fill="rgb(5,59,115)"/><circle cx="598" cy="388" r="108" fill="rgb(6,79,153)"/><circle cx="340" cy="548" r="108" fill="rgb(6,79,153)"/><circle cx="426" cy="388" r="108" fill="rgb(10,132,255)"/></svg></div>
+          <div class="n-body">
+            <div class="n-top"><span class="n-title">Money arrived</span><span class="n-when">40m</span></div>
+            <div class="n-text"><b>1,250 USDC</b> landed in main.eth, from an address you’ve named Karim.</div>
+          </div>
+          <div class="att"><svg viewBox="0 0 40 40"><rect width="40" height="40" rx="9" fill="#0052ff"/><circle cx="20" cy="20" r="11.5" fill="#fff"/><rect x="14.6" y="16.4" width="10.8" height="7.2" rx="1.1" fill="#0052ff"/></svg></div>
+        </div>
+        <div class="prov"><span class="tag mark">SOURCE MARK</span><span class="txt">Base — the chain the transfer settled on, from the Apps catalog asset</span></div>
+      </div>
+
+      <div class="wrap">
+        <div class="notif">
+          <div class="appicon"><svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#000"/><circle cx="598" cy="708" r="108" fill="rgb(2,26,51)"/><circle cx="684" cy="548" r="108" fill="rgb(3,42,82)"/><circle cx="426" cy="708" r="108" fill="rgb(3,42,82)"/><circle cx="512" cy="548" r="108" fill="rgb(5,59,115)"/><circle cx="598" cy="388" r="108" fill="rgb(6,79,153)"/><circle cx="340" cy="548" r="108" fill="rgb(6,79,153)"/><circle cx="426" cy="388" r="108" fill="rgb(10,132,255)"/></svg></div>
+          <div class="n-body">
+            <div class="n-top"><span class="n-title">Your Wednesday</span><span class="n-when">7:30</span></div>
+            <div class="n-text">14 new while you were away · wallet <b>+1.5%</b>, mostly ETH.</div>
+          </div>
+          <div class="att"><svg viewBox="0 0 40 40"><rect width="40" height="40" fill="#161a26"/><rect width="40" height="9" fill="#232a3d"/><rect x="5" y="14" width="30" height="3.4" rx="1.7" fill="rgba(255,255,255,.5)"/><rect x="5" y="21" width="24" height="3.4" rx="1.7" fill="rgba(255,255,255,.3)"/><rect x="5" y="28" width="28" height="3.4" rx="1.7" fill="rgba(255,255,255,.18)"/></svg></div>
+        </div>
+        <div class="prov"><span class="tag photo">PHOTO</span><span class="txt">the newest screenshot’s own stored thumbnail — already on the Thing</span></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============ 2. LIKES EXPANDED ============ -->
+<div class="column">
+  <div class="col-label">Pressed open — likes on your post</div>
+  <div class="col-note">The new arrival class you asked for. Names, never numbers — already the inbound read’s own rule. Real avatars from the network, and your own words quoted back so you know which post without opening anything.</div>
+  <div class="phone">
+    <div class="wallglow"></div>
+    <div class="dim"></div>
+    <div class="expanded">
+      <div class="bigcard">
+        <div class="head">
+          <div class="appicon"><svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#000"/><circle cx="598" cy="708" r="108" fill="rgb(2,26,51)"/><circle cx="684" cy="548" r="108" fill="rgb(3,42,82)"/><circle cx="426" cy="708" r="108" fill="rgb(3,42,82)"/><circle cx="512" cy="548" r="108" fill="rgb(5,59,115)"/><circle cx="598" cy="388" r="108" fill="rgb(6,79,153)"/><circle cx="340" cy="548" r="108" fill="rgb(6,79,153)"/><circle cx="426" cy="388" r="108" fill="rgb(10,132,255)"/></svg></div>
+          <span class="n-title">Liked by paulg and 4 others</span>
+          <span class="n-when">12m</span>
+        </div>
+        <div class="rich">
+          <div class="hero-line display">5 people<small>liked your post on Bluesky</small></div>
+          <div class="facepile">
+            <div class="f"><svg viewBox="0 0 40 40"><rect width="40" height="40" fill="#3a4a6b"/><circle cx="20" cy="15.5" r="6.4" fill="rgba(255,255,255,.86)"/><path d="M6.5 40c1.6-8 7-11.6 13.5-11.6S32 32 33.5 40z" fill="rgba(255,255,255,.86)"/></svg></div>
+            <div class="f"><svg viewBox="0 0 40 40"><rect width="40" height="40" fill="#5a3f6b"/><circle cx="20" cy="15.5" r="6.4" fill="rgba(255,255,255,.86)"/><path d="M6.5 40c1.6-8 7-11.6 13.5-11.6S32 32 33.5 40z" fill="rgba(255,255,255,.86)"/></svg></div>
+            <div class="f"><svg viewBox="0 0 40 40"><rect width="40" height="40" fill="#2f5f52"/><circle cx="20" cy="15.5" r="6.4" fill="rgba(255,255,255,.86)"/><path d="M6.5 40c1.6-8 7-11.6 13.5-11.6S32 32 33.5 40z" fill="rgba(255,255,255,.86)"/></svg></div>
+            <div class="f"><svg viewBox="0 0 40 40"><rect width="40" height="40" fill="#6b4f2f"/><circle cx="20" cy="15.5" r="6.4" fill="rgba(255,255,255,.86)"/><path d="M6.5 40c1.6-8 7-11.6 13.5-11.6S32 32 33.5 40z" fill="rgba(255,255,255,.86)"/></svg></div>
+            <div class="f"><svg viewBox="0 0 40 40"><rect width="40" height="40" fill="#42506b"/><circle cx="20" cy="15.5" r="6.4" fill="rgba(255,255,255,.86)"/><path d="M6.5 40c1.6-8 7-11.6 13.5-11.6S32 32 33.5 40z" fill="rgba(255,255,255,.86)"/></svg></div>
+            <span class="more">paulg, dan, mira, ken, jo</span>
+          </div>
+          <div class="quote">
+            “The thing about small tools is that they don’t ask you to become a different person to use them.”
+            <div class="meta">You · Monday · 3 replies</div>
+          </div>
+        </div>
+      </div>
+      <div class="actions"><div class="action primary">Open the post</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 3. MONEY ARRIVED EXPANDED ============ -->
+<div class="column">
+  <div class="col-label">Pressed open — money arrived</div>
+  <div class="col-note">The other arrival class. The amount is the picture, so nothing is lost by having no photo. Facts only — the address book’s own name for the sender, and what it does to the balance. No confetti on someone else’s money.</div>
+  <div class="phone">
+    <div class="wallglow"></div>
+    <div class="dim"></div>
+    <div class="expanded">
+      <div class="bigcard">
+        <div class="head">
+          <div class="appicon"><svg viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#000"/><circle cx="598" cy="708" r="108" fill="rgb(2,26,51)"/><circle cx="684" cy="548" r="108" fill="rgb(3,42,82)"/><circle cx="426" cy="708" r="108" fill="rgb(3,42,82)"/><circle cx="512" cy="548" r="108" fill="rgb(5,59,115)"/><circle cx="598" cy="388" r="108" fill="rgb(6,79,153)"/><circle cx="340" cy="548" r="108" fill="rgb(6,79,153)"/><circle cx="426" cy="388" r="108" fill="rgb(10,132,255)"/></svg></div>
+          <span class="n-title">Money arrived</span>
+          <span class="n-when">40m</span>
+        </div>
+        <div class="rich">
+          <div class="hero-line display"><span class="up">+1,250 USDC</span><small>into main.eth · Base</small></div>
+          <div class="rowset">
+            <div class="mini-row"><span class="k">From</span><span class="v">Karim</span></div>
+            <div class="mini-row"><span class="k">Wallet now holds</span><span class="v">$18,402</span></div>
+            <div class="mini-row"><span class="k">Third time from Karim</span><span class="v good">$3,750 in all</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <div class="action primary">Open in Casberi</div>
+        <div class="action">Receipt</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<div class="ledger">
+  <h2 class="display">What fires, and what it carries on the right</h2>
+  <div class="grid">
+    <div class="hd">CLASS</div><div class="hd">FIRES ON</div><div class="hd">RIGHT-HAND SLOT</div>
+
+    <div class="cls"><span class="swatch s-alarm"></span>Alarm</div>
+    <div class="dim2">A dispute opened · a new approval on a watched wallet · Privacy Pools cleared or asked for proof · a deadline inside 72h (evidence due, veAERO vote, lock expiry) · payments went silent</div>
+    <div class="dim2">The source’s own mark — Stripe, the chain, 0xBow. Never a photo, because none of these sources serves one.</div>
+
+    <div class="cls"><span class="swatch s-arrive"></span>Arrival</div>
+    <div class="dim2">Money in — an inbound transfer to a watched wallet, a Stripe payout paid. Attention in — likes, replies and new followers on your own posts, batched per post</div>
+    <div class="dim2">Attention: the liker’s or replier’s real avatar. Money: the chain’s or Stripe’s mark.</div>
+
+    <div class="cls"><span class="swatch s-whisper"></span>Whisper</div>
+    <div class="dim2">Once a day, at a time you pick. The line <code>DayBrief</code> already composes — nil when there is nothing to say, and then nothing fires at all</div>
+    <div class="dim2">The newest screenshot’s own stored thumbnail when the day landed one; the busiest source’s mark otherwise.</div>
+  </div>
+
+  <p class="never">
+    <b>Never fires:</b> a landed row (a post, a link, a screenshot — the feed is the product and it waits), any count or balance reading (a state, not an event — §216), a trending token, a bridge finishing a sync, a charge succeeding.
+    <b>Batching:</b> likes on one post collapse into one notification that updates in place as more arrive; a sweep finding eleven alarm-class events sends the worst and says “and 10 more”.
+    <b>Time-sensitive</b> is claimed by the deadline alarms alone, so a 3am dispute can break through — everything else honors quiet hours.
+    <b>The ask</b> comes the first time an alarm-class event actually exists, never at launch.
+  </p>
+</div>
+
+</body>
+</html>

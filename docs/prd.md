@@ -16477,3 +16477,121 @@ by reading, each provable from the code and none of them proof that the wire
 is healthy. `-kalshiBookProbe` remains the decisive read and takes one launch;
 if it reports `phase 2 FAILED` or a `fields=` line missing the quote pair,
 that is a different bug and this file did not fix it.
+## §306 — Notifications: three classes, and the right-hand slot is the only one we own (user: "i think we should add notifications now... i want them to look fabulous", then "likes on your posts, received money should also count", then "the icon cannot be our logo... or maybe we use our logo on one side and the sources on the other", 2026-08-05)
+
+Mockups: `prototype/notifications-v1.html` → `v2` → `v3` (v3 is the ruling).
+
+**Local only, and that is not a limitation — it is the feature.** There is no
+server, so there is no push. A `BGAppRefreshTask` runs the same bounded bridge
+sweep the foreground already runs, and anything alarm-class it finds schedules
+a LOCAL `UNNotificationRequest`. The privacy screen's claim ("no server,
+nothing routes through us", §205) survives a notification feature intact,
+which a remote-push design would have cost us. The corollary is a real
+ceiling, stated rather than hidden: iOS decides when background refresh runs,
+so a notification is "soon after we next got to look", never "the instant it
+happened" — the copy therefore stamps the EVENT's time, not the delivery's.
+
+**Three classes fire, and nothing else ever does.**
+
+1. **Alarm** — something needs you. A dispute opened; a new approval on a
+   watched wallet; Privacy Pools cleared to withdraw or asked for proof; a
+   deadline inside 72h (evidence due, veAERO vote window, lock expiry);
+   payments went silent (`StripeSilence.verdict`).
+2. **Arrival** — something landed FOR you. Money in: an inbound transfer to a
+   watched wallet, a Stripe payout paid. Attention in: likes, replies and new
+   followers on your own posts — the `mine` half of `SocialInbound` (§239),
+   which already reads NAMES rather than numbers, so the notification can too.
+3. **Whisper** — once a day, at a time the person picks. The line `DayBrief`
+   already composes (§165). It is nil when there is nothing to say, and then
+   NOTHING FIRES — a daily notification that always fires is an alarm clock,
+   not a whisper.
+
+**The never-fires list is the load-bearing half**, and it is §216's
+event-vs-state distinction reused verbatim: a landed row never notifies (a
+post, a link, a screenshot — the feed is the product and it waits), nor does
+any count or balance reading (a state), a trending token, a bridge finishing
+a sync, or a charge succeeding. A bridge pass lands dozens of rows; notifying
+them trains a person to swipe the app off their lock screen within a week,
+and the corpus they'd stop reading is the whole product. **The user's own
+framing of the core loop — capture → read, the feed is the product — is what
+this list protects.**
+
+**The left icon is not a design decision, and we checked before designing
+around it.** iOS renders the SENDING APP's icon there on every notification;
+there is no API to change it, so the berry is fixed and identical on all of
+them. The single exception is a "communication notification", where a donated
+messaging intent replaces the icon with the sender's face — Apple reserves
+that for real messaging apps, so claiming it for likes is an App Review risk
+we are not taking for a cosmetic win. The repetition worry is real but
+smaller than it looks: iOS stacks by app, and this design's whole point is low
+volume.
+
+**So the right-hand slot is the only one we own, and it does the job the left
+one can't: the left says who is telling you, the right says what it is
+about.** A ladder, and it NEVER INVENTS — which is §83's fake-status ban
+applied to a surface where a drawn picture would be indistinguishable from a
+real one:
+
+1. A real photo the thing ALREADY HOLDS — the liker's avatar (hydrated by the
+   inbound read), a screenshot's own stored thumbnail.
+2. Failing that, the SOURCE's own mark — the same asset the Apps catalog
+   ships. Stripe for a dispute, the chain for a transfer, 0xBow for a pool.
+   This is identity, which the colour rule already permits; it is not status.
+3. Failing both, nothing. An honest blank, never a drawing.
+
+v1 drew a red sparkline for the dispute and a generic chart tile for money.
+Both were invented, and both looked better than the truth — which is exactly
+why the rule is written down: **on a lock screen, a fabricated thumbnail is
+more convincing than anywhere else in the product, because there is no
+surrounding context to contradict it.**
+
+**Batching, so a good day can't become a bad one.** Likes on one post collapse
+into ONE notification that updates in place as more arrive (a per-post
+identifier, `UNNotificationRequest` replacing itself), never one per liker.
+A sweep that finds eleven alarm-class events sends the worst one and says "and
+10 more" — because eleven separate alarms is the thing that makes people
+disable notifications, and the eleventh is never the one that mattered.
+
+**Time-sensitive is claimed by the deadline alarms alone** (a dispute with
+evidence due, a closing vote window), so a 3am dispute can break through a
+Focus. Everything else — every arrival, the whisper — honors quiet hours.
+Over-claiming the interruption level is the fastest way to have iOS's own
+notification summary bury the class that needed it.
+
+**The permission ask happens the first time an alarm-class event actually
+exists** — never at launch. An ask at launch is asked before the person has
+seen anything worth being told about, gets declined, and the decline is
+permanent short of a trip to Settings. Asking at the first real dispute means
+the ask arrives carrying its own reason.
+
+### §306 amendment — time-sensitive is DECLARED, not yet honoured (2026-08-05, same session)
+
+The section above says a 3am dispute "can break through" a Focus. That is the
+design and it is **not true of this build**, caught by a compiler warning during
+the pass that wrote it: `UNAuthorizationOptions.timeSensitive` was deprecated in
+iOS 15 and grants nothing, and the level is gated by the
+`com.apple.developer.usernotifications.time-sensitive` ENTITLEMENT instead —
+which `Casberi.entitlements` does not carry, because it needs a capability
+enabled on the App ID in the developer portal that no build step can add for
+itself. Without it iOS silently caps `.timeSensitive` to `.active`.
+
+**Silently** is the whole problem, and why this is written down rather than
+quietly deferred: nothing fails, no log line appears, and the notification
+arrives looking exactly right — it just doesn't pierce a Focus. It is the §83
+fake-status shape in a place with no screen to inspect.
+
+So, three decisions. The dead authorization option is REMOVED (asking for
+nothing while reading as "we asked"). `interruptionLevel` still declares
+`.timeSensitive` for the two deadline alarms, because that line is correct and
+becomes live the day the capability is enabled — no code change waiting on it.
+And the user-facing copy no longer promises break-through: the quiet-hours row
+read "except a deadline, which may break through" and now reads "anything that
+arrives at night waits until morning", which is what the build actually does.
+
+**To finish it** (needs the portal, so it is the user's step, not a build's):
+enable Time Sensitive Notifications on the `com.casberi.app` App ID, add
+`com.apple.developer.usernotifications.time-sensitive` to both entitlements
+files, and restore the copy. Note the standing lesson from the entitlements
+memory — an entitlement not present in the provisioning profile breaks the
+ARCHIVE rather than the simulator build, so this must be verified with
+`codesign -d --entitlements` on an exported IPA, not on a green `xcodebuild`.

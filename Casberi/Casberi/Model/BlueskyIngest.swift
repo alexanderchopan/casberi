@@ -429,12 +429,24 @@ enum BlueskyIngest {
               let likes = root["likes"] as? [[String: Any]] else { return }
         guard post.isLive else { return }   // the pass awaited; a heal may have landed
         let watched = Set(BlueskyStore.shared.accounts.map(\.handle))
+        // Every liker, for the notification (prd §306) — the resurface below
+        // still only reacts to WATCHED likers, which is §221's rule and
+        // unchanged. The two want different populations from the same read: a
+        // resurface is "someone you follow found this again", while "who liked
+        // your post" is about anyone at all. No extra request either way.
+        var allLikers: [String] = []
+        var firstAvatar: String?
+        var newest: Date?
         for like in likes {
             guard let actor = like["actor"] as? [String: Any],
                   let liker = actor["handle"] as? String,
-                  liker != ownHandle, watched.contains(liker) else { continue }
+                  liker != ownHandle else { continue }
             let when = IngestSupport.isoDate(like["createdAt"])
                 ?? IngestSupport.isoDate(like["indexedAt"])
+            if allLikers.isEmpty { firstAvatar = actor["avatar"] as? String }
+            allLikers.append(BlueskyStore.short(liker))
+            if let when, newest.map({ when > $0 }) ?? true { newest = when }
+            guard watched.contains(liker) else { continue }
             resurface(post, reactedAt: when)
             if (when ?? .now).timeIntervalSinceNow > -SocialInbound.newsWindow {
                 SourceMoments.shared.fire(
@@ -442,6 +454,12 @@ enum BlueskyIngest {
                     source: "Bluesky")
             }
         }
+        guard let ref = post.sourceRef else { return }
+        await Notifications.likes(postRef: ref, postTitle: post.title,
+                                  likers: allLikers, avatarURL: firstAvatar,
+                                  source: "Bluesky",
+                                  link: "casberi://thing/\(post.id.uuidString)",
+                                  when: newest ?? .now)
     }
 
     /// Who started following you since the last pass. First sight seeds the

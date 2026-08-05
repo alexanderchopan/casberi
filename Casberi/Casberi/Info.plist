@@ -20,9 +20,15 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
-		<!-- BGAppRefreshTask: opportunistic wallet holdings sampling so the
-		     value line densifies between app opens (still forward-only, still
-		     real reads — just more of them). WalletBackgroundRefresh. -->
+		<!-- BGAppRefreshTask (WalletBackgroundRefresh), two jobs on one task
+		     rather than two competing tasks — iOS budgets background time per
+		     APP, so a second identifier would only split the same allowance and
+		     make both arrive less often. (1) Opportunistic wallet holdings
+		     sampling so the value line densifies between app opens (still
+		     forward-only, still real reads — just more of them). (2) The
+		     notification sweep (prd §306): what among the rows that already
+		     landed deserves telling. The sweep drives NO network reads of its
+		     own — a task that expires is one iOS throttles next time. -->
 		<string>fetch</string>
 	</array>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
