@@ -86,6 +86,15 @@ enum KalshiWatch {
         /// when a pull-to-refresh landed can't commit its pre-pull batch
         /// over the fresh one and re-stamp `fetchedAt` with it.
         private var generation = 0
+        /// The HTTP status the last discovery read answered with — 200 when
+        /// the listing served, 429 when Kalshi is pacing us, 0 when nothing
+        /// answered at all. `IngestSupport.getJSON` collapses all three into
+        /// one nil, and the room could only ever render that as "couldn't
+        /// reach", which is a claim about the network that is FALSE for two
+        /// of the three (prd §83's no-fake-status rule applied to an error
+        /// message). Kept here rather than threaded through the return tuple
+        /// because only the empty case ever reads it.
+        private(set) var lastStatus = 0
 
         func get() async -> (events: [[String: Any]], truncated: Bool) {
             if let fetchedAt, Date().timeIntervalSince(fetchedAt) < 120, !events.isEmpty {
@@ -104,21 +113,52 @@ enum KalshiWatch {
             var fetched: [[String: Any]] = []
             var cursor = ""
             var more = false
+            var firstStatus: Int?
             for _ in 0..<discoveryPages {
-                let paged = cursor.isEmpty ? "" : "&cursor=\(cursor)"
-                guard let root = await IngestSupport.getJSON(
+                // The cursor is an OPAQUE token and is not safe to paste into
+                // a query string raw: a `+` in it decodes to a space and a
+                // `=`/`&` ends the parameter early, so page 2 comes back a
+                // 400 and the walk silently truncates to page 1. `.alphanumerics`
+                // rather than `.urlQueryAllowed` on purpose — the query-allowed
+                // set leaves exactly those three characters alone, which is
+                // the whole bug.
+                let paged = cursor.isEmpty ? "" :
+                    "&cursor=\(cursor.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? cursor)"
+                let hit = await IngestSupport.getJSONStatus(
                     "https://api.elections.kalshi.com/trade-api/v2/events?status=open&limit=200&with_nested_markets=false\(paged)")
-                    as? [String: Any],
-                    let batch = root["events"] as? [[String: Any]], !batch.isEmpty
+                if firstStatus == nil { firstStatus = hit.status }
+                guard let root = hit.json as? [String: Any],
+                      let batch = root["events"] as? [[String: Any]], !batch.isEmpty
                 else { break }
                 fetched.append(contentsOf: batch)
                 cursor = (root["cursor"] as? String) ?? ""
                 more = !cursor.isEmpty
                 if cursor.isEmpty { break }
             }
-            // Keep the stale batch over nothing — and never commit a walk a
-            // pull-to-refresh has already superseded.
-            guard !fetched.isEmpty, generation == gen else { return (events, truncated) }
+            lastStatus = firstStatus ?? 0
+            // Keep the stale batch over nothing — one bad read shouldn't blank
+            // a book that already loaded.
+            guard !fetched.isEmpty else { return (events, truncated) }
+            // A pull-to-refresh landed while this walk was in the air. Its
+            // batch must not be COMMITTED — it predates the pull, and
+            // committing would re-stamp `fetchedAt` so the next 120s serve
+            // pre-pull data the gesture explicitly asked past. But it must
+            // still be RETURNED.
+            //
+            // Returning `events` here instead (the old behaviour) handed every
+            // caller waiting on this walk an EMPTY book on a cold cache, and
+            // the room can only render an empty book as "Couldn't reach the
+            // market book just now." — on a read that reached it fine and had
+            // the whole listing in hand. That is the self-reinforcing shape of
+            // the reported failure: `FeedScreen.performPull` bumps
+            // `chrome.refreshPulse` (which re-fires the browse `.task(id:)`,
+            // starting this walk) BEFORE it awaits `invalidateCache()`, so
+            // every pull-to-refresh in a prediction room raced its own reload
+            // and lost — the error appears, the obvious response is to pull to
+            // refresh, and the pull is what guarantees it appears again. The
+            // ordering is fixed at that call site too; this is the half that
+            // holds regardless of who invalidates when.
+            guard generation == gen else { return (fetched, more) }
             events = fetched
             truncated = more
             fetchedAt = Date()
@@ -165,12 +205,18 @@ enum KalshiWatch {
     /// line above a fully populated category strip, i.e. above proof that
     /// the book HAD been reached. A dead control and a fake status are the
     /// same offence (prd §83), so the room now says which of these it is.
-    enum BookOutcome {
+    enum BookOutcome: Equatable {
         /// Rows came back.
         case rows
-        /// The discovery listing is empty AND no per-event read answered —
-        /// the only case that is genuinely "couldn't reach".
-        case unreached
+        /// No read answered with a usable body, carrying the HTTP status that
+        /// came back so the room can say WHICH failure it was. 0 is a
+        /// transport failure — offline, DNS, a dropped connection — and the
+        /// only one "couldn't reach" honestly describes. 429 is Kalshi pacing
+        /// us and clears itself in seconds. A 4xx is an endpoint that moved,
+        /// which no amount of retrying fixes. Three problems, three different
+        /// next steps for the person holding the phone; without the status
+        /// they all read as "check your wifi".
+        case unreached(status: Int)
         /// The book was read fine; the query/category simply matched no open
         /// event.
         case noMatch
@@ -191,7 +237,9 @@ enum KalshiWatch {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let cat = category?.lowercased()
         let (events, _) = await cache.get()
-        guard !events.isEmpty else { return Book(rows: [], outcome: .unreached) }
+        guard !events.isEmpty else {
+            return Book(rows: [], outcome: .unreached(status: await cache.lastStatus))
+        }
 
         // Phase 1 — match on the cheap listing (title + subtitle + category).
         var candidates: [[String: Any]] = []
@@ -215,16 +263,25 @@ enum KalshiWatch {
         // event can hold many markets and the volume sort happens after.
         let hydrate = Array(candidates.prefix(max(limit, 12)))
         let hydrated = await IngestSupport.boundedGather(hydrate, maxConcurrent: 4) { event -> Hydrated in
-            guard let ticker = event["event_ticker"] as? String else { return Hydrated(rows: [], reached: false) }
+            guard let ticker = event["event_ticker"] as? String else {
+                return Hydrated(rows: [], reached: false, status: 0)
+            }
             return await markets(inEvent: ticker,
                                  category: (event["category"] as? String) ?? "",
                                  query: q)
         }
         let rows = Array(hydrated.flatMap(\.rows).sorted { $0.volume > $1.volume }.prefix(limit))
         if !rows.isEmpty { return Book(rows: rows, outcome: .rows) }
-        // Not one event answered — the listing was cached, so this is still a
-        // reachability failure even though phase 1 succeeded.
-        guard hydrated.contains(where: \.reached) else { return Book(rows: [], outcome: .unreached) }
+        // Not one event answered. Phase 1 succeeded, so the network is
+        // demonstrably fine and the status is the whole story — this is the
+        // read most likely to be rate-limited, since it fires one request per
+        // matching event in a burst while phase 1 fired one. Report the first
+        // status anything actually answered with, falling back to 0 only when
+        // nothing did.
+        guard hydrated.contains(where: \.reached) else {
+            let answered = hydrated.first { $0.status != 0 }?.status ?? 0
+            return Book(rows: [], outcome: .unreached(status: answered))
+        }
         return Book(rows: [], outcome: .noQuote)
     }
 
@@ -236,6 +293,11 @@ enum KalshiWatch {
     private struct Hydrated {
         let rows: [Resolved]
         let reached: Bool
+        /// The HTTP status this event's read answered with — 200 when it
+        /// reached, 429 when Kalshi paced us, 0 when nothing came back. What
+        /// lets an all-failed hydration say WHY rather than blame the
+        /// connection phase 1 just proved was working.
+        let status: Int
     }
 
     /// One event's open markets, as watchable rows. The query is re-applied
@@ -243,9 +305,11 @@ enum KalshiWatch {
     /// category alone shouldn't hand back every candidate in the race.
     private static func markets(inEvent eventTicker: String, category: String,
                                 query q: String) async -> Hydrated {
-        guard let root = await IngestSupport.getJSON(
+        let hit = await IngestSupport.getJSONStatus(
             "https://api.elections.kalshi.com/trade-api/v2/events/\(eventTicker.uppercased())?with_nested_markets=true")
-            as? [String: Any] else { return Hydrated(rows: [], reached: false) }
+        guard let root = hit.json as? [String: Any] else {
+            return Hydrated(rows: [], reached: false, status: hit.status)
+        }
         let event = (root["event"] as? [String: Any]) ?? root
         let seriesTicker = (event["series_ticker"] as? String) ?? ""
         let eventTitle = (event["title"] as? String) ?? ""
@@ -270,9 +334,10 @@ enum KalshiWatch {
         // A query that named a SIDE ("Chiefs") keeps only that side; one that
         // named the race keeps the field. Applied after the fetch because the
         // side's name lives on the market, not on the listing.
-        guard !q.isEmpty else { return Hydrated(rows: rows, reached: true) }
+        guard !q.isEmpty else { return Hydrated(rows: rows, reached: true, status: hit.status) }
         let sideMatches = rows.filter { "\($0.title) \($0.subtitle)".lowercased().contains(q) }
-        return Hydrated(rows: sideMatches.isEmpty ? rows : sideMatches, reached: true)
+        return Hydrated(rows: sideMatches.isEmpty ? rows : sideMatches,
+                        reached: true, status: hit.status)
     }
 
     /// Resolves a query to its busiest matching market — the Watch button's path.

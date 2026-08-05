@@ -900,14 +900,40 @@ struct PredictionBrowseSection: View {
         if !q.isEmpty { return String(localized: "No open market matches “\(q)”.") }
         if let category { return String(localized: "Nothing open in \(category) right now.") }
         // Only Kalshi reports a reason today — Polymarket's `search` has no
-        // failure channel, so a Polymarket-only empty keeps the old sentence
+        // failure channel, so a Polymarket-ONLY empty keeps the old sentence
         // rather than inheriting a verdict from the other venue's read.
-        guard scope == .kalshi, let kalshiOutcome else {
+        //
+        // `.all` reads Kalshi's verdict too (2026-08-05). The guard used to
+        // demand `scope == .kalshi`, so a reader with both venues connected
+        // got "Couldn't reach the market book just now." no matter what
+        // Kalshi had actually said — including `.noMatch`, which is the
+        // exchange answering perfectly. Kalshi is in scope for `.all` by the
+        // same test `loadIfNeeded` uses to run the read at all, so this reads
+        // the outcome it already has instead of throwing it away.
+        guard scope == .kalshi || scope == .all, let kalshiOutcome else {
             return String(localized: "Couldn't reach the market book just now.")
         }
         switch kalshiOutcome {
-        case .unreached:
-            return String(localized: "Couldn't reach the market book just now.")
+        case .unreached(let status):
+            // Three failures, three sentences (the Stripe connect ruling, prd
+            // §250 ③). A rate limit and a moved endpoint both used to read as
+            // "couldn't reach", which sends someone to their wifi over a
+            // working connection — and the wait-and-retry that DOES fix a 429
+            // is the one thing that sentence doesn't suggest.
+            switch status {
+            case 0:
+                return String(localized: "Couldn't reach the market book just now.")
+            case 429:
+                return String(localized: "Kalshi is limiting requests right now — try again in a moment.")
+            case 200:
+                // Answered, and we couldn't read what came back — the drift
+                // case, and the one worth naming separately even though it
+                // reads oddly: it is the only branch here a retry can't fix,
+                // and the only one that means the app needs changing.
+                return String(localized: "Kalshi answered, but not in a shape this app can read.")
+            default:
+                return String(localized: "Kalshi's market book answered with an error (\(status)).")
+            }
         case .noMatch:
             return String(localized: "Nothing open on Kalshi right now.")
         case .noQuote, .rows:

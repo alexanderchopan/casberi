@@ -4734,6 +4734,18 @@ struct FeedScreen: View {
         chrome.refreshHue = source == "Wallet"
             ? (selectedWallet.map(WalletFace.tint) ?? DS.washHue(for: source))
             : (source == "All" ? nil : DS.washHue(for: source))
+        // BEFORE the pulse, not after (2026-08-05). The pulse is what re-fires
+        // `PredictionBrowseSection`'s `.task(id:)`, i.e. it STARTS the room's
+        // reload — so clearing the book cache from inside `refreshFeed()`
+        // below landed after that reload had already begun its discovery walk,
+        // and `KalshiWatch.Cache` correctly refuses to commit a walk a pull
+        // has superseded. On a cold cache the reload therefore came back with
+        // nothing and the room rendered "Couldn't reach the market book just
+        // now." — on a pull that reached it fine. Worse, it was
+        // self-reinforcing: the error's obvious remedy is another pull, and
+        // another pull reproduced it exactly. Invalidating first makes the
+        // reload a genuinely fresh read with nothing to race.
+        if LiveRoomSources.has(source) { await KalshiWatch.invalidateCache() }
         chrome.refreshPulse += 1   // spins the avatar door, deals the berry rain
         await refreshFeed()
     }
@@ -4757,12 +4769,10 @@ struct FeedScreen: View {
         // Wallet feed's treemap isn't served a TTL-cached read (same contract as
         // Home's pull; the cache is for the automatic fan-out, not the gesture).
         await WalletIngest.invalidateHoldingsCache()
-        // Same contract for the prediction rooms' own book (prd §237-follow-up)
-        // — the room otherwise has no way to force past its 120s cache short of
-        // waiting it out, and `chrome.refreshPulse` (bumped below) already
-        // reaches `PredictionBrowseSection`'s own reload — this just makes
-        // that reload a genuinely fresh one instead of re-serving the cache.
-        if LiveRoomSources.has(source) { await KalshiWatch.invalidateCache() }
+        // The prediction rooms' own book cache is cleared by `performPull`
+        // BEFORE it bumps the pulse (see the note there) — it cannot live
+        // here, because by the time this runs the pulse has already started
+        // the reload this was meant to freshen.
         BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges, force: true)
         streamBlock()
     }

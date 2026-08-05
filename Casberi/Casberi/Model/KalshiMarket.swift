@@ -62,9 +62,18 @@ struct KalshiMarket {
     static func fetch(series: String, event: String) async -> KalshiMarket? {
         guard let root = await IngestSupport.getJSON(
             "https://api.elections.kalshi.com/trade-api/v2/events/\(event.uppercased())?with_nested_markets=true")
-            as? [String: Any],
-            let markets = root["markets"] as? [[String: Any]]
+            as? [String: Any]
         else { return nil }
+        // BOTH shapes, the way `KalshiWatch.markets(inEvent:)` already reads
+        // this exact payload (2026-08-05). `with_nested_markets=true` is a
+        // request to nest the markets INSIDE `event`, and reading only the
+        // top-level sibling array meant this card silently took its
+        // unavailable fallback for every market on a payload its own sibling
+        // parses fine — invisible, since the fallback is a legitimate state.
+        let markets = (root["markets"] as? [[String: Any]])
+            ?? ((root["event"] as? [String: Any])?["markets"] as? [[String: Any]])
+            ?? []
+        guard !markets.isEmpty else { return nil }
         let market = markets.first { ($0["status"] as? String) == "active" } ?? markets.first
         guard let market,
               let ticker = market["ticker"] as? String,

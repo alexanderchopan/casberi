@@ -16412,3 +16412,68 @@ The timing block itself is kept, `#if DEBUG`-gated and free in Release, on the
 `LaunchPerf` bargain: "the brief feels slow" is a recurring report whose cause
 is never guessable without a per-read breakdown, since three concurrent reads
 only ever show their slowest.
+
+## §305 — The Kalshi room's error was true of the app, not of Kalshi (user: "the kalshi order book never shows. always error could not get order book", 2026-08-05)
+
+§287 answered the first report of this by making the empty state say WHICH of
+three things went wrong, and by building `-kalshiBookProbe` to name the cause
+in one launch. The sentence got more honest and the failure did not go away —
+which is the tell: if the room can say "couldn't reach" while the exchange is
+fine, the bug can be in the app and still wear that sentence forever.
+
+**It was.** `FeedScreen.performPull` bumped `chrome.refreshPulse` and THEN
+awaited `KalshiWatch.invalidateCache()`. The pulse is the browse section's own
+reload trigger (it is a term in `PredictionBrowseSection`'s `.task(id:)`
+string), so the order was: start the reload, let it begin a discovery walk,
+then invalidate the cache underneath it. `Cache.walk` is right to refuse to
+COMMIT a batch a pull has superseded — committing would re-stamp `fetchedAt`
+and serve pre-pull data for the next two minutes, which is exactly what the
+gesture asked past — but it also **returned** the stale cache to every caller
+waiting on that walk, and on a cold cache the stale cache is empty. An empty
+book has exactly one rendering, and it is "Couldn't reach the market book just
+now."
+
+The shape that makes this report read as "ALWAYS" is that it is
+**self-reinforcing**: the only obvious response to that sentence is to pull to
+refresh, and pulling to refresh is what reproduces it. Every attempt to clear
+the error was the thing causing it.
+
+Two fixes, because the two halves fail independently. The call site
+invalidates BEFORE the pulse, so the reload has nothing to race. And a
+superseded walk now **returns its own batch while still declining to commit
+it** — data it actually fetched, handed to the callers who asked for it,
+without re-stamping the freshness clock. That second half holds no matter who
+invalidates when, which is the point: the first fix is an ordering, and
+orderings get re-broken.
+
+**Three smaller defects in the same read, each invisible and each capable of
+wearing the same sentence.** (1) `IngestSupport.getJSON` collapses a 429, a
+moved endpoint and a dead network into one `nil`, so a rate limit — the most
+likely failure of a phase that fires one request per matching event in a
+burst — read as "check your wifi", which is the one remedy that doesn't work.
+`BookOutcome.unreached` now carries the HTTP status and the room says which:
+0 couldn't reach, 429 is Kalshi pacing us and clears itself, 200 means it
+answered in a shape the app can't read (the drift case, and the only branch a
+retry can't fix), anything else names its code. (2) `emptyLine` demanded
+`scope == .kalshi` before reading Kalshi's own verdict, so anyone with BOTH
+venues connected got the generic network sentence no matter what Kalshi had
+actually said — including `.noMatch`, which is the exchange answering
+perfectly. (3) The discovery cursor was pasted into the query string raw: a
+`+` in an opaque token decodes to a space and a `=` ends the parameter, so
+pages 2 and 3 could 400 and truncate the walk to page 1 with no error
+anywhere.
+
+And one in the sheet, found by reading the same payload twice:
+`KalshiMarket.fetch` requested `with_nested_markets=true` — a request to nest
+the markets INSIDE `event` — then read only the top-level `markets` sibling,
+where `KalshiWatch.markets(inEvent:)` has always read both. On the nested
+shape the card silently took its unavailable fallback for every market. Both
+now read both.
+
+**Stated plainly, because it bounds what this session can claim:** none of
+this was measured against the live API. The host this was written on has no
+egress to `api.elections.kalshi.com`, so every one of these is a defect found
+by reading, each provable from the code and none of them proof that the wire
+is healthy. `-kalshiBookProbe` remains the decisive read and takes one launch;
+if it reports `phase 2 FAILED` or a `fields=` line missing the quote pair,
+that is a different bug and this file did not fix it.
