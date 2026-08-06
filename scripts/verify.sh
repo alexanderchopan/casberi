@@ -300,6 +300,18 @@ print -P "%F{green}✓ localization audit%f"
 # as "no related things" forever), an accepted status-bar clock puts "9:41
 # today" on nearly every screenshot's calendar hand-off, and a permissive
 # grounding check turns §218's honesty rail off while still logging that it ran.
+# The main-thread profiler's PARSER, not the profiler (which needs a Mac app
+# and a GUI, so it reports rather than gates — `perf.sh`'s contract). What is
+# guarded here is the one part that can rot silently: a summariser whose regex
+# stops matching prints "no hot spots" and reads as a healthy app. That is
+# §257's lesson exactly — perf.sh spent three weeks recording a launch climbing
+# 293→763ms while its own log predicate dropped the markers the app was
+# emitting. Static, pure, sub-second.
+step "Main-thread profiler self-test"
+"$ROOT/scripts/main-thread-profile.sh" --self-test >/dev/null \
+  || fail "the main-thread profiler's summariser failed — run scripts/main-thread-profile.sh --self-test"
+print -P "%F{green}✓ main-thread profiler self-test%f"
+
 step "On-device pure-logic self-test"
 "$ROOT/scripts/ondevice-selftest.sh" >/dev/null \
   || fail "the on-device logic self-test failed — run scripts/ondevice-selftest.sh"
