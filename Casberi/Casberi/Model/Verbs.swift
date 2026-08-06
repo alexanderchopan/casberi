@@ -170,8 +170,26 @@ enum VerbDerivation {
         case .note:
             // A note's next action: it becomes a reminder (S4 — captures
             // become outcomes). The write confirms; copy follows.
-            out.append(Verb(label: "Send to Reminders", icon: "checklist",
-                            action: .addToReminders))
+            //
+            // NOT FOR AN IMPORTED POST (2026-08-06). S4's premise was that
+            // every `.note` in the corpus is something the person typed,
+            // pasted or dictated — a capture, waiting to become an outcome.
+            // The import rooms retired that premise without anyone noticing:
+            // X posts and replies, Instagram captions and comments, TikTok
+            // comments all land as `.note`, and none of them is a capture.
+            // They are published writing, most of it years old and some of it
+            // somebody else's, so "what will you do about this" is the wrong
+            // question to put first — reported against an X post from an
+            // archive ("why is a Reminders button on a Twitter thing sheet?").
+            //
+            // Scoped to `bulkImportSources` rather than to a kind or a source
+            // list of its own: that set already means exactly "rows that came
+            // in by the archive-load door", and it is what every other
+            // aggregate over these rooms narrows by.
+            if !Corpus.bulkImportSources.contains(thing.source) {
+                out.append(Verb(label: "Send to Reminders", icon: "checklist",
+                                action: .addToReminders))
+            }
             if let v = externalVerb(for: thing, apps: [.todoist]) { out.append(v) }
             out.append(Verb(label: "Copy text", icon: "doc.on.doc", action: .copyText))
             if !(thing.postText ?? thing.content).isEmpty {
