@@ -64,13 +64,22 @@ try:
 except OSError as e:
     print(f"  cannot read {path}: {e}"); sys.exit(2)
 
-# `sample` prints one "Call graph:" section, threads inside it. The main thread
-# is the one LaunchServices marks as com.apple.main-thread; matching on that
-# rather than "Thread_1" because thread ORDER is not guaranteed and the first
-# listed thread is regularly a worker.
+# `sample` prints one "Call graph:" section, threads inside it. Matching the
+# main thread by NAME rather than by "Thread_1", because thread order is not
+# guaranteed and the first listed thread is regularly a worker.
+#
+# TWO SPELLINGS, and the second one cost a run: a macOS process labels it
+#   8330 Thread_x   DispatchQueue_1: com.apple.main-thread  (serial)
+# while an app hosted by the iOS SIMULATOR labels it
+#   8330 Thread_x: Main Thread   DispatchQueue_<multiple>
+# The first cut of this file knew only the macOS form, so the very first real
+# iOS profile — the platform the bug was actually reported on — parsed to
+# nothing. It failed loudly rather than printing an empty ranking, which is the
+# one thing that saved it; both spellings are fixtured below now.
+MAIN_MARKERS = ("com.apple.main-thread", ": Main Thread")
 main_start = None
 for i, ln in enumerate(lines):
-    if "com.apple.main-thread" in ln:
+    if any(m in ln for m in MAIN_MARKERS):
         main_start = i
         break
 if main_start is None:
@@ -200,6 +209,30 @@ FIX
   chk "the hot system leaf is found by self time"                        'NSDataDetector\.firstMatch'
   chk "our own frame is attributed to Casberi"                           'VerbDerivation\.placeURL'
   chk "the actionable app-only list is produced"                         'OUR OWN CODE'
+  # The iOS-simulator thread label, which is spelled differently from macOS's
+  # and which the first cut of this file could not find at all — so the first
+  # real profile of the platform the bug was reported on parsed to nothing.
+  cat > "$WORK/sim.txt" <<'FIX'
+Analysis of sampling Casberi (pid 456) every 1 millisecond
+Call graph:
+    900 Thread_162091: Main Thread   DispatchQueue_<multiple>
+    + 900 start_sim (in dyld_sim) + 20  [0x1]
+    + ! 900 FeedScreen.feedList.getter (in Casberi) + 21  [0x2]
+    + !   700 SwiftUI.ViewGraph.updateOutputs (in SwiftUI) + 22  [0x3]
+    2000 Thread_162137: com.apple.uikit.eventfetch-thread
+      2000 __NSThread__start__ (in Foundation) + 23  [0x4]
+FIX
+  SIM="$(summarise "$WORK/sim.txt")" || { print -r -- "  ✗ simulator-format sample not parsed"; exit 1; }
+  if print -r -- "$SIM" | grep -q 'samples on the main thread: 900'; then
+    print -r -- "  ✓ the iOS-simulator main-thread label is recognised"
+  else
+    print -r -- "  ✗ the iOS-simulator main-thread label is NOT recognised"; fail=1
+  fi
+  if print -r -- "$SIM" | grep -q 'ViewGraph.updateOutputs'; then
+    print -r -- "  ✓ frames parse through the simulator's '+ !' tree prefixes"
+  else
+    print -r -- "  ✗ the simulator's '+ !' tree prefixes break frame parsing"; fail=1
+  fi
   if print -r -- "$OUT" | grep -q 'mach_msg_trap'; then
     print -r -- "  ✗ idle frame was ranked (it must be excluded)"; fail=1
   else
