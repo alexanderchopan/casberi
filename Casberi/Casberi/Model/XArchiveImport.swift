@@ -112,11 +112,20 @@ enum XArchiveImport {
 
         // "tweets" is the current name and "tweet" the older one; both are
         // read so an archive downloaded years ago still opens.
+        // WHOSE archive this is (2026-08-06). Read before the posts because
+        // every one of them wants it: `PostCard` leads with `authorHandle`,
+        // and without one every row in the room introduced itself as "X" —
+        // the room's own name, said three thousand times.
+        //
+        // Nothing depends on it. A missing or renamed `account.js` yields nil
+        // and the rows land exactly as they did before, so this can only ever
+        // add a handle, never lose a post.
+        let mine = accountHandle(under: folder)
         var tweetFiles = readSeries("tweets", under: folder)
         if tweetFiles.isEmpty { tweetFiles = readSeries("tweet", under: folder) }
         for data in tweetFiles {
             foundAnyCategory = true
-            landTweets(data, summary: &summary, landed: &landed, seen: &seen)
+            landTweets(data, mine: mine, summary: &summary, landed: &landed, seen: &seen)
         }
         for data in readSeries("like", under: folder) {
             foundAnyCategory = true
@@ -189,10 +198,119 @@ enum XArchiveImport {
         return parts.joined(separator: " · ")
     }
 
+    // MARK: - Repairing rows that predate the room's own shape
+
+    /// Give rows landed before 2026-08-06 the three fields the room now DRAWS.
+    ///
+    /// Until the X room had a shape of its own, nothing rendered a post's full
+    /// sentence, nobody's handle, and no reply's recipient — so the importer
+    /// had no reason to fill `postText`, `socialContext` or `parent`. All
+    /// three are derivable from what those rows already hold, which is the
+    /// point: no archive, no folder grant, no network. A re-import CANNOT do
+    /// this job, because `landTweets` skips a ref it has already seen.
+    ///
+    /// It deliberately does not reach `authorHandle` for your own posts. Only
+    /// `account.js` names you, and a handle is the one thing here worth
+    /// nothing if guessed — those rows keep the room's own icon until the next
+    /// import.
+    ///
+    /// One-shot through a UserDefaults flag, so the steady state costs a
+    /// `bool(forKey:)` and no fetch — `ScreenshotTopics.restamp`'s shape, for
+    /// the same reason, and chunked with a yield for the same one too: this
+    /// dirties every row in the room, and one save over thousands of models is
+    /// the freeze `ImportCommit` exists to avoid. `postText == nil` is the
+    /// fetch's cheap first cut and an exact proxy for "landed before this
+    /// date": every row the importer lands now sets it.
+    @MainActor
+    static func healRoom(context: ModelContext, chunk: Int = 200) async -> Int {
+        let key = "x.roomFields.backfill"
+        guard !UserDefaults.standard.bool(forKey: key) else { return 0 }
+        let descriptor = FetchDescriptor<Thing>(
+            predicate: #Predicate<Thing> { $0.source == "X" && $0.postText == nil })
+        // A post keeps its words in `content`; a liked post keeps a PERMALINK
+        // there and its words in `enrichedText`. Reading the wrong one would
+        // put a bare URL in the card's body.
+        func words(of thing: Thing) -> String {
+            (thing.kind == .link ? (thing.enrichedText ?? "") : thing.content)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        // The recipient, back out of the title the importer wrote it into.
+        // Reading our OWN format rather than inferring anything: `landTweets`
+        // has led a reply's title with exactly "To @<handle> · " since the
+        // seat shipped, so this is as exact as the archive was.
+        func repliedTo(_ thing: Thing) -> String? {
+            guard thing.kind == .note, thing.title.hasPrefix("To @"),
+                  let sep = thing.title.range(of: " · ") else { return nil }
+            let handle = thing.title[thing.title.index(thing.title.startIndex, offsetBy: 4)..<sep.lowerBound]
+            return handle.isEmpty ? nil : String(handle)
+        }
+        func liked(_ thing: Thing) -> Bool {
+            thing.kind == .link && thing.tags.contains("Liked") && thing.socialContext == nil
+        }
+        // Rows this pass can actually change. A liked post whose text never
+        // came down has no words to copy and keeps `postText == nil` forever,
+        // so it is filtered OUT here rather than left to be revisited — and
+        // never stamped with an empty `postText` to push it out of the
+        // predicate, which was the other way and is wrong: `Verbs` reads
+        // `postText ?? content` for a copy body, so an empty string would take
+        // away the permalink such a row carries instead of words.
+        let pending = ((try? context.fetch(descriptor)) ?? []).filter {
+            guard !Corpus.isImportReceipt($0) else { return false }
+            return !words(of: $0).isEmpty || liked($0)
+                || ($0.parent == nil && repliedTo($0) != nil)
+        }
+        guard !pending.isEmpty else {
+            UserDefaults.standard.set(true, forKey: key)
+            return 0
+        }
+        var changed = 0
+        for (offset, thing) in pending.enumerated() {
+            // Per-ROW liveness, not a re-filter of the array (COROLLARY 6):
+            // this list is held across every yield below, and a bridge heal
+            // can tombstone a row inside one.
+            if thing.isLive {
+                let text = words(of: thing)
+                if !text.isEmpty { thing.postText = text }
+                if liked(thing) { thing.socialContext = "liked" }
+                if thing.parent == nil, let handle = repliedTo(thing) {
+                    thing.parent = SocialCard(handle: handle, text: "", avatarURL: nil, url: nil, ref: nil)
+                }
+                changed += 1
+            }
+            if offset % chunk == chunk - 1 {
+                _ = context.saveHonestly()
+                await Task.yield()
+            }
+        }
+        if changed > 0 { _ = context.saveHonestly() }
+        UserDefaults.standard.set(true, forKey: key)
+        return changed
+    }
+
+    /// The account's own `@handle`, from the archive's `account.js`.
+    ///
+    /// Pure and failure-tolerant by construction: every step is an optional
+    /// read and the whole thing returns nil rather than guessing, because the
+    /// one thing worse than an unnamed post is somebody else's name on it.
+    /// The leading "@" is dropped — `PostCard` renders a handle as written and
+    /// the rest of the app stores them bare.
+    static func accountHandle(under root: URL) -> String? {
+        for data in readSeries("account", under: root) {
+            guard let entries = parseArray(data) else { continue }
+            for entry in entries {
+                let account = (entry["account"] as? [String: Any]) ?? entry
+                guard let name = account["username"] as? String else { continue }
+                let handle = name.trimmingCharacters(in: CharacterSet(charactersIn: " @"))
+                if !handle.isEmpty { return handle }
+            }
+        }
+        return nil
+    }
+
     // MARK: - Your own posts and replies (full text — the substance)
 
     @MainActor
-    private static func landTweets(_ data: Data, summary: inout Summary,
+    private static func landTweets(_ data: Data, mine: String?, summary: inout Summary,
                                    landed: inout [Thing], seen: inout Set<String>) {
         guard let entries = parseArray(data) else { return }
 
@@ -281,6 +399,39 @@ enum XArchiveImport {
             if let thread {
                 thing.enrichedText = thread.text
                 thing.messageCount = thread.count
+            }
+            // THE WORDS, in the field the room actually draws (2026-08-06).
+            // `title` is `titleLine`'s 80-character clamp and `content` is
+            // what the retriever reads — neither is what `PostCard` renders,
+            // which is `postText`, and until the X room had a shape of its own
+            // nothing rendered a post's full sentence at all. No new field:
+            // `postText` has been on `Thing` since prd 81's social pass, and
+            // this is the same fact arriving through a different door.
+            //
+            // `row.text`, never `face` — the "To @someone · " lead belongs to
+            // the clamped title, where it survives a cut that would eat it at
+            // the end. The card has room to say who a reply answers on its own
+            // line and shouldn't repeat it inside the sentence.
+            thing.postText = row.text
+            // Yours, when the archive said so. Same slot a liked post's author
+            // lands in, which is what lets one card render both halves of the
+            // room without asking which half it's drawing.
+            thing.authorHandle = mine
+            // WHO A REPLY ANSWERS, in the slot the card already draws
+            // (2026-08-06). `PostCard` renders `parent` as "Replying to
+            // @someone" and reads NOTHING else off the card — not its text,
+            // not a permalink, not a protocol ref — so a handle-only card
+            // states exactly what the archive knows and fabricates none of
+            // the post we don't have. Without it the recipient survived only
+            // in `title`'s "To @someone · " lead, which the card doesn't
+            // draw, and a room of replies would have read as a room of
+            // non sequiturs.
+            //
+            // `ref` deliberately stays nil: it is what `foldThreadReplies`
+            // walks, and X's chains are already handled at import (a head
+            // carries its own `enrichedText`).
+            if let replyTo = row.replyTo {
+                thing.parent = SocialCard(handle: replyTo, text: "", avatarURL: nil, url: nil, ref: nil)
             }
             // What the post actually did. No new field — `likeCount` and
             // `repostCount` have been on `Thing` since prd 81's social pass,
@@ -422,7 +573,27 @@ enum XArchiveImport {
             // The words are the whole reason a like is worth keeping, and
             // `title` is clamped to 80 characters — so the full text rides
             // `enrichedText`, which is what the answer path actually reads.
-            if !row.text.isEmpty { thing.enrichedText = row.text }
+            //
+            // And `postText` beside it (2026-08-06), which is what the room
+            // DRAWS. `enrichedText` is retrieval-only by the 2026-07-15
+            // ruling, so until now a liked post's full sentence was in the
+            // store and on no screen: the room showed its first eighty
+            // characters and nothing else could reach the rest. Both, not one
+            // — they are read by different halves of the app and collapsing
+            // them would quietly change what the answer path indexes.
+            if !row.text.isEmpty {
+                thing.enrichedText = row.text
+                thing.postText = row.text
+            }
+            // WHY this row is here (2026-08-06). Half the X room is somebody
+            // else's writing, and once every row renders as a post card the
+            // author's handle is the only thing separating the halves — which
+            // says nothing at all for the years before `fetchFaces` has named
+            // one. `socialContext` is the existing marker for exactly this
+            // ("Liked", "Mentions you", "Recast"), so the room gets the same
+            // word every other social room already wears, drawn by the same
+            // `SocialThread.contextLabel`.
+            thing.socialContext = "liked"
             landed.append(thing)
             summary.liked += 1
         }
@@ -773,8 +944,35 @@ enum XArchiveImport {
                 text = text.replacingOccurrences(of: short, with: full)
             }
         }
-        return IngestSupport.decodeHTMLEntities(text)
+        // A PICTURE'S OWN SHORTLINK (2026-08-06). An attached photo, video or
+        // GIF puts a bare `t.co` shortlink in `full_text` and files itself
+        // under `entities.media` — a DIFFERENT key from the `urls` expanded
+        // above, so that shortlink survived every clean and rode into
+        // `content` on every post anybody ever attached an image to. X's own
+        // client has never shown it, and downstream it was worse than ugly:
+        // `ScreenshotTopics` read `t.co` as a hostname, it cleared `normalize`
+        // (four characters, three letters, no stoplist entry), it recurred
+        // across thousands of rows, and `cells` — which credits each row to
+        // its single most common qualifying term — collapsed the whole room
+        // into one cell labelled `t.co` under the title "What you post about".
+        //
+        // Removed only when WORDS REMAIN. A photo-only post is nothing but its
+        // shortlink, and `landTweets` drops a row whose text is empty, so
+        // stripping unconditionally would silently stop importing exactly the
+        // posts that carry pictures.
+        let decoded = IngestSupport.decodeHTMLEntities(text)
             .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let media = entities?["media"] as? [[String: Any]], !media.isEmpty else {
+            return decoded
+        }
+        var stripped = text
+        for item in media {
+            guard let short = item["url"] as? String, !short.isEmpty else { continue }
+            stripped = stripped.replacingOccurrences(of: short, with: " ")
+        }
+        let words = IngestSupport.decodeHTMLEntities(stripped)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return words.isEmpty ? decoded : words
     }
 
     /// A tweet's id as a string, from whichever field this archive's vintage

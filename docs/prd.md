@@ -17125,3 +17125,86 @@ lived on the RSS screen alone, so forty channels collected over a year could not
 leave. Export only — this screen's grammar is a NAME the app resolves, and
 importing raw feed URLs here would create entries no name explains, which is
 precisely the state `YouTubeFollowRepair` exists to clean up.
+
+## §313 — The X room: a wall of clamped titles, and a treemap of link plumbing (user: "the x com room could be better. i'm not sure how but it's just a long list of things and the tree map seems incorrect", 2026-08-06)
+
+Two complaints, one root: **X had a room but never had a ROOM.** Every registry
+§307 put it in was about being findable — the retriever, the recap, the topic
+map's `switch` — and none of them was about what the room LOOKS like when you
+open it. So the seat shipped searchable and unreadable.
+
+**The treemap was counting `t.co`.** `XArchiveImport.clean` expands
+`entities.urls` and nothing else; a picture, video or GIF files its shortlink
+under `entities.media`, a DIFFERENT key, so every post anybody ever attached an
+image to carried a bare `t.co` link in `content`. `ScreenshotTopics.domains`
+matched it (the `co` TLD), `normalize` passed it (four characters, three
+letters, no stoplist entry), it recurred across thousands of rows, and
+`cells()` — which credits each row to its SINGLE most common qualifying term —
+collapsed the room into one cell. Quote-tweets added `twitter.com` beside it,
+and a reply's `full_text` opens with the handles it answers, which NLTagger
+reads as people: a room of replies mapped the people replied TO, under the
+title "What you post about".
+
+**The ruling underneath it: a hostname is not a subject.** For a SCREENSHOT the
+domain on screen is the strongest "what is this" signal, which is why it leads
+`terms(in:)`. For a person's own sentences it is the weakest — the words are
+right there, and where they pointed a link is not what they wrote about. So
+`TopicSource` forks (`includeDomains`), and a writing room reads `prose(of:)`
+instead: hashtags harvested first (the one place somebody states their own topic
+outright), then entities over text with URLs, @mentions and hashtags removed.
+Photos and Files are byte-identical to what they always did.
+
+**A `topicsAt` stamp means "we looked", not "we looked correctly"** — so a rules
+change reaches only rows imported AFTER it, which for a bulk-import room, where
+everything landed on one afternoon, is nothing at all. `restamp` is the
+one-time re-read, keyed on a `termsEpoch` DATE rather than a version field
+precisely so it needs no CloudKit Production deploy. Same shape for the fields
+the card draws (`healRoom`), and it lives in the foreground sweep rather than at
+import because **a re-import cannot do it: `landTweets` skips a ref it has
+already seen.**
+
+**The subtitle was over-claiming.** It counted every row in the room while the
+cells only hold rows credited to a top-six term — "3,500 posts" above six cells
+summing to a few hundred, reading as a partition of the room when it is a
+partition of the part we could read. It says "N of M" now, and only when the two
+really differ, so a map that does cover its room is unchanged.
+
+**The long list was a missing `Shape` case.** X fell to `.plain`, so every row
+was a `BandRow`: an icon, `titleLine`'s 80-character clamp, a timestamp — in a
+room whose entire content is sentences written to be read. The words were in the
+store the whole time and on no screen: a post's on `content`, a liked post's on
+`enrichedText`, which is retrieval-only by the 2026-07-15 ruling. Now a post
+reads as a post (2026-07-13's ruling, arriving late), and **that includes a
+liked one** — it is somebody else's post, and `fetchFaces` has named its author
+since the seat shipped. Its OWN shape rather than `.social`, because `.social`
+means an article by a `.link` (`ReadingRow`) and here a `.link` is a post; and
+because sharing the case would hand this room the Farcaster/Bluesky roster head,
+which reads its accounts out of `BlueskyStore` for anything not Farcaster.
+
+Four fields make that card true, none of them new: `postText` (the body it
+renders), `authorHandle` from the archive's own `account.js` (without it every
+row introduced itself as "X", the room's own name, three thousand times),
+`parent` as a HANDLE-ONLY `SocialCard` — `ReplyingToRow` reads nothing but the
+handle, so it states exactly what the archive knows and invents none of the post
+we don't have — and `socialContext = "liked"`, which is what tells the two
+halves of the room apart before any face has been fetched. X joins
+`contextSources` on Slack's terms: an author and a provenance word, no thread
+API and no profile lookup, because X has no free read left to build them on.
+
+**`PostCard` could not draw a picture the app already HOLDS.** Every source it
+had served was a live bridge whose media is a URL; an import has no URL to give
+— `ImportMedia` decodes the archive's file to bytes inside the folder grant,
+since there is no second chance at a folder somebody stopped granting. Without a
+stored-bytes branch the card showed none of them: §283's Files bug in a new room
+(pixels in the store, never drawn).
+
+**Two registry gaps found alongside, both invisible by construction.** `-topicMapProbe`
+read `source == "Instagram" ? .note : .screenshot`, so for X it filtered a room
+of `.note` posts down to `.screenshot`, found zero rows and reported "no card"
+on EVERY run — the one headless view of this card had been blind since the seat
+shipped, and blind for TikTok and Files too once §309 gave the map a kind SET.
+And TikTok, which §309 says has a map, had no `TopicSource` at all, so
+`healTopics` returned 0 and the card could never render: a room whose writing
+spans two kinds against a `switch` that could only answer with one. Both are the
+same lesson as §307's `topicSource` miss — a call into a registry that answers
+nil is a no-op that looks exactly like having nothing to say.

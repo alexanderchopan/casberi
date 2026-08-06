@@ -376,7 +376,7 @@ struct FeedScreen: View {
 
     /// The shape a source takes when its chip is in force.
     private enum Shape {
-        case all, photos, wallet, calendar, gmail, chat, social, reminders, safari, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, plain
+        case all, photos, wallet, calendar, gmail, chat, social, reminders, safari, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, x, plain
         init(source: String) {
             switch source {
             case "All":                 self = .all
@@ -404,6 +404,23 @@ struct FeedScreen: View {
             // Posts read as posts in their own room (2026-07-13) — split from
             // .chat: a saved conversation is a snippet row, a post is a card.
             case "Farcaster", "Bluesky": self = .social
+            // X, 2026-08-06 — the same ruling as the line above, arriving two
+            // years of somebody's writing late. The room had NO case here at
+            // all, so it fell to `.plain` and drew a `BandRow` per row: an
+            // icon, `titleLine`'s 80-character clamp, a timestamp. In a room
+            // whose entire content is sentences written to be read. The words
+            // were in the store the whole time and on no screen — a post's on
+            // `content`, a liked post's on `enrichedText`, which is
+            // retrieval-only by the 2026-07-15 ruling.
+            //
+            // Its OWN case rather than joining `.social`, because `.social`
+            // means something different by a `.link`: there it is an article a
+            // post shared (`ReadingRow`), here it is a post somebody else
+            // wrote and you liked — a post, and it reads as one. Sharing the
+            // case would also hand X's room the Farcaster/Bluesky roster head,
+            // which reads its accounts out of `BlueskyStore` for anything that
+            // isn't Farcaster.
+            case "X":                   self = .x
             case "Reminders", "Todoist": self = .reminders
             case "Safari":              self = .safari
             // Obsidian joins the notes room — the vault is notes (prd §59).
@@ -441,7 +458,7 @@ struct FeedScreen: View {
         // Frames settle in like the music room's covers — a touch of scale so
         // the art reads as arriving, not sliding.
         case .media:    .init(dx: 0, dy: 10, scale: 0.97, step: 0.035)
-        case .social:   .init(dx: 0, dy: 12, scale: 0.98, step: 0.035)
+        case .social, .x: .init(dx: 0, dy: 12, scale: 0.98, step: 0.035)
         default:        .init(dx: 0, dy: 8, scale: 1, step: 0.028)
         }
     }
@@ -4041,6 +4058,28 @@ struct FeedScreen: View {
                     // Item 6 (2026-07-27): a head with folded-in self-replies
                     // reads as one thread card; everything else is a plain post.
                     SocialThreadCard(head: thing, replies: kids)
+                } else {
+                    PostCard(thing: thing)
+                }
+            // The X room (2026-08-06). A post reads as a post, and that
+            // includes a LIKED one — it is somebody else's post, and
+            // `XArchiveImport.fetchFaces` has stamped its author since the
+            // seat shipped, which is the field `PostCard` leads with.
+            //
+            // Two rows here are not posts and say so by being something else:
+            // the app's own import receipt (a `.note` by kind, but the one row
+            // in the room nobody wrote — it keeps the plain band it wears in
+            // All) and a DM conversation, which is a transcript and reads as
+            // the excerpt every other chat room draws.
+            case .x:
+                if Corpus.isImportReceipt(thing) {
+                    BandRow(thing: thing,
+                            emphasized: thing.id == nextEventID,
+                            live: false,
+                            imageOnly: imageOnly,
+                            wideArt: wideArt)
+                } else if thing.kind == .chat {
+                    ExcerptRow(thing: thing, lines: 2)
                 } else {
                     PostCard(thing: thing)
                 }

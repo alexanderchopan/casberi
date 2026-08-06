@@ -66,7 +66,15 @@ enum SocialThread {
     /// and a channel but no thread API and no profile lookup to back those,
     /// so it earns only this half — `isSocial`/`sources` above stay the
     /// thread-capable set, untouched.
-    static let contextSources: Set<String> = sources.union(["Slack"])
+    ///
+    /// X joined on the same terms (2026-08-06). Its archive has an author and
+    /// a provenance word ("Liked") and will never have a thread API or a
+    /// profile lookup — X has no free read left at all — so it earns this half
+    /// and not the other, exactly like Slack. It is what tells the two halves
+    /// of that room apart once every row renders as a post card: your own
+    /// writing and posts you liked, which otherwise differ only by a handle
+    /// that `fetchFaces` may not have named yet.
+    static let contextSources: Set<String> = sources.union(["Slack", "X"])
     static func hasContext(_ source: String) -> Bool { contextSources.contains(source) }
 
     /// How many replies a thread fetch returns — the sheet shows this many at
