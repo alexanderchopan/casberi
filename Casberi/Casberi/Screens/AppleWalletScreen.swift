@@ -42,7 +42,7 @@ struct AppleWalletScreen: View {
             BridgeSetupHeader(
                 name: "Apple Wallet",
                 mode: .onThisDevice,
-                intro: "Grant access once and your Apple Card, Apple Cash and Savings transactions keep arriving — the only source that knows where you actually shopped. United States only, and it needs iOS 17.4 or later.",
+                intro: "Apple Card, Apple Cash and Savings, with the merchant's real name. United States only, iOS 17.4 or later.",
                 connected: isConnected,
                 flipTrigger: flipTrigger)
 
@@ -90,11 +90,9 @@ struct AppleWalletScreen: View {
             // §220's rule, and numerals here would send the eye hunting for a
             // step 1 that doesn't exist.
             BridgeStepLines(steps: [
-                String(localized: "Reads: the merchant, the amount, and when."),
-                String(localized: "Goes: nowhere. Read and stored on this \(DS.device). Casberi has no server."),
-                String(localized: "Never: uploaded, sold, or used for advertising."),
-                String(localized: "Can't: spend, move money, or change anything."),
-                String(localized: "Stopping: disconnect and everything it brought in is deleted."),
+                String(localized: "Read on this \(DS.device). Casberi has no server, so nothing is uploaded or sold."),
+                String(localized: "It can't spend or move money."),
+                String(localized: "Disconnect and everything it brought in is deleted."),
             ], numbered: false)
         } header: {
             Text("Before you connect")
@@ -116,10 +114,6 @@ struct AppleWalletScreen: View {
                 }
             }
             .disabled(connecting)
-        } footer: {
-            Text("Apple will ask you which accounts to share. You choose each one, and you can change it later in Settings.")
-                .dsText(.label11)
-                .foregroundStyle(DS.textTertiary)
         }
     }
 
@@ -128,10 +122,7 @@ struct AppleWalletScreen: View {
     /// rule (§83).
     private var unavailableSection: some View {
         Section {
-            Text("This iPhone can't share financial data.")
-                .dsText(.body17)
-                .foregroundStyle(DS.textPrimary)
-            Text("FinanceKit needs iOS 17.4 or later, and Apple Card, Apple Cash and Savings are only available in the United States.")
+            Text("This \(DS.device) can't share financial data. It's US-only, and needs iOS 17.4.")
                 .dsText(.subhead13)
                 .foregroundStyle(DS.textSecondary)
         }
@@ -160,7 +151,7 @@ struct AppleWalletScreen: View {
         } header: {
             Text("Balances")
         } footer: {
-            Text("Read on this iPhone, refreshed as you use the app. Shown per account — they're never added together.")
+            Text("Never added together.")
                 .dsText(.label11)
                 .foregroundStyle(DS.textTertiary)
         }
