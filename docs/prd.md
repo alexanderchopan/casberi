@@ -18014,3 +18014,25 @@ that answers it exactly. §307 made a source name a filter deliberately and that
 ruling stands; what it lacks is a fallback when the scoped read comes back empty
 and the unscoped one would not. That is a product decision about §307, not a
 scoring bug, so it is recorded rather than quietly changed.
+
+### §318 amendment 2 — a source scope that empties the answer (2026-08-06)
+
+§318's amendment recorded "onchain wallet analytics returns NOTHING" as an open
+product decision rather than a bug, because §307 made a source name a filter on
+purpose. Ruled: the scope is TRIED FIRST and kept whenever it answers; only a
+scoped read that comes back EMPTY falls through to the whole corpus, where the
+source name scores as the ordinary word it also is.
+
+Nothing §307 fixed is affected — those queries return rows, and a non-empty
+result never reaches the fallback. What changes is only the case where the app
+previously said "nothing matches" while holding a row that answered exactly:
+"wallet" resolved to the Wallet bridge, scoped to four transactions, stripped
+itself from the terms, and hid a Circle x402 row titled "Onchain alpha, wallet
+flow, and DEX analytics". Measured on the same corpus: 0 → 4 hits with that row
+first, while "wallet" and "my wallet" still return the Wallet room's own four
+transactions and nothing else.
+
+The general rule this instance belongs to: a filter derived from the person's
+words is a GUESS about what they meant, and a guess that empties the result was
+wrong. Both halves are mutation-tested — removing the fallback restores the
+wall, and firing it when the scope already answered undoes §307.

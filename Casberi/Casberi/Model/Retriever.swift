@@ -27,6 +27,32 @@ enum Retriever {
     /// sentence-embedding pass (a narrowed pool carries no new words of its
     /// own to re-embed against).
     static func rank(_ query: String, in corpus: [Thing], isPoolRefinement: Bool) -> [Thing] {
+        let scoped = rank(query, in: corpus, isPoolRefinement: isPoolRefinement,
+                          honourSource: true)
+        guard scoped.isEmpty else { return scoped }
+        // A SOURCE FILTER THAT EMPTIES THE ANSWER IS NOT A FILTER, IT IS A WALL
+        // (2026-08-06, prd §318 amendment 2). §307 made a source name scope the
+        // search and that ruling stands — "my X stuff" over a 3,500-post archive
+        // must mean the X room. But a source name is often an ordinary word that
+        // merely happens to be an app's: measured, "onchain wallet analytics"
+        // returned NOTHING, because "wallet" resolved to the Wallet bridge,
+        // scoped the search to four transactions and stripped itself from the
+        // terms — while a Circle x402 row titled "Onchain alpha, wallet flow,
+        // and DEX analytics" answered the question exactly.
+        //
+        // So the scope is TRIED FIRST and kept whenever it answers; only a
+        // scoped read that comes back empty falls through to the whole corpus,
+        // where the source name scores as the ordinary word it was. Every query
+        // §307 fixed is unaffected — those return rows, and a non-empty result
+        // never reaches this line.
+        guard let named = Self.sourceFilter(in: query),
+              corpus.contains(where: { $0.source == named.source }) else { return scoped }
+        return rank(query, in: corpus, isPoolRefinement: isPoolRefinement,
+                    honourSource: false)
+    }
+
+    private static func rank(_ query: String, in corpus: [Thing], isPoolRefinement: Bool,
+                             honourSource: Bool) -> [Thing] {
         // A SOURCE word is a filter too (2026-08-05) — the other half of what
         // a thing is, and the half this engine could not see. Resolved off the
         // whole query before it's split, because a source name can be two
@@ -41,7 +67,7 @@ enum Retriever {
         // and the words score normally, so a wrong resolution costs nothing.
         // (The caller may hand us a corpus already scoped to that source; then
         // this is trivially true and the filter is a no-op re-check.)
-        let named = Self.sourceFilter(in: query)
+        let named = honourSource ? Self.sourceFilter(in: query) : nil
         let sourceMatch = named.flatMap { match in
             corpus.contains { $0.source == match.source } ? match : nil
         }

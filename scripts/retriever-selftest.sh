@@ -379,6 +379,21 @@ let vogue = Thing(title: "Vogue just gave another nod of approval to the tech wo
 check("a synonym for one word of two does not answer",
       rank("climate change", [vogue] + (1...3).map { Thing(title: "filler \($0)") }).isEmpty)
 
+print("a source scope that empties the answer falls through to the whole corpus")
+// The measured case: "wallet" is an app name AND an ordinary word. Scoping to
+// the Wallet room finds nothing, while the x402 row answers exactly — before
+// the fallback this query returned NOTHING.
+let txn = Thing(title: "Swapped 0.5 ETH", source: "Photos")   // a real room, no match
+let x402 = Thing(title: "EMC2 · Onchain alpha, wallet flow, and DEX analytics",
+                 source: "Circle x402", kind: .link)
+check("a scoped read that comes back empty falls through",
+      rank("onchain photos analytics", [txn, x402]).contains(x402.title))
+// …and the scope is KEPT whenever it answers, which is §307's whole ruling.
+let inRoom = Thing(title: "Receipt for the hotel", source: "Photos", kind: .screenshot)
+let elsewhereSame = Thing(title: "Receipt for the hotel", source: "Gmail", kind: .link)
+check("a scope that answers is not widened",
+      rank("photos receipt", [inRoom, elsewhereSame]) == [inRoom.title])
+
 print("the honest-nothing path survives")
 check("a query nothing says returns nothing",
       rank("tokyo", [all4, one4, two4]).isEmpty)
@@ -523,6 +538,10 @@ mutate "rarity removed from rank (every word weighs the same)" \
   'let weight = idf[term] ?? 1' 'let weight = 1.0'
 mutate "the phrase bonus removed from rank" \
   'if entry.titleText.contains(pair) { score += 2.5 }' ''
+mutate "the empty-scope fallback removed (an app-named word walls the answer)" \
+  'honourSource: false)' 'honourSource: true)'
+mutate "the fallback fires even when the scope answered (§307 undone)" \
+  'guard scoped.isEmpty else { return scoped }' ''
 mutate "the relevance floor removed (common-word noise returns)" \
   'if !strongMeaning { return nil }' ''
 mutate "a synonym credited in FULL (a neighbour of one word answers a two-word query)" \
