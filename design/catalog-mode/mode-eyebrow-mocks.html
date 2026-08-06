@@ -1,0 +1,299 @@
+<title>How it connects, one tap earlier — the product page eyebrow</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #1673e6; --confirm: #32d74b; --down: #ff5a5f; --warn: #ffb340;
+    --card: rgba(22,24,31,.82);
+    --ig: #e1306c; --ph: #5e9ee6; --bs: #0285ff; --st: #635bff;
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body {
+    font-family: var(--text); color: var(--ink);
+    background: radial-gradient(900px 420px at 18% -8%, rgba(225,48,108,.10), transparent 62%), var(--page);
+    padding: 44px 26px 90px;
+  }
+  .wrap { max-width: 1320px; margin: 0 auto; }
+  header.top { max-width: 860px; margin-bottom: 8px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: #b9c2d6; margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.6vw,38px); font-weight: 800; letter-spacing: -.02em; line-height: 1.08; text-wrap: balance; margin-bottom: 14px; }
+  header.top p { font-size: 15px; line-height: 1.62; color: var(--muted); max-width: 72ch; margin-bottom: 10px; }
+  header.top p b { color: var(--ink); font-weight: 650; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .93em; color: #cbd2e2; }
+
+  h2.sec { font-size: 20px; font-weight: 800; letter-spacing: -.015em; margin: 54px 0 6px; }
+  h2.sec span { color: var(--faint); font-weight: 600; font-size: 15px; }
+  p.lede { font-size: 14px; line-height: 1.62; color: var(--muted); max-width: 76ch; margin-bottom: 26px; }
+  p.lede b { color: var(--ink); font-weight: 650; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 30px; align-items: flex-start; }
+  .option { width: 300px; }
+  .phone { width: 300px; border-radius: 42px; padding: 9px; background: #16181d; box-shadow: 0 26px 62px rgba(0,0,0,.55); position: relative; }
+  .statebadge { position: absolute; top: -13px; left: 50%; transform: translateX(-50%);
+    font-size: 10.5px; font-weight: 800; padding: 5px 13px; border-radius: 999px;
+    background: #262b38; color: var(--muted); white-space: nowrap; z-index: 3; letter-spacing: .02em; }
+  .statebadge.now { background: rgba(255,90,95,.15); color: var(--down); }
+  .statebadge.pick { background: rgba(50,215,75,.16); color: var(--confirm); }
+  .screen { border-radius: 34px; overflow: hidden; position: relative; padding: 16px 15px 20px; min-height: 470px; background: #000; }
+  .screen.ig { background: linear-gradient(180deg, rgba(225,48,108,.34) 0%, rgba(225,48,108,.30) 22%, rgba(225,48,108,0) 74%) top/100% 300px no-repeat, #000; }
+  .screen.ph { background: linear-gradient(180deg, rgba(94,158,230,.32) 0%, rgba(94,158,230,.28) 22%, rgba(94,158,230,0) 74%) top/100% 300px no-repeat, #000; }
+  .screen.bs { background: linear-gradient(180deg, rgba(2,133,255,.32) 0%, rgba(2,133,255,.28) 22%, rgba(2,133,255,0) 74%) top/100% 300px no-repeat, #000; }
+  .screen.st { background: linear-gradient(180deg, rgba(99,91,255,.32) 0%, rgba(99,91,255,.28) 22%, rgba(99,91,255,0) 74%) top/100% 300px no-repeat, #000; }
+  .caption { margin-top: 16px; padding: 0 4px; }
+  .caption h3 { font-size: 15.5px; font-weight: 750; margin-bottom: 6px; }
+  .caption p { font-size: 13px; line-height: 1.58; color: var(--muted); }
+  .caption p + p { margin-top: 7px; }
+  .caption b { color: #dfe4ee; font-weight: 650; }
+  .caption .risk { display: block; margin-top: 8px; font-size: 12.5px; color: var(--faint); }
+  .caption .risk b { color: #cbd2e2; }
+
+  /* iOS chrome */
+  .nav { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+  .nav .back { color: #fff; font-weight: 600; opacity: .9; }
+
+  /* product page atoms */
+  .prodhead { display: flex; gap: 12px; align-items: flex-start; }
+  .mark { width: 64px; height: 64px; border-radius: 16px; flex: none; display: flex; align-items: center; justify-content: center;
+          font-size: 27px; font-weight: 800; color: #fff; }
+  .mark.ig { background: linear-gradient(150deg,#f9a03f,#e1306c 52%,#7b3fe4); }
+  .mark.ph { background: linear-gradient(150deg,#7fc0f5,#5e9ee6); }
+  .mark.bs { background: linear-gradient(150deg,#4aa8ff,#0285ff); }
+  .mark.st { background: linear-gradient(150deg,#8b85ff,#635bff); }
+  .prodhead .t { min-width: 0; }
+  .prodhead .t .grp { font-size: 11px; color: rgba(255,255,255,.52); font-weight: 600; letter-spacing: .01em; }
+  .prodhead .t .grp.q { color: #fff; opacity: .92; font-weight: 700; }
+  .prodhead .t .grp em { font-style: normal; color: rgba(255,255,255,.42); font-weight: 600; }
+  .prodhead .t .nm { font-size: 21px; font-weight: 800; letter-spacing: -.012em; margin-top: 1px; }
+  .prodhead .t .tag { font-size: 12.5px; color: rgba(255,255,255,.66); margin-top: 3px; line-height: 1.4; }
+  .cta { display: inline-flex; align-items: center; margin-top: 11px; font-size: 12.5px; font-weight: 750;
+         color: #fff; background: var(--tint); border-radius: 999px; padding: 7px 19px; }
+
+  /* the mode chip, as the connect page already draws it */
+  .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700;
+          color: #fff; background: rgba(255,255,255,.15); border-radius: 999px; padding: 5px 11px; }
+  .chip .g { font-size: 10.5px; opacity: .85; }
+  .chiprow { margin-top: 12px; }
+
+  .lab { font-size: 10.5px; color: var(--faint); font-weight: 600; margin: 20px 0 7px; letter-spacing: .02em; }
+  .body { font-size: 12.5px; line-height: 1.55; color: #dfe4ee; }
+  .body + .body { margin-top: 9px; }
+  .fade { -webkit-mask-image: linear-gradient(180deg,#000 60%,transparent); mask-image: linear-gradient(180deg,#000 60%,transparent); }
+
+  .flags { list-style: none; margin: 20px 0 0; padding: 0; max-width: 76ch; }
+  .flags li { font-size: 13px; color: var(--muted); line-height: 1.58; margin: 9px 0; padding-left: 22px; position: relative; }
+  .flags li::before { content: "●"; position: absolute; left: 4px; color: var(--tint); font-size: 9px; top: 5px; }
+  .flags li b { color: var(--ink); font-weight: 650; }
+  .flags.bad li::before { color: var(--down); }
+
+  .rule { height: 1px; background: transparent; margin: 8px 0; }
+</style>
+
+<div class="wrap">
+<header class="top">
+  <div class="eyebrow">Catalog · product page (AppDetailScreen)</div>
+  <h1>Say how it connects one tap earlier</h1>
+  <p>The fact already exists and is already computed: <code>BridgeCatalog.Offer.qualifier</code> → <b>One tap</b> / <b>No account</b> / <b>Import</b>, derived from how the bridge connects. Today it renders only on a Discover story card. The product page's eyebrow prints the group instead — <b>Network</b> — which is the least useful word on the page, since you arrived from the Network shelf or from search.</p>
+  <p>Four takes on the same header. Everything below the header is unchanged, and the connect page keeps its own chip exactly as it is.</p>
+</header>
+
+<h2 class="sec">Instagram <span>— the app someone opens expecting a live feed</span></h2>
+<p class="lede">Same page, same summary, same Connect. Only the line above the name moves.</p>
+
+<div class="row">
+
+  <!-- TODAY -->
+  <div class="option">
+    <div class="phone">
+      <div class="statebadge now">Today</div>
+      <div class="screen ig">
+        <div class="nav"><span class="back">‹ Apps</span></div>
+        <div class="prodhead">
+          <div class="mark ig">◉</div>
+          <div class="t">
+            <div class="grp">Network</div>
+            <div class="nm">Instagram</div>
+            <div class="tag">Your posts and saves, findable</div>
+            <div class="cta">Connect</div>
+          </div>
+        </div>
+        <div class="lab">WHAT IT DOES</div>
+        <div class="body fade">Instagram only lets you export your account — a folder you'll never open again.<br><br>Casberi lets you actually use it: everything you wrote becomes text you can search, everything you saved becomes a link you can tap.</div>
+      </div>
+    </div>
+    <div class="caption">
+      <h3>Nothing says it's an import</h3>
+      <p>“Network”, “Your posts and saves, findable”, and a blue <b>Connect</b>. Every signal reads like Bluesky's page. The word <em>export</em> is in the summary's first line — but below the fold on a small phone, and only for someone who reads prose before tapping the button.</p>
+      <p class="risk"><b>The failure:</b> tap Connect, get a folder picker, and learn the terms after committing.</p>
+    </div>
+  </div>
+
+  <!-- A -->
+  <div class="option">
+    <div class="phone">
+      <div class="statebadge pick">Option A · replace</div>
+      <div class="screen ig">
+        <div class="nav"><span class="back">‹ Apps</span></div>
+        <div class="prodhead">
+          <div class="mark ig">◉</div>
+          <div class="t">
+            <div class="grp q">Import</div>
+            <div class="nm">Instagram</div>
+            <div class="tag">Your posts and saves, findable</div>
+            <div class="cta">Connect</div>
+          </div>
+        </div>
+        <div class="lab">WHAT IT DOES</div>
+        <div class="body fade">Instagram only lets you export your account — a folder you'll never open again.<br><br>Casberi lets you actually use it: everything you wrote becomes text you can search, everything you saved becomes a link you can tap.</div>
+      </div>
+    </div>
+    <div class="caption">
+      <h3><code>qualifier ?? group</code></h3>
+      <p>One word, in the slot the eye already lands on before the name. No new UI, no new copy to write or translate — 55 offers covered by a property that exists.</p>
+      <p class="risk"><b>Cost:</b> the group disappears on the ~30 offers that have a qualifier. Ask yourself whether “Network” was ever doing work here.</p>
+    </div>
+  </div>
+
+  <!-- B -->
+  <div class="option">
+    <div class="phone">
+      <div class="statebadge">Option B · both</div>
+      <div class="screen ig">
+        <div class="nav"><span class="back">‹ Apps</span></div>
+        <div class="prodhead">
+          <div class="mark ig">◉</div>
+          <div class="t">
+            <div class="grp q">Import <em>· Network</em></div>
+            <div class="nm">Instagram</div>
+            <div class="tag">Your posts and saves, findable</div>
+            <div class="cta">Connect</div>
+          </div>
+        </div>
+        <div class="lab">WHAT IT DOES</div>
+        <div class="body fade">Instagram only lets you export your account — a folder you'll never open again.<br><br>Casberi lets you actually use it: everything you wrote becomes text you can search, everything you saved becomes a link you can tap.</div>
+      </div>
+    </div>
+    <div class="caption">
+      <h3>Qualifier leads, group trails</h3>
+      <p>Keeps the taxonomy. The differentiating fact takes the strong position and the group recedes to the dimmer ink — the same ordering ruling §303 made for a failed Cursor run, where the outcome leads and the context follows.</p>
+      <p class="risk"><b>Cost:</b> two facts in a 11px line. Reads busier at Dynamic Type sizes.</p>
+    </div>
+  </div>
+
+  <!-- C -->
+  <div class="option">
+    <div class="phone">
+      <div class="statebadge">Option C · the real chip</div>
+      <div class="screen ig">
+        <div class="nav"><span class="back">‹ Apps</span></div>
+        <div class="prodhead">
+          <div class="mark ig">◉</div>
+          <div class="t">
+            <div class="grp">Network</div>
+            <div class="nm">Instagram</div>
+            <div class="tag">Your posts and saves, findable</div>
+            <div class="chiprow"><span class="chip"><span class="g">⤓</span>One-time import</span></div>
+            <div class="cta">Connect</div>
+          </div>
+        </div>
+        <div class="lab">WHAT IT DOES</div>
+        <div class="body fade">Instagram only lets you export your account — a folder you'll never open again.<br><br>Casberi lets you actually use it: everything you wrote becomes text you can search.</div>
+      </div>
+    </div>
+    <div class="caption">
+      <h3><code>BridgeSetupMode</code>, moved up</h3>
+      <p>The connect page's own chip — same glyph, same six-case vocabulary, same words. <b>“One-time import”</b> is unambiguous where the terse “Import” still needs a beat to parse.</p>
+      <p class="risk"><b>Cost:</b> a second badge stacked over the Connect button, and the chip then appears twice in one flow. Also needs <code>mode</code> lifted onto <code>Offer</code> — the other three don't.</p>
+    </div>
+  </div>
+
+</div>
+
+<h2 class="sec">Does the system hold? <span>— the same slot on three other apps</span></h2>
+<p class="lede">Shown as Option A. The badge earns its place only when the fact differentiates, so an app with no qualifier keeps its group — which is what stops this becoming the wallpaper you deleted from the catalog rows on 2026-07-16.</p>
+
+<div class="row">
+
+  <div class="option">
+    <div class="phone">
+      <div class="screen ph">
+        <div class="nav"><span class="back">‹ Apps</span></div>
+        <div class="prodhead">
+          <div class="mark ph">❖</div>
+          <div class="t">
+            <div class="grp q">One tap</div>
+            <div class="nm">Photos</div>
+            <div class="tag">Screenshots, straight to your feed</div>
+            <div class="cta">Connect</div>
+          </div>
+        </div>
+        <div class="lab">WHAT IT DOES</div>
+        <div class="body fade">The screenshots you take flow into your feed, searchable by what's in them — no album to dig through.</div>
+      </div>
+    </div>
+    <div class="caption">
+      <h3>The reassurance, free</h3>
+      <p>This is the other half of the sentence you were going to write on onboarding — “Apple apps are one tap” — except it's stated on the page where someone is deciding, per app, computed rather than claimed.</p>
+    </div>
+  </div>
+
+  <div class="option">
+    <div class="phone">
+      <div class="screen bs">
+        <div class="nav"><span class="back">‹ Apps</span></div>
+        <div class="prodhead">
+          <div class="mark bs">✤</div>
+          <div class="t">
+            <div class="grp q">No account</div>
+            <div class="nm">Bluesky</div>
+            <div class="tag">Track any Bluesky account</div>
+            <div class="cta">Connect</div>
+          </div>
+        </div>
+        <div class="lab">WHAT IT DOES</div>
+        <div class="body fade">Built on an open protocol — posts are public, so this connects with just a handle: your own or anyone's, and mentions of them can land too.</div>
+      </div>
+    </div>
+    <div class="caption">
+      <h3>The live one, named as such</h3>
+      <p>Sitting beside Instagram in the same shelf, the contrast is the whole point: one says <b>No account</b>, one says <b>Import</b>, before either is tapped.</p>
+    </div>
+  </div>
+
+  <div class="option">
+    <div class="phone">
+      <div class="screen st">
+        <div class="nav"><span class="back">‹ Apps</span></div>
+        <div class="prodhead">
+          <div class="mark st">§</div>
+          <div class="t">
+            <div class="grp">Work</div>
+            <div class="nm">Stripe</div>
+            <div class="tag">What your money did today</div>
+            <div class="cta">Connect</div>
+          </div>
+        </div>
+        <div class="lab">WHAT IT DOES</div>
+        <div class="body fade">The five things that happen to money, landing in your feed as they happen — disputes opened and closed, payouts, canceled subscriptions, failed payments.</div>
+      </div>
+    </div>
+    <div class="caption">
+      <h3>No qualifier → unchanged</h3>
+      <p>A pasted-key bridge has no qualifier today, so its page is exactly what it is now. Nothing to review, nothing to translate.</p>
+      <p class="risk"><b>Open question:</b> should <code>qualifier</code> gain a fourth case, <b>Paste a key</b>? It's the mode people most want to know before tapping — but it also puts a badge on ~20 more pages.</p>
+    </div>
+  </div>
+
+</div>
+
+<h2 class="sec">What this does and doesn't fix</h2>
+<ul class="flags">
+  <li><b>Fixes:</b> the person who opens Instagram, X, Snapchat or TikTok first now reads how it connects before tapping Connect, in the app's own six-case vocabulary rather than a paragraph they'd have to remember from onboarding.</li>
+  <li><b>Doesn't fix:</b> the catalog grid. Row 1 still shows name + tagline only, and “Your posts and saves, findable” still reads like a live feed. If that's the surface that matters, the fix there is the four taglines, not a badge — you already ruled a badge on every row is wallpaper.</li>
+  <li><b>Doesn't touch:</b> the connect page. Its chip, intro sentence and §315 prose budget are unchanged; this is the same fact stated one step earlier, not a second copy of it.</li>
+</ul>
+<ul class="flags bad">
+  <li>Every option costs one edit in <code>AppDetailScreen.header</code>. Option C additionally needs <code>BridgeSetupMode</code> lifted from the setup screens onto <code>Offer</code> — worth doing on its own merits (it would let <code>setup-copy-audit.py</code> assert every connectable offer declares a mode), but it's a bigger change than the eyebrow.</li>
+</ul>
+</div>
