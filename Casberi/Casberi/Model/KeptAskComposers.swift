@@ -72,6 +72,7 @@ enum KeptAskComposers {
             return handleRecap(String(kind.dropFirst("handle:".count)), things: things)
         }
         if kind == "throwback" { return throwback(things) }
+        if kind == "moneyflow" { return moneyFlow(things) }
         if kind.hasPrefix("search:") {
             return search(String(kind.dropFirst("search:".count)), things: things)
         }
@@ -868,6 +869,104 @@ enum KeptAskComposers {
         return Result(delta: "\(hits.count) things", digest: "\(hits.count)",
                       doc: ["root = Stack([ins, res])", "ins = Insight(\"\(genSafe(line))\")"]
                           + rows(Array(hits.prefix(6)), title: "Matches"))
+    }
+
+    // MARK: - Where the money went
+
+    /// The money's LIFECYCLE across the four wallet-riding seats (2026-08-05,
+    /// prd §311) — in through Peer, out through the cards, shielded in 0xBow,
+    /// coming back through ether.fi's unstake queue.
+    ///
+    /// THE READ ONLY A CORPUS CAN MAKE, and the reason is structural rather
+    /// than clever: each of those four services can see exactly one leg. Peer
+    /// knows you bought and nothing about what you spent; a card issuer knows
+    /// what you spent and nothing about where it came from; 0xBow knows what
+    /// you shielded and — by design, permanently — cannot know what you did
+    /// next. Only something holding all four rows at once can put them in a
+    /// sentence, and that is the whole argument for a corpus.
+    ///
+    /// Deterministic arithmetic over rows already landed: no request, no
+    /// model, no new field. Every leg reads `priceValue` where it has one and
+    /// COUNTS where it doesn't, because these rows settle in different tokens
+    /// and summing across them to make one number would be exactly the quiet
+    /// arithmetic §83 bans.
+    private static func moneyFlow(_ things: [Thing]) -> Result? {
+        struct Leg { let title: String; let rows: [Thing] }
+        func rows(_ source: String) -> [Thing] {
+            things.filter { $0.source == source && !Corpus.isImportReceipt($0) }
+        }
+        let inbound = rows("Peer")
+        let cards = (rows("Gnosis Pay") + rows("ether.fi"))
+            .filter { $0.kind == .transaction }
+        let shielded = rows("Privacy Pools").filter { $0.tags.contains("Shielded") }
+
+        var lines: [String] = []
+        if !inbound.isEmpty {
+            // The rail is the interesting half — "you funded with Venmo" says
+            // more than a count, and it's stamped now (`PeerBridge`).
+            let rails = Set(inbound.compactMap(\.authorHandle)).sorted()
+            lines.append(rails.isEmpty
+                ? String(localized: "\(inbound.count) in through Peer")
+                : String(localized: "\(inbound.count) in through Peer, via \(rails.joined(separator: " and "))"))
+        }
+        if !cards.isEmpty {
+            // One currency only — see `FeedInsight.cardMonths` for why.
+            let currency = cards.first?.priceCurrency
+            let spent = cards.filter { $0.priceCurrency == currency }
+                .compactMap(\.priceValue).reduce(0, +)
+            let money = PriceFormat.string(spent, currency: currency)
+            lines.append(money.map { String(localized: "\($0) out on cards") }
+                ?? String(localized: "\(cards.count) card purchases"))
+        }
+        if !shielded.isEmpty {
+            let waiting = shielded.filter {
+                $0.tags.contains("Pending") || $0.tags.contains("Needs proof")
+            }.count
+            lines.append(waiting > 0
+                ? String(localized: "\(shielded.count) shielded, \(waiting) still clearing")
+                : String(localized: "\(shielded.count) shielded"))
+        }
+        // Two legs minimum. One leg is a fact the room it came from already
+        // states better, and calling that a "flow" would be a shape claiming
+        // more than it has.
+        guard lines.count >= 2 else { return nil }
+
+        let recent = (inbound + cards + shielded)
+            .sorted { $0.capturedAt > $1.capturedAt }
+        return Result(delta: lines.first ?? "", digest: lines.joined(separator: "|"),
+                      doc: ["root = Stack([ins, res])",
+                            "ins = Insight(\"\(genSafe(lines.joined(separator: " · ")))\")"]
+                          + Self.rows(Array(recent.prefix(6)), title: "Where it moved"))
+    }
+
+    /// "How's my card?" / "what's shielded?" / "anything to claim?" — the
+    /// three standing questions the wallet-riding seats answer and that no ask
+    /// reached (2026-08-05, prd §311). `WalletAsk`, `WalletDeFiAsk` and
+    /// `SafeAsk` all existed; these four seats had none, so the only way to
+    /// their rows was to find the chip and scroll.
+    ///
+    /// Each resolves to a SOURCE-scoped recap, which is the deterministic
+    /// answer that already exists — no new composer, no model, and the same
+    /// doc a kept pill would re-run.
+    static func matchesSeatAsk(_ query: String) -> String? {
+        let q = query.lowercased()
+        for phrase in ["my card", "card spending", "what did i spend on my card"]
+        where q.contains(phrase) { return "Gnosis Pay" }
+        for phrase in ["shielded", "privacy pool", "privacy pools", "0xbow"]
+        where q.contains(phrase) { return "Privacy Pools" }
+        for phrase in ["to claim", "unstake", "unstaking", "claimable"]
+        where q.contains(phrase) { return "ether.fi" }
+        for phrase in ["on peer", "my peer", "peer trades"]
+        where q.contains(phrase) { return "Peer" }
+        return nil
+    }
+
+    /// The phrasings that ask for it.
+    static func matchesMoneyFlow(_ query: String) -> Bool {
+        let q = query.lowercased()
+        return q.contains("where did my money go") || q.contains("where my money went")
+            || q.contains("money flow") || q.contains("where's my money")
+            || q.contains("wheres my money") || q.contains("money moved")
     }
 
     // MARK: - On this day, across every import

@@ -484,6 +484,15 @@ enum PeerBridge {
                 capturedAt: times[fill.block] ?? .now,
                 sourceRef: ref)
             thing.walletAddress = wallet
+            // The RAIL as data, not just as words in the title (2026-08-05,
+            // prd §311). `story.method` has always been resolved — it is what
+            // makes the title say "with Venmo" rather than "received" — and it
+            // was only ever interpolated into a string, so nothing could group
+            // on it. `authorHandle` is the groupable slot every other room
+            // ranks on (Instagram's saved authors, X's liked authors), and a
+            // funding rail is exactly that kind of fact: a small fixed
+            // vocabulary you'd want counted. No new field.
+            thing.authorHandle = story.method
             // Rate context (prd §237): a decimals-less token can't honestly
             // scale rawAmount into a real-units figure, so the line stays off.
             if story.token?.decimals != nil {
@@ -795,6 +804,9 @@ enum PeerBridge {
                     capturedAt: Date(timeIntervalSince1970: signal.timestamp),
                     sourceRef: ref)
                 thing.walletAddress = wallet
+                // The rail, on the SELL side too — a board that ranked only
+                // buys would be a ranking of half the room.
+                thing.authorHandle = signal.method
                 if token?.decimals != nil {
                     let story = Story(method: signal.method, currency: signal.currency,
                                       escrow: nil, depositId: nil, token: token,

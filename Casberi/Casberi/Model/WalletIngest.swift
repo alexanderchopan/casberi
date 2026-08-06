@@ -485,6 +485,10 @@ enum WalletIngest {
                                                         addresses: evmAddresses,
                                                         existing: existing)
         added += gnosisPayAdded ?? 0
+        // Rows landed before this seat had a room of its own move ONCE, here,
+        // so the first sync after updating leaves nothing behind in Wallet
+        // (prd §311). Cheap and self-terminating — see `moveToOwnRoomOnce`.
+        EtherFiCash.moveToOwnRoomOnce(context: context)
         // ether.fi Cash card spends ride the same pass (2026-07-31) — one
         // filtered `Spend` read per Cash account on Optimism, plus the credit
         // line's risk crossing. Gated on `isEtherFiSafe`, so a wallet that

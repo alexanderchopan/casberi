@@ -61,6 +61,55 @@ import SwiftData
 ///   remaining capacity $398.10 — and `getMaxBorrowAmount(user, true)` equals
 ///   `debt + remaining` exactly, which is the read checking itself.
 enum EtherFiCash {
+    /// The room these rows live in (2026-08-05, prd §311).
+    ///
+    /// They landed as `"Wallet"` until now, which put a Visa card's purchases
+    /// in the same feed as token transfers and approvals while **Gnosis Pay —
+    /// the identical product, a card settling onchain — has had its own room
+    /// since it shipped**. That was an inconsistency rather than a decision:
+    /// two cards, one diluting the wallet feed and one not.
+    ///
+    /// One room for both halves of the seat, because the catalog offers one
+    /// seat ("ether.fi — Your staked ETH, and the card"). `KindGlyph` and
+    /// `AppIconTile` already answer to this exact name, so the design layer
+    /// needed nothing.
+    static let source = "ether.fi"
+
+    private static let roomMoveKey = "etherfi.roomMove.v1"
+
+    /// Moves rows landed BEFORE this seat had a room of its own (prd §311).
+    ///
+    /// Without it the fix reaches only spends and unstake requests landed from
+    /// today on, and everything already in the corpus stays filed under
+    /// "Wallet" — so the new room opens half empty while the wallet feed keeps
+    /// the other half, which is worse than either arrangement alone. The
+    /// `recheckContractsOnce` precedent (§294), same shape and same reason.
+    ///
+    /// Keyed on the `sourceRef` PREFIXES this seat has always written, so it
+    /// can never move a row that wasn't ours. Runs once per install; a person
+    /// who never used ether.fi pays one empty fetch, once, ever.
+    @MainActor
+    static func moveToOwnRoomOnce(context: ModelContext) {
+        guard !UserDefaults.standard.bool(forKey: roomMoveKey) else { return }
+        UserDefaults.standard.set(true, forKey: roomMoveKey)
+        let wallet = "Wallet"
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == wallet })
+        guard let rows = try? context.fetch(descriptor) else { return }
+        var moved: [Thing] = []
+        for thing in rows.live {
+            guard let ref = thing.sourceRef,
+                  ref.hasPrefix("etherficash:") || ref.hasPrefix("etherfi:unstake:")
+            else { continue }
+            thing.source = source
+            moved.append(thing)
+        }
+        guard !moved.isEmpty else { return }
+        context.saveHonestly()
+        // Re-donated: the source is part of what Spotlight shows, so a moved
+        // row would otherwise keep naming the room it left.
+        SpotlightIndex.index(moved)
+    }
+
 
     // Production Optimism deployment (`cash-v3`, deployments/mainnet/10).
     private static let dataProvider = "0xDC515Cb479a64552c5A11a57109C314E40A1A778"
@@ -335,7 +384,7 @@ enum EtherFiCash {
                               // Uniswap) already land. The row's own title
                               // still says "with ether.fi Cash", so nothing
                               // about the purchase is lost.
-                              source: "Wallet",
+                              source: source,
                               capturedAt: times[spend.block] ?? .now,
                               sourceRef: ref)
             thing.walletAddress = safe
@@ -381,7 +430,7 @@ enum EtherFiCash {
                 : String(localized: "Your ether.fi Cash credit line is close to its limit — \(debt) owed, health \(String(format: "%.2f", hf))")
             let thing = Thing(kind: .link, title: title,
                               content: "https://app.ether.fi/cash",
-                              source: "Wallet", capturedAt: .now, sourceRef: ref)
+                              source: source, capturedAt: .now, sourceRef: ref)
             thing.walletAddress = account.safe
             context.insert(thing)
             SpotlightIndex.index([thing])
@@ -562,11 +611,11 @@ enum EtherFiCash {
         running = true
         let spends = await syncLocked(
             context: context, addresses: addresses,
-            existing: IngestSupport.existingSourceRefs(context, source: "Wallet"))
+            existing: IngestSupport.existingSourceRefs(context, source: source))
         running = false
         lines.append("spends: \(spends.map(String.init) ?? "FAILED") landed")
         let risk = await syncRisk(context: context, addresses: addresses,
-                                  existing: IngestSupport.existingSourceRefs(context, source: "Wallet"))
+                                  existing: IngestSupport.existingSourceRefs(context, source: source))
         lines.append("risk: \(risk.map(String.init) ?? "FAILED") landed")
         return lines
     }

@@ -478,6 +478,7 @@ enum PrivacyPoolsBridge {
                 content: "https://etherscan.io/tx/\(deposit.txHash)",
                 source: "Privacy Pools",
                 capturedAt: capturedAt,
+                tags: ["Shielded", "Pending"],
                 sourceRef: ref)
             thing.walletAddress = wallet
             // Anonymity-set context (prd §228): how much cover this deposit
@@ -594,6 +595,29 @@ enum PrivacyPoolsBridge {
     /// batched per pool scope (the API's own batching: comma-joined
     /// X-Labels under one X-Pool-Scope). Lands alert things on watched
     /// transitions, prunes terminal entries. Returns alerts landed.
+    /// Moves a deposit row's state tag as the ASP answers (prd §311).
+    ///
+    /// One tag from a fixed set at a time — `Pending` → `Cleared` / `Declined`
+    /// / `Needs proof` — so a row always states exactly one state and the
+    /// room's distribution can never double-count a deposit that changed its
+    /// mind. `Shielded` stays on regardless: it says what the row IS, not how
+    /// the review went.
+    ///
+    /// Silent when the deposit isn't here — a status can arrive for a label
+    /// whose deposit predates the tag or was removed, and inventing a row for
+    /// it would be worse than saying nothing.
+    @MainActor
+    private static func retag(label: String, to state: String, context: ModelContext) {
+        let ref = "privacypools:deposit:" + label
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == ref })
+        guard let thing = (try? context.fetch(descriptor))?.first, thing.isLive else { return }
+        let states = ["Pending", "Cleared", "Declined", "Needs proof"]
+        var tags = thing.tags.filter { !states.contains($0) }
+        tags.append(state)
+        guard tags != thing.tags else { return }
+        thing.tags = tags
+    }
+
     @MainActor
     private static func pollStatuses(context: ModelContext,
                                      existing: Set<String>) async -> Int {
@@ -631,6 +655,15 @@ enum PrivacyPoolsBridge {
             let watching = stored == "pending" || stored == "poi_required"
             switch status {
             case "approved", "declined":
+                // The deposit's OWN row learns its state (2026-08-05, prd
+                // §311). Until now the status lived in the alert's title text
+                // and a UserDefaults watchlist, so nothing could group or
+                // filter on it — the room could not say how much was still
+                // waiting, and "what's pending" had no answer. Re-tagged in
+                // place rather than landed as a new row: a deposit clearing is
+                // the SAME deposit, and its alert is already the news.
+                retag(label: label, to: status == "approved" ? "Cleared" : "Declined",
+                      context: context)
                 if watching {
                     let what = "\(e["amount"] ?? "") \(e["symbol"] ?? "")"
                         .trimmingCharacters(in: .whitespaces)
@@ -670,6 +703,7 @@ enum PrivacyPoolsBridge {
                 // declined, which alerts through the case above. UNMEASURED
                 // live — built to the documented enum, re-measure before
                 // trusting the copy.
+                retag(label: label, to: "Needs proof", context: context)
                 if watching, stored == "pending" {
                     let what = "\(e["amount"] ?? "") \(e["symbol"] ?? "")"
                         .trimmingCharacters(in: .whitespaces)

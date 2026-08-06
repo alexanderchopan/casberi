@@ -16940,3 +16940,77 @@ in the file and a wrong parse would land garbage in a searchable index.
 Guarded in `scripts/x-selftest.sh`: chunked landing, the yield (chunking without
 one buys nothing), receipt-after-rows, the thumbnail size, the path fence, the
 DM gate on all three, and removal's scope. Mutation-proven.
+
+## §311 — The wallet-riding seats get rooms worth opening (user: "what more can we do with 0xbow and Peer and EtherFi and Gnosis Pay" → "Do all", then "Card spends for EtherFi we definitely should do!" → "but not for notifications", 2026-08-05)
+
+Four seats that ride the watched wallets — no account, no key — and all four
+led with nothing. Unlike the import work, these are the best-MEASURED code in
+the app (Peer live-verified 2026-07-17, Gnosis Pay 2026-07-26, ether.fi
+2026-07-31, 0xBow 2026-07-22), so building on them carried unusually low risk.
+
+**ether.fi Cash got its own room.** It landed as `source: "Wallet"` while
+**Gnosis Pay — the identical product, a card settling onchain — has had its own
+room since it shipped**. Two cards, one diluting the wallet feed and one not:
+an inconsistency, not a decision. Both halves of the seat (Cash spends and the
+unstake queue) now land as `"ether.fi"`, matching the one catalog offer, and
+`KindGlyph`/`AppIconTile` already answered to that exact name. Rows landed
+before the move are re-pointed ONCE by `moveToOwnRoomOnce` — keyed on the
+`sourceRef` prefixes this seat has always written, so it can never move a row
+that wasn't ours (the `recheckContractsOnce` precedent, §294). Without it the
+new room would open half empty while Wallet kept the other half, which is worse
+than either arrangement alone.
+
+**Every room now draws something.** Peer ranks on the funding RAIL — which
+`PeerBridge` has always resolved (it is what makes a title read "with Venmo")
+and, until now, only ever interpolated into a string, so nothing could group on
+it. Stamped on `authorHandle`, the same slot Instagram and X rank authors in, on
+both the buy and sell paths (a board over half the room is a ranking of half the
+room). Both cards get `cardMonths`, month-by-month spend off the `priceValue`
+both bridges already stamp — **and the ceiling is the point**: merchant, MCC and
+original currency never reach the chain, so this can say WHEN and HOW MUCH and
+can never say WHERE. The "top merchants" board a card reader expects is the one
+thing this data cannot support, and building it would mean inventing labels. One
+currency only; summing EUR into USD to lengthen a bar is §83's quiet arithmetic.
+
+**Privacy Pools' status became data.** The ASP verdict lived in an alert's title
+text and a UserDefaults watchlist, so the room could not answer "how much is
+still waiting" — the one thing a person with money in a pool wants at a glance.
+Deposits land tagged `Shielded` + `Pending`, and `retag` moves them to
+`Cleared` / `Declined` / `Needs proof` as the poll answers, one state at a time
+so a deposit that changed its mind can't be double-counted. The distribution
+reads those tags, ordered as a JOURNEY rather than by size so it doesn't
+reshuffle on every flip, and counts rather than amounts (a dozen tokens don't
+sum to one number). It also makes "what's pending" answerable by facet.
+
+**The money lifecycle, which is the read only a corpus can make.** In through
+Peer, out through the two cards, shielded in 0xBow. Each of those services sees
+exactly one leg — Peer knows you bought and nothing about what you spent; a card
+issuer knows what you spent and nothing about where it came from; 0xBow cannot
+know what you did next, by design and permanently. Only something holding all
+four at once can put them in a sentence. Two legs minimum: one leg is a fact its
+own room states better, and calling that a "flow" would claim more than it has.
+
+**Notifications: Peer fills only.** A fill is money arriving on somebody else's
+schedule — you started the trade but did not decide when it cleared — which is
+exactly what `moneyIn` is for. `peer:expired:` is excluded by name (a buyer's
+payment fell through; nothing arrived). The ref shapes forced the ordering: a
+buy's ref is bare `peer:<intentHash>`, so a prefix test would have swallowed
+expiries.
+
+**CARD SPENDS ARE DELIBERATELY NOT NOTIFIED** (user's ruling, and it went
+against the "do all" that preceded it — they narrowed it themselves). Both
+bridges land rows that would fit the shape inverted, and your bank already
+buzzes you for every tap, instantly and reliably. §306's discipline is that the
+right-hand slot is the only one this app owns; spending it to repeat a
+notification you already get is noise wearing our icon. The spends still land,
+still rank in the room's bars, and still answer an ask.
+
+**Three asks that didn't exist.** `WalletAsk`, `WalletDeFiAsk` and `SafeAsk` all
+shipped long ago; these four seats had none, so the only route to their rows was
+finding the chip and scrolling. "How's my card?", "what's shielded?", "anything
+to claim?" resolve to the source-scoped recap that already existed.
+
+**Unbuilt, and it must stay unbuilt: 0xBow's loop cannot close.** A normal
+withdrawal is unlinkable — that is the entire product. Deposits, ragequits and
+status flips are the honest surface, and anything appearing to reconcile a
+withdrawal would invent the link the protocol exists to prevent.

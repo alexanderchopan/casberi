@@ -72,6 +72,21 @@ enum FeedInsight {
         // through to it by construction rather than by a special case here.
         case "X":
             return savedAuthors(things)
+        // The wallet-riding seats, 2026-08-05 (prd §311). Each earns a room
+        // and each led with nothing until now.
+        //
+        // Peer ranks on the funding RAIL, which `PeerBridge` has always
+        // resolved (it is what makes a title say "with Venmo") and, until this
+        // date, only ever interpolated into a string. Stamped on
+        // `authorHandle` now — the same groupable slot Instagram and X rank
+        // their authors in — so this is `counted` unchanged.
+        case "Peer":
+            return counted(things, title: "How you fund",
+                           unit: ("trade", "trades"), key: handle)
+        case "Gnosis Pay":
+            return cardMonths(things, title: "What the card spent")
+        case "ether.fi":
+            return cardMonths(things, title: "What the card spent")
         default:
             return nil
         }
@@ -128,6 +143,55 @@ enum FeedInsight {
         }
         return board("Saved", title: "Who you save most", unit: ("save", "saves"))
             ?? board("Liked", title: "Whose posts you like", unit: ("like", "likes"))
+    }
+
+    /// What a card actually spent, month by month (2026-08-05, prd §311).
+    ///
+    /// THE CEILING IS THE POINT, and it is why this is a shape of its own
+    /// rather than a leaderboard. The merchant, the MCC and the original
+    /// currency never reach the chain — that is stated in both card bridges'
+    /// own docs and it is permanent — so this room can honestly say WHEN and
+    /// HOW MUCH and can never say WHERE. A "top merchants" board is the one
+    /// card card readers expect and the one thing this data cannot support;
+    /// building it would mean inventing the labels.
+    ///
+    /// Reads `priceValue`, which both card bridges stamp precisely so an
+    /// amount can be re-formatted and compared. A row without one is left OUT
+    /// rather than counted as zero — an unread amount is not a free purchase.
+    static func cardMonths(_ things: [Thing], title: String) -> Leaderboard? {
+        let calendar = Calendar.current
+        var totals: [String: Double] = [:]
+        var order: [String] = []
+        var currency: String?
+        var spent = 0.0
+        let formatter = DateFormatter()
+        formatter.locale = .current
+        formatter.setLocalizedDateFormatFromTemplate("MMM yyyy")
+        for thing in things {
+            guard thing.kind == .transaction, let value = thing.priceValue, value > 0
+            else { continue }
+            // One currency only. A card settles in whichever stablecoin the
+            // account holds, and summing EUR into USD to make a bar longer is
+            // the kind of quiet arithmetic §83 bans; the majority currency
+            // wins and the rest simply don't count toward these bars.
+            if currency == nil { currency = thing.priceCurrency }
+            guard thing.priceCurrency == currency else { continue }
+            let label = formatter.string(from: thing.capturedAt)
+            if totals[label] == nil { order.append(label) }
+            totals[label, default: 0] += value
+            spent += value
+        }
+        guard totals.count >= 2 else { return nil }
+        let subtitle = PriceFormat.string(spent, currency: currency)
+            .map { String(localized: "\($0) in \(totals.count) months") }
+            ?? String(localized: "\(totals.count) months")
+        // Newest first — a card statement reads backwards from now.
+        let ranked = order.reversed().prefix(12).map { label in
+            LeaderRow(label: label, value: Int((totals[label] ?? 0).rounded()),
+                      detail: PriceFormat.string(totals[label] ?? 0, currency: currency)
+                          ?? WalletIngest.format(totals[label] ?? 0))
+        }
+        return Leaderboard(title: title, subtitle: subtitle, rows: Array(ranked))
     }
 
     /// Count things by a grouping key, rank the top groups, format the subtitle
@@ -207,8 +271,58 @@ enum FeedInsight {
         switch source {
         case "Stocktwits": return stocktwitsMood(things)
         case "Linear":     return linearWorkload(things)
+        case "Privacy Pools": return shieldedReview(things)
         default: return nil
         }
+    }
+
+    /// Where your shielded deposits sit in 0xBow's review (2026-08-05,
+    /// prd §311) — the room's standing question, and the only one it has.
+    ///
+    /// A Privacy Pools room is deposits and status flips, and the flip is the
+    /// whole product: a deposit is not spendable privately until the ASP
+    /// clears it. Until now that state existed only inside an alert's title
+    /// text and a UserDefaults watchlist, so the room could not answer "how
+    /// much is still waiting" — the one thing a person with money in a pool
+    /// wants to know at a glance.
+    ///
+    /// Reads the state TAG `PrivacyPoolsBridge.retag` maintains, never the
+    /// title's words. A deposit carries exactly one state tag at a time, so a
+    /// deposit that cleared can't be counted twice.
+    ///
+    /// COUNTS, not amounts. The room's rows carry their amounts as text in a
+    /// dozen different tokens, and summing across ETH and USDC to make a
+    /// segment longer would be arithmetic nobody asked for (§83). How many
+    /// deposits are in each state is a fact; their total is not one number.
+    private static func shieldedReview(_ things: [Thing]) -> Distribution? {
+        var counts: [String: Int] = [:]
+        for thing in things where thing.tags.contains("Shielded") {
+            for state in ["Pending", "Cleared", "Declined", "Needs proof"]
+            where thing.tags.contains(state) {
+                counts[state, default: 0] += 1
+            }
+        }
+        let total = counts.values.reduce(0, +)
+        guard total >= 2 else { return nil }
+        // Fixed order, so the bar reads as a JOURNEY (waiting → cleared) and
+        // doesn't reshuffle itself every time one deposit changes state.
+        // The tones carry the meaning: waiting is neutral, needing you is the
+        // one that should catch an eye, cleared is the good outcome.
+        let order: [(state: String, tone: Tone)] = [
+            ("Pending", .neutral), ("Needs proof", .negative),
+            ("Cleared", .positive), ("Declined", .alt1),
+        ]
+        let segments = order.compactMap { entry -> Segment? in
+            guard let n = counts[entry.state], n > 0 else { return nil }
+            return Segment(label: entry.state, count: n, tone: entry.tone)
+        }
+        guard segments.count >= 2 else { return nil }
+        let waiting = (counts["Pending"] ?? 0) + (counts["Needs proof"] ?? 0)
+        let subtitle = waiting > 0
+            ? String(localized: "\(waiting) of \(total) still waiting to clear")
+            : String(localized: "\(total) deposits, all reviewed")
+        return Distribution(title: "Where your deposits stand",
+                            subtitle: subtitle, segments: segments)
     }
 
     /// Where your assigned Linear work sits — the tracker's standing question

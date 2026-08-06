@@ -145,6 +145,32 @@ enum NotifySweep {
         if ref.hasPrefix("privacypools:status:") { return .poolCleared }
         if ref.hasPrefix("privacypools:poi:") { return .poolProofNeeded }
 
+        // — Peer: a FILL is money arriving (2026-08-05, prd §311). You started
+        //   the trade, but you did not decide when it settled — an onramp
+        //   clears on somebody else's schedule, and "your dollars are now
+        //   crypto" is exactly the moment `moneyIn` exists for.
+        //
+        //   `peer:sell:` is here too and `peer:expired:` deliberately is not:
+        //   an expiry means a buyer's payment fell through and your funds went
+        //   back where they were — nothing arrived, so nothing is announced,
+        //   and the row in the feed is the honest record of it.
+        //   ORDER MATTERS: a buy's ref is bare `peer:<intentHash>`, so a
+        //   prefix test for it would swallow the other two shapes. Expiry is
+        //   ruled out first, by name, and everything else under `peer:` is a
+        //   settled trade.
+        if ref.hasPrefix("peer:expired:") { return nil }
+        if ref.hasPrefix("peer:") { return .moneyIn }
+
+        // — CARD SPENDS ARE NOT NOTIFIED, and this absence is a decision worth
+        //   writing down because both card bridges land perfectly good rows
+        //   that would fit `moneyIn`'s shape inverted (user's ruling,
+        //   2026-08-05). Your bank and your card app already buzz you for
+        //   every tap, instantly and reliably. §306's whole discipline is that
+        //   the right-hand slot is the only one this app owns, and spending it
+        //   to repeat a notification you already get is not service — it is
+        //   noise wearing our icon. The spends still land, still rank in the
+        //   room's own card-months bars, and still answer an ask.
+
         // — Social: a named person is an event (the module doctrine's own
         //   phrasing). Likes never reach here — they are counts and never land
         //   as rows; their notification is composed at the read site, where the

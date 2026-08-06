@@ -50,6 +50,9 @@ import SwiftData
 /// states them in its Locked tray ("2.4 ETH unstaking") — never priced, per
 /// that type's rule 2.
 enum EtherFiUnstake {
+    /// One room with `EtherFiCash` — see its `source` for why (prd §311).
+    static let source = EtherFiCash.source
+
 
     /// `WithdrawRequestNFT` (proxy). The 2026-06-26 deployment record names an
     /// implementation; this is the address that is actually called.
@@ -267,7 +270,7 @@ enum EtherFiUnstake {
             }
             let thing = Thing(kind: .link, title: fresh,
                               content: "https://app.ether.fi/withdraw",
-                              source: "Wallet", capturedAt: .now, sourceRef: ref)
+                              source: source, capturedAt: .now, sourceRef: ref)
             thing.dueAt = due
             thing.walletAddress = request.owner
             context.insert(thing)
@@ -380,7 +383,7 @@ enum EtherFiUnstake {
         }
         lines.append("queued=\(book.queued.count) claimable=\(book.claimable.count)")
         let landed = await syncEvents(context: context, addresses: addresses,
-                                      existing: IngestSupport.existingSourceRefs(context, source: "Wallet"))
+                                      existing: IngestSupport.existingSourceRefs(context, source: source))
         lines.append("sync: \(landed.map(String.init) ?? "FAILED") landed")
         return lines
     }

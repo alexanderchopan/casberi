@@ -2077,6 +2077,28 @@ struct RootShell: View {
         // Before `matchesUpcoming` because the two vocabularies don't collide
         // and this one is more specific; answered through the composer itself
         // so the typed ask and a kept pill can never drift (§132).
+        // "Where did my money go?" across Peer, the two cards and 0xBow
+        // (2026-08-05, prd §311). Before the wallet branches: those answer
+        // about HOLDINGS, this answers about MOVEMENT, and the words don't
+        // collide.
+        if KeptAskComposers.matchesMoneyFlow(query) {
+            lastAnswerHits = []
+            if let result = await KeptAskComposers.compose("moneyflow", things: allThings(),
+                                                          context: modelContext) {
+                return result.doc
+            }
+        }
+        // The wallet-riding seats' own standing questions (prd §311). After
+        // the money-flow branch, which spans them, and before the generic
+        // named-ask path, whose prefix table these phrasings don't match.
+        if let seat = KeptAskComposers.matchesSeatAsk(query) {
+            lastAnswerHits = []
+            if let result = await KeptAskComposers.compose("context:" + seat,
+                                                          things: allThings(),
+                                                          context: modelContext) {
+                return result.doc
+            }
+        }
         if KeptAskComposers.matchesThrowback(query) {
             lastAnswerHits = []
             if let result = await KeptAskComposers.compose("throwback", things: allThings(),
