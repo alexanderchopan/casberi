@@ -1,0 +1,133 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;transition:none!important}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#EEEAE1;font-family:-apple-system,"Helvetica Neue","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+.mono{font-family:ui-monospace,"SF Mono","Menlo",monospace;}
+.stage{position:absolute;inset:0;overflow:hidden;background:#EEEAE1;}
+.grain{position:absolute;inset:0;opacity:.5;background-image:radial-gradient(circle at 20% 30%, rgba(0,0,0,.03) 0 1px, transparent 1px),radial-gradient(circle at 70% 65%, rgba(0,0,0,.025) 0 1px, transparent 1px);background-size:7px 7px, 9px 9px;}
+.mast{position:absolute;left:70px;right:70px;top:74px;display:flex;justify-content:space-between;font-size:27px;letter-spacing:.16em;color:#14110d;font-weight:600;}
+.rule{position:absolute;left:70px;right:70px;top:126px;height:3px;background:#14110d;transform-origin:left;}
+.wm{position:absolute;right:20px;top:150px;font-size:280px;line-height:.82;white-space:nowrap;text-align:right;font-weight:800;letter-spacing:-.04em;opacity:.08;will-change:opacity,transform;}
+.kick{position:absolute;left:74px;top:196px;font-size:32px;letter-spacing:.14em;font-weight:600;will-change:transform,opacity;}
+.tagpill{position:absolute;left:74px;top:238px;font-size:19px;font-weight:800;letter-spacing:.06em;padding:8px 16px;border-radius:100px;will-change:opacity,transform;}
+.head{position:absolute;left:70px;top:288px;right:70px;font-size:88px;line-height:1.0;font-weight:800;letter-spacing:-.045em;color:#14110d;white-space:pre-line;will-change:transform,opacity;}
+.foot{position:absolute;left:74px;right:74px;bottom:70px;display:flex;justify-content:space-between;font-size:26px;letter-spacing:.12em;color:#14110d;font-weight:600;}
+.wipe{position:absolute;top:-12%;left:0;width:135%;height:124%;transform:skewX(-9deg) translateX(160%);will-change:transform;}
+.comp{position:absolute;left:120px;top:800px;width:840px;height:860px;border-radius:34px;overflow:hidden;box-shadow:34px 40px 0 rgba(20,17,13,.13), inset 0 0 0 1px rgba(255,255,255,.05), 0 30px 70px rgba(20,17,13,.26);opacity:0;will-change:transform,opacity;transform-origin:center top;padding:52px;color:#fff;background:#0d0d09;display:flex;flex-direction:column;justify-content:center;}
+.comp > .shd{position:absolute;top:52px;left:52px;right:52px;margin:0;font-size:24px;letter-spacing:.12em;color:rgba(255,255,255,.45);}
+/* shared row grammar */
+.row{display:flex;align-items:center;gap:20px;padding:22px 24px;border-radius:20px;background:rgba(255,255,255,.05);margin-bottom:16px;will-change:opacity,transform;}
+.pill{flex:none;font-size:19px;font-weight:800;padding:9px 16px;border-radius:11px;font-family:ui-monospace,monospace;}
+.rt{font-size:25px;font-weight:750;line-height:1.3;}
+.rs{font-size:20px;color:rgba(255,255,255,.45);margin-top:4px;}
+.note{margin-top:26px;text-align:center;font-size:22px;font-weight:650;color:rgba(255,255,255,.5);line-height:1.45;will-change:opacity;}
+.note em{font-style:normal;font-weight:750;}
+/* the struck-through tally, used by three of the four */
+.cnt{display:flex;align-items:center;justify-content:space-between;padding:19px 6px;border-bottom:1px solid rgba(255,255,255,.07);will-change:opacity,transform;}
+.cnt .l{font-size:25px;font-weight:650;color:rgba(255,255,255,.55);text-decoration:line-through;text-decoration-color:#FF6B4A;text-decoration-thickness:3px;}
+.cnt .r{font-size:19px;font-weight:800;color:#FF6B4A;letter-spacing:.06em;}
+.keep{display:flex;align-items:center;justify-content:space-between;padding:22px 6px;will-change:opacity,transform;}
+.keep .l{font-size:25px;font-weight:800;color:#fff;}
+.keep .r{font-size:19px;font-weight:800;color:#3fb950;letter-spacing:.06em;}
+
+.creep{background:rgba(255,255,255,.06);border-radius:26px;padding:44px 32px;text-align:center;will-change:opacity,transform;}
+.cline{display:flex;align-items:baseline;justify-content:center;gap:24px;font-family:ui-monospace,monospace;}
+.cline .was{font-size:52px;font-weight:800;color:rgba(255,255,255,.34);text-decoration:line-through;text-decoration-thickness:4px;}
+.cline .arrow{font-size:38px;color:rgba(255,255,255,.4);}
+.cline .now{font-size:76px;font-weight:800;color:#FF6B4A;letter-spacing:-.02em;}
+.cwho{margin-top:22px;font-size:29px;font-weight:750;}
+.bar{margin-bottom:26px;will-change:opacity,transform;}
+.bl{display:flex;justify-content:space-between;font-size:25px;font-weight:750;margin-bottom:12px;}
+.bl span:last-child{font-family:ui-monospace,monospace;color:rgba(255,255,255,.66);}
+.btrack{height:14px;border-radius:100px;background:rgba(255,255,255,.08);overflow:hidden;}
+.btrack i{display:block;height:100%;border-radius:100px;background:#fff;transform-origin:left;will-change:transform;}
+#quiet2{margin-top:34px;}
+.outro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:0 74px;opacity:0;will-change:opacity;}
+.outro .b{font-size:200px;font-weight:800;letter-spacing:-.05em;color:#14110d;line-height:.9;}
+.outro .u{font-size:34px;letter-spacing:.1em;color:#14110d;margin-top:40px;font-weight:600;} .outro .u b{color:#fff;background:#1d1d1f;padding:2px 10px;border-radius:6px;}
+</style></head><body>
+<div class="stage">
+  <div class="grain"></div>
+  <div class="mast mono"><span>CASBERI</span><span>APPLE WALLET</span></div>
+  <div class="rule" id="rule"></div>
+  <div class="wm" id="wm">01</div>
+
+  <div class="comp" id="comp0">
+    <div class="shd mono">WHAT EVERY OTHER CARD CAN SEE</div>
+    <div class="cnt" data-i="0"><span class="l">0.0312 ETH &nbsp;·&nbsp; an address</span><span class="r">ONCHAIN</span></div>
+    <div class="cnt" data-i="1"><span class="l">$6.50 &nbsp;·&nbsp; a card descriptor</span><span class="r">VIRTUAL</span></div>
+    <div class="cnt" data-i="2"><span class="l">£4.20 &nbsp;·&nbsp; a moment</span><span class="r">GNOSIS PAY</span></div>
+    <div class="keep" id="keep0"><span class="l">Blue Bottle Coffee · $6.50</span><span class="r">APPLE CARD</span></div>
+    <div class="note" id="note0">The merchant's real name never touches a chain.<br><em>This is the only source in the app that knows it.</em></div>
+  </div>
+  <div class="comp" id="comp1">
+    <div class="shd mono">THE ONE NOTHING ELSE TELLS YOU</div>
+    <div class="creep" id="creep1">
+      <div class="cline"><span class="was">$15.49</span><span class="arrow">→</span><span class="now">$17.99</span></div>
+      <div class="cwho">Netflix went up 16%</div>
+    </div>
+    <div class="note" id="note1">Your bank pushed you the charge. Nothing pushed you<br><em>the change.</em> Three charges make a cadence; the fourth is news.</div>
+  </div>
+  <div class="comp" id="comp2">
+    <div class="shd mono">WHO YOU ACTUALLY PAY</div>
+    <div class="bar" id="b0"><div class="bl"><span>Whole Foods</span><span>$412</span></div><div class="btrack"><i style="width:78%"></i></div></div>
+    <div class="bar" id="b1"><div class="bl"><span>Blue Bottle Coffee</span><span>$96</span></div><div class="btrack"><i style="width:31%"></i></div></div>
+    <div class="bar" id="b2"><div class="bl"><span>Amazon</span><span>$43</span></div><div class="btrack"><i style="width:14%"></i></div></div>
+    <div class="row" id="quiet2"><span class="pill" style="background:rgba(255,159,10,.18);color:#ff9f0a">Quiet</span><div><div class="rt">Spotify hasn't charged you in 29 days</div><div class="rs">Every ~31 days, until it wasn't</div></div></div>
+    <div class="note" id="note2">Ranked by what you spent, not how often you tapped.</div>
+  </div>
+  <div class="comp" id="comp3">
+    <div class="shd mono">BEFORE YOU CONNECT</div>
+    <div class="cnt" data-j="0"><span class="l">Uploaded anywhere</span><span class="r">NEVER</span></div>
+    <div class="cnt" data-j="1"><span class="l">Sold, or used for ads</span><span class="r">NEVER</span></div>
+    <div class="cnt" data-j="2"><span class="l">Able to spend or move money</span><span class="r">NEVER</span></div>
+    <div class="keep" id="keep3"><span class="l">Disconnect, and it's all deleted</span><span class="r">ONE TAP</span></div>
+    <div class="note" id="note3">Read on your iPhone, stored on your iPhone.<br><em>Casberi has no server to send it to.</em></div>
+  </div>
+  <div class="kick mono" id="kick"></div>
+  <div class="tagpill" id="tagpill"></div>
+  <div class="head" id="head"></div>
+  <div class="foot mono"><span>casberi.app</span><span>—</span></div>
+  <div class="wipe" id="wipe"></div>
+  <div class="outro" id="outro"><div class="b">Casberi</div><div class="u mono"><b>casberi.app</b></div></div>
+</div>
+<script>
+const clamp01=v=>Math.max(0,Math.min(1,v)),easeOut=p=>1-Math.pow(1-p,3),back=p=>{const c=1.7;return 1+(c+1)*Math.pow(p-1,3)+c*Math.pow(p-1,2);};
+const INTRO=0.45,BEAT=3.15,OUT_AT=13.049999999999999,N=4;
+const D=[{"kick":"THE NAME","head":"Every other card\nsees a number.","accent":"#FF6B4A"},{"kick":"THE DELTA","head":"Your bank says $17.99.\nIt was $15.49.","accent":"#14110d"},{"kick":"THE SILENCE","head":"The one that stopped\ncharging you.","accent":"#14110d"},{"kick":"ON DEVICE","head":"No server.\nNothing to upload.","accent":"#3fb950"}];window.TOTAL=14.95;
+const TAGS=["NEW",null,null,null];
+const ACCENT="#1d1d1f";
+const comps=[...document.querySelectorAll('.comp')];
+function stag(sel,p,st,dur,dy){document.querySelectorAll(sel).forEach((r,k)=>{const rp=clamp01((p-k*st)/dur);r.style.opacity=rp;r.style.transform='translateY('+((1-back(rp))*(dy||20))+'px)';});}
+function pop(el,p,from,dur,dy){if(!el)return 0;const rp=clamp01((p-from)/dur);el.style.opacity=rp;el.style.transform='translateY('+((1-back(rp))*(dy||22))+'px)';return rp;}
+function show(id,p,from,dur){const e=document.getElementById(id);if(e)e.style.opacity=clamp01((p-from)/(dur||0.24));}
+window.seek=function(t){
+  let active=Math.max(0,Math.min(N-1,Math.floor((t-INTRO)/BEAT)));
+  const bs=INTRO+active*BEAT, local=t-bs, acc=D[active].accent, pIn=clamp01((local-0.26)/1.9);
+  let coverAcc=acc,wipeX=200;const bounds=[];for(let k=1;k<N;k++)bounds.push({t:INTRO+k*BEAT,c:D[k].accent});bounds.push({t:OUT_AT,c:'#14110d'});
+  for(const b of bounds){const p=(t-(b.t-0.34))/0.68;if(p>=0&&p<=1){wipeX=(1-p)*135-p*135*1.15;coverAcc=b.c;}}
+  const wp=document.getElementById('wipe');wp.style.background=coverAcc;wp.style.transform='skewX(-9deg) translateX('+wipeX+'%)';
+  document.getElementById('rule').style.transform='scaleX('+easeOut(clamp01(t/0.6))+')';
+  const wm=document.getElementById('wm');wm.textContent=D[active].kick;wm.style.fontSize=Math.max(40,Math.min(240,780/(0.6*D[active].kick.length)))+'px';wm.style.color=acc;wm.style.opacity=0.09*clamp01(local/0.4);wm.style.transform='translateY('+((1-easeOut(clamp01(local/0.5)))*30)+'px)';
+  const ki=document.getElementById('kick');ki.textContent=D[active].kick;ki.style.color=acc;const kin=clamp01(local/0.4);ki.style.opacity=easeOut(kin);ki.style.transform='translateX('+((1-easeOut(kin))*-40)+'px)';
+  const tag=document.getElementById('tagpill');
+  if(TAGS[active]){tag.textContent=TAGS[active];tag.style.background=ACCENT;tag.style.color='#fff';tag.style.opacity=easeOut(kin);tag.style.transform='translateX('+((1-easeOut(kin))*-40)+'px)';}
+  else{tag.style.opacity=0;}
+  const he=document.getElementById('head');he.innerHTML=D[active].head.replace(/\n/g,'<br>');const hin=clamp01((local-0.06)/0.5);he.style.opacity=clamp01(local/0.2);he.style.transform='translateY('+((1-back(hin))*80)+'px)';
+  comps.forEach((c,i)=>{const cbs=INTRO+i*BEAT,cl=t-cbs,cin=clamp01((cl-0.12)/0.6);const beatEnd=INTRO+(i+1)*BEAT,outp=clamp01((t-(beatEnd-0.3))/0.4);let op=(i===active?1:0)*clamp01(cl/0.15);if(t>OUT_AT)op*=(1-clamp01((t-OUT_AT)/0.25));const y=(1-back(cin))*180+outp*200+Math.sin(t*0.9+i)*5;const rot=(-2.2)+(1-easeOut(cin))*-5+outp*4;c.style.opacity=op;c.style.transform='translateY('+y+'px) rotate('+rot+'deg)';});
+  animateComp(active,pIn,t,local);
+  const fo=(t>OUT_AT)?(1-clamp01((t-OUT_AT)/0.25)):1;['kick','head'].forEach(id=>{const e=document.getElementById(id);e.style.opacity=Math.min(+e.style.opacity||1,fo);});
+  document.getElementById('outro').style.opacity=easeOut(clamp01((t-(OUT_AT+0.25))/0.5));
+};
+function animateComp(i,p,t,local){
+
+  if(i===0){stag('#comp0 .cnt',p,0.13,0.24,16);pop(document.getElementById('keep0'),p,0.52,0.26,20);show('note0',p,0.76);}
+  else if(i===1){pop(document.getElementById('creep1'),p,0.04,0.32,26);show('note1',p,0.62);}
+  else if(i===2){
+    ['b0','b1','b2'].forEach((id,k)=>{const el=document.getElementById(id);const rp=clamp01((p-k*0.12)/0.3);
+      el.style.opacity=rp;el.style.transform='translateY('+((1-back(rp))*18)+'px)';
+      const fill=el.querySelector('i');fill.style.transform='scaleX('+easeOut(clamp01((p-0.08-k*0.12)/0.42))+')';});
+    pop(document.getElementById('quiet2'),p,0.56,0.28,20);show('note2',p,0.8);}
+  else if(i===3){stag('#comp3 .cnt',p,0.13,0.24,16);pop(document.getElementById('keep3'),p,0.52,0.26,20);show('note3',p,0.76);}
+}
+window.seek(0);
+</script></body></html>
