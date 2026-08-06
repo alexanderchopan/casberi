@@ -2674,8 +2674,16 @@ enum ProbeHooks {
                 let shots = (try? context.fetch(FetchDescriptor<Thing>(
                     predicate: #Predicate { $0.source == source },
                     sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []
-                let wanted: ThingKind = source == "Instagram" ? .note : .screenshot
-                let screens = shots.filter { $0.kind == wanted && !Corpus.isImportReceipt($0) }
+                // The kinds a room's map really reads (fixed 2026-08-06). This
+                // was `source == "Instagram" ? .note : .screenshot`, so for X
+                // it filtered a room of `.note` posts down to `.screenshot`,
+                // found nothing, and reported "no card" on every run — the one
+                // headless view of this card was blind for X from the day the
+                // seat shipped, and blind for TikTok and Files too once §309
+                // gave the map a kind SET. Deliberately wide: the map narrows
+                // by kind and tag itself, so handing it the room is right and
+                // guessing its membership here is what broke.
+                let screens = shots.filter { !Corpus.isImportReceipt($0) }
                 let withTerms = screens.filter { !$0.ocrTopics.isEmpty }.count
                 NSLog("[Casberi] topicMap: source=%@ backfilled=%d · rows=%d · withTerms=%d",
                       source, filled, screens.count, withTerms)

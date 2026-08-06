@@ -37,7 +37,24 @@ enum ScreenshotTopics {
     /// signal), then NLTagger's organizations / places / people. UI chrome and
     /// bare numbers are dropped — a treemap of "Settings", "Cancel", "9:41" is
     /// noise, not a portrait.
-    static func terms(in text: String, cap: Int = 6) -> [String] {
+    ///
+    /// `includeDomains` is the WRITING/PIXELS fork (2026-08-06). For a
+    /// screenshot the hostname on screen is the strongest "what is this"
+    /// signal, which is why it leads. For a person's own sentences it is the
+    /// WEAKEST — the words are right there, and the domain of a link they
+    /// pointed at is not what they wrote about. The X room proved it the
+    /// expensive way: `XArchiveImport.clean` expands `entities.urls` and never
+    /// `entities.media`, so every post with a picture kept its bare
+    /// `t.co` shortlink, and that hostname cleared `normalize` (four
+    /// characters, three letters, no stoplist entry) and recurred across
+    /// thousands of posts — and since `cells` credits each row to its single
+    /// most common qualifying term, one `t.co` cell swallowed the room under
+    /// the title "What you post about". Quote-tweets added `twitter.com`
+    /// beside it. Off, the reading surface is `prose(of:)` — hashtags harvested
+    /// first (the one place a person states their own topic outright), then
+    /// entities over text with URLs, @mentions and hashtags removed, so a
+    /// reply's addressing prefix stops reading as a subject.
+    static func terms(in text: String, cap: Int = 6, includeDomains: Bool = true) -> [String] {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return [] }
         var seen = Set<String>()            // lowercased dedupe
@@ -47,15 +64,23 @@ enum ScreenshotTopics {
                   seen.insert(term.lowercased()).inserted else { return }
             out.append(term)
         }
-        for host in domains(in: trimmed) { add(host) }
+        let read: String
+        if includeDomains {
+            for host in domains(in: trimmed) { add(host) }
+            read = trimmed
+        } else {
+            for tag in hashtags(in: trimmed) { add(tag) }
+            read = prose(of: trimmed)
+        }
+        guard !read.isEmpty else { return Array(out.prefix(cap)) }
         let tagger = NLTagger(tagSchemes: [.nameType])
-        tagger.string = trimmed
-        let range = trimmed.startIndex..<trimmed.endIndex
+        tagger.string = read
+        let range = read.startIndex..<read.endIndex
         tagger.enumerateTags(in: range, unit: .word, scheme: .nameType,
                              options: [.omitWhitespace, .omitPunctuation, .omitOther, .joinNames]) { tag, r in
             switch tag {
             case .some(.organizationName), .some(.placeName), .some(.personalName):
-                add(String(trimmed[r]))
+                add(String(read[r]))
             default:
                 break
             }
@@ -69,8 +94,7 @@ enum ScreenshotTopics {
     /// link). Matched against a curated TLD set so a version string ("1.2.3")
     /// or a decimal never reads as a domain; leading "www." stripped, lowercased.
     static func domains(in text: String) -> [String] {
-        let pattern = #"\b(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:com|org|net|io|co|app|dev|gov|edu|ai|xyz|me|tv|so|gg|fm|to|us|uk|de|jp|fr|ca|in|eu|store|shop|news|social|finance|health)\b"#
-        guard let re = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { return [] }
+        guard let re = try? NSRegularExpression(pattern: domainPattern, options: [.caseInsensitive]) else { return [] }
         let lower = text.lowercased()
         let ns = lower as NSString
         var hosts: [String] = []
@@ -81,6 +105,70 @@ enum ScreenshotTopics {
             if seen.insert(host).inserted { hosts.append(host) }
         }
         return hosts
+    }
+
+    /// The hostname shape, spelled ONCE (2026-08-06) because two readers need
+    /// to agree on it exactly: `domains(in:)` harvests these as terms for a
+    /// pixels corpus, and `prose(of:)` removes the very same spans for a
+    /// writing one. Spelling it twice is how the two silently drift into a
+    /// host that is neither counted nor stripped.
+    /// (One line on purpose — `x-selftest.sh` lifts it with `grabline`, which
+    /// reads a single line and would otherwise hand the compiler half a regex.)
+    static let domainPattern = #"\b(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:com|org|net|io|co|app|dev|gov|edu|ai|xyz|me|tv|so|gg|fm|to|us|uk|de|jp|fr|ca|in|eu|store|shop|news|social|finance|health)\b"#
+
+    /// The topics a person declared outright. A hashtag is the one place
+    /// somebody says what their own post is about, so for a writing corpus it
+    /// leads the way a domain leads for a screenshot.
+    ///
+    /// The `#` is DROPPED from the returned term on purpose: "#WWDC" and a
+    /// plain mention of WWDC in the next post are the same subject, and
+    /// keeping the mark would file them as two cells that each look too small.
+    /// The label still literally appears in the post, which is the honesty rule
+    /// this whole type is built on. Three characters minimum, matching
+    /// `normalize`, and never mid-token so a URL fragment can't produce one.
+    static func hashtags(in text: String) -> [String] {
+        let pattern = #"(?<![\w#/])#([A-Za-z][A-Za-z0-9_]{2,39})\b"#
+        guard let re = try? NSRegularExpression(pattern: pattern) else { return [] }
+        let ns = text as NSString
+        var out: [String] = []
+        var seen = Set<String>()
+        for m in re.matches(in: text, range: NSRange(location: 0, length: ns.length)) {
+            guard m.numberOfRanges > 1 else { continue }
+            let word = ns.substring(with: m.range(at: 1))
+            if seen.insert(word.lowercased()).inserted { out.append(word) }
+        }
+        return out
+    }
+
+    /// A post's WORDS, with its plumbing removed — what the entity tagger
+    /// should read when the corpus is somebody's own writing.
+    ///
+    /// Four spans go, in this order because the earlier patterns are the more
+    /// specific ones: full URLs (a scheme or a `www.`), then bare hosts and
+    /// whatever path trails them (`t.co/xyz`, the shortlink an X archive keeps
+    /// for every attached picture), then @mentions, then hashtags (already
+    /// harvested above — leaving them lets the tagger join a mark to the word
+    /// beside it and name something nobody wrote).
+    ///
+    /// Mentions are the half that fixes the reply prefix: an X reply's
+    /// `full_text` opens with the handles it answers, and NLTagger reads those
+    /// as people — so a room of replies produced a map of the people you reply
+    /// TO, filed under "What you post about". Addressing is not a subject.
+    static func prose(of text: String) -> String {
+        var out = text
+        for pattern in [
+            #"\b(?:https?://|www\.)\S+"#,
+            domainPattern + #"\S*"#,
+            #"(?<![\w])@[A-Za-z0-9_]{1,15}\b"#,
+            #"(?<![\w])#[A-Za-z0-9_]+\b"#,
+        ] {
+            guard let re = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
+            else { continue }
+            let ns = out as NSString
+            out = re.stringByReplacingMatches(
+                in: out, range: NSRange(location: 0, length: ns.length), withTemplate: " ")
+        }
+        return out.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// UI chrome, units, and time words that name no topic — dropped from the
@@ -162,7 +250,14 @@ enum ScreenshotTopics {
     /// their text is present the moment they land, so there is nothing to wait
     /// for.
     private struct TopicSource {
-        let kind: ThingKind
+        /// A SET since 2026-08-06, mirroring `FeedInsight.topicMap`'s own
+        /// (prd §309 gave the map a kind set and left this switch behind, so
+        /// TikTok's map — whose writing spans `.link` captions and `.note`
+        /// comments — had no way to get terms at all: `topicSource` answered
+        /// nil for it, `healTopics` returned 0, and the card could never
+        /// render. Exactly the defect X shipped with, still live in the room
+        /// beside it.)
+        let kinds: Set<ThingKind>
         /// Whether a row must have been OCR'd before its text can be read.
         /// TRUE for Photos and load-bearing there, not an optimization: topics
         /// come off the OCR `content`, so a shot whose OCR hasn't run yet has
@@ -171,12 +266,19 @@ enum ScreenshotTopics {
         /// re-extraction, the words OCR writes moments later would never become
         /// topics. FALSE for imported text, which arrives whole.
         let needsOCR: Bool
+        /// Whether a hostname counts as a topic here — see `terms(in:)`. TRUE
+        /// for a corpus of PIXELS (the domain on screen is what the shot is),
+        /// FALSE for a corpus of WRITING (the domain of a link somebody
+        /// pointed at is not what they wrote about). It also decides which
+        /// rows the one-time `restamp` below re-reads: only the writing rooms
+        /// changed rules, so only they have anything to repair.
+        let includeDomains: Bool
     }
 
     private static func topicSource(_ source: String) -> TopicSource? {
         switch source {
-        case "Photos":    return TopicSource(kind: .screenshot, needsOCR: true)
-        case "Instagram": return TopicSource(kind: .note, needsOCR: false)
+        case "Photos":    return TopicSource(kinds: [.screenshot], needsOCR: true, includeDomains: true)
+        case "Instagram": return TopicSource(kinds: [.note], needsOCR: false, includeDomains: false)
         // X is Instagram's shape exactly (2026-08-05): the room's `.note` half
         // is the person's own posts and replies, its `.link` half is posts
         // somebody else wrote, and a map over both would be titled a lie.
@@ -186,7 +288,14 @@ enum ScreenshotTopics {
         // call did nothing and the map it was meant to fill never had terms —
         // one of three separate places X was missing from a registry the other
         // import rooms are in.
-        case "X":         return TopicSource(kind: .note, needsOCR: false)
+        case "X":         return TopicSource(kinds: [.note], needsOCR: false, includeDomains: false)
+        // TikTok, 2026-08-06 — the room prd §309 gave a map and this switch
+        // never learned about. Its writing spans TWO kinds (a video's caption
+        // rides the `.link` row, a comment is a `.note`), which is why the
+        // kind above became a set; `FeedInsight.topicMap` narrows to the
+        // person's OWN rows by tag, so a saved stranger's video getting terms
+        // here costs nothing and reaches no card.
+        case "TikTok":    return TopicSource(kinds: [.link, .note], needsOCR: false, includeDomains: false)
         // A connected folder is Photos' shape wearing a different kind
         // (2026-08-02): `FilesIngest.heal` OCRs the folder's images into
         // `content` exactly the way the screenshot heal does. `needsOCR` is
@@ -195,7 +304,7 @@ enum ScreenshotTopics {
         // files: a text file or PDF lands with a byte-preview `content` and
         // no `ocrAt`, and reading topics off those bytes would put file
         // previews in a map titled as what your images say.
-        case "Files":     return TopicSource(kind: .file, needsOCR: true)
+        case "Files":     return TopicSource(kinds: [.file], needsOCR: true, includeDomains: true)
         default:          return nil
         }
     }
@@ -225,18 +334,96 @@ enum ScreenshotTopics {
         // an import, and reading "312 saved · 1,204 comments" for topics would
         // put the app's voice in a map of the person's words.
         let rows = ((try? context.fetch(descriptor)) ?? [])
-            .filter { $0.kind == spec.kind && !Corpus.isImportReceipt($0) }
+            .filter { spec.kinds.contains($0.kind) && !Corpus.isImportReceipt($0) }
             .prefix(limit)
-        guard !rows.isEmpty else { return 0 }
 
         var changed = 0
         let now = Date.now
         for thing in rows where thing.isLive {
-            thing.ocrTopics = terms(in: thing.content)
+            thing.ocrTopics = terms(in: thing.content, includeDomains: spec.includeDomains)
             thing.topicsAt = now
             changed += 1
         }
         if changed > 0 { _ = context.saveHonestly() }
+        // Only once the NEW rows are drained — a fresh import is what somebody
+        // is looking at, and a repair that starves it would be the wrong
+        // trade. The repair then gets every later pass to itself.
+        guard changed == 0 else { return changed }
+        return await restamp(source: source, spec: spec, context: context)
+    }
+
+    /// When the term rules last changed. A row stamped before this was read
+    /// under the old ones and says so by its `topicsAt` alone — no new `Thing`
+    /// field, and therefore no CloudKit Production deploy, which is the whole
+    /// reason it is a date rather than a version number.
+    ///
+    /// 2026-08-06: domains stopped counting as topics for a writing corpus,
+    /// hashtags started, and @mentions stopped. Bump this and clear the flags
+    /// below the next time the rules move.
+    static let termsEpoch = Date(timeIntervalSince1970: 1_785_974_400)
+
+    /// Re-read a writing room's rows that were stamped under the old rules.
+    ///
+    /// This exists because `topicsAt` is a "we looked" mark and nothing else:
+    /// the normal sweep skips any row that has one, so a rules change reaches
+    /// only rows imported AFTER it — which for a bulk import room, where
+    /// everything landed on one afternoon, means it reaches nothing at all and
+    /// the broken map stays broken forever. (The `recheckContractsOnce` /
+    /// `kindRecheck.7702` shape, one directory over.)
+    ///
+    /// It drains the room in ONE pass rather than `limit` rows at a time, and
+    /// chunks with a yield instead (`ImportCommit`'s shape). At the sweep's
+    /// bound a repaired room would take some forty foregrounds to come right,
+    /// which for the person who reported the broken map reads as the fix not
+    /// having landed. This is a once-per-install cost, and it declares itself
+    /// done through a UserDefaults flag rather than by re-running the query —
+    /// so the steady state afterwards is a `bool(forKey:)` and NO fetch, which
+    /// is the cheap-empty-fetch property the sweep above is careful to keep.
+    ///
+    /// `chunk` is what keeps the main actor answering: extraction is a
+    /// `NLTagger` pass per row, and ten thousand of them in one hop is a
+    /// visible freeze. Each chunk saves, so a run interrupted halfway keeps
+    /// what it repaired and the next pass resumes from the same query.
+    @MainActor
+    private static func restamp(source: String, spec: TopicSource,
+                                context: ModelContext, chunk: Int = 100) async -> Int {
+        // Only the writing rooms changed rules. Photos and Files read exactly
+        // what they always read, so re-walking them would be work with a
+        // guaranteed-identical result.
+        guard !spec.includeDomains else { return 0 }
+        let key = "topics.restamp." + source
+        guard !UserDefaults.standard.bool(forKey: key) else { return 0 }
+
+        let descriptor = FetchDescriptor<Thing>(
+            predicate: #Predicate<Thing> { $0.source == source && $0.topicsAt != nil })
+        let stale = ((try? context.fetch(descriptor)) ?? [])
+            .filter { spec.kinds.contains($0.kind) && !Corpus.isImportReceipt($0) }
+            .filter { ($0.topicsAt ?? Date.distantPast) < termsEpoch }
+        guard !stale.isEmpty else {
+            UserDefaults.standard.set(true, forKey: key)
+            return 0
+        }
+
+        var changed = 0
+        let now = Date.now
+        for (offset, thing) in stale.enumerated() {
+            // Per-ROW liveness, not a re-filter of the array (COROLLARY 6).
+            // This list is held across every yield below and a bridge heal can
+            // tombstone a row inside one; checking at the point of the read is
+            // the same guarantee, evaluated later than any bulk filter could
+            // be.
+            if thing.isLive {
+                thing.ocrTopics = terms(in: thing.content, includeDomains: spec.includeDomains)
+                thing.topicsAt = now
+                changed += 1
+            }
+            if offset % chunk == chunk - 1 {
+                _ = context.saveHonestly()
+                await Task.yield()
+            }
+        }
+        if changed > 0 { _ = context.saveHonestly() }
+        UserDefaults.standard.set(true, forKey: key)
         return changed
     }
 }

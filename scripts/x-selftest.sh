@@ -77,8 +77,15 @@ grep -q 'scoped.predicate = #Predicate { \$0.source == source }' Casberi/Casberi
 # The room's own registries. X was in NONE of these until 2026-08-05, so the
 # room led with nothing at all — and `healTopics(source: "X")` had been called
 # by the import screen the whole time against a switch that answered nil.
-grep -q 'case "X":         return TopicSource' Casberi/Casberi/Model/ScreenshotTopics.swift \
+TOPICS="Casberi/Casberi/Model/ScreenshotTopics.swift"
+grep -q 'case "X":         return TopicSource' "$TOPICS" \
   || { echo "✗ X has no topic source — its import screen's healTopics call is a no-op again"; exit 1; }
+# 2026-08-06: the SAME registry gap, one room over. prd §309 gave TikTok a
+# topic map whose writing spans two kinds and never taught this switch about
+# it, so `healTopics(source: "TikTok")` returned 0 and the card could never
+# render. A count of zero and a card that doesn't exist look identical.
+grep -q 'case "TikTok":    return TopicSource' "$TOPICS" \
+  || { echo "✗ TikTok has no topic source — its map can never get terms"; exit 1; }
 grep -q '"X":             Label(title: "Your X year"' Casberi/Casberi/Model/FeedHeatmap.swift \
   || { echo "✗ X has no heatmap label — and with it goes the room's On This Day, which rides inside that card"; exit 1; }
 grep -q 'connected("x")' Casberi/Casberi/Model/BridgeRefresh.swift \
@@ -105,6 +112,58 @@ for name, floor in (("postCap", 5_000), ("likeCap", 2_500)):
 PY
 grep -q 'summary.droppedPosts += max(0, rows.count - postCap)' "$XARCH" \
   || { echo "✗ the cap no longer counts what it refused — a truncated import reads as a complete one"; exit 1; }
+
+# --- 2026-08-06: the room reads as a room -----------------------------------
+# The reported symptom was two things at once: "just a long list" and "the
+# treemap seems incorrect". Both were wiring, and both failed invisibly — a
+# BandRow renders perfectly over a room of prose, and a treemap of `t.co`
+# renders perfectly over anybody's writing. Each guard below is the specific
+# line whose absence brings one of them back.
+FEEDSCREEN="Casberi/Casberi/Screens/FeedScreen.swift"
+grep -q 'case "X":                   self = .x' "$FEEDSCREEN" \
+  || { echo "✗ X has no room shape again — it falls to .plain and the room is a wall of 80-char BandRows"; exit 1; }
+grep -q 'PostCard(thing: thing)' "$FEEDSCREEN" \
+  || { echo "✗ nothing renders a post as a post"; exit 1; }
+# An IMPORT has no media URL to give — `ImportMedia` decodes the archive's own
+# file to bytes on the row, inside the folder grant. Without a stored-bytes
+# branch the card draws none of them: pixels in the store and none on screen,
+# which is §283's Files bug in a new room.
+grep -q 'thing.previewImageData, let stored = UIImage(data: data)' Casberi/Casberi/Screens/ShapedRows.swift \
+  || { echo "✗ PostCard can't draw a picture the app already holds — every imported post loses its media"; exit 1; }
+# The treemap's root cause. `clean` expands `entities["urls"]` and used to stop
+# there, so a picture's own shortlink rode into `content` on every post that
+# had one, `t.co` read as a hostname, and `cells` — which credits each row to
+# its single most common term — collapsed the room into one cell.
+grep -q 'entities?\["media"\] as? \[\[String: Any\]\]' "$XARCH" \
+  || { echo "✗ clean no longer strips a media shortlink — t.co returns as a topic"; exit 1; }
+# The other half of the same fix: a hostname is not a subject in a room of
+# writing. If X's TopicSource says otherwise, every link a person shared reads
+# as what they wrote about.
+grep -q 'case "X":         return TopicSource(kinds: \[.note\], needsOCR: false, includeDomains: false)' "$TOPICS" \
+  || { echo "✗ X counts domains as topics again — the map goes back to naming hosts"; exit 1; }
+grep -q 'terms(in: thing.content, includeDomains: spec.includeDomains)' "$TOPICS" \
+  || { echo "✗ the sweep no longer passes the writing/pixels fork — every room reads domains again"; exit 1; }
+# The repair. Without it the fix reaches only rows imported AFTER it, which for
+# a bulk import room — where everything landed on one afternoon — is nothing.
+grep -q 'private static func restamp' "$TOPICS" \
+  || { echo "✗ no re-read for rows stamped under the old term rules — an existing room keeps its old map forever"; exit 1; }
+grep -q 'await XArchiveImport.healRoom(context: context)' Casberi/Casberi/Model/BridgeRefresh.swift \
+  || { echo "✗ rows landed before the room had a shape never gain the fields it draws (and a re-import can't: landTweets skips a seen ref)"; exit 1; }
+# What the card DRAWS. `postText` is `PostCard`'s body, `parent` is its
+# "Replying to @…" line, `socialContext` is the word that tells your own
+# writing from a post you liked.
+grep -q 'thing.postText = row.text' "$XARCH" \
+  || { echo "✗ a post's full sentence is no longer in the field the card renders"; exit 1; }
+grep -qF 'thing.parent = SocialCard(handle: replyTo, text: ""' "$XARCH" \
+  || { echo "✗ a reply no longer says who it answers — the card doesn't draw the title's 'To @' lead"; exit 1; }
+grep -q 'thing.socialContext = "liked"' "$XARCH" \
+  || { echo "✗ a liked post is no longer marked — half the room stops being distinguishable from your own writing"; exit 1; }
+grep -q 'sources.union(\["Slack", "X"\])' Casberi/Casberi/Model/SocialBridge.swift \
+  || { echo "✗ X lost its context label — the 'Liked' marker it stamps would render nowhere"; exit 1; }
+# The probe that could not have caught ANY of this. It filtered a room of
+# `.note` posts down to `.screenshot` and reported "no card" on every run.
+grep -q 'let screens = shots.filter { !Corpus.isImportReceipt($0) }' Casberi/Casberi/Shell/ProbeHooks.swift \
+  || { echo "✗ -topicMapProbe is guessing a room's kinds again — it goes blind for every room whose map spans more than one"; exit 1; }
 
 # --- 2026-08-05: the same guarantees for the other three import rooms --------
 # prd §309. X's caps were found by a person noticing their room was short;
@@ -191,9 +250,9 @@ TMP=$(mktemp -d /tmp/x-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT
 
 # --- extract the shipped functions -----------------------------------------
-python3 - "$OEMBED" "$XARCH" "$SUPPORT" "$TMP/extracted.swift" <<'PY'
+python3 - "$OEMBED" "$XARCH" "$SUPPORT" "$TMP/extracted.swift" "$TOPICS" <<'PY'
 import re, sys
-oembed, xarch, support, out = sys.argv[1:5]
+oembed, xarch, support, out, topics = sys.argv[1:6]
 
 def grab(path, signature):
     """The whole function whose declaration line contains `signature`,
@@ -286,6 +345,16 @@ pieces = [
     grab(xarch, "static func identifier"),
     grab(xarch, "static func created"),
     grabvar(xarch, "static let twitterDateFormatter"),
+    "}\n",
+    # The treemap's reading surface for a room of WRITING (2026-08-06). Both
+    # are Foundation-only — `terms(in:)` itself needs NLTagger and a model
+    # whose output is nobody's contract, so what is asserted here is the part
+    # that has a right answer: which spans reach the tagger at all. That is
+    # exactly where the `t.co` cell came from.
+    "enum ScreenshotTopics {",
+    grabline(topics, "static let domainPattern"),
+    grab(topics, "static func hashtags"),
+    grab(topics, "static func prose"),
     "}\n",
 ]
 open(out, "w").write("\n".join(pieces))
@@ -535,6 +604,58 @@ check("a parent id prefers the _str form",
       XThreads.parentIdentifier(["in_reply_to_status_id_str": "123",
                                  "in_reply_to_status_id": 1]) == "123")
 check("no parent → nil", XThreads.parentIdentifier(["full_text": "hi"]) == nil)
+
+print("prose / hashtags — what the topic map is allowed to read (2026-08-06)")
+// THE BUG, as a test. A post with a picture keeps the picture's own shortlink,
+// and `t.co` cleared every guard the term reader had: four characters, three
+// letters, no stoplist entry, and it recurs across thousands of rows.
+let withMedia = "shipping the new room today https://t.co/aB3xY9"
+check("a media shortlink never reaches the tagger",
+      !ScreenshotTopics.prose(of: withMedia).lowercased().contains("t.co"))
+check("…and the sentence around it survives",
+      ScreenshotTopics.prose(of: withMedia).contains("shipping the new room today"))
+// A quote-tweet's expansion is a real URL and just as wrong a topic: nobody
+// posts ABOUT twitter.com.
+check("a quote-tweet expansion is stripped",
+      !ScreenshotTopics.prose(of: "this is exactly right https://twitter.com/a/status/1")
+          .contains("twitter"))
+// A bare host with no scheme — what an expanded link often looks like after
+// `clean`, and what the `\S*` tail on `domainPattern` exists for.
+let bareHost = ScreenshotTopics.prose(of: "read this github.com/apple/swift/pull/1 tonight")
+check("a bare host goes, and its path goes with it",
+      !bareHost.contains("github") && !bareHost.contains("apple"))
+check("…and the words on either side stay",
+      bareHost.contains("read this") && bareHost.contains("tonight"))
+// The reply prefix. `full_text` opens with the handles a reply answers, and
+// NLTagger reads those as PEOPLE — which turned a room of replies into a map
+// of the people replied TO, filed under "What you post about".
+let reply = "@jack @dhh the tradeoff is latency, not throughput"
+check("a reply's addressing prefix never reaches the tagger",
+      !ScreenshotTopics.prose(of: reply).contains("jack")
+          && !ScreenshotTopics.prose(of: reply).contains("dhh"))
+check("…and its actual argument does",
+      ScreenshotTopics.prose(of: reply).contains("latency"))
+// A post that is nothing but a link has nothing to say. Empty, not a hostname.
+check("a link-only post reads as no words at all",
+      ScreenshotTopics.prose(of: "https://t.co/aB3xY9").isEmpty)
+check("an ordinary sentence is untouched",
+      ScreenshotTopics.prose(of: "Portland in October is underrated")
+          == "Portland in October is underrated")
+
+// Hashtags — the one place somebody states their own topic outright, and the
+// signal that replaces the domains this room no longer counts.
+check("a hashtag is a topic", ScreenshotTopics.hashtags(in: "counting down to #WWDC") == ["WWDC"])
+check("the mark is dropped so it merges with a plain mention",
+      ScreenshotTopics.hashtags(in: "#Swift and Swift are one subject") == ["Swift"])
+check("two spellings are one topic",
+      ScreenshotTopics.hashtags(in: "#swift then #Swift").count == 1)
+// Three letters, matching `normalize` — else "#AI" and "#UK" become cells that
+// say nothing and outrank real ones by sheer frequency.
+check("a two-letter tag is not a topic", ScreenshotTopics.hashtags(in: "shipping #ai today").isEmpty)
+// A URL fragment is not a hashtag, which is why the match refuses a word
+// character before the mark.
+check("a URL fragment is not a hashtag",
+      ScreenshotTopics.hashtags(in: "see example.com/guide#installing").isEmpty)
 
 print("")
 if failures > 0 { print("x-selftest: ✗ \(failures) assertion(s) failed"); exit(1) }

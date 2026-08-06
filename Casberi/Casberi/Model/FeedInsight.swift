@@ -556,7 +556,19 @@ enum FeedInsight {
         guard perShot.count >= 6 else { return nil }
         let ranked = ScreenshotTopics.cells(perShot: perShot)
         guard ranked.count >= 2 else { return nil }
-        let subtitle = "\(total.formatted()) \(total == 1 ? unit.one : unit.many)"
+        // WHAT THE CELLS ACTUALLY COVER (2026-08-06). The subtitle used to
+        // count every row in the room while the cells only ever hold the rows
+        // credited to a top-six recurring term — fine for a screenshot library,
+        // where nearly every shot carries one, and a straight misstatement for
+        // an archive: "3,500 posts" sat above six cells summing to a few
+        // hundred, so the card read as a partition of the room when it is a
+        // partition of the part we could read. Says "N of M" only when the two
+        // really differ, so a map that does cover its room is unchanged.
+        let covered = ranked.reduce(0) { $0 + $1.count }
+        let noun = total == 1 ? unit.one : unit.many
+        let subtitle = covered < total
+            ? String(localized: "\(covered.formatted()) of \(total.formatted()) \(noun)")
+            : "\(total.formatted()) \(noun)"
         return TopicMap(title: title, subtitle: subtitle,
                         cells: ranked.map { TopicMap.Cell(label: $0.label, count: $0.count) })
     }

@@ -1977,6 +1977,29 @@ struct PostCard: View {
                 PostImageGrid(urls: thing.imageURLs)
             } else if let media = thing.previewImageURL, !media.isEmpty {
                 PostMedia(urlString: media)
+            } else if let data = thing.previewImageData, let stored = UIImage(data: data) {
+                // A picture the app already HOLDS rather than fetches
+                // (2026-08-06). Every source this card served until now was a
+                // live network bridge whose media is a URL; an IMPORT has no
+                // URL to give — `ImportMedia` decodes the archive's own file
+                // to a thumbnail inside the folder grant, because there is no
+                // second chance at a folder somebody has stopped granting. So
+                // an X post's picture is bytes on the row, and without this
+                // branch the card would have shown none of them: the §283
+                // failure exactly (pixels stored, never drawn), which is what
+                // a connected folder of screenshots looked like as a wall of
+                // text.
+                //
+                // Pinned inside a GeometryReader for the reason `PostMedia`
+                // states above it — a bare `scaledToFill` inflates the row to
+                // the image's intrinsic size.
+                GeometryReader { geo in
+                    Image(uiImage: stored)
+                        .resizable().scaledToFill()
+                        .frame(width: geo.size.width, height: geo.size.height)
+                }
+                .frame(height: 160)
+                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
             }
         }
         .padding(.vertical, DS.Space.s2)

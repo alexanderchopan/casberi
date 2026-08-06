@@ -542,6 +542,13 @@ enum BridgeRefresh {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await ScreenshotTopics.healTopics(source: "X", context: context)
+                // The words the room draws, for rows landed before it had a
+                // shape to draw them in (2026-08-06). Free like topics — a
+                // copy between fields already in the store — and one-shot, so
+                // it costs a `bool(forKey:)` once it has drained. It runs
+                // here rather than at import because a re-import can't do it:
+                // `landTweets` skips a ref it has already seen.
+                _ = await XArchiveImport.healRoom(context: context)
                 if BridgeRefresh.dueForHeal("x.faces") {
                     _ = await XArchiveImport.fetchFaces(limit: 60, context: context)
                 }
