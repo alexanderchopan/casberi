@@ -160,6 +160,11 @@ grep -q 'thing.socialContext = "liked"' "$XARCH" \
   || { echo "✗ a liked post is no longer marked — half the room stops being distinguishable from your own writing"; exit 1; }
 grep -q 'sources.union(\["Slack", "X"\])' Casberi/Casberi/Model/SocialBridge.swift \
   || { echo "✗ X lost its context label — the 'Liked' marker it stamps would render nowhere"; exit 1; }
+# S4's premise — every `.note` is a capture waiting to become an outcome —
+# expired the day the import rooms landed published writing under that kind,
+# and nothing said so. An X post from 2019 is not a task.
+grep -q 'if !Corpus.bulkImportSources.contains(thing.source) {' Casberi/Casberi/Model/Verbs.swift \
+  || { echo "✗ an imported post offers 'Send to Reminders' again — S4's capture rule reaching rows nobody captured"; exit 1; }
 # The probe that could not have caught ANY of this. It filtered a room of
 # `.note` posts down to `.screenshot` and reported "no card" on every run.
 grep -q 'let screens = shots.filter { !Corpus.isImportReceipt($0) }' Casberi/Casberi/Shell/ProbeHooks.swift \
