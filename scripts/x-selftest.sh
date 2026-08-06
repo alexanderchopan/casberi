@@ -86,6 +86,21 @@ grep -q 'case "X":         return TopicSource' "$TOPICS" \
 # render. A count of zero and a card that doesn't exist look identical.
 grep -q 'case "TikTok":    return TopicSource' "$TOPICS" \
   || { echo "✗ TikTok has no topic source — its map can never get terms"; exit 1; }
+# 2026-08-06: the repair's done-flag must carry the epoch. Both halves of this
+# are invisible at runtime and each one alone makes the other useless — a
+# bumped `termsEpoch` reaches nothing on a device that already ran a repair
+# under the old key, and an epoch-keyed flag re-arms nothing if the date never
+# moves. The morning's own fix shipped with a bare `topics.restamp.<source>`
+# and a midnight epoch, so it excluded every row it had itself restamped.
+grep -q 'topics.restamp.\\(source).\\(Int(termsEpoch.timeIntervalSince1970))' "$TOPICS" \
+  || { echo "✗ the restamp flag no longer carries the epoch — a rules change can never re-arm the repair"; exit 1; }
+grep -q 'topicsAt ?? Date.distantPast) < termsEpoch' "$TOPICS" \
+  || { echo "✗ restamp no longer selects rows read under the old rules"; exit 1; }
+# The noun read itself, at its call site: `subjects` is what makes a writing
+# room's map non-empty (proper nouns alone yielded a term for 2 rows in 12),
+# and it must stay OFF for a screenshot corpus, where the domain is the answer.
+grep -q 'if !includeDomains {' "$TOPICS" \
+  || { echo "✗ the noun read is no longer forked on the writing/pixels split"; exit 1; }
 grep -q '"X":             Label(title: "Your X year"' Casberi/Casberi/Model/FeedHeatmap.swift \
   || { echo "✗ X has no heatmap label — and with it goes the room's On This Day, which rides inside that card"; exit 1; }
 grep -q 'connected("x")' Casberi/Casberi/Model/BridgeRefresh.swift \
@@ -98,6 +113,21 @@ grep -q 'connected("x")' Casberi/Casberi/Model/BridgeRefresh.swift \
 # prove the real condition, not that the words appear somewhere).
 grep -qF 'let face = row.replyTo.map { "To @\($0) · \(row.text)" } ?? row.text' "$XARCH" \
   || { echo "✗ a reply's recipient no longer LEADS its title — titleLine's 80-char clamp eats a trailing one (§303)"; exit 1; }
+# The avatar, same reasoning: `accountAvatarURL` is compiled and tested below,
+# but `landTweets` builds `Thing`s and can't be, so only a text guard can say
+# the face reaches a row at all. Three separate facts, each able to fail alone.
+grep -qF 'thing.authorAvatarURL = avatar' "$XARCH" \
+  || { echo "✗ your own posts no longer carry your avatar — every row falls back to the X logo"; exit 1; }
+grep -qF 'let face = accountAvatarURL(under: folder)' "$XARCH" \
+  || { echo "✗ the archive's profile.js is no longer read — the avatar is nil for every row"; exit 1; }
+grep -qF 'if row.authorAvatarURL == nil, let avatar { row.authorAvatarURL = avatar }' "$XARCH" \
+  || { echo "✗ a re-import no longer repairs rows on the dedupe hit — a room imported before the face existed can never get one (the folder is a temporary scoped pick, so no foreground sweep can)"; exit 1; }
+# A liked post's author is somebody else and X publishes no face for them, so
+# `landLikes` must never be handed this.
+grep -q 'landLikes(data, summary' "$XARCH" \
+  || { echo "✗ landLikes' call shape changed — check it did not gain the avatar (a stranger's post wearing your face)"; exit 1; }
+grep -q '"pbs.twimg.com"' Casberi/Casberi/Model/NetworkReach.swift \
+  || { echo "✗ the avatar CDN is not declared — the privacy screen is wrong and this is a ship gate"; exit 1; }
 # The caps. Not an exact number — that should be free to move — but a floor far
 # above the 1,000/500 that silently dropped two thirds of a real archive.
 python3 - "$XARCH" <<'PY' || exit 1
@@ -309,6 +339,26 @@ def grabline(path, signature):
     start = src.rfind("\n", 0, i) + 1
     return src[start:src.index("\n", i)].replace("private ", "")
 
+def grabbracket(path, signature):
+    """A multi-line `static let X: Set<String> = [ … ]`. Neither `grabvar` (it
+    brace-matches from the next `{`, which for a bracket literal is the
+    following FUNCTION's body) nor `grabline` (which stops at the first
+    newline and hands the compiler an unterminated array) can read one."""
+    src = open(path).read()
+    i = src.find(signature)
+    if i < 0:
+        sys.exit(f"✗ extraction failed: {signature!r} not found in {path}")
+    start = src.rfind("\n", 0, i) + 1
+    j = src.index("[", i)
+    depth, k = 0, j
+    while k < len(src):
+        if src[k] == "[": depth += 1
+        elif src[k] == "]":
+            depth -= 1
+            if depth == 0: break
+        k += 1
+    return src[start:k+1].replace("private ", "")
+
 def wholefile(path):
     """A file that is Foundation-only by construction, compiled AS SHIPPED
     rather than by extraction — the strongest form this harness has."""
@@ -316,7 +366,10 @@ def wholefile(path):
     return "\n".join(l for l in src.splitlines() if not l.startswith("import "))
 
 pieces = [
-    "import Foundation\n",
+    "import Foundation",
+    # `subjects(in:)` reads part of speech, so the topics half of this harness
+    # links NaturalLanguage now. Everything else here stays Foundation-only.
+    "import NaturalLanguage\n",
     "enum IngestSupport {",
     grab(support, "static func decodeHTMLEntities"),
     grab(support, "static func titleLine"),
@@ -346,6 +399,13 @@ pieces = [
     "enum XArchiveImport {",
     grab(xarch, "static func snowflakeDate"),
     grab(xarch, "static func parseArray"),
+    # The avatar fence (2026-08-06). `accountAvatarURL` is the one reader here
+    # that turns a line in somebody's data file into a host the app connects
+    # to, so its allowlist is worth a test of its own.
+    grab(xarch, "static func accountAvatarURL"),
+    grabline(xarch, "static let avatarHost"),
+    grab(xarch, "static func readSeries"),
+    grab(xarch, "static func read(_ relative"),
     grab(xarch, "static func clean"),
     grab(xarch, "static func identifier"),
     grab(xarch, "static func created"),
@@ -360,6 +420,18 @@ pieces = [
     grabline(topics, "static let domainPattern"),
     grab(topics, "static func hashtags"),
     grab(topics, "static func prose"),
+    # `subjects(in:)` DOES need NLTagger, unlike everything above it, and it is
+    # extracted anyway (2026-08-06) because it is now what the writing map is
+    # made of. What is asserted about it is only ever a contract of OUR code —
+    # a generic noun never survives, a returned label is always a trim of a
+    # word the person really typed — never a claim about which words Apple's
+    # tagger happens to pick, which is nobody's contract and would rot.
+    grab(topics, "static func terms"),
+    grab(topics, "static func domains"),
+    grab(topics, "static func subjects"),
+    grab(topics, "static func normalize"),
+    grabbracket(topics, "static let stop:"),
+    grabbracket(topics, "static let genericNouns:"),
     "}\n",
 ]
 open(out, "w").write("\n".join(pieces))
@@ -661,6 +733,93 @@ check("a two-letter tag is not a topic", ScreenshotTopics.hashtags(in: "shipping
 // character before the mark.
 check("a URL fragment is not a hashtag",
       ScreenshotTopics.hashtags(in: "see example.com/guide#installing").isEmpty)
+
+print("your own face, out of the archive (2026-08-06)")
+// A real folder with a real `data/profile.js`, because the whole point of this
+// reader is what it does with bytes off somebody's disk.
+func profileFolder(_ body: String) -> URL {
+    let dir = URL(fileURLWithPath: NSTemporaryDirectory())
+        .appending(path: "x-avatar-\(UUID().uuidString)/data")
+    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    try? ("window.YTD.profile.part0 = " + body).write(
+        to: dir.appending(path: "profile.js"), atomically: true, encoding: .utf8)
+    return dir.deletingLastPathComponent()
+}
+func avatar(_ url: String) -> String? {
+    XArchiveImport.accountAvatarURL(under: profileFolder(
+        #"[{"profile":{"avatarMediaUrl":"\#(url)"}}]"#))
+}
+check("your avatar is read from profile.js",
+      avatar("https://pbs.twimg.com/profile_images/1/a.jpg")
+          == "https://pbs.twimg.com/profile_images/1/a.jpg")
+// THE FENCE. This URL is a line in a file the person picked, and it goes
+// straight into a fetch — so an unfenced read lets a data file name any host
+// it likes for the app to call. Matched on the LABEL boundary, the same rule
+// `OEmbed.handles` uses, or a lookalike domain walks straight through.
+check("a lookalike host is refused",
+      avatar("https://pbs.twimg.com.attacker.example/a.jpg") == nil)
+check("an unrelated host is refused", avatar("https://evil.example/a.jpg") == nil)
+check("plain http is refused", avatar("http://pbs.twimg.com/a.jpg") == nil)
+check("a subdomain of the real CDN is allowed",
+      avatar("https://x.pbs.twimg.com/a.jpg") != nil)
+check("a file with no avatar in it yields nil",
+      XArchiveImport.accountAvatarURL(under: profileFolder(#"[{"profile":{}}]"#)) == nil)
+// An EMPTY directory of its own, never the shared temp root: `read` looks one
+// level down as well (an archive unzips into a named folder and picking either
+// one has to work), so pointing this at the temp root makes it find the
+// fixtures the checks above just wrote there. That is the test being wrong,
+// not the reader — but it fails intermittently, which is worse.
+let barren = URL(fileURLWithPath: NSTemporaryDirectory())
+    .appending(path: "x-avatar-empty-\(UUID().uuidString)")
+try? FileManager.default.createDirectory(at: barren, withIntermediateDirectories: true)
+check("a folder with no profile.js yields nil",
+      XArchiveImport.accountAvatarURL(under: barren) == nil)
+
+print("subjects — the words a writing room is actually about (2026-08-06)")
+// WHY THIS EXISTS. Stripping domains fixed the `t.co` cell and left the
+// tagger reading for PROPER nouns alone, which over ordinary sentences names
+// almost nothing: a sample of tech posts yielded a term for 2 rows in 12, and
+// `FeedInsight.topicMap` needs six carrying rows before it draws at all. A
+// wrong map became no map. This is the read that makes the room say something.
+let ordinary = "the retrieval layer rewrite paid off, search is instant now"
+check("an ordinary sentence with no proper noun still has subjects",
+      !ScreenshotTopics.subjects(in: ordinary).isEmpty)
+check("…and the whole term reader returns them for a writing corpus",
+      !ScreenshotTopics.terms(in: ordinary, includeDomains: false).isEmpty)
+// The pixels fork must be BYTE-IDENTICAL to what it was — Photos and Files
+// are not broken and this change must not reach them.
+check("a screenshot's read is unchanged: domains, and no nouns",
+      ScreenshotTopics.terms(in: "Order confirmed amazon.com delivery", includeDomains: true)
+          == ["amazon.com"])
+// THE HONESTY RULE, as a test, and the one assertion that is a contract of our
+// code rather than of Apple's tagger: every label is a trim of a word the
+// person really typed. The lemma is taken only when it is a PREFIX of the
+// surface form, so "systems" may become "system" and "people" can never
+// become "person".
+// "analyses" is deliberate: its lemma is "analysis", which is NOT a prefix of
+// it, so this sentence is the one that can tell a guarded fold from an
+// unguarded one. A regular plural passes either way and proves nothing.
+let sentence = "the analyses of design systems were mostly wrong"
+let words = sentence.lowercased().split { !$0.isLetter }.map(String.init)
+check("every subject is a prefix of a word that was actually written",
+      ScreenshotTopics.subjects(in: sentence).allSatisfy { term in
+          words.contains { $0.hasPrefix(term.lowercased()) } })
+// Generic nouns are the whole reason a noun read is safe: a term wins a cell
+// by RECURRING, and "thing" recurs in everything. Unfiltered, a map of
+// somebody's writing is a map of English.
+check("the nouns English builds sentences out of are not subjects",
+      ScreenshotTopics.subjects(in: "the thing about the way people take time").isEmpty)
+check("…and they are gone from the full reader too",
+      ScreenshotTopics.terms(in: "someone said something about that thing",
+                             includeDomains: false).isEmpty)
+// A cell needs to RECUR, so a plural and its singular have to land together or
+// each looks too small to draw.
+// In a SENTENCE, not bare: a lone word carries no part of speech for the
+// tagger to read, so `subjects(in: "dashboards")` is legitimately empty and an
+// assertion built that way tests the tagger's context window, not our fold.
+let folded = ScreenshotTopics.subjects(in: "the dashboards are slow")
+check("an inflected noun folds to the form its singular shares",
+      folded == ["dashboard"])
 
 print("")
 if failures > 0 { print("x-selftest: ✗ \(failures) assertion(s) failed"); exit(1) }

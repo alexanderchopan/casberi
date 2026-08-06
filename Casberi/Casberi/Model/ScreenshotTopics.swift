@@ -86,7 +86,68 @@ enum ScreenshotTopics {
             }
             return out.count < cap * 4      // gather a few extra; capped on return
         }
+        // The subjects themselves, for a writing corpus only — see
+        // `subjects(in:)`. Last, so a name the tagger recognised keeps the
+        // casing and the multi-word join it came with.
+        if !includeDomains {
+            for noun in subjects(in: read, cap: cap * 2) { add(noun) }
+        }
         return Array(out.prefix(cap))
+    }
+
+    /// The ordinary nouns a person's own sentences are ABOUT — the second half
+    /// of the writing fork, and the half that makes the map worth drawing.
+    ///
+    /// **Measured 2026-08-06, and the reason this exists:** `.nameType` names
+    /// only PROPER nouns. Over a screenshot library that is the whole signal
+    /// (a shot's identity really is the site, the app, the person on screen),
+    /// but over somebody's own posts it is almost nothing — a sample of
+    /// ordinary tech posts yielded a term for **2 rows in 12**, and
+    /// `FeedInsight.topicMap` needs six rows carrying terms before it will draw
+    /// at all. So the domains fix earlier the same day traded a wrong map (one
+    /// `t.co` cell swallowing the room) for no map, which is not obviously the
+    /// better failure: both mean the room never says what it is about. The
+    /// same sample read for nouns gives design / layer / dashboard / product /
+    /// treemap / problem, which is a portrait.
+    ///
+    /// Still deterministic and still off the model, so the honesty rule holds:
+    /// a label is a word the person actually typed, picked by a part-of-speech
+    /// tagger, never a category anything invented.
+    ///
+    /// Two guards keep it from filling with noise:
+    ///   • `genericNouns` — the nouns English uses to build a sentence rather
+    ///     than to name a subject ("thing", "way", "someone"). They recur in
+    ///     everything, which under `cells`' recurrence rule is exactly what
+    ///     makes a term win, so unfiltered they would be the whole map.
+    ///   • Inflection folding, so "dashboards" and "dashboard" are one cell
+    ///     and not two that each look too small to draw. The lemma is taken
+    ///     ONLY when it is a prefix of what was written, which is what makes
+    ///     the fold provably a trim of their own word ("systems" → "system")
+    ///     rather than a substitution — an irregular ("people" → "person")
+    ///     fails that test and keeps the surface form the person typed.
+    static func subjects(in text: String, cap: Int = 12) -> [String] {
+        guard !text.isEmpty else { return [] }
+        var out: [String] = []
+        var seen = Set<String>()
+        let tagger = NLTagger(tagSchemes: [.lexicalClass, .lemma])
+        tagger.string = text
+        tagger.enumerateTags(in: text.startIndex..<text.endIndex, unit: .word,
+                             scheme: .lexicalClass,
+                             options: [.omitWhitespace, .omitPunctuation, .omitOther]) { tag, r in
+            guard tag == .noun else { return true }
+            let surface = String(text[r])
+            var term = surface
+            if let lemma = tagger.tag(at: r.lowerBound, unit: .word, scheme: .lemma).0?.rawValue,
+               lemma.count >= 3, surface.lowercased().hasPrefix(lemma.lowercased()) {
+                term = lemma
+            }
+            guard let clean = normalize(term),
+                  !genericNouns.contains(clean.lowercased()),
+                  seen.insert(clean.lowercased()).inserted else { return true }
+            out.append(clean)
+            return out.count < cap
+        }
+        return out
     }
 
     /// The hostnames a screenshot's text shows — the single most reliable
@@ -154,6 +215,10 @@ enum ScreenshotTopics {
     /// `full_text` opens with the handles it answers, and NLTagger reads those
     /// as people — so a room of replies produced a map of the people you reply
     /// TO, filed under "What you post about". Addressing is not a subject.
+    ///
+    /// This is the reading surface for `subjects(in:)` as well, and both stages
+    /// run over it in that order: the tagger names what it can, then the plain
+    /// nouns fill in everything it can't.
     static func prose(of text: String) -> String {
         var out = text
         for pattern in [
@@ -181,6 +246,28 @@ enum ScreenshotTopics {
         "http", "https", "www", "untitled", "screenshot", "screenshots",
         "screen", "iphone", "ipad", "am", "pm", "monday", "tuesday",
         "wednesday", "thursday", "friday", "saturday", "sunday",
+    ]
+
+    /// The nouns English builds a SENTENCE out of rather than names a subject
+    /// with — dropped from the noun stream only (`subjects(in:)`), never from
+    /// the entity one, so a company or a place that happens to be spelled like
+    /// one of these survives as the name it is.
+    ///
+    /// They have to go, and the reason is `cells`' own recurrence rule: a term
+    /// wins a cell by appearing in the most rows, and "thing" appears in
+    /// everything. Unfiltered, a map of somebody's writing is a map of English.
+    /// Lemma forms are enough for the regular plurals (`subjects` folds before
+    /// it checks) but both are listed where the fold can't reach.
+    private static let genericNouns: Set<String> = [
+        "thing", "things", "way", "ways", "time", "times", "people", "person",
+        "someone", "somebody", "anyone", "anybody", "everyone", "everybody",
+        "nobody", "something", "anything", "nothing", "everything", "stuff",
+        "guy", "guys", "kind", "sort", "type", "part", "bit", "lot", "lots",
+        "day", "days", "week", "weeks", "month", "months", "year", "years",
+        "morning", "afternoon", "evening", "night", "moment", "while",
+        "place", "case", "point", "fact", "reason", "number", "end", "side",
+        "half", "rest", "one", "ones", "everyone's", "take", "sense", "worth",
+        "course", "line", "bunch", "couple", "few", "many", "much", "none",
     ]
 
     /// A candidate term cleaned for grouping, or nil to drop it: 3–40 chars,
@@ -357,10 +444,25 @@ enum ScreenshotTopics {
     /// field, and therefore no CloudKit Production deploy, which is the whole
     /// reason it is a date rather than a version number.
     ///
-    /// 2026-08-06: domains stopped counting as topics for a writing corpus,
-    /// hashtags started, and @mentions stopped. Bump this and clear the flags
-    /// below the next time the rules move.
-    static let termsEpoch = Date(timeIntervalSince1970: 1_785_974_400)
+    /// 2026-08-06 (morning): domains stopped counting as topics for a writing
+    /// corpus, hashtags started, and @mentions stopped.
+    ///
+    /// 2026-08-06 (afternoon): ordinary nouns started counting — see
+    /// `subjects(in:)`. Bumped past the morning's own value, which is the
+    /// point of the two entries: a row stamped BETWEEN them was read under
+    /// rules that were already fixed and still wrong, and a date that only
+    /// moved once a day could not tell those rows apart from good ones. That
+    /// is not hypothetical — the morning's epoch was midnight, so every row
+    /// the app restamped in the hours after it shipped was excluded from its
+    /// own repair.
+    ///
+    /// The next rules change bumps this and NOTHING else: `restamp`'s
+    /// done-flag is keyed by the epoch, so moving the date re-arms the repair
+    /// by construction. It used to be a bare `topics.restamp.<source>`, which
+    /// meant a device that had already run one repair would refuse the next
+    /// one forever — the fix landing in the same commit as the rules it fixes,
+    /// and doing nothing.
+    static let termsEpoch = Date(timeIntervalSince1970: 1_786_030_000)
 
     /// Re-read a writing room's rows that were stamped under the old rules.
     ///
@@ -391,7 +493,11 @@ enum ScreenshotTopics {
         // what they always read, so re-walking them would be work with a
         // guaranteed-identical result.
         guard !spec.includeDomains else { return 0 }
-        let key = "topics.restamp." + source
+        // Keyed by the EPOCH, not just the source — so a rules change re-arms
+        // the repair on a device that already ran the previous one. See
+        // `termsEpoch`; this is the half of that bug that no bumped date could
+        // have fixed on its own.
+        let key = "topics.restamp.\(source).\(Int(termsEpoch.timeIntervalSince1970))"
         guard !UserDefaults.standard.bool(forKey: key) else { return 0 }
 
         let descriptor = FetchDescriptor<Thing>(

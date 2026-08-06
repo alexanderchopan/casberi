@@ -17400,3 +17400,92 @@ that trimming them deletes true differentiating information.
 **Measured result:** Instagram 145 → 62 words, one register per slot, and the
 fact that it is an import is now the second thing on the page instead of the
 last.
+
+## §316 — A treemap of English, then a treemap of nothing (user: "the twitter treemap is really dumb. it's like it isn't actually reading things. it has t.co as the largest tree which doesn't even mean anything", then "i think it should have my avatar too", 2026-08-06)
+
+§313 fixed the `t.co` cell this morning by taking hostnames out of the term
+reader for a writing corpus. That was right and it was half the job, and the
+half it left undone is the more interesting one.
+
+**Measured, the same day, on a sample of ordinary tech posts: the fixed reader
+returned a term for 2 rows in 12.** `FeedInsight.topicMap` needs six carrying
+rows before it draws at all, so for most archives §313 traded a wrong map for
+NO map. Both mean the room never says what it is about, and the second one is
+harder to notice — a card that doesn't render looks like a card that was never
+built, while a wrong card at least tells you something is on.
+
+The cause is that `.nameType` names only PROPER nouns. Over a screenshot
+library that is the whole signal (a shot's identity really is the site, the
+app, the person on screen — which is why Photos and Files are untouched here).
+Over somebody's own sentences it is almost nothing: it found "Portland" and
+"#WWDC" and passed over latency, retrieval, design, dashboards, concurrency.
+It also missed "Anthropic" and "TestFlight", which are proper nouns — the
+tagger is simply weak on short informal text.
+
+**The ruling: for a corpus of writing, the subjects are the NOUNS.**
+`ScreenshotTopics.subjects(in:)` reads part of speech over the same
+plumbing-stripped prose the entity pass reads, and the same sample goes from
+2 rows in 12 to 24 in 24, with cells reading design / Portland / build / copy /
+dashboard / layer. Still deterministic, still off the model, so the honesty
+rule holds unchanged: every label is a word the person actually typed.
+
+Two guards, both measured rather than assumed:
+
+- **`genericNouns`.** A term wins a cell by RECURRING, and "thing" recurs in
+  everything — unfiltered, a map of somebody's writing is a map of English.
+  Applied to the noun stream only, never the entity one, so a company or place
+  spelled like one of these survives as the name it is.
+- **Inflection folding**, so "dashboards" and "dashboard" are one cell rather
+  than two that each look too small to draw. The lemma is taken ONLY when it is
+  a prefix of what was written, which makes the fold provably a trim of their
+  own word ("systems" → "system") and never a substitution — an irregular
+  ("analyses" → "analysis") fails that test and keeps the surface form. The
+  harness asserts this with "analyses" specifically: a regular plural passes
+  either way and proves nothing.
+
+**The repair was also unreachable, which is the part worth remembering.**
+`topicsAt` is a "we looked" mark, so a rules change reaches only rows stamped
+after it — which for a bulk-import room, where everything landed on one
+afternoon, is nothing. §313 knew that and added `restamp`. It then broke it two
+ways, both invisible: `termsEpoch` was set to MIDNIGHT of the day it shipped,
+so every row the app restamped in the hours afterwards was excluded from its
+own repair; and the done-flag was a bare `topics.restamp.<source>`, so a device
+that had run one repair would refuse the next one forever. The flag is keyed by
+the epoch now, which makes bumping the date the whole ritual — the two halves
+can no longer drift apart, because there is only one thing to change.
+
+**Your own face (the second message).** `PostCard` has always drawn
+`authorAvatarURL` when a row carries one and the source icon when it doesn't,
+so a room made entirely of your own writing wore the X logo on every row, three
+thousand times. The archive names your avatar in `profile.js` as a link to X's
+image CDN rather than shipping the picture, so that link is read and stamped on
+YOUR posts only — never on a liked post, whose author is somebody else and
+whose face X publishes nowhere; a stranger's post wearing your avatar is the
+plainest fake status there is.
+
+Two consequences that shaped the code:
+
+1. **The URL is a line in a file the person picked, and it goes straight into a
+   fetch.** Unfenced, a data file could name any host for the app to call, once
+   per row on a screen full of them. HTTPS only, and the host must be
+   `pbs.twimg.com` matched on the LABEL boundary — `OEmbed.handles`' rule, for
+   `OEmbed.endpoints`' reason. `pbs.twimg.com.attacker.example` must not match.
+2. **This one cannot be healed from a later foreground.** Topics and room
+   fields can, because they read `content` that is already in the store; the
+   avatar lives in the archive FOLDER, which is a temporary scoped pick. So
+   `landTweets` repairs on the DEDUPE HIT (the Snapchat-tag shape) and a
+   re-import is what fixes a room imported before today. `run` builds
+   `IngestSupport.thingsByRef` rather than a ref set for exactly this — a set
+   can answer "already here" and nothing else.
+
+`pbs.twimg.com` is declared in `NetworkReach` in the same commit, per the
+2026-07-31 ship gate.
+
+**Harness:** `x-selftest.sh` at 110 assertions, eight new mutations, six new
+drift guards. `subjects(in:)` is the first thing this harness extracts that
+needs NLTagger, and what is asserted about it is only ever a contract of OUR
+code — a generic noun never survives, a label is always a trim of a word really
+typed — never a claim about which words Apple's tagger picks, which is nobody's
+contract and would rot. One test was unsound and said so on its second run: the
+"no profile.js" case pointed at the shared temp root, which the fixtures above
+it had just filled, and `read(_:under:)` looks one level down by design.

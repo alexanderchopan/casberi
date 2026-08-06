@@ -107,7 +107,15 @@ enum XArchiveImport {
                     progress: ((Int) -> Void)? = nil) async -> Summary {
         var summary = Summary()
         var landed: [Thing] = []
-        var seen = Set(IngestSupport.thingsByRef(context, source: "X").keys)
+        // The rows already here, as THINGS and not just their refs (2026-08-06,
+        // the `landMemories` move one room over): a ref set can answer "already
+        // here" and nothing else, and the avatar below has to reach a room
+        // somebody imported before it existed. `landTweets` repairs on the
+        // dedupe hit, which is the only pass that will ever touch those rows —
+        // the archive folder is a temporary scoped pick, so unlike topics or
+        // room fields this cannot be healed from a later foreground.
+        let existing = IngestSupport.thingsByRef(context, source: "X")
+        var seen = Set(existing.keys)
         var foundAnyCategory = false
 
         // "tweets" is the current name and "tweet" the older one; both are
@@ -121,11 +129,18 @@ enum XArchiveImport {
         // and the rows land exactly as they did before, so this can only ever
         // add a handle, never lose a post.
         let mine = accountHandle(under: folder)
+        // And your FACE, from the same archive (2026-08-06). `PostCard` has
+        // always drawn `authorAvatarURL` when a row carries one and the source
+        // icon when it doesn't — so before this every post in the room wore the
+        // X logo, three thousand times, in a room that is entirely your own
+        // writing. Same contract as the handle above: nil changes nothing.
+        let face = accountAvatarURL(under: folder)
         var tweetFiles = readSeries("tweets", under: folder)
         if tweetFiles.isEmpty { tweetFiles = readSeries("tweet", under: folder) }
         for data in tweetFiles {
             foundAnyCategory = true
-            landTweets(data, mine: mine, summary: &summary, landed: &landed, seen: &seen)
+            landTweets(data, mine: mine, avatar: face, existing: existing,
+                       summary: &summary, landed: &landed, seen: &seen)
         }
         for data in readSeries("like", under: folder) {
             foundAnyCategory = true
@@ -307,10 +322,47 @@ enum XArchiveImport {
         return nil
     }
 
+    /// The account's own avatar, from the archive's `profile.js`.
+    ///
+    /// **Fenced to one host, and that is not a formality.** This URL comes out
+    /// of a file the person picked off their disk, and it goes straight into a
+    /// `RemoteThumb` that fetches it — so an unfenced read lets a data file
+    /// name an arbitrary host for the app to call, and lets it do so once per
+    /// row on a screen full of them. The same reasoning as `OEmbed.endpoints`
+    /// being an allowlist rather than following the spec's own discovery, and
+    /// as `ImportMedia`'s fence on a relative path. HTTPS only, and the host
+    /// must be X's own image CDN matched on the LABEL boundary — `pbs.twimg.com`
+    /// itself or a subdomain of it, never `pbs.twimg.com.attacker.example`.
+    ///
+    /// It can go stale: an archive downloaded two years ago names the avatar
+    /// you had two years ago, and X may have stopped serving that file. That
+    /// costs a row its face and falls back to the source icon, which is exactly
+    /// what every row looks like today.
+    static func accountAvatarURL(under root: URL) -> String? {
+        for data in readSeries("profile", under: root) {
+            guard let entries = parseArray(data) else { continue }
+            for entry in entries {
+                let profile = (entry["profile"] as? [String: Any]) ?? entry
+                guard let raw = profile["avatarMediaUrl"] as? String,
+                      let url = URL(string: raw.trimmingCharacters(in: .whitespaces)),
+                      url.scheme?.lowercased() == "https",
+                      let host = url.host?.lowercased(),
+                      host == avatarHost || host.hasSuffix("." + avatarHost)
+                else { continue }
+                return url.absoluteString
+            }
+        }
+        return nil
+    }
+
+    /// X's image CDN — the only host an archive is allowed to point the app at.
+    private static let avatarHost = "pbs.twimg.com"
+
     // MARK: - Your own posts and replies (full text — the substance)
 
     @MainActor
-    private static func landTweets(_ data: Data, mine: String?, summary: inout Summary,
+    private static func landTweets(_ data: Data, mine: String?, avatar: String?,
+                                   existing: [String: Thing], summary: inout Summary,
                                    landed: inout [Thing], seen: inout Set<String>) {
         guard let entries = parseArray(data) else { return }
 
@@ -357,7 +409,22 @@ enum XArchiveImport {
             // the ref has to survive this file deciding differently about the
             // same post, or a re-import would land it twice.
             let ref = "x:tweet:\(row.id)"
-            guard !seen.contains(ref) else { summary.skipped += 1; continue }
+            guard !seen.contains(ref) else {
+                // REPAIR ON THE DEDUPE HIT (2026-08-06, the Snapchat-tag
+                // shape). A room imported before the face was read can only be
+                // reached from here: the avatar lives in the archive folder,
+                // which is a temporary scoped pick, so no later foreground
+                // sweep can go and get it the way topics and room fields are
+                // healed. Without this a re-import would skip every row it
+                // already had and change nothing, which reads as the fix not
+                // having landed.
+                if let row = existing[ref], row.isLive {
+                    if row.authorHandle == nil, let mine { row.authorHandle = mine }
+                    if row.authorAvatarURL == nil, let avatar { row.authorAvatarURL = avatar }
+                }
+                summary.skipped += 1
+                continue
+            }
             seen.insert(ref)
             // A reply says who it was to. The parent post is NOT in the
             // archive, so the row names the recipient rather than pretending
@@ -417,6 +484,12 @@ enum XArchiveImport {
             // lands in, which is what lets one card render both halves of the
             // room without asking which half it's drawing.
             thing.authorHandle = mine
+            // …and your face beside it. Only ever on YOUR OWN posts: a liked
+            // row's author is somebody else and X's oEmbed serves no image at
+            // all, so `landLikes` has nothing to put here and must not borrow
+            // this one — a stranger's post wearing your avatar is the plainest
+            // fake status there is.
+            thing.authorAvatarURL = avatar
             // WHO A REPLY ANSWERS, in the slot the card already draws
             // (2026-08-06). `PostCard` renders `parent` as "Replying to
             // @someone" and reads NOTHING else off the card — not its text,

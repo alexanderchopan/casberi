@@ -121,6 +121,17 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "tiktok"),
                  purpose: "Your TikTok export lists the videos you saved as bare links, without their words. \(DS.device) asks TikTok's own public preview endpoint what each one is — the caption, who made it, the cover picture — so you can search for it later. The request carries only that video's link, and no account or key is involved.",
                  hosts: ["www.tiktok.com"]),
+        // The fourth, and the only one that reaches for something of YOURS
+        // rather than somebody else's (2026-08-06). An X archive names your
+        // avatar as a link to X's own image CDN instead of shipping the
+        // picture, so a room made entirely of your writing had the X logo on
+        // every row. This asks that one link, once, for the rows you wrote —
+        // never for a post you liked, whose author is somebody else and whose
+        // face X publishes nowhere.
+        Endpoint(service: "Your X avatar",
+                 reach: .whenConnected(bridge: "x"),
+                 purpose: "Your X archive names your profile picture as a link rather than including it. \(DS.device) loads that one picture from X's image server so your own posts show your face instead of the X logo. The request carries only that picture's link.",
+                 hosts: ["pbs.twimg.com"]),
         Endpoint(service: "Snapchat Memories",
                  reach: .whenConnected(bridge: "snapchat"),
                  purpose: "Your Snapchat export holds links, not pictures — and they expire. When you tap to fetch your Memories, \(DS.device) asks Snapchat's own link for each one and downloads that picture.",
