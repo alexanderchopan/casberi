@@ -372,7 +372,28 @@ struct FeedScreen: View {
     /// prd 43h: Reduce Motion is law — the hand-rolled moves (row entrances)
     /// fall back to plain state changes under it.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.openURL) private var openURL
+
+    /// Opening a URL is an ACTION here — a button tap, a swipe verb — and never
+    /// something the body renders. It used to arrive as
+    /// `@Environment(\.openURL)`, which is a stored property, and
+    /// `OpenURLAction` wraps a closure, so it can never compare equal: every
+    /// recomputation of the environment counted as a change to this view and
+    /// re-ran the whole feed body.
+    ///
+    /// MEASURED 2026-08-06 on a 6,000-row corpus, via `Self._printChanges()`:
+    /// 18 of 53 FeedScreen invalidations in one launch named `_openURL`, and
+    /// each one is a ~260ms `feedList` rebuild on the main actor — a third of
+    /// the rebuild storm, bought by a value the view never draws. Nothing above
+    /// this view overrides `openURL` (the one override in the tree wraps
+    /// `ThingSheetView` inside the composer), so this is the same call the
+    /// environment action would have made.
+    ///
+    /// It is NOT the whole rebuild story and should not be read as the fix:
+    /// the dominant trigger is `@self` — MainSurface re-creating this view —
+    /// which this does nothing about. A/B measured rebuilds ~49 → ~43.
+    private func openExternal(_ url: URL) {
+        UIApplication.shared.open(url)
+    }
 
     /// The shape a source takes when its chip is in force.
     private enum Shape {
@@ -1280,7 +1301,7 @@ struct FeedScreen: View {
             Spacer(minLength: DS.Space.s2)
             Button {
                 DSHaptic.selection()
-                if case .openURL(let url) = headerCompose.run { openURL(url) }
+                if case .openURL(let url) = headerCompose.run { openExternal(url) }
             } label: {
                 HStack(spacing: DS.Space.s1) {
                     Image(systemName: "plus").font(.system(size: 13, weight: .semibold))
@@ -4796,7 +4817,7 @@ struct FeedScreen: View {
     private func perform(_ verb: Verb, on thing: Thing) {
         switch verb.action {
         case .openURL(let url):
-            openURL(url)
+            openExternal(url)
         case .addToCalendar:
             Task {
                 do {

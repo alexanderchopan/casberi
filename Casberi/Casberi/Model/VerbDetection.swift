@@ -78,9 +78,23 @@ enum VerbDetection {
         for (thing, found) in zip(pending, detected) where thing.isLive {
             // All three may legitimately be nil — that IS the answer for most
             // things, and `detectedAt` is what stops it being re-asked forever.
-            thing.detectedPlace = found.place
-            thing.detectedTel = found.tel
-            thing.detectedMailto = found.mailto
+            //
+            // Assigned ONLY when the value really differs (2026-08-06). A
+            // `@Model` write fires observation whether or not it changed
+            // anything, and the overwhelmingly common result here is three
+            // nils onto three nils — so the unconditional form told every
+            // observer that 150 rows had changed, on every foreground, having
+            // changed nothing. The feed is one of those observers, and it
+            // rebuilds its whole list per notification: measured via
+            // `Self._printChanges()` on a 6,000-row corpus,
+            // `\Thing.detectedMailto` accounted for 9 of 53 feed rebuilds in
+            // a single launch. `detectedAt`/`detectionVersion` are still
+            // written unconditionally — they are the "we asked" mark, and
+            // withholding them would re-ask this row forever — but nothing
+            // renders them, so they cost no rebuild.
+            if thing.detectedPlace != found.place { thing.detectedPlace = found.place }
+            if thing.detectedTel != found.tel { thing.detectedTel = found.tel }
+            if thing.detectedMailto != found.mailto { thing.detectedMailto = found.mailto }
             thing.detectedAt = now
             thing.detectionVersion = current
             changed = true

@@ -18,9 +18,10 @@
 # HOW `rank` COMPILES AT ALL. It takes `[Thing]`, a SwiftData model, and calls
 # five app types. The ENTIRE `Retriever` enum is extracted from the shipped
 # source — never copied — and compiled against minimal STUBS of those types
-# (below). The stubs are deliberately inert: `SemanticExpand` returns no
-# synonyms and `EmbeddingIndex` refuses to embed, so every ordering asserted
-# here is the KEYWORD engine's alone and cannot be an embedding accident. If
+# (below). The stubs are deliberately flat: `EmbeddingIndex` refuses to embed
+# and `SemanticExpand` answers from a two-entry table rather than NLEmbedding,
+# so every ordering asserted here is the engine's own and cannot be an
+# embedding accident or an OS-version difference in a word's neighbours. If
 # `rank` starts reading a property or calling a function the stubs don't have,
 # the compile FAILS LOUDLY rather than asserting nothing — which is the point.
 #
@@ -48,6 +49,25 @@ grep -q 'Retriever.contentTerms(query)' "$ROOTSHELL" \
 # thing with NO keyword evidence may only answer on a STRONG semantic match.
 grep -q 'score > 0 || sim >= semanticQualifyFloor' "$RETRIEVER" \
   || { echo "✗ the semantic qualify floor is gone — loosely-related things can answer alone"; exit 1; }
+# Synonyms count toward the relevance floor at HALF the weight of the word they
+# stand in for. Both halves matter and each fails differently: full credit lets
+# a neighbour of one word answer a two-word query (the shipped "climate change"
+# → "Vogue gave another nod" bug), and no credit at all deletes the single-word
+# synonym reach the expansion exists for. Fixtures pin both; this guard catches
+# the line being removed outright.
+grep -q 'matchedMass += 0.5 \* weight' "$RETRIEVER" \
+  || { echo "✗ synonyms no longer count toward the relevance floor — either they are exempt again"; \
+       echo "  (climate change → 'Vogue gave another nod') or their reach is deleted entirely"; exit 1; }
+# A neighbour also carries its own rarity, so a synonym most of the corpus says
+# is not evidence. Grep-guarded rather than fixture-pinned: the stub table's two
+# entries are rare in every fixture corpus, so no assertion exercises the
+# rarity cutoff itself.
+grep -q 'if weight >= Self.expansionFloor { expandedIdf\[word\] = weight }' "$RETRIEVER" \
+  || { echo "✗ synonym neighbours are no longer rarity-filtered — common words become evidence again"; exit 1; }
+grep -q 'synonym += 1.5 \* nWeight' "$RETRIEVER" \
+  || { echo "✗ synonym hits are no longer rarity-weighted — a ubiquitous neighbour scores like a rare one"; exit 1; }
+grep -q 'expansionsByTerm\[term\] = SemanticExpand.expand(\[term\])' "$RETRIEVER" \
+  || { echo "✗ synonyms are no longer attributed to the term they stand in for — the floor cannot credit them"; exit 1; }
 
 TMP=$(mktemp -d /tmp/retriever-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT
@@ -82,8 +102,9 @@ open(out, "w").write("import Foundation\nimport NaturalLanguage\n\n"
 PY
 
 # --- stubs ------------------------------------------------------------------
-# The app types `rank` reaches for. Inert BY DESIGN: no synonyms, no embedding,
-# so every ordering asserted below is the keyword engine's own.
+# The app types `rank` reaches for. Flat BY DESIGN: no embedding at all, and
+# synonyms from a fixed two-entry table, so every ordering asserted below is
+# the engine's own and reproducible on any machine.
 cat > "$TMP/stubs.swift" <<'SWIFT'
 import Foundation
 import NaturalLanguage
@@ -103,15 +124,20 @@ final class Thing {
     var title: String
     var content: String
     var enrichedText: String?
+    var postText: String?
+    var summary: String?
+    var authorHandle: String?
     var tags: [String]
     var source: String
     var kind: ThingKind
     var capturedAt: Date
     var embedding: Data?
     init(title: String, content: String = "", enrichedText: String? = nil,
+         postText: String? = nil, summary: String? = nil, authorHandle: String? = nil,
          tags: [String] = [], source: String = "You", kind: ThingKind = .note,
          capturedAt: Date = Date(timeIntervalSince1970: 1_750_000_000)) {
         self.title = title; self.content = content; self.enrichedText = enrichedText
+        self.postText = postText; self.summary = summary; self.authorHandle = authorHandle
         self.tags = tags; self.source = source; self.kind = kind
         self.capturedAt = capturedAt; self.embedding = nil
     }
@@ -125,10 +151,27 @@ enum DateQuery {
 }
 
 enum SemanticExpand {
-    // Inert: NLEmbedding's neighbours differ by OS build, so a synonym landing
+    // A FIXED table, not NLEmbedding: real neighbours differ by OS build, so
+    // reading them here would make the harness flaky and its failures
+    // unreadable. Two entries, both measured on a real device — "car" →
+    // "vehicle" is the reach this feature exists for, and "change" →
+    // "another" is the one that put a Vogue piece and a Ford review into a
+    // "climate change" answer. Every other term expands to nothing, so the
+    // ranking fixtures above stay exact-keyword-only.
+    static let table: [String: Set<String>] = [
+        "car": ["vehicle"],
+        "change": ["another"],
+    ]
+    // Inert for everything else: NLEmbedding's neighbours differ by OS build,
+    // so a synonym landing
     // in the middle of a ranking fixture would make this harness flaky and its
     // failures unreadable. Every ordering below is exact-keyword evidence.
-    static func expand(_ terms: [String]) -> Set<String> { [] }
+    static func expand(_ terms: [String]) -> Set<String> {
+        var out: Set<String> = []
+        for t in terms { out.formUnion(table[t] ?? []) }
+        out.subtract(terms)
+        return out
+    }
 }
 
 enum EmbeddingIndex {
@@ -174,9 +217,14 @@ print("coverage — matching more of the query wins (the 'general answers' fix)"
 let all4 = Thing(title: "Pasta recipe from the Lisbon trip")
 let one4 = Thing(title: "Notes from the trip")
 let two4 = Thing(title: "Lisbon trip planning")
-let order = rank("pasta recipe lisbon trip", [one4, two4, all4])
+let three4 = Thing(title: "Recipe from the Lisbon trip")
+let order = rank("pasta recipe lisbon trip", [one4, three4, two4, all4])
 check("the thing answering the whole query leads", order.first == all4.title)
-check("more coverage outranks less", place(two4.title, order) < place(one4.title, order))
+check("more coverage outranks less", place(three4.title, order) < place(two4.title, order))
+// And the one-word ride is not merely demoted now — the relevance floor below
+// removes it outright.
+check("a one-of-four common-word match is gone entirely",
+      !order.contains(one4.title))
 // The complaint itself, isolated. `ride` says ONE query word — but says it in
 // its title AND its tags AND its body, which is the maximum a single term can
 // score (3+2+1). `spread` says THREE of the four words, and only in passing in
@@ -185,11 +233,26 @@ check("more coverage outranks less", place(two4.title, order) < place(one4.title
 // preceding fixtures could NOT prove this — there, raw hit counts already
 // ordered things correctly, so deleting coverage changed nothing and the
 // mutation survived (this harness's own second finding).
-let ride = Thing(title: "Trip", content: "trip notes", tags: ["Trip"])
-let spread = Thing(title: "Untitled", content: "pasta recipe from lisbon")
-let byCoverage = rank("pasta recipe lisbon trip", [ride, spread])
-check("three words in passing beat one word said everywhere",
+// `ride` says ONE query word — but in its title AND tags AND body, the most a
+// single term can score (3+2+1). `spread` says BOTH words, once each, in
+// weaker positions. Under the old OR-semantics the one-word ride won 6 units
+// to 4 and took the top slot; coverage is what reverses it.
+//
+// Tuned so BOTH clear the relevance floor (each matches at least one of two
+// equally-rare words), because otherwise the floor removes `ride` on its own
+// and the fixture proves nothing about coverage — which is exactly what
+// happened when the floor landed, and the mutation started surviving.
+// `elsewhere` exists only to give "porto" a second holder so the two terms
+// weigh the same; without it porto is rarer and rarity, not coverage, decides.
+let pad10 = (1...8).map { Thing(title: "unrelated note \($0)") }
+let ride = Thing(title: "Lisbon", content: "lisbon notes", tags: ["Lisbon"])
+let spread = Thing(title: "Porto", content: "lisbon day trip")
+let elsewhere = Thing(title: "Notes", content: "porto")
+let byCoverage = rank("lisbon porto", pad10 + [ride, spread, elsewhere])
+check("both words in weak positions beat one word said everywhere",
       byCoverage.first == spread.title)
+check("the one-word ride still answers (the floor did not remove it)",
+      byCoverage.contains(ride.title))
 
 print("rarity — a distinctive word pulls harder than a ubiquitous one")
 // Both candidates match exactly ONE of two terms, so coverage is equal and
@@ -205,10 +268,12 @@ let rare = Thing(title: "Lisbon")
 let ubiquitous = Thing(title: "work", content: "work work", tags: ["work"])
 common.append(contentsOf: [rare, ubiquitous])
 let byRarity = rank("work lisbon", common)
-check("both candidates are in the result (or the order proves nothing)",
-      byRarity.contains(rare.title) && byRarity.contains(ubiquitous.title))
-check("the rare term's thing leads the common term's",
-      place(rare.title, byRarity) < place(ubiquitous.title, byRarity))
+check("the rare term's thing answers", byRarity.contains(rare.title))
+// Rarity now decides membership, not just order: matching only the word
+// eleven things say carries too little of the query to be a match at all,
+// while matching the word one thing says carries most of it.
+check("matching only the ubiquitous word is not a match",
+      !byRarity.contains(ubiquitous.title))
 
 print("adjacency — a phrase beats the same two words scattered")
 // Again the weaker-looking candidate is given the stronger raw position:
@@ -230,13 +295,101 @@ let inBody = Thing(title: "Untitled", content: "we went to Lisbon in May")
 let byField = rank("lisbon", [inBody, inTags, inTitle])
 check("title, then tags, then content", byField == [inTitle.title, inTags.title, inBody.title])
 
+print("the relevance floor — matching only the uninformative words is no match")
+// The measured simulator case, as a fixture. Nothing here is about climate;
+// several things merely say "change". Under ranking alone they all qualified
+// and filled the screen ("11 things match", a Ford review at the top).
+let noise = [
+    Thing(title: "Ford needs another Taurus, and the EV pickup isn't it"),
+    Thing(title: "Vogue gave another nod of approval to the tech world"),
+    Thing(title: "Car washes can still sponsor workers despite visa changes"),
+    Thing(title: "Reddit shifts karma rules, a change for first-time posters"),
+    Thing(title: "Half of vaccines are binned - fridge-free versions could change that"),
+]
+check("a subject the corpus knows nothing about answers NOTHING",
+      rank("climate change", noise).isEmpty)
+// …and the same corpus still answers the question it CAN answer, so the floor
+// is refusing noise rather than refusing everything.
+check("the same corpus still answers what it does hold",
+      rank("vaccines fridge", noise).count == 1)
+// An honest partial match SURVIVES: three of four words, missing the rarest,
+// is most of the query's mass. A floor that ate this would be worse than the
+// noise it removes.
+let partial = Thing(title: "Pasta recipe from the trip")
+check("three of four words still matches (the rarest one missing)",
+      rank("pasta recipe lisbon trip", [partial] + noise).first == partial.title)
+// The synonym path owns its own evidence and is deliberately exempt — a thing
+// with NO exact match at all is left exactly as it was.
+check("a single term still matches things that say it",
+      rank("vaccines", noise).count == 1)
+
+print("the fields a row actually carries are all searched")
+// A social row, shaped as the bridges really store one: `content` is the
+// PERMALINK, `title` is the 80-char clamp, and the words live on `postText`.
+// Before 2026-08-06 the engine read title/tags/content only, so the searchable
+// body of every Farcaster, Bluesky, Nostr, Slack and X row was a URL.
+let post = Thing(title: "Long thread about the retrieval problem in personal",
+                 content: "https://bsky.app/profile/someone/post/3k2f",
+                 postText: "Long thread about the retrieval problem in personal corpora — "
+                         + "the hard part is ranking, not storage. Vector search alone "
+                         + "returns plausible neighbours instead of answers.",
+                 authorHandle: "someone.bsky.social",
+                 source: "Bluesky", kind: .chat)
+let decoy = Thing(title: "Storage prices", content: "nothing to do with it")
+check("a word only in postText is findable",
+      rank("plausible neighbours", [post, decoy]).first == post.title)
+check("the handle is findable (it is nowhere in the title)",
+      rank("someone.bsky.social", [post, decoy]).contains(post.title))
+// An x402 seller row: the services it sells live on `enrichedText`, its line
+// on `summary`, the company on `authorHandle`.
+let seller = Thing(title: "Allium · Blockchain prices, tokens, wallets, and SQL",
+                   content: "https://allium.so",
+                   enrichedText: "onchain data · SQL queries across chains · wallet labels",
+                   summary: "12 services from $0.0100",
+                   authorHandle: "Allium", tags: ["x402", "Data"], source: "Circle x402", kind: .link)
+check("a service only named in enrichedText is findable",
+      rank("wallet labels", [seller, decoy]).contains(seller.title))
+check("the seller is findable by name", rank("allium", [seller, decoy]).first == seller.title)
+// A dotted handle or domain is ONE space-separated word and three tokens. The
+// engine split the query on spaces while tokenizing fields on every
+// non-alphanumeric, so these could never match — the values a person is most
+// likely to search a social or x402 room by.
+check("a dotted handle matches", rank("someone.bsky.social", [post, decoy]).contains(post.title))
+check("a domain matches", rank("allium.so", [seller, decoy]).contains(seller.title))
+// The seam guard: two fields are joined for the phrase scan, so a pair must not
+// match ACROSS the seam. Both rows contain both words — the one holding them
+// as a real phrase must win.
+let seam = Thing(title: "Seam", content: "the ending word carrots",
+                 postText: "potatoes start the next field")
+let real = Thing(title: "Real", content: "a bag of carrots potatoes and onions")
+check("a true phrase outranks the same words split across a seam",
+      rank("carrots potatoes", [seam, real]).first == real.title)
+
+print("synonyms stand in for a word — at half its weight, never full")
+// The reach the feature exists for: one word, answered by its near-synonym.
+// Half of one term's mass is exactly 0.5, which clears the floor.
+let vehicle = Thing(title: "Vehicle maintenance schedule")
+check("a single word is still answered by its synonym",
+      rank("car", [vehicle] + (1...3).map { Thing(title: "filler \($0)") }).contains(vehicle.title))
+// …and the bug that survived both the floor and a tighter neighbour distance:
+// a synonym for ONE word of two carries 0.25 of the query and is not an answer.
+// "another" really is a near neighbour of "change" — tightening distance could
+// never separate them, which is why the credit is halved instead.
+let vogue = Thing(title: "Vogue just gave another nod of approval to the tech world")
+check("a synonym for one word of two does not answer",
+      rank("climate change", [vogue] + (1...3).map { Thing(title: "filler \($0)") }).isEmpty)
+
 print("the honest-nothing path survives")
 check("a query nothing says returns nothing",
       rank("tokyo", [all4, one4, two4]).isEmpty)
-// Coverage is a demotion, never a hard AND: one unknown word must not empty a
-// query whose other words really are in the corpus.
-check("one unmatched word does not empty the result",
-      !rank("lisbon tokyo", [all4]).isEmpty)
+// Two RARE words where the corpus holds only one is an honest partial answer
+// and must survive — this is the case that set `massFloor` to 0.45 rather than
+// 0.5, and it is the counterweight to the noise fixtures above. Padded to a
+// realistic corpus size on purpose: with one thing in the store every term is
+// trivially "common" and the rarity weights collapse, which measures nothing.
+let filler = (1...10).map { Thing(title: "unrelated note \($0)") }
+check("two rare words, one of them held, still answers",
+      rank("lisbon tokyo", filler + [all4]).contains(all4.title))
 
 print("regressions — the filters this pass rewrote around")
 let shotA = Thing(title: "Home screen", kind: .screenshot)
@@ -370,6 +523,18 @@ mutate "rarity removed from rank (every word weighs the same)" \
   'let weight = idf[term] ?? 1' 'let weight = 1.0'
 mutate "the phrase bonus removed from rank" \
   'if entry.titleText.contains(pair) { score += 2.5 }' ''
+mutate "the relevance floor removed (common-word noise returns)" \
+  'if !strongMeaning { return nil }' ''
+mutate "a synonym credited in FULL (a neighbour of one word answers a two-word query)" \
+  'matchedMass += 0.5 * weight' 'matchedMass += weight'
+# Both edges of a narrow measured band. 0.5 is the round number the floor was
+# nearly set to, and it refuses an honest partial match; 0.3 lets the measured
+# noise back in. That both fail is what makes 0.40 a measurement rather than a
+# preference.
+mutate "the floor rounded up to 0.5 (refuses honest partial matches)" \
+  'static let massFloor = 0.40' 'static let massFloor = 0.5'
+mutate "the floor dropped to 0.3 (noise returns)" \
+  'static let massFloor = 0.40' 'static let massFloor = 0.3'
 mutate "idf inverted (common outweighs rare)" \
   '(Double(n) + 1) / (Double(df) + 1)' '(Double(df) + 1) / (Double(n) + 1)'
 mutate "coverage flattened (one word scores like four)" \

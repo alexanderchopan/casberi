@@ -45,9 +45,23 @@ enum Retriever {
         let sourceMatch = named.flatMap { match in
             corpus.contains { $0.source == match.source } ? match : nil
         }
+        // Split the query the SAME way a thing's fields are tokenized below —
+        // on every non-alphanumeric, not on spaces (2026-08-06).
+        //
+        // It used to split on spaces alone, so a query term kept its dots while
+        // the fields it was matched against had theirs stripped: a handle
+        // ("someone.bsky.social", "vitalik.eth"), a domain ("allium.so") or a
+        // filename could NEVER match, because the engine looked for one token
+        // with dots in a set that held three without. Precisely the values a
+        // person is most likely to search a social or x402 room by.
+        //
+        // Single characters are dropped: splitting this way turns "what's" into
+        // "what" + "s", and a bare "s" scored as a search term matches most of
+        // the corpus. Source names are resolved off the RAW query above, so a
+        // one-letter source ("X") is already claimed before this runs.
         var terms = query.lowercased()
-            .trimmingCharacters(in: CharacterSet(charactersIn: "? "))
-            .split(separator: " ").map(String.init)
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { $0.count > 1 }
         if let sourceMatch { terms.removeAll { sourceMatch.words.contains($0) } }
 
         // A FACET word narrows within a named room — "my X replies", "what I
@@ -109,7 +123,17 @@ enum Retriever {
         let all = corpus
         // Semantic widening: near-synonyms of the query's words, scored
         // BELOW exact matches — "car stuff" reaches "vehicle" titles.
-        let expanded = SemanticExpand.expand(terms)
+        //
+        // Expanded PER TERM rather than in one flat set (2026-08-06), because a
+        // synonym's worth depends entirely on which word it stands in for.
+        // Expanding a rare word is where this feature earns its place;
+        // expanding a common one produces common neighbours and pure noise —
+        // measured, "change" reaches "another", which put a Vogue piece and a
+        // Ford review into a "climate change" answer. Attribution is what lets
+        // the floor below credit a synonym against the term it replaced.
+        var expansionsByTerm: [String: Set<String>] = [:]
+        for term in terms { expansionsByTerm[term] = SemanticExpand.expand([term]) }
+        let expanded = Set(expansionsByTerm.values.joined())
 
         // Sentence-level semantic match (2026-07-12): embed the natural-language
         // ask and score each thing by cosine to its stored vector — so a query
@@ -137,7 +161,7 @@ enum Retriever {
         // lift is normalized 0…1 above the boost floor and weighted so a strong
         // meaning-match rivals a title hit (+3).
         let semanticBoostFloor = 0.55
-        let semanticQualifyFloor = 0.62
+        let semanticQualifyFloor = Self.semanticQualifyFloor
         let semanticWeight = 3.0
 
         // Whole words, not substrings (2026-07-10): "what is my name" used
@@ -161,17 +185,42 @@ enum Retriever {
             if let kindFilter, thing.kind != kindFilter { return nil }
             if let dateMatch, !dateMatch.range.contains(thing.capturedAt) { return nil }
             let titleTokens = tokens(thing.title)
-            let tagTokens = tokens(thing.tags.joined(separator: " "))
-            // The content scan reaches the thing's own body AND its enriched
-            // text (a link's fetched article, 2026-07-15) — so a keyword the
-            // title never says can still match a saved page.
-            let contentTokens = tokens(thing.content + " " + (thing.enrichedText ?? ""))
+            // WHOSE it is scores like a tag (2026-08-06). `authorHandle` is the
+            // poster on a social row, the seller on an x402 row, the creator on
+            // an imported like — the field every "whose" room is already keyed
+            // by — and until now the ranking engine could not see it at all, so
+            // a handle only matched when it happened to appear in the title.
+            let tagTokens = tokens(thing.tags.joined(separator: " ")
+                                   + " " + (thing.authorHandle ?? ""))
+            // The content scan reaches the thing's own body, its enriched text
+            // (a link's fetched article, 2026-07-15), the FULL post text, and
+            // the source's own abstract.
+            //
+            // `postText` is the one that mattered most and was missing: for
+            // every social row `content` holds the PERMALINK, `title` is an
+            // 80-char clamp, and the post's real words live only here — so the
+            // searchable body of a Farcaster, Bluesky, Nostr, Slack or X row
+            // was a URL, and anything said past the clamp could not be found.
+            // `summary` is display copy the source wrote (a Trello card back, a
+            // Cursor agent's account of its run, an x402 seller's line); the
+            // embedding index has read it since 2026-07-22 and the keyword
+            // engine never did.
+            //
+            // Each field's tokens are kept as their own RUN and joined with a
+            // sentinel, so the phrase bonus can't match across a seam and
+            // invent an adjacency that exists in neither field.
+            let contentRuns = [thing.content, thing.enrichedText ?? "",
+                               thing.postText ?? "", thing.summary ?? ""]
+                .map(tokens).filter { !$0.isEmpty }
+            let contentTokens = contentRuns.flatMap { $0 }
             return Prepared(thing: thing,
                             title: Set(titleTokens),
                             tags: Set(tagTokens),
                             content: Set(contentTokens),
                             titleText: " " + titleTokens.joined(separator: " ") + " ",
-                            contentText: " " + contentTokens.joined(separator: " ") + " ")
+                            contentText: " " + contentRuns
+                                .map { $0.joined(separator: " ") }
+                                .joined(separator: " \u{1} ") + " ")
         }
 
         // Pass 2 — each term's weight is its RARITY in this corpus (prd §318):
@@ -195,17 +244,63 @@ enum Retriever {
         let pairs: [String] = terms.count > 1
             ? (0..<(terms.count - 1)).map { " \(terms[$0]) \(terms[$0 + 1]) " } : []
 
+        // The query's whole information content, for the floor below. Summed
+        // once, not per thing.
+        let totalMass = terms.reduce(0.0) { $0 + (idf[$1] ?? 1) }
+
+        // A SYNONYM carries its own rarity too (prd §318 amendment, measured on
+        // the simulator). `SemanticExpand` hands back up to eight neighbours
+        // per term and they scored a flat 1.5/1/0.5 — unweighted, and exempt
+        // from the mass floor because they are not exact matches. Measured
+        // consequence over a real corpus: "climate change" returned a Vogue
+        // piece ("gave another nod of approval") and a Ford review ("needs
+        // another Taurus"), NEITHER of which contains either query word — they
+        // matched the neighbour "another", a word most of the corpus says.
+        // A synonym that common is not evidence of anything, so a neighbour is
+        // weighted by its own rarity and dropped outright below
+        // `expansionFloor`.
+        var expandedIdf: [String: Double] = [:]
+        for word in expanded {
+            let df = prepared.reduce(0) { count, entry in
+                count + ((entry.title.contains(word) || entry.tags.contains(word)
+                          || entry.content.contains(word)) ? 1 : 0)
+            }
+            let weight = Self.idfWeight(corpus: prepared.count, holding: df)
+            if weight >= Self.expansionFloor { expandedIdf[word] = weight }
+        }
+
         return prepared.compactMap { entry -> (Thing, Double)? in
             let thing = entry.thing
             var exact = 0.0
             var matchedTerms = 0
+            var matchedMass = 0.0
+            // Synonym credit, accumulated here so it can be added AFTER the
+            // coverage scaling below — an expanded hit is weaker evidence and
+            // must not be multiplied by a coverage figure it didn't earn.
+            var synonym = 0.0
             for term in terms {
                 let weight = idf[term] ?? 1
                 var hit = false
                 if entry.title.contains(term) { exact += 3 * weight; hit = true }
                 if entry.tags.contains(term) { exact += 2 * weight; hit = true }
                 if entry.content.contains(term) { exact += 1 * weight; hit = true }
-                if hit { matchedTerms += 1 }
+                if hit {
+                    matchedTerms += 1
+                    matchedMass += weight
+                    continue                     // said the word itself — no stand-in needed
+                }
+                // This term is absent; a near-synonym may stand in for it, at
+                // HALF the term's mass. Half because it is genuinely weaker
+                // evidence, and crediting it in full would let "change" →
+                // "another" satisfy a query about climate.
+                var stoodIn = false
+                for neighbour in expansionsByTerm[term] ?? [] {
+                    guard let nWeight = expandedIdf[neighbour] else { continue }
+                    if entry.title.contains(neighbour) { synonym += 1.5 * nWeight; stoodIn = true }
+                    if entry.tags.contains(neighbour) { synonym += 1 * nWeight; stoodIn = true }
+                    if entry.content.contains(neighbour) { synonym += 0.5 * nWeight; stoodIn = true }
+                }
+                if stoodIn { matchedTerms += 1; matchedMass += 0.5 * weight }
             }
             // COVERAGE (prd §318): a thing matching one of four query words is
             // demoted well below one matching all four — the single biggest
@@ -214,11 +309,7 @@ enum Retriever {
             // subtotal only: synonym and semantic evidence below keep their
             // own paths, so "car stuff" still reaches a "vehicle" title.
             var score = exact * Self.coverageFactor(matched: matchedTerms, of: terms.count)
-            for term in expanded {
-                if entry.title.contains(term) { score += 1.5 }
-                if entry.tags.contains(term) { score += 1 }
-                if entry.content.contains(term) { score += 0.5 }
-            }
+                + synonym
             for pair in pairs {
                 if entry.titleText.contains(pair) { score += 2.5 }
                 if entry.contentText.contains(pair) { score += 1 }
@@ -243,6 +334,48 @@ enum Retriever {
                 score = 1
             }
             guard score > 0 else { return nil }
+            // THE RELEVANCE FLOOR (prd §318 amendment, 2026-08-06 — measured on
+            // the simulator, see below). Ranking is not filtering: coverage
+            // demotes a one-common-word match, but with nothing better in the
+            // corpus that match still leads, and sixteen of them still fill the
+            // screen. Measured over a real 130-thing corpus, "climate change"
+            // — a subject NOTHING there is about — answered "11 things match"
+            // with a Ford Taurus review and a visa-rules piece, because both
+            // say "change". That is the reported complaint exactly, and no
+            // amount of reordering fixes it.
+            //
+            // The rule: a thing must carry a real share of what the query was
+            // ASKING — measured in the terms' own rarity, not their count. So
+            // matching "change" out of "climate change" is 0.38 of the mass and
+            // fails, while matching three words of "pasta recipe lisbon trip"
+            // is most of it and passes even though a rarer word is missing.
+            //
+            // ONE exemption: a strong sentence-embedding match still qualifies
+            // on its own, the unchanged §282 rail.
+            //
+            // Synonyms used to be exempt too, and that hole is what kept the
+            // reported query broken: a thing matching NO query word could
+            // qualify on a near-neighbour alone, so "climate change" still
+            // answered with "Vogue gave another nod" and "Ford needs another
+            // Taurus" — neither containing either word — long after the floor
+            // landed. Tightening the neighbour distance could not fix it
+            // ("another" sits very close to "change") without gutting the
+            // synonym reach the feature exists for. Crediting a synonym at half
+            // its term's mass does fix it, and needs no exemption: a single-word
+            // query answered by a synonym alone still clears the floor at
+            // exactly 0.5, so "car" → a "vehicle" title survives, while a
+            // synonym for one word of two carries 0.25 and does not.
+            if !terms.isEmpty, totalMass > 0,
+               matchedMass / totalMass < Self.massFloor {
+                let strongMeaning: Bool = {
+                    guard let queryVec, let queryLanguage,
+                          let data = thing.embedding, !data.isEmpty else { return false }
+                    return EmbeddingIndex.similarity(query: queryVec, queryNorm: queryNorm,
+                                                     packed: data,
+                                                     language: queryLanguage) >= semanticQualifyFloor
+                }()
+                if !strongMeaning { return nil }
+            }
             let age = Date.now.timeIntervalSince(thing.capturedAt)
             score += max(0, 1 - age / (7 * 86_400))   // fresh floats, capped +1
             return (thing, score)
@@ -294,6 +427,61 @@ enum Retriever {
                                      // which is what an ask naming a source
                                      // actually answered with.
                                      "can", "could", "would", "please", "stuff"]
+
+    /// The share of a query's information a thing must actually carry to be a
+    /// match at all (prd §318 amendment).
+    ///
+    /// MEASURED, and the margin is genuinely tight — do not round this number
+    /// off. Over a real 130-thing corpus: a "climate change" candidate matching
+    /// only "change" carries 0.38 of the query's mass, and a "vaccines fridge
+    /// free" candidate matching only "free" carries 0.31 — both noise, both
+    /// must fail. But a query naming two RARE words where the corpus holds only
+    /// one ("lisbon tokyo" against a corpus with a Lisbon note) carries ~0.44,
+    /// and that is an honest partial answer that must pass — so the round 0.5
+    /// is wrong, and was measured refusing exactly that case.
+    ///
+    /// The band is NARROW and moves with corpus size, so treat 0.40 as MEASURED
+    /// rather than principled: noise measured 0.31 and 0.34–0.38; honest
+    /// partials measured 0.44 on a 12-thing corpus, rising toward 0.5 as the
+    /// corpus grows and a rare word's weight approaches its ceiling. 0.40 sits
+    /// between them with the most room on either side. Both bounds are pinned
+    /// by fixtures in `scripts/retriever-selftest.sh` — retune this and one of
+    /// them tells you which side you broke.
+    ///
+    /// The asymmetry is the whole point and is what makes the rule work: an
+    /// absent term inflates the denominator (nothing says it, so it scores
+    /// maximum rarity), which is why matching only a COMMON word fails while
+    /// matching one of two RARE words passes. Matching "change" says nothing
+    /// about climate; matching "lisbon" says a great deal about Lisbon.
+    static let massFloor = 0.40
+
+    /// How similar a thing must be, by SENTENCE EMBEDDING alone, to answer a
+    /// question it shares no words with (prd §282's rail, exposed here 2026-08-06
+    /// so it can be measured rather than argued about).
+    ///
+    /// This is the one number the keyword rules cannot reach: a thing with no
+    /// exact match and no synonym still qualifies on meaning alone, which is
+    /// the feature — and, measured on a real corpus, also the last source of
+    /// "general answers". `-semanticFloor <n>` overrides it in DEBUG so a sweep
+    /// can compare floors on the SAME corpus in one run; release builds always
+    /// use the shipped value.
+    static var semanticQualifyFloor: Double {
+        #if DEBUG
+        let override = UserDefaults.standard.double(forKey: "semanticFloor")
+        if override > 0 { return override }
+        #endif
+        return 0.62
+    }
+
+    /// How distinctive a SYNONYM must be to count as evidence at all (prd §318
+    /// amendment). `SemanticExpand` returns a word's eight nearest neighbours
+    /// with no regard for whether the corpus is full of them, and a neighbour
+    /// most things say is not evidence — measured, it was "another" putting a
+    /// Vogue piece and a Ford review into a "climate change" answer. At 0.6 a
+    /// neighbour has to sit in under roughly a quarter of the corpus, which is
+    /// what removed both while leaving genuine synonym reach ("car" → a
+    /// "vehicle" title) untouched.
+    static let expansionFloor = 0.6
 
     /// A term's rarity weight over this corpus (prd §318): 1.5 for a word one
     /// thing says, tapering to 0.3 for a word every thing says. Log-scaled and

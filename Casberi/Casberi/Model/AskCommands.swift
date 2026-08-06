@@ -451,12 +451,34 @@ enum StatusAsk {
 enum SemanticExpand {
     private static let embedding = NLEmbedding.wordEmbedding(for: .english)
 
+    /// How near a neighbour must be to stand in for a query word.
+    ///
+    /// MEASURED 2026-08-06 (prd §318 amendment), and the reason the sweep
+    /// exists: at the original 1.0 this was the last source of "general
+    /// answers", and by a wide margin — over a real corpus "roman empire"
+    /// answered with a story about Ukraine and "knitting patterns" with one
+    /// about Spotify, neither sharing a single word with the query. NLEmbedding
+    /// returns eight neighbours no matter how far away they are, and at 1.0
+    /// every one of them counted; "car" → "vehicle" is close, "roman" →
+    /// "russian" is not, and only the distance tells them apart.
+    ///
+    /// `-expandDistance <n>` overrides it in DEBUG so a sweep can compare
+    /// cutoffs on one corpus in a single run.
+    static var maxDistance: Double {
+        #if DEBUG
+        let override = UserDefaults.standard.double(forKey: "expandDistance")
+        if override > 0 { return override }
+        #endif
+        return 0.82
+    }
+
     static func expand(_ terms: [String]) -> Set<String> {
         guard let embedding else { return [] }
+        let limit = maxDistance
         var out: Set<String> = []
         for term in terms {
             for (word, distance) in embedding.neighbors(for: term, maximumCount: 8)
-            where distance < 1.0 {
+            where distance < limit {
                 out.insert(word.lowercased())
             }
         }

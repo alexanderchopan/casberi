@@ -807,6 +807,37 @@ struct RootShell: View {
                 || UserDefaults.standard.bool(forKey: "openComposer") {
                 composerOpen = true
             }
+            // Debug hook: `-rankSweep "q1|q2|q3"` — run `Retriever.rank` over
+            // the real corpus for SEVERAL queries in ONE launch, logging each
+            // query's hit count and top three titles (`rankSweep|` per query,
+            // one NSLog each — the `-todayProbe` truncation lesson).
+            //
+            // It exists because the thing worth measuring here is a RANKING,
+            // and a ranking can only be judged by comparing queries that should
+            // answer against queries that shouldn't. `-findProbe` takes one
+            // query per launch, so a twelve-query set across three candidate
+            // floors is thirty-six launches and ten minutes — long enough that
+            // in practice the comparison never gets run, which is how 0.62
+            // stayed unexamined. Pairs with `-semanticFloor <n>`: same corpus,
+            // same queries, one variable.
+            //
+            // Retrieval only — no model, no composer, nothing written.
+            if let spec = UserDefaults.standard.string(forKey: "rankSweep"), !spec.isEmpty {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(400))
+                    var descriptor = FetchDescriptor<Thing>(
+                        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+                    descriptor.fetchLimit = 2000
+                    let corpus = (try? modelContext.fetch(descriptor)) ?? []
+                    NSLog("[Casberi] rankSweep: floor=%.2f corpus=%d",
+                          Retriever.semanticQualifyFloor, corpus.count)
+                    for query in spec.split(separator: "|").map(String.init) {
+                        let hits = Retriever.rank(query, in: corpus, isPoolRefinement: false)
+                        let top = hits.prefix(3).map(\.title).joined(separator: " ⁄ ")
+                        NSLog("[Casberi] rankSweep| %@ → %d | %@", query, hits.count, top)
+                    }
+                }
+            }
             // Debug hook: `-openSources YES` raises the sources tray — the
             // agent bar's HOLD, which no headless run can perform (a long
             // press isn't a launch arg and computer-use is blocked in

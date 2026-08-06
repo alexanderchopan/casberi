@@ -17939,3 +17939,78 @@ The seat shipped with no `FeedScreen.Shape` case, so it fell to `.plain`: twenty
 **The catalog copy was cut from 79 words to 40** (user: "look how long that is and wordy"), matching OpenSea and Deals; the features list is gone. Screen intro and slab note now match GeckoTerminal's almost exactly.
 
 **Deliberately unbuilt: lane filter chips.** §269 ruled the tag filter is the agent's with no control of its own; whether this room earns an exception is the user's ruling, not a side effect of a polish pass.
+
+### §318 amendment — the relevance floor, and what measuring it actually found (user: "how can we make search across the app smarter… seems to give general answers" → "do all" → "yes. please do", 2026-08-06)
+
+Ranking is not filtering. §318 made a full match outrank a one-word match, and
+on a real 130-thing corpus that still left "climate change" — a subject nothing
+there is about — answering "11 things match" with a Ford Taurus review and a
+visa-rules piece, because both say "change". Reordering cannot fix a result set
+whose every member is weak.
+
+**The floor.** A thing must carry a real share of what the query was ASKING,
+measured in the terms' own rarity rather than their count (`massFloor`, 0.40).
+Matching only "free" out of "vaccines fridge free" is 0.31 of the query's
+information; matching three words of "pasta recipe lisbon trip" is most of it
+and passes even with the rarest word missing. **0.40 is measured, and the band
+is narrow** — noise at 0.31–0.38, honest partials at 0.44 rising toward 0.5 as
+the corpus grows. The round 0.5 was tried first and measured refusing a genuine
+partial answer. Both edges are pinned by fixtures, and mutations proving that
+0.5 and 0.3 each break something are what make it a measurement.
+
+**Then the sweep, which refuted the hypothesis it was built to test.** The
+prime suspect was the §282 sentence-embedding floor (0.62) — the one number
+keyword rules can't reach. `-rankSweep "q1|q2|…"` plus `-semanticFloor <n>` ran
+twelve queries at 0.62 / 0.68 / 0.72 / 0.78 over one corpus: **all four
+identical, not one query changed.** The embedding contributes nothing on this
+corpus, and an afternoon of retuning it would have moved nothing. Worth
+recording as method, not just result: the instrument existed to be wrong, and
+the cheap sweep is what stopped a plausible story from becoming a change.
+
+**The real culprit was `SemanticExpand`.** NLEmbedding returns eight neighbours
+regardless of distance and the cutoff was 1.0, so every one counted — "roman
+empire" answered with a story about Ukraine, "knitting patterns" with one about
+Spotify, neither sharing a word with the query. Sweeping the distance
+(`-expandDistance`) over 1.0 / 0.9 / 0.82 / 0.75: 1.0 → 0.9 is free (two
+fabricated answers become honest zeros, nothing real lost); 0.82 trims the
+remaining tails; **0.75 starts cutting real reach** — "car" collapses 8 → 4,
+which is the synonym feature itself. Hence 0.82.
+
+**But distance alone could not finish the job, and that is the interesting
+part.** "another" is a genuinely near neighbour of "change", so no cutoff that
+keeps "car" → "vehicle" also drops "Vogue gave another nod" from a climate
+query. The fix is not distance but ACCOUNTING: a synonym now stands in for the
+term it replaced at HALF that term's mass, and the floor's old
+synonym exemption is gone. A single-word query answered by a synonym alone
+carries exactly 0.5 and still clears the floor; a synonym for one word of two
+carries 0.25 and does not. Neighbours are also weighted by their own rarity
+(`expansionFloor`), and expansion is now attributed PER TERM rather than
+flattened into one set — expanding a rare word is where the feature earns its
+place, expanding a common one is noise generation.
+
+**Three fields the engine could not see.** Measured against the Circle x402 and
+social rooms: `postText`, `summary` and `authorHandle` were never scored. For
+every social row `content` holds the PERMALINK and `title` is an 80-char clamp,
+so the searchable body of a Farcaster, Bluesky, Nostr, Slack or X post was a
+URL and anything said past the clamp could not be found at all. `authorHandle`
+is the poster, the x402 seller, the creator of an imported like — the field
+every "whose" room is keyed by. Each field's tokens are kept as their own run,
+joined with a sentinel, so the phrase bonus cannot match across a seam.
+
+**And a bug that made handles unsearchable.** `rank` split the query on SPACES
+while tokenizing fields on every non-alphanumeric, so a term kept its dots while
+the fields it was matched against had theirs stripped: `someone.bsky.social`,
+`vitalik.eth`, `allium.so` could NEVER match. Precisely the values a person
+searches a social or x402 room by. Single characters are dropped on the new
+split, since "what's" becomes "what" + "s" and a bare "s" matches most of a
+corpus.
+
+**Open, and NOT fixed here — the source filter has no empty fallback.**
+Measured: "onchain wallet analytics" returns NOTHING, because `sourceFilter`
+resolves "wallet" to the Wallet bridge, confirms the corpus has rows from it,
+scopes to those four transactions and strips the word from the terms — while
+the x402 room holds a row titled "Onchain alpha, wallet flow, and DEX analytics"
+that answers it exactly. §307 made a source name a filter deliberately and that
+ruling stands; what it lacks is a fallback when the scoped read comes back empty
+and the unscoped one would not. That is a product decision about §307, not a
+scoring bug, so it is recorded rather than quietly changed.
