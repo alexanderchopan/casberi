@@ -17212,3 +17212,77 @@ nil is a no-op that looks exactly like having nothing to say.
 **§313 amendment — S4's capture premise expired and nothing said so** (user: "why is a Reminders button on a Twitter thing sheet?", 2026-08-06). Every `.note` in the corpus got a "Send to Reminders" disc, from S4's rule that captures become outcomes. That was true while a `.note` was always something the person typed, pasted or dictated. The import rooms retired the premise silently: X posts and replies, Instagram captions and comments and TikTok comments all land as `.note`, and none of them is a capture — they are published writing, most of it years old and some of it somebody else's, so "what will you do about this" is the wrong question to put first. Scoped to `Corpus.bulkImportSources`, the set that already means "came in by the archive-load door".
 
 **Held, because it needs a device measurement:** the same screenshot shows the disc's own failure path firing — "Copied — couldn't open the app". Unlike "Open in Photos" and "Open in YouTube", which §275 gated on `canOpenURL` precisely so a disc can never do nothing, this hand-off is ungated, so on a device where `x-apple-reminderkit://` doesn't resolve it copies and fails every time. Gating it is the same ruling one verb over, and `HandOffState.candidates` + `LSApplicationQueriesSchemes` is where it goes — but whether the scheme is unclaimed on that device or simply the WRONG scheme is not knowable from here, and gating a wrong scheme deletes the verb everywhere rather than fixing it. Measure `canOpenURL("x-apple-reminderkit://")` on a real device first.
+
+## §314 — The import setup screens: one verb at a time (2026-08-06)
+
+Reported of X, of the screen you land on after tapping Connect: *"the twitter
+connect page looks terrible. three large buttons and tons of text."* The count
+was right, and every block it named was already illegal under a rule this repo
+had written down and then re-broken from memory — the same shape as every other
+mechanical check here, one screen later.
+
+**Four law breaks, all quotable from the source.** `DSSlabButton` says it is
+*"a screen's one filled block, so it reads as THE verb"*: X rendered two before
+an import and four after — open the settings page, choose the folder, find the
+authors, remove everything. `DSSlab` says destructive *"sits outside the rhythm
+on purpose"* and stays the quiet centered red row Disconnect wears everywhere:
+"Remove all 3,412 imported things" was a filled tint slab, the single most
+dangerous control on the screen dressed as its main verb. `DSSlabNote` says
+*"every manage page gets exactly one"*, restating §218: X had five, about 130
+words of centered tertiary text before you had done anything. And
+`BridgeFooterNote` was built (2026-07-31) for exactly this wall, with a lede and
+a scannable `points` list — used by no import screen at all, though the import
+family carries more fine print than any other.
+
+**The root, which the button count is a symptom of: an import screen is two
+moments separated by up to twenty-four hours, and it rendered both at full
+strength, simultaneously, forever.** X makes you request the archive, re-enter
+your password, and wait a day. So on arrival the only act that can do anything
+is the door out to X — and beside it sat an equally loud "Choose folder" for a
+file that did not exist yet. A day later, when the folder is finally the point,
+the four steps about requesting it are noise; after the import they are noise
+forever.
+
+**So the block stages itself** (`ImportArchiveSection`). One filled verb at a
+time, chosen from things actually observed — a door tapped, and rows in the
+corpus. Stage 1: the door leads, the pick is present but quiet, because someone
+arriving with a zip already in Files must not be blocked but is the rare case
+and should not set the screen's weight. Stage 2, once the door has been tapped:
+they swap, step one ticks green through `BridgeStepLines.doneThrough`, and the
+door drops to a quiet slab wearing *"Asked 2 days ago"* — the wait acknowledged
+rather than day one and day three looking identical. Stage 3, once anything has
+landed: the whole block collapses to one quiet row, because that job is done and
+its tutorial is not a permanent fixture. Re-opening it clears the mark, so the
+cycle restarts clean instead of claiming a request answered months ago.
+
+`ImportRequestMark` is UserDefaults, not a `Thing` field — no schema change and
+no CloudKit Production deploy. **It is not a claim that an archive was
+requested**; we cannot see that, and a tap could be idle curiosity. It decides
+which verb leads and says when we saw the tap, which is honest about being our
+own record. Nothing here infers a step finished off-screen — `doneThrough`'s own
+contract, reused rather than re-argued.
+
+**The removal keeps every property that matters and loses only its weight**
+(`ImportUpkeepSection`): same scope, same confirmation, same recoverability, now
+the centered red row `BridgeDisconnectSection` named. The staleness line moves to
+the section footer, where a fact about a section belongs and costs no gray
+sentence in the body.
+
+**Snapchat had computed `held` and `staleness` on appear since §310 landed and
+rendered neither** — so it was the one import room with no way back out and no
+word about its own age, while its three siblings had both. Found by restyling
+the family, not by any check: a screen that reads state and never draws it looks
+exactly like a screen with nothing to say. It has the section now.
+
+**Carried to all four rooms** on §309's terms — one ruling, four instances. The
+private-messages note (47 words, centered, under the switch) became the switch's
+own one-line detail plus one footer point carrying the only part that changes
+what anyone would do: the switch decides before the import, and un-ticking it
+afterwards undoes nothing.
+
+**Not done, and the reason is the honesty rule.** Snapchat is the last import
+whose step one is a URL you must type rather than a door you tap. It has no door
+because `accounts.snapchat.com` could not be reached from the host this was
+written on, and a door to a URL nobody has loaded is exactly the dead control
+§83 bans. Give it one once someone has confirmed the page, and add the host to
+`network-reach-audit.sh`'s non-reach denylist in the same commit.

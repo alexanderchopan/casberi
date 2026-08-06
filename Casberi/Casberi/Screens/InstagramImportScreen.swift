@@ -35,14 +35,13 @@ private let instagramRecentDescriptor: FetchDescriptor<Thing> = {
 /// about before tapping Import, and disclosed in `NetworkReach` besides), and
 /// it says a deleted or private post stays a link, because the failure has to
 /// be named where the promise is made.
+///
+/// SHAPE: `ImportSetupComponents`' (prd §314) — the staged block X earned. The
+/// wait here is about an hour rather than a day, but the structure is the same
+/// and so was the clutter.
 struct InstagramImportScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
-    @Environment(\.openURL) private var openURL
-    /// Off by default, and off is the safety property — see `ImportOptions`.
-    /// Bound straight to the shared key rather than mirrored into local state,
-    /// so the switch and the importer can never disagree.
-    @AppStorage(ImportOptions.messagesStorageKey) private var includeMessages = false
     @State private var importing = false
     @State private var result: String?
     @State private var resultIsError = false
@@ -50,8 +49,6 @@ struct InstagramImportScreen: View {
     /// prd §310). Both read off the import RECEIPT and a count — no new field.
     @State private var staleness: String?
     @State private var held = 0
-    @State private var removing = false
-    @State private var confirmRemove = false
 
     @Query(instagramRecentDescriptor) private var recent: [Thing]
 
@@ -59,10 +56,22 @@ struct InstagramImportScreen: View {
         List {
             BridgeSetupHeader(name: "Instagram")
             setupSection
-            upkeepSection
+            BridgeFooterNote(
+                lede: "One-time import — nothing arrives on its own afterwards, and re-importing later adds only what's new.",
+                points: [
+                    String(localized: "Your captions and comments arrive as searchable text."),
+                    String(localized: "Saves and likes arrive as links. Casberi reads each post's own public page afterwards, a few at a time, to fill in the caption."),
+                    String(localized: "A post since deleted or made private stays a link."),
+                    ImportOptions.messagesPoint,
+                ])
             if !recent.isEmpty {
                 RecentThingsSection(header: "Imported", things: recent.live)
                     .listRowSeparator(.hidden)
+            }
+            ImportUpkeepSection(source: "Instagram", held: held, staleness: staleness) { gone in
+                reread()
+                resultIsError = false
+                result = String(localized: "\(gone) removed")
             }
         }
         .listStyle(.insetGrouped)
@@ -71,10 +80,7 @@ struct InstagramImportScreen: View {
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
-        .onAppear {
-            staleness = ImportRemoval.stalenessLine(source: "Instagram", context: modelContext)
-            held = ImportRemoval.count(source: "Instagram", context: modelContext)
-        }
+        .onAppear { reread() }
         .dsScreenTitle("Instagram")
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.folder]) { outcome in
@@ -86,93 +92,36 @@ struct InstagramImportScreen: View {
     private var setupSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSSlabButton(title: "Open Instagram", systemImage: "arrow.up.right") {
-                    DSHaptic.tap()
-                    if let url = URL(string: "https://accountscenter.instagram.com/info_and_permissions/dyi/") {
-                        openURL(url)
-                    }
-                }
-                // "JSON" is called out because the default is HTML, and an HTML
-                // export parses into nothing here — a silent zero that reads
-                // as a broken importer rather than as the wrong format.
-                BridgeStepLines(steps: [
-                    "Choose Download or transfer information, then Some of your information.",
-                    "Tick Saved, Likes, Posts and Comments, then Download to device.",
-                    "Set Format to JSON — an HTML export can't be read. Instagram emails a link within about an hour.",
-                    // "then pick the unzipped folder below" was the button
-                    // beneath it read out loud (2026-07-31).
-                    "Save the zip to Files and tap it once to unzip.",
-                ], startingAt: 2)
-                // ABOVE the pick on purpose: this is a decision to make before
-                // the import runs, not a preference to discover afterwards.
-                Toggle(ImportOptions.messagesTitle, isOn: $includeMessages)
-                    .dsText(.body17)
-                DSSlabNote(text: ImportOptions.messagesNote)
-                DSSlabButton(title: "Choose folder", systemImage: "folder") {
-                    DSHaptic.tap()
-                    importing = true
-                }
+                ImportArchiveSection(
+                    source: "Instagram",
+                    doorTitle: "Open Instagram",
+                    doorURL: URL(string: "https://accountscenter.instagram.com/info_and_permissions/dyi/"),
+                    // "JSON" is called out because the default is HTML, and an
+                    // HTML export parses into nothing here — a silent zero that
+                    // reads as a broken importer rather than as the wrong
+                    // format.
+                    steps: [
+                        "Choose Download or transfer information, then Some of your information.",
+                        "Tick Saved, Likes, Posts and Comments, then Download to device.",
+                        "Set Format to JSON — an HTML export can't be read. Instagram emails a link within about an hour.",
+                        // "then pick the unzipped folder below" was the button
+                        // beneath it read out loud (2026-07-31).
+                        "Save the zip to Files and tap it once to unzip.",
+                    ],
+                    pickTitle: "Choose folder",
+                    alreadyImported: held > 0,
+                    showsMessagesToggle: true) { importing = true }
                 BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-                DSSlabNote(text: "One-time import — re-importing later adds only what's new. Instagram's export lists your saves and likes by handle and link, with no words in them. Casberi opens each saved post's own public page afterwards to read its caption, a few at a time, so you can search what was in them. A post that's since been deleted or made private stays a link.")
             }
         }
         .dsSlabSection()
     }
 
-
-    /// How old this import is, and the way back out (2026-08-05, prd §310).
-    ///
-    /// Both halves exist because the caps moved. A room frozen six months ago
-    /// reads exactly like a current one — there is no live read behind this
-    /// seat and never will be, so the only remedy is a fresh export and the
-    /// copy says so. And a decade landed in one tap needs a way back out that
-    /// isn't "delete everything you own".
-    ///
-    /// The removal is DESTRUCTIVE and confirms first, naming the real number.
-    /// It is also completely recoverable by repeating the import, which is
-    /// what makes a plain confirm the right weight rather than a typed name.
-    @ViewBuilder
-    private var upkeepSection: some View {
-        if staleness != nil || held > 0 {
-            Section {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    if let staleness { DSSlabNote(text: staleness) }
-                    if held > 0 {
-                        DSSlabButton(title: removing
-                                        ? String(localized: "Removing…")
-                                        : String(localized: "Remove all \(held) imported things"),
-                                     systemImage: "trash",
-                                     busy: removing,
-                                     enabled: !removing) {
-                            DSHaptic.tap()
-                            confirmRemove = true
-                        }
-                        DSSlabNote(text: "Removes only what came from Instagram. Everything else stays, and importing again brings it all back.")
-                    }
-                }
-            }
-            .dsSlabSection()
-            .confirmationDialog("Remove all \(held) things from Instagram?",
-                                isPresented: $confirmRemove, titleVisibility: .visible) {
-                Button("Remove \(held) things", role: .destructive) {
-                    Task { await runRemove() }
-                }
-                Button("Keep them", role: .cancel) { }
-            } message: {
-                Text("They came from an export, so importing again brings them back.")
-            }
-        }
-    }
-
-    private func runRemove() async {
-        removing = true
-        defer { removing = false }
-        let gone = await ImportRemoval.removeAll(source: "Instagram", context: modelContext)
-        held = ImportRemoval.count(source: "Instagram", context: modelContext)
+    /// One re-read of what this screen shows about the corpus — on appear,
+    /// after an import and after a removal, so the three can never disagree.
+    private func reread() {
         staleness = ImportRemoval.stalenessLine(source: "Instagram", context: modelContext)
-        DSHaptic.success()
-        resultIsError = false
-        result = String(localized: "\(gone) removed")
+        held = ImportRemoval.count(source: "Instagram", context: modelContext)
     }
 
     // MARK: - Run
@@ -206,6 +155,10 @@ struct InstagramImportScreen: View {
         }
         resultIsError = false
         DSHaptic.success()
+        // `held` is what collapses the archive block now, so a screen that
+        // didn't re-read it would leave the tutorial open after a successful
+        // import until the next visit.
+        reread()
         result = summary.imported > 0 ? landedLine(summary) : nothingNewLine(summary)
         let proof = summary.imported > 0
             ? String(localized: "\(summary.imported) in")

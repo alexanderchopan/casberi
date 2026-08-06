@@ -21,20 +21,22 @@ private let xRecentDescriptor: FetchDescriptor<Thing> = {
 /// reason: an archive scatters its categories across several files under
 /// `data/`, and asking for each one would be several chances to pick wrong.
 ///
-/// The note under the button names the BOOKMARKS GAP. That is the whole of why
-/// it's there: bookmarks are the pile an X user would most expect to find in
-/// this app, they have never been in the export, and a person who imports and
-/// then can't find them would reasonably read that as a broken importer rather
-/// than as a limit of what X hands over. Saying it before the tap is the
-/// honesty rule, not hedging.
+/// The BOOKMARKS GAP is named in the footer, and that is the whole of why it's
+/// there: bookmarks are the pile an X user would most expect to find in this
+/// app, they have never been in the export, and a person who imports and then
+/// can't find them would reasonably read that as a broken importer rather than
+/// as a limit of what X hands over. Saying it before the tap is the honesty
+/// rule, not hedging.
+///
+/// The SHAPE is `ImportSetupComponents`' (prd §314) — this screen is the one
+/// that earned it, reported as *"three large buttons and tons of text"*. What
+/// it had was two filled slabs before an import and four after, five separate
+/// centered gray paragraphs, and a 24-hour wait rendered as though both halves
+/// of it were happening at once. What it has now is one filled verb at a time
+/// and one footer.
 struct XArchiveImportScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
-    @Environment(\.openURL) private var openURL
-    /// Off by default, and off is the safety property — see `ImportOptions`.
-    /// Bound straight to the shared key rather than mirrored into local state,
-    /// so the switch and the importer can never disagree.
-    @AppStorage(ImportOptions.messagesStorageKey) private var includeMessages = false
     @State private var importing = false
     @State private var result: String?
     @State private var resultIsError = false
@@ -42,8 +44,6 @@ struct XArchiveImportScreen: View {
     /// prd §310). Both read off the import RECEIPT and a count — no new field.
     @State private var staleness: String?
     @State private var held = 0
-    @State private var removing = false
-    @State private var confirmRemove = false
     @State private var fetching = false
     @State private var pending = 0
 
@@ -52,19 +52,30 @@ struct XArchiveImportScreen: View {
     var body: some View {
         List {
             BridgeSetupHeader(name: "X")
-            setupSection
-            upkeepSection
+            archiveSection
             if pending > 0 { authorsSection }
+            // The screen's one gray block (§218), and the three facts under it
+            // are separate limits rather than a paragraph — the treatment
+            // `BridgeFooterNote.points` exists for, and which no import screen
+            // was using despite being the family with the most fine print.
+            BridgeFooterNote(
+                lede: "One-time import — nothing arrives on its own afterwards, and re-importing later adds only what's new.",
+                points: [
+                    String(localized: "Your bookmarks can't come: X has never put them in the archive."),
+                    String(localized: "Reposts are skipped — X stores them as someone else's words, cut short."),
+                    ImportOptions.messagesPoint,
+                ])
             if !recent.isEmpty {
                 RecentThingsSection(header: "Imported", things: recent.live)
                     .listRowSeparator(.hidden)
             }
+            ImportUpkeepSection(source: "X", held: held, staleness: staleness) { gone in
+                reread()
+                resultIsError = false
+                result = String(localized: "\(gone) removed")
+            }
         }
-        .onAppear {
-            staleness = ImportRemoval.stalenessLine(source: "X", context: modelContext)
-            held = ImportRemoval.count(source: "X", context: modelContext)
-            pending = XArchiveImport.pendingFaceCount(context: modelContext)
-        }
+        .onAppear { reread() }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .bridgeSetupWash(name: "X")
@@ -79,36 +90,25 @@ struct XArchiveImportScreen: View {
         }
     }
 
-    private var setupSection: some View {
+    /// The wait is the reason this screen stages itself at all: X makes you
+    /// re-enter your password and then takes up to 24 hours. Someone who taps
+    /// "Choose folder" the same minute has nothing to pick.
+    private var archiveSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSSlabButton(title: "Open X settings", systemImage: "arrow.up.right") {
-                    DSHaptic.tap()
-                    if let url = URL(string: "https://x.com/settings/download_your_data") {
-                        openURL(url)
-                    }
-                }
-                // The wait is called out because it is genuinely long and
-                // unlike every other importer here: X makes you re-enter your
-                // password, then takes up to 24 hours. Someone who taps
-                // "Choose folder" the same minute has nothing to pick, and
-                // without this line that reads as the screen not working.
-                BridgeStepLines(steps: [
-                    "Tap Request archive and confirm your password.",
-                    "X emails you when it's ready — usually within 24 hours.",
-                    "Save the zip to Files and tap it once to unzip.",
-                ], startingAt: 2)
-                // ABOVE the pick on purpose: this is a decision to make before
-                // the import runs, not a preference to discover afterwards.
-                Toggle(ImportOptions.messagesTitle, isOn: $includeMessages)
-                    .dsText(.body17)
-                DSSlabNote(text: ImportOptions.messagesNote)
-                DSSlabButton(title: "Choose folder", systemImage: "folder") {
-                    DSHaptic.tap()
-                    importing = true
-                }
+                ImportArchiveSection(
+                    source: "X",
+                    doorTitle: "Open X settings",
+                    doorURL: URL(string: "https://x.com/settings/download_your_data"),
+                    steps: [
+                        "Tap Request archive and confirm your password.",
+                        "X emails you when it's ready — usually within 24 hours.",
+                        "Save the zip to Files and tap it once to unzip.",
+                    ],
+                    pickTitle: "Choose folder",
+                    alreadyImported: held > 0,
+                    showsMessagesToggle: true) { importing = true }
                 BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-                DSSlabNote(text: "One-time import — re-importing later adds only what's new. Your bookmarks can't come: X has never put them in the archive. Reposts are skipped — X stores them as someone else's words, cut short.")
             }
         }
         .dsSlabSection()
@@ -132,66 +132,23 @@ struct XArchiveImportScreen: View {
                     DSHaptic.tap()
                     Task { await runFetch() }
                 }
-                DSSlabNote(text: "Your likes arrive with the post's words but no author — the archive only ever names the post. This asks X who wrote each one, so the room can show whose posts you like. No account, no key, and no rush: unlike the archive, the posts don't expire.")
+                // This section's own sentence, and the screen's only one
+                // outside the footer — it is the sole explanation of a verb
+                // that costs network, so it stays beside the button rather
+                // than moving to the bottom with the fine print.
+                DSSlabNote(text: "The archive names the post but never who wrote it. This asks X, so the room can show whose posts you like. No account, no key, and no rush: unlike the archive, the posts don't expire.")
             }
         }
         .dsSlabSection()
     }
 
-
-    /// How old this import is, and the way back out (2026-08-05, prd §310).
-    ///
-    /// Both halves exist because the caps moved. A room frozen six months ago
-    /// reads exactly like a current one — there is no live read behind this
-    /// seat and never will be, so the only remedy is a fresh export and the
-    /// copy says so. And a decade landed in one tap needs a way back out that
-    /// isn't "delete everything you own".
-    ///
-    /// The removal is DESTRUCTIVE and confirms first, naming the real number.
-    /// It is also completely recoverable by repeating the import, which is
-    /// what makes a plain confirm the right weight rather than a typed name.
-    @ViewBuilder
-    private var upkeepSection: some View {
-        if staleness != nil || held > 0 {
-            Section {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    if let staleness { DSSlabNote(text: staleness) }
-                    if held > 0 {
-                        DSSlabButton(title: removing
-                                        ? String(localized: "Removing…")
-                                        : String(localized: "Remove all \(held) imported things"),
-                                     systemImage: "trash",
-                                     busy: removing,
-                                     enabled: !removing) {
-                            DSHaptic.tap()
-                            confirmRemove = true
-                        }
-                        DSSlabNote(text: "Removes only what came from X. Everything else stays, and importing again brings it all back.")
-                    }
-                }
-            }
-            .dsSlabSection()
-            .confirmationDialog("Remove all \(held) things from X?",
-                                isPresented: $confirmRemove, titleVisibility: .visible) {
-                Button("Remove \(held) things", role: .destructive) {
-                    Task { await runRemove() }
-                }
-                Button("Keep them", role: .cancel) { }
-            } message: {
-                Text("They came from an export, so importing again brings them back.")
-            }
-        }
-    }
-
-    private func runRemove() async {
-        removing = true
-        defer { removing = false }
-        let gone = await ImportRemoval.removeAll(source: "X", context: modelContext)
-        held = ImportRemoval.count(source: "X", context: modelContext)
+    /// One re-read of everything this screen shows about the corpus — called on
+    /// appear, after an import and after a removal, so the three can never
+    /// disagree about how much is here.
+    private func reread() {
         staleness = ImportRemoval.stalenessLine(source: "X", context: modelContext)
-        DSHaptic.success()
-        resultIsError = false
-        result = String(localized: "\(gone) removed")
+        held = ImportRemoval.count(source: "X", context: modelContext)
+        pending = XArchiveImport.pendingFaceCount(context: modelContext)
     }
 
     // MARK: - Run
@@ -225,7 +182,11 @@ struct XArchiveImportScreen: View {
         }
         resultIsError = false
         DSHaptic.success()
-        pending = XArchiveImport.pendingFaceCount(context: modelContext)
+        // The whole screen's corpus reading, not just the face queue — `held`
+        // is what collapses the archive block now, so a screen that only
+        // refreshed `pending` would leave the tutorial open after a successful
+        // import until the next visit.
+        reread()
         result = summary.imported > 0 ? landedLine(summary) : nothingNewLine(summary)
         let proof = summary.imported > 0
             ? String(localized: "\(summary.imported) in")

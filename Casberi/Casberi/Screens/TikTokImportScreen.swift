@@ -38,8 +38,6 @@ struct TikTokImportScreen: View {
     /// prd §310). Both read off the import RECEIPT and a count — no new field.
     @State private var staleness: String?
     @State private var held = 0
-    @State private var removing = false
-    @State private var confirmRemove = false
     @State private var fetching = false
     @State private var pending = 0
 
@@ -48,21 +46,22 @@ struct TikTokImportScreen: View {
     var body: some View {
         List {
             BridgeSetupHeader(name: "TikTok")
-            // "JSON" is called out because the picker defaults to TXT, and a
-            // TXT export parses into nothing here — a silent zero that reads
-            // as a broken importer rather than as the wrong format (the
-            // lesson §245 paid for with Instagram's HTML default).
-            ImportStepsCard("Get your export", [
-                "In TikTok, open Settings and privacy, then Account, then Download your data.",
-                "Set the format to JSON — a TXT export can't be read. Tap Select all, then Request data.",
-                "TikTok takes up to 4 days, then the link works for 4 days. Save the file to Files.",
-            ])
             pickSection
-            upkeepSection
             if pending > 0 { facesSection }
+            BridgeFooterNote(
+                lede: "One-time import — nothing arrives on its own afterwards, and re-importing later adds only what's new.",
+                points: [
+                    String(localized: "Your captions and comments arrive as searchable text."),
+                    String(localized: "Saved and liked videos arrive as links: TikTok's export has nobody else's captions in it."),
+                ])
             if !recent.isEmpty {
                 RecentThingsSection(header: "Imported", things: Array(recent.live))
                     .listRowSeparator(.hidden)
+            }
+            ImportUpkeepSection(source: "TikTok", held: held, staleness: staleness) { gone in
+                reread()
+                resultIsError = false
+                result = String(localized: "\(gone) removed")
             }
         }
         .listStyle(.insetGrouped)
@@ -80,26 +79,42 @@ struct TikTokImportScreen: View {
             guard case .success(let url) = outcome else { return }
             Task { await runImport(url) }
         }
-        .onAppear {
-            staleness = ImportRemoval.stalenessLine(source: "TikTok", context: modelContext)
-            held = ImportRemoval.count(source: "TikTok", context: modelContext)
-            pending = TikTokImport.pendingFaceCount(context: modelContext)
-        }
+        .onAppear { reread() }
     }
 
+    /// No door: TikTok's export is requested inside TikTok's own app, not at a
+    /// URL — so the steps number from 1 and the pick is the permanent verb.
+    /// The block still collapses once something has been imported (prd §314).
     private var pickSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                ImportPickRow(label: "Choose export") { importing = true }
+                ImportArchiveSection(
+                    source: "TikTok",
+                    // "JSON" is called out because the picker defaults to TXT,
+                    // and a TXT export parses into nothing here — a silent zero
+                    // that reads as a broken importer rather than as the wrong
+                    // format (the lesson §245 paid for with Instagram's HTML
+                    // default).
+                    steps: [
+                        "In TikTok, open Settings and privacy, then Account, then Download your data.",
+                        "Set the format to JSON — a TXT export can't be read. Tap Select all, then Request data.",
+                        "TikTok takes up to 4 days, then the link works for 4 days. Save the file to Files.",
+                    ],
+                    pickTitle: "Choose export",
+                    pickIcon: "square.and.arrow.down",
+                    alreadyImported: held > 0) { importing = true }
                 BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-                // The export's own split, stated plainly — the §245 rule. The
-                // failure this prevents is a person importing their saves,
-                // searching for the recipe they bookmarked, and finding
-                // nothing because the words were never in the file.
-                DSSlabNote(text: "One-time import — re-importing later adds only what's new. Your captions and comments become searchable text. Saved and liked videos arrive as links: TikTok's export has nobody else's captions in it.")
             }
         }
         .dsSlabSection()
+    }
+
+    /// One re-read of what this screen shows about the corpus — on appear,
+    /// after an import and after a removal, so the three can never disagree.
+    private func reread() {
+        staleness = ImportRemoval.stalenessLine(source: "TikTok", context: modelContext)
+        held = ImportRemoval.count(source: "TikTok", context: modelContext)
+        pending = TikTokImport.pendingFaceCount(context: modelContext)
     }
 
     /// The second act. Only ever on screen when there is genuinely something
@@ -120,61 +135,6 @@ struct TikTokImportScreen: View {
         .dsSlabSection()
     }
 
-
-    /// How old this import is, and the way back out (2026-08-05, prd §310).
-    ///
-    /// Both halves exist because the caps moved. A room frozen six months ago
-    /// reads exactly like a current one — there is no live read behind this
-    /// seat and never will be, so the only remedy is a fresh export and the
-    /// copy says so. And a decade landed in one tap needs a way back out that
-    /// isn't "delete everything you own".
-    ///
-    /// The removal is DESTRUCTIVE and confirms first, naming the real number.
-    /// It is also completely recoverable by repeating the import, which is
-    /// what makes a plain confirm the right weight rather than a typed name.
-    @ViewBuilder
-    private var upkeepSection: some View {
-        if staleness != nil || held > 0 {
-            Section {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    if let staleness { DSSlabNote(text: staleness) }
-                    if held > 0 {
-                        DSSlabButton(title: removing
-                                        ? String(localized: "Removing…")
-                                        : String(localized: "Remove all \(held) imported things"),
-                                     systemImage: "trash",
-                                     busy: removing,
-                                     enabled: !removing) {
-                            DSHaptic.tap()
-                            confirmRemove = true
-                        }
-                        DSSlabNote(text: "Removes only what came from TikTok. Everything else stays, and importing again brings it all back.")
-                    }
-                }
-            }
-            .dsSlabSection()
-            .confirmationDialog("Remove all \(held) things from TikTok?",
-                                isPresented: $confirmRemove, titleVisibility: .visible) {
-                Button("Remove \(held) things", role: .destructive) {
-                    Task { await runRemove() }
-                }
-                Button("Keep them", role: .cancel) { }
-            } message: {
-                Text("They came from an export, so importing again brings them back.")
-            }
-        }
-    }
-
-    private func runRemove() async {
-        removing = true
-        defer { removing = false }
-        let gone = await ImportRemoval.removeAll(source: "TikTok", context: modelContext)
-        held = ImportRemoval.count(source: "TikTok", context: modelContext)
-        staleness = ImportRemoval.stalenessLine(source: "TikTok", context: modelContext)
-        DSHaptic.success()
-        resultIsError = false
-        result = String(localized: "\(gone) removed")
-    }
 
     // MARK: - Run
 
@@ -207,7 +167,9 @@ struct TikTokImportScreen: View {
         }
         resultIsError = false
         DSHaptic.success()
-        pending = TikTokImport.pendingFaceCount(context: modelContext)
+        // `held` is what collapses the archive block now, so re-read all three
+        // rather than only the face queue.
+        reread()
         result = summary.imported > 0 ? landedLine(summary) : nothingNewLine(summary)
 
         let proof = summary.imported > 0

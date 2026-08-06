@@ -45,5 +45,17 @@ enum ImportOptions {
     /// What the toggle says about itself. One definition, so four screens can
     /// never describe the same switch differently.
     static let messagesTitle = String(localized: "Include private messages")
-    static let messagesNote = String(localized: "Off by default. Your DMs are the largest thing in most exports and the most personal — they only come in if you ask, and they're searchable like everything else once they do. Turning this off later doesn't remove what already landed; use Remove for that.")
+
+    /// The switch's OWN line, one line long (prd §314). `DSSlabSwitch` clamps
+    /// its detail to a single line, which is the point: the reasoning below is
+    /// a paragraph, and a paragraph under a switch is how these screens grew
+    /// their wall of centered gray text in the first place.
+    static let messagesDetail = String(localized: "Off by default — only if you ask")
+
+    /// The line for the screen's single footer — one of its scannable points,
+    /// not a paragraph. This replaced a 47-word note that sat under the switch
+    /// in centered tertiary text (prd §314); what survives is the only part
+    /// that changes what anyone would DO, which is that the switch decides
+    /// before the import and un-ticking it afterwards undoes nothing.
+    static let messagesPoint = String(localized: "Private messages come in only if you switch them on before importing — turning it off later doesn't remove what already landed.")
 }
