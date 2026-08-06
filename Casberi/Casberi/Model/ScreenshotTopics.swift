@@ -328,6 +328,31 @@ enum ScreenshotTopics {
     /// and a shared flag would make whichever ran second silently do nothing.
     @MainActor private static var sweeping: Set<String> = []
 
+    /// Extraction for a batch of rows, OFF the main actor (2026-08-06).
+    ///
+    /// `terms(in:)` is an `NLTagger` pass per row and it ran on the main actor
+    /// because that is where the `Thing` it reads lives — but nothing about
+    /// the work needs to be there: it takes a `String` and returns `[String]`,
+    /// and both cross an actor boundary freely. Only the FETCH and the write
+    /// back onto the model have to stay on main.
+    ///
+    /// This is the whole post-271 jank fix in one line of structure. A sweep
+    /// over a bulk import room is thousands of tagger passes, and on the main
+    /// actor every one of them is time the app cannot draw a frame or answer a
+    /// scroll — which is what "laggy after 271" was. Off it, the same work is
+    /// invisible: the main actor is touched only to read the text out and to
+    /// stamp the result back.
+    ///
+    /// Batched rather than one row at a time so the hop is paid per batch, and
+    /// returns a parallel array so the caller can `zip` it back onto the rows
+    /// it came from — no `Thing`, and nothing else non-`Sendable`, crosses.
+    private nonisolated static func extract(_ texts: [String],
+                                            includeDomains: Bool) async -> [[String]] {
+        await Task.detached(priority: .utility) {
+            texts.map { terms(in: $0, includeDomains: includeDomains) }
+        }.value
+    }
+
     /// What a source's topics are read off, for the sweep below (2026-07-31).
     ///
     /// The extraction never cared where text came from — `terms(in:)` reads a
@@ -420,14 +445,21 @@ enum ScreenshotTopics {
         // The import receipt is excluded with it: it's the app's own row about
         // an import, and reading "312 saved · 1,204 comments" for topics would
         // put the app's voice in a map of the person's words.
-        let rows = ((try? context.fetch(descriptor)) ?? [])
+        let rows = Array(((try? context.fetch(descriptor)) ?? [])
             .filter { spec.kinds.contains($0.kind) && !Corpus.isImportReceipt($0) }
-            .prefix(limit)
+            .prefix(limit))
 
+        // Read the text on main, tag it off main, stamp the result back on
+        // main (2026-08-06 — see `extract`).
+        let extracted = await extract(rows.map(\.content),
+                                      includeDomains: spec.includeDomains)
         var changed = 0
         let now = Date.now
-        for thing in rows where thing.isLive {
-            thing.ocrTopics = terms(in: thing.content, includeDomains: spec.includeDomains)
+        // Per-ROW liveness AFTER the await, not the array filter that ran
+        // before it (COROLLARY 6): a bridge heal can tombstone a row while the
+        // tagger runs, and this is the first read of a stored property since.
+        for (thing, topics) in zip(rows, extracted) where thing.isLive {
+            thing.ocrTopics = topics
             thing.topicsAt = now
             changed += 1
         }
@@ -482,10 +514,13 @@ enum ScreenshotTopics {
     /// so the steady state afterwards is a `bool(forKey:)` and NO fetch, which
     /// is the cheap-empty-fetch property the sweep above is careful to keep.
     ///
-    /// `chunk` is what keeps the main actor answering: extraction is a
-    /// `NLTagger` pass per row, and ten thousand of them in one hop is a
-    /// visible freeze. Each chunk saves, so a run interrupted halfway keeps
-    /// what it repaired and the next pass resumes from the same query.
+    /// `chunk` is what keeps the main actor answering, and since 2026-08-06 it
+    /// bounds the SAVE rather than the tagging: extraction hops off the actor
+    /// per batch (`extract`), so what is left here is a batch of assignments
+    /// and one `saveHonestly()`, which re-emits the feed's `@Query` and is now
+    /// the expensive half. Each chunk still saves, so a run interrupted
+    /// halfway keeps what it repaired and the next pass resumes from the same
+    /// query.
     @MainActor
     private static func restamp(source: String, spec: TopicSource,
                                 context: ModelContext, chunk: Int = 100) async -> Int {
@@ -512,23 +547,33 @@ enum ScreenshotTopics {
 
         var changed = 0
         let now = Date.now
-        for (offset, thing) in stale.enumerated() {
+        for start in stride(from: 0, to: stale.count, by: chunk) {
+            let batch = Array(stale[start..<min(start + chunk, stale.count)])
+            // The tagger runs off the main actor; only the read out and the
+            // stamp back happen here (2026-08-06 — see `extract`). Before
+            // this, a room of several thousand posts spent every one of its
+            // `NLTagger` passes on the actor the app draws with, in chunks of
+            // a hundred, which is a visible freeze per chunk for as many
+            // chunks as the room is long.
+            let texts = batch.map(\.content)
+            let extracted = await extract(texts, includeDomains: spec.includeDomains)
             // Per-ROW liveness, not a re-filter of the array (COROLLARY 6).
-            // This list is held across every yield below and a bridge heal can
-            // tombstone a row inside one; checking at the point of the read is
-            // the same guarantee, evaluated later than any bulk filter could
-            // be.
-            if thing.isLive {
-                thing.ocrTopics = terms(in: thing.content, includeDomains: spec.includeDomains)
+            // This list is held across the extraction hop and every yield
+            // below, and a bridge heal can tombstone a row inside one;
+            // checking at the point of the read is the same guarantee,
+            // evaluated later than any bulk filter could be.
+            for (thing, topics) in zip(batch, extracted) where thing.isLive {
+                thing.ocrTopics = topics
                 thing.topicsAt = now
                 changed += 1
             }
-            if offset % chunk == chunk - 1 {
-                _ = context.saveHonestly()
-                await Task.yield()
-            }
+            // One save per batch, then hand the actor back. The save is now
+            // the expensive half of this loop — it re-emits the feed's own
+            // `@Query` — so the yield is what keeps a scroll answering
+            // between them rather than a nicety.
+            _ = context.saveHonestly()
+            await Task.yield()
         }
-        if changed > 0 { _ = context.saveHonestly() }
         UserDefaults.standard.set(true, forKey: key)
         return changed
     }

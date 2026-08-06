@@ -150,6 +150,31 @@ enum ProbeHooks {
                   ? "every item device-only and non-syncing"
                   : "STILL LOOSE — see the counts above")
         },
+        // `-sweepTimerProbe YES` — where a FOREGROUND SWEEP's time goes
+        // (2026-08-06). Turns `SweepClock` on (the flag itself does that, so
+        // the instrument is live before the sweep it measures), waits for the
+        // pass to finish, and dumps the summary: one `sweepPass|` line, then
+        // one `sweepSlot|` per instrumented sweep, worst-stall first.
+        //
+        // It exists because this class of regression is invisible to every
+        // other measurement we have. `perf.sh` times launch, steady RSS and
+        // answer latency; a sweep that holds the main actor for two seconds
+        // after the app is already up moves none of them, which is how the
+        // nightly read green through the whole post-271 "feels laggy" report.
+        //
+        // The WAIT is not tunable padding: the stagger is 40ms per slot over
+        // ~45 slots, so the pass is still starting work a second and a half
+        // in, and `SweepClock` only reports once nothing has been in flight
+        // for a beat. A shorter wait reports a pass that hasn't happened yet
+        // and reads as "nothing to fix".
+        Hook(key: "sweepTimerProbe") { _, _ in
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(25))
+                // One NSLog per line — a joined multi-line message gets
+                // truncated by the log reader (the `-todayProbe` lesson).
+                for line in SweepClock.summary() { NSLog("[Casberi] %@", line) }
+            }
+        },
         // `-receiptsProbe YES` dumps the network receipts ledger (prd §277):
         // one line per host actually reached, with whether the "What this app
         // reaches" registry declares it. A host reading NOT-DECLARED is the

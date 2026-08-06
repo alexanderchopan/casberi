@@ -156,6 +156,17 @@ print -P "%F{green}✓ cursor self-test%f"
 # behaviour) and the package harness carries a COST guard (the obvious npm
 # endpoint is 6.8 MB and is exactly what a future simplification would reach
 # for).
+# The foreground-sweep instrument (2026-08-06). It measures the one regression
+# class this whole script is blind to — a sweep holding the main actor after
+# launch — so its own correctness has no other check: `perf.sh` reports launch,
+# RSS and answer latency, and a wrong number here moves none of them. Also
+# carries the drift guards tying the instrument to the sweeps it names and to
+# the off-main-actor hop that fixed them.
+step "Sweep-clock self-test"
+"$ROOT/scripts/sweep-clock-selftest.sh" >/dev/null \
+  || fail "the sweep-clock self-test failed — run scripts/sweep-clock-selftest.sh"
+print -P "%F{green}✓ sweep-clock self-test%f"
+
 step "Sentry pure-logic self-test"
 "$ROOT/scripts/sentry-selftest.sh" >/dev/null \
   || fail "the Sentry logic self-test failed — run scripts/sentry-selftest.sh"

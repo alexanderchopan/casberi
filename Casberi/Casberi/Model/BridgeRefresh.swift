@@ -53,6 +53,11 @@ enum BridgeRefresh {
     static func refreshAllConnected(context: ModelContext, store: BridgeStore, force: Bool = false) {
         if !force, let last = lastSweep, Date.now.timeIntervalSince(last) < minSweepInterval { return }
         lastSweep = .now
+        // Where this pass's time goes, when `-sweepTimer YES` asked (2026-08-06).
+        // Off, this is one `Bool` read; on, it is the only view of the main-actor
+        // stalls a foreground sweep causes — the thing `perf.sh` cannot see,
+        // since none of its three numbers touch this path. See `SweepClock`.
+        SweepClock.beginPass(force: force)
         var nextSlot = 0
         func slot() -> Int { defer { nextSlot += 1 }; return nextSlot }
         // The native-framework bridges (Photos/Calendar/Reminders/Health/
@@ -105,7 +110,7 @@ enum BridgeRefresh {
                 // animation starts on; new screenshots still land this sweep.
                 let ps = slot(); Task { @MainActor in
                     await BridgeRefresh.stagger(ps)
-                    _ = ScreenshotIngest.ingest(context: context)
+                    await sweepTimed("photos.ingest") { _ = ScreenshotIngest.ingest(context: context) }
                     // …and one batch of the walk BACKWARDS through the library,
                     // so screenshots older than the head fetch's window finally
                     // arrive. Costs nothing once the walk has reached the end.
@@ -118,19 +123,19 @@ enum BridgeRefresh {
                 if force || BridgeRefresh.dueForHeal("photos") {
                     let s = slot(); Task { @MainActor in
                         await BridgeRefresh.stagger(s)
-                        _ = await ScreenshotIngest.heal(context: context)
+                        _ = await sweepTimed("photos.heal") { await ScreenshotIngest.heal(context: context) }
                         // Mirror Photos deletions (prd §231): a screenshot
                         // deleted from the library leaves Casberi too. One
                         // batched existence check, no per-asset await — so it
                         // catches the fully-healed rows heal's perf filter
                         // skips, which is exactly why deletion never synced
                         // before (2026-07-30).
-                        _ = ScreenshotIngest.pruneDeleted(context: context)
+                        await sweepTimed("photos.prune") { _ = ScreenshotIngest.pruneDeleted(context: context) }
                         // Then lift the treemap terms off whatever OCR text the
                         // heal (and prior passes) have written — no PHAsset walk,
                         // just `content`, so it's cheap and self-terminating once
                         // the library is fully topic'd (2026-07-30).
-                        _ = await ScreenshotTopics.healTopics(context: context)
+                        _ = await sweepTimed("photos.topics") { await ScreenshotTopics.healTopics(context: context) }
                     }
                 }
             } else if photoBridge.status != .attention {
@@ -196,7 +201,7 @@ enum BridgeRefresh {
         if !RSSStore.shared.feeds.isEmpty || !FeedFollowStore.substack.isEmpty {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
-                await FeedArticleText.sweep(context: context)
+                await sweepTimed("feeds.articleText") { await FeedArticleText.sweep(context: context) }
             }
         }
         if BlueskyStore.shared.connected {
@@ -294,7 +299,7 @@ enum BridgeRefresh {
                 // self-retiring: it returns immediately once every landed
                 // video has been classified once.
                 if kind == .youtube {
-                    await YouTubeShorts.sweep(context: context)
+                    await sweepTimed("youtube.shorts") { await YouTubeShorts.sweep(context: context) }
                 }
             }
         }
@@ -429,7 +434,7 @@ enum BridgeRefresh {
                     // (2026-08-02). Store-only and self-terminating, so
                     // riding the heal's throttle costs nothing: topics can
                     // only ever trail the OCR they read.
-                    _ = await ScreenshotTopics.healTopics(source: "Files", context: context)
+                    _ = await sweepTimed("files.topics") { await ScreenshotTopics.healTopics(source: "Files", context: context) }
                 }
             }
         }
@@ -510,7 +515,7 @@ enum BridgeRefresh {
         if connected("instagram") {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
-                _ = await ScreenshotTopics.healTopics(source: "Instagram", context: context)
+                _ = await sweepTimed("instagram.topics") { await ScreenshotTopics.healTopics(source: "Instagram", context: context) }
                 if BridgeRefresh.dueForHeal("instagram.captions") {
                     _ = await InstagramCaptions.heal(context: context)
                 }
@@ -532,7 +537,7 @@ enum BridgeRefresh {
         if connected("tiktok"), BridgeRefresh.dueForHeal("tiktok.faces") {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
-                _ = await TikTokImport.fetchFaces(limit: 60, context: context)
+                _ = await sweepTimed("tiktok.faces") { await TikTokImport.fetchFaces(limit: 60, context: context) }
             }
         }
         // X has no live read either (prd §280) and carries BOTH kinds of
@@ -552,16 +557,16 @@ enum BridgeRefresh {
         if connected("x") {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
-                _ = await ScreenshotTopics.healTopics(source: "X", context: context)
+                _ = await sweepTimed("x.topics") { await ScreenshotTopics.healTopics(source: "X", context: context) }
                 // The words the room draws, for rows landed before it had a
                 // shape to draw them in (2026-08-06). Free like topics — a
                 // copy between fields already in the store — and one-shot, so
                 // it costs a `bool(forKey:)` once it has drained. It runs
                 // here rather than at import because a re-import can't do it:
                 // `landTweets` skips a ref it has already seen.
-                _ = await XArchiveImport.healRoom(context: context)
+                _ = await sweepTimed("x.healRoom") { await XArchiveImport.healRoom(context: context) }
                 if BridgeRefresh.dueForHeal("x.faces") {
-                    _ = await XArchiveImport.fetchFaces(limit: 60, context: context)
+                    _ = await sweepTimed("x.faces") { await XArchiveImport.fetchFaces(limit: 60, context: context) }
                 }
             }
         }
