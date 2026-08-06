@@ -16847,3 +16847,96 @@ ruling with four instances, and a rule split across four files is a rule that
 drifts. Cap FLOORS (not exact values: the numbers stay free to move, never back
 under the ones that truncated a real export), a drop-counting check per file,
 and five behaviour guards. Mutation-proven five ways.
+
+## §310 — Upkeep: an import you can watch, take back, and see (user: "what else would you do to snapchat instagram x tiktok" → "do all", 2026-08-05)
+
+Five pieces, and one of them is a risk §307/§309 introduced rather than found.
+
+**THE IMPORT NO LONGER FREEZES THE APP.** All four importers built every row,
+inserted them, saved once, and handed the whole array to Spotlight. That was
+fine at a few hundred rows — which is what they were capped at until this same
+day. Raising the caps by more than an order of magnitude turned an unhurried
+shape into one that holds the main thread for the length of the import.
+`ImportCommit` chunks it: insert, save, index, report, yield, 200 at a time. The
+work stays on the main actor (these insert into the main context while a live
+`@Query` feed watches — the arrangement the liveness rules protect); what
+changes is that it stops being one uninterruptible block. **A chunk is a commit,
+and that is a deliberate change of failure mode**: an import that dies at row
+9,000 now keeps 9,000 real things, and the receipt lands only after the rows do,
+so a partial run is never crowned with a total it never reached. The screens
+show the running count in the status row the receipt will replace.
+
+The three synchronous `run`s became `async`, which their own doc comments said
+they could not be ("Synchronous on purpose… the read must finish before the
+`defer` releases the grant"). Half right: awaiting holds a security-scoped grant
+across the suspension exactly as a synchronous read held it across the call,
+because `defer` fires on return and not on suspend. What is still forbidden —
+and still the reason the await is inline rather than detached — is handing the
+URL to a task that outlives the scope.
+
+**MEDIA LANDS.** All four importers declined it with the same sentence: the
+images are files relative to a temporary scoped folder "with no
+copy-into-app-storage path here". The objection was to copying ORIGINALS into a
+CloudKit-mirrored store, which is still refused. What lands is a 480pt
+thumbnail — the same object `ScreenshotIngest`, `FilesBridge` and
+`SnapchatImport` already write — read while the grant is held, with the export's
+files left exactly where they are. It mattered most where it was most absurd:
+**Instagram is a photo app and its room was a wall of text.** X files media by
+tweet id (a directory index), Instagram by a path its own JSON states (resolved
+with a fence, since a relative path is data out of a file and `../../..` would
+otherwise read anything the grant reaches).
+
+*The liveness audit caught this code and the obvious fix would have broken it.*
+Check 6 flagged `attachMedia` for holding `[Thing]` across an await; its usual
+remedy is to re-filter `.live` afterwards — and these rows are not INSERTED yet,
+so `isLive` (`modelContext != nil`) is false for every one of them and that
+guard would have skipped the lot, disabling media while every check reported
+green. Split instead so no model crosses the suspension at all: read the models
+synchronously into plain `Job` values, decode with nothing in scope, apply
+synchronously after.
+
+**CROSS-ROOM READS**, the thing only a corpus can do. "On this day" now spans
+every imported room at once (`throwback`) instead of riding inside one room's
+heatmap where it can only speak about that room while you stand in it — a
+person's 2019 was a year, not an Instagram year, and the four exports holding it
+are an accident of which companies they used. And "everything I wrote" scopes to
+`Post`/`Reply`/`Comment`/`Thread` across all sources — UNGATED, unlike the
+facets, because the wording is the difference: "posts" is an ordinary noun with
+several readings, "what I wrote" is an explicit claim about authorship with one.
+
+**STALENESS AND REMOVAL.** Every imported room is frozen at the moment it was
+imported and nothing said so; a room six months behind read exactly like a
+current one, which is the fake-status ban in its quietest form. The line reads
+off the receipt's own date — no new field, it was simply never read for this —
+and stays silent under 30 days, because a nag people learn to ignore is worse
+than nothing. And removal was all-or-nothing: at 500 rows a regretted room was a
+nuisance, at 15,000 it is a corpus. `ImportRemoval` is scoped to
+`Corpus.bulkImportSources` on purpose — a live bridge's rows keep arriving, so
+removing them is a sync artefact rather than a decision, and the honest verb
+there is Disconnect.
+
+**DMs, BEHIND A SWITCH.** §245 declined private messages with: "whether years of
+private conversation belong in a searchable index is a decision the person makes
+deliberately, not a side effect of tapping Import." That is an argument for
+ASKING, and for three importers' lifetimes there was no way to answer — which
+made it a decision the app took on the person's behalf, the opposite of what the
+ruling says. `ImportOptions.includeMessages` is off by default and off is the
+whole safety property: nothing changes for any existing install, there is no
+prompt and no clever default. The toggle sits ABOVE the folder pick, because it
+is a decision to make before the import rather than a preference to discover
+after. One thing per CONVERSATION, never per message (a message alone is a
+fragment; ten thousand would bury a corpus — §246's reasoning), clamped to
+`SnapchatImport`'s own 60 lines / 4,000 bytes so two rooms holding the same kind
+of object hold the same amount of it.
+
+**Wired for X and Instagram only, and the screens that show the toggle are the
+ones that honour it** — a switch that quietly does nothing for a source would be
+its own small lie. Snapchat needs nothing: its saved conversations already ARE
+its messages, which is what its export gives instead of a message archive.
+TikTok's DM path is the least grounded of the four and is deliberately left for
+a measured pass rather than guessed at, since this is the most personal content
+in the file and a wrong parse would land garbage in a searchable index.
+
+Guarded in `scripts/x-selftest.sh`: chunked landing, the yield (chunking without
+one buys nothing), receipt-after-rows, the thumbnail size, the path fence, the
+DM gate on all three, and removal's scope. Mutation-proven.

@@ -2073,6 +2073,17 @@ struct RootShell: View {
         // word a reminder itself retrieves on — an accident of vocabulary, not
         // a branch. Answers through the composer itself rather than a parallel
         // builder, so the two paths cannot drift (the §132 principle).
+        // "On this day" across every imported room (2026-08-05, prd §310).
+        // Before `matchesUpcoming` because the two vocabularies don't collide
+        // and this one is more specific; answered through the composer itself
+        // so the typed ask and a kept pill can never drift (§132).
+        if KeptAskComposers.matchesThrowback(query) {
+            lastAnswerHits = []
+            if let result = await KeptAskComposers.compose("throwback", things: allThings(),
+                                                          context: modelContext) {
+                return result.doc
+            }
+        }
         if KeptAskComposers.matchesUpcoming(query) {
             lastAnswerHits = []
             if let result = await KeptAskComposers.compose("upcoming", things: allThings(),

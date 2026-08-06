@@ -35,11 +35,16 @@ import SwiftData
 /// endpoint left for these rows to have waited on; the export's own handle is
 /// the only face they will ever have.
 ///
-/// NOT BUILT, with reasons. (1) MEDIA: your own posts reference their JPEGs by
-/// a path relative to the export folder, and that folder is a temporary
-/// security-scoped pick — landing them would need a copy-into-app-storage path
-/// this importer doesn't have. Captions land; the pictures stay in the export,
-/// and the screen says so. (2) DMs: full message text is in there and would be
+/// MEDIA now lands, as of 2026-08-05 (prd §310), and the old decline is worth
+/// keeping visible because the reasoning was half right: your own posts
+/// reference their JPEGs by a path relative to a temporary security-scoped
+/// folder, and copying originals into a CloudKit-mirrored store really would
+/// be wrong. What lands is a 480pt THUMBNAIL — the same object every other
+/// picture in this app is — read while the grant is still held. The export's
+/// files stay exactly where they are. This mattered more here than anywhere
+/// else: Instagram is a photo app, and its room was a wall of text.
+///
+/// NOT BUILT, with reasons. (1) DMs: full message text is in there and would be
 /// the largest prose corpus in the export, but whether years of private
 /// conversation belong in a searchable index is the person's call to make
 /// deliberately, not a side effect of tapping Import. (3) Followers/following:
@@ -52,12 +57,15 @@ enum InstagramImport {
         var liked = 0
         var posts = 0
         var comments = 0
+        /// Private messages, landed only when `ImportOptions.includeMessages`
+        /// says so. Off by default and stays off.
+        var messages = 0
         var skipped = 0
         /// Rows the cap refused. Reported rather than swallowed — see `tapCap`.
         var dropped = 0
         var failed = false
 
-        var imported: Int { saved + liked + posts + comments }
+        var imported: Int { saved + liked + posts + comments + messages }
     }
 
     /// The newest N per category. Each category is capped on its own rather
@@ -95,7 +103,8 @@ enum InstagramImport {
     /// file is not an error. `failed` is reserved for "this isn't an Instagram
     /// export at all": no category was found anywhere under the picked folder.
     @MainActor
-    static func run(folder: URL, context: ModelContext) -> Summary {
+    static func run(folder: URL, context: ModelContext,
+                    progress: ((Int) -> Void)? = nil) async -> Summary {
         var summary = Summary()
         var landed: [Thing] = []
         // The stored rows themselves, not just their refs: a save landed by a
@@ -108,6 +117,8 @@ enum InstagramImport {
         var seen = Set(stored.keys)       // grows as we land, so two files can't collide
         var backfilled = false
         var foundAnyCategory = false
+        // ref → the picture path the export states for that post.
+        var mediaURIs: [String: String] = [:]
 
         if let data = read(savedPath, under: folder) {
             foundAnyCategory = true
@@ -123,16 +134,30 @@ enum InstagramImport {
         }
         for data in readNumbered(postsStem, under: folder) {
             foundAnyCategory = true
-            landPosts(data, summary: &summary, landed: &landed, seen: &seen)
+            landPosts(data, summary: &summary, landed: &landed, seen: &seen,
+                      mediaURIs: &mediaURIs)
         }
         for data in readNumbered(commentsStem, under: folder) {
             foundAnyCategory = true
             landComments(data, summary: &summary, landed: &landed, seen: &seen)
         }
 
+        if ImportOptions.includeMessages {
+            for data in readInbox(under: folder) {
+                foundAnyCategory = true
+                landMessages(data, summary: &summary, landed: &landed, seen: &seen)
+            }
+        }
+
         guard foundAnyCategory else { return Summary(failed: true) }
-        for thing in landed { context.insert(thing) }
-        finish(&summary, landed: landed, backfilled: backfilled, context: context)
+        // The export's own pictures, before the rows go down so a thumbnail
+        // rides the same insert (prd §310). Inside the scoped grant — there is
+        // no second chance at a folder the person has stopped granting.
+        let pixels = await ImportMedia.decode(
+            mediaJobs(landed, uris: mediaURIs, under: folder))
+        ImportMedia.apply(pixels, to: landed)
+        await finish(&summary, landed: landed, backfilled: backfilled,
+                     context: context, progress: progress)
         return summary
     }
 
@@ -141,7 +166,8 @@ enum InstagramImport {
     /// than an XPC round-trip per row. Mirrors `DayOneImport.finish`.
     @MainActor
     private static func finish(_ summary: inout Summary, landed: [Thing],
-                               backfilled: Bool, context: ModelContext) {
+                               backfilled: Bool, context: ModelContext,
+                               progress: ((Int) -> Void)?) async {
         // A repeat import that landed nothing new may still have repaired
         // authors on rows already here; that needs its own save, but never a
         // receipt — nothing arrived, so All must not be told anything did.
@@ -154,15 +180,142 @@ enum InstagramImport {
         // import happened from this one reconciling row and nothing else.
         // Landed BEFORE the save, so the receipt rides the same transaction —
         // a receipt saved separately could survive a failed import.
+        guard await ImportCommit.commit(landed, context: context, progress: progress) else {
+            summary = Summary(failed: true)
+            return
+        }
         ImportReceipt.land(source: "Instagram", count: summary.imported,
                            detail: receiptDetail(summary), context: context)
-        do {
-            try context.save()
-            SpotlightIndex.index(landed)
-        } catch {
-            summary = Summary(failed: true)
-        }
+        if (try? context.save()) == nil { summary = Summary(failed: true) }
     }
+
+    /// Gives each landed post the picture its own export entry names.
+    ///
+    /// Posts only — a SAVE's picture belongs to whoever made it and Instagram
+    /// does not ship those files, so there is nothing to attach.
+
+    /// The pictures, in three parts so that NO `Thing` is ever held across a
+    /// suspension — `jobs` reads the models synchronously and hands out plain
+    /// values, `ImportMedia.decode` awaits with no model in scope at all, and
+    /// `apply` writes back synchronously.
+    ///
+    /// The split is defensive rather than decorative, and worth stating because
+    /// the obvious shortcut is wrong in a way that fails silently: the usual
+    /// remedy for holding models across an await is to re-filter `.live`
+    /// afterwards, and these rows have not been INSERTED yet, so `isLive`
+    /// (`modelContext != nil`) is false for every one of them. That guard would
+    /// skip the lot and disable media while every check reported green.
+    ///
+    /// (Un-inserted models are in fact safe to hold — nothing can tombstone a
+    /// row that is not in the context, which is what the liveness rules are
+    /// about. This shape avoids relying on that being true forever.)
+    @MainActor
+    private static func mediaJobs(_ landed: [Thing], uris: [String: String],
+                                  under folder: URL) -> [ImportMedia.Job] {
+        guard !uris.isEmpty else { return [] }
+        var jobs: [ImportMedia.Job] = []
+        for thing in landed where thing.kind == .note {
+            guard jobs.count < ImportMedia.perImport,
+                  let ref = thing.sourceRef, let uri = uris[ref],
+                  let file = ImportMedia.resolve(uri, under: folder) else { continue }
+            jobs.append(ImportMedia.Job(ref: ref, file: file))
+        }
+        return jobs
+    }
+
+    // MARK: - Private messages (only when asked — see `ImportOptions`)
+
+    /// Every thread's `message_1.json` under `messages/inbox/`.
+    ///
+    /// Instagram files each conversation in its OWN folder, so unlike every
+    /// other category here this is a DIRECTORY walk rather than a known path.
+    /// Bounded at `writingCap` folders: a person can hand this any folder they
+    /// like, and an unbounded enumeration of somebody's whole Files app is the
+    /// same hazard `locate` already guards against elsewhere.
+    private static func readInbox(under root: URL) -> [Data] {
+        let manager = FileManager.default
+        var roots = [root]
+        if let children = try? manager.contentsOfDirectory(
+            at: root, includingPropertiesForKeys: [.isDirectoryKey]) {
+            roots += children.filter {
+                (try? $0.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true
+            }
+        }
+        for base in roots {
+            let inbox = base.appending(path: "your_instagram_activity/messages/inbox")
+            guard let threads = try? manager.contentsOfDirectory(
+                at: inbox, includingPropertiesForKeys: nil), !threads.isEmpty else { continue }
+            var out: [Data] = []
+            for thread in threads.prefix(writingCap) {
+                // `message_1.json` is the newest page; older pages are
+                // `_2`, `_3` … and are deliberately not walked — the clamp
+                // below keeps only the newest lines anyway, so reading them
+                // would be work whose result is thrown away.
+                if let data = try? Data(contentsOf: thread.appending(path: "message_1.json")) {
+                    out.append(data)
+                }
+            }
+            if !out.isEmpty { return out }
+        }
+        return []
+    }
+
+    /// One thing per CONVERSATION, never per message — see
+    /// `XArchiveImport.landMessages` for the reasoning, which is the same here
+    /// and deliberately produces the same shape.
+    @MainActor
+    private static func landMessages(_ data: Data, summary: inout Summary,
+                                     landed: inout [Thing], seen: inout Set<String>) {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let messages = root["messages"] as? [[String: Any]] else { return }
+        let title = (root["title"] as? String).map(repairMojibake) ?? ""
+
+        var lines: [(date: Date, text: String)] = []
+        for message in messages {
+            let raw = (message["content"] as? String) ?? ""
+            let text = repairMojibake(raw).trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else { continue }
+            // Instagram stamps in MILLISECONDS here, unlike the seconds every
+            // other category in this export uses.
+            let ms = (message["timestamp_ms"] as? Double) ?? 0
+            guard ms > 0 else { continue }
+            let who = (message["sender_name"] as? String).map(repairMojibake) ?? ""
+            lines.append((Date(timeIntervalSince1970: ms / 1000),
+                          who.isEmpty ? text : "\(who): \(text)"))
+        }
+        guard !lines.isEmpty else { return }
+        lines.sort { $0.date < $1.date }
+
+        // Keyed on the thread's own title: the export's folder name carries a
+        // per-export suffix, so a ref built from it would re-land every
+        // conversation on the next import.
+        let ref = "instagram:dm:\(title.lowercased())"
+        guard !title.isEmpty, !seen.contains(ref) else { summary.skipped += 1; return }
+        seen.insert(ref)
+
+        var transcript = lines.suffix(transcriptLines).map(\.text).joined(separator: "\n")
+        if transcript.count > transcriptBytes {
+            transcript = String(transcript.suffix(transcriptBytes))
+        }
+        let thing = Thing(
+            kind: .chat,
+            title: String(localized: "Messages with \(title)"),
+            content: transcript,
+            source: "Instagram",
+            capturedAt: lines.last?.date ?? Date(timeIntervalSince1970: 0),
+            tags: ["Conversation"],
+            sourceRef: ref
+        )
+        thing.authorHandle = title
+        thing.messageCount = lines.count
+        landed.append(thing)
+        summary.messages += 1
+    }
+
+    /// `SnapchatImport`'s numbers — two rooms holding the same kind of object
+    /// hold the same amount of it.
+    private static let transcriptLines = 60
+    private static let transcriptBytes = 4_000
 
     /// The receipt's own line — what the count is made of, in the order a
     /// person would care about. Only non-zero parts appear, so a saves-only
@@ -173,6 +326,7 @@ enum InstagramImport {
             s.liked > 0 ? String(localized: "\(s.liked) liked") : nil,
             s.posts > 0 ? String(localized: "\(s.posts) posts") : nil,
             s.comments > 0 ? String(localized: "\(s.comments) comments") : nil,
+            s.messages > 0 ? String(localized: "\(s.messages) conversations") : nil,
         ].compactMap { $0 }
         // A capped import SAYS SO — without it, truncated and complete read
         // identically here and in the room that follows.
@@ -280,11 +434,12 @@ enum InstagramImport {
     /// doc), so a caption is the only substance such a row would have.
     @MainActor
     private static func landPosts(_ data: Data, summary: inout Summary,
-                                  landed: inout [Thing], seen: inout Set<String>) {
+                                  landed: inout [Thing], seen: inout Set<String>,
+                                  mediaURIs: inout [String: String]) {
         guard let entries = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]]
         else { return }
 
-        let dated: [(date: Date, caption: String)] = entries.compactMap { entry in
+        let dated: [(date: Date, caption: String, uri: String?)] = entries.compactMap { entry in
             let media = entry["media"] as? [[String: Any]] ?? []
             let rawCaption = (entry["title"] as? String).flatMap { $0.isEmpty ? nil : $0 }
                 ?? (media.first?["title"] as? String)
@@ -294,7 +449,11 @@ enum InstagramImport {
                 ?? 0
             let caption = repairMojibake(rawCaption).trimmingCharacters(in: .whitespacesAndNewlines)
             guard !caption.isEmpty, stamp > 0 else { return nil }
-            return (Date(timeIntervalSince1970: stamp), caption)
+            // The export states its own picture's path relative to the export
+            // root. Carried through so `run` can thumbnail it while the scoped
+            // grant is still held (prd §310).
+            let uri = (entry["uri"] as? String) ?? (media.first?["uri"] as? String)
+            return (Date(timeIntervalSince1970: stamp), caption, uri)
         }.sorted { $0.date > $1.date }
         summary.dropped += max(0, dated.count - writingCap)
 
@@ -302,7 +461,7 @@ enum InstagramImport {
             let ref = "instagram:post:\(Int(row.date.timeIntervalSince1970))"
             guard !seen.contains(ref) else { summary.skipped += 1; continue }
             seen.insert(ref)
-            landed.append(Thing(
+            let thing = Thing(
                 kind: .note,
                 title: IngestSupport.titleLine(row.caption),
                 content: row.caption,
@@ -310,7 +469,9 @@ enum InstagramImport {
                 capturedAt: row.date,
                 tags: ["Post"],
                 sourceRef: ref
-            ))
+            )
+            landed.append(thing)
+            if let uri = row.uri, !uri.isEmpty { mediaURIs[ref] = uri }
             summary.posts += 1
         }
     }

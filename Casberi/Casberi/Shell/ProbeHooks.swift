@@ -241,7 +241,8 @@ enum ProbeHooks {
         // half was empty" from "the whole import failed" — which for this
         // export is the difference that matters most.
         Hook(key: "instagramImport") { path, context in
-            let summary = InstagramImport.run(folder: URL(fileURLWithPath: path), context: context)
+            Task { @MainActor in
+            let summary = await InstagramImport.run(folder: URL(fileURLWithPath: path), context: context)
             NSLog("Instagram probe: posts=%d comments=%d saved=%d liked=%d",
                   summary.posts, summary.comments, summary.saved, summary.liked)
             NSLog("Instagram probe: %d imported, %d skipped, failed=%d",
@@ -251,6 +252,7 @@ enum ProbeHooks {
             // probe: healthy counts, no failure flag, and the refused rows
             // appearing nowhere.
             NSLog("Instagram probe: %d dropped by cap", summary.dropped)
+            }
         },
         // `-xArchiveImport <path>` imports an UNZIPPED X archive folder (the
         // one holding `data/`, or its parent). Logs each category on its OWN
@@ -261,7 +263,8 @@ enum ProbeHooks {
         // whose files are JavaScript rather than JSON is the failure most
         // worth being able to see.
         Hook(key: "xArchiveImport") { path, context in
-            let summary = XArchiveImport.run(folder: URL(fileURLWithPath: path), context: context)
+            Task { @MainActor in
+            let summary = await XArchiveImport.run(folder: URL(fileURLWithPath: path), context: context)
             NSLog("X probe: posts=%d replies=%d liked=%d reposts-skipped=%d",
                   summary.posts, summary.replies, summary.liked, summary.retweets)
             NSLog("X probe: %d imported, %d skipped, failed=%d",
@@ -275,6 +278,7 @@ enum ProbeHooks {
             NSLog("X probe: dropped-by-cap posts=%d likes=%d, %d awaiting authors",
                   summary.droppedPosts, summary.droppedLikes,
                   XArchiveImport.pendingFaceCount(context: context))
+            }
         },
         // `-xFaces <limit|YES>` runs the oEmbed author pass over the liked
         // posts already landed — the second act, exactly as in the UI.
@@ -349,13 +353,15 @@ enum ProbeHooks {
         // Lands metadata only. Giving those links their real faces is the
         // separate `-tiktokFaces` pass, exactly as in the UI.
         Hook(key: "tiktokImport") { path, context in
-            let summary = TikTokImport.run(file: URL(fileURLWithPath: path), context: context)
+            Task { @MainActor in
+            let summary = await TikTokImport.run(file: URL(fileURLWithPath: path), context: context)
             NSLog("TikTok probe: saved=%d liked=%d posts=%d comments=%d",
                   summary.saved, summary.liked, summary.posts, summary.comments)
             NSLog("TikTok probe: %d imported, %d skipped, failed=%d, %d awaiting faces",
                   summary.imported, summary.skipped, summary.failed ? 1 : 0,
                   TikTokImport.pendingFaceCount(context: context))
             NSLog("TikTok probe: %d dropped by cap", summary.dropped)
+            }
         },
         // `-tiktokFaces <limit|YES>` runs the oEmbed face pass over whatever is
         // already landed: caption, creator and poster art per saved video.

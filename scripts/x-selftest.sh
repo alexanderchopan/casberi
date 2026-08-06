@@ -149,6 +149,44 @@ grep -q 'already.tags.append("Memory")' "$SC" \
 grep -q 'kinds = \[.link, .note\]' Casberi/Casberi/Model/FeedInsight.swift \
   || { echo "✗ TikTok's topic map is back to one kind — it would cover half the writing while claiming all of it"; exit 1; }
 
+# --- 2026-08-05: prd §310, the upkeep pass ---------------------------------
+grep -q 'await ImportCommit.commit' "$XARCH" \
+  || { echo "✗ X lands in one transaction again — at the raised caps that holds the main thread for the whole import"; exit 1; }
+grep -q 'await ImportCommit.commit' "$IG" \
+  || { echo "✗ Instagram lands in one transaction again"; exit 1; }
+grep -q 'await ImportCommit.commit' "$TT" \
+  || { echo "✗ TikTok lands in one transaction again"; exit 1; }
+grep -q 'await Task.yield()' Casberi/Casberi/Model/ImportCommit.swift \
+  || { echo "✗ ImportCommit no longer yields — chunking without a yield buys nothing at all"; exit 1; }
+# The receipt must land AFTER the rows, or a partial import is crowned with a
+# total it never reached.
+python3 - "$XARCH" "$IG" "$TT" <<'PYEOF' || exit 1
+import sys
+for path in sys.argv[1:]:
+    src = open(path).read()
+    commit = src.find("await ImportCommit.commit")
+    receipt = src.find("ImportReceipt.land")
+    if commit < 0 or receipt < 0:
+        sys.exit(f"✗ {path.split('/')[-1]}: can't find the landing order")
+    if receipt < commit:
+        sys.exit(f"✗ {path.split('/')[-1]}: the receipt lands BEFORE the rows — a partial import would claim a total it never reached")
+PYEOF
+# Media is a THUMBNAIL, never a copied original into a mirrored store.
+grep -q 'kCGImageSourceThumbnailMaxPixelSize: 480' Casberi/Casberi/Model/ImportMedia.swift \
+  || { echo "✗ imported media is no longer a 480pt thumbnail — originals in a CloudKit-mirrored store is the thing this was careful not to do"; exit 1; }
+grep -q 'resolved.path.hasPrefix(fence)' Casberi/Casberi/Model/ImportMedia.swift \
+  || { echo "✗ a relative media path can escape the export folder — that path is data out of a file"; exit 1; }
+# DMs stay OFF unless asked.
+grep -q 'if ImportOptions.includeMessages' "$XARCH" \
+  || { echo "✗ X imports messages unconditionally — §245's whole ruling is that this is a deliberate choice"; exit 1; }
+grep -q 'if ImportOptions.includeMessages' "$IG" \
+  || { echo "✗ Instagram imports messages unconditionally"; exit 1; }
+grep -q 'UserDefaults.standard.bool(forKey: messagesKey)' Casberi/Casberi/Model/ImportOptions.swift \
+  || { echo "✗ the messages default is no longer a plain false — off by default IS the safety property"; exit 1; }
+# Removal is scoped to imports, never a live bridge.
+grep -q 'Corpus.bulkImportSources.contains(source) else { return 0 }' Casberi/Casberi/Model/ImportRemoval.swift \
+  || { echo "✗ per-source removal is no longer scoped to imports — a live bridge's rows are not a decision to undo"; exit 1; }
+
 TMP=$(mktemp -d /tmp/x-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT
 

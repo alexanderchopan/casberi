@@ -27,6 +27,12 @@ struct SnapchatImportScreen: View {
     @State private var importing = false
     @State private var result: String?
     @State private var resultIsError = false
+    /// How old this import is, and how much of it is here (2026-08-05,
+    /// prd §310). Both read off the import RECEIPT and a count — no new field.
+    @State private var staleness: String?
+    @State private var held = 0
+    @State private var removing = false
+    @State private var confirmRemove = false
     @State private var fetching = false
     @State private var pending = 0
 
@@ -60,7 +66,11 @@ struct SnapchatImportScreen: View {
             guard case .success(let url) = outcome else { return }
             Task { await runImport(url) }
         }
-        .onAppear { pending = SnapchatImport.pendingMediaCount(context: modelContext) }
+        .onAppear {
+            staleness = ImportRemoval.stalenessLine(source: "Snapchat", context: modelContext)
+            held = ImportRemoval.count(source: "Snapchat", context: modelContext)
+            pending = SnapchatImport.pendingMediaCount(context: modelContext)
+        }
     }
 
     private var pickSection: some View {

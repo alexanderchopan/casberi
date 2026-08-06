@@ -71,6 +71,7 @@ enum KeptAskComposers {
         if kind.hasPrefix("handle:") {
             return handleRecap(String(kind.dropFirst("handle:".count)), things: things)
         }
+        if kind == "throwback" { return throwback(things) }
         if kind.hasPrefix("search:") {
             return search(String(kind.dropFirst("search:".count)), things: things)
         }
@@ -867,6 +868,67 @@ enum KeptAskComposers {
         return Result(delta: "\(hits.count) things", digest: "\(hits.count)",
                       doc: ["root = Stack([ins, res])", "ins = Insight(\"\(genSafe(line))\")"]
                           + rows(Array(hits.prefix(6)), title: "Matches"))
+    }
+
+    // MARK: - On this day, across every import
+
+    /// "What was I doing on this day?" — the same calendar day in prior years,
+    /// read across ALL of the imported rooms at once (2026-08-05, prd §310).
+    ///
+    /// WHY IT ISN'T THE HEATMAP'S ECHO. `OnThisDay` already rides inside each
+    /// room's own heatmap card, which means it can only ever speak about ONE
+    /// room and only while you are standing in it. A person's 2019 was not an
+    /// Instagram year or an X year — it was a year, and the four exports that
+    /// happen to hold it are an accident of which companies they used. This is
+    /// the read only a corpus can make, and it is the one thing none of those
+    /// four apps can show you about yourself.
+    ///
+    /// Deterministic and cheap: a month/day comparison over things already in
+    /// memory, no model and no request. Nil on nearly every day of the year,
+    /// which is correct — an anniversary that fires constantly isn't one.
+    private static func throwback(_ things: [Thing]) -> Result? {
+        let calendar = Calendar.current
+        let today = calendar.dateComponents([.month, .day], from: .now)
+        let thisYear = calendar.component(.year, from: .now)
+
+        // Imported rooms only. A live bridge's rows from this day last year are
+        // ordinary history — it is the EXPORTS that hold the years nobody has
+        // looked at, and mixing a calendar event from last April into a
+        // throwback would dilute the one thing this is for.
+        var hits: [(thing: Thing, years: Int)] = []
+        for thing in things where Corpus.bulkImportSources.contains(thing.source) {
+            guard !Corpus.isImportReceipt(thing) else { continue }
+            let parts = calendar.dateComponents([.month, .day, .year], from: thing.capturedAt)
+            guard parts.month == today.month, parts.day == today.day,
+                  let year = parts.year, thisYear - year >= 1 else { continue }
+            hits.append((thing, thisYear - year))
+        }
+        guard !hits.isEmpty else {
+            return Result(delta: "", digest: "0",
+                          doc: ["root = Stack([ins])",
+                                "ins = Insight(\"\(genSafe("Nothing from this day in an earlier year."))\")"])
+        }
+        // Furthest back FIRST — the deepest year is the surprising one, and it
+        // is what makes this different from scrolling a recent feed.
+        hits.sort { $0.years > $1.years }
+        let sources = Set(hits.map(\.thing.source)).count
+        let deepest = hits[0].years
+        let line = sources > 1
+            ? String(localized: "\(hits.count) things from this day, going back \(deepest) years, across \(sources) apps.")
+            : String(localized: "\(hits.count) things from this day, going back \(deepest) years.")
+        return Result(delta: "\(hits.count) things", digest: "\(hits.count)|\(deepest)",
+                      doc: ["root = Stack([ins, res])",
+                            "ins = Insight(\"\(genSafe(line))\")"]
+                          + rows(Array(hits.prefix(6)).map(\.thing), title: "On this day"))
+    }
+
+    /// The phrasings that ask for it. Read by `RootShell.answerDocument` and by
+    /// the keepable-kind recognizer, the `matchesUpcoming` precedent.
+    static func matchesThrowback(_ query: String) -> Bool {
+        let q = query.lowercased()
+        return q.contains("on this day") || q.contains("this day in")
+            || q.contains("throwback") || q.contains("years ago today")
+            || q.contains("what was i doing")
     }
 
     // MARK: - Noticed

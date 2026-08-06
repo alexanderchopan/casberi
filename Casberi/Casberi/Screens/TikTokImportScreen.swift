@@ -34,6 +34,12 @@ struct TikTokImportScreen: View {
     @State private var importing = false
     @State private var result: String?
     @State private var resultIsError = false
+    /// How old this import is, and how much of it is here (2026-08-05,
+    /// prd §310). Both read off the import RECEIPT and a count — no new field.
+    @State private var staleness: String?
+    @State private var held = 0
+    @State private var removing = false
+    @State private var confirmRemove = false
     @State private var fetching = false
     @State private var pending = 0
 
@@ -52,6 +58,7 @@ struct TikTokImportScreen: View {
                 "TikTok takes up to 4 days, then the link works for 4 days. Save the file to Files.",
             ])
             pickSection
+            upkeepSection
             if pending > 0 { facesSection }
             if !recent.isEmpty {
                 RecentThingsSection(header: "Imported", things: Array(recent.live))
@@ -71,9 +78,13 @@ struct TikTokImportScreen: View {
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.json, .folder]) { outcome in
             guard case .success(let url) = outcome else { return }
-            runImport(url)
+            Task { await runImport(url) }
         }
-        .onAppear { pending = TikTokImport.pendingFaceCount(context: modelContext) }
+        .onAppear {
+            staleness = ImportRemoval.stalenessLine(source: "TikTok", context: modelContext)
+            held = ImportRemoval.count(source: "TikTok", context: modelContext)
+            pending = TikTokImport.pendingFaceCount(context: modelContext)
+        }
     }
 
     private var pickSection: some View {
@@ -109,17 +120,86 @@ struct TikTokImportScreen: View {
         .dsSlabSection()
     }
 
+
+    /// How old this import is, and the way back out (2026-08-05, prd §310).
+    ///
+    /// Both halves exist because the caps moved. A room frozen six months ago
+    /// reads exactly like a current one — there is no live read behind this
+    /// seat and never will be, so the only remedy is a fresh export and the
+    /// copy says so. And a decade landed in one tap needs a way back out that
+    /// isn't "delete everything you own".
+    ///
+    /// The removal is DESTRUCTIVE and confirms first, naming the real number.
+    /// It is also completely recoverable by repeating the import, which is
+    /// what makes a plain confirm the right weight rather than a typed name.
+    @ViewBuilder
+    private var upkeepSection: some View {
+        if staleness != nil || held > 0 {
+            Section {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    if let staleness { DSSlabNote(text: staleness) }
+                    if held > 0 {
+                        DSSlabButton(title: removing
+                                        ? String(localized: "Removing…")
+                                        : String(localized: "Remove all \(held) imported things"),
+                                     systemImage: "trash",
+                                     busy: removing,
+                                     enabled: !removing) {
+                            DSHaptic.tap()
+                            confirmRemove = true
+                        }
+                        DSSlabNote(text: "Removes only what came from TikTok. Everything else stays, and importing again brings it all back.")
+                    }
+                }
+            }
+            .dsSlabSection()
+            .confirmationDialog("Remove all \(held) things from TikTok?",
+                                isPresented: $confirmRemove, titleVisibility: .visible) {
+                Button("Remove \(held) things", role: .destructive) {
+                    Task { await runRemove() }
+                }
+                Button("Keep them", role: .cancel) { }
+            } message: {
+                Text("They came from an export, so importing again brings them back.")
+            }
+        }
+    }
+
+    private func runRemove() async {
+        removing = true
+        defer { removing = false }
+        let gone = await ImportRemoval.removeAll(source: "TikTok", context: modelContext)
+        held = ImportRemoval.count(source: "TikTok", context: modelContext)
+        staleness = ImportRemoval.stalenessLine(source: "TikTok", context: modelContext)
+        DSHaptic.success()
+        resultIsError = false
+        result = String(localized: "\(gone) removed")
+    }
+
     // MARK: - Run
 
-    /// Synchronous on purpose. The security-scoped grant covers the pick for as
-    /// long as access is held, and the importer reads the file from inside it —
-    /// so the read must finish before the `defer` releases the grant, not be
-    /// handed to a task that outlives it.
-    private func runImport(_ url: URL) {
+    /// The security-scoped grant covers the pick for as long as access is
+    /// held, and the importer reads the file from inside it — so the read must
+    /// finish before the `defer` releases the grant.
+    ///
+    /// That used to mean this had to be SYNCHRONOUS. It doesn't (2026-08-05,
+    /// prd §310): awaiting holds the grant across the suspension exactly as a
+    /// synchronous read held it across the call, because `defer` fires when the
+    /// function returns and not when it suspends. Handing the URL to a task
+    /// that outlives this scope is still forbidden, and still the reason the
+    /// await is here rather than detached.
+    private func runImport(_ url: URL) async {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
 
-        let summary = TikTokImport.run(file: url, context: modelContext)
+        let summary = await TikTokImport.run(file: url, context: modelContext,
+                                                 progress: { count in
+            // A running count in the status row the receipt will replace — a
+            // large archive lands in chunks now (prd §310), and without this
+            // the stretch between the tap and the receipt says nothing at all.
+            result = String(localized: "\(count) landed…")
+            resultIsError = false
+        })
         if summary.failed {
             result = String(localized: "Couldn't read that — pick the user_data_tiktok.json file, or the folder holding it. A TXT export can't be read.")
             resultIsError = true

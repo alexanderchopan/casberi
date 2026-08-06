@@ -149,7 +149,8 @@ enum TikTokImport {
     /// `failed` is reserved for "this isn't a TikTok export": the JSON didn't
     /// parse, or parsed and carried none of the four categories.
     @MainActor
-    static func run(file url: URL, context: ModelContext) -> Summary {
+    static func run(file url: URL, context: ModelContext,
+                    progress: ((Int) -> Void)? = nil) async -> Summary {
         guard let data = locate(url),
               let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { return Summary(failed: true) }
@@ -185,8 +186,7 @@ enum TikTokImport {
         }
 
         guard foundAnyCategory else { return Summary(failed: true) }
-        for thing in landed { context.insert(thing) }
-        finish(&summary, landed: landed, context: context)
+        await finish(&summary, landed: landed, context: context, progress: progress)
         return summary
     }
 
@@ -195,21 +195,21 @@ enum TikTokImport {
     /// an XPC round-trip per row. Mirrors `InstagramImport.finish`.
     @MainActor
     private static func finish(_ summary: inout Summary, landed: [Thing],
-                               context: ModelContext) {
+                               context: ModelContext,
+                               progress: ((Int) -> Void)?) async {
         guard summary.imported > 0 else { return }
         // TikTok is a `Corpus.bulkImportSources` member: its things stay out of
         // the All feed and live in their own room, so All learns the import
         // happened from this one reconciling row and nothing else. Landed
         // BEFORE the save so the receipt rides the same transaction — a receipt
         // saved separately could survive a failed import.
+        guard await ImportCommit.commit(landed, context: context, progress: progress) else {
+            summary = Summary(failed: true)
+            return
+        }
         ImportReceipt.land(source: source, count: summary.imported,
                            detail: receiptDetail(summary), context: context)
-        do {
-            try context.save()
-            SpotlightIndex.index(landed)
-        } catch {
-            summary = Summary(failed: true)
-        }
+        if (try? context.save()) == nil { summary = Summary(failed: true) }
     }
 
     /// What the count is made of, in the order a person would care about. Only

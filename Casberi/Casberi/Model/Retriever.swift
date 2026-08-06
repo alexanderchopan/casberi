@@ -64,6 +64,24 @@ enum Retriever {
         }
         if let facetMatch { terms.removeAll { facetMatch.words.contains($0) } }
 
+        // "everything I wrote" — YOUR words, across every room at once
+        // (2026-08-05, prd §310). This is the read that needs the whole corpus
+        // and so belongs to no single room: your Instagram captions, your X
+        // posts and replies, your TikTok comments are one body of writing that
+        // four separate exports happen to have split up.
+        //
+        // UNGATED, unlike the facet above, and the difference is the wording.
+        // "posts" is an ordinary noun that could mean anything, which is why a
+        // facet needs a named room to disambiguate it; "what I wrote" is an
+        // explicit claim about authorship with no other reading, so it can
+        // safely scope the whole corpus. Confirmed against that corpus like
+        // every other filter here.
+        let writingScope = Self.writingScope(in: query).flatMap { match in
+            corpus.contains { !$0.tags.isEmpty && !Self.mine.isDisjoint(with: $0.tags) }
+                ? match : nil
+        }
+        if let writingScope { terms.removeAll { writingScope.contains($0) } }
+
         // A kind word is a filter, not a search term.
         var kindFilter: ThingKind?
         terms.removeAll { term in
@@ -150,6 +168,7 @@ enum Retriever {
         return all.compactMap { thing -> (Thing, Double)? in
             if let sourceMatch, thing.source != sourceMatch.source { return nil }
             if let facetMatch, !thing.tags.contains(facetMatch.tag) { return nil }
+            if writingScope != nil, Self.mine.isDisjoint(with: thing.tags) { return nil }
             if let kindFilter, thing.kind != kindFilter { return nil }
             if let dateMatch, !dateMatch.range.contains(thing.capturedAt) { return nil }
             let title = words(thing.title)
@@ -184,7 +203,8 @@ enum Retriever {
             // ("my X stuff") lists that source. The freshness bonus below then
             // orders them, so a bare list is newest-first.
             if terms.isEmpty && (kindFilter != nil || dateMatch != nil
-                                 || sourceMatch != nil || facetMatch != nil) {
+                                 || sourceMatch != nil || facetMatch != nil
+                                 || writingScope != nil) {
                 score = 1
             }
             guard score > 0 else { return nil }
@@ -195,6 +215,37 @@ enum Retriever {
         .sorted { $0.1 > $1.1 }
         .prefix(16)
         .map(\.0)
+    }
+
+    /// The tags that mean YOU wrote it, across every import room. `Saved`,
+    /// `Liked` and `Memory` are deliberately absent — they are things you
+    /// TAPPED or were handed, and counting them as your writing is the whole
+    /// distinction this scope exists to draw.
+    static let mine: Set<String> = ["Post", "Reply", "Comment", "Thread"]
+
+    /// Whether a query explicitly asks for the person's OWN writing, and the
+    /// words that said so.
+    ///
+    /// Phrases only, never a bare noun. "What I wrote" and "my own words" have
+    /// exactly one reading; "posts" has several, which is why that lives in
+    /// `facetFilter` behind a named room. Getting this boundary wrong in the
+    /// permissive direction would make an ordinary search silently exclude
+    /// every link and note in the corpus.
+    static func writingScope(in query: String) -> Set<String>? {
+        let phrases = [
+            "everything i wrote", "everything i've written", "everything ive written",
+            "what i wrote", "what i've written", "what ive written",
+            "things i wrote", "stuff i wrote", "my own words", "my writing",
+            "posts i wrote", "anything i wrote",
+        ]
+        let haystack = " " + query.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ") + " "
+        for phrase in phrases where haystack.contains(" " + phrase + " ") {
+            return Set(phrase.split(separator: " ").map(String.init))
+        }
+        return nil
     }
 
     /// The FACET a query names within a room — a half of that room rather than

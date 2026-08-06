@@ -42,10 +42,13 @@ import SwiftData
 /// message text and it would be the largest prose corpus in the file, but
 /// whether years of private conversation belong in a searchable index is a
 /// decision to make deliberately, not a side effect of tapping Import — the
-/// Instagram ruling, unchanged. (3) MEDIA: the images live under `data/`
-/// as files relative to a temporary security-scoped folder, with no
-/// copy-into-app-storage path here. (4) Followers/following: names and dates,
+/// Instagram ruling, unchanged. (3) Followers/following: names and dates,
 /// no content — a tally, and a thing is never a tally.
+///
+/// MEDIA now lands, as of 2026-08-05 (prd §310) — as a 480pt THUMBNAIL, the
+/// same one every other picture in this app is. The old decline was to copying
+/// originals into a mirrored store, which is still refused; the export's files
+/// stay exactly where they are. See `ImportMedia`.
 enum XArchiveImport {
 
     static let source = "X"
@@ -61,9 +64,12 @@ enum XArchiveImport {
         /// person is the only one who can tell whether the missing years matter.
         var droppedPosts = 0
         var droppedLikes = 0
+        /// Private messages, landed only when `ImportOptions.includeMessages`
+        /// says so. See that file — the default is off and stays off.
+        var messages = 0
         var failed = false
 
-        var imported: Int { posts + replies + liked }
+        var imported: Int { posts + replies + liked + messages }
         var dropped: Int { droppedPosts + droppedLikes }
     }
 
@@ -81,11 +87,12 @@ enum XArchiveImport {
     /// numbers below cover a decade-long account outright; `droppedPosts` /
     /// `droppedLikes` make any archive past them say so.
     ///
-    /// They are not unbounded, and the reason is the import's own shape rather
-    /// than storage: `run` is `@MainActor` and builds every row before one
-    /// save, so the cap is also what keeps a very large archive from holding
-    /// the main thread. An archive that exceeds these is rare enough to be
-    /// worth a sentence on screen rather than a chunked, resumable importer.
+    /// They are not unbounded, but the reason is no longer the main thread:
+    /// since 2026-08-05 the landing runs through `ImportCommit`, which saves and
+    /// yields in chunks, so a large archive no longer holds the UI (prd §310).
+    /// What the cap bounds now is simply how much of a very long life belongs
+    /// in one tap — and any archive past it SAYS SO rather than truncating in
+    /// silence.
     private static let postCap = 10_000
     private static let likeCap = 5_000
 
@@ -96,7 +103,8 @@ enum XArchiveImport {
     /// legitimately have no likes. `failed` is reserved for "this isn't an X
     /// archive at all": neither category was found anywhere under the pick.
     @MainActor
-    static func run(folder: URL, context: ModelContext) -> Summary {
+    static func run(folder: URL, context: ModelContext,
+                    progress: ((Int) -> Void)? = nil) async -> Summary {
         var summary = Summary()
         var landed: [Thing] = []
         var seen = Set(IngestSupport.thingsByRef(context, source: "X").keys)
@@ -114,33 +122,50 @@ enum XArchiveImport {
             foundAnyCategory = true
             landLikes(data, summary: &summary, landed: &landed, seen: &seen)
         }
+        // Only when explicitly asked. `readSeries` is reused so a long DM
+        // history split across `-part1`, `-part2` … is read whole, exactly
+        // like the tweets are.
+        if ImportOptions.includeMessages {
+            for data in readSeries("direct-messages", under: folder) {
+                foundAnyCategory = true
+                landMessages(data, summary: &summary, landed: &landed, seen: &seen)
+            }
+        }
 
         guard foundAnyCategory else { return Summary(failed: true) }
-        for thing in landed { context.insert(thing) }
-        finish(&summary, landed: landed, context: context)
+        // The archive's own pictures, before the rows go down so a thumbnail
+        // rides the same insert (prd §310). Inside the scoped grant, which is
+        // why this can't be a later heal — there is no second chance at a
+        // folder the person has stopped granting.
+        let pixels = await ImportMedia.decode(mediaJobs(landed, under: folder))
+        ImportMedia.apply(pixels, to: landed)
+        await finish(&summary, landed: landed, context: context, progress: progress)
         return summary
     }
 
-    /// One save whose failure is REPORTED (a swallowed save behind a success
-    /// screen is fake status), and one batched Spotlight submission rather than
-    /// an XPC round-trip per row. Mirrors `InstagramImport.finish`.
+    /// Chunked landing whose failure is REPORTED (a swallowed save behind a
+    /// success screen is fake status). The rows go through `ImportCommit` —
+    /// insert, save, index, yield, per chunk — and the receipt is landed only
+    /// once they are all down, so a partial run is never crowned with a receipt
+    /// claiming a total it didn't reach. Mirrors `InstagramImport.finish`.
     @MainActor
     private static func finish(_ summary: inout Summary, landed: [Thing],
-                               context: ModelContext) {
+                               context: ModelContext,
+                               progress: ((Int) -> Void)?) async {
         guard summary.imported > 0 else { return }
         // X is a `Corpus.bulkImportSources` member: its things stay out of the
         // All feed and live in their own room, so All learns the import
         // happened from this one reconciling row and nothing else. Landed
-        // BEFORE the save so the receipt rides the same transaction — a receipt
-        // saved separately could survive a failed import.
+        // The rows first, in chunks that each save and yield (`ImportCommit`),
+        // then the receipt — so a run that dies partway leaves real things and
+        // no receipt claiming a total it never reached.
+        guard await ImportCommit.commit(landed, context: context, progress: progress) else {
+            summary = Summary(failed: true)
+            return
+        }
         ImportReceipt.land(source: "X", count: summary.imported,
                            detail: receiptDetail(summary), context: context)
-        do {
-            try context.save()
-            SpotlightIndex.index(landed)
-        } catch {
-            summary = Summary(failed: true)
-        }
+        if (try? context.save()) == nil { summary = Summary(failed: true) }
     }
 
     /// The receipt's own line. Only non-zero parts appear, so a likes-only
@@ -156,6 +181,7 @@ enum XArchiveImport {
             s.posts > 0   ? String(localized: "\(s.posts) posts") : nil,
             s.replies > 0 ? String(localized: "\(s.replies) replies") : nil,
             s.liked > 0   ? String(localized: "\(s.liked) liked") : nil,
+            s.messages > 0 ? String(localized: "\(s.messages) conversations") : nil,
         ].compactMap { $0 }
         if s.dropped > 0 {
             parts.append(String(localized: "\(s.dropped) older not imported"))
@@ -402,6 +428,42 @@ enum XArchiveImport {
         }
     }
 
+    /// Gives each landed post the picture the archive filed under its id.
+    ///
+    /// Only YOUR OWN posts have media in the archive — a liked post's pictures
+    /// are somebody else's and X does not ship them — so this reaches `.note`
+    /// rows and skips the likes, which is why it keys on the tweet id inside
+    /// `sourceRef`.
+
+    /// The pictures, in three parts so that NO `Thing` is ever held across a
+    /// suspension — `jobs` reads the models synchronously and hands out plain
+    /// values, `ImportMedia.decode` awaits with no model in scope at all, and
+    /// `apply` writes back synchronously.
+    ///
+    /// The split is defensive rather than decorative, and worth stating because
+    /// the obvious shortcut is wrong in a way that fails silently: the usual
+    /// remedy for holding models across an await is to re-filter `.live`
+    /// afterwards, and these rows have not been INSERTED yet, so `isLive`
+    /// (`modelContext != nil`) is false for every one of them. That guard would
+    /// skip the lot and disable media while every check reported green.
+    ///
+    /// (Un-inserted models are in fact safe to hold — nothing can tombstone a
+    /// row that is not in the context, which is what the liveness rules are
+    /// about. This shape avoids relying on that being true forever.)
+    @MainActor
+    private static func mediaJobs(_ landed: [Thing], under folder: URL) -> [ImportMedia.Job] {
+        let index = ImportMedia.xMediaIndex(under: folder)
+        guard !index.isEmpty else { return [] }
+        var jobs: [ImportMedia.Job] = []
+        for thing in landed where thing.kind == .note {
+            guard jobs.count < ImportMedia.perImport,
+                  let ref = thing.sourceRef, ref.hasPrefix("x:tweet:") else { continue }
+            let id = String(ref.dropFirst("x:tweet:".count))
+            if let file = index[id] { jobs.append(ImportMedia.Job(ref: ref, file: file)) }
+        }
+        return jobs
+    }
+
     // MARK: - The second act: who wrote the things you liked
 
     struct FaceResult {
@@ -556,6 +618,91 @@ enum XArchiveImport {
         // it — dropped so the next semantic sweep re-embeds on the real words.
         if changed { thing.embedding = nil }
         return changed
+    }
+
+    // MARK: - Private messages (only when asked — see `ImportOptions`)
+
+    /// Direct-message conversations, one thing per CONVERSATION rather than one
+    /// per message.
+    ///
+    /// A message is not a thing: on its own it is a fragment with no subject,
+    /// and ten thousand of them would bury a corpus in the same way §246 said
+    /// Snapchat's per-snap history would. A conversation IS one — it has two
+    /// people, a span and a subject — which is also exactly the shape
+    /// `SnapchatImport` already lands, so this room and that one agree about
+    /// what a chat looks like without either having to know about the other.
+    ///
+    /// The transcript is CLAMPED like Snapchat's, newest-biased, for its
+    /// reason: `content` is what the retriever reads and what a bubble view
+    /// draws, and a decade of one friendship should be neither. `messageCount`
+    /// carries the real total, so the room can rank on the whole conversation
+    /// rather than on the slice that was kept.
+    ///
+    /// UNMEASURED, like everything else in this file. Every failure returns
+    /// early, so a shape that isn't what this expects lands nothing at all
+    /// rather than landing something wrong.
+    @MainActor
+    private static func landMessages(_ data: Data, summary: inout Summary,
+                                     landed: inout [Thing], seen: inout Set<String>) {
+        guard let entries = parseArray(data) else { return }
+
+        for entry in entries {
+            let conversation = (entry["dmConversation"] as? [String: Any]) ?? entry
+            guard let id = conversation["conversationId"] as? String, !id.isEmpty,
+                  let messages = conversation["messages"] as? [[String: Any]]
+            else { continue }
+
+            var lines: [(date: Date, text: String)] = []
+            for wrapper in messages {
+                guard let create = (wrapper["messageCreate"] as? [String: Any]) else { continue }
+                let raw = (create["text"] as? String) ?? ""
+                let text = clean(raw, entities: create["urls"].map { ["urls": $0] })
+                guard !text.isEmpty else { continue }
+                let stamp = (create["createdAt"] as? String).flatMap(isoStamp) ?? Date(timeIntervalSince1970: 0)
+                lines.append((stamp, text))
+            }
+            guard !lines.isEmpty else { continue }
+            lines.sort { $0.date < $1.date }
+
+            let ref = "x:dm:\(id)"
+            guard !seen.contains(ref) else { summary.skipped += 1; continue }
+            seen.insert(ref)
+
+            let kept = lines.suffix(transcriptLines)
+            var transcript = kept.map(\.text).joined(separator: "\n")
+            if transcript.count > transcriptBytes {
+                transcript = String(transcript.suffix(transcriptBytes))
+            }
+            let newest = lines.last?.date ?? Date(timeIntervalSince1970: 0)
+            let thing = Thing(
+                kind: .chat,
+                title: String(localized: "Messages · \(lines.count) in a conversation"),
+                content: transcript,
+                source: "X",
+                capturedAt: newest,
+                tags: ["Conversation"],
+                sourceRef: ref
+            )
+            thing.messageCount = lines.count
+            landed.append(thing)
+            summary.messages += 1
+        }
+    }
+
+    /// Newest N lines kept, inside a byte ceiling — `SnapchatImport`'s numbers,
+    /// deliberately the same so two rooms holding the same kind of object hold
+    /// the same amount of it.
+    private static let transcriptLines = 60
+    private static let transcriptBytes = 4_000
+
+    /// X stamps a DM in ISO 8601 (`2019-04-16T12:34:56.000Z`), not the
+    /// `created_at` shape its tweets use.
+    private static func isoStamp(_ raw: String) -> Date? {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let d = f.date(from: raw) { return d }
+        f.formatOptions = [.withInternetDateTime]
+        return f.date(from: raw)
     }
 
     // MARK: - Dates
