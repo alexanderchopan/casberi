@@ -771,6 +771,43 @@ enum BridgeCatalog {
         categories.first { $0.groups.contains(offer.group) }?.name ?? "Life"
     }
 
+    /// The catalog category a landed SOURCE belongs to — the join `SourcesTray`
+    /// groups by, so the tray reads like the catalog rather than inventing a
+    /// second taxonomy (2026-08-06).
+    ///
+    /// A source name is NOT always an offer name, which is the whole reason
+    /// this exists rather than a bare `offers.first { $0.name == source }`:
+    /// `Thing.source` is "Privacy Pools" while the offer (and the wallet seat)
+    /// is "0xBow Privacy Pools", so exact matching alone files the flagship
+    /// privacy seat under nothing. The suffix rule fixes that family at a
+    /// stroke — it is also what resolves "Music" → "Apple Music", "Notes" →
+    /// "Apple Notes" and "Journal" → "Apple Journal", where the catalog carries
+    /// the vendor prefix and the corpus does not.
+    ///
+    /// Matched on a SPACE boundary (`" " + source`), never `contains`: a bare
+    /// substring test would file "Deals" under "Open Food Facts" the first time
+    /// an offer name happened to carry the word. First match in catalog order
+    /// wins, so the answer is stable and reviewable rather than dependent on
+    /// dictionary ordering.
+    ///
+    /// Reads `allOffers`, not `offers`: a platform-filtered offer can still
+    /// have landed things on this device (its rows sync from another one), and
+    /// a source with rows in the corpus must never lose its category because
+    /// the seat is hidden on the Mac.
+    ///
+    /// Returns nil for a source the catalog has never heard of — the caller
+    /// decides what to do with it, because "we don't know" and "Life" are
+    /// different answers and `category(of:)`'s default must not leak here.
+    static func category(forSource source: String) -> String? {
+        if let exact = allOffers.first(where: { $0.name == source }) {
+            return category(of: exact)
+        }
+        if let suffixed = allOffers.first(where: { $0.name.hasSuffix(" " + source) }) {
+            return category(of: suffixed)
+        }
+        return nil
+    }
+
     /// Offers not yet among the person's bridges — what the Apps page lists
     /// under Available and the tile counts as "to add". A–Z: the flat list is
     /// an inventory you scan by name (the grouped catalog keeps value order —

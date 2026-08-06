@@ -98,11 +98,13 @@
   /* packed rows: each row is a flex of groups; every cell is 65.2pt, so
      the global 5-column rhythm survives packing untouched */
   .rows { display: flex; flex-direction: column; gap: var(--s4); }
-  .prow { display: flex; gap: 10px; }
-  .pg { display: flex; flex-direction: column; gap: 5px; }
-  .ovl { font-size: 11px; font-weight: 600; color: var(--t3); line-height: 1;
-         padding-left: 7px; letter-spacing: 0; }
-  .pg .cells { display: flex; gap: 10px; }
+  .prow { display: flex; flex-direction: column; }
+  /* the name band and the chip row are both five equal slots, so a name and
+     the chip under it align with no measurement — exactly as the Swift does */
+  .band { display: flex; gap: 10px; height: 15px; margin-bottom: 5px; }
+  .band b { width: 65.2px; font-size: 11px; font-weight: 600; color: var(--t3);
+            line-height: 15px; padding-left: 7px; }
+  .cells { display: flex; gap: 10px; }
   .pcell { width: 65.2px; display: flex; flex-direction: column; align-items: center; gap: var(--s1); }
   .chip { width: 52px; height: 52px; display: flex; align-items: center; justify-content: center;
           position: relative; border-radius: 50%; }
@@ -166,7 +168,8 @@
     <p class="standfirst">v2's marker held a grid column, which cost the fifth chip on every row and a
     whole row per category. Move the name <b>above</b> its group as a small overline and both costs go
     away: chips run five across again, small categories share a row, and your twenty sources pack into
-    <b>four rows — 554pt, shorter than today's ungrouped 572pt.</b> Categories, at a height discount.</p>
+    <b>four rows — 566pt, shorter than today's ungrouped 572pt</b>, in strict catalog order. Categories,
+    at a height discount.</p>
   </header>
 
   <div class="stage">
@@ -203,51 +206,11 @@
             <div class="grabber"></div>
             <h2>Your sources</h2>
             <div class="rows">
-              <div class="prow">
-                <div class="pg"><div class="ovl">Wallet</div><div class="cells">
-                  <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-wallet"/></svg></div></div><div class="name">Wallet</div></div>
-                  <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-pools"/></svg></div></div><div class="name">Privacy Pools</div></div>
-                  <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-railgun"/></svg></div></div><div class="name">Railgun</div></div>
-                </div></div>
-                <div class="pg"><div class="ovl">Mail</div><div class="cells">
-                  <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-mail"/></svg></div></div><div class="name">iCloud Mail</div></div>
-                </div></div>
-                <div class="pg"><div class="ovl">Work</div><div class="cells">
-                  <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-github"/></svg></div></div><div class="name">GitHub</div></div>
-                </div></div>
-              </div>
-              <div class="prow">
-                <div class="pg"><div class="ovl">Social</div><div class="cells">
-                  <div class="pcell"><div class="chip broken"><div class="icon"><svg><use href="#g-farcaster"/></svg></div></div><div class="name">Farcaster</div></div>
-                  <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-bluesky"/></svg></div></div><div class="name">Bluesky</div></div>
-                  <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-x"/></svg></div></div><div class="name">X</div></div>
-                </div></div>
-                <div class="pg"><div class="ovl">Media</div><div class="cells">
-                  <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-music"/></svg></div></div><div class="name">Apple Music</div></div>
-                  <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-youtube"/></svg></div></div><div class="name">YouTube</div></div>
-                </div></div>
-              </div>
-              <div class="prow">
-                <div class="pg"><div class="ovl">Markets</div><div class="cells">
-                  <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-tokens"/></svg></div></div><div class="name">Tokens</div></div>
-                  <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-stocktwits"/></svg></div></div><div class="name">Stocktwits</div></div>
-                  <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-gecko"/></svg></div></div><div class="name">GeckoTerminal</div></div>
-                  <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-kalshi"/></svg></div></div><div class="name">Kalshi</div></div>
-                  <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-polymarket"/></svg></div></div><div class="name">Polymarket</div></div>
-                </div></div>
-              </div>
-              <div class="prow">
-                <div class="pg"><div class="ovl">Life</div><div class="cells">
-                  <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-photos"/></svg></div></div><div class="name">Photos</div></div>
-                  <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-files"/></svg></div></div><div class="name">Files</div></div>
-                  <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-calendar"/></svg></div></div><div class="name">Calendar</div></div>
-                  <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-reminders"/></svg></div></div><div class="name">Reminders</div></div>
-                </div></div>
-                <div class="pg"><div class="ovl">Reading</div><div class="cells">
-                  <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-rss"/></svg></div></div><div class="name">RSS</div></div>
-                </div></div>
-              </div>
-            </div>
+<div class="prow"><div class="band"><b>Wallet</b><b></b><b></b><b>Social</b><b></b></div><div class="cells"><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-wallet"/></svg></div></div><div class="name">Wallet</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-pools"/></svg></div></div><div class="name">Privacy Pools</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-railgun"/></svg></div></div><div class="name">Railgun</div></div><div class="pcell"><div class="chip broken"><div class="icon"><svg><use href="#g-farcaster"/></svg></div></div><div class="name">Farcaster</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-bluesky"/></svg></div></div><div class="name">Bluesky</div></div></div></div>
+<div class="prow"><div class="band"><b></b><b>Mail</b><b>Media</b><b></b><b>Markets</b></div><div class="cells"><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-x"/></svg></div></div><div class="name">X</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-mail"/></svg></div></div><div class="name">iCloud Mail</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-music"/></svg></div></div><div class="name">Apple Music</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-youtube"/></svg></div></div><div class="name">YouTube</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-tokens"/></svg></div></div><div class="name">Tokens</div></div></div></div>
+<div class="prow"><div class="band"><b></b><b></b><b></b><b></b><b>Life</b></div><div class="cells"><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-stocktwits"/></svg></div></div><div class="name">Stocktwits</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-gecko"/></svg></div></div><div class="name">GeckoTerminal</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-kalshi"/></svg></div></div><div class="name">Kalshi</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-polymarket"/></svg></div></div><div class="name">Polymarket</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-photos"/></svg></div></div><div class="name">Photos</div></div></div></div>
+<div class="prow"><div class="band"><b></b><b></b><b></b><b>Work</b><b>Reading</b></div><div class="cells"><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-files"/></svg></div></div><div class="name">Files</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-calendar"/></svg></div></div><div class="name">Calendar</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-reminders"/></svg></div></div><div class="name">Reminders</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-github"/></svg></div></div><div class="name">GitHub</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-rss"/></svg></div></div><div class="name">RSS</div></div></div></div>
+</div>
           </div>
         </div>
       </div>
@@ -255,12 +218,16 @@
       secondary text aligned to its first chip's edge — quiet enough that the chips still lead, present
       enough that "Markets" reads before the five marks under it do. Groups keep the strip's frozen
       order inside themselves; the feed still peeks above the tray the way it does today.</p>
-      <p class="note"><b>One honest compromise:</b> the singletons float. Work rides row one beside Wallet
-      and Mail, out of catalog order, because a packed row beats a faithful sequence that scrolls. Strict
-      catalog order packs to five rows (~660pt) instead of four — still far better than v2, if the order
-      matters more than the height.</p>
+      <p class="note"><b>Groups pack greedily, and most of them straddle a row.</b> This is the real
+      arrangement the shipped code produces, not a tidied one: Markets starts in row two's last column
+      and finishes across row three, Life starts in row three's last column and finishes in row four.
+      Five of the eight groups break across a row end — which is what buys strict catalog order AND
+      four rows at the same time.</p>
+      <p class="note">It reads because <b>an overline marks a START, never a continuation</b>. A named
+      cell begins a group; every unnamed cell after it belongs to the last name above and to its left.
+      One rule, learned once. The panel beside this shows what refusing to split costs.</p>
       <dl class="spec">
-        <dt>height</dt><dd class="good">554pt · shorter than today's 572</dd>
+        <dt>height</dt><dd class="good">566pt · shorter than today's 572</dd>
         <dt>rows</dt><dd>4 · five chips across again</dd>
         <dt>scroll</dt><dd class="good">none — fits the resting cap</dd>
         <dt>chips</dt><dd>20 — All lives in the strip</dd>
@@ -268,49 +235,29 @@
     </div>
 
     <div class="col">
-      <div class="chead"><h3>When a category outgrows a row</h3><span class="tag">the wrap, solved for free</span></div>
+      <div class="chead"><h3>The alternative</h3><span class="tag">never split a group</span></div>
       <div class="holder">
         <div class="panel">
-          <div class="edge"></div>
-          <h2>Your sources</h2>
-          <div class="rows">
-            <div class="prow">
-              <div class="pg"><div class="ovl">Markets</div><div class="cells">
-                <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-tokens"/></svg></div></div><div class="name">Tokens</div></div>
-                <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-stocktwits"/></svg></div></div><div class="name">Stocktwits</div></div>
-                <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-gecko"/></svg></div></div><div class="name">GeckoTerminal</div></div>
-                <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-kalshi"/></svg></div></div><div class="name">Kalshi</div></div>
-                <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-polymarket"/></svg></div></div><div class="name">Polymarket</div></div>
-              </div></div>
-            </div>
-            <div class="prow">
-              <div class="pg"><div class="cells">
-                <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-opensea"/></svg></div></div><div class="name">OpenSea</div></div>
-              </div></div>
-            </div>
-            <div class="prow">
-              <div class="pg"><div class="ovl">Life</div><div class="cells">
-                <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-photos"/></svg></div></div><div class="name">Photos</div></div>
-                <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-files"/></svg></div></div><div class="name">Files</div></div>
-                <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-calendar"/></svg></div></div><div class="name">Calendar</div></div>
-                <div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-reminders"/></svg></div></div><div class="name">Reminders</div></div>
-              </div></div>
-            </div>
-          </div>
+<div class="prow"><div class="band"><b>Wallet</b><b></b><b></b><b></b><b></b></div><div class="cells"><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-wallet"/></svg></div></div><div class="name">Wallet</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-pools"/></svg></div></div><div class="name">Privacy Pools</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-railgun"/></svg></div></div><div class="name">Railgun</div></div></div></div>
+<div class="prow"><div class="band"><b>Social</b><b></b><b></b><b>Mail</b><b></b></div><div class="cells"><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-farcaster"/></svg></div></div><div class="name">Farcaster</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-bluesky"/></svg></div></div><div class="name">Bluesky</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-x"/></svg></div></div><div class="name">X</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-mail"/></svg></div></div><div class="name">iCloud Mail</div></div></div></div>
+<div class="prow"><div class="band"><b>Media</b><b></b><b></b><b></b><b></b></div><div class="cells"><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-music"/></svg></div></div><div class="name">Apple Music</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-youtube"/></svg></div></div><div class="name">YouTube</div></div></div></div>
+<div class="prow"><div class="band"><b>Markets</b><b></b><b></b><b></b><b></b></div><div class="cells"><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-tokens"/></svg></div></div><div class="name">Tokens</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-stocktwits"/></svg></div></div><div class="name">Stocktwits</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-gecko"/></svg></div></div><div class="name">GeckoTerminal</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-kalshi"/></svg></div></div><div class="name">Kalshi</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-polymarket"/></svg></div></div><div class="name">Polymarket</div></div></div></div>
+<div class="prow"><div class="band"><b>Life</b><b></b><b></b><b></b><b>Work</b></div><div class="cells"><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-photos"/></svg></div></div><div class="name">Photos</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-files"/></svg></div></div><div class="name">Files</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-calendar"/></svg></div></div><div class="name">Calendar</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-reminders"/></svg></div></div><div class="name">Reminders</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-github"/></svg></div></div><div class="name">GitHub</div></div></div></div>
+<div class="prow"><div class="band"><b>Reading</b><b></b><b></b><b></b><b></b></div><div class="cells"><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-rss"/></svg></div></div><div class="name">RSS</div></div></div></div>
         </div>
       </div>
-      <p class="note">Connect OpenSea and Markets holds six. The continuation row starts at column one
-      like every other row — <b>the indent problem v2's rail existed to solve doesn't exist here</b>,
-      because no column is reserved for a name. The dashed guide marks the one left edge every chip in
-      the tray shares, first rows and continuations alike.</p>
-      <p class="note">A continuation row deliberately carries no repeated overline — the row above already
-      said "Markets," and a category that wraps is packed alone on both its rows so nothing else can be
-      mistaken for a sixth member.</p>
+      <p class="note"><b>Refuse to split any group and the height comes straight back.</b> Catalog order
+      is strict in both, and the only difference is whether a group may run past a row end — here it may
+      not, so Social can't share row one with Wallet, Media can't share with Mail, and every part-filled
+      row is space paid for nothing.</p>
+      <p class="note"><b>Six rows, 816pt.</b> That is past the 620pt resting cap and past what
+      <code>.large</code> shows, so the tray scrolls — to buy tidiness in a picker you are in for two
+      seconds. The packed version is the one that ships; this is what it is bought with.</p>
       <dl class="spec">
-        <dt>overline</dt><dd>11pt semibold, text3, one per group</dd>
-        <dt>cell</dt><dd>unchanged — 52 chip + 4 + 28 name</dd>
-        <dt>row</dt><dd>16 overline + 5 + 84 cell = 105pt</dd>
-        <dt>alignment</dt><dd class="good">one edge, no reserved column</dd>
+        <dt>height</dt><dd>816pt · 1.4× today's 572pt</dd>
+        <dt>rows</dt><dd>6 · no group ever straddles</dd>
+        <dt>scroll</dt><dd>yes — past the cap and past .large</dd>
+        <dt>waste</dt><dd>10 empty cells of 30</dd>
       </dl>
     </div>
 
@@ -326,10 +273,17 @@
     job as the strip's map — it would teach positions the icon-only strip doesn't have. This keeps the
     frozen order inside every group, adds the category read on top, and still comes in 18pt shorter
     than the flat grid it replaces.</p>
-    <p><b>The ruling it needs:</b> packing floats the singletons out of catalog order (Work sits in row
-    one). If catalog order must be strict, the same layout packs to five rows / ~660pt — a one-row
-    price for a faithful sequence. Either way no scroll bar at twenty sources; the layout crosses the
-    620pt resting cap only past roughly thirty.</p>
+    <p><b>Catalog order is strict and nothing floats.</b> An earlier cut of this page floated the
+    single-app categories to tidy the rows; that turned out to be unnecessary once groups were allowed
+    to straddle a row end, so the order you see is exactly <code>BridgeCatalog.categories</code>'.
+    No scroll at twenty sources — the layout crosses the 620pt resting cap only past roughly
+    twenty-four.</p>
+    <p><b>Built, not just drawn.</b> This page is the spec for what shipped: the packing here is the
+    output of the same algorithm, checked against the real catalog, and the height is its arithmetic.
+    <code>SourcesTray.swift</code> groups by <code>BridgeCatalog.category(forSource:)</code>, which
+    matches an offer name exactly and then on a space boundary — the rule that files "Privacy Pools"
+    under the "0xBow Privacy Pools" offer, and "Music"/"Notes"/"Journal" under their Apple-prefixed
+    ones.</p>
     <p>Icons are simplified stand-ins; a build uses the same <code>BridgeIcon</code> marks. Rings read
     as they do on the strip — solid tint is where you are, dashed orange (Farcaster above) is a
     connection that needs you.</p>
