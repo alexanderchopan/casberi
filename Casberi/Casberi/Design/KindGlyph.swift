@@ -164,6 +164,7 @@ enum BridgeGlyph {
         case "peer":      return "arrow.left.arrow.right"
         case "privacy pools", "0xbow privacy pools": return "shield.lefthalf.filled"
         case "gnosis pay": return "creditcard"
+        case "apple wallet": return "creditcard.fill"
         // The unstake queue's whole subject is waiting, then collecting — an
         // hourglass says that where a generic coin or chain glyph wouldn't.
         case "ether.fi":  return "hourglass"

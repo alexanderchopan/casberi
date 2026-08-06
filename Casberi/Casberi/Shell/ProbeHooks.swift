@@ -761,6 +761,40 @@ enum ProbeHooks {
             } else {
                 NSLog("[Casberi] appleWallet| SHAPE composed NOTHING — the fixture broke")
             }
+
+            // WHAT WOULD LAND, without landing it. `landChanges` is the half no
+            // screen can show: a price rise becomes a row in the feed, and on a
+            // simulator the pass it runs in never executes at all. These are the
+            // exact refs and titles the bridge would insert, so a dedupe key
+            // that repeats on every refresh — or a title that goes stale a day
+            // after it lands — is visible here in one launch.
+            let fixtureSeries = AppleWalletRoom.recurringSeries(fixture, now: now)
+            for c in AppleWalletRoom.creeps(fixtureSeries, now: now) {
+                NSLog("[Casberi] appleWalletLand| CREEP %@ → %@",
+                      AppleWalletRoom.creepRef(c), AppleWalletRoom.creepLine(c))
+            }
+            for q in AppleWalletRoom.silences(fixtureSeries, now: now) {
+                NSLog("[Casberi] appleWalletLand| SILENCE %@ → %@ (stamped %@)",
+                      AppleWalletRoom.silenceRef(q), AppleWalletRoom.silenceTitle(q),
+                      AppleWalletRoom.dayLabel(AppleWalletRoom.silenceOccurredAt(q)))
+            }
+            if AppleWalletRoom.creeps(fixtureSeries, now: now).isEmpty
+                && AppleWalletRoom.silences(fixtureSeries, now: now).isEmpty {
+                NSLog("[Casberi] appleWalletLand| (nothing would land — the fixture broke)")
+            }
+
+            // NORMALIZATION, on the descriptor forms a card statement really
+            // carries. The failure worth seeing is not a prefix that fails to
+            // strip (one shop ranks as two, which the board shows) but a strip
+            // that goes too far and MERGES two real merchants — a total nobody
+            // spent, rendered perfectly. So the untouched cases are logged too.
+            for raw in ["SQ *BLUE BOTTLE", "TST* BLUE BOTTLE", "PAYPAL *STEAM GAMES",
+                        "Amazon.com*2H4KJ8", "AMZN Mktp US*PRIME", "SQUARE ENIX",
+                        "Blue Bottle Coffee"] {
+                let clean = AppleWalletRoom.normalizeMerchant(raw)
+                NSLog("[Casberi] appleWalletName| %@ → %@%@", raw, clean,
+                      clean == raw ? "  (untouched)" : "")
+            }
             NSLog("[Casberi] appleWallet| LIVE supported=%@ connected=%@",
                   AppleWalletBridge.isSupported ? "YES" : "NO",
                   AppleWalletBridge.connected ? "YES" : "NO")

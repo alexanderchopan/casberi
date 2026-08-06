@@ -206,7 +206,7 @@ enum BridgeCatalog {
         // The last line names the two ceilings so the copy can never drift
         // past them: US-only, and pending charges aren't a statement.
         Offer(name: "Apple Wallet", tagline: "What your card actually spends",  group: "Wallet",    connectable: true,
-              summary: "Apple Card, Apple Cash and Savings, read straight from this \(DS.device). Every purchase lands with the merchant's real name — the one thing a card feed off the chain can never tell you — so your spending is findable beside everything else you keep.\n\nThe room leads with who you actually pay, and speaks up when something changes: a subscription whose price went up, one that quietly stopped charging, a payment coming due.\n\nRead on this \(DS.device) and stored on it. Casberi has no server, so nothing is uploaded, sold, or used for advertising, and it can't spend or move money. Disconnect and everything it brought in is deleted.\n\nApple Card, Apple Cash and Savings are US-only. Pending charges are shown but never counted — this is what you spent, not a statement.",
+              summary: "Apple Card, Apple Cash and Savings, read on your \(DS.device). Every purchase lands with the merchant's real name.\n\nThe room leads with who you pay most, and speaks up when a subscription's price rises or quietly stops.\n\nRead-only, on device, never uploaded or sold. Disconnect and everything it brought in is deleted. United States only.",
               needsSetup: true, added: day(2026, 8, 6)),
         // Wallet group by ruling (user, 2026-07-21): the balances MERGE into
         // the combined portfolio, so an exchange belongs beside the wallets
@@ -364,7 +364,7 @@ enum BridgeCatalog {
               ],
               needsSetup: true, added: day(2026, 7, 31)),
         Offer(name: "GeckoTerminal", tagline: "Trending tokens, per chain",          group: "Markets",   connectable: true,
-              summary: "Pick the chains you care about and the tokens trending on each — GeckoTerminal's own ranking, by 24-hour volume and price move — land in your feed as links.\n\nNo account, no key: fetched straight from GeckoTerminal's public API by \(DS.device).\n\nRead-only public price data; nothing here buys, sells, or trades.\n\nEach trending row opens to its live on-device chart.",
+              summary: "Pick the chains you care about and the tokens trending on each — GeckoTerminal's own ranking, by 24-hour volume and price move — land in your feed as links.\n\nNo account, no key: fetched straight from GeckoTerminal's public API by \(DS.device). Read-only public price data; nothing here buys, sells, or trades.\n\nEach trending row opens to its live on-device chart.",
               needsSetup: true),
         Offer(name: "OpenSea",     tagline: "New NFT drops in your feed",            group: "NFTs",      connectable: true,
               summary: "Watch the chains you care about and their newest NFT collections land in your feed as links — the ones with real artwork, not the empty test contracts. Fetched straight from OpenSea's public API, read-only: nothing here buys, sells, or bids.",

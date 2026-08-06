@@ -166,6 +166,48 @@ def sentences(text: str) -> int:
     return len([s for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()])
 
 
+
+# ── the catalog offer's own budget (added 2026-08-06) ──────────────────────
+#
+# The connect SCREEN had a budget and the catalog SUMMARY did not, so the same
+# sprawl the §315 rules pushed off the screen simply moved one surface over.
+# The Apple Wallet offer landed at 131 words in 4 paragraphs — three times the
+# median and half again the longest legitimate entry — and nothing could see it.
+#
+# MEASURED, not chosen (2026-08-06, over the 91 offers that carry a summary):
+# median 43 words, p90 75, longest real entry 88 (Gnosis Pay). So the ceiling is
+# 90 — above every offer written to date, which means it flags NEW sprawl and
+# never re-litigates copy the user already approved. Paragraphs cap at 3, the
+# median and the observed maximum.
+#
+# What it deliberately does NOT check: the QUALITY of a sentence (it cannot
+# tell a true one from a false one), the tagline (already one short phrase by
+# construction), or the ceilings an offer must state — an honest caveat is
+# exactly what a word budget must never squeeze out, which is why the ceiling
+# sits above the longest honest entry rather than at the median.
+OFFER_MAX_WORDS = 90
+OFFER_MAX_PARAGRAPHS = 3
+CATALOG = os.path.join(ROOT, "Casberi", "Casberi", "Model", "BridgeCatalog.swift")
+
+
+def audit_catalog(src: str):
+    findings = []
+    offers = 0
+    for m in re.finditer(r'Offer\(name:\s*"([^"]+)".*?summary:\s*"((?:[^"\\]|\\.)*)"',
+                         src, re.S):
+        name, raw = m.group(1), m.group(2)
+        offers += 1
+        text = raw.replace('\\"', '"')
+        paras = [p for p in text.split("\\n\\n") if p.strip()]
+        w = words(text.replace("\\n", " "))
+        if w > OFFER_MAX_WORDS:
+            findings.append(f"{name}: summary is {w} words (max {OFFER_MAX_WORDS}) — "
+                            f"the median offer is 43")
+        if len(paras) > OFFER_MAX_PARAGRAPHS:
+            findings.append(f"{name}: summary is {len(paras)} paragraphs "
+                            f"(max {OFFER_MAX_PARAGRAPHS})")
+    return findings, offers
+
 # ── the checks ─────────────────────────────────────────────────────────────
 
 def audit_source(name: str, src: str):
@@ -328,6 +370,36 @@ def self_test() -> bool:
         ok = False
     else:
         print("  ✓ passes a clean screen (and ignores copy quoted in comments)")
+
+    # The catalog budget's own fixtures. A check that cannot fail proves
+    # nothing — and this one guards a rule that was broken the day it was
+    # written (a 131-word, 4-paragraph offer), so it has to demonstrate it
+    # catches both shapes and clears an ordinary entry.
+    long_summary = " ".join(["word"] * (OFFER_MAX_WORDS + 5))
+    dirty_words = f'Offer(name: "Bloaty", tagline: "x", group: "g", connectable: true, summary: "{long_summary}", needsSetup: true),'
+    f, _ = audit_catalog(dirty_words)
+    if not any("words" in x for x in f):
+        print(f"  SELF-TEST FAIL: an over-long summary was not caught — {f}")
+        ok = False
+    else:
+        print("  ✓ catches an over-long catalog summary")
+
+    dirty_paras = 'Offer(name: "Wally", tagline: "x", group: "g", connectable: true, summary: "One.\\n\\nTwo.\\n\\nThree.\\n\\nFour.", needsSetup: true),'
+    f, _ = audit_catalog(dirty_paras)
+    if not any("paragraphs" in x for x in f):
+        print(f"  SELF-TEST FAIL: a 4-paragraph summary was not caught — {f}")
+        ok = False
+    else:
+        print("  ✓ catches a catalog summary with too many paragraphs")
+
+    clean = 'Offer(name: "Tidy", tagline: "x", group: "g", connectable: true, summary: "Lands your things.\\n\\nNo account, no key.\\n\\nRead-only.", needsSetup: true),'
+    f, n = audit_catalog(clean)
+    if f or n != 1:
+        print(f"  SELF-TEST FAIL: an ordinary offer was flagged — {f} (parsed {n})")
+        ok = False
+    else:
+        print("  ✓ passes an ordinary catalog offer")
+
     return ok
 
 
@@ -355,7 +427,10 @@ def main() -> int:
         screens += 1
         findings += audit_source(fn, src)
 
-    print(f"  {screens} connect screens checked")
+    catalog_findings, offers = audit_catalog(strip_comments(open(CATALOG).read()))
+    findings += catalog_findings
+
+    print(f"  {screens} connect screens, {offers} catalog offers checked")
     if findings:
         print(f"\n  {len(findings)} finding(s):")
         for f in findings:
