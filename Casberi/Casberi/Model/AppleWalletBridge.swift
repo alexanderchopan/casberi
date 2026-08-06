@@ -85,6 +85,36 @@ enum AppleWalletBridge {
     /// runaway guard, not a window.
     static let maxPerPass = 500
 
+    /// How far back of ALREADY-SEEN history every pass re-reads, so a pending
+    /// authorization can be healed once it settles.
+    ///
+    /// **This constant is a bug fix, and the bug it fixes was invisible.** The
+    /// cursor is the newest `transactionDate` already landed, and the query
+    /// asked for `transactionDate > cursor` — but a pending authorization
+    /// lands wearing today's date, which is at or below the cursor the same
+    /// pass then writes. So it was excluded from every subsequent read, the
+    /// heal path in `land` could never fire for it, and it stayed "Pending ·"
+    /// forever: its settled amount never arrived, it was never counted, and
+    /// the card's "N pending charges aren't counted" note grew by one more
+    /// permanent row each time. Nothing errored, and the room rendered
+    /// perfectly the whole time — it just quietly undercounted for life.
+    ///
+    /// Seven days clears the window a card issuer takes to settle an
+    /// authorization (typically 1–3, longer for hotels, fuel and car hire).
+    /// Re-reading is free: `land` dedupes on `sourceRef`, so a row already
+    /// settled costs one dictionary lookup and lands nothing.
+    ///
+    /// It is a FLOOR, not the whole rule — `pendingFloor` widens the window to
+    /// cover the oldest row still pending, because a fixed offset from a cursor
+    /// that advances daily strands exactly the long holds (hotel, car hire)
+    /// that take longest to settle.
+    static let healbackDays = 7
+
+    /// How far back the window may be dragged by a still-pending row. Bounds
+    /// the read for a corpus holding a permanently-stuck authorization — see
+    /// the phantom-pending ceiling on `pendingFloor`.
+    static let maxHealbackDays = 90
+
     // MARK: - Stored state (UserDefaults — no new `Thing` field, no CloudKit deploy)
 
     private static let connectedKey = "applewallet.connected"
@@ -235,7 +265,16 @@ enum AppleWalletBridge {
         for account in accounts { names[account.id] = account.displayName }
         await readBalances(accounts: accounts)
 
-        let since = cursor ?? Date().addingTimeInterval(-Double(backfillDays) * 86_400)
+        // The read window starts BEFORE the cursor, so pending rows landed on
+        // an earlier pass are seen again and healed when they settle — and it
+        // reaches back far enough to cover the oldest row STILL pending, not
+        // merely a fixed number of days. Only the first sight reaches all the
+        // way back to `backfillDays`.
+        let firstSight = Date().addingTimeInterval(-Double(backfillDays) * 86_400)
+        let since = cursor.map { c in
+            min(c.addingTimeInterval(-Double(healbackDays) * 86_400),
+                pendingFloor(context: context))
+        } ?? firstSight
         let query = TransactionQuery(
             sortDescriptors: [SortDescriptor(\Transaction.transactionDate, order: .reverse)],
             predicate: #Predicate { $0.transactionDate > since },
@@ -244,6 +283,10 @@ enum AppleWalletBridge {
 
         let landed = land(txns, accountNames: names, context: context)
         landDueRows(context: context)
+        try? context.save()
+        // After the save, so the pass reads a corpus including what just
+        // landed — a price rise is only visible once its charge is a row.
+        landChanges(context: context)
         try? context.save()
 
         // Cursor last, and only over rows we actually saw.
@@ -326,7 +369,8 @@ enum AppleWalletBridge {
             let ref = "applewallet:txn:\(txn.id.uuidString)"
             let amount = NSDecimalNumber(decimal: txn.transactionAmount.amount).doubleValue
             let currency = txn.transactionAmount.currencyCode
-            let merchant = merchantLabel(txn)
+            let raw = merchantLabel(txn)
+            let merchant = AppleWalletRoom.normalizeMerchant(raw)
             let isRefund = txn.creditDebitIndicator == .credit
             let settled = txn.status == .booked
             let title = rowTitle(merchant: merchant, amount: amount, currency: currency,
@@ -334,10 +378,14 @@ enum AppleWalletBridge {
 
             if let row = byRef[ref] {
                 // Heal: a pending row that posted, or an amount that moved.
+                // Reachable only because `refresh` re-reads `healbackDays` of
+                // already-seen history — see that constant for the bug this
+                // path silently had until then.
                 if row.title != title {
                     row.title = title
                     row.priceValue = amount
                     row.priceCurrency = currency
+                    row.transferCounterparty = merchant
                     row.transferAmount = AppleWalletRoom.money(amount, currency)
                     row.tags = tags(isRefund: isRefund, isSettled: settled)
                     row.capturedAt = txn.postedDate ?? txn.transactionDate
@@ -356,9 +404,15 @@ enum AppleWalletBridge {
             thing.priceValue = amount
             thing.priceCurrency = currency
             thing.tags = tags(isRefund: isRefund, isSettled: settled)
-            if let account = accountNames[txn.accountID] {
-                thing.enrichedText = account
-            }
+            // The account, plus the descriptor AS THE BANK WROTE IT when
+            // normalization changed it. `enrichedText` is retrieval-only by the
+            // 2026-07-15 ruling, so neither is ever displayed — but both are
+            // searchable, which is the point: after `normalizeMerchant` turns
+            // "SQ *BLUE BOTTLE" into "Blue Bottle", searching the string that
+            // is actually on your statement must still find the row.
+            var enriched = accountNames[txn.accountID].map { [$0] } ?? []
+            if merchant != raw { enriched.append(raw) }
+            if !enriched.isEmpty { thing.enrichedText = enriched.joined(separator: " · ") }
             context.insert(thing)
             byRef[ref] = thing
             landed += 1
@@ -404,6 +458,144 @@ enum AppleWalletBridge {
         if isRefund { out.append("Refund") }
         if !isSettled { out.append("Pending") }
         return out
+    }
+
+    /// The oldest still-pending row's date, less a day, or `.distantFuture`
+    /// when nothing is pending (so `min` leaves the window alone).
+    ///
+    /// **`healbackDays` alone is a grace period bolted onto the same bug.**
+    /// The cursor is the newest date ever seen, so on a card in daily use it
+    /// advances every day and a fixed 7-day offset walks forward with it. A
+    /// hotel hold placed on day D is outside the window by day D+8 and settles
+    /// on day D+10 — never re-read, stuck as `Pending ·` forever, exactly the
+    /// failure the heal-back exists to prevent. The window has to be anchored
+    /// to what is actually unresolved, not to how long we guessed that takes.
+    ///
+    /// **Stated ceiling: a released authorization is never pruned.** An issuer
+    /// that drops a hold (petrol, hotel) simply stops returning it, and nothing
+    /// here deletes a row FinanceKit no longer mentions — a reconcile pass
+    /// would have to distinguish "gone" from "outside this page", and
+    /// `maxPerPass` truncation makes that unsafe to guess at. So a dropped hold
+    /// stays as a phantom pending row, uncounted, and drags this floor with it;
+    /// `maxHealbackDays` is what stops it dragging forever. Fix it by measuring
+    /// what FinanceKit really does with a released hold on a real device — it
+    /// is not knowable from the SDK's interface.
+    @MainActor
+    private static func pendingFloor(context: ModelContext) -> Date {
+        let name = sourceName
+        let fetch = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == name })
+        let rows = (try? context.fetch(fetch)) ?? []
+        let pending = rows.filter { $0.isLive && $0.tags.contains("Pending") }
+        guard let oldest = pending.map(\.capturedAt).min() else { return .distantFuture }
+        let bound = Date().addingTimeInterval(-Double(maxHealbackDays) * 86_400)
+        return max(oldest.addingTimeInterval(-86_400), bound)
+    }
+
+    // MARK: - What changed, as rows
+
+    /// Land the two judgements that are NEWS: a recurring price that rose, and
+    /// a subscription that stopped charging.
+    ///
+    /// **Why these leave the room.** `AppleWalletRoom` computes both for its
+    /// head, and a head only speaks while you're standing in front of it — so
+    /// before this, "Netflix went up 16%" was visible only to someone who
+    /// opened the Apple Wallet room and looked at the subline, which is
+    /// precisely the fact nobody goes looking for because nobody knows to.
+    /// Landing them puts each in the feed, in the corpus a year later, and in
+    /// reach of `NotifySweep`. It is the PostHog precedent exactly (prd §223:
+    /// a milestone and a silence land as things while the metric curve does
+    /// not), and it does not touch §313's ruling that a CHARGE never notifies:
+    /// your bank told you about the charge and told you nothing about the
+    /// delta.
+    ///
+    /// **Backfill can't fake urgency.** Each row is stamped with when it
+    /// really happened — a creep at the raised charge's own date, a silence at
+    /// the date it missed — so a first connect that reaches back six months
+    /// sorts its findings into history rather than into today. `NotifySweep`
+    /// only considers rows inside its 36-hour news window, which means that
+    /// stamping is also what decides, for free and correctly, that a rise
+    /// found on first connect is never announced while tomorrow's is.
+    @MainActor
+    private static func landChanges(context: ModelContext) {
+        let name = sourceName
+        let fetch = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == name })
+        let existing = (try? context.fetch(fetch)) ?? []
+        let refs = Set(existing.compactMap(\.sourceRef))
+        let spends = AppleWalletRoomSource.spends(from: existing)
+        guard !spends.isEmpty else { return }
+        let now = Date()
+        let series = AppleWalletRoom.recurringSeries(spends, now: now)
+
+        // EVERY fresh rise, not just the largest: the card shows one because a
+        // list of price changes is a bill, but the corpus must hold both when
+        // two subscriptions went up in the same month.
+        for creep in AppleWalletRoom.creeps(series, now: now) {
+            let ref = AppleWalletRoom.creepRef(creep)
+            guard !refs.contains(ref) else { continue }
+            let thing = Thing(kind: .note,
+                              title: AppleWalletRoom.creepLine(creep),
+                              content: "",
+                              source: sourceName,
+                              capturedAt: creep.at,
+                              sourceRef: ref)
+            thing.tags = ["Card", "Price rise"]
+            thing.transferCounterparty = creep.merchant
+            thing.priceValue = creep.now
+            thing.priceCurrency = creep.currency
+            context.insert(thing)
+        }
+
+        for silence in AppleWalletRoom.silences(series, now: now) {
+            let ref = AppleWalletRoom.silenceRef(silence)
+            guard !refs.contains(ref) else { continue }
+            let thing = Thing(kind: .note,
+                              title: AppleWalletRoom.silenceTitle(silence),
+                              content: "",
+                              source: sourceName,
+                              capturedAt: AppleWalletRoom.silenceOccurredAt(silence),
+                              sourceRef: ref)
+            thing.tags = ["Card", "Silence"]
+            thing.transferCounterparty = silence.merchant
+            context.insert(thing)
+        }
+
+        reconcileSilences(existing, series: series, context: context)
+    }
+
+    /// Remove a landed "stopped charging you" row once that subscription has
+    /// charged again.
+    ///
+    /// **A silence row is the one thing this bridge lands that can become
+    /// FALSE.** A creep is a fact about two charges and stays true forever; a
+    /// payment due date is superseded by the next statement. But "Spotify
+    /// stopped charging you" is a claim about the future, and a subscription
+    /// that paused for six weeks — a failed card, a plan change — and then
+    /// resumed leaves the corpus asserting something that isn't so, retrievable
+    /// and searchable, with nothing to correct it. `silences` stops REPORTING
+    /// the merchant the moment a new charge lands, which fixes the card and
+    /// does nothing for the row.
+    ///
+    /// Deleting rather than rewriting, because there is no true sentence left
+    /// to write: the outage it described didn't turn into something else, it
+    /// turned out not to be one. Deleting an upstream-contradicted row is the
+    /// same verb every bridge's heal pass already uses.
+    @MainActor
+    private static func reconcileSilences(_ existing: [Thing],
+                                          series: [AppleWalletRoom.Series],
+                                          context: ModelContext) {
+        var lastCharge: [String: Date] = [:]
+        for s in series {
+            let key = AppleWalletRoom.merchantKey(s.merchant)
+            lastCharge[key] = max(lastCharge[key] ?? .distantPast, s.last.date)
+        }
+        for row in existing where row.isLive && row.tags.contains("Silence") {
+            guard let ref = row.sourceRef,
+                  let lastSeen = AppleWalletRoom.silenceLastSeen(fromRef: ref),
+                  let merchant = row.transferCounterparty,
+                  let charged = lastCharge[AppleWalletRoom.merchantKey(merchant)],
+                  charged > lastSeen else { continue }
+            context.delete(row)
+        }
     }
 
     /// The payment-due row — a reconciling `dueAt` thing, the ENSExpiry shape.

@@ -2088,6 +2088,17 @@ struct RootShell: View {
                 return result.doc
             }
         }
+        // "What did I spend?" — the card seats' own arithmetic (prd §317).
+        // AFTER money-flow, whose phrasings this one deliberately doesn't
+        // claim: "where did my money go" spans four seats and answers better
+        // than a total, so the broader question keeps the broader answer.
+        if KeptAskComposers.matchesSpend(query) {
+            lastAnswerHits = []
+            if let result = await KeptAskComposers.compose("spend", things: allThings(),
+                                                          context: modelContext) {
+                return result.doc
+            }
+        }
         // The wallet-riding seats' own standing questions (prd §311). After
         // the money-flow branch, which spans them, and before the generic
         // named-ask path, whose prefix table these phrasings don't match.

@@ -41,25 +41,31 @@ enum AppleWalletRoomSource {
     /// leaderboard's own 30-day window would discard anyway.
     static let lookbackDays = 400
 
+    /// Landed rows → the plain values the room judges.
+    ///
+    /// Split out of `compose` so `AppleWalletBridge.landChanges` reads the
+    /// corpus through exactly this function: the price rise it LANDS and the
+    /// price rise the card DRAWS are then computed from one reading, and a
+    /// change to what counts as a spend can't leave the two disagreeing about
+    /// whether a subscription went up.
     @MainActor
-    static func compose(things: [Thing], now: Date = .now) -> AppleWalletRoom.Card? {
-        guard AppleWalletBridge.connected else { return nil }
-
+    static func spends(from things: [Thing], now: Date = .now) -> [AppleWalletRoom.Spend] {
         let floor = now.addingTimeInterval(-Double(lookbackDays) * 86_400)
-        var spends: [AppleWalletRoom.Spend] = []
+        var out: [AppleWalletRoom.Spend] = []
         // Filtered to live at the BOUNDARY, before a single stored property is
         // read (corollary 4) — the caller's array may be a debounced snapshot.
         for thing in things.live where thing.source == AppleWalletBridge.sourceName {
-            // A payment-due row is a clock, not a spend. It carries no
-            // `priceValue`, so it would be skipped below anyway — but skipping
-            // it by KIND says why, and stops a future due row that gains an
-            // amount from silently entering the leaderboard as a merchant.
+            // A payment-due row is a clock, not a spend; a price-rise row is an
+            // observation ABOUT spends. Neither carries `priceCurrency`+
+            // counterparty in a way that would survive below — but skipping by
+            // KIND says why, and stops a future row that gains an amount from
+            // silently entering the leaderboard as a merchant.
             guard thing.kind == .transaction else { continue }
             guard let amount = thing.priceValue,
                   let currency = thing.priceCurrency,
                   let merchant = thing.transferCounterparty else { continue }
             guard thing.capturedAt >= floor else { continue }
-            spends.append(AppleWalletRoom.Spend(
+            out.append(AppleWalletRoom.Spend(
                 merchant: merchant,
                 amount: abs(amount),
                 currency: currency,
@@ -67,6 +73,13 @@ enum AppleWalletRoomSource {
                 isSettled: !thing.tags.contains("Pending"),
                 isRefund: thing.tags.contains("Refund")))
         }
+        return out
+    }
+
+    @MainActor
+    static func compose(things: [Thing], now: Date = .now) -> AppleWalletRoom.Card? {
+        guard AppleWalletBridge.connected else { return nil }
+        let spends = spends(from: things, now: now)
 
         let dues = AppleWalletBridge.dues.map { account, stamp -> AppleWalletRoom.Due in
             let date = Date(timeIntervalSince1970: stamp)

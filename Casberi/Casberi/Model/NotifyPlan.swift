@@ -40,6 +40,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
     case poolProofNeeded
     case poolCleared
     case paymentsSilent
+    case priceRose
     // — arrival
     case moneyIn
     case payoutPaid
@@ -52,7 +53,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
     var cls: NotifyClass {
         switch self {
         case .disputeOpened, .deadlineNear, .approvalGranted,
-             .poolProofNeeded, .poolCleared, .paymentsSilent:
+             .poolProofNeeded, .poolCleared, .paymentsSilent, .priceRose:
             return .alarm
         case .moneyIn, .payoutPaid, .likesReceived, .repliesReceived, .followersGained:
             return .arrival
@@ -74,6 +75,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .poolProofNeeded:  return 70    // action required, no clock stated
         case .paymentsSilent:   return 60    // revenue stopped; nothing to click
         case .poolCleared:      return 50    // good news, act whenever
+        case .priceRose:        return 40    // recurring money, already charged
         default:                return 0     // arrivals/whisper never compete
         }
     }

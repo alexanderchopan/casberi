@@ -280,6 +280,14 @@ struct Composer: View {
             kind = "walletgas"
         } else if SafeAsk.matches(question) {
             kind = "walletsafe"
+        } else if KeptAskComposers.matchesSpend(question),
+                  KeptAskComposers.hasSpendToReport(things) {
+            // Gated on the composer's OWN conditions, not a weaker proxy —
+            // a first cut asked only whether a card row existed, so someone
+            // whose card rows were all pending, or all older than the window,
+            // could mint a pill that composed nothing every time it was
+            // tapped: the dead control this gate exists to prevent.
+            kind = "spend"
         } else if q.contains("away"), let pulse = StatusAsk.pulse(question, things: things),
                   !pulse.pool.isEmpty {
             kind = "away"

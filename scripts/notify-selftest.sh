@@ -159,6 +159,15 @@ ok(NotifyKind.approvalGranted.severity > NotifyKind.poolProofNeeded.severity, "a
 ok(NotifyKind.poolProofNeeded.severity > NotifyKind.paymentsSilent.severity, "proof outranks silence")
 ok(NotifyKind.paymentsSilent.severity > NotifyKind.poolCleared.severity, "silence outranks good news")
 ok(NotifyKind.moneyIn.severity == 0, "arrivals never compete for the alarm slot")
+// A price rise is an alarm, and the LOWEST-ranked one: the money already left,
+// there is no clock on it, and it must never push a dispute or a deadline out
+// of the one alarm slot a batch keeps. `severity` falls through to `default: 0`
+// for anything unlisted, so an alarm added without its own case would silently
+// tie with the arrivals and lose every tie-break — this asserts it didn't.
+ok(NotifyKind.priceRose.cls == .alarm, "a price rise is an alarm")
+ok(NotifyKind.priceRose.severity > 0, "a price rise has a real severity, not the default 0")
+ok(NotifyKind.poolCleared.severity > NotifyKind.priceRose.severity, "good news outranks a rise already charged")
+ok(!NotifyKind.priceRose.isTimeSensitive, "a price rise never breaks a Focus")
 
 // ── the deadline window ─────────────────────────────────────────────────────
 let now = at(12)

@@ -182,6 +182,33 @@ enum NotifySweep {
         // post it is.
         if thing.socialContext == "reply" { return .repliesReceived }
 
+        // — Apple Wallet, BEFORE the money-in rule below, which would otherwise
+        //   claim its refunds.
+        //
+        //   A refund is stored `transferDirection == "received"` (it is money
+        //   coming back) and carries no `transferUSD`, so it takes that rule's
+        //   documented "unpriced → notify anyway" path and buzzes "Money
+        //   arrived — Refunded · Amazon · $12.00". That rule was written for
+        //   wallet transfers, where money received really is news; a refund on
+        //   your own card is the reversal of a purchase you already know about,
+        //   and §313's ruling that a charge never notifies covers its undoing
+        //   for the same reason. So this bridge answers for ALL of its own
+        //   rows and never falls through.
+        if thing.source == AppleWalletBridge.sourceName {
+            // A recurring price that ROSE, and only that. §313's ruling holds
+            // and this is its one exception, for the reason the ruling gives:
+            // your bank pushed you the charge minutes ago and pushed you
+            // nothing about the delta. A subscription quietly costing more
+            // every year is money leaving on a decision you never made.
+            //
+            // Its sibling `Silence` deliberately does NOT fire. A subscription
+            // that stopped charging is usually one you cancelled yourself, so
+            // announcing it fails the same "did you already know?" test that
+            // keeps charges quiet; it lands as a row, which is where a fact you
+            // might have forgotten belongs.
+            return thing.tags.contains("Price rise") ? .priceRose : nil
+        }
+
         // — Money in. `transferDirection` is the bridge's own stored answer, so
         //   this needs no re-derivation from addresses.
         //
@@ -235,6 +262,7 @@ enum NotifySweep {
         case .poolProofNeeded:  return String(localized: "Privacy Pools needs a response")
         case .poolCleared:      return String(localized: "Clear to withdraw")
         case .paymentsSilent:   return String(localized: "Payments went quiet")
+        case .priceRose:        return String(localized: "A subscription went up")
         case .moneyIn:          return String(localized: "Money arrived")
         case .payoutPaid:       return String(localized: "Paid out")
         case .likesReceived:    return String(localized: "Liked your post")

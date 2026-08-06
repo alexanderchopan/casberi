@@ -73,6 +73,7 @@ enum KeptAskComposers {
         }
         if kind == "throwback" { return throwback(things) }
         if kind == "moneyflow" { return moneyFlow(things) }
+        if kind == "spend" { return spend(things) }
         if kind.hasPrefix("search:") {
             return search(String(kind.dropFirst("search:".count)), things: things)
         }
@@ -896,8 +897,13 @@ enum KeptAskComposers {
             things.filter { $0.source == source && !Corpus.isImportReceipt($0) }
         }
         let inbound = rows("Peer")
-        let cards = (rows("Gnosis Pay") + rows("ether.fi"))
-            .filter { $0.kind == .transaction }
+        // Every card seat that stores real numbers, Apple Wallet included
+        // since 2026-08-06 — before that this leg named the two onchain cards
+        // and silently omitted the one most people actually spend on.
+        let cards = things.filter {
+            $0.kind == .transaction && Corpus.cardSpendSources.contains($0.source)
+                && !$0.tags.contains("Pending") && !Corpus.isImportReceipt($0)
+        }
         let shielded = rows("Privacy Pools").filter { $0.tags.contains("Shielded") }
 
         var lines: [String] = []
@@ -912,8 +918,17 @@ enum KeptAskComposers {
         if !cards.isEmpty {
             // One currency only — see `FeedInsight.cardMonths` for why.
             let currency = cards.first?.priceCurrency
+            // Refunds SUBTRACT. Neither onchain card seat lands one (Gnosis
+            // Pay's refunds settle off-chain, which its own copy states), so
+            // this line summed raw amounts safely for as long as those two
+            // were its only members — and Apple Wallet DOES land refunds,
+            // stamped positive and tagged, so joining it without this turns
+            // every refund into money spent.
             let spent = cards.filter { $0.priceCurrency == currency }
-                .compactMap(\.priceValue).reduce(0, +)
+                .reduce(0.0) { total, row in
+                    guard let value = row.priceValue else { return total }
+                    return total + (row.tags.contains("Refund") ? -abs(value) : abs(value))
+                }
             let money = PriceFormat.string(spent, currency: currency)
             lines.append(money.map { String(localized: "\($0) out on cards") }
                 ?? String(localized: "\(cards.count) card purchases"))
@@ -959,6 +974,114 @@ enum KeptAskComposers {
         for phrase in ["on peer", "my peer", "peer trades"]
         where q.contains(phrase) { return "Peer" }
         return nil
+    }
+
+    // MARK: - What did I spend?
+
+    /// "What did I spend this month?" — the plainest question a card room can
+    /// be asked, and until now the app had no answer to it (2026-08-06).
+    ///
+    /// **Why it can exist at all.** Every other money row in this corpus keeps
+    /// its amount as a formatted substring inside a title (`StripeRoomSource`
+    /// says so, and it's why the Stripe head refuses arithmetic). Apple Wallet
+    /// and the two onchain card seats stamp `priceValue`/`priceCurrency` as
+    /// real numbers, so this is honest arithmetic over stored facts rather
+    /// than prose re-parsed into a total.
+    ///
+    /// Deterministic, no model, no request. Three rules inherited whole from
+    /// `AppleWalletRoom`, because a second answer that disagreed with the room
+    /// on any of them would be worse than no answer:
+    ///   · currencies are NEVER summed — one line per currency;
+    ///   · a pending authorization is never counted;
+    ///   · a refund subtracts.
+    private static func spend(_ things: [Thing]) -> Result? {
+        let recent = spendRows(things)
+        guard !recent.isEmpty else { return nil }
+
+        // Per currency, so nothing here ever states a total across two.
+        var totals: [String: Double] = [:]
+        for row in recent {
+            guard let amount = row.priceValue, let currency = row.priceCurrency else { continue }
+            totals[currency, default: 0] += row.tags.contains("Refund")
+                ? -abs(amount) : abs(amount)
+        }
+        guard !totals.isEmpty else { return nil }
+        // Largest first, ties on the code so two runs can't disagree.
+        let ranked = totals.sorted { a, b in
+            a.value == b.value ? a.key < b.key : a.value > b.value
+        }
+        let lines = ranked.map { AppleWalletRoom.money($0.value, $0.key) }
+
+        // WHO, when we can honestly say it — the one field a card seat has and
+        // the chain doesn't.
+        //
+        // **The merchant clause is scoped to the DOMINANT currency and gated on
+        // attribution being nearly complete**, and both guards are load-bearing:
+        // only Apple Wallet stores a counterparty at all (Gnosis Pay's stated
+        // ceiling is "rows say what was spent, never where", and ether.fi is
+        // the same), so an unguarded version reads the top Apple Wallet
+        // merchant and attaches it to a total spanning three seats and two
+        // currencies — "€900.00 · $30.00 on cards — most of it at Blue Bottle",
+        // where Blue Bottle is 3% of it. "Most" also has to MEAN most, or one
+        // named shop out of forty carries the sentence.
+        let currency = ranked.first?.key
+        let scoped = recent.filter { $0.priceCurrency == currency }
+        let spends = scoped.compactMap { row -> AppleWalletRoom.Spend? in
+            guard let amount = row.priceValue, let currency = row.priceCurrency,
+                  let merchant = row.transferCounterparty else { return nil }
+            return AppleWalletRoom.Spend(merchant: merchant, amount: abs(amount),
+                                         currency: currency, date: row.capturedAt,
+                                         isSettled: true,
+                                         isRefund: row.tags.contains("Refund"))
+        }
+        let attributed = Double(spends.count) / Double(max(1, scoped.count))
+        let top = attributed >= spendAttributionFloor
+            ? AppleWalletRoom.leaderboard(spends).first : nil
+        let head = lines.joined(separator: " · ")
+        let line = top.flatMap { row -> String? in
+            guard row.share >= spendLeadShare else { return nil }
+            return String(localized: "\(head) on cards in the last 30 days — most of it at \(row.name)")
+        } ?? String(localized: "\(head) on cards in the last 30 days")
+
+        let newest = recent.sorted { $0.capturedAt > $1.capturedAt }
+        return Result(delta: lines.first ?? "", digest: lines.joined(separator: "|"),
+                      doc: ["root = Stack([ins, res])",
+                            "ins = Insight(\"\(genSafe(line))\")"]
+                          + rows(Array(newest.prefix(6)), title: "What you paid for"))
+    }
+
+    /// How much of the window's spend must carry a merchant name before the
+    /// answer is allowed to name one. Below this the total spans seats that
+    /// cannot say where money went, and "most of it at X" would be a claim
+    /// about rows X had nothing to do with.
+    private static let spendAttributionFloor = 0.8
+    /// …and how large that merchant's own share must be for "most" to be true.
+    private static let spendLeadShare = 0.3
+
+    /// The rows the spend answer counts: a card purchase, settled, inside the
+    /// window. Shared with `Composer.recognizeKeptAskKind` so the pill can
+    /// never be minted for a question this composer would answer with nothing.
+    static func spendRows(_ things: [Thing]) -> [Thing] {
+        let window = Date.now.addingTimeInterval(-Double(AppleWalletRoom.windowDays) * 86_400)
+        return things.filter {
+            $0.kind == .transaction && Corpus.cardSpendSources.contains($0.source)
+                && !$0.tags.contains("Pending") && !Corpus.isImportReceipt($0)
+                && $0.capturedAt >= window && $0.priceValue != nil && $0.priceCurrency != nil
+        }
+    }
+
+    /// Whether "What did I spend?" has a real answer right now.
+    static func hasSpendToReport(_ things: [Thing]) -> Bool { !spendRows(things).isEmpty }
+
+    /// The phrasings that ask for it. Deliberately narrow: "spend" alone also
+    /// appears in "where did my money go", which `matchesMoneyFlow` answers
+    /// better because it spans four seats rather than totalling one.
+    static func matchesSpend(_ query: String) -> Bool {
+        let q = query.lowercased()
+        for phrase in ["what did i spend", "what have i spent", "how much did i spend",
+                       "how much have i spent", "my spending", "what i spent"]
+        where q.contains(phrase) { return true }
+        return false
     }
 
     /// The phrasings that ask for it.

@@ -32,6 +32,13 @@
 #   · a subscription called SILENT while it is merely three days late
 #   · an inferred recurring date sorted above the bank's own payment deadline
 #   · a merchant board that drops its sixth row instead of folding it
+#   · one shop filed as two merchants because a descriptor SHOUTS and a
+#     merchant name doesn't, splitting a total and dropping both halves off
+#   · a processor prefix stripped so eagerly that two real merchants merge
+#   · a month-over-month line giving a direction to calendar noise, or
+#     comparing this month against "all history" because the prior window has
+#     no floor
+#   · the same price rise landing as a new row on every single refresh
 #
 # Pure, local, deterministic — no network, no simulator. Exit non-zero on
 # failure.
@@ -72,7 +79,13 @@ grep -q 'saveOrder' "$BRIDGE" \
   && { echo "✗ AppleWalletBridge calls saveOrder — the read-only promise is a lie"; exit 1; }
 grep -q 'Casberi has no server' "$SCREEN" \
   || { echo "✗ the setup screen no longer states the no-server promise BEFORE connect"; exit 1; }
-grep -q 'is deleted from Casberi' "$SCREEN" \
+# Anchored on the sentence the screen ACTUALLY carries. It was anchored on
+# `is deleted from Casberi` when this harness shipped — a phrase that was never
+# in the screen, so `verify.sh` was red from the commit that added it and the
+# guard proved nothing about the promise it was written to protect. The
+# standing lesson (CLAUDE.md, the reach-audit ship gate) earned again: run
+# `verify.sh`, not the audits you happen to remember.
+grep -q 'brought in is deleted' "$SCREEN" \
   || { echo "✗ the setup screen no longer promises deletion on disconnect"; exit 1; }
 
 # Never re-present the system prompt on a background pass (the Contacts rule).
@@ -107,6 +120,69 @@ grep -q 'Refunded · \\(merchant)' "$BRIDGE" \
   || { echo "✗ a refund no longer LEADS its title — the 80-char clamp would eat a trailing marker and a refund would read as a purchase (§83)"; exit 1; }
 grep -q 'Pending · \\(merchant)' "$BRIDGE" \
   || { echo "✗ a pending charge no longer LEADS its title"; exit 1; }
+
+# THE PENDING-HEAL WINDOW. The cursor is the newest date already landed and the
+# query asks for everything after it — so without a heal-back window a pending
+# authorization (landed wearing today's date) sits at or below the cursor
+# forever, is never re-read, never settles, and is never counted. It renders
+# perfectly the whole time. This is the one drift guard here protecting a fix
+# rather than a promise.
+grep -q 'healbackDays' "$BRIDGE" \
+  || { echo "✗ the pending heal-back window is gone — pending rows would never settle again"; exit 1; }
+grep -q 'addingTimeInterval(-Double(healbackDays) \* 86_400)' "$BRIDGE" \
+  || { echo "✗ the read window no longer reaches BACK past the cursor — the heal path is unreachable again"; exit 1; }
+# …and the heal must rewrite the merchant too, or a row that landed under a raw
+# descriptor keeps it after normalization changes.
+grep -q 'row.transferCounterparty = merchant' "$BRIDGE" \
+  || { echo "✗ the heal no longer rewrites the merchant"; exit 1; }
+
+# NORMALIZATION IS APPLIED AT LANDING, and the raw descriptor is kept where it
+# stays searchable. Both halves matter: without the first the board fragments,
+# without the second searching what your statement actually says finds nothing.
+grep -q 'AppleWalletRoom.normalizeMerchant(raw)' "$BRIDGE" \
+  || { echo "✗ merchant names are no longer normalized at landing — one shop can file as three"; exit 1; }
+grep -q 'if merchant != raw { enriched.append(raw) }' "$BRIDGE" \
+  || { echo "✗ the raw descriptor is no longer kept — searching the string on your statement would find nothing"; exit 1; }
+
+# CHANGES LEAVE THE ROOM. A head only speaks while you stand in front of it;
+# these two are the judgements worth having when you don't.
+grep -q 'landChanges(context: context)' "$BRIDGE" \
+  || { echo "✗ creep/silence are no longer landed — the room's whole point is invisible outside the room"; exit 1; }
+grep -q 'AppleWalletRoom.creeps(series, now: now)' "$BRIDGE" \
+  || { echo "✗ landing uses a single creep rather than every fresh rise — two subscriptions rising in one month would land one"; exit 1; }
+# Stamped with when it HAPPENED, never `now` — this is also what decides
+# (correctly, for free) that a rise found on a first connect never notifies,
+# since NotifySweep only considers rows inside its 36-hour news window.
+grep -q 'capturedAt: creep.at' "$BRIDGE" \
+  || { echo "✗ a price rise is no longer stamped with its own date — a backfilled rise would land as today's news"; exit 1; }
+grep -q 'capturedAt: AppleWalletRoom.silenceOccurredAt(silence)' "$BRIDGE" \
+  || { echo "✗ a silence is no longer stamped with the date it missed"; exit 1; }
+# §313's ruling, still true: a CHARGE never notifies. Only the delta does.
+grep -q 'thing.tags.contains("Price rise")' "Casberi/Casberi/Model/NotifySweep.swift" \
+  || { echo "✗ a price rise no longer reaches the notify sweep"; exit 1; }
+# The bridge lands rows and never decides what notifies — `NotifySweep` reads
+# the tags and classifies, which is what keeps the whole never-fires list
+# reviewable on one screen (§306). Anchored on the classifier's own vocabulary
+# rather than on the tag string: the bridge legitimately reads its own "Silence"
+# tag to reconcile a row whose claim has become false.
+grep -qE 'NotifyKind|priceRose|Notifications\.' "$BRIDGE" \
+  && { echo "✗ the bridge is deciding what notifies — classification belongs to NotifySweep"; exit 1; }
+
+# A silence row is the one landed row that can become FALSE, so it must be
+# reconciled when the subscription resumes.
+grep -q 'reconcileSilences' "$BRIDGE" \
+  || { echo "✗ nothing un-lands a silence when the subscription resumes — the corpus keeps asserting it stopped"; exit 1; }
+# The heal-back window must follow what is actually unresolved. A fixed offset
+# from a cursor that advances daily strands exactly the long holds that take
+# longest to settle.
+grep -q 'pendingFloor(context: context)' "$BRIDGE" \
+  || { echo "✗ the read window no longer follows the oldest pending row — a long hold is stranded again"; exit 1; }
+
+# The spend ask reads the declared set, never a hand-typed source list.
+grep -q 'Corpus.cardSpendSources' "Casberi/Casberi/Model/KeptAskComposers.swift" \
+  || { echo "✗ the spend ask no longer reads Corpus.cardSpendSources"; exit 1; }
+grep -q 'row.tags.contains("Refund")' "Casberi/Casberi/Model/KeptAskComposers.swift" \
+  || { echo "✗ the money-flow card total no longer subtracts refunds — every refund would read as money spent"; exit 1; }
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
@@ -385,6 +461,257 @@ do {
           AppleWalletRoom.money(5, "XYZ").contains("XYZ") || AppleWalletRoom.money(5, "XYZ").contains("5"))
 }
 
+// ── one shop is one merchant ───────────────────────────────────────────────
+// FinanceKit hands over `merchantName` when it has one and we fall back to
+// `transactionDescription` when it doesn't, and those two disagree about case
+// and about processor prefixes. Filed apart, a total splits in half — and both
+// halves can then sit below the ranking floor, so the board silently omits
+// the place you spend most.
+print("merchant identity")
+do {
+    check("case folds into one key",
+          AppleWalletRoom.merchantKey("BLUE BOTTLE") == AppleWalletRoom.merchantKey("Blue Bottle"))
+    check("surrounding space is not identity",
+          AppleWalletRoom.merchantKey("  Blue Bottle ") == AppleWalletRoom.merchantKey("Blue Bottle"))
+    check("different shops stay different",
+          AppleWalletRoom.merchantKey("Blue Bottle") != AppleWalletRoom.merchantKey("Blue Bottles"))
+}
+do {
+    check("the cased spelling wins over the shouting one",
+          AppleWalletRoom.preferredSpelling(["BLUE BOTTLE COFFEE", "Blue Bottle Coffee"]) == "Blue Bottle Coffee")
+    check("all-caps survives when it's all there is",
+          AppleWalletRoom.preferredSpelling(["IKEA"]) == "IKEA")
+    // An acronym must never be re-cased into a name nobody uses.
+    check("a shouting name is never title-cased into a new one",
+          AppleWalletRoom.preferredSpelling(["CVS", "CVS"]) == "CVS")
+    check("ties break alphabetically (stable board)",
+          AppleWalletRoom.preferredSpelling(["Zeta Shop", "Alpha Shop"]) == "Alpha Shop")
+}
+do {
+    let s = [spend("BLUE BOTTLE COFFEE", 6.50, 1), spend("Blue Bottle Coffee", 6.50, 3)]
+    let rows = AppleWalletRoom.leaderboard(s)
+    check("two spellings rank as ONE merchant", rows.count == 1)
+    check("…with both charges counted", rows.first?.count == 2)
+    check("…and both amounts summed", rows.first?.total == 13.0)
+    check("…shown under the readable spelling", rows.first?.name == "Blue Bottle Coffee")
+}
+do {
+    // The failure that matters most: a subscription arriving cased one month
+    // and shouting the next splits into two series of two, and two charges can
+    // never carry a cadence — so the price rise this room exists to report
+    // becomes invisible with no error anywhere.
+    let s = [spend("NETFLIX", 15.49, 93), spend("Netflix", 15.49, 62),
+             spend("NETFLIX", 15.49, 31), spend("Netflix", 17.99, 1)]
+    let series = AppleWalletRoom.recurringSeries(s, now: now)
+    check("a subscription spelled two ways is still one series", series.count == 1)
+    check("…so its price rise is still found",
+          AppleWalletRoom.creep(series, now: now)?.merchant != nil)
+}
+
+// ── digging a name out of a descriptor ─────────────────────────────────────
+print("normalize")
+do {
+    check("Square", AppleWalletRoom.normalizeMerchant("SQ *BLUE BOTTLE") == "BLUE BOTTLE")
+    check("Toast", AppleWalletRoom.normalizeMerchant("TST* BLUE BOTTLE") == "BLUE BOTTLE")
+    check("PayPal", AppleWalletRoom.normalizeMerchant("PAYPAL *STEAM GAMES") == "STEAM GAMES")
+    check("a trailing reference code goes",
+          AppleWalletRoom.normalizeMerchant("Amazon.com*2H4KJ8") == "Amazon.com")
+}
+do {
+    // The conservative half, and the more important one: a prefix that strips
+    // something it shouldn't MERGES TWO REAL MERCHANTS, which states a total
+    // nobody spent. Every case here must come back untouched.
+    check("an ordinary name is untouched",
+          AppleWalletRoom.normalizeMerchant("Blue Bottle Coffee") == "Blue Bottle Coffee")
+    check("a name that merely starts with S is untouched",
+          AppleWalletRoom.normalizeMerchant("SQUARE ENIX") == "SQUARE ENIX")
+    check("a letters-only tail is a word, not a code",
+          AppleWalletRoom.normalizeMerchant("AMZN Mktp US*PRIME") == "AMZN Mktp US*PRIME")
+    check("a tail with a space is not a code",
+          AppleWalletRoom.normalizeMerchant("SHOP*BLUE BOTTLE") == "SHOP*BLUE BOTTLE")
+    check("stripping to nothing is refused",
+          AppleWalletRoom.normalizeMerchant("SQ *X") == "SQ *X")
+    check("empty in, empty out", AppleWalletRoom.normalizeMerchant("") == "")
+}
+do {
+    check("a bare word is meaningful", AppleWalletRoom.isMeaningfulName("CVS"))
+    check("two characters are not", !AppleWalletRoom.isMeaningfulName("XY"))
+    check("digits alone are not a name", !AppleWalletRoom.isMeaningfulName("12345"))
+    // An UNLISTED processor tag must not be read as the shop. `CKO*NORDVPN1`
+    // has a digit-bearing spaceless tail and a 3-char head that passes
+    // `isMeaningfulName` — so without the head-length rule every Checkout.com
+    // purchase ever made ranks as one merchant called CKO.
+    check("a short head is a processor tag, not a shop",
+          AppleWalletRoom.normalizeMerchant("CKO*NORDVPN1") == "CKO*NORDVPN1")
+    check("…while a real long head still loses its code",
+          AppleWalletRoom.normalizeMerchant("Amazon.com*2H4KJ8") == "Amazon.com")
+    check("…and a multi-word head does too",
+          AppleWalletRoom.normalizeMerchant("AMZN Mktp US*2H4KJ8") == "AMZN Mktp US")
+}
+
+// ── currency is part of every grouping key ─────────────────────────────────
+// The file header has always said so; it was true of `compose` (which scopes
+// first) and false of `leaderboard`/`recurringSeries` themselves, which is
+// safe until something calls them unscoped — and `landChanges` does.
+print("currency keying")
+do {
+    let s = [spend("Shop", 10, 1), spend("Shop", 10, 2, cur: "EUR")]
+    let rows = AppleWalletRoom.leaderboard(s)
+    check("one merchant in two currencies is two rows", rows.count == 2)
+    check("…and neither total is a sum across them", rows.allSatisfy { $0.total == 10 })
+}
+do {
+    // The landing case: €10, €10, then $12 must NOT read as a 20% price rise.
+    let s = [spend("Sub", 10, 62, cur: "EUR"), spend("Sub", 10, 31, cur: "EUR"),
+             spend("Sub", 12, 1)]
+    let series = AppleWalletRoom.recurringSeries(s, now: now)
+    check("a cadence never spans two currencies", series.allSatisfy { s in
+        Set(s.charges.map(\.currency)).count == 1
+    })
+    check("…so no cross-currency price rise is invented",
+          AppleWalletRoom.creep(series, now: now) == nil)
+}
+
+// ── month over month ───────────────────────────────────────────────────────
+print("comparison")
+do {
+    check("a rise is stated with its direction",
+          AppleWalletRoom.comparisonText(total: 120, prevTotal: 100, prevCount: 4,
+                                         currency: "USD")?.contains("Up 20%") == true)
+    check("a fall too",
+          AppleWalletRoom.comparisonText(total: 80, prevTotal: 100, prevCount: 4,
+                                         currency: "USD")?.contains("Down 20%") == true)
+    // §83: a change that rounds to nothing has no direction.
+    check("noise gets NO direction",
+          AppleWalletRoom.comparisonText(total: 102, prevTotal: 100, prevCount: 4,
+                                         currency: "USD")?.contains("About the same") == true)
+    check("…and no arrow either",
+          AppleWalletRoom.comparisonText(total: 102, prevTotal: 100, prevCount: 4,
+                                         currency: "USD")?.contains("Up") == false)
+    // A first month has nothing to compare against, and "up from $0" would be
+    // the app congratulating you on existing.
+    check("no prior month → no comparison",
+          AppleWalletRoom.comparisonText(total: 120, prevTotal: 0, prevCount: 0,
+                                         currency: "USD") == nil)
+    check("a prior window with rows but no spend still says nothing",
+          AppleWalletRoom.comparisonText(total: 120, prevTotal: 0, prevCount: 3,
+                                         currency: "USD") == nil)
+    check("the comparison names the prior total",
+          AppleWalletRoom.comparisonText(total: 120, prevTotal: 100, prevCount: 4,
+                                         currency: "USD")?.contains("100") == true)
+}
+do {
+    // Through `compose`: a quiet month — nothing rose, nothing stopped, no
+    // deadline — must still say something true rather than nothing at all.
+    let s = [spend("Shop", 60, 5), spend("Shop", 40, 10),
+             spend("Shop", 50, 40), spend("Shop", 50, 50)]
+    let card = AppleWalletRoom.compose(spends: s, now: now)
+    check("a quiet month falls through to the comparison",
+          card?.subline?.contains("last month") == true)
+}
+do {
+    // …and it must never outrank a price rise, which costs more to miss.
+    let s = [spend("Netflix", 15.49, 93), spend("Netflix", 15.49, 62),
+             spend("Netflix", 15.49, 31), spend("Netflix", 17.99, 1)]
+    let card = AppleWalletRoom.compose(spends: s, now: now)
+    check("a price rise still outranks the comparison",
+          card?.subline?.contains("went up") == true)
+}
+do {
+    // The PRIOR window is bounded on BOTH sides. Unbounded below, "last month"
+    // silently means "every month before this one", and the card states a
+    // delta against a number nobody would recognise.
+    let s = [spend("Shop", 50, 5), spend("Shop", 50, 40),
+             spend("Shop", 5000, 300)]
+    let card = AppleWalletRoom.compose(spends: s, now: now)
+    check("ancient history is not last month",
+          card?.subline?.contains("Down 9") != true)
+}
+
+// ── what leaves the room ───────────────────────────────────────────────────
+// The refs are a dedupe identity: one event lands once, a genuinely new one
+// still lands. Get this wrong in either direction and the feed either repeats
+// a price rise on every refresh forever, or never reports the second one.
+print("landing")
+do {
+    let a = AppleWalletRoom.Creep(merchant: "Netflix", was: 15.49, now: 17.99,
+                                  currency: "USD", at: day(1))
+    // The same rise RE-READ on a later pass. Every field of a `Creep` is a
+    // property of the charge — the merchant, the two amounts, and the date it
+    // posted — so a later pass reconstructs it identically and the ref is
+    // stable by construction. (An earlier version of this fixture varied `at`
+    // to mean "computed later", which is a thing that cannot happen: `at` is
+    // the charge's own date, not the date we looked.)
+    let again = AppleWalletRoom.Creep(merchant: "Netflix", was: 15.49, now: 17.99,
+                                      currency: "USD", at: day(1))
+    let further = AppleWalletRoom.Creep(merchant: "Netflix", was: 17.99, now: 19.99,
+                                        currency: "USD", at: day(0))
+    check("the same rise keeps one ref (no repeat on every refresh)",
+          AppleWalletRoom.creepRef(a) == AppleWalletRoom.creepRef(again))
+    check("a SECOND rise gets its own ref", AppleWalletRoom.creepRef(a) != AppleWalletRoom.creepRef(further))
+    // Promotional pricing CYCLES: $15.99 → $9.99 promo → $15.99 again, and a
+    // year later the same promo ends again. Keyed on the amounts alone the
+    // second rise dedupes against the first and a real, current price increase
+    // is reported to nobody.
+    let laterSameRise = AppleWalletRoom.Creep(merchant: "Netflix", was: 15.49, now: 17.99,
+                                              currency: "USD", at: day(300))
+    check("the SAME rise a year later still lands",
+          AppleWalletRoom.creepRef(a) != AppleWalletRoom.creepRef(laterSameRise))
+    check("the ref survives a spelling change",
+          AppleWalletRoom.creepRef(a) ==
+          AppleWalletRoom.creepRef(AppleWalletRoom.Creep(merchant: "NETFLIX", was: 15.49,
+                                                         now: 17.99, currency: "USD", at: day(1))))
+    check("the landed title says the same thing the card does",
+          AppleWalletRoom.creepLine(a).contains("Netflix") && AppleWalletRoom.creepLine(a).contains("16%"))
+}
+do {
+    let s = AppleWalletRoom.Silence(merchant: "Spotify", lastSeen: day(60),
+                                    expectedEvery: 31, overdueDays: 29)
+    check("one outage keeps one ref",
+          AppleWalletRoom.silenceRef(s) ==
+          AppleWalletRoom.silenceRef(AppleWalletRoom.Silence(merchant: "Spotify", lastSeen: day(60),
+                                                             expectedEvery: 31, overdueDays: 33)))
+    check("a later outage gets its own ref",
+          AppleWalletRoom.silenceRef(s) !=
+          AppleWalletRoom.silenceRef(AppleWalletRoom.Silence(merchant: "Spotify", lastSeen: day(20),
+                                                             expectedEvery: 31, overdueDays: 12)))
+    // A landed row is read months later. "29 days ago" is true for one day;
+    // the date it last charged is true forever.
+    check("the landed title names a DATE, not a countdown",
+          !AppleWalletRoom.silenceTitle(s).contains("29"))
+    check("…and names the merchant", AppleWalletRoom.silenceTitle(s).contains("Spotify"))
+    // Stamped when it HAPPENED — which is also what stops a first connect
+    // announcing a months-old cancellation as today's news.
+    check("a silence is stamped at the date it missed, not now",
+          AppleWalletRoom.silenceOccurredAt(s) < now)
+    check("…which is one cadence after the last charge",
+          abs(AppleWalletRoom.silenceOccurredAt(s).timeIntervalSince(day(29))) < 86_400)
+    // A silence row is the ONE thing this bridge lands that can become FALSE:
+    // a subscription that paused and resumed leaves the corpus asserting it
+    // stopped. The reconcile pass reads the last-charge date back out of the
+    // ref, so a ref it can't parse must not be mistaken for one it can.
+    check("the ref round-trips its last-charge date",
+          AppleWalletRoom.silenceLastSeen(fromRef: AppleWalletRoom.silenceRef(s))
+              .map { abs($0.timeIntervalSince(day(60))) < 1 } == true)
+    check("a foreign ref yields no date",
+          AppleWalletRoom.silenceLastSeen(fromRef: "applewallet:txn:ABC") == nil)
+    check("a creep ref is not read as a silence ref",
+          AppleWalletRoom.silenceLastSeen(
+              fromRef: AppleWalletRoom.creepRef(
+                  AppleWalletRoom.Creep(merchant: "N", was: 1, now: 2,
+                                        currency: "USD", at: day(1)))) == nil)
+}
+do {
+    // `creeps` returns EVERY fresh rise; `creep` picks the one to headline.
+    let a = [spend("Big", 200, 93), spend("Big", 200, 62), spend("Big", 200, 31), spend("Big", 240, 1)]
+    let b = [spend("Small", 10, 93), spend("Small", 10, 62), spend("Small", 10, 31), spend("Small", 15, 1)]
+    let series = AppleWalletRoom.recurringSeries(a + b, now: now)
+    check("both rises are landable", AppleWalletRoom.creeps(series, now: now).count == 2)
+    check("only the largest headlines", AppleWalletRoom.creep(series, now: now)?.merchant == "Big")
+    check("the headline is one OF the landable ones",
+          AppleWalletRoom.creeps(series, now: now).contains { $0.merchant == "Big" })
+}
+
 print(failures == 0 ? "\nAll assertions passed." : "\n\(failures) FAILED")
 exit(failures == 0 ? 0 : 1)
 SWIFT
@@ -501,6 +828,118 @@ mutate "tie-break dropped from the board" \
 mutate "leaderboard window removed" \
   'let inWindow = scoped.filter { $0.date >= windowStart && $0.date <= now }' \
   'let inWindow = scoped'
+
+# 15. Case is identity again — one shop files as two, and a subscription
+#     spelled two ways loses its cadence and its price rise with it.
+mutate "merchant identity is case-sensitive again" \
+  'name.trimmingCharacters(in: .whitespaces).lowercased()' \
+  'name.trimmingCharacters(in: .whitespaces)'
+
+# 16. The board shows whichever spelling the dictionary happened to yield.
+mutate "spelling picked arbitrarily rather than preferring the cased form" \
+  'let pool = cased.isEmpty ? names : cased' \
+  'let pool = names'
+
+# 17. Normalization strips a prefix without checking what is left, so
+#     `SQ *X` becomes `X` and two one-letter merchants merge.
+mutate "a strip that leaves nothing is accepted" \
+  'if isMeaningfulName(stripped) { name = stripped }' \
+  'name = stripped'
+
+# 18. The trailing-code rule drops a real word: `AMZN Mktp US*PRIME` loses it.
+mutate "a letters-only tail treated as a reference code" \
+  'if !tail.isEmpty, !tail.contains(" "), tail.contains(where: \.isNumber),' \
+  'if !tail.isEmpty, !tail.contains(" "),'
+
+# 19. The comparison gives calendar noise a direction (§83).
+mutate "month-over-month noise gets an arrow" \
+  'if abs(fraction) < comparisonFlatBand {' \
+  'if abs(fraction) < 0 {'
+
+# 20. The prior window loses its floor, so "last month" silently means
+#     "all history before this month".
+mutate "prior window unbounded below" \
+  'let prevWindow = scoped.filter { $0.date >= prevStart && $0.date < windowStart }' \
+  'let prevWindow = scoped.filter { $0.date < windowStart }'
+
+# 21. A first month compares against zero — "up from nothing".
+mutate "comparison drawn with no prior month" \
+  'guard prevCount > 0, prevTotal > 0, total > 0 else { return nil }' \
+  'guard total > 0 else { return nil }'
+
+# 22. Only the largest rise is landable, so a month where two subscriptions
+#     went up keeps one and loses the other forever.
+mutate "creeps collapses to the single headline rise" \
+  'static func creeps(_ series: [Series], now: Date) -> [Creep] {' \
+  'static func creeps(_ series: [Series], now: Date) -> [Creep] {
+        return creep2(series, now: now).map { [$0] } ?? []
+    }
+    static func creep2(_ series: [Series], now: Date) -> Creep? {
+        return creeps2(series, now: now).max { $0.delta < $1.delta }
+    }
+    static func creeps2(_ series: [Series], now: Date) -> [Creep] {'
+
+# 23. The creep ref ignores the amounts, so a SECOND rise on the same
+#     subscription dedupes against the first and never lands.
+mutate "creep ref keyed on the merchant alone" \
+  'return "applewallet:creep:\(merchantKey(c.merchant)):\(was):\(now):\(day)"' \
+  'return "applewallet:creep:\(merchantKey(c.merchant))"'
+
+# 24. The creep ref keys on the raw spelling, so the same rise lands again the
+#     month the descriptor arrives shouting.
+mutate "creep ref keyed on the raw spelling" \
+  'return "applewallet:creep:\(merchantKey(c.merchant)):\(was):\(now):\(day)"' \
+  'return "applewallet:creep:\(c.merchant):\(was):\(now):\(day)"'
+
+# 25. The silence ref ignores WHICH outage, so a subscription that stops,
+#     resumes and stops again reports only the first.
+mutate "silence ref keyed on the merchant alone" \
+  '"applewallet:silence:\(merchantKey(s.merchant)):\(Int(s.lastSeen.timeIntervalSince1970))"' \
+  '"applewallet:silence:\(merchantKey(s.merchant))"'
+
+# 26. The landed silence title carries a countdown, which is true for one day
+#     and false every day after — a row is read months later.
+mutate "silence title carries a countdown instead of a date" \
+  'String(localized: "\(s.merchant) stopped charging you — last was \(dayLabel(s.lastSeen))")' \
+  'String(localized: "\(s.merchant) stopped charging you — \(s.overdueDays) days")'
+
+# 27. A silence is stamped NOW, so a first connect announces every
+#     cancellation you already knew about as today's news.
+mutate "silence stamped at discovery rather than at the missed date" \
+  's.lastSeen.addingTimeInterval(Double(s.expectedEvery) * 86_400)' \
+  'Date()'
+
+# 28. Currency drops out of the grouping key, so `landChanges` — which reads
+#     the corpus UNSCOPED, unlike `compose` — invents a price rise across two
+#     currencies: €10, €10, $12 lands as "went up 20%" and alarms about it.
+mutate "currency dropped from the grouping key" \
+  'merchantKey(s.merchant) + "\u{1}" + s.currency' \
+  'merchantKey(s.merchant)'
+
+# 29. The creep ref loses its date, so a promotional price that returns to a
+#     value it held before never lands again.
+mutate "creep ref keyed without the day" \
+  'return "applewallet:creep:\(merchantKey(c.merchant)):\(was):\(now):\(day)"' \
+  'return "applewallet:creep:\(merchantKey(c.merchant)):\(was):\(now)"'
+
+# 30. The trailing-code rule accepts a short head, so an unlisted processor tag
+#     becomes the merchant and every purchase through it merges into one row.
+mutate "a processor tag accepted as the shop" \
+  'let headIsName = head.count >= minHeadForCodeStrip || head.contains(" ")' \
+  'let headIsName = true'
+
+# 31. The silence ref stops round-tripping its date, so the reconcile pass can
+#     never tell that a subscription resumed and the false row stands forever.
+mutate "silence ref no longer carries a readable date" \
+  '"applewallet:silence:\(merchantKey(s.merchant)):\(Int(s.lastSeen.timeIntervalSince1970))"' \
+  '"applewallet:silence:\(merchantKey(s.merchant)):x"'
+
+# 32. `silenceLastSeen` stops checking the prefix, so a creep ref's trailing
+#     day number is read as a last-charge date in 1970 — every silence row then
+#     looks resumed and is deleted.
+mutate "silenceLastSeen accepts any ref" \
+  'guard ref.hasPrefix("applewallet:silence:"),' \
+  'guard true,'
 
 echo
 echo "applewallet-selftest: OK — assertions pass and every mutation is caught."

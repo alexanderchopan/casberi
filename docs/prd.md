@@ -17489,3 +17489,167 @@ typed — never a claim about which words Apple's tagger picks, which is nobody'
 contract and would rot. One test was unsound and said so on its second run: the
 "no profile.js" case pointed at the shared temp root, which the fixtures above
 it had just filled, and `read(_:under:)` looks one level down by design.
+
+## §317 — The Apple Wallet room, past its first day (user: "how else can we improve the apple wallet experience", then "do it all", 2026-08-06)
+
+§313 shipped the seat this morning and the questions it left open were the
+right ones. Six changes, and the first is a defect the seat shipped with.
+
+### The pending charge that could never settle
+
+`refresh` asked FinanceKit for `transactionDate > cursor`, and `cursor` is the
+newest date already landed. A pending authorization lands wearing today's
+date — which is at or below the cursor the same pass then writes. So it was
+excluded from every subsequent read, the heal path in `land` (written for
+exactly this transition, and correct) could never be reached, and the row
+stayed `Pending ·` **forever**: its settled amount never arrived, it was never
+counted, and the card's "N pending charges aren't counted" note grew by one
+more permanent row each time.
+
+Nothing errored. The room rendered perfectly the whole time and quietly
+undercounted for life. `healbackDays` (7) reaches the read window back past
+the cursor, which clears the window an issuer takes to settle an
+authorization; re-reading is free because `land` dedupes on `sourceRef`, so a
+row already settled costs one dictionary lookup.
+
+**The class, worth naming: a cursor that advances past rows that are still
+going to change is not a cursor, it is a deadline.** Every other cursor in
+this app tracks events that are final when they land — a fill, a deposit, a
+cast. An authorization is the first one that lands provisional, and the shape
+that is right everywhere else is wrong here.
+
+### What changed leaves the room
+
+`AppleWalletRoom` computed a price rise and a stopped subscription for its
+head, and a head only speaks while you are standing in front of it. So
+"Netflix went up 16%" — §313's stated flagship, the fact nothing else in a
+person's day tells them — was visible only to someone who opened the Apple
+Wallet room and read the subline. That is precisely the fact nobody goes
+looking for, because nobody knows to.
+
+Both now land as rows (`landChanges`), which is the PostHog precedent exactly
+(§223: a milestone and a silence are things, the metric curve is not). §313's
+ruling that a CHARGE never notifies is untouched and is the reason this one
+does: your bank pushed you the charge and told you nothing about the delta.
+
+- **A price rise notifies** — `NotifyKind.priceRose`, an alarm, and the
+  lowest-ranked one. The money already left and there is no clock on it, so it
+  must never take the single alarm slot from a dispute or a deadline.
+- **A silence does NOT notify.** A subscription that stopped charging is
+  usually one you cancelled yourself, so announcing it fails the same "did you
+  already know?" test that keeps charges quiet. It lands as a row, which is
+  where a fact you might have forgotten belongs.
+
+**Backfill cannot fake urgency, and it costs nothing to guarantee.** Each row
+is stamped with when it really happened — a creep at the raised charge's own
+date, a silence at the date it missed — so a first connect reaching back six
+months sorts its findings into history. `NotifySweep` only considers rows
+inside its 36-hour news window, so that stamping is also what decides, for
+free and correctly, that a rise found on first connect is never announced
+while tomorrow's is.
+
+`creeps` returns every fresh rise where `creep` returned only the largest: the
+card shows one because a list of price changes is a bill, but a month where
+two subscriptions went up is two facts and the corpus must hold both.
+
+### One shop is one merchant
+
+The board groups by merchant string, and FinanceKit hands over `merchantName`
+when it has one and `transactionDescription` when it doesn't. Those two do not
+agree: the same coffee shop arrives as "Blue Bottle Coffee" and as
+"SQ *BLUE BOTTLE COFFEE". Filed apart, a total splits in half — and both
+halves can then sit below the ranking floor, so **the board silently omits the
+place you spend most**.
+
+Worse, and the case the harness leads with: a subscription spelled two ways
+splits into two series of two charges, two charges can never carry a cadence,
+and the price rise this room exists to report becomes invisible with no error
+anywhere.
+
+Three rules, and the restraint is the point:
+
+1. **Case is not identity** (`merchantKey`). The displayed spelling prefers
+   the form that isn't shouting — a descriptor arrives ALL CAPS and a merchant
+   name arrives cased — and never re-cases anything itself, because
+   title-casing turns IKEA into Ikea and a name we invented is not the
+   merchant's name.
+2. **One known leading processor token** comes off (`SQ *`, `TST*`,
+   `PAYPAL *`, …), and only if what remains is still somebody's name.
+3. **A trailing reference code** comes off — a `*` followed by a run with no
+   spaces that CONTAINS A DIGIT, which is what `AMZN Mktp US*2H4KJ8` is and
+   what a merchant name never is. Without the digit requirement,
+   `AMZN Mktp US*PRIME` loses a real word.
+
+Nothing else. No store numbers, no trailing city, no fuzzy matching — each of
+those can merge two genuinely different merchants, and **a board that combines
+two shops states a total nobody spent**. The prefix table is UNMEASURED
+against real FinanceKit data like everything else in this seat, and it fails
+safe: an entry that never matches costs nothing, because the function returns
+its input unchanged unless a prefix really leads the string. The failure to
+fear is not a prefix that fails to strip (one shop ranks as two, which the
+board shows you) but a strip that goes too far, which renders perfectly.
+
+The raw descriptor is kept on `enrichedText` — retrieval-only by the
+2026-07-15 ruling, so never displayed — because after normalization turns
+"SQ *BLUE BOTTLE" into "Blue Bottle", searching the string that is actually
+printed on your statement must still find the row.
+
+### A quiet month still says something
+
+The subline had four rungs and no floor: no rise, no silence, no deadline, and
+it said nothing at all. It now falls through to month-over-month, which is a
+CHANGE — the room's whole stated thesis — computed over a prior window bounded
+on BOTH sides. Unbounded below, "last month" silently means "every month
+before this one" and the card states a delta against a number nobody would
+recognise. Inside a 5% band the line carries no direction at all, because §83
+is that a change which rounds to nothing has none, and a 30-day window sliding
+across billing days generates a few percent by itself.
+
+### "What did I spend?"
+
+The plainest question a card room can be asked, and the app had no answer to
+it. `KeptAskComposers.spend` is deterministic arithmetic over stored numbers —
+possible only because these seats stamp `priceValue`/`priceCurrency` as real
+values, where Stripe's amounts survive only as substrings in a title
+(`StripeRoomSource` says so, and it is why the Stripe head refuses arithmetic).
+Three rules inherited whole from the room, because a second answer that
+disagreed with it would be worse than no answer: currencies are never summed,
+pending is never counted, refunds subtract.
+
+`Corpus.cardSpendSources` declares the set once, and **membership is a data
+test rather than a judgement about the seat**: a member lands `.transaction`
+rows carrying both a value and a currency. Privacy.com is a real card and is
+deliberately absent — its amount exists only inside a formatted title on a
+`.link` kind, and adding it would let its rows pass the source filter, be
+dropped for want of a number, and leave the answer stating a total that
+silently excluded them.
+
+Joining Apple Wallet to `moneyFlow`'s card leg exposed a latent bug in it: that
+line summed raw amounts, which was safe for exactly as long as the two onchain
+cards were its only members (neither lands a refund — Gnosis Pay's settle
+off-chain, as its own copy states). Apple Wallet does land refunds, stamped
+positive and tagged, so joining it without subtracting them would have turned
+every refund into money spent.
+
+### The harness was red the day it shipped
+
+`applewallet-selftest.sh` guarded the entitlement's promises by grepping the
+setup screen for `is deleted from Casberi` — a phrase that was never in the
+screen, which says "everything it brought in is deleted". So `verify.sh` failed
+from the commit that added the guard, and the guard proved nothing about the
+promise it existed to protect.
+
+This is the reach-audit lesson (2026-07-31) earned a second time and it is the
+same sentence: **run `verify.sh`, not the audits you happen to remember.** A
+drift guard is a claim about the tree, and a claim nobody ran is not a check.
+The harness is at 27 mutations now, and the new ones are chosen so that each is
+a silent wrong answer rather than a visible break — a dedupe key that repeats a
+price rise on every refresh forever, a landed title carrying a countdown that
+is true for one day, a silence stamped at discovery so a first connect
+announces every cancellation you already knew about as today's news.
+
+**Still UNVERIFIED against real data, and structurally so.** No simulator ships
+FinanceKit data, so every path here has only ever run its unavailable branch.
+The entitlement is granted and `-appleWalletProbe` now dumps what `landChanges`
+WOULD insert (refs and titles, without inserting) alongside the normalization
+table — so the device run that finally measures this is one command.

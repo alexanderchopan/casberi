@@ -171,7 +171,13 @@ grep -q 'entities?\["media"\] as? \[\[String: Any\]\]' "$XARCH" \
 # as what they wrote about.
 grep -q 'case "X":         return TopicSource(kinds: \[.note\], needsOCR: false, includeDomains: false)' "$TOPICS" \
   || { echo "✗ X counts domains as topics again — the map goes back to naming hosts"; exit 1; }
-grep -q 'terms(in: thing.content, includeDomains: spec.includeDomains)' "$TOPICS" \
+# Anchored on the fork being PASSED, not on the call shape that passes it. It
+# read `terms(in: thing.content, includeDomains: spec.includeDomains)` until the
+# sweep moved its extraction off the main actor and behind a batched
+# `extract(_:includeDomains:)` — at which point the guard matched nothing and
+# `verify.sh` went red while the behaviour it protects was perfectly intact.
+# A drift guard has to name the invariant, not the line it happened to live on.
+grep -q 'includeDomains: spec.includeDomains' "$TOPICS" \
   || { echo "✗ the sweep no longer passes the writing/pixels fork — every room reads domains again"; exit 1; }
 # The repair. Without it the fix reaches only rows imported AFTER it, which for
 # a bulk import room — where everything landed on one afternoon — is nothing.

@@ -119,6 +119,31 @@ enum Corpus {
     /// instead (`isImportReceipt`), and the room holds everything.
     static let bulkImportSources: Set<String> = ["Instagram", "Snapchat", "TikTok", "X"]
 
+    /// Seats whose `.transaction` rows are a CARD PURCHASE — money you spent,
+    /// stamped with a real `priceValue`/`priceCurrency` rather than a formatted
+    /// substring inside a title (2026-08-06, prd §317).
+    ///
+    /// Declared once because two readers must agree about it: the "what did I
+    /// spend?" ask and the money-flow composer's card leg. A wallet transfer is
+    /// deliberately absent — it moves money without buying anything, and
+    /// folding it in here would total a swap as shopping.
+    ///
+    /// **Membership is a data test, not a judgement about the seat**: a member
+    /// lands `.transaction` rows carrying `priceValue` AND `priceCurrency`.
+    /// Adding a seat that doesn't is worse than leaving it out — its rows would
+    /// pass the source filter, then be dropped for want of a number, and the
+    /// answer would state a total that silently excluded them.
+    ///
+    /// Two deliberate absences, each for its own reason:
+    ///   · **Privacy.com** — a real card, and its rows carry the amount only
+    ///     inside a formatted title (`PrivacyBridge.txnThing`) on a `.link`
+    ///     kind. It cannot be totalled without re-parsing prose, which is the
+    ///     one thing money arithmetic here never does.
+    ///   · **Stripe** — `StripeRoomSource` documents why its amounts can't do
+    ///     arithmetic either, and it wouldn't belong regardless: it reads
+    ///     strangers paying you, not you paying anyone.
+    static let cardSpendSources: Set<String> = ["Apple Wallet", "Gnosis Pay", "ether.fi"]
+
     /// The stable ref of a source's import receipt. Stable ON PURPOSE: a
     /// second import must UPDATE the one receipt rather than stack another,
     /// so All never accumulates a pile of "you imported" rows.
