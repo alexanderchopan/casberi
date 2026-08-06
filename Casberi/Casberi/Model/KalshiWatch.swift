@@ -300,6 +300,38 @@ enum KalshiWatch {
         let status: Int
     }
 
+    /// The markets on an `/events/<ticker>?with_nested_markets=true` payload,
+    /// wherever this API decided to put them.
+    ///
+    /// **The empty-book bug (measured 2026-08-06).** That endpoint answers with
+    /// BOTH keys: a top-level `markets` sibling that is **always an empty
+    /// array**, and the real markets nested under `event.markets` (measured
+    /// across 8 open events — 0 at the top every time, 1–8 nested). Every
+    /// caller here read them as
+    ///
+    ///     (root["markets"] as? [[String: Any]]) ?? (event["markets"] as? …) ?? []
+    ///
+    /// and `??` only fires when the cast returns **nil** — an EMPTY `NSArray`
+    /// casts to `[[String: Any]]` perfectly well (zero elements, so the element
+    /// check trivially passes). So the first branch always won with `[]`, the
+    /// nested markets were never read, and every event hydrated to zero
+    /// markets. `markets(inEvent:)` drops any market it can't quote, so the
+    /// whole browse came back empty — which the room could only render as an
+    /// empty-state sentence. **That is the "can't reach the market book" report:
+    /// the book was reached, parsed and thrown away.** Simulating the shipped
+    /// path against the live API returned 0 rows over 24 events; the same walk
+    /// reading nested returned 194.
+    ///
+    /// Presence is therefore NOT the test — non-emptiness is. Written as an
+    /// explicit function rather than another `??` chain so the next reader
+    /// can't restore the coalescing operator that caused this.
+    static func nestedMarkets(_ root: [String: Any]) -> [[String: Any]] {
+        if let top = root["markets"] as? [[String: Any]], !top.isEmpty { return top }
+        if let event = root["event"] as? [String: Any],
+           let nested = event["markets"] as? [[String: Any]] { return nested }
+        return []
+    }
+
     /// One event's open markets, as watchable rows. The query is re-applied
     /// against each market's OWN title/side — an event matched on its
     /// category alone shouldn't hand back every candidate in the race.
@@ -313,8 +345,7 @@ enum KalshiWatch {
         let event = (root["event"] as? [String: Any]) ?? root
         let seriesTicker = (event["series_ticker"] as? String) ?? ""
         let eventTitle = (event["title"] as? String) ?? ""
-        let markets = (root["markets"] as? [[String: Any]])
-            ?? (event["markets"] as? [[String: Any]]) ?? []
+        let markets = nestedMarkets(root)
         var rows: [Resolved] = []
         for market in markets {
             guard let ticker = market["ticker"] as? String,
@@ -405,12 +436,16 @@ enum KalshiWatch {
             let hit = await IngestSupport.getJSONStatus(
                 "https://api.elections.kalshi.com/trade-api/v2/events/\(ticker.uppercased())?with_nested_markets=true")
             let body = hit.json as? [String: Any]
-            let nested = (body?["event"] as? [String: Any])
             // Named `onWire`, not `markets` — a local called `markets` would
             // shadow `markets(inEvent:category:query:)` for the rest of this
             // scope, which is a trap for the next edit rather than a bug today.
-            let onWire = (body?["markets"] as? [[String: Any]])
-                ?? (nested?["markets"] as? [[String: Any]]) ?? []
+            let onWire = nestedMarkets(body ?? [:])
+            // Where they came from, said out loud: the probe reported
+            // `markets=0` for a payload carrying eight of them, because it
+            // shared the `??` defect it was built to find. A probe that
+            // inherits the bug can only confirm the symptom.
+            let top = (body?["markets"] as? [[String: Any]])?.count ?? -1
+            let deep = ((body?["event"] as? [String: Any])?["markets"] as? [[String: Any]])?.count ?? -1
             let priced = onWire.filter { liveProbability($0) != nil }
             quoted += priced.count
             // The decisive line: the price-shaped keys really on the wire,
@@ -420,7 +455,7 @@ enum KalshiWatch {
             let keys = Array((onWire.first ?? [:]).keys)
                 .filter { $0.contains("bid") || $0.contains("ask") || $0.contains("volume") || $0.contains("price") }
                 .sorted().joined(separator: ",")
-            out.append("event \(ticker) status=\(hit.status) markets=\(onWire.count) quoted=\(priced.count) fields=[\(keys)]")
+            out.append("event \(ticker) status=\(hit.status) markets=\(onWire.count) (top=\(top) nested=\(deep)) quoted=\(priced.count) fields=[\(keys)]")
         }
         out.append(quoted > 0
                    ? "phase 2 OK — \(quoted) quoted market(s) across \(min(limit, ticketed.count)) event(s)"

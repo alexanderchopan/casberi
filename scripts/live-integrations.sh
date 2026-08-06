@@ -216,8 +216,14 @@ else
     "$KALSHI_API/events/$KTICKER?with_nested_markets=true" 2>/dev/null)
   if [[ -z "$kmkt" ]]; then
     fail "Kalshi event hydration $KTICKER (unreachable)"
-  elif [[ "$kmkt" != *'"markets"'* ]]; then
-    fail "Kalshi event hydration $KTICKER — 200 but no \`markets\` array"
+  # Presence is NOT the test — NON-EMPTINESS is, and the difference is the
+  # whole 2026-08-06 bug. This endpoint answers with a top-level `markets`
+  # sibling that is ALWAYS `[]` and the real markets nested under
+  # `event.markets`. A grep for the key name matched that empty sibling, so
+  # this row ran green for the entire life of a room that was reading zero
+  # markets on every request. Count the objects, don't spot the key.
+  elif ! print -r -- "$kmkt" | grep -qE '"markets":\[[[:space:]]*\{'; then
+    fail "Kalshi event hydration $KTICKER — 200 but no NON-EMPTY \`markets\` array (the key alone proves nothing; the top-level sibling is always [])"
   # The app reads `yes_bid_dollars`/`yes_ask_dollars` first and falls back to
   # the integer-cent `yes_bid`/`yes_ask`. Either pair keeps the room alive;
   # LOSING THE DOLLARS PAIR is worth an amber even while the fallback holds,

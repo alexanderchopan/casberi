@@ -64,15 +64,13 @@ struct KalshiMarket {
             "https://api.elections.kalshi.com/trade-api/v2/events/\(event.uppercased())?with_nested_markets=true")
             as? [String: Any]
         else { return nil }
-        // BOTH shapes, the way `KalshiWatch.markets(inEvent:)` already reads
-        // this exact payload (2026-08-05). `with_nested_markets=true` is a
-        // request to nest the markets INSIDE `event`, and reading only the
-        // top-level sibling array meant this card silently took its
-        // unavailable fallback for every market on a payload its own sibling
-        // parses fine — invisible, since the fallback is a legitimate state.
-        let markets = (root["markets"] as? [[String: Any]])
-            ?? ((root["event"] as? [String: Any])?["markets"] as? [[String: Any]])
-            ?? []
+        // Through `KalshiWatch.nestedMarkets` (2026-08-06), which is where the
+        // measured truth about this payload lives. The 2026-08-05 fix here read
+        // both shapes with `??` and still never reached the nested array — the
+        // top-level sibling is present-but-EMPTY, and an empty array is not
+        // nil, so the coalescing never fell through. This card kept taking its
+        // unavailable fallback for exactly the same reason it did before.
+        let markets = KalshiWatch.nestedMarkets(root)
         guard !markets.isEmpty else { return nil }
         let market = markets.first { ($0["status"] as? String) == "active" } ?? markets.first
         guard let market,
