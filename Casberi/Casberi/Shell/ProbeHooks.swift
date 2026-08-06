@@ -162,11 +162,12 @@ enum ProbeHooks {
         // after the app is already up moves none of them, which is how the
         // nightly read green through the whole post-271 "feels laggy" report.
         //
-        // The WAIT is not tunable padding: the stagger is 40ms per slot over
-        // ~45 slots, so the pass is still starting work a second and a half
-        // in, and `SweepClock` only reports once nothing has been in flight
-        // for a beat. A shorter wait reports a pass that hasn't happened yet
-        // and reads as "nothing to fix".
+        // The WAIT is not tunable padding: the automatic sweep holds a 1.8s
+        // lead-in and then staggers 120ms per slot over ~45 slots
+        // (2026-08-06), so the pass is still starting work seven seconds in,
+        // and `SweepClock` only reports once nothing has been in flight for a
+        // beat. A shorter wait reports a pass that hasn't happened yet and
+        // reads as "nothing to fix".
         Hook(key: "sweepTimerProbe") { _, _ in
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(25))

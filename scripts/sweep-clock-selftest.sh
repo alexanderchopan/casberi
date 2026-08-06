@@ -61,6 +61,52 @@ guard "the topics sweep uses it" \
   "Casberi/Casberi/Model/ScreenshotTopics.swift" 'await extract\(rows\.map\(\\\.content\)'
 guard "the restamp repair uses it" \
   "Casberi/Casberi/Model/ScreenshotTopics.swift" 'await extract\(texts, includeDomains:'
+# The SECOND off-main hop (2026-08-06): `VerbDetection`'s three scans, which a
+# device profile put at ~21% of busy main-thread time in the render path and
+# which then ran 150 rows deep on every foreground. Same silent-regression
+# shape as the tagger — put back on main and every number here stays green.
+guard "verb detection hops off the main actor" \
+  "Casberi/Casberi/Model/Verbs.swift" 'nonisolated static func detect\(_ inputs: \[Input\]\) async'
+guard "the detect hop is detached" \
+  "Casberi/Casberi/Model/Verbs.swift" 'Task\.detached\(priority: \.utility\)'
+# …and that the three scans take PLAIN VALUES. A scan that takes a `Thing`
+# again cannot leave the main actor, and the hop above would go back to being
+# a hop that carries nothing.
+for fn in 'placeURL\(in input: Input\)' 'telURL\(in input: Input\)' 'mailtoURL\(in input: Input\)'; do
+  guard "scan is value-typed: $fn" \
+    "Casberi/Casberi/Model/Verbs.swift" "nonisolated static func $fn"
+done
+guard "the sweep uses the hop" \
+  "Casberi/Casberi/Model/VerbDetection.swift" 'await VerbDerivation\.detect\('
+guard "the sweep re-checks liveness after the hop (corollary 6)" \
+  "Casberi/Casberi/Model/VerbDetection.swift" 'zip\(pending, detected\) where thing\.isLive'
+# The PACING fix, which is the other half of the report's subject. The
+# automatic sweep must hold past the first-scroll moment and space its slots;
+# a pull-to-refresh must not (its contract is immediacy). A revert to one pace
+# for both is invisible in every other check.
+guard "the automatic sweep holds a lead-in, the pull does not" \
+  "Casberi/Casberi/Model/BridgeRefresh.swift" 'let leadInMs = force \? 0 : [0-9]{4}'
+guard "the automatic sweep spaces slots wider than the pull" \
+  "Casberi/Casberi/Model/BridgeRefresh.swift" 'let slotSpacingMs = force \? 40 : 1[0-9]{2}'
+# The pace must be baked in at DISPATCH, not read per slot — otherwise a
+# pull-to-refresh mid-sweep re-paces the automatic sweep's remaining slots to
+# its own 0/40 and collapses them into the burst the lead-in exists to prevent.
+guard "a slot carries its own precomputed delay" \
+  "Casberi/Casberi/Model/BridgeRefresh.swift" 'return leadInMs \+ nextSlot \* slotSpacingMs'
+guard "stagger sleeps a delay, not an index" \
+  "Casberi/Casberi/Model/BridgeRefresh.swift" 'func stagger\(_ delayMs: Int\) async'
+# The clock has to be told about that window or it reports half a sweep.
+guard "the pass is held open across the dispatch window" \
+  "Casberi/Casberi/Model/BridgeRefresh.swift" 'SweepClock\.holdPass\(for: \.milliseconds\(leadInMs \+ nextSlot \* slotSpacingMs\)\)'
+# The foreground work OUTSIDE the bridge sweep — deferred on every activation
+# (it used to run inline on a return, which was the "lags when I come back"
+# half) and on the clock, since it costs about what a bridge slot does.
+guard "foreground work is deferred on a return too" \
+  "Casberi/Casberi/Shell/RootShell.swift" 'firstActivation \? 800 : [0-9]+'
+for label in insight.recompute verbs.detect; do
+  guard "slot instrumented: $label" \
+    "Casberi/Casberi/Shell/RootShell.swift" "SweepClock\\.measure\\(\"$label\"\\)"
+done
 # The probe is the only door to the report on a device.
 guard "the probe hook exists" \
   "Casberi/Casberi/Shell/ProbeHooks.swift" 'Hook\(key: "sweepTimerProbe"\)'
@@ -138,6 +184,22 @@ var runs = 0
 let returned = await SweepClock.measure("passthrough") { () -> Int in runs += 1; return 41 + 1 }
 check(returned == 42 && runs == 1, "measure is transparent: returns the value, runs once")
 
+// 7. `holdPass` keeps ONE sweep in one report across a dispatch gap wider than
+//    any settle. This is what the 2026-08-06 pacing change needs: slots are
+//    spread over seconds now, so an early slot and a late one are separated by
+//    a silence that would otherwise close the pass — and the split reads as
+//    two small sweeps, i.e. as the jank having gone away.
+SweepClock.report()          // close and clear whatever is open
+SweepClock.beginPass()
+SweepClock.holdPass(for: .milliseconds(3500))
+await SweepClock.measure("early") { try? await Task.sleep(for: .milliseconds(50)) }
+// Longer than `settle`, so an unheld pass has certainly reported by now.
+try? await Task.sleep(for: .milliseconds(3000))
+await SweepClock.measure("late") { try? await Task.sleep(for: .milliseconds(50)) }
+lines = SweepClock.summary()
+check(line(lines, "early") != nil && line(lines, "late") != nil,
+      "a held pass keeps both sides of a dispatch gap in one report")
+
 print(failures == 0 ? "sweep-clock-selftest: OK" : "sweep-clock-selftest: \(failures) FAILED")
 exit(failures == 0 ? 0 : 1)
 SWIFT
@@ -192,6 +254,12 @@ mutate "hitches no longer charged to the sweep in flight" \
 # about jank.
 mutate "report ranks by wall time instead of stall" \
   's|for label in order.sorted(by: { (entries\[\$0\]?.hitchMs ?? 0, entries\[\$0\]?.wallMs ?? 0)|for label in order.sorted(by: { (entries[$0]?.wallMs ?? 0, entries[$0]?.wallMs ?? 0)|'
+# A `holdPass` that returns before the dispatch window is over lets the pass
+# close in the gap the 2026-08-06 pacing opened, splitting one sweep into two
+# reports that each look small. Nothing else here would notice — the numbers in
+# both halves are correct, there are just two of them.
+mutate "holdPass returns before the dispatch window is over" \
+  's|try? await Task.sleep(for: window)|try? await Task.sleep(for: .zero)|'
 
 print -r -- ""
 if [[ $fail -eq 0 ]]; then

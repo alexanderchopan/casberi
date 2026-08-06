@@ -48,7 +48,15 @@ enum VerbDetection {
     /// Ordered NEWEST FIRST on purpose: the rows a person can actually see are
     /// the recent ones, so the verbs come back where they'd be noticed first
     /// and the long tail fills in behind them.
-    static func backfill(context: ModelContext) {
+    /// The scans run OFF the main actor since 2026-08-06 (the post-271 "laggy
+    /// at open" report). They used to run on it — 150 rows × three
+    /// `NSDataDetector`/regex passes over each row's full text, synchronously,
+    /// on every single foreground — which is the same shape of stall the
+    /// profile above found in the render path, simply moved to a different
+    /// moment. Only the FETCH and the write back onto the models have to be on
+    /// main; the scanning takes a String and returns Strings. See
+    /// `VerbDerivation.Input` and `ScreenshotTopics.extract`, the same fix.
+    static func backfill(context: ModelContext) async {
         guard !running else { return }
         running = true
         defer { running = false }
@@ -60,17 +68,24 @@ enum VerbDetection {
         d.fetchLimit = batch
         guard let pending = try? context.fetch(d), !pending.isEmpty else { return }
 
+        let detected = await VerbDerivation.detect(pending.map(VerbDerivation.Input.init))
+
+        // Per-ROW liveness AFTER the await, not the fetch that ran before it
+        // (COROLLARY 6): a bridge heal can tombstone a row while the scans
+        // run, and this is the first read of a stored property since.
         let now = Date()
-        for thing in pending where thing.isLive {
-            // Both may legitimately be nil — that IS the answer for most things,
-            // and `detectedAt` is what stops it being re-asked forever.
-            thing.detectedPlace = VerbDerivation.placeURL(for: thing)?.absoluteString
-            thing.detectedTel = VerbDerivation.telURL(in: thing)?.absoluteString
-            thing.detectedMailto = VerbDerivation.mailtoURL(for: thing)?.absoluteString
+        var changed = false
+        for (thing, found) in zip(pending, detected) where thing.isLive {
+            // All three may legitimately be nil — that IS the answer for most
+            // things, and `detectedAt` is what stops it being re-asked forever.
+            thing.detectedPlace = found.place
+            thing.detectedTel = found.tel
+            thing.detectedMailto = found.mailto
             thing.detectedAt = now
             thing.detectionVersion = current
+            changed = true
         }
-        context.saveHonestly()
+        if changed { context.saveHonestly() }
     }
 
     /// Re-scan a thing whose text changed under it (a heal that rewrites

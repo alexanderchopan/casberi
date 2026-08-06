@@ -8,17 +8,31 @@ import SwiftData
 /// independently, fire-and-forget, on the main actor.
 @MainActor
 enum BridgeRefresh {
-    /// Spreads a foreground refresh's ~25 independent bridge Tasks over
-    /// roughly a second instead of firing every network request in the same
-    /// instant (2026-07-15 — no cap or stagger existed before this). Each
-    /// bridge still refreshes fully independently — this only delays ITS OWN
-    /// first `await`, never queues one bridge behind another — so a slow
-    /// bridge still can't block a fast one; it just spreads the peak of
-    /// simultaneous new socket/TLS handshakes across the refresh instead of
-    /// bursting them all at once.
-    private static func stagger(_ slot: Int) async {
-        guard slot > 0 else { return }
-        try? await Task.sleep(for: .milliseconds(slot * 40))
+    /// Spreads a foreground refresh's ~45 independent bridge Tasks instead of
+    /// firing every one in the same instant (2026-07-15 — no cap or stagger
+    /// existed before this). Each bridge still refreshes fully independently —
+    /// this only delays ITS OWN first `await`, never queues one bridge behind
+    /// another — so a slow bridge still can't block a fast one.
+    ///
+    /// Two paces since 2026-08-06 (the post-271 "laggy at open" report, see
+    /// `SweepClock`): the AUTOMATIC scenePhase sweep holds the whole pass for
+    /// a lead-in — past the first-scroll moment it used to land on — and then
+    /// spaces slots 120ms apart, since every slot's decode+insert half runs on
+    /// the main actor and 40ms packed all ~45 of them into the opening two
+    /// seconds. A pull-to-refresh keeps the original 0ms lead-in and 40ms
+    /// spacing: the gesture's contract is immediacy, and the person is
+    /// watching the spinner, not scrolling.
+    ///
+    /// The delay arrives ALREADY COMPUTED (`slot()` returns milliseconds, not
+    /// an index) so a pass's pace is fixed at the instant it dispatches. Read
+    /// from shared state in here instead, a pull-to-refresh landing while an
+    /// automatic sweep is still staggering would re-pace that sweep's
+    /// not-yet-woken slots to the pull's own 0/40 — collapsing the thirty
+    /// still to come into one burst, which is precisely the stall the lead-in
+    /// exists to prevent, arriving at the one moment nobody would look for it.
+    private static func stagger(_ delayMs: Int) async {
+        guard delayMs > 0 else { return }
+        try? await Task.sleep(for: .milliseconds(delayMs))
     }
 
     /// When the whole sweep last ran — a rapid background→active bounce
@@ -53,13 +67,22 @@ enum BridgeRefresh {
     static func refreshAllConnected(context: ModelContext, store: BridgeStore, force: Bool = false) {
         if !force, let last = lastSweep, Date.now.timeIntervalSince(last) < minSweepInterval { return }
         lastSweep = .now
+        // This pass's pace, fixed here rather than read per slot — see
+        // `stagger`.
+        let leadInMs = force ? 0 : 1800
+        let slotSpacingMs = force ? 40 : 120
         // Where this pass's time goes, when `-sweepTimer YES` asked (2026-08-06).
         // Off, this is one `Bool` read; on, it is the only view of the main-actor
         // stalls a foreground sweep causes — the thing `perf.sh` cannot see,
         // since none of its three numbers touch this path. See `SweepClock`.
         SweepClock.beginPass(force: force)
+        // Returns this slot's DELAY IN MILLISECONDS, not its index — so every
+        // `stagger(s)` below carries its pass's pace with it.
         var nextSlot = 0
-        func slot() -> Int { defer { nextSlot += 1 }; return nextSlot }
+        func slot() -> Int {
+            defer { nextSlot += 1 }
+            return leadInMs + nextSlot * slotSpacingMs
+        }
         // The native-framework bridges (Photos/Calendar/Reminders/Health/
         // Music) only ever ingested at the moment of connect — nothing
         // re-scanned them, so a screenshot taken an hour later never
@@ -588,5 +611,14 @@ enum BridgeRefresh {
                 _ = await DealsIngest.refresh(context: context)
             }
         }
+        // Every slot is now dispatched, so the pass's own dispatch window is
+        // known exactly — tell the clock, or it closes the pass in the quiet
+        // between two widely-staggered slots and reports half a sweep. Only
+        // measurable here: `nextSlot` is this pass's real slot count, which
+        // depends on what this person has connected.
+        SweepClock.holdPass(for: .milliseconds(leadInMs + nextSlot * slotSpacingMs))
+        // (`nextSlot` is the count, so this is the delay the NEXT slot would
+        // have had — one spacing past the last real one, which is the margin
+        // we want anyway.)
     }
 }

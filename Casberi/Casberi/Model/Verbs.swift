@@ -301,12 +301,65 @@ enum VerbDerivation {
         return Array(out.prefix(4))
     }
 
+    /// Everything the three scans below read off a thing, as PLAIN VALUES.
+    ///
+    /// The scans never needed a `Thing` — they need text — but taking one
+    /// pinned them to the main actor, which is where a SwiftData model has to
+    /// be read. Pulling the reads out into this lets the expensive half run
+    /// anywhere (2026-08-06, the same structural fix as
+    /// `ScreenshotTopics.extract`, and for the same reason: these are the two
+    /// `NSDataDetector` passes a device profile put at ~21% of busy
+    /// main-thread time).
+    struct Input: Sendable {
+        /// What the address and phone scans read: the body, else the title.
+        let text: String
+        /// The mailto compose subject.
+        let title: String
+        /// A mail thing reads its sender and NEVER its body — the one place
+        /// `mailtoURL` diverges from `text` (see its doc below). Both fields
+        /// are needed: a mail thing whose envelope carried no address must
+        /// answer nil, not fall through to scanning the body.
+        let isMail: Bool
+        let mailFrom: String?
+
+        @MainActor init(_ thing: Thing) {
+            text = thing.content.isEmpty ? thing.title : thing.content
+            title = thing.title
+            isMail = thing.kind == .mail
+            mailFrom = thing.authorHandle
+        }
+    }
+
+    /// What one pass over an `Input` found. Strings, not `URL`s, because that
+    /// is what `Thing` stores and what crosses back.
+    struct Detected: Sendable {
+        let place: String?
+        let tel: String?
+        let mailto: String?
+    }
+
+    /// Scan a batch OFF the main actor — the whole point of `Input` existing.
+    ///
+    /// Batched rather than one row at a time so the hop is paid per batch, and
+    /// returns a parallel array so the caller can `zip` it back onto the rows
+    /// it came from — no `Thing`, and nothing else non-`Sendable`, crosses.
+    /// The detectors are thread-safe for concurrent matching (see above).
+    nonisolated static func detect(_ inputs: [Input]) async -> [Detected] {
+        await Task.detached(priority: .utility) {
+            inputs.map {
+                Detected(place: placeURL(in: $0)?.absoluteString,
+                         tel: telURL(in: $0)?.absoluteString,
+                         mailto: mailtoURL(in: $0)?.absoluteString)
+            }
+        }.value
+    }
+
     /// A place the thing points at, as an Apple Maps directions URL — or nil
     /// when there's no address to route to (the verb drops; no dead control).
     /// A maps/geo link passes straight through; otherwise a detected street
     /// address becomes the destination query.
-    static func placeURL(for thing: Thing) -> URL? {
-        let text = thing.content.isEmpty ? thing.title : thing.content
+    nonisolated static func placeURL(in input: Input) -> URL? {
+        let text = input.text
 
         if let url = Capture.detectURL(in: text) {
             let host = url.host()?.lowercased() ?? ""
@@ -328,8 +381,8 @@ enum VerbDerivation {
     }
 
     /// A phone number in the thing → a tel: URL, else nil (the verb drops).
-    static func telURL(in thing: Thing) -> URL? {
-        let text = thing.content.isEmpty ? thing.title : thing.content
+    nonisolated static func telURL(in input: Input) -> URL? {
+        let text = input.text
         let range = NSRange(text.startIndex..., in: text)
         guard let number = phoneDetector?.firstMatch(in: text, range: range)?.phoneNumber else { return nil }
         let dialable = number.filter { $0.isNumber || $0 == "+" }
@@ -347,20 +400,22 @@ enum VerbDerivation {
     /// raw address when the header carries one ("Jane Appleseed", no "@") —
     /// so this only fires for the addresses it can already see, same as
     /// before body text existed; it never guesses.
-    static func mailtoURL(for thing: Thing) -> URL? {
+    nonisolated static func mailtoURL(in input: Input) -> URL? {
         let text: String
-        if thing.kind == .mail {
-            guard let from = thing.authorHandle else { return nil }
+        if input.isMail {
+            // A mail thing whose sender the envelope never carried answers
+            // nil; scanning the body instead is the wrong-person guess above.
+            guard let from = input.mailFrom else { return nil }
             text = from
         } else {
-            text = thing.content.isEmpty ? thing.title : thing.content
+            text = input.text
         }
         guard let r = text.range(of: #"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}"#,
                                  options: [.regularExpression, .caseInsensitive]) else { return nil }
         var comps = URLComponents()
         comps.scheme = "mailto"
         comps.path = String(text[r])
-        comps.queryItems = [URLQueryItem(name: "subject", value: thing.title)]
+        comps.queryItems = [URLQueryItem(name: "subject", value: input.title)]
         return comps.url
     }
 

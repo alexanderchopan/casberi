@@ -113,6 +113,29 @@ enum SweepClock {
         startMonitor()
     }
 
+    /// Hold the pass open while the caller is still DISPATCHING slots.
+    ///
+    /// "The pass is over" is inferred from a quiet gap (see `settle`), and
+    /// since 2026-08-06 the automatic sweep spreads its slots over several
+    /// seconds — so the gap between an early instrumented slot and a late one
+    /// is routinely wider than any settle worth using, which would close the
+    /// pass and split one sweep across two reports (each of them true about
+    /// half of it, and neither saying so). A dispatch window is genuinely work
+    /// in flight: nothing has finished, the pass simply hasn't reached that
+    /// slot yet. `BridgeRefresh` declares its own window, so the two can't
+    /// drift the way a constant here would.
+    static func holdPass(for window: Duration) {
+        guard isOn else { return }
+        openWork += 1
+        reportPending?.cancel()
+        reportPending = nil
+        Task { @MainActor in
+            try? await Task.sleep(for: window)
+            openWork -= 1
+            if openWork <= 0 { scheduleReport() }
+        }
+    }
+
     /// Time one sweep. The function times ITSELF at its own definition, so
     /// adding a slot to `BridgeRefresh` needs no matching edit here — and a
     /// slot nobody instrumented still shows up in the hitch line as `(none)`.
@@ -188,10 +211,15 @@ enum SweepClock {
     // MARK: - Report
 
     /// Sweeps are fire-and-forget with no join point, so "the pass is over" is
-    /// inferred: nothing in flight, and nothing new started for a beat. The
-    /// settle matters because the stagger is 40ms per slot — without it the
-    /// first slot finishing before the fortieth starts would end the pass.
-    private static let settle = Duration.milliseconds(1200)
+    /// inferred: nothing in flight, and nothing new started for a beat.
+    ///
+    /// The dispatch window is `holdPass`'s job, not this constant's — a settle
+    /// wide enough to span a whole staggered sweep would also be a report that
+    /// arrives long after the sweep it describes. This is the margin AFTER
+    /// dispatch: the last slot's own work, plus slop. Widened from 1200ms with
+    /// the 2026-08-06 pacing change, since a slot's work now more often
+    /// straddles the end of the window.
+    private static let settle = Duration.milliseconds(2600)
 
     private static func scheduleReport() {
         reportPending?.cancel()

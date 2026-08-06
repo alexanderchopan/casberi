@@ -1050,8 +1050,14 @@ struct RootShell: View {
             // render — prd §260. Same bounded-sweep shape as the
             // embedding backfill above, and deliberately in the same
             // deferred block: it is the work the launch window exists
-            // to keep clear.
-            VerbDetection.backfill(context: modelContext)
+            // to keep clear. Its scans hop off the main actor themselves
+            // (2026-08-06) — on it, 150 rows of `NSDataDetector` was a
+            // stall in exactly this window, every foreground.
+            Task { @MainActor in
+                await SweepClock.measure("verbs.detect") {
+                    await VerbDetection.backfill(context: modelContext)
+                }
+            }
             // The two model-fed sweeps (prd §282, 2026-08-02) — both bounded
             // to a handful of rows per foreground, both no-ops without Apple
             // Intelligence, and both deliberately behind the cheap
@@ -1066,6 +1072,12 @@ struct RootShell: View {
             // ruling 10). Also refreshes the kept-ask digest cache
             // (`KeptAskStore.anyChanged`) the bar's pulse reads from.
             Task { @MainActor in
+              // On the sweep clock (2026-08-06) because it is main-actor work
+              // in the same window as the bridge sweep and costs about what a
+              // bridge slot does — a 600-row materialization plus three
+              // composes — so a report that showed only the sweep would send
+              // whoever reads it to optimize the smaller half.
+              await SweepClock.measure("insight.recompute") {
                 // Bounded (2026-07-24): insight/kept-ask/whisper read
                 // only recent activity, so this needn't materialize the
                 // whole corpus on the main actor at launch.
@@ -1100,14 +1112,21 @@ struct RootShell: View {
                 // Task already paid for — never its own fetch.
                 refreshWhisper(things: surfaced)
                 #endif
+              }
             }
         }
-        if firstActivation {
-            Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(800))
-                runForegroundWork()
-            }
-        } else {
+        // Deferred on EVERY activation since 2026-08-06, not just the first.
+        // A return has no launch animation to protect, which is why this block
+        // used to run inline there — but it has something better worth
+        // protecting: the person is looking at a rendered feed and is about to
+        // scroll it, and this is a 600-row materialization plus three composes
+        // plus ~45 bridge slots landing on the main actor at the exact instant
+        // they touch the screen. That was the "lags when I come back" half of
+        // the post-271 report. The shorter delay is the crossfade's length —
+        // long enough to clear the frame, short enough that nothing feels
+        // withheld.
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(firstActivation ? 800 : 250))
             runForegroundWork()
         }
         // Resnapshot hand-off state so the thing sheet's "Add to <app>"
