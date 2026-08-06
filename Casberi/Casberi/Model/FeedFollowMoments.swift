@@ -30,8 +30,42 @@ enum FeedFollowMoments {
     /// separate roster to resolve.
     static func checkReturns(_ kind: FeedFollowKind, context: ModelContext) {
         let names = kind.store.entries.map(\.displayName).filter { !$0.isEmpty }
+        checkReturns(source: kind.source, names: names, context: context) { name, gapDays in
+            // "released a new episode" doesn't fit the other two kinds'
+            // "<verb> again" template, so each kind gets its own full line.
+            switch kind {
+            case .youtube:  String(localized: "\(name) uploaded again after \(gapDays) days")
+            case .podcasts: String(localized: "\(name) released a new episode after \(gapDays) days quiet")
+            default:        String(localized: "\(name) posted again after \(gapDays) days")
+            }
+        }
+    }
+
+    /// RSS's own quiet return (2026-08-06).
+    ///
+    /// The moment above shipped for the four feed-follow kinds and skipped RSS
+    /// for one structural reason and no design one: it took a
+    /// `FeedFollowKind`, and RSS isn't one — it has its own store, added a
+    /// year earlier. So a blog you follow coming back after four months quiet
+    /// — the single most feed-shaped moment there is, and the one a reader
+    /// notices — went unannounced, while the same event on a Substack fired.
+    ///
+    /// The identity slot lines up exactly: `RSSIngest` stamps the feed's
+    /// learned title on `authorHandle`, which is what `FeedFollowIngest` does
+    /// too, so the shared core below needs nothing but the names.
+    static func checkRSSReturns(context: ModelContext) {
+        let names = RSSStore.shared.feeds.map(\.displayName).filter { !$0.isEmpty }
+        checkReturns(source: "RSS", names: names, context: context) { name, gapDays in
+            String(localized: "\(name) published again after \(gapDays) days")
+        }
+    }
+
+    /// The shared body: which followed feed just landed something after a real
+    /// silence. `line` is the only thing that differs per source, so it is the
+    /// only thing passed in.
+    private static func checkReturns(source: String, names: [String], context: ModelContext,
+                                     line: (_ name: String, _ gapDays: Int) -> String) {
         guard !names.isEmpty else { return }
-        let source = kind.source
         let descriptor = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == source })
         guard let things = try? context.fetch(descriptor) else { return }
         let watched = Set(names)
@@ -47,15 +81,7 @@ enum FeedFollowMoments {
             guard newest.capturedAt.timeIntervalSinceNow > -freshWindow else { continue }
             let gapDays = Int(sorted[1].capturedAt.distance(to: newest.capturedAt) / 86400)
             guard gapDays >= Int(quietDays) else { continue }
-            // "released a new episode" doesn't fit the other two kinds'
-            // "<verb> again" template, so each kind gets its own full line.
-            let line: String
-            switch kind {
-            case .youtube:  line = String(localized: "\(name) uploaded again after \(gapDays) days")
-            case .podcasts: line = String(localized: "\(name) released a new episode after \(gapDays) days quiet")
-            default:        line = String(localized: "\(name) posted again after \(gapDays) days")
-            }
-            SourceMoments.shared.fire(line, source: kind.source)
+            SourceMoments.shared.fire(line(name, gapDays), source: source)
         }
     }
 

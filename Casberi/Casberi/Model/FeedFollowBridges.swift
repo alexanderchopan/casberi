@@ -64,10 +64,21 @@ final class FeedFollowStore {
     }
 
     func remove(input: String) {
+        // The feed's HTTP record goes with the follow (2026-08-05) — see
+        // `FeedFreshness.forget`. Keyed on the RESOLVED feed URL, which is
+        // what was actually fetched; an entry never synced has none yet and
+        // has nothing to forget.
+        for entry in entries
+        where entry.input.caseInsensitiveCompare(input) == .orderedSame && !entry.feedURL.isEmpty {
+            FeedFreshness.forget(entry.feedURL)
+        }
         entries.removeAll { $0.input.caseInsensitiveCompare(input) == .orderedSame }
     }
 
-    func removeAll() { entries = [] }
+    func removeAll() {
+        for entry in entries where !entry.feedURL.isEmpty { FeedFreshness.forget(entry.feedURL) }
+        entries = []
+    }
 
     /// The learned title for a watched input, for the accounts list.
     func display(for input: String) -> String {
@@ -83,6 +94,18 @@ final class FeedFollowStore {
         guard !title.isEmpty,
               let i = entries.firstIndex(where: { $0.id == id }), entries[i].title != title else { return }
         entries[i].title = title
+    }
+
+    /// Forgets a learned title so the next sync re-learns it from the feed.
+    /// `setTitle` deliberately refuses an empty string (a feed with no
+    /// `<title>` must not blank a good name), so a genuine reset needs its own
+    /// door — see `YouTubeFollowRepair`, which is the only caller: a follow
+    /// pointed at the wrong channel learned the wrong channel's real name, and
+    /// re-pointing it without clearing that would land the right videos under
+    /// the wrong publisher.
+    func clearTitle(for id: UUID) {
+        guard let i = entries.firstIndex(where: { $0.id == id }), !entries[i].title.isEmpty else { return }
+        entries[i].title = ""
     }
 
     private func persist() {
@@ -277,10 +300,39 @@ enum FeedFetch {
 
     /// A channel's UC… id — used as-is when the input already carries one,
     /// otherwise scraped from the channel page the @handle/URL points to.
+    ///
+    /// THE FIRST `"channelId"` IN THE PAGE IS NOT THIS CHANNEL'S, and reading
+    /// it was this function's shipped behaviour until 2026-08-05. Measured
+    /// against three handles, three for three wrong:
+    ///
+    ///     @MrBeast     "channelId" → UCAiLfjNXkNv24uhpzUgPa6A   canonical → UCX6OQ3DkcsbYNE6H8uQQuVA
+    ///     @mkbhd       "channelId" → UCG7J20LhUeLl6y_Emi7OJrA   canonical → UCBJycsmduvYEL83R_U4JriQ
+    ///     @veritasium  "channelId" → UCin0m13qWv3-051xlWlHamA   canonical → UCHnyfMqiRRG1u-2MsSQLbXA
+    ///
+    /// A channel page's initial-data blob names other channels before it names
+    /// its own, so following an `@handle` — the shape the field's own
+    /// placeholder asks for — silently followed a DIFFERENT channel. It failed
+    /// invisibly: a real feed came back, real videos landed, and the follow's
+    /// learned title was the wrong channel's real name, so nothing anywhere
+    /// read as an error.
+    ///
+    /// The order below is what the page says about ITSELF, strongest first —
+    /// `<link rel="canonical">` and `"externalId"` are the channel's own
+    /// identity, and the `channel/UC…` fallback was already correct 3/3
+    /// (because the canonical link is the first `channel/` occurrence in the
+    /// document). The naive `"channelId"` read is gone rather than demoted:
+    /// it never answers correctly, so keeping it anywhere in the chain would
+    /// only be a slower way to be wrong. Guarded nightly — see
+    /// `scripts/live-integrations.sh`.
     static func resolveYouTubeChannelID(_ raw: String) async -> String? {
         let t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !t.isEmpty else { return nil }
-        if let id = match(t, pattern: "UC[A-Za-z0-9_-]{20,}") { return id }
+        // A pasted `/channel/UC…` URL or a bare id. Strict form first — a real
+        // id is exactly "UC" + 22 base64url characters — with the old loose
+        // match kept as a fallback so a future length change can't stop a
+        // person pasting their own id.
+        if let id = match(t, pattern: "UC[A-Za-z0-9_-]{22}(?![A-Za-z0-9_-])")
+            ?? match(t, pattern: "UC[A-Za-z0-9_-]{20,}") { return id }
 
         var page = t
         if !page.contains("://") {
@@ -294,8 +346,14 @@ enum FeedFetch {
         }
         guard let url = URL(string: page), let data = await data(url),
               let html = String(data: data, encoding: .utf8) else { return nil }
-        return match(html, pattern: "\"channelId\":\"(UC[A-Za-z0-9_-]+)\"", group: 1)
-            ?? match(html, pattern: "channel/(UC[A-Za-z0-9_-]+)", group: 1)
+        for pattern in [
+            "<link[^>]+rel=[\"']canonical[\"'][^>]+href=[\"'][^\"']*/channel/(UC[A-Za-z0-9_-]{22})",
+            "\"externalId\":\"(UC[A-Za-z0-9_-]{22})\"",
+            "channel/(UC[A-Za-z0-9_-]{22})",
+        ] {
+            if let id = match(html, pattern: pattern, group: 1) { return id }
+        }
+        return nil
     }
 
     /// Apple's keyless podcast directory — a show search that hands back each
@@ -326,6 +384,125 @@ enum FeedFetch {
     }
 }
 
+// MARK: - Repairing follows the old resolver pointed at the wrong channel
+
+/// A one-time re-resolution of every YouTube follow (2026-08-05).
+///
+/// `FeedFetch.resolveYouTubeChannelID` read the first `"channelId"` in a
+/// channel page, which is another channel's — see the measured table in its
+/// own doc. So every follow added by `@handle` or channel URL, for as long as
+/// that code shipped, points at a channel the person never chose. Fixing the
+/// resolver only fixes follows added AFTER the fix; this fixes the ones
+/// already stored, which is most of them.
+///
+/// PROVABLE, NOT INFERRED. It re-resolves the person's own stored input and
+/// compares against the channel id in the feed URL that input produced. A
+/// difference is proof the stored one is wrong; equality means the follow was
+/// always fine and nothing is touched. No follow is ever removed and no input
+/// is ever rewritten — only the derived feed URL and the title learned through
+/// it.
+///
+/// THE ROWS GO TOO, and only in the proven-wrong case: a follow that has been
+/// landing a stranger's uploads under that stranger's name has filled the feed
+/// with videos from a channel the person never asked for, and re-pointing the
+/// follow would strand them — `HandleBridge.removeName` prunes by the follow's
+/// CURRENT learned name, so after the repair nothing could ever explain them
+/// again. This is §286's ruling ("if you unfollow something it shouldn't show
+/// in your corpus") reaching the case where the app, not the person, chose
+/// wrong.
+///
+/// IT DOES NOT MARK ITSELF DONE UNTIL EVERY ENTRY HAS ANSWERED. YouTube
+/// answers a client it has decided to throttle with a plain 404 (measured, see
+/// `FeedFreshness.troubleAfter`), so a pass that resolves nothing is a
+/// throttled pass, not a clean bill of health — marking done there would leave
+/// a wrong follow wrong forever.
+@MainActor
+enum YouTubeFollowRepair {
+    private static let doneKey = "feed.youtube.idRecheck.v1"
+    /// Entries already verified, by entry id. Without it a follow list longer
+    /// than `perPass` would re-check the same first four every pass and never
+    /// reach the fifth — the pass has to be resumable per entry, not just
+    /// bounded.
+    private static let seenKey = "feed.youtube.idRecheck.seen"
+
+    /// Channel pages are ~1.4MB each. Four per pass keeps a repair invisible
+    /// on a foreground while still finishing in one sync for anyone with a
+    /// normal follow list.
+    private static let perPass = 4
+
+    struct Report {
+        var checked = 0
+        var wrong = 0
+        var pruned = 0
+        /// Entries whose channel page didn't answer this pass — the reason
+        /// `done` is withheld. Reported rather than swallowed: "nothing was
+        /// wrong" and "we couldn't look" are different answers.
+        var unresolved = 0
+        var done = false
+    }
+
+    static var isDone: Bool { UserDefaults.standard.bool(forKey: doneKey) }
+
+    /// The channel id a stored feed URL was built around, or nil for a URL
+    /// this bridge didn't build.
+    static func channelID(inFeedURL url: String) -> String? {
+        guard let range = url.range(of: "channel_id=", options: .caseInsensitive) else { return nil }
+        let tail = url[range.upperBound...].prefix { $0.isLetter || $0.isNumber || $0 == "_" || $0 == "-" }
+        return tail.hasPrefix("UC") ? String(tail) : nil
+    }
+
+    @discardableResult
+    static func run(context: ModelContext, force: Bool = false) async -> Report? {
+        guard force || !isDone else { return nil }
+        let store = FeedFollowStore.youtube
+        guard !store.isEmpty else {
+            UserDefaults.standard.set(true, forKey: doneKey)
+            return Report(done: true)
+        }
+        var report = Report()
+        var seen = Set(UserDefaults.standard.stringArray(forKey: seenKey) ?? [])
+        if force { seen = [] }
+        // Everything this repair could ever have an opinion about. An entry
+        // with no resolved feed URL has nothing to compare against (it will
+        // resolve fresh, with the fixed resolver); an input that already
+        // carries an id never went through the scrape, so it was never wrong.
+        let eligible = store.entries.filter { entry in
+            guard !entry.feedURL.isEmpty, channelID(inFeedURL: entry.feedURL) != nil else { return false }
+            return entry.input.range(of: "UC[A-Za-z0-9_-]{22}", options: .regularExpression) == nil
+        }
+        for entry in eligible where !seen.contains(entry.id.uuidString) {
+            guard report.checked < perPass else { break }
+            guard let stored = channelID(inFeedURL: entry.feedURL) else { continue }
+            report.checked += 1
+            guard let real = await FeedFetch.resolveYouTubeChannelID(entry.input) else {
+                report.unresolved += 1
+                continue
+            }
+            seen.insert(entry.id.uuidString)
+            guard real != stored else { continue }
+            report.wrong += 1
+            let strangersName = entry.title
+            FeedFreshness.forget(entry.feedURL)
+            store.setFeedURL("https://www.youtube.com/feeds/videos.xml?channel_id=\(real)", for: entry.id)
+            store.clearTitle(for: entry.id)
+            if !strangersName.isEmpty {
+                report.pruned += SocialTopics.pruneAuthor(
+                    source: "YouTube", handle: strangersName, remainingTopics: [], context: context)
+            }
+        }
+        UserDefaults.standard.set(Array(seen), forKey: seenKey)
+        // Done when every eligible entry has answered at least once. A pass
+        // that resolved nothing is a throttled pass, not a clean bill of
+        // health — see the type doc.
+        if eligible.allSatisfy({ seen.contains($0.id.uuidString) }) {
+            UserDefaults.standard.set(true, forKey: doneKey)
+            UserDefaults.standard.removeObject(forKey: seenKey)
+            report.done = true
+        }
+        return report
+    }
+}
+
 // MARK: - Ingest (one path, parameterized by kind)
 
 enum FeedFollowIngest {
@@ -339,10 +516,16 @@ enum FeedFollowIngest {
     /// persisted (see `refresh`) so a transient content-fetch failure
     /// doesn't undo an expensive resolution (YouTube's channel-page scrape,
     /// Podcasts' iTunes search) and force it to re-run next time.
+    ///
+    /// `reached` splits that nil in two (2026-08-05). A 304 also carries no
+    /// parse — the publisher answered and nothing changed — and folding it in
+    /// with an unreachable host would make a fully up-to-date sync of nothing
+    /// but 304s report "couldn't reach any of them".
     private struct Fetched {
         let entry: FeedFollowEntry
         let resolvedFeedURL: String?
         let parsed: FeedParser.Parsed?
+        var reached = false
     }
 
     /// Resolving/fetching/parsing one entry — no shared state, so every
@@ -357,14 +540,26 @@ enum FeedFollowIngest {
             resolvedFeedURL = built
         }
         guard let url = URL(string: feedURL) else { return nil }
-        guard let data = await FeedFetch.data(url, as: kind.source) else {
+        // Conditional GET + the feed's own health, shared with the RSS bridge
+        // (2026-08-05) — see `FeedFreshness`. It records the host under this
+        // bridge's name for the receipts screen too, which two of the four
+        // genuinely need: a Substack on its own domain and a podcast feed on
+        // whatever host the show publishes from are both hosts the reach
+        // registry structurally cannot name (prd §289).
+        switch await FeedFreshness.fetch(url, as: kind.source) {
+        case .fresh(let data):
+            return Fetched(entry: entry, resolvedFeedURL: resolvedFeedURL,
+                           parsed: FeedParser.parse(data), reached: true)
+        case .notModified:
+            return Fetched(entry: entry, resolvedFeedURL: resolvedFeedURL,
+                           parsed: nil, reached: true)
+        case .failed:
             // The resolution (if any) is still worth returning and
             // persisting even though this pass never reached the feed's
             // actual content (review 2026-07-13 — see the struct doc above).
             return resolvedFeedURL != nil
                 ? Fetched(entry: entry, resolvedFeedURL: resolvedFeedURL, parsed: nil) : nil
         }
-        return Fetched(entry: entry, resolvedFeedURL: resolvedFeedURL, parsed: FeedParser.parse(data))
     }
 
     /// Fetches every followed feed for one bridge and lands new items as link
@@ -378,6 +573,13 @@ enum FeedFollowIngest {
         }
         running.insert(kind.source)
         defer { running.remove(kind.source) }
+
+        // Before the fetch, not after: a follow this repairs must be fetched
+        // through its corrected URL in the SAME pass, or the person sees one
+        // more round of the wrong channel's uploads. Self-retiring — it reads
+        // a flag and returns instantly once every follow has been verified
+        // once.
+        if kind == .youtube { await YouTubeFollowRepair.run(context: context) }
 
         var existing = IngestSupport.existingSourceRefs(context, source: kind.source)
         let backfill = ArtlessBackfill(context, source: kind.source)
@@ -440,10 +642,13 @@ enum FeedFollowIngest {
         for case let f? in fetched {
             let entry = f.entry
             if let resolvedFeedURL = f.resolvedFeedURL { store.setFeedURL(resolvedFeedURL, for: entry.id) }
-            // Resolved but unreachable this pass (see `Fetched` doc) — the
-            // resolution is saved above; nothing else to do until next time.
+            // A 304 counts as reached before the parse guard drops it — an
+            // up-to-date sync must not read as an unreachable one.
+            if f.reached { reachedAny = true }
+            // Resolved but unreachable this pass, or answered 304 (see the
+            // `Fetched` doc) — either way there is no body to land or heal
+            // from; a resolution, if any, is saved above.
             guard let parsed = f.parsed else { continue }
-            reachedAny = true
             if entry.title.isEmpty, !parsed.title.isEmpty {
                 store.setTitle(parsed.title, for: entry.id)
             }

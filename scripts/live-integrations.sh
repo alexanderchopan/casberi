@@ -232,6 +232,99 @@ else
   fi
 fi
 
+# YouTube (FeedFollowBridges) — the bridge whose every read is a SCRAPE or an
+# undocumented feed, i.e. the one with no contract behind it at all. Three
+# single points of failure, each asserted on its own because each fails
+# silently and differently:
+#
+#   * the handle page's `<link rel="canonical" …/channel/UC…>` — how
+#     `resolveYouTubeChannelID` learns which channel an @handle IS. This check
+#     exists because reading the WRONG field here shipped: the resolver took
+#     the first `"channelId"` in the page, which belongs to another channel
+#     entirely (measured 2026-08-05, wrong for 3 of 3 handles), so following an
+#     @handle followed a stranger — with real videos landing under that
+#     stranger's real name, so nothing looked broken anywhere.
+#   * `feeds/videos.xml?channel_id=…` still serving `<entry>` — the whole
+#     bridge.
+#   * `media:statistics views=` on an entry — the only per-video number any
+#     feed this app follows carries, and the sole input to the view-doubling
+#     moment (FeedFollowMoments.checkYouTubeBreakout). It vanishes silently:
+#     the moment simply stops firing.
+#
+# A 404 here is AMBER, not red, and that is measured rather than lenient:
+# YouTube answers a client it has decided to throttle with a plain 404 (not a
+# 429), so a nightly that goes red on one would cry wolf. The two readings are
+# named in the row so a real removal isn't mistaken for a throttle.
+YT_HANDLE='MrBeast'
+ythtml=$(curl -s --max-time "$TIMEOUT" -A 'Mozilla/5.0 (compatible; Casberi/1.0; +https://casberi.app)' \
+  "https://www.youtube.com/@$YT_HANDLE" 2>/dev/null)
+YTID=$(print -r -- "$ythtml" | grep -o 'rel="canonical" href="https://www.youtube.com/channel/UC[A-Za-z0-9_-]\{22\}' | head -1 | grep -o 'UC[A-Za-z0-9_-]\{22\}')
+if [[ -z "$ythtml" ]]; then
+  fail "YouTube channel page @$YT_HANDLE (unreachable)"
+elif [[ -z "$YTID" ]]; then
+  fail "YouTube @$YT_HANDLE — no rel=canonical channel link: every @handle follow resolves to nothing"
+else
+  pass "YouTube @$YT_HANDLE — canonical channel link resolves ($YTID)"
+  # The naive read the resolver used to make. Informational: it is EXPECTED to
+  # disagree, and a row saying so is what keeps the fix from being quietly
+  # reverted by someone who finds `"channelId"` and assumes it means this
+  # channel.
+  YTNAIVE=$(print -r -- "$ythtml" | grep -o '"channelId":"UC[A-Za-z0-9_-]\{22\}"' | head -1 | grep -o 'UC[A-Za-z0-9_-]\{22\}')
+  if [[ -n "$YTNAIVE" && "$YTNAIVE" == "$YTID" ]]; then
+    warn "YouTube — first \"channelId\" now AGREES with canonical ($YTNAIVE); the 2026-08-05 measurement may no longer hold"
+  fi
+  ytfeed=$(curl -s --max-time "$TIMEOUT" "https://www.youtube.com/feeds/videos.xml?channel_id=$YTID" 2>/dev/null)
+  if [[ -z "$ytfeed" ]]; then
+    fail "YouTube videos.xml $YTID (unreachable)"
+  elif [[ "$ytfeed" != *'<entry>'* ]]; then
+    warn "YouTube videos.xml $YTID — no <entry>: either the endpoint moved, or this host is being throttled (YouTube answers a throttled client 404, not 429)"
+  elif [[ "$ytfeed" != *'media:statistics'* ]]; then
+    warn "YouTube videos.xml $YTID — entries serve, but no \`media:statistics views\`: the view-doubling moment stops firing silently"
+  else
+    pass "YouTube videos.xml — entries + media:statistics views serve ($YTID)"
+  fi
+fi
+
+# YouTube Shorts (YouTubeShorts) — the discriminator the Shorts tag rides.
+# There is no field anywhere in videos.xml that says a video is a Short (the
+# feed's media:content is a fixed 640x390 flash placeholder and its thumbnail a
+# fixed 480x360, on every entry), so the only keyless read is what
+# `/shorts/<id>` answers: 200 for a Short, 303 to /watch for a regular video —
+# measured 4/4 on 2026-08-05. If that ever collapses to one status, every video
+# reads as the same thing and the tag becomes noise rather than a filter.
+yt_shorts_status() {   # $1 video id → status code, redirects NOT followed
+  curl -s -o /dev/null -I --max-time "$TIMEOUT" \
+    -A 'Mozilla/5.0 (compatible; Casberi/1.0; +https://casberi.app)' \
+    -w '%{http_code}' "https://www.youtube.com/shorts/$1" 2>/dev/null
+}
+#
+# Both samples are DERIVED, never pinned — a hardcoded video id goes red the
+# day it is deleted and says nothing about the app. The channel's own Shorts
+# tab names the Shorts; the regular video is the newest feed entry that ISN'T
+# one of them. (The naive version of this — "first entry in the feed" — read
+# amber on its very first run: MrBeast's newest upload was itself a Short, so
+# the two samples were the same video.)
+YTSHORTIDS=$(curl -s --max-time "$TIMEOUT" -A 'Mozilla/5.0 (compatible; Casberi/1.0; +https://casberi.app)' \
+  "https://www.youtube.com/@$YT_HANDLE/shorts" 2>/dev/null \
+  | grep -o '"videoId":"[A-Za-z0-9_-]\{11\}"' \
+  | sed -E 's/.*:"([A-Za-z0-9_-]{11})"/\1/' | sort -u)
+YTSHORT=$(print -r -- "$YTSHORTIDS" | head -1)
+YTLONG=''
+for cand in $(print -r -- "${ytfeed:-}" | grep -o '<yt:videoId>[A-Za-z0-9_-]\{11\}' | sed 's/.*>//'); do
+  print -r -- "$YTSHORTIDS" | grep -qx "$cand" && continue
+  YTLONG="$cand"; break
+done
+if [[ -z "$YTSHORT" || -z "$YTLONG" ]]; then
+  warn "YouTube Shorts probe — couldn't sample one of each (short:${YTSHORT:-none} long:${YTLONG:-none}); check skipped"
+else
+  sc=$(yt_shorts_status "$YTSHORT"); lc=$(yt_shorts_status "$YTLONG")
+  if [[ "$sc" == 200 && "$lc" == 30* ]]; then
+    pass "YouTube Shorts probe — short=200, regular video=$lc (discriminator holds)"
+  else
+    warn "YouTube Shorts probe — short=$sc regular=$lc: /shorts/<id> no longer separates the two, every video would classify alike"
+  fi
+fi
+
 # Morpho (MorphoDeFi) — POST GraphQL, so http_ping can't cover it. This sends
 # the SAME field/enum shape the app's position + activity queries use against a
 # neutral address, so schema drift (the class already caught once: market txs

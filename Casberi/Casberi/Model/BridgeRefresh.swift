@@ -180,6 +180,23 @@ enum BridgeRefresh {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await RSSIngest.refresh(context: context)
+                // A blog back after months quiet — the feed-follow kinds have
+                // had this since 2026-07-28 and RSS was left out because it
+                // isn't a `FeedFollowKind`, not because the moment doesn't
+                // fit (2026-08-06). Read-only over what just landed.
+                FeedFollowMoments.checkRSSReturns(context: context)
+            }
+        }
+        // What the articles actually SAY (2026-08-06) — a bounded, ledgered
+        // read of the pages RSS and Substack rows already link to, into
+        // retrieval-only `enrichedText`. Its own slot: it is several fetches
+        // against several publishers and has no business delaying the landing
+        // pass above. Self-retiring — returns at once when every recent row
+        // has been read or has run out of attempts.
+        if !RSSStore.shared.feeds.isEmpty || !FeedFollowStore.substack.isEmpty {
+            let s = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s)
+                await FeedArticleText.sweep(context: context)
             }
         }
         if BlueskyStore.shared.connected {
@@ -270,6 +287,14 @@ enum BridgeRefresh {
                 // as every other crossing here).
                 if kind == .youtube || kind == .podcasts {
                     MediaMoments.checkArtistCrossing(context: context)
+                }
+                // A Short and a twenty-minute review land as the same kind of
+                // row — the feed says nothing about which is which, so this
+                // asks (2026-08-06, `YouTubeShorts`). Bounded, ledgered and
+                // self-retiring: it returns immediately once every landed
+                // video has been classified once.
+                if kind == .youtube {
+                    await YouTubeShorts.sweep(context: context)
                 }
             }
         }

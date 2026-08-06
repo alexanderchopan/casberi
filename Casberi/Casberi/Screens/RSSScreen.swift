@@ -57,7 +57,7 @@ struct RSSScreen: View {
                 BridgeDisconnectSection(
                     bridgeID: "rss", name: "RSS",
                     teardown: {
-                        RSSStore.shared.feeds = []
+                        RSSStore.shared.removeAll()
                     }
                 ).listRowSeparator(.hidden)
             }
@@ -193,9 +193,24 @@ struct RSSScreen: View {
                         Text(feed.displayName)
                             .dsText(.body17).foregroundStyle(DS.textPrimary)
                             .lineLimit(1)
-                        Text(feed.url)
-                            .dsText(.label12).foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
+                        // A feed that has stopped answering says so, in place
+                        // of its own address (2026-08-05). The URL is demoted
+                        // detail on this row; a publisher that has gone dark
+                        // outranks it, and until now the two states — "quiet
+                        // publisher" and "dead URL" — rendered as the same
+                        // row that simply stopped growing. Silent unless
+                        // there is something to say; see `FeedFreshness.
+                        // trouble` for why the bar is three misses and three
+                        // days rather than one.
+                        if let trouble = FeedFreshness.trouble(for: feed.url) {
+                            Text(trouble)
+                                .dsText(.label12).foregroundStyle(DS.attention)
+                                .lineLimit(1)
+                        } else {
+                            Text(feed.url)
+                                .dsText(.label12).foregroundStyle(DS.textTertiary)
+                                .lineLimit(1)
+                        }
                     }
                     Spacer(minLength: 0)
                 }

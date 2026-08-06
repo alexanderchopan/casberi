@@ -138,6 +138,26 @@ enum HandleBridge: String {
         }
     }
 
+    /// What a followed feed's row should say when the feed itself has stopped
+    /// answering (2026-08-05) — nil for the people bridges, which fetch an API
+    /// rather than a feed, and nil for a feed with nothing to report.
+    ///
+    /// Keyed on the RESOLVED feed URL, so a follow that never got past
+    /// resolution (a YouTube handle whose channel page never answered, a
+    /// podcast search that found no show) reports nothing here — it has never
+    /// fetched a feed to have a health record for. That case reads as an
+    /// unchanging list rather than a failing feed, which is honest: nothing
+    /// about the feed is known.
+    func feedTrouble(_ name: String) -> String? {
+        guard let kind = feedKind,
+              let entry = kind.store.entries.first(where: {
+                  $0.input.caseInsensitiveCompare(name) == .orderedSame
+              }),
+              !entry.feedURL.isEmpty
+        else { return nil }
+        return FeedFreshness.trouble(for: entry.feedURL)
+    }
+
     func addName(_ raw: String) {
         switch self {
         case .bluesky:   BlueskyStore.shared.add(raw)
@@ -443,6 +463,11 @@ struct HandleSetupScreen: View {
     /// byline does, carrying every per-account action.
     @State private var openProfile: SocialProfile?
 
+    /// The followed list as an OPML file, for the four feed bridges. nil for
+    /// the people bridges (there is no feed to hand anyone) and until a follow
+    /// resolves — see `refreshExportURL`.
+    @State private var exportURL: URL?
+
     var body: some View {
         List {
             BridgeSetupHeader(name: bridge.rawValue,
@@ -488,8 +513,13 @@ struct HandleSetupScreen: View {
         .dsPageBackground()
         .dsSoftScrollEdges()
         .dsScreenTitle(bridge.rawValue)
+        // The list changing is the cheap trigger; a finished sync is the other
+        // one, since that is when an entry's feed URL actually resolves (a
+        // follow added seconds ago has a name and no address yet).
+        .onChange(of: accountNames) { _, _ in refreshExportURL() }
         .onAppear {
             accountNames = bridge.names
+            refreshExportURL()
             query = bridge.displayName
             if bridge.isConnected {
                 Task { await sync() }
@@ -567,8 +597,20 @@ struct HandleSetupScreen: View {
             ForEach(accountNames, id: \.self) { name in
                 HStack(spacing: DS.Space.s3) {
                     BridgeIcon(name: bridge.rawValue, size: 28, circular: true)
-                    Text(bridge.shortName(name)).dsText(.body17)
-                        .foregroundStyle(DS.textPrimary)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(bridge.shortName(name)).dsText(.body17)
+                            .foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                        // A followed feed that has stopped answering says so —
+                        // the RSS ledger's own line (2026-08-05). Silent
+                        // otherwise, so the row keeps its plain shape; there
+                        // is no subline to demote here, unlike RSS's URL.
+                        if let trouble = bridge.feedTrouble(name) {
+                            Text(trouble)
+                                .dsText(.label12).foregroundStyle(DS.attention)
+                                .lineLimit(1)
+                        }
+                    }
                     Spacer()
                 }
                 .swipeActions(edge: .trailing) {
@@ -816,9 +858,55 @@ struct HandleSetupScreen: View {
                                      syncingLine: omniSyncingLine,
                                      result: result, resultIsError: resultIsError)
                 DSSlabNote(text: omniNote)
+                exportLink
             }
         }
         .dsSlabSection()
+    }
+
+    /// The off-ramp (2026-08-06).
+    ///
+    /// These four follows are RSS underneath — every one resolves to a feed
+    /// URL — but OPML lived on the RSS screen alone, so a list of forty
+    /// YouTube channels collected over a year could not leave. §309 made
+    /// reversibility the standard for the import rooms; a follow list is the
+    /// same promise.
+    ///
+    /// Export only, deliberately, where RSS has both. An OPML file's outlines
+    /// are feed URLs, and this screen's grammar is a NAME (`@handle`, `r/sub`,
+    /// a show to search) that the app resolves — importing raw feed URLs here
+    /// would put entries in the store that no name explains, which is exactly
+    /// the state `YouTubeFollowRepair` exists to clean up. Feed URLs already
+    /// have a front door: the RSS screen imports them.
+    ///
+    /// Secondary, not a second slab — this screen's one verb is following.
+    @ViewBuilder private var exportLink: some View {
+        if let exportURL {
+            ShareLink(item: exportURL) {
+                Text("Export as OPML")
+                    .dsText(.subhead13).foregroundStyle(DS.tint)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.plain)
+            .simultaneousGesture(TapGesture().onEnded { DSHaptic.tap() })
+        }
+    }
+
+    /// Kept fresh as the list changes — an export offered stale (missing a
+    /// channel followed seconds ago) is a small honesty gap on a screen whose
+    /// whole pitch is that nothing sits between you and the feed. nil until at
+    /// least one follow has RESOLVED: an unresolved entry is left out of the
+    /// file (see `OPMLImport.export`), so a list of only those has nothing to
+    /// write and offers no link rather than an empty document.
+    private func refreshExportURL() {
+        guard let kind = bridge.feedKind else { exportURL = nil; return }
+        let resolved = kind.store.entries.filter { !$0.feedURL.isEmpty }
+        guard !resolved.isEmpty else { exportURL = nil; return }
+        let data = OPMLImport.export(resolved, listName: "Casberi \(kind.source)")
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("casberi-\(kind.bridgeID).opml")
+        guard (try? data.write(to: url, options: .atomic)) != nil else { exportURL = nil; return }
+        exportURL = url
     }
 
     /// The field's own words. `BridgeFieldRow`'s fixed affixes are gone with
@@ -1003,6 +1091,10 @@ struct HandleSetupScreen: View {
         syncing = true
         let added = await bridge.refresh(context: modelContext)
         syncing = false
+        // A sync is where a follow's feed URL resolves, and the export is
+        // built from resolved URLs — so the link appears (or grows) here, not
+        // at the moment the name was typed.
+        refreshExportURL()
         if resyncQueued {
             resyncQueued = false
             await sync()

@@ -26,8 +26,15 @@ enum LinkTitle {
     /// description plus its opening paragraphs — so an answer can reach what a
     /// link is ABOUT, not just its title. The `-linkBodyProbe` hook's path;
     /// `enrich` uses `fetchPage`. Best-effort and bounded (see `parseReadable`).
-    static func fetchReadable(_ url: URL) async -> String? {
-        guard let html = await fetchHTML(url) else { return nil }
+    ///
+    /// `service` names the caller for the receipts screen. It defaults to
+    /// "Saved links" — a link YOU pasted, which is what this path meant when
+    /// it was the only caller. `FeedArticleText` passes its own bridge name
+    /// instead, because a publisher's article host arrives through a feed you
+    /// followed, and filing that under "Saved links" would put a reach in the
+    /// wrong drawer on the one screen that exists to be checkable.
+    static func fetchReadable(_ url: URL, as service: String = "Saved links") async -> String? {
+        guard let html = await fetchHTML(url, as: service) else { return nil }
         return parseReadable(in: html)
     }
 
@@ -41,12 +48,12 @@ enum LinkTitle {
 
     /// One 8s / 512KB fetch of a page's HTML (article body lives well past
     /// <head>). nil on a network error or a non-2xx status.
-    private static func fetchHTML(_ url: URL) async -> String? {
+    private static func fetchHTML(_ url: URL, as service: String = "Saved links") async -> String? {
         var request = URLRequest(url: url)
         request.timeoutInterval = 8
         request.setValue("text/html", forHTTPHeaderField: "Accept")
         request.setValue(IngestSupport.safariUserAgent, forHTTPHeaderField: "User-Agent")
-        NetworkLedger.shared.record(request, as: "Saved links")
+        NetworkLedger.shared.record(request, as: service)
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               (response as? HTTPURLResponse).map({ (200..<300).contains($0.statusCode) }) ?? false
         else { return nil }

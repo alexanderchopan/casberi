@@ -98,6 +98,32 @@ enum VerbDerivation {
                     out.append(Verb(label: "Open in \(thing.source)",
                                     icon: "music.note", action: .openURL(url)))
                 }
+            } else if thing.source == "YouTube",
+                      let video = YouTubeShorts.videoID(in: thing.content),
+                      HandOffState.installedSchemes.contains("youtube"),
+                      let app = URL(string: "youtube://www.youtube.com/watch?v=\(video)") {
+                // Watch it in the app rather than the browser (2026-08-06).
+                //
+                // Gated on the scheme, so it is never a disc that does
+                // nothing — the screenshot verb's rule, and for the same
+                // reason: an unclaimed scheme is refused ASYNCHRONOUSLY by
+                // LaunchServices and neither `UIApplication.open`'s completion
+                // nor SwiftUI's `openURL` reports it (measured 2026-07-16 for
+                // `wc:`). Without the app installed the row keeps "Open link"
+                // below, which is the right door then.
+                //
+                // The PATH grammar is unmeasured — no device here has the
+                // YouTube app — and it fails safe: YouTube claims the scheme
+                // (that is what the gate proves), so the worst case is its
+                // home screen instead of this video, which is exactly the
+                // promise the label makes and no more. The video id is
+                // validated to YouTube's own 11-character shape before it is
+                // interpolated.
+                out.append(Verb(label: "Open in YouTube", icon: "play.rectangle",
+                                action: .openURL(app)))
+                if let web = Capture.detectURL(in: thing.content) {
+                    out.append(Verb(label: "Open link", icon: "safari", action: .openURL(web)))
+                }
             } else if let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) {
                 out.append(Verb(label: "Open link", icon: "safari", action: .openURL(url)))
             }
@@ -421,7 +447,11 @@ enum HandOffState {
     /// `photos-redirect` joined the probe list on 2026-08-02: the Photos
     /// hand-off is the one verb here that is NOT tied to a connected bridge, so
     /// nothing else could tell whether it would open anything.
-    private static let candidates = ["todoist", "googlegmail", "photos-redirect"]
+    /// `youtube` joined 2026-08-06, for the same reason as `photos-redirect`:
+    /// the "Open in YouTube" verb is not tied to a connected bridge in the
+    /// `externalVerb` sense (following a channel doesn't mean the app is
+    /// installed), so nothing else could tell whether it would open anything.
+    private static let candidates = ["todoist", "googlegmail", "photos-redirect", "youtube"]
 
     @MainActor static func refresh(connected: Set<String>) {
         let schemes = Set(candidates.filter {

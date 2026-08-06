@@ -279,6 +279,13 @@ enum Retriever {
             (["my comments", "comments", "comment"], "Comment"),
             (["conversations", "conversation", "chats", "chat"], "Conversation"),
             (["memories", "memory"], "Memory"),
+            // The half of a YouTube room nothing could name before (2026-08-06,
+            // `YouTubeShorts`). Same rule as every entry above and it matters
+            // more here than most: "short" is an ordinary English word, so
+            // this only ever filters alongside a named source — "shorts from
+            // YouTube" narrows, "something short" can't quietly empty a
+            // result.
+            (["shorts", "short"], "Shorts"),
         ]
         let haystack = " " + query.lowercased()
             .components(separatedBy: CharacterSet.alphanumerics.inverted)

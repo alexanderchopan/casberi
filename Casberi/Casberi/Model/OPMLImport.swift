@@ -75,15 +75,41 @@ enum OPMLImport {
     /// standard OPML 2.0 document, so leaving Casberi never means retyping
     /// every feed by hand into whatever reader comes next.
     static func export(_ feeds: [RSSStore.Feed]) -> Data {
-        let items = feeds.map { feed -> String in
-            let name = xmlEscape(feed.title.isEmpty ? feed.displayName : feed.title)
-            let url = xmlEscape(feed.url)
+        export(feeds.map { (title: $0.title.isEmpty ? $0.displayName : $0.title, url: $0.url) },
+               listName: "Casberi feeds")
+    }
+
+    /// The same off-ramp for the feed-follow bridges (2026-08-06).
+    ///
+    /// Substack, Reddit, YouTube and Podcasts follows are RSS underneath —
+    /// each one resolves to a feed URL and is fetched by the same parser — but
+    /// they were one-way in: OPML import and export lived on the RSS screen
+    /// alone, so a person who had spent a year collecting forty YouTube
+    /// channels could not take that list anywhere. §309 made "reversible" the
+    /// standard for the import rooms; a follow list is the same promise, and
+    /// every reader on the other side reads a YouTube or Reddit feed URL
+    /// perfectly well.
+    ///
+    /// A follow whose feed URL hasn't resolved yet is left out rather than
+    /// exported as a name with no address — an outline with no `xmlUrl` is a
+    /// FOLDER to every reader that opens this, so writing one would turn a
+    /// broken follow into a phantom category.
+    static func export(_ entries: [FeedFollowEntry], listName: String) -> Data {
+        export(entries.filter { !$0.feedURL.isEmpty }
+                      .map { (title: $0.displayName, url: $0.feedURL) },
+               listName: listName)
+    }
+
+    private static func export(_ rows: [(title: String, url: String)], listName: String) -> Data {
+        let items = rows.map { row -> String in
+            let name = xmlEscape(row.title)
+            let url = xmlEscape(row.url)
             return "    <outline text=\"\(name)\" title=\"\(name)\" type=\"rss\" xmlUrl=\"\(url)\"/>"
         }.joined(separator: "\n")
         return Data("""
         <?xml version="1.0" encoding="UTF-8"?>
         <opml version="2.0">
-        <head><title>Casberi feeds</title></head>
+        <head><title>\(xmlEscape(listName))</title></head>
         <body>
         \(items)
         </body>

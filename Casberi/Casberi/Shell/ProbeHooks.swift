@@ -3160,6 +3160,165 @@ enum ProbeHooks {
                 NSLog("RSS probe: %@ new things", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-feedFollow "<Substack|Reddit|YouTube|Podcasts>:<name[,name]>"` —
+        // follow one or more names on a feed-follow bridge and sync, NSLogging
+        // each entry's resolved feed URL and learned title.
+        //
+        // The four feed-follow bridges had NO headless door at all until now
+        // (2026-08-06), which is not a small gap: they are four of the app's
+        // most-used seats, and the resolver bug `YouTubeFollowRepair` exists to
+        // clean up — every `@handle` follow landing a stranger's channel —
+        // could not have been caught by any automated run, because nothing
+        // could follow a channel without a person tapping. The resolved URL
+        // and the learned title are logged together on purpose: that pairing
+        // is the whole tell. A wrong resolution still produces a real feed
+        // with real videos, and the only thing that reads as wrong is a title
+        // that isn't the name you typed.
+        Hook(key: "feedFollow") { spec, context in
+            // Split on the FIRST colon: a Substack input can be a URL and
+            // carry its own (the `-startFollow` rule).
+            guard let colon = spec.firstIndex(of: ":") else {
+                NSLog("feedFollow: expected \"<Kind>:<name[,name]>\"")
+                return
+            }
+            let kindName = String(spec[spec.startIndex..<colon]).trimmingCharacters(in: .whitespaces)
+            guard let kind = FeedFollowKind(rawValue: kindName) else {
+                NSLog("feedFollow: unknown kind %@ — one of %@", kindName,
+                      FeedFollowKind.allCases.map(\.rawValue).joined(separator: "/"))
+                return
+            }
+            let names = String(spec[spec.index(after: colon)...])
+                .split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }
+            for name in names where !name.isEmpty {
+                kind.store.add(FeedFollowEntry(input: kind.normalize(name)))
+            }
+            Task { @MainActor in
+                let n = await FeedFollowIngest.refresh(kind, context: context)
+                NSLog("feedFollow: %@ | %@ %@ in", kind.source,
+                      n.map(String.init) ?? "FAILED", kind.noun)
+                for entry in kind.store.entries {
+                    NSLog("feedFollowRow| %@ | input=%@ | title=%@ | feed=%@",
+                          kind.source, entry.input,
+                          entry.title.isEmpty ? "(unlearned)" : entry.title,
+                          entry.feedURL.isEmpty ? "(unresolved)" : entry.feedURL)
+                }
+            }
+        },
+        // `-feedHealthProbe YES` — every tracked feed's HTTP record, one
+        // `feedHealth|` line each (the `-todayProbe` truncation lesson).
+        //
+        // It exists because the conditional GET is INVISIBLE when it works
+        // (2026-08-05): a feed answering 304 lands exactly what a feed
+        // answering 200-with-nothing-new lands — nothing — so a build, a
+        // screen sweep and a landed count are all identical whether the
+        // validators are being sent, being ignored, or being sent wrong. The
+        // `cond=YES` column is the only place that shows they were stored at
+        // all, and `status` separates the three ways a feed goes quiet: 304
+        // (working perfectly), 404 (moved, or YouTube throttling us — the two
+        // are indistinguishable on the wire), 0 (offline).
+        //
+        // Counts, dates and statuses only. An ETag is an opaque publisher
+        // token and there is no reason to print one.
+        Hook(key: "feedHealthProbe") { _, _ in
+            let census = FeedFreshness.census()
+            NSLog("feedHealthProbe: %d feeds tracked | %d conditional | %d failing",
+                  census.count, census.filter(\.conditional).count,
+                  census.filter { $0.failures > 0 }.count)
+            for row in census.prefix(60) {
+                let ago = row.successAt.map { Int(-$0.timeIntervalSinceNow / 3600) }
+                NSLog("feedHealth| %@ | lastOK=%@ | fails=%d | status=%d | cond=%@ | says=%@",
+                      row.url,
+                      ago.map { "\($0)h ago" } ?? "never",
+                      row.failures, row.lastStatus,
+                      row.conditional ? "YES" : "NO",
+                      FeedFreshness.trouble(for: row.url) ?? "-")
+            }
+        },
+        // `-articleTextProbe [limit]` — what a followed article actually SAYS
+        // (2026-08-06, `FeedArticleText`), one `articleText|` line per row.
+        //
+        // The one pass in this file whose whole output is invisible on every
+        // screen: `enrichedText` is retrieval-only by the 2026-07-15 ruling,
+        // so a successful read and a read that never ran render identically.
+        // `considered` is what separates the several reasons a pass does
+        // nothing — no RSS/Substack rows, every recent row already read, every
+        // summary already substantial (the good feeds), or the walk stopping.
+        Hook(key: "articleTextProbe") { spec, context in
+            Task { @MainActor in
+                let limit = Int(spec.trimmingCharacters(in: .whitespaces))
+                let r = await FeedArticleText.sweep(context: context, limit: limit, trace: true)
+                NSLog("articleTextProbe: %d read | %d missed | %d considered | backedOff=%@",
+                      r.enriched, r.failed, r.considered, r.backedOff ? "YES" : "NO")
+            }
+        },
+        // `-ytRepairProbe YES|force` — re-resolve every YouTube follow and
+        // report which ones were pointing at the WRONG channel (2026-08-05,
+        // `YouTubeFollowRepair`). `force` ignores the done flag and the
+        // per-entry ledger, which is the only way to re-run it once it has
+        // retired itself.
+        //
+        // `wrong=0` is the healthy answer and it has two causes worth telling
+        // apart, which is why `unresolved` is printed beside it: every follow
+        // verified correct, or YouTube answered none of the channel pages (it
+        // serves a throttled client a plain 404, so a silent pass looks
+        // exactly like a clean one).
+        Hook(key: "ytRepairProbe") { spec, context in
+            Task { @MainActor in
+                let force = spec.lowercased() == "force"
+                guard let r = await YouTubeFollowRepair.run(context: context, force: force) else {
+                    NSLog("ytRepairProbe: already done — pass `force` to re-run")
+                    return
+                }
+                NSLog("ytRepairProbe: checked=%d wrong=%d pruned=%d unresolved=%d done=%@",
+                      r.checked, r.wrong, r.pruned, r.unresolved, r.done ? "YES" : "NO")
+            }
+        },
+        // `-ytChannelProbe <@handle|url|id>` — what a typed YouTube name
+        // resolves to, and the feed that id actually serves.
+        //
+        // Two lines, because the bug this exists for lived entirely between
+        // them: resolution succeeded, a real feed came back, real videos
+        // landed — under a channel the person never chose. Printing the id
+        // beside the feed's own `<title>` is what makes a wrong answer
+        // readable at all.
+        Hook(key: "ytChannelProbe") { spec, _ in
+            Task { @MainActor in
+                let input = spec.trimmingCharacters(in: .whitespaces)
+                guard let id = await FeedFetch.resolveYouTubeChannelID(input) else {
+                    NSLog("ytChannelProbe: %@ → UNRESOLVED (page unreachable, throttled, or no canonical link)",
+                          input)
+                    return
+                }
+                NSLog("ytChannelProbe: %@ → %@", input, id)
+                let feed = "https://www.youtube.com/feeds/videos.xml?channel_id=\(id)"
+                guard let url = URL(string: feed),
+                      let data = await FeedFetch.data(url, as: "YouTube") else {
+                    NSLog("ytChannelProbe: feed UNREACHABLE — %@", feed)
+                    return
+                }
+                let parsed = FeedParser.parse(data)
+                NSLog("ytChannelProbe: feed title=%@ | %d entries | views=%@",
+                      parsed.title.isEmpty ? "(none)" : parsed.title, parsed.items.count,
+                      parsed.items.first?.viewCount.map(String.init) ?? "none")
+            }
+        },
+        // `-ytShorts <limit|YES>` — classify landed YouTube rows as Short or
+        // video (2026-08-06, `YouTubeShorts`), one `ytShort|` line each.
+        //
+        // `unclear` is the column that matters: a row YouTube declines to
+        // answer about is NOT recorded, so it is asked again later — and a
+        // pass that is all-unclear means the `/shorts/<id>` discriminator has
+        // moved, which otherwise shows up as a room where nothing is ever
+        // tagged and nothing is ever wrong.
+        Hook(key: "ytShorts") { spec, context in
+            Task { @MainActor in
+                let limit = Int(spec.trimmingCharacters(in: .whitespaces))
+                let r = await YouTubeShorts.sweep(context: context, limit: limit, trace: true)
+                NSLog("ytShorts: asked=%d shorts=%d videos=%d unclear=%d considered=%d backedOff=%@",
+                      r.asked, r.shorts, r.videos, r.unclear, r.considered,
+                      r.backedOff ? "YES" : "NO")
+            }
+        },
         // `-seedInsightDemo YES` seeds synthetic things so the feed-head insight
         // heroes (FeedInsight) can be seen rendering on the simulator, where the
         // real bridges need keys/accounts the sim has none of — the same job

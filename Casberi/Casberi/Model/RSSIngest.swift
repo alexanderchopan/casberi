@@ -57,7 +57,19 @@ final class RSSStore {
     }
 
     func remove(at offsets: IndexSet) {
+        // Drop the feed's HTTP record with the follow itself (2026-08-05), so
+        // re-following a URL that had been failing starts clean instead of
+        // inheriting the streak the person just removed it over.
+        for i in offsets where feeds.indices.contains(i) { FeedFreshness.forget(feeds[i].url) }
         feeds.remove(atOffsets: offsets)
+    }
+
+    /// Disconnect. Assigning `feeds = []` directly would leave every feed's
+    /// HTTP record behind, so the one caller that used to do that goes
+    /// through here (2026-08-05).
+    func removeAll() {
+        for feed in feeds { FeedFreshness.forget(feed.url) }
+        feeds = []
     }
 
     func setTitle(_ title: String, for id: UUID) {
@@ -101,7 +113,12 @@ enum RSSIngest {
     /// bookkeeping loop below needs, computed off the main actor.
     private struct Fetched {
         let feed: RSSStore.Feed
-        let parsed: FeedParser.Parsed
+        /// nil when the publisher answered 304 — the feed was REACHED and has
+        /// nothing new, which is a different fact from a fetch that failed
+        /// (that returns no `Fetched` at all). Nothing to parse, nothing to
+        /// land, and nothing to heal from either: a body we already saw can't
+        /// carry a field we didn't store last time.
+        let parsed: FeedParser.Parsed?
         /// Set when autodiscovery resolved a pasted SITE to its real feed.
         let resolvedURL: String?
     }
@@ -113,12 +130,23 @@ enum RSSIngest {
     /// that specific call.
     private static func fetchAndParse(_ feed: RSSStore.Feed) async -> Fetched? {
         guard let url = URL(string: feed.url) else { return nil }
-        // Attributed: a feed URL is whatever the person pasted, so this host
-        // can never be in the reach registry (prd §205 lists "the feeds you
-        // follow"). Naming the service here is what keeps the receipts
-        // screen from reading your own feed as an undisclosed reach.
-        NetworkLedger.shared.record(url, as: "RSS")
-        guard let (data, _) = try? await URLSession.shared.data(from: url) else { return nil }
+        // Conditional GET, and the feed's own health, both live in
+        // `FeedFreshness` (2026-08-05) — which also attributes the host to
+        // "RSS" for the receipts screen. A feed URL is whatever the person
+        // pasted, so it can never be in the reach registry (prd §205 lists
+        // "the feeds you follow") and the call site has to name the service
+        // itself (prd §289).
+        let outcome = await FeedFreshness.fetch(url, as: "RSS")
+        let data: Data
+        switch outcome {
+        case .fresh(let body):
+            data = body
+        case .notModified:
+            // Reached, unchanged. Not a failure, and not a parse.
+            return Fetched(feed: feed, parsed: nil, resolvedURL: nil)
+        case .failed:
+            return nil
+        }
         var parsed = FeedParser.parse(data)
         var resolvedURL: String?
         // People paste a SITE, not a feed URL (the field even invites it) —
@@ -177,7 +205,10 @@ enum RSSIngest {
         for case let f? in fetched {
             reachedAny = true
             let feed = f.feed
-            let parsed = f.parsed
+            // A 304 — the publisher answered and nothing changed. Counted as
+            // reached above (a sync that got five 304s is up to date, not
+            // offline), then skipped: there is no body to land or heal from.
+            guard let parsed = f.parsed else { continue }
             if let resolvedURL = f.resolvedURL { store.setURL(resolvedURL, for: feed.id) }
             if !parsed.title.isEmpty {
                 store.setTitle(parsed.title, for: feed.id)

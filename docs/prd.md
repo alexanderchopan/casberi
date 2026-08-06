@@ -17014,3 +17014,114 @@ to claim?" resolve to the source-scoped recap that already existed.
 withdrawal is unlinkable — that is the entire product. Deposits, ragequits and
 status flips are the honest surface, and anything appearing to reconcile a
 withdrawal would invent the link the protocol exists to prevent.
+
+## §312 — RSS and YouTube: a follow that pointed at the wrong channel, and a feed nobody could see the state of (user: "how would you improve the RSS and YouTube experiences" → "do all", 2026-08-06)
+
+Eight improvements, and the first thing measuring found was a shipped bug worse
+than any of them.
+
+**FOLLOWING AN `@handle` ON YOUTUBE FOLLOWED SOMEBODY ELSE.**
+`FeedFetch.resolveYouTubeChannelID` read the first `"channelId"` in the channel
+page's HTML. That value belongs to another channel in the page's initial-data
+blob — measured 2026-08-06, wrong for three handles out of three:
+
+    @MrBeast     naive → UCAiLfjNXkNv24uhpzUgPa6A   real → UCX6OQ3DkcsbYNE6H8uQQuVA
+    @mkbhd       naive → UCG7J20LhUeLl6y_Emi7OJrA   real → UCBJycsmduvYEL83R_U4JriQ
+    @veritasium  naive → UCin0m13qWv3-051xlWlHamA   real → UCHnyfMqiRRG1u-2MsSQLbXA
+
+The function's own fallback (`channel/UC…`) was right all along and was never
+reached, because the wrong pattern always matched first. **It failed
+invisibly, which is the whole lesson**: a real feed came back, real videos
+landed, the follow learned the wrong channel's real name, and every screen
+rendered perfectly. The field's placeholder asks for an `@handle`, so this was
+the common path, not an edge.
+
+Two reasons it survived: the resolver is a SCRAPE, so it has no contract to
+break loudly — and **the four feed-follow bridges had no headless probe at
+all**, so no automated run in this repo could follow a channel. `-feedFollow
+"<Kind>:<name>"` fixes the second, and logs the resolved URL beside the learned
+title on purpose, because that pairing is the only thing that reads as wrong.
+`scripts/live-integrations.sh` now asserts the canonical link nightly and warns
+if the naive read ever starts AGREEING with it — a row whose job is to stop the
+fix being reverted by someone who finds `"channelId"` and assumes it means this
+channel.
+
+**The repair is provable, not inferred** (`YouTubeFollowRepair`). Fixing the
+resolver fixes follows added after the fix; the ones already stored stay wrong.
+So it re-resolves each stored input and compares against the id that input
+produced. A difference is proof. Equality touches nothing. The rows go too, and
+only in the proven case: a follow that has been landing a stranger's uploads
+under that stranger's name would otherwise strand them permanently, since
+`removeName` prunes by the follow's CURRENT name. §286's ruling reaching the
+case where the app, not the person, chose wrong. It withholds its own done flag
+until every follow has answered, because YouTube serves a throttled client a
+plain **404** (measured — the same channel id returned 200 and then 404ed for
+twenty minutes), so a pass that resolved nothing is a throttled pass, not a
+clean bill of health.
+
+**A feed you can see the state of.** Two features, one store (`FeedFreshness`),
+because they are the same three fields. Conditional GET (`ETag` /
+`Last-Modified`), and whether the publisher is still answering at all. The
+health line exists because a feed going QUIET and a feed going DEAD render
+identically — both are rows that stop growing — and nothing on any screen could
+tell them apart. It says only what was observed ("hasn't answered in 12 days"),
+never that a feed is gone, because a status code cannot support that claim.
+
+**How often the conditional GET helps is measured, and it is not uniform:**
+three of seven real feeds serve validators. TechCrunch serves both (verified
+end-to-end: 304 and 0 bytes against 200 and 17,250); the Verge and a personal
+Ghost blog serve an ETag; **BBC, Hacker News, Reddit's `.rss` and YouTube's
+`videos.xml` serve neither** — so the two hosts the feed-follow bridges lean on
+hardest get nothing from this. That is fine (a feed with no validators costs
+exactly what it always did) but it makes this a courtesy that pays off
+unevenly, not a win to count on. `-feedHealthProbe`'s `cond=` column is the only
+place that is visible.
+
+The record lives in UserDefaults and **could not have lived on `RSSStore.Feed`
+or `FeedFollowEntry`**: both are `Codable` structs decoded with `try?` that fall
+back to an EMPTY list, and Swift's synthesized decoder does not apply a
+property's default for a missing key. Adding a field to either would have
+silently unfollowed every feed on the device on the first launch after the
+update.
+
+**The validators are dropped once a day on purpose.** A 304 hands the ingest
+nothing, which is right for landing and wrong for HEALING — both ingests patch
+already-landed rows from feed data every pass (a publisher icon, the feed's name
+onto `authorHandle`, an entity-decoded title, a lead image). A permanently-304
+feed would stall those forever.
+
+**What the articles actually say** (`FeedArticleText`). A feed hands over a
+headline and a lede, so a corpus of six hundred stories answers "what did I save
+about X" with whatever happened to put those words in a title. The article was
+never read. This reads the page the row already links to, into retrieval-only
+`enrichedText` — the same pass a link YOU paste has had for a year, which feed
+rows never got because they arrive already named and `LinkTitle.enrich` bails on
+anything wearing a real title. RSS and Substack only: YouTube's link is a watch
+page whose description is already in `summary` (scraping adds other people's
+video titles), and Reddit's is a permalink whose prose is the COMMENTS —
+strangers' words filed under a row that is not theirs.
+
+**Shorts are a facet, and the feed cannot answer it.** Every entry's
+`media:content` is a fixed 640×390 flash placeholder and every thumbnail a fixed
+480×360, on a Short and on a landscape upload alike — there is no duration, no
+marker, nothing. The only keyless read is what `/shorts/<id>` ANSWERS: **200 for
+a Short, 303 to `/watch` for a regular video** (measured 4/4, and again in-app:
+6 asked, 4 shorts, 2 videos, 0 unclear). HEAD, so it downloads zero bytes, and
+redirects REFUSED — following the 303 answers 200 from the watch page and
+inverts the classification for every row silently. Only Shorts are tagged: a
+`Video` tag on the other 90% is chrome, and §308's rule already covers the other
+side, since a facet filters only alongside a named source ("shorts from
+YouTube" narrows; a bare "short" can never quietly empty a result).
+
+**Smaller, and each its own kind of gap.** RSS never had the quiet-return
+moment — a blog back after four months, the most feed-shaped moment there is —
+purely because `FeedFollowMoments.checkReturns` took a `FeedFollowKind` and RSS
+isn't one. "Open in YouTube" is gated on `canOpenURL`, the screenshot verb's
+rule, so it can never be a disc that does nothing; its path grammar is
+UNMEASURED and fails safe (the gate proves YouTube claims the scheme, so the
+worst case is its home screen, which is all the label promises). And OPML export
+reached the four feed-follow bridges: they are RSS underneath, but the format
+lived on the RSS screen alone, so forty channels collected over a year could not
+leave. Export only — this screen's grammar is a NAME the app resolves, and
+importing raw feed URLs here would create entries no name explains, which is
+precisely the state `YouTubeFollowRepair` exists to clean up.
