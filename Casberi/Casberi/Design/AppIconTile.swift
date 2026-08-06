@@ -112,6 +112,12 @@ extension DS {
         // pixels sample #e03000–#f0b000 across the hedgehog.
         case "posthog":             return Color.fixed("#f54e00")
         case "cloudflare":          return Color.fixed("#f6821f")   // the cloud's orange (their documented brand orange; the bundled mark samples it)
+        // Circle's mark is a logo-on-white lockup (the PostHog/Hugging Face
+        // shape), so the brand is the mark, not the field — and the mark is a
+        // gradient running teal → blue → periwinkle, so a flat fill has to pick
+        // one point on it (Trello's case). The midpoint blue, icon-sampled: the
+        // teal end reads as any mint brand and the periwinkle end as any purple.
+        case "circle x402":         return Color.fixed("#60b0f0")
         case "trello":              return Color.fixed("#1169df")   // the mark's own gradient at its midpoint, icon-sampled from the bundled asset (#2381fd → #0054c2)
         // Cursor's own brand page gives #000000, and the mark really is
         // monochrome — the Grok/X case, not a logo-on-black lockup. washHue

@@ -114,6 +114,8 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
    background class is needed here — see .ai-geminiexchange in AppIconTile.swift
    for the in-app equivalent, a different rendering system with no CSS to share. */
 .ai-geckoterminal { background: #272053; }
+.ai-circle-x402 { background: #fff; }
+.ai-circle-x402 img { width: 100%; height: 100%; border-radius: inherit; }
 .ai-venice    { background: #18181b; }
 .ai-bankr     { background: #a78bfa; }
 .ai-1claw     { background: #990029; }

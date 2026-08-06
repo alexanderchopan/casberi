@@ -349,6 +349,59 @@ else
 fi
 
 hr
+# Circle x402 (2026-08-06) — the marketplace directory. Four assertions, each a
+# silent failure of its own: the room renders perfectly on a drifted read and
+# only ever gets quieter, so nothing in a build or a screen sweep can see any
+# of these.
+#
+# The fourth is the one to read carefully. Circle's `category` filter accepts
+# SIX values while its own data carries SEVEN (`DATA_ENRICHMENT`, 185 of 955
+# listings when measured), which is why the bridge fetches unfiltered and
+# narrows on device. If Circle ever fixes that, this row goes amber — not to
+# demand a change, but so the decision is made by someone who knows, rather
+# than by whoever next assumes a server-side filter would be tidier.
+x402=$(curl -s --max-time "$TIMEOUT" \
+  "https://api.circle.com/v2/x402/discovery/resources?limit=5" 2>/dev/null)
+if [[ -z "$x402" ]]; then
+  fail "Circle x402 discovery (unreachable)"
+else
+  # 1. The envelope the walk pages on. Without `total` the walk reads page one
+  #    and stops, which looks exactly like a directory with 5 entries in it.
+  if [[ "$x402" == *'"items"'* && "$x402" == *'"total"'* ]]; then
+    pass "Circle x402 — items[] + pagination.total serve"
+  else
+    fail "Circle x402 — envelope drift: the walk can't page (items/total missing)"
+  fi
+  # 2. Every shaping decision rests on these three fields. A rename empties the
+  #    room or strips its prices with no error anywhere.
+  if [[ "$x402" == *'"provider"'* && "$x402" == *'"category"'* && "$x402" == *'"amount"'* ]]; then
+    pass "Circle x402 — provider/category/amount still on the wire"
+  else
+    fail "Circle x402 — listing shape drifted: provider, category or amount is gone"
+  fi
+  # 3. Keyless is the whole seat. A 401 here means the bridge needs an account
+  #    it has never asked anyone for.
+  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time "$TIMEOUT" \
+    "https://api.circle.com/v2/x402/discovery/resources?limit=1" 2>/dev/null)
+  if [[ "$code" == "200" ]]; then
+    pass "Circle x402 — still answers with no key (http 200)"
+  else
+    fail "Circle x402 — keyless read now answers http $code"
+  fi
+  # 4. The six-vs-seven gap. Amber either way it moves: still-broken is the
+  #    status quo the bridge is built for, newly-fixed is a design input.
+  dec=$(curl -s -o /dev/null -w '%{http_code}' --max-time "$TIMEOUT" \
+    "https://api.circle.com/v2/x402/discovery/resources?category=DATA_ENRICHMENT&limit=1" 2>/dev/null)
+  if [[ "$dec" == "400" ]]; then
+    pass "Circle x402 — category filter still refuses DATA_ENRICHMENT (on-device filtering stays right)"
+  elif [[ "$dec" == "200" ]]; then
+    warn "Circle x402 — category=DATA_ENRICHMENT now answers 200; the six-value filter may be fixed (see quirk 1 before changing the walk)"
+  else
+    warn "Circle x402 — category=DATA_ENRICHMENT answered http $dec (expected 400)"
+  fi
+fi
+
+hr
 if (( RED == 0 && AMBER == 0 )); then
   print -P "%F{green}All live-integration hosts healthy.%f"
 elif (( RED == 0 )); then

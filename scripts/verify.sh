@@ -146,6 +146,30 @@ step "Cursor pure-logic self-test"
   || fail "the Cursor logic self-test failed — run scripts/cursor-selftest.sh"
 print -P "%F{green}✓ cursor self-test%f"
 
+# Circle x402 (2026-08-06). Unlike the harnesses above this bridge IS
+# measurable — the directory is keyless — and that is exactly why it needs one:
+# a live curl proves the wire shape and proves nothing about the arithmetic
+# downstream of it. Every failure it catches renders perfectly. It also carries
+# two guards worth more than the assertions: the read must never go back to the
+# API's own `category` filter (which accepts six of the seven values its own
+# data carries, so a server-side filter silently drops 19% of the marketplace),
+# and the file must never gain a write verb or read a `payTo` — this is a
+# PAYMENT protocol, and "Casberi never pays for a call" is kept by conduct.
+step "Circle x402 pure-logic self-test"
+"$ROOT/scripts/x402-selftest.sh" >/dev/null \
+  || fail "the x402 logic self-test failed — run scripts/x402-selftest.sh"
+print -P "%F{green}✓ x402 self-test%f"
+
+# Pure-logic self-test for the retriever's scoring primitives (prd §318): term
+# rarity, query coverage, phrase adjacency, match-centered snippets. The
+# failure mode here is the one no build or sweep can see — a RANKING being
+# wrong: a grounding set diluted by one-common-word matches still paints 16
+# plausible rows, and the model's general prose over them reads as an answer.
+step "Retriever pure-logic self-test"
+"$ROOT/scripts/retriever-selftest.sh" >/dev/null \
+  || fail "the retriever logic self-test failed — run scripts/retriever-selftest.sh"
+print -P "%F{green}✓ retriever self-test%f"
+
 # The four bridges added 2026-08-04. Three of them (Sentry, Vercel, PagerDuty)
 # have never run against a live account from this host, so these harnesses are
 # the only proof their shaping is right — and every failure in them is a silent

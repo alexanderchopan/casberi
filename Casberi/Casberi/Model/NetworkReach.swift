@@ -190,6 +190,10 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "GeckoTerminal"),
                  purpose: "Fetches the tokens trending on the chains you follow — GeckoTerminal's own public ranking.",
                  hosts: ["api.geckoterminal.com"]),
+        Endpoint(service: "Circle x402",
+                 reach: .whenConnected(bridge: "Circle x402"),
+                 purpose: "Reads Circle's public directory of services that sell themselves to software by the call. Carries nothing about you — there's no account and no key, and no payment is ever made.",
+                 hosts: ["api.circle.com"]),
         // The thumbnail CDN is listed beside the API because a Daily Paper row
         // draws its cover image, and an image loaded into a row is a real
         // reach even though `NetworkLedger` doesn't record it (its own stated

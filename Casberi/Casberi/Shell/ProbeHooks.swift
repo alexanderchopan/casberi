@@ -1283,6 +1283,31 @@ enum ProbeHooks {
                 NSLog("GeckoTerminal probe: %@ trending in", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-x402Lane "<lane[,lane]>|YES"` connects Circle x402 (a comma-separated
+        // list of Circle's own category names, e.g.
+        // `FINANCIAL_ANALYSIS,PREDICTION_MARKETS`, or YES for every lane) and
+        // syncs — headless bridge test. Declared BEFORE `-x402Probe`: hooks run
+        // in list order and the probe must read a watched seat.
+        Hook(key: "x402Lane") { spec, context in
+            let lanes = spec.split(separator: ",")
+                .compactMap { X402Category.from(String($0).trimmingCharacters(in: .whitespaces)) }
+            if lanes.isEmpty { X402Store.shared.connectDefaults() }
+            else { for lane in lanes { X402Store.shared.add(lane) } }
+            Task { @MainActor in
+                let n = await X402Ingest.refresh(context: context)
+                NSLog("Circle x402 probe: %@ listed in", n.map(String.init) ?? "FAILED")
+            }
+        },
+        // `-x402Probe YES` — the directory read PHASE BY PHASE, then one
+        // `x402Row|` line per provider (the `-todayProbe` truncation lesson).
+        // An empty x402 room has five causes that render as one silence — not
+        // connected, the directory unreachable, everything already landed,
+        // nothing in a watched lane, or shape drift — and only the last is a
+        // bug. It also NAMES any category string this build can't map, which
+        // otherwise lands rows in no lane and says nothing about why.
+        Hook(key: "x402Probe") { _, context in
+            Task { @MainActor in await X402Ingest.diagnose(context: context) }
+        },
         // `-sentryHost <host>` — the host to read against (declare it BEFORE
         // `-tokenBridge "Sentry:<token>"`: hooks run in list order, and the
         // token's validation must see the host already set). `-sentryOrg

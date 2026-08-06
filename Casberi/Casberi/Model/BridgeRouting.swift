@@ -30,6 +30,10 @@ enum BridgeRouter {
         case stocktwits
         case openSea
         case geckoTerminal
+        /// Circle's public x402 directory (2026-08-06) — a watch list of lanes,
+        /// so it must NOT ride `.token`: it has no token at all, and the first
+        /// lane usually wants a second.
+        case circleX402
         case huggingFace
         case shopify
         case deals
@@ -215,6 +219,7 @@ enum BridgeRouter {
             case .stocktwits:     "stocktwits"
             case .openSea:        "opensea"
             case .geckoTerminal:  "geckoterminal"
+            case .circleX402:     "x402"
             case .huggingFace:    "huggingface"
             case .shopify:        "shopify"
             case .deals:          "deals"
@@ -323,6 +328,7 @@ enum BridgeRouter {
         Row(offer: "Stocktwits", id: "stocktwits", destination: .stocktwits),
         Row(offer: "OpenSea",    id: "opensea",    destination: .openSea),
         Row(offer: "GeckoTerminal", id: "geckoterminal", destination: .geckoTerminal),
+        Row(offer: "Circle x402", id: "x402", destination: .circleX402),
         Row(offer: "Hugging Face", id: "huggingface", destination: .huggingFace),
         Row(offer: "Shopify",    id: "shopify",    destination: .shopify),
         Row(offer: "Deals",      id: "deals",      destination: .deals),
@@ -415,6 +421,7 @@ struct BridgeDestinationView: View {
         case .stocktwits:     StocktwitsScreen()
         case .openSea:        OpenSeaScreen()
         case .geckoTerminal:  GeckoTerminalScreen()
+        case .circleX402:     CircleX402Screen()
         case .huggingFace:    HuggingFaceScreen()
         case .shopify:        ShopifyScreen()
         case .deals:          DealsScreen()

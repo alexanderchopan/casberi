@@ -502,6 +502,12 @@ enum BridgeRefresh {
                 _ = await TrendingIngest.refresh(context: context)
             }
         }
+        if X402Store.shared.connected {
+            let s = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await X402Ingest.refresh(context: context)
+            }
+        }
         if HuggingFaceStore.shared.connected {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)

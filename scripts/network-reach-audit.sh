@@ -56,6 +56,11 @@ KNOWN_NON_REACH=(
   # permalink host and its read host are the same `pypi.org`, so it needs no
   # entry here.)
   www.npmjs.com
+  # Circle's own service catalog — the last-resort permalink an x402 row opens
+  # on tap, for a provider whose directory entry names no website of its own.
+  # Never fetched: the read is `api.circle.com`, a DIFFERENT host, and it IS
+  # disclosed in NetworkReach — so this door can't stand in for the call.
+  agents.circle.com
   # Mail app-password pages, and the Google Takeout page you download your
   # own Gemini export from — all opened in the browser, none read by us.
   appleid.apple.com myaccount.google.com takeout.google.com

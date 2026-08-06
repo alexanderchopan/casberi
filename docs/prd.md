@@ -17653,3 +17653,77 @@ FinanceKit data, so every path here has only ever run its unavailable branch.
 The entitlement is granted and `-appleWalletProbe` now dumps what `landChanges`
 WOULD insert (refs and titles, without inserting) alongside the normalization
 table — so the device run that finally measures this is one command.
+
+## §319 — The agent economy, watchable (user: "can we do anything with this <Circle x402 Discovery API link>", then "Do it", 2026-08-06)
+
+Circle runs the public directory of **x402** services — APIs that answer an
+unpaid request with a price and settle per-call in USDC. It is keyless: no
+account, no key, nothing to mint. `GET api.circle.com/v2/x402/discovery/
+resources` and the whole catalog answers.
+
+**The seat, and its ceiling.** Casberi never pays an x402 service, holds no
+wallet that could, and shows no path to one. That is not a v1 shortcut — it is
+the wallet seat's standing promise ("watching can never trade or move funds") in
+the one room where every row is literally priced. Read-only discovery is the
+entire scope, and the harness enforces it: `x402-selftest.sh` fails the build if
+`CircleX402Bridge.swift` gains any write verb, or reads `payTo` — the single
+field in the payload that exists only to send money.
+
+**Ruling 1 — a PROVIDER lands, not a service.** Measured 2026-08-06: 955
+listings, 22 providers. Orthogonal alone is 310 of them, QuickNode 132, each a
+near-identical sibling ("latest spot price", "spot price at timestamp"). Landing
+per listing would file 310 rows the day one company onboards, which is §223's
+count-as-a-thing failure wearing a new coat: the EVENT is a company arriving on
+the marketplace, and the endpoint tally is an attribute of it. So endpoints fold
+into one row per provider, which HEALS in place as they add services or reprice
+(the social-bridge dedupe-hit pattern) and never re-lands wearing a new number.
+
+**Ruling 2 — filter on device, and this one is load-bearing.** Circle's own
+`category` parameter rejects `DATA_ENRICHMENT` with a 400 naming its six legal
+options — and **185 of the 955 listings (19%) are stamped exactly that**. A
+server-side category filter therefore cannot reach a fifth of the marketplace,
+with no error anywhere and a room that looks completely healthy. The walk fetches
+unfiltered and `X402Store` narrows locally, which costs fewer requests anyway
+(five pages beats one request per lane) and makes the seventh lane a switch the
+person can actually flip. `live-integrations.sh` watches that 400 nightly and
+goes amber if it ever becomes a 200 — not to demand a change, but so the decision
+is made by someone who knows, rather than by whoever next assumes a server-side
+filter would be tidier.
+
+**Ruling 3 — an unmapped lane still lands.** Falling out of the picker must never
+mean falling out of the feed (§307's silent-drop lesson). A category this build
+can't map is our gap, not a reason to hide a company, so such a provider lands
+whenever anything is watched and `-x402Probe` NAMES the unknown string — the
+`-cursorProbe` rule for a status value we don't recognise.
+
+**Ruling 4 — `lastUpdated` cannot date an arrival.** All 955 rows fell inside a
+three-day window when measured, so the field records when Circle last reindexed,
+not when anyone joined. Rows stamp `.now` — honestly "when this reached your
+feed" — and nothing in the room ever says "just joined", which would be a date we
+do not have.
+
+**Ruling 5 — a zero quote is a fact, never the floor.** 37 listings quote a price
+of 0 (free operations sitting beside paid ones), and a naive minimum reports
+"$0.0000" for four of the biggest sellers. The low end is the cheapest NON-ZERO
+call and free operations are said separately, because "from $0.00" reads as free
+and isn't. The same rule one step further: prices render at four decimals below a
+cent, because QuickNode's entire catalog is $0.0001 a call and two decimals would
+report that whole company as free.
+
+**Ruling 6 — no prune on a lane switch-off**, unlike GeckoTerminal's per-chain
+sweep (§286). A row here is a COMPANY, and a company usually sells into several
+lanes at once (Orthogonal sits in five), so pruning by the lane just switched off
+would delete rows still earned by the lanes still on.
+
+**No new `Thing` property**, so no CloudKit Production deploy: the row rides
+`summary` (display), `enrichedText` (retrieval-only) and `tags`.
+
+**Verified, and the split matters.** The wire shape is MEASURED — this bridge was
+written against live reads, unlike Cursor/Stripe/PostHog. The arithmetic is not
+measurable that way, which is why it still gets a harness: a curl proves the
+envelope and proves nothing about whether a sub-cent price survives its way to a
+row. `scripts/x402-selftest.sh` extracts the pure logic from the shipped source,
+46 assertions, six mutations. Its own first run was a finding — the quirk-1 guard
+fired against a perfectly correct bridge, because the file's header explains the
+defect by naming it, so every negative guard now greps a comment-stripped copy
+(the setup-copy audit's lesson, earned again).
