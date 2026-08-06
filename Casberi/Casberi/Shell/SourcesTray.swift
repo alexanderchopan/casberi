@@ -272,8 +272,17 @@ struct SourcesTray: View {
         // Same read as the strip's: one ring, two exclusive states. Solid tint
         // is selection; DASHED orange is "this connection needs you" (the
         // 2026-07-21 ruling — the two must not be the same ring in two hues).
+        //
+        // Resolved through the catalog rather than compared to the label
+        // directly: a source name is not always its seat's name ("Privacy
+        // Pools" against the "0xBow Privacy Pools" seat), and a bare `==` meant
+        // that family could never show the ring at all. Falls back to the label
+        // for a source the catalog has never heard of, which is what every
+        // exactly-named seat already resolved to — so this changes nothing for
+        // the seats that already worked.
+        let seat = BridgeCatalog.offer(forSource: label)?.name ?? label
         let broken = bridges.bridges.contains {
-            $0.name == label && $0.status == .attention
+            $0.name == seat && $0.status == .attention
         }
         Button {
             DSHaptic.selection()

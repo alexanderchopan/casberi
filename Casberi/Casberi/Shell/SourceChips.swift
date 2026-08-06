@@ -269,8 +269,12 @@ struct SourceChips: View {
     @ViewBuilder
     private func chip(_ label: String) -> some View {
         let isActive = label == active
+        // Through the catalog, not against the label: see `SourcesTray.cell`.
+        // The strip and the tray it opens must agree about which seats are in
+        // trouble, so this line and that one stay identical.
+        let seat = BridgeCatalog.offer(forSource: label)?.name ?? label
         let broken = bridges.bridges.contains {
-            $0.name == label && $0.status == .attention
+            $0.name == seat && $0.status == .attention
         }
         Button {
             DSHaptic.selection()

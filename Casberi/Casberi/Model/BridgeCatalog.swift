@@ -809,13 +809,29 @@ enum BridgeCatalog {
     /// decides what to do with it, because "we don't know" and "Life" are
     /// different answers and `category(of:)`'s default must not leak here.
     static func category(forSource source: String) -> String? {
-        if let exact = allOffers.first(where: { $0.name == source }) {
-            return category(of: exact)
-        }
-        if let suffixed = allOffers.first(where: { $0.name.hasSuffix(" " + source) }) {
-            return category(of: suffixed)
-        }
-        return nil
+        offer(forSource: source).map(category(of:))
+    }
+
+    /// The catalog offer a landed SOURCE belongs to — the join itself, factored
+    /// out of `category(forSource:)` because grouping was never the only thing
+    /// that needs it (2026-08-06).
+    ///
+    /// An offer's name is also the name its BRIDGE registers under
+    /// (`BridgeStore.registerConnected(id:name:)` is handed `WalletSeat.name`,
+    /// which is the offer name), so this doubles as source → seat. That matters
+    /// for every read that asks "is this source's connection in trouble": the
+    /// two source chips compared a chip label against `BridgeApp.name`
+    /// directly, so for the family whose names differ — "Privacy Pools" the
+    /// source against "0xBow Privacy Pools" the seat — the dashed
+    /// needs-reconnecting ring could never light, no matter how broken the
+    /// connection was. Silent by construction: a seat that never draws the ring
+    /// looks exactly like a seat that is perfectly healthy.
+    ///
+    /// See `category(forSource:)` above for why the match is exact-then-suffix
+    /// on a SPACE boundary rather than `contains`, and why it reads `allOffers`.
+    static func offer(forSource source: String) -> Offer? {
+        if let exact = allOffers.first(where: { $0.name == source }) { return exact }
+        return allOffers.first(where: { $0.name.hasSuffix(" " + source) })
     }
 
     /// Offers not yet among the person's bridges — what the Apps page lists
