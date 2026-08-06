@@ -93,7 +93,7 @@ struct CircleX402Screen: View {
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Reading the marketplace…"),
                                      result: lastResult, resultIsError: lastResultIsError)
-                DSSlabNote(text: "A company lands once, with what it sells and what a call costs. Nothing here pays.")
+                DSSlabNote(text: "Switch a lane on and its companies land. Read-only.")
             }
         }
         .dsSlabSection()

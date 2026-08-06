@@ -376,7 +376,7 @@ struct FeedScreen: View {
 
     /// The shape a source takes when its chip is in force.
     private enum Shape {
-        case all, photos, wallet, calendar, gmail, chat, social, reminders, safari, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, x, plain
+        case all, photos, wallet, calendar, gmail, chat, social, reminders, safari, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, x, x402, plain
         init(source: String) {
             switch source {
             case "All":                 self = .all
@@ -421,6 +421,15 @@ struct FeedScreen: View {
             // which reads its accounts out of `BlueskyStore` for anything that
             // isn't Farcaster.
             case "X":                   self = .x
+            // Circle x402, 2026-08-06 — the same defect as the line above, one
+            // day later. It had no case here, so `.plain` drew twenty-two
+            // BandRows wearing one glyph and ONE TIMESTAMP (every seller lands
+            // on the walk that first sees it), while what a call costs sat on
+            // `summary`, visible only inside the sheet. Its own case rather
+            // than joining any existing one: no other room's row leads with a
+            // price, and none of them has a trailing slot that must NOT be a
+            // time.
+            case X402Ingest.source:     self = .x402
             case "Reminders", "Todoist": self = .reminders
             case "Safari":              self = .safari
             // Obsidian joins the notes room — the vault is notes (prd §59).
@@ -1765,6 +1774,10 @@ struct FeedScreen: View {
                     AppleWalletRoomCard(room: room) { merchant in
                         openMerchant(merchant, in: visible)
                     }
+                case .x402(let room):
+                    X402RoomCard(room: room) { slug in
+                        openBySourceRef("x402:\(slug)", in: visible)
+                    }
                 }
             }
         } else if let anniversary {
@@ -1871,6 +1884,11 @@ struct FeedScreen: View {
             // real unit; boundary rides the same capturedAt-keyed helper.
             let days = sessionGroups(visible)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+        case .x402:
+            // Lanes, not days — see `x402Lanes`. No `boundary:`, deliberately:
+            // the new-since divider is a chronological mark, and in a room
+            // where every row shares one timestamp it would land arbitrarily.
+            groupedSections(x402Lanes(visible), nextEventID: nextEventID)
         case .tokens:
             watchlistLedeSection(visible)
             watchlistSection(visible, nextEventID: nextEventID)
@@ -2461,11 +2479,59 @@ struct FeedScreen: View {
     /// PostHog reading, each held in bridge state. So they get a head each,
     /// and they share one slot in the chain because they can never compete —
     /// every case names exactly one source.
+    /// LANES, NOT DAYS (2026-08-06) — the x402 room's real unit.
+    ///
+    /// Every seller here lands on the walk that first sees it, so the whole room
+    /// shares one timestamp: day-grouping produces a single section called
+    /// "Today" holding twenty-two rows, which is a grouping that does no work
+    /// and a divider that says nothing. `.music` made exactly this move for the
+    /// same reason (a listening sitting is its real unit, not a calendar day).
+    ///
+    /// Two orderings, and both replace something arbitrary:
+    ///
+    ///  • **Lanes by how many sellers they hold**, so the shelf you scroll into
+    ///    first is the one with something on it.
+    ///  • **Sellers within a lane by SERVICE COUNT**, matching the head's own
+    ///    ranking — so scrolling the room reads as descending a leaderboard
+    ///    instead of wandering a pile. Before this the order was insertion
+    ///    order, which is to say no order at all.
+    ///
+    /// A seller whose reading isn't stored yet (a fresh install syncs the rows
+    /// but not `X402State`) ranks 0 and falls back to its own arrival rather
+    /// than being dropped — the room still draws, just unranked, which is the
+    /// honest outcome when we haven't walked on this device yet.
+    private func x402Lanes(_ visible: [Thing]) -> [(String, [Thing])] {
+        let services = Dictionary(X402State.sellers.map { ($0.slug, $0.services) },
+                                  uniquingKeysWith: { first, _ in first })
+        func rank(_ thing: Thing) -> Int {
+            guard let ref = thing.sourceRef, ref.hasPrefix("x402:") else { return 0 }
+            return services[String(ref.dropFirst("x402:".count))] ?? 0
+        }
+        var lanes: [String: [Thing]] = [:]
+        // Live at the BOUNDARY, before any stored property is read (corollary 4)
+        // — `visible` may be a debounced snapshot.
+        for thing in visible.live {
+            // The room's own marker names no lane; the first real tag wins. A
+            // row with no lane at all (a seller whose category this build can't
+            // map — quirk 2) gets a shelf rather than vanishing, which is the
+            // same refusal the ingest makes when it lands them.
+            let lane = thing.tags.first { $0.caseInsensitiveCompare("x402") != .orderedSame }
+                ?? String(localized: "Everything else")
+            lanes[lane, default: []].append(thing)
+        }
+        return lanes
+            .map { label, rows in
+                (label, rows.sorted { (rank($0), $0.capturedAt) > (rank($1), $1.capturedAt) })
+            }
+            .sorted { ($0.1.count, $1.0) > ($1.1.count, $0.0) }
+    }
+
     private enum SourceHead {
         case runway(CloudflareRunway)
         case stripe(StripeRoom)
         case posthog(PostHogRoom)
         case appleWallet(AppleWalletRoom.Card)
+        case x402(X402Room)
     }
 
     /// Resolve this room's own head, or nil. One `switch` so adding a fourth
@@ -2480,6 +2546,8 @@ struct FeedScreen: View {
             return PostHogRoomSource.compose(things: visible).map { .posthog($0) }
         case AppleWalletBridge.sourceName:
             return AppleWalletRoomSource.compose(things: visible).map { .appleWallet($0) }
+        case X402Ingest.source:
+            return X402RoomSource.compose(things: visible).map { .x402($0) }
         default:
             return nil
         }
@@ -4110,6 +4178,23 @@ struct FeedScreen: View {
                     ExcerptRow(thing: thing, lines: 2)
                 } else {
                     PostCard(thing: thing)
+                }
+            case .x402:
+                // The import receipt keeps its plain band — it is our own note
+                // about the sync, not a company selling anything.
+                if Corpus.isImportReceipt(thing) {
+                    BandRow(thing: thing,
+                            emphasized: thing.id == nextEventID,
+                            live: false,
+                            imageOnly: imageOnly,
+                            wideArt: wideArt)
+                } else {
+                    // The lane's biggest seller leads it. `index` is the
+                    // position within the SECTION, and since sections are lanes
+                    // ranked by service count, index 0 is that lane's leader —
+                    // so each shelf gets one landmark instead of reading as an
+                    // undifferentiated run.
+                    CircleX402Row(thing: thing, lead: index == 0)
                 }
             case .safari: ReadingRow(thing: thing)
             default:

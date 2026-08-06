@@ -88,6 +88,68 @@ enum X402Category: String, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - Bridge state (what the last walk saw, per seller)
+
+/// What the marketplace looked like on the last walk — the room head's whole
+/// input, and NOT corpus.
+///
+/// This exists for the §298 reason the per-source heads exist at all:
+/// `FeedInsight` is pure over `[Thing]` by contract, and a seller's service
+/// count and price range are bridge state. They could in principle be parsed
+/// back out of each row's `summary` prose, and that is exactly the move the
+/// Apple Wallet head refused ("matched on the stored counterparty rather than
+/// by parsing the title back apart") — a display string is not a data model,
+/// and reparsing one is a silent wrong number waiting for the first copy edit.
+///
+/// UserDefaults rather than a `Thing` field, so the head costs no CloudKit
+/// deploy. The consequence is the PostHog one and it is handled where it
+/// matters: **a fresh install syncs the ROWS but not this**, so the head is
+/// absent until the first walk on that device rather than drawn with zeroes.
+enum X402State {
+
+    struct Seller: Codable, Equatable {
+        let slug: String
+        let name: String
+        let services: Int
+        /// USDC base units; the cheapest and dearest NON-ZERO call.
+        let minPrice: Int?
+        let maxPrice: Int?
+        let hasFree: Bool
+        /// Display names of the lanes this seller sells into.
+        let lanes: [String]
+    }
+
+    private static let key = "x402.state.v1"
+
+    private struct Snapshot: Codable {
+        var sellers: [Seller]
+        var listings: Int
+        var savedAt: Date
+    }
+
+    private static func load() -> Snapshot? {
+        guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
+        return try? JSONDecoder().decode(Snapshot.self, from: data)
+    }
+
+    static var sellers: [Seller] { load()?.sellers ?? [] }
+    /// Total listings the walk saw — the marketplace's own size, which is not
+    /// the sum of `services` when the walk was truncated.
+    static var listings: Int { load()?.listings ?? 0 }
+    static var savedAt: Date? { load()?.savedAt }
+
+    static func save(sellers: [Seller], listings: Int) {
+        let snap = Snapshot(sellers: sellers, listings: listings, savedAt: .now)
+        if let data = try? JSONEncoder().encode(snap) {
+            UserDefaults.standard.set(data, forKey: key)
+        }
+    }
+
+    /// Disconnecting forgets what the marketplace looked like — the head must
+    /// not outlive the seat that earned it.
+    static func forget() { UserDefaults.standard.removeObject(forKey: key) }
+}
+
 // MARK: - Store (just the watched lanes — no key, nothing to mint)
 
 @Observable
@@ -133,7 +195,13 @@ final class X402Store {
         categoryIDs = Self.defaultCategories
     }
 
-    func disconnect() { categoryIDs = [] }
+    func disconnect() {
+        categoryIDs = []
+        X402State.forget()
+        // A seller may have added a picture since we last asked, and a
+        // reconnect is the one moment it's worth paying to find out.
+        X402Faces.reset()
+    }
 
     private func persist() {
         if let data = try? JSONEncoder().encode(categoryIDs) {
@@ -192,6 +260,30 @@ enum X402Ingest {
         /// True when NO category this provider declares maps to a lane this
         /// build knows — quirk 2's case.
         var allCategoriesUnknown: Bool { known.isEmpty }
+
+        /// This provider as the head's stored record.
+        var seller: X402State.Seller {
+            X402State.Seller(slug: slug, name: name, services: endpoints,
+                             minPrice: minPrice, maxPrice: maxPrice,
+                             hasFree: hasFree, lanes: known.map(\.display))
+        }
+
+        /// The seller's own registrable domain — the last two labels of its
+        /// website's host — for the ledger crossing. Written without an example
+        /// URL on purpose: `NetworkReach`'s audit reads host LITERALS and does
+        /// not strip comments, so any domain-shaped string here, real or
+        /// invented, reports as an undisclosed reach. (The hosts this pass
+        /// actually touches come from Circle's directory at runtime and name
+        /// their own service to `NetworkLedger` — see `X402Faces`.) Naive
+        /// last-two-labels, which is right for the `.com`/`.io`/`.ai` hosts this
+        /// directory is made of and wrong for a `.co.uk` — a miss costs a
+        /// delight moment nobody was promised, never a wrong claim.
+        var registrableHost: String? {
+            guard let site = website ?? docsURL, let host = URL(string: site)?.host() else { return nil }
+            let labels = host.split(separator: ".")
+            guard labels.count >= 2 else { return nil }
+            return labels.suffix(2).joined(separator: ".")
+        }
 
         /// "$0.01–$3.50 a call", "$0.0001 a call", "some free, then …", or
         /// "free" — never "$0.0000" (quirk 4).
@@ -378,6 +470,14 @@ enum X402Ingest {
         let existing = IngestSupport.thingsByRef(context, source: source)
         var added = 0
         var healed = false
+        // What the head reads. Recorded for EVERY provider the walk saw, not
+        // just the ones in a watched lane — switching a lane on must not need a
+        // second walk before the room can draw itself.
+        X402State.save(sellers: walk.providers.map(\.seller), listings: walk.total)
+        // Fetched once, not per provider: the crossing below is a plain suffix
+        // check against this, the shape `GeckoTrending`'s watched-token crossing
+        // uses (one keyed read, then lookups).
+        let reached = NetworkLedger.shared.snapshot().map(\.host)
 
         for provider in walk.providers {
             // Quirk 2: a provider whose lanes we can't map still lands.
@@ -407,11 +507,28 @@ enum X402Ingest {
                 tags: tags(for: provider),
                 sourceRef: ref
             )
+            // The seller's own name as its own field, not a prefix to be parsed
+            // back out of the title later. It is what the row draws in its
+            // leading line and what the head's cells are keyed by, and it makes
+            // the room's rows the same shape every other "whose" room already
+            // uses (§247's `authorHandle`).
+            thing.authorHandle = provider.name
             thing.summary = summaryLine(provider)
             thing.enrichedText = retrievalText(provider)
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
+
+            // The crossing only this app can see: a company selling on x402
+            // that this device ALREADY talks to. Zero extra cost — the ledger
+            // is on-device, and this fires only for a row `insert` really
+            // inserted, so a re-read window can't repeat it (the Stripe rule).
+            if let host = provider.registrableHost,
+               reached.contains(where: { $0 == host || $0.hasSuffix("." + host) }) {
+                SourceMoments.shared.fire(
+                    String(localized: "\(provider.name) sells on x402 — this \(DS.device) already reaches them"),
+                    source: source)
+            }
         }
 
         if added > 0 || healed { context.saveHonestly() }
@@ -423,6 +540,11 @@ enum X402Ingest {
     private static func heal(_ thing: Thing, with provider: Provider) -> Bool {
         guard thing.isLive else { return false }
         var moved = false
+        // Repairs a row that landed before the seller's name was its own field
+        // (§309's rule: a re-import can't fix these, because the dedupe hit is
+        // the only pass that will ever reach them again). Without it the row
+        // shape has no name to lead with and falls back to the whole title.
+        if thing.authorHandle != provider.name { thing.authorHandle = provider.name; moved = true }
         let summary = summaryLine(provider)
         if thing.summary != summary { thing.summary = summary; moved = true }
         let text = retrievalText(provider)
@@ -442,11 +564,14 @@ enum X402Ingest {
         return "\(provider.name) · \(detail)"
     }
 
-    /// Display copy — what they sell and what it costs.
-    private static func summaryLine(_ provider: Provider) -> String {
+    /// Display copy — what they sell and what it costs. Deliberately SHORT and
+    /// room-scoped: it is what the feed row draws under the pitch, and the room
+    /// already says whose marketplace this is, so naming Circle again in every
+    /// row would be chrome repeated twenty-two times.
+    static func summaryLine(_ provider: Provider) -> String {
         let services = provider.endpoints == 1
-            ? String(localized: "1 service on Circle's x402 marketplace")
-            : String(localized: "\(provider.endpoints) services on Circle's x402 marketplace")
+            ? String(localized: "1 service")
+            : String(localized: "\(provider.endpoints) services")
         guard let price = provider.priceLine else { return services }
         return "\(services) · \(price)"
     }
@@ -467,12 +592,21 @@ enum X402Ingest {
     }
 
     /// USDC base units (6 decimals) as money, with enough precision to stay
-    /// true — a $0.0001 call must not render as "$0.00".
+    /// true — a real price must never render as a row of zeroes.
+    ///
+    /// Three tiers, and the third was found by drawing the room rather than by
+    /// reading the code: two decimals is right for ordinary money, four is
+    /// needed because QuickNode's entire catalog is $0.0001 a call — and
+    /// **AIsa API quotes ONE base unit**, a millionth of a dollar, which at
+    /// four decimals renders "$0.0000". That is quirk 4's lie wearing a
+    /// different mask: a real, payable price displayed as free. Six decimals is
+    /// exact for every possible USDC amount and cannot round anything to zero,
+    /// which is the only property that matters here.
     static func usd(_ base: Int) -> String {
         let value = Double(base) / 1_000_000
-        return value >= 0.01
-            ? String(format: "$%.2f", value)
-            : String(format: "$%.4f", value)
+        if value >= 0.01   { return String(format: "$%.2f", value) }
+        if value >= 0.0001 { return String(format: "$%.4f", value) }
+        return String(format: "$%.6f", value)
     }
 
     // MARK: - Probe

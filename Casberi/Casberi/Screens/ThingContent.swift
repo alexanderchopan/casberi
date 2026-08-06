@@ -265,8 +265,16 @@ struct ThingContentView: View {
             // sentence is the fact a reader most needs and would otherwise get
             // wrong, which is exactly the bar this exception was written for.
             // Only unshields set it; shields leave it nil.
+            // A Circle x402 seller carries a SAMPLE OF WHAT IT SELLS on
+            // `enrichedText` — its own tags plus a few endpoint descriptions
+            // ("Retrieve the latest spot price for one or more tokens").
+            // Same exception, same bar: the row can only say how many services
+            // and what they cost, and "what are they, actually" is the question
+            // a reader opens this sheet to answer. Without it the sheet is a
+            // title and a link, and the catalog we already fetched stays
+            // invisible on every screen.
             if (thing.source == "Privacy Pools" || thing.source == "Peer"
-                || thing.source == "Railgun"),
+                || thing.source == "Railgun" || thing.source == X402Ingest.source),
                let cover = thing.enrichedText?.trimmingCharacters(in: .whitespacesAndNewlines),
                !cover.isEmpty {
                 Text(cover)

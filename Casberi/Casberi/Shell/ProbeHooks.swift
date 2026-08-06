@@ -1308,6 +1308,20 @@ enum ProbeHooks {
         Hook(key: "x402Probe") { _, context in
             Task { @MainActor in await X402Ingest.diagnose(context: context) }
         },
+        // `-x402Faces <YES|reset>` — the second act: one page read per seller
+        // for its own `og:image`. `reset` clears the asked-once ledger first,
+        // which is the only way to re-ask a seller that answered with nothing
+        // (that decline is remembered on purpose). Reports how many rows gained
+        // a face, which a landed count can't tell you: a room where every
+        // seller's page serves no image is indistinguishable from one where the
+        // pass never ran.
+        Hook(key: "x402Faces") { spec, context in
+            Task { @MainActor in
+                if spec.lowercased() == "reset" { X402Faces.reset() }
+                let n = await X402Faces.heal(context: context)
+                NSLog("x402Faces: %d row(s) gained a face", n)
+            }
+        },
         // `-sentryHost <host>` — the host to read against (declare it BEFORE
         // `-tokenBridge "Sentry:<token>"`: hooks run in list order, and the
         // token's validation must see the host already set). `-sentryOrg

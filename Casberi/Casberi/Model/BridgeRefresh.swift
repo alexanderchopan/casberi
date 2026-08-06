@@ -531,6 +531,14 @@ enum BridgeRefresh {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await X402Ingest.refresh(context: context)
+                // The second act: a seller's own page for its picture. A
+                // network pass, so it goes behind `dueForHeal` exactly like
+                // Instagram's captions and TikTok's faces — a bounded slice per
+                // interval, self-terminating once every seller has been asked
+                // once. Under no deadline, unlike Snapchat's expiring memories.
+                if BridgeRefresh.dueForHeal("x402.faces") {
+                    _ = await X402Faces.heal(context: context)
+                }
             }
         }
         if HuggingFaceStore.shared.connected {

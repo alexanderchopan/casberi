@@ -17923,3 +17923,19 @@ comment-stripped copy. One existing guard was loosened in the same commit:
 `sweep-clock-selftest.sh` pinned `extract(rows.map(\.content))` when what it
 protects is the off-actor HOP, and a guard that fails for a change it has no
 opinion about is one somebody deletes.
+
+## §319 amendment — the x402 room (user: "how can we improve the circle experience? eg way the feed looks", then "do all", 2026-08-06)
+
+The seat shipped with no `FeedScreen.Shape` case, so it fell to `.plain`: twenty-two `BandRow`s wearing one glyph, one clamped title, one timestamp — §313's X-room defect, one day later. What a call costs, the room's whole differentiating fact, sat on `summary` and was visible only inside the sheet.
+
+**A head, because the feed itself cannot rank this room.** Every seller lands on the walk that first sees it, so all rows share one timestamp and newest-first ranks nothing. `X402Room` (Foundation-only) + `UnitTreemap` — the receipts screen's own component — put Orthogonal's 310 services beside StablePhone's 1. It may draw numbers rows may not, for §223's stated reason: a count is never a *thing*, and a state surface that updates in place is the one honest home for one. Tripwire: it must never grow a "+3 services this week" line — that is the count trying to become news again.
+
+**Lanes, not days.** Day-grouping produced a single "Today" holding everything, so the room groups by lane and ranks within each by service count — `.music`'s "sessions, not days" move for the same reason. Each lane's biggest seller wears a larger face and one more line; that is the entire density difference, deliberately, because a card or a border would make it a second component.
+
+**Five facts, no new `Thing` property**, so no CloudKit deploy: `authorHandle` (the seller's name, healed onto older rows), `title` (pitch), `summary` (price), `tags` (lane, in the trailing slot — a timestamp there is a column of identical text), `previewImageURL` (`X402Faces`, one page read per seller, **stamping the picture and never the title** — Circle's directory names these companies, their `<title>` is SEO; §245's ruling). Per-seller readings live in `X402State` (UserDefaults) rather than being parsed back out of display prose — the Apple Wallet head's refusal.
+
+**A price of $0.000001 is real, and the mockup found it.** `usd` had two tiers; AIsa API's cheapest call is ONE base unit, which rendered "$0.0000" — a payable price shown as free, quirk 4's lie in a new place. Three tiers now, the third exact for every USDC amount. Caught by DRAWING the room, not by reading the code, which is the argument for building the mockup at all.
+
+**The catalog copy was cut from 79 words to 40** (user: "look how long that is and wordy"), matching OpenSea and Deals; the features list is gone. Screen intro and slab note now match GeckoTerminal's almost exactly.
+
+**Deliberately unbuilt: lane filter chips.** §269 ruled the tag filter is the agent's with no control of its own; whether this room earns an exception is the user's ruling, not a side effect of a polish pass.
