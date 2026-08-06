@@ -31,8 +31,6 @@ struct SnapchatImportScreen: View {
     /// prd §310). Both read off the import RECEIPT and a count — no new field.
     @State private var staleness: String?
     @State private var held = 0
-    @State private var removing = false
-    @State private var confirmRemove = false
     @State private var fetching = false
     @State private var pending = 0
 
@@ -41,17 +39,29 @@ struct SnapchatImportScreen: View {
     var body: some View {
         List {
             BridgeSetupHeader(name: "Snapchat")
-            // The third step was "Pick the unzipped folder below", above a
-            // button titled "Choose the export folder" (§220, 2026-07-31).
-            ImportStepsCard("Get your export", [
-                "At accounts.snapchat.com, open My Data and submit a request (pick JSON).",
-                "Snapchat emails a link within a few hours. Save the zip to Files and tap it once to unzip.",
-            ])
             pickSection
             if pending > 0 { picturesSection }
+            BridgeFooterNote(
+                lede: "One-time import — nothing arrives on its own afterwards, and re-importing later adds only what's new.",
+                points: [
+                    String(localized: "Your saved chats become searchable."),
+                    String(localized: "Your memories land on the day you took them."),
+                    String(localized: "Only saved chats exist: Snapchat deletes everything else when it's viewed."),
+                ])
             if !recent.isEmpty {
                 RecentThingsSection(header: "Imported", things: Array(recent.live))
                     .listRowSeparator(.hidden)
+            }
+            // Snapchat computed `held` and `staleness` on appear from the day
+            // §310 landed and rendered NEITHER — so it was the one import room
+            // with no way back out and no word about its own age, while its
+            // three siblings had both. Found while restyling the family
+            // (prd §314): a screen that reads state and never draws it looks
+            // exactly like a screen that has nothing to say.
+            ImportUpkeepSection(source: "Snapchat", held: held, staleness: staleness) { gone in
+                reread()
+                resultIsError = false
+                result = String(localized: "\(gone) removed")
             }
         }
         .listStyle(.insetGrouped)
@@ -66,22 +76,41 @@ struct SnapchatImportScreen: View {
             guard case .success(let url) = outcome else { return }
             Task { await runImport(url) }
         }
-        .onAppear {
-            staleness = ImportRemoval.stalenessLine(source: "Snapchat", context: modelContext)
-            held = ImportRemoval.count(source: "Snapchat", context: modelContext)
-            pending = SnapchatImport.pendingMediaCount(context: modelContext)
-        }
+        .onAppear { reread() }
     }
 
+    /// No door, deliberately — Snapchat's My Data page could not be reached
+    /// from the host this was written on, and a door to a URL nobody has
+    /// verified is exactly the dead control §83 bans. The step names the
+    /// address instead, as it always did. Give it a door once someone has
+    /// loaded the page and confirmed it, and add the host to the reach audit's
+    /// non-reach denylist in the same commit.
+    ///
+    /// The third step was "Pick the unzipped folder below", above a button
+    /// titled "Choose the export folder" (§220, 2026-07-31).
     private var pickSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                ImportPickRow(label: "Choose folder") { importing = true }
+                ImportArchiveSection(
+                    source: "Snapchat",
+                    steps: [
+                        "At accounts.snapchat.com, open My Data and submit a request (pick JSON).",
+                        "Snapchat emails a link within a few hours. Save the zip to Files and tap it once to unzip.",
+                    ],
+                    pickTitle: "Choose folder",
+                    alreadyImported: held > 0) { importing = true }
                 BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-                DSSlabNote(text: "One-time import — your saved chats become searchable, your memories land on the day you took them. Only saved chats exist: Snapchat deletes everything else when it's viewed.")
             }
         }
         .dsSlabSection()
+    }
+
+    /// One re-read of what this screen shows about the corpus — on appear,
+    /// after an import and after a removal, so the three can never disagree.
+    private func reread() {
+        staleness = ImportRemoval.stalenessLine(source: "Snapchat", context: modelContext)
+        held = ImportRemoval.count(source: "Snapchat", context: modelContext)
+        pending = SnapchatImport.pendingMediaCount(context: modelContext)
     }
 
     /// The second act. Only ever on screen when there is genuinely something
@@ -116,7 +145,9 @@ struct SnapchatImportScreen: View {
         }
         resultIsError = false
         DSHaptic.success()
-        pending = SnapchatImport.pendingMediaCount(context: modelContext)
+        // `held` is what collapses the archive block now, so re-read all three
+        // rather than only the media queue.
+        reread()
 
         var parts: [String] = []
         if summary.chats > 0 { parts.append(String(localized: "\(summary.chats) chats in")) }
