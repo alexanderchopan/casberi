@@ -198,6 +198,16 @@ enum BridgeCatalog {
         Offer(name: "Gnosis Pay",  tagline: "Card spending, straight off the chain", group: "Wallet",    connectable: true,
               summary: "Gnosis Pay is a Visa card that settles onchain: every purchase moves stablecoin out of your own Safe in real time. Watch that wallet and each purchase lands in your feed — what you spent, when, and a link to the transaction itself.\n\nRead from Gnosis Chain's public chain for the wallets you already watch. No account, no key.\n\nThe merchant's name never reaches the chain, so rows show the amount and the moment, not where you were. Refunds settle off-chain — this is what you spent, not a statement.",
               needsSetup: true, added: day(2026, 7, 26)),
+        // Apple Wallet (prd §313, 2026-08-06) — FinanceKit, granted by Apple
+        // for this bundle id on request QVDBMBPMJU. Wallet group beside Gnosis
+        // Pay for that seat's own reason: a card feed belongs with the cards.
+        // The summary's third paragraph is the entitlement's terms in plain
+        // words and is NOT ordinary marketing copy — see AppleWalletScreen.
+        // The last line names the two ceilings so the copy can never drift
+        // past them: US-only, and pending charges aren't a statement.
+        Offer(name: "Apple Wallet", tagline: "What your card actually spends",  group: "Wallet",    connectable: true,
+              summary: "Apple Card, Apple Cash and Savings, read straight from this \(DS.device). Every purchase lands with the merchant's real name — the one thing a card feed off the chain can never tell you — so your spending is findable beside everything else you keep.\n\nThe room leads with who you actually pay, and speaks up when something changes: a subscription whose price went up, one that quietly stopped charging, a payment coming due.\n\nRead on this \(DS.device) and stored on it. Casberi has no server, so nothing is uploaded, sold, or used for advertising, and it can't spend or move money. Disconnect and everything it brought in is deleted.\n\nApple Card, Apple Cash and Savings are US-only. Pending charges are shown but never counted — this is what you spent, not a statement.",
+              needsSetup: true, added: day(2026, 8, 6)),
         // Wallet group by ruling (user, 2026-07-21): the balances MERGE into
         // the combined portfolio, so an exchange belongs beside the wallets
         // whose total it joins — not in Markets, which is where things you

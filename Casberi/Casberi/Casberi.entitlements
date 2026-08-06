@@ -8,6 +8,21 @@
 	<true/>
 	<key>com.apple.developer.homekit</key>
 	<true/>
+	<!-- FinanceKit — granted by Apple 2026-08-06 for team 35428TQK3S /
+	     com.casberi.app (request QVDBMBPMJU). Reads Apple Card, Apple Cash and
+	     Savings transactions and balances, on device, after the person grants
+	     it per-account through Apple's own prompt.
+	     iOS ONLY, deliberately: this key is absent from
+	     Casberi-Catalyst.entitlements because FinanceKit declares
+	     `@available(macOS, unavailable)`, and an entitlement the Mac
+	     provisioning profile doesn't carry fails a signed archive. The code is
+	     gated to match (`AppleWalletBridge` compiles out under macCatalyst), so
+	     the seat simply never appears there — which is what we told Apple on
+	     the request form (iOS now, macOS as future interest). -->
+	<key>com.apple.developer.financekit</key>
+	<array>
+		<string>financialdata</string>
+	</array>
 	<key>aps-environment</key>
 	<string>development</string>
 	<key>com.apple.developer.icloud-container-identifiers</key>

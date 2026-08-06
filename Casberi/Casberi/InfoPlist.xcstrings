@@ -1,474 +1,510 @@
 {
-  "sourceLanguage" : "en",
-  "strings" : {
-    "CFBundleDisplayName" : {
-      "comment" : "Bundle display name",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi"
+  "sourceLanguage": "en",
+  "strings": {
+    "CFBundleDisplayName": {
+      "comment": "Bundle display name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi"
           }
         }
       }
     },
-    "CFBundleName" : {
-      "comment" : "Bundle name",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Casberi"
+    "CFBundleName": {
+      "comment": "Bundle name",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Casberi"
           }
         }
       }
     },
-    "NSAppleMusicUsageDescription" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi reads what you've recently played so it lands in your feed."
+    "NSAppleMusicUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi reads what you've recently played so it lands in your feed."
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi lee lo que has escuchado recientemente para que llegue a tu feed."
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi lee lo que has escuchado recientemente para que llegue a tu feed."
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi は最近再生した内容を読み込み、フィードに届けます。"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi は最近再生した内容を読み込み、フィードに届けます。"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi는 최근 재생한 항목을 읽어 피드에 담아요."
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi는 최근 재생한 항목을 읽어 피드에 담아요."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi 会读取你最近播放的内容，让它进入你的订阅流。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi 会读取你最近播放的内容，让它进入你的订阅流。"
           }
         }
       }
     },
-    "NSCalendarsFullAccessUsageDescription" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi reads your events so your day lands as things."
+    "NSCalendarsFullAccessUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi reads your events so your day lands as things."
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi lee tus eventos para que tu día llegue como cosas."
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi lee tus eventos para que tu día llegue como cosas."
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi は予定を読み込み、あなたの一日を thing として届けます。"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi は予定を読み込み、あなたの一日を thing として届けます。"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi는 일정을 읽어 하루가 항목으로 들어오게 해요."
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi는 일정을 읽어 하루가 항목으로 들어오게 해요."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi 会读取你的日程，让你的一天作为内容进来。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi 会读取你的日程，让你的一天作为内容进来。"
           }
         }
       }
     },
-    "NSCameraUsageDescription" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi scans a product's barcode so its item lands in your feed."
+    "NSCameraUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi scans a product's barcode so its item lands in your feed."
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi escanea el código de barras de un producto para que llegue a tu feed."
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi escanea el código de barras de un producto para que llegue a tu feed."
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi は商品のバーコードをスキャンし、フィードに届けます。"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi は商品のバーコードをスキャンし、フィードに届けます。"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi는 상품의 바코드를 스캔해 피드에 담아요."
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi는 상품의 바코드를 스캔해 피드에 담아요."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi 会扫描商品条码，让它进入你的订阅流。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi 会扫描商品条码，让它进入你的订阅流。"
           }
         }
       }
     },
-    "NSContactsUsageDescription" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi reads your contacts so the people you know become findable — search-only, never shown in your feed."
+    "NSContactsUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi reads your contacts so the people you know become findable — search-only, never shown in your feed."
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi lee tus contactos para que las personas que conoces sean localizables — solo en la búsqueda, nunca se muestran en tu feed."
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi lee tus contactos para que las personas que conoces sean localizables — solo en la búsqueda, nunca se muestran en tu feed."
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi は連絡先を読み込み、知り合いを検索で見つけられるようにします — 検索専用で、フィードには表示されません。"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi は連絡先を読み込み、知り合いを検索で見つけられるようにします — 検索専用で、フィードには表示されません。"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi는 연락처를 읽어 아는 사람을 찾을 수 있게 해요 — 검색 전용이며 피드에는 표시되지 않아요."
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi는 연락처를 읽어 아는 사람을 찾을 수 있게 해요 — 검색 전용이며 피드에는 표시되지 않아요."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi 会读取你的通讯录，让你认识的人可被搜索到 — 仅用于搜索，绝不会出现在你的订阅流中。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi 会读取你的通讯录，让你认识的人可被搜索到 — 仅用于搜索，绝不会出现在你的订阅流中。"
           }
         }
       }
     },
-    "NSHealthShareUsageDescription" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi reads your workouts so they land in your feed."
+    "NSFinancialDataUsageDescription": {
+      "comment": "Why the app reads Apple Card / Apple Cash / Savings data (FinanceKit)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi reads your Apple Card, Apple Cash and Savings transactions on this device so your spending appears in your feed. It stays on this device, is never uploaded, and can't spend or move money."
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi lee tus entrenamientos para que lleguen a tu feed."
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi lee las transacciones de tu Apple Card, Apple Cash y Ahorros en este dispositivo para que tus gastos aparezcan en tu feed. Todo permanece en este dispositivo, nunca se sube y no puede gastar ni mover dinero."
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi はワークアウトを読み込み、フィードに届けます。"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi は Apple Card、Apple Cash、貯蓄口座の取引をこの端末上で読み取り、支出をフィードに表示します。データはこの端末に留まり、アップロードされることはなく、送金や決済はできません。"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi는 운동을 읽어 피드에 담아요."
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi는 이 기기에서 Apple Card, Apple Cash, 저축 계좌의 거래 내역을 읽어 지출 내역을 피드에 표시합니다. 데이터는 이 기기에만 저장되며 업로드되지 않고, 결제나 송금은 할 수 없습니다."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi 会读取你的锻炼记录，让它进入你的订阅流。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi 在本设备上读取你的 Apple Card、Apple Cash 和储蓄账户交易，以便你的支出显示在信息流中。数据保留在本设备上，绝不上传，也无法消费或转移资金。"
           }
         }
       }
     },
-    "NSHealthUpdateUsageDescription" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi only reads your workouts so they land in your feed — it never writes to Health."
+    "NSHealthShareUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi reads your workouts so they land in your feed."
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi solo lee tus entrenamientos para que lleguen a tu feed — nunca escribe en Salud."
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi lee tus entrenamientos para que lleguen a tu feed."
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi はワークアウトを読み込んでフィードに届けるだけです — ヘルスケアに書き込むことはありません。"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi はワークアウトを読み込み、フィードに届けます。"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi는 운동을 읽어서 피드에 담을 뿐, 건강 앱에는 절대 기록하지 않아요."
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi는 운동을 읽어 피드에 담아요."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi 只会读取你的锻炼记录并汇入订阅流 — 绝不会写入健康。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi 会读取你的锻炼记录，让它进入你的订阅流。"
           }
         }
       }
     },
-    "NSHomeKitUsageDescription" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi reads your home's accessories — locks, doors, sensors — so their state lands as things."
+    "NSHealthUpdateUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi only reads your workouts so they land in your feed — it never writes to Health."
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi lee los accesorios de tu hogar — cerraduras, puertas, sensores — para que su estado llegue como cosas."
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi solo lee tus entrenamientos para que lleguen a tu feed — nunca escribe en Salud."
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi は自宅のアクセサリー — 鍵、ドア、センサー — を読み込み、その状態を thing として届けます。"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi はワークアウトを読み込んでフィードに届けるだけです — ヘルスケアに書き込むことはありません。"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi는 집의 액세서리 — 잠금장치, 문, 센서 — 를 읽어 그 상태를 항목으로 담아요."
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi는 운동을 읽어서 피드에 담을 뿐, 건강 앱에는 절대 기록하지 않아요."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi 会读取你家中的配件 — 门锁、房门、传感器 — 让它们的状态作为内容进来。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi 只会读取你的锻炼记录并汇入订阅流 — 绝不会写入健康。"
           }
         }
       }
     },
-    "NSLocationWhenInUseUsageDescription" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi reads your location once to show today's weather in Coming up — never in the background."
+    "NSHomeKitUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi reads your home's accessories — locks, doors, sensors — so their state lands as things."
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi lee tu ubicación una vez para mostrar el clima de hoy en Coming up — nunca en segundo plano."
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi lee los accesorios de tu hogar — cerraduras, puertas, sensores — para que su estado llegue como cosas."
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi は位置情報を一度だけ読み込み、Coming up に今日の天気を表示します — バックグラウンドでは読み込みません。"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi は自宅のアクセサリー — 鍵、ドア、センサー — を読み込み、その状態を thing として届けます。"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi는 위치를 한 번만 읽어 Coming up에 오늘의 날씨를 보여줘요 — 백그라운드에서는 절대 읽지 않아요."
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi는 집의 액세서리 — 잠금장치, 문, 센서 — 를 읽어 그 상태를 항목으로 담아요."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi 只会读取一次你的位置，用于在「即将到来」中显示今天的天气 — 绝不会在后台读取。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi 会读取你家中的配件 — 门锁、房门、传感器 — 让它们的状态作为内容进来。"
           }
         }
       }
     },
-    "NSMicrophoneUsageDescription" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi records your voice notes when you tap the mic."
+    "NSLocationWhenInUseUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi reads your location once to show today's weather in Coming up — never in the background."
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi graba tus notas de voz cuando tocas el micrófono."
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi lee tu ubicación una vez para mostrar el clima de hoy en Coming up — nunca en segundo plano."
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "マイクをタップすると、Casberi がボイスノートを録音します。"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi は位置情報を一度だけ読み込み、Coming up に今日の天気を表示します — バックグラウンドでは読み込みません。"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "마이크를 탭하면 Casberi가 음성 메모를 녹음해요."
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi는 위치를 한 번만 읽어 Coming up에 오늘의 날씨를 보여줘요 — 백그라운드에서는 절대 읽지 않아요."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "点击麦克风时，Casberi 会录制你的语音备忘录。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi 只会读取一次你的位置，用于在「即将到来」中显示今天的天气 — 绝不会在后台读取。"
           }
         }
       }
     },
-    "NSPhotoLibraryUsageDescription" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi reads screenshots you take so they land as things."
+    "NSMicrophoneUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi records your voice notes when you tap the mic."
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi lee las capturas que haces para que lleguen como cosas."
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi graba tus notas de voz cuando tocas el micrófono."
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi は撮影したスクリーンショットを読み込み、thing として届けます。"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マイクをタップすると、Casberi がボイスノートを録音します。"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi는 찍은 스크린샷을 읽어 항목으로 담아요."
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마이크를 탭하면 Casberi가 음성 메모를 녹음해요."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi 会读取你截取的屏幕截图，让它们作为内容进来。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点击麦克风时，Casberi 会录制你的语音备忘录。"
           }
         }
       }
     },
-    "NSRemindersFullAccessUsageDescription" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi reads your reminders so your list lands as things."
+    "NSPhotoLibraryUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi reads screenshots you take so they land as things."
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi lee tus recordatorios para que tu lista llegue como cosas."
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi lee las capturas que haces para que lleguen como cosas."
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi はリマインダーを読み込み、あなたのリストを thing として届けます。"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi は撮影したスクリーンショットを読み込み、thing として届けます。"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi는 미리 알림을 읽어 목록이 항목으로 들어오게 해요."
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi는 찍은 스크린샷을 읽어 항목으로 담아요."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi 会读取你的提醒事项，让你的清单作为内容进来。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi 会读取你截取的屏幕截图，让它们作为内容进来。"
           }
         }
       }
     },
-    "NSSpeechRecognitionUsageDescription" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi transcribes your voice notes so they stay findable."
+    "NSRemindersFullAccessUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi reads your reminders so your list lands as things."
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi transcribe tus notas de voz para que sigan siendo localizables."
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi lee tus recordatorios para que tu lista llegue como cosas."
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi はボイスノートを文字起こしし、検索できる状態を保ちます。"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi はリマインダーを読み込み、あなたのリストを thing として届けます。"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi는 음성 메모를 텍스트로 변환해 계속 찾을 수 있게 해요."
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi는 미리 알림을 읽어 목록이 항목으로 들어오게 해요."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Casberi 会转写你的语音备忘录，让它们保持可搜索。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi 会读取你的提醒事项，让你的清单作为内容进来。"
+          }
+        }
+      }
+    },
+    "NSSpeechRecognitionUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi transcribes your voice notes so they stay findable."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi transcribe tus notas de voz para que sigan siendo localizables."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi はボイスノートを文字起こしし、検索できる状態を保ちます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi는 음성 메모를 텍스트로 변환해 계속 찾을 수 있게 해요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi 会转写你的语音备忘录，让它们保持可搜索。"
           }
         }
       }
     }
   },
-  "version" : "1.0"
+  "version": "1.0"
 }

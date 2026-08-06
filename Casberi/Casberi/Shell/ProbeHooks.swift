@@ -662,6 +662,90 @@ enum ProbeHooks {
                       shaped.dueAt == nil ? "" : " (carries a deadline)")
             }
         },
+        // `-appleWalletProbe YES` — the whole Apple Wallet room, headless.
+        //
+        // Two halves, and the FIRST is the reason this exists. `SHAPE` composes
+        // the real `AppleWalletRoom` over a synthetic corpus with NO
+        // entitlement, NO FinanceKit and NO device — the only way to see this
+        // card at all on a simulator, where `isDataAvailable` is false and
+        // every model path takes its unavailable branch. The fixture carries a
+        // subscription whose price rose, one that stopped, a pending charge and
+        // a foreign one, so the four judgements that can be silently wrong all
+        // render in one launch.
+        //
+        // `LIVE` then reports what the device itself can do — supported,
+        // connected, how many rows landed, and whether the real corpus composes
+        // a card. An empty Apple Wallet room has FIVE causes that render as one
+        // silence (not supported, not connected, access denied, a US-only
+        // product on a non-US account, or nothing spent yet) and only the last
+        // is normal.
+        //
+        // One NSLog per line — a joined multi-line message gets truncated by
+        // the log reader (the `-todayProbe` lesson).
+        Hook(key: "appleWalletProbe") { _, _ in
+            let now = Date.now
+            func day(_ n: Double) -> Date { now.addingTimeInterval(-n * 86_400) }
+            func s(_ m: String, _ a: Double, _ d: Double, cur: String = "USD",
+                   settled: Bool = true, refund: Bool = false) -> AppleWalletRoom.Spend {
+                AppleWalletRoom.Spend(merchant: m, amount: a, currency: cur,
+                                      date: day(d), isSettled: settled, isRefund: refund)
+            }
+            let fixture: [AppleWalletRoom.Spend] = [
+                s("Netflix", 15.49, 93), s("Netflix", 15.49, 62),
+                s("Netflix", 15.49, 31), s("Netflix", 17.99, 2),
+                s("Spotify", 11.99, 152), s("Spotify", 11.99, 121),
+                s("Spotify", 11.99, 91), s("Spotify", 11.99, 60),
+                s("Blue Bottle Coffee", 6.50, 1), s("Blue Bottle Coffee", 6.50, 4),
+                s("Whole Foods", 88.20, 5), s("Amazon", 43.10, 6),
+                s("Amazon", 12.00, 3, refund: true),
+                s("Delta", 412.00, 0, settled: false),
+                s("Muji", 3800, 8, cur: "JPY"),
+            ]
+            let dues = [AppleWalletRoom.Due(account: "Apple Card",
+                                            date: now.addingTimeInterval(9 * 86_400),
+                                            currency: "USD")]
+            if let card = AppleWalletRoom.compose(spends: fixture, dues: dues, now: now) {
+                NSLog("[Casberi] appleWallet| SHAPE headline: %@", card.headline)
+                NSLog("[Casberi] appleWallet| SHAPE subline: %@", card.subline ?? "(none)")
+                NSLog("[Casberi] appleWallet| SHAPE currency: %@ · note: %@",
+                      card.currency, card.note ?? "(none)")
+                for m in card.merchants {
+                    NSLog("[Casberi] appleWalletMerchant| %@ · %@ · %d charges · %.0f%%",
+                          m.name, AppleWalletRoom.money(m.total, m.currency),
+                          m.count, m.share * 100)
+                }
+                if card.moreMerchants > 0 {
+                    NSLog("[Casberi] appleWalletMerchant| (+%d folded)", card.moreMerchants)
+                }
+                if let c = card.creep {
+                    NSLog("[Casberi] appleWalletCreep| %@ %@ → %@ (%+.0f%%)", c.merchant,
+                          AppleWalletRoom.money(c.was, c.currency),
+                          AppleWalletRoom.money(c.now, c.currency), c.fraction * 100)
+                } else {
+                    NSLog("[Casberi] appleWalletCreep| (no price rise)")
+                }
+                for q in card.silences {
+                    NSLog("[Casberi] appleWalletSilence| %@ · every ~%dd · %dd overdue",
+                          q.merchant, q.expectedEvery, q.overdueDays)
+                }
+                for u in card.upcoming {
+                    NSLog("[Casberi] appleWalletUpcoming| %@ · %@ · %@", u.label,
+                          u.kind == .payment ? "PAYMENT (theirs)" : "recurring (ours)",
+                          u.isOverdue ? "overdue" : AppleWalletRoom.dayLabel(u.date))
+                }
+            } else {
+                NSLog("[Casberi] appleWallet| SHAPE composed NOTHING — the fixture broke")
+            }
+            NSLog("[Casberi] appleWallet| LIVE supported=%@ connected=%@",
+                  AppleWalletBridge.isSupported ? "YES" : "NO",
+                  AppleWalletBridge.connected ? "YES" : "NO")
+            for (account, text) in AppleWalletBridge.balances.sorted(by: { $0.key < $1.key }) {
+                NSLog("[Casberi] appleWalletBalance| %@ · %@", account, text)
+            }
+            if AppleWalletBridge.balances.isEmpty {
+                NSLog("[Casberi] appleWalletBalance| (none read on this device)")
+            }
+        },
         // `-fcName <username>` connects Farcaster headlessly (appends, so a
         // comma-separated list watches several — dedupes, safe to re-fire).
         Hook(key: "fcName") { name, context in

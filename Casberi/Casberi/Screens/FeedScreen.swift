@@ -1752,6 +1752,14 @@ struct FeedScreen: View {
                     PostHogRoomCard(room: room) { event in
                         openBySourceRef(PostHogWatch.metricRef(event), in: visible)
                     }
+                case .appleWallet(let room):
+                    // Opens by MERCHANT rather than by `sourceRef`: the card
+                    // ranks a merchant across many charges, so there is no one
+                    // row it names — the honest tap is "show me this merchant",
+                    // which is the tag filter the room already supports.
+                    AppleWalletRoomCard(room: room) { merchant in
+                        openMerchant(merchant, in: visible)
+                    }
                 }
             }
         } else if let anniversary {
@@ -2452,6 +2460,7 @@ struct FeedScreen: View {
         case runway(CloudflareRunway)
         case stripe(StripeRoom)
         case posthog(PostHogRoom)
+        case appleWallet(AppleWalletRoom.Card)
     }
 
     /// Resolve this room's own head, or nil. One `switch` so adding a fourth
@@ -2464,9 +2473,23 @@ struct FeedScreen: View {
             return StripeRoomSource.compose(things: visible).map { .stripe($0) }
         case "PostHog":
             return PostHogRoomSource.compose(things: visible).map { .posthog($0) }
+        case AppleWalletBridge.sourceName:
+            return AppleWalletRoomSource.compose(things: visible).map { .appleWallet($0) }
         default:
             return nil
         }
+    }
+
+    /// Open a merchant's newest charge. The Apple Wallet head ranks a merchant
+    /// across many rows, so it can't name a `sourceRef` — the honest landing is
+    /// the most recent charge from that merchant, matched on the stored
+    /// counterparty rather than by parsing the title back apart.
+    private func openMerchant(_ merchant: String, in visible: [Thing]) {
+        let match = visible.live
+            .filter { $0.source == AppleWalletBridge.sourceName
+                      && $0.transferCounterparty == merchant }
+            .max { $0.capturedAt < $1.capturedAt }
+        if let match { openThing(match) }
     }
 
     /// Open the row a head card named, by its `sourceRef`. The cards hold no

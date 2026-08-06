@@ -163,6 +163,20 @@ step "npm/PyPI pure-logic self-test"
   || fail "the package-registry logic self-test failed — run scripts/packages-selftest.sh"
 print -P "%F{green}✓ packages self-test%f"
 
+# Apple Wallet / FinanceKit (prd §313). Carries more weight than the other
+# room harnesses: NO SIMULATOR SHIPS FINANCEKIT DATA, so the sweep below can
+# never exercise one line of this room — `isDataAvailable` is false there and
+# every path takes its unavailable branch. Stripe and PostHog could at least be
+# measured by anyone who mints a key; this needs a real device, a real Apple
+# Card and a US account. Until then this file IS the verification. It also
+# guards the entitlement's own terms (the disconnect that deletes, the
+# no-server line on the setup screen, FinanceKit staying out of the Catalyst
+# entitlements) — those are promises on file with Apple, not preferences.
+step "Apple Wallet pure-logic self-test"
+"$ROOT/scripts/applewallet-selftest.sh" >/dev/null \
+  || fail "the Apple Wallet logic self-test failed — run scripts/applewallet-selftest.sh"
+print -P "%F{green}✓ apple wallet self-test%f"
+
 # Pure-logic self-test for notifications (prd §306). The ONLY automated check
 # this feature can have: the simulator never runs a BGAppRefreshTask, so the
 # pass that decides what fires cannot be exercised there by any means, and on a

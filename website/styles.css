@@ -72,6 +72,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-wallet    { background: #2962ef; }
 .ai-peer      { background: #4b47f6; }
 .ai-gnosispay { background: #4830c0; }   /* their indigo (icon-sampled) */
+.ai-applewallet { background: #1d1d1f; } /* Apple Card graphite */
 .ai-privacypools { background: #fff; }
 .ai-railgun   { background: #000; }      /* their black — the mark's own field */
 .ai-safe      { background: #12ff80; }   /* Safe{Wallet}'s green (icon-sampled) */

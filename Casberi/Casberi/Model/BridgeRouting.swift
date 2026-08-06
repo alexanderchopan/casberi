@@ -84,6 +84,11 @@ enum BridgeRouter {
         /// the raised sheet dismissed itself the moment the first watched
         /// metric registered the seat (review, 2026-07-27).
         case posthog
+        /// Apple Wallet (prd §313) — FinanceKit. Its own Destination rather
+        /// than `.token` because it has no token at all: consent is Apple's
+        /// own per-account prompt, and the screen must state the entitlement's
+        /// terms BEFORE that prompt is raised.
+        case appleWallet
         /// Stripe is a TokenBridge for its key and seat id, but its screen has
         /// its own connected state (a balance and what it watches), so it takes
         /// its own Destination for PostHog's reason — riding `.token` would
@@ -251,6 +256,7 @@ enum BridgeRouter {
             case .appleNotes:     "notes"
             case .bookmarks:      "bookmarks"
             case .token(let b):   b.bridgeID
+            case .appleWallet:    AppleWalletBridge.seatID
             case .posthog:        TokenBridge.posthog.bridgeID
             case .stripe:         TokenBridge.stripe.bridgeID
             case .sentry:         TokenBridge.sentry.bridgeID
@@ -356,6 +362,7 @@ enum BridgeRouter {
         // exists so Connect routes to the share-path explainer (prd 55).
         Row(offer: "Apple Notes", id: "notes", destination: .appleNotes),
         Row(offer: "Bookmarks", id: "bookmarks", destination: .bookmarks),
+        Row(offer: "Apple Wallet", id: AppleWalletBridge.seatID, destination: .appleWallet),
         Row(offer: "PostHog", id: "posthog", destination: .posthog),
         Row(offer: "Stripe", id: "stripe", destination: .stripe),
         Row(offer: "Sentry", id: "sentry", destination: .sentry),
@@ -447,6 +454,7 @@ struct BridgeDestinationView: View {
         case .appleNotes:     NotesShareScreen()
         case .bookmarks:      BookmarksImportScreen()
         case .token(let b):   TokenSetupScreen(bridge: b)
+        case .appleWallet:    AppleWalletScreen()
         case .posthog:        PostHogScreen()
         case .stripe:         StripeScreen()
         case .sentry:         SentryScreen()
