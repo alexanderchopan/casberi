@@ -768,6 +768,10 @@ struct MainSurface: View {
             // one-step decision up through `chrome.pageStep` below.
             ZStack {
                 FeedScreen(source: filter.source, isActive: true, nearActive: true)
+                    // See `FeedScreen: Equatable` — this is what stops a
+                    // MainSurface render from rebuilding the whole feed
+                    // (measured 15 body builds → 2).
+                    .equatable()
                     .id(filter.source)
                     .transition(.asymmetric(
                         insertion: .move(edge: slideEdge),

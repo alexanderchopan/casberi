@@ -19,6 +19,45 @@ import Translation
 /// "All" renders kind-aware rows; only `.approval` breaks row rhythm
 /// (the consent card). Day groups, pins, swipes, the sheet, and write-confirm
 /// all survive inside shapes.
+/// Compared by its three PLAIN inputs, so a parent re-render alone cannot
+/// rebuild the feed (2026-08-06).
+///
+/// `MainSurface` re-creates this view on every one of its own body
+/// evaluations, and SwiftUI then compares the two structs to decide whether to
+/// re-run this body. That comparison could never say "equal": the stored
+/// `@Query` descriptor and the `@Environment` actions wrap closures and key
+/// paths, which compare by nothing. So every MainSurface render — and it
+/// renders on every corpus change, holding an unfiltered `@Query` of its own —
+/// re-ran the whole feed body.
+///
+/// MEASURED on a 6,000-row corpus. `Self._printChanges()` put `@self changed`
+/// at 24 of 53 invalidations in one launch (40 of 79 in another), the single
+/// largest cause. With `.equatable()`, interleaved A/B runs against one
+/// drained corpus: **15 body builds → 2**, reproducible, launch unchanged.
+///
+/// What it did NOT do, stated so nobody reads more into it: in that steady
+/// state the 13 removed builds were cheap ones, and the ~600ms main-actor
+/// stall per foreground was IDENTICAL in both arms — so this is less work,
+/// not a demonstrated cure for the "laggy after 271" report. The remaining
+/// stall is somewhere else again.
+///
+/// The three `let`s below ARE the entire contract with the parent — every
+/// other input arrives through a property wrapper (`@Query`, `@State`,
+/// `@Environment`, `@Observable` environment objects), each of which
+/// invalidates this view through its own dependency rather than the parent's
+/// comparison. So equality on the three is sound: state changes, query
+/// re-fires and observation all still redraw exactly as before; only the
+/// parent-churn path is cut.
+///
+/// If a stored property the body READS is ever added here, it MUST join this
+/// comparison — otherwise the feed renders it once and never updates it again,
+/// which is the one way this optimization can lie.
+extension FeedScreen: Equatable {
+    static func == (a: FeedScreen, b: FeedScreen) -> Bool {
+        a.source == b.source && a.isActive == b.isActive && a.nearActive == b.nearActive
+    }
+}
+
 struct FeedScreen: View {
     /// The source this feed IS (2026-07-16, the pager): each page owns one
     /// source for its whole life instead of the whole screen re-reading the
