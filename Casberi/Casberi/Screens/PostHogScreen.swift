@@ -54,8 +54,12 @@ struct PostHogScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "PostHog", connected: configured && !watched.isEmpty,
-                              flipTrigger: flipTrigger)
+            BridgeSetupHeader(
+                name: "PostHog",
+                mode: .pasteKey,
+                intro: "Paste a read-only key, watch the metrics you care about, and only what's actually news arrives: a milestone crossed, a metric falling silent, a deploy you annotated. Aggregates only — nothing here reads an individual person's profile.",
+                connected: configured && !watched.isEmpty,
+                flipTrigger: flipTrigger)
             if !hasKey {
                 keySection.listRowSeparator(.hidden)
             } else if projectID.isEmpty {
@@ -77,7 +81,6 @@ struct PostHogScreen: View {
                                         })
                     .listRowSeparator(.hidden)
             }
-            footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -289,16 +292,6 @@ struct PostHogScreen: View {
         return Double(thisWeek - lastWeek) / Double(lastWeek)
     }
 
-    /// "The key can never write" left with the paragraph — the three `:read`
-    /// scopes on the key card say it exactly (2026-07-31). The sentence
-    /// defining an annotation left the same day: the watch card's own slab
-    /// note ("Deploys and launches you annotate land on their own") names them
-    /// in plainer words beside the control, which is the tier that wins.
-    private var footerSection: some View {
-        BridgeFooterNote(
-            lede: "Aggregates only: nothing here reads an individual person's profile.",
-            detail: "A watched metric updates in place — only a milestone or a metric falling silent lands as news.")
-    }
 
     // MARK: - Actions
 

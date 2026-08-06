@@ -22,7 +22,11 @@ struct OpenSeaScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "OpenSea", connected: opensea.connected)
+            BridgeSetupHeader(
+                name: "OpenSea",
+                mode: .noAccount,
+                intro: "No account and no key — pick your chains and new collections arrive as they drop, straight from OpenSea's public API. No ranking of ours.",
+                connected: opensea.connected)
             chainsSection.listRowSeparator(.hidden)
             if opensea.connected {
                 ChipLiveNote(name: "OpenSea", verb: "for new drops.")
@@ -34,7 +38,6 @@ struct OpenSeaScreen: View {
                     }
                 ).listRowSeparator(.hidden)
             }
-            footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -81,13 +84,6 @@ struct OpenSeaScreen: View {
         .dsSlabSection()
     }
 
-    /// The read-only promise is the slab note's, beside the switches that make
-    /// the connection — so the footer, which said it again in longer words,
-    /// keeps only what the note doesn't say (§252's ruling, 2026-07-31).
-    private var footerSection: some View {
-        BridgeFooterNote(
-            lede: "Fetched directly by \(DS.device) through OpenSea's public API — no account, no ranking.")
-    }
 
     // MARK: - Actions
 

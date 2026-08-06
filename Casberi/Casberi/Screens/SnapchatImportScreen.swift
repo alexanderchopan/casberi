@@ -38,16 +38,15 @@ struct SnapchatImportScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Snapchat")
+            // "Only saved chats exist" earns the second sentence: it is the
+            // limit most likely to read as a bug, because a Snapchat user's
+            // mental model is that they had far more conversation than this.
+            BridgeSetupHeader(
+                name: "Snapchat",
+                mode: .oneTimeImport,
+                intro: "Snapchat has no live connection — request your export, bring it here, and keep your saved chats and memories for good. Only saved chats exist: Snapchat deletes the rest when it's viewed.")
             pickSection
             if pending > 0 { picturesSection }
-            BridgeFooterNote(
-                lede: "One-time import — nothing arrives on its own afterwards, and re-importing later adds only what's new.",
-                points: [
-                    String(localized: "Your saved chats become searchable."),
-                    String(localized: "Your memories land on the day you took them."),
-                    String(localized: "Only saved chats exist: Snapchat deletes everything else when it's viewed."),
-                ])
             if !recent.isEmpty {
                 RecentThingsSection(header: "Imported", things: Array(recent.live))
                     .listRowSeparator(.hidden)
@@ -95,7 +94,7 @@ struct SnapchatImportScreen: View {
                     source: "Snapchat",
                     steps: [
                         "At accounts.snapchat.com, open My Data and submit a request (pick JSON).",
-                        "Snapchat emails a link within a few hours. Save the zip to Files and tap it once to unzip.",
+                        "They email a link in a few hours — unzip it in Files.",
                     ],
                     pickTitle: "Choose folder",
                     alreadyImported: held > 0) { importing = true }

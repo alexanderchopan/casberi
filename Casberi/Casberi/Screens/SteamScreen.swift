@@ -62,7 +62,10 @@ struct SteamScreen: View {
     /// (prd §218, 2026-07-25). Leads the screen before connecting; lives
     /// behind the door after.
     @ViewBuilder private var connectForm: some View {
-        BridgeSetupHeader(name: "Steam")
+        BridgeSetupHeader(
+            name: "Steam",
+            mode: .pasteKey,
+            intro: "Paste a free Web API key and your profile name, and the games you play keep arriving. Read-only — nothing here buys, plays, or posts.")
         setupSection
     }
 

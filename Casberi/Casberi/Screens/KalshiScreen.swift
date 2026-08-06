@@ -21,7 +21,11 @@ struct KalshiScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Kalshi", connected: connected)
+            BridgeSetupHeader(
+                name: "Kalshi",
+                mode: .noAccount,
+                intro: "No account, no wallet, no key — Kalshi's odds are public, so following just brings the markets you pick into your feed. Nothing here ever places a trade.",
+                connected: connected)
             PredictionVenueConnect(ownVenue: .kalshi)
         }
         .listStyle(.insetGrouped)

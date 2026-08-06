@@ -38,7 +38,10 @@ struct SlackScreen: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             } else {
-                BridgeSetupHeader(name: "Slack")
+                BridgeSetupHeader(
+                    name: "Slack",
+                    mode: .signIn,
+                    intro: "Sign in on Slack's own page and mentions of you keep arriving. Only messages that name you — never a channel's whole history, and it can never post.")
                 connectSection.listRowSeparator(.hidden)
             }
         }

@@ -48,7 +48,12 @@ struct SentryScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Sentry", connected: configured, flipTrigger: flipTrigger)
+            BridgeSetupHeader(
+                name: "Sentry",
+                mode: .pasteKey,
+                intro: "Paste a read-only token and three things arrive: an issue that's new, one that regressed, one that escalated. Never an event, a stack trace, or anything about the person who hit it.",
+                connected: configured,
+                flipTrigger: flipTrigger)
             if !configured {
                 tokenSection.listRowSeparator(.hidden)
                 if hasToken, !orgs.isEmpty {
@@ -71,7 +76,6 @@ struct SentryScreen: View {
                     }
                 ).listRowSeparator(.hidden)
             }
-            footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -188,10 +192,6 @@ struct SentryScreen: View {
         .dsSlabSection()
     }
 
-    private var footerSection: some View {
-        BridgeFooterNote(
-            lede: "Only three things land: an issue that's new, one that regressed, and one that escalated. How many times an error fired is a count, and a count isn't news.")
-    }
 
     // MARK: - Actions
 

@@ -138,8 +138,10 @@ struct TokenSetupScreen: View {
     /// It leads the screen before connecting, and lives behind the Connection
     /// door after — same sections either way, never rewritten.
     @ViewBuilder private var connectForm: some View {
-        BridgeSetupHeader(name: bridge.rawValue, connected: bridge.connected,
-                          flipTrigger: flipTrigger)
+        BridgeSetupHeader(name: bridge.rawValue,
+                          mode: deviceFlowOffered ? .signIn : .pasteKey,
+                          intro: bridge.setupIntro,
+                          connected: bridge.connected, flipTrigger: flipTrigger)
         if deviceFlowOffered {
             // Sign-in is THE path; the token hunt folds away behind a
             // disclosure so the screen leads with one action instead of

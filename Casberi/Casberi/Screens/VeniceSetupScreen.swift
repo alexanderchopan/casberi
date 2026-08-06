@@ -20,7 +20,11 @@ struct VeniceSetupScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Venice", flipTrigger: flipTrigger)
+            BridgeSetupHeader(
+                name: "Venice",
+                mode: .pasteKey,
+                intro: "Paste a key and Venice can answer questions about your corpus when the free on-device model isn't enough. It's asked only when you tap for it, never on its own.",
+                flipTrigger: flipTrigger)
             setupSection
         }
         .listStyle(.insetGrouped)

@@ -13,7 +13,10 @@ struct DealsScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Deals")
+            BridgeSetupHeader(
+                name: "Deals",
+                mode: .noAccount,
+                intro: "No account and no key — today's discounts arrive from each aggregator's own public feed, in no order but theirs. Nothing here buys anything.")
             sourcesSection.listRowSeparator(.hidden)
             if deals.connected {
                 ChipLiveNote(name: "Deals", verb: "for the latest.")
@@ -25,7 +28,6 @@ struct DealsScreen: View {
                     }
                 ).listRowSeparator(.hidden)
             }
-            footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -77,11 +79,6 @@ struct DealsScreen: View {
         }
     }
 
-    private var footerSection: some View {
-        BridgeFooterNote(
-            lede: "Read-only: nothing here buys anything.",
-            detail: "Fetched directly by \(DS.device) through each aggregator's public feed — no account, no ranking.")
-    }
 
     private func toggle(_ source: DealSource) {
         if deals.isOn(source) {

@@ -24,7 +24,11 @@ struct HuggingFaceScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Hugging Face", connected: hf.connected)
+            BridgeSetupHeader(
+                name: "Hugging Face",
+                mode: .noAccount,
+                intro: "No account and no key — name the people and orgs you follow and their new models, datasets and Spaces arrive. Only a repo that did not exist before lands: downloads and likes are counts, not news.",
+                connected: hf.connected)
             addSection.listRowSeparator(.hidden)
             papersSection.listRowSeparator(.hidden)
             if !hf.authors.isEmpty {
@@ -38,7 +42,6 @@ struct HuggingFaceScreen: View {
                     teardown: { HuggingFaceStore.shared.disconnect() }
                 ).listRowSeparator(.hidden)
             }
-            footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -131,10 +134,6 @@ struct HuggingFaceScreen: View {
         }
     }
 
-    private var footerSection: some View {
-        BridgeFooterNote(
-            lede: "Fetched directly by \(DS.device) through Hugging Face's public API — no account, no key. A repo only lands when it's NEW: downloads and likes are counts, not news.")
-    }
 
     // MARK: - Actions
 

@@ -30,7 +30,10 @@ struct ClaudeImportScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Claude")
+            BridgeSetupHeader(
+                name: "Claude",
+                mode: .oneTimeImport,
+                intro: "Claude has no live connection — export your conversations, bring them here, and every chat becomes searchable. Re-import any time for what's new.")
             setupSection
             if !recent.isEmpty {
                 RecentThingsSection(header: "Imported", things: recent.live)
@@ -63,7 +66,7 @@ struct ClaudeImportScreen: View {
                 // the header's own "Import your chats, keep them findable"
                 // (§220's finding, twice; 2026-07-31).
                 BridgeStepLines(steps: ["In Claude, open Settings → Privacy → Export data.",
-                                     "Anthropic emails a download link. Save the zip to Files and tap it once to unzip."], startingAt: 1)
+                                     "Anthropic emails a link — unzip it in Files."], startingAt: 1)
                 DSSlabButton(title: "Choose conversations.json", systemImage: "square.and.arrow.down") {
                     DSHaptic.tap()
                     importing = true

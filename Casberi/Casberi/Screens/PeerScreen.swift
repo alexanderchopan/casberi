@@ -25,13 +25,16 @@ struct PeerScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Peer", connected: hasWallets)
+            BridgeSetupHeader(
+                name: "Peer",
+                mode: .watchedWallets,
+                intro: "Peer has no account here — it reads the wallets you already watch, so buying crypto with Venmo or Cash App lands in your feed on its own. Your Venmo side never touches the chain, so Casberi never sees it.",
+                connected: hasWallets)
             connectSection.listRowSeparator(.hidden)
             if hasWallets {
                 ChipLiveNote(name: "Peer", verb: "for your fills.")
                     .listRowSeparator(.hidden)
             }
-            footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -84,16 +87,6 @@ struct PeerScreen: View {
         .dsSlabSection()
     }
 
-    /// The read-only promise lives in the slab note above — it says it in BOTH
-    /// states, adjacent to the control, at the better tier. This footer opened
-    /// with the same promise in different words, so one fact wore two
-    /// paragraphs (duplication audit, 2026-07-31); the sourcing line it used to
-    /// bury moved up to lead.
-    private var footerSection: some View {
-        BridgeFooterNote(
-            lede: "Fills are read from Base's public chain by \(DS.device) — no Peer account, no key.",
-            detail: "Your Venmo/PayPal side never hits the chain, so Casberi never sees it.")
-    }
 
     // MARK: - Actions
 

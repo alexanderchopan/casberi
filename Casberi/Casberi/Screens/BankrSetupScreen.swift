@@ -24,7 +24,11 @@ struct BankrSetupScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Bankr", flipTrigger: flipTrigger)
+            BridgeSetupHeader(
+                name: "Bankr",
+                mode: .pasteKey,
+                intro: "Paste a read-only key and Bankr can answer questions about your wallets and live markets when you tap for it. Every prompt is prefixed answer only — it is never asked to execute anything.",
+                flipTrigger: flipTrigger)
             setupSection
         }
         .listStyle(.insetGrouped)
@@ -54,7 +58,7 @@ struct BankrSetupScreen: View {
                 // whatever the key can do. "Paste it below" is the field's own
                 // placeholder ("Paste your Bankr key"), §220's finding. One
                 // instruction left, so the numerals go too.
-                BridgeStepLines(steps: ["Make the key read-only, and enable agent access — it's checked with Bankr before it saves."],
+                BridgeStepLines(steps: ["Make it read-only with agent access — checked before saving."],
                                 numbered: false)
                 DSSlabField(placeholder: AgentProvider.bankr.placeholder, text: $keyDraft,
                             actionLabel: checking ? "CHECKING…" : (configured ? "UPDATE" : "CONNECT"),

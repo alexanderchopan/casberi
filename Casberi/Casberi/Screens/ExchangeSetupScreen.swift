@@ -78,7 +78,10 @@ struct ExchangeSetupScreen: View {
 
     /// The connect form — steps whole, furniture gone (prd §218, 2026-07-25).
     @ViewBuilder private var connectForm: some View {
-        BridgeSetupHeader(name: venue.display)
+        BridgeSetupHeader(
+            name: venue.display,
+            mode: .pasteKey,
+            intro: "Paste a read-only key and your balances and trades keep arriving. \(venue.display) is asked what the key may do before it is ever stored — one that can move money is refused and never written to this \(DS.device).")
         setupSection
     }
 

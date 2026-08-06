@@ -44,7 +44,10 @@ struct OpenFoodFactsScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Open Food Facts")
+            BridgeSetupHeader(
+                name: "Open Food Facts",
+                mode: .noAccount,
+                intro: "No account and no key — scan a barcode and what's in it lands in your feed. Nothing about you leaves this \(DS.device) but the barcode itself.")
             scanSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
                 ChipLiveNote(name: "Open Food Facts", verb: "for what you've scanned.")
@@ -57,7 +60,6 @@ struct OpenFoodFactsScreen: View {
                 BridgeDisconnectSection(bridgeID: "off", name: "Open Food Facts", teardown: {})
                     .listRowSeparator(.hidden)
             }
-            footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -107,11 +109,6 @@ struct OpenFoodFactsScreen: View {
         .dsSlabSection()
     }
 
-    private var footerSection: some View {
-        BridgeFooterNote(
-            lede: "Keyless and read-only: nothing about you leaves \(DS.device) but the barcode you look up.",
-            detail: "Open Food Facts is a free, collaborative database — like Wikipedia for food.")
-    }
 
     private func lookUp(_ raw: String) async {
         // A lookup already in flight is NOT a bad barcode. One `else` covering

@@ -183,12 +183,19 @@ enum FeedFollowKind: String, CaseIterable {
         }
     }
 
-    var footerLine: String {
+    /// The connect screen's one sentence (prd §315) — the mode's consequence
+    /// and the payoff, in that order. Replaced `footerLine`, which said the
+    /// same facts in the footer's tertiary gray at the bottom of the screen.
+    var setupIntro: String {
         switch self {
-        case .substack: "Read-only, public posts only — fetched straight from each publication's feed."
-        case .reddit:   "Read-only, public posts only — through Reddit's own RSS, no sign-in."
-        case .youtube:  "Read-only, public uploads only — through YouTube's own feed, no sign-in."
-        case .podcasts: "Read-only — episodes arrive through each show's public feed."
+        case .substack:
+            String(localized: "No account and no sign-in — name a publication and its posts arrive, fetched straight from its own feed. Public posts only; a subscriber-only one stays behind Substack's wall.")
+        case .reddit:
+            String(localized: "No account and no sign-in — name a subreddit or a person and their posts arrive through Reddit's own RSS. Public posts only.")
+        case .youtube:
+            String(localized: "No account and no sign-in — name a channel and its uploads arrive through YouTube's own feed. Public uploads only, and Shorts are tagged so you can filter them out.")
+        case .podcasts:
+            String(localized: "No account and no sign-in — name a show and its episodes arrive through the show's own public feed.")
         }
     }
 

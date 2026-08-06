@@ -50,12 +50,13 @@ enum ImportOptions {
     /// its detail to a single line, which is the point: the reasoning below is
     /// a paragraph, and a paragraph under a switch is how these screens grew
     /// their wall of centered gray text in the first place.
-    static let messagesDetail = String(localized: "Off by default — only if you ask")
-
-    /// The line for the screen's single footer — one of its scannable points,
-    /// not a paragraph. This replaced a 47-word note that sat under the switch
-    /// in centered tertiary text (prd §314); what survives is the only part
-    /// that changes what anyone would DO, which is that the switch decides
-    /// before the import and un-ticking it afterwards undoes nothing.
-    static let messagesPoint = String(localized: "Private messages come in only if you switch them on before importing — turning it off later doesn't remove what already landed.")
+    ///
+    /// AMENDED (prd §315): it used to read "Off by default — only if you ask",
+    /// which restates the switch's own visible position and says nothing you
+    /// couldn't see. The one fact here that changes what anyone would DO is
+    /// that this decides BEFORE the run and un-ticking it afterwards undoes
+    /// nothing — which is why it now carries that instead. This is also where
+    /// the fact now lives outright: `messagesPoint` retired with the footers it
+    /// was written for, and a rule about a switch belongs on the switch.
+    static let messagesDetail = String(localized: "Decide before importing — off later won't undo it")
 }

@@ -74,7 +74,6 @@ struct StocktwitsScreen: View {
                                         })
                     .listRowSeparator(.hidden)
             }
-            footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -126,7 +125,14 @@ struct StocktwitsScreen: View {
                                     ? String(localized: "Finding the ticker…")
                                     : String(localized: "Syncing takes…"),
                                  result: result, resultIsError: resultIsError)
-            DSSlabNote(text: "Read-only — nothing here trades or sees a portfolio.")
+            // This screen has no `BridgeSetupHeader` by ruling (§185), so it is
+            // the one connect page with nowhere for §315's intro sentence to
+            // go — and its footer held the load-bearing honesty fact: a take is
+            // its author's opinion, not a rating this app computed. Presenting
+            // somebody's bullish call as though we endorsed it is exactly the
+            // fake status §83 bans, so the fact moves HERE, onto the note beside
+            // the field that starts the watching, rather than being dropped.
+            DSSlabNote(text: "Read-only — nothing here trades or sees a portfolio. Every bullish or bearish take is its author's, never a rating of ours.")
             }
         }
         .dsSlabSection()
@@ -235,15 +241,6 @@ struct StocktwitsScreen: View {
         }
     }
 
-    /// The old lede was the add slab's note VERBATIM — "Read-only: nothing
-    /// here trades or sees a portfolio." twice on one screen (duplication
-    /// audit, 2026-07-31). The slab's copy keeps it: it sits beside the field
-    /// that does the watching. What's left is what only this footer says.
-    private var footerSection: some View {
-        BridgeFooterNote(
-            lede: "Takes are what traders post publicly on Stocktwits — each bullish or bearish call is its author's, never a rating of ours.",
-            detail: "Charts draw from public market data on \(DS.device).")
-    }
 
     // MARK: - Actions
 

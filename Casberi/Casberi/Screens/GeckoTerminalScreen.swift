@@ -24,7 +24,11 @@ struct GeckoTerminalScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "GeckoTerminal", connected: gecko.connected)
+            BridgeSetupHeader(
+                name: "GeckoTerminal",
+                mode: .noAccount,
+                intro: "No account and no key — pick your chains and whatever is trending on them arrives. The ranking is GeckoTerminal's own, by 24-hour volume and price move, never ours.",
+                connected: gecko.connected)
             chainsSection.listRowSeparator(.hidden)
             if gecko.connected {
                 ChipLiveNote(name: "GeckoTerminal", verb: "for what's trending.")
@@ -36,7 +40,6 @@ struct GeckoTerminalScreen: View {
                     }
                 ).listRowSeparator(.hidden)
             }
-            footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -83,13 +86,6 @@ struct GeckoTerminalScreen: View {
         .dsSlabSection()
     }
 
-    /// The read-only promise is the slab note's, beside the switches that make
-    /// the connection — so the footer, which said it again in longer words,
-    /// keeps only what the note doesn't say (§252's ruling, 2026-07-31).
-    private var footerSection: some View {
-        BridgeFooterNote(
-            lede: "Trending is GeckoTerminal's own ranking — by 24-hour volume and price move — fetched directly by \(DS.device) through its public API.")
-    }
 
     // MARK: - Actions
 

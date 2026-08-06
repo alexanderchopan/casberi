@@ -36,7 +36,10 @@ struct FilesScreen: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             } else {
-                BridgeSetupHeader(name: "Files")
+                BridgeSetupHeader(
+                    name: "Files",
+                    mode: .onThisDevice,
+                    intro: "Name a folder and what's in it keeps arriving — documents searchable by their text, images by what they say. It stays on this \(DS.device); nothing is copied anywhere.")
                 folderSection.listRowSeparator(.hidden)
             }
         }

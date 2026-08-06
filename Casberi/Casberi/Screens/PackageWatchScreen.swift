@@ -32,8 +32,12 @@ struct PackageWatchScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: registry.displayName, connected: connected,
-                              flipTrigger: flipTrigger)
+            BridgeSetupHeader(
+                name: registry.displayName,
+                mode: .noAccount,
+                intro: registryIntro,
+                connected: connected,
+                flipTrigger: flipTrigger)
             addSection.listRowSeparator(.hidden)
             if !watched.isEmpty {
                 watchlistSection
@@ -46,7 +50,6 @@ struct PackageWatchScreen: View {
                     teardown: { PackageStore.shared.disconnect(registry) }
                 ).listRowSeparator(.hidden)
             }
-            footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -137,16 +140,19 @@ struct PackageWatchScreen: View {
         }
     }
 
-    private var footerSection: some View {
-        BridgeFooterNote(lede: footerLede)
-    }
 
-    private var footerLede: String {
+
+    /// The intro's one variable half — npm calls its home a registry and PyPI
+    /// an index, and using either word for both would be wrong in one place.
+    /// The "download counts are never fetched" clause is the §315 survivor of
+    /// the old footer: it is the fact that changes what someone expects to see,
+    /// because a package page leads with that number and this room never will.
+    private var registryIntro: String {
         switch registry {
         case .npm:
-            String(localized: "Fetched directly by \(DS.device) from the public registry — no account, no key. Download counts are never fetched: a tally isn't news.")
+            String(localized: "No account and no key — watch a package and new releases arrive from the public registry. Download counts are never fetched: a tally isn't news.")
         case .pypi:
-            String(localized: "Fetched directly by \(DS.device) from the public index — no account, no key. Download counts are never fetched: a tally isn't news.")
+            String(localized: "No account and no key — watch a package and new releases arrive from the public index. Download counts are never fetched: a tally isn't news.")
         }
     }
 

@@ -20,7 +20,10 @@ struct DayOneImportScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Day One")
+            BridgeSetupHeader(
+                name: "Day One",
+                mode: .oneTimeImport,
+                intro: "Day One has no live connection — export your journal, bring it here, and every entry becomes searchable on the day you wrote it. Re-import any time for what's new.")
             // The third step was "Pick the .json inside below", above a button
             // titled "Choose your Day One .json" (§220, 2026-07-31).
             ImportStepsCard("Get your export", [
@@ -106,7 +109,10 @@ struct JournalImportScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Apple Journal")
+            BridgeSetupHeader(
+                name: "Apple Journal",
+                mode: .oneTimeImport,
+                intro: "Journal has no live connection — export it from Settings, bring it here, and every entry becomes searchable on the day you wrote it. Re-import any time for what's new.")
             // The third step was "Pick the unzipped folder below", above a
             // button titled "Choose the export folder" (§220, 2026-07-31).
             ImportStepsCard("Get your export", [
@@ -184,7 +190,10 @@ struct NotesShareScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Apple Notes")
+            BridgeSetupHeader(
+                name: "Apple Notes",
+                mode: .onThisDevice,
+                intro: "Apple offers no export and no read API for Notes, so there is nothing to connect. Share a note to Casberi and it lands in your feed, findable like everything else.")
             ImportStepsCard("How notes come in", [
                 "Open a note in Apple Notes.",
                 "Tap share, then Casberi.",
@@ -247,7 +256,10 @@ struct BookmarksImportScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Bookmarks")
+            BridgeSetupHeader(
+                name: "Bookmarks",
+                mode: .oneTimeImport,
+                intro: "Export your bookmarks from any browser, bring the file here, and they become findable links — folders become tags. Re-import any time for what's new.")
             ImportStepsCard("Get your export", [
                 "Chrome: chrome://bookmarks → ⋮ → Export bookmarks.",
                 "Safari (Mac): File → Export Bookmarks…",

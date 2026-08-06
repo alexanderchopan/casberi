@@ -45,15 +45,12 @@ struct TikTokImportScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "TikTok")
+            BridgeSetupHeader(
+                name: "TikTok",
+                mode: .oneTimeImport,
+                intro: "TikTok has no live connection — request your export in their app, bring it here, and search your captions, comments, saves and likes.")
             pickSection
             if pending > 0 { facesSection }
-            BridgeFooterNote(
-                lede: "One-time import — nothing arrives on its own afterwards, and re-importing later adds only what's new.",
-                points: [
-                    String(localized: "Your captions and comments arrive as searchable text."),
-                    String(localized: "Saved and liked videos arrive as links: TikTok's export has nobody else's captions in it."),
-                ])
             if !recent.isEmpty {
                 RecentThingsSection(header: "Imported", things: Array(recent.live))
                     .listRowSeparator(.hidden)
@@ -97,8 +94,8 @@ struct TikTokImportScreen: View {
                     // default).
                     steps: [
                         "In TikTok, open Settings and privacy, then Account, then Download your data.",
-                        "Set the format to JSON — a TXT export can't be read. Tap Select all, then Request data.",
-                        "TikTok takes up to 4 days, then the link works for 4 days. Save the file to Files.",
+                        "Set the format to JSON, not TXT, then Select all and Request data.",
+                        "Ready in up to 4 days — save it to Files, the link expires.",
                     ],
                     pickTitle: "Choose export",
                     pickIcon: "square.and.arrow.down",

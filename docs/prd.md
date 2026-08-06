@@ -17286,3 +17286,117 @@ because `accounts.snapchat.com` could not be reached from the host this was
 written on, and a door to a URL nobody has loaded is exactly the dead control
 §83 bans. Give it one once someone has confirmed the page, and add the host to
 `network-reach-audit.sh`'s non-reach denylist in the same commit.
+
+## §315 — A connect page gets one sentence (user: "look how long the instagram connect page text is, not on the actual app page, but the connect page. those pages across the app are really wordy and bad with text in different places", then "we also need to be clear on some of these: instagram doesn't allow a live sync you must download etc", 2026-08-06)
+
+The complaint was Instagram's, but the sweep found the whole family. Every
+connect screen was drawing from up to **seven text registers**: the header
+tagline, numbered steps, `DSSlabNote`s (three on some screens), a
+`BridgeFooterNote` carrying a lede plus up to four bullets plus a detail
+paragraph, a `ChipLiveNote`, a Section's own `footer:` closure, and status
+rows. Instagram's page ran about **145 words in four type tiers at three
+positions** before you had done anything at all.
+
+**The second half of the report is the sharper finding, and it is a product
+bug, not a copy one.** *"Instagram doesn't allow a live sync — you must
+download."* Nowhere did an import screen say that up front. Instagram whispered
+it as the first clause of a footer lede at the very bottom of the page, in
+`subhead13`/tertiary — the tier `DesignTokens` reserves for timestamps and
+disabled glyphs. Someone tapping Connect has every reason to expect a sync, and
+had to infer otherwise from the *steps*.
+
+### The ruling: two slots, and the second one is one sentence
+
+1. **Mode chip** (`BridgeSetupMode`, in the header, under the tagline). A
+   **closed set** of six: One-time import · No account · Sign in on their site ·
+   Paste a key · Reads your wallets · On this device. Closed on purpose — a
+   free-form label per screen is what the footers already were, and they drifted
+   into seven registers saying overlapping things. The value is that the same
+   words mean the same thing on all 43 screens.
+
+   The chip states the **method**. The cadence — whether anything keeps arriving
+   — rides the intro, because it only surprises for the imports, and a chip
+   reading "keeps arriving" on thirty-five screens would be furniture.
+
+2. **Intro sentence** (`BridgeSetupHeader.intro`, `callout15`/secondary, at the
+   top). The mode's consequence and the payoff, together, in the person's own
+   terms. Instagram's is the template:
+
+   > *"Instagram has no live connection — download your export, bring it here,
+   > and search your captions, comments, saves and likes. Re-import any time for
+   > what's new."*
+
+   A second sentence only when it states a limit that would otherwise read as a
+   bug: X's bookmarks (the pile an X user most expects the seat to hold, and the
+   one thing it can never have), Snapchat's "only saved chats exist".
+
+3. **Nothing else.** `BridgeFooterNote` is **deleted**, not deprecated.
+
+### Where the fine print went, and the test each fact had to pass
+
+The words were mostly good — that was never the problem. The test was: **does
+this change what someone would DO?**
+
+- **Yes, and it governs a control** → it moves onto that control.
+  `ImportOptions.messagesDetail` was *"Off by default — only if you ask"*, which
+  restates the switch's own visible position; it now reads *"Decide before
+  importing — off later won't undo it"*, which is the only part that was ever
+  load-bearing. Keychain notes stay under token fields.
+- **Yes, but only once it has failed** → it moves to the error copy, which is
+  the one place it can be acted on. Instagram's *"an HTML export can't be read"*
+  left step 4 and joined the empty-import message.
+- **No** → it goes. "A post since deleted or made private stays a link" is true
+  and changes nothing anyone would do.
+
+One screen has nowhere to put an intro: `StocktwitsScreen` has no
+`BridgeSetupHeader` by ruling (§185). Its footer held a genuine §83 fact — a
+bullish take is its author's, not a rating we computed — so that fact moved onto
+the slab note beside the field that starts the watching, rather than being
+dropped to fit the shape.
+
+### Two multi-bridge screens got a per-bridge sentence
+
+`HandleBridge.footerLine` and `FeedFollowKind.footerLine` were **already dead
+code** — nothing rendered either — and became `setupIntro`. `TokenBridge`
+gained one, deliberately NOT reusing `canLine`: that is the *connected* state's
+capability line, read beside the things it describes, and several run past sixty
+words. The intro states the read-only promise in the form that is actually true
+for that bridge, in **three grades whose wording differs because the strength
+does** — MINTED (Trello: Casberi builds the authorize link with `scope=read`, so
+Trello issues a token with no write permission to give), SCOPED (the person
+ticks read-only on someone else's page), CONDUCT (Privacy, Cursor, Vercel: the
+key carries no scopes, so the promise is ours to keep — these say *"only ever
+reads"*, never *"read-only"*). Blurring those three would be exactly the fake
+status §83 bans, in the one domain where believing it is expensive.
+
+### Mechanical, because this is the third time
+
+`scripts/setup-copy-audit.py`, self-tested (6 dirty fixtures + a clean one),
+wired into `verify.sh`'s static head. Five checks: every header declares a mode;
+the intro is ≤2 sentences and ≤55 words; a step is ≤14 words; ≤2 `DSSlabNote`s
+per screen (with a documented `NOTE_ALLOWANCE` for the files serving several
+bridges); and `BridgeFooterNote` may not return, including under a new name — a
+`footer:` closure carrying more than 25 words is the same wall rebuilt.
+
+**The reason it is a script and not a rule is the whole point of this section.**
+These screens have now been de-walled twice from memory. §218 ruled "one gray
+sentence per screen"; by §314 the import screens carried five notes and ~130
+words. §314 gave the family a staged shape and *one* footer; by §315 that footer
+was a lede plus four bullets plus a paragraph. Every other load-bearing rule in
+this repo is a script for exactly this reason, and the design system got its
+first mechanical check in §299 on the same argument. Memory lost twice; it does
+not get a third try.
+
+The audit found ten real findings on its first run over the swept tree — long
+steps on Apple Wallet, Bankr, all three chat imports, Snapchat and TikTok, none
+of which the sweep had noticed by hand. It deliberately does **not** read the
+intro for quality (it cannot tell a true sentence from a false one, and
+pretending otherwise would be its own fake status), does not require an intro
+where there is no header (§185's Stocktwits ruling is a decision, not an
+omission), and does not hold `canLine`/`summary` to a connect page's budget —
+those are read in different places for different reasons, and §192 already ruled
+that trimming them deletes true differentiating information.
+
+**Measured result:** Instagram 145 → 62 words, one register per slot, and the
+fact that it is an import is now the second thing on the page instead of the
+last.

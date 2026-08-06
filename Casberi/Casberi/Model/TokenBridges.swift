@@ -331,6 +331,77 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         }
     }
 
+    /// The connect screen's ONE sentence (prd §315) — what pasting a token
+    /// gets you, and the strongest true promise about what it can't do.
+    ///
+    /// It is deliberately NOT `canLine`. That sentence is the CONNECTED
+    /// state's capability line, written to be read beside the things it
+    /// describes, and several run to sixty words (Cursor's names four verbs;
+    /// Sentry's names four kinds of data it never touches). A connect page has
+    /// one sentence of prose, so this states the read-only promise in the form
+    /// that is actually true for THIS bridge and stops.
+    ///
+    /// Three grades of promise, and the wording tracks which one applies —
+    /// getting this wrong would be exactly the fake status §83 bans:
+    ///   · MINTED — Casberi builds the authorize link with `scope=read`, so
+    ///     the service issues a token with no write permission to give
+    ///     (Trello alone).
+    ///   · SCOPED — the person ticks read-only on the service's own page, and
+    ///     the token cannot write whatever this app does (most of them).
+    ///   · CONDUCT — the key carries no scopes at all, so the promise is kept
+    ///     by what the code does and nothing else (Privacy, Cursor, Vercel).
+    ///     These say "only ever reads" rather than "read-only", because the
+    ///     restriction is ours, not the token's.
+    var setupIntro: String {
+        switch self {
+        case .readwise:
+            String(localized: "Paste a read-only token and every highlight you've saved becomes searchable here, arriving on its own from then on.")
+        case .github:
+            String(localized: "Sign in with GitHub — or paste a token — and the feeds you pick keep arriving, plus any repo you watch. Watching here is private: it never touches your GitHub account.")
+        case .todoist:
+            String(localized: "Paste a read-only token and your open tasks keep arriving with their due dates. Nothing here completes, edits, or adds a task.")
+        case .raindrop:
+            String(localized: "Paste a read-only token and your bookmarks keep arriving, searchable alongside everything else. Nothing here adds or deletes one.")
+        case .calcom:
+            String(localized: "Paste a read-only key and your bookings keep arriving before they happen. Nothing here books, moves, or cancels anything.")
+        case .calendly:
+            String(localized: "Paste a read-only token and your scheduled meetings keep arriving before they happen. Nothing here books, moves, or cancels anything.")
+        case .notion:
+            String(localized: "Paste an integration secret and only the pages you explicitly connect arrive — Notion decides what it can see, not us. Nothing here edits a page.")
+        case .linear:
+            String(localized: "Paste a read-only key and the issues assigned to you keep arriving. Nothing here comments, closes, or moves an issue.")
+        case .bitrefill:
+            String(localized: "Paste a read-only key and your orders and refills keep arriving, with your balance beside them. Nothing here ever buys, pays, or spends.")
+        case .privacy:
+            // CONDUCT. Privacy's key can issue cards and move money; the
+            // promise is what this code does, so it is worded as such.
+            String(localized: "Paste an API key and what you spend on your virtual cards keeps arriving. Privacy's key can't be scoped read-only, so the promise is ours to keep: Casberi only ever reads transactions, and never creates, closes, or funds a card.")
+        case .oneclaw:
+            String(localized: "Paste an agent key and you'll see what it can reach — which vaults, which secret paths, and when each grant expires. Names and permissions only: no secret's value is ever read.")
+        case .posthog:
+            String(localized: "Paste a read-only key, watch the metrics you care about, and only what's news arrives: a milestone crossed, a metric falling silent, a deploy you annotated.")
+        case .stripe:
+            String(localized: "Paste a read-only key and the money that needs you keeps arriving — a dispute and its deadline, a payout, a cancelled subscription, a failed payment.")
+        case .trello:
+            // MINTED — the strongest promise in the catalog, and the only one
+            // that is structural rather than a box someone ticked.
+            String(localized: "Authorize once and the cards assigned to you keep arriving with their due dates. Casberi asks Trello for a read-only token, so the one it issues has no write permission to give.")
+        case .cloudflare:
+            String(localized: "Paste a read-only token and you're told before a certificate, domain or token expires, and when a DNS record changes. No analytics, and nothing about your visitors.")
+        case .cursor:
+            // CONDUCT, and the weakest grade here: this key could start an
+            // agent, which spends money AND writes a branch to a repo.
+            String(localized: "Paste a key and your finished cloud agents keep arriving — what each was asked to do, what it says it did, and the pull request it opened. Cursor's key can't be scoped read-only, so the promise is ours to keep: Casberi only ever lists them.")
+        case .sentry:
+            String(localized: "Paste a read-only token and three things arrive: an issue that's new, one that regressed, one that escalated. Never an event, a stack trace, or anything about the person who hit it.")
+        case .vercel:
+            // CONDUCT.
+            String(localized: "Paste a token and your deployments keep arriving — what shipped, what broke, and the commit behind it. Vercel's token can't be scoped read-only, so the promise is ours to keep: Casberi only ever lists them, and never reads your environment variables.")
+        case .pagerduty:
+            String(localized: "Paste a read-only key and your incidents keep arriving — what fired, how urgent, and when it was resolved. Nothing here pages anyone, acknowledges, or resolves.")
+        }
+    }
+
     var canLine: String {
         switch self {
         case .readwise: "Reads your highlights."

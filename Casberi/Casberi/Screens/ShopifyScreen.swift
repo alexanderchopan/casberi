@@ -34,7 +34,11 @@ struct ShopifyScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Shopify", connected: shopify.connected)
+            BridgeSetupHeader(
+                name: "Shopify",
+                mode: .noAccount,
+                intro: "No account and no key — paste a store's address and its new products arrive from the store's own public catalog. Nothing here checks out or pays.",
+                connected: shopify.connected)
             addSection.listRowSeparator(.hidden)
             if !shopify.shops.isEmpty { followingSection.listRowSeparator(.hidden) }
             // What landed, newest first. The `@Query` above was declared with a
@@ -52,7 +56,6 @@ struct ShopifyScreen: View {
                     }
                 ).listRowSeparator(.hidden)
             }
-            footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -137,11 +140,6 @@ struct ShopifyScreen: View {
         .dsSlabSection()
     }
 
-    private var footerSection: some View {
-        BridgeFooterNote(
-            lede: "Read-only: nothing here checks out or pays.",
-            detail: "Fetched directly by \(DS.device) through each store's public catalog — no account, no ranking.\n\nSome big stores block automated reads; those it can't follow, it says so.")
-    }
 
     // MARK: - Actions
 

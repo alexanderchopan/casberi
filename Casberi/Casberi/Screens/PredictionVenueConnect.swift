@@ -80,24 +80,13 @@ struct PredictionVenueConnect: View {
                 }
             }
             companion
-        } footer: {
-            // One gray sentence for the whole screen (DSSlab's companion
-            // rule) — the two venues' honesty notes collapsed into one,
-            // rather than a paragraph per exchange.
-            // Lede then detail (2026-07-31) — the promise steps up to the tier
-            // the step lines use; the sourcing keeps the quiet one. Written
-            // inline rather than as `BridgeFooterNote` because that component
-            // IS a Section and this is a Section's own `footer:` closure.
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                Text("Read-only: nothing here ever places a trade.")
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text("No account, no key — both exchanges' odds are public.")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .listRowBackground(Color.clear)
         }
+        // The footer that used to close this card retired in the §315 pass.
+        // Both sentences it carried — "nothing here ever places a trade" and
+        // "no account, no key, the odds are public" — are now the intro on
+        // BOTH screens this card appears on (`KalshiScreen`, `PolymarketScreen`),
+        // stated before the follow rather than under it. Keeping it here would
+        // have made this the one screen that says the same thing twice.
     }
 
     private var confirmTitle: String {

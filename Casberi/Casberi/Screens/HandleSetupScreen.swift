@@ -258,18 +258,23 @@ enum HandleBridge: String {
         }
     }
 
-    var footerLine: String {
+    /// The connect screen's one sentence (prd §315). Replaced `footerLine`,
+    /// which carried the same facts at the bottom of the screen in the tier
+    /// `DesignTokens` reserves for timestamps. Each says the mode's
+    /// consequence, then the payoff, then — only where it would otherwise
+    /// read as a bug — the one thing that can never arrive.
+    var setupIntro: String {
         switch self {
         case .bluesky:
-            "Read-only, public data only. Likes arrive with sign-in, later."
+            String(localized: "No account and no sign-in — name someone and their posts arrive, straight from Bluesky's public API. What they like stays out: that needs a sign-in, which is coming later.")
         case .farcaster:
-            "Read-only, public data only — served by the Farcaster team's own public node."
+            String(localized: "No account and no sign-in — name someone and their casts arrive, served by the Farcaster team's own public node. Channels and mentions of you can be followed too.")
         case .nostr:
-            "Read-only, public data only — served by whichever public relays you happen to reach."
+            String(localized: "No account and no sign-in — name someone and their notes arrive from whichever public relays this \(DS.device) can reach. No key, and nothing here can ever post.")
         case .pinterest:
-            "Read-only, public boards only — secret boards never appear in the public feed."
+            String(localized: "No account and no sign-in — name someone and their pins arrive. Public boards only: a secret board never appears in the public feed, so it can never appear here.")
         default:
-            feedKind?.footerLine ?? ""
+            feedKind?.setupIntro ?? ""
         }
     }
 
@@ -471,6 +476,7 @@ struct HandleSetupScreen: View {
     var body: some View {
         List {
             BridgeSetupHeader(name: bridge.rawValue,
+                              mode: .noAccount, intro: bridge.setupIntro,
                               connected: bridge.isConnected, flipTrigger: connectFlip)
             omniSection.listRowSeparator(.hidden)
             if bridge.isRichSocial {

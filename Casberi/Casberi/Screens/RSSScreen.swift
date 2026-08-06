@@ -48,7 +48,11 @@ struct RSSScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "RSS", connected: !rss.feeds.isEmpty)
+            BridgeSetupHeader(
+                name: "RSS",
+                mode: .noAccount,
+                intro: "No account and no server — paste a feed's address and its posts arrive, fetched by this \(DS.device) itself. No ranking, nothing skipped.",
+                connected: !rss.feeds.isEmpty)
             omniSection.listRowSeparator(.hidden)
             if !rss.feeds.isEmpty {
                 ledgerSection.listRowSeparator(.hidden)
@@ -61,7 +65,6 @@ struct RSSScreen: View {
                     }
                 ).listRowSeparator(.hidden)
             }
-            footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -242,13 +245,6 @@ struct RSSScreen: View {
         }
     }
 
-    private var footerSection: some View {
-        Section {
-            Text("Fetched directly by \(DS.device) — no account, no server, no ranking.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .listRowBackground(Color.clear)
-        }
-    }
 
     // MARK: - Actions
 

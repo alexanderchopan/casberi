@@ -51,20 +51,18 @@ struct XArchiveImportScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "X")
+            // The bookmarks limit rides the intro rather than a footer point
+            // (prd §315), and it is the one limit that earns the sentence's
+            // second half: bookmarks are the pile an X user most expects this
+            // seat to hold, and they are the one thing it can never have. The
+            // reposts rule left the screen — it changes nothing anyone would
+            // do, and the receipt already counts what was skipped.
+            BridgeSetupHeader(
+                name: "X",
+                mode: .oneTimeImport,
+                intro: "X has no live connection — request your archive, bring it here, and search every post, reply and like you ever made. Bookmarks aren't in it: X has never put them there.")
             archiveSection
             if pending > 0 { authorsSection }
-            // The screen's one gray block (§218), and the three facts under it
-            // are separate limits rather than a paragraph — the treatment
-            // `BridgeFooterNote.points` exists for, and which no import screen
-            // was using despite being the family with the most fine print.
-            BridgeFooterNote(
-                lede: "One-time import — nothing arrives on its own afterwards, and re-importing later adds only what's new.",
-                points: [
-                    String(localized: "Your bookmarks can't come: X has never put them in the archive."),
-                    String(localized: "Reposts are skipped — X stores them as someone else's words, cut short."),
-                    ImportOptions.messagesPoint,
-                ])
             if !recent.isEmpty {
                 RecentThingsSection(header: "Imported", things: recent.live)
                     .listRowSeparator(.hidden)

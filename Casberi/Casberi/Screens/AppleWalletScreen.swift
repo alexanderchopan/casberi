@@ -39,8 +39,12 @@ struct AppleWalletScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Apple Wallet", connected: isConnected,
-                              flipTrigger: flipTrigger)
+            BridgeSetupHeader(
+                name: "Apple Wallet",
+                mode: .onThisDevice,
+                intro: "Grant access once and your Apple Card, Apple Cash and Savings transactions keep arriving — the only source that knows where you actually shopped. United States only, and it needs iOS 17.4 or later.",
+                connected: isConnected,
+                flipTrigger: flipTrigger)
 
             if !AppleWalletBridge.isSupported && !isConnected {
                 unavailableSection
@@ -70,7 +74,6 @@ struct AppleWalletScreen: View {
                 }
             }
 
-            BridgeFooterNote(lede: String(localized: "Apple Card, Apple Cash and Savings are available in the United States only. This needs iOS 17.4 or later."))
         }
         .dsPageBackground()
         .scrollContentBackground(.hidden)
@@ -87,10 +90,11 @@ struct AppleWalletScreen: View {
             // §220's rule, and numerals here would send the eye hunting for a
             // step 1 that doesn't exist.
             BridgeStepLines(steps: [
-                String(localized: "What it reads: transactions and balances from Apple Card, Apple Cash and Savings — the merchant, the amount, and when."),
-                String(localized: "Where it goes: nowhere. It's read on this iPhone and stored on this iPhone. Casberi has no server."),
-                String(localized: "What it never does: it can't spend, move money, or change anything. It's never uploaded, never sold, and never used for advertising."),
-                String(localized: "Stopping: disconnect at any time and everything it brought in is deleted from Casberi."),
+                String(localized: "Reads: the merchant, the amount, and when."),
+                String(localized: "Goes: nowhere. Read and stored on this \(DS.device). Casberi has no server."),
+                String(localized: "Never: uploaded, sold, or used for advertising."),
+                String(localized: "Can't: spend, move money, or change anything."),
+                String(localized: "Stopping: disconnect and everything it brought in is deleted."),
             ], numbered: false)
         } header: {
             Text("Before you connect")

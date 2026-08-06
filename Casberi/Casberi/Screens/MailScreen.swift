@@ -63,7 +63,10 @@ struct MailScreen: View {
     /// The connect form — steps whole (user ruling 2026-07-23), furniture gone
     /// (prd §218, 2026-07-25).
     @ViewBuilder private var connectForm: some View {
-        BridgeSetupHeader(name: provider.source)
+        BridgeSetupHeader(
+            name: provider.source,
+            mode: .pasteKey,
+            intro: "Make an app-specific password and your mail becomes searchable here. Read-only over IMAP, and your real account password never enters the app.")
         setupSection
     }
 

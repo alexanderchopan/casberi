@@ -44,8 +44,12 @@ struct StripeScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Stripe", connected: hasKey,
-                              flipTrigger: flipTrigger)
+            BridgeSetupHeader(
+                name: "Stripe",
+                mode: .pasteKey,
+                intro: "Paste a read-only key and the money that needs you keeps arriving: a dispute and its deadline, a payout, a cancelled subscription, a failed payment. Individual charges never land, and nothing here reads a customer's name or card.",
+                connected: hasKey,
+                flipTrigger: flipTrigger)
             if hasKey {
                 balanceSection.listRowSeparator(.hidden)
                 if !recent.isEmpty {
@@ -63,7 +67,6 @@ struct StripeScreen: View {
             } else {
                 keySection.listRowSeparator(.hidden)
             }
-            footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -165,20 +168,6 @@ struct StripeScreen: View {
         }
     }
 
-    /// The five shapes as a LIST, because that's what they are — welded into a
-    /// tertiary paragraph they were the least-read sentence on the screen
-    /// (2026-07-31). "The key can never write" left with them: the slab note
-    /// above already says it, and one fact wearing two paragraphs is §220's
-    /// finding one component down.
-    private var footerSection: some View {
-        BridgeFooterNote(
-            lede: "What arrives:",
-            detail: "Individual charges never land — a payment is a tally, and Stripe already counts those. Nothing here reads your customers' names or card details.",
-            points: ["A dispute, and its deadline",
-                     "A payout reaching your bank",
-                     "A subscription ending",
-                     "A payment that failed"])
-    }
 
     // MARK: - Actions
 

@@ -28,13 +28,16 @@ struct RailgunScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Railgun", connected: hasWallets)
+            BridgeSetupHeader(
+                name: "Railgun",
+                mode: .watchedWallets,
+                intro: "No account here — it reads the wallets you already watch, so shields and unshields land in your feed. What happens inside the pool is never read: your private balance stays private, which is the point of using Railgun.",
+                connected: hasWallets)
             connectSection.listRowSeparator(.hidden)
             if hasWallets {
                 ChipLiveNote(name: "Railgun", verb: "for what you shield.")
                     .listRowSeparator(.hidden)
             }
-            footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -80,11 +83,6 @@ struct RailgunScreen: View {
         .dsSlabSection()
     }
 
-    private var footerSection: some View {
-        BridgeFooterNote(
-            lede: "Read-only: nothing here shields, unshields, or moves funds.",
-            detail: "Shields and unshields are read from Ethereum's public chain by \(DS.device) — no account, no key.\n\nWhat happens inside the pool is never read. Your private balance and transfers stay private, which is the point of using Railgun at all.\n\nRelayed shields carry no public sender, so they can't appear here — only your wallet's own activity shows them.")
-    }
 
     // MARK: - Actions
 

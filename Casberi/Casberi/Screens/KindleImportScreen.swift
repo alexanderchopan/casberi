@@ -16,7 +16,10 @@ struct KindleImportScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Kindle")
+            BridgeSetupHeader(
+                name: "Kindle",
+                mode: .oneTimeImport,
+                intro: "Kindle has no live connection — export your notes and highlights, bring them here, and every passage you marked becomes searchable. Re-import any time for what's new.")
             // The third step was "Pick that file below", above a button titled
             // "Choose My Clippings.txt" (§220, 2026-07-31).
             ImportStepsCard("Get your highlights", [

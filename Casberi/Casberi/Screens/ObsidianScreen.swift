@@ -38,7 +38,10 @@ struct ObsidianScreen: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             } else {
-                BridgeSetupHeader(name: "Obsidian")
+                BridgeSetupHeader(
+                    name: "Obsidian",
+                    mode: .onThisDevice,
+                    intro: "Name your vault's folder and your notes keep arriving, searchable alongside everything else. Read-only — nothing here edits or writes a note back.")
                 vaultSection.listRowSeparator(.hidden)
             }
         }

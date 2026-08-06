@@ -16,7 +16,11 @@ struct PolymarketScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Polymarket", connected: connected)
+            BridgeSetupHeader(
+                name: "Polymarket",
+                mode: .noAccount,
+                intro: "No account, no wallet, no key — Polymarket's odds are public, so following just brings the markets you pick into your feed. Nothing here ever places a trade.",
+                connected: connected)
             PredictionVenueConnect(ownVenue: .polymarket)
         }
         .listStyle(.insetGrouped)

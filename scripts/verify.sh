@@ -44,6 +44,19 @@ step "Info.plist strings audit"
 "$ROOT/scripts/infoplist-strings-audit.py" || fail "a purpose string resolves to its own key name — see the output above"
 print -P "%F{green}✓ infoplist strings audit%f"
 
+# Keeps the connect pages from regrowing their wall of text (prd §315).
+# Static, no build. It is mechanical for the reason every rule in this file is
+# mechanical: the copy has now been de-walled twice from memory (§218's "one
+# gray sentence", §314's single footer) and grown back both times — by §315
+# Instagram's connect page ran ~145 words before you had done anything, and the
+# fact that mattered most ("this is an import, nothing syncs") was last on the
+# screen in the tier reserved for timestamps.
+step "Setup copy audit"
+"$ROOT/scripts/setup-copy-audit.py" --self-test >/dev/null \
+  || fail "the setup copy audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/setup-copy-audit.py" || fail "a connect page drifted past its copy budget — see the output above"
+print -P "%F{green}✓ setup copy audit%f"
+
 # Keeps every Keychain write device-only and non-syncing (prd §277). Static,
 # no build. The failure it catches is invisible at runtime — a key stored with
 # the wrong accessibility works perfectly and also rides an encrypted backup

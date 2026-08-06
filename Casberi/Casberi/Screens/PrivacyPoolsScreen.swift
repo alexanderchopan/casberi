@@ -28,7 +28,11 @@ struct PrivacyPoolsScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "0xBow Privacy Pools", connected: hasWallets)
+            BridgeSetupHeader(
+                name: "0xBow Privacy Pools",
+                mode: .watchedWallets,
+                intro: "No account here — it reads the wallets you already watch, so every deposit lands and you're told the moment one is cleared to withdraw. Withdrawals are unlinkable by design, so that side never appears.",
+                connected: hasWallets)
             connectSection.listRowSeparator(.hidden)
             if hasWallets {
                 // "…and their screening status" left the verb (duplication
@@ -38,7 +42,6 @@ struct PrivacyPoolsScreen: View {
                 ChipLiveNote(name: "0xBow Privacy Pools", verb: "for your deposits.")
                     .listRowSeparator(.hidden)
             }
-            footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -90,11 +93,6 @@ struct PrivacyPoolsScreen: View {
         .dsSlabSection()
     }
 
-    private var footerSection: some View {
-        BridgeFooterNote(
-            lede: "Read-only: nothing here deposits, withdraws, or moves funds.",
-            detail: "Deposits are read from Ethereum's public chain and each deposit's review status from 0xBow's public API by \(DS.device) — no account, no key.\n\nWithdrawals are private by design: the chain can't link them to your deposit, so Casberi never sees or shows that side.")
-    }
 
     // MARK: - Actions
 

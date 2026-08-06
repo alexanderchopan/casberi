@@ -24,13 +24,15 @@ struct EthValidatorScreen: View {
             // Tokens and Stocktwits go headerless on purpose because their
             // omnibox leads an asset SHELF; this is a wallet seat with a
             // watchlist, and it simply never got one.
-            BridgeSetupHeader(name: "ETH Validators",
-                              connected: !validatorStore.watched.isEmpty)
+            BridgeSetupHeader(
+                name: "ETH Validators",
+                mode: .noAccount,
+                intro: "A validator index is public — anyone can look one up. Add yours and its balance, status and rewards keep arriving.",
+                connected: !validatorStore.watched.isEmpty)
             addSection.listRowSeparator(.hidden)
             if !validatorStore.watched.isEmpty {
                 watchlistSection
             }
-            footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -131,18 +133,6 @@ struct EthValidatorScreen: View {
         }
     }
 
-    /// One sentence, and it's the one nothing else on the screen says. The
-    /// read-only promise that used to close it — "watching one can never
-    /// stake, exit, or move its balance" — is already the last clause of the
-    /// add slab's note, which sits beside the field it's a promise about
-    /// (duplication audit, 2026-07-31).
-    private var footerSection: some View {
-        Section {
-            Text("A validator index is public — anyone can look up its balance and status.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .listRowBackground(Color.clear)
-        }
-    }
 
     // MARK: - Actions
 

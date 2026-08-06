@@ -45,7 +45,10 @@ struct TwitchScreen: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             } else {
-                BridgeSetupHeader(name: "Twitch")
+                BridgeSetupHeader(
+                    name: "Twitch",
+                    mode: .signIn,
+                    intro: "Sign in on Twitch's own page and the channels you follow keep arriving — who's live, and what they streamed. Read-only: it can never chat, follow, or subscribe.")
                 connectSection.listRowSeparator(.hidden)
             }
         }

@@ -40,7 +40,10 @@ struct SpotifyScreen: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             } else {
-                BridgeSetupHeader(name: "Spotify")
+                BridgeSetupHeader(
+                    name: "Spotify",
+                    mode: .signIn,
+                    intro: "Sign in on Spotify's own page and what you save and listen to keeps arriving. Read-only: it can never play, queue, or change a playlist.")
                 connectSection.listRowSeparator(.hidden)
             }
         }

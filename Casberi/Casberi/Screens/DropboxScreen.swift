@@ -48,7 +48,10 @@ struct DropboxScreen: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             } else {
-                BridgeSetupHeader(name: "Dropbox")
+                BridgeSetupHeader(
+                    name: "Dropbox",
+                    mode: .signIn,
+                    intro: "Sign in on Dropbox's own page and one folder you name keeps arriving — only that folder, never a shared link and never anything shared with you.")
                 connectSection.listRowSeparator(.hidden)
             }
         }

@@ -16,13 +16,87 @@ func recentBridgeThings(source: String, context: ModelContext) -> [Thing] {
     return (try? context.fetch(descriptor)) ?? []
 }
 
-/// The screen's opening move — the app at full size with what connecting
-/// means, so a setup screen reads like a product page, not a form. The
-/// summary is the catalog's own (one source of words).
+/// How a bridge connects, as a closed set (prd §315, 2026-08-06).
+///
+/// The chip answers the question a connect screen never used to answer until
+/// the bottom of a gray wall: **what am I in for, and does anything arrive on
+/// its own afterwards?** Reported of Instagram — *"we need to be clear on some
+/// of these: instagram doesn't allow a live sync you must download etc"*. The
+/// fact was in the copy (the footer's lede opened "One-time import"), 145 words
+/// down the screen, in the tier `DesignTokens` reserves for timestamps.
+///
+/// CLOSED on purpose. A free-form label per screen is what the footers already
+/// were, and they drifted into seven registers saying overlapping things. Six
+/// cases cover all 44 setup screens; a seventh should be argued for in the PRD
+/// before it is added, because the value here is that the same words mean the
+/// same thing on every screen.
+///
+/// The chip states the METHOD. The cadence — whether anything keeps arriving —
+/// rides the intro sentence, because it only surprises for the imports, and a
+/// chip that said "keeps arriving" on thirty-five screens would be furniture.
+enum BridgeSetupMode {
+    /// You point at an export you downloaded. Nothing arrives on its own.
+    case oneTimeImport
+    /// Public reads, no sign-in and no key — a handle, an address, a feed URL.
+    case noAccount
+    /// A sign-in that happens on the service's own page.
+    case signIn
+    /// A token or key, pasted.
+    case pasteKey
+    /// No connection of its own: it reads the wallets already watched.
+    case watchedWallets
+    /// A system permission on this device — no account anywhere.
+    case onThisDevice
+
+    var label: String {
+        switch self {
+        case .oneTimeImport:  return String(localized: "One-time import")
+        case .noAccount:      return String(localized: "No account")
+        case .signIn:         return String(localized: "Sign in on their site")
+        case .pasteKey:       return String(localized: "Paste a key")
+        case .watchedWallets: return String(localized: "Reads your wallets")
+        case .onThisDevice:   return String(localized: "On this device")
+        }
+    }
+
+    var glyph: String {
+        switch self {
+        case .oneTimeImport:  return "arrow.down.doc"
+        case .noAccount:      return "globe"
+        case .signIn:         return "person.badge.key"
+        case .pasteKey:       return "key"
+        case .watchedWallets: return "wallet.bifold"
+        case .onThisDevice:   return "iphone"
+        }
+    }
+}
+
+/// The screen's opening move — the app at full size, what connecting means,
+/// and how it connects, so a setup screen reads like a product page, not a
+/// form. The tagline is the catalog's own (one source of words).
+///
+/// THE INTRO SENTENCE (prd §315) replaced `BridgeFooterNote` on every connect
+/// screen. The footer carried a lede, up to four bullets and a detail
+/// paragraph, at the bottom, in tertiary gray — so the load-bearing facts (this
+/// is an import; nothing here can spend; it only lands what's NEW) were the
+/// last thing read and the least legible. One sentence, at the top, in
+/// `callout15`/secondary: the mode, then the payoff, in the person's own terms.
+///
+/// What did NOT move here: fine print that changes what someone would DO stays
+/// next to the control it governs (the messages switch's own detail line, the
+/// Keychain note under a token field) or in the error copy that already says it
+/// (Instagram's "you ticked JSON" lives in the empty-import message). Anything
+/// that survived neither test was reassurance, and the intro sentence is one.
 struct BridgeSetupHeader: View {
     let name: String
     /// Override when a screen wants different words than the catalog offer.
     var blurb: String? = nil
+    /// How this bridge connects. Renders as a chip under the tagline.
+    var mode: BridgeSetupMode? = nil
+    /// ONE sentence: the mode's consequence and the payoff together. Two at the
+    /// absolute most, and only when the second states a limit that changes what
+    /// someone would do. This is the screen's whole prose budget.
+    var intro: String? = nil
     /// Once connected, the header wears the source's hue as a soft wash — the
     /// same crown the thing sheet uses — so a live connection reads different
     /// from a catalog page at a glance (delight 2026-07-14).
@@ -33,27 +107,42 @@ struct BridgeSetupHeader: View {
 
     var body: some View {
         Section {
-            // The screen's large nav title already says the name — the header
-            // adds the face and the promise, not a second name. The promise is
-            // the offer's TAGLINE, not its summary: the person just read the
-            // summary on the product page they arrived from, and repeating it
-            // here was the family's biggest copy redundancy (mock review
-            // 2026-07-16). Primary color — it's the one line the screen wants
-            // read, and an all-gray pre-connect screen read as disabled.
-            HStack(alignment: .center, spacing: DS.Space.s3) {
-                BridgeIcon(name: name, size: 60)
-                    .settleIn()
-                    .coinFlip(trigger: flipTrigger)
-                if let line = blurb ?? BridgeCatalog.offers.first(where: { $0.name == name })?.tagline {
-                    // The catalog copy is stored as English key strings; treat
-                    // each as a LocalizedStringKey so it resolves from the
-                    // active .lproj and switches live with the language.
-                    Text(LocalizedStringKey(line))
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .settleIn(delay: 0.06)
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                // The screen's large nav title already says the name — the
+                // header adds the face and the promise, not a second name. The
+                // promise is the offer's TAGLINE, not its summary: the person
+                // just read the summary on the product page they arrived from,
+                // and repeating it here was the family's biggest copy
+                // redundancy (mock review 2026-07-16). Primary color — it's the
+                // one line the screen wants read, and an all-gray pre-connect
+                // screen read as disabled.
+                HStack(alignment: .center, spacing: DS.Space.s3) {
+                    BridgeIcon(name: name, size: 60)
+                        .settleIn()
+                        .coinFlip(trigger: flipTrigger)
+                    VStack(alignment: .leading, spacing: DS.Space.s1) {
+                        if let line = blurb ?? BridgeCatalog.offers.first(where: { $0.name == name })?.tagline {
+                            // The catalog copy is stored as English key strings;
+                            // treat each as a LocalizedStringKey so it resolves
+                            // from the active .lproj and switches live with the
+                            // language.
+                            Text(LocalizedStringKey(line))
+                                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        if let mode {
+                            modeChip(mode)
+                        }
+                    }
+                    .settleIn(delay: 0.06)
+                    Spacer(minLength: 0)
                 }
-                Spacer(minLength: 0)
+                if let intro {
+                    Text(LocalizedStringKey(intro))
+                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .settleIn(delay: 0.1)
+                }
             }
             .padding(DS.Space.s3)
             .background {
@@ -71,6 +160,21 @@ struct BridgeSetupHeader: View {
                                       bottom: DS.Space.s2, trailing: DS.Space.s1))
         }
         .listRowSeparator(.hidden)
+    }
+
+    /// Quiet by construction — `label12` on the well fill, the same recess the
+    /// fields use. It is a FACT about the screen, not a control and not a
+    /// badge: anything louder competes with the door that follows it.
+    private func modeChip(_ mode: BridgeSetupMode) -> some View {
+        HStack(spacing: DS.Space.s1) {
+            Image(systemName: mode.glyph)
+                .font(.system(size: 10, weight: .semibold))
+            Text(mode.label).dsText(.label12)
+        }
+        .foregroundStyle(DS.textSecondary)
+        .padding(.horizontal, DS.Space.s2)
+        .padding(.vertical, 4)
+        .background(DS.surfaceWell, in: Capsule(style: .continuous))
     }
 }
 
@@ -96,59 +200,15 @@ extension View {
     }
 }
 
-/// The screen's closing paragraph — its promise, then its fine print
-/// (2026-07-31, user: *"how would you make the text in each of the app connect
-/// sheets more appealing in terms of display"*).
-///
-/// Every setup screen ended with one undifferentiated `Text` at `subhead13` in
-/// `DS.textTertiary` — 60 to 80 words of it on the worst screens (Safe ran 453
-/// characters, Stripe 351). That tier measures 4.5:1 and `DesignTokens` defines
-/// its job as *"row metadata (timestamps, source names), placeholders, disabled
-/// glyphs"*: so the sentence the whole screen exists to earn — read-only, no
-/// account, nothing signs here — was wearing the timestamp tier, inside a wall.
-/// §218 ruled "one gray sentence per screen" and these had grown back to three
-/// paragraphs.
-///
-/// The fix is not shorter copy — the words were the good part. It's a LEDE and
-/// its detail: the load-bearing promise steps up to the `BridgeStepLines` tier
-/// (`callout15`/secondary, still quiet, now legible), and the elaboration keeps
-/// the old one. Where the detail is really a LIST of separate facts, pass
-/// `points` instead and they render as a `DSCheckList` — the treatment Stripe's
-/// scopes already proved is the most scannable text on any of these screens.
-struct BridgeFooterNote: View {
-    /// The one sentence worth reading if nothing else is.
-    let lede: String
-    /// The paragraph after it, or nil when the lede says everything.
-    var detail: String? = nil
-    /// Separate facts that read as a list, not a paragraph. Rendered as a
-    /// checklist beneath the lede; combine freely with `detail`.
-    var points: [String] = []
+/// `BridgeFooterNote` was DELETED in the §315 pass. It was built 2026-07-31
+/// to make the wall of closing text legible — a lede, a bullet list, a detail
+/// paragraph — and it did, but the wall was the problem: the facts that
+/// decide whether someone connects were still last on the screen, under the
+/// controls, in tertiary gray. `BridgeSetupHeader`'s `mode` + `intro` say them
+/// first instead. Do not bring it back; a connect screen gets one sentence,
+/// and fine print that survives that budget belongs beside the control it
+/// governs (`DSSlabNote`) or in the error copy that already states it.
 
-    var body: some View {
-        Section {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Text(LocalizedStringKey(lede))
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                if !points.isEmpty {
-                    // The neutral bullet, never the checkmark: these are the
-                    // things that ARRIVE, not permissions granted. On Stripe
-                    // both lists sit on one screen, and in matching green they
-                    // read as one list of ten (caught on screen, 2026-07-31).
-                    DSCheckList(lines: points, systemImage: "circle.fill",
-                                tint: DS.textTertiary)
-                }
-                if let detail {
-                    Text(LocalizedStringKey(detail))
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .listRowBackground(Color.clear)
-        }
-    }
-}
 
 /// The steps that remain after the door (prd §218, 2026-07-25).
 ///

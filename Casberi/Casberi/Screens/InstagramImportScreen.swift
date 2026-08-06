@@ -54,16 +54,11 @@ struct InstagramImportScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Instagram")
+            BridgeSetupHeader(
+                name: "Instagram",
+                mode: .oneTimeImport,
+                intro: "Instagram has no live connection — download your export, bring it here, and search your captions, comments, saves and likes. Re-import any time for what's new.")
             setupSection
-            BridgeFooterNote(
-                lede: "One-time import — nothing arrives on its own afterwards, and re-importing later adds only what's new.",
-                points: [
-                    String(localized: "Your captions and comments arrive as searchable text."),
-                    String(localized: "Saves and likes arrive as links. Casberi reads each post's own public page afterwards, a few at a time, to fill in the caption."),
-                    String(localized: "A post since deleted or made private stays a link."),
-                    ImportOptions.messagesPoint,
-                ])
             if !recent.isEmpty {
                 RecentThingsSection(header: "Imported", things: recent.live)
                     .listRowSeparator(.hidden)
@@ -96,17 +91,19 @@ struct InstagramImportScreen: View {
                     source: "Instagram",
                     doorTitle: "Open Instagram",
                     doorURL: URL(string: "https://accountscenter.instagram.com/info_and_permissions/dyi/"),
-                    // "JSON" is called out because the default is HTML, and an
-                    // HTML export parses into nothing here — a silent zero that
-                    // reads as a broken importer rather than as the wrong
-                    // format.
+                    // JSON is called out because the default is HTML, and an
+                    // HTML export parses into nothing here. The REASON for that
+                    // ("an HTML export can't be read") left the step in the §315
+                    // pass and lives in `nothingNewLine` — the moment it can
+                    // actually be acted on. A step says what to do; an error
+                    // says why it didn't work.
                     steps: [
                         "Choose Download or transfer information, then Some of your information.",
-                        "Tick Saved, Likes, Posts and Comments, then Download to device.",
-                        "Set Format to JSON — an HTML export can't be read. Instagram emails a link within about an hour.",
+                        "Tick Saved, Likes, Posts and Comments.",
+                        "Set Format to JSON, not HTML, then Download to device.",
                         // "then pick the unzipped folder below" was the button
                         // beneath it read out loud (2026-07-31).
-                        "Save the zip to Files and tap it once to unzip.",
+                        "They email a link in about an hour — unzip it in Files.",
                     ],
                     pickTitle: "Choose folder",
                     alreadyImported: held > 0,
@@ -198,6 +195,6 @@ struct InstagramImportScreen: View {
     private func nothingNewLine(_ summary: InstagramImport.Summary) -> String {
         summary.skipped > 0
             ? "Nothing new — all \(summary.skipped) were already here."
-            : "That export had nothing in it. Check you ticked Saved, Likes, Posts or Comments, and chose JSON."
+            : "That export had nothing in it. Check you ticked Saved, Likes, Posts or Comments — and chose JSON, not HTML, which can't be read."
     }
 }

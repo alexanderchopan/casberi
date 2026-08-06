@@ -29,14 +29,17 @@ struct SafeScreen: View {
 
     var body: some View {
         List {
-            BridgeSetupHeader(name: "Safe", connected: safeCount > 0)
+            BridgeSetupHeader(
+                name: "Safe",
+                mode: .watchedWallets,
+                intro: "No account here — it reads the wallets you already watch, so you're told when a transaction is waiting on your signature, and when an owner, threshold or module changes. Signing always happens in your own Safe app.",
+                connected: safeCount > 0)
             connectSection.listRowSeparator(.hidden)
             coSignersSection.listRowSeparator(.hidden)
             if hasWallets {
                 ChipLiveNote(name: "Safe", verb: "for your Safe's signature queue.")
                     .listRowSeparator(.hidden)
             }
-            footerSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -88,24 +91,6 @@ struct SafeScreen: View {
         .dsSlabSection()
     }
 
-    /// The family's worst wall — 453 characters welding four separate facts
-    /// into one tertiary paragraph. They were always a list; now they read as
-    /// one (2026-07-31).
-    ///
-    /// Three points, not four: "Finds every Safe you're a signer on" was the
-    /// connect slab's own sentence a screen-length above ("Watch a Safe
-    /// directly, or just your own wallet if it's one of a Safe's signers"),
-    /// and that is where it's news — before a Safe is detected. Once one is,
-    /// the point described something that already happened (duplication audit,
-    /// 2026-07-31).
-    private var footerSection: some View {
-        BridgeFooterNote(
-            lede: "Read-only: signing always happens in your own Safe app, never here.",
-            detail: "Read from Safe's own public Transaction Service by \(DS.device) — no account, no key.",
-            points: ["Says plainly when it's your own signature that's missing",
-                     "Alerts on a new or removed owner, or a changed signature threshold",
-                     "Alerts on a newly enabled module — the facts that decide who can move the funds"])
-    }
 
     // MARK: - Who you sign with
 
