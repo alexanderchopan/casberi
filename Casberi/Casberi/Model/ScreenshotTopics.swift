@@ -385,6 +385,13 @@ enum ScreenshotTopics {
         /// rows the one-time `restamp` below re-reads: only the writing rooms
         /// changed rules, so only they have anything to repair.
         let includeDomains: Bool
+        /// Which stored text the terms come out of (2026-08-06). Every room
+        /// before Obsidian kept its whole text on `content`, so this was
+        /// `\.content` everywhere and didn't need saying — a vault note keeps
+        /// its WORDS on `enrichedText` and only a 300-character excerpt on
+        /// `content`, so reading the default there would map each note by its
+        /// opening paragraph and call the result what the person writes about.
+        var text: (Thing) -> String = { $0.content }
     }
 
     private static func topicSource(_ source: String) -> TopicSource? {
@@ -417,6 +424,18 @@ enum ScreenshotTopics {
         // no `ocrAt`, and reading topics off those bytes would put file
         // previews in a map titled as what your images say.
         case "Files":     return TopicSource(kinds: [.file], needsOCR: true, includeDomains: true)
+        // Obsidian, 2026-08-06 — and the plainest case this switch has. The
+        // other writing rooms are archives of things published elsewhere;
+        // a vault is the person's own notes, written to be read, with no
+        // caption's brevity and nobody else's words mixed in. It was absent
+        // from here since the bridge shipped, which is why its room led with
+        // the generic year heatmap — the weakest lead there is — while the
+        // strongest "what you write about" corpus in the app sat unread.
+        //
+        // The text comes off `enrichedText`, falling back to the excerpt for a
+        // note the reader hasn't reached yet.
+        case "Obsidian":  return TopicSource(kinds: [.note], needsOCR: false, includeDomains: false,
+                                             text: { $0.enrichedText ?? $0.content })
         default:          return nil
         }
     }
@@ -451,7 +470,7 @@ enum ScreenshotTopics {
 
         // Read the text on main, tag it off main, stamp the result back on
         // main (2026-08-06 — see `extract`).
-        let extracted = await extract(rows.map(\.content),
+        let extracted = await extract(rows.map(spec.text),
                                       includeDomains: spec.includeDomains)
         var changed = 0
         let now = Date.now
@@ -555,7 +574,7 @@ enum ScreenshotTopics {
             // `NLTagger` passes on the actor the app draws with, in chunks of
             // a hundred, which is a visible freeze per chunk for as many
             // chunks as the room is long.
-            let texts = batch.map(\.content)
+            let texts = batch.map(spec.text)
             let extracted = await extract(texts, includeDomains: spec.includeDomains)
             // Per-ROW liveness, not a re-filter of the array (COROLLARY 6).
             // This list is held across the extraction hop and every yield

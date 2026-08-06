@@ -170,6 +170,18 @@ step "Retriever pure-logic self-test"
   || fail "the retriever logic self-test failed — run scripts/retriever-selftest.sh"
 print -P "%F{green}✓ retriever self-test%f"
 
+# The vault reader (2026-08-06), plus the drift guards for the wiring it can't
+# prove. Two of those guards cover SILENT TRUNCATIONS — this bridge and the
+# Files bridge both capped their walk BEFORE filtering what they already held,
+# so neither could ever land past its first hundred items — and nothing in a
+# build, a screen sweep or a landed count can see that: the room renders
+# perfectly and the sync reports success. The parsing half is the same class,
+# one layer up: a note whose excerpt is its YAML frontmatter looks like a note.
+step "Obsidian pure-logic self-test"
+"$ROOT/scripts/obsidian-selftest.sh" >/dev/null \
+  || fail "the Obsidian logic self-test failed — run scripts/obsidian-selftest.sh"
+print -P "%F{green}✓ obsidian self-test%f"
+
 # The four bridges added 2026-08-04. Three of them (Sentry, Vercel, PagerDuty)
 # have never run against a live account from this host, so these harnesses are
 # the only proof their shaping is right — and every failure in them is a silent

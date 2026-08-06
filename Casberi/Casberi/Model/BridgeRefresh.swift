@@ -428,7 +428,32 @@ enum BridgeRefresh {
         if ObsidianStore.shared.connected {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
-                _ = await ObsidianIngest.refresh(context: context)
+                // nil means the vault couldn't be walked at all — moved,
+                // renamed, or its permission lost. Say so, the way Files and
+                // Mail do (prd §284): this used to be discarded, so a vault
+                // that had gone unreadable went on showing its old notes while
+                // every pull did nothing and no screen said why.
+                guard await ObsidianIngest.refresh(context: context) != nil else {
+                    store.markAttention("obsidian",
+                        statusLine: "Couldn't read that vault — reconnect it to resume")
+                    return
+                }
+                // The Notes group's own delight (2026-07-28), which until
+                // today NOTHING CALLED — both checks were written, reviewed
+                // and shipped, and no code path ever reached them, so the
+                // moments they exist to fire have never once fired. They run
+                // here because this is the only pass that can make either true:
+                // a crossing needs a note that landed seconds ago, and the
+                // reach-back needs its wikilinks, both of which the refresh
+                // above has just written.
+                NoteMoments.checkLinkCrossings(context: context)
+                NoteMoments.checkWikilinkReachBack(context: context)
+                // Then the treemap terms off the words the sync just stored —
+                // the Files ordering. Store-only and self-terminating, so it
+                // can only ever trail the reader it reads.
+                _ = await sweepTimed("obsidian.topics") {
+                    await ScreenshotTopics.healTopics(source: "Obsidian", context: context)
+                }
             }
         }
         if FilesStore.shared.connected {

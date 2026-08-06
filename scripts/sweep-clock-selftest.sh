@@ -57,8 +57,15 @@ done
 # goes back on the main actor the numbers stay green and the app stutters again.
 guard "topic extraction hops off the main actor" \
   "Casberi/Casberi/Model/ScreenshotTopics.swift" 'Task\.detached\(priority: \.utility\)'
+# Anchored on the HOP, not on which field is read (2026-08-06): this guard
+# names `extract` because going back on-actor is the regression it exists to
+# catch, and it read `rows.map(\.content)` only because every room's text
+# happened to live on `content` when it was written. Obsidian's does not — a
+# vault note keeps its words on `enrichedText` — so pinning the argument made
+# this fail for a change it has no opinion about. WHICH text each room reads is
+# `scripts/obsidian-selftest.sh`'s guard, where it belongs.
 guard "the topics sweep uses it" \
-  "Casberi/Casberi/Model/ScreenshotTopics.swift" 'await extract\(rows\.map\(\\\.content\)'
+  "Casberi/Casberi/Model/ScreenshotTopics.swift" 'await extract\(rows\.map\('
 guard "the restamp repair uses it" \
   "Casberi/Casberi/Model/ScreenshotTopics.swift" 'await extract\(texts, includeDomains:'
 # The SECOND off-main hop (2026-08-06): `VerbDetection`'s three scans, which a

@@ -17727,3 +17727,103 @@ row. `scripts/x402-selftest.sh` extracts the pure logic from the shipped source,
 fired against a perfectly correct bridge, because the file's header explains the
 defect by naming it, so every negative guard now greps a comment-stripped copy
 (the setup-copy audit's lesson, earned again).
+
+## §320 — The vault that stopped at a hundred notes (user: "how if at all would we improve our Obsidian experience", then "do all", 2026-08-06)
+
+The question was open-ended and the answer was mostly defects, three of which
+had been shipping silently since the bridge landed on 2026-07-08. Every one of
+them renders perfectly: the room paints, the sync reports success, and only
+somebody who knows how many notes they have could ever have noticed.
+
+**1. A vault over 100 notes could never finish arriving.** `ObsidianIngest`
+read `sorted.prefix(100)` and THEN skipped already-landed refs — cap before
+filter — so pass one landed the newest hundred and every pass afterwards
+looked at those same hundred, found them all landed, and added nothing. Note
+101 and everything older were unreachable unless an edit pushed them into the
+newest hundred. The doc above the line said a big vault "arrives in waves";
+the waves never advanced. **`FilesIngest` had the identical line**, found by
+reading the file this bridge was modelled on — §307's silent-truncation class
+with no report against it, because a truncated import looks exactly like a
+complete one.
+
+**2. A note was read once, ever.** The dedupe skipped any ref already seen, so
+a note's excerpt, wikilinks and dates froze at first sight. A note is the one
+thing in this corpus that is EXPECTED to change — every other bridge's rows are
+events, final when they land — and this bridge treated it as an event. The
+watermark needs no new field and therefore no CloudKit deploy: `capturedAt` is
+already the file's own modification date, so "changed since we read it" is a
+comparison against a column we've always had.
+
+**3. Deletions and renames never synced.** A note deleted in the vault stayed
+forever; a rename landed a duplicate and orphaned the old row, which also broke
+wikilink resolution into it (that keys on title). The fix is `FilesIngest`'s
+ref-set difference, with `ScreenshotIngest.pruneDeleted`'s empty-read guard
+attached — **an un-materialized iCloud folder enumerates EMPTY**, and this
+bridge's own setup copy says iCloud Drive is where vaults usually live, so a
+zero-file walk is a sync state and not an emptied vault. Erring toward keep
+leaves a stale row; erring the other way deletes the corpus and mirrors it to
+every other device.
+
+**4. The reader read metadata.** The first 300 raw bytes became the excerpt,
+and for a vault using templates, Dataview or the tag pane those bytes are
+`---\ntags: […]\naliases:` for EVERY note. `ObsidianNote` strips frontmatter
+before clamping and harvests the vault's own tags — frontmatter and inline —
+onto `Thing.tags`, which is the room's filter surface. Two rules are not
+negotiable: frontmatter opens on the FIRST line and nowhere else (a `---`
+further down is a horizontal rule, and consuming from it deletes everything
+above), and an opener with no closing fence is not frontmatter at all (the safe
+direction: a stray `---` in an excerpt, never a silently emptied note).
+
+**5. Retrieval saw a paragraph.** The full body now rides `enrichedText`
+(retrieval-only by the 2026-07-15 ruling, so nothing on screen changes), which
+is what stops a 2,000-word note being findable only by its opening. An edit
+clears `embedding` and `topicsAt` with it — **a "we looked" mark is not a "we
+looked correctly" mark** (§313), and without the clear an edited note keeps the
+vector and the topics of its first draft and search answers with what it used
+to be about.
+
+**6. Two features existed and nothing called them.** `NoteMoments.checkLinkCrossings`
+and `checkWikilinkReachBack` were written, reviewed and shipped on 2026-07-28
+and no code path ever reached them, so the Notes group's delight has never once
+fired. And the vault was absent from `ScreenshotTopics.topicSource` and
+`FeedInsight.topicMap`, so the app's most literal "what you write about" corpus
+led with a year heatmap — the weakest lead in the chain (§247). Same class as
+X's and TikTok's missing registry cases (§307/§313): a call into a table that
+answers nil is a no-op indistinguishable from having nothing to say. `TopicSource`
+gained a `text` closure, because every room before this one kept its whole text
+on `content` and a vault note does not.
+
+**Two additions rather than repairs.** A note now opens in the app that owns it
+(`obsidian://open?vault=&file=`, both halves already stored, gated on
+`canOpenURL` so it can never be a disc that does nothing — the §275 rule), and
+the sheet shows BACKLINKS, the half a note cannot carry itself: its outgoing
+links are written in its text, its incoming ones in everybody else's.
+
+**The repair, and why it needs one.** `capturedAt` as a watermark has one blind
+spot — a note the person has not edited is untouched by definition, so a change
+to how we READ notes reaches only notes edited afterwards, which for an
+established vault is approximately none. `readerEpoch` re-reads the vault once
+per device and keys its own done-flag, so bumping the date re-arms the repair by
+construction (§313's `termsEpoch` lesson, including the half that no bumped date
+alone could fix). It withholds that flag while any note is still capped out or
+still downloading — `YouTubeFollowRepair`'s rule: a repair that declares itself
+finished with subjects unreachable has silently decided they never will be.
+
+**The single-flight is time-boxed now**, not a bare `Bool`. `String(contentsOf:)`
+on an evicted iCloud note blocks with no timeout, so the `defer` never runs, the
+flag latches, and the bridge is dead for the life of the app — `FilesIngest`'s
+own 2026-08-02 report, in the bridge whose documented happy path is iCloud
+Drive. An un-downloaded note now lands on its title and gets its words on a
+later pass, and stays in the walk so the prune can't read "not downloaded" as
+"deleted".
+
+`scripts/obsidian-selftest.sh` compiles `ObsidianNote.swift` WHOLE and
+unmodified (it is Foundation-only by design) — 76 assertions, 11 mutations, plus
+the drift guards for the wiring no assertion can reach, chiefly both cap
+orderings. Its first run reproduced §319's lesson word for word: the truncation
+guard fired against the fixed source, because both files explain the old broken
+line in a comment so the next reader knows what not to write — so it greps a
+comment-stripped copy. One existing guard was loosened in the same commit:
+`sweep-clock-selftest.sh` pinned `extract(rows.map(\.content))` when what it
+protects is the off-actor HOP, and a guard that fails for a change it has no
+opinion about is one somebody deletes.

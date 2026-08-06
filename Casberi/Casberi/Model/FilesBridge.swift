@@ -197,8 +197,19 @@ enum FilesIngest {
                 guard let files = walk(folder) else { return nil }
                 let sorted = files.sorted { $0.modified > $1.modified }
 
+                // THE CAP GOES AFTER THE FILTER, not before it (2026-08-06).
+                //
+                // This read `sorted.prefix(100) where !existing.contains(…)`,
+                // which meant a folder of more than 100 files could never
+                // finish arriving: pass one landed the newest 100, and every
+                // pass after it looked at those same 100, found them all
+                // landed, and added nothing. File 101 and everything older
+                // were unreachable unless an edit pushed them into the newest
+                // hundred — so the doc above ("arrives in waves") described
+                // waves that never advanced. Found while fixing the identical
+                // line in `ObsidianIngest`, which this bridge was modelled on.
                 var new: [(file: WalkedFile, preview: String)] = []
-                for file in sorted.prefix(100) where !existing.contains(file.ref) {
+                for file in sorted.filter({ !existing.contains($0.ref) }).prefix(100) {
                     // An evicted iCloud file lands on its SIZE rather than
                     // its text — reading it would block this whole pass on a
                     // download nobody asked for, which is the stall that used

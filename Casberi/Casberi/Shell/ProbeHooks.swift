@@ -3188,6 +3188,53 @@ enum ProbeHooks {
                 NSLog("Obsidian probe: %@ new", n.map(String.init) ?? "FAILED")
             }
         },
+        // `-obsidianProbe YES` — one vault pass, reported job by job, plus one
+        // `obsidianNote|` line PER note the pass touched (the `-todayProbe`
+        // truncation lesson: a joined multi-line NSLog gets cut by the log
+        // reader mid-document).
+        //
+        // It exists because a landed count of 0 is the HEALTHY answer for a
+        // vault already in, and it has five other causes that render the same
+        // way: nothing new, everything capped out and waiting for the next
+        // pass, notes sitting un-downloaded in iCloud Drive, a one-time reader
+        // repair still draining, or a walk that returned nothing at all. Only
+        // the last is a bug, and only the phase lines can tell them apart.
+        Hook(key: "obsidianProbe") { _, context in
+            Task { @MainActor in
+                guard ObsidianStore.shared.connected else {
+                    NSLog("obsidian| NOT CONNECTED — no vault picked"); return
+                }
+                guard let report = await ObsidianIngest.pass(context: context) else {
+                    NSLog("obsidian| UNREADABLE — vault moved, renamed, or permission lost")
+                    return
+                }
+                NSLog("obsidian| vault=%@ walked=%d", ObsidianStore.shared.vaultName, report.walked)
+                NSLog("obsidian| landed=%d reread=%d pruned=%d", report.landed,
+                      report.reread, report.pruned)
+                NSLog("obsidian| pending=%d notDownloaded=%d prunePassed=%@",
+                      report.pending, report.notDownloaded, report.prunePassed ? "YES" : "NO")
+                NSLog("obsidian| repairing=%@ repairDone=%@",
+                      report.repairing ? "YES" : "NO", report.repairDone ? "YES" : "NO")
+                let descriptor = FetchDescriptor<Thing>(
+                    predicate: #Predicate<Thing> { $0.source == "Obsidian" })
+                let notes = ((try? context.fetch(descriptor)) ?? []).filter(\.isLive)
+                NSLog("obsidian| corpus=%d", notes.count)
+                for note in notes.prefix(40) {
+                    // `words` is the retrieval body's length, and it is the
+                    // field to read first: `content` looking right proves only
+                    // that the excerpt landed, while a nil body means the
+                    // reader never reached this note and nothing on any screen
+                    // would show it.
+                    NSLog("obsidianNote| %@ words=%d tags=%@ links=%d open=%@",
+                          note.title,
+                          (note.enrichedText ?? "").count,
+                          note.tags.isEmpty ? "-" : note.tags.joined(separator: ","),
+                          note.wikilinks.count,
+                          ObsidianLink.openURL(vault: ObsidianStore.shared.vaultName,
+                                               sourceRef: note.sourceRef)?.absoluteString ?? "none")
+                }
+            }
+        },
         // `-filesFolder <path>` points the Files bridge at a folder headlessly
         // (an in-sandbox path needs no security scope — sim testing only).
         Hook(key: "filesFolder") { path, context in

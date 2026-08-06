@@ -98,6 +98,10 @@ struct ThingSheetView: View {
     /// otherwise leave a stale row that traps on read — `liveLinkedNotes`
     /// filters to `.isLive` at render time before anything reads through it.
     @State private var linkedNotes: [KeyedThing] = []
+    /// The notes that link TO this one — the half a note cannot carry itself
+    /// (2026-08-06, `NoteLinks.backlinks`). Read on open like `linkedNotes`,
+    /// never persisted.
+    @State private var backlinks: [KeyedThing] = []
     /// Walking into a linked note (2026-07-28) — a plain re-presentation of
     /// this same sheet over the target, the recursive shape already used
     /// elsewhere in this app (e.g. `-agentThingProbe`'s Stack push).
@@ -382,6 +386,11 @@ struct ThingSheetView: View {
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s4)
                 }
+                if !liveBacklinks.isEmpty {
+                    backlinksSection
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s4)
+                }
                 relatedShelf
                     .padding(.top, DS.Space.s4)
             }
@@ -433,8 +442,11 @@ struct ThingSheetView: View {
                 crossSourceEcho = CrossSourceEcho.find(for: thing, context: modelContext)
                 writtenAbout = CrossSourceEcho.writtenAbout(thing, context: modelContext)
             }
-            if thing.source == "Obsidian", !thing.wikilinks.isEmpty {
-                linkedNotes = NoteLinks.resolve(thing.wikilinks, context: modelContext).keyed
+            if thing.source == "Obsidian" {
+                if !thing.wikilinks.isEmpty {
+                    linkedNotes = NoteLinks.resolve(thing.wikilinks, context: modelContext).keyed
+                }
+                backlinks = NoteLinks.backlinks(to: thing, context: modelContext).keyed
             }
             // The gate is a string check — non-approval things spend nothing.
             if WalletPrepare.applies(to: thing) {
@@ -1074,12 +1086,34 @@ struct ThingSheetView: View {
         linkedNotes.filter { $0.thing.isLive }
     }
 
+    /// `backlinks` filtered to still-live models — the corollary-2 guard, same
+    /// as `liveLinkedNotes` above.
+    private var liveBacklinks: [KeyedThing] {
+        backlinks.filter { $0.thing.isLive }
+    }
+
     private var noteLinksSection: some View {
+        noteLinkList("Links to", notes: liveLinkedNotes)
+    }
+
+    /// The inverse graph (2026-08-06). Obsidian's own most-used panel, and the
+    /// one direction a note cannot show from inside itself: its outgoing links
+    /// are written in its text, its incoming ones in everybody else's. Drawn
+    /// UNDER "Links to" and with an inbound arrow, so the two can't be read as
+    /// one list — a note that both links to and is linked from another would
+    /// otherwise show it twice with no way to tell the directions apart.
+    private var backlinksSection: some View {
+        noteLinkList("Linked from", notes: liveBacklinks, icon: "arrow.down.left")
+    }
+
+    @ViewBuilder
+    private func noteLinkList(_ title: LocalizedStringKey, notes: [KeyedThing],
+                              icon: String = "arrow.up.right") -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text("Links to")
+            Text(title)
                 .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
-            ForEach(liveLinkedNotes) { note in
+            ForEach(notes) { note in
                 // `liveLinkedNotes` filters when this view VALUE is made; this
                 // runs again each time the closure is re-evaluated, which is
                 // when the delete actually lands (corollary 3, build 176 —
@@ -1089,7 +1123,7 @@ struct ThingSheetView: View {
                         walkingToNote = note
                     } label: {
                         HStack(spacing: DS.Space.s2) {
-                            Image(systemName: "arrow.up.right")
+                            Image(systemName: icon)
                                 .accessibilityHidden(true)
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundStyle(DS.textTertiary)

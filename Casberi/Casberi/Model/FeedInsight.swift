@@ -533,6 +533,14 @@ enum FeedInsight {
             title = "What you write about"; unit = ("post", "posts")
             kinds = [.link, .note]
             belongs = { $0.tags.contains("Post") || $0.tags.contains("Comment") }
+        // Obsidian, 2026-08-06. The room this card was always most obviously
+        // for, and the last one to get it: a vault is nothing BUT the person's
+        // own writing, one kind, no import receipt to exclude and no
+        // somebody-else half to leave out. Its absence is why the vault room
+        // led with a year heatmap — which answers WHEN, the weakest lead in
+        // the chain — over the years of subjects sitting under it.
+        case "Obsidian":
+            title = "What you write about"; unit = ("note", "notes"); kinds = [.note]
         case "Files":
             // The connected folder's images, read the Photos way (2026-08-02):
             // `FilesIngest.heal` already OCRs them into `content` and

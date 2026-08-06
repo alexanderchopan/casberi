@@ -50,7 +50,11 @@
 	     LaunchServices fails it asynchronously in its own daemon
 	     (LSApplicationWorkspaceErrorDomain 115 in the log), so the opened-Bool
 	     cannot tell "no wallet" from "opened fine". photos-redirect → a
-	     screenshot's "Open in Photos" disc (2026-08-02). Same reasoning as wc,
+	     screenshot's "Open in Photos" disc (2026-08-02). obsidian → a vault
+	     note's "Open in Obsidian" verb (2026-08-06); connecting a vault proves
+	     the person has a FOLDER, which on iOS says nothing about whether the
+	     app is installed — a vault synced from a Mac through iCloud Drive
+	     reads the same either way. Same reasoning as wc,
 	     and the same failure it had shipped as: the verb opened that scheme
 	     unconditionally, so on a system where nothing claims it the disc did
 	     nothing at all and reported nothing (user: it "doesn't go to the Photos
@@ -75,6 +79,7 @@
 		<string>wc</string>
 		<string>photos-redirect</string>
 		<string>youtube</string>
+		<string>obsidian</string>
 		<string>metamask</string>
 		<string>rainbow</string>
 		<string>rabby</string>

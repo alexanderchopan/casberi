@@ -186,6 +186,29 @@ enum VerbDerivation {
             // list of its own: that set already means exactly "rows that came
             // in by the archive-load door", and it is what every other
             // aggregate over these rooms narrows by.
+            // A vault note opens in the app that OWNS it (2026-08-06).
+            //
+            // Obsidian is the one source in this app whose rows the person also
+            // has an editor for, and the corpus was a dead end: a note found
+            // here could be read here and nowhere else, with the app that owns
+            // it one tap away. Both halves of the URL are already stored — the
+            // vault's folder name and the note's path inside it — so this
+            // costs no field and no request.
+            //
+            // FIRST among this kind's verbs, because for a note it is the
+            // strongest thing you can do with it, and gated on the scheme so
+            // it is never a disc that does nothing (the screenshot verb's
+            // rule: an unclaimed scheme is refused ASYNCHRONOUSLY by
+            // LaunchServices and neither `UIApplication.open`'s completion nor
+            // SwiftUI's `openURL` reports it). Without Obsidian installed the
+            // note keeps the verbs below, which is the right set then.
+            if thing.source == "Obsidian",
+               HandOffState.installedSchemes.contains("obsidian"),
+               let vault = ObsidianLink.openURL(vault: ObsidianStore.shared.vaultName,
+                                                sourceRef: thing.sourceRef) {
+                out.append(Verb(label: "Open in Obsidian", icon: "book.closed",
+                                action: .openURL(vault)))
+            }
             if !Corpus.bulkImportSources.contains(thing.source) {
                 out.append(Verb(label: "Send to Reminders", icon: "checklist",
                                 action: .addToReminders))
@@ -524,7 +547,13 @@ enum HandOffState {
     /// the "Open in YouTube" verb is not tied to a connected bridge in the
     /// `externalVerb` sense (following a channel doesn't mean the app is
     /// installed), so nothing else could tell whether it would open anything.
-    private static let candidates = ["todoist", "googlegmail", "photos-redirect", "youtube"]
+    /// `obsidian` joined 2026-08-06. Same reason as the two above: connecting
+    /// a vault means the person has a FOLDER, which on iOS says nothing about
+    /// whether the Obsidian app is on this device — a vault synced from a Mac
+    /// through iCloud Drive reads identically either way — so the bridge being
+    /// connected could never have answered this.
+    private static let candidates = ["todoist", "googlegmail", "photos-redirect",
+                                     "youtube", "obsidian"]
 
     @MainActor static func refresh(connected: Set<String>) {
         let schemes = Set(candidates.filter {

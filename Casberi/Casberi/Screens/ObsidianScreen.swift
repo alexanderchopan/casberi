@@ -32,6 +32,7 @@ struct ObsidianScreen: View {
                     // the checklist's "Read-only — never edits a note."
                     connectionNote: String(localized: "A folder on \(DS.device)"),
                     capabilitiesFallback: ["Reads the vault you picked.",
+                                           "Keeps up with edits, and drops notes you delete.",
                                            "Read-only — never edits a note."],
                     openConnection: { showConnection = true }
                 )
@@ -121,7 +122,12 @@ struct ObsidianScreen: View {
             // Says what LANDS before what's safe — see `SteamScreen` (audit,
             // 2026-07-31). "beside everything else" left the same day: the
             // header three rows up is already "Your vault, beside your things".
-            DSSlabNote(text: "Every note in the vault lands in your feed. A vault is a folder of Markdown — find it in Files (often iCloud Drive → Obsidian). Read-only: the vault is never changed.")
+            // What lands, then what's safe — `SteamScreen`'s ordering (audit,
+            // 2026-07-31). The edit/delete sentence is here rather than in the
+            // intro because it changes what someone would DO: it is the answer
+            // to "will this go stale?", and before 2026-08-06 the honest
+            // answer was yes.
+            DSSlabNote(text: "Every note in the vault lands in your feed, and keeps up as you edit or delete them. A vault is a folder of Markdown — find it in Files (often iCloud Drive → Obsidian). Read-only: the vault is never changed.")
         }
         .dsSlabSection()
     }
@@ -161,6 +167,7 @@ struct ObsidianScreen: View {
             : String(localized: "Synced just now")
         if store.registerConnected(id: "obsidian", name: "Obsidian", proof: proof,
                                    can: ["Reads the vault you picked.",
+                                         "Keeps up with edits, and drops notes you delete.",
                                          "Read-only — never edits a note."]) {
             DSHaptic.success()
         }
