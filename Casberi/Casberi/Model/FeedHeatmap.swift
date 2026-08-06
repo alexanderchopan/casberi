@@ -65,6 +65,14 @@ enum FeedHeatmap {
         // post and a comment are each one dated act, and the export dates every
         // one of them.
         "TikTok":        Label(title: "Your TikTok year",     unit: "entry",      units: "entries"),
+        // X counts the whole room for TikTok's and Instagram's reason: a post,
+        // a reply and a like are each one dated act, and the archive dates
+        // every one of them exactly — replies and posts from `created_at`,
+        // likes decoded from the post's own snowflake id. "Entries" rather
+        // than "posts" because a third of them are somebody else's posts that
+        // this person liked, and the noun in a subtitle has to be true of
+        // everything it counts.
+        "X":             Label(title: "Your X year",          unit: "entry",      units: "entries"),
     ]
 
     static func label(for source: String) -> Label? { labels[source] }

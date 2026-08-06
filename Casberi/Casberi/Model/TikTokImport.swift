@@ -92,6 +92,8 @@ enum TikTokImport {
         var posts = 0
         var comments = 0
         var skipped = 0
+        /// Rows the cap refused. Reported rather than swallowed — see `tapCap`.
+        var dropped = 0
         var failed = false
 
         var imported: Int { saved + liked + posts + comments }
@@ -101,7 +103,15 @@ enum TikTokImport {
     /// budget. Instagram's reason (§245) applies harder here: a likes list runs
     /// to five figures while your own posts are in the dozens, so one shared
     /// cap would let the contentless rows crowd out every row carrying text.
-    private static let cap = 500
+    ///
+    /// RAISED 2026-08-05 from a single 500 (prd §309, generalising §307), and
+    /// split in two for the reason the paragraph above already gives: a likes
+    /// list running to five figures and a comments list of your own words are
+    /// not worth the same number. Five hundred failed SILENTLY — the receipt
+    /// for a truncated import was word-for-word the receipt for a complete one
+    /// — which is what `dropped` now fixes.
+    private static let writingCap = 10_000
+    private static let tapCap = 5_000
 
     // MARK: - Where each category lives
 
@@ -206,12 +216,17 @@ enum TikTokImport {
     /// non-zero parts appear, so a saves-only export doesn't advertise three
     /// empty categories.
     private static func receiptDetail(_ s: Summary) -> String {
-        let parts = [
+        var parts = [
             s.saved > 0 ? String(localized: "\(s.saved) saved") : nil,
             s.liked > 0 ? String(localized: "\(s.liked) liked") : nil,
             s.posts > 0 ? String(localized: "\(s.posts) posts") : nil,
             s.comments > 0 ? String(localized: "\(s.comments) comments") : nil,
         ].compactMap { $0 }
+        // A capped import SAYS SO — truncated and complete are otherwise the
+        // same sentence, here and in the room that follows.
+        if s.dropped > 0 {
+            parts.append(String(localized: "\(s.dropped) older not imported"))
+        }
         return parts.joined(separator: " · ")
     }
 
@@ -234,8 +249,9 @@ enum TikTokImport {
             let date = stamp(field(entry, ["Date"])) ?? Date(timeIntervalSince1970: 0)
             return (date, video.id, video.canonical)
         }.sorted { $0.date > $1.date }
+        summary.dropped += max(0, dated.count - tapCap)
 
-        for row in dated.prefix(cap) {
+        for row in dated.prefix(tapCap) {
             let ref = "tiktok:video:\(row.id)"
             guard !seen.contains(ref) else {
                 // Already here from the other half of this same file, or from a
@@ -303,8 +319,9 @@ enum TikTokImport {
                 return (date, video.id, video.canonical, caption,
                         field(entry, ["Likes"]).flatMap { Int($0) })
             }.sorted { $0.date > $1.date }
+        summary.dropped += max(0, dated.count - writingCap)
 
-        for row in dated.prefix(cap) {
+        for row in dated.prefix(writingCap) {
             // A distinct ref from the saved/liked rows on purpose: liking your
             // own video is a different act from posting it, and collapsing them
             // would make one disappear.
@@ -349,8 +366,9 @@ enum TikTokImport {
             let link = field(entry, ["url", "Url", "Link"]).flatMap { TikTokLink.video($0)?.canonical }
             return (date, text, link)
         }.sorted { $0.date > $1.date }
+        summary.dropped += max(0, dated.count - writingCap)
 
-        for row in dated.prefix(cap) {
+        for row in dated.prefix(writingCap) {
             // NOT `hashValue`: Swift seeds string hashing per PROCESS, so a ref
             // built from one would differ on every launch and a re-import would
             // duplicate every comment instead of deduping it.
@@ -391,10 +409,16 @@ enum TikTokImport {
     struct FaceResult {
         var named = 0
         var missed = 0
-        /// Every attempt failed and at least one was made — the honest read on
-        /// an endpoint that has changed or gone. Never claimed off one failure,
-        /// since a single deleted video legitimately answers 400.
-        var unreachable: Bool { named == 0 && missed > 0 }
+        /// Videos TikTok says are deleted or private (2026-08-05, prd §309) —
+        /// a real answer, not a failure, and the read no service makes about
+        /// your own library: it remembers what TikTok has forgotten.
+        var gone = 0
+        /// Every attempt failed WITHOUT a status, and at least one was made:
+        /// an endpoint that has changed or a network that isn't there.
+        /// Deletions are excluded — a library of long-dead saves would
+        /// otherwise report the endpoint broken on every pass, which is the
+        /// opposite of what happened.
+        var unreachable: Bool { named == 0 && gone == 0 && missed > 0 }
     }
 
     /// What's still wearing its URL as a face.
@@ -415,7 +439,13 @@ enum TikTokImport {
         let all = (try? context.fetch(descriptor)) ?? []
         // A row is pending when its title is still the link it was born with —
         // the same test `LinkTitle.enrich` makes, so this can never fight it.
-        return all.live.filter { $0.kind == .link && $0.title == $0.content }
+        //
+        // A row TikTok has told us is GONE will never gain a face, so without
+        // the second clause it stays pending forever and spends a request per
+        // dead video on every pass, for the life of the install (2026-08-05).
+        return all.live.filter {
+            $0.kind == .link && $0.title == $0.content && !$0.tags.contains("Gone")
+        }
     }
 
     /// Gives imported videos their real faces: caption, creator and poster art,
@@ -445,14 +475,28 @@ enum TikTokImport {
         // uses. TikTok publishes no rate limit for this endpoint, so the shared
         // ceiling is the conservative read rather than a number invented here.
         let answers = await IngestSupport.boundedGather(jobs, maxConcurrent: 4) { job in
-            (job.ref, await OEmbed.resolve(job.url))
+            let outcome = await OEmbed.ask(job.url)
+            return (job.ref, outcome.response, outcome.status)
         }
 
         let byRef = IngestSupport.thingsByRef(context, source: source)
         var result = FaceResult()
         var changed: [Thing] = []
-        for (ref, embed) in answers {
+        for (ref, embed, status) in answers {
             guard let thing = byRef[ref], thing.isLive else { continue }
+            // GONE is recorded on the row rather than counted as a miss
+            // (2026-08-05, prd §309). `OEmbed.resolve` collapsed every failure
+            // into one nil, so a deleted video and a dead network were the
+            // same event here: the row was re-asked forever and a library of
+            // old saves reported the endpoint as broken.
+            if OEmbed.meansGone(status) {
+                result.gone += 1
+                if !thing.tags.contains("Gone") {
+                    thing.tags.append("Gone")
+                    changed.append(thing)
+                }
+                continue
+            }
             guard let embed, apply(embed, to: thing) else { result.missed += 1; continue }
             result.named += 1
             changed.append(thing)

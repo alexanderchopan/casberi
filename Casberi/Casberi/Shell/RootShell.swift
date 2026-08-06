@@ -1582,6 +1582,15 @@ struct RootShell: View {
         case .kind(let kind):
             sceneState.filter.source = "All"
             sceneState.filter.tag = kind.typeTag
+        // The only destination that sets BOTH (2026-08-05, prd §307) — a room
+        // and one of its halves. `FeedFilter` has always ANDed these two; until
+        // now nothing could ask for the pair, so an imported room's posts,
+        // replies and likes were one undifferentiated column. Still the agent's
+        // filter and not a control (§269): the day-section header names it, and
+        // any source-chip tap clears it.
+        case .sourceFacet(let source, let tag):
+            sceneState.filter.source = source
+            sceneState.filter.tag = tag
         }
     }
 
@@ -1976,8 +1985,24 @@ struct RootShell: View {
         }
         if let agg = AggregateAsk.parse(query, sources: knownSources()) {
             lastAnswerHits = []
-            let line = AggregateAsk.answer(agg, things: allThings())
-            return ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"]
+            // A superlative names a THING, so it answers with that thing beside
+            // the line — a count alone would make the person search for the
+            // post it just told them about (2026-08-05, prd §307). Falls
+            // through to ordinary retrieval when nothing in scope carries the
+            // number, rather than asserting a winner that doesn't exist.
+            if case .topThing(let metric, let source, let range, let words) = agg {
+                if let best = AggregateAsk.topThing(metric: metric, source: source,
+                                                    range: range, rangeWords: words,
+                                                    things: allThings()) {
+                    lastAnswerHits = [best.thing]
+                    return ["root = Stack([ins, res])",
+                            "ins = Insight(\"\(genSafe(best.line))\")"]
+                        + groundingLines([best.thing], title: "The post")
+                }
+            } else {
+                let line = AggregateAsk.answer(agg, things: allThings())
+                return ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"]
+            }
         }
         // "How's my day?" — the Today brief (prd §166), the screen the whisper
         // capsule opens. Answers THROUGH the composer itself so the typed ask,
@@ -2254,6 +2279,19 @@ struct RootShell: View {
             var recent = pool.filter { $0.capturedAt >= now.addingTimeInterval(-3 * 86_400) }
             if recent.isEmpty {
                 recent = pool.filter { $0.capturedAt >= now.addingTimeInterval(-7 * 86_400) }
+            }
+            // An ARCHIVE has no recent window and never will (2026-08-05, prd
+            // §307). Both filters above are empty the moment an import
+            // finishes, so "summarize my X" could not reach the model at all —
+            // it fell to the deterministic recap every time, which is the one
+            // shape that can't summarize anything. A bulk-import room hands
+            // over its newest instead, which is what the cap below would have
+            // taken from a live room anyway.
+            if recent.isEmpty {
+                recent = pool
+                    .filter { !Corpus.isImportReceipt($0)
+                              && Corpus.bulkImportSources.contains($0.source) }
+                    .sorted { $0.capturedAt > $1.capturedAt }
             }
             if !recent.isEmpty {
                 let capped = Array(recent.prefix(16))
@@ -2555,13 +2593,46 @@ struct RootShell: View {
         if let pool {
             corpus = pool
         } else {
-            var descriptor = FetchDescriptor<Thing>(
-                sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-            )
-            descriptor.fetchLimit = 2000
-            corpus = (try? modelContext.fetch(descriptor)) ?? []
+            corpus = scopedCorpus(for: query)
         }
         return Retriever.rank(query, in: corpus, isPoolRefinement: pool != nil)
+    }
+
+    /// The things an ask is scored against.
+    ///
+    /// A query that NAMES a source is fetched scoped to that source instead of
+    /// through the global recency window (2026-08-05). The window is the
+    /// reason: 2,000 newest things is generous for a corpus that arrives a few
+    /// rows at a time, and useless for one that arrives all at once dated
+    /// across a decade — an imported X archive of 3,500 posts had well over
+    /// half of itself permanently outside any answer, including the answers
+    /// that named X explicitly. Scoping by predicate costs the same single
+    /// fetch and reaches the whole room.
+    ///
+    /// FALLS BACK rather than answering empty. A catalog name the person has
+    /// nothing from resolves here and fetches nothing, and returning that would
+    /// turn a question whose wording happens to contain an app's name into
+    /// "nothing matches". An empty scoped read is treated as no scope at all,
+    /// and `Retriever.rank` independently declines to honour a filter the
+    /// corpus can't confirm.
+    private func scopedCorpus(for query: String) -> [Thing] {
+        var descriptor = FetchDescriptor<Thing>(
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+        )
+        if let named = Retriever.sourceFilter(in: query) {
+            // Bound into a local — a `#Predicate` captures values, not the
+            // members of a tuple it was handed.
+            let source = named.source
+            var scoped = descriptor
+            scoped.predicate = #Predicate { $0.source == source }
+            // High enough that no real room is truncated, still a ceiling: the
+            // scoring pass below is linear over whatever this returns.
+            scoped.fetchLimit = 20_000
+            let rows = (try? modelContext.fetch(scoped)) ?? []
+            if !rows.isEmpty { return rows }
+        }
+        descriptor.fetchLimit = 2000
+        return (try? modelContext.fetch(descriptor)) ?? []
     }
 
     /// Today's doc, verbatim — the record paints from the top 4 hits. The

@@ -16595,3 +16595,255 @@ files, and restore the copy. Note the standing lesson from the entitlements
 memory — an entitlement not present in the provisioning profile breaks the
 ARCHIVE rather than the simulator build, so this must be verified with
 `codesign -d --entitlements` on an exported IPA, not on a green `xcodebuild`.
+
+## §307 — An imported room you can't search is a folder (user: "so i imported my X stuff. but what do i do with it now? it imported 3500 posts. when i ask the agent 'can you search my X stuff' it shows me about 5 posts", then "how do we make it more searchable so it has real utility", 2026-08-05)
+
+The report was one sentence and it named four independent defects, none of which
+a build or a screen sweep could see. Every one of them rendered perfectly.
+
+**1. Two thirds of the archive never landed.** `postCap` was 1,000 and `likeCap`
+500, so no X archive could ever put more than 1,500 rows in the store. A
+3,500-post archive imported, reported "1000 posts · 500 liked", and refused two
+thousand posts with no line anywhere saying so — the receipt for a truncated
+import was word-for-word the receipt for a complete one. Raised to 10,000 /
+5,000 and, more importantly, the refusal is now COUNTED and said out loud
+(`droppedPosts` / `droppedLikes`, on the receipt, on the import screen and in
+the probe). The caps are not unbounded because `run` is `@MainActor` and builds
+every row before one save; that is a real bound and it is now a sentence on
+screen rather than a silence.
+
+**2. The retriever could not see a source.** `Retriever.rank` scored `title`,
+`tags` and `content`. A KIND word had been a filter since the beginning
+("screenshots about work"), and a SOURCE word — the other half of what a thing
+is — had no route in at all. So "can you search my X stuff" stripped to the
+terms `can` / `x` / `stuff` and answered with whatever unrelated things contain
+the word "can". Those were the five posts, and none of them were from X. A
+source is a filter now, resolved off the whole query before it's split (a source
+name can be two words), matched on word boundaries and longest-first, and
+CONFIRMED against the corpus before it's honoured so a stray match costs
+nothing. `can`/`could`/`would`/`please`/`stuff` joined the stopword list.
+
+**3. The ask window is 2,000 things and an archive is bigger than that.**
+`RootShell.retrieve` fetched the newest 2,000 rows globally — generous for a
+corpus that arrives a few rows at a time, useless for one that arrives at once
+dated across a decade. A query that NAMES a source is now fetched scoped to that
+source, which costs the same single fetch and reaches the whole room. An empty
+scoped read falls back rather than answering nothing.
+
+**4. "What's new in X" could only ever answer "nothing".** `contextRecap`
+windows to three days, then a week. Every `Corpus.bulkImportSources` member
+lands its whole corpus at once, dated when it really happened — so both windows
+are empty the moment the import finishes, permanently, over a room holding
+thousands of things. These rooms get an ARCHIVE recap instead: how many, and the
+span. "3,214 things from X, 2011 to 2026" is the sentence that says the import
+worked. `handleRecap` had the identical bug and became reachable the same day
+(see below), so it takes the same branch, decided on where the handle's things
+actually LIVE. No `dailyBars` on an archive — seven empty columns read as a
+broken card, not an honest zero.
+
+**The room also had no head, and X was missing from THREE registries.** No
+leaderboard, no heatmap, no topic map — 3,500 rows of reverse-chron and nothing
+else, while Instagram, TikTok and Snapchat each got a face in §247/§279. The
+sharpest of the three: `XArchiveImportScreen` has called
+`ScreenshotTopics.healTopics(source: "X")` since the seat shipped, and
+`topicSource` answered nil for X every time, so the call did nothing and the map
+it was meant to fill never had terms. X now takes Instagram's split exactly —
+"What you post about" over the `.note` half (the person's own sentences; the
+`.link` half is posts somebody else wrote) — plus "Your X year" and, riding
+inside that heatmap card as everywhere but Snapchat, On This Day. The
+pixel-gated `OnThisDayHero` stays Snapchat-only on purpose: an X post has no
+`previewImageData`, so promoting it would suppress every other card and render
+a blank head.
+
+**The archive names no author for a like, and X does.** `like.js` carries
+`fullText` but `expandedUrl` is `x.com/i/web/status/<id>`, which identifies the
+post and never the person — and §280's own doc concluded from that that this
+room could never rank who you like most. That was a fact about the FILE mistaken
+for a fact about X: `publish.x.com/oembed`, already in `OEmbed.endpoints`,
+answers any public post keylessly with its author. `XArchiveImport.fetchFaces`
+is that second act, split out by §246's ruling and under no deadline (a post
+doesn't expire the way an export's links do). It stamps `authorHandle` only —
+the title is LEFT ALONE, unlike TikTok's pass, because an X like already arrives
+wearing the post's real words and re-fetching the same text would spend a write
+and drop the row's vector for nothing. `OEmbed` learned to read a handle out of
+`author_url` (single path component only — X's `/Interior` and SoundCloud's
+`/artist` are handles, YouTube's `/channel/UC…` is not).
+
+**A reply's recipient was being eaten by the title clamp.** `titleLine` cuts at
+80 characters and the recipient TRAILED, so every reply longer than about sixty
+characters — most of them — landed with no visible recipient and, worse, without
+the one word that makes a reply findable in the field the retriever scores
+highest. It leads now: §303's Cursor ruling, in a second place, for the same
+reason.
+
+**No new `Thing` field, so no CloudKit Production deploy.** Everything above
+rides fields that already exist.
+
+Harnessed in `scripts/x-selftest.sh` (41 new assertions, mutation-proven six
+ways). One lesson worth keeping: the first cut of the reply-clamp assertion
+built its own strings and passed cleanly against an importer reverted to the
+trailing form — it proved `titleLine`'s behaviour and not the shipped
+composition. `landTweets` can't be compiled here, so that one is a drift guard
+on the source text, which is the Cursor-selftest lesson (a guard must prove the
+real condition, not that the words appear).
+
+## §308 — Searching an archive: filters, threads, and the reads X can't make (user: "how do we make it more searchable so it has real utility", then "i want the agent to really be able to help a person search their x content in ways they couldn't on x. i imagine filters or other things", 2026-08-05)
+
+§307 made the room reachable. This makes it worth reaching. Seven additions, and
+one deliberate refusal.
+
+**YEARS (`DateQuery`).** The whole date vocabulary was relative — today, this
+week, last Thursday — which is everything a corpus that arrives a few rows at a
+time ever needs. An import is the other shape: fifteen years at once, and "what
+did I post in 2019" is the first question anyone asks it. Bare years, "in 2019",
+"before 2020", "since 2021", "between 2015 and 2018". The bounds read the way
+the words read in English (before/after exclusive, since/in inclusive) —
+getting that backwards returns a neighbouring year's things and looks like an
+answer. Four digits and 1990…next year, or it isn't a year: an ask carries all
+kinds of numbers, and treating one as a date silently empties the result.
+
+**FACETS.** `Post` / `Reply` / `Liked` / `Saved` / `Thread` / `Gone` are the
+tags that partition a room into halves a person names out loud, so they filter
+now — but ONLY alongside a named source. That gate is the design, not caution:
+these are ordinary English words, and letting "posts" filter an unscoped ask
+would hide every link and note about the subject behind whichever rows happen to
+carry the tag. Inside a room the person already named, the same word is
+unambiguous. A topic tag is NOT a facet — "design" names what a thing is about,
+the scorer already handles that at double weight, and promoting every tag to a
+hard filter would make an ask about a subject exclude everything not tagged with
+it.
+
+**THREADS.** `tweets.js` carries `in_reply_to_status_id`, and a post whose
+parent is ALSO IN THE FILE is by definition a reply to something the same person
+wrote — exact, needing no user id, no handle and no inference. A thread's HEAD
+now carries the whole chain as `enrichedText` and its length as `messageCount`.
+X only ever surfaces a thread if you find its head; here a word from the fourth
+post finds the first one, and the model reading that row reads the argument
+rather than its opening sentence. The continuations still land as their own
+rows, deliberately — they were real posts, folding them away would change what
+`sourceRef` means for rows already stored, and a re-import has to stay stable.
+This adds a way IN to a thread; it does not rewrite what the archive was.
+
+**WHAT'S GONE.** `OEmbed.resolve` collapsed every failure into nil, which is
+right for enrichment and wrong for a caller that wants to know why. `ask`
+surfaces the status, and the author pass marks a 404/410/403 row `Gone` rather
+than counting it as a miss. This is the read no service can make about you:
+your own archive remembers a post that no longer exists anywhere. Two
+consequences that had to be handled or the feature is worse than nothing — a
+gone row is excluded from `pending` (it will never gain an author, so it would
+be re-asked every pass forever), and `unreachable` now excludes deletions (an
+archive full of long-dead posts would otherwise report the endpoint broken on
+every run, which is the opposite of what happened).
+
+**SUPERLATIVES.** The archive carries `favorite_count` and `retweet_count`, and
+`Thing` has had `likeCount`/`repostCount` since prd 81's social pass — so "my
+most liked post" costs no new field. It answers with the POST beside the line,
+because a count alone makes the person go hunting for the thing it just told
+them about. A row with no count recorded is EXCLUDED, never counted as zero —
+the `messageCount` ruling in a second place: an unrecorded number is not a small
+one. Both a superlative word and an engagement word are required, since "most"
+alone is one of the commonest words in a question.
+
+**SYNTHESIS OVER AN ARCHIVE.** `answerNamedAsk` windowed the model's pool to
+three days, then a week — both empty forever for a bulk room, so "summarize my
+X" fell to the deterministic recap every time, which is the one shape that
+cannot summarize anything. A bulk-import room hands over its newest instead.
+
+**THE ECHO ONLY A CORPUS CAN MAKE.** `CrossSourceEcho.writtenAbout` matches a
+saved link against a POST whose text contains it — so opening an article can say
+"you linked this on X in 2019", which neither X nor a bookmark manager can do,
+because each holds one half. Still EXACT, never topical: "you posted about this
+subject" is an inference, occasionally delightful and regularly wrong, and a
+wrong "you already wrote about this" reads as a bug (`find`'s own reasoning).
+What makes the exact version possible is that the importer swaps every t.co
+shortening back to its real destination, so the URL in a fifteen-year-old post
+is literally the URL in the corpus today.
+
+**THE REFUSAL: no filter chips.** The obvious shape for all of this is a row of
+Posts / Replies / Likes chips on the room. §269 ruled the tag filter is the
+AGENT's and has no control of its own (user: "i do not want to see the x chips
+those are supposed to be internal only"), so shipping chips here would
+re-litigate a recorded decision from the other direction. The capability lands
+through the sanctioned door instead: `NavigateIntent.sourceFacet` sets BOTH
+`FeedFilter.source` and `.tag`, which the filter has ANDed since it existed and
+which nothing could ever ask for together — so "show my X replies" opens the
+room already narrowed, the day-section header names what's on, and any
+source-chip tap clears it. Whether the chips themselves should exist is the
+user's ruling to make, not one to take by building them.
+
+Harnessed in `scripts/x-selftest.sh` (88 assertions total, 47 new). `DateQuery`
+is Foundation-only so it compiles AS SHIPPED rather than by extraction — the
+strongest form this harness has. Two lessons paid for: `grabvar` brace-matches
+from the next `{` it sees, which for a constant with no closure is the next
+FUNCTION's body and swallows it whole (an invalid-redeclaration error, not a
+missing constant — hence `grabline`); and a mutation removing the thread cycle
+guard was NOT caught, because the fixture proved the right result for the wrong
+reason. A node has one parent, so a cycle is unreachable from a head by
+construction — `threadCap` is the real bound, the `seen` set guards only a
+duplicate-id archive, and the assertion now says what it actually proves.
+
+## §309 — The other three import rooms had the same bugs, and nobody had looked (user: "do 1", then "can we make snapchat, tiktok, and instagram have parity with the X features", 2026-08-05)
+
+§307 was found because a person noticed their X room was short. Instagram,
+TikTok and Snapchat carried the identical defects and no one had reported them,
+which is the whole lesson: a silent truncation is only ever found by someone who
+already knows how much they put in.
+
+**THE CAPS.** Instagram capped at 500 across four categories, TikTok at 500
+across four, Snapchat at 500 chats and 500 memories — and not one of the three
+counted what it refused. Same failure as X's: the receipt for a truncated import
+is word-for-word the receipt for a complete one. All three now split their cap
+the way X does (what you WROTE is worth more rows than what you TAPPED, which
+was already each file's stated reasoning — it just had one number to say it
+with) and all three report `dropped` on the receipt, the screen and the probe.
+Snapchat's two differ because its units do: a conversation is one row per
+PERSON, a memory one row per CAPTURE.
+
+**WHAT'S GONE.** TikTok's face pass had X's exact blindness — `OEmbed.resolve`
+collapsed every failure into one nil, so a deleted video and a dead network were
+the same event: the row was re-asked on every pass forever, and a library of old
+saves reported the endpoint as broken. It reads the status now, marks the row
+`Gone`, and drops it from `pending`. Its SCREEN was worse than blind — it printed
+"N gone from TikTok" for any miss, a guess stated as a fact; that is a measured
+404/410/403 now, with unreadable answers counted separately.
+
+Instagram's caption pass was already the best of the three (a real outcome enum,
+an attempt ledger) but it only ever STOPPED ASKING — so the fact that a saved
+post no longer exists lived in a UserDefaults counter, where nothing could reach
+it. It tags the row now, like the others.
+
+Snapchat needs neither: its media links expire by design and `MediaResult`
+already models that as its own state.
+
+**SNAPCHAT HAD NO TAGS AT ALL** — the only import room where that was true, so
+nothing in it could be narrowed the way "my Instagram saves" or "my X replies"
+can. Its rows carry `Conversation` and `Memory` now, and BOTH paths repair a row
+that predates the tag on the dedupe hit (the Instagram "repair its author"
+pattern): a memory never heals otherwise, so that pass is the only one that will
+ever reach it. `landMemories` had to move from `existingSourceRefs` to
+`thingsByRef` for that — a ref SET can answer "already here" and nothing else —
+and its save now fires on a backfill, or an all-skipped re-import would repair
+tags and lose them.
+
+**TIKTOK'S TOPIC MAP.** §279 declined it permanently: TikTok's writing spans two
+kinds (captions ride the `.link` rows of your own videos, comments are `.note`s)
+and `FeedInsight.topicMap` read one, so a map would have covered half the writing
+while claiming all of it. The fix is to map BOTH and narrow by TAG — `topicMap`
+takes a `Set<ThingKind>` now, and `belongs` keeps saves and likes out for exactly
+the reason Instagram's map leaves out its saves. The limitation was in our
+signature, not in the export.
+
+**WHAT DOES NOT GENERALISE, and why.** Threads and the reply-recipient lead are
+X-specific (only its archive names a parent post, and only its replies name a
+recipient). Superlatives already work for TikTok — it has stamped `likeCount`
+from its export's own `Likes` field since it shipped, so §308's ask reached it
+the day that ask existed — and correctly do not for Instagram or Snapchat, whose
+exports carry no counts at all. Snapchat gets no topic map: its `.chat` rows are
+conversations mixing both people's words, and a card titled "what you write
+about" over someone else's messages would be the fake status §83 bans.
+
+Guarded in `scripts/x-selftest.sh` rather than three new scripts — this is one
+ruling with four instances, and a rule split across four files is a rule that
+drifts. Cap FLOORS (not exact values: the numbers stay free to move, never back
+under the ones that truncated a real export), a drop-counting check per file,
+and five behaviour guards. Mutation-proven five ways.

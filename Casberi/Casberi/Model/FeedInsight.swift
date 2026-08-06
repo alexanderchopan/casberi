@@ -64,6 +64,14 @@ enum FeedInsight {
         // behaviour rather than something to work around.
         case "TikTok":
             return savedAuthors(things)
+        // X, 2026-08-05 — the same board as Instagram and TikTok, reached the
+        // TikTok way: the archive names no author for a liked post, so the
+        // handles arrive from `XArchiveImport.fetchFaces` and this board is
+        // empty until that pass has run. It only ever renders the "Liked" arm,
+        // since an X archive has no saves to lead with — `savedAuthors` falls
+        // through to it by construction rather than by a special case here.
+        case "X":
+            return savedAuthors(things)
         default:
             return nil
         }
@@ -372,7 +380,13 @@ enum FeedInsight {
         // you write about" would be a lie if it counted what you tapped.
         let title: String
         let unit: (one: String, many: String)
-        let kind: ThingKind
+        // A SET since 2026-08-05 (prd §309), not one kind. TikTok was declined
+        // a map entirely because its writing spans two — captions ride the
+        // `.link` rows of your own videos, comments are `.note`s — and a map
+        // over one kind would have covered half the writing while claiming all
+        // of it. `belongs` then narrows within those kinds, which is what keeps
+        // somebody else's video out of a map about your words.
+        let kinds: Set<ThingKind>
         // What the count in the subtitle COUNTS, beyond the kind. Photos and
         // Instagram never needed this (their kind IS the membership), but a
         // Files room holds PDFs and text files under the same `.file` kind as
@@ -382,16 +396,36 @@ enum FeedInsight {
         var belongs: (Thing) -> Bool = { _ in true }
         switch source {
         case "Photos":
-            title = "What you screenshot"; unit = ("screenshot", "screenshots"); kind = .screenshot
+            title = "What you screenshot"; unit = ("screenshot", "screenshots"); kinds = [.screenshot]
         case "Instagram":
-            title = "What you write about"; unit = ("post", "posts"); kind = .note
+            title = "What you write about"; unit = ("post", "posts"); kinds = [.note]
+        // X, 2026-08-05. Instagram's split exactly, and the strongest corpus in
+        // the app for this card: an X archive's `.note` half is years of the
+        // person's own sentences, written to be read, with none of a caption's
+        // brevity. The `.link` half is posts they liked — somebody else's
+        // words — so it is left out for the same reason Instagram leaves out
+        // its saves, and TikTok gets no map at all because ITS writing spans
+        // both kinds and a map over one would cover half of it silently.
+        case "X":
+            title = "What you post about"; unit = ("post", "posts"); kinds = [.note]
+        // TikTok, 2026-08-05 — the gap the comment above used to describe as
+        // permanent. Its writing really does span two kinds, and the fix is to
+        // map BOTH and narrow by tag: your own videos' captions carry the
+        // `Post` tag on a `.link` row, your comments carry `Comment` on a
+        // `.note`. Saves and likes are `.link` rows too and are excluded by
+        // exactly that test — they are somebody else's videos, the same reason
+        // Instagram's map leaves out its saves.
+        case "TikTok":
+            title = "What you write about"; unit = ("post", "posts")
+            kinds = [.link, .note]
+            belongs = { $0.tags.contains("Post") || $0.tags.contains("Comment") }
         case "Files":
             // The connected folder's images, read the Photos way (2026-08-02):
             // `FilesIngest.heal` already OCRs them into `content` and
             // `ScreenshotTopics.healTopics` lifts the same deterministic
             // terms. "Images", not "screenshots" — a folder makes no claim
             // about where its pictures came from.
-            title = "What your images say"; unit = ("image", "images"); kind = .file
+            title = "What your images say"; unit = ("image", "images"); kinds = [.file]
             belongs = { FilesIngest.isImageRef($0.sourceRef) }
         default:
             return nil
@@ -399,7 +433,7 @@ enum FeedInsight {
 
         var perShot: [[String]] = []
         var total = 0
-        for thing in things where thing.kind == kind && belongs(thing) && !Corpus.isImportReceipt(thing) {
+        for thing in things where kinds.contains(thing.kind) && belongs(thing) && !Corpus.isImportReceipt(thing) {
             total += 1
             if !thing.ocrTopics.isEmpty { perShot.append(thing.ocrTopics) }
         }

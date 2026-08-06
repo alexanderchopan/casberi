@@ -246,6 +246,11 @@ enum ProbeHooks {
                   summary.posts, summary.comments, summary.saved, summary.liked)
             NSLog("Instagram probe: %d imported, %d skipped, failed=%d",
                   summary.imported, summary.skipped, summary.failed ? 1 : 0)
+            // The CAP's own line (prd §309). A truncated import is otherwise
+            // indistinguishable from a complete one in every reading of this
+            // probe: healthy counts, no failure flag, and the refused rows
+            // appearing nowhere.
+            NSLog("Instagram probe: %d dropped by cap", summary.dropped)
         },
         // `-xArchiveImport <path>` imports an UNZIPPED X archive folder (the
         // one holding `data/`, or its parent). Logs each category on its OWN
@@ -261,6 +266,33 @@ enum ProbeHooks {
                   summary.posts, summary.replies, summary.liked, summary.retweets)
             NSLog("X probe: %d imported, %d skipped, failed=%d",
                   summary.imported, summary.skipped, summary.failed ? 1 : 0)
+            // The CAP's own line (2026-08-05). It gets one because a truncated
+            // import is otherwise indistinguishable from a complete one in
+            // every reading of this probe: the landed counts are healthy, the
+            // failure flag is clear, and the thousands of posts the cap refused
+            // appear nowhere. That is exactly how a 3,500-post archive read as
+            // a successful 1,500-row import for as long as it did.
+            NSLog("X probe: dropped-by-cap posts=%d likes=%d, %d awaiting authors",
+                  summary.droppedPosts, summary.droppedLikes,
+                  XArchiveImport.pendingFaceCount(context: context))
+        },
+        // `-xFaces <limit|YES>` runs the oEmbed author pass over the liked
+        // posts already landed — the second act, exactly as in the UI.
+        //
+        // Reports named/missed SEPARATELY because they are different facts
+        // about different things: a miss is a deleted or protected post and is
+        // permanent, while every attempt missing is an endpoint that has
+        // changed shape. `unreachable` is only claimed when every attempt
+        // failed, since one deleted post legitimately answers 404 on its own.
+        Hook(key: "xFaces") { spec, context in
+            Task { @MainActor in
+                let limit = Int(spec) ?? 200
+                let outcome = await XArchiveImport.fetchFaces(limit: limit, context: context)
+                NSLog("X faces probe: %d named, %d gone, %d missed, unreachable=%d, %d still waiting",
+                      outcome.named, outcome.gone, outcome.missed,
+                      outcome.unreachable ? 1 : 0,
+                      XArchiveImport.pendingFaceCount(context: context))
+            }
         },
         // `-dayoneImport <path>` imports a Day One export .json from disk.
         Hook(key: "dayoneImport") { path, context in
@@ -288,8 +320,9 @@ enum ProbeHooks {
                 NSLog("Snapchat probe: %d chats, %d healed, %d memories, %d skipped, failed=%d",
                       summary.chats, summary.healed, summary.memories,
                       summary.skipped, summary.failed ? 1 : 0)
-                NSLog("Snapchat probe: %d awaiting pictures",
-                      SnapchatImport.pendingMediaCount(context: context))
+                NSLog("Snapchat probe: %d awaiting pictures, %d dropped by cap",
+                      SnapchatImport.pendingMediaCount(context: context),
+                      summary.dropped)
             }
         },
         // `-snapchatMedia <limit|YES>` runs the memories' picture fetch over
@@ -322,6 +355,7 @@ enum ProbeHooks {
             NSLog("TikTok probe: %d imported, %d skipped, failed=%d, %d awaiting faces",
                   summary.imported, summary.skipped, summary.failed ? 1 : 0,
                   TikTokImport.pendingFaceCount(context: context))
+            NSLog("TikTok probe: %d dropped by cap", summary.dropped)
         },
         // `-tiktokFaces <limit|YES>` runs the oEmbed face pass over whatever is
         // already landed: caption, creator and poster art per saved video.
@@ -335,8 +369,9 @@ enum ProbeHooks {
             Task { @MainActor in
                 let limit = Int(spec) ?? 200
                 let outcome = await TikTokImport.fetchFaces(limit: limit, context: context)
-                NSLog("TikTok faces probe: %d named, %d missed, unreachable=%d, %d still waiting",
-                      outcome.named, outcome.missed, outcome.unreachable ? 1 : 0,
+                NSLog("TikTok faces probe: %d named, %d gone, %d missed, unreachable=%d, %d still waiting",
+                      outcome.named, outcome.gone, outcome.missed,
+                      outcome.unreachable ? 1 : 0,
                       TikTokImport.pendingFaceCount(context: context))
             }
         },

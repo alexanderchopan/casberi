@@ -151,12 +151,19 @@ struct TikTokImportScreen: View {
         }
         resultIsError = false
         DSHaptic.success()
-        // A miss is usually a video its creator deleted, which is worth saying
-        // rather than reporting as a failure — the row is still a real thing
-        // that was really saved.
-        result = outcome.missed > 0
-            ? "\(outcome.named) named · \(outcome.missed) gone from TikTok"
-            : "\(outcome.named) named"
+        // "Gone" was a GUESS until 2026-08-05 (prd §309): every failure arrived
+        // as one nil, so this line called any miss "gone from TikTok" without
+        // ever having been told that. It is a measured fact now — TikTok
+        // answered 404/410/403 — and a miss is separately an answer we could
+        // not read, which is a different thing and says so.
+        var line = String(localized: "\(outcome.named) named")
+        if outcome.gone > 0 {
+            line += String(localized: " · \(outcome.gone) gone or private")
+        }
+        if outcome.missed > 0 {
+            line += String(localized: " · \(outcome.missed) unreadable")
+        }
+        result = line
     }
 
     /// Names each category that actually landed rather than one total — the
@@ -168,10 +175,14 @@ struct TikTokImportScreen: View {
         if summary.comments > 0 { parts.append(String(localized: "\(summary.comments) comments")) }
         if summary.saved > 0    { parts.append(String(localized: "\(summary.saved) saved")) }
         if summary.liked > 0    { parts.append(String(localized: "\(summary.liked) liked")) }
-        let landed = parts.joined(separator: " · ")
-        return summary.skipped > 0
-            ? String(localized: "\(landed) · \(summary.skipped) already here")
-            : landed
+        var landed = parts.joined(separator: " · ")
+        if summary.skipped > 0 {
+            landed += String(localized: " · \(summary.skipped) already here")
+        }
+        if summary.dropped > 0 {
+            landed += String(localized: " · \(summary.dropped) older not imported")
+        }
+        return landed
     }
 
     private func nothingNewLine(_ summary: TikTokImport.Summary) -> String {

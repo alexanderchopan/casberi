@@ -145,8 +145,12 @@ struct InstagramImportScreen: View {
         if summary.comments > 0 { parts.append("\(summary.comments) comments") }
         if summary.saved > 0    { parts.append("\(summary.saved) saved") }
         if summary.liked > 0    { parts.append("\(summary.liked) liked") }
-        let landed = parts.joined(separator: " · ")
-        return summary.skipped > 0 ? "\(landed) · \(summary.skipped) already here" : landed
+        var landed = parts.joined(separator: " · ")
+        if summary.skipped > 0 { landed += " · \(summary.skipped) already here" }
+        // A capped import says so on the screen that ran it — this is the one
+        // moment the person could still act on it (prd §309).
+        if summary.dropped > 0 { landed += " · \(summary.dropped) older not imported" }
+        return landed
     }
 
     private func nothingNewLine(_ summary: InstagramImport.Summary) -> String {

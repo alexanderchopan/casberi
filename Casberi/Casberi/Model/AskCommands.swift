@@ -13,6 +13,26 @@ enum AggregateAsk {
         case count(kind: ThingKind?, source: String?, range: ClosedRange<Date>?, rangeWords: String?)
         /// "which app sent the most <timeframe>" / "most active app"
         case topSource(range: ClosedRange<Date>?, rangeWords: String?)
+        /// "my most liked post", "my best post on X", "most reposted in 2019"
+        /// (2026-08-05, prd §307) — a superlative naming a real THING, not a
+        /// tally: the answer is the post itself and the count is how it won.
+        ///
+        /// It exists because the archive carries `favorite_count` and
+        /// `retweet_count` per post and X's own product makes your best post
+        /// remarkably hard to find — there is no "sort by likes" anywhere in
+        /// it, and scrolling fifteen years to eyeball one is not a search.
+        case topThing(metric: Metric, source: String?,
+                      range: ClosedRange<Date>?, rangeWords: String?)
+    }
+
+    /// Which engagement number a superlative is asking about.
+    enum Metric {
+        case likes, reposts
+
+        var noun: String { self == .likes ? "liked" : "reposted" }
+        func count(_ thing: Thing) -> Int? {
+            self == .likes ? thing.likeCount : thing.repostCount
+        }
     }
 
     /// `sources` is an `@autoclosure` (2026-07-21): every caller used to
@@ -32,6 +52,32 @@ enum AggregateAsk {
             return .topSource(range: date?.range, rangeWords: rangeWords ?? nil)
         }
 
+        // A superlative over THINGS, by what they earned. Checked after
+        // `topSource` (whose own guard already requires the words "app" or
+        // "source", so the two can't both match) and before "how many", which
+        // is a count rather than a pick.
+        //
+        // BOTH HALVES REQUIRED — a superlative word AND an engagement word —
+        // because "most" alone is one of the commonest words in a question and
+        // matching it would hijack asks that have nothing to do with numbers.
+        let superlatives = ["most", "best", "top", "biggest"]
+        if superlatives.contains(where: { q.contains($0) }) {
+            let metric: Metric? = {
+                for word in ["repost", "retweet", "reshared", "shared most"]
+                where q.contains(word) { return .reposts }
+                for word in ["like", "liked", "popular", "favourite", "favorite"]
+                where q.contains(word) { return .likes }
+                // "my best post" / "top tweet" name no number, and likes is
+                // what those mean in every product that has both.
+                for word in ["post", "tweet"] where q.contains(word) { return .likes }
+                return nil
+            }()
+            if let metric {
+                return .topThing(metric: metric, source: namedSource(q, sources: sources()),
+                                 range: date?.range, rangeWords: rangeWords ?? nil)
+            }
+        }
+
         guard q.contains("how many") else { return nil }
         var words = q.components(separatedBy: CharacterSet.alphanumerics.inverted)
             .filter { !$0.isEmpty }
@@ -47,6 +93,37 @@ enum AggregateAsk {
         }
         return .count(kind: kind, source: source, range: date?.range,
                       rangeWords: rangeWords ?? nil)
+    }
+
+    /// A source the query names, matched on whole words so "X" can't be found
+    /// inside another word. Shares `Retriever.sourceFilter`'s vocabulary and
+    /// matching rule rather than spelling a second one — one definition, so a
+    /// superlative and a search can never disagree about which room was named.
+    private static func namedSource(_ q: String, sources: [String]) -> String? {
+        Retriever.sourceFilter(in: q, sources: sources)?.source
+    }
+
+    /// The best thing by a metric, and the line naming it. nil when nothing in
+    /// scope carries that number at all — which is the honest answer for a
+    /// corpus whose rows never recorded one, and NOT the same as a tie at zero.
+    static func topThing(metric: Metric, source: String?, range: ClosedRange<Date>?,
+                         rangeWords: String?, things: [Thing]) -> (line: String, thing: Thing)? {
+        let scoped = things.filter { thing in
+            guard !Corpus.isImportReceipt(thing) else { return false }
+            if let source, thing.source != source { return false }
+            if let range, !range.contains(thing.capturedAt) { return false }
+            return metric.count(thing) != nil
+        }
+        // `max(by:)` over the counts we actually have. A row with no count is
+        // excluded above rather than treated as zero — an unrecorded number is
+        // not a small one, the `messageCount` ruling in a second place.
+        guard let best = scoped.max(by: { (metric.count($0) ?? 0) < (metric.count($1) ?? 0) }),
+              let count = metric.count(best) else { return nil }
+        let year = Calendar.current.component(.year, from: best.capturedAt)
+        let when = rangeWords ?? String(year)
+        let where_ = source.map { " on \($0)" } ?? ""
+        return (String(localized: "Your most \(metric.noun) post\(where_) — \(count.formatted()), \(when)."),
+                best)
     }
 
     /// The timeframe as the person said it ("this week", "today"), for the
@@ -147,6 +224,13 @@ enum AggregateAsk {
             let top = counts.max { $0.value != $1.value ? $0.value < $1.value : $0.key > $1.key }!
             let noun = top.value == 1 ? "thing" : "things"
             return "\(top.key) sent the most\(when) — \(top.value) \(noun)."
+
+        case .topThing(let metric, let source, let range, let rangeWords):
+            // The line alone, for callers that render prose. `RootShell` uses
+            // `topThing` directly so it can show the post beside it.
+            return topThing(metric: metric, source: source, range: range,
+                            rangeWords: rangeWords, things: things)?.line
+                ?? String(localized: "Nothing here records how often a post was \(metric.noun).")
         }
     }
 }

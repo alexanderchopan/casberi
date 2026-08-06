@@ -123,6 +123,18 @@ enum InstagramCaptions {
                 report.failed += 1
                 consecutiveFailures += 1
                 bump(&ledger, ref, to: maxAttempts)
+                // RECORD it, don't just stop asking (2026-08-05, prd §309).
+                // The ledger above is a UserDefaults counter whose only job is
+                // to end the retries — so the FACT that a saved post no longer
+                // exists lived nowhere a person could reach, and this is the
+                // one read no service can make about their own corpus: your
+                // library remembers something Instagram has forgotten. A tag,
+                // so it is filterable and searchable the day it lands and needs
+                // no CloudKit deploy — the same shape X uses.
+                if !thing.tags.contains("Gone") {
+                    thing.tags.append("Gone")
+                    context.saveHonestly()
+                }
             case .unreachable:
                 trace?("unreachable \(url.path()) — attempt \((ledger[ref] ?? 0) + 1)/\(maxAttempts)")
                 report.failed += 1

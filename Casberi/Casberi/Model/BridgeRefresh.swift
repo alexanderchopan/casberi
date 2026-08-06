@@ -499,6 +499,29 @@ enum BridgeRefresh {
                 _ = await TikTokImport.fetchFaces(limit: 60, context: context)
             }
         }
+        // X has no live read either (prd §280) and carries BOTH kinds of
+        // unfinished local work, so it takes Instagram's shape and TikTok's in
+        // one block (2026-08-05).
+        //
+        // TOPICS are free — they read `content` that is already stored — so
+        // they run every foreground, unthrottled, and drain a large archive
+        // over a few opens. Before this the only caller was the import screen
+        // itself, one bounded pass at the moment of import, which for a
+        // multi-thousand-post archive meant the map saw the first slice and
+        // never the rest.
+        //
+        // FACES are a request each, so they go behind `dueForHeal` like the
+        // other two. They name the AUTHOR of a liked post, which the archive
+        // itself never carries — see `XArchiveImport.fetchFaces`.
+        if connected("x") {
+            let s = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await ScreenshotTopics.healTopics(source: "X", context: context)
+                if BridgeRefresh.dueForHeal("x.faces") {
+                    _ = await XArchiveImport.fetchFaces(limit: 60, context: context)
+                }
+            }
+        }
         if connected("stocktwits") {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)

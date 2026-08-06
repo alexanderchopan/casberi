@@ -520,7 +520,16 @@ enum KeptAskComposers {
     /// already worked keeps working.
     static func namedAskTarget(_ query: String, things: [Thing])
         -> (target: NamedAskTarget, synthesize: Bool)? {
-        let q = query.lowercased().trimmingCharacters(in: .whitespaces)
+        var q = query.lowercased().trimmingCharacters(in: .whitespaces)
+        // A politeness lead is not part of the ask (2026-08-05). "Can you
+        // search my X stuff" is the same question as "search my X", and
+        // without this it matched no prefix at all and fell through to the
+        // term-scored retriever, which is how a question naming a real source
+        // came back with things that merely contain the word "can".
+        for lead in politeLeads where q.hasPrefix(lead) {
+            q = String(q.dropFirst(lead.count)).trimmingCharacters(in: .whitespaces)
+            break
+        }
         for (prefix, synth) in namedAskPrefixes where q.hasPrefix(prefix) {
             var name = String(q.dropFirst(prefix.count))
                 .trimmingCharacters(in: CharacterSet(charactersIn: "? "))
@@ -589,6 +598,28 @@ enum KeptAskComposers {
         // all carry a distinguishing word ("did"/"from").
         ("what did ", false),
         ("anything from ", false), ("anything new from ", false),
+        // The plain LOOKUP verbs (2026-08-05). A person who has just imported
+        // years of something asks for it by name — "search my X", "show me my
+        // Instagram" — and every phrasing above wanted news instead, so the
+        // most natural way to reach a room was the one way that missed. Longer
+        // forms lead, matching this table's own convention, since the loop
+        // takes the first prefix that both matches and resolves.
+        //
+        // Safe to widen: a residual that names no real source, handle or
+        // category returns nil and the caller falls straight through to the
+        // retriever, which is what these queries already did.
+        ("search my ", false), ("search ", false),
+        ("show me my ", false), ("show me ", false), ("show my ", false),
+        ("look through my ", false), ("look through ", false),
+        ("go through my ", false),
+    ]
+
+    /// Leading politeness that isn't part of the question. Stripped before the
+    /// prefix table is consulted, so "can you search my X stuff" is the same
+    /// ask as "search my X".
+    private static let politeLeads = [
+        "can you please ", "could you please ", "can you ", "could you ",
+        "would you ", "please ", "hey ", "ok ", "okay ",
     ]
 
     /// Trailing verbs/pronouns the person phrasings tack onto a name —
@@ -625,6 +656,18 @@ enum KeptAskComposers {
     /// honest lookup forever, the same discipline `context:<source>` already
     /// keeps for bridges.
     private static func handleRecap(_ handle: String, things: [Thing]) -> Result? {
+        // A handle that belongs to an IMPORTED room has `contextRecap`'s
+        // always-empty window for the same reason (2026-08-05), and it became
+        // reachable the day X's face pass started stamping the authors of
+        // liked posts: "what did I like from @someone" over an archive is a
+        // question about years, and a three-day window answers it "nothing"
+        // every time. Decided on where the handle's things actually LIVE, not
+        // on the handle, since the same person can be a followed publisher in
+        // one room and an imported author in another.
+        let owned = things.filter { $0.authorHandle == handle }
+        if !owned.isEmpty, owned.allSatisfy({ Corpus.bulkImportSources.contains($0.source) }) {
+            return archiveRecap(label: handle, pool: owned)
+        }
         let now = Date.now
         var pool = things.filter { $0.authorHandle == handle && $0.capturedAt >= now.addingTimeInterval(-3 * 86_400) }
         var windowWords = "in the last three days"
@@ -652,6 +695,17 @@ enum KeptAskComposers {
     /// parses a natural-language CUE, not a bare source name) — same
     /// precedent as `overdue`'s duplication above.
     private static func contextRecap(_ source: String, things: [Thing]) -> Result? {
+        // An ARCHIVE is never "new" and asking it what arrived this week is a
+        // question with one possible answer (2026-08-05). Every
+        // `Corpus.bulkImportSources` member lands its whole corpus in one pass,
+        // dated across the years it really happened in — so the three-day and
+        // one-week windows below are both empty the moment the import
+        // finishes, and "what's new in X" answered "Nothing new from X
+        // recently" over a room holding thousands of things, permanently.
+        // These rooms get a recap of what they HOLD instead.
+        if Corpus.bulkImportSources.contains(source) {
+            return archiveRecap(source, things: things)
+        }
         let now = Date.now
         var pool = things.filter { $0.source == source && $0.capturedAt >= now.addingTimeInterval(-3 * 86_400) }
         var windowWords = "in the last three days"
@@ -668,6 +722,51 @@ enum KeptAskComposers {
         return Result(delta: "\(pool.count) things", digest: "\(pool.count)",
                       doc: recapDoc(line: line, pool: pool,
                                     barsEyebrow: "This week", rowsTitle: "From \(source)"))
+    }
+
+    /// What an imported room HOLDS, for the sources whose whole corpus arrived
+    /// at once (2026-08-05, prd §280 amendment).
+    ///
+    /// The shape follows from what the question can honestly mean here. "How's
+    /// my X?" over an archive is not a question about this week — there is no
+    /// this week — it's a question about a body of things, so the answer states
+    /// its SIZE and its SPAN and then shows the newest of it. The span is the
+    /// fact a person can't get any other way and the one that makes the room
+    /// feel like a corpus rather than a list: "3,214 things from X, 2011 to
+    /// 2026" is the sentence that says the import worked.
+    ///
+    /// No `dailyBars`: a seven-day chart over a decade-old archive is seven
+    /// empty columns, which reads as a broken card rather than as an honest
+    /// zero. `rows` alone, newest first, each a door into the room.
+    private static func archiveRecap(_ source: String, things: [Thing]) -> Result? {
+        archiveRecap(label: source, pool: things.filter { $0.source == source })
+    }
+
+    /// The archive shape over an already-scoped pool — shared by the
+    /// source-scoped recap above and the handle-scoped one, which has the same
+    /// always-empty window for the same reason once a handle belongs to an
+    /// imported room.
+    private static func archiveRecap(label: String, pool unsorted: [Thing]) -> Result? {
+        // The import's own receipt is the app talking about itself, and every
+        // other aggregate over these rooms already excludes it.
+        let pool = unsorted
+            .filter { !Corpus.isImportReceipt($0) }
+            .sorted { $0.capturedAt > $1.capturedAt }
+        guard let newest = pool.first, let oldest = pool.last else {
+            return Result(delta: "", digest: "0",
+                          doc: ["root = Stack([ins])",
+                                "ins = Insight(\"\(genSafe("Nothing imported from \(label) yet."))\")"])
+        }
+        let calendar = Calendar.current
+        let from = calendar.component(.year, from: oldest.capturedAt)
+        let to = calendar.component(.year, from: newest.capturedAt)
+        // A single-year archive says the year once rather than "2026 to 2026".
+        let span = from == to ? "\(from)" : "\(from) to \(to)"
+        let line = String(localized: "\(pool.count) things from \(label), \(span).")
+        return Result(delta: "\(pool.count) things", digest: "\(pool.count)|\(span)",
+                      doc: ["root = Stack([ins, res])",
+                            "ins = Insight(\"\(genSafe(line))\")"]
+                          + rows(Array(pool.prefix(6)), title: "Newest from \(label)"))
     }
 
     // MARK: - What's up with my <category>

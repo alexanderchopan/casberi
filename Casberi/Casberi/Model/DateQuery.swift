@@ -69,6 +69,85 @@ enum DateQuery {
             let back = (today - target + 7) % 7   // 0 = that name IS today
             return Match(range: day(-back), words: [name])
         }
-        return nil
+
+        // A YEAR (2026-08-05, prd §307). Last, after every relative phrase
+        // above, because those are more specific and a year can't collide with
+        // them.
+        //
+        // WHY IT WAS MISSING AND WHY IT MATTERS NOW. Every phrase above is
+        // relative — today, this week, last Thursday — which is the whole
+        // vocabulary a corpus that arrives a few rows at a time ever needs. An
+        // IMPORT is the other shape: an X archive lands fifteen years at once,
+        // and "what did I post in 2019" is the first question anyone asks it.
+        // Without this, "2019" scored as a text term and matched the handful of
+        // things that happen to contain that string.
+        return yearMatch(in: q, now: now, calendar: calendar)
+    }
+
+    /// A year, a bound, or a span. Written as one function because the four
+    /// phrasings share their parsing and differ only in which end is open.
+    ///
+    /// FOUR DIGITS AND PLAUSIBLE, or it isn't a year. An ask can carry all
+    /// kinds of numbers — a price, a count, part of a name — and treating any
+    /// of them as a date filter would silently empty the answer. The window is
+    /// deliberately narrow: below 1990 there is nothing in anyone's corpus, and
+    /// one year ahead is as far as a forward-dated thing (a calendar event)
+    /// can plausibly sit.
+    private static func yearMatch(in q: String, now: Date,
+                                  calendar: Calendar) -> Match? {
+        let thisYear = calendar.component(.year, from: now)
+        let plausible = 1990...(thisYear + 1)
+
+        func start(_ year: Int) -> Date? {
+            calendar.date(from: DateComponents(year: year, month: 1, day: 1))
+        }
+        func end(_ year: Int) -> Date? {
+            start(year + 1).map { $0.addingTimeInterval(-1) }
+        }
+
+        // Whole words only — a four-digit run inside a longer number or an
+        // identifier is not a year somebody typed.
+        let words = q.components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+        let years = words.compactMap { word -> Int? in
+            guard word.count == 4, let n = Int(word), plausible.contains(n) else { return nil }
+            return n
+        }
+        guard let first = years.first else { return nil }
+
+        // A SPAN needs two years and a joining word, and it reads inclusively
+        // at both ends — "between 2015 and 2018" means four years, not three.
+        if years.count >= 2, q.contains("between") || q.contains("from") || q.contains(" to ") {
+            let second = years[1]
+            let lower = min(first, second), upper = max(first, second)
+            guard let a = start(lower), let b = end(upper) else { return nil }
+            return Match(range: a...b,
+                         words: Set(["between", "from", "to", "and",
+                                     String(lower), String(upper)]))
+        }
+
+        // A BOUND. "before 2020" is exclusive of 2020 and "after 2015"
+        // exclusive of 2015, which is how the words read in English; "since"
+        // and "in" are inclusive, which is also how they read. Getting this
+        // backwards is a silently-wrong answer, not an error — it just returns
+        // a neighbouring year's things.
+        let bounding = ["before", "after", "since", "until", "up to", "prior to"]
+        let bound = bounding.first { q.contains($0) }
+        if let bound {
+            let bag: Set<String> = [bound, String(first), "in", "the", "year"]
+            switch bound {
+            case "before", "until", "up to", "prior to":
+                guard let a = start(plausible.lowerBound), let b = start(first) else { return nil }
+                return Match(range: a...b.addingTimeInterval(-1), words: bag)
+            default:   // "after", "since"
+                let from = bound == "since" ? first : first + 1
+                guard let a = start(from), let b = end(plausible.upperBound) else { return nil }
+                return Match(range: a...b, words: bag)
+            }
+        }
+
+        // A bare year, or "in 2019".
+        guard let a = start(first), let b = end(first) else { return nil }
+        return Match(range: a...b, words: [String(first), "in", "the", "year"])
     }
 }

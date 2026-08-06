@@ -53,6 +53,8 @@ enum InstagramImport {
         var posts = 0
         var comments = 0
         var skipped = 0
+        /// Rows the cap refused. Reported rather than swallowed — see `tapCap`.
+        var dropped = 0
         var failed = false
 
         var imported: Int { saved + liked + posts + comments }
@@ -62,7 +64,20 @@ enum InstagramImport {
     /// than sharing one budget: a saves library runs to thousands while your
     /// own posts are in the dozens, and a shared cap would let the cheap rows
     /// crowd out the ones carrying real text.
-    private static let cap = 500
+    ///
+    /// RAISED 2026-08-05 from a single 500 (prd §309, generalising §307). Five
+    /// hundred was far too low for an export covering years, and it failed
+    /// SILENTLY: the receipt for a truncated import read word-for-word like the
+    /// receipt for a complete one, so a library of six thousand saves landed
+    /// five hundred and nothing anywhere said so. `dropped` is what makes the
+    /// difference visible.
+    ///
+    /// Two numbers now, not one, because the halves aren't worth the same: what
+    /// you WROTE is the substance of an export and what you TAPPED is a link
+    /// and a date. That was already this doc's reasoning for capping per
+    /// category; it just had one number to say it with.
+    private static let writingCap = 10_000
+    private static let tapCap = 5_000
 
     /// Where each category lives inside an export, relative to the folder that
     /// holds `your_instagram_activity`. Instagram splits large categories
@@ -153,12 +168,17 @@ enum InstagramImport {
     /// person would care about. Only non-zero parts appear, so a saves-only
     /// export doesn't advertise three empty categories.
     private static func receiptDetail(_ s: Summary) -> String {
-        let parts = [
+        var parts = [
             s.saved > 0 ? String(localized: "\(s.saved) saved") : nil,
             s.liked > 0 ? String(localized: "\(s.liked) liked") : nil,
             s.posts > 0 ? String(localized: "\(s.posts) posts") : nil,
             s.comments > 0 ? String(localized: "\(s.comments) comments") : nil,
         ].compactMap { $0 }
+        // A capped import SAYS SO — without it, truncated and complete read
+        // identically here and in the room that follows.
+        if s.dropped > 0 {
+            parts.append(String(localized: "\(s.dropped) older not imported"))
+        }
         return parts.joined(separator: " · ")
     }
 
@@ -185,8 +205,9 @@ enum InstagramImport {
             let handle = (entry["title"] as? String).map(repairMojibake) ?? ""
             return (Date(timeIntervalSince1970: stamp), handle, href)
         }.sorted { $0.date > $1.date }
+        summary.dropped += max(0, dated.count - tapCap)
 
-        for row in dated.prefix(cap) {
+        for row in dated.prefix(tapCap) {
             let ref = "instagram:\(marker):\(row.link)"
             guard !seen.contains(ref) else {
                 // Already here — repair its author if it predates the field.
@@ -275,8 +296,9 @@ enum InstagramImport {
             guard !caption.isEmpty, stamp > 0 else { return nil }
             return (Date(timeIntervalSince1970: stamp), caption)
         }.sorted { $0.date > $1.date }
+        summary.dropped += max(0, dated.count - writingCap)
 
-        for row in dated.prefix(cap) {
+        for row in dated.prefix(writingCap) {
             let ref = "instagram:post:\(Int(row.date.timeIntervalSince1970))"
             guard !seen.contains(ref) else { summary.skipped += 1; continue }
             seen.insert(ref)
@@ -314,8 +336,9 @@ enum InstagramImport {
             guard stamp > 0 else { return nil }
             return (Date(timeIntervalSince1970: stamp), text, owner)
         }.sorted { $0.date > $1.date }
+        summary.dropped += max(0, dated.count - writingCap)
 
-        for row in dated.prefix(cap) {
+        for row in dated.prefix(writingCap) {
             // NOT `hashValue`: Swift seeds string hashing per PROCESS, so a
             // ref built from one would differ on every launch and a re-import
             // would duplicate every comment instead of deduping it.

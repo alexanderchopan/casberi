@@ -85,6 +85,11 @@ struct ThingSheetView: View {
     /// per sheet open, like `replies`/`approvalCheck` below, is the honest
     /// place to pay that cost.
     @State private var crossSourceEcho: String?
+    /// You WROTE about this link once, somewhere else (2026-08-05, prd §307) —
+    /// an X post from 2019 that carried this exact URL. Fetched on open beside
+    /// `crossSourceEcho`, and held as plain values rather than the `Thing`, so
+    /// a heal landing under the open sheet can't leave a stale model here.
+    @State private var writtenAbout: (source: String, date: Date)?
     /// An Obsidian note's own `[[wikilink]]` targets, resolved against notes
     /// already landed (2026-07-28) — fetched once on open, like `replies`
     /// above. Held as `KeyedThing` (see `ThingRowKeying.swift`) rather than
@@ -426,6 +431,7 @@ struct ThingSheetView: View {
             // constructing the Task for the common non-link case.
             if thing.kind == .link {
                 crossSourceEcho = CrossSourceEcho.find(for: thing, context: modelContext)
+                writtenAbout = CrossSourceEcho.writtenAbout(thing, context: modelContext)
             }
             if thing.source == "Obsidian", !thing.wikilinks.isEmpty {
                 linkedNotes = NoteLinks.resolve(thing.wikilinks, context: modelContext).keyed
@@ -809,11 +815,12 @@ struct ThingSheetView: View {
             && !(contentShown && ThingContentView.showsLinkPreview(thing))
             && Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content)?.host() != nil
         let hasEcho = crossSourceEcho != nil
+        let hasWritten = writtenAbout != nil
         let hasAgent = thing.provenance.agent != nil
         let hasFrom = showsWho
         let hasCounterparty = showsWho && thing.source == "Wallet"
             && !(thing.counterpartyAddress ?? "").isEmpty
-        let anyRow = hasEvent || hasDue || hasSite || hasEcho || hasAgent || hasFrom || hasCounterparty
+        let anyRow = hasEvent || hasDue || hasSite || hasEcho || hasWritten || hasAgent || hasFrom || hasCounterparty
 
         if anyRow {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
@@ -840,6 +847,14 @@ struct ThingSheetView: View {
                 // re-save as new (CrossSourceEcho, 2026-07-21).
                 if hasEcho, let crossSourceEcho {
                     specRow("Also", "Saved from \(crossSourceEcho)")
+                }
+                // The read no single service can make: this link, inside
+                // something you WROTE somewhere else, years before you saved
+                // it here. Exact URL containment, never a topical guess — see
+                // `CrossSourceEcho.writtenAbout`.
+                if hasWritten, let writtenAbout {
+                    specRow("You wrote",
+                            "Linked on \(writtenAbout.source), \(writtenAbout.date.formatted(.dateTime.month(.abbreviated).year()))")
                 }
                 if hasAgent, let agent = thing.provenance.agent {
                     specRow("By", "\(agent)\(thing.provenance.machine.map { " on \($0)" } ?? "")")

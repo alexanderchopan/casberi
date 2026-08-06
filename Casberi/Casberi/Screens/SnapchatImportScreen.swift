@@ -117,6 +117,9 @@ struct SnapchatImportScreen: View {
         } else if summary.skipped > 0 {
             parts.append(String(localized: "\(summary.skipped) already here"))
         }
+        if summary.dropped > 0 {
+            parts.append(String(localized: "\(summary.dropped) older not imported"))
+        }
         result = parts.joined(separator: " · ")
 
         let landed = summary.chats + summary.memories

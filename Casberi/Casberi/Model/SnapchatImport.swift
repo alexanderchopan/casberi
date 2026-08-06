@@ -48,14 +48,27 @@ enum SnapchatImport {
         var healed = 0
         var memories = 0
         var skipped = 0
+        /// Rows the cap refused. Reported rather than swallowed — see `chatCap`.
+        var dropped = 0
         /// Nothing in the folder parsed as a Snapchat export.
         var failed = false
     }
 
     /// The newest N of each kind. The ChatGPT precedent — a years-deep export
     /// shouldn't flood the corpus in one tap.
-    private static let chatCap = 500
-    private static let memoryCap = 500
+    ///
+    /// RAISED 2026-08-05 from 500/500 (prd §309, generalising §307). The old
+    /// numbers failed SILENTLY: the receipt for a truncated import read
+    /// word-for-word like the receipt for a complete one, so a decade of
+    /// memories landed five hundred and nothing said so. `dropped` is what
+    /// makes the difference visible.
+    ///
+    /// The two differ because the units do. A conversation is one row per
+    /// PERSON — five hundred distinct people is already a generous read of
+    /// anyone's Snapchat — while a memory is one row per CAPTURE, and a decade
+    /// of those runs far higher.
+    private static let chatCap = 2_000
+    private static let memoryCap = 10_000
     /// Lines kept per conversation, newest-biased, and the transcript's byte
     /// ceiling. `content` is what `ChatBubbles` draws and what `Retriever`
     /// reads; a decade of one friendship shouldn't be either.
@@ -111,11 +124,16 @@ enum SnapchatImport {
     /// The receipt's own line — what the count is made of. Only non-zero
     /// parts appear, so a chats-only export doesn't advertise empty ones.
     private static func receiptDetail(_ s: Summary) -> String {
-        let parts = [
+        var parts = [
             s.chats > 0 ? String(localized: "\(s.chats) conversations") : nil,
             s.healed > 0 ? String(localized: "\(s.healed) updated") : nil,
             s.memories > 0 ? String(localized: "\(s.memories) memories") : nil,
         ].compactMap { $0 }
+        // A capped import SAYS SO — truncated and complete are otherwise the
+        // same sentence, here and in the room that follows.
+        if s.dropped > 0 {
+            parts.append(String(localized: "\(s.dropped) older not imported"))
+        }
         return parts.joined(separator: " · ")
     }
 
@@ -247,6 +265,7 @@ enum SnapchatImport {
         // save an otherwise all-skipped re-import would never make.
         var backfilled = false
 
+        summary.dropped += max(0, conversations.count - chatCap)
         for conversation in conversations.prefix(chatCap) {
             let ref = "snapchat:chat:\(conversation.handle.lowercased())"
             let transcript = conversation.transcript
@@ -255,6 +274,14 @@ enum SnapchatImport {
                 guard already.isLive else { continue }
                 if already.messageCount != conversation.total {
                     already.messageCount = conversation.total
+                    backfilled = true
+                }
+                // Repair a row that predates the tag (2026-08-05) — the
+                // Instagram "repair its author on the dedupe hit" pattern.
+                // Without it the facet reaches only rows landed from today on,
+                // and every conversation already in the corpus stays unfilterable.
+                if !already.tags.contains("Conversation") {
+                    already.tags.append("Conversation")
                     backfilled = true
                 }
                 // Only a genuinely newer conversation is news. An identical
@@ -276,6 +303,12 @@ enum SnapchatImport {
                 content: transcript,
                 source: source,
                 capturedAt: conversation.newest,
+                // TAGGED since 2026-08-05 (prd §309). Snapchat's rows carried
+                // no tags at all — the only import room where that was true —
+                // so nothing here could be narrowed the way "my Instagram
+                // saves" or "my X replies" can be. The room's two halves are
+                // its whole shape, and they are what a person names out loud.
+                tags: ["Conversation"],
                 sourceRef: ref
             )
             thing.authorHandle = conversation.handle
@@ -331,9 +364,16 @@ enum SnapchatImport {
     @MainActor
     private static func landMemories(data: Data, context: ModelContext) -> Summary {
         guard let memories = parseMemories(data) else { return Summary() }
-        let existing = IngestSupport.existingSourceRefs(context, source: source)
+        // `thingsByRef` rather than `existingSourceRefs` (2026-08-05): the ref
+        // SET can only answer "already here", and a row landed before the tag
+        // existed needs to be REPAIRED, not skipped. A memory never heals
+        // otherwise — it is a finished capture — so this is the only pass that
+        // will ever reach it.
+        let existing = IngestSupport.thingsByRef(context, source: source)
         var summary = Summary()
+        var backfilled = false
 
+        summary.dropped += max(0, memories.count - memoryCap)
         for memory in memories.prefix(memoryCap) {
             // Date + type is the only stable key the export offers: the
             // download link is minted per export and the array's order isn't
@@ -342,7 +382,14 @@ enum SnapchatImport {
             // index) would re-land the whole library on every re-import.
             let ref = "snapchat:memory:\(Int(memory.date.timeIntervalSince1970))"
                 + "-\(memory.mediaType.lowercased())"
-            guard !existing.contains(ref) else { summary.skipped += 1; continue }
+            if let already = existing[ref] {
+                summary.skipped += 1
+                if already.isLive, !already.tags.contains("Memory") {
+                    already.tags.append("Memory")
+                    backfilled = true
+                }
+                continue
+            }
 
             var note = memory.isVideo ? "Video" : "Photo"
             if let place = memory.location, !place.isEmpty { note += " · \(place)" }
@@ -354,6 +401,7 @@ enum SnapchatImport {
                 content: note,
                 source: source,
                 capturedAt: memory.date,
+                tags: ["Memory"],
                 sourceRef: ref
             )
             // A video can't become `previewImageData`, so it never joins the
@@ -367,7 +415,9 @@ enum SnapchatImport {
             summary.memories += 1
         }
 
-        if summary.memories > 0 { context.saveHonestly() }
+        // `backfilled` too — an all-skipped re-import that only repaired
+        // tags makes no other write, and without this its repair is lost.
+        if summary.memories > 0 || backfilled { context.saveHonestly() }
         return summary
     }
 

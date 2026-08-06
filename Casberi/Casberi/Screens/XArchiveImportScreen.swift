@@ -34,6 +34,8 @@ struct XArchiveImportScreen: View {
     @State private var importing = false
     @State private var result: String?
     @State private var resultIsError = false
+    @State private var fetching = false
+    @State private var pending = 0
 
     @Query(xRecentDescriptor) private var recent: [Thing]
 
@@ -41,11 +43,13 @@ struct XArchiveImportScreen: View {
         List {
             BridgeSetupHeader(name: "X")
             setupSection
+            if pending > 0 { authorsSection }
             if !recent.isEmpty {
                 RecentThingsSection(header: "Imported", things: recent.live)
                     .listRowSeparator(.hidden)
             }
         }
+        .onAppear { pending = XArchiveImport.pendingFaceCount(context: modelContext) }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .bridgeSetupWash(name: "X")
@@ -90,6 +94,30 @@ struct XArchiveImportScreen: View {
         .dsSlabSection()
     }
 
+    /// The second act (2026-08-05), TikTok's split for the same reason: the
+    /// import above is instant and offline, this is one request per liked post.
+    ///
+    /// What it buys is narrower than TikTok's and worth stating plainly — a
+    /// liked post already arrives wearing its own words, because `like.js`
+    /// carries `fullText`. What the archive never carries is WHO WROTE IT, and
+    /// without that the room can't answer whose posts you like, which is the
+    /// one thing a decade of likes is actually shaped to say.
+    private var authorsSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                DSSlabButton(title: fetching ? "Finding authors…" : "Find authors for \(pending) likes",
+                             systemImage: "person.crop.circle",
+                             busy: fetching,
+                             enabled: !fetching) {
+                    DSHaptic.tap()
+                    Task { await runFetch() }
+                }
+                DSSlabNote(text: "Your likes arrive with the post's words but no author — the archive only ever names the post. This asks X who wrote each one, so the room can show whose posts you like. No account, no key, and no rush: unlike the archive, the posts don't expire.")
+            }
+        }
+        .dsSlabSection()
+    }
+
     // MARK: - Run
 
     /// Synchronous on purpose. The security-scoped grant covers the picked
@@ -108,6 +136,7 @@ struct XArchiveImportScreen: View {
         }
         resultIsError = false
         DSHaptic.success()
+        pending = XArchiveImport.pendingFaceCount(context: modelContext)
         result = summary.imported > 0 ? landedLine(summary) : nothingNewLine(summary)
         let proof = summary.imported > 0
             ? String(localized: "\(summary.imported) in")
@@ -140,6 +169,13 @@ struct XArchiveImportScreen: View {
         var line = parts.joined(separator: " · ")
         if summary.skipped > 0  { line += " · \(summary.skipped) already here" }
         if summary.retweets > 0 { line += " · \(summary.retweets) reposts skipped" }
+        // A capped archive says so on the screen that ran it, not only in the
+        // receipt. Without it a truncated import and a complete one read
+        // identically here, and this is the one moment the person could still
+        // do something about it.
+        if summary.dropped > 0 {
+            line += " · \(summary.dropped) older not imported"
+        }
         return line
     }
 
@@ -147,5 +183,35 @@ struct XArchiveImportScreen: View {
         summary.skipped > 0
             ? "Nothing new — all \(summary.skipped) were already here."
             : "That archive had no posts or likes in it."
+    }
+
+    /// Four outcomes, four sentences — the `-kalshiBookProbe` discipline on a
+    /// screen: "couldn't reach X" and "every post we asked about is gone" are
+    /// different facts and only one is worth retrying.
+    private func runFetch() async {
+        fetching = true
+        defer { fetching = false }
+        let outcome = await XArchiveImport.fetchFaces(context: modelContext)
+        pending = XArchiveImport.pendingFaceCount(context: modelContext)
+
+        if outcome.unreachable {
+            result = String(localized: "Couldn't reach X — your likes are still here, so try finding their authors again later.")
+            resultIsError = true
+            return
+        }
+        resultIsError = false
+        DSHaptic.success()
+        var line = String(localized: "\(outcome.named) named")
+        // GONE is its own clause, separate from a miss. They read alike and
+        // they are not alike: a gone post is a fact X told us and one this app
+        // now keeps, while a miss is an answer we couldn't parse.
+        if outcome.gone > 0 {
+            line += String(localized: " · \(outcome.gone) gone or private")
+        }
+        if outcome.missed > 0 {
+            line += String(localized: " · \(outcome.missed) unreadable")
+        }
+        if pending > 0 { line += String(localized: " · \(pending) to go") }
+        result = line
     }
 }

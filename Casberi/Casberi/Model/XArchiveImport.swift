@@ -18,9 +18,15 @@ import SwiftData
 /// arrives as full text with real timestamps, and is the substance here. What
 /// you TAPPED — your likes — arrives BETTER than Instagram's saves did: X
 /// stores each liked post's `fullText`, so a like lands wearing the words it
-/// was liked for, not just a handle. It is worse in one way, though, and the
-/// copy says so: `like.js` carries no author, so nothing in this room can rank
-/// who you like most the way Instagram's saves rank who you save most.
+/// was liked for, not just a handle.
+///
+/// The archive names no author for a like — `expandedUrl` is
+/// `x.com/i/web/status/<id>`, which identifies the post and never the person —
+/// and until 2026-08-05 this doc concluded from that that the room could never
+/// rank who you like most the way Instagram's saves rank who you save most.
+/// That was a fact about the FILE mistaken for a fact about X:
+/// `publish.x.com/oembed` answers any public post keylessly with its author.
+/// `fetchFaces` is that second act, and the room ranks now.
 ///
 /// THE HOLE, named rather than left to be discovered: **bookmarks are not in
 /// the export.** They never have been, and nothing changed in 2026. Bookmarks
@@ -42,15 +48,23 @@ import SwiftData
 /// no content — a tally, and a thing is never a tally.
 enum XArchiveImport {
 
+    static let source = "X"
+
     struct Summary {
         var posts = 0
         var replies = 0
         var liked = 0
         var skipped = 0
         var retweets = 0        // seen and deliberately not landed
+        /// Rows the cap refused — see `postCap`. Reported rather than swallowed:
+        /// a truncated import renders exactly like a complete one, and the
+        /// person is the only one who can tell whether the missing years matter.
+        var droppedPosts = 0
+        var droppedLikes = 0
         var failed = false
 
         var imported: Int { posts + replies + liked }
+        var dropped: Int { droppedPosts + droppedLikes }
     }
 
     /// Per-category caps rather than one shared budget — the Instagram rule,
@@ -58,8 +72,22 @@ enum XArchiveImport {
     /// substance of this export and run to tens of thousands for a long-time
     /// account, so they get the larger share; likes are the cheaper rows and
     /// must not be able to crowd them out.
-    private static let postCap = 1_000
-    private static let likeCap = 500
+    ///
+    /// RAISED 2026-08-05 from 1,000/500, which was far too low and failed
+    /// SILENTLY. A reported 3,500-post archive landed 1,500 rows: the receipt
+    /// read "1000 posts · 500 liked" and nothing anywhere said that two
+    /// thousand posts had been refused, so the room looked complete and every
+    /// search over it was quietly answering from a third of the corpus. The
+    /// numbers below cover a decade-long account outright; `droppedPosts` /
+    /// `droppedLikes` make any archive past them say so.
+    ///
+    /// They are not unbounded, and the reason is the import's own shape rather
+    /// than storage: `run` is `@MainActor` and builds every row before one
+    /// save, so the cap is also what keeps a very large archive from holding
+    /// the main thread. An archive that exceeds these is rare enough to be
+    /// worth a sentence on screen rather than a chunked, resumable importer.
+    private static let postCap = 10_000
+    private static let likeCap = 5_000
 
     // MARK: - Run
 
@@ -117,12 +145,21 @@ enum XArchiveImport {
 
     /// The receipt's own line. Only non-zero parts appear, so a likes-only
     /// archive doesn't advertise two empty categories.
+    ///
+    /// A capped import SAYS SO. Without that clause the receipt for a
+    /// truncated archive is word-for-word the receipt for a complete one, and
+    /// the room that follows looks equally finished either way — the honesty
+    /// rule's fake-status ban, in the one place a person could still act on it
+    /// (by trimming the archive, or by asking for the cap to move).
     private static func receiptDetail(_ s: Summary) -> String {
-        let parts = [
+        var parts = [
             s.posts > 0   ? String(localized: "\(s.posts) posts") : nil,
             s.replies > 0 ? String(localized: "\(s.replies) replies") : nil,
             s.liked > 0   ? String(localized: "\(s.liked) liked") : nil,
         ].compactMap { $0 }
+        if s.dropped > 0 {
+            parts.append(String(localized: "\(s.dropped) older not imported"))
+        }
         return parts.joined(separator: " · ")
     }
 
@@ -133,7 +170,14 @@ enum XArchiveImport {
                                    landed: inout [Thing], seen: inout Set<String>) {
         guard let entries = parseArray(data) else { return }
 
-        struct Row { let date: Date; let text: String; let id: String; let replyTo: String? }
+        struct Row {
+            let date: Date; let text: String; let id: String; let replyTo: String?
+            /// The post this one answers, when the archive names it. Only ever
+            /// used to recognise a SELF-reply — see `threadTexts`.
+            let parentID: String?
+            let likes: Int?
+            let reposts: Int?
+        }
         var rows: [Row] = []
         for entry in entries {
             // An entry is either `{"tweet": {…}}` or the tweet object itself,
@@ -152,11 +196,17 @@ enum XArchiveImport {
             guard !text.isEmpty, let date = created(tweet, id: id) else { continue }
             let replyTo = (tweet["in_reply_to_screen_name"] as? String)
                 .flatMap { $0.isEmpty ? nil : $0 }
-            rows.append(Row(date: date, text: text, id: id, replyTo: replyTo))
+            rows.append(Row(date: date, text: text, id: id, replyTo: replyTo,
+                            parentID: parentIdentifier(tweet),
+                            likes: metric(tweet, "favorite_count"),
+                            reposts: metric(tweet, "retweet_count")))
         }
+        // Threads, before the cap so a chain is measured over the whole file.
+        let threads = threadTexts(rows.map { ($0.id, $0.parentID, $0.text, $0.date) })
         // Newest first BEFORE the cap — a cap over file order would keep the
         // oldest posts and drop everything recent.
         rows.sort { $0.date > $1.date }
+        summary.droppedPosts += max(0, rows.count - postCap)
 
         for row in rows.prefix(postCap) {
             // Keyed on the tweet id alone, NOT on whether it reads as a reply:
@@ -168,18 +218,131 @@ enum XArchiveImport {
             // A reply says who it was to. The parent post is NOT in the
             // archive, so the row names the recipient rather than pretending
             // to quote something we don't have — the Instagram comment rule.
-            let face = row.replyTo.map { "\(row.text) — to @\($0)" } ?? row.text
-            landed.append(Thing(
+            //
+            // THE RECIPIENT LEADS, and that is the §303 clamp ruling rather
+            // than a style choice. `titleLine` cuts at 80 characters, so a
+            // trailing "— to @someone" is precisely what the cut eats: every
+            // reply longer than about sixty characters — most of them — landed
+            // with no visible recipient at all, and the one word that makes a
+            // reply searchable ("@someone") never reached the title, which is
+            // the field the retriever scores highest. Leading with it survives
+            // the clamp and costs the tail of a sentence whose full text is on
+            // `content` regardless.
+            let face = row.replyTo.map { "To @\($0) · \(row.text)" } ?? row.text
+            var tags = [row.replyTo == nil ? "Post" : "Reply"]
+            let thread = threads[row.id]
+            if thread != nil { tags.append("Thread") }
+            let thing = Thing(
                 kind: .note,
                 title: IngestSupport.titleLine(face),
                 content: row.text,
                 source: "X",
                 capturedAt: row.date,
-                tags: [row.replyTo == nil ? "Post" : "Reply"],
+                tags: tags,
                 sourceRef: ref
-            ))
+            )
+            // A THREAD's head carries the whole chain as retrieval text
+            // (2026-08-05, prd §307). X only ever surfaces a thread if you find
+            // its head; here, a word from the fourth post finds the first one,
+            // and the on-device model reading this row reads the argument
+            // rather than its opening sentence.
+            //
+            // The continuations still land as their own rows, deliberately —
+            // they were real posts, folding them away would change what
+            // `sourceRef` means for rows already in the store, and a re-import
+            // has to stay stable. This adds a way IN to the thread; it doesn't
+            // rewrite what the archive was.
+            if let thread {
+                thing.enrichedText = thread.text
+                thing.messageCount = thread.count
+            }
+            // What the post actually did. No new field — `likeCount` and
+            // `repostCount` have been on `Thing` since prd 81's social pass,
+            // and this is the same fact from a different door. A count is never
+            // a thing on its own (the module doctrine), but it makes the one
+            // superlative worth asking answerable: your best post, which X's
+            // own product makes remarkably hard to find.
+            thing.likeCount = row.likes
+            thing.repostCount = row.reposts
+            landed.append(thing)
             if row.replyTo == nil { summary.posts += 1 } else { summary.replies += 1 }
         }
+    }
+
+    /// Self-reply chains, as the full text of each thread keyed by its HEAD.
+    ///
+    /// A self-reply is recognised without knowing whose archive this is: a post
+    /// whose parent id is ALSO IN THIS FILE is by definition a reply to
+    /// something the same person wrote. That is exact and needs no user id,
+    /// no handle and no guess — the two fields the archive would otherwise
+    /// force us to infer it from (`in_reply_to_user_id`, and the account's own
+    /// id, which is in a different file entirely).
+    ///
+    /// Bounded at `threadCap` posts per chain — that is the real bound, and no
+    /// thread anybody wrote needs more. The `seen` set beside it is NOT what
+    /// stops a cycle: a node has exactly one parent, so a cycle is by
+    /// construction unreachable from a head (a head is a node with no parent in
+    /// the file). It guards the one shape that CAN revisit an id — an archive
+    /// listing the same post twice, where a child list can hold a duplicate.
+    private static func threadTexts(_ rows: [(id: String, parent: String?,
+                                              text: String, date: Date)])
+        -> [String: (text: String, count: Int)] {
+        let byID = Dictionary(rows.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        // Child lists, so a head can be walked DOWN its own chain.
+        var children: [String: [String]] = [:]
+        for row in rows {
+            guard let parent = row.parent, byID[parent] != nil else { continue }
+            children[parent, default: []].append(row.id)
+        }
+        guard !children.isEmpty else { return [:] }
+
+        // A head is a post with children of its own that is not itself a
+        // continuation — the first post of the thread as written.
+        var out: [String: (text: String, count: Int)] = [:]
+        for row in rows {
+            guard children[row.id] != nil else { continue }
+            if let parent = row.parent, byID[parent] != nil { continue }
+            var parts: [String] = []
+            var cursor: String? = row.id
+            var seen = Set<String>()
+            while let id = cursor, parts.count < threadCap, seen.insert(id).inserted {
+                guard let post = byID[id] else { break }
+                parts.append(post.text)
+                // Oldest child first — a thread is written in order, and X
+                // stores no explicit sequence.
+                cursor = children[id]?
+                    .compactMap { byID[$0] }
+                    .min(by: { $0.date < $1.date })?
+                    .id
+            }
+            guard parts.count > 1 else { continue }
+            out[row.id] = (parts.joined(separator: "\n\n"), parts.count)
+        }
+        return out
+    }
+
+    /// A thread longer than this is almost certainly a malformed archive rather
+    /// than something somebody wrote.
+    private static let threadCap = 60
+
+    /// The post this one answers. `_str` first for the same reason
+    /// `identifier` prefers `id_str`: a modern snowflake is past the range
+    /// where a JSON number survives as a Double.
+    private static func parentIdentifier(_ tweet: [String: Any]) -> String? {
+        if let s = tweet["in_reply_to_status_id_str"] as? String, !s.isEmpty { return s }
+        if let n = tweet["in_reply_to_status_id"] as? UInt64 { return String(n) }
+        if let s = tweet["in_reply_to_status_id"] as? String, !s.isEmpty { return s }
+        return nil
+    }
+
+    /// An engagement count, which the archive writes as a STRING in every
+    /// vintage seen ("favorite_count": "12") and which some tools rewrite as a
+    /// number. Both are read; anything else is absent rather than zero, since
+    /// a post with no count recorded is not a post nobody liked.
+    private static func metric(_ tweet: [String: Any], _ key: String) -> Int? {
+        if let s = tweet[key] as? String, let n = Int(s) { return n }
+        if let n = tweet[key] as? Int { return n }
+        return nil
     }
 
     // MARK: - Your likes (text AND a link — better than Instagram's saves)
@@ -212,6 +375,7 @@ enum XArchiveImport {
             rows.append(Row(date: date, text: text, link: link, id: id))
         }
         rows.sort { $0.date > $1.date }
+        summary.droppedLikes += max(0, rows.count - likeCap)
 
         for row in rows.prefix(likeCap) {
             let ref = "x:like:\(row.id)"
@@ -236,6 +400,162 @@ enum XArchiveImport {
             landed.append(thing)
             summary.liked += 1
         }
+    }
+
+    // MARK: - The second act: who wrote the things you liked
+
+    struct FaceResult {
+        var named = 0
+        var missed = 0
+        /// Posts X says are deleted or private — a real answer, not a failure,
+        /// and the one thing in this room a person cannot learn on X itself.
+        var gone = 0
+        /// Every attempt failed WITHOUT a status, and at least one was made:
+        /// the honest read on an endpoint that has changed or a network that
+        /// isn't there. Deletions are excluded on purpose — an archive full of
+        /// long-dead posts would otherwise report the endpoint as broken every
+        /// pass, which is the opposite of what happened.
+        var unreachable: Bool { named == 0 && gone == 0 && missed > 0 }
+    }
+
+    /// Liked posts still missing their author.
+    @MainActor
+    static func pendingFaceCount(context: ModelContext) -> Int {
+        pending(context: context).count
+    }
+
+    /// A liked row is pending while `authorHandle` is nil.
+    ///
+    /// Deliberately NOT TikTok's test (`title == content`, a row still wearing
+    /// its own URL): an X like lands with the post's real WORDS as its title
+    /// because `like.js` carries `fullText`. What it can never carry is the
+    /// author — `expandedUrl` is `x.com/i/web/status/<id>`, which names the
+    /// post and not the person — so the missing field is the author, and the
+    /// author is what this pass exists to fetch.
+    @MainActor
+    private static func pending(context: ModelContext) -> [Thing] {
+        let name = source
+        let descriptor = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == name },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+        )
+        let all = (try? context.fetch(descriptor)) ?? []
+        return all.live.filter {
+            // A row X has told us is gone stays unnamed forever, so without
+            // this it would be re-asked on every pass for the life of the
+            // install — spending a request per dead post to learn the same
+            // thing again. The "Gone" tag is the answer, not a pending state.
+            $0.kind == .link && $0.tags.contains("Liked")
+                && $0.authorHandle == nil && !$0.tags.contains("Gone")
+        }
+    }
+
+    /// Names the author of each liked post, from X's own keyless oEmbed
+    /// endpoint, one request each (prd §280 amendment, 2026-08-05).
+    ///
+    /// A SEPARATE, EXPLICIT ACT — the ruling that split Snapchat's media fetch
+    /// (§246) and TikTok's face pass (§279) out of their imports. The import
+    /// itself is instant and offline; this reaches X once per liked post, and
+    /// a person importing years of likes should choose to spend that rather
+    /// than discover it. Unlike Snapchat's, it is under no deadline: a public
+    /// post does not expire the way an export's download links do, so an
+    /// unfinished pass simply resumes.
+    ///
+    /// WHY IT IS WORTH A REQUEST AT ALL. `XArchiveImport`'s own type doc said
+    /// this room "can't rank who you like most the way Instagram's room ranks
+    /// who you save most" — true of the ARCHIVE, and not true of X, which
+    /// publishes the author of any public post keylessly at
+    /// `publish.x.com/oembed`. That endpoint was already in `OEmbed.endpoints`
+    /// for saved links; this points it at the rows the import landed. Once a
+    /// handle is stamped the room's leaderboard, the handle-scoped ask
+    /// ("what did I like from @someone") and Spotlight all read it for free.
+    ///
+    /// UNMEASURED against a real archive's likes, like everything else in this
+    /// file. Every failure returns nil and leaves the row exactly as it landed,
+    /// so a dead endpoint costs a pass and never a face that was already right.
+    @MainActor
+    @discardableResult
+    static func fetchFaces(limit: Int = 200, context: ModelContext) async -> FaceResult {
+        let waiting = pending(context: context).prefix(limit)
+        let jobs: [Job] = waiting.compactMap { thing in
+            guard let ref = thing.sourceRef, let url = URL(string: thing.content) else { return nil }
+            return Job(ref: ref, url: url)
+        }
+        guard !jobs.isEmpty else { return FaceResult() }
+
+        // Four at a time, the shared ceiling every bulk fetch in this app uses.
+        let answers = await IngestSupport.boundedGather(jobs, maxConcurrent: 4) { job in
+            let outcome = await OEmbed.ask(job.url)
+            return (job.ref, outcome.response, outcome.status)
+        }
+
+        let byRef = IngestSupport.thingsByRef(context, source: source)
+        var result = FaceResult()
+        var changed: [Thing] = []
+        for (ref, embed, status) in answers {
+            guard let thing = byRef[ref], thing.isLive else { continue }
+            // GONE is recorded on the row, not just counted (2026-08-05). It is
+            // the read this room can make that X cannot: your own archive
+            // remembers a post that no longer exists anywhere. Marked with a
+            // tag rather than a new field, so it is filterable and searchable
+            // the day it lands and needs no CloudKit deploy.
+            if OEmbed.meansGone(status) {
+                result.gone += 1
+                if !thing.tags.contains("Gone") {
+                    thing.tags.append("Gone")
+                    changed.append(thing)
+                }
+                continue
+            }
+            guard let embed, apply(embed, to: thing) else { result.missed += 1; continue }
+            result.named += 1
+            changed.append(thing)
+        }
+        if !changed.isEmpty {
+            context.saveHonestly()
+            SpotlightIndex.index(changed)
+        }
+        return result
+    }
+
+    private struct Job: Sendable {
+        let ref: String
+        let url: URL
+    }
+
+    /// Writes an oEmbed answer onto a liked row.
+    ///
+    /// The HANDLE is the point — it groups, so it is what the room's board and
+    /// a handle-scoped ask read. The author's display NAME joins `enrichedText`
+    /// beside the post's words, which is retrieval substance rather than
+    /// chrome: "what did I like from Paul Graham" then reaches a post whose
+    /// title is only its own sentence.
+    ///
+    /// THE TITLE IS LEFT ALONE, unlike TikTok's pass. A TikTok save arrives
+    /// wearing a bare URL and has nothing to lose; an X like already arrives
+    /// wearing the post's real words, which are a better face than anything
+    /// this answer carries. Overwriting them with the same text re-fetched
+    /// would spend a write, drop the row's vector and change nothing a person
+    /// can see.
+    @MainActor
+    private static func apply(_ embed: OEmbed.Response, to thing: Thing) -> Bool {
+        var changed = false
+        if let handle = embed.authorHandle, thing.authorHandle != handle {
+            thing.authorHandle = handle
+            changed = true
+        }
+        if let author = embed.authorName {
+            let words = thing.enrichedText ?? thing.title
+            let enriched = "\(words) · \(author)"
+            if !words.contains(author), thing.enrichedText != enriched {
+                thing.enrichedText = enriched
+                changed = true
+            }
+        }
+        // A changed row's stored vector describes text that no longer matches
+        // it — dropped so the next semantic sweep re-embeds on the real words.
+        if changed { thing.embedding = nil }
+        return changed
     }
 
     // MARK: - Dates

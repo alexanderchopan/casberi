@@ -177,6 +177,16 @@ enum ScreenshotTopics {
         switch source {
         case "Photos":    return TopicSource(kind: .screenshot, needsOCR: true)
         case "Instagram": return TopicSource(kind: .note, needsOCR: false)
+        // X is Instagram's shape exactly (2026-08-05): the room's `.note` half
+        // is the person's own posts and replies, its `.link` half is posts
+        // somebody else wrote, and a map over both would be titled a lie.
+        //
+        // `XArchiveImportScreen` has called `healTopics(source: "X")` since the
+        // seat shipped and this switch answered nil for it every time, so the
+        // call did nothing and the map it was meant to fill never had terms —
+        // one of three separate places X was missing from a registry the other
+        // import rooms are in.
+        case "X":         return TopicSource(kind: .note, needsOCR: false)
         // A connected folder is Photos' shape wearing a different kind
         // (2026-08-02): `FilesIngest.heal` OCRs the folder's images into
         // `content` exactly the way the screenshot heal does. `needsOCR` is

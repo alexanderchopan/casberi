@@ -65,8 +65,8 @@ enum OEmbed {
         /// their display name (TikTok's `author_unique_id`; measured present
         /// 2026-08-02). Kept apart from `authorName` because a handle is DATA —
         /// it groups, and "Scout, Suki & Stella" does not — which is what makes
-        /// a room's "Who you save most" possible. nil for every other provider
-        /// in the table, and no reader may assume it.
+        /// a room's "Who you save most" possible. nil for every provider that
+        /// names neither field, and no reader may assume it.
         let authorHandle: String?
     }
 
@@ -157,16 +157,42 @@ enum OEmbed {
     /// Asks an allowlisted host what a link is. nil for any host we don't
     /// carry, any non-200, or an answer with no title, author or thumbnail in
     /// it — the caller keeps its generic path in every one of those cases.
-    static func resolve(_ url: URL) async -> Response? {
+    static func resolve(_ url: URL) async -> Response? { await ask(url).response }
+
+    /// What a host said, INCLUDING the status when there's nothing to parse.
+    ///
+    /// `resolve` collapses every failure into nil, which is right for
+    /// enrichment — a link keeps the title it has either way. It is wrong for a
+    /// caller that wants to know WHY (2026-08-05, prd §307): a 404 or 410 from
+    /// these hosts means the post is gone for good, a 403 means it went
+    /// private, and an unreachable network means try later. Those are three
+    /// different facts about the person's own corpus and only the last is worth
+    /// retrying, so the one caller that acts on the difference reads it here.
+    ///
+    /// `status` is nil when the request never completed at all, which is the
+    /// case that must never be mistaken for a deletion.
+    static func ask(_ url: URL) async -> (response: Response?, status: Int?) {
         guard let endpoint = endpoint(for: url), let request = request(endpoint, for: url)
-        else { return nil }
+        else { return (nil, nil) }
         NetworkLedger.shared.record(request)
-        guard let (data, response) = try? await URLSession.shared.data(for: request),
-              (response as? HTTPURLResponse)?.statusCode == 200,
+        guard let (data, response) = try? await URLSession.shared.data(for: request)
+        else { return (nil, nil) }
+        let status = (response as? HTTPURLResponse)?.statusCode
+        guard status == 200,
               data.count <= 512_000,        // an oEmbed answer is small; a page isn't
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-        else { return nil }
-        return parse(json)
+        else { return (nil, status) }
+        return (parse(json), status)
+    }
+
+    /// Status codes that mean the thing itself is gone rather than that we
+    /// couldn't reach it. 403 is included because these hosts answer it for a
+    /// post whose account went private, which is "you can't see this any more"
+    /// wearing a different number — and both readings are honest under the
+    /// wording the room uses ("gone or private").
+    static func meansGone(_ status: Int?) -> Bool {
+        guard let status else { return false }
+        return status == 404 || status == 410 || status == 403
     }
 
     /// Builds the endpoint request, percent-encoding the link BY HAND.
@@ -211,12 +237,47 @@ enum OEmbed {
                                 authorName: text("author_name"),
                                 thumbnailURL: IngestSupport.imageURL(json["thumbnail_url"] as? String),
                                 providerName: text("provider_name"),
-                                authorHandle: text("author_unique_id"))
+                                authorHandle: text("author_unique_id")
+                                    ?? handle(inAuthorURL: text("author_url")))
         // An answer that names nothing is not an answer — fall through to the
         // page fetch rather than saving an empty enrichment over a real title.
         guard response.title != nil || response.authorName != nil
                 || response.thumbnailURL != nil else { return nil }
         return response
+    }
+
+    /// The @handle inside an `author_url`, for the providers that name their
+    /// creator only by their profile link (2026-08-05).
+    ///
+    /// X is why this exists: `publish.x.com/oembed` answers with an
+    /// `author_name` — a display name, which does not group — and an
+    /// `author_url` whose single path component is the handle (their post host
+    /// followed by `/Interior`). Without this, every liked post in an X archive lands
+    /// with `authorHandle` nil and the room can never rank whose posts you
+    /// like, which is the one board this corpus is shaped for.
+    ///
+    /// A SINGLE PATH COMPONENT ONLY, and that rule is what keeps it from
+    /// inventing handles for the rest of the table rather than a scoping
+    /// accident: X's `/Interior`, SoundCloud's `/artist`, Vimeo's `/user123`
+    /// and YouTube's `/@name` are all one component and all genuinely handles,
+    /// while YouTube's other two shapes (`/channel/UC…`, `/user/Name`) are two
+    /// components and are refused — a channel id is not something to print
+    /// beside a face. A leading "@" is dropped so the stored value is the bare
+    /// handle every other stamper in this app writes.
+    ///
+    /// Bounded and charset-checked because the value reaches a room's own
+    /// chrome: a provider is free to answer with anything, and a ranking board
+    /// is not the place to find that out.
+    private static func handle(inAuthorURL raw: String?) -> String? {
+        guard let raw, let url = URL(string: raw) else { return nil }
+        let parts = url.path.split(separator: "/").map(String.init)
+        guard parts.count == 1 else { return nil }
+        var handle = parts[0]
+        if handle.hasPrefix("@") { handle.removeFirst() }
+        guard (1...30).contains(handle.count),
+              handle.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "_" || $0 == "." || $0 == "-" })
+        else { return nil }
+        return handle
     }
 
     /// The words inside an embed's `<blockquote><p>…</p>`, for the one provider

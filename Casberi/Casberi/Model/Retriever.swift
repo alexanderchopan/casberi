@@ -21,9 +21,48 @@ enum Retriever {
     /// sentence-embedding pass (a narrowed pool carries no new words of its
     /// own to re-embed against).
     static func rank(_ query: String, in corpus: [Thing], isPoolRefinement: Bool) -> [Thing] {
+        // A SOURCE word is a filter too (2026-08-05) — the other half of what
+        // a thing is, and the half this engine could not see. Resolved off the
+        // whole query before it's split, because a source name can be two
+        // words ("Apple Health", "Day One") and per-term matching would never
+        // find one. See `sourceFilter`.
+        //
+        // CONFIRMED AGAINST THE CORPUS before it's honoured. The vocabulary is
+        // the catalog, which names sources this person may never have
+        // connected — and a filter for a source with nothing behind it would
+        // turn an ordinary question into "nothing matches" purely because one
+        // of its words happens to be an app's name. Unconfirmed, it's dropped
+        // and the words score normally, so a wrong resolution costs nothing.
+        // (The caller may hand us a corpus already scoped to that source; then
+        // this is trivially true and the filter is a no-op re-check.)
+        let named = Self.sourceFilter(in: query)
+        let sourceMatch = named.flatMap { match in
+            corpus.contains { $0.source == match.source } ? match : nil
+        }
         var terms = query.lowercased()
             .trimmingCharacters(in: CharacterSet(charactersIn: "? "))
             .split(separator: " ").map(String.init)
+        if let sourceMatch { terms.removeAll { sourceMatch.words.contains($0) } }
+
+        // A FACET word narrows within a named room — "my X replies", "what I
+        // liked on X", "just my own posts on X" (2026-08-05, prd §307).
+        //
+        // GATED ON A SOURCE, deliberately, and this is the whole design. These
+        // words are ordinary English and the tags they name are not rare:
+        // letting "posts" filter an unscoped ask would hide every link and note
+        // about the subject behind whichever things happen to carry a "Post"
+        // tag, which is a worse answer than no filter at all. Inside a room the
+        // person has already named, the same word is unambiguous — they are
+        // asking about that room's own halves. Confirmed against the corpus
+        // like the source, so a facet with nothing behind it is dropped rather
+        // than emptying the answer.
+        let facetMatch: (tag: String, words: Set<String>)? = sourceMatch.flatMap { _ in
+            let named = Self.facetFilter(in: query)
+            return named.flatMap { match in
+                corpus.contains { $0.tags.contains(match.tag) } ? match : nil
+            }
+        }
+        if let facetMatch { terms.removeAll { facetMatch.words.contains($0) } }
 
         // A kind word is a filter, not a search term.
         var kindFilter: ThingKind?
@@ -50,7 +89,16 @@ enum Retriever {
                                   // "list that kind" path as intended.
                                   "show", "find", "search", "list", "look", "up",
                                   "save", "saved", "have", "has", "had", "get",
-                                  "see", "tell", "give", "all", "any"]
+                                  "see", "tell", "give", "all", "any",
+                                  // "can you search my X stuff" (2026-08-05) —
+                                  // the polite forms and the filler noun that
+                                  // `KeptAskComposers.namedAskTarget` has always
+                                  // stripped. Left in, "can"/"stuff" scored as
+                                  // content terms and matched every unrelated
+                                  // thing whose text happens to say "can",
+                                  // which is what an ask naming a source
+                                  // actually answered with.
+                                  "can", "could", "would", "please", "stuff"]
         terms.removeAll { stops.contains($0) }
 
         // A date phrase ("today", "last week", "thursday") is a WHEN filter,
@@ -100,6 +148,8 @@ enum Retriever {
                 .filter { !$0.isEmpty })
         }
         return all.compactMap { thing -> (Thing, Double)? in
+            if let sourceMatch, thing.source != sourceMatch.source { return nil }
+            if let facetMatch, !thing.tags.contains(facetMatch.tag) { return nil }
             if let kindFilter, thing.kind != kindFilter { return nil }
             if let dateMatch, !dateMatch.range.contains(thing.capturedAt) { return nil }
             let title = words(thing.title)
@@ -130,8 +180,13 @@ enum Retriever {
                 }
             }
             // A bare kind query ("screenshots?") lists that kind; a bare date
-            // query ("what landed today?") lists the day.
-            if terms.isEmpty && (kindFilter != nil || dateMatch != nil) { score = 1 }
+            // query ("what landed today?") lists the day; a bare source query
+            // ("my X stuff") lists that source. The freshness bonus below then
+            // orders them, so a bare list is newest-first.
+            if terms.isEmpty && (kindFilter != nil || dateMatch != nil
+                                 || sourceMatch != nil || facetMatch != nil) {
+                score = 1
+            }
             guard score > 0 else { return nil }
             let age = Date.now.timeIntervalSince(thing.capturedAt)
             score += max(0, 1 - age / (7 * 86_400))   // fresh floats, capped +1
@@ -140,5 +195,94 @@ enum Retriever {
         .sorted { $0.1 > $1.1 }
         .prefix(16)
         .map(\.0)
+    }
+
+    /// The FACET a query names within a room — a half of that room rather than
+    /// a subject in it (2026-08-05, prd §307).
+    ///
+    /// The vocabulary is fixed and small on purpose. An importer's tags are the
+    /// only ones that partition a room into halves a person would name out
+    /// loud: X's `Post` / `Reply` / `Liked`, Instagram's and TikTok's `Saved` /
+    /// `Liked`. A topic tag is NOT a facet — "design" names what a thing is
+    /// about, and the scorer already handles that at double weight; promoting
+    /// every tag to a hard filter would make an ask about a subject silently
+    /// exclude everything not tagged with it.
+    ///
+    /// Longest phrase first, so "my own posts" reads as the `Post` facet rather
+    /// than stopping at the bare word, and plurals and singulars both resolve.
+    static func facetFilter(in query: String) -> (tag: String, words: Set<String>)? {
+        // Order matters: the first entry whose phrase appears wins, so the
+        // more specific phrasings lead.
+        let table: [(phrases: [String], tag: String)] = [
+            (["my own posts", "own posts", "my posts", "posts", "post"], "Post"),
+            (["my replies", "replies", "reply", "replied"], "Reply"),
+            (["what i liked", "i liked", "my likes", "likes", "liked"], "Liked"),
+            (["my saves", "saves", "saved"], "Saved"),
+            // The read X can't answer about your own corpus: posts you kept
+            // that no longer exist there. Stamped by the author pass — see
+            // `XArchiveImport.fetchFaces`.
+            (["gone", "deleted", "no longer there", "disappeared"], "Gone"),
+            (["threads", "thread"], "Thread"),
+            // The remaining halves of the four import rooms (2026-08-05,
+            // prd §309): Instagram's and TikTok's comments, and Snapchat's two.
+            (["my comments", "comments", "comment"], "Comment"),
+            (["conversations", "conversation", "chats", "chat"], "Conversation"),
+            (["memories", "memory"], "Memory"),
+        ]
+        let haystack = " " + query.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ") + " "
+        for entry in table {
+            for phrase in entry.phrases where haystack.contains(" " + phrase + " ") {
+                return (entry.tag, Set(phrase.split(separator: " ").map(String.init)))
+            }
+        }
+        return nil
+    }
+
+    /// The source a query NAMES, and the words that named it.
+    ///
+    /// WHY THIS EXISTS. Until 2026-08-05 this engine scored `title`, `tags` and
+    /// `content` and nothing else, so a source name was invisible to it: "can
+    /// you search my X stuff" over a 3,500-post X archive stripped to the terms
+    /// `can` / `x` / `stuff` and answered with whatever unrelated things happen
+    /// to contain the word "can". A kind word had been a filter since the
+    /// beginning ("screenshots about work"); a source word — the other half of
+    /// what a thing IS — had no route in at all.
+    ///
+    /// THE VOCABULARY IS THE CATALOG, not the corpus. `BridgeCatalog.offers` is
+    /// this app's own fixed set of source names, so resolving against it costs
+    /// no fetch and — the part that matters — is COMPLETE: deriving the
+    /// vocabulary from the things we happened to fetch would make a source
+    /// nameable only while something of its own sits inside that window, which
+    /// is exactly wrong for an archive dated across years. A name that resolves
+    /// here but has nothing stored simply matches nothing, which is the honest
+    /// answer anyway.
+    ///
+    /// MATCHED ON WORD BOUNDARIES and LONGEST FIRST. Boundaries because a
+    /// substring match would let "Files" match "profiles"; longest first
+    /// because "Apple Music" and "Apple Health" share a word and the shorter
+    /// name must never win the query that named the longer one.
+    static func sourceFilter(in query: String,
+                             sources: [String] = BridgeCatalog.offers.map(\.name))
+        -> (source: String, words: Set<String>)? {
+        func padded(_ s: String) -> String {
+            " " + s.lowercased()
+                .components(separatedBy: CharacterSet.alphanumerics.inverted)
+                .filter { !$0.isEmpty }
+                .joined(separator: " ") + " "
+        }
+        let haystack = padded(query)
+        var best: (source: String, words: Set<String>)?
+        for source in sources {
+            let needle = padded(source)
+            guard needle.count > 2, haystack.contains(needle) else { continue }
+            let words = Set(needle.split(separator: " ").map(String.init))
+            if best == nil || words.count > best!.words.count {
+                best = (source, words)
+            }
+        }
+        return best
     }
 }
