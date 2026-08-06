@@ -10,6 +10,11 @@ struct KeyedAnswer {
     let doc: [String]
     var searchedWeb = false
     var imagesSeen = 0
+    /// How many extra billed rounds the agent spent searching the corpus
+    /// itself (2026-08-06, `AgentCorpusTools`). 0 means it answered from the
+    /// evidence it was handed, which is the common case and not a failure —
+    /// the badge only mentions this when it happened.
+    var toolRounds = 0
 }
 
 /// The composer — the hero (principle 4). Full width above the tab bar, glass.
@@ -46,7 +51,11 @@ struct Composer: View {
     /// (2026-07-21). nil when the key or the network failed — the composer
     /// words that honestly. The verb only shows when a key is configured; it
     /// never fires on its own.
-    var answerWithKey: (_ query: String, _ onProseDoc: @escaping ([String]) -> Void) async -> Result<KeyedAnswer, AgentAnswerFailure> = { _, _ in .failure(.noKey) }
+    /// `provider` names which configured agent answers THIS ask (2026-08-06)
+    /// — nil means the app-wide active one. Passed rather than read from a
+    /// shared pointer so choosing a second agent for one question can never
+    /// change what the next question runs on.
+    var answerWithKey: (_ query: String, _ provider: AgentProvider?, _ onProseDoc: @escaping ([String]) -> Void) async -> Result<KeyedAnswer, AgentAnswerFailure> = { _, _, _ in .failure(.noKey) }
     /// Your real tags, from the corpus — typed-ask completion, the "Show
     /// <tag>" chips, and navigation matching read these (never a write).
     var tagCandidates: () -> [String] = { [] }
@@ -131,6 +140,9 @@ struct Composer: View {
         /// the settled turn so scrolling back doesn't lose the receipt.
         var searchedWeb = false
         var imagesSeen = 0
+        /// How many extra billed rounds it spent searching your own things
+        /// (2026-08-06). Carried onto the settled turn like the rest.
+        var toolRounds = 0
         /// This turn is a failure notice, not an answer — so it wears NO
         /// provenance badge. Without this a keyed failure fell through to
         /// the on-device badge and claimed "Answered on this iPhone" over a
@@ -165,6 +177,23 @@ struct Composer: View {
     /// assumes. Reset per ask alongside `keyedCurrent`.
     @State private var keyedSearchedWeb = false
     @State private var keyedImagesSeen = 0
+    /// How many times the CURRENT keyed answer went back to the corpus with a
+    /// tool (2026-08-06). Observed from the loop, never assumed — a model that
+    /// answered from the evidence it was handed reports 0 and the badge stays
+    /// quiet about it.
+    @State private var keyedToolRounds = 0
+    /// Which configured agent the next keyed ask runs on (2026-08-06, prd
+    /// §242's "Make active" without the app-wide flip). nil is the app-wide
+    /// active provider, and stays nil unless the person deliberately picks a
+    /// different one from the verb's own menu — so the default behaviour is
+    /// exactly what it was, and a second opinion costs one long-press rather
+    /// than a trip to Settings and back.
+    ///
+    /// It persists for the open conversation rather than resetting per ask:
+    /// having chosen to ask Gemini, the follow-up almost always belongs to
+    /// Gemini too — and `keyedHistory` upstream threads the prior turns, which
+    /// would otherwise be handed to a different model than wrote them.
+    @State private var askProvider: AgentProvider?
     /// The current "answer" is really a failure notice — no provenance badge
     /// belongs on it (2026-07-21). Reset at the start of every ask.
     @State private var answerFailed = false
@@ -1209,6 +1238,7 @@ struct Composer: View {
                                             provenanceBadge(keyed: turn.keyed,
                                                             searchedWeb: turn.searchedWeb,
                                                             imagesSeen: turn.imagesSeen,
+                                                            toolRounds: turn.toolRounds,
                                                             found: turn.found)
                                         }
                                     }
@@ -1274,6 +1304,7 @@ struct Composer: View {
                                             provenanceBadge(keyed: keyedCurrent,
                                                             searchedWeb: keyedSearchedWeb,
                                                             imagesSeen: keyedImagesSeen,
+                                                            toolRounds: keyedToolRounds,
                                                             found: foundCurrent)
                                         }
                                         if !proseStreaming, !inFlight {
@@ -1381,7 +1412,7 @@ struct Composer: View {
                                                 // provider (Claude/ChatGPT/Gemini/Venice).
                                                 if !keyedCurrent, keyAvailable,
                                                    !currentQuestion.isEmpty {
-                                                    Button { askWithKey() } label: {
+                                                    keyedVerb(action: askWithKey) {
                                                         // The row's one consequential verb wears
                                                         // its weight (design pass 2026-07-21):
                                                         // it sends the question and its matched
@@ -1389,7 +1420,9 @@ struct Composer: View {
                                                         // person's own key. It read as the
                                                         // QUIETEST chip in the row while two
                                                         // routine saves shouted.
-                                                        Chip(text: "Try with your key",
+                                                        Chip(text: askProvider.map {
+                                                                String(localized: "Try with \($0.agent)")
+                                                             } ?? String(localized: "Try with your key"),
                                                              style: .tint, glyph: "key.fill")
                                                     }
                                                     .buttonStyle(.plain)
@@ -1758,6 +1791,17 @@ struct Composer: View {
     private func consumeAskRequest() async {
         guard isOpen, let query = chrome.askRequest else { return }
         chrome.askRequest = nil
+        // A surface that asked for a KEYED answer (a thing sheet's "Ask about
+        // this") gets the same arc a tap on the verb gives: the free
+        // on-device answer runs first and the keyed one fires itself the
+        // moment it settles. Read and cleared together with the query, so a
+        // later plain ask can never inherit it. Only honoured when a key is
+        // actually configured — otherwise it would arm a follow-up that has
+        // nothing to run on.
+        if chrome.askWithKey {
+            pendingKeyedFollowUp = AgentKey.isConfigured
+            chrome.askWithKey = false
+        }
         fillDraft(query)
         try? await Task.sleep(for: .milliseconds(400))   // let the bubble settle
         // Closing the bubble inside the settle window cancels this task; the
@@ -1872,6 +1916,7 @@ struct Composer: View {
         keyedCurrent = false
         keyedSearchedWeb = false
         keyedImagesSeen = 0
+        keyedToolRounds = 0
         answerFailed = false
         foundCurrent = false
         conversationIsKeyed = false
@@ -1931,7 +1976,8 @@ struct Composer: View {
             if answering {
                 turns.append(ConvoTurn(question: currentQuestion, els: answerStream.els,
                                        keyed: keyedCurrent, searchedWeb: keyedSearchedWeb,
-                                       imagesSeen: keyedImagesSeen, failed: answerFailed,
+                                       imagesSeen: keyedImagesSeen, toolRounds: keyedToolRounds,
+                                       failed: answerFailed,
                                        found: foundCurrent))
             }
             answering = true
@@ -1941,6 +1987,7 @@ struct Composer: View {
             keyedCurrent = false
             keyedSearchedWeb = false
             keyedImagesSeen = 0
+            keyedToolRounds = 0
             answerFailed = false
             foundCurrent = true
             // Nothing is in flight: the retriever already ran, synchronously.
@@ -1974,8 +2021,18 @@ struct Composer: View {
     /// tool running — so this states what happened rather than what was
     /// offered: an agent that could search but didn't never claims it did.
     private func provenanceBadge(keyed: Bool, searchedWeb: Bool = false,
-                                 imagesSeen: Int = 0, found: Bool = false) -> some View {
+                                 imagesSeen: Int = 0, toolRounds: Int = 0,
+                                 found: Bool = false) -> some View {
         var parts: [String] = []
+        // Searching your own things leads, because it is the one part of this
+        // list that describes work done on the corpus rather than away from
+        // it — and it is the only visible sign that the agent went looking
+        // instead of summarizing what it was handed.
+        if toolRounds == 1 {
+            parts.append(String(localized: "searched your things"))
+        } else if toolRounds > 1 {
+            parts.append(String(localized: "searched your things \(toolRounds) times"))
+        }
         if searchedWeb { parts.append(String(localized: "searched the web")) }
         if imagesSeen == 1 {
             parts.append(String(localized: "read 1 screenshot"))
@@ -2014,6 +2071,49 @@ struct Composer: View {
         commit()
     }
 
+    /// The keyed verb, wearing a provider picker when there is a choice to
+    /// make (2026-08-06). A plain tap is unchanged — it asks whichever agent
+    /// the label names — and a long press offers every configured one.
+    ///
+    /// A `Menu` with a `primaryAction` rather than a separate chevron control:
+    /// the row is already the busiest in the app, and a second control for
+    /// something most people will never touch would cost more than it buys.
+    /// With one key configured there is nothing to choose, so it stays exactly
+    /// the Button it always was — a menu offering a single item is a dead
+    /// control wearing an affordance.
+    @ViewBuilder
+    private func keyedVerb<Content: View>(action: @escaping () -> Void,
+                                         @ViewBuilder label: () -> Content) -> some View {
+        let configured = AgentKey.configured
+        if configured.count > 1 {
+            Menu {
+                ForEach(configured) { provider in
+                    Button {
+                        askProvider = provider
+                        action()
+                    } label: {
+                        // The active one is named as such rather than just
+                        // ticked: "Claude" and "Claude (usual)" answer
+                        // different questions, and the second is the one
+                        // somebody scanning this menu is actually asking.
+                        if provider == (askProvider ?? AgentKey.active) {
+                            Label(String(localized: "\(provider.agent) (usual)"),
+                                  systemImage: "checkmark")
+                        } else {
+                            Text(provider.agent)
+                        }
+                    }
+                }
+            } label: {
+                label()
+            } primaryAction: {
+                action()
+            }
+        } else {
+            Button(action: action) { label() }
+        }
+    }
+
     /// The BYO-key retry: the same question, re-answered by the person's own
     /// agent key (Claude, ChatGPT, Gemini, or Venice). The on-device answer
     /// settles into the thread first, so the two sit side by side — the tap
@@ -2027,7 +2127,8 @@ struct Composer: View {
             if answering {
                 turns.append(ConvoTurn(question: currentQuestion, els: answerStream.els,
                                        keyed: keyedCurrent, searchedWeb: keyedSearchedWeb,
-                                       imagesSeen: keyedImagesSeen, failed: answerFailed,
+                                       imagesSeen: keyedImagesSeen, toolRounds: keyedToolRounds,
+                                       failed: answerFailed,
                                        found: foundCurrent))
             }
             answering = true
@@ -2037,6 +2138,7 @@ struct Composer: View {
             currentStreamed = false
             keyedSearchedWeb = false   // observed per answer, never carried over
             keyedImagesSeen = 0
+            keyedToolRounds = 0
             answerFailed = false
             foundCurrent = false       // a keyed retry is an answer, not a find
             // keepableAskKind is NOT reset here: askWithKey() re-asks the
@@ -2057,7 +2159,7 @@ struct Composer: View {
             // each growing snapshot the same way the on-device path does
             // (commit()'s onProseDoc), with the same stale-ask guard.
             var streamed = false
-            let outcome = await answerWithKey(q) { partialDoc in
+            let outcome = await answerWithKey(q, askProvider) { partialDoc in
                 guard gen == askGeneration else { return }
                 streamed = true
                 currentStreamed = true   // a real synthesis — keepable
@@ -2073,6 +2175,7 @@ struct Composer: View {
                 currentStreamed = true   // a keyed synthesis is keepable too
                 keyedSearchedWeb = answer.searchedWeb
                 keyedImagesSeen = answer.imagesSeen
+                keyedToolRounds = answer.toolRounds
                 // From here a typed follow-up stays on the agent that just
                 // answered — it has the context the on-device model doesn't.
                 conversationIsKeyed = true
@@ -2604,12 +2707,12 @@ struct Composer: View {
                         // evenly beside Find and Send-to rather than reading
                         // as a smaller, different kind of control.
                         if offerKeyed {
-                        Button { askDirectly() } label: {
+                        keyedVerb(action: askDirectly) {
                             HStack(spacing: DS.Space.s2) {
                                 Image(systemName: "key.fill")
                                     .accessibilityHidden(true)
                                     .font(.system(size: 14, weight: .medium))
-                                Text("Ask \(AgentKey.active?.agent ?? "your key")")
+                                Text("Ask \(askProvider?.agent ?? AgentKey.active?.agent ?? "your key")")
                                     .dsText(.callout15).fontWeight(.semibold)
                             }
                             .foregroundStyle(DS.tint)
@@ -2722,7 +2825,8 @@ struct Composer: View {
             if answering {
                 turns.append(ConvoTurn(question: currentQuestion, els: answerStream.els,
                                        keyed: keyedCurrent, searchedWeb: keyedSearchedWeb,
-                                       imagesSeen: keyedImagesSeen, failed: answerFailed,
+                                       imagesSeen: keyedImagesSeen, toolRounds: keyedToolRounds,
+                                       failed: answerFailed,
                                        found: foundCurrent))
             }
             // A follow-up in a conversation the person already took to their
@@ -2742,6 +2846,7 @@ struct Composer: View {
                 keyedCurrent = stayKeyed
                 keyedSearchedWeb = false   // observed per answer
                 keyedImagesSeen = 0
+                keyedToolRounds = 0
                 answerFailed = false
                 foundCurrent = false       // this is an ANSWER, not a find
                 inFlight = true
@@ -2780,10 +2885,11 @@ struct Composer: View {
                     // Bound as `keyed`, not `answer` — `answer` is the
                     // on-device closure this same block falls back to, and
                     // one name for both reads as a bug.
-                    switch await answerWithKey(q, paintPartial) {
+                    switch await answerWithKey(q, askProvider, paintPartial) {
                     case .success(let keyed):
                         keyedSearchedWeb = keyed.searchedWeb
                         keyedImagesSeen = keyed.imagesSeen
+                        keyedToolRounds = keyed.toolRounds
                         finalDoc = keyed.doc
                     case .failure:
                         // The agent didn't answer, so the on-device model

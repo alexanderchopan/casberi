@@ -68,6 +68,8 @@ struct GrokSetupScreen: View {
                             action: connect)
                 BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
                 AgentActiveStatusRow(provider: .grok)
+                AgentModelRow(provider: .grok)
+                AgentSpendRow(provider: .grok)
                 // The opening clause was the header's own tagline — "Try with
                 // your key, on Grok" — restated a screen below it
                 // (2026-07-31). The consent clause it carried stays.

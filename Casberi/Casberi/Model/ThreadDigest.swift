@@ -83,7 +83,7 @@ enum ThreadDigest {
     @MainActor
     @discardableResult
     static func sweep(context: ModelContext, limit: Int = 3) async -> Int {
-        guard OnDeviceModel.isAvailable, !sweeping else { return 0 }
+        guard AgentLibrarian.available, !sweeping else { return 0 }
         sweeping = true
         defer { sweeping = false }
 
@@ -120,15 +120,20 @@ enum ThreadDigest {
         return digested
     }
 
-    /// Two or three sentences saying what a thread was about. nil when the
-    /// model is unavailable, declines, or errors.
+    /// Two or three sentences saying what a thread was about. nil when
+    /// neither engine could summarize it.
+    ///
+    /// The on-device model answers whenever it exists and its nil is FINAL —
+    /// see `ScreenshotNaming.name` for why paying a key to second-guess a
+    /// local decline is the wrong trade. The key is reached only where there
+    /// is no local model at all (2026-08-06, `AgentLibrarian`).
     static func summarize(title: String, transcript: String) async -> String? {
         #if canImport(FoundationModels)
-        if #available(iOS 26.0, *) {
+        if #available(iOS 26.0, *), OnDeviceModel.isAvailable {
             return await ThreadDigestModel.summarize(title: title, transcript: transcript)
         }
         #endif
-        return nil
+        return await AgentLibrarian.summarize(title: title, transcript: transcript)
     }
 }
 

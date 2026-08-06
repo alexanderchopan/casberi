@@ -85,30 +85,17 @@ final class ToolHitSink: @unchecked Sendable {
 /// Keyword scoring over the snapshot — the tools' own small retriever (the
 /// RootShell scorer works over `Thing`s and can't reach here). Title beats
 /// text; a term must be a whole word somewhere in the thing.
+///
+/// The implementation moved to `AgentCorpusTools.rank` (2026-08-06) when the
+/// keyed path grew the same tools: it needs the identical scorer and cannot
+/// see this one, which is `@available(iOS 26.0, *)` because of the
+/// FoundationModels types around it. Two copies would drift, and then the same
+/// question would answer differently depending on whether a key is
+/// configured, for a reason invisible from either file.
 @available(iOS 26.0, *)
 enum ToolScore {
     static func rank(_ query: String, _ corpus: [AnswerTools.Snapshot], limit: Int) -> [AnswerTools.Snapshot] {
-        let terms = query.lowercased()
-            .components(separatedBy: CharacterSet.alphanumerics.inverted)
-            .filter { $0.count > 1 }
-        guard !terms.isEmpty else { return Array(corpus.prefix(limit)) }
-        func words(_ s: String) -> Set<String> {
-            Set(s.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted)
-                .filter { !$0.isEmpty })
-        }
-        return corpus.compactMap { snap -> (AnswerTools.Snapshot, Int)? in
-            let title = words(snap.title)
-            let text = words(snap.text + " " + snap.source)
-            var score = 0
-            for term in terms {
-                if title.contains(term) { score += 3 }
-                if text.contains(term) { score += 1 }
-            }
-            return score > 0 ? (snap, score) : nil
-        }
-        .sorted { $0.1 > $1.1 }
-        .prefix(limit)
-        .map(\.0)
+        AgentCorpusTools.rank(query, corpus, limit: limit)
     }
 }
 

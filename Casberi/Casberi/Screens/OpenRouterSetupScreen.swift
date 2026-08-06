@@ -62,6 +62,8 @@ struct OpenRouterSetupScreen: View {
                             action: connect)
                 BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
                 AgentActiveStatusRow(provider: .openrouter)
+                AgentModelRow(provider: .openrouter)
+                AgentSpendRow(provider: .openrouter)
                 // The opening sentence ("auto-picks whichever model fits") was
                 // the header's own tagline — "One key, whichever model fits" —
                 // a screen apart (2026-07-31). "there" lost its antecedent

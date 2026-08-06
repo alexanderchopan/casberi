@@ -63,6 +63,9 @@ struct AccountDetailSheet: View {
     @State private var keyChecking = false
     @State private var keyProvider: AgentProvider = AgentKey.active ?? .anthropic
     @State private var keyConfigured = AgentKey.isConfigured(AgentKey.active ?? .anthropic)
+    /// Bumped whenever a key is saved or removed so `AgentSpendRow` re-reads
+    /// the ledger, which is a static store SwiftUI cannot observe.
+    @State private var keyTick = 0
     /// One shower per colour actually CHOSEN (prd §204's pour, dealt as the
     /// app's own rain) — the setting you just picked falling through the sheet
     /// in its own colour, so a swatch tap answers "what did I just change?"
@@ -414,6 +417,20 @@ struct AccountDetailSheet: View {
                 keyResult = nil
                 keyDraft = ""
             }
+            // Which model it answers with, and what it has been spent on
+            // (2026-08-06). Both render nothing until this provider is
+            // configured, so an unconfigured pick shows the field alone,
+            // exactly as before.
+            AgentModelRow(provider: keyProvider)
+            AgentSpendRow(provider: keyProvider, tick: keyTick)
+            AgentLibrarianRow()
+            #if targetEnvironment(macCatalyst)
+            // Mac only — the local MCP listener (2026-08-06). It sits with the
+            // key because it is the same subject from the other side: your key
+            // lets Casberi ask somebody else's agent, this lets an agent on
+            // this Mac ask Casberi.
+            MCPServerRow()
+            #endif
             HStack(spacing: DS.Space.s3) {
                 SecureField(LocalizedStringKey(keyProvider.placeholder), text: $keyDraft)
                     .textInputAutocapitalization(.never)
@@ -449,6 +466,7 @@ struct AccountDetailSheet: View {
                     DSHaptic.tap()
                     AgentKey.clear(keyProvider)
                     keyConfigured = false
+                    keyTick += 1
                     keyResultIsError = false
                     keyResult = AgentKey.isConfigured
                         ? "Removed — answers run on \(AgentKey.active?.agent ?? "") now."
@@ -570,6 +588,7 @@ struct AccountDetailSheet: View {
             keyChecking = false
             if outcome == .accepted {
                 AgentKey.set(candidate, for: keyProvider)
+                keyTick += 1
                 keyConfigured = true
                 keyDraft = ""
                 DSHaptic.success()

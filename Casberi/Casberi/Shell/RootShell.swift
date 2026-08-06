@@ -212,6 +212,12 @@ struct RootShell: View {
                 chrome.risingBriefTitle = nil
             }
         }
+        #if targetEnvironment(macCatalyst)
+        // The local MCP listener (2026-08-06) — Mac only, and only if the
+        // person turned it on. `startIfEnabled` is a no-op otherwise, so the
+        // default build opens no port at all.
+        .task { MCPServer.shared.startIfEnabled() }
+        #endif
         // A surface requested an ask (the weekend cover) — open the composer;
         // it consumes the query once it mounts (prd 54).
         .onChange(of: chrome.askRequest) { _, request in
@@ -612,6 +618,12 @@ struct RootShell: View {
                       AgentKey.isConfigured ? 1 : 0, active?.rawValue ?? "none",
                       active.map { AgentKey.hint($0) } ?? "")
             }
+            // Debug hook: `-agentModel "<provider>:<model id>"` (or `clear`)
+            // pins which model a provider answers with, so a model choice is
+            // exercisable headlessly. Declared BEFORE every probe below —
+            // hooks run in list order and each must read a store that is
+            // already seeded.
+            AgentModelStore.seedFromLaunchArgs()
             if let q = UserDefaults.standard.string(forKey: "byokProbe") {
                 Task {
                     await EmbeddingIndex.indexPending(context: modelContext)
@@ -620,12 +632,98 @@ struct RootShell: View {
                     let ms = Int(Date().timeIntervalSince(start) * 1000)
                     switch outcome {
                     case .success(let answer):
-                        NSLog("[Casberi] byokProbe(\"%@\") %dms searchedWeb=%d images=%d →\n%@",
-                              q, ms, answer.searchedWeb ? 1 : 0, answer.imagesSeen,
+                        // `rounds` is the field that separates the two shapes
+                        // this path can now take — a single-shot summary of
+                        // what it was handed, or a real tool loop that went
+                        // looking. They produce identical-looking documents,
+                        // so a doc dump alone cannot tell them apart.
+                        NSLog("[Casberi] byokProbe(\"%@\") %dms model=%@ rounds=%d searchedWeb=%d images=%d →\n%@",
+                              q, ms, (AgentKey.active?.model ?? "none"), answer.toolRounds,
+                              answer.searchedWeb ? 1 : 0, answer.imagesSeen,
                               answer.doc.joined(separator: "\n"))
                     case .failure(let failure):
                         NSLog("[Casberi] byokProbe(\"%@\") %dms failed=%@ → \"%@\"",
                               q, ms, String(describing: failure), failure.line)
+                    }
+                    // The receipt for whatever just happened, printed right
+                    // after it — a keyed probe that answers and a keyed probe
+                    // that fails both spend something, and the difference
+                    // between them is exactly what this ledger exists to show.
+                    for entry in AgentSpend.shared.snapshot() {
+                        NSLog("[Casberi] agentSpend| %@ requests=%d toolRounds=%d tokens=%@ model=%@",
+                              entry.provider, entry.requests, entry.toolRounds,
+                              entry.tokenLine ?? "(not reported)", entry.model ?? "-")
+                    }
+                }
+            }
+            // Debug hook: `-spendProbe YES` dumps the key-spend ledger without
+            // asking anything — one `agentSpend|` line per provider (the
+            // `-todayProbe` truncation lesson). The only way to read what a
+            // key has been spent on across launches, since the counts persist
+            // and the answer path that writes them does not re-run.
+            if UserDefaults.standard.bool(forKey: "spendProbe") {
+                let entries = AgentSpend.shared.snapshot()
+                NSLog("[Casberi] spendProbe: providers=%d requests=%d",
+                      entries.count, AgentSpend.shared.totalRequests)
+                for entry in entries {
+                    NSLog("[Casberi] agentSpend| %@ requests=%d toolRounds=%d tokens=%@ model=%@ reported=%@",
+                          entry.provider, entry.requests, entry.toolRounds,
+                          entry.tokenLine ?? "(not reported)", entry.model ?? "-",
+                          entry.reportedUSD.map { String(format: "$%.4f", $0) } ?? "-")
+                }
+            }
+            // Debug hook: `-librarianProbe YES` reports whether the keyed
+            // librarian (prd §282's passes, run on a key) is reachable and how
+            // much work is waiting — WITHOUT spending anything. `-librarianProbe
+            // run` actually runs the catch-up pass, which bills real money, so
+            // it is a different word rather than a flag: a probe that spends
+            // on every headless run is one nobody can safely put in a sweep.
+            //
+            // The state line is the point. An empty result here has four
+            // causes that render as one silence — no key, the toggle off, an
+            // on-device model doing the work for free (the healthy case, and
+            // NOT a bug), or genuinely nothing left to organize.
+            if let mode = UserDefaults.standard.string(forKey: "librarianProbe") {
+                Task { @MainActor in
+                    let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
+                    let weak = all.filter {
+                        $0.isLive && $0.kind == .screenshot && $0.ocrAt != nil
+                            && !$0.content.isEmpty && ScreenshotNaming.isWeak($0.title)
+                    }.count
+                    let threads = all.filter { $0.isLive && ThreadDigest.wants($0) }.count
+                    NSLog("[Casberi] librarianProbe: onDevice=%d keyed=%d enabled=%d provider=%@ weakTitles=%d undigested=%d",
+                          AgentLibrarian.deviceCanDoIt ? 1 : 0, AgentLibrarian.canRun ? 1 : 0,
+                          AgentLibrarian.isEnabled ? 1 : 0,
+                          AgentKey.active?.rawValue ?? "none", weak, threads)
+                    guard mode == "run" else { return }
+                    let caught = await AgentLibrarian.catchUp(context: modelContext)
+                    NSLog("[Casberi] librarianProbe: named=%d digested=%d → \"%@\"",
+                          caught.named, caught.digested, caught.line)
+                }
+            }
+            // Debug hook: `-modelsProbe YES` asks every CONFIGURED provider
+            // what models it offers and logs one `agentModel|` line each (plus
+            // the count, since a list of 300 can't be logged whole). It exists
+            // because a pinned model id fails as a `providerError(404)` that
+            // the composer words as ordinary trouble — this is the read that
+            // says whether the pin is still real.
+            if UserDefaults.standard.bool(forKey: "modelsProbe") {
+                Task {
+                    for provider in AgentKey.configured {
+                        guard let key = TokenVault.get(provider.vaultKey) else { continue }
+                        let models = await AgentModels.list(provider: provider, key: key)
+                        guard let models else {
+                            NSLog("[Casberi] agentModel| %@ UNREADABLE (keeping pin %@)",
+                                  provider.rawValue, provider.defaultModel)
+                            continue
+                        }
+                        let pinLives = models.contains { $0.id == provider.defaultModel }
+                        NSLog("[Casberi] agentModel| %@ count=%d using=%@ chosen=%@ pinStillReal=%d",
+                              provider.rawValue, models.count, provider.model,
+                              AgentModelStore.chosen(provider) ?? "-", pinLives ? 1 : 0)
+                        for model in models.prefix(40) {
+                            NSLog("[Casberi] agentModelRow| %@ %@", provider.rawValue, model.id)
+                        }
                     }
                 }
             }
@@ -808,7 +906,7 @@ struct RootShell: View {
             // default lookup path takes to the scoring doc).
             if let q = UserDefaults.standard.string(forKey: "toolAnswer") {
                 Task { @MainActor in
-                    let snap = toolSnapshot()
+                    let snap = toolSnapshot(terms: Retriever.contentTerms(q))
                     if let r = await AnswerTools.answer(query: q, corpus: snap) {
                         NSLog("[Casberi] toolAnswer(\"%@\") → %@\n  grounded on %d things: %@",
                               q, r.prose, r.hitIDs.count, r.hitIDs.joined(separator: ", "))
@@ -2239,7 +2337,9 @@ struct RootShell: View {
             guard !pulse.pool.isEmpty else {
                 return appendingInsight(await tokenLine(), walletLine, to: proseDoc(StatusAsk.line(pulse)))
             }
-            if let prose = await streamSynthesis(query, over: candidates(pulse.sample),
+            if let prose = await streamSynthesis(query,
+                                                 over: candidates(pulse.sample,
+                                                                  terms: Retriever.contentTerms(query)),
                                                  onProseDoc: onProseDoc) {
                 // Prose, then its away/wallet addenda, then the receipts it
                 // was drawn from — the status synthesis success now shows its
@@ -2286,7 +2386,8 @@ struct RootShell: View {
                   (!followUp && retrievalThin) ? "agent" : "compose")
             #endif
             if !followUp, retrievalThin,
-               let result = await AnswerTools.answer(query: query, corpus: toolSnapshot()) {
+               let result = await AnswerTools.answer(
+                   query: query, corpus: toolSnapshot(terms: Retriever.contentTerms(query))) {
                 let grounded = things(forIDs: result.hitIDs)
                 if !grounded.isEmpty {
                     lastAnswerHits = grounded
@@ -2296,13 +2397,16 @@ struct RootShell: View {
                 // Tools found nothing the pre-retrieval didn't — fall through to
                 // compose over `hits` (the stronger semantic retriever's set).
             }
-            guard let answer = await OnDeviceModel.compose(query: query, candidates: candidates(hits)) else {
+            guard let answer = await OnDeviceModel.compose(
+                query: query,
+                candidates: candidates(hits, terms: Retriever.contentTerms(query))) else {
                 return retrievalDoc(hits, tag: tag, in: allThings())   // model declined or errored — fall back
             }
             return modelDoc(insight: answer.insight, hits: hits, picks: answer.picks, tag: tag, in: allThings())
         case .synthesis:
-            guard let prose = await streamSynthesis(query, over: candidates(hits),
-                                                    onProseDoc: onProseDoc) else {
+            guard let prose = await streamSynthesis(
+                query, over: candidates(hits, terms: Retriever.contentTerms(query)),
+                onProseDoc: onProseDoc) else {
                 return synthesisEmptyDoc(hits)
             }
             // The prose, with the retrieved things it was drawn from as
@@ -2359,8 +2463,9 @@ struct RootShell: View {
             if !recent.isEmpty {
                 let capped = Array(recent.prefix(16))
                 lastAnswerHits = capped
-                if let prose = await streamSynthesis(query, over: candidates(capped),
-                                                     onProseDoc: onProseDoc) {
+                if let prose = await streamSynthesis(
+                    query, over: candidates(capped, terms: Retriever.contentTerms(query)),
+                    onProseDoc: onProseDoc) {
                     return answered(appendingGrounding(capped, title: "Drawn from", to: proseDoc(prose)))
                 }
             }
@@ -2422,18 +2527,34 @@ struct RootShell: View {
     /// same grounded "Found" row the on-device lookup path does, via
     /// `modelDoc` — plain prose when it named none.
     private func keyedAnswerDocument(_ query: String,
+                                     provider explicitProvider: AgentProvider? = nil,
                                      onProseDoc: @escaping ([String]) -> Void = { _ in })
     async -> Result<KeyedAnswer, AgentAnswerFailure> {
         let hits = lastAnswerHits.isEmpty ? retrieve(query) : lastAnswerHits
         // Bankr answers from the wallet and live markets too, so an empty
         // corpus match still asks; every other agent only re-reads the same
         // evidence, so an empty match gets the honest line instead.
-        guard !hits.isEmpty || AgentKey.active == .bankr else {
+        let provider = explicitProvider ?? AgentKey.active
+        // The corpus tools (2026-08-06) — the whole corpus flattened, the same
+        // snapshot the on-device tool path already builds. Bankr gets none: it
+        // answers from the wallet and live markets rather than from the
+        // candidate list at all, so a corpus search is no use to it.
+        let corpus = provider == .bankr
+            ? [] : toolSnapshot(terms: Retriever.contentTerms(query))
+        // The honest line above used to fire whenever the local retrieval came
+        // back empty. With tools it fires only for a genuinely empty corpus —
+        // an empty retrieval is now exactly the case where a second,
+        // differently-worded search is most likely to find something, which is
+        // the whole reason the model has tools.
+        guard !hits.isEmpty || provider == .bankr || !corpus.isEmpty else {
             return .success(KeyedAnswer(doc: proseDoc(
                 "Nothing matches that — a bigger model won't help.")))
         }
         let outcome = await AgentAnswer.synthesize(
-            query: query, candidates: candidates(hits), history: keyedHistory,
+            query: query,
+            candidates: candidates(hits, terms: Retriever.contentTerms(query)),
+            history: keyedHistory,
+            provider: provider, corpus: corpus,
             onPartial: { partial in onProseDoc(self.proseDoc(partial)) })
         guard case .success(let result) = outcome else {
             guard case .failure(let failure) = outcome else { return .failure(.empty) }
@@ -2441,21 +2562,43 @@ struct RootShell: View {
         }
         keyedHistory.append(AgentTurn(question: query, answer: result.text))
         let picks = result.picks.filter { hits.indices.contains($0) }
+        // Grounding rows now come from two places, and the tool hits LEAD: a
+        // thing the model went and found is by construction one the local
+        // retrieval missed, so it is the more informative row — and burying it
+        // under the candidates it already had would hide the only visible
+        // evidence that the tool loop did anything at all.
+        let toolHits = things(forIDs: result.toolHitIDs)
         // No `tag:`/`in:` here — `keyedAnswerDocument` never resolves a topic
         // tile the way the on-device lookup route does, and `modelDoc` skips
         // that tile entirely whenever `tag` is nil, so there's no corpus
         // fetch to make for it.
-        let doc = picks.isEmpty ? proseDoc(result.text)
+        let doc: [String]
+        if toolHits.isEmpty {
+            doc = picks.isEmpty ? proseDoc(result.text)
                                 : modelDoc(insight: result.text, hits: hits, picks: picks)
+        } else {
+            // `modelDoc` reads `picks` as indices into the array it is handed,
+            // so the two sets merge into one array first — de-duped, since a
+            // thing can be both retrieved locally and returned by a tool and
+            // must not appear twice under one answer.
+            var merged = toolHits
+            var seen = Set(toolHits.map(\.id))
+            for index in picks where hits.indices.contains(index) {
+                let thing = hits[index]
+                if seen.insert(thing.id).inserted { merged.append(thing) }
+            }
+            doc = modelDoc(insight: result.text, hits: merged, picks: Array(merged.indices))
+        }
         return .success(KeyedAnswer(doc: doc, searchedWeb: result.searchedWeb,
-                                    imagesSeen: result.imagesSeen))
+                                    imagesSeen: result.imagesSeen,
+                                    toolRounds: result.toolRounds))
     }
 
     /// The corpus flattened to a plain `Sendable` snapshot for the tool-calling
     /// agent (AnswerTools) — the newest 2000 things, so a tool's `call` never
     /// reaches SwiftData off its actor. Same evidence shape (title/kind/source/
     /// when + excerpt) the single-shot candidates use.
-    private func toolSnapshot() -> [AnswerTools.Snapshot] {
+    private func toolSnapshot(terms: [String] = []) -> [AnswerTools.Snapshot] {
         var descriptor = FetchDescriptor<Thing>(
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
         descriptor.fetchLimit = 2000
@@ -2463,7 +2606,8 @@ struct RootShell: View {
         return all.map { t in
             AnswerTools.Snapshot(id: t.id.uuidString, title: t.title,
                                  kind: t.kind.typeTag, source: t.source,
-                                 when: shortTime(t.capturedAt), text: answerSnippet(t))
+                                 when: shortTime(t.capturedAt),
+                                 text: answerSnippet(t, terms: terms))
         }
     }
 
@@ -2483,11 +2627,12 @@ struct RootShell: View {
 
     /// Retrieved things flattened for the model — the one place the mapping
     /// lives, so every answer path hands the model the same shape.
-    private func candidates(_ things: [Thing]) -> [OnDeviceModel.Candidate] {
+    private func candidates(_ things: [Thing],
+                            terms: [String] = []) -> [OnDeviceModel.Candidate] {
         things.map {
             OnDeviceModel.Candidate(title: $0.title, kind: $0.kind.typeTag,
                                     source: $0.source, when: shortTime($0.capturedAt),
-                                    note: answerSnippet($0),
+                                    note: answerSnippet($0, terms: terms),
                                     imageData: $0.kind == .screenshot ? $0.previewImageData : nil,
                                     // Read the FULL text, not the excerpt below
                                     // (prd §277) — this is what lets the keyed
@@ -2503,7 +2648,11 @@ struct RootShell: View {
     /// For a bare-URL link the body IS the URL (no prose), so it falls through
     /// to `enrichedText` — the page's own lede — when the fetch landed one.
     /// Capped at 300 so 16 candidates still fit the on-device context window.
-    private func answerSnippet(_ thing: Thing) -> String {
+    /// When `terms` are given and the body overflows the cap, the excerpt is
+    /// CENTERED on the first query-term hit (prd §318, `Retriever.matchWindow`)
+    /// — the head-300 of a long note or article rarely contains the fact the
+    /// person asked for, which read back as answers that stayed general.
+    private func answerSnippet(_ thing: Thing, terms: [String] = []) -> String {
         let rawBody = thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
         // A bare link carries no prose the title doesn't already imply — reach
         // for the fetched article text instead.
@@ -2516,7 +2665,11 @@ struct RootShell: View {
         let flat = body.replacingOccurrences(of: "\n", with: " ")
             .replacingOccurrences(of: "\t", with: " ")
         let squeezed = flat.replacingOccurrences(of: "  ", with: " ")
-        return squeezed.count > 300 ? String(squeezed.prefix(300)) + "…" : squeezed
+        guard squeezed.count > 300 else { return squeezed }
+        if !terms.isEmpty, let window = Retriever.matchWindow(in: squeezed, terms: terms) {
+            return window
+        }
+        return String(squeezed.prefix(300)) + "…"
     }
 
     /// Streams the model's grounded synthesis, painting each snapshot through

@@ -113,7 +113,17 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         self == .anthropic ? "token.anthropic-key" : "token.\(rawValue)-key"
     }
 
-    var model: String {
+    /// The model a request actually names — the person's own choice when they
+    /// have made one on the connect screen, else the pin below (2026-08-06,
+    /// `AgentModelStore`). Every call site reads THIS, so a choice reaches the
+    /// answer path, the key check and the librarian sweep without any of them
+    /// knowing a choice exists.
+    var model: String { AgentModelStore.chosen(self) ?? defaultModel }
+
+    /// The fallback pin, used until the provider's own model list is read and
+    /// something is picked from it. Kept because a list read can fail — a pin
+    /// that might be stale still beats no request at all.
+    var defaultModel: String {
         switch self {
         case .anthropic:  "claude-opus-4-8"
         case .openai:     "gpt-4o"
@@ -267,6 +277,15 @@ enum AgentKey {
         if UserDefaults.standard.string(forKey: activeDefaultsKey) == provider.rawValue {
             UserDefaults.standard.removeObject(forKey: activeDefaultsKey)
         }
+        // The receipt goes with the key (2026-08-06). Removing a key and
+        // leaving its spend row behind would keep reporting on a credential
+        // that is gone — and the row would then start accumulating against a
+        // DIFFERENT key if the same provider is ever reconnected, which makes
+        // the one number on that screen quietly wrong.
+        AgentSpend.shared.forget(provider)
+        // The model choice goes too: it was picked from that key's own list,
+        // and a different key on the same provider may not be entitled to it.
+        AgentModelStore.set(nil, for: provider)
     }
 
     /// The tail of a stored key for the settings line ("…3kQA") — enough to
@@ -303,6 +322,25 @@ struct AgentAnswerResult: Sendable {
     let picks: [Int]
     var searchedWeb = false
     var imagesSeen = 0
+    /// Real `Thing` ids the CORPUS TOOLS surfaced and the answer pointed at
+    /// (2026-08-06) — the grounding rows for a tool-loop answer, in the order
+    /// the model picked them. Empty on the single-shot path, where `picks`
+    /// carries the same job as indices into the candidate list instead.
+    ///
+    /// Two fields rather than one because the two paths ground differently
+    /// and collapsing them would lose that: `picks` indexes a list the CALLER
+    /// already holds, while these are ids the caller must go and fetch,
+    /// possibly for things its own retrieval never found — which is the
+    /// entire point of giving the model tools.
+    var toolHitIDs: [String] = []
+    /// How many extra billed requests the tool loop cost — 0 means the model
+    /// answered from what it was handed, which is the common case and not a
+    /// failure. Shown in the provenance badge, so the person can see when a
+    /// question went looking.
+    var toolRounds = 0
+    /// The model the provider says actually answered, when it says. The only
+    /// place a silently rotated pin becomes visible.
+    var model: String?
 }
 
 /// Why a keyed answer didn't arrive (2026-07-21). The old path collapsed all
@@ -521,11 +559,27 @@ enum AgentAnswer {
     /// async job flow, wallet/market grounding — and answers through neither
     /// of the three above: no history, no images, no search tool, since its
     /// whole answer already isn't bound to the candidate list.)
+    /// A fourth divergence since 2026-08-06, and the one that changes what the
+    /// key BUYS: when the caller hands over a `corpus` snapshot, the request
+    /// carries `AgentCorpusTools` and the answer runs as a bounded tool loop —
+    /// the model can search the person's things itself, follow a lead with a
+    /// second read, and ask which sources exist, instead of summarizing the
+    /// one pre-retrieved candidate list it was handed. The on-device path has
+    /// worked this way since 2026-07-15 (`AnswerTools`); this is the paid path
+    /// catching up to the free one. An empty `corpus` keeps the old
+    /// single-shot behaviour exactly.
+    ///
+    /// `provider` overrides the app-wide active one for THIS ask (prd §242's
+    /// "Make active" without the app-wide flip) — the composer uses it so a
+    /// person holding four keys can send one question to a second agent
+    /// without changing what every later question runs on.
     static func synthesize(query: String, candidates: [OnDeviceModel.Candidate],
                            history: [AgentTurn] = [],
+                           provider explicitProvider: AgentProvider? = nil,
+                           corpus: [AnswerTools.Snapshot] = [],
                            onPartial: ((String) -> Void)? = nil)
     async -> Result<AgentAnswerResult, AgentAnswerFailure> {
-        guard let provider = AgentKey.active,
+        guard let provider = explicitProvider ?? AgentKey.active,
               let key = TokenVault.get(provider.vaultKey) else { return .failure(.noKey) }
 
         // The credential tripwire (prd §277, 2026-08-02). Everything past this
@@ -563,9 +617,16 @@ enum AgentAnswer {
         if provider == .bankr {
             return await bankrAnswer(query: query, candidates: candidates, key: key)
         }
-        guard !candidates.isEmpty else { return .failure(.empty) }
+        // With tools the model can reach things the local retriever missed, so
+        // an empty candidate list is a starting point rather than a dead end.
+        // Without them it is the whole evidence set, and a bigger model over
+        // nothing is only a slower way to say "nothing matches".
+        let toolsOn = !corpus.isEmpty
+        guard !candidates.isEmpty || toolsOn else { return .failure(.empty) }
 
-        var system = OnDeviceModel.synthesisInstructions(length: "a few plain sentences") + pickInstructions
+        var system = OnDeviceModel.synthesisInstructions(length: "a few plain sentences")
+        if toolsOn { system += toolGuidance }
+        system += toolsOn ? toolPickInstructions : pickInstructions
         if provider.searchesWeb { system += webSearchGuidance }
 
         // First turn sends the full prompt (instructions + numbered
@@ -580,12 +641,164 @@ enum AgentAnswer {
             ? Array(candidates.enumerated().compactMap { i, c in c.imageData.map { (i, $0) } }.prefix(6))
             : []
 
-        // Strip the "PICKS: …" marker line from every partial paint too, so
-        // it never flashes in the live answer before settling.
-        let liveOnPartial: ((String) -> Void)? = onPartial.map { forward in
-            { raw in forward(extractPicks(from: raw, candidateCount: candidates.count).text) }
+        // The numbered candidates own labels 1…N for the whole exchange, so a
+        // thing a tool surfaces later is #N+1 and one "PICKS:" line means one
+        // unambiguous thing whichever list it came from. Reserved rather than
+        // renumbered: the candidates are already written into the prompt by
+        // the time any tool runs, so their numbers can no longer move.
+        let sink = AgentCorpusTools.Sink(reserved: candidates.count)
+        var steps: [AgentStep] = []
+        var finalText = ""
+        var searchedWeb = false
+        var answeredModel: String?
+        var rounds = 0
+
+        while true {
+            // The LAST permitted round declares no tools at all, so the model
+            // is never handed a tool it won't be allowed to use — it is asked
+            // a question it must answer from what it already has.
+            let declareTools = toolsOn && rounds < AgentCorpusTools.maxRounds
+            // Strip the "PICKS: …" marker line from every partial paint too, so
+            // it never flashes in the live answer before settling. Each round
+            // paints from empty on purpose: a round that ends in a tool call
+            // emits a preamble ("let me look…"), and the answer that replaces
+            // it is the one worth keeping.
+            let liveOnPartial: ((String) -> Void)? = onPartial.map { forward in
+                { raw in forward(stripPickLine(raw)) }
+            }
+            guard let wire = makeRequest(provider: provider, key: key, system: system,
+                                         history: history, userText: userText,
+                                         images: images, steps: steps,
+                                         declareTools: declareTools) else {
+                return .failure(.noKey)
+            }
+            var request = wire.request
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.timeoutInterval = 90
+
+            let streamed: StreamOutcome
+            switch await streamText(request, onPartial: liveOnPartial, parse: wire.parse) {
+            case .success(let outcome):
+                streamed = outcome
+            case .failure(let failure):
+                // A failed round was usually still a billed request — a 429 or
+                // a 5xx arrives after the provider has read the prompt. It is
+                // recorded with no token counts, which is the honest shape:
+                // it happened, and nobody told us what it cost.
+                AgentSpend.shared.record(provider: provider, round: rounds)
+                NSLog("[Casberi] AgentAnswer(%@): %@", provider.rawValue, String(describing: failure))
+                return .failure(failure)
+            }
+            AgentSpend.shared.record(provider: provider, round: rounds,
+                                     input: streamed.inputTokens,
+                                     output: streamed.outputTokens,
+                                     model: streamed.model)
+            if streamed.searchedWeb { searchedWeb = true }
+            if let model = streamed.model { answeredModel = model }
+            finalText = streamed.text
+
+            let calls = streamed.toolCalls
+            guard declareTools, !calls.isEmpty else { break }
+            rounds += 1
+            steps.append(.toolCalls(calls))
+            steps.append(.toolResults(calls.map {
+                AgentCorpusTools.run($0, corpus: corpus, sink: sink)
+            }))
         }
 
+        let text = stripPickLine(finalText)
+        guard !text.isEmpty else { return .failure(.empty) }
+        let grounding = resolvePicks(from: finalText, candidateCount: candidates.count,
+                                     surfaced: sink.ids)
+        return .success(AgentAnswerResult(text: text, picks: grounding.picks,
+                                          searchedWeb: searchedWeb,
+                                          imagesSeen: images.count,
+                                          toolHitIDs: grounding.toolHitIDs,
+                                          toolRounds: rounds,
+                                          model: answeredModel))
+    }
+
+    /// A plain one-shot completion: a system prompt, a question, a string back
+    /// (2026-08-06). No corpus candidates, no tools, no history, no images, no
+    /// streaming — the small, cheap shape the LIBRARIAN work needs
+    /// (`AgentLibrarian`: naming a screenshot from its OCR text, digesting a
+    /// thread), where there is nothing to ground against and nothing to paint
+    /// live.
+    ///
+    /// It rides `makeRequest` rather than growing a second transport, so a
+    /// wire-shape fix reaches both paths. `streamText` is still what reads the
+    /// response — a non-streamed request would need a fourth response parser
+    /// per provider for no benefit, since nothing here is watching it arrive.
+    ///
+    /// Bankr is refused rather than attempted: it is a wallet agent that
+    /// answers from holdings and live markets, so asking it to name a
+    /// screenshot would spend a job on a question it has no way to answer.
+    static func complete(system: String, prompt: String,
+                         provider explicitProvider: AgentProvider? = nil,
+                         maxTokens: Int = 256)
+    async -> Result<String, AgentAnswerFailure> {
+        guard let provider = explicitProvider ?? AgentKey.active,
+              provider != .bankr,
+              let key = TokenVault.get(provider.vaultKey) else { return .failure(.noKey) }
+        guard var wire = makeRequest(provider: provider, key: key, system: system,
+                                     history: [], userText: prompt, images: [],
+                                     steps: [], declareTools: false) else {
+            return .failure(.noKey)
+        }
+        // `makeRequest` asks for 1024 tokens, which is right for an answer and
+        // wasteful for a title. Re-encoding the body is cheaper than
+        // threading a token budget through every branch of a switch that
+        // exists to serve the answer path.
+        if var body = (try? JSONSerialization.jsonObject(with: wire.request.httpBody ?? Data()))
+            as? [String: Any] {
+            if body["generationConfig"] != nil {
+                body["generationConfig"] = ["maxOutputTokens": maxTokens]
+            } else {
+                body["max_tokens"] = maxTokens
+            }
+            wire.request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        }
+        var request = wire.request
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 60
+
+        switch await streamText(request, onPartial: nil, parse: wire.parse) {
+        case .success(let outcome):
+            AgentSpend.shared.record(provider: provider, input: outcome.inputTokens,
+                                     output: outcome.outputTokens, model: outcome.model)
+            let text = outcome.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            return text.isEmpty ? .failure(.empty) : .success(text)
+        case .failure(let failure):
+            AgentSpend.shared.record(provider: provider)
+            return .failure(failure)
+        }
+    }
+
+    // MARK: - One round, in each provider's own wire shape
+
+    /// What the model asked for and what it was given, in the order it
+    /// happened. Kept provider-agnostic and rendered per wire below, because
+    /// the three shapes disagree about nearly everything — Anthropic pairs a
+    /// result to a call by `tool_use_id`, OpenAI by `tool_call_id` on a
+    /// message of its own `role: "tool"`, and Gemini pairs by NAME with no id
+    /// anywhere in the payload.
+    private enum AgentStep {
+        case toolCalls([AgentCorpusTools.Call])
+        case toolResults([AgentCorpusTools.Result])
+    }
+
+    /// One round's request plus the parser for its stream. Returns nil only
+    /// for Bankr, which never reaches here (it returns from `synthesize`
+    /// above) — spelled as an explicit case rather than a `default` so a
+    /// future eighth provider fails to compile instead of silently landing in
+    /// somebody else's branch.
+    private static func makeRequest(provider: AgentProvider, key: String, system: String,
+                                    history: [AgentTurn], userText: String,
+                                    images: [(index: Int, data: Data)],
+                                    steps: [AgentStep], declareTools: Bool)
+    -> (request: URLRequest, parse: ([String: Any]) -> StreamDelta)? {
         var request: URLRequest
         let parse: ([String: Any]) -> StreamDelta
         switch provider {
@@ -598,11 +811,17 @@ enum AgentAnswer {
                 "max_tokens": 1024,
                 "system": system,
                 "stream": true,
-                "messages": anthropicMessages(history: history, userText: userText, images: images),
+                "messages": anthropicMessages(history: history, userText: userText,
+                                              images: images, steps: steps),
             ]
+            // Anthropic's web search is a SERVER tool and coexists with
+            // client tools in the same array — unlike Gemini's, below.
+            var tools: [[String: Any]] = []
             if provider.searchesWeb {
-                body["tools"] = [["type": "web_search_20260209", "name": "web_search"]]
+                tools.append(["type": "web_search_20260209", "name": "web_search"])
             }
+            if declareTools { tools += AgentCorpusTools.anthropicDeclarations() }
+            if !tools.isEmpty { body["tools"] = tools }
             request.httpBody = try? JSONSerialization.data(withJSONObject: body)
             parse = anthropicDelta
         case .openai, .venice, .openrouter, .grok:
@@ -621,7 +840,7 @@ enum AgentAnswer {
             case .venice:     base = "https://api.venice.ai/api/v1"
             case .openrouter: base = "https://openrouter.ai/api/v1"
             case .grok:       base = "https://api.x.ai/v1"
-            default:          fatalError("unreachable — case list above is exhaustive for this branch")
+            default:          return nil
             }
             request = URLRequest(url: URL(string: "\(base)/chat/completions")!)
             request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
@@ -638,12 +857,24 @@ enum AgentAnswer {
                 messages.append(["role": "assistant", "content": turn.answer])
             }
             messages.append(["role": "user", "content": openAIUserContent(userText, images: images)])
+            messages += openAISteps(steps)
             var body: [String: Any] = [
                 "model": provider.model,
                 "max_tokens": 1024,
                 "stream": true,
                 "messages": messages,
             ]
+            if declareTools { body["tools"] = AgentCorpusTools.openAIDeclarations() }
+            // Usage on a STREAMED OpenAI-compatible response only arrives if
+            // the request asks for it. Sent to the two providers that document
+            // the option and withheld from Venice and Grok, whose support is
+            // unconfirmed: an unknown body key is a 400 risk on the answer
+            // path itself, and a missing spend row is a far cheaper failure
+            // than a question that won't answer. `AgentSpend` prints its own
+            // sentence for a provider that reports nothing.
+            if provider == .openai || provider == .openrouter {
+                body["stream_options"] = ["include_usage": true]
+            }
             // Venice's own extension — a bare "search" boolean/flag on the
             // usual chat-completions body, no separate tool declaration.
             // (ChatGPT never reaches here with searchesWeb true — Anthropic's
@@ -668,41 +899,61 @@ enum AgentAnswer {
                 userParts.append(["inline_data": ["mime_type": "image/jpeg", "data": data.base64EncodedString()]])
             }
             contents.append(["role": "user", "parts": userParts])
+            contents += geminiSteps(steps)
             var body: [String: Any] = [
                 "system_instruction": ["parts": [["text": system]]],
                 "contents": contents,
                 "generationConfig": ["maxOutputTokens": 1024],
             ]
-            if provider.searchesWeb {
+            // Gemini will not take `google_search` and `functionDeclarations`
+            // in the same request on the model generations this app pins, so
+            // the two cannot both be offered and one has to win. The corpus
+            // tools do: they read the things the person actually saved, which
+            // is what this answer is FOR, and web search is the fallback for
+            // when those fall short. `searchedWeb` is observed rather than
+            // assumed, so a round with no search tool simply never claims one
+            // — the badge stays honest without a special case.
+            if declareTools {
+                body["tools"] = AgentCorpusTools.geminiDeclarations()
+            } else if provider.searchesWeb {
                 let searchTool: [String: Any] = ["google_search": [String: Any]()]
                 body["tools"] = [searchTool]
             }
             request.httpBody = try? JSONSerialization.data(withJSONObject: body)
             parse = geminiDelta
         case .bankr:
-            return .failure(.noKey) // unreachable — bankr returned above
+            return nil // unreachable — bankr returns from `synthesize` above
         }
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 90
-
-        let streamed: StreamOutcome
-        switch await streamText(request, onPartial: liveOnPartial, parse: parse) {
-        case .success(let outcome):
-            streamed = outcome
-        case .failure(let failure):
-            NSLog("[Casberi] AgentAnswer(%@): %@", provider.rawValue, String(describing: failure))
-            return .failure(failure)
-        }
-        let (text, picks) = extractPicks(from: streamed.text, candidateCount: candidates.count)
-        guard !text.isEmpty else { return .failure(.empty) }
-        return .success(AgentAnswerResult(text: text, picks: picks,
-                                          searchedWeb: streamed.searchedWeb,
-                                          imagesSeen: images.count))
+        return (request, parse)
     }
 
     // MARK: - The "PICKS: …" marker — structured grounding without a
     // separate structured-output API per provider
+
+    /// Prepended to the system prompt when the corpus tools are declared
+    /// (2026-08-06). Three things it has to say, each earned:
+    ///
+    /// 1. USE the tools. A model handed a candidate list AND tools will
+    ///    usually just summarize the list, because that is the cheaper thing
+    ///    to do and nothing told it otherwise — which would make this whole
+    ///    feature invisible.
+    /// 2. The rounds are BOUNDED. Without that a model plans a five-search
+    ///    strategy, gets cut off at three, and answers from a half-finished
+    ///    survey rather than from what it has.
+    /// 3. Don't restate the rows. The app paints the things it found as real
+    ///    rows underneath the prose, so a model that lists them writes the
+    ///    screen twice — the same instruction `AnswerTools` gives on-device.
+    private static let toolGuidance = """
+
+
+        You have tools that read the things this person has saved. Use them \
+        before you answer — search for what the question is about, and search \
+        again with different words if the first look was thin. You may go back \
+        at most \(AgentCorpusTools.maxRounds) times, so make each search count, \
+        and answer from what you have when you are done. The app DISPLAYS every \
+        thing your tools returned as rows beneath your answer, so never list, \
+        number or restate them — write only what they add up to.
+        """
 
     /// Appended to the shared synthesis instructions: asks the model to name,
     /// on its own trailing line, which numbered candidates its answer drew
@@ -722,6 +973,23 @@ enum AgentAnswer {
         Nothing may follow that line.
         """
 
+    /// The same marker, worded for the tool loop — where the numbers span two
+    /// lists (the candidates in the prompt, then everything the tools
+    /// returned, which carry their own `#n` labels continuing the same run).
+    /// One numbering space is the whole reason `Sink` takes a `reserved`
+    /// count: two independently-numbered lists would make "PICKS: 3"
+    /// ambiguous, and an ambiguous grounding row is a wrong grounding row.
+    private static let toolPickInstructions = """
+
+
+        After you answer, on its own new line, write exactly "PICKS: " \
+        followed by the numbers of the things your answer actually draws on, \
+        most relevant first, comma-separated — for example "PICKS: 2, 5". Use \
+        the number each thing was given, whether it was numbered in the list \
+        above or came back from a tool wearing a "#" label. Write "PICKS: \
+        none" if none apply. Nothing may follow that line.
+        """
+
     /// Appended only for a provider that `searchesWeb` — the one line that
     /// changes the grounding contract, so it says so plainly to the model
     /// too: the saved things come first, search only fills real gaps.
@@ -731,50 +999,132 @@ enum AgentAnswer {
         first — they are what the person actually saved.
         """
 
-    /// Splits the model's own "PICKS: 2, 5" marker line off the end of the
-    /// answer — the prose with that line (and the blank line before it)
-    /// removed, and the 0-based indices it named, validated against the
-    /// candidate count. No marker, or nothing parseable → no picks, the
-    /// whole text stays prose (the caller shows it plain, same as before
-    /// this existed).
-    private static func extractPicks(from text: String, candidateCount: Int) -> (text: String, picks: [Int]) {
+    /// The prose with the model's own "PICKS: …" marker line (and the blank
+    /// line before it) removed. No marker → the text unchanged, which is also
+    /// what a stream mid-flight looks like, so this is safe to call on every
+    /// partial paint.
+    private static func stripPickLine(_ text: String) -> String {
         let lines = text.components(separatedBy: "\n")
         guard let markerIndex = lines.lastIndex(where: {
             $0.trimmingCharacters(in: .whitespaces).uppercased().hasPrefix("PICKS:")
         }) else {
-            return (text.trimmingCharacters(in: .whitespacesAndNewlines), [])
+            return text.trimmingCharacters(in: .whitespacesAndNewlines)
         }
-        let marker = lines[markerIndex].trimmingCharacters(in: .whitespaces)
-        let value = marker.dropFirst("PICKS:".count).trimmingCharacters(in: .whitespaces)
-        let picks: [Int] = value.uppercased() == "NONE" ? [] : value
-            .split(separator: ",")
-            .compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
-            .map { $0 - 1 }
-            .filter { $0 >= 0 && $0 < candidateCount }
         let prose = lines[..<markerIndex].joined(separator: "\n")
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        return (prose.isEmpty ? text.trimmingCharacters(in: .whitespacesAndNewlines) : prose, picks)
+        return prose.isEmpty ? text.trimmingCharacters(in: .whitespacesAndNewlines) : prose
+    }
+
+    /// Splits the marker's numbers across the two things they can mean: a
+    /// number inside the reserved candidate range is an index the CALLER can
+    /// resolve itself, and anything above it is the (1-based) position of a
+    /// thing the tools surfaced, resolved to a real `Thing` id here.
+    ///
+    /// Out-of-range numbers are dropped rather than clamped. A model that
+    /// invents "PICKS: 47" over a nine-thing exchange has invented a citation,
+    /// and clamping it to the ninth thing would turn that into a confident
+    /// wrong row — the one failure the grounding rail exists to prevent.
+    private static func resolvePicks(from text: String, candidateCount: Int,
+                                     surfaced: [String]) -> (picks: [Int], toolHitIDs: [String]) {
+        let lines = text.components(separatedBy: "\n")
+        guard let markerIndex = lines.lastIndex(where: {
+            $0.trimmingCharacters(in: .whitespaces).uppercased().hasPrefix("PICKS:")
+        }) else { return ([], []) }
+        let marker = lines[markerIndex].trimmingCharacters(in: .whitespaces)
+        let value = marker.dropFirst("PICKS:".count).trimmingCharacters(in: .whitespaces)
+        guard value.uppercased() != "NONE" else { return ([], []) }
+        // The model writes "#4" when it is citing a tool result and "4" when
+        // it is citing the prompt's own list; both mean the same number, so
+        // the hash is stripped rather than parsed.
+        let numbers = value.split(separator: ",").compactMap {
+            Int($0.trimmingCharacters(in: CharacterSet(charactersIn: " #")))
+        }
+        var picks: [Int] = []
+        var toolHitIDs: [String] = []
+        for number in numbers {
+            if number >= 1 && number <= candidateCount {
+                picks.append(number - 1)
+            } else {
+                let index = number - candidateCount - 1
+                if surfaced.indices.contains(index) { toolHitIDs.append(surfaced[index]) }
+            }
+        }
+        return (picks, toolHitIDs)
     }
 
     // MARK: - Streaming transport
 
+    /// One fragment of a tool call as it arrives. All three wire shapes stream
+    /// a call in PIECES rather than whole — the name arrives in one event and
+    /// the JSON arguments dribble in across several — so nothing can be run
+    /// until the stream ends. `index` is the provider's own slot number for
+    /// the call, which is the only thing that pairs a later argument fragment
+    /// back to the name that opened it.
+    ///
+    /// Gemini is the exception and sets `arguments` whole in one go; it also
+    /// sends no id anywhere in the payload, so one is synthesized from the
+    /// index (the id is only ever used to pair a result back to its call, and
+    /// Gemini's own wire pairs by name).
+    private struct ToolFragment {
+        let index: Int
+        var id: String?
+        var name: String?
+        var arguments: String?
+    }
+
     /// What one SSE line's parsed JSON means to the caller — an incremental
     /// chunk of prose to append, a refusal that abandons the whole answer,
-    /// the provider's own signal that its web-search tool actually ran, or
-    /// an event type this parser doesn't care about.
+    /// the provider's own signal that its web-search tool actually ran, a
+    /// piece of a tool call, the billed token counts, or an event type this
+    /// parser doesn't care about.
     private enum StreamDelta {
         case text(String)
         case refused
         case searched
+        case tool([ToolFragment])
+        case usage(input: Int?, output: Int?, model: String?)
         case ignore
     }
 
     /// Everything one stream produced: the accumulated prose, whether the
-    /// model declined, and whether its live search actually ran.
+    /// model declined, whether its live search actually ran, the tool calls it
+    /// asked for, and what the provider says the round cost.
     private struct StreamOutcome {
         var text = ""
         var refused = false
         var searchedWeb = false
+        var inputTokens: Int?
+        var outputTokens: Int?
+        var model: String?
+        /// Slot number → the call being assembled, in arrival order.
+        var toolBuffers: [(index: Int, id: String, name: String, arguments: String)] = []
+
+        /// Merges a fragment into whatever is already buffered for its slot.
+        mutating func absorb(_ fragment: ToolFragment) {
+            if let position = toolBuffers.firstIndex(where: { $0.index == fragment.index }) {
+                if let id = fragment.id, !id.isEmpty { toolBuffers[position].id = id }
+                if let name = fragment.name, !name.isEmpty { toolBuffers[position].name = name }
+                if let arguments = fragment.arguments { toolBuffers[position].arguments += arguments }
+            } else {
+                toolBuffers.append((index: fragment.index,
+                                    id: fragment.id ?? "call_\(fragment.index)",
+                                    name: fragment.name ?? "",
+                                    arguments: fragment.arguments ?? ""))
+            }
+        }
+
+        /// The finished calls, in the order the provider opened them. A buffer
+        /// with no name is dropped: it is a slot the stream opened and never
+        /// filled (a connection cut mid-call), and running a nameless tool
+        /// would only produce an error result the model then has to reason
+        /// about.
+        var toolCalls: [AgentCorpusTools.Call] {
+            toolBuffers.compactMap { buffer in
+                guard !buffer.name.isEmpty else { return nil }
+                return AgentCorpusTools.Call(id: buffer.id, name: buffer.name,
+                                             arguments: buffer.arguments.isEmpty ? "{}" : buffer.arguments)
+            }
+        }
     }
 
     /// Reads one provider's SSE response line by line, accumulating text via
@@ -818,6 +1168,16 @@ enum AgentAnswer {
                     outcome.refused = true
                 case .searched:
                     outcome.searchedWeb = true
+                case .tool(let fragments):
+                    fragments.forEach { outcome.absorb($0) }
+                case .usage(let input, let output, let model):
+                    // Anthropic reports input on `message_start` and output on
+                    // `message_delta`, so the two halves arrive in different
+                    // events — each is taken only when present, never
+                    // overwriting a count already read with a nil.
+                    if let input { outcome.inputTokens = input }
+                    if let output { outcome.outputTokens = output }
+                    if let model, !model.isEmpty { outcome.model = model }
                 case .ignore:
                     continue
                 }
@@ -826,7 +1186,11 @@ enum AgentAnswer {
             // A connection dropped mid-stream. Whatever text arrived stands —
             // a partial answer is still a real answer, and the person can see
             // it got cut. Only a drop before ANY text is a failure.
-            if outcome.text.isEmpty { return .failure(.unreachable) }
+            //
+            // A drop before any text but AFTER a tool call was assembled is
+            // not a failure either: the round did its job, and the loop will
+            // run the tools and ask again.
+            if outcome.text.isEmpty && outcome.toolCalls.isEmpty { return .failure(.unreachable) }
         }
         if outcome.refused { return .failure(.refused) }
         return .success(outcome)
@@ -837,32 +1201,59 @@ enum AgentAnswer {
     /// that must not be read as an answer.
     private static func anthropicDelta(_ json: [String: Any]) -> StreamDelta {
         let type = json["type"] as? String
-        if type == "content_block_delta",
-           let delta = json["delta"] as? [String: Any],
-           delta["type"] as? String == "text_delta",
-           let t = delta["text"] as? String {
-            return .text(t)
+        // Usage arrives in two halves: the input count rides `message_start`
+        // (which also names the model that actually answered), the output
+        // count rides the closing `message_delta`.
+        if type == "message_start", let message = json["message"] as? [String: Any] {
+            let usage = message["usage"] as? [String: Any]
+            return .usage(input: usage?["input_tokens"] as? Int,
+                          output: usage?["output_tokens"] as? Int,
+                          model: message["model"] as? String)
         }
-        // The search tool actually running opens its own content block — the
-        // observed signal, not the fact that we offered the tool.
+        if type == "content_block_delta",
+           let delta = json["delta"] as? [String: Any] {
+            if delta["type"] as? String == "text_delta", let t = delta["text"] as? String {
+                return .text(t)
+            }
+            // The arguments of a client tool call, streamed as raw JSON text.
+            if delta["type"] as? String == "input_json_delta",
+               let partial = delta["partial_json"] as? String,
+               let index = json["index"] as? Int {
+                return .tool([ToolFragment(index: index, arguments: partial)])
+            }
+        }
         if type == "content_block_start",
            let block = json["content_block"] as? [String: Any] {
             let blockType = block["type"] as? String
+            // The search tool actually running opens its own content block —
+            // the observed signal, not the fact that we offered the tool.
             if blockType == "server_tool_use" || blockType == "web_search_tool_result" {
                 return .searched
             }
+            // A CLIENT tool call opens the same way, and is ours to run.
+            if blockType == "tool_use", let index = json["index"] as? Int,
+               let name = block["name"] as? String,
+               AgentCorpusTools.names.contains(name) {
+                return .tool([ToolFragment(index: index, id: block["id"] as? String, name: name)])
+            }
         }
-        if type == "message_delta",
-           let delta = json["delta"] as? [String: Any],
-           delta["stop_reason"] as? String == "refusal" {
-            return .refused
+        if type == "message_delta" {
+            if let delta = json["delta"] as? [String: Any],
+               delta["stop_reason"] as? String == "refusal" {
+                return .refused
+            }
+            if let usage = json["usage"] as? [String: Any] {
+                return .usage(input: usage["input_tokens"] as? Int,
+                              output: usage["output_tokens"] as? Int, model: nil)
+            }
         }
         return .ignore
     }
 
-    /// The OpenAI-compatible chat-completions SSE shape (ChatGPT and
-    /// Venice): each chunk's `choices[0].delta.content` is the next slice of
-    /// text; a populated `delta.refusal` is a refusal, never text.
+    /// The OpenAI-compatible chat-completions SSE shape (ChatGPT, Venice,
+    /// OpenRouter and Grok): each chunk's `choices[0].delta.content` is the
+    /// next slice of text; a populated `delta.refusal` is a refusal, never
+    /// text.
     private static func openAIDelta(_ json: [String: Any]) -> StreamDelta {
         // Venice reports a search it actually ran as citations riding the
         // chunk. Checked before `choices` because the citation chunk carries
@@ -874,9 +1265,29 @@ enum AgentAnswer {
             return .searched
         }
         if let citations = json["citations"] as? [Any], !citations.isEmpty { return .searched }
+        // The usage chunk arrives last and carries an EMPTY `choices` array,
+        // so it is read before the guard below rejects it.
+        if let usage = json["usage"] as? [String: Any] {
+            return .usage(input: usage["prompt_tokens"] as? Int,
+                          output: usage["completion_tokens"] as? Int,
+                          model: json["model"] as? String)
+        }
         guard let choices = json["choices"] as? [[String: Any]],
               let delta = choices.first?["delta"] as? [String: Any] else { return .ignore }
         if let refusal = delta["refusal"] as? String, !refusal.isEmpty { return .refused }
+        // Tool calls stream as an array of index-keyed fragments; one chunk
+        // can carry pieces of several calls at once, which is why a delta
+        // yields a LIST of fragments rather than one.
+        if let calls = delta["tool_calls"] as? [[String: Any]], !calls.isEmpty {
+            let fragments: [ToolFragment] = calls.enumerated().compactMap { position, call in
+                let function = call["function"] as? [String: Any]
+                return ToolFragment(index: call["index"] as? Int ?? position,
+                                    id: call["id"] as? String,
+                                    name: function?["name"] as? String,
+                                    arguments: function?["arguments"] as? String)
+            }
+            return fragments.isEmpty ? .ignore : .tool(fragments)
+        }
         if let content = delta["content"] as? String, !content.isEmpty { return .text(content) }
         return .ignore
     }
@@ -889,6 +1300,14 @@ enum AgentAnswer {
            feedback["blockReason"] != nil {
             return .refused
         }
+        // `usageMetadata` rides its own chunk and names cumulative totals for
+        // the response, so the last one seen wins — which is what `.usage`'s
+        // overwrite (rather than add) semantics already give.
+        if let usage = json["usageMetadata"] as? [String: Any] {
+            return .usage(input: usage["promptTokenCount"] as? Int,
+                          output: usage["candidatesTokenCount"] as? Int,
+                          model: json["modelVersion"] as? String)
+        }
         guard let candidates = json["candidates"] as? [[String: Any]],
               let first = candidates.first else { return .ignore }
         // Gemini attaches groundingMetadata only when its search actually ran
@@ -897,6 +1316,18 @@ enum AgentAnswer {
         if first["groundingMetadata"] != nil { return .searched }
         guard let content = first["content"] as? [String: Any],
               let parts = content["parts"] as? [[String: Any]] else { return .ignore }
+        // A function call arrives WHOLE — name and arguments together, no id.
+        let fragments: [ToolFragment] = parts.enumerated().compactMap { position, part in
+            guard let call = part["functionCall"] as? [String: Any],
+                  let name = call["name"] as? String,
+                  AgentCorpusTools.names.contains(name) else { return nil }
+            let arguments = call["args"] as? [String: Any] ?? [:]
+            let encoded = (try? JSONSerialization.data(withJSONObject: arguments))
+                .flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+            return ToolFragment(index: position, id: "call_\(position)_\(name)",
+                                name: name, arguments: encoded)
+        }
+        if !fragments.isEmpty { return .tool(fragments) }
         let t = parts.compactMap { $0["text"] as? String }.joined()
         return t.isEmpty ? .ignore : .text(t)
     }
@@ -909,7 +1340,8 @@ enum AgentAnswer {
     /// per photo labelled by the candidate it belongs to, so the model can
     /// tell which picture goes with which numbered thing.
     private static func anthropicMessages(history: [AgentTurn], userText: String,
-                                          images: [(index: Int, data: Data)]) -> [[String: Any]] {
+                                          images: [(index: Int, data: Data)],
+                                          steps: [AgentStep]) -> [[String: Any]] {
         var messages: [[String: Any]] = []
         for turn in history {
             messages.append(["role": "user", "content": turn.question])
@@ -923,7 +1355,82 @@ enum AgentAnswer {
                                       "data": data.base64EncodedString()]])
         }
         messages.append(["role": "user", "content": content])
+        // The tool loop so far, replayed: Anthropic pairs a result to its call
+        // by `tool_use_id`, and every prior call must be present or the API
+        // rejects the whole request rather than ignoring the orphan.
+        for step in steps {
+            switch step {
+            case .toolCalls(let calls):
+                messages.append(["role": "assistant", "content": calls.map { call in
+                    ["type": "tool_use", "id": call.id, "name": call.name,
+                     "input": jsonObject(call.arguments)]
+                }])
+            case .toolResults(let results):
+                messages.append(["role": "user", "content": results.map { result in
+                    ["type": "tool_result", "tool_use_id": result.id, "content": result.content]
+                }])
+            }
+        }
         return messages
+    }
+
+    /// The OpenAI-compatible replay of the tool loop: the assistant's calls as
+    /// one message carrying `tool_calls`, then ONE message per result — the
+    /// shape's own rule, and a single merged `role: "tool"` message for two
+    /// calls is rejected.
+    private static func openAISteps(_ steps: [AgentStep]) -> [[String: Any]] {
+        var messages: [[String: Any]] = []
+        for step in steps {
+            switch step {
+            case .toolCalls(let calls):
+                messages.append([
+                    "role": "assistant",
+                    // Some implementations of this shape require the key to be
+                    // present even when the turn is pure tool use.
+                    "content": NSNull(),
+                    "tool_calls": calls.map { call in
+                        ["id": call.id, "type": "function",
+                         "function": ["name": call.name, "arguments": call.arguments]]
+                    },
+                ])
+            case .toolResults(let results):
+                for result in results {
+                    messages.append(["role": "tool", "tool_call_id": result.id,
+                                     "name": result.name, "content": result.content])
+                }
+            }
+        }
+        return messages
+    }
+
+    /// Gemini's replay. It carries NO call id anywhere in the payload and
+    /// pairs a response to its call by NAME, which is why `Call.id` is
+    /// synthesized there and never sent.
+    private static func geminiSteps(_ steps: [AgentStep]) -> [[String: Any]] {
+        var contents: [[String: Any]] = []
+        for step in steps {
+            switch step {
+            case .toolCalls(let calls):
+                contents.append(["role": "model", "parts": calls.map { call in
+                    ["functionCall": ["name": call.name, "args": jsonObject(call.arguments)]]
+                }])
+            case .toolResults(let results):
+                contents.append(["role": "user", "parts": results.map { result in
+                    ["functionResponse": ["name": result.name,
+                                          "response": ["result": result.content]]]
+                }])
+            }
+        }
+        return contents
+    }
+
+    /// A tool call's raw argument string as a dictionary, for the two wires
+    /// that want an object where OpenAI wants the string back verbatim. An
+    /// unparseable string becomes `{}` rather than failing the request: the
+    /// tool itself already treats missing arguments as "no filter", so the
+    /// round still produces a usable result instead of an API error.
+    private static func jsonObject(_ raw: String) -> [String: Any] {
+        (try? JSONSerialization.jsonObject(with: Data(raw.utf8))) as? [String: Any] ?? [:]
     }
 
     /// The OpenAI-compatible `content` value for the current turn — a bare

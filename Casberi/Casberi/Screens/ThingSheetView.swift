@@ -36,6 +36,7 @@ struct ThingSheetView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
+    @Environment(ShellChrome.self) private var chrome
 
     @State private var confirmingVerb: Verb?
     /// The screenshot, opened full screen and zoomable (2026-08-02) — the Zoom
@@ -369,6 +370,7 @@ struct ThingSheetView: View {
                         .settleIn(delay: 0.2)
                     dialResult
                 }
+                askAboutThis
                 if !replies.isEmpty {
                     // One replies renderer (2026-07-16) — the thing sheet and
                     // the in-app walker show a reply identically, however deep
@@ -1074,6 +1076,78 @@ struct ThingSheetView: View {
         verbOutcome
             .frame(maxWidth: .infinity)
             .padding(.top, DS.Space.s2)
+    }
+
+    /// Renders this thing (and what it sits near) as markdown on the
+    /// clipboard. The neighbours are fetched here rather than reused from the
+    /// shelf's stream: that stream is a rendered document, not an array of
+    /// things, and the shelf may not have finished — a copy verb that silently
+    /// omits the related list depending on scroll timing is worse than one
+    /// that spends a bounded fetch.
+    private func copyAsContext() {
+        guard thing.isLive else { return }
+        var descriptor = FetchDescriptor<Thing>(
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        descriptor.fetchLimit = 300   // the shelf's own window
+        let corpus = ((try? modelContext.fetch(descriptor)) ?? []).filter(\.isLive)
+        let related = RelatedThings.neighbours(of: thing, in: corpus)
+        DSPasteboard.copy(AgentContext.render(thing, related: related))
+        verbResult = String(localized: "Copied as context")
+        verbResultIsError = false
+    }
+
+    // MARK: - Ask about this (2026-08-06)
+
+    /// The agent, reachable from a thing (2026-08-06). Until now the keyed
+    /// agent had exactly ONE door — the composer — so the moment you were most
+    /// likely to have a question about something ("what else do I have on
+    /// this?") was the one moment you had to leave, reopen the agent, and type
+    /// the subject back in yourself.
+    ///
+    /// It hands the ask to `ShellChrome` rather than answering here: one
+    /// answer surface, one conversation, one place a keyed answer can be kept
+    /// — a second answer renderer inside a sheet would fork all three. With a
+    /// key configured it runs the keyed arc (free on-device answer first, the
+    /// keyed one straight after); without one it is an ordinary ask, which is
+    /// still the useful verb it names.
+    ///
+    /// One chip, not a disc: the dial holds the verbs that DO something to
+    /// this thing, and this one leaves it to go somewhere else.
+    @ViewBuilder
+    private var askAboutThis: some View {
+        if thing.isLive {
+            let subject = thing.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !subject.isEmpty {
+                HStack(spacing: DS.Space.s2) {
+                    Button {
+                        DSHaptic.tap()
+                        // Dismiss first: the composer rises over the shell, and
+                        // a sheet still up would sit between them.
+                        dismiss()
+                        chrome.ask("What else do I have about \(subject)?",
+                                   withKey: AgentKey.isConfigured)
+                    } label: {
+                        Chip(text: AgentKey.active.map {
+                                String(localized: "Ask \($0.agent) about this")
+                             } ?? String(localized: "Ask about this"),
+                             style: .neutral, glyph: "sparkles")
+                    }
+                    .buttonStyle(.plain)
+                    // The door for every agent this app will never have an API
+                    // for (2026-08-06, `AgentContext`) — a browser chat, a
+                    // terminal agent, whatever shipped last week. No key, no
+                    // network, no provider list.
+                    Button {
+                        DSHaptic.tap()
+                        copyAsContext()
+                    } label: {
+                        Chip(text: "Copy as context", style: .neutral, glyph: "doc.on.doc")
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.top, DS.Space.s4)
+            }
+        }
     }
 
     // MARK: - Note links (a vault's own wikilink graph, 2026-07-28)

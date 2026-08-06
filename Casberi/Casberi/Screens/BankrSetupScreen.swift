@@ -67,6 +67,8 @@ struct BankrSetupScreen: View {
                             action: connect)
                 BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
                 AgentActiveStatusRow(provider: .bankr)
+                AgentModelRow(provider: .bankr)
+                AgentSpendRow(provider: .bankr)
                 DSSlabNote(text: "Answers re-run on Bankr — your wallet and live markets included — only when you tap. Nothing trades.")
             }
         }

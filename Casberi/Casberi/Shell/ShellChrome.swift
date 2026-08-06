@@ -102,7 +102,20 @@ final class ShellChrome {
     /// synthesis, prd 54) — RootShell opens the bubble on set; the composer
     /// consumes the query and sends it through the real answer path.
     var askRequest: String?
-    func ask(_ query: String) { askRequest = query }
+    /// The requested ask should run on the person's own key, not just on
+    /// device (2026-08-06). Consumed by the composer alongside `askRequest`,
+    /// which sets its existing `pendingKeyedFollowUp` — so the free on-device
+    /// answer still runs first and the keyed one follows it, exactly as a tap
+    /// on "Ask <agent>" already behaves. A surface asking for a keyed answer
+    /// is asking for the same arc, not a different one.
+    ///
+    /// Reset by the composer on consumption so a later plain `ask` can never
+    /// inherit somebody else's request to spend money.
+    var askWithKey = false
+    func ask(_ query: String, withKey: Bool = false) {
+        askRequest = query
+        askWithKey = withKey
+    }
 
     /// The agent rose to be TYPED IN, not to deliver something (2026-07-30) —
     /// set by the bar's magnifier, consumed by the composer, which focuses the

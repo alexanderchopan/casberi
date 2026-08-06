@@ -12,9 +12,15 @@ enum Retriever {
     /// Matches are scored, not just found: title hits outweigh tag hits
     /// outweigh content hits, fresh things float, and kind words in the
     /// person's own words filter ("screenshots about work" searches
-    /// screenshots for work). Returns the ranked grounding set (top 16 — a
-    /// wide net for the model to rerank, well past the 4 the fallback
-    /// paints; raised from 10, 2026-07-15).
+    /// screenshots for work). Since 2026-08-06 (prd §318) the scoring is also
+    /// SPECIFIC, three ways: a term's weight is its RARITY in this corpus
+    /// (`idfWeight` — "Lisbon" outweighs "work"), a thing matching MORE of the
+    /// query outranks one matching a single word (`coverageFactor` — the fix
+    /// for one common word dragging noise into the grounding set), and
+    /// adjacent query words found adjacent in a thing score extra ("climate
+    /// change" as a phrase beats either word alone). Returns the ranked
+    /// grounding set (top 16 — a wide net for the model to rerank, well past
+    /// the 4 the fallback paints; raised from 10, 2026-07-15).
     ///
     /// `isPoolRefinement` is true when `corpus` already arrived as a
     /// follow-up's narrowed pool rather than a fresh fetch — it skips the
@@ -93,31 +99,7 @@ enum Retriever {
             }
             return false
         }
-        let stops: Set<String> = ["about", "my", "the", "a", "in", "from", "for", "of",
-                                  "what", "whats", "what's", "landed", "on", "happened",
-                                  "is", "are", "was", "were", "do", "does", "did", "i",
-                                  "me", "you", "your", "who", "how", "when", "where",
-                                  "why", "which", "it", "and", "or", "to", "with",
-                                  // Command / query verbs (2026-07-15): a lookup
-                                  // like "show me my events" or "which events do
-                                  // I have" names an ACTION, not content — left
-                                  // in, "show"/"have" scored as search terms and
-                                  // matched nothing, so the ask returned empty. A
-                                  // bare kind/date list then falls through to the
-                                  // "list that kind" path as intended.
-                                  "show", "find", "search", "list", "look", "up",
-                                  "save", "saved", "have", "has", "had", "get",
-                                  "see", "tell", "give", "all", "any",
-                                  // "can you search my X stuff" (2026-08-05) —
-                                  // the polite forms and the filler noun that
-                                  // `KeptAskComposers.namedAskTarget` has always
-                                  // stripped. Left in, "can"/"stuff" scored as
-                                  // content terms and matched every unrelated
-                                  // thing whose text happens to say "can",
-                                  // which is what an ask naming a source
-                                  // actually answered with.
-                                  "can", "could", "would", "please", "stuff"]
-        terms.removeAll { stops.contains($0) }
+        terms.removeAll { Self.stops.contains($0) }
 
         // A date phrase ("today", "last week", "thursday") is a WHEN filter,
         // not a text term — things outside the range drop out entirely.
@@ -160,33 +142,86 @@ enum Retriever {
 
         // Whole words, not substrings (2026-07-10): "what is my name" used
         // to match the "is" inside "Lisbon" and answer with nonsense — a
-        // term now has to BE a word somewhere in the thing.
-        func words(_ s: String) -> Set<String> {
-            Set(s.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted)
-                .filter { !$0.isEmpty })
+        // term now has to BE a word somewhere in the thing. Tokens are kept
+        // ORDERED too (2026-08-06): the adjacency bonus needs word order, and
+        // the membership sets are derived from the same single pass.
+        func tokens(_ s: String) -> [String] {
+            s.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted)
+                .filter { !$0.isEmpty }
         }
-        return all.compactMap { thing -> (Thing, Double)? in
+
+        // Pass 1 — filter and tokenize each candidate ONCE. The hard filters
+        // run first so a dropped thing costs no tokenization; the padded
+        // joined strings exist for the adjacency check (" a b " containment
+        // is a word-boundary phrase match with no regex).
+        let prepared: [Prepared] = all.compactMap { thing -> Prepared? in
             if let sourceMatch, thing.source != sourceMatch.source { return nil }
             if let facetMatch, !thing.tags.contains(facetMatch.tag) { return nil }
             if writingScope != nil, Self.mine.isDisjoint(with: thing.tags) { return nil }
             if let kindFilter, thing.kind != kindFilter { return nil }
             if let dateMatch, !dateMatch.range.contains(thing.capturedAt) { return nil }
-            let title = words(thing.title)
-            let tags = words(thing.tags.joined(separator: " "))
+            let titleTokens = tokens(thing.title)
+            let tagTokens = tokens(thing.tags.joined(separator: " "))
             // The content scan reaches the thing's own body AND its enriched
             // text (a link's fetched article, 2026-07-15) — so a keyword the
             // title never says can still match a saved page.
-            let content = words(thing.content + " " + (thing.enrichedText ?? ""))
-            var score = 0.0
-            for term in terms {
-                if title.contains(term) { score += 3 }
-                if tags.contains(term) { score += 2 }
-                if content.contains(term) { score += 1 }
+            let contentTokens = tokens(thing.content + " " + (thing.enrichedText ?? ""))
+            return Prepared(thing: thing,
+                            title: Set(titleTokens),
+                            tags: Set(tagTokens),
+                            content: Set(contentTokens),
+                            titleText: " " + titleTokens.joined(separator: " ") + " ",
+                            contentText: " " + contentTokens.joined(separator: " ") + " ")
+        }
+
+        // Pass 2 — each term's weight is its RARITY in this corpus (prd §318):
+        // document frequency counted over the filtered set, mapped through
+        // `idfWeight` so "Lisbon" pulls several times harder than "work".
+        // Computed here, once per query, never per thing.
+        var idf: [String: Double] = [:]
+        for term in terms {
+            let df = prepared.reduce(0) { count, entry in
+                count + ((entry.title.contains(term) || entry.tags.contains(term)
+                          || entry.content.contains(term)) ? 1 : 0)
             }
+            idf[term] = Self.idfWeight(corpus: prepared.count, holding: df)
+        }
+        // Adjacent query-word pairs, in the person's own order — "climate
+        // change" found AS a phrase in a thing is stronger evidence than the
+        // two words scattered. Stop-word removal above can join words that
+        // weren't adjacent in the raw query; that only ever WIDENS what counts
+        // as a phrase, and a bonus that occasionally fires on "trip … lisbon"
+        // is still evidence of the right thing.
+        let pairs: [String] = terms.count > 1
+            ? (0..<(terms.count - 1)).map { " \(terms[$0]) \(terms[$0 + 1]) " } : []
+
+        return prepared.compactMap { entry -> (Thing, Double)? in
+            let thing = entry.thing
+            var exact = 0.0
+            var matchedTerms = 0
+            for term in terms {
+                let weight = idf[term] ?? 1
+                var hit = false
+                if entry.title.contains(term) { exact += 3 * weight; hit = true }
+                if entry.tags.contains(term) { exact += 2 * weight; hit = true }
+                if entry.content.contains(term) { exact += 1 * weight; hit = true }
+                if hit { matchedTerms += 1 }
+            }
+            // COVERAGE (prd §318): a thing matching one of four query words is
+            // demoted well below one matching all four — the single biggest
+            // cause of "general answers" was OR-semantics letting a lone
+            // common word ride into the grounding set. Scales the EXACT
+            // subtotal only: synonym and semantic evidence below keep their
+            // own paths, so "car stuff" still reaches a "vehicle" title.
+            var score = exact * Self.coverageFactor(matched: matchedTerms, of: terms.count)
             for term in expanded {
-                if title.contains(term) { score += 1.5 }
-                if tags.contains(term) { score += 1 }
-                if content.contains(term) { score += 0.5 }
+                if entry.title.contains(term) { score += 1.5 }
+                if entry.tags.contains(term) { score += 1 }
+                if entry.content.contains(term) { score += 0.5 }
+            }
+            for pair in pairs {
+                if entry.titleText.contains(pair) { score += 2.5 }
+                if entry.contentText.contains(pair) { score += 1 }
             }
             // Semantic lift: meaning-match adds to the score and can qualify a
             // thing that shares no words at all — but only a STRONG match
@@ -215,6 +250,120 @@ enum Retriever {
         .sorted { $0.1 > $1.1 }
         .prefix(16)
         .map(\.0)
+    }
+
+    // MARK: - Scoring primitives (pure — verified by scripts/retriever-selftest.sh)
+
+    /// One candidate, tokenized once. The membership sets answer "does this
+    /// thing say that word"; the padded joined strings answer "does it say
+    /// these two words TOGETHER" — a phrase match by containment, no regex.
+    /// A plain struct rather than a tuple so `rank`'s two passes share one
+    /// named shape rather than a six-field type spelled twice.
+    private struct Prepared {
+        let thing: Thing
+        let title: Set<String>
+        let tags: Set<String>
+        let content: Set<String>
+        let titleText: String
+        let contentText: String
+    }
+
+    /// The words that carry no content — questions' scaffolding, command verbs,
+    /// filler. Enum-scope so `contentTerms` shares the exact set `rank` strips.
+    static let stops: Set<String> = ["about", "my", "the", "a", "in", "from", "for", "of",
+                                     "what", "whats", "what's", "landed", "on", "happened",
+                                     "is", "are", "was", "were", "do", "does", "did", "i",
+                                     "me", "you", "your", "who", "how", "when", "where",
+                                     "why", "which", "it", "and", "or", "to", "with",
+                                     // Command / query verbs (2026-07-15): a lookup
+                                     // like "show me my events" or "which events do
+                                     // I have" names an ACTION, not content — left
+                                     // in, "show"/"have" scored as search terms and
+                                     // matched nothing, so the ask returned empty. A
+                                     // bare kind/date list then falls through to the
+                                     // "list that kind" path as intended.
+                                     "show", "find", "search", "list", "look", "up",
+                                     "save", "saved", "have", "has", "had", "get",
+                                     "see", "tell", "give", "all", "any",
+                                     // "can you search my X stuff" (2026-08-05) —
+                                     // the polite forms and the filler noun that
+                                     // `KeptAskComposers.namedAskTarget` has always
+                                     // stripped. Left in, "can"/"stuff" scored as
+                                     // content terms and matched every unrelated
+                                     // thing whose text happens to say "can",
+                                     // which is what an ask naming a source
+                                     // actually answered with.
+                                     "can", "could", "would", "please", "stuff"]
+
+    /// A term's rarity weight over this corpus (prd §318): 1.5 for a word one
+    /// thing says, tapering to 0.3 for a word every thing says. Log-scaled and
+    /// normalized against the corpus size, so the spread is stable whether the
+    /// corpus holds 40 things or 2,000 — a rare term pulls roughly 3–5× a
+    /// ubiquitous one, never orders of magnitude (a floor of 0.3 keeps a
+    /// common word a real, if small, signal rather than deleting it).
+    static func idfWeight(corpus n: Int, holding df: Int) -> Double {
+        guard n > 0 else { return 1 }
+        let ceiling = log2(Double(n) + 1)
+        guard ceiling > 0 else { return 1 }
+        let raw = log2((Double(n) + 1) / (Double(df) + 1))
+        return 0.3 + 1.2 * max(0, min(1, raw / ceiling))
+    }
+
+    /// How much of the query a thing actually matched, as a multiplier on its
+    /// exact-keyword score (prd §318). Smooth, never zero: full coverage is
+    /// 1.0, one-of-four is ~0.33, and a thing with only synonym evidence
+    /// (matched 0) keeps a sliver rather than being deleted — the demotion is
+    /// the point, not a hard AND (a hard AND would empty every query
+    /// containing one word the corpus doesn't say).
+    static func coverageFactor(matched: Int, of total: Int) -> Double {
+        guard total > 0 else { return 1 }
+        return (Double(matched) + 0.5) / (Double(total) + 0.5)
+    }
+
+    /// The window of `body` centered on its first whole-word hit of any term —
+    /// what lets the model's per-thing snippet carry the passage that MATCHED
+    /// instead of the opening pleasantries (prd §318: a long note's or fetched
+    /// article's head-300 chars rarely contain the fact the person asked for).
+    /// Nil when no term appears as a whole word, and nil when the first hit
+    /// already sits inside the head window — the caller's own head excerpt
+    /// serves both, identically and without a misleading leading ellipsis.
+    static func matchWindow(in body: String, terms: [String], radius: Int = 150) -> String? {
+        guard !terms.isEmpty, !body.isEmpty else { return nil }
+        func word(_ c: Character) -> Bool { c.isLetter || c.isNumber }
+        var earliest: Range<String.Index>?
+        for term in terms where !term.isEmpty {
+            var search = body.startIndex..<body.endIndex
+            while let r = body.range(of: term, options: .caseInsensitive, range: search) {
+                let beforeOK = r.lowerBound == body.startIndex
+                    || !word(body[body.index(before: r.lowerBound)])
+                let afterOK = r.upperBound == body.endIndex || !word(body[r.upperBound])
+                if beforeOK, afterOK {
+                    if earliest == nil || r.lowerBound < earliest!.lowerBound { earliest = r }
+                    break
+                }
+                search = r.upperBound..<body.endIndex
+            }
+        }
+        guard let hit = earliest else { return nil }
+        let start = body.index(hit.lowerBound, offsetBy: -radius, limitedBy: body.startIndex)
+            ?? body.startIndex
+        guard start > body.startIndex else { return nil }
+        let end = body.index(hit.upperBound, offsetBy: radius, limitedBy: body.endIndex)
+            ?? body.endIndex
+        var out = "…" + String(body[start..<end])
+        if end < body.endIndex { out += "…" }
+        return out
+    }
+
+    /// The query's content-bearing words — lowercased, stop-stripped, in query
+    /// order. What `matchWindow` centers a snippet on. A light mirror of
+    /// `rank`'s term prep on purpose (no source/kind/date resolution): a
+    /// snippet centered on a filter word is harmless, and one centered on
+    /// nothing falls back to the head excerpt.
+    static func contentTerms(_ query: String) -> [String] {
+        query.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty && !Self.stops.contains($0) }
     }
 
     /// The tags that mean YOU wrote it, across every import room. `Saved`,

@@ -19,6 +19,17 @@
 	<!-- Every bridge is an outbound HTTP read. -->
 	<key>com.apple.security.network.client</key>
 	<true/>
+	<!-- The local MCP listener (MCPServer, 2026-08-06) — an agent running on
+	     THIS Mac (Claude Desktop, Claude Code, Raycast) reading the corpus over
+	     127.0.0.1. A sandbox entitlement the app declares for itself, not a
+	     portal capability, so it needs no provisioning-profile change and
+	     cannot fail a signed archive the way FinanceKit would. Without it a
+	     sandboxed app's NWListener simply never reaches .ready, which is why
+	     MCPServer surfaces that failure instead of logging it.
+	     The listener is bound to loopback, is off by default, and requires the
+	     pairing token — see MCPServer's own rails. -->
+	<key>com.apple.security.network.server</key>
+	<true/>
 	<!-- The Files/Obsidian security-scoped bookmarks. -->
 	<key>com.apple.security.files.user-selected.read-only</key>
 	<true/>

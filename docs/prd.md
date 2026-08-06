@@ -17654,6 +17654,102 @@ The entitlement is granted and `-appleWalletProbe` now dumps what `landChanges`
 WOULD insert (refs and titles, without inserting) alongside the normalization
 table — so the device run that finally measures this is one command.
 
+## §318 — Search that answers the question, not the neighbourhood (user: "how can we make search across the app smarter? i don't feel like it is that specific. seems to give general answers", then "do all", 2026-08-06)
+
+The report is about ANSWERS and the cause was in RETRIEVAL. `Retriever.rank` had
+scored the same way since it was extracted from `RootShell.retrieve` in July:
+each query term worth 3 in a title, 2 in a tag, 1 in the body, summed, and any
+thing scoring above zero qualified. That is OR-semantics, and it has three
+consequences that compound into exactly the sentence the user wrote.
+
+**One word was enough.** "That pasta recipe from the Lisbon trip" strips to four
+terms, and a thing saying only "trip" qualified on equal footing with the thing
+that answered the whole question. The top-16 grounding set is a WIDE NET by
+design (raised from 10 on 2026-07-15 so the model has room to rerank), which is
+right — but a wide net over OR-semantics fills with neighbours, and the model
+then synthesizes over a pile of loosely-related things. Loose evidence in,
+general prose out. **Coverage** is the fix: the exact-keyword subtotal is scaled
+by how much of the query a thing actually matched, so one-of-four is demoted to
+about a third of its old weight. Deliberately a SMOOTH demotion, never a hard
+AND — a query carrying one word the corpus doesn't say must still answer, or an
+ordinary typo empties the result.
+
+**Every word weighed the same.** "Lisbon" and "work" both scored 3 in a title,
+so the distinctive half of a query had no extra pull over the half that appears
+in a hundred things. **Rarity** (`idfWeight`) weights each term by its document
+frequency in the corpus this query is actually running over — 1.5 for a word
+one thing says, tapering to a floor of 0.3 for a word everything says. Bounded
+on purpose: a common word stays a real if small signal rather than being
+deleted, so an all-common-words query still answers. Counted once per query
+over the already-filtered set, never per thing.
+
+**A phrase was two loose words.** "climate change" scored identically whether a
+thing said it as a phrase or said "change" in one sentence and "climate" in
+another. **Adjacency** adds a bonus when consecutive query words appear
+consecutively in a title or body. Note stop-word removal can join words that
+weren't adjacent in the raw query; that only ever WIDENS what counts as a
+phrase, and a bonus that occasionally fires on "trip … lisbon" is still evidence
+of the right thing.
+
+**And the model was reading the wrong 300 characters.** `answerSnippet` handed
+each candidate's opening 300 characters to the model. For a title-and-a-line
+note that is the whole thing; for a long note, an imported chat, or a fetched
+article — the rows most likely to hold a specific fact — the passage that
+matched the query is almost never in the first 300 characters. So even a
+PERFECTLY retrieved thing could only be described in general terms, because the
+specific sentence was never in the prompt. `Retriever.matchWindow` centers the
+excerpt on the first whole-word hit instead. Three rulings inside it: whole
+words only (the 2026-07-10 substring lesson, which lives at the scoring layer
+and had no equivalent here), a hit already inside the head window returns nil so
+the caller's own excerpt serves and no misleading leading ellipsis is added, and
+the window is passed the query's CONTENT terms (`contentTerms`, sharing `rank`'s
+own stop set) so a snippet is never centered on the word "what".
+
+**What was deliberately NOT touched.** The semantic floors (0.55 boost / 0.62
+qualify) and the top-16 cap are MEASURED tunings and stay as they are; the
+honesty rail is unchanged — a thing with no keyword evidence may still only
+answer on a strong semantic match, which is what keeps "nothing matches" honest.
+`NLContextualEmbedding` remains declined for the reason recorded in §282. The
+scoring changes are all in the keyword layer, which is where the imprecision
+actually lived.
+
+**Harness (`scripts/retriever-selftest.sh`, in `verify.sh`).** The stronger kind:
+it compiles the ENTIRE `Retriever` enum as shipped — `rank` included — against
+minimal stubs of `Thing`, `ThingKind`, `DateQuery`, `SemanticExpand`,
+`EmbeddingIndex` and `BridgeCatalog`. The stubs are INERT by design (no
+synonyms, refuses to embed), so every ordering asserted is the keyword engine's
+alone and cannot be an embedding accident; if `rank` starts reading a property
+the stubs lack, the compile fails loudly rather than asserting nothing. 45
+assertions, 9 mutations. **It exists because a wrong RANKING is invisible to
+every other check in this repo** — a diluted grounding set still paints 16
+plausible rows and the model still writes fluent prose over them, so a build,
+a screen sweep and a probe all pass while the answer is worse than it should be.
+
+Two findings from the harness's own first runs, both the same shape — a test
+that proves the right result for the wrong reason:
+
+- **Three of the four ranking fixtures could not have caught the headline
+  change.** Deleting coverage from `rank` entirely left their order unchanged,
+  because raw hit counts already ordered those cases correctly. The mutation
+  SURVIVED. The fixture that pins it had to be built so the two candidates are
+  tied on raw units and separable only by coverage: one thing saying a single
+  query word in its title AND tags AND body (the maximum a lone term can score)
+  against one saying three of the four words in passing. The same correction
+  was needed for rarity and adjacency — in each, the candidate that should LOSE
+  is now given the stronger raw position on purpose, so the mutation is
+  provably caught rather than landing on a tie the sort breaks by luck.
+- **A `matchWindow` boundary fixture passed for the wrong reason.** Its padding
+  prose contained the word "particular", which holds "art" as a substring
+  inside the head window — so the assertion that "art" must not match "restart"
+  was satisfied by an early bogus hit returning nil, and dropping the
+  word-boundary check entirely sailed through green. Its own pad now holds no
+  such substring.
+
+A third trap cost a run and is worth recording: a `firstIndex(of:)!` on a
+fixture element the top-16 cap had dropped TRAPS, and a trapping harness under
+`-O` dies with no output at all — which reads as a broken engine rather than a
+broken test. Rank positions go through a sentinel helper now.
+
 ## §319 — The agent economy, watchable (user: "can we do anything with this <Circle x402 Discovery API link>", then "Do it", 2026-08-06)
 
 Circle runs the public directory of **x402** services — APIs that answer an

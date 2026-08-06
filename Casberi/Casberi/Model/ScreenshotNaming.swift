@@ -96,7 +96,7 @@ enum ScreenshotNaming {
     @MainActor
     @discardableResult
     static func sweep(context: ModelContext, limit: Int = 3) async -> Int {
-        guard OnDeviceModel.isAvailable, !sweeping else { return 0 }
+        guard AgentLibrarian.available, !sweeping else { return 0 }
         sweeping = true
         defer { sweeping = false }
 
@@ -142,15 +142,22 @@ enum ScreenshotNaming {
         return named
     }
 
-    /// A short title for a screenshot, from its OCR text. nil when the model
-    /// is unavailable, declines, or errors.
+    /// A short title for a screenshot, from its OCR text. nil when neither
+    /// engine could name it.
+    ///
+    /// The on-device model answers whenever it exists, and its nil is FINAL
+    /// (2026-08-06): it returns nil both for "unavailable" and for a
+    /// deliberate NONE, and paying a key to second-guess a correct decline is
+    /// spending money to make the app worse. The key is reached only where
+    /// there is no local model at all — which is the whole case
+    /// `AgentLibrarian` exists for.
     static func name(text: String) async -> String? {
         #if canImport(FoundationModels)
-        if #available(iOS 26.0, *) {
+        if #available(iOS 26.0, *), OnDeviceModel.isAvailable {
             return await ScreenshotNameModel.name(text: text)
         }
         #endif
-        return nil
+        return await AgentLibrarian.name(text: text)
     }
 }
 
