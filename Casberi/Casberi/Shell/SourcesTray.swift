@@ -107,12 +107,19 @@ struct SourcesTray: View {
         let startsGroup: Bool
     }
 
-    /// One packed row: up to `columns` cells. A row draws a name band when any
-    /// of its cells starts a group; a row of pure continuations draws none.
+    /// One packed row: up to `columns` cells.
+    ///
+    /// Every row draws a band now — it either starts a group or continues the
+    /// one above, and BOTH are named (2026-08-06, user). Before this, a
+    /// wrapped group left its continuation cells with an empty band, and the
+    /// type doc's justification ("continuations of the group named above
+    /// them") was simply false for them: the name sat on the PREVIOUS row, at
+    /// whichever column the group happened to start, so it was diagonally back
+    /// and up — and not even consistently in one direction. Measured on a
+    /// 25-source corpus, three of five rows BEGAN with an unlabelled chip.
     private struct PackedRow: Identifiable {
         let id: Int
         let cells: [Cell]
-        var hasOverlines: Bool { cells.contains(where: \.startsGroup) }
     }
 
     /// Group the labels by catalog category in catalog order, then pack the
@@ -168,24 +175,40 @@ struct SourcesTray: View {
         return rows
     }
 
-    private func height(of row: PackedRow) -> CGFloat {
-        let cell = Self.chipSize + DS.Space.s1 + Self.nameHeight
-        // A row where no group starts carries no band at all — there is
-        // nothing to name, and reserving the space would pay for a label that
-        // is never drawn.
-        return row.hasOverlines ? Self.overlineHeight + Self.overlineGap + cell : cell
-    }
+    /// Uniform, because every row carries a band (see `PackedRow`). This used
+    /// to vary per row and no longer can — which also means the resting height
+    /// below is exact arithmetic rather than a sum over a ragged list.
+    private static let rowHeight: CGFloat =
+        overlineHeight + overlineGap + chipSize + DS.Space.s1 + nameHeight
+
+    /// DSTray's own chrome: top clearance, the title, its gap, bottom pad.
+    private static let chromeHeight: CGFloat = DS.Space.s6 + 30 + DS.Space.s4 + DS.Space.s6
+    private static let restingCap: CGFloat = 620
 
     /// Natural height, capped. Past the cap the grid scrolls and `.large` is
     /// draggable — a 40-source corpus must not clip silently (the "Worth a
     /// look" tray's own 2026-07-24 lesson).
+    ///
+    /// The cap SNAPS DOWN to a whole number of rows. A raw `min(…, cap)` cuts
+    /// wherever the arithmetic lands, and the worst cut is the likeliest one:
+    /// between an overline band and the chips it names. Measured on a
+    /// 25-source corpus (5 rows, ~673pt against the 620pt cap) the tray rested
+    /// showing "Reading / Shopping / Other" with NOTHING underneath them —
+    /// which reads as a rendering bug, not as "there is more below". Snapping
+    /// means the last visible row is always whole and the next is fully
+    /// hidden; the grabber and the `.large` detent carry the "there's more"
+    /// signal, as they already did.
     private var trayHeight: CGFloat {
-        let rows = packed
-        let grid = rows.reduce(0) { $0 + height(of: $1) }
-            + CGFloat(max(0, rows.count - 1)) * DS.Space.s4
-        // DSTray's own chrome: top clearance, the title, its gap, bottom pad.
-        let chrome = DS.Space.s6 + 30 + DS.Space.s4 + DS.Space.s6
-        return min(grid + chrome, 620)
+        let rows = packed.count
+        let gap = DS.Space.s4
+        func height(_ n: Int) -> CGFloat {
+            CGFloat(n) * Self.rowHeight + CGFloat(max(0, n - 1)) * gap
+        }
+        let natural = height(rows) + Self.chromeHeight
+        guard natural > Self.restingCap else { return natural }
+        var fit = 1
+        while fit < rows, height(fit + 1) + Self.chromeHeight <= Self.restingCap { fit += 1 }
+        return height(fit) + Self.chromeHeight
     }
 
     var body: some View {
@@ -207,7 +230,7 @@ struct SourcesTray: View {
                     VStack(alignment: .leading, spacing: DS.Space.s4) {
                         ForEach(rows) { row in
                             VStack(alignment: .leading, spacing: 0) {
-                                if row.hasOverlines { overlineBand(row) }
+                                overlineBand(row)
                                 cellRow(row)
                             }
                         }
@@ -225,14 +248,32 @@ struct SourcesTray: View {
     /// belongs to line up with no measurement anywhere. A span-per-group
     /// layout would need the cell width to compute its own, which is the
     /// `GeometryReader` this deliberately avoids.
+    /// What a band slot says, and whether it is a repeat rather than a start.
+    ///
+    /// Only column ZERO repeats. A continuation in any other column already
+    /// has its name on this same row, to its left, and repeating it there
+    /// would split one group into what reads as two.
+    private func bandSlot(_ row: PackedRow, _ column: Int) -> (text: String, repeated: Bool) {
+        guard column < row.cells.count else { return ("", false) }
+        let cell = row.cells[column]
+        if cell.startsGroup { return (cell.category, false) }
+        guard column == 0 else { return ("", false) }
+        // The interpunct is the SHAPE half of the cue. Tint alone would make
+        // this a hue-only distinction, which is exactly what the 2026-07-21
+        // Differentiate Without Color pass ruled against for the status marks
+        // — and the whole point of the repeat is that it must survive being
+        // glanced at.
+        return (cell.category + "·", true)
+    }
+
     private func overlineBand(_ row: PackedRow) -> some View {
         HStack(spacing: DS.Space.s2) {
             ForEach(0..<Self.columns, id: \.self) { column in
-                Text(column < row.cells.count && row.cells[column].startsGroup
-                     ? row.cells[column].category : "")
+                let slot = bandSlot(row, column)
+                Text(slot.text)
                     .dsText(.label11)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(DS.textTertiary)
+                    .fontWeight(slot.repeated ? .medium : .semibold)
+                    .foregroundStyle(slot.repeated ? DS.textQuaternary : DS.textTertiary)
                     // Names never truncate (prd §201) — the app-tile rule. A
                     // category name is one word, and the longest in the
                     // catalog ("Shopping") clears a phone column at this size,

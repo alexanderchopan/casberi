@@ -565,7 +565,12 @@ struct FeedScreen: View {
     /// aren't "connected", so they don't either.
     private var activeSourceBridge: BridgeApp? {
         guard source != "All" else { return nil }
-        return bridges.bridges.first { $0.name == source && $0.status != .paused }
+        // Through the catalog, not against the source: a source name is not
+        // always its seat's name ("Privacy Pools" against the "0xBow Privacy
+        // Pools" seat), and a bare `==` meant that room silently owned no
+        // seat — so it got no header and no door to its own control panel.
+        let seat = BridgeCatalog.offer(forSource: source)?.name ?? source
+        return bridges.bridges.first { $0.name == seat && $0.status != .paused }
     }
 
     /// Day groups, newest day first ("Today", "Yesterday", then dated). A feed
@@ -4148,7 +4153,12 @@ struct FeedScreen: View {
     /// which is the only place the two vocabularies meet.
     private var quietWords: RoomQuiet.Words? {
         guard source != "All" else { return nil }
-        let seat = bridges.bridges.first { $0.name == source }
+        // Through the catalog — see `activeSourceBridge`. A bare `==` resolved
+        // the wallet-riding rooms to no seat at all, so `.none` won the switch
+        // below and they fell back to the generic "connect an app" invitation:
+        // §299's own failure, in the rooms it was written for.
+        let seatName = BridgeCatalog.offer(forSource: source)?.name ?? source
+        let seat = bridges.bridges.first { $0.name == seatName }
         let mapped: RoomQuiet.Seat = switch seat?.status {
         case .connected: .connected
         case .attention: .attention
