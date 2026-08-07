@@ -18621,3 +18621,55 @@ growing a second lesser list inside the board would be the duplication §248
 removed from the brief. Whether the threads should be tappable as a filtered
 feed view is the user's ruling; today the thread head is a label, not a control,
 because §269 ruled the tag filter is the agent's with no control of its own.
+
+## §333 — The All feed's "thread" head is deleted; the themes map leads again (user: "i DO NOT LIKE the new header block in the ALL feed. it looks totally random. bring back the tree map or lets do something else", 2026-08-07)
+
+**Shipped in the morning, deleted the same day, and the screenshot is the whole
+argument.** The card's headline read **"Wallet · Across Files, Circle x402, and
+GitHub"** over four rows: a Files row whose title contains "Wallet", an x402
+provider blurb containing the phrase "wallet flow", and **two of the person's
+own git commit messages about building the Apple Wallet bridge**. Nothing in
+that group is about anything. It is four things that share a common noun.
+
+**The mechanism, and why no threshold fixes it.** `FeedThread.find` credited
+every 4+ character title word as a candidate subject and ranked by
+sources-then-count. Its own doc said the honesty gates were "≥3 things spanning
+≥2 sources" and that "the cross-source gate does most of the filtering" — but a
+common word clears both gates trivially, and the stoplist held ~50 entries
+against an open vocabulary. "wallet", "time", "work", "need", "back" and every
+other ordinary noun were all eligible headlines. Worse, **"Wallet" is the name
+of one of this app's own bridges**, so the strongest available subject was a
+source name; and because the corpus contains a GitHub feed of this project,
+the app surfaced *its own development history* as a theme in the person's life.
+
+**The real objection is older than this card.** A deterministic word-overlap
+card that claims a CONNECTION is exactly what §36c removed, for exactly this
+reason — "manufacturing connections and costing screen space above what the
+person came to see". `HomeInsightStore`'s doc has carried that note the whole
+time, including the sentence that decides this: a real version of the idea
+"would be a fresh build, not a revival of this." `FeedThread` was the revival.
+Being deterministic is what made it *worse*, not safer: it cannot tell a
+subject from a shared string, and it says "Across Files, Circle x402, and
+GitHub" in a confident voice while doing so.
+
+**The ruling: a head may only claim what it can measure.** The themes treemap
+leads the All feed again — it says these words recur in your things, which is
+true by construction and is the whole claim. `FeedThread.swift`,
+`FeedThreadCard.swift` and `-threadProbe` are DELETED rather than tuned,
+because tuning implies a threshold exists that separates "a subject running
+across your apps" from "three rows sharing a noun", and there isn't one at the
+string level.
+
+**Held open, and what a real version would need.** The idea is good — a subject
+genuinely running across several apps is the one read no source room can make.
+It needs SEMANTICS, not string overlap: the embedding index (§282) can already
+say two things are about the same thing, and `HomeInsightStore` already has a
+model that returns picks. Both are Apple-Intelligence-gated, which is precisely
+why this was attempted deterministically — and the answer to "the good version
+needs a model we can't rely on" is to not ship the bad version, not to ship a
+string match wearing the good version's copy. Three guards any future attempt
+owes: a subject may never be a source or bridge name; the app's own GitHub
+feed may never supply a subject (it is the app talking about itself); and the
+card must be shown to a person before it is shipped, which is what did not
+happen here — it was authored on Linux, UNBUILT by its own commit message, and
+first rendered on the user's device.
