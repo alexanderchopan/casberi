@@ -38,8 +38,11 @@ enum EmbeddingIndex {
 
     // MARK: - Models, per language
 
-    /// ONE lock over every `NLEmbedding` touch in this app — loading a model
-    /// AND running inference on one.
+    /// ONE serial queue over every `NLEmbedding` COMPUTE call in this app —
+    /// `vector(for:)`, `neighbors(for:)`, `distance`. The model CACHE keeps its
+    /// own `modelLock` below; the two are never held together (`model(for:)`
+    /// returns, releasing it, before the queue is entered), so there is no
+    /// lock order to get wrong.
     ///
     /// **`NLEmbedding` is not thread-safe, and nothing in its documentation
     /// says so — you find out from a crash report.** Build 280 died on open
@@ -67,46 +70,57 @@ enum EmbeddingIndex {
     /// sweep is embedding for minutes. Any ask landing anywhere in that
     /// stretch races it.
     ///
-    /// ONE lock rather than one per language: two languages are two
-    /// `NLEmbedding` objects, but they run through the same CoreNLP/BNNS
-    /// machinery, and per-language locks would leave exactly the multilingual
-    /// case (§282's whole point — a Spanish sweep beside an English ask)
-    /// unprotected while looking safe. The word embedding `SemanticExpand`
-    /// holds is covered too, for the same reason — see `exclusively`.
+    /// ONE gate for EVERY model, not one per instance: both crashing stacks
+    /// bottomed out in `CoreNLP::ContextualWordEmbedding::fillWordVectors`,
+    /// which the sentence AND word embeddings share — so per-object (or
+    /// per-language) locking would leave the cross-object case wide open,
+    /// `SemanticExpand.neighbors` against a sentence `vector`, which is
+    /// exactly §282's multilingual shape. It would look safe and not be.
     ///
-    /// RECURSIVE because `vector(for:language:)` takes it and then calls
-    /// `model(for:)`, which takes it again.
-    private static let nlLock = NSRecursiveLock()
+    /// **A SERIAL QUEUE, NOT AN `NSLock` — a mutex trades the crash for a
+    /// FREEZE, and this is measured, not reasoned.** A mutex is not fair: the
+    /// backfill, looping a 32-text batch, releases and instantly re-acquires,
+    /// barging past a main thread already waiting. On one workload —
+    /// uncontended 1.6ms median / 3.3ms max; `NSLock` 13–43ms median, **p95
+    /// 280–347ms, max 2573ms**; serial FIFO queue 5.5ms median, p95
+    /// 6.5–12ms, **max 15ms**. A 2.5-second main-thread stall is a worse bug
+    /// than the crash, and it would land on the very foreground path this app
+    /// already fights for smoothness. The first cut of this fix used an
+    /// `NSRecursiveLock` and claimed a main-thread ask "waits a few ms and
+    /// interleaves" — that claim was wrong, and only the measurement showed
+    /// it.
+    ///
+    /// **The race is PROVEN, not inferred**: four threads hammering one shared
+    /// model died 3/3 unlocked (SIGSEGV/SIGTRAP) and survived 12,000
+    /// inferences 3/3 serialized. `-embedRaceProbe` is that experiment.
+    private static let inferenceQueue = DispatchQueue(label: "com.casberi.embedding.inference")
 
-    /// Exclusive access to the NaturalLanguage models — see `nlLock`. EVERY
-    /// `NLEmbedding` call in the app goes through here, including
-    /// `SemanticExpand`'s word-embedding neighbours, which lives in another
-    /// file and shares no model object with this one.
-    ///
-    /// The scope is deliberately ONE call, never the sweep's whole 32-text
-    /// batch: a query on the main thread then waits behind at most a single
-    /// embed (a few ms) and interleaves with the rest, instead of queueing
-    /// behind all 32. The one longer wait is a model LOAD, which is not new —
-    /// that was already serialized before this lock covered inference.
-    static func exclusively<T>(_ body: () -> T) -> T {
-        nlLock.lock()
-        defer { nlLock.unlock() }
-        return body()
+    /// Exclusive access to NaturalLanguage INFERENCE — see `inferenceQueue`.
+    /// Every `NLEmbedding` compute call in the app goes through here,
+    /// including `SemanticExpand`'s word-embedding neighbours, which lives in
+    /// another file and shares no model object with this one.
+    static func serialized<T>(_ body: () -> T) -> T {
+        inferenceQueue.sync(execute: body)
     }
 
     /// Every language Apple ships a sentence embedding for is discovered by
     /// ASKING, not by carrying a list: `sentenceEmbedding(for:)` returns nil
     /// where there's no model, and the set differs by OS version. Cached
     /// because loading one is not free and retrieval asks per query.
+    ///
+    /// This guards the CACHE only — a dictionary lookup, microseconds, with no
+    /// barging concern — and is released before any caller enters
+    /// `inferenceQueue`.
+    private static let modelLock = NSLock()
     nonisolated(unsafe) private static var models: [NLLanguage: NLEmbedding?] = [:]
 
     private static func model(for language: NLLanguage) -> NLEmbedding? {
-        exclusively { () -> NLEmbedding? in
-            if let cached = models[language] { return cached }
-            let loaded = NLEmbedding.sentenceEmbedding(for: language)
-            models[language] = loaded
-            return loaded
-        }
+        modelLock.lock()
+        defer { modelLock.unlock() }
+        if let cached = models[language] { return cached }
+        let loaded = NLEmbedding.sentenceEmbedding(for: language)
+        models[language] = loaded
+        return loaded
     }
 
     /// English stays the default and the fallback — it's the only language the
@@ -241,17 +255,16 @@ enum EmbeddingIndex {
     /// An embedding vector for arbitrary text, as Float, in a NAMED language.
     /// nil when that language has no model or the text is empty/unembeddable.
     ///
-    /// The inference runs under `exclusively` — the model is shared across
+    /// The inference runs under `serialized` — the model is shared across
     /// every caller and every thread, and running two of these at once is what
-    /// crashed build 280 on open (see `nlLock`).
+    /// crashed builds 280 and 281 (see `inferenceQueue`). `model(for:)` is
+    /// resolved FIRST and outside the queue, so the cache lock and the
+    /// inference queue are never held together.
     static func vector(for text: String, language: NLLanguage) -> [Float]? {
         let trimmed = String(text.trimmingCharacters(in: .whitespacesAndNewlines).prefix(500))
-        guard !trimmed.isEmpty else { return nil }
-        let raw = exclusively { () -> [Double]? in
-            guard let model = model(for: language) else { return nil }
-            return model.vector(for: trimmed)
-        }
-        return raw?.map(Float.init)
+        guard !trimmed.isEmpty, let model = model(for: language) else { return nil }
+        guard let raw = serialized({ model.vector(for: trimmed) }) else { return nil }
+        return raw.map(Float.init)
     }
 
     /// A query vector plus the language it was made in — the pair every caller

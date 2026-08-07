@@ -62,31 +62,56 @@ grep -q 'matched.wholeMatch(of: bareClock) == nil' "$FACTS" \
 grep -q 'thing.embedding = nil' "Casberi/Casberi/Model/ThreadDigest.swift" \
   || { echo "✗ a digested thread no longer clears its stale vector"; exit 1; }
 
-# THE THREAD-SAFETY RAIL (2026-08-07, build 280's crash-on-open). `NLEmbedding`
-# is not thread-safe and does not say so anywhere; the app embeds from the main
-# actor (an ask, via `Retriever.rank`) and from a detached utility task (the
-# backfill sweep), both started by the SAME foreground pass — so a cold open
-# with anything to embed runs two inferences at once by construction, and the
-# second one segfaults inside BNNS. Every `NLEmbedding` call must sit inside
-# `EmbeddingIndex.exclusively`.
+# THE ONE-INFERENCE-AT-A-TIME RAIL (2026-08-07, builds 280 and 281).
+# `NLEmbedding` is not safe to call from two threads at once and does not say
+# so anywhere. The app embeds from the main actor (an ask, via
+# `Retriever.rank`) and from a detached utility task (the backfill sweep) —
+# both started by the SAME foreground pass, so any pass with something to embed
+# runs two inferences concurrently by construction and one of them segfaults
+# inside BNNS. Every `NLEmbedding` COMPUTE call must go through
+# `EmbeddingIndex.serialized`.
 #
-# Guarded here rather than remembered because the failure is a hard crash on
-# open with a stack that names only Apple's frameworks — nothing in the source
-# looks wrong, and a "fix" that unwraps either call site restores it silently.
-# CEILING, stated plainly: these are line greps, so they prove the two SHIPPED
-# call sites are still spelled inside the lock. They cannot prove a THIRD
-# `NLEmbedding` added later takes it — the neighbours count below is the only
-# part that can, and only for `AskCommands.swift`.
-grep -q 'let raw = exclusively { () -> \[Double\]? in' "$EMBED" \
-  || { echo "✗ EmbeddingIndex.vector no longer embeds inside the NL lock — two threads in NLEmbedding is what crashed build 280 on open"; exit 1; }
-grep -q '^ *return model.vector(for: trimmed)$' "$EMBED" \
-  || { echo "✗ the sentence-embedding inference moved out of EmbeddingIndex.vector's locked block"; exit 1; }
-awk '/EmbeddingIndex\.exclusively\(\{/ { getline
-       if ($0 ~ /embedding\.neighbors\(for: term, maximumCount: 8\)/) found = 1 }
-     END { exit found ? 0 : 1 }' "$ASKCMD" \
-  || { echo "✗ SemanticExpand's word-embedding neighbours no longer run under the NL lock"; exit 1; }
-[[ $(grep -c '\.neighbors(' "$ASKCMD") -eq 1 ]] \
-  || { echo "✗ a second word-embedding call site appeared in AskCommands.swift — it needs EmbeddingIndex.exclusively too"; exit 1; }
+# Guarded here rather than remembered because the failure is a hard crash whose
+# stack names only Apple's frameworks — nothing in the source looks wrong, and
+# a "fix" that unwraps either call site restores it silently while every other
+# check stays green (xcodebuild is happy, the audits are static, and the
+# simulator ships no on-device model).
+#
+# The negative sweep reads a COMMENT-STRIPPED copy: the source DOCUMENTS this
+# rule by naming the very methods it governs, so a guard grepping raw source
+# fires against the prose explaining it (the Obsidian/Cursor lesson).
+STRIPPED="$(mktemp)"; trap 'rm -f "$STRIPPED"' EXIT
+sed 's://.*::; s:^ *///.*::' "$EMBED" "$ASKCMD" > "$STRIPPED"
+
+grep -q 'serialized({ model.vector(for: trimmed) })' "$EMBED" \
+  || { echo "✗ EmbeddingIndex.vector no longer serializes its inference — two threads in NLEmbedding is what crashed 280 and 281"; exit 1; }
+grep -q 'inferenceQueue.sync(execute: body)' "$EMBED" \
+  || { echo "✗ EmbeddingIndex.serialized is no longer a serial queue — an NSLock here trades the crash for a 2.5s main-thread stall (measured)"; exit 1; }
+grep -q 'DispatchQueue(label: "com.casberi.embedding.inference")' "$EMBED" \
+  || { echo "✗ the inference queue is gone or is no longer serial (a concurrent queue serializes nothing)"; exit 1; }
+grep -q 'EmbeddingIndex.serialized { embedding.neighbors(for: term, maximumCount: 8) }' "$ASKCMD" \
+  || { echo "✗ SemanticExpand's word-embedding neighbours no longer serialize — the word and sentence models share fillWordVectors"; exit 1; }
+# Every compute call in these two files, comments removed, must name
+# `serialized` ON THE SAME LINE — which is why the two shipped call sites are
+# written as one-liners rather than wrapped across three lines: a line-wise
+# guard cannot see a closure that opens on one line and calls on the next, and
+# the first cut of this check fired on its own correct code.
+if grep -nE '\.(vector|neighbors|distance)\(for:' "$STRIPPED" | grep -v 'serialized' | grep -q .; then
+  echo "✗ an NLEmbedding compute call is not inside EmbeddingIndex.serialized:"
+  grep -nE '\.(vector|neighbors|distance)\(for:' "$STRIPPED" | grep -v 'serialized'
+  exit 1
+fi
+# The sweep above is scoped to the only two files that HOLD an `NLEmbedding`;
+# everything else in the app calls `EmbeddingIndex.vector`, which is serialized
+# for them. That scope is only correct while it stays true — a third file
+# taking its own model would be un-swept and invisible, so it fails here
+# instead. (Comment-stripped: several files discuss NLEmbedding in prose.)
+THIRD=$(for f in $(grep -rl 'NLEmbedding' --include=*.swift Casberi/ 2>/dev/null); do
+          case "$f" in *EmbeddingIndex.swift|*AskCommands.swift) continue;; esac
+          sed 's://.*::; s:^ *///.*::' "$f" | grep -q 'NLEmbedding' && echo "$f"
+        done)
+[[ -z "$THIRD" ]] \
+  || { echo "✗ a third file holds an NLEmbedding and is not covered by the sweep above: $THIRD"; exit 1; }
 
 TMP=$(mktemp -d /tmp/ondevice-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT

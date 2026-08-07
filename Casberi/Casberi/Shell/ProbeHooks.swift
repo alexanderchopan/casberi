@@ -2780,14 +2780,21 @@ enum ProbeHooks {
             }
         },
         // `-embedRaceProbe <rounds|YES>` — the ONE thing a build cannot prove
-        // about the 2026-08-07 crash-on-open fix (build 280): that two threads
-        // may embed AT ONCE. `NLEmbedding` is not thread-safe and does not say
-        // so, and the app has always driven it from two places that run in the
-        // same foreground pass — the backfill sweep's detached utility task
-        // (`EmbeddingIndex.packedVectors`) and the main actor's ask
-        // (`Retriever.rank` → `queryVector`). Both crash frames bottomed out
-        // in the SAME function, `EmbeddingIndex.vector(for:language:)`, so
-        // this hammers exactly that function from exactly those two contexts.
+        // about the 2026-08-07 fix (builds 280 and 281): that several threads
+        // may embed AT ONCE. `NLEmbedding` is not safe to call from two
+        // threads and does not say so, and the app has always driven it from
+        // two places that run in the same foreground pass — the backfill
+        // sweep's detached utility task (`EmbeddingIndex.packedVectors`) and
+        // the main actor's ask (`Retriever.rank` → `queryVector`). All four
+        // crash stacks across the two reports bottomed out in the SAME
+        // function, `EmbeddingIndex.vector(for:language:)`, so this hammers
+        // exactly that function.
+        //
+        // FOUR concurrent embedders, not two, matching the experiment that
+        // proved the race: four threads on one shared model died 3/3 unlocked
+        // (SIGSEGV/SIGTRAP) and survived 12,000 inferences 3/3 serialized. Two
+        // threads reproduce it too, but more slowly — and a probe that needs
+        // several runs to fail is one somebody concludes is fine.
         //
         // WHAT A PASS AND A FAIL LOOK LIKE, because they are not symmetric: a
         // fail is a SIGSEGV inside `BNNSFilterApplyBatch` and the probe prints
@@ -2823,20 +2830,28 @@ enum ProbeHooks {
                     NSLog("embedRaceProbe: nothing embeddable in this corpus")
                     return
                 }
-                NSLog("embedRaceProbe: rounds=%d texts=%d — detached utility + main actor, concurrently",
+                NSLog("embedRaceProbe: rounds=%d texts=%d lanes=4 — 3 detached utility + main actor",
                       rounds, texts.count)
-                // The SWEEP's half — a detached utility task, which is the
-                // exact context `packedVectors` runs on and the queue the
-                // crash report names (com.apple.root.utility-qos.cooperative).
-                let sweep = Task.detached(priority: .utility) {
-                    var n = 0
-                    for round in 0..<rounds {
-                        for text in texts {
-                            if EmbeddingIndex.vector(for: text, language: .english) != nil { n += 1 }
+                // The SWEEP's half — THREE detached utility tasks, which is
+                // the exact context `packedVectors` runs on and the queue the
+                // crash reports name (com.apple.root.utility-qos.cooperative).
+                // Three plus the main actor is the four-way contention the
+                // race was proven with.
+                let sweeps = (0..<3).map { lane in
+                    Task.detached(priority: .utility) {
+                        var n = 0
+                        for round in 0..<rounds {
+                            // Offset per lane so the three don't march in step
+                            // through identical strings — identical inputs are
+                            // the easiest case, not the hardest.
+                            for i in texts.indices {
+                                let text = texts[(i + lane) % texts.count]
+                                if EmbeddingIndex.vector(for: text, language: .english) != nil { n += 1 }
+                            }
+                            if round.isMultiple(of: 8) { await Task.yield() }
                         }
-                        if round.isMultiple(of: 8) { await Task.yield() }
+                        return n
                     }
-                    return n
                 }
                 // The ASK's half — on the main actor, where `Retriever.rank`
                 // embeds. `queryVector` once first so the real entry point is
@@ -2849,8 +2864,9 @@ enum ProbeHooks {
                                              language: .english) != nil { asks += 1 }
                     await Task.yield()
                 }
-                let embeds = await sweep.value
-                NSLog("embedRaceProbe: SURVIVED asks=%d embeds=%d", asks, embeds)
+                var embeds = 0
+                for sweep in sweeps { embeds += await sweep.value }
+                NSLog("embedRaceProbe: SURVIVED asks=%d embeds=%d lanes=4", asks, embeds)
             }
         },
         // `-relatedProbe "<title prefix>"` — what the thing sheet would show
