@@ -65,8 +65,17 @@ struct SourceChips: View {
     /// The active chip's ink ring glides between chips instead of blinking
     /// (the old tab lozenge's grammar, motion pass 2026-07-11).
     @Namespace private var chipRingNS
+    /// The two fixed doors' glass union (2026-08-06) — see `dsGlassDoor`. Owned
+    /// here rather than passed in, because the pair only exists in this strip.
+    @Namespace private var doorGlassNS
     /// Last time the catalogue door actually opened — see `openApps()`.
     @State private var lastAppsOpen: TimeInterval = 0
+
+    /// One value both doors key on, so the pair can't drift onto two different
+    /// unions and quietly stop being one shape.
+    private var doorsUnion: DSGlassUnion {
+        DSGlassUnion(id: "stripDoors", namespace: doorGlassNS)
+    }
 
     // Leading-dissolve geometry (user, 2026-07-19; widened 2026-07-20 when
     // the avatar joined as a SECOND fixed leading icon ahead of the
@@ -100,8 +109,7 @@ struct SourceChips: View {
     /// own when a corpus grows past the rail's height.
     private var verticalRail: some View {
         VStack(spacing: Self.iconGap) {
-            avatarChip
-            catalogueChip
+            headDoors(.vertical)
             ScrollViewReader { proxy in
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: DS.Space.s1) {
@@ -162,11 +170,40 @@ struct SourceChips: View {
             // neither is a filter, and both must stay in reach as the active
             // source chip re-centers below. They ride ON TOP so chips vanish
             // into them.
-            HStack(spacing: Self.iconGap) {
-                avatarChip
-                catalogueChip
+            headDoors(.horizontal)
+                .padding(.leading, DS.Space.s4)
+        }
+    }
+
+    /// The two fixed doors as ONE glass capsule (2026-08-06) — see
+    /// `dsGlassDoor` for why they are one object.
+    ///
+    /// The container is required for the union to merge at all, and its spacing
+    /// is 0 ON PURPOSE for the same reason the shell's bottom cluster passes 0:
+    /// a non-zero spacing lets ANY two shapes inside bridge by proximity, which
+    /// is a merge decided by a layout constant instead of by intent. The union
+    /// says which pair fuses; the spacing says none fuse by accident.
+    ///
+    /// Layout is byte-for-byte what it was — same stacks, same `iconGap` — which
+    /// matters more here than it looks: the horizontal strip's leading-dissolve
+    /// mask is measured off these two doors' exact widths and gap
+    /// (`catalogueTrailingEdge`), so a container that changed the head's metrics
+    /// would put the fade ramp somewhere other than where the chips melt.
+    @ViewBuilder
+    private func headDoors(_ axis: Axis) -> some View {
+        DSGlassContainer(spacing: 0) {
+            switch axis {
+            case .horizontal:
+                HStack(spacing: Self.iconGap) {
+                    avatarChip
+                    catalogueChip
+                }
+            case .vertical:
+                VStack(spacing: Self.iconGap) {
+                    avatarChip
+                    catalogueChip
+                }
             }
-            .padding(.leading, DS.Space.s4)
         }
     }
 
@@ -176,7 +213,8 @@ struct SourceChips: View {
     /// the actual door/bounce/spin — this just wires this screen's params.
     @ViewBuilder private var avatarChip: some View {
         AvatarChip(onSettings: onSettings, refreshSpin: refreshSpin,
-                   pullTension: chrome.pullTension, zoomNS: zoomNS)
+                   pullTension: chrome.pullTension, zoomNS: zoomNS,
+                   doorUnion: doorsUnion)
     }
 
     /// The leading dissolve: transparent where the app icon sits, a soft ramp
@@ -215,7 +253,10 @@ struct SourceChips: View {
             // chip wear the floating material. A source chip keeps its own app
             // icon — an icon IS content, and frosting one would only muddy a
             // mark the person recognizes.
-            .dsGlass(cornerRadius: 23)
+            //
+            // Joined to the avatar door beside it as one shape (2026-08-06) —
+            // the sentence above finally true of both doors, not just this one.
+            .dsGlassDoor(doorsUnion)
             // THE DOOR IS THE CIRCLE, not the glyph inside it (user, "you
             // press it and it doesn't respond, have to press it several
             // times", 2026-07-26 — the third report on this button). A

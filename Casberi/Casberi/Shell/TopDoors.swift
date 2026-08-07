@@ -23,6 +23,11 @@ struct AvatarChip: View {
     /// with `SourceChips`'s own `zoomNS` (the catalogue door's "appsDoor"
     /// transition lives in the same namespace under a different id).
     var zoomNS: Namespace.ID? = nil
+    /// The glass union this door joins — `SourceChips.doorsUnion`, which pairs
+    /// it with the catalogue door beside it (2026-08-06). The door wears glass
+    /// either way; the union is what makes the two of them ONE shape. nil is a
+    /// preview or any future placement with no partner to merge with.
+    var doorUnion: DSGlassUnion? = nil
     /// Taps bounce the door (Telegram grammar, same as the tab icons).
     @State private var avatarBounce = 0
     /// Last time the door actually opened — see `openSettings()` below.
@@ -36,7 +41,11 @@ struct AvatarChip: View {
             open()
         } label: {
             ZStack {
-                Circle().fill(DS.gray100)
+                // The flat gray well is GONE (2026-08-06): this door now wears
+                // the floating material the strip's own comment has claimed for
+                // "the doors" since 2026-07-20 and only the catalogue door ever
+                // had. An opaque 46pt disc over the glass would also leave the
+                // union merging two shapes nobody can see through.
                 if let zoomNS {
                     AvatarDoor()
                         .modifier(DoorBounce(trigger: avatarBounce))
@@ -49,11 +58,19 @@ struct AvatarChip: View {
                 }
             }
             .frame(width: 46, height: 46)
+            // Glass at the same radius the catalogue door beside it uses — one
+            // shared definition, so the union merges two identical circles
+            // rather than smearing one shape into a differently-rounded
+            // neighbour.
+            .dsGlassDoor(doorUnion)
             // The door is the circle. This one was never as bad as the
             // catalogue's — its `Circle().fill` renders across the whole
             // 46pt, so the region was already whole — but stating it means
             // the two doors beside each other can't drift on what a press
-            // has to hit.
+            // has to hit. Load-bearing NOW rather than merely tidy: with the
+            // gray well gone in the union case there is no opaque fill left to
+            // catch a press away from the glyph (the catalogue door's own
+            // 2026-07-26 lesson, three reports deep).
             .contentShape(Circle())
             .dsHover()
         }

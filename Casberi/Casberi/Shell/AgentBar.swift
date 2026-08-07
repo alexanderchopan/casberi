@@ -59,6 +59,17 @@ struct AgentBar: View {
     /// braces, the safeAreaInset-over-pager arbitration), which is not a place
     /// to stack a second recognizer.
     var onSources: () -> Void = {}
+    /// The room's own hue, when standing in a room that HAS one (2026-08-06) —
+    /// `ShellChrome.pourHue`, which is non-nil only inside a scoped wallet.
+    ///
+    /// The crown has said which room you're in since §159; the bottom chrome
+    /// never did, and this is the same fact reaching the other end of the
+    /// screen. It is deliberately tied to `pourHue` rather than to a hue of its
+    /// own so the two can never disagree — and it inherits that field's whole
+    /// argument for free: §297 drains the pour on a source room precisely
+    /// because a permanent colour that says nothing is decoration, and a
+    /// nil here is that same silence.
+    var roomTint: Color? = nil
     var action: () -> Void
 
     /// A hold has fired, so the button's own touch-up must not act on top of
@@ -130,7 +141,12 @@ struct AgentBar: View {
         // At rest the glass hugs its two controls instead of spanning the
         // screen — the shape itself says the bar has yielded to the content.
         .frame(maxWidth: expanded ? .infinity : nil)
-        .dsGlass(cornerRadius: DS.Radius.pill)
+        .dsGlass(cornerRadius: DS.Radius.pill, tint: roomTint)
+        // A scope change re-tints the bar on the same beat the crown re-tints
+        // (`MainSurface.crownPour` animates the same value) — the two ends of
+        // the screen answering one move, rather than a hard swap down here
+        // under a gradient that glided.
+        .animation(DS.Motion.standard, value: roomTint)
         // The whole pill, not a per-icon zone: at ~110pt there isn't room to
         // split one hold between two targets, and the tray it opens belongs to
         // the bar as a whole rather than to asking or to finding.
@@ -240,6 +256,10 @@ struct WhisperCapsule: View {
     /// screen's title merely happening to match. Optional for the same
     /// reason `AgentBar.morphNS` is: a namespace-free preview still renders.
     var morphNS: Namespace.ID?
+    /// The room's hue — see `AgentBar.roomTint`. The capsule takes it too so
+    /// the bottom cluster reads as one coordinated pair (2026-07-23) rather
+    /// than one tinted slab beside a neutral one.
+    var roomTint: Color? = nil
     var action: () -> Void
 
     @Environment(\.colorScheme) private var scheme
@@ -278,7 +298,17 @@ struct WhisperCapsule: View {
             .dsHover()
         }
         .buttonStyle(.plain)
-        .dsGlass(cornerRadius: DS.Radius.control)
+        .dsGlass(cornerRadius: DS.Radius.control, tint: roomTint)
+        // It MATERIALIZES (2026-08-06). This capsule appears once a day, out of
+        // nothing, carrying something genuinely new — the one piece of chrome in
+        // the app whose arrival is itself the news. Fading it in like any other
+        // view spent that moment on nothing; the glass growing its own lens is
+        // the system's own way of saying a floating thing just arrived. Reduce
+        // Motion stills it (`dsGlassMaterialize` gates), and because it rides
+        // the glass rather than the content, a system that declines to draw the
+        // transition costs the capsule nothing.
+        .dsGlassMaterialize()
+        .animation(DS.Motion.standard, value: roomTint)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(title). \(lead)"
                             + (walletPct.map { String(format: ", wallet %+.1f percent", $0) } ?? ""))

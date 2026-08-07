@@ -273,7 +273,7 @@ struct HeroWidget: Widget {
         // a rename can't leave the widget listening on a channel nobody writes.
         StaticConfiguration(kind: WidgetLede.kind, provider: HeroProvider()) { entry in
             HeroWidgetView(entry: entry)
-                .containerBackground(.black, for: .widget)
+                .containerBackground(for: .widget) { WidgetField() }
         }
         // Named for what it now shows (§193 renamed the brief "What's going
         // on"); the old "Synthesis" described the tag-cluster line that's gone.
@@ -284,13 +284,60 @@ struct HeroWidget: Widget {
     }
 }
 
-struct HeroWidgetView: View {
-    let entry: HeroEntry
-    @Environment(\.widgetFamily) private var family
+/// The widget's own field (2026-08-06). It was a hardcoded `.black`, which is
+/// wrong in two of the three rendering modes the system asks for and was never
+/// looked at again after it shipped.
+///
+/// `.accented` (the lock screen, StandBy) and `.vibrant` (a tinted Home Screen,
+/// and the glass appearances iOS 26 added on top of it) both mean "the system
+/// will provide the backing and re-render your content for legibility over it".
+/// A widget that paints its own opaque slab there fights that treatment and
+/// wins — which is how a tinted Home Screen ends up with one black tile on it.
+/// So those modes get nothing, deliberately, and the system's material shows.
+///
+/// `.fullColor` keeps a dark ground, and gains the app's own crown pour — the
+/// one atmospheric move the shell makes (§159), in the person's own chosen
+/// accent, which the app already writes across the app group. The widget is the
+/// app's face on a Home Screen; wearing the app's signature field costs one
+/// gradient and makes the tile recognizably ours rather than a black rectangle
+/// with text on it.
+///
+/// **UNVERIFIED in `.vibrant`.** Neither the simulator nor any build check can
+/// show a tinted Home Screen, so the `.fullColor` path is the only one that has
+/// been seen. It fails safe: the modes that now get nothing were getting an
+/// opaque slab the system had already told us not to draw, so the worst case is
+/// the system's own backing instead of ours.
+private struct WidgetField: View {
+    @Environment(\.widgetRenderingMode) private var mode
+
+    var body: some View {
+        // Read once, not per gradient stop — three UserDefaults lookups and
+        // three Scanner passes to draw one field is silly in a ~30MB extension.
+        let accent = Self.accent
+        switch mode {
+        case .fullColor:
+            ZStack(alignment: .top) {
+                Color.black
+                // Half the shell's own dose: a widget is a fraction of the
+                // height the crown pour was tuned against, so the same alphas
+                // would read as a wash over the whole tile rather than a field
+                // at the top of one.
+                LinearGradient(stops: [
+                    .init(color: accent.opacity(0.16), location: 0),
+                    .init(color: accent.opacity(0.05), location: 0.5),
+                    .init(color: accent.opacity(0), location: 1),
+                ], startPoint: .top, endPoint: .bottom)
+            }
+        default:
+            // Nothing. See the type's own note — the system owns the backing in
+            // `.accented` and `.vibrant`, and anything painted here overrides it.
+            Color.clear
+        }
+    }
 
     /// The app accent, carried across the app group (falls back to Casberi
     /// blue before the app has ever written it).
-    private var accent: Color {
+    static var accent: Color {
         let hex = UserDefaults(suiteName: SharedStore.appGroup)?
             .string(forKey: "theme.tint.hex") ?? "#1673e6"
         var value: UInt64 = 0
@@ -299,6 +346,15 @@ struct HeroWidgetView: View {
                      green: Double((value >> 8) & 0xff) / 255,
                      blue: Double(value & 0xff) / 255)
     }
+}
+
+struct HeroWidgetView: View {
+    let entry: HeroEntry
+    @Environment(\.widgetFamily) private var family
+
+    /// The app accent — one definition, shared with the field behind it
+    /// (`WidgetField.accent`), so the dot and the pour can't name two colours.
+    private var accent: Color { WidgetField.accent }
 
     var body: some View {
         Group {

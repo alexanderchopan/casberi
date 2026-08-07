@@ -1411,7 +1411,8 @@ struct RootShell: View {
                     if let whisper {
                         WhisperCapsule(title: whisper.title, lead: whisper.lead,
                                        walletPct: whisper.walletPct,
-                                       morphNS: agentMorph) {
+                                       morphNS: agentMorph,
+                                       roomTint: chrome.pourHue) {
                             DSHaptic.tap()
                             // The capsule's promise kept (prd §166): the tap
                             // lands on the Today brief itself, not the rest
@@ -1466,7 +1467,14 @@ struct RootShell: View {
                                  // menu reach the same door.
                                  chrome.openFind()
                              },
-                             onSources: { openSources() }) {
+                             onSources: { openSources() },
+                             // The room's hue reaching the bottom of the screen
+                             // (2026-08-06) — non-nil only inside a scoped
+                             // wallet, which is the one place the crown itself
+                             // still pours (§297). Read straight off
+                             // `chrome.pourHue` rather than re-derived, so the
+                             // crown and the bar can never name two colours.
+                             roomTint: chrome.pourHue) {
                         DSHaptic.tap()
                         // Open onto the Today brief, not the empty chips (prd
                         // §181, user: "make daily brief be the default when a
@@ -3057,6 +3065,14 @@ struct RootShell: View {
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s2)
         .dsGlass(cornerRadius: DS.Radius.pill)
+        // It MATERIALIZES (2026-08-06). A toast is the one piece of chrome here
+        // that exists ONLY as an arrival — it has no resting state to return to,
+        // it appears because something just happened and then it's gone. The
+        // move-and-fade below still carries it up from the bottom edge; this is
+        // the glass itself forming rather than a finished pane cross-dissolving
+        // into place. Applied inside the container so the pill and its Undo
+        // capsule form together, as the one substance they already lens as.
+        .dsGlassMaterialize()
         }
         .padding(.bottom, 140)
         // A replacing flash swaps identity — crossfade, never a stack (§12).

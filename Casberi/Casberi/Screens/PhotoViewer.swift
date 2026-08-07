@@ -71,6 +71,14 @@ struct PhotoViewer: View {
 
     /// Glass, and legitimately so: this is the floating layer over content,
     /// the one place the design law allows it.
+    ///
+    /// CLEAR glass, and this is the app's only screen that earns it
+    /// (2026-08-06): every other floating element here sits over rows and words,
+    /// where the frosting IS the legibility. Here it sits over a photograph
+    /// shown full-bleed on black — the brightest, busiest thing the app ever
+    /// draws — and a frosted disc over that reads as a smudge on the picture
+    /// instead of a control above it. The glyph is white and semibold on a dark
+    /// ground either way, so nothing legible was traded for it.
     private var closeButton: some View {
         Button { dismiss() } label: {
             Image(systemName: "xmark")
@@ -79,7 +87,7 @@ struct PhotoViewer: View {
                 .frame(width: 36, height: 36)
         }
         .buttonStyle(.plain)
-        .dsGlass(cornerRadius: 18)
+        .dsGlass(cornerRadius: 18, variant: .clear)
         .dsHover()
         .padding(DS.Space.s4)
         .accessibilityLabel(Text("Close"))
