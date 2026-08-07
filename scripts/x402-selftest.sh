@@ -174,6 +174,24 @@ awk '/case \.x402:/{f=1} f&&/chronoDays|chronoGroups/{print; found=1} /case \.to
 grep -q 'CircleX402Row(thing: thing, lead: index == 0)' "$FEED" \
   || { echo "✗ the lane leader no longer leads — shelves lose their landmark"; exit 1; }
 
+# THE LANE STRIP (2026-08-06). §269 killed a chip that APPEARED as a
+# consequence of agent state; this is a control you operate, and the difference
+# is that it is always present and always lists every lane. Both halves are
+# guarded: the strip is drawn, and it SCOPES THE HEAD as well as the rows —
+# a card describing 22 companies over two filtered rows is two surfaces
+# disagreeing on one screen.
+grep -q 'x402LaneStrip' "$FEED" \
+  || { echo "✗ the lane strip is gone — three lanes become unreachable again"; exit 1; }
+grep -q 'X402RoomSource.compose(things: visible, lane: x402Lane)' "$FEED" \
+  || { echo "✗ the head no longer narrows with the strip — it would describe a"; \
+       echo "  marketplace the person just filtered away."; exit 1; }
+grep -q 'shape == .x402 ? x402Scoped(allVisible) : allVisible' "$FEED" \
+  || { echo "✗ the strip no longer scopes the room"; exit 1; }
+# Reused verbatim from the prediction strip; a second visual language for the
+# same job is the drift the design system exists to prevent.
+grep -q 'Capsule().fill(isOn ? DS.tint : DS.fillFaint)' "$FEED" \
+  || { echo "✗ the lane chip drifted off PredictionBrowseSection.viewChip's styling"; exit 1; }
+
 # THE FACES GUARD, and the strongest of this group. `X402Faces` reads a
 # company's own marketing page. Circle's directory is the authority on who these
 # companies ARE; their `<title>` is SEO ("Alchemy | The Web3 Development
@@ -558,6 +576,23 @@ check("past three folds",
       X402Networks.line(["Base", "Polygon", "Sei", "Solana", "Optimism"]) == "Base, Polygon and Sei and 2 more")
 check("unknowns join the fold",   X402Networks.line(["Base"], unknown: 2) == "Base and 2 more")
 check("no chains → nothing said",  X402Networks.line([]) == nil)
+
+print("the lane strip — the head narrows with the rows")
+let laneRoom = X402Room.compose(sellers: sellers([("BlockRun.AI", 138), ("AIsa API", 94)]),
+                                listings: 232, typical: 20000, lane: "Prediction markets")
+// A head still saying "22 companies" over two filtered rows is two surfaces
+// disagreeing on one screen.
+check("the headline names the lane",
+      X402Room.headline(laneRoom!) == "2 companies in prediction markets")
+check("the lane is lowercased at the join, not shouted",
+      X402Room.headline(laneRoom!).contains("in prediction markets"))
+check("one seller in a lane still reads as a sentence",
+      X402Room.compose(sellers: sellers([("A", 3), ("B", 1)]), listings: 4,
+                       lane: "Creative").map(X402Room.headline) == "2 companies in creative")
+check("unscoped keeps the marketplace headline",
+      X402Room.headline(many!) == "7 companies are selling to agents")
+check("the scoped note counts only the lane",
+      X402Room.note(laneRoom!, money: X402Ingest.usd) == "232 services · typically $0.02 a call")
 
 print("share — area is service count, and only service count")
 check("the biggest tile is fully washed",

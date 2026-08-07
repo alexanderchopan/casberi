@@ -230,6 +230,16 @@ struct FeedScreen: View {
         }
     }
     @State private var feedSheet: FeedSheetRoute?
+    /// The x402 room's selected lane, or nil for all of it (2026-08-06).
+    ///
+    /// `@State`, so it resets when you leave the room — the same lifetime
+    /// `PredictionBrowseSection.bookView` has, and correct for a VIEW filter:
+    /// it is how you are looking right now, not a setting you configured.
+    /// Which is also what keeps §269 intact — that ruling killed a chip which
+    /// APPEARED as a consequence of agent state, not a control you operate.
+    /// This strip is always there, always shows every lane, and nothing but a
+    /// tap can change it.
+    @State private var x402Lane: String?
     @State private var confirming: (Verb, Thing)?
     /// Translate verb, swipe-triggered — same system sheet as ThingSheetView's.
     @State private var showTranslate = false
@@ -545,6 +555,32 @@ struct FeedScreen: View {
             // proportions instead of the All feed's 26pt square. Music is NOT
             // here — `MusicRow` has led with the cover since 2026-07-11 and is
             // already this shape by another name.
+            //
+            // PODCASTS STAYS HERE, decided 2026-08-06 rather than allowed to
+            // happen. A per-episode `<itunes:image>` now fills
+            // `previewImageURL`, so overnight every episode row carries art
+            // where it carried none, and the three precedents for splitting a
+            // room off (Snapchat §247, Files §283, X §313) all look like this
+            // one from a distance. They are not: each of those was a room whose
+            // pixels were STORED AND NEVER DRAWN, or whose rows were the wrong
+            // anatomy for what they held. This room was built for art from the
+            // day it shipped — `MediaShape.art(for:)` has declared Podcasts
+            // `.cover` since §219, and `MediaRow` has drawn `previewImageURL`
+            // at 48×48 with the brand glyph standing in on the same 48×48 box.
+            // So the geometry does not move: row height, leading box, byline,
+            // trailing time are all unchanged, and what changes is the CONTENT
+            // of a box the room already reserved. That is a fill, not a
+            // re-shape, and a new `Shape` case would be a second mechanism
+            // saying what this one already says.
+            //
+            // Two knock-ons, both already handled where they live, and both
+            // reasons NOT to build a mixed grid here: `FeedInsight.mosaic`
+            // dedupes tiles by URL, so a show that stamps one cover on every
+            // episode can never fill the 4-tile shelf and the head correctly
+            // declines it (and the "Latest episodes" leaderboard outranks the
+            // mosaic anyway); and `MediaShape.freshness` saturation now reaches
+            // podcast art, which is §219's own decay arriving as designed
+            // rather than a new behaviour.
             case _ where MediaShape.isMediaFeed(source): self = .media
             case "Tokens":              self = .tokens
             case "Bitrefill":           self = .bitrefill
@@ -1748,7 +1784,18 @@ struct FeedScreen: View {
     /// ids computed alongside it) and threads them into every shape branch —
     /// none of the branches below re-derive `visible` themselves.
     @ViewBuilder
-    private func shapedSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
+    private func shapedSections(_ allVisible: [Thing], nextEventID: UUID?) -> some View {
+        // THE LANE STRIP SCOPES EVERYTHING BELOW IT, head included (2026-08-06).
+        // Narrowed here, once, rather than at each reader: a head still
+        // describing the whole marketplace over rows you just filtered would be
+        // two surfaces disagreeing on screen.
+        //
+        // A chip reaches ANY lane a seller sells into, which is the capability
+        // the shelves structurally cannot offer — they file each seller under
+        // one primary lane, so Prediction markets and Creative have no shelf at
+        // all despite having real members, and were unreachable by any means.
+        let visible = shape == .x402 ? x402Scoped(allVisible) : allVisible
+        if shape == .x402 { x402LaneStrip }
         // The new-since divider rides every chronological shape now
         // (2026-07-13) — each source's feed keeps its own last-visit stamp.
         // Photos (a grid), Calendar (future-first) and Reminders (state
@@ -2591,6 +2638,60 @@ struct FeedScreen: View {
     /// PostHog reading, each held in bridge state. So they get a head each,
     /// and they share one slot in the chain because they can never compete —
     /// every case names exactly one source.
+    /// The lane strip — `PredictionBrowseSection.viewChip` reused verbatim in
+    /// look and behaviour, because that is the app's existing answer to "scope
+    /// this room by one of a known set of categories" and a second visual
+    /// language for the same job would be the drift the design system exists to
+    /// prevent.
+    ///
+    /// Every lane is always listed, in the catalog's own order, whether or not
+    /// anyone sells into it today — a strip whose contents shift under you is a
+    /// status readout, not a control. A lane with nothing in it still answers
+    /// honestly when tapped (the empty room says so), which is a truthful
+    /// answer rather than a missing button.
+    @ViewBuilder
+    private var x402LaneStrip: some View {
+        Section {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: DS.Space.s2) {
+                    laneChip(nil, label: String(localized: "All"))
+                    ForEach(X402Category.allCases) { lane in
+                        laneChip(lane.display, label: lane.display)
+                    }
+                }
+                .padding(.horizontal, DS.Space.s4)
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets())
+        }
+    }
+
+    private func laneChip(_ value: String?, label: String) -> some View {
+        let isOn = x402Lane == value
+        return Button {
+            DSHaptic.selection()
+            withAnimation(DS.Motion.standard) { x402Lane = value }
+        } label: {
+            Text(label)
+                .dsText(.subhead13).fontWeight(.semibold)
+                .foregroundStyle(isOn ? .white : DS.textSecondary)
+                .padding(.horizontal, DS.Space.s3).padding(.vertical, 7)
+                .background(Capsule().fill(isOn ? DS.tint : DS.fillFaint))
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// The room narrowed to the selected lane. A seller qualifies if it sells
+    /// into that lane AT ALL — the row's `tags` carry every lane it serves, not
+    /// just the primary one its shelf files it under.
+    private func x402Scoped(_ visible: [Thing]) -> [Thing] {
+        guard let lane = x402Lane else { return visible }
+        return visible.live.filter { thing in
+            thing.tags.contains { $0.caseInsensitiveCompare(lane) == .orderedSame }
+        }
+    }
+
     /// LANES, NOT DAYS (2026-08-06) — the x402 room's real unit.
     ///
     /// Every seller here lands on the walk that first sees it, so the whole room
@@ -2660,7 +2761,7 @@ struct FeedScreen: View {
         case AppleWalletBridge.sourceName:
             return AppleWalletRoomSource.compose(things: visible).map { .appleWallet($0) }
         case X402Ingest.source:
-            return X402RoomSource.compose(things: visible).map { .x402($0) }
+            return X402RoomSource.compose(things: visible, lane: x402Lane).map { .x402($0) }
         // The one head here that reads no rows at all — its subject is STATE,
         // and replaying the feed for it would let this card and the connect
         // screen disagree about the same corpus. See `ASCRoomSource.compose`.

@@ -142,6 +142,11 @@ enum X402State {
         /// Chains whose id this build can't name — counted, never dropped.
         var unknownNetworks: Int = 0
         var docsURL: String? = nil
+        /// This seller's OWN typical call — the median of its listings. Kept
+        /// per seller so a lane's typical price can be computed when the strip
+        /// narrows the room; the marketplace-wide figure is a true median over
+        /// every listing and lives on the snapshot.
+        var median: Int? = nil
     }
 
     /// The seller a landed row stands for, by its `sourceRef`.
@@ -394,7 +399,8 @@ enum X402Ingest {
                              minPrice: minPrice, maxPrice: maxPrice,
                              hasFree: hasFree, lanes: known.map(\.display),
                              detail: detailRows, networks: networks,
-                             unknownNetworks: unknownNetworks, docsURL: docsURL)
+                             unknownNetworks: unknownNetworks, docsURL: docsURL,
+                             median: X402Ingest.median(prices))
         }
 
         /// The seller's own registrable domain — the last two labels of its

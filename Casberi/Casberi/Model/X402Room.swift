@@ -65,6 +65,10 @@ struct X402Room: Equatable {
     /// What a call TYPICALLY costs — the median of every priced listing. See
     /// `note` for why the headline is not the floor.
     let typical: Int?
+    /// The lane the strip has narrowed to, or nil for the whole marketplace.
+    /// Only the headline reads it: a card describing "22 companies" over two
+    /// filtered rows is two surfaces disagreeing on one screen.
+    let lane: String?
     let hasFree: Bool
 
     /// Cells the map draws before folding. One below `UnitTreemap.maxCells` so
@@ -79,7 +83,7 @@ struct X402Room: Equatable {
     /// purpose: one tile is not a comparison, and a treemap of it is a square
     /// that says "all of it" — a drawing with no information in it.
     static func compose(sellers list: [X402State.Seller], listings: Int,
-                        typical: Int? = nil) -> X402Room? {
+                        typical: Int? = nil, lane: String? = nil) -> X402Room? {
         let ranked = list.sorted {
             // Services descending, then name, so the order is total and a
             // redraw can never reshuffle equal sellers.
@@ -109,6 +113,7 @@ struct X402Room: Equatable {
                         minPrice: lows.min(),
                         maxPrice: highs.max(),
                         typical: typical,
+                        lane: lane,
                         hasFree: ranked.contains(where: \.hasFree))
     }
 
@@ -118,9 +123,17 @@ struct X402Room: Equatable {
     /// company is the unit a person can act on, and "955 services" as a headline
     /// reads as a firehose rather than a directory you could shop.
     static func headline(_ room: X402Room) -> String {
-        room.sellers == 1
-            ? String(localized: "1 company is selling to agents")
-            : String(localized: "\(room.sellers) companies are selling to agents")
+        guard let lane = room.lane else {
+            return room.sellers == 1
+                ? String(localized: "1 company is selling to agents")
+                : String(localized: "\(room.sellers) companies are selling to agents")
+        }
+        // The lane's own name, lowercased at the join so "Prediction markets"
+        // reads as a phrase rather than a label dropped into a sentence.
+        let named = lane.prefix(1).lowercased() + lane.dropFirst()
+        return room.sellers == 1
+            ? String(localized: "1 company in \(named)")
+            : String(localized: "\(room.sellers) companies in \(named)")
     }
 
     /// The size and the price of entry, under the headline. Says nothing it
