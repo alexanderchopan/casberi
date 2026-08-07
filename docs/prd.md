@@ -18739,4 +18739,53 @@ still carries the inverted-rank layout that `UnitTreemap` was corrected away
 from on 2026-08-06 — rank 3 drawing smaller than ranks 4–5. The wallet holdings
 treemap and the receipts/x402/topic maps therefore disagree about relative cell
 size at six cells, which is the exact thing `UnitTreemap`'s own doc says must
-never happen. Its own fix, its own commit.
+never happen. Its own fix, its own commit. **Fixed in §335.**
+
+## §335 — One treemap table, not two (2026-08-07)
+
+**The wallet's holdings map never got §328's fix.** `UnitTreemap.frames(6)` was
+corrected on 2026-08-06 from 4·2·1·2·2·1 to 4·2·2·2·1·1, because rank 3 drawing
+smaller than ranks 4 and 5 breaks the one claim a rank-ordered map makes. That
+correction reached the receipts reach map, the x402 head and every topic map —
+and not the wallet's holdings map or the All feed's themes lede, which draw
+through `GenTagMap`, which had been carrying its own private copy of the table
+since `UnitTreemap` was extracted on 2026-08-04. Ranks 0–5 for one to five
+cells were byte-identical in both files; only the six-cell row differed, and
+only in the row that had just been fixed. So for a day the app shipped two maps
+that disagreed about which of two tokens was bigger, each internally consistent
+and each rendering perfectly.
+
+**The ruling: there is ONE table, and the guard enforces that, not "both tables
+are correct".** `GenTagMap.frames` now returns `UnitTreemap.frames(items.count)`
+and spells nothing itself. A guard that merely checked each table's areas were
+non-increasing would have passed a third copy into existence, and the failure
+here was never that a table was internally wrong — it was that a correction
+landed in one of two places. So `scripts/x402-selftest.sh` grew two checks
+beside the one §328 added: `GenTagMap` must delegate, and **a 4×3 tiling
+literal anywhere else in the app fails the build**, naming its own file and
+line. Mutation-proven three ways — re-growing the private table, planting a
+table in a third file, and re-inverting `UnitTreemap`'s own six-cell row.
+
+**Why nothing else could have seen it.** `xcodebuild` is happy with two tables,
+the screen sweep photographs one map at a time, and the disagreement is only
+visible to someone holding the holdings map and the receipts map side by side.
+This is §300's own failure shape one level up: that section ruled the map is
+rank-ordered rather than area-proportional and wrote "the small map and the big
+one can never disagree about which is largest" into `UnitTreemap`'s doc — a
+sentence that was true of the component and false of the app, because a second
+component had copied the table out from under it.
+
+**`MiniTreemap` needs no table and gets none.** The Today brief's compact map is
+one large cell beside up to three equal stacked ones, so its areas are
+non-increasing by construction — there is no ordering for a layout change to
+invert. It draws `items[0]` largest for the same reason the other two do, and
+the guard deliberately does not reach it: a grep asserting an `HStack` still
+holds a `VStack` would test spelling, not the claim.
+
+**Consequence worth knowing:** at six cells the holdings map's ranks 2–3 change
+shape, from a 1×1 and a tall 1×2 to two wide 2×1 cells. `GenTagMap.cellLabel`
+branches on that shape — a wide cell shows its value trailing, a tall one shows
+it at the bottom with the "N things" count line — so ranks 2 and 3 now state
+their value where they previously showed none and a count line respectively.
+That is the correction working, not a side effect to trim: the cell got bigger
+because it ranks higher, and a bigger cell has room to say more.

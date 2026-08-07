@@ -50,7 +50,8 @@ THING="Casberi/Shared/Thing.swift"
 REACH="Casberi/Casberi/Model/NetworkReach.swift"
 REFRESH="Casberi/Casberi/Model/BridgeRefresh.swift"
 SCREEN="Casberi/Casberi/Screens/CircleX402Screen.swift"
-for f in "$X402" "$ROOM" "$FACES" "$TREEMAP" "$FEED" "$CONTENT" "$SUPPORT" "$THING" "$REACH" "$REFRESH" "$SCREEN"; do
+GENUI="Casberi/Casberi/GenUI/GenRenderer.swift"
+for f in "$X402" "$ROOM" "$FACES" "$TREEMAP" "$FEED" "$CONTENT" "$SUPPORT" "$THING" "$REACH" "$REFRESH" "$SCREEN" "$GENUI"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -263,6 +264,51 @@ for (x, y, w, h) in frames:
             grid[(x + dx, y + dy)] = 1
 if len(grid) != 12:
     print(f"  ✗ frames(6): tiles {len(grid)} of 12 units — the board has a hole"); bad = 1
+sys.exit(bad)
+PY
+
+# ONE TABLE, and only one. The check above proves `UnitTreemap.frames` ranks
+# correctly and proves NOTHING about a second copy of it elsewhere — which is
+# not hypothetical: `GenTagMap` (the wallet's holdings map, the themes lede)
+# carried its own private 4×3 table from the day the shared one was extracted,
+# so the 2026-08-06 correction reached the receipts / x402 / topic maps and
+# left the holdings map drawing rank 3 SMALLER than ranks 4 and 5 (fixed
+# 2026-08-07). Two tables is the whole failure: each is internally consistent,
+# each renders perfectly, and the disagreement is only visible to someone
+# holding both maps side by side — which is exactly what `UnitTreemap`'s doc
+# says can never be allowed to happen. So the guard is not "both tables must
+# rank correctly", it is "there is one table". A tiling literal anywhere else
+# in the app fails the build, and names itself.
+grep -q 'UnitTreemap<EmptyView>.frames(items.count)' "$GENUI" \
+  || { echo "✗ GenTagMap no longer reads UnitTreemap's table — the holdings map"; \
+       echo "  can drift from the receipts / x402 / topic maps again."; exit 1; }
+python3 - "$TREEMAP" <<'PY' || exit 1
+import os, re, sys
+owner = os.path.abspath(sys.argv[1])
+# A 4×3 tiling table: an array literal of four-int tuples that all fit the unit
+# grid and cover a real part of it. Bounded below at 2 tuples and 6 units so an
+# ordinary array of small quadruples somewhere else can't read as a treemap.
+lit = re.compile(r'\[\s*(\((?:\s*\d+\s*,){3}\s*\d+\s*\)(?:\s*,\s*)?)+\]')
+bad = 0
+for root, dirs, files in os.walk("Casberi"):
+    dirs[:] = [d for d in dirs if d not in (".build", "build")]
+    for name in files:
+        if not name.endswith(".swift"): continue
+        path = os.path.join(root, name)
+        if os.path.abspath(path) == owner: continue
+        for i, line in enumerate(open(path, errors="replace"), 1):
+            if line.lstrip().startswith("//"): continue
+            for m in lit.finditer(line):
+                t = [tuple(int(v) for v in f.split(","))
+                     for f in re.findall(r'\(([^)]*)\)', m.group(0))]
+                if len(t) < 2: continue
+                if not all(x + w <= 4 and y + h <= 3 for x, y, w, h in t): continue
+                if not 6 <= sum(w * h for _, _, w, h in t) <= 12: continue
+                print(f"  ✗ {path}:{i} carries its own 4×3 treemap table")
+                print(f"    {m.group(0)}")
+                print("    Call UnitTreemap.frames(_:) instead — a second table is how the")
+                print("    holdings map and the receipts map came to disagree about rank 3.")
+                bad = 1
 sys.exit(bad)
 PY
 

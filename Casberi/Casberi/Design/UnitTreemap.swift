@@ -14,6 +14,16 @@ import SwiftUI
 /// a legible label. The `GenTagMap`/`MiniTreemap` heroes read the same way, so
 /// the small map and the big one can never disagree about which is largest.
 ///
+/// `frames` is that claim's ONE table, and every 4×3 map in the app calls it —
+/// `GenTagMap` (the wallet's holdings, the themes lede) delegates here rather
+/// than spelling its own, since it spelled its own until 2026-08-07 and kept
+/// the inverted six-cell layout for a day after this one was corrected, so the
+/// two maps disagreed about rank 3 exactly as the paragraph above forbids.
+/// `MiniTreemap` needs no table — one big cell beside up to three equal ones
+/// can't invert a rank — but it draws `items[0]` largest for the same reason.
+/// Guarded in `scripts/x402-selftest.sh`, which checks this table's areas at
+/// every cell count AND fails on a second table appearing anywhere in the app.
+///
 /// Six is the ceiling because the table ends there. A caller with more must
 /// FOLD its tail into a final cell that says so ("9 more") rather than passing
 /// seven and having the seventh silently vanish — a chart that drops rows

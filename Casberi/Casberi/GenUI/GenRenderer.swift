@@ -2361,18 +2361,19 @@ private struct GenTagMap: View {
     /// real is pending, never as decoration.
     @State private var breathe = false
 
-    /// Grid areas (col, row, w, h) on a 4×3 unit grid, largest-first. One set
-    /// per item count, each tiling the grid COMPLETELY — a holdings map can hold
-    /// 1–6 tokens, and a template sized for 6 leaves holes when fewer arrive.
+    /// Grid areas (col, row, w, h) on a 4×3 unit grid, largest-first — read
+    /// from `UnitTreemap`, which owns the ONE table every treemap in the app
+    /// tiles on. It is not spelled here (2026-08-07): a private copy of the
+    /// table is exactly how the wallet's holdings map and the receipts / x402
+    /// / topic maps came to disagree, which `UnitTreemap`'s own doc says must
+    /// never happen ("the small map and the big one can never disagree about
+    /// which is largest"). The six-cell layout was corrected on 2026-08-06 to
+    /// run 4·2·2·2·1·1 — non-increasing, so a lower rank can never draw
+    /// bigger — and this copy kept the inverted one, where rank 3 got a single
+    /// unit while ranks 4 and 5 got two. `EmptyView` names the generic
+    /// parameter and nothing else; `frames` is a pure static over the count.
     private var frames: [(Int, Int, Int, Int)] {
-        switch items.count {
-        case 0, 1: return [(0, 0, 4, 3)]
-        case 2:    return [(0, 0, 2, 3), (2, 0, 2, 3)]
-        case 3:    return [(0, 0, 2, 2), (2, 0, 2, 2), (0, 2, 4, 1)]
-        case 4:    return [(0, 0, 2, 2), (2, 0, 2, 2), (0, 2, 2, 1), (2, 2, 2, 1)]
-        case 5:    return [(0, 0, 2, 2), (2, 0, 2, 2), (0, 2, 2, 1), (2, 2, 1, 1), (3, 2, 1, 1)]
-        default:   return [(0, 0, 2, 2), (2, 0, 2, 1), (2, 1, 1, 1), (3, 1, 1, 2), (0, 2, 2, 1), (2, 2, 1, 1)]
-        }
+        UnitTreemap<EmptyView>.frames(items.count)
     }
 
     private var items: [KindCountRow.Item] {
