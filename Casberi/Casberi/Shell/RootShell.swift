@@ -2392,7 +2392,31 @@ struct RootShell: View {
         // A follow-up ("which ones were from sam") searches the LAST
         // answer's grounding, not the whole corpus (2026-07-10).
         let pool = isFollowUp(query) && !lastAnswerHits.isEmpty ? lastAnswerHits : nil
-        let hits = retrieve(query, in: pool)
+        var hits = retrieve(query, in: pool)
+        // SEMANTIC RECALL (2026-08-07). The keyword retriever finds only things
+        // that share WORDS with the query; the sentence embedding meant to
+        // bridge vocabulary gaps contributes almost nothing on a real corpus
+        // (measured, `-rankSweep` — byte-identical across every floor), so a
+        // paraphrase ("that beach place" for a "coastal property" note) comes
+        // back empty. When a FRESH ask lands thin and the on-device model is
+        // present, it rephrases the query into concrete terms and we UNION
+        // anything new those reach — the SAME deterministic retriever, so every
+        // hit is still a real ranked thing (honesty rail intact). Purely
+        // additive: primary ranking is untouched, and it's a no-op when the ask
+        // wasn't thin, the model declines, or there's no model (zero
+        // regression). Skipped for a follow-up (its pool is deliberately the
+        // last answer's things, and a widened search would lose that anchor).
+        if pool == nil, hits.count < 8, OnDeviceModel.isAvailable,
+           let phrases = await OnDeviceModel.expandQuery(query) {
+            var seen = Set(hits.map(\.id))
+            for phrase in phrases {
+                for extra in retrieve(phrase, in: nil) where seen.insert(extra.id).inserted {
+                    hits.append(extra)
+                }
+                if hits.count >= 16 { break }
+            }
+            hits = Array(hits.prefix(16))
+        }
         lastAnswerHits = hits
         // If the query names a tag ("about work"), the answer opens with that
         // tag's tile — tap it to open the tag's view, the same push the Home

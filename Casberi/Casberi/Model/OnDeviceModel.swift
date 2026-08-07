@@ -114,6 +114,50 @@ enum OnDeviceModel {
         return nil
     }
 
+    // MARK: - Semantic recall (query expansion)
+
+    /// Rewrites a short or paraphrased query into a few CONCRETE alternative
+    /// phrasings, to widen a keyword search over the person's things
+    /// (2026-08-07). This is the semantic-recall step the retriever can't do on
+    /// its own: `EmbeddingIndex`'s sentence vectors contribute almost nothing on
+    /// a real corpus (measured, `-rankSweep` returned byte-identical results
+    /// across every floor), so search is keyword-only in practice and a
+    /// paraphrase — "that beach place" for a note that says "coastal property" —
+    /// finds nothing. The model supplies the missing words; the caller re-runs
+    /// the SAME deterministic retriever over them and unions anything new (the
+    /// honesty rail is untouched — every hit is still a real ranked `Thing`).
+    /// Returns nil off Apple-Intelligence devices, on a decline, or when the
+    /// query is already concrete — the caller then searches the literal words
+    /// alone (zero regression).
+    static func expandQuery(_ query: String) async -> [String]? {
+        #if canImport(FoundationModels)
+        if #available(iOS 26.0, *) {
+            return await FoundationAnswer.expandQuery(query)
+        }
+        #endif
+        return nil
+    }
+
+    // MARK: - The day's read (Today brief synthesis)
+
+    /// The agent's genuine READ of the day for the Today brief (2026-08-07) —
+    /// the synthesis the deterministic notes can't be. Grounded strictly on the
+    /// day's real facts (`evidence`, every line something a deterministic pass
+    /// already established), with the prior briefs' recurring topics as
+    /// CONTINUITY so a week reads as a thread rather than a fresh template each
+    /// morning. Returns nil off Apple-Intelligence devices (the notes card then
+    /// stands alone, exactly as before) and on an honestly thin day (the model
+    /// declines with NONE). The money total is deliberately NOT in the evidence,
+    /// so the read can't restate the hero's number — the honesty rail holds.
+    static func dayRead(evidence: String, continuity: String?) async -> String? {
+        #if canImport(FoundationModels)
+        if #available(iOS 26.0, *) {
+            return await FoundationAnswer.dayRead(evidence: evidence, continuity: continuity)
+        }
+        #endif
+        return nil
+    }
+
     // MARK: - Shared synthesis prompt
 
     /// The one serialization every model path shares: a numbered line per
@@ -504,6 +548,95 @@ enum FoundationAnswer {
             if !title.isEmpty, out.contains(title) { titleHits += 1 }
         }
         return titleHits >= 3
+    }
+
+    /// Expands a query into up to three concrete alternative phrasings — the
+    /// iOS-26 half of `OnDeviceModel.expandQuery`. A throwaway session (never
+    /// the composer's conversation), plain-text out, parsed defensively: one
+    /// phrase per line, two-to-five words, the original query and any duplicate
+    /// dropped, `NONE` mapped to nothing. Fails to nil throughout, so the caller
+    /// searches the literal words alone on any decline.
+    @MainActor
+    static func expandQuery(_ query: String) async -> [String]? {
+        guard OnDeviceModel.isAvailable else { return nil }
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 3 else { return nil }
+        let instructions = """
+        You widen a search query over someone's saved things. Given a query, \
+        write up to THREE alternative phrasings that mean the SAME thing in \
+        DIFFERENT words — a synonym, the concrete noun behind a vague one, the \
+        plain term behind slang. Each on its own line, two to four words, no \
+        punctuation, no numbering, no explanation, and do not just repeat the \
+        original words. If the query is already concrete and no useful \
+        alternative exists, reply with the single word NONE.
+        """ + LanguageStore.shared.llmLanguageDirective
+        let session = LanguageModelSession(instructions: instructions)
+        do {
+            let response = try await session.respond(to: "Query: \"\(trimmed)\"")
+            let lower = trimmed.lowercased()
+            let strip = CharacterSet(charactersIn: " -•*\t\"'.").union(.whitespaces)
+            var out: [String] = []
+            var seen = Set<String>()
+            for raw in response.content.components(separatedBy: CharacterSet(charactersIn: "\n,;")) {
+                let phrase = raw.trimmingCharacters(in: strip)
+                let key = phrase.lowercased()
+                guard !phrase.isEmpty, key != "none", key != lower else { continue }
+                let words = phrase.split(separator: " ")
+                guard (1...5).contains(words.count) else { continue }
+                if seen.insert(key).inserted { out.append(phrase) }
+                if out.count == 3 { break }
+            }
+            #if DEBUG
+            NSLog("[Casberi] expandQuery \"%@\" → %@", trimmed,
+                  out.isEmpty ? "(none)" : out.joined(separator: " | "))
+            #endif
+            return out.isEmpty ? nil : out
+        } catch {
+            return nil
+        }
+    }
+
+    /// The Today brief's read of the day — the iOS-26 half of
+    /// `OnDeviceModel.dayRead`. One throwaway session, one grounded paragraph,
+    /// the same NONE-declines-honestly rail `homeInsight` keeps. Never streams:
+    /// the brief anchors to its own top and is composed once (§288), so a
+    /// growing paragraph would fight that anchor.
+    @MainActor
+    static func dayRead(evidence: String, continuity: String?) async -> String? {
+        guard OnDeviceModel.isAvailable else { return nil }
+        let trimmed = evidence.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 20 else { return nil }
+        let instructions = """
+        You write ONE short paragraph — two sentences at most — saying what \
+        someone's day was actually about, from the facts you are given. Speak \
+        TO them as "you"; never write in the first person. Find the THREAD \
+        across the facts — a subject, place, person, or project running through \
+        more than one of them — and say what it amounted to, not a list. Do NOT \
+        restate a money total or any figure; another card already shows those. \
+        Ground every word in the facts; never invent a thing, a number, a \
+        person, or a connection that isn't there. Plain words only — no \
+        metaphors, no marketing, no preamble, no bullet points. If the facts \
+        don't add up to anything worth saying, reply with the single word NONE \
+        — a truthful NONE beats a forced observation.
+        """ + LanguageStore.shared.llmLanguageDirective
+        var prompt = "Today's facts:\n\(trimmed)"
+        if let continuity, !continuity.isEmpty {
+            prompt += "\n\nEarlier this week your brief kept returning to: \(continuity). "
+                + "Note a continuation ONLY if today's facts genuinely continue it."
+        }
+        let session = LanguageModelSession(instructions: instructions)
+        do {
+            let response = try await session.respond(to: prompt)
+            let text = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+            #if DEBUG
+            NSLog("[Casberi] todayRead → %@", text.isEmpty ? "(nothing)" : text)
+            #endif
+            let stripped = text.trimmingCharacters(in: CharacterSet(charactersIn: ".!\"' "))
+            if stripped.isEmpty || stripped.uppercased() == "NONE" || text.count < 20 { return nil }
+            return text
+        } catch {
+            return nil
+        }
     }
 
     /// Streams a grounded plain-text synthesis. Bridges the model's response

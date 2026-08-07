@@ -327,6 +327,26 @@ enum TodayBrief {
         let notes = observations(things: things, landed: landed, move: move, moves: moves,
                                  now: now, ledger: ledger, ledeTookRisk: lede.tookRisk,
                                  topic: topic, leads: Set(leadIDs))
+        // The agent's READ of the day (2026-08-07) — a genuine model paragraph
+        // leading the synthesis section, where the deterministic notes below are
+        // single facts. The fix for "the brief feels generic": the notes are a
+        // fixed menu of single-field detectors, so the card reads the same shape
+        // every morning; this says what the day was actually ABOUT, and varies.
+        //
+        // PRESENTING-ONLY (the `worstDebt()` precedent, §214) — the
+        // background/widget/digest compose never pays the model's latency, and
+        // this element changes no `digest`, `delta`, or ledger fact, only the
+        // display, so the whisper's changed-dot stays deterministic (ruling 5).
+        // Nil off Apple-Intelligence devices and on a thin day; the notes card
+        // then stands alone exactly as before (zero regression). Grounded on the
+        // day's own facts with the prior briefs' topics as continuity.
+        if presenting,
+           let read = await OnDeviceModel.dayRead(
+               evidence: dayReadEvidence(landed: landed, notes: notes, topic: topic),
+               continuity: dayReadContinuity(ledger)) {
+            ids.append("read")
+            lines.append("read = Insight(\"\(genSafe(read))\")")
+        }
         if !notes.isEmpty {
             ids.append("notes")
             lines.append("notes = DayNotes([\(notes.indices.map { "n\($0)" }.joined(separator: ", "))])")
@@ -373,7 +393,7 @@ enum TodayBrief {
         // them (a resolved market is money news), and the second lead stays
         // glued to the first. Composed rather than hard-coded in the renderer
         // because only this file knows which of them actually fired.
-        let chapters = ["hero", "themes", "notes", leadRefs.first]
+        let chapters = ["hero", "themes", "read", "notes", leadRefs.first]
             .compactMap { $0 }
             .filter { ids.contains($0) && $0 != ids.first }
         return KeptAskComposers.Result(delta: digest, digest: digest,
@@ -525,6 +545,44 @@ enum TodayBrief {
         }
 
         return Array(out.prefix(3))
+    }
+
+    /// The day's real facts, flattened to plain lines for the model's read of
+    /// the day (2026-08-07). Every line is something a deterministic pass
+    /// already established — the fired notes, then the day's own landed things
+    /// the notes didn't already name — so the model's job is only to find the
+    /// thread across them, never to discover a new fact. The money total is
+    /// deliberately absent (the hero owns it), so the read can't restate it.
+    /// Bounded so it fits the on-device context window.
+    static func dayReadEvidence(landed: [Thing], notes: [Note], topic: Topic?) -> String {
+        var lines: [String] = []
+        for note in notes where !note.text.isEmpty { lines.append("- " + note.text) }
+        if let topic { lines.append("- Several of today's reads are about \(topic.word).") }
+        let named = Set(notes.map(\.thingID)).subtracting([""])
+        for thing in landed where thing.isLive && !named.contains(thing.id.uuidString) {
+            let title = clamp(thing.title, max: 70)
+            guard !title.isEmpty else { continue }
+            lines.append("- \(title) (\(thing.source))")
+            if lines.count >= 14 { break }
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    /// The topics the last few briefs kept returning to — continuity fuel for
+    /// the read, so a week reads as a thread. Distinct theme words from the
+    /// recent ledger, most-recent first, three at most; nil when the ledger is
+    /// empty (the read then simply carries no continuity clause).
+    static func dayReadContinuity(_ ledger: [BriefLedger.Entry]) -> String? {
+        var seen = Set<String>()
+        var out: [String] = []
+        for entry in ledger.suffix(4).reversed() {
+            for theme in entry.themes where seen.insert(theme.lowercased()).inserted {
+                out.append(theme)
+                if out.count == 3 { break }
+            }
+            if out.count == 3 { break }
+        }
+        return out.isEmpty ? nil : out.joined(separator: ", ")
     }
 
     /// The 4th observation family (2026-07-22, user: "how would you improve
