@@ -214,6 +214,21 @@ enum BridgeGlyph {
         // exclamation inside a bubble is what every crash reporter's own UI
         // uses. Not "ant" (Sentry's own mark is a lantern, which reads as a
         // lamp at 32pt and says nothing about errors).
+        // The ONE seat in this table with no bundled mark BY RULING (user,
+        // 2026-08-06: "we can't use their icon"): the App Store's own mark is
+        // Apple's trademark, so the SF Symbol IS this bridge's face rather
+        // than a fallback for art that failed to load.
+        //
+        // A MONOGRAM, chosen over a pictogram (user: "why not use some version
+        // of an A") — which is also the convention half this catalog already
+        // follows, since Privacy, Bitrefill and Kalshi all wear a letter.
+        // `character` is named for typography UI but RENDERS a plain capital
+        // A, verified by rendering it; that is the whole reason it is here, so
+        // don't "fix" it to a more semantically-named symbol without looking
+        // at what that one draws. `a.square` also draws an A and was rejected:
+        // the tile is already a rounded square, so it reads as a square inside
+        // a square.
+        case "app store connect": return "character"
         case "sentry":    return "exclamationmark.bubble"
         // The mark is a triangle; `triangle.fill` is the closest SF Symbol and
         // is what a Vercel deploy reads as anywhere it's drawn small.

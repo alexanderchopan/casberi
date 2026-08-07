@@ -18061,3 +18061,163 @@ words is a GUESS about what they meant, and a guess that empties the result was
 wrong. Both halves are mutation-tested — removing the fallback restores the
 wall, and firing it when the scope already answered undoes §307.
 
+## §323 — The half of shipping that happens on somebody else's desk (user: "lets add a bridge for apple app store connect, how would it work", then "do it", then "you decide on the open questions", 2026-08-06)
+
+App Store Connect joins the catalog as a **Work** seat beside Stripe, Sentry and
+Cursor. The pitch is the gap in the shipping loop this app already covers
+everywhere else: GitHub says what you wrote, Vercel says what deployed, Sentry
+says what broke, Stripe says what it earned — and the one stretch nobody
+narrates is the one where you have done everything you can and are WAITING for
+Apple. That waiting has no home. Some of it arrives as email, the rest is behind
+a login, and the single most expensive fact in it — that a TestFlight build dies
+90 days after upload — is announced nowhere at all.
+
+**Four shapes land, and each is a moment somebody else decided.**
+
+1. **A review verdict.** The flagship: a version moving to Rejected, Metadata
+   rejected, Invalid binary, In review, Approved, or live. The verdict LEADS the
+   title, which is §303's clamp ruling — `titleLine` cuts at 80 characters, so
+   anything parked at the END is what the clamp eats, and a rejection reading as
+   a release is the §83 fake status. Both halves are mutation-tested.
+2. **A customer review.** Real words a real person wrote — the most thing-shaped
+   object the API has. The rating LEADS as five glyphs, for the verdict's reason
+   one step stronger: the whole point of a review row is which ones are bad.
+3. **A build finishing processing.** VALID or INVALID. You know you uploaded it;
+   you do not know when Apple finished, and INVALID is a wasted afternoon.
+4. **A TestFlight build about to expire**, inside a two-week window, as a
+   reconciling `dueAt` — so `NotifySweep`'s generic `deadlineNear` reaches the
+   lock screen with no notification code of this bridge's own.
+
+**What does not land, and why.** Downloads, impressions, units, proceeds,
+conversion, crash counts: all tallies, all forbidden by §216 for the reason
+PostHog taught. Sales and Analytics are deferred for a second, practical reason
+— the Sales Reports API answers with a gzipped TSV keyed by a vendor number and
+lands a day late, and the Analytics API is a request-then-poll job; neither is a
+GET that returns news. **A version moving to WAITING_FOR_REVIEW does not land
+either, nor one you rejected yourself, nor an app you pulled**: those are YOUR
+acts, and you were standing there. That is §313's test (a charge your bank
+already pushed you never notifies) applied to release management, and it is
+mutation-tested because it is the rule a later pass is most likely to "fix" by
+adding cases.
+
+**There is deliberately NO star rating anywhere.** The API publishes individual
+customer reviews and no aggregate, so any number the screen showed would be the
+mean of the twenty reviews we happened to read, presented as your app's rating —
+§83's fake status in the one place a developer would believe it instantly.
+
+**The credential is the novel part, and it is the catalog's first signed one.**
+Apple issues no token to paste: a request carries a JWT you sign yourself with
+ES256, from three values — a `.p8` private key, the ten-character Key ID that
+names it, and an Issuer ID. That is done on device with CryptoKit, no dependency
+and no server, and the key never leaves the Keychain. Three consequences with
+their reasons:
+
+- **Three fields, one save.** Trello needed two credentials and got a two-stage
+  screen because its second value is minted using its first. These three are all
+  printed on one page of App Store Connect, so asking one at a time would be
+  three round trips to the same tab. One verb, on the last field
+  (`DSSlabField`'s empty-`actionLabel` form), armed by the other two.
+- **The Issuer ID may legitimately be EMPTY, and that is a configuration rather
+  than an omission.** Apple's own token spec makes `iss` and `sub` mutually
+  exclusive: `iss` is "not used with individual keys", `sub: "user"` is "not used
+  with team keys". Sending both — or neither — is a **401 indistinguishable from
+  a wrong key**, and it is the single likeliest mistake with this credential. So
+  it is the one piece of fine print on the screen, sitting on the control it
+  governs (§315), it is what the failure copy names first, and it is the
+  harness's first two mutations.
+- **A refused paste leaves NOTHING behind.** There is no way to validate an App
+  Store Connect key except by using it, so all three are stored before the check
+  — and torn back out on failure, or the bridge would read `configured` on a
+  credential Apple just rejected and 401 on every foreground sweep forever.
+
+**Read-only is by CONDUCT, and this is the weakest grade in the catalog.** App
+Store Connect keys carry a ROLE, not scopes, and no role is read-only for what
+this reads: the narrowest that works is Developer, which can also upload a build
+and submit a version. That puts it below Cursor's tier (which can spend money and
+write a branch) — this one can ship software to the public under your name.
+There is no box to tick. So the promise is kept by conduct, and
+**`scripts/appstoreconnect-selftest.sh` fails the build if a write verb ever
+appears in that file** — the Cursor tripwire, for a stronger reason. Its negative
+guards read a COMMENT-STRIPPED copy, which this file re-earned on its own first
+run (the Obsidian lesson): the source DOCUMENTS the things it must never do, so
+a guard grepping raw source fires against the prose explaining it.
+
+**Two measured-risk decisions worth not re-litigating.** (1) **No `fields[…]`
+and no `include=` anywhere.** Asking App Store Connect for an attribute the
+account's API version doesn't serve is a **400**, not a silently-absent field, so
+a projection written against today's docs empties the whole room for anyone on an
+older shape — with the error swallowed by `getJSON`'s nil. These payloads are
+twenty rows; the saving was never worth the cliff. Enforced by the harness.
+(2) **`appVersionState` first, `appStoreState` as fallback** — Apple deprecated
+one in favour of the other, and reading both costs nothing while a rename that
+empties a room with no error anywhere is this bridge's likeliest silent failure
+(the Kalshi `yes_bid_dollars` shape).
+
+**First sight seeds in SILENCE for versions and builds, and BACKFILLS reviews.**
+An account with four shipped versions would otherwise land four "Live on the App
+Store" rows the moment it connected, all months old and all four dated today —
+the bug `HyperliquidDeFi.sync` shipped and had to be fixed for. Reviews land with
+their REAL dates and sort back into the year they were written (the Hugging Face
+split: somebody who just connected is owed proof). **Expiries are the deliberate
+exception and land on first sight**, because a build three days from death is
+exactly what you need to be told immediately (the Aave/Morpho risk-crossing
+precedent). No `reconcile…` pass: every row here is final when it lands, and one
+appearing means something started landing a state.
+
+**UNMEASURED against a live account**, but uniquely measurable: every field map
+comes from Apple's published reference, and the build host has no egress to
+`api.appstoreconnect.apple.com` — yet this project already holds such a key
+(`asc-p8` in the login Keychain, used by `scripts/testflight.sh`), which makes it
+the first keyed Work bridge here that CAN be checked before it is trusted. Every
+read is a GET whose failure returns nil, and **every endpoint is read
+INDEPENDENTLY**, so a role that can't see customer reviews 403s that one call and
+lands versions and builds regardless. `-ascProbe YES` reports the read phase by
+phase plus one `ascRow|` line per version, review and build, because an empty
+room here has SIX causes — no key, no key ID, an unreadable `.p8`, a 401, a
+per-endpoint 403, a genuinely quiet account, and shape drift — and only the last
+is a bug.
+
+**Deliberately NOT built, with reasons.** (a) **A feed room head.** The state
+worth showing (which apps, where each version stands) lives on the connect
+screen, which is where every other bridge's state lives; a `sourceHead` is
+§298's own pattern with its own card, source and harness, and it should be a
+pass of its own once these numbers have been seen against a real account.
+(b) **A `NotifyKind` of its own.** A rejection is arguably the most
+notification-worthy event in this whole app, but adding a kind means re-proving
+`scripts/notify-selftest.sh`'s 79 assertions and 14 mutations; the expiry rows
+already reach the lock screen through the generic `deadlineNear`, and a
+rejection flashes on a sync the person is present for (the Stripe
+`lastPassAlarm` split: an approval rains, a rejection never does). (c) **Beta
+tester feedback**, (d) **sales and analytics** — see above.
+
+### §323 amendment — the seat with no mark (user: "we can't use their icon tho", "we need a fallback", then "why not use some version of an A", 2026-08-06)
+
+App Store Connect ships with **no bundled brand asset at all**, and it is the
+only seat in the catalog for which that is a RULING rather than a gap. The App
+Store's icon is Apple's trademark; a first cut inlined it on the website and it
+came straight back out.
+
+So the fallback is the face. `BridgeGlyph` and `DS.brandHue` already exist for a
+seat whose bundled art fails to load — the pair Trello was missing on
+2026-08-03, when its tile rendered as a generic gray square on TestFlight — and
+here they are load-bearing rather than defensive, because nothing will ever load.
+
+A **monogram**, not a pictogram, and that is also the convention half this
+catalog already follows: Privacy, Bitrefill and Kalshi all wear a letter. The SF
+Symbol is `character`, which is named for typography UI and RENDERS a plain
+capital A — verified by rendering it, which is the whole reason it is there, so
+don't "fix" it to a better-named symbol without looking at what that one draws.
+`a.square` also draws an A and was rejected: the tile is already a rounded
+square, so it reads as a square inside a square.
+
+The hue is **#0a84ff, the iOS system accent — deliberately NOT the App Store
+icon's blue.** Borrowing the store icon's exact gradient would be imitating the
+mark by other means; the system accent says "Apple platform" without standing in
+for a trademark. The website mirrors both exactly (a text "A" on the same hue,
+the `.ai-calendar` numeral shape), and the two must move together or the site
+and the app disagree about what this seat looks like.
+
+The tagline is **"How your app is doing"** (user), not the first cut's "What
+Apple did to your app" — which was accurate about the verdict rows and cold
+about the rest, and made a seat that also carries your reviews sound like a
+seat about being judged.

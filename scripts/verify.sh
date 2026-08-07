@@ -155,6 +155,18 @@ print -P "%F{green}✓ cursor self-test%f"
 # data carries, so a server-side filter silently drops 19% of the marketplace),
 # and the file must never gain a write verb or read a `payTo` — this is a
 # PAYMENT protocol, and "Casberi never pays for a call" is kept by conduct.
+# App Store Connect (2026-08-06, prd §323). Its conduct guard is the strongest
+# reason any harness here exists: an App Store Connect key carries a ROLE, not
+# scopes, and no role is read-only for what this bridge reads — the narrowest
+# one that works can also upload a build and submit a version. "Casberi only
+# ever reads" is kept by that one file issuing GET alone. It also pins the
+# claim set: `iss` and `sub` are mutually exclusive in Apple's token spec, and
+# getting it wrong is a 401 indistinguishable from a wrong key.
+step "App Store Connect pure-logic self-test"
+"$ROOT/scripts/appstoreconnect-selftest.sh" >/dev/null \
+  || fail "the App Store Connect logic self-test failed — run scripts/appstoreconnect-selftest.sh"
+print -P "%F{green}✓ app store connect self-test%f"
+
 step "Circle x402 pure-logic self-test"
 "$ROOT/scripts/x402-selftest.sh" >/dev/null \
   || fail "the x402 logic self-test failed — run scripts/x402-selftest.sh"

@@ -105,6 +105,13 @@ enum BridgeRouter {
         /// `.token` would give it `finishesOnConnect == true` and drop the
         /// sheet the moment the token was stored, with no org picked yet.
         case sentry
+        /// App Store Connect is a TokenBridge for its vault slot and seat id,
+        /// but it takes THREE credentials (a `.p8`, a key ID, an issuer ID)
+        /// and its connected state lists the apps it can see — so it takes its
+        /// own Destination for PostHog's reason: riding `.token` would give it
+        /// `finishesOnConnect == true` and drop the raised sheet the moment
+        /// the key was stored, with no key ID entered yet.
+        case appStoreConnect
         /// npm and PyPI share one screen and one ingest, parameterised by
         /// registry — the `.exchange(venue)` shape. They are watch lists, so
         /// they must not ride `.token` (they have no token at all) and must
@@ -265,6 +272,7 @@ enum BridgeRouter {
             case .posthog:        TokenBridge.posthog.bridgeID
             case .stripe:         TokenBridge.stripe.bridgeID
             case .sentry:         TokenBridge.sentry.bridgeID
+            case .appStoreConnect: TokenBridge.appStoreConnect.bridgeID
             // The registry's own raw value IS the seat id ("npm", "pypi"), so
             // the Row and this can't drift apart — `.exchange`'s rule.
             case .packages(let r): r.bridgeID
@@ -372,9 +380,12 @@ enum BridgeRouter {
         Row(offer: "PostHog", id: "posthog", destination: .posthog),
         Row(offer: "Stripe", id: "stripe", destination: .stripe),
         Row(offer: "Sentry", id: "sentry", destination: .sentry),
+        Row(offer: "App Store Connect", id: "appstoreconnect", destination: .appStoreConnect),
         Row(offer: "npm",  id: "npm",  destination: .packages(.npm)),
         Row(offer: "PyPI", id: "pypi", destination: .packages(.pypi)),
-    ] + TokenBridge.allCases.filter { $0 != .posthog && $0 != .stripe && $0 != .sentry }.map {
+    ] + TokenBridge.allCases.filter {
+        $0 != .posthog && $0 != .stripe && $0 != .sentry && $0 != .appStoreConnect
+    }.map {
         Row(offer: $0.rawValue, id: $0.bridgeID, destination: .token($0))
     }
 
@@ -465,6 +476,7 @@ struct BridgeDestinationView: View {
         case .posthog:        PostHogScreen()
         case .stripe:         StripeScreen()
         case .sentry:         SentryScreen()
+        case .appStoreConnect: AppStoreConnectScreen()
         case .packages(let r): PackageWatchScreen(registry: r)
         case .walletHistory(let scope): WalletHistoryScreen(scope: scope)
         case .walletConnection: WalletConnectionScreen()

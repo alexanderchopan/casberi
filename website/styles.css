@@ -157,6 +157,15 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
    if the artwork ever fails to load.
    npm and PyPI carry DIFFERENT fields on purpose: they sit together in the
    same Work shelf, and a shared colour would read as one app listed twice. */
+/* App Store Connect carries NO brand mark, by ruling (2026-08-06: "we can't
+   use their icon") — the App Store's mark is Apple's trademark. So this tile
+   is a MONOGRAM on the iOS system blue, deliberately NOT the store icon's
+   blue, mirroring what BridgeIcon renders in the app (KindGlyph "character",
+   which draws a plain capital A; AppIconTile #0a84ff). The two must move
+   together or the site and the app disagree about what this seat looks like.
+   Sized up like .ai-calendar's numeral: a lone letterform reads small against
+   tiles whose artwork fills 52% of the square. */
+.ai-appstoreconnect { background: #0a84ff; font-size: 23px; }
 .ai-sentry    { background: #fff; }
 .ai-vercel    { background: #000; }
 .ai-pagerduty { background: #04ac38; }

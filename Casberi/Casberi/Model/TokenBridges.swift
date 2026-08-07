@@ -26,6 +26,10 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     case sentry   = "Sentry"
     case vercel   = "Vercel"
     case pagerduty = "PagerDuty"
+    /// The only bridge here that takes THREE credentials and signs its own
+    /// requests — see `ASCAuth`. It rides `TokenBridge` for the vault slot and
+    /// the seat id, and routes to its own `Destination`.
+    case appStoreConnect = "App Store Connect"
 
     var id: String { rawValue }
 
@@ -51,6 +55,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .sentry:   "sentry"
         case .vercel:   "vercel"
         case .pagerduty: "pagerduty"
+        case .appStoreConnect: "appstoreconnect"
         }
     }
 
@@ -105,6 +110,11 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // the two live on different pages — this is the one where the
         // read-only checkbox is.
         case .pagerduty: URL(string: "https://pagerduty.com/api_keys")
+        // The Integrations tab, which is where the key, the key ID and the
+        // issuer ID all live on one page — the three things this screen asks
+        // for, in the order it asks for them.
+        case .appStoreConnect:
+            URL(string: "https://appstoreconnect.apple.com/access/integrations/api")
         }
     }
 
@@ -132,6 +142,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .sentry:    "sentry.io → Settings → Auth Tokens"
         case .vercel:    "vercel.com → Settings → Tokens"
         case .pagerduty: "pagerduty.com → Integrations → API Access Keys"
+        case .appStoreConnect: "App Store Connect → Users and Access → Integrations"
         }
     }
 
@@ -243,6 +254,19 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .pagerduty: [
             "Create a General Access REST API Key and tick Read-only.",
             "Copy it and paste it below."]
+        // FOUR steps, not two, and this is the only bridge here that needs
+        // them — Apple hands back three separate values and a downloadable
+        // file, and the download happens ONCE (the `.p8` can never be
+        // re-downloaded, which is worth its own step). The role is named
+        // because it is the only lever a person has over reach, and because
+        // App Store Connect owns its own screen the checklist beneath step 2
+        // carries the reads rather than this step naming them twice (§220,
+        // the PostHog/Stripe precedent).
+        case .appStoreConnect: [
+            "Generate a key with the Developer role — the narrowest that works.",
+            "Download the .p8. Apple only offers it once.",
+            "Copy the Key ID and the Issuer ID from the same page.",
+            "Paste all three below."]
         }
     }
 
@@ -274,6 +298,11 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // validation rule (the Cursor reasoning).
         case .vercel:   "Token"
         case .pagerduty: "API key"
+        // The field this names is the `.p8` itself. Apple's own marker is
+        // shown rather than an invented prefix, because it is the one string
+        // every one of these files really starts with — and it doubles as the
+        // hint that the whole file goes in, not just its first line.
+        case .appStoreConnect: "-----BEGIN PRIVATE KEY-----"
         }
     }
 
@@ -303,6 +332,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .sentry:   "auth token"
         case .vercel:   "token"
         case .pagerduty: "API key"
+        case .appStoreConnect: "private key"
         }
     }
 
@@ -328,6 +358,10 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .sentry:   "issues"
         case .vercel:   "deploys"
         case .pagerduty: "incidents"
+        // Four shapes with no shared noun — "verdicts, reviews and builds"
+        // would be a list, and "items" says nothing. "updates" is Stripe's
+        // and PostHog's answer to the same problem.
+        case .appStoreConnect: "updates"
         }
     }
 
@@ -399,6 +433,11 @@ enum TokenBridge: String, CaseIterable, Identifiable {
             String(localized: "Paste a token and your deployments keep arriving — what shipped, what broke, and the commit behind it. Vercel's token can't be scoped read-only, so the promise is ours to keep: Casberi only ever lists them, and never reads your environment variables.")
         case .pagerduty:
             String(localized: "Paste a read-only key and your incidents keep arriving — what fired, how urgent, and when it was resolved. Nothing here pages anyone, acknowledges, or resolves.")
+        case .appStoreConnect:
+            // CONDUCT, and the weakest grade in the catalog: an App Store
+            // Connect key carries a ROLE, and no role is read-only for what
+            // this reads — the same key could submit a version.
+            String(localized: "Add an App Store Connect key and what happens to your apps keeps arriving: a review verdict, a customer review, a build about to expire. Apple's keys have no read-only role, so the promise is ours to keep — Casberi only ever reads.")
         }
     }
 
@@ -449,6 +488,15 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .sentry:   "Reads your unresolved issues — the error, the project, and where in your code it happened. Never an event, a stack trace, or anything about the person who hit it. The token is scoped read-only: it cannot resolve an issue, comment, or change a project."
         case .vercel:   "Reads your deployments — the project, whether each one shipped or broke, and its commit message. Vercel's token can't be scoped read-only, so the promise is kept by conduct: Casberi only ever lists deployments, and never deploys, promotes, rolls back, cancels, or deletes one. It never reads your environment variables."
         case .pagerduty: "Reads your incidents — what fired, on which service, how urgent, and when it was resolved. A read-only key cannot page anyone, acknowledge, resolve, or reassign."
+        // The Cursor sentence, one rung stronger, because the risk is one rung
+        // higher: an App Store Connect key carries a ROLE rather than scopes,
+        // and the narrowest role that can read all four of these can also ship
+        // software to the public under your name. Naming the six verbs Casberi
+        // doesn't use IS the promise, so they are listed rather than
+        // summarised — and if a write is ever added to `AppStoreConnectBridge`,
+        // this line has to change in the same commit
+        // (`scripts/appstoreconnect-selftest.sh` fails the build if it isn't).
+        case .appStoreConnect: "Reads your apps' review status, your customer reviews, and your builds. Apple has no read-only role, so the promise is kept by conduct: Casberi only ever reads, and never submits a version, releases one, removes an app from sale, replies to a review, uploads a build, or changes anything. It never reads your sales, your proceeds, or anything about the people who use your apps."
         }
     }
 
@@ -503,6 +551,15 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // that never lands anything, with nothing anywhere saying why.
         case .vercel:
             String(localized: "Vercel answered — no deployments found. A token scoped to your personal account can't see a team's projects, so if your work lives under a team, make the token for that team.")
+        // Cloudflare's and PagerDuty's case, with an extra cause of its own.
+        // Nothing lands until something HAPPENS to an app, so a shipped app in
+        // a quiet week legitimately reads empty — AND a first sync deliberately
+        // records where every version and build already stands without saying
+        // anything, so that a decade of shipped releases doesn't land as
+        // today's news. Both are the healthy answer, and both are exactly as
+        // silent as a key Apple refused.
+        case .appStoreConnect:
+            String(localized: "Apple answered — nothing has changed. Casberi lands what happens to your apps, so a first sync notes where everything stands and stays quiet until a verdict, a review, or a build expiry actually arrives.")
         default:
             nil
         }
@@ -545,6 +602,12 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // as yours.
         case .sentry:    SentryAccount.clear()
         case .pagerduty: PagerDutyCursor.clear()
+        // Cleared on BOTH callers, unlike Trello's API key: a re-paste here
+        // replaces the key AND its two identifiers together (the screen asks
+        // for all three), and a fresh key may name a different Apple account.
+        // Diffing a new account's versions against the old account's ledger
+        // would announce a stranger's rejection as yours.
+        case .appStoreConnect: ASCAuth.clear()
         default:         break
         }
     }
@@ -693,6 +756,14 @@ enum TokenIngest {
         // page, and it lands both halves of an incident's life, the second of
         // which is dated from the app's own record of the first.
         if bridge == .pagerduty { return await PagerDutyIngest.refresh(context: context) }
+        // App Store Connect owns its whole pass for PostHog's reason and one
+        // of its own. It DERIVES its news by diffing per-version and per-build
+        // state ledgers rather than mirroring a list, so the generic dedupe
+        // below would be re-deriving what those ledgers already answered — and
+        // its credential isn't a token at all but three values and a signed
+        // JWT, so `TokenVault.get(bridge.tokenKey)` alone can't establish that
+        // it is really connected (see `ASCAuth.configured`).
+        if bridge == .appStoreConnect { return await ASCIngest.refresh(context: context) }
         guard let token = TokenVault.get(bridge.tokenKey), !running.contains(bridge) else {
             return running.contains(bridge) ? 0 : nil
         }
@@ -782,6 +853,7 @@ enum TokenIngest {
         case .stripe:   ownSweepUnreachable(.stripe)
         case .sentry:   ownSweepUnreachable(.sentry)
         case .pagerduty: ownSweepUnreachable(.pagerduty)
+        case .appStoreConnect: ownSweepUnreachable(.appStoreConnect)
         }
     }
 

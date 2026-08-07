@@ -27,6 +27,11 @@ enum ProbeHooks {
         // the same reason `-wcProjectID` is: anything credential-shaped stays
         // out of the log, so nobody has to remember which ones are safe.
         "-trelloKey",
+        // The `.p8` itself — a real ECDSA private key, and the most sensitive
+        // value any probe in this file takes. `-ascKeyID`/`-ascIssuer` are
+        // deliberately NOT here: they are identifiers, useless without the
+        // key, and seeing them in `probeArgs:` is how a 401 gets diagnosed.
+        "-ascKey",
         // Not a credential the app USES, but by construction the value is a
         // sample secret — the whole point of the probe is to hand it one.
         // Printing it verbatim in `probeArgs:` would put a real key in the
@@ -456,6 +461,57 @@ enum ProbeHooks {
         // is simply current — and all five render as the same one sentence.
         Hook(key: "cloudflareProbe") { _, _ in
             Task { @MainActor in await CloudflareFetch.diagnose() }
+        },
+        // App Store Connect takes THREE credentials, so it takes three hooks —
+        // and they are declared BEFORE `-ascProbe` because hooks run in list
+        // order and a token can only be signed once all three have landed
+        // (the `-trelloKey`/`-posthogHost` rule).
+        //
+        // `-ascKeyID <id>` — the ten characters printed beside the key.
+        Hook(key: "ascKeyID") { value, _ in
+            ASCAuth.setKeyID(value.trimmingCharacters(in: .whitespacesAndNewlines))
+            NSLog("[Casberi] ascKeyID: set")
+        },
+        // `-ascIssuer <uuid>|clear` — EMPTY means an individual key, which is
+        // Apple's own discriminator and not a fallback, so `clear` is a real
+        // configuration rather than a reset (see `ASCJWT.payloadJSON`).
+        Hook(key: "ascIssuer") { value, _ in
+            let issuer = value == "clear" ? ""
+                : value.trimmingCharacters(in: .whitespacesAndNewlines)
+            ASCAuth.setIssuer(issuer)
+            NSLog("[Casberi] ascIssuer: %@", issuer.isEmpty ? "empty (individual key)" : "set")
+        },
+        // `-ascKey <p8|clear>` — the private key. Takes the whole PEM, or just
+        // its base64 body with the newlines stripped, which is what survives a
+        // shell argument:
+        //
+        //   -ascKey "$(scripts/dev-keys.sh get asc-p8 | grep -v -- ----- | tr -d '\n')"
+        //
+        // Inline command substitution, per the dev-keys rule — the value never
+        // enters a variable, and `secretArgKeys` keeps it out of `probeArgs:`.
+        Hook(key: "ascKey") { value, _ in
+            guard value != "clear" else {
+                TokenVault.delete(ASCAuth.keyVaultKey)
+                ASCAuth.clear()
+                NSLog("[Casberi] ascKey: cleared")
+                return
+            }
+            guard let pem = ASCJWT.normalizedPEM(value) else {
+                NSLog("[Casberi] ascKey: NOT a readable private key — truncated paste, or the wrong file")
+                return
+            }
+            TokenVault.set(pem, for: ASCAuth.keyVaultKey)
+            ASCAuth.forgetToken()
+            NSLog("[Casberi] ascKey: stored (%d bytes of PEM)", pem.count)
+        },
+        // `-ascProbe YES` walks the App Store Connect read phase by phase with
+        // the STORED credentials, and dumps one `ascRow|` line per version,
+        // review and build. Six causes render as one empty room here and only
+        // one is a bug — see `ASCIngest.diagnose`. It is also the only way to
+        // tell a 401 from the individual/team claim set being the wrong way
+        // round, which is the single likeliest mistake with this credential.
+        Hook(key: "ascProbe") { _, _ in
+            Task { @MainActor in await ASCIngest.diagnose() }
         },
         // `-cursorProbe YES` walks the Cursor read phase by phase with the
         // STORED key (connect first via `-tokenBridge "Cursor:<key>"`), and

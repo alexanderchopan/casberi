@@ -123,6 +123,13 @@ extension DS {
         // monochrome — the Grok/X case, not a logo-on-black lockup. washHue
         // nils pure black, so the Cursor screens stay pure ink on purpose and
         // this only stops the tile falling back to gray.
+        // iOS system blue — NOT the App Store icon's blue, and the difference
+        // is the point (user, 2026-08-06: "we can't use their icon"). This
+        // seat carries no bundled mark at all, so the hue and the glyph
+        // together are its whole identity; borrowing the store icon's exact
+        // gradient would be imitating the mark by other means. The system
+        // accent says "Apple platform" without standing in for a trademark.
+        case "app store connect":   return Color.fixed("#0a84ff")
         case "cursor":              return Color.fixed("#000000")
         // Sentry's documented purple. Their mark is the lantern in this
         // colour on white — the PostHog/Hugging Face shape (a logo-on-white
