@@ -17940,6 +17940,30 @@ The seat shipped with no `FeedScreen.Shape` case, so it fell to `.plain`: twenty
 
 **Deliberately unbuilt: lane filter chips.** §269 ruled the tag filter is the agent's with no control of its own; whether this room earns an exception is the user's ruling, not a side effect of a polish pass.
 
+## §321 — Work leads the catalog, second (user: "instagram snapchat tiktok and twitter are the weakest links, i think we should move the social category towards the bottom", then "move work up to second in the catalogue", 2026-08-06)
+
+The reported problem was real and the proposed lever was aimed one level too high. Social is not a weak band, it is a MIXED one: Bluesky, Farcaster and Nostr are keyless one-handle live connects — a new person types a handle and rows land in seconds, no key, no export — sitting in the same band as four archive imports. Demoting the band would have buried the three to hide the four, and would have put the catalog at odds with onboarding's own first-run fork, whose third card ("follow someone", §217) points straight at Bluesky/Farcaster/Feed. The four are not weak because they are social; they are weak because they are not connects — request an export, wait days, download, unzip, pick a folder — which is equally true at the bottom of the wall as at the top.
+
+**What moved instead: Work, from NINTH of eleven to second.** It sat below Life and Notes while carrying 14 live seats and, with Wallet, the half of the catalog that has had the most work put into it. It is also a better answer to the problem the 2026-07-23 order was solving than the order it replaces: that ruling put universal categories between Wallet and Markets so two crypto bands could not read as a crypto-only app, and GitHub/Linear/Slack/Notion/Stripe in the second band says "broader than crypto" harder than Social did — while every seat in it connects for real. Social keeps its high slot and stays adjacent to Mail.
+
+**Ordering only.** No seat changed category, so `category:<name>` kept-asks, the `SourcesTray` join and every `BridgeCatalog.category(of:)` caller are untouched; `wallBands`' small-category pairing is unaffected because a full band never pairs. The website `#catalog` shelf was reordered to match in the same session (the standing sync rule) — a pure block move, byte-identical length, and `catalog-sync.sh` compares SETS not order, so the site's order is upheld by the rule and not by the audit.
+
+**Held open, not built: splitting the imports out.** The catalog already knows exactly which seats they are (`Offer.qualifier`'s `imports` set, 11 of them, incl. the ChatGPT/Claude/Gemini chat archives sitting inside Agents), so a low-sitting "Imports" band is cheap. It is a taxonomy change rather than an ordering one — it would move Instagram out of Social, so "what's new in Social" would stop covering it (arguably correct, since an archive is never new) — and that is the user's ruling to make.
+
+## §322 — The whole wall order, dictated (user: "in the app catalogue lets have the order be wallet, work, life, agents, media, social, mail, shopping and whatever else if there is another category", 2026-08-06)
+
+§321 moved one band; this rules the whole sequence. **Wallet, Work, Life, Agents, Media, Social, Mail, Reading, Shopping, Markets, Notes** — the user named the first eight and left "whatever else" to follow, then ruled on the tail themselves ("should reading come before shopping?", same session).
+
+**Reading ahead of Shopping**, on two facts about the bands rather than taste: Reading is 7 seats to Shopping's 5, and every one of them is a live connect that fills the feed with something to READ — RSS, Substack, Reddit, Readwise, Raindrop, Kindle, Bookmarks — which is the app's own core loop. Shopping is the narrowest band in the catalog: Privacy needs a paid plan, Open Food Facts is a barcode scanner rather than a feed, Bitrefill is crypto gift cards.
+
+**What the earlier rulings were protecting, and where each one landed.** Every prior order ruling was a constraint, not a preference, so each is checked rather than assumed: Wallet still leads and Markets is now TENTH, the furthest it has ever sat from it (2026-07-23's crypto-wall rule, satisfied harder than before); Work stays second (§321); Social keeps a mid slot and stays ADJACENT TO MAIL, which is the one adjacency the band layout was ruled around. What is deliberately given up is 2026-07-23's "gappiest band sits dead last" — Shopping (5 seats, 3 empty at four-across) is ninth now, not last. That was a tidiness rule about a trailing hole; it loses to an order the user dictated by name.
+
+**Life third is the substantive change.** It pulls Photos, Calendar, Reminders, Health, Contacts and Files — the seats that connect in one tap through iOS, with no key, no export and no account — up to where a new phone meets them. Wallet and Work lead on depth; Life leads on the shortest possible first connect.
+
+**Band shapes are unchanged, and that is provable rather than hoped.** Mail (2 seats) is the ONLY category under `wallBands`' three-seat pairing threshold, so it has no small neighbour in any permutation and draws a 2-tile band wherever it sits — exactly as it did before. Every other band is ≥4 and full-width, and a full band never pairs.
+
+**Ordering only.** No seat changed category, so `category:<name>` kept-asks, `category(of:)`/`category(forSource:)` and the `SourcesTray` join are untouched — the tray's group order follows the catalog by design (§2026-08-06), so it re-sorts with the wall, which is the intended behaviour and not a second taxonomy drifting. The website `#catalog` shelf was reordered to match in the same session (the standing sync rule): a pure block permutation, asserted as one (same multiset of lines in, same out, 54 moved lines each way), because `catalog-sync.sh` compares SETS not order and cannot catch a shelf mangled mid-move — and those shelves carry the inlined base64 icons, so a hand edit there is the one place a stray byte is both easy and invisible.
+
 ### §318 amendment — the relevance floor, and what measuring it actually found (user: "how can we make search across the app smarter… seems to give general answers" → "do all" → "yes. please do", 2026-08-06)
 
 Ranking is not filtering. §318 made a full match outrank a one-word match, and
@@ -18036,3 +18060,4 @@ The general rule this instance belongs to: a filter derived from the person's
 words is a GUESS about what they meant, and a guess that empties the result was
 wrong. Both halves are mutation-tested — removing the fallback restores the
 wall, and firing it when the scope already answered undoes §307.
+

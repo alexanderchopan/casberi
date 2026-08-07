@@ -748,20 +748,35 @@ enum BridgeCatalog {
     // SAME mapping the catalog page shows — the whole point of this being
     // the ruled single source of truth.
     static let categories: [(name: String, exemplar: String, groups: Set<String>)] = [
-        // Order set by the user (ruling 2026-07-23, "broaden the first
-        // impression"): Wallet leads (the flagship), but Markets no longer
-        // sits beside it — leading with two crypto bands read as a crypto-only
-        // app when the app is broader. So universal categories (Social, Mail,
-        // Agents, Media) come between Wallet and Markets: breadth is obvious by
-        // the second band, and Markets stays prominent without forming a
-        // crypto wall up top. Social + Mail render as two compact side-by-side
-        // cards.
+        // WALL ORDER IS THE USER'S, DICTATED BAND BY BAND (ruling 2026-08-06,
+        // prd §322): "wallet, work, life, agents, media, social, mail,
+        // shopping and whatever else if there is another category" — the three
+        // they didn't name (Markets, Notes, Reading) keep their relative order
+        // and settle after Shopping.
+        //
+        // It keeps every property the earlier rulings were protecting and
+        // states them plainly, so a later pass doesn't "restore" one of them:
+        //   • Wallet leads, Markets sits far from it (ruling 2026-07-23) — two
+        //     crypto bands up top read as a crypto-only app. Markets is now
+        //     ninth, so that gap is wider than it has ever been.
+        //   • Work is second (ruling 2026-08-06, prd §321): 14 live seats,
+        //     every one a real connect, and the strongest answer to the same
+        //     crypto-wall problem.
+        //   • Life third pulls the Apple apps (Photos, Calendar, Reminders,
+        //     Health, Contacts, Files) up where a new phone can connect
+        //     something in one tap.
+        //   • Social keeps a mid slot and stays ADJACENT TO MAIL, the pairing
+        //     the wall's band layout was ruled around.
+        // Mail (2 seats) is the only small category in the catalog, so it has
+        // no small neighbour to pair with in ANY order and draws a 2-tile band
+        // wherever it sits — the same as before this move. Nothing else here
+        // changes shape: every other band is ≥4 seats and full-width.
+        //
+        // Ordering only — no seat changed category, so `category:<name>`
+        // kept-asks, `category(of:)`/`category(forSource:)` and the
+        // `SourcesTray` join are all untouched.
         ("Wallet",  "Wallet",      ["Wallet"]),
-        ("Social",  "Bluesky",     ["Network"]),
-        ("Mail",    "Gmail",       ["Mail"]),
-        ("Agents",  "Claude",      ["Agent"]),
-        ("Media",   "Spotify",     ["Watching", "Listening", "Games", "Images"]),
-        ("Markets", "Kalshi",      ["Markets", "NFTs"]),
+        ("Work",    "GitHub",      ["Work"]),
         // Life absorbs Home (user ruling 2026-07-23): HomeKit was the lone app
         // in its own category, and a one-app band wastes a whole 4-wide row —
         // "one option would be we could put HomeKit in Life." "People"
@@ -770,15 +785,22 @@ enum BridgeCatalog {
         // unpredictable, so it reads as personal-life miscellany, not a
         // dedicated content type.
         ("Life",    "Photos",      ["Photos", "Schedule", "Fitness", "People", "Home", "Storage"]),
-        ("Notes",   "Apple Notes", ["Notes"]),
-        ("Work",    "GitHub",      ["Work"]),
-        // Reading and Shopping settle LAST (user ruling 2026-07-23): they
-        // carry the biggest trailing gaps at four-per-row (Reading 6 → 2
-        // empty, Shopping 5 → 3 empty), and a partial last row reads as "the
-        // wall ended" at the very bottom rather than a hole mid-list. The
-        // gappiest (Shopping) sits dead last.
+        ("Agents",  "Claude",      ["Agent"]),
+        ("Media",   "Spotify",     ["Watching", "Listening", "Games", "Images"]),
+        ("Social",  "Bluesky",     ["Network"]),
+        ("Mail",    "Gmail",       ["Mail"]),
+        // Reading sits AHEAD of Shopping (user ruling 2026-08-06, "should
+        // reading come before shopping?"). Two reasons, both about the band
+        // rather than the taste: Reading is 7 seats to Shopping's 5, and every
+        // one of them is a live connect that fills the feed with something to
+        // READ (RSS, Substack, Reddit, Readwise, Raindrop, Kindle, Bookmarks)
+        // — the app's own core loop. Shopping is the narrowest band in the
+        // catalog: Privacy needs a paid plan, Open Food Facts is a barcode
+        // scanner rather than a feed, Bitrefill is crypto gift cards.
         ("Reading", "Readwise",    ["Reading", "Saves"]),
         ("Shopping", "Shopify",    ["Shopping"]),
+        ("Markets", "Kalshi",      ["Markets", "NFTs"]),
+        ("Notes",   "Apple Notes", ["Notes"]),
     ]
 
     static func category(of offer: Offer) -> String {
