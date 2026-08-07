@@ -413,7 +413,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .privacy:
             // CONDUCT. Privacy's key can issue cards and move money; the
             // promise is what this code does, so it is worded as such.
-            String(localized: "Paste an API key and what you spend on your virtual cards keeps arriving. Privacy's key can't be scoped read-only, so the promise is ours to keep: Casberi only ever reads transactions, and never creates, closes, or funds a card.")
+            String(localized: "Paste an API key and what you spend on your virtual cards keeps arriving. Privacy's key can't be scoped read-only. Casberi only reads transactions — it never creates, closes, or funds a card.")
         case .oneclaw:
             String(localized: "Paste an agent key and you'll see what it can reach — which vaults, which secret paths, and when each grant expires. Names and permissions only: no secret's value is ever read.")
         case .posthog:
@@ -429,19 +429,19 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .cursor:
             // CONDUCT, and the weakest grade here: this key could start an
             // agent, which spends money AND writes a branch to a repo.
-            String(localized: "Paste a key and your finished cloud agents keep arriving — what each was asked to do, what it says it did, and the pull request it opened. Cursor's key can't be scoped read-only, so the promise is ours to keep: Casberi only ever lists them.")
+            String(localized: "Paste a key and your finished cloud agents keep arriving — what each was asked to do, what it says it did, and the pull request it opened. Cursor's key can't be scoped read-only. Casberi only ever lists them.")
         case .sentry:
             String(localized: "Paste a read-only token and three things arrive: an issue that's new, one that regressed, one that escalated. Never an event, a stack trace, or anything about the person who hit it.")
         case .vercel:
             // CONDUCT.
-            String(localized: "Paste a token and your deployments keep arriving — what shipped, what broke, and the commit behind it. Vercel's token can't be scoped read-only, so the promise is ours to keep: Casberi only ever lists them, and never reads your environment variables.")
+            String(localized: "Paste a token and your deployments keep arriving — what shipped, what broke, and the commit behind it. Vercel's token can't be scoped read-only. Casberi only lists them, and never reads your environment variables.")
         case .pagerduty:
             String(localized: "Paste a read-only key and your incidents keep arriving — what fired, how urgent, and when it was resolved. Nothing here pages anyone, acknowledges, or resolves.")
         case .appStoreConnect:
             // CONDUCT, and the weakest grade in the catalog: an App Store
             // Connect key carries a ROLE, and no role is read-only for what
             // this reads — the same key could submit a version.
-            String(localized: "Add a key and Apple's verdicts, your customer reviews and expiring builds keep arriving. Apple has no read-only role, so the promise is ours to keep — Casberi only ever reads.")
+            String(localized: "Add a key and Apple's verdicts, your customer reviews and expiring builds keep arriving. Apple has no read-only role, and Casberi only ever reads.")
         }
     }
 
@@ -461,7 +461,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .notion:   "Reads the pages you connect."
         case .linear:   "Reads issues assigned to you."
         case .bitrefill: "Reads your orders, refills, and balance — nothing here ever buys, pays, or spends."
-        case .privacy:  "Reads your card transactions only. Privacy's key can't be scoped read-only, so the promise is kept by conduct: Casberi never creates, closes, or funds a card."
+        case .privacy:  "Reads your card transactions only. Privacy's key can't be scoped read-only. Casberi never creates, closes, or funds a card."
         case .oneclaw:  "Reads which vaults and secret paths the key can reach — names and permissions only. Nothing here ever reads a secret's value, signs, or spends."
         case .posthog:  "Reads the metrics you watch and your project's annotations. The key is scoped read-only — it cannot ship a flag, edit a dashboard, or write anything back."
         case .stripe:   "Reads disputes, payouts, canceled subscriptions, failed payments, and your balance. The restricted key is read-only — it cannot refund, charge, or pay out."
@@ -483,14 +483,14 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // is the whole promise, so they're listed rather than summarised. If a
         // write is ever added to `CursorFetch`, this line has to change in the
         // same commit.
-        case .cursor:   "Reads the cloud agents you've run — what each was asked to do, what it says it did, and the pull request it opened. Cursor's key can't be scoped read-only, so the promise is kept by conduct: Casberi only ever lists your agents, and never starts one, follows one up, stops one, or deletes one."
+        case .cursor:   "Reads the cloud agents you've run — what each was asked to do, what it says it did, and the pull request it opened. Cursor's key can't be scoped read-only. Casberi only lists your agents — it never starts one, follows one up, stops one, or deletes one."
         // What is NOT read is the load-bearing clause. Sentry holds the data
         // your users generated when something broke — anyone connecting it has
         // every right to ask whether that is about to land in a feed. It isn't:
         // this reads the ISSUE list, which is titles and code locations, and
         // never an event, a stack trace, a request body, or a user.
         case .sentry:   "Reads your unresolved issues — the error, the project, and where in your code it happened. Never an event, a stack trace, or anything about the person who hit it. The token is scoped read-only: it cannot resolve an issue, comment, or change a project."
-        case .vercel:   "Reads your deployments — the project, whether each one shipped or broke, and its commit message. Vercel's token can't be scoped read-only, so the promise is kept by conduct: Casberi only ever lists deployments, and never deploys, promotes, rolls back, cancels, or deletes one. It never reads your environment variables."
+        case .vercel:   "Reads your deployments — the project, whether each one shipped or broke, and its commit message. Vercel's token can't be scoped read-only. Casberi only lists deployments — it never deploys, promotes, rolls back, cancels, or deletes one. It never reads your environment variables."
         case .pagerduty: "Reads your incidents — what fired, on which service, how urgent, and when it was resolved. A read-only key cannot page anyone, acknowledge, resolve, or reassign."
         // The Cursor sentence, one rung stronger, because the risk is one rung
         // higher: an App Store Connect key carries a ROLE rather than scopes,
@@ -500,7 +500,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // summarised — and if a write is ever added to `AppStoreConnectBridge`,
         // this line has to change in the same commit
         // (`scripts/appstoreconnect-selftest.sh` fails the build if it isn't).
-        case .appStoreConnect: "Reads your apps' review status, your customer reviews, and your builds. Apple has no read-only role, so the promise is kept by conduct: Casberi only ever reads, and never submits a version, releases one, removes an app from sale, replies to a review, uploads a build, or changes anything. It never reads your sales, your proceeds, or anything about the people who use your apps."
+        case .appStoreConnect: "Reads your apps' review status, your customer reviews, and your builds. Apple has no read-only role. Casberi only reads — it never submits a version, releases one, removes an app from sale, replies to a review, uploads a build, or changes anything. It never reads your sales, your proceeds, or anything about the people who use your apps."
         }
     }
 
