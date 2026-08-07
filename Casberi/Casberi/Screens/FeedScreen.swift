@@ -142,6 +142,39 @@ struct FeedScreen: View {
                 // cheaper coat.
                 \.detectedTel, \.detectedPlace, \.detectedMailto,
             ]
+            // BOUNDED (2026-08-06). `propertiesToFetch` above made each row
+            // cheap; it never bounded HOW MANY, so this query materialised the
+            // whole corpus — every row, as a real `Thing` object, on the main
+            // actor, every time the body read it.
+            //
+            // MEASURED with `scripts/main-thread-profile.sh` on a 6,000-row
+            // corpus, cold launch: `FeedScreen.things.getter` was 26.6% of the
+            // main thread (and `MainSurface.things.getter` another 25.0%). The
+            // self time underneath is `swift_conformsToProtocol`,
+            // `MetadataCacheKey::operator==`, `Hasher.combine` and
+            // retain/release — SwiftData instantiating models, not any code of
+            // ours. Our own functions measured ~0% self time. That is the
+            // "laggy after 271" report: it scales with corpus size, which is
+            // why it arrived with the bulk-import rooms.
+            //
+            // Three read sites made it unavoidable per body evaluation, which
+            // is why the limit lives HERE and not at any one of them:
+            // `Corpus.hasSurfaced(things)` in `feedList`, `.task(id:
+            // things.count)`, and `liveVisible()`.
+            //
+            // The number: the feed WINDOWS at `windowRowTarget` (30) rows and
+            // grows by that much per "Show older", so this is ~40 taps of
+            // headroom — far past anyone's scrolling — while bounding the cost
+            // at a constant no matter how large the corpus grows. The room's
+            // own derivations (themes, day groups, the insight heroes) now
+            // describe the recent window rather than all-time, which is the
+            // ruling this was built under (user, 2026-08-06) and is what
+            // `HomeInsightStore` already did with its own 600-row fetch.
+            //
+            // HONESTY (§83): a bound the person can reach must never render as
+            // "you're all caught up". `reachedFetchCeiling` below says so
+            // plainly at the edge instead.
+            d.fetchLimit = Self.allRoomFetchLimit
             _things = Query(d)
         } else {
             _things = Query(filter: #Predicate<Thing> { $0.source == source },
@@ -4730,7 +4763,15 @@ struct FeedScreen: View {
     /// Takes the render's `visible` (the Feed-freeze rule) instead of
     /// re-deriving it.
     private func caughtUpFooter(_ rows: [Thing]) -> some View {
-        Text(source == "All"
+        // At the fetch bound this is NOT the end of the corpus, and saying
+        // "that's everything" there would be the §83 fake status in the one
+        // place a person is deciding whether anything older exists. The room
+        // stops fetching at `allRoomFetchLimit`; the copy says which stop this
+        // is. Open the source's own chip to walk past it — a per-source room
+        // carries its own predicated query and no such bound.
+        Text(reachedFetchCeiling
+             ? "Showing your most recent \(rows.count) — open a source to go further back"
+             : source == "All"
              ? "That's everything · \(rows.count == 1 ? "1 thing" : "\(rows.count) things")"
              : "That's everything from \(source) · \(countLabel(rows))")
             .dsText(.subhead13)
@@ -4766,6 +4807,28 @@ struct FeedScreen: View {
     /// last day and current day only on load" — right that it was too
     /// generous; see `windowed` for why the unit is rows and not days).
     private static let windowRowTarget = 30
+
+    /// How many rows the All room's `@Query` will materialise, ever. See the
+    /// long note in `init` for the measurement that produced it: unbounded,
+    /// that query was 26.6% of the main thread on a 6,000-row corpus, because
+    /// SwiftData instantiates every row as a real model object on the main
+    /// actor. ~40 "Show older" taps of headroom, and constant thereafter no
+    /// matter how large the corpus grows.
+    static let allRoomFetchLimit = 1200
+
+    /// True when the window has opened as far as the FETCH will go — the
+    /// person has reached the bound above, not the end of their corpus.
+    ///
+    /// This exists so the bound can never masquerade as the end (§83). The
+    /// caught-up footer is a claim about the CORPUS ("nothing older exists"),
+    /// and at this edge that claim is false: there is more, we simply stopped
+    /// fetching it. `windowed` reports `more: false` here for exactly the same
+    /// reason it does when a room really is exhausted, so nothing downstream
+    /// can tell the two apart — which is why this is asked separately.
+    private var reachedFetchCeiling: Bool {
+        source == "All" && filter.tag == "All"
+            && windowRowBudget >= Self.allRoomFetchLimit
+    }
 
     /// Each step opens another target's worth. Monotonic for the life of the
     /// screen: it must not collapse when a thing lands, or scrolling back would
