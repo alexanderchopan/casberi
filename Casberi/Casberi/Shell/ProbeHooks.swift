@@ -2779,6 +2779,80 @@ enum ProbeHooks {
                 NSLog("embeddingProbe: remedyCleared=%d", fixed)
             }
         },
+        // `-embedRaceProbe <rounds|YES>` — the ONE thing a build cannot prove
+        // about the 2026-08-07 crash-on-open fix (build 280): that two threads
+        // may embed AT ONCE. `NLEmbedding` is not thread-safe and does not say
+        // so, and the app has always driven it from two places that run in the
+        // same foreground pass — the backfill sweep's detached utility task
+        // (`EmbeddingIndex.packedVectors`) and the main actor's ask
+        // (`Retriever.rank` → `queryVector`). Both crash frames bottomed out
+        // in the SAME function, `EmbeddingIndex.vector(for:language:)`, so
+        // this hammers exactly that function from exactly those two contexts.
+        //
+        // WHAT A PASS AND A FAIL LOOK LIKE, because they are not symmetric: a
+        // fail is a SIGSEGV inside `BNNSFilterApplyBatch` and the probe prints
+        // NOTHING (the process is gone — the trapping-harness lesson from
+        // `retriever-selftest`), so an absent `SURVIVED` line IS the failure.
+        // A pass is one `SURVIVED` line with both counts non-zero. Run it
+        // against a build WITHOUT the lock and it should die; that is the only
+        // way to know this probe can fail at all.
+        //
+        // Both halves are pinned to `.english` deliberately. The race needs
+        // ONE model object, and a corpus whose dominant language isn't English
+        // would send the two halves to two different models — which is a
+        // weaker test that would pass on the broken build too.
+        Hook(key: "embedRaceProbe") { spec, context in
+            let rounds = max(1, Int(spec) ?? 50)
+            Task { @MainActor in
+                guard EmbeddingIndex.isAvailable else {
+                    NSLog("embedRaceProbe: NO SENTENCE MODEL here — the race cannot be run on this device")
+                    return
+                }
+                // Real corpus text where there is any, so the inputs are the
+                // lengths the app really embeds; a synthetic fallback so the
+                // probe still works on an empty install. Mapped to `[String]`
+                // ON THE MAIN ACTOR, before any suspension and before anything
+                // is handed to a detached task — no `Thing` crosses a thread
+                // or an `await` here (liveness corollary 6).
+                let corpus = ((try? context.fetch(FetchDescriptor<Thing>())) ?? [])
+                    .filter(\.isLive)
+                let texts: [String] = corpus.isEmpty
+                    ? (1...32).map { "Flight to Lisbon on the \($0)th, hotel near the water, dinner booked" }
+                    : corpus.prefix(32).map(EmbeddingIndex.indexText(for:)).filter { !$0.isEmpty }
+                guard !texts.isEmpty else {
+                    NSLog("embedRaceProbe: nothing embeddable in this corpus")
+                    return
+                }
+                NSLog("embedRaceProbe: rounds=%d texts=%d — detached utility + main actor, concurrently",
+                      rounds, texts.count)
+                // The SWEEP's half — a detached utility task, which is the
+                // exact context `packedVectors` runs on and the queue the
+                // crash report names (com.apple.root.utility-qos.cooperative).
+                let sweep = Task.detached(priority: .utility) {
+                    var n = 0
+                    for round in 0..<rounds {
+                        for text in texts {
+                            if EmbeddingIndex.vector(for: text, language: .english) != nil { n += 1 }
+                        }
+                        if round.isMultiple(of: 8) { await Task.yield() }
+                    }
+                    return n
+                }
+                // The ASK's half — on the main actor, where `Retriever.rank`
+                // embeds. `queryVector` once first so the real entry point is
+                // exercised too, then the shared function both crash stacks
+                // named.
+                var asks = 0
+                if EmbeddingIndex.queryVector(for: "travel plans") != nil { asks += 1 }
+                for round in 0..<rounds {
+                    if EmbeddingIndex.vector(for: "what did I save about travel \(round)",
+                                             language: .english) != nil { asks += 1 }
+                    await Task.yield()
+                }
+                let embeds = await sweep.value
+                NSLog("embedRaceProbe: SURVIVED asks=%d embeds=%d", asks, embeds)
+            }
+        },
         // `-relatedProbe "<title prefix>"` — what the thing sheet would show
         // UNDER a thing: the earlier copy of it (deterministic), then its
         // semantic neighbours. Keyed on a title prefix, not a UUID, for the
