@@ -105,6 +105,18 @@ enum AgentPanel {
         var radius: Double
     }
 
+    /// One deadline on a runway — where it sits on the axis and how close it is.
+    struct RunwayMark: Equatable {
+        /// 0…1 along the axis. Overdue pins to 0 rather than running off the
+        /// left edge, which is `StripeRoom.position`'s own rule: the deadline
+        /// you most need to see is the one you already missed.
+        var position: Double
+        var overdue: Bool
+        /// Inside three days — the mark ramps toward the warn colour, because
+        /// urgency is STATE and state is allowed colour.
+        var urgent: Bool
+    }
+
     /// What a card draws.
     ///
     /// Every case is a SHAPE, never a sentence. Adding a `.text` case is the
@@ -142,6 +154,12 @@ enum AgentPanel {
         /// their labels collide, which turns the app's one visible claim about
         /// its own intelligence into noise.
         case scatter(dots: [Dot], clusters: [DotCluster])
+        /// A time rail with deadlines on it (prd §338) — Stripe's disputes and
+        /// dunning, Cloudflare's certificates. Both rooms already draw exactly
+        /// this and both were left out of §337 because their FULL cards are
+        /// mostly rows; the rail alone is the half that draws, and it survives
+        /// the small cell precisely because it is one axis with no labels.
+        case runway(marks: [RunwayMark], span: String)
 
         /// A figure with nothing in it draws nothing, and a tile that draws
         /// nothing is a tile that shouldn't exist. Checked at composition, so
@@ -171,6 +189,9 @@ enum AgentPanel {
             case .river(let b):   return b.count < 2 || (b.first?.weeks.count ?? 0) < 4
             // A map with no named cluster is a spray of dots asserting nothing.
             case .scatter(let d, let c): return d.count < 12 || c.isEmpty
+            // One dot on an axis is a dot. A runway's claim is the SPREAD —
+            // what is close versus what is far — and one deadline has none.
+            case .runway(let m, _): return m.count < 2
             }
         }
     }
@@ -212,6 +233,7 @@ enum AgentPanel {
         // Radially symmetric with no labels — the one new figure that holds
         // at every size.
         case .dial:    return .any
+        case .runway:  return .any
         case .flow:    return .bandOnly
         case .river:   return .bandOnly
         case .scatter: return .large
@@ -385,6 +407,7 @@ enum AgentPanel {
         case .dial(let m):    return Set(m.map { Int($0.hour) }).count
         case .river(let b):   return b.count
         case .scatter(_, let c): return c.count
+        case .runway(let m, _): return m.count
         // A pulse is scored on its LIVE days, not its length: every registered
         // grid is 53 columns wide, so raw length would rank every heatmap
         // identically and always above everything else.

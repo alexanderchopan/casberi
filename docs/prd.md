@@ -18960,3 +18960,36 @@ proves nothing, and it moved with the logic. And the cap fixture used exactly
 nothing and the mutation went silent; the fixture overshoots by construction
 now. Both found by the user asking a plain question ("will we still show the
 sankey?") rather than by any check.
+
+## §338 — Stripe and Cloudflare get the rail, and it's better small (user: "i think for sure stripe and cloudflare should get them b/c they have cool visuals. and since they are not too complicated they could be smaller in size on the bento", 2026-08-07)
+
+**§337 excluded both for a reason that was true of the wrong thing.** The
+argument was that their heads are mostly ROWS, and that the rail is
+`accessibilityHidden` because — in its own card's words — "every mark on this
+axis is a row below it". That is a correct account of the whole card and a
+wrong account of the rail: the rail is the half that DRAWS, and its
+restatement problem only exists while the rows are sitting underneath it. In
+the panel there are no rows, so there is nothing to restate.
+
+**And it is the one figure that GAINS from the small cell.** An axis and some
+dots need no labels at all, so at 118pt it still says "three things due, one of
+them nearly here" — where a treemap loses its names and a heatmap's cells drop
+under 3pt. The user got there first: "not too complicated, so they could be
+smaller."
+
+**One figure, both rooms**, because underneath they are the same shape — a
+deadline is a day count and a day count is a position. `AgentPanel.RunwayMark`
+carries only that, and both rooms feed it through `StripeRoom.span`/`position`,
+the arithmetic that already exists and is already harnessed. Cloudflare's items
+carry an OPTIONAL day count (a certificate with no published expiry), and those
+are DROPPED rather than pinned somewhere invented.
+
+**Three rules inherited rather than re-decided:** overdue pins to the axis's
+left edge instead of running off it (the deadline you most need to see is the
+one you already missed); urgency ramps the dot toward the warn colour, since
+urgency is STATE and state is allowed colour; and both rails ride their room's
+own composer, so a tile and the room it previews can never disagree about the
+same deadlines — guarded.
+
+**Held as before:** the rooms' full cards keep their rows. This lifts the rail
+out for the panel; it does not change what either room draws.

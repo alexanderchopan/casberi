@@ -71,6 +71,18 @@ check(AgentPanel.Figure.rail([]).isEmpty, "an empty rail draws nothing")
 check(AgentPanel.Figure.curve([1, 2]).isEmpty, "two points is a line between dots, not a curve")
 check(!AgentPanel.Figure.curve([1, 2, 3]).isEmpty, "three points is a curve")
 check(AgentPanel.Figure.wall(["a", "b", "c"]).isEmpty, "a wall needs a full grid")
+
+// The runway (§338) — Stripe's and Cloudflare's rail, the figure that GAINS
+// from a small cell.
+func marks(_ ps: [Double]) -> [AgentPanel.RunwayMark] {
+    ps.map { AgentPanel.RunwayMark(position: $0, overdue: $0 <= 0, urgent: $0 < 0.2) }
+}
+check(AgentPanel.Figure.runway(marks: marks([0.5]), span: "30 days").isEmpty,
+      "one dot on an axis is a dot, not a runway — the claim is the SPREAD")
+check(!AgentPanel.Figure.runway(marks: marks([0.1, 0.7]), span: "30 days").isEmpty,
+      "two deadlines make a runway")
+check(AgentPanel.fit(.runway(marks: marks([0.1, 0.7]), span: "7 days")) == .any,
+      "a runway reads at every slot — one axis, no labels to clip")
 // The pulse pair — the one that actually happens on a quiet room.
 check(AgentPanel.Figure.pulse(Array(repeating: 0, count: 84)).isEmpty,
       "a full-width grid of ZEROS is empty boxes claiming to be a year")
@@ -231,6 +243,9 @@ mutate "a room can take two tiles" \
 mutate "dedupe keys on source and eats the sankey" \
   'guard !out.contains(where: { $0.key == card.key }) else { return }' \
   'guard !out.contains(where: { $0.source == card.source }) else { return }' || rc=1
+mutate "a lone deadline draws as a runway" \
+  'case .runway(let m, _): return m.count < 2' \
+  'case .runway(let m, _): return m.count < 1' || rc=1
 mutate "a one-sided flow draws" \
   'case .flow(let inL, let outL): return inL.isEmpty || outL.isEmpty' \
   'case .flow(let inL, let outL): return inL.isEmpty && outL.isEmpty' || rc=1
@@ -294,6 +309,10 @@ guard_has "import receipts are excluded" "$COMPOSER" 'Corpus\.isImportReceipt' |
 guard_has "a tile tap switches the room" "$COMPOSER" 'filter\.source = source' || rc=1
 # The sankey rides the room's own composer — the panel must not grow a second
 # flow engine that can disagree with the feed's band.
+# Both rails must ride their ROOM's own composer, or the tile and the room can
+# disagree about the same deadlines.
+guard_has "the Stripe rail rides StripeRoomSource" "$COMPOSER" 'StripeRoomSource\.compose' || rc=1
+guard_has "the Cloudflare rail rides its own source" "$COMPOSER" 'CloudflareRunwaySource\.compose' || rc=1
 guard_has "the flow card rides WalletFlowSource" "$COMPOSER" 'WalletFlowSource\.band\(from:' || rc=1
 # …and it must take a full-width slot: half a sankey is unreadable by the
 # sizing inventory this panel was built against.

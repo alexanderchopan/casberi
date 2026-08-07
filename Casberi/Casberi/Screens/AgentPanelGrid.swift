@@ -221,6 +221,8 @@ private struct FigureView: View {
             case .dial(let marks):    DialFigure(marks: marks, slot: slot, t: t)
             case .river(let bands):   RiverFigure(bands: bands, t: t)
             case .scatter(let d, let c): ScatterFigure(dots: d, clusters: c, t: t)
+            case .runway(let m, let span):
+                RunwayFigure(marks: m, span: span, slot: slot, t: t)
             }
         }
         .animation(reduceMotion ? nil : DS.Motion.standard.delay(0.08), value: grown)
@@ -632,6 +634,61 @@ private struct ScatterFigure: View {
                 }
             }
         }
+    }
+}
+
+/// A time rail with deadlines on it (prd §338) — Stripe's disputes and dunning,
+/// Cloudflare's certificates.
+///
+/// The one figure that GAINS from a small cell: an axis and some dots need no
+/// labels, so at 118pt it says "three things due, one of them nearly here"
+/// without a word. `now` is pinned at the left with a tick, and the dots ramp
+/// toward the warn colour as they approach it — urgency is state, and state is
+/// allowed colour. Overdue pins to the very edge rather than running off it.
+private struct RunwayFigure: View {
+    let marks: [AgentPanel.RunwayMark]
+    let span: String
+    let slot: AgentPanel.Slot
+    let t: Double
+
+    var body: some View {
+        GeometryReader { geo in
+            let w = geo.size.width, h = geo.size.height
+            let axisY = h / 2
+            ZStack(alignment: .topLeading) {
+                Capsule()
+                    .fill(DS.fillLine)
+                    .frame(width: w * t, height: 2)
+                    .position(x: w * t / 2, y: axisY)
+                // "Now" — the tick every mark is measured from.
+                Capsule()
+                    .fill(DS.textTertiary)
+                    .frame(width: 2, height: 10)
+                    .position(x: 1, y: axisY)
+                ForEach(Array(marks.enumerated()), id: \.offset) { i, mark in
+                    Circle()
+                        .fill(colour(mark))
+                        .frame(width: mark.overdue ? 9 : 7, height: mark.overdue ? 9 : 7)
+                        .position(x: max(4, w * mark.position), y: axisY)
+                        .opacity(t)
+                        .animation(DS.Motion.standard.delay(0.1 + Double(min(i, 6)) * 0.05),
+                                   value: t)
+                }
+                if slot != .small {
+                    Text(span)
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textTertiary)
+                        .position(x: w - 22, y: axisY + 20)
+                        .opacity(t)
+                }
+            }
+        }
+    }
+
+    private func colour(_ mark: AgentPanel.RunwayMark) -> Color {
+        if mark.overdue { return Color(hex: "#ff453a") }
+        if mark.urgent  { return Color(hex: "#ffd60a") }
+        return DS.tint
     }
 }
 

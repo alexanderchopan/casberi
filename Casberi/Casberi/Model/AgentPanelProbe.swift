@@ -57,6 +57,13 @@ enum AgentPanelProbe {
         case .dial(let m):    return "dial(\(Set(m.map { Int($0.hour) }).count) hours of \(m.count))"
         case .river(let b):   return "river(\(b.count) bands x \(b.first?.weeks.count ?? 0)w)"
         case .scatter(let d, let c): return "scatter(\(d.count) dots, \(c.count) clusters)"
+        // Overdue and urgent counted apart: a rail of five distant deadlines
+        // and one with an overdue mark render very differently and would read
+        // as the same total.
+        case .runway(let m, let span):
+            let over = m.filter(\.overdue).count
+            let soon = m.filter(\.urgent).count
+            return "runway(\(m.count) over \(span), \(over) overdue, \(soon) urgent)"
         }
     }
 }

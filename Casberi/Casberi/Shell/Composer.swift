@@ -986,6 +986,46 @@ struct Composer: View {
                                        affinity: ChipMemory.weight(for: "Apple Wallet"),
                                        reading: nil, rising: nil))
         }
+        // Stripe and Cloudflare (prd §338, user: "they have cool visuals. and
+        // since they are not too complicated they could be smaller in size").
+        // §337 left both out because their FULL cards are mostly rows and the
+        // rail's own doc calls it a restatement of them — but that reasoning
+        // was about the whole card. The RAIL ALONE is the half that draws, and
+        // it is the one figure here that gains from being small: one axis,
+        // dots, no labels to clip.
+        if let stripe = StripeRoomSource.compose(things: corpus) {
+            let days = stripe.items.map(\.days)
+            let span = StripeRoom.span(days: days)
+            let marks = days.map {
+                AgentPanel.RunwayMark(position: StripeRoom.position(days: $0, span: span),
+                                      overdue: $0 < 0, urgent: $0 >= 0 && $0 <= 3)
+            }
+            out.append(AgentPanel.Card(source: "Stripe", key: "stripe.runway",
+                                       title: String(localized: "What's due"),
+                                       caption: "",
+                                       figure: .runway(marks: marks,
+                                                       span: StripeRoom.spanLabel(span: span)),
+                                       affinity: ChipMemory.weight(for: "Stripe"),
+                                       reading: nil, rising: nil))
+        }
+        if let cf = CloudflareRunwaySource.compose(things: corpus) {
+            // Cloudflare's items carry an OPTIONAL day count — a certificate
+            // with no published expiry has no place on an axis, so it is
+            // dropped rather than pinned somewhere invented.
+            let days = cf.items.compactMap(\.days)
+            let span = StripeRoom.span(days: days)
+            let marks = days.map {
+                AgentPanel.RunwayMark(position: StripeRoom.position(days: $0, span: span),
+                                      overdue: $0 < 0, urgent: $0 >= 0 && $0 <= 3)
+            }
+            out.append(AgentPanel.Card(source: "Cloudflare", key: "cloudflare.runway",
+                                       title: String(localized: "Expiring"),
+                                       caption: "",
+                                       figure: .runway(marks: marks,
+                                                       span: StripeRoom.spanLabel(span: span)),
+                                       affinity: ChipMemory.weight(for: "Cloudflare"),
+                                       reading: nil, rising: nil))
+        }
         return out
     }
 
