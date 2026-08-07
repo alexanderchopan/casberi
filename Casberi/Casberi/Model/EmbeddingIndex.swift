@@ -38,20 +38,66 @@ enum EmbeddingIndex {
 
     // MARK: - Models, per language
 
+    /// ONE lock over every `NLEmbedding` touch in this app — loading a model
+    /// AND running inference on one.
+    ///
+    /// **`NLEmbedding` is not thread-safe, and nothing in its documentation
+    /// says so — you find out from a crash report.** Build 280 died on open
+    /// (2026-08-07, `EXC_BAD_ACCESS` at 0x2000) with two threads inside
+    /// `-[NLEmbedding vectorForString:]` at the same instant: the main actor
+    /// embedding an ask through `Retriever.rank` → `queryVector`, and the
+    /// backfill's detached utility task embedding a batch through
+    /// `packedVectors`. Both bottomed out in
+    /// `CoreNLP::SentenceEmbedding::fillStringVector` → `BNNSFilterApplyBatch`
+    /// reading a torn pointer. Nothing was corrupt on disk and no vector was
+    /// wrong; the two calls simply shared the model's scratch state.
+    ///
+    /// **It is not a rare interleaving — it is what a cold open does.**
+    /// `RootShell.runForegroundWork` fires `backfill` and the kept-ask digest
+    /// recompute (which re-runs `Retriever.rank` for every kept `search:` ask)
+    /// a few lines apart, so on any open where the sweep has something to
+    /// embed, both halves are running at once by construction.
+    ///
+    /// ONE lock rather than one per language: two languages are two
+    /// `NLEmbedding` objects, but they run through the same CoreNLP/BNNS
+    /// machinery, and per-language locks would leave exactly the multilingual
+    /// case (§282's whole point — a Spanish sweep beside an English ask)
+    /// unprotected while looking safe. The word embedding `SemanticExpand`
+    /// holds is covered too, for the same reason — see `exclusively`.
+    ///
+    /// RECURSIVE because `vector(for:language:)` takes it and then calls
+    /// `model(for:)`, which takes it again.
+    private static let nlLock = NSRecursiveLock()
+
+    /// Exclusive access to the NaturalLanguage models — see `nlLock`. EVERY
+    /// `NLEmbedding` call in the app goes through here, including
+    /// `SemanticExpand`'s word-embedding neighbours, which lives in another
+    /// file and shares no model object with this one.
+    ///
+    /// The scope is deliberately ONE call, never the sweep's whole 32-text
+    /// batch: a query on the main thread then waits behind at most a single
+    /// embed (a few ms) and interleaves with the rest, instead of queueing
+    /// behind all 32. The one longer wait is a model LOAD, which is not new —
+    /// that was already serialized before this lock covered inference.
+    static func exclusively<T>(_ body: () -> T) -> T {
+        nlLock.lock()
+        defer { nlLock.unlock() }
+        return body()
+    }
+
     /// Every language Apple ships a sentence embedding for is discovered by
     /// ASKING, not by carrying a list: `sentenceEmbedding(for:)` returns nil
     /// where there's no model, and the set differs by OS version. Cached
     /// because loading one is not free and retrieval asks per query.
-    private static let modelLock = NSLock()
     nonisolated(unsafe) private static var models: [NLLanguage: NLEmbedding?] = [:]
 
     private static func model(for language: NLLanguage) -> NLEmbedding? {
-        modelLock.lock()
-        defer { modelLock.unlock() }
-        if let cached = models[language] { return cached }
-        let loaded = NLEmbedding.sentenceEmbedding(for: language)
-        models[language] = loaded
-        return loaded
+        exclusively { () -> NLEmbedding? in
+            if let cached = models[language] { return cached }
+            let loaded = NLEmbedding.sentenceEmbedding(for: language)
+            models[language] = loaded
+            return loaded
+        }
     }
 
     /// English stays the default and the fallback — it's the only language the
@@ -185,11 +231,18 @@ enum EmbeddingIndex {
 
     /// An embedding vector for arbitrary text, as Float, in a NAMED language.
     /// nil when that language has no model or the text is empty/unembeddable.
+    ///
+    /// The inference runs under `exclusively` — the model is shared across
+    /// every caller and every thread, and running two of these at once is what
+    /// crashed build 280 on open (see `nlLock`).
     static func vector(for text: String, language: NLLanguage) -> [Float]? {
         let trimmed = String(text.trimmingCharacters(in: .whitespacesAndNewlines).prefix(500))
-        guard let model = model(for: language), !trimmed.isEmpty,
-              let v = model.vector(for: trimmed) else { return nil }
-        return v.map(Float.init)
+        guard !trimmed.isEmpty else { return nil }
+        let raw = exclusively { () -> [Double]? in
+            guard let model = model(for: language) else { return nil }
+            return model.vector(for: trimmed)
+        }
+        return raw?.map(Float.init)
     }
 
     /// A query vector plus the language it was made in — the pair every caller

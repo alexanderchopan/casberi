@@ -477,7 +477,16 @@ enum SemanticExpand {
         let limit = maxDistance
         var out: Set<String> = []
         for term in terms {
-            for (word, distance) in embedding.neighbors(for: term, maximumCount: 8)
+            // Under `EmbeddingIndex.exclusively` for the reason recorded on
+            // `EmbeddingIndex.nlLock`: `NLEmbedding` is not thread-safe, and
+            // build 280 crashed on open with two threads inside one. This is a
+            // DIFFERENT model object (words, not sentences) reached from a
+            // nonisolated `Retriever.rank`, but it runs through the same
+            // CoreNLP/BNNS machinery, so it takes the same lock rather than
+            // resting on "nothing calls rank off the main actor today".
+            for (word, distance) in EmbeddingIndex.exclusively({
+                embedding.neighbors(for: term, maximumCount: 8)
+            })
             where distance < limit {
                 out.insert(word.lowercased())
             }

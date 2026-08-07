@@ -42,7 +42,8 @@ RELATED="Casberi/Casberi/Model/RelatedThings.swift"
 FACTS="Casberi/Casberi/Model/ScreenshotFacts.swift"
 NAMING="Casberi/Casberi/Model/ScreenshotNaming.swift"
 RETRIEVER="Casberi/Casberi/Model/Retriever.swift"
-for f in "$EMBED" "$RELATED" "$FACTS" "$NAMING" "$RETRIEVER"; do
+ASKCMD="Casberi/Casberi/Model/AskCommands.swift"
+for f in "$EMBED" "$RELATED" "$FACTS" "$NAMING" "$RETRIEVER" "$ASKCMD"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -60,6 +61,32 @@ grep -q 'matched.wholeMatch(of: bareClock) == nil' "$FACTS" \
   || { echo "✗ the date scan no longer rejects a bare clock on the MATCHED TEXT"; exit 1; }
 grep -q 'thing.embedding = nil' "Casberi/Casberi/Model/ThreadDigest.swift" \
   || { echo "✗ a digested thread no longer clears its stale vector"; exit 1; }
+
+# THE THREAD-SAFETY RAIL (2026-08-07, build 280's crash-on-open). `NLEmbedding`
+# is not thread-safe and does not say so anywhere; the app embeds from the main
+# actor (an ask, via `Retriever.rank`) and from a detached utility task (the
+# backfill sweep), both started by the SAME foreground pass — so a cold open
+# with anything to embed runs two inferences at once by construction, and the
+# second one segfaults inside BNNS. Every `NLEmbedding` call must sit inside
+# `EmbeddingIndex.exclusively`.
+#
+# Guarded here rather than remembered because the failure is a hard crash on
+# open with a stack that names only Apple's frameworks — nothing in the source
+# looks wrong, and a "fix" that unwraps either call site restores it silently.
+# CEILING, stated plainly: these are line greps, so they prove the two SHIPPED
+# call sites are still spelled inside the lock. They cannot prove a THIRD
+# `NLEmbedding` added later takes it — the neighbours count below is the only
+# part that can, and only for `AskCommands.swift`.
+grep -q 'let raw = exclusively { () -> \[Double\]? in' "$EMBED" \
+  || { echo "✗ EmbeddingIndex.vector no longer embeds inside the NL lock — two threads in NLEmbedding is what crashed build 280 on open"; exit 1; }
+grep -q '^ *return model.vector(for: trimmed)$' "$EMBED" \
+  || { echo "✗ the sentence-embedding inference moved out of EmbeddingIndex.vector's locked block"; exit 1; }
+awk '/EmbeddingIndex\.exclusively\(\{/ { getline
+       if ($0 ~ /embedding\.neighbors\(for: term, maximumCount: 8\)/) found = 1 }
+     END { exit found ? 0 : 1 }' "$ASKCMD" \
+  || { echo "✗ SemanticExpand's word-embedding neighbours no longer run under the NL lock"; exit 1; }
+[[ $(grep -c '\.neighbors(' "$ASKCMD") -eq 1 ]] \
+  || { echo "✗ a second word-embedding call site appeared in AskCommands.swift — it needs EmbeddingIndex.exclusively too"; exit 1; }
 
 TMP=$(mktemp -d /tmp/ondevice-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT
