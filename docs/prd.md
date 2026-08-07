@@ -18329,3 +18329,11 @@ stopped listing the three shapes twenty words above a checklist listing four
 (24 words, down from 37), and the checklist became the READ BOUNDARY rather than
 a second copy of the arrival list. The product page went 60 → 40 words, against
 a catalog median of 43.
+
+## §325 — The mail servers nobody had disclosed (2026-08-06)
+
+`NetworkReach` is the screen that makes "no server, nothing routes through us" checkable, and `scripts/network-reach-audit.sh` is what makes it complete by construction. But the audit scans `https://` literals, and `IMAPClient` speaks IMAP itself over `NWConnection` on port 993 — so a bare `"imap.gmail.com"` handed to a socket is invisible to it. **Apple's and Google's mail servers had been reached since 2026-07-08 with the registry naming neither**, through every green audit since. The §289 class in a different protocol: not a host nobody added, a host the check cannot see.
+
+Both are declared now, one entry per inbox rather than a merged "Mail" row — the screen splits on whether the owning bridge is CONNECTED, and a merged row would tell someone who connected only Gmail that Apple's server was being reached too.
+
+The audit grew **check C** in the same commit (any `"imap.*"` literal must be in the registry), self-tested both ways, plus an assertion that the scan finds a host at all — **a membership test over an empty list passes for the wrong reason, which is exactly how this survived.**
