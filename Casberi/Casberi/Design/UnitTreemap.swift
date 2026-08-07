@@ -37,7 +37,21 @@ struct UnitTreemap<Cell: View>: View {
         case 3:    return [(0, 0, 2, 2), (2, 0, 2, 2), (0, 2, 4, 1)]
         case 4:    return [(0, 0, 2, 2), (2, 0, 2, 2), (0, 2, 2, 1), (2, 2, 2, 1)]
         case 5:    return [(0, 0, 2, 2), (2, 0, 2, 2), (0, 2, 2, 1), (2, 2, 1, 1), (3, 2, 1, 1)]
-        default:   return [(0, 0, 2, 2), (2, 0, 2, 1), (2, 1, 1, 1), (3, 1, 1, 2), (0, 2, 2, 1), (2, 2, 1, 1)]
+        // AREA MUST NEVER RISE WITH RANK (fixed 2026-08-06, user-reported:
+        // "the treemap is a bit off"). The old six-cell table was
+        // `(2,1,1,1), (3,1,1,2)` — rank 3 got ONE unit while ranks 4 and 5 got
+        // TWO, so the third-biggest term drew visibly SMALLER than the fourth
+        // and fifth. Reported against the X room's map, where "t.co · 97" sat
+        // in a small tile beside "app · 63" in a tall one, which reads as the
+        // map being wrong about its own numbers — and it was.
+        //
+        // Rank order is this map's ONLY claim (§300: it is deliberately not
+        // area-proportional, because true squarified cells arrive as slivers
+        // too thin to label). A layout that inverts two ranks breaks the one
+        // thing it promises. Areas now run 4·2·2·2·1·1, non-increasing, and
+        // still tile all twelve units with no holes — guarded in
+        // `scripts/x402-selftest.sh`, which checks every cell count.
+        default:   return [(0, 0, 2, 2), (2, 0, 2, 1), (2, 1, 2, 1), (0, 2, 2, 1), (2, 2, 1, 1), (3, 2, 1, 1)]
         }
     }
 

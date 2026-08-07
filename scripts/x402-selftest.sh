@@ -187,6 +187,57 @@ grep -q 'NetworkLedger.shared.record(request, as: X402Ingest.source)' "$faces_co
 # files because the model is Foundation-only and cannot see the view. Set them
 # equal and the tail is silently clipped — a dropped seller looking exactly like
 # a marketplace that had five (§300's own failure).
+# THE TREEMAP'S ONE CLAIM. `UnitTreemap` is rank-ordered, not
+# area-proportional (§300), so the only thing a reader may infer from a tile's
+# size is its RANK. A table where area rises with rank breaks exactly that, and
+# it shipped: the six-cell layout gave rank 3 one unit and ranks 4–5 two each,
+# so the third-biggest term drew smaller than the fifth. User-reported against
+# the X room's map, 2026-08-06. Checked here for EVERY cell count, and the
+# tiling is verified to fill all twelve units with no overlap — a layout that
+# ranks correctly but leaves a hole is just a different bug.
+python3 - "$TREEMAP" <<'PY' || exit 1
+import re, sys
+src = open(sys.argv[1]).read()
+body = src[src.index("static func frames"):]
+body = body[:body.index("static var maxCells")]
+bad = 0
+for m in re.finditer(r'case ([0-9, ]+):\s*return \[(.*?)\]\n', body, re.S):
+    labels = [int(x) for x in m.group(1).replace(" ", "").split(",") if x]
+    frames = [tuple(int(v) for v in f.split(","))
+              for f in re.findall(r'\(([^)]*)\)', m.group(2))]
+    areas = [w * h for _, _, w, h in frames]
+    n = max(labels)
+    if any(areas[i] < areas[i + 1] for i in range(len(areas) - 1)):
+        print(f"  ✗ frames({n}): area RISES with rank {areas} — a smaller value would draw bigger")
+        bad = 1
+    grid = {}
+    for (x, y, w, h) in frames:
+        for dx in range(w):
+            for dy in range(h):
+                cell = (x + dx, y + dy)
+                if cell in grid:
+                    print(f"  ✗ frames({n}): cells overlap at {cell}"); bad = 1
+                grid[cell] = 1
+    if len(grid) != 12:
+        print(f"  ✗ frames({n}): tiles {len(grid)} of 12 units — the board has a hole"); bad = 1
+# `default:` is the six-cell table and carries no `case` label.
+m = re.search(r'default:\s*return \[(.*?)\]\n', body, re.S)
+frames = [tuple(int(v) for v in f.split(",")) for f in re.findall(r'\(([^)]*)\)', m.group(1))]
+areas = [w * h for _, _, w, h in frames]
+if any(areas[i] < areas[i + 1] for i in range(len(areas) - 1)):
+    print(f"  ✗ frames(6): area RISES with rank {areas} — rank 3 would draw smaller than rank 5"); bad = 1
+grid = {}
+for (x, y, w, h) in frames:
+    for dx in range(w):
+        for dy in range(h):
+            if (x + dx, y + dy) in grid:
+                print(f"  ✗ frames(6): cells overlap at {(x+dx, y+dy)}"); bad = 1
+            grid[(x + dx, y + dy)] = 1
+if len(grid) != 12:
+    print(f"  ✗ frames(6): tiles {len(grid)} of 12 units — the board has a hole"); bad = 1
+sys.exit(bad)
+PY
+
 drawn=$(grep -oE 'static let drawnCap = [0-9]+' "$ROOM" | grep -oE '[0-9]+')
 maxc=$(grep -oE 'static var maxCells: Int \{ [0-9]+ \}' "$TREEMAP" | grep -oE '[0-9]+')
 [[ -n "$drawn" && -n "$maxc" ]] \
