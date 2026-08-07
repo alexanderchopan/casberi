@@ -52,11 +52,20 @@ enum EmbeddingIndex {
     /// reading a torn pointer. Nothing was corrupt on disk and no vector was
     /// wrong; the two calls simply shared the model's scratch state.
     ///
-    /// **It is not a rare interleaving — it is what a cold open does.**
+    /// **It is not a rare interleaving — it is what a foreground pass does.**
     /// `RootShell.runForegroundWork` fires `backfill` and the kept-ask digest
     /// recompute (which re-runs `Retriever.rank` for every kept `search:` ask)
-    /// a few lines apart, so on any open where the sweep has something to
+    /// a few lines apart, so on any pass where the sweep has something to
     /// embed, both halves are running at once by construction.
+    ///
+    /// And the window is NOT the launch. Build 281 — the same crash, on a
+    /// different binary, with the two threads' roles swapped — died **131
+    /// seconds** after launch, which corrects the first read of this bug
+    /// ("crashes on open"). Two things widen it: `runForegroundWork` runs on
+    /// EVERY activation, not just the first, and `indexPending` loops until
+    /// the store drains, so on a large or freshly-synced corpus the detached
+    /// sweep is embedding for minutes. Any ask landing anywhere in that
+    /// stretch races it.
     ///
     /// ONE lock rather than one per language: two languages are two
     /// `NLEmbedding` objects, but they run through the same CoreNLP/BNNS
