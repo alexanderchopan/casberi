@@ -39,10 +39,14 @@ enum SocialInbound {
     /// on a foreground refresh, beside the ~4 the bridge already makes.
     static let ownPostPage = 6
 
-    /// How far back a post of yours stays eligible for the inbound reads. A
-    /// month-old post gains a like a week; re-asking about it forever is spend
-    /// with no news in it, and the recent window is where every answer that
-    /// matters lives.
+    /// How far back a post of yours is PREFERRED for the inbound reads. A
+    /// month-old post gains a like a week; re-asking about it before a fresh
+    /// one is spend with no news in it, and the recent window is where every
+    /// answer that matters lives.
+    ///
+    /// Preferred, not required — see `ownRecentPosts`. As a hard cutoff this
+    /// silently switched the whole inbound half off for anyone who posts less
+    /// than weekly.
     static let ownPostWindow: TimeInterval = 7 * 86_400
 
     /// Most new followers landed in one pass. First sight seeds silently
@@ -68,6 +72,20 @@ enum SocialInbound {
     /// so the inbound reads begin on the second pass. `-inboundProbe` reports
     /// this count for exactly that reason.
     ///
+    /// **The window is a PREFERENCE, not a gate (2026-08-07, prd §331).** It
+    /// used to be a hard filter, and that made marking an account `mine` a
+    /// silent no-op for anyone who doesn't post weekly: every cast older than
+    /// seven days was excluded, so a monthly poster's inbound half read
+    /// NOTHING, forever, with no error and nothing on any screen to say why.
+    /// Reported as exactly that — "i marked a farcaster profile as mine and
+    /// expected to see likes given to me, i even tapped that".
+    ///
+    /// So when the window holds nothing, this falls back to your newest posts
+    /// regardless of age. The cost is unchanged — `ownPostPage` bounds the
+    /// result either way — which is what makes this a floor rather than a
+    /// widening: a person with fresh posts still gets exactly the old
+    /// behaviour, and a person without one stops being told nothing.
+    ///
     /// `.isLive` at the boundary (corollary 4 of the SwiftData liveness rule):
     /// this hands an array of models onward to readers that will read stored
     /// properties off them, so the guarantee is made HERE, where it's local
@@ -75,12 +93,10 @@ enum SocialInbound {
     @MainActor
     static func ownRecentPosts(_ landed: [String: Thing], handle: String,
                                refPrefix: String) -> [Thing] {
-        let cutoff = Date.now.addingTimeInterval(-ownPostWindow)
-        return landed.values
+        let mine = landed.values
             .filter { thing in
                 thing.isLive
                     && thing.authorHandle == handle
-                    && thing.capturedAt > cutoff
                     && (thing.sourceRef?.hasPrefix(refPrefix) ?? false)
                     // A post you LANDED because someone else amplified or
                     // mentioned it isn't yours to be replied to — the author
@@ -90,8 +106,9 @@ enum SocialInbound {
                     && thing.socialContext == nil
             }
             .sorted { $0.capturedAt > $1.capturedAt }
-            .prefix(ownPostPage)
-            .map { $0 }
+        let cutoff = Date.now.addingTimeInterval(-ownPostWindow)
+        let fresh = mine.filter { $0.capturedAt > cutoff }
+        return Array((fresh.isEmpty ? mine : fresh).prefix(ownPostPage))
     }
 
     /// The followers already seen for one account — an ordered, capped ledger

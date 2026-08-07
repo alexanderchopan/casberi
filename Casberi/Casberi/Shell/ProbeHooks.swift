@@ -1134,8 +1134,19 @@ enum ProbeHooks {
                             ? FarcasterStore.followerLedgerKey(handle)
                             : BlueskyStore.followerLedgerKey(handle)
                         let ledger = SocialInbound.FollowerLedger(key: key)
-                        NSLog("inbound %@ @%@: %d own posts eligible, %d followers recorded%@",
-                              source, handle, own.count, ledger.seen.count,
+                        // Whether the eligible posts came from the preferred
+                        // window or the §331 fallback. Both are correct; the
+                        // difference is worth printing because an account whose
+                        // newest post is months old used to be read as "no
+                        // eligible posts" and now is read at all — so a run
+                        // saying `outside the window` is the fallback doing its
+                        // job, not a stale corpus.
+                        let cutoff = Date.now.addingTimeInterval(-SocialInbound.ownPostWindow)
+                        let stale = own.allSatisfy { $0.capturedAt <= cutoff }
+                        NSLog("inbound %@ @%@: %d own posts eligible%@, %d followers recorded%@",
+                              source, handle, own.count,
+                              own.isEmpty ? "" : (stale ? " (all outside the 7d window — newest-first fallback)" : ""),
+                              ledger.seen.count,
                               ledger.isFirstSight ? " (FIRST SIGHT — next pass can land)" : "")
                     }
                     let live = landed.values.filter(\.isLive)

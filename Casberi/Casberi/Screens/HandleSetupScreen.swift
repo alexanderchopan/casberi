@@ -341,10 +341,18 @@ enum HandleBridge: String {
     }
 
     /// The line under the watched-accounts list, explaining its toggles.
+    ///
+    /// Rewritten 2026-08-07 (prd §331). It used to end "and likes bring your
+    /// posts back", which described the ONE thing a like did — resurface the
+    /// post — and that only fired when the liker was already an account you
+    /// watch, so for almost every like it promised something that never
+    /// happened. It never said you would see WHO, because until §330 you
+    /// couldn't. Now it names the three reads plainly, in the order they
+    /// matter.
     var watchFooter: String? {
         switch self {
-        case .farcaster: "Mine — this account is yours: replies, new followers, and likes bring your posts back."
-        case .bluesky:   "Mine — this account is yours: replies, new followers, and likes bring your posts back."
+        case .farcaster, .bluesky:
+            "Mine — this account is yours: who liked your posts, who replied, and who started following."
         case .nostr:     nil
         default:         nil
         }
