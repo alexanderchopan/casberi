@@ -65,6 +65,23 @@ enum BridgeRefresh {
     /// gesture's own contract of bypassing every other TTL/cache in the
     /// refresh path — only the automatic scenePhase-driven sweep is gated.
     static func refreshAllConnected(context: ModelContext, store: BridgeStore, force: Bool = false) {
+        // THE DEMO REACHES NOTHING (2026-08-07). Not a nicety and not merely
+        // privacy — the demo marks 60-odd seats connected and watches a wallet
+        // address that does not exist, and the keyless wallet paths ride the
+        // watched list rather than any credential. So an ungated sweep would
+        // fire real RPC reads for a made-up address on somebody's first run,
+        // and then write what came back: `WalletIngest` would record a fresh
+        // value sample of ZERO over the seeded curve, which renders as a
+        // balance that fell off a cliff — the "flat curve reads as went to
+        // zero" failure `agent-panel-selftest` exists to prevent, arriving by
+        // a route that self-test cannot see.
+        //
+        // `force` does NOT override this, unlike every other gate here: a
+        // pull-to-refresh is a request for fresher data, and in the demo there
+        // is no fresher data to get — only real requests and a chance to
+        // corrupt the seed. Nothing about the demo is time-sensitive, so the
+        // gesture costs nothing by doing nothing.
+        if DemoMode.isActive { return }
         if !force, let last = lastSweep, Date.now.timeIntervalSince(last) < minSweepInterval { return }
         lastSweep = .now
         // This pass's pace, fixed here rather than read per slot — see

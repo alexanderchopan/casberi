@@ -178,6 +178,19 @@ final class ShellChrome {
     /// restored 2026-07-14 — the tab-drop rewire had orphaned it) and the
     /// berry rain (BerryRain, user ask same day).
     var refreshPulse = 0
+
+    /// True for the half-second between tapping Exit in the demo and the rows
+    /// actually going. The shell fades its content on this, so leaving reads
+    /// as the app LETTING GO rather than as a hard cut to somewhere else.
+    ///
+    /// It is a single opacity on one container, deliberately — the obvious
+    /// version of this effect animates the rows out individually, and that
+    /// means deleting ~330 `Thing`s while a live `@Query` feed re-renders
+    /// between each batch, which is precisely the crash class CLAUDE.md's six
+    /// liveness corollaries document. The fade is indistinguishable to the
+    /// eye and touches no model at all: the delete still happens once, in one
+    /// transaction, after the content is already invisible.
+    var demoLeaving = false
     /// LIVE overscroll (points past the top) while a pull is in progress —
     /// written by FeedScreen's own scroll observer, read by the avatar door,
     /// which WINDS UP proportionally before the release spin fires

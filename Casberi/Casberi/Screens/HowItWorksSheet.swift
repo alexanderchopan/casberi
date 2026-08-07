@@ -36,11 +36,22 @@ struct HowItWorksSheet: View {
     /// run", which is what gates the rain, the CTA, and the fork below.
     ///
     /// The CTA used to be "Browse the catalog" and land in a wall of ~40 apps
-    /// (prd §217, 2026-07-25). It is "Try it" now, and it lands on
-    /// `StartHereScreen` — the fork. The word matters as much as the
-    /// destination: "Continue" says more setup is ahead, "Try it" says the next
-    /// tap does something. The catalog is still one tap away from there, so
-    /// nothing is taken from someone who came to browse.
+    /// (prd §217, 2026-07-25), then "Try it" landing on the fork. It is
+    /// **"Try the demo"** now and it lands in a furnished app.
+    ///
+    /// The reasoning that moved it (2026-08-07): every previous CTA handed
+    /// someone a DECISION as their first act — which of forty apps, or which
+    /// of three sources — and each of those decisions costs something real (a
+    /// permission, an address, a handle) at the exact moment the person still
+    /// does not know what the app is. The demo costs nothing and answers that
+    /// question directly, so it is the only honest first tap. The fork is not
+    /// deleted, it MOVED: leaving the demo lands on it (`HomeRoute.startHere`),
+    /// where "which of your own sources?" is a question the person now has.
+    ///
+    /// The secondary link below the CTA is the other half of that ruling —
+    /// someone who already knows they want this must not be made to sit
+    /// through a demo first. Primary/secondary rather than two equal buttons,
+    /// because the fork's own "pick-one, not do-any" grammar applies here too.
     ///
     /// A non-nil node is where to land after the cover lifts; nil means the
     /// feed, which is right whenever the tap already produced something to see.
@@ -48,6 +59,9 @@ struct HowItWorksSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.modelContext) private var modelContext
+    @Environment(BridgeStore.self) private var store
+    @State private var enteringDemo = false
     @State private var arrived = false
     /// False = the rain waits above the screen · true = it has fallen through.
     @State private var rainFell = false
@@ -200,11 +214,12 @@ struct HowItWorksSheet: View {
             }
             .safeAreaInset(edge: .bottom) {
                 if onStart != nil {
+                    VStack(spacing: DS.Space.s1) {
                     Button {
                         DSHaptic.success()
-                        showStart = true
+                        enterDemo()
                     } label: {
-                        Text("Try it")
+                        Text("Try the demo")
                             .dsText(.body17)
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
@@ -222,6 +237,25 @@ struct HowItWorksSheet: View {
                             .contentShape(Capsule())
                     }
                     .buttonStyle(.plain)
+                    .disabled(enteringDemo)
+
+                    // The door for someone who already knows. Text, not a
+                    // second button: two equal buttons is a decision, and the
+                    // whole point of the change above is that the first tap
+                    // shouldn't be one.
+                    Button {
+                        DSHaptic.tap()
+                        showStart = true
+                    } label: {
+                        Text("Start with my own things")
+                            .dsText(.callout15)
+                            .foregroundStyle(DS.textSecondary)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    }
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.bottom, DS.Space.s2)
                 }
@@ -244,18 +278,34 @@ struct HowItWorksSheet: View {
         }
         #if DEBUG
         // `-howItWorksCTA <s>` fires the onboarding-tail CTA after a delay.
-        // It now pushes the FORK rather than landing in the catalog (§217) —
-        // pair with `-startPick <arm>` to walk a whole first run headlessly.
+        // It now enters the DEMO rather than pushing the fork — pass
+        // `-startPick <arm>` with `-demoCTA NO` to walk the own-things route.
         .onAppear {
             let delay = UserDefaults.standard.double(forKey: "howItWorksCTA")
             guard delay > 0, onStart != nil else { return }
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(delay))
-                NSLog("howItWorksCTA: fired")
-                showStart = true
+                let ownThings = UserDefaults.standard.object(forKey: "demoCTA") != nil
+                    && !UserDefaults.standard.bool(forKey: "demoCTA")
+                NSLog("howItWorksCTA: fired (%@)", ownThings ? "fork" : "demo")
+                if ownThings { showStart = true } else { enterDemo() }
             }
         }
         #endif
+    }
+
+    /// Claim the demo, then lift the cover IMMEDIATELY.
+    ///
+    /// The rows are deliberately not landed here — `DemoMode.begin` only marks
+    /// the mode and the seats, and `RootShell` pours the rows once this cover
+    /// is out of the way. Seeding first would hand someone a finished feed,
+    /// which reads as a screenshot; pouring after lets them watch it fill,
+    /// which is the whole argument for the demo existing.
+    private func enterDemo() {
+        guard !enteringDemo, let onStart else { return }
+        enteringDemo = true
+        DemoMode.begin(store: store)
+        onStart(nil)
     }
 
     // MARK: - One step, writ large

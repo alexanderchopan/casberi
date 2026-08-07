@@ -61,6 +61,10 @@ struct StartHereScreen: View {
     @State private var pickingFolder = false
     @State private var connectingFolder = false
     @State private var showFollow = false
+    /// The demo card acts in place like the files card — seeding ~330 rows
+    /// and their bridge state is fast but not instant, and a card that looked
+    /// inert while working would read as a dead control.
+    @State private var enteringDemo = false
 
     var body: some View {
         ScrollView {
@@ -81,18 +85,20 @@ struct StartHereScreen: View {
                 .padding(.top, DS.Space.s2)
                 .startArrive(arrived, delay: 0.05)
 
-                card(glyph: "folder.badge.plus", hue: .blue,
+                card(figure: .treemap, hue: .blue,
                      title: "Show me my files",
                      line: "Pick any folder — Downloads, iCloud Drive, anywhere.",
+                     cost: "Opens the Files picker",
                      busy: connectingFolder) {
                     DSHaptic.tap()
                     pickingFolder = true
                 }
                 .startArrive(arrived, delay: 0.15)
 
-                card(glyph: "wallet.bifold.fill", hue: .green,
+                card(figure: .curve, hue: .green,
                      title: "Watch a wallet",
-                     line: "Enter an ENS, paste an address, or connect your wallet app.") {
+                     line: "Enter an ENS, paste an address, or connect your wallet app.",
+                     cost: "No account needed") {
                     // The wallet manager already IS all three doors (§202's
                     // roster and §188's "Connect a wallet app" button), so this
                     // hands off rather than growing a fourth address field.
@@ -101,13 +107,32 @@ struct StartHereScreen: View {
                 }
                 .startArrive(arrived, delay: 0.25)
 
-                card(glyph: "at", hue: .purple,
+                card(figure: .faces, hue: .purple,
                      title: "Follow someone I read",
-                     line: "A Bluesky or Farcaster handle, or a feed.") {
+                     line: "A Bluesky or Farcaster handle, or a feed.",
+                     cost: "No sign-in") {
                     DSHaptic.tap()
                     showFollow = true
                 }
                 .startArrive(arrived, delay: 0.35)
+
+                // The fourth answer — and it is HIDDEN once the demo has been
+                // seen, which is the common case now that it is the greeting's
+                // own CTA. This screen's main job since 2026-08-07 is to catch
+                // someone LEAVING the demo, and offering to re-enter the thing
+                // they just chose to leave is a door back into a room they
+                // walked out of.
+                if !DemoMode.hasSeen {
+                    card(figure: .sparkle, hue: .orange,
+                         title: "Just show me what it looks like",
+                         line: "Sample data from every source. Leave it any time.",
+                         cost: "Nothing to connect",
+                         busy: enteringDemo) {
+                        DSHaptic.tap()
+                        enterDemo()
+                    }
+                    .startArrive(arrived, delay: 0.45)
+                }
             }
             .padding(.horizontal, DS.Space.s4)
             .padding(.bottom, DS.Space.s8)
@@ -132,13 +157,18 @@ struct StartHereScreen: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            // Not "Skip": this lands where the old CTA went, so someone who
-            // came to browse loses nothing.
+            // Named by what it DOES, not by what it isn't (2026-08-07). It read
+            // "Browse the catalog instead", which was written when this link
+            // was only an escape hatch from onboarding — it is now also the
+            // main route for someone arriving here from the demo who already
+            // knows which app they want, and "instead" framed that person's
+            // deliberate choice as a way out of the real one. The count is the
+            // argument anyway.
             Button {
                 DSHaptic.tap()
                 onStart(.apps)
             } label: {
-                Text("Browse the catalog instead")
+                Text("See all \(BridgeCatalog.offers.count) apps")
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .frame(maxWidth: .infinity)
@@ -171,6 +201,7 @@ struct StartHereScreen: View {
                 case "folder":  pickingFolder = true
                 case "wallet":  onStart(.bridge(.wallet))
                 case "follow":  showFollow = true
+                case "demo":    enterDemo()
                 default:        onStart(.apps)
                 }
             }
@@ -221,11 +252,32 @@ struct StartHereScreen: View {
         }
     }
 
+    /// Furnish the app and land in the feed.
+    ///
+    /// `onStart(nil)` rather than a node: the tap has already produced
+    /// something to look at, which is exactly the case the nil arm exists for.
+    private func enterDemo() {
+        guard !enteringDemo else { return }
+        enteringDemo = true
+        DemoMode.begin(store: store)
+        // Claim the mode, hand back, and let the pour happen where it can be
+        // SEEN — same split as the greeting's CTA, and the reason is the same:
+        // a feed revealed already full reads as a screenshot.
+        onStart(nil)
+    }
+
     /// One shape for all three, so the fork reads as one decision rather than
     /// three offers of different weight. No chevron and no toggle: each of
     /// these is a button that DOES something (see the tripwire above).
-    private func card(glyph: String, hue: Color, title: LocalizedStringKey,
-                      line: LocalizedStringKey, busy: Bool = false,
+    /// `cost` is the three-word answer to "what will this ask of me?" — a
+    /// picker, a paste, a sign-in. It exists because the cards were four
+    /// identically-weighted offers with no way to tell which one wanted a
+    /// system permission and which wanted nothing, and that ambiguity is
+    /// exactly what makes someone back out to the previous screen rather than
+    /// tap. It is a FACT about the next tap, never a reassurance.
+    private func card(figure: StartFigure, hue: Color, title: LocalizedStringKey,
+                      line: LocalizedStringKey, cost: LocalizedStringKey? = nil,
+                      busy: Bool = false,
                       action: @escaping () -> Void) -> some View {
         Button { action() } label: {
             HStack(spacing: DS.Space.s4) {
@@ -233,9 +285,7 @@ struct StartHereScreen: View {
                     if busy {
                         ProgressView().tint(hue)
                     } else {
-                        Image(systemName: glyph)
-                            .font(.system(size: 24, weight: .semibold))
-                            .foregroundStyle(hue)
+                        StartFigureMark(figure: figure, hue: hue)
                     }
                 }
                 .frame(width: 54, height: 54)
@@ -251,6 +301,13 @@ struct StartHereScreen: View {
                         .dsText(.callout15)
                         .foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
+                    if let cost {
+                        Text(cost)
+                            .dsText(.subhead13)
+                            .foregroundStyle(hue)
+                            .padding(.top, 4)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -262,6 +319,108 @@ struct StartHereScreen: View {
         }
         .buttonStyle(PressSpring())
         .disabled(busy)
+    }
+}
+
+/// What a card's tap PRODUCES, drawn as the figure that room will wear.
+enum StartFigure { case treemap, curve, faces, sparkle }
+
+/// The mark on a fork card — the figure the source becomes, not a glyph for
+/// the category it belongs to.
+///
+/// **Why it changed (2026-08-07).** Four cards wearing four tinted SF Symbols
+/// read as four equal-weight menu items: the glyph names the KIND of thing
+/// ("a folder", "a wallet") and says nothing about what you get. That was
+/// tolerable while the fork ran before anyone had seen the app. It is wasteful
+/// now that the fork runs AFTER the demo, because the person arriving here has
+/// just watched a treemap tile itself, a balance curve draw and a roster fill —
+/// so a card can answer "how do I get that?" by simply showing the figure
+/// again, at card scale, in the card's own hue.
+///
+/// **Two rules, both load-bearing.**
+///
+/// The figures are GENERIC SHAPE ONLY — no number, no label, no plausible
+/// data. A mark that carried "$12,480" or a real-looking file name would be a
+/// claim about what YOUR wallet holds or what YOUR folder contains, made on
+/// the screen where trust is being established and before a single thing has
+/// been read. That is §83 at its most expensive. A rising line says "this
+/// becomes a curve"; it must never say "your curve rises".
+///
+/// And they have NO ENTRANCE OF THEIR OWN. The cards already arrive on
+/// `startArrive`'s stagger, so an animated figure would be a second entrance
+/// on the same element — which the design-motion audit would flag, and would
+/// be right to.
+struct StartFigureMark: View {
+    let figure: StartFigure
+    let hue: Color
+
+    var body: some View {
+        switch figure {
+        case .treemap:
+            // The Files room's own hero, at card scale: one dominant cell and
+            // a smaller tail, which is what a real folder's treemap looks like.
+            HStack(spacing: 2.5) {
+                RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                    .fill(hue)
+                    .frame(width: 16, height: 27)
+                VStack(spacing: 2.5) {
+                    RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                        .fill(hue.opacity(0.62))
+                    RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                        .fill(hue.opacity(0.36))
+                }
+                .frame(width: 10, height: 27)
+            }
+        case .curve:
+            // The balance line, with its endpoint emphasised the way the real
+            // sparkline emphasises the latest sample.
+            StartCurveShape()
+                .stroke(hue, style: StrokeStyle(lineWidth: 2.5, lineCap: .round,
+                                                lineJoin: .round))
+                .overlay(alignment: .topTrailing) {
+                    Circle().fill(hue).frame(width: 6.5, height: 6.5)
+                        .offset(x: 1.5, y: -1.5)
+                }
+                .frame(width: 30, height: 24)
+        case .faces:
+            // A roster: people, overlapping, the way every follow room draws
+            // them. The ring is the CARD's fill, so the stack reads as lifted
+            // off the surface rather than as three flat discs.
+            HStack(spacing: -5) {
+                ForEach(Array([1.0, 0.72, 0.46].enumerated()), id: \.offset) { _, dose in
+                    Circle()
+                        .fill(hue.opacity(dose))
+                        .frame(width: 15, height: 15)
+                        .overlay(Circle().stroke(DS.surfaceSheet, lineWidth: 2.5))
+                }
+            }
+        case .sparkle:
+            // The demo is not one figure — it is all of them — so it keeps a
+            // glyph rather than pretending to preview a single room.
+            Image(systemName: "sparkles")
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundStyle(hue)
+        }
+    }
+}
+
+/// A rising line with one dip, normalised to its rect. Hand-placed rather than
+/// random: a figure that reshuffles between launches reads as data.
+private struct StartCurveShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let points: [CGPoint] = [
+            CGPoint(x: 0.00, y: 0.82), CGPoint(x: 0.19, y: 0.58),
+            CGPoint(x: 0.35, y: 0.68), CGPoint(x: 0.52, y: 0.30),
+            CGPoint(x: 0.68, y: 0.44), CGPoint(x: 0.85, y: 0.12),
+            CGPoint(x: 1.00, y: 0.20),
+        ]
+        var path = Path()
+        for (index, point) in points.enumerated() {
+            let scaled = CGPoint(x: rect.minX + point.x * rect.width,
+                                 y: rect.minY + point.y * rect.height)
+            if index == 0 { path.move(to: scaled) } else { path.addLine(to: scaled) }
+        }
+        return path
     }
 }
 

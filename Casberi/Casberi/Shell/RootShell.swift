@@ -40,6 +40,9 @@ struct RootShell: View {
     /// `casberi://person/<Source>/<handle>` — the profile card, by name.
     @State private var deepLinkPerson: SocialProfile?
     @AppStorage("onboarded") private var onboarded = false
+    /// Mirrors `DemoMode.isActive` so the standing demo banner appears and
+    /// disappears with the mode — see the banner's own gate in `shellBase`.
+    @AppStorage("demo.mode.active") private var demoActive = false
     /// Set by the onboarding CTA, consumed by the cover's onDismiss: the
     /// catalog push must wait until the cover is fully DOWN. Pushing while
     /// the cover still stood raced its dismissal, and SwiftUI intermittently
@@ -1026,6 +1029,11 @@ struct RootShell: View {
         ), onDismiss: {
             sceneState.filter.source = "All"
             sceneState.filter.tag = "All"
+            // The demo pours HERE, with the cover out of the way, so the feed
+            // is watched filling rather than revealed already full. Safe to
+            // fire unconditionally — it returns immediately unless a pour is
+            // actually pending.
+            Task { @MainActor in await DemoMode.pourIfNeeded(context: modelContext) }
             guard let node = landingNode else { return }   // nil = the feed itself
             landingNode = nil
             sceneState.route.present(node)
@@ -1345,6 +1353,13 @@ struct RootShell: View {
             // Anything dropped on the shell lands as a thing (capture: drop).
             MainSurface()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // The demo's marking lives in `MainSurface.topInset`, NOT here
+                // — an inset applied at this level is ignored by the source
+                // strip, which owns the top of the screen from inside the
+                // NavigationStack. See that property for the measurements.
+                // The demo's drain — see `ShellChrome.demoLeaving`.
+                .opacity(chrome.demoLeaving ? 0 : 1)
+                .animation(DS.Motion.standard, value: chrome.demoLeaving)
                 .dropDestination(for: URL.self) { urls, _ in
                     guard let url = urls.first else { return false }
                     if url.isFileURL {
@@ -1925,7 +1940,16 @@ struct RootShell: View {
                 undoCapture(id: id)
             }, seconds: 4)
         } else {
-            chrome.flash(first ? "Your first thing" : "Saved", tone: .success)
+            // After a demo, "Your first thing" is the one line that isn't
+            // true — the person has just spent minutes among hundreds of
+            // things. What is new is that this one is THEIRS, so say that
+            // instead. (The demo's own rows never reach `land`; they are
+            // poured straight into the context, which is why `first` is still
+            // waiting here at all.)
+            let firstLine = DemoMode.hasSeen
+                ? String(localized: "That one's yours")
+                : String(localized: "Your first thing")
+            chrome.flash(first ? firstLine : "Saved", tone: .success)
         }
 
         // "Watching the record" used to mean either feed shape (Pinned or

@@ -98,6 +98,7 @@ enum ChipMemory {
         counts = c
         lastVisit = v
     }
+    #endif
 
     /// Plant visit counts for the furnished demo corpus (`DemoSeedAll`).
     ///
@@ -107,6 +108,15 @@ enum ChipMemory {
     /// tie. That looks arbitrary, and it silently starves whole figure kinds:
     /// with twenty slots and sixty rooms, every mood rail in the app sat below
     /// the cut behind rooms whose only advantage was a name starting with A.
+    ///
+    /// **Deliberately NOT `#if DEBUG`, and it was.** `DemoSeedAll` carries no
+    /// `#if` of its own — it is gated at its CALL SITE by a runtime flag — so
+    /// a DEBUG-only member here failed the Release build outright
+    /// (`type 'ChipMemory' has no member 'seedDemo'`, 2026-08-07), which no
+    /// DEBUG build and no static audit could see: `verify.sh` compiles Debug,
+    /// and the break only surfaces in `testflight.sh`'s archive. The furnished
+    /// demo is a SHIPPING surface now (the onboarding fork's fourth card), so
+    /// the fix is to reach release rather than to guard the call.
     static func seedDemo(_ visits: [String: Int]) {
         var c = counts
         var v = lastVisit
@@ -118,5 +128,21 @@ enum ChipMemory {
         counts = c
         lastVisit = v
     }
-    #endif
+
+    /// Forget the visit history `seedDemo` planted — the demo's exit path.
+    ///
+    /// Named sources only, never a blanket wipe: leaving the demo must not
+    /// cost someone the tap-learning their own real use has earned. On the
+    /// onboarding route there is nothing else here to protect, but this is
+    /// also reachable from a dev install where there is.
+    static func forgetDemo(_ sources: [String]) {
+        var c = counts
+        var v = lastVisit
+        for source in sources {
+            c.removeValue(forKey: source)
+            v.removeValue(forKey: source)
+        }
+        counts = c
+        lastVisit = v
+    }
 }

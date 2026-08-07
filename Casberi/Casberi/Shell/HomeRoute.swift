@@ -48,6 +48,20 @@ final class HomeRoute {
         /// navigate intent, so a tag named from the composer lands where a
         /// treemap tap lands.
         case project(String)
+        /// The onboarding fork ("What should I start with?"), reachable as a
+        /// real destination rather than only as a page inside the onboarding
+        /// cover.
+        ///
+        /// It exists because leaving the demo lands HERE. The fork used to run
+        /// before anyone had seen anything, which is what made it a decision
+        /// asked too early; after a furnished demo the same three cards are an
+        /// answer to a question the person now has. Landing in the catalog
+        /// instead was considered and declined — §217's own ruling is that the
+        /// catalog is "a wall you have to survey" and the fork is "a fork you
+        /// answer in a second", and that reasoning got stronger, not weaker,
+        /// as the catalog grew past sixty seats. The catalog stays one tap
+        /// away on the fork itself.
+        case startHere
     }
     var path: [Node] = []
 

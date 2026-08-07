@@ -105,6 +105,81 @@ enum DemoSeedAll {
         return mine.count
     }
 
+    // MARK: - Teardown
+
+    /// The rooms whose visit history `seedBridgeState` plants, hoisted so the
+    /// seed and the unseed read ONE list. Split apart they drift, and the
+    /// failure is silent in the direction that matters: a room dropped from
+    /// the seed keeps its affinity forever, so the panel goes on ranking a
+    /// room the demo no longer furnishes.
+    ///
+    /// Affinity is the panel's PRIMARY sort inside a grade (`AgentPanel.rank`),
+    /// so with none of it the tiles fall back to alphabetical — which reads as
+    /// arbitrary and, worse, starves whole figure kinds: the three mood rails
+    /// in the app all sat below the twenty-tile cap behind rooms whose only
+    /// advantage was their name. These are the rooms a demo should lead with,
+    /// and they cover every figure the panel can draw.
+    ///
+    /// `Pinterest`/`OpenSea` are here so one image room holds a slot and the
+    /// thumbnail WALL is on the panel too — every other figure kind has a room
+    /// above the cap, and a demo showing seven of the eight is the one thing
+    /// this seed exists to prevent. (`pulse` is deliberately absent: §336
+    /// grades a year wall below everything, and a demo that fought that ruling
+    /// would be showing a panel the app doesn't actually build.)
+    static let demoVisits: [String: Int] = [
+        "Photos": 9, "X": 8, "Stocktwits": 7, "Obsidian": 6, "Linear": 6,
+        "Snapchat": 5, "YouTube": 5, "Instagram": 4, "Privacy Pools": 4,
+        "Farcaster": 4, "Apple Wallet": 3, "Circle x402": 3, "TikTok": 3,
+        "Gmail": 2, "Files": 2, "Pinterest": 5, "OpenSea": 3,
+    ]
+
+    /// The PostHog metrics `seedBridgeState` plants, named once for the same
+    /// reason as `demoVisits` — `PostHogState.clear()` would take a real
+    /// project's readings with them.
+    static let demoMetrics = ["signed_up", "answer_asked"]
+
+    /// Undo everything `seed` did — the rows AND the state it planted.
+    ///
+    /// The mirror of `seed`, and it lives beside it deliberately: `clear`
+    /// alone deletes the Things and leaves the demo wallet watched, its
+    /// balance curve on disk, two PostHog metrics, a seller table and a visit
+    /// history — so "exit the demo" landed on an empty feed wearing five
+    /// furnished rooms and a $12,480 crown. That is worse than not exiting,
+    /// because the corpus is gone and the numbers above it are not.
+    ///
+    /// Every unwind here is BY NAME rather than a blanket wipe: this is
+    /// reachable from a dev install that also holds real watched wallets and
+    /// real readings, and leaving the demo must never cost those.
+    /// Returns the row count deleted.
+    @MainActor
+    @discardableResult
+    static func teardown(_ context: ModelContext) -> Int {
+        let rows = clear(context)
+
+        // The wallet, and only the one this file added. `WalletStore.remove`
+        // drops the history key with the address (see its `addresses`
+        // observer), so the curve needs no separate delete — but a wallet the
+        // person watched themselves keeps both.
+        if let index = WalletStore.shared.addresses
+            .firstIndex(where: { $0.address.lowercased() == demoWallet.lowercased() }) {
+            WalletStore.shared.remove(at: IndexSet(integer: index))
+        }
+
+        for event in demoMetrics { PostHogState.forget(event) }
+        ChipMemory.forgetDemo(Array(demoVisits.keys))
+        X402State.forget()
+
+        // `clear` REMOVES the version stamp, which is right for the dev verb
+        // it was written for (`-demoSeed clear`, where the next launch should
+        // re-furnish). Leaving the demo is the opposite intent, and on a DEBUG
+        // install `seedIfNeeded` would re-seed every room on the very next
+        // launch — an exit that silently undoes itself. Stamping the current
+        // version says "this one is handled" without touching `clear`'s
+        // meaning for the harness.
+        UserDefaults.standard.set(version, forKey: versionKey)
+        return rows
+    }
+
     // MARK: - Clock
 
     /// `daysAgo` days back, at `hour` local, on a stable minute.
@@ -160,7 +235,16 @@ enum DemoSeedAll {
 
     // MARK: - The rooms
 
-    private static func rooms() -> [Thing] {
+    /// Plant the state the three stored-state heads read, from `DemoMode`'s
+    /// pour — internal shim over the private seeder below, so the state is in
+    /// place BEFORE the rows arrive (a room head that lands after its own
+    /// rows reads as a late correction rather than an app filling up).
+    @MainActor
+    static func seedBridgeStateForDemo() { seedBridgeState() }
+
+    /// Internal so `DemoMode` can pour these in chunks rather than landing
+    /// them all in one transaction — see `DemoMode.pourIfNeeded`.
+    static func rooms() -> [Thing] {
         var out: [Thing] = []
         out += photos()
         out += obsidian()
@@ -180,6 +264,7 @@ enum DemoSeedAll {
         out += appleWallet()
         out += cards()
         out += work()
+        out += infra()
         out += writing()
         out += fitness()
         out += schedule()
@@ -950,6 +1035,87 @@ enum DemoSeedAll {
 
     // MARK: Work — the rooms whose rows are one-line facts
 
+    /// The eight seats that claimed a connection and furnished nothing
+    /// (2026-08-07, reported as "the source tray doesn't show all the
+    /// sources").
+    ///
+    /// A seat with no landed row gets NO CHIP, and that rule is correct —
+    /// `MainSurface.newestPerSource` asks each candidate for its newest row
+    /// and drops the ones that answer nothing, because a room you cannot open
+    /// is not worth a slot. So the defect was never in the strip; it was that
+    /// `seatTable` named 66 apps while `rooms()` furnished 58, and the eight
+    /// in the gap sat in the catalog marked "Synced 20m ago" over a room with
+    /// nothing in it. The catalog contradicting the feed is the exact failure
+    /// widening `BridgeApp.demo` was meant to end.
+    ///
+    /// Each row is the shape its real bridge lands, not filler: Sentry and
+    /// PagerDuty land an incident, Vercel a deployment, npm/PyPI a release,
+    /// Cloudflare an expiry with a real `dueAt`, and the two schedulers land
+    /// bookings — which is also why they are dated across days rather than
+    /// stacked on one, so the rails and dials they feed have a spread to draw.
+    private static func infra() -> [Thing] {
+        var out: [Thing] = []
+        let incidents: [(String, String, Double, Int)] = [
+            ("Resolved: checkout 500s on /api/pay", "Sentry", 1, 9),
+            ("New issue: EXC_BAD_ACCESS in EmbeddingIndex", "Sentry", 3, 16),
+            ("Regression: nil unwrap in FeedInsight", "Sentry", 9, 11),
+            ("Resolved: API latency above 2s", "PagerDuty", 2, 21),
+            ("Acknowledged: database connections saturated", "PagerDuty", 11, 3),
+        ]
+        out += incidents.enumerated().map { i, s in
+            row(.link, s.0, source: s.1, ref: "demo:\(s.1.lowercased()):\(i)",
+                days: s.2, hour: s.3,
+                content: "https://example.com/\(s.1.lowercased())/\(i)",
+                tags: ["Alert"])
+        }
+        let deploys: [(String, Double, Int)] = [
+            ("Deployed casberi-site to production", 0.5, 14),
+            ("Preview ready for panel-figures", 2, 17),
+            ("Deployed casberi-site to production", 8, 10),
+        ]
+        out += deploys.enumerated().map { i, d in
+            row(.link, d.0, source: "Vercel", ref: "demo:vercel:\(i)", days: d.1, hour: d.2,
+                content: "https://example.com/vercel/\(i)", tags: ["Release"])
+        }
+        let releases: [(String, String, Double)] = [
+            ("casberi-sdk 2.4.0 published", "npm", 1),
+            ("casberi-sdk 2.3.1 published", "npm", 13),
+            ("casberi-py 0.9.0 published", "PyPI", 4),
+            ("casberi-py 0.8.2 published", "PyPI", 21),
+        ]
+        out += releases.enumerated().map { i, r in
+            row(.link, r.0, source: r.1, ref: "demo:\(r.1.lowercased()):\(i)",
+                days: r.2, hour: 12,
+                content: "https://example.com/\(r.1.lowercased())/\(i)", tags: ["Release"])
+        }
+        // Cloudflare's room head is a RUNWAY, so these need a real `dueAt` or
+        // the head has nothing to measure — a certificate with no expiry is
+        // exactly the row that renders as an empty rail.
+        let certs: [(String, Double, Double)] = [
+            ("casberi.app certificate renews", 3, -34),
+            ("api.casberi.app certificate renews", 6, -71),
+        ]
+        out += certs.enumerated().map { i, c in
+            row(.reminder, c.0, source: "Cloudflare", ref: "demo:cloudflare:\(i)",
+                days: c.1, hour: 8, content: "Auto-renews") { t in
+                t.dueAt = at(c.2, 8)
+            }
+        }
+        let bookings: [(String, String, Double, Double)] = [
+            ("Intro call with Priya", "Cal.com", 4, -1),
+            ("Design review with Sam", "Cal.com", 6, -3),
+            ("Investor update", "Calendly", 5, -2),
+            ("Onboarding walkthrough", "Calendly", 9, -6),
+        ]
+        out += bookings.enumerated().map { i, b in
+            row(.event, b.0, source: b.1, ref: "demo:\(b.1.lowercased()):\(i)",
+                days: b.2, hour: 13, content: "30 minutes") { t in
+                t.dueAt = at(b.3, 13)
+            }
+        }
+        return out
+    }
+
     private static func work() -> [Thing] {
         var out: [Thing] = []
         // Linear's rail reads `mark`, which the bridge maps from Linear's own
@@ -1270,27 +1436,8 @@ enum DemoSeedAll {
             total: 6_310, series: [210, 240, 198, 265, 288, 240, 301], announced: 5_000, seeded: true)
         PostHogState.replace(metrics)
 
-        // 3 · A visit history, so the panel ranks on something. Affinity is
-        // the primary sort inside a grade (`AgentPanel.rank`), so with none of
-        // it the tiles fall back to alphabetical — which reads as arbitrary
-        // and, worse, starves whole figure kinds: the three mood rails in the
-        // app all sat below the twenty-tile cap behind rooms whose only
-        // advantage was their name. These are the rooms a demo should lead
-        // with, and they cover every figure the panel can draw.
-        ChipMemory.seedDemo([
-            "Photos": 9, "X": 8, "Stocktwits": 7, "Obsidian": 6, "Linear": 6,
-            "Snapchat": 5, "YouTube": 5, "Instagram": 4, "Privacy Pools": 4,
-            "Farcaster": 4, "Apple Wallet": 3, "Circle x402": 3, "TikTok": 3,
-            "Gmail": 2, "Files": 2,
-            // One image room high enough to hold a slot, so the thumbnail
-            // WALL is on the panel too — every other figure kind has a room
-            // above the cap, and a demo that shows seven of the eight is the
-            // one thing this seed exists to prevent. (`pulse` is deliberately
-            // absent: §336 grades a year wall below everything, and a demo
-            // that fought that ruling would be showing a panel the app
-            // doesn't actually build.)
-            "Pinterest": 5, "OpenSea": 3,
-        ])
+        // 3 · A visit history, so the panel ranks on something.
+        ChipMemory.seedDemo(demoVisits)
 
         // 4 · Circle x402 — the sellers behind the room's treemap. Service
         // counts are the measured shape of the real directory (Orthogonal

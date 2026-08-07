@@ -143,6 +143,14 @@ enum Notifications {
                        photos: [String: Data] = [:],
                        now: Date = Date(),
                        dryRun: Bool = false) async -> [NotifyPlan] {
+        // The demo never notifies. Its rows carry real-looking deadlines and a
+        // dispute due in five days, so an ungated sweep would put "£240
+        // disputed" on a stranger's lock screen about money that does not
+        // exist — and it would burn the one-and-only authorization prompt to
+        // do it, on someone who has not yet decided whether to keep the app.
+        // Dry runs still compose, so `-notifyProbe` keeps working over a
+        // furnished corpus.
+        if !dryRun, DemoMode.isActive { return [] }
         let s = settings
         var eligible = plans.filter { s.allows($0.cls) }
         guard !eligible.isEmpty else { return [] }

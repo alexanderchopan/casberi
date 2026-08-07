@@ -4608,12 +4608,16 @@ struct FeedScreen: View {
             .buttonStyle(.plain)
             .padding(.top, DS.Space.s4)
             .settleIn(delay: 0.1)
-            // The other doors, named — the copy used to CLAIM capture
-            // without teaching a single capture verb.
-            Text("Or paste a link, share into Casberi, or snap a screenshot — those land here too.")
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .padding(.top, DS.Space.s3)
-                .settleIn(delay: 0.15)
+            // The "or paste a link, share in, snap a screenshot" line is
+            // DELETED (user, 2026-08-07). It was added to teach the capture
+            // verbs the headline only claimed, but it teaches them to someone
+            // who has nothing yet and no reason to care which door they use —
+            // and it sits above the pile of real apps, which is the actual
+            // answer to an empty feed. Every one of those verbs is discovered
+            // in the moment it is wanted (the share sheet is the system's, the
+            // composer's paste chip appears when there is something on the
+            // clipboard); a screen that has to list them is padding the one
+            // moment that should be shortest.
             Spacer(minLength: DS.Space.s6)
             EmptyFeedPile()
         }

@@ -64,6 +64,10 @@ struct MainSurface: View {
     // each and injects them, so a second window routes and filters on its own.
     @Environment(FeedFilter.self) private var filter
     @Environment(HomeRoute.self) private var route
+    /// Mirrors `DemoMode.isActive` — the standing demo banner rides this
+    /// surface's top inset (see the `.safeAreaInset` below). `@AppStorage`
+    /// rather than a plain read so Exit removes it on the spot.
+    @AppStorage("demo.mode.active") private var demoActive = false
     /// Source moments (wallet new highs, token new highs, a Bitrefill refill,
     /// a quiet account posting again) — the data paths can't reach the
     /// corpus-arrival watcher that fires the release rain (some aren't things
@@ -119,6 +123,51 @@ struct MainSurface: View {
     /// The detail pane (`showsPane`) is untouched — that's a width question,
     /// not an axis one.
     private var showsRail: Bool { isRegular }
+
+    /// What sits above the feed: the demo's marking, then the source strip.
+    ///
+    /// **Why the banner is HERE and not on the shell.** It was tried twice on
+    /// `RootShell` — once as a top-aligned child of its ZStack, once as a
+    /// `safeAreaInset` on this whole surface — and both drew it straight over
+    /// the chips, clipping the avatar and the first two rooms. The cause is
+    /// that this strip is itself a `.safeAreaInset` applied INSIDE the
+    /// NavigationStack, whose toolbar is hidden so it owns the top of the
+    /// screen outright (see `.toolbar(.hidden, for: .navigationBar)` below):
+    /// an inset applied further out reserves space the strip simply ignores.
+    /// So the marking joins the one inset that already owns this edge.
+    ///
+    /// **Why it is its own property.** Inlining these two into the modifier
+    /// chain blew the type-checker's budget outright ("unable to type-check
+    /// this expression in reasonable time") — the same failure `shellPhaseAware`
+    /// was split out of in `RootShell`, and it only appears on a cold build,
+    /// so an incremental build will happily hide it until a TestFlight archive.
+    @ViewBuilder
+    private var topInset: some View {
+        VStack(spacing: 0) {
+            if demoActive {
+                DemoBanner()
+                    .padding(.top, ProcessInfo.processInfo.isMacCatalystApp
+                             ? DS.Space.s2 : DS.Space.s4)
+                    .padding(.bottom, DS.Space.s1)
+            }
+            if !showsRail {
+                sourceStrip(axis: .horizontal)
+                    // The s6 top padding replaces iPhone's hidden system nav
+                    // bar with air. A Mac window already has a REAL title bar
+                    // there — stacking a second s6 on top of it read as ~65pt
+                    // of dead chrome before the strip even starts (Mac polish,
+                    // 2026-07-28), so Mac gets only a small breathing gap.
+                    // …and that vacated space is the first thing handed back
+                    // when the strip folds (2026-07-30): air is what it was,
+                    // and content is what it's for. The demo banner replaces
+                    // that air with itself, so the strip drops its own.
+                    .padding(.top, ProcessInfo.processInfo.isMacCatalystApp
+                             || chrome.minimized || demoActive
+                             ? DS.Space.s2 : DS.Space.s6)
+                    .padding(.bottom, DS.Space.s2)
+            }
+        }
+    }
 
     /// The corpus MINUS search-only sources (Contacts) — the same rule Home and
     /// Feed already share (`Corpus.surfaced`), so the chip row lists exactly the
@@ -888,23 +937,7 @@ struct MainSurface: View {
             // `safeAreaInset` reserves the rail's width so every feed page's
             // rows start beside it rather than under it, and the crown pour
             // painted by this surface's own background still runs behind it.
-            .safeAreaInset(edge: .top, spacing: 0) {
-                if !showsRail {
-                    sourceStrip(axis: .horizontal)
-                        // The s6 top padding replaces iPhone's hidden system
-                        // nav bar with air. A Mac window already has a REAL
-                        // title bar there — stacking a second s6 on top of
-                        // it read as ~65pt of dead chrome before the strip
-                        // even starts (Mac polish, 2026-07-28), so Mac gets
-                        // only a small breathing gap instead.
-                        // …and that vacated space is the first thing handed
-                        // back when the strip folds (2026-07-30): air is what
-                        // it was, and content is what it's for.
-                        .padding(.top, ProcessInfo.processInfo.isMacCatalystApp || chrome.minimized
-                                 ? DS.Space.s2 : DS.Space.s6)
-                        .padding(.bottom, DS.Space.s2)
-                }
-            }
+            .safeAreaInset(edge: .top, spacing: 0) { topInset }
             // The detail pane (2026-07-25) — the iPad half of "a row tap
             // opens a thing". A trailing inset rather than an HStack sibling
             // so every modifier already hanging off the pager (the crown
@@ -1109,6 +1142,14 @@ struct MainSurface: View {
                     }
                 case .project(let name):
                     ProjectDetailScreen(projectName: name)
+                case .startHere:
+                    // Reached after leaving the demo, so "finishing" is a pop
+                    // rather than the end of onboarding — a non-nil node still
+                    // means "land there instead", which is how the wallet card
+                    // and the catalog link keep working unchanged.
+                    StartHereScreen { landing in
+                        if let landing { route.present(landing) } else { route.path = [] }
+                    }
                 }
             }
         }
