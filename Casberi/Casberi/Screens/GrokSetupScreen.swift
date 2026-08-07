@@ -73,7 +73,7 @@ struct GrokSetupScreen: View {
                 // The opening clause was the header's own tagline — "Try with
                 // your key, on Grok" — restated a screen below it
                 // (2026-07-31). The consent clause it carried stays.
-                DSSlabNote(text: "xAI has no free tier, so your team needs credits before a key can answer — buy them in the same console.")
+                DSSlabNote(text: "xAI has no free tier — buy credits in the same console before a key can answer.")
             }
         }
         .dsSlabSection()

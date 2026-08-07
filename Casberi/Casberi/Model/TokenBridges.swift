@@ -395,7 +395,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .readwise:
             String(localized: "Paste a read-only token and every highlight you've saved becomes searchable here, arriving on its own from then on.")
         case .github:
-            String(localized: "Sign in with GitHub — or paste a token — and the feeds you pick keep arriving, plus any repo you watch. Watching here is private: it never touches your GitHub account.")
+            String(localized: "Sign in with GitHub — or paste a token — and the feeds you pick keep arriving, plus any repo you watch. Watching here is private.")
         case .todoist:
             String(localized: "Paste a read-only token and your open tasks keep arriving with their due dates. Nothing here completes, edits, or adds a task.")
         case .raindrop:
@@ -413,9 +413,9 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .privacy:
             // CONDUCT. Privacy's key can issue cards and move money; the
             // promise is what this code does, so it is worded as such.
-            String(localized: "Paste an API key and what you spend on your virtual cards keeps arriving. Privacy's key can't be scoped read-only. Casberi only reads transactions — it never creates, closes, or funds a card.")
+            String(localized: "Paste an API key and what you spend on your virtual cards keeps arriving. Privacy's key can't be scoped read-only — Casberi never creates, closes, or funds a card.")
         case .oneclaw:
-            String(localized: "Paste an agent key and you'll see what it can reach — which vaults, which secret paths, and when each grant expires. Names and permissions only: no secret's value is ever read.")
+            String(localized: "Paste an agent key and you'll see what it can reach — which vaults, which paths, when each grant expires. No secret's value is ever read.")
         case .posthog:
             String(localized: "Paste a read-only key, watch the metrics you care about, and only what's news arrives: a milestone crossed, a metric falling silent, a deploy you annotated.")
         case .stripe:
@@ -423,18 +423,18 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .trello:
             // MINTED — the strongest promise in the catalog, and the only one
             // that is structural rather than a box someone ticked.
-            String(localized: "Authorize once and the cards assigned to you keep arriving with their due dates. Casberi asks Trello for a read-only token, so the one it issues has no write permission to give.")
+            String(localized: "Authorize once and the cards assigned to you keep arriving with their due dates. Casberi asks Trello for a read-only token, so it has no write permission to give.")
         case .cloudflare:
             String(localized: "Paste a read-only token and you're told before a certificate, domain or token expires, and when a DNS record changes. No analytics, and nothing about your visitors.")
         case .cursor:
             // CONDUCT, and the weakest grade here: this key could start an
             // agent, which spends money AND writes a branch to a repo.
-            String(localized: "Paste a key and your finished cloud agents keep arriving — what each was asked to do, what it says it did, and the pull request it opened. Cursor's key can't be scoped read-only. Casberi only ever lists them.")
+            String(localized: "Paste a key and your finished cloud agents keep arriving. Cursor's key can't be scoped read-only, and Casberi only ever lists them.")
         case .sentry:
-            String(localized: "Paste a read-only token and three things arrive: an issue that's new, one that regressed, one that escalated. Never an event, a stack trace, or anything about the person who hit it.")
+            String(localized: "Paste a read-only token and three things arrive: a new issue, a regression, an escalation. Never an event, a stack trace, or anything about the person who hit it.")
         case .vercel:
             // CONDUCT.
-            String(localized: "Paste a token and your deployments keep arriving — what shipped, what broke, and the commit behind it. Vercel's token can't be scoped read-only. Casberi only lists them, and never reads your environment variables.")
+            String(localized: "Paste a token and your deployments keep arriving — what shipped and what broke. Vercel's token can't be scoped read-only, and Casberi never reads your environment variables.")
         case .pagerduty:
             String(localized: "Paste a read-only key and your incidents keep arriving — what fired, how urgent, and when it was resolved. Nothing here pages anyone, acknowledges, or resolves.")
         case .appStoreConnect:

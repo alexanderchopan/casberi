@@ -124,7 +124,7 @@ struct SnapchatImportScreen: View {
                     DSHaptic.tap()
                     Task { await runFetch() }
                 }
-                DSSlabNote(text: "Your memories arrive as links, not pictures, and Snapchat's links stop working 7 days after it builds the export. Videos stay as dated entries — only photos are fetched.")
+                DSSlabNote(text: "Memories arrive as links, and Snapchat's stop working 7 days after the export. Only photos are fetched; videos stay as dated entries.")
             }
         }
         .dsSlabSection()

@@ -79,7 +79,6 @@ struct GeminiImportScreen: View {
                     importing = true
                 }
                 BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-                DSSlabNote(text: "One-time import — re-importing later adds only what's new.")
             }
         }
         .dsSlabSection()

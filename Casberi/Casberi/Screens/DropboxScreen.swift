@@ -101,7 +101,7 @@ struct DropboxScreen: View {
             }
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your Dropbox…"),
                                  result: result, resultIsError: resultIsError)
-            DSSlabNote(text: "Sign-in happens on Dropbox's own page — PKCE, no password in the app, no server ever holds a secret. Reads only the folder you name — never shared links, never \u{201c}shared with me\u{201d}.")
+            DSSlabNote(text: "Sign-in happens on Dropbox's own page — PKCE, no password in the app.")
         }
         .dsSlabSection()
     }
@@ -121,7 +121,7 @@ struct DropboxScreen: View {
                         action: saveFolder)
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your Dropbox…"),
                                  result: result, resultIsError: resultIsError)
-            DSSlabNote(text: "Whatever's inside the folder you name lands in your feed — and only that folder. Changing it starts a fresh sync there.")
+            DSSlabNote(text: "Changing the folder starts a fresh sync there.")
         }
         .dsSlabSection()
     }

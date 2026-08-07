@@ -85,7 +85,7 @@ struct SafeScreen: View {
                 // signing actually happens — in both states.
                 DSSlabNote(text: safeCount > 0
                     ? String(localized: "Watching \(safeCount) Safe — a pending signature lands in your feed the moment it's proposed.")
-                    : String(localized: "Watch a Safe, or a wallet that signs for one — the queue reads automatically."))
+                    : String(localized: "Watch a Safe, or a wallet that signs for one."))
             }
         }
         .dsSlabSection()

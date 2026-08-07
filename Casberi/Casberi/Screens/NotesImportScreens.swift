@@ -34,7 +34,7 @@ struct DayOneImportScreen: View {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     ImportPickRow(label: "Choose your Day One .json") { importing = true }
                     BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-                    DSSlabNote(text: "One-time import — entries become findable notes, dated as you wrote them. Photos stay in the export for now. Re-importing adds only what's new.")
+                    DSSlabNote(text: "Photos stay in the export for now.")
                 }
             }
             .dsSlabSection()
@@ -123,7 +123,7 @@ struct JournalImportScreen: View {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     ImportPickRow(label: "Choose the export folder") { importing = true }
                     BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-                    DSSlabNote(text: "One-time import — entries become findable notes, dated as you wrote them. Photos stay in the export for now. (Apple offers no live read.)")
+                    DSSlabNote(text: "Photos stay in the export for now.")
                 }
             }
             .dsSlabSection()
@@ -271,7 +271,6 @@ struct BookmarksImportScreen: View {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     pickRows
                     BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-                    DSSlabNote(text: "One-time import — bookmarks become findable links, folders become tags. Re-importing adds only what's new.")
                 }
             }
             .dsSlabSection()

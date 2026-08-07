@@ -80,8 +80,8 @@ struct PeerScreen: View {
                                      syncingLine: String(localized: "Reading your fills…"),
                                      result: lastResult, resultIsError: lastResultIsError)
                 DSSlabNote(text: hasWallets
-                    ? "On automatically — Peer reads the wallets you watch. Read-only, never trades."
-                    : "Peer settles into your own wallet, so watching a wallet is all it takes. Read-only, never trades.")
+                    ? "On automatically. Read-only, never trades."
+                    : "Watching a wallet is all it takes.")
             }
         }
         .dsSlabSection()

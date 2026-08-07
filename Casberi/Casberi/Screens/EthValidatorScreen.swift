@@ -64,7 +64,7 @@ struct EthValidatorScreen: View {
                 // a duplication can be one line). What survives is the part
                 // the tagline can't carry: WHERE it shows, where to find the
                 // index, and the promise.
-                DSSlabNote(text: "It shows under ETH. Your staking client (or any beacon-chain explorer) shows the index. Read-only — nothing here stakes, exits, or moves a balance.")
+                DSSlabNote(text: "It shows under ETH. Your staking client shows the index. Read-only — nothing stakes, exits, or moves a balance.")
             }
         }
         .dsSlabSection()

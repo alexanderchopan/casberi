@@ -127,7 +127,7 @@ struct ObsidianScreen: View {
             // intro because it changes what someone would DO: it is the answer
             // to "will this go stale?", and before 2026-08-06 the honest
             // answer was yes.
-            DSSlabNote(text: "Every note in the vault lands in your feed, and keeps up as you edit or delete them. A vault is a folder of Markdown — find it in Files (often iCloud Drive → Obsidian). Read-only: the vault is never changed.")
+            DSSlabNote(text: "A vault is a folder of Markdown — find it in Files, often iCloud Drive → Obsidian.")
         }
         .dsSlabSection()
     }

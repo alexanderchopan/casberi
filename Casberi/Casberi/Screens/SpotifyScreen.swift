@@ -103,7 +103,7 @@ struct SpotifyScreen: View {
             }
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Checking your liked songs…"),
                                  result: result, resultIsError: resultIsError)
-            DSSlabNote(text: "Sign-in happens on Spotify's own page — PKCE, no password in the app, no server ever holds a secret. Read-only.")
+            DSSlabNote(text: "Sign-in happens on Spotify's own page — PKCE, no password in the app. Read-only.")
         }
         .dsSlabSection()
     }

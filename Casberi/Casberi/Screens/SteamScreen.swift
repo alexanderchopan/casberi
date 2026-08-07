@@ -110,7 +110,7 @@ struct SteamScreen: View {
                 // your feed") was that line paraphrased 60 points lower
                 // (audit, 2026-07-31). What's left is the part the header
                 // can't say.
-                DSSlabNote(text: "Your key stays in \(DS.device)'s Keychain, goes only to Steam, and only ever reads public profile data.")
+                DSSlabNote(text: "Your key stays in \(DS.device)'s Keychain and only ever reads public profile data.")
             }
         }
         .dsSlabSection()

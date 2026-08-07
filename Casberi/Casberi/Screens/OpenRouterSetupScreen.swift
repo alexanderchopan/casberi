@@ -68,7 +68,7 @@ struct OpenRouterSetupScreen: View {
                 // the header's own tagline — "One key, whichever model fits" —
                 // a screen apart (2026-07-31). "there" lost its antecedent
                 // with it, so it names OpenRouter now.
-                DSSlabNote(text: "Your key powers \"Try with your key\": any answer re-runs on OpenRouter, straight from \(DS.device), only when you tap.\n\nThe key lives in the Keychain, goes only to OpenRouter, and OpenRouter bills you directly.")
+                DSSlabNote(text: "The key lives in the Keychain, goes only to OpenRouter, and OpenRouter bills you directly.")
             }
         }
         .dsSlabSection()

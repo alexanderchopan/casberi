@@ -96,7 +96,7 @@ struct SlackScreen: View {
             // look up your mentions and nothing else", which is the first
             // sentence again; the SCOPE (prd §192) is what it's there for, and
             // that survives whole.
-            DSSlabNote(text: "The messages that mention you land in your feed, findable beside everything else. Sign-in happens on Slack's own page — no password ever touches the app.")
+            DSSlabNote(text: "Sign-in happens on Slack's own page — no password ever touches the app.")
         }
         .dsSlabSection()
     }

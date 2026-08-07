@@ -70,7 +70,7 @@ struct HuggingFaceScreen: View {
                                      result: lastResult, resultIsError: lastResultIsError)
                 // Names the accepted shapes, because pasting a model page is
                 // how most people will arrive (`normalize` takes the owner).
-                DSSlabNote(text: "A name like meta-llama, or any Hugging Face link — new models, datasets and Spaces land. Read-only.")
+                DSSlabNote(text: "A name like meta-llama, or any Hugging Face link.")
             }
         }
         .dsSlabSection()
@@ -91,7 +91,7 @@ struct HuggingFaceScreen: View {
                         togglePapers(on)
                     }
                 ))
-                DSSlabNote(text: "Hugging Face's own daily pick of new research — each lands with its abstract, so you can search what a paper was about.")
+                DSSlabNote(text: "Hugging Face's own daily pick — each lands with its abstract.")
             }
         }
         .dsSlabSection()

@@ -76,8 +76,8 @@ struct RailgunScreen: View {
                                      syncingLine: String(localized: "Reading the pool's doors…"),
                                      result: lastResult, resultIsError: lastResultIsError)
                 DSSlabNote(text: hasWallets
-                    ? String(localized: "On automatically — both doors land in your feed as they happen.")
-                    : String(localized: "Shields are read off the wallets you watch."))
+                    ? String(localized: "On automatically — both doors land as they happen.")
+                    : String(localized: "Read off the wallets you watch."))
             }
         }
         .dsSlabSection()

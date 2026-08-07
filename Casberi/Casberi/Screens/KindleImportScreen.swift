@@ -30,7 +30,7 @@ struct KindleImportScreen: View {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     ImportPickRow(label: "Choose My Clippings.txt") { importing = true }
                     BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-                    DSSlabNote(text: "One-time import — highlights become findable notes, grouped by book. Re-importing adds only what's new. (Amazon offers no live read.)")
+                    DSSlabNote(text: "Highlights become findable notes, grouped by book. Re-importing adds only what's new.")
                 }
             }
             .dsSlabSection()

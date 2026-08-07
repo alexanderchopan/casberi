@@ -61,7 +61,7 @@ struct VeniceSetupScreen: View {
                 AgentActiveStatusRow(provider: .venice)
                 AgentModelRow(provider: .venice)
                 AgentSpendRow(provider: .venice)
-                DSSlabNote(text: "Nothing reads in — Venice keeps chats on your device by design. Your key powers \"Try with your key\": any answer re-runs on Venice, straight from \(DS.device), only when you tap.\n\nThe key lives in the Keychain, goes only to Venice, and Venice bills you directly.")
+                DSSlabNote(text: "Venice keeps chats on your device by design. The key lives in the Keychain, goes only to Venice, and Venice bills you directly.")
             }
         }
         .dsSlabSection()

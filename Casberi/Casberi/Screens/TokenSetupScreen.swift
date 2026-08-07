@@ -186,7 +186,7 @@ struct TokenSetupScreen: View {
                             actionLabel: trelloKey == nil
                                 ? String(localized: "NEXT") : String(localized: "REPLACE"),
                             action: saveTrelloKey)
-                DSSlabNote(text: "This key names the Power-Up, not you. It's public by design and does nothing on its own — the token below is what reads your cards.")
+                DSSlabNote(text: "It names the Power-Up, not you — public by design. The token below is what reads your cards.")
             }
         }
         .dsSlabSection()
@@ -346,7 +346,7 @@ struct TokenSetupScreen: View {
                 // only fact worth a gray line on a screen about trust. The
                 // "Sign in" header went with the furniture: the button says
                 // what it does (§190).
-                DSSlabNote(text: "Grants repo, profile and gist access — GitHub's smallest scope that reaches private issues and PRs.")
+                DSSlabNote(text: "GitHub's smallest scope that reaches private issues and PRs.")
             }
         }
         .dsSlabSection()
@@ -469,7 +469,7 @@ struct TokenSetupScreen: View {
                                         Task { await sync() }
                                     }))
                 }
-                DSSlabNote(text: "Saved things and things that happened — all of it lands under GitHub.")
+                DSSlabNote(text: "All of it lands under GitHub.")
             }
         }
         .dsSlabSection()
@@ -487,7 +487,7 @@ struct TokenSetupScreen: View {
                 BridgeSyncStatusRows(syncing: watching,
                                      syncingLine: String(localized: "Looking it up…"),
                                      result: watchResult, resultIsError: watchResultIsError)
-                DSSlabNote(text: "Private to \(DS.device) — watching here never touches your GitHub account.")
+                DSSlabNote(text: "Private to \(DS.device) — it never touches your GitHub account.")
             }
         }
         .dsSlabSection()
