@@ -67,6 +67,44 @@ enum AgentPanel {
         var count: Int
     }
 
+    /// One mark on the day dial — a thing at its hour, with how recent it is.
+    struct DialMark: Equatable {
+        /// 0…24, fractional. Hour of day is the whole point: the heatmaps
+        /// answer WHICH DAYS and nothing in the app answers which hours.
+        var hour: Double
+        /// 0 (oldest in window) … 1 (today) — drives the radius, so today
+        /// rides the rim and the week fades inward.
+        var recency: Double
+        /// The room, for hue.
+        var source: String
+    }
+
+    /// One band of the theme river — a theme's weekly volume, oldest first.
+    struct RiverBand: Equatable {
+        var label: String
+        var weeks: [Int]
+        /// Total across the window, for ordering and for the caption.
+        var total: Int { weeks.reduce(0, +) }
+    }
+
+    /// One dot on the semantic map — a thing already projected into the unit
+    /// square. The PROJECTION happens upstream (`SemanticProjection`), never
+    /// here: this file stays arithmetic, and the projection has to be cached
+    /// anyway or the map would reshuffle between opens.
+    struct Dot: Equatable {
+        var x: Double
+        var y: Double
+        var source: String
+    }
+
+    /// A named cluster on the semantic map — its centre and its own top term.
+    struct DotCluster: Equatable {
+        var label: String
+        var x: Double
+        var y: Double
+        var radius: Double
+    }
+
     /// What a card draws.
     ///
     /// Every case is a SHAPE, never a sentence. Adding a `.text` case is the
@@ -91,6 +129,20 @@ enum AgentPanel {
         /// width, and the user's ask was the diagram, not a thumbnail of one.
         case flow(inLanes: [FlowLane], outLanes: [FlowLane])
 
+        /// The day dial (prd §337) — a week of things on a 24-hour clock.
+        /// Radially symmetric, so it is the ONE new figure that reads at every
+        /// size including the 118pt small cell: no labels to clip, hue carries
+        /// identity, and the shape itself is the reading.
+        case dial([DialMark])
+        /// The theme river (prd §337) — attention as movement rather than
+        /// snapshot. A band figure: ten weeks of bands need horizontal run.
+        case river([RiverBand])
+        /// The semantic map (prd §337) — the corpus arranged by meaning.
+        /// Hero or band only: at 118pt the clusters merge into one smudge and
+        /// their labels collide, which turns the app's one visible claim about
+        /// its own intelligence into noise.
+        case scatter(dots: [Dot], clusters: [DotCluster])
+
         /// A figure with nothing in it draws nothing, and a tile that draws
         /// nothing is a tile that shouldn't exist. Checked at composition, so
         /// an empty room can never mint a blank card.
@@ -111,6 +163,14 @@ enum AgentPanel {
             // `WalletFlow.band` already declines those windows, and this
             // re-states it so a future caller can't hand one in.
             case .flow(let inL, let outL): return inL.isEmpty || outL.isEmpty
+            // A dial of three marks is three dots on a circle, not a rhythm —
+            // and rhythm is the only thing it claims.
+            case .dial(let m):    return m.count < 12
+            // A river needs at least two themes to be a river and enough weeks
+            // to show drift; one band over ten weeks is an area chart.
+            case .river(let b):   return b.count < 2 || (b.first?.weeks.count ?? 0) < 4
+            // A map with no named cluster is a spray of dots asserting nothing.
+            case .scatter(let d, let c): return d.count < 12 || c.isEmpty
             }
         }
     }
@@ -132,6 +192,33 @@ enum AgentPanel {
         var isEmpty: Bool { cards.isEmpty }
     }
 
+    /// Where a figure is legible.
+    ///
+    /// Bento means slots differ in SHAPE, not just scale — so this is a real
+    /// constraint rather than a hint. A figure routed to a slot it can't hold
+    /// doesn't shrink gracefully; it clips, collides, or turns to mush, and
+    /// all three render as a perfectly good-looking tile.
+    enum Fit: Equatable {
+        /// Reads anywhere, including the 118pt small cell.
+        case any
+        /// Needs the hero's double height or a full-width band.
+        case large
+        /// Full width only — labelled columns on both sides.
+        case bandOnly
+    }
+
+    static func fit(_ figure: Figure) -> Fit {
+        switch figure {
+        // Radially symmetric with no labels — the one new figure that holds
+        // at every size.
+        case .dial:    return .any
+        case .flow:    return .bandOnly
+        case .river:   return .bandOnly
+        case .scatter: return .large
+        default:       return .any
+        }
+    }
+
     // MARK: - Cards
 
     struct Card: Equatable {
@@ -151,6 +238,17 @@ enum AgentPanel {
         var figure: Figure
         /// `ChipMemory`'s decaying tap weight for this source.
         var affinity: Int
+        /// The ONE reading the hero carries under its figure — "$12,480 ·
+        /// +1.8%". A sentence the room already says about itself, not a tally:
+        /// §213 bans counting things, and a balance with its delta is a
+        /// reading, not a count. nil everywhere but the hero, and nil for any
+        /// room with no honest one-liner.
+        var reading: String?
+        /// Direction, when the figure has one — drives green/red on the curve
+        /// and the money bands. `nil` where direction is meaningless, and
+        /// deliberately nil for a move that rounds to zero (§83's flat rule:
+        /// a change with no direction gets no sign and no colour).
+        var rising: Bool?
     }
 
     /// A ranked card's SLOT in the bento (prd §334 amendment, layout B).
@@ -190,7 +288,13 @@ enum AgentPanel {
     /// where "at a glance" is true — but the cap is not really about screen
     /// space: every tile below the fold is a figure nobody asked to compute.
     /// Eight is two full screens and the honest edge of a glance.
-    static let maxCards = 8
+    /// Raised from 8 (user, 2026-08-07: "its fine if the agent displays even
+    /// more than ten, really if we have a visualization in the app that is
+    /// active some form of it should by and large be in the agent"). The cap
+    /// is now a runaway guard rather than an editorial choice — every live
+    /// figure earns a slot, and scrolling is the honest cost of having a lot
+    /// connected.
+    static let maxCards = 20
 
     /// What a figure is WORTH leading with (prd §336, user: "nobody cares about
     /// your capture year or your chat year tho, those are superfluous metrics",
@@ -212,6 +316,10 @@ enum AgentPanel {
     static func grade(_ figure: Figure) -> Int {
         switch figure {
         case .pulse: return 0
+        // The cross-source figures (prd §337) outrank a room's own reading:
+        // they are the only things on this surface that no room can show, and
+        // "something you don't see on All" was the panel's whole brief.
+        case .dial, .river, .scatter: return 2
         default:     return 1
         }
     }
@@ -272,6 +380,11 @@ enum AgentPanel {
         case .curve(let v):   return min(v.count, 8)
         case .wall(let u):    return u.count
         case .flow(let inL, let outL): return inL.count + outL.count
+        // Live HOURS, not marks: a hundred things all landing at 9am says less
+        // about a day's shape than twenty spread across it.
+        case .dial(let m):    return Set(m.map { Int($0.hour) }).count
+        case .river(let b):   return b.count
+        case .scatter(_, let c): return c.count
         // A pulse is scored on its LIVE days, not its length: every registered
         // grid is 53 columns wide, so raw length would rank every heatmap
         // identically and always above everything else.

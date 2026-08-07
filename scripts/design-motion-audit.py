@@ -82,6 +82,16 @@ KNOWN_EXEMPT = {
     # BerryRain's "ONE gesture deals ONE shower" lesson forbids. The audit
     # can't follow a value across a struct boundary, so: a conscious ruling.
     "AgentPanelGrid.swift:FlowFigure": "entrance is FigureView's shared clock, passed as t",
+    # Same shape as FlowFigure above: `FigureView` owns the one `grown` clock
+    # every panel figure shares (with the Reduce Motion collapse the first
+    # check demands) and hands it down as `t`. DialFigure gates each mark's
+    # opacity on `t` reaching its own hour — that IS the radar sweep — and
+    # RiverFigure masks its width by `t`. A second entrance state inside either
+    # child would put two clocks on one tile, the double-deal BerryRain's
+    # "ONE gesture deals ONE shower" lesson forbids. The audit cannot follow a
+    # value across a struct boundary, so: conscious rulings, not snoozes.
+    "AgentPanelGrid.swift:DialFigure": "entrance is FigureView's shared clock, passed as t",
+    "AgentPanelGrid.swift:RiverFigure": "entrance is FigureView's shared clock, passed as t",
     # `size * 0.3` on the state badge is a FIXED proportion of the mark's own
     # size parameter, not a magnitude read off data — the same shape
     # `WalletFace`'s identicon blobs already draw (`d * 0.5`, `d * 0.42`),

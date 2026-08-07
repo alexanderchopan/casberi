@@ -910,12 +910,190 @@ struct Composer: View {
         // is pure over `[Thing]` and declines an unpriceable or single-sided
         // window itself, so the panel inherits the room's own honesty gates.
         if let flow = walletFlow(corpus: corpus) { cards.append(flow) }
+        cards.append(contentsOf: crossSourceCards(corpus))
+        cards.append(contentsOf: roomHeadCards(corpus))
+        for social in ["Farcaster", "Bluesky"] {
+            if let card = socialChannelCard(corpus, source: social) { cards.append(card) }
+        }
         // Dictionary iteration above is per-process in its order; `rank` is a
         // TOTAL sort, which is what makes the panel identical across launches
         // (the §332 hashing bug, one surface over).
         out.cards = AgentPanel.rank(cards)
         return out
     }
+
+    /// The per-source ROOM HEADS that draw (user, 2026-08-07: "if we have a
+    /// visualization in the app that is active some form of it should by and
+    /// large be in the agent").
+    ///
+    /// These live outside `FeedInsight` because their subject is bridge state
+    /// in UserDefaults rather than corpus rows, so no registry can reach them —
+    /// which is exactly why they were missing from the panel. Only the ones
+    /// that genuinely DRAW are lifted: Stripe's and Cloudflare's heads are a
+    /// time rail whose own doc calls it a restatement of the rows beneath it,
+    /// and §334 says a card earns its slot by drawing something.
+    @MainActor
+    private func roomHeadCards(_ corpus: [Thing]) -> [AgentPanel.Card] {
+        var out: [AgentPanel.Card] = []
+        // Circle x402 — sellers by service count, the treemap the room leads
+        // with. Reuses the room's OWN composer, so the tile and the room can
+        // never disagree about who is biggest.
+        if let room = X402Room.compose(sellers: X402State.sellers,
+                                       listings: X402State.listings,
+                                       typical: X402State.medianPrice) {
+            let cells = room.cells.map {
+                AgentPanel.Cell(label: $0.label, weight: $0.services)
+            }
+            out.append(AgentPanel.Card(source: "Circle x402", key: "x402.sellers",
+                                       title: String(localized: "Who sells the most"),
+                                       caption: "", figure: .treemap(cells),
+                                       affinity: ChipMemory.weight(for: "Circle x402"),
+                                       reading: nil, rising: nil))
+        }
+        // PostHog — the busiest watched metric's own seven-day curve. The room
+        // draws it inside a milestone ring (`MetricDisc`); the panel draws the
+        // curve alone, because a ring at tile scale is two readings competing
+        // in 118pt and the curve is the half that answers "is this moving".
+        let metrics = PostHogState.all()
+        if let busiest = metrics
+            .filter({ $0.value.series.count >= 3 })
+            .max(by: { $0.value.total < $1.value.total }) {
+            let series = busiest.value.series.map(Double.init)
+            let first = series.first ?? 0, last = series.last ?? 0
+            out.append(AgentPanel.Card(source: "PostHog", key: "posthog.metric",
+                                       title: busiest.key, caption: "",
+                                       figure: .curve(series),
+                                       affinity: ChipMemory.weight(for: "PostHog"),
+                                       reading: nil,
+                                       // §83's flat rule — an unmoved metric
+                                       // gets no direction and no colour.
+                                       rising: abs(last - first) < 0.5 ? nil : last > first))
+        }
+        // Apple Wallet — where the money actually went, as the room's own
+        // merchant share bars. `share` is already the fraction of settled
+        // spend, so the panel re-derives nothing and the two can't disagree.
+        let spends = AppleWalletRoomSource.spends(from: corpus)
+        if let card = AppleWalletRoom.compose(spends: spends, now: .now),
+           !card.merchants.isEmpty {
+            let bars = card.merchants.prefix(4).map {
+                AgentPanel.Bar(label: $0.name,
+                               value: Int(($0.share * 1000).rounded()),
+                               detail: String(format: "%.0f%%", $0.share * 100))
+            }
+            out.append(AgentPanel.Card(source: "Apple Wallet", key: "wallet.merchants",
+                                       title: String(localized: "Where you spend"),
+                                       caption: "", figure: .bars(Array(bars)),
+                                       affinity: ChipMemory.weight(for: "Apple Wallet"),
+                                       reading: nil, rising: nil))
+        }
+        return out
+    }
+
+    /// The social rooms' channel treemap (prd §337) — the answer to "the
+    /// farcaster casting summary is a really weak visualization".
+    ///
+    /// Those rooms lead with `SocialRosterHero`, an avatar scroller rather than
+    /// a chart, so with the year-wall demoted they contributed nothing at all.
+    /// `channelName` has been stamped on every cast since §81 and nothing has
+    /// ever drawn it — which makes this the topic map the user prefers, over a
+    /// field that already exists.
+    @MainActor
+    private func socialChannelCard(_ corpus: [Thing], source: String) -> AgentPanel.Card? {
+        var counts: [String: Int] = [:]
+        for thing in corpus where thing.source == source {
+            guard let channel = thing.channelName, !channel.isEmpty else { continue }
+            counts[channel, default: 0] += 1
+        }
+        guard counts.count >= 2 else { return nil }
+        let cells = counts
+            .sorted { $0.value == $1.value ? $0.key < $1.key : $0.value > $1.value }
+            .prefix(4)
+            .map { AgentPanel.Cell(label: $0.key, weight: $0.value) }
+        return AgentPanel.Card(source: source, key: "\(source).channels",
+                               title: String(localized: "Where you post"),
+                               caption: "", figure: .treemap(Array(cells)),
+                               affinity: ChipMemory.weight(for: source),
+                               reading: nil, rising: nil)
+    }
+
+    /// The three figures no ROOM can draw (prd §337) — the clock, the weeks,
+    /// and meaning. Composed over the whole corpus rather than one room's
+    /// slice, which is exactly why `FeedInsight`'s registries can't produce
+    /// them and why the All feed has never had a hero.
+    ///
+    /// Built from one flat pass: `AgentPanelFigures` is Foundation-only over
+    /// `Entry`, so nothing here hands a `Thing` across a boundary.
+    @MainActor
+    private func crossSourceCards(_ corpus: [Thing]) -> [AgentPanel.Card] {
+        let entries = corpus
+            .filter { !Corpus.isImportReceipt($0) }
+            .map { thing in
+                AgentPanelFigures.Entry(source: thing.source,
+                                        at: thing.capturedAt,
+                                        terms: thing.ocrTopics + thing.tags,
+                                        vector: nil)
+            }
+        guard !entries.isEmpty else { return [] }
+        var out: [AgentPanel.Card] = []
+        func card(_ key: String, _ title: String, _ caption: String,
+                  _ figure: AgentPanel.Figure) -> AgentPanel.Card {
+            // Source "You" so the corner glyph and hue read as the app's own
+            // rather than borrowing a room's — these belong to no room, which
+            // is the whole point of them. The tap lands on the All feed.
+            AgentPanel.Card(source: "All", key: key, title: title,
+                            caption: AgentPanel.clamp(caption), figure: figure,
+                            affinity: 0, reading: nil, rising: nil)
+        }
+        let marks = AgentPanelFigures.dial(entries)
+        if !marks.isEmpty {
+            out.append(card("cross.dial", String(localized: "Your week, by the hour"),
+                            String(localized: "when things land"), .dial(marks)))
+        }
+        let bands = AgentPanelFigures.river(entries)
+        if bands.count >= 2 {
+            out.append(card("cross.river", String(localized: "What you keep circling"),
+                            String(localized: "ten weeks"), .river(bands)))
+        }
+        // The semantic map — the third §337 figure, and the only one on this
+        // surface that draws §282's embeddings, which have served retrieval
+        // invisibly since the day they shipped.
+        //
+        // Built from its OWN pass rather than from `entries` above, and that is
+        // a cost decision, not tidiness: unpacking a vector materialises ~512
+        // Doubles, so decoding the whole corpus to project 150 of them would
+        // spend the open's entire budget on rows the projection then discards.
+        // Newest-first, capped, and only the things that actually carry a
+        // vector — on a device with no embeddings this costs one filter and
+        // the map simply doesn't appear, which is the honest state.
+        let projected = corpus
+            .filter { !Corpus.isImportReceipt($0) && $0.embedding != nil }
+            .sorted { $0.capturedAt > $1.capturedAt }
+            .prefix(Self.scatterCap)
+            .compactMap { thing -> AgentPanelFigures.Entry? in
+                guard let packed = thing.embedding,
+                      let vector = EmbeddingIndex.unpack(packed) else { return nil }
+                return AgentPanelFigures.Entry(source: thing.source, at: thing.capturedAt,
+                                               terms: thing.ocrTopics + thing.tags,
+                                               vector: vector)
+            }
+        let map = AgentPanelFigures.scatter(Array(projected))
+        if !map.dots.isEmpty, !map.clusters.isEmpty {
+            out.append(card("cross.scatter", String(localized: "Your corpus, by meaning"),
+                            String(localized: "what sits near what"),
+                            .scatter(dots: map.dots, clusters: map.clusters)))
+        }
+        return out
+    }
+
+    /// How many vectors the semantic map projects.
+    ///
+    /// `AgentPanelFigures.scatter` caps at 300 of its own; this is tighter
+    /// because the projection is the one piece of real arithmetic the panel
+    /// does on open — power iteration over N × 512 — and the open is
+    /// synchronous by design (§334: the alternative shows a frame of empty
+    /// panel every time). 150 points already saturate a tile visually, so the
+    /// extra 150 buy nothing a person can see.
+    private static let scatterCap = 150
 
     /// What a room would LEAD with, as a figure.
     ///
@@ -936,7 +1114,8 @@ struct Composer: View {
                   _ figure: AgentPanel.Figure) -> AgentPanel.Card {
             AgentPanel.Card(source: source, key: source, title: title,
                             caption: AgentPanel.clamp(caption), figure: figure,
-                            affinity: ChipMemory.weight(for: source))
+                            affinity: ChipMemory.weight(for: source),
+                            reading: nil, rising: nil)
         }
         if let map = FeedInsight.topicMap(source: source, things: things) {
             // Four rows, not six: the inventory of small forms is explicit that
@@ -1008,11 +1187,30 @@ struct Composer: View {
     private func walletCurve() -> AgentPanel.Card? {
         let samples = WalletStore.shared.combinedValueSamples().map(\.usd)
         guard samples.count >= 3 else { return nil }
+        let window = Array(samples.suffix(24))
+        // The hero's ONE reading — the balance with its move, which is a
+        // reading and not a tally (§213 bans counting things; a number the
+        // room already says about itself is not a count).
+        let first = window.first ?? 0, last = window.last ?? 0
+        let pct = first > 0 ? (last - first) / first * 100 : 0
+        // §83's flat rule: a change that rounds to zero has no direction, so
+        // it gets no sign, no colour and no pill.
+        let flat = abs(pct) < 0.05
+        let reading = flat
+            ? String(format: "$%@", compactMoney(last))
+            : String(format: "$%@ · %+.1f%%", compactMoney(last), pct)
         return AgentPanel.Card(source: "Wallet", key: "wallet.curve",
                                title: String(localized: "Your balance"),
                                caption: "",
-                               figure: .curve(samples.suffix(24).map { $0 }),
-                               affinity: ChipMemory.weight(for: "Wallet"))
+                               figure: .curve(window),
+                               affinity: ChipMemory.weight(for: "Wallet"),
+                               reading: reading,
+                               rising: flat ? nil : pct > 0)
+    }
+
+    private func compactMoney(_ usd: Double) -> String {
+        usd >= 10_000 ? String(format: "%.0fk", usd / 1000)
+                      : String(format: "%.0f", usd)
     }
 
     /// The wallet's flow band — the second Wallet card, under its own key.
@@ -1033,7 +1231,8 @@ struct Composer: View {
                                caption: "",
                                figure: .flow(inLanes: lanes(band.inLanes),
                                              outLanes: lanes(band.outLanes)),
-                               affinity: ChipMemory.weight(for: "Wallet"))
+                               affinity: ChipMemory.weight(for: "Wallet"),
+                               reading: nil, rising: nil)
     }
 
     /// Fills the grid so the slots span DOORS, not four flavors of one
@@ -1840,6 +2039,14 @@ struct Composer: View {
             // something — an empty composition falls through to `dayCard` and
             // the chips, which is the rest screen exactly as it was.
             if boardShowing {
+                // The panel SCROLLS (§337). The composer sizes to itself so
+                // the sheet can hug it, which was right when the rest state
+                // was a greeting and two chip rows — but with the cap lifted
+                // past twenty figures the board is taller than the sheet, and
+                // the overflow ran the greeting up under the status bar and
+                // pushed the input bar off the bottom. Capped and scrollable:
+                // the bar stays reachable and the greeting stays put.
+                ScrollView {
                 AgentOpenBoard(composition: composition,
                                onOpenRoom: { source in
                                    // Switch the feed to that room and lower the
@@ -1850,6 +2057,9 @@ struct Composer: View {
                                    filter.tag = "All"
                                    close()
                                })
+                }
+                .frame(maxHeight: 520)
+                .scrollIndicators(.hidden)
             }
             // The day, as the room's lead — the FALLBACK now (§332). It stood
             // in for a synthesis the open couldn't show; the board is that
@@ -2787,8 +2997,9 @@ struct Composer: View {
                                                      : pool[min(placeholderIndex, pool.count - 1)])
                         .dsText(.body17).foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
-                        .id(placeholderIndex)
-                        .transition(.opacity)
+                        .contentTransition(.opacity)
+                        .animation(reduceMotion ? nil : DS.Motion.standard,
+                                   value: placeholderIndex)
                 }
                 .dsText(.body17)
                 .foregroundStyle(DS.textPrimary)

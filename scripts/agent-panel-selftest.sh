@@ -114,7 +114,10 @@ check(AgentPanel.rank([card("X", .treemap(cells(1)))]).isEmpty,
       "a figure too thin to draw never becomes a card")
 
 // The cap.
-let many = (0..<20).map { card("s\($0)", .bars(bars([3, 2])), affinity: 5) }
+// MORE than the cap, deliberately: the fixture was 20 and the cap was raised
+// to 20 in §337, so it stopped exceeding it and deleting the cap changed
+// nothing — the mutation survived silently. A cap fixture has to overshoot.
+let many = (0..<(AgentPanel.maxCards + 8)).map { card("s\($0)", .bars(bars([3, 2])), affinity: 5) }
 check(AgentPanel.rank(many).count == AgentPanel.maxCards, "the panel caps at maxCards")
 
 // TOTAL order: equal affinity AND equal richness must fall to the name, or the
@@ -294,7 +297,12 @@ guard_has "a tile tap switches the room" "$COMPOSER" 'filter\.source = source' |
 guard_has "the flow card rides WalletFlowSource" "$COMPOSER" 'WalletFlowSource\.band\(from:' || rc=1
 # …and it must take a full-width slot: half a sankey is unreadable by the
 # sizing inventory this panel was built against.
-guard_has "a flow figure demands full width" "$GRID" 'case \.flow = figure \{ return true \}' || rc=1
+guard_has "a flow figure demands full width" "$SRC" 'case \.flow:    return \.bandOnly' || rc=1
+# …and the GRID must actually honour `fit`, or the model's constraint is a
+# comment. The guard moved with the logic: it lived on a helper in the grid
+# until §337 put routing in `AgentPanel.fit`, and a guard left pointing at the
+# old home reads ✗ while the behaviour is perfectly correct.
+guard_has "the grid routes by fit" "$GRID" 'AgentPanel\.fit\(\$0\.figure\) == \.bandOnly' || rc=1
 # §334's tripwire: the moment a figure can be words, the panel is a list again.
 if sed 's|//.*||' "$SRC" | grep -qE 'case text\('; then
   print "  ✗ a Figure case may never be text (§334's tripwire)"; rc=1

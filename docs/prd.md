@@ -18377,61 +18377,6 @@ the app's. `catalog-sync.sh` still passes — it checks the SET of connectable
 offers against the site, which is unchanged by a reshuffle, so the ordering half
 of this is verified by reading rather than by the audit.
 
-## §327 — The catalogue keeps its pours; product and setup pages stay two surfaces (user: "do you think the crown pours in the app catalogue help or hurt?… i think you are probably right that it's better w/ the pours", 2026-08-06)
-
-Two questions raised together as the app reads more and more like a
-productivity tool, both settled by looking rather than arguing.
-
-**The product-page brand wash stays.** The worry was that bold per-brand color
-fights a productivity feel, and that dropping it would buy cohesion with the
-feeds. But the cohesion premise was stale: the feeds are already ink for a
-default user (Ink bleed default, §204 amendment; feed/thing-sheet washes
-dropped 2026-07-18; §297 drains the source rooms), so the daily surface —
-where the productivity feel is actually set — carries no pour to cohere with.
-Removing the catalogue wash buys uniform ink, not a shared language. And the
-experiment was already in the app for free: the hueless brands (X, ChatGPT,
-Vercel, Grok, Tokens, 0xBow) render pure-ink product pages by design. The user
-looked at the Tokens page and named the result exactly: it feels flatter, and
-it feels like **settings that are part of the app**. That's the distinction
-the wash exists to draw. The catalog is a store by charter ("the App-Store
-move", AppDetailScreen's own header comment) — the pour says *this is their
-product, you're deciding to let it in*, where ink says *this is a preferences
-pane you already own*, because ink is what our chrome wears everywhere else.
-This is the same standard every other pour ruling converged on — color
-survives where it carries information — landing on KEEP this time: on a
-product page the hue IS information (the tapped tile's identity, continued),
-and it retires from the daily loop the moment the person connects. Three
-mechanical costs of removal, recorded so they don't have to be rediscovered:
-the grid tiles keep their brand colors either way, so the color cliff moves to
-the tap instead of disappearing; `connectBloom` blooms the brand hue over the
-page, which comes out of nowhere over a page that never showed color; and
-~60 near-identical ink pages differ only by icon and name. The middle path —
-draining the dose to a film — was noted and declined; it re-litigates the
-2026-07-13 "bold, not a film" ruling, which the user did not amend.
-
-**Product page and setup page stay two surfaces.** The felt duplication that
-motivated the question was copy drift, and it was already fixed the same day
-(6002a3c "The product pages said everything twice", ef39936 "The connect pages
-said it twice too") — the seam was prose repeated across the pair, not the
-pair existing. Structurally they are already combined in the way that matters:
-since §218, Connect raises the setup form as a sheet OVER the product page for
-nearly everything, one-shot credentials dismiss themselves, and the payoff
-lands back on the page that made the promise. A true merge fights three
-structures: the two pages have different prose jobs with different audited
-budgets (§315 caps a connect page at a mode chip plus one intro sentence —
-marketing copy above a form is exactly what that audit exists to prevent);
-setup screens are reached from routes other than the product page (Fix, bridge
-detail, `-openSetup`); and the two-act imports (Snapchat, TikTok) and
-watch-list managers genuinely need a persistent working surface. Held open,
-deliberately unbuilt: inlining the single paste field on product pages for the
-plain token bridges would kill a hop, but drags the read-only-promise copy and
-the error states onto the product page — revisit only if the sheet hop starts
-bothering in practice.
-
-
-
-
-
 ## §328 — The x402 room's second pass: a map that ranks, a price you'd meet, a sheet with something in it (user: "the treemap is a bit off", then "do median", then "can we get more information on each of the sources?", 2026-08-06)
 
 **The treemap was inverting two ranks, everywhere.** `UnitTreemap.frames(6)` laid out areas 4·2·1·2·2·1 — rank 3 got one unit while ranks 4 and 5 got two — so QuickNode's 132 services drew smaller than AIsa's 94, and its label truncated to "Quick…". Reported against the x402 head, but the component is shared: the receipts reach map and every topic map had it too. Rank order is this map's ONLY claim (§300 made it rank-ordered rather than area-proportional on purpose, because true squarified cells arrive as slivers too thin to label), so a table that inverts two ranks breaks the single thing the drawing promises — the truncation was the symptom, not the cause. Now 4·2·2·2·1·1, non-increasing, still tiling all twelve units. Guarded for EVERY cell count, tiling included: a layout that ranks correctly but leaves a hole is a different bug, not a fixed one.
@@ -18939,3 +18884,79 @@ already stamped on every cast, ranked bars over reply/mention counterparties
 (social is conspicuously absent from the leaderboard's 19 rooms), or an
 engagement-received curve over the counts §330 already keeps. The user's
 ruling, not this file's.
+
+## §337 — Three figures nothing could draw, and the panel becomes everything active (user: "i think you can think harder for three really good novel unique ones", "if we have a visualization in the app that is active some form of it should by and large be in the agent", 2026-08-07)
+
+**Three CROSS-SOURCE figures**, composed the opposite way round from every
+registry: `FeedInsight` is pure over ONE room's things by contract, which is
+why the All feed never had a hero — a chart of everything composed that way is
+a chart of nothing. These take the whole corpus and find the axis all rooms
+genuinely share.
+
+**The day dial.** Every thing at its hour on a 24-hour clock, hue by room,
+radius by recency. The heatmaps answer which DAYS; nothing in the app has ever
+answered which HOURS, and hour-of-day is where a personal corpus is most
+revealing. Radially symmetric with no labels, so it is the one new figure that
+holds at every slot including the 118pt cell. Enters as a radar sweep. On the
+first real run it drew the week's shape immediately: a dense arc through
+working hours, a thin scatter overnight.
+
+**The theme river.** Ten weeks of the themes the topic maps already extract, as
+a stream. A treemap is the snapshot; this is the movement, and `BriefLedger`
+has held the history since §214 without anything drawing it. Two floors, both
+earned on the first run: kind-words (`link`, `shorts`, `screenshot`) flowed as
+if they were themes — §313's "a container is not a subject" in a new figure —
+and a theme confined to the newest weeks is a BURST, not drift, which drew as a
+flat line flaring at the right edge. Both are now refusals.
+
+**The semantic map.** The corpus projected by embedding similarity, hue by
+room, clusters named by the term the neighbourhood actually shares. §282 built
+a real index that serves retrieval INVISIBLY; this is the one surface that
+draws it. It is also the honest version of what §333 killed: that card turned a
+shared word into a sentence, this draws proximity and **asserts nothing** — the
+reader draws the conclusion, and a mixed-hue cluster is a cross-source theme
+made visible. **The projection is PCA by power iteration with a fixed seed, and
+determinism picked the method**: t-SNE and UMAP separate better and are both
+randomised, so the whole picture would rearrange between two opens — the
+failure `rank`'s total ordering exists to prevent, far more glaring here.
+
+**Bento means slots differ in SHAPE, not scale.** `AgentPanel.fit` is a
+constraint, not a hint: a figure routed to a slot it can't hold doesn't shrink
+gracefully, it clips or turns to mush, and both render as a perfectly good
+tile. The sankey and river are band-only; the map needs the hero or a band; the
+dial goes anywhere.
+
+**The cap is now a runaway guard, not an editorial choice** (8 → 20). Every
+live figure earns a slot, and the per-source heads that no registry could reach
+are wired: x402's seller treemap, PostHog's busiest metric curve, Apple
+Wallet's merchant bars — each through the room's OWN composer, so the tile and
+the room cannot disagree. Stripe's and Cloudflare's heads stay out: their own
+docs call the rail a restatement of the rows beneath it, and §334 says a card
+earns its slot by drawing.
+
+**Farcaster and Bluesky finally draw something** (user: "the farcaster casting
+summary is a really weak visualization"). Those rooms lead with an avatar
+scroller, so once the year-wall was demoted they contributed nothing at all.
+`channelName` has been stamped on every cast since §81 and nothing had ever
+drawn it — so the fix is a treemap over a field that already exists.
+
+**Four defects only a screenshot could find**, all invisible to the build and
+every audit: the greeting ran up under the status bar and the input bar fell
+off the bottom once the panel outgrew the sheet (it scrolls now, capped); the
+placeholder cycled with `.id()` + `.transition(.opacity)`, which inserts a new
+view while removing the old, so two sentences overlapped mid-crossfade
+(`contentTransition` animates one view in place); treemap labels were trapped
+inside the proportional bar and clipped to "Ort…" in a half-width cell (the
+label now sits above the bar at full row width — magnitude is the bar's job);
+and a near-WHITE brand hue filled ChatGPT's pulse with glaring white cells, so
+`panelHue` falls back to the tint above a luma bar — `signalColor` solves the
+inverse problem and hands back white for exactly those brands.
+
+**Two harness defects, both the same shape as everything else here.** A drift
+guard was grepping the GRID for a helper that had moved into the model, so it
+read ✗ while the behaviour was correct — a guard pointing at the wrong file
+proves nothing, and it moved with the logic. And the cap fixture used exactly
+20 cards on the day the cap became 20, so deleting the cap entirely changed
+nothing and the mutation went silent; the fixture overshoots by construction
+now. Both found by the user asking a plain question ("will we still show the
+sankey?") rather than by any check.
