@@ -212,6 +212,7 @@ private struct FigureView: View {
         let shares = AgentPanel.normalized(shown)
         return GeometryReader { geo in
             VStack(alignment: .leading, spacing: 5) {
+                Spacer(minLength: 0)
                 ForEach(Array(shown.enumerated()), id: \.offset) { i, bar in
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 4) {
@@ -230,8 +231,14 @@ private struct FigureView: View {
                             .frame(width: max(3, geo.size.width * shares[i] * t), height: 4)
                     }
                 }
+                Spacer(minLength: 0)
             }
-            .frame(maxHeight: .infinity, alignment: .center)
+            // Explicit spacers, not `.frame(alignment: .center)` — inside a
+            // GeometryReader that frame resolves against the reader's own
+            // bounds and left the rows pooled at the bottom of a tall cell
+            // (seen on the sim, §336).
+            .padding(.vertical, 0)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         }
     }
 
@@ -343,17 +350,41 @@ private struct FigureView: View {
         }
     }
 
+    /// A 2×2 wall that FILLS its cell rather than sitting at a fixed height.
+    ///
+    /// Fixed heights left the tall slot two-thirds empty with the pictures
+    /// pooled at the bottom (seen on the sim, §336) — a wall is texture, and
+    /// texture that doesn't reach its edges reads as a loading state.
     private func wall(_ urls: [String]) -> some View {
-        let grid = [GridItem(.flexible(), spacing: 3), GridItem(.flexible(), spacing: 3)]
-        return LazyVGrid(columns: grid, spacing: 3) {
-            ForEach(Array(urls.prefix(4).enumerated()), id: \.offset) { _, url in
-                AsyncImage(url: URL(string: url)) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    RoundedRectangle(cornerRadius: 4, style: .continuous).fill(DS.fillLine)
+        let shown = Array(urls.prefix(4))
+        return GeometryReader { geo in
+            let gap: CGFloat = 3
+            let cellH = max(18, (geo.size.height - gap) / 2)
+            let cellW = max(18, (geo.size.width - gap) / 2)
+            VStack(spacing: gap) {
+                ForEach(0..<2, id: \.self) { row in
+                    HStack(spacing: gap) {
+                        ForEach(0..<2, id: \.self) { col in
+                            let i = row * 2 + col
+                            Group {
+                                if i < shown.count {
+                                    AsyncImage(url: URL(string: shown[i])) { image in
+                                        image.resizable().scaledToFill()
+                                    } placeholder: {
+                                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                            .fill(DS.fillLine)
+                                    }
+                                } else {
+                                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                        .fill(DS.fillLine)
+                                }
+                            }
+                            .frame(width: cellW, height: cellH)
+                            .clipped()
+                            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                        }
+                    }
                 }
-                .frame(height: slot == .small ? 30 : 42)
-                .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
             }
         }
         .opacity(t)

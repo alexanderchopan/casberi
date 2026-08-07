@@ -1827,7 +1827,13 @@ struct Composer: View {
             // own doc has said "pinned to the bottom" since it hugged a sheet
             // — was nowhere near it. Only at rest: once an answer exists the
             // conversation's own scroll is the expanding element.
-            if restChrome(keepBrief: false) { Spacer(minLength: DS.Space.s4) }
+            // The rest screen settles at the BOTTOM (2026-07-31) — but not
+            // under the panel, which is a full surface of its own and needs no
+            // pushing down. Left in, it opened a ~300pt hole between the
+            // greeting and the first tile (seen on the sim, §336).
+            if restChrome(keepBrief: false), !boardShowing {
+                Spacer(minLength: DS.Space.s4)
+            }
             // The room, answered (prd §332). Leads everything below it: the
             // noticing, the kept asks wearing their readings, the window
             // threaded, the fold. Shows only at rest and only when it has
@@ -2532,7 +2538,12 @@ struct Composer: View {
         // Docked beneath the brief LANDING too (prd §181) — a kept standing
         // ask must stay reachable when the agent opens onto the brief, not
         // only from the old empty state.
-        if restChrome(keepBrief: true), !keptKinds.isEmpty {
+        // Hidden while the panel is up (§336): "one intro sentence and the rest
+        // ONLY visualizations" — a row of text pills under the figures is
+        // exactly the non-visualization the ruling removes. They return the
+        // moment the panel has nothing to draw, which is the state they were
+        // designed for.
+        if restChrome(keepBrief: true), !boardShowing, !keptKinds.isEmpty {
             let sorted = keptKinds.sorted { a, b in
                 let store = KeptAskStore.shared
                 let changedA = store.changed(a, digest: store.currentDigests[a] ?? "")
@@ -2640,7 +2651,7 @@ struct Composer: View {
         // Also shown docked beneath the brief LANDING (prd §181) — the one
         // answer state that keeps its chips, so opening the agent onto the
         // brief never costs the person the "what else can I ask" row.
-        if restChrome(keepBrief: true), !dockedSuggestions.isEmpty {
+        if restChrome(keepBrief: true), !boardShowing, !dockedSuggestions.isEmpty {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: DS.Space.s2) {
                 ForEach(Array(dockedSuggestions.enumerated()), id: \.element.memoryKey) { i, ask in

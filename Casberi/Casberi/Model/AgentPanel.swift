@@ -192,9 +192,40 @@ enum AgentPanel {
     /// Eight is two full screens and the honest edge of a glance.
     static let maxCards = 8
 
+    /// What a figure is WORTH leading with (prd §336, user: "nobody cares about
+    /// your capture year or your chat year tho, those are superfluous metrics",
+    /// and "topic maps > capture year or chat year").
+    ///
+    /// A contribution wall answers WHEN — the weakest thing a room can say,
+    /// and the same ruling `FeedScreen.shapedSections` already made when it
+    /// moved the heatmap LAST in the hero chain on 2026-07-31. The panel
+    /// inherited the wrong half of that: the per-room chain preferred a topic
+    /// map correctly, but `rank` then sorted PULSES from term-poor rooms above
+    /// real figures from richer ones, so the open led with "Your capture year"
+    /// over four live days. Grade beats affinity now — a wall shows only when
+    /// nothing better exists, and can never take the hero cell.
+    ///
+    /// Everything above `.pulse` is deliberately FLAT: a treemap, a
+    /// leaderboard and a flow all answer WHAT or WHO, and ranking them against
+    /// each other would be a quality judgment this file has no basis to make.
+    /// Affinity — the room you actually open — decides among them.
+    static func grade(_ figure: Figure) -> Int {
+        switch figure {
+        case .pulse: return 0
+        default:     return 1
+        }
+    }
+
+    /// Rooms that always hold a slot when they have anything to draw (user:
+    /// "the wallet should always be on the visualizations"). Pinned ahead of
+    /// affinity, because affinity is a TAP counter and the wallet is the one
+    /// room whose figure you want without having gone looking for it.
+    static let pinnedSources: Set<String> = ["Wallet"]
+
     /// Rank and cap.
     ///
-    /// Order is AFFINITY first — `ChipMemory`'s tap-learned, decaying weight,
+    /// Order is PINNED first, then GRADE, then AFFINITY — `ChipMemory`'s
+    /// tap-learned, decaying weight,
     /// the same signal that already sorts the source strip — so the panel leads
     /// with the rooms you actually open, and a room you never visit drifts to
     /// the tail on its own without an edit surface. Ties break on the figure's
@@ -206,6 +237,11 @@ enum AgentPanel {
         cards
             .filter { !$0.figure.isEmpty }
             .sorted { a, b in
+                let (pa, pb) = (pinnedSources.contains(a.source),
+                                pinnedSources.contains(b.source))
+                if pa != pb { return pa }
+                let (ga, gb) = (grade(a.figure), grade(b.figure))
+                if ga != gb { return ga > gb }
                 if a.affinity != b.affinity { return a.affinity > b.affinity }
                 let (ra, rb) = (richness(a.figure), richness(b.figure))
                 if ra != rb { return ra > rb }

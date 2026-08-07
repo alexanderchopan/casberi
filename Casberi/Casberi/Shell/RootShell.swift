@@ -1486,7 +1486,23 @@ struct RootShell: View {
                         // ask before the bar rose still wins; the masthead
                         // title-travel stays whisper-only (no `risingBriefTitle`
                         // here — a bare tap has no capsule to morph from).
-                        if chrome.askRequest == nil { chrome.askRequest = TodayBrief.title }
+                        // NO auto-brief on a bare tap (prd §336, 2026-08-07).
+                        // §181 made the Today brief the default landing, and
+                        // that is what made §334's panel unreachable: seeding
+                        // an ask here puts the composer in `answering`, so
+                        // `restChrome` is false and `boardShowing` can NEVER be
+                        // true — the panel shipped in 282 and 284 and could not
+                        // draw on a single normal open, while the person got a
+                        // wall of synthesized text instead. A bare tap now
+                        // opens the agent AT REST, where the panel lives.
+                        //
+                        // Every deliberate route to the brief is untouched: the
+                        // whisper capsule, the Daily Brief quick action, the
+                        // `casberi://brief` deep link, the day strip, a kept
+                        // `today` pill, and a typed "how's my day" all still
+                        // seed `askRequest` themselves. The guard below stays
+                        // `nil`-checked so any of those still wins if it set an
+                        // ask before the bar rose.
                         composerOpen = true
                     }
                 }

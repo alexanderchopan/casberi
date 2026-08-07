@@ -132,6 +132,25 @@ let rich = AgentPanel.rank([
 ])
 check(rich.first?.source == "Zzz", "with equal affinity the fuller figure leads")
 
+// §336: a contribution wall answers WHEN — the weakest thing a room can say —
+// so it never outranks a real figure, even from a room you open far more.
+let demoted = AgentPanel.rank([
+    card("Photos", .pulse(oneDay), affinity: 99),
+    card("RSS", .bars(bars([5, 3])), affinity: 0),
+])
+check(demoted.first?.source == "RSS", "a year wall never leads over a real figure")
+check(AgentPanel.grade(.pulse(oneDay)) < AgentPanel.grade(.bars(bars([1]))),
+      "pulse grades below everything else")
+
+// The Wallet holds a slot without having been tapped (user: "the wallet should
+// always be on the visualizations") — affinity is a TAP counter, and the
+// wallet's figure is one you want without having gone looking for it.
+let pinned = AgentPanel.rank([
+    card("Photos", .bars(bars([9, 8])), affinity: 99),
+    card("Wallet", .curve([1, 2, 3]), key: "wallet.curve", affinity: 0),
+])
+check(pinned.first?.source == "Wallet", "the Wallet is pinned ahead of affinity")
+
 // A heatmap must not win on width alone.
 var sparse = Array(repeating: 0, count: 84); sparse[0] = 1; sparse[1] = 1
 check(AgentPanel.richness(.pulse(sparse)) == 2, "a pulse is scored on live days, not its width")
@@ -218,6 +237,12 @@ mutate "the panel loses its cap" \
 mutate "tile order stops being total" \
   'return a.source < b.source' \
   'return false' || rc=1
+mutate "a year wall outranks a real figure again" \
+  'if ga != gb { return ga > gb }' \
+  'if false { return false }' || rc=1
+mutate "the Wallet loses its pin" \
+  'if pa != pb { return pa }' \
+  'if false { return false }' || rc=1
 mutate "affinity stops leading the sort" \
   'if a.affinity != b.affinity { return a.affinity > b.affinity }' \
   'if false { return false }' || rc=1

@@ -18377,6 +18377,61 @@ the app's. `catalog-sync.sh` still passes — it checks the SET of connectable
 offers against the site, which is unchanged by a reshuffle, so the ordering half
 of this is verified by reading rather than by the audit.
 
+## §327 — The catalogue keeps its pours; product and setup pages stay two surfaces (user: "do you think the crown pours in the app catalogue help or hurt?… i think you are probably right that it's better w/ the pours", 2026-08-06)
+
+Two questions raised together as the app reads more and more like a
+productivity tool, both settled by looking rather than arguing.
+
+**The product-page brand wash stays.** The worry was that bold per-brand color
+fights a productivity feel, and that dropping it would buy cohesion with the
+feeds. But the cohesion premise was stale: the feeds are already ink for a
+default user (Ink bleed default, §204 amendment; feed/thing-sheet washes
+dropped 2026-07-18; §297 drains the source rooms), so the daily surface —
+where the productivity feel is actually set — carries no pour to cohere with.
+Removing the catalogue wash buys uniform ink, not a shared language. And the
+experiment was already in the app for free: the hueless brands (X, ChatGPT,
+Vercel, Grok, Tokens, 0xBow) render pure-ink product pages by design. The user
+looked at the Tokens page and named the result exactly: it feels flatter, and
+it feels like **settings that are part of the app**. That's the distinction
+the wash exists to draw. The catalog is a store by charter ("the App-Store
+move", AppDetailScreen's own header comment) — the pour says *this is their
+product, you're deciding to let it in*, where ink says *this is a preferences
+pane you already own*, because ink is what our chrome wears everywhere else.
+This is the same standard every other pour ruling converged on — color
+survives where it carries information — landing on KEEP this time: on a
+product page the hue IS information (the tapped tile's identity, continued),
+and it retires from the daily loop the moment the person connects. Three
+mechanical costs of removal, recorded so they don't have to be rediscovered:
+the grid tiles keep their brand colors either way, so the color cliff moves to
+the tap instead of disappearing; `connectBloom` blooms the brand hue over the
+page, which comes out of nowhere over a page that never showed color; and
+~60 near-identical ink pages differ only by icon and name. The middle path —
+draining the dose to a film — was noted and declined; it re-litigates the
+2026-07-13 "bold, not a film" ruling, which the user did not amend.
+
+**Product page and setup page stay two surfaces.** The felt duplication that
+motivated the question was copy drift, and it was already fixed the same day
+(6002a3c "The product pages said everything twice", ef39936 "The connect pages
+said it twice too") — the seam was prose repeated across the pair, not the
+pair existing. Structurally they are already combined in the way that matters:
+since §218, Connect raises the setup form as a sheet OVER the product page for
+nearly everything, one-shot credentials dismiss themselves, and the payoff
+lands back on the page that made the promise. A true merge fights three
+structures: the two pages have different prose jobs with different audited
+budgets (§315 caps a connect page at a mode chip plus one intro sentence —
+marketing copy above a form is exactly what that audit exists to prevent);
+setup screens are reached from routes other than the product page (Fix, bridge
+detail, `-openSetup`); and the two-act imports (Snapchat, TikTok) and
+watch-list managers genuinely need a persistent working surface. Held open,
+deliberately unbuilt: inlining the single paste field on product pages for the
+plain token bridges would kill a hop, but drags the read-only-promise copy and
+the error states onto the product page — revisit only if the sheet hop starts
+bothering in practice.
+
+
+
+
+
 ## §328 — The x402 room's second pass: a map that ranks, a price you'd meet, a sheet with something in it (user: "the treemap is a bit off", then "do median", then "can we get more information on each of the sources?", 2026-08-06)
 
 **The treemap was inverting two ranks, everywhere.** `UnitTreemap.frames(6)` laid out areas 4·2·1·2·2·1 — rank 3 got one unit while ranks 4 and 5 got two — so QuickNode's 132 services drew smaller than AIsa's 94, and its label truncated to "Quick…". Reported against the x402 head, but the component is shared: the receipts reach map and every topic map had it too. Rank order is this map's ONLY claim (§300 made it rank-ordered rather than area-proportional on purpose, because true squarified cells arrive as slivers too thin to label), so a table that inverts two ranks breaks the single thing the drawing promises — the truncation was the symptom, not the cause. Now 4·2·2·2·1·1, non-increasing, still tiling all twelve units. Guarded for EVERY cell count, tiling included: a layout that ranks correctly but leaves a hole is a different bug, not a fixed one.
@@ -18829,3 +18884,58 @@ at TILE scale, and §334 already measured that and capped tile maps at four.
 Ranks 4–5 are 1×1 under both tables, so §335 makes no cell smaller than the
 five-cell layout already did. Do not re-open this as a rendering fix; it is a
 density preference, and the answer was six.
+
+## §336 — The panel could never draw, and the year walls were leading (user: "284 DOES NOT SHOW AGENT AS BENTO AND STILL HAS NON VISUALIZATIONS IN THE AGENT", then "nobody cares about your capture year or your chat year", 2026-08-07)
+
+**The panel shipped twice and rendered zero times.** §181 made the Today brief
+the default landing, so `RootShell`'s bare agent-bar tap seeded
+`chrome.askRequest = TodayBrief.title` — which puts the composer in
+`answering`, which makes `restChrome` false, which makes `boardShowing`
+**permanently false**. Builds 282 and 284 both carried `AgentPanel` and neither
+could draw it on a single normal open; what the person got was the brief's
+synthesized document, which is the exact opposite of the ruling. The bug is not
+in the panel — every line of it was correct — it is that the panel was built
+for a state the app stopped entering a month earlier, and nobody opened the app
+to check. **That is §333's own lesson, recorded that morning and broken the
+same day: the card must be seen by a person before it ships.**
+
+**A bare tap now opens AT REST.** Every deliberate route to the brief is
+untouched — the whisper capsule, the Daily Brief quick action, the
+`casberi://brief` deep link, the day strip, a kept `today` pill, and a typed
+"how's my day" all seed `askRequest` themselves, and the `nil` guard still lets
+any of them win if they set an ask before the bar rose. This supersedes §181's
+default, and only its default.
+
+**One intro sentence means one.** The greeting IS that sentence, so the kept-ask
+pills, the suggestion chips and the day card are all suppressed while the panel
+is up. They return the moment it has nothing to draw — the state they were
+designed for.
+
+**Grade beats affinity.** A contribution wall answers WHEN, the weakest thing a
+room can say, and `FeedScreen.shapedSections` already moved the heatmap last in
+2026-07-31. The panel inherited the wrong half: the per-room chain preferred a
+topic map correctly, but `rank` then sorted PULSES from term-poor rooms above
+real figures from richer ones, so the open led with "Your capture year" over
+four live days. `AgentPanel.grade` puts `.pulse` below everything; it can never
+take the hero. Everything above it stays FLAT — a treemap, a leaderboard and a
+flow all answer WHAT or WHO, and ranking those against each other would be a
+quality judgment this file has no basis to make.
+
+**The Wallet is pinned** (`pinnedSources`), ahead of affinity: affinity is a TAP
+counter, and the wallet's figure is the one you want without having gone
+looking for it.
+
+**Two layout bugs only a screenshot could find.** The rest screen's bottom
+spacer opened a ~300pt hole between the greeting and the first tile, and
+thumbnail walls sat at a fixed height with the pictures pooled at the bottom of
+a tall cell — texture that doesn't reach its edges reads as a loading state.
+Both were invisible to the build, the harness and every audit.
+
+**Held open, and the inventory says it's the real gap:** social rooms lead with
+`SocialRosterHero`, an avatar scroller rather than a chart, so with the pulse
+demoted Farcaster and Bluesky will often contribute nothing at all. Three
+candidates need no new field — a channels treemap over the `channelName`
+already stamped on every cast, ranked bars over reply/mention counterparties
+(social is conspicuously absent from the leaderboard's 19 rooms), or an
+engagement-received curve over the counts §330 already keeps. The user's
+ruling, not this file's.
