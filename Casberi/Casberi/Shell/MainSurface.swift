@@ -26,9 +26,33 @@ struct MainSurface: View {
     // property read off `things`/`feedThings` here is in this set, so nothing
     // faults; the objects never leave this view.
     @Query(MainSurface.chipCorpus) private var things: [Thing]
+    @Environment(\.modelContext) private var modelContext
     private static var chipCorpus: FetchDescriptor<Thing> {
         var d = FetchDescriptor<Thing>(sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
         d.propertiesToFetch = [\.id, \.source, \.capturedAt, \.title, \.tags]
+        // BOUNDED (2026-08-06). `propertiesToFetch` made each row cheap and
+        // never bounded how many, so this materialised the whole corpus every
+        // time the body touched it — and `.onChange(of: things.count)` below
+        // touches it on EVERY body pass, which is what made it 25.0% of the
+        // main thread on a 6,000-row corpus (`main-thread-profile.sh`).
+        //
+        // What survives the bound is exactly what this query is still for: the
+        // newest row for the resting pane (`latestArrival`), and the id set the
+        // arrival watcher diffs. Both are inherently about what just landed, so
+        // a recent window is the RIGHT input, not a compromised one — an
+        // arrival is by construction near the top of a newest-first list.
+        //
+        // The chip SET no longer comes from here at all (`newestPerSource`),
+        // because that question needs an exact answer at any age and a window
+        // cannot give one. Two questions, two shapes.
+        //
+        // Two things the watcher relies on that the bound leaves intact: rows
+        // ageing OUT of the window can never fake an arrival, since `fresh` is
+        // a set SUBTRACTION and only additions count; and `firstEver` is
+        // additionally gated on a persistent `bloom.seen.<source>` flag, so a
+        // source whose older rows sit outside the window still cannot replay
+        // its connect celebration.
+        d.fetchLimit = 400
         return d
     }
     @Environment(ShellChrome.self) private var chrome
@@ -243,6 +267,42 @@ struct MainSurface: View {
     /// a thumb, which is the one thing the freeze exists to prevent.
     private func refreshLiveChips() { liveChips = computedChipLabels }
 
+    /// Every source that owns at least one row, newest first — one indexed
+    /// `fetchLimit: 1` read per candidate name.
+    ///
+    /// CANDIDATES are the catalog's own seats plus whatever the recent window
+    /// happens to name. The catalog half is what makes this exact where a
+    /// bounded corpus walk was not: a seat is asked directly, so a source whose
+    /// newest row is years old still answers and still earns its chip. The
+    /// window half catches a source the catalog does NOT name — a retired seat,
+    /// a demo seed — which can only be found by having a row, and is therefore
+    /// subject to the same recency limit the old code had for everything. That
+    /// is a strictly smaller blind spot than before, not a new one.
+    ///
+    /// `capturedAt` can sit in the FUTURE (a calendar event carries the event's
+    /// own time), so ordering on it puts a source with something scheduled
+    /// ahead of one that just landed. That is the order the strip has always
+    /// had — `things` is sorted the same way and first-appearance drove the old
+    /// list — so it is preserved deliberately rather than quietly corrected.
+    private func newestPerSource() -> [(String, Date)] {
+        var candidates = Set(store.bridges.map(\.name))
+        for thing in things where thing.isLive { candidates.insert(thing.source) }
+        var out: [(String, Date)] = []
+        for name in candidates where Corpus.earnsRoom(name) {
+            var d = FetchDescriptor<Thing>(
+                predicate: #Predicate { $0.source == name },
+                sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+            d.fetchLimit = 1
+            // Only the column the sort and the order need. Without this the one
+            // row faults its heavy inline text in — per source, per refresh.
+            d.propertiesToFetch = [\.source, \.capturedAt]
+            guard let newest = (try? modelContext.fetch(d))?.first, newest.isLive
+            else { continue }
+            out.append((name, newest.capturedAt))
+        }
+        return out.sorted { $0.1 > $1.1 }
+    }
+
     /// Chip order: All, then every source — most-recent-first is still the
     /// baseline (`things` is newest-first, so first appearance IS the newest
     /// thing per source), but a source you actually VISIT often (`ChipMemory`,
@@ -250,16 +310,31 @@ struct MainSurface: View {
     /// zero-weight tie keeps the recency order untouched — this only ever
     /// promotes a chip you use, never reorders the rest.
     private var computedChipLabels: [String] {
-        var seen: Set<String> = []
+        // Asked SOURCE BY SOURCE since 2026-08-06, not by walking the corpus.
+        //
+        // This used to read `feedThings`, i.e. the whole corpus materialised as
+        // model objects, to learn two things: which sources exist, and how
+        // recent each one's newest row is. `scripts/main-thread-profile.sh` put
+        // `MainSurface.things.getter` at 25.0% of the main thread on a
+        // 6,000-row corpus — a quarter of the thread spent instantiating every
+        // row the person owns to answer a question about a few dozen names.
+        //
+        // The feed's bound (`FeedScreen.allRoomFetchLimit`) cannot be copied
+        // here, and that is the whole reason this is shaped differently: a
+        // newest-N limit answers "which sources exist" WRONGLY, by dropping any
+        // source whose newest row is older than the Nth newest row overall.
+        // That is a room vanishing from the strip — a correctness bug, not the
+        // recency trade the feed accepted.
+        //
+        // So each candidate is asked for its newest row alone: one indexed
+        // fetch, one object, per name. Dozens of tiny reads instead of
+        // thousands of materialisations, and the answer is exact at any corpus
+        // size. It stays off the body path for the reason it always did — the
+        // callers are `freezeChips`/`refreshLiveChips`, driven by mount,
+        // foreground and arrival.
         var ordered: [String] = []
-        // `Corpus.chiplessSources` skips "You" (ruling 2026-08-02) — its things
-        // stay in All and keep their stamp, it just isn't a room. Filtered on
-        // the way IN rather than out of the finished list, so the learned sort
-        // below can't hold a slot for something with nowhere to go.
-        for thing in feedThings where Corpus.earnsRoom(thing.source)
-            && seen.insert(thing.source).inserted {
-            ordered.append(thing.source)
-        }
+        for (name, _) in newestPerSource() { ordered.append(name) }
+        var seen = Set(ordered)
         // A LIVE-room source earns its chip by being CONNECTED, not by having
         // landed anything (prd §234, `LiveRoomSources`): Kalshi and Polymarket
         // have no sync, so a corpus-only rule left a connected exchange with
