@@ -2959,6 +2959,31 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-threadProbe YES` — the All feed's cross-source thread head
+        // (2026-08-07, `FeedThread`). Deterministic, so unlike the model paths
+        // this VERIFIES ON THE SIMULATOR: it logs the detected subject, the
+        // framing line, then one `threadMember|` line PER member (the
+        // `-todayProbe` truncation lesson). An empty result has one honest
+        // cause — no subject spans two sources in the recent window — which is
+        // the common day, so "no thread" is the expected answer, not a bug.
+        Hook(key: "threadProbe") { _, context in
+            Task { @MainActor in
+                var d = FetchDescriptor<Thing>(
+                    sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+                d.fetchLimit = 2000
+                let things = (try? context.fetch(d)) ?? []
+                if let thread = FeedThread.find(in: things) {
+                    NSLog("[Casberi] thread| %@ · %@ · %d members",
+                          thread.subject, thread.line, thread.members.count)
+                    for member in thread.members {
+                        NSLog("[Casberi] threadMember| %@ — %@ · %@",
+                              member.title, member.source, member.meta)
+                    }
+                } else {
+                    NSLog("[Casberi] thread: none (no subject spans two sources recently)")
+                }
+            }
+        },
         // `-roomInsightProbe <Source>` — what a source's room would LEAD with
         // (2026-07-31). Every hero card is asked independently and logged with
         // its own answer, then the first non-nil in the documented order is

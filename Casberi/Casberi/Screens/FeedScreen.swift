@@ -1845,6 +1845,15 @@ struct FeedScreen: View {
         // one card here that renders on an EMPTY room, which is the whole
         // reason it exists — see `CloudflareRunway`.
         let sourceHead = liveStream == nil ? sourceHead(visible) : nil
+        // THE ALL FEED'S HEAD (2026-08-07) — the cross-source thread. Every
+        // head above is gated to one source; the All feed had none, because the
+        // registries are pure over ONE room's things and a thread is the one
+        // read that spans rooms (a subject carried across several apps at once).
+        // Deterministic (no model), so it renders on every device; RARE by
+        // construction, so on the common day it's nil and the feed opens on its
+        // rows. Scoped to `.all` so it can never disturb a source room.
+        let feedThread = liveStream == nil && shape == .all
+            ? FeedThread.find(in: visible) : nil
         // The anniversary, when it's a PICTURE (2026-07-31). Scoped to the
         // memories room on purpose: everywhere else `OnThisDay` rides inside
         // the heatmap card, where a title represents the thing perfectly, and
@@ -1894,6 +1903,7 @@ struct FeedScreen: View {
         let heroShown = liveStream != nil || anniversary != nil || topicMap != nil
             || heatmapLabel != nil || leaderboard != nil || sourceHead != nil
             || distribution != nil || mosaic != nil || !rosterAccounts.isEmpty
+            || feedThread != nil
         if let liveStream {
             insightSection { LiveStreamHero(thing: liveStream) { openThing(liveStream) } }
         } else if let sourceHead {
@@ -1966,6 +1976,13 @@ struct FeedScreen: View {
                                                displayName: account.title, bio: nil,
                                                avatarURL: account.avatarURL)
                 }
+            }
+        } else if let feedThread {
+            // The All feed's cross-source thread. Members carry ids, not
+            // `sourceRef`s (not every thing has a unique one), so the tap
+            // resolves by id against the live corpus.
+            insightSection {
+                FeedThreadCard(thread: feedThread) { id in openByID(id, in: visible) }
             }
         }
         switch shape {
@@ -2075,7 +2092,15 @@ struct FeedScreen: View {
                 // moved off Home) — a cross-source overview, so it only makes
                 // sense over the WHOLE corpus, not a kind-filtered slice (the
                 // `if` branch above).
-                themesLedeSection(visible)
+                //
+                // Yields to the cross-source THREAD head when one fired
+                // (2026-08-07): both are cross-source overviews and the design
+                // forbids stacking two (`heroShown`). The thread is the
+                // specific, timely lead; the themes map is the standing one —
+                // so the thread wins the slot, and the map returns on every day
+                // no thread forms. (Also closes a latent double-stack: a live
+                // stream landing in the All feed already set `heroShown`.)
+                if !heroShown { themesLedeSection(visible) }
                 // All is where volume floods — bundles + the new-since
                 // divider live here. A single source's shape IS that source;
                 // bundling there would collapse the whole screen into one row.
@@ -2789,6 +2814,16 @@ struct FeedScreen: View {
     /// lookup lands here, against the live corpus.
     private func openBySourceRef(_ ref: String, in visible: [Thing]) {
         guard let match = visible.first(where: { $0.isLive && $0.sourceRef == ref })
+        else { return }
+        openThing(match)
+    }
+
+    /// Open a thing by its `id.uuidString`, resolved against the live feed — the
+    /// head-card contract for a head whose members carry ids rather than
+    /// `sourceRef`s (the cross-source thread; not every thing has a unique ref).
+    /// Liveness inside the filter, before any stored read (corollary 3).
+    private func openByID(_ id: String, in visible: [Thing]) {
+        guard let match = visible.first(where: { $0.isLive && $0.id.uuidString == id })
         else { return }
         openThing(match)
     }
