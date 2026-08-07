@@ -19,6 +19,7 @@ enum X402RoomSource {
         // (corollary 4) — the caller's array may be a debounced snapshot.
         let landed = things.live.contains { $0.source == X402Ingest.source }
         guard landed else { return nil }
-        return X402Room.compose(sellers: X402State.sellers, listings: X402State.listings)
+        return X402Room.compose(sellers: X402State.sellers, listings: X402State.listings,
+                                typical: X402State.medianPrice)
     }
 }

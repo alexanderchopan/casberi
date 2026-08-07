@@ -107,6 +107,20 @@ enum X402Category: String, CaseIterable, Identifiable {
 /// absent until the first walk on that device rather than drawn with zeroes.
 enum X402State {
 
+    /// One endpoint, as the sheet lists it.
+    struct Service: Codable, Equatable, Identifiable {
+        /// The directory's own sentence about what it does. Present on all 955
+        /// measured listings, median 48 characters.
+        let what: String
+        /// GET / POST — worth showing because it says whether a call is a
+        /// lookup or a job you hand work to.
+        let method: String
+        /// Cheapest NON-ZERO call for this endpoint, in USDC base units.
+        let price: Int?
+        let free: Bool
+        var id: String { method + " " + what }
+    }
+
     struct Seller: Codable, Equatable {
         let slug: String
         let name: String
@@ -117,6 +131,24 @@ enum X402State {
         let hasFree: Bool
         /// Display names of the lanes this seller sells into.
         let lanes: [String]
+        /// A bounded slice of the actual catalog, for the thing sheet. Capped
+        /// at `X402Ingest.detailCap` — Orthogonal alone lists 310 endpoints,
+        /// and a sheet is not a directory. `services` above stays the REAL
+        /// total, so the card can say how much it is showing rather than
+        /// implying the cap is the whole catalog (§307).
+        var detail: [Service] = []
+        /// Readable chain names this seller settles on, commonest first.
+        var networks: [String] = []
+        /// Chains whose id this build can't name — counted, never dropped.
+        var unknownNetworks: Int = 0
+        var docsURL: String? = nil
+    }
+
+    /// The seller a landed row stands for, by its `sourceRef`.
+    static func seller(forRef ref: String?) -> Seller? {
+        guard let ref, ref.hasPrefix("x402:") else { return nil }
+        let slug = String(ref.dropFirst("x402:".count))
+        return sellers.first { $0.slug == slug }
     }
 
     private static let key = "x402.state.v1"
@@ -125,6 +157,10 @@ enum X402State {
         var sellers: [Seller]
         var listings: Int
         var savedAt: Date
+        /// The MEDIAN cost of a call across the whole marketplace, in USDC base
+        /// units — see `X402Room.note` for why the median and not the floor.
+        /// Optional so a snapshot written before this shipped still decodes.
+        var medianPrice: Int? = nil
     }
 
     private static func load() -> Snapshot? {
@@ -137,9 +173,12 @@ enum X402State {
     /// the sum of `services` when the walk was truncated.
     static var listings: Int { load()?.listings ?? 0 }
     static var savedAt: Date? { load()?.savedAt }
+    /// What a call typically costs across the marketplace.
+    static var medianPrice: Int? { load()?.medianPrice }
 
-    static func save(sellers: [Seller], listings: Int) {
-        let snap = Snapshot(sellers: sellers, listings: listings, savedAt: .now)
+    static func save(sellers: [Seller], listings: Int, medianPrice: Int?) {
+        let snap = Snapshot(sellers: sellers, listings: listings, savedAt: .now,
+                            medianPrice: medianPrice)
         if let data = try? JSONEncoder().encode(snap) {
             UserDefaults.standard.set(data, forKey: key)
         }
@@ -148,6 +187,80 @@ enum X402State {
     /// Disconnecting forgets what the marketplace looked like — the head must
     /// not outlive the seat that earned it.
     static func forget() { UserDefaults.standard.removeObject(forKey: key) }
+}
+
+// MARK: - Chains
+
+/// CAIP-2 ids as chain names (2026-08-06), for "settles on Base and Polygon".
+///
+/// **Testnets are excluded, not renamed.** Base Sepolia and Polygon Amoy are
+/// 792 of the 3,365 measured `accepts` entries, and listing them beside real
+/// chains would put pretend money in a line about where you'd actually pay —
+/// §250's ruling, which is why the Stripe seat refuses test-mode keys outright.
+/// No measured seller settles on testnets ALONE, so excluding them never
+/// empties a seller's list today; if one ever does, it simply says nothing
+/// rather than claiming a chain nobody can pay on.
+///
+/// An id this build can't name is COUNTED, never dropped (§307) — a marketplace
+/// quietly reporting fewer chains than it settles on is the same silent
+/// truncation, one field over.
+enum X402Networks {
+
+    /// Measured on the live directory, 2026-08-06.
+    static let names: [String: String] = [
+        "eip155:1":     "Ethereum",
+        "eip155:10":    "Optimism",
+        "eip155:130":   "Unichain",
+        "eip155:137":   "Polygon",
+        "eip155:146":   "Sonic",
+        "eip155:196":   "X Layer",
+        "eip155:480":   "World Chain",
+        "eip155:999":   "HyperEVM",
+        "eip155:1329":  "Sei",
+        "eip155:8453":  "Base",
+        "eip155:42161": "Arbitrum",
+        "eip155:43114": "Avalanche",
+        "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp": "Solana",
+    ]
+
+    /// Chain ids that are test networks — never shown.
+    static let testnets: Set<String> = [
+        "eip155:84532",     // Base Sepolia
+        "eip155:80002",     // Polygon Amoy
+        "eip155:11155111",  // Sepolia
+    ]
+
+    /// Raw ids (with repeats) → readable names ordered commonest first, plus
+    /// how many distinct ids we couldn't name.
+    static func named(_ raw: [String]) -> (names: [String], unknown: Int) {
+        var counts: [String: Int] = [:]
+        for id in raw where !testnets.contains(id) { counts[id, default: 0] += 1 }
+        var seen: [String: Int] = [:]
+        var unknown: Set<String> = []
+        for (id, n) in counts {
+            if let name = names[id] { seen[name, default: 0] += n } else { unknown.insert(id) }
+        }
+        let ordered = seen.sorted { ($0.value, $1.key) > ($1.value, $0.key) }.map(\.key)
+        return (ordered, unknown.count)
+    }
+
+    /// "Base, Polygon and 2 more" — the sheet's one-line answer to "where does
+    /// this settle". Folds past three so a seller on nine chains doesn't spend
+    /// a paragraph naming them.
+    static func line(_ names: [String], unknown: Int = 0) -> String? {
+        var shown = names
+        var extra = unknown
+        if shown.count > 3 { extra += shown.count - 3; shown = Array(shown.prefix(3)) }
+        guard !shown.isEmpty else { return nil }
+        let list: String
+        switch shown.count {
+        case 1:  list = shown[0]
+        case 2:  list = "\(shown[0]) and \(shown[1])"
+        default: list = "\(shown.dropLast().joined(separator: ", ")) and \(shown.last!)"
+        }
+        guard extra > 0 else { return list }
+        return String(localized: "\(list) and \(extra) more")
+    }
 }
 
 // MARK: - Store (just the watched lanes — no key, nothing to mint)
@@ -226,6 +339,12 @@ enum X402Ingest {
     /// 955, so it has real headroom, and `Walk.truncated` COUNTS the refusal
     /// rather than letting a grown directory read as a complete one (§307).
     static let maxPages = 10
+    /// Endpoints kept per seller for the thing sheet. A sheet is not a
+    /// directory — Orthogonal lists 310 — and the seller's REAL total rides
+    /// beside it, so the card says "Showing 12 of 310" rather than implying the
+    /// cap is the catalog (§307). Twelve is what fits before the sheet stops
+    /// being a summary and becomes a scroll.
+    static let detailCap = 12
     /// New providers landed per pass. A ONE-OPEN DELAY, not a ceiling: a
     /// provider held back this pass is still absent from `existing` next pass,
     /// so it lands then (the Hugging Face rule).
@@ -252,6 +371,14 @@ enum X402Ingest {
         let hasFree: Bool
         /// A sample of what they actually sell — retrieval fodder, never shown.
         let sampleDescriptions: [String]
+        /// A bounded slice of the real catalog, for the thing sheet.
+        let detailRows: [X402State.Service]
+        /// Readable chain names, commonest first, plus how many ids this build
+        /// couldn't name — counted, never silently dropped (§307).
+        let networks: [String]
+        let unknownNetworks: Int
+        /// Every priced listing's cheapest real call.
+        let prices: [Int]
 
         var known: [X402Category] {
             categories.compactMap(X402Category.from).sorted { $0.display < $1.display }
@@ -265,7 +392,9 @@ enum X402Ingest {
         var seller: X402State.Seller {
             X402State.Seller(slug: slug, name: name, services: endpoints,
                              minPrice: minPrice, maxPrice: maxPrice,
-                             hasFree: hasFree, lanes: known.map(\.display))
+                             hasFree: hasFree, lanes: known.map(\.display),
+                             detail: detailRows, networks: networks,
+                             unknownNetworks: unknownNetworks, docsURL: docsURL)
         }
 
         /// The seller's own registrable domain — the last two labels of its
@@ -388,6 +517,11 @@ enum X402Ingest {
         var maxPrice: Int?
         var hasFree = false
         var sampleDescriptions: [String] = []
+        var detailRows: [X402State.Service] = []
+        /// Raw CAIP-2 ids, with repeats — the count is what orders them.
+        var networks: [String] = []
+        /// Every priced listing's cheapest real call, for the median.
+        var prices: [Int] = []
 
         mutating func absorb(provider: [String: Any], item: [String: Any],
                              unknown: inout Set<String>) {
@@ -403,17 +537,34 @@ enum X402Ingest {
             for tag in (provider["tags"] as? [String] ?? []) where tags.count < 12 {
                 if let t = trimmed(tag), !tags.contains(t) { tags.append(t) }
             }
-            if sampleDescriptions.count < 8,
-               let what = trimmed((item["metadata"] as? [String: Any])?["description"]) {
-                sampleDescriptions.append(what)
-            }
+            let meta = item["metadata"] as? [String: Any]
+            let what = trimmed(meta?["description"])
+            if let what, sampleDescriptions.count < 8 { sampleDescriptions.append(what) }
 
+            // This listing's own cheapest REAL call, plus whether it has a free
+            // operation — the same quirk-4 split one level down, because the
+            // sheet prices each endpoint separately.
+            var here: Int?
+            var freeHere = false
             for accept in (item["accepts"] as? [[String: Any]] ?? []) {
+                if let network = trimmed(accept["network"]) { networks.append(network) }
                 guard let amount = amount(accept["amount"]) else { continue }
                 // Zero is recorded as a FACT, never as the minimum (quirk 4).
-                if amount == 0 { hasFree = true; continue }
+                if amount == 0 { hasFree = true; freeHere = true; continue }
+                here = min(here ?? amount, amount)
                 minPrice = min(minPrice ?? amount, amount)
                 maxPrice = max(maxPrice ?? amount, amount)
+            }
+            // Every priced listing feeds the median, whether or not its detail
+            // is drawn — the typical price is a fact about the whole catalog,
+            // not about the twelve endpoints that fit on a card.
+            if let here { prices.append(here) }
+
+            if detailRows.count < X402Ingest.detailCap, let what {
+                detailRows.append(X402State.Service(
+                    what: what,
+                    method: (trimmed(meta?["method"]) ?? "GET").uppercased(),
+                    price: here, free: freeHere))
             }
         }
 
@@ -421,7 +572,11 @@ enum X402Ingest {
             Provider(name: name, slug: slug, detail: detail, website: website,
                      docsURL: docsURL, categories: categories, tags: tags,
                      endpoints: endpoints, minPrice: minPrice, maxPrice: maxPrice,
-                     hasFree: hasFree, sampleDescriptions: sampleDescriptions)
+                     hasFree: hasFree, sampleDescriptions: sampleDescriptions,
+                     detailRows: detailRows,
+                     networks: X402Networks.named(networks).names,
+                     unknownNetworks: X402Networks.named(networks).unknown,
+                     prices: prices)
         }
 
         private func trimmed(_ raw: Any?) -> String? {
@@ -473,7 +628,8 @@ enum X402Ingest {
         // What the head reads. Recorded for EVERY provider the walk saw, not
         // just the ones in a watched lane — switching a lane on must not need a
         // second walk before the room can draw itself.
-        X402State.save(sellers: walk.providers.map(\.seller), listings: walk.total)
+        X402State.save(sellers: walk.providers.map(\.seller), listings: walk.total,
+                       medianPrice: median(walk.providers.flatMap(\.prices)))
         // Fetched once, not per provider: the crossing below is a plain suffix
         // check against this, the shape `GeckoTrending`'s watched-token crossing
         // uses (one keyed read, then lookups).
@@ -589,6 +745,29 @@ enum X402Ingest {
 
     private static func tags(for provider: Provider) -> [String] {
         (["x402"] + provider.known.map(\.display)).reduced()
+    }
+
+    /// The typical cost of a call — the MEDIAN of every priced listing, never
+    /// the mean.
+    ///
+    /// Measured 2026-08-06 across 885 priced listings: median **$0.01**, mean
+    /// **$0.15**. The mean is dragged four-hundred-fold by a handful of $8–$10
+    /// calls, so it describes no listing anybody would meet. `StripeSilence`
+    /// made the identical choice for the identical reason — "a burst would drag
+    /// a mean into inventing an outage" — and this is that rule about prices.
+    ///
+    /// Free listings are excluded rather than counted as zero (quirk 4 again):
+    /// they are said separately, and folding 70 zeroes into the middle of the
+    /// distribution would drag the typical price toward a number nobody pays.
+    static func median(_ prices: [Int]) -> Int? {
+        let sorted = prices.filter { $0 > 0 }.sorted()
+        guard !sorted.isEmpty else { return nil }
+        let mid = sorted.count / 2
+        // Even counts average the two middle values, which for money in base
+        // units is exact — no rounding to argue about.
+        return sorted.count.isMultiple(of: 2)
+            ? (sorted[mid - 1] + sorted[mid]) / 2
+            : sorted[mid]
     }
 
     /// USDC base units (6 decimals) as money, with enough precision to stay

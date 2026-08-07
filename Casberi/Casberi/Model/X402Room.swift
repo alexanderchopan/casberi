@@ -62,6 +62,9 @@ struct X402Room: Equatable {
     let listings: Int
     let minPrice: Int?
     let maxPrice: Int?
+    /// What a call TYPICALLY costs — the median of every priced listing. See
+    /// `note` for why the headline is not the floor.
+    let typical: Int?
     let hasFree: Bool
 
     /// Cells the map draws before folding. One below `UnitTreemap.maxCells` so
@@ -75,7 +78,8 @@ struct X402Room: Equatable {
     /// The head, or nil when there is nothing to rank. Nil below two sellers on
     /// purpose: one tile is not a comparison, and a treemap of it is a square
     /// that says "all of it" — a drawing with no information in it.
-    static func compose(sellers list: [X402State.Seller], listings: Int) -> X402Room? {
+    static func compose(sellers list: [X402State.Seller], listings: Int,
+                        typical: Int? = nil) -> X402Room? {
         let ranked = list.sorted {
             // Services descending, then name, so the order is total and a
             // redraw can never reshuffle equal sellers.
@@ -104,6 +108,7 @@ struct X402Room: Equatable {
                         listings: max(listings, 0),
                         minPrice: lows.min(),
                         maxPrice: highs.max(),
+                        typical: typical,
                         hasFree: ranked.contains(where: \.hasFree))
     }
 
@@ -128,13 +133,20 @@ struct X402Room: Equatable {
                          ? String(localized: "1 service")
                          : String(localized: "\(room.listings) services"))
         }
-        if let low = room.minPrice {
-            // "From" the cheapest REAL call. A marketplace whose floor is a free
-            // operation is not a free marketplace, and saying "from $0.00"
-            // would be the §83 fake status in the one place money is the point.
+        if let typical = room.typical {
+            // THE TYPICAL PRICE, NOT THE FLOOR (user ruling, 2026-08-06: "do
+            // median"). The line used to read "from $0.000001 a call", which is
+            // true — AIsa API really quotes one base unit — and useless: a
+            // single dust-priced endpoint set the headline for a marketplace
+            // whose median call is $0.01, four orders of magnitude away. A
+            // number that is technically true and describes nothing a reader
+            // will meet is the §83 problem wearing honesty as a costume.
+            //
+            // The median rather than the mean, measured: mean is $0.15, dragged
+            // by a handful of $8–$10 calls (`X402Ingest.median`).
             parts.append(room.hasFree
-                         ? String(localized: "some free, then from \(money(low)) a call")
-                         : String(localized: "from \(money(low)) a call"))
+                         ? String(localized: "some free · typically \(money(typical)) a call")
+                         : String(localized: "typically \(money(typical)) a call"))
         } else if room.hasFree {
             parts.append(String(localized: "free"))
         }

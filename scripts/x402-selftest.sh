@@ -141,8 +141,18 @@ grep -q 'X402RoomSource.compose' "$FEED" \
   || { echo "✗ the room head is no longer resolved — the ranking has nowhere to live"; exit 1; }
 grep -q 'X402RoomCard' "$FEED" \
   || { echo "✗ the room head is resolved but never drawn"; exit 1; }
-grep -q 'thing.source == X402Ingest.source' "$CONTENT" \
-  || { echo "✗ the sheet no longer shows what a seller sells — enrichedText goes invisible again"; exit 1; }
+# THE DEAD-CODE GUARD. The first attempt at this feature put the branch in
+# `ThingContent`'s `default:` case — but these rows are `.link`, which has its
+# own case, so it could never be reached. Build green, grep guard green, feature
+# doing nothing. So the guard checks the ROUTE, not the words: the seller card
+# must be constructed, and the source must NOT reappear in the default branch.
+grep -q 'X402SellerContent(thing: thing)' "$CONTENT" \
+  || { echo "✗ the sheet no longer draws the seller's catalog"; exit 1; }
+content_code="$TMP/content.swift"
+sed -E '/^[[:space:]]*\/\//d' "$CONTENT" > "$content_code"
+awk '/default:/{f=1} f&&/X402Ingest.source/{found=1} END{exit found?1:0}' "$content_code" \
+  || { echo "✗ x402 is back in ThingContent's default: branch — its rows are .link,"; \
+       echo "  so that branch is unreachable for them and the feature would be dead code."; exit 1; }
 grep -q 'X402Faces.heal' "$REFRESH" \
   || { echo "✗ the faces pass is never run — every row keeps the same glyph"; exit 1; }
 
@@ -270,11 +280,22 @@ def grab(path, signature):
         k += 1
     return src[start:k+1].replace("private ", "")
 
+def grabline(path, signature):
+    """A single-line declaration. Needed for brace-less constants: `grab`
+    matches from the next `{`, so on `static let detailCap = 12` it would
+    swallow the whole FOLLOWING function — the trap the X harness recorded."""
+    for line in open(path).read().splitlines():
+        if signature in line:
+            return line.replace("private ", "")
+    sys.exit(f"✗ extraction failed: {signature!r} not found in {path}")
+
 pieces = [
     "import Foundation\n",
     grab(x402, "enum X402Category"),
     "",
     grab(x402, "enum X402State"),
+    "",
+    grab(x402, "enum X402Networks"),
     "",
     grab(thing, "extension Array where Element == String"),
     "",
@@ -282,6 +303,8 @@ pieces = [
     grab(support, "static func titleLine"),
     "}\n",
     "enum X402Ingest {",
+    grabline(x402, "static let detailCap"),
+    grab(x402, "static func median"),
     grab(x402, "struct Provider {"),
     grab(x402, "struct Builder {"),
     grab(x402, "static func usd"),
@@ -452,7 +475,7 @@ check("no tail when everything fits", two?.cells.contains { $0.isTail } == false
 // marketplace (§300).
 let many = X402Room.compose(
     sellers: sellers([("A", 100), ("B", 90), ("C", 80), ("D", 70),
-                      ("E", 60), ("F", 50), ("G", 40)]), listings: 490)
+                      ("E", 60), ("F", 50), ("G", 40)]), listings: 490, typical: 20000)
 check("seven sellers fold to six cells", many?.cells.count == 6)
 check("the last cell is the tail", many?.cells.last?.isTail == true)
 check("the tail NAMES what it hides", many?.cells.last?.label == "2 more")
@@ -468,12 +491,13 @@ check("sellers is the headline unit",
       X402Room.headline(many!) == "7 companies are selling to agents")
 check("the listing count is the walk's own total, not the sum of cells",
       many?.listings == 490)
-check("note says size then floor",
-      X402Room.note(many!, money: X402Ingest.usd) == "490 services · from $0.02 a call")
+check("note says size then TYPICAL price, never the floor",
+      X402Room.note(many!, money: X402Ingest.usd) == "490 services · typically $0.02 a call")
 // The §83 rule in the one room where money is the point.
-let freeish = X402Room.compose(sellers: sellers([("A", 3), ("B", 2)], free: true), listings: 5)
-check("a free operation never becomes the advertised floor",
-      X402Room.note(freeish!, money: X402Ingest.usd) == "5 services · some free, then from $0.02 a call")
+let freeish = X402Room.compose(sellers: sellers([("A", 3), ("B", 2)], free: true),
+                               listings: 5, typical: 20000)
+check("a free operation never becomes the advertised price",
+      X402Room.note(freeish!, money: X402Ingest.usd) == "5 services · some free · typically $0.02 a call")
 let allFree = X402Room.compose(
     sellers: sellers([("A", 3), ("B", 2)], free: true, low: nil, high: nil), listings: 5)
 check("nothing priced reads 'free'",
@@ -482,14 +506,58 @@ let quiet = X402Room.compose(
     sellers: sellers([("A", 3), ("B", 2)], low: nil, high: nil), listings: 0)
 check("it says nothing it doesn't know",
       X402Room.note(quiet!, money: X402Ingest.usd) == "")
-check("the floor is the cheapest across the WHOLE marketplace",
+// THE RULING (user, 2026-08-06: "do median"). One dust-priced endpoint must
+// not set the headline. Measured on the live directory: the floor is
+// $0.000001 (AIsa quotes ONE base unit) while the median call is $0.01 —
+// four orders of magnitude apart, and only one of them describes a price
+// anybody meets.
+check("a dust endpoint does NOT set the headline",
       X402Room.compose(sellers: [
-        X402State.Seller(slug: "a", name: "A", services: 2, minPrice: 9000,
+        X402State.Seller(slug: "a", name: "A", services: 2, minPrice: 1,
                          maxPrice: 9000, hasFree: false, lanes: []),
         X402State.Seller(slug: "b", name: "B", services: 1, minPrice: 100,
                          maxPrice: 500, hasFree: false, lanes: []),
-      ], listings: 3).map { X402Room.note($0, money: X402Ingest.usd) }
-      == "3 services · from $0.0001 a call")
+      ], listings: 3, typical: 10000).map { X402Room.note($0, money: X402Ingest.usd) }
+      == "3 services · typically $0.01 a call")
+
+print("median — the typical call, never the mean")
+// Measured across 885 priced listings: median $0.01, mean $0.15. The mean is
+// dragged 15x by a handful of $8–$10 calls and describes no real listing.
+check("odd count takes the middle",   X402Ingest.median([100, 20000, 9_000_000]) == 20000)
+check("even count averages the two",  X402Ingest.median([10000, 20000]) == 15000)
+check("a fat tail cannot drag it",    X402Ingest.median([10000, 10000, 10000, 10_000_000]) == 10000)
+check("free listings are excluded, not counted as zero",
+      X402Ingest.median([0, 0, 0, 10000, 20000]) == 15000)
+check("nothing priced → nil",         X402Ingest.median([]) == nil)
+check("all free → nil",               X402Ingest.median([0, 0]) == nil)
+
+print("chains — testnets are not where money settles")
+check("Base is named",       X402Networks.named(["eip155:8453"]).names == ["Base"])
+// §250's ruling: pretend money filed beside real money is fake status.
+check("Base Sepolia is excluded", X402Networks.named(["eip155:84532"]).names == [])
+check("Polygon Amoy is excluded", X402Networks.named(["eip155:80002"]).names == [])
+// THE DISCRIMINATING CHECK, and the two above are not it. A testnet id isn't
+// in the names table either way, so `.names == []` passes even with the filter
+// deleted — the mutation SURVIVED against those two alone (the retriever
+// harness's "right result for the wrong reason" lesson). The filter's real
+// effect is that a testnet contributes NOTHING: not a name, and not an
+// unknown-chain count that would make the sheet say "and 1 more".
+check("a testnet is not even counted as an unknown chain",
+      X402Networks.named(["eip155:84532", "eip155:80002"]).unknown == 0)
+check("a testnet beside a real chain leaves it alone",
+      X402Networks.named(["eip155:8453", "eip155:84532"]) == (["Base"], 0))
+check("commonest chain leads",
+      X402Networks.named(["eip155:137", "eip155:8453", "eip155:8453"]).names == ["Base", "Polygon"])
+// §307: an id we can't name is COUNTED, never dropped.
+check("an unknown chain is counted", X402Networks.named(["eip155:424242"]).unknown == 1)
+check("an unknown chain is not named", X402Networks.named(["eip155:424242"]).names == [])
+check("one chain reads plainly",  X402Networks.line(["Base"]) == "Base")
+check("two chains read 'and'",    X402Networks.line(["Base", "Polygon"]) == "Base and Polygon")
+check("three list out",           X402Networks.line(["Base", "Polygon", "Sei"]) == "Base, Polygon and Sei")
+check("past three folds",
+      X402Networks.line(["Base", "Polygon", "Sei", "Solana", "Optimism"]) == "Base, Polygon and Sei and 2 more")
+check("unknowns join the fold",   X402Networks.line(["Base"], unknown: 2) == "Base and 2 more")
+check("no chains → nothing said",  X402Networks.line([]) == nil)
 
 print("share — area is service count, and only service count")
 check("the biggest tile is fully washed",
@@ -546,7 +614,12 @@ mutate "usd flattens sub-cent prices to \$0.00" 's/value >= 0\.01/value >= 0.0/'
 # a real, payable price shown as free. Found by drawing the room.
 mutate "usd drops the tier a real listing needs" 's/%\.6f/%.4f/' || bad=1
 # Quirk 4 undone: a zero quote becomes the advertised minimum.
-mutate "a zero quote is taken as the price floor" 's/if amount == 0 { hasFree = true; continue }/if amount == 0 { hasFree = true }/' || bad=1
+mutate "a zero quote is taken as the price floor" 's/if amount == 0 { hasFree = true; freeHere = true; continue }/if amount == 0 { hasFree = true; freeHere = true }/' || bad=1
+# The median must ignore free listings, or 70 zeroes drag the typical price
+# toward a number nobody pays.
+mutate "free listings drag the median down" 's/let sorted = prices.filter { \$0 > 0 }.sorted()/let sorted = prices.sorted()/' || bad=1
+# §250's ruling: pretend money must not be filed beside real money.
+mutate "testnets count as places money settles" 's/for id in raw where !testnets.contains(id)/for id in raw/' || bad=1
 # Quirk 1 undone at the data layer: the seventh lane stops resolving.
 mutate "DATA_ENRICHMENT stops mapping to a lane" 's/case enrichment     = "DATA_ENRICHMENT"/case enrichment     = "DATA_ENRICHMENT_X"/' || bad=1
 # Quirk 2 undone: an unmapped lane silently removes a provider.
@@ -572,4 +645,4 @@ mutate "the wash denominator changes" 's/let top = room.cells.map(\\.services).m
 
 echo
 if (( bad )); then echo "x402-selftest: mutation pass FAILED"; exit 1; fi
-echo "x402-selftest: OK — shipped logic verified, 11 mutations caught."
+echo "x402-selftest: OK — shipped logic verified, 14 mutations caught."

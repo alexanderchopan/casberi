@@ -151,6 +151,17 @@ struct ThingContentView: View {
                 case .polymarket(let conditionId):
                     PolymarketMarketContent(conditionId: conditionId, url: thing.content)
                 }
+            } else if thing.source == X402Ingest.source {
+                if let url = Capture.detectURL(in: thing.content) {
+                    LinkPreviewCard(url: url, storedImageURL: thing.previewImageURL)
+                }
+                // A seller leads with its own page, then the catalog it sells:
+                // endpoints with their per-call prices, the chains they settle
+                // on, and a door to their docs. See `X402SellerContent` — this
+                // branch exists because the first attempt put the same idea in
+                // the `default:` case below, which these `.link` rows never
+                // reach, so it was dead code that a grep-based guard passed.
+                X402SellerContent(thing: thing)
             } else if thing.source == "GitHub", thing.sourceRef?.hasPrefix("gh:release:") == true {
                 // A release leads with its preview, then its own notes —
                 // read live, since `enrichedText` is retrieval-only.
@@ -265,16 +276,12 @@ struct ThingContentView: View {
             // sentence is the fact a reader most needs and would otherwise get
             // wrong, which is exactly the bar this exception was written for.
             // Only unshields set it; shields leave it nil.
-            // A Circle x402 seller carries a SAMPLE OF WHAT IT SELLS on
-            // `enrichedText` — its own tags plus a few endpoint descriptions
-            // ("Retrieve the latest spot price for one or more tokens").
-            // Same exception, same bar: the row can only say how many services
-            // and what they cost, and "what are they, actually" is the question
-            // a reader opens this sheet to answer. Without it the sheet is a
-            // title and a link, and the catalog we already fetched stays
-            // invisible on every screen.
+            // Circle x402 is NOT in this list, deliberately: its rows are
+            // `.link`, which never reaches this `default:` branch, so naming it
+            // here was dead code for a whole pass. Its catalog is drawn by
+            // `X402SellerContent` on the `.link` route above.
             if (thing.source == "Privacy Pools" || thing.source == "Peer"
-                || thing.source == "Railgun" || thing.source == X402Ingest.source),
+                || thing.source == "Railgun"),
                let cover = thing.enrichedText?.trimmingCharacters(in: .whitespacesAndNewlines),
                !cover.isEmpty {
                 Text(cover)
