@@ -205,7 +205,8 @@ enum SpotifyIngest {
 
     @MainActor private static var running = false
 
-    /// Liked songs, newest 30 — "Song — Artist" things linking to Spotify.
+    /// Liked songs, newest 30 — "Song — Artist" things linking to Spotify,
+    /// each wearing its album's cover and the album it came off.
     @MainActor
     static func refresh(context: ModelContext) async -> Int? {
         guard SpotifyAuth.connected, !running else {
@@ -233,6 +234,7 @@ enum SpotifyIngest {
                 .compactMap { $0["name"] as? String }.joined(separator: ", ")
             let link = ((track["external_urls"] as? [String: Any])?["spotify"] as? String) ?? ""
             let when = IngestSupport.isoDate(item["added_at"])
+            let album = (track["album"] as? [String: Any]) ?? [:]
 
             let thing = Thing(
                 kind: .link,
@@ -240,6 +242,16 @@ enum SpotifyIngest {
                 content: link,
                 source: "Spotify",
                 capturedAt: when ?? .now,
+                // What this row IS, in the vocabulary the retriever already
+                // has: `Retriever.facetFilter` reads "Liked" as a facet behind
+                // a named room, so "what I liked on Spotify" narrows to these
+                // rather than falling back to a whole-corpus keyword scan. It
+                // is also simply true — this endpoint is `/me/tracks`, the
+                // Liked Songs library and nothing else. No "Music" tag beside
+                // it: the source chip and the type tag already say that, and a
+                // literal on every row of a source is noise (ShapedRows' own
+                // reason for dropping bridge tags from the trailing slot).
+                tags: ["Liked"],
                 sourceRef: ref
             )
             // The join key MediaMoments' artist crossing reads (a podcast or
@@ -247,11 +259,71 @@ enum SpotifyIngest {
             // reads this for Spotify (ShapedRows' trailing slot has no
             // "Spotify" case), it's purely a backend field.
             if !artists.isEmpty { thing.authorHandle = artists }
+            // The album cover. `MediaShape.art(for:)` has declared Spotify a
+            // `.cover` source since prd §219 and `MusicRow` has led with
+            // `previewImageURL` at 44pt since 2026-07-11 — but nothing ever
+            // filled the slot, so every Spotify row drew the bridge glyph
+            // while its sibling Apple Music row (same room shape, same field)
+            // wore real art. The images are in every `/me/tracks` response;
+            // this bridge was simply throwing them away.
+            thing.previewImageURL = coverURL(album)
+            // The album a liked track came off — the one fact this payload
+            // carries that the title doesn't. `summary`, not `enrichedText`:
+            // Spotify authored the album name and handed it over in its own
+            // payload, which is the exact line the 2026-07-22 field split
+            // draws (enrichedText is text WE scraped, and is retrieval-only).
+            thing.summary = albumLine(album, track: name)
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
         }
         if added > 0 { context.saveHonestly() }
         return added
+    }
+
+    // MARK: - Album facts (both read off `track.album`, already in hand)
+
+    /// The album cover as a plain https URL. Spotify serves three sizes per
+    /// album (640 / 300 / 64 square); 300 is what `AppleMusicIngest.artURL`
+    /// picks for the same job and for the same reasons — crisp at
+    /// `MusicRow`'s 44pt thumb on a 3× screen, small enough that
+    /// `RemoteThumb`'s downsample stays cheap.
+    ///
+    /// Nearest-to-300 rather than "the middle one": the sizes are a Spotify
+    /// convention, not a contract, and an album with one image would make an
+    /// index-based pick silently wrong. A payload carrying no widths at all
+    /// scores every entry equally and keeps the first, which is Spotify's
+    /// largest — a real cover, never an invented size.
+    private static func coverURL(_ album: [String: Any]) -> String? {
+        let sized = ((album["images"] as? [[String: Any]]) ?? [])
+            .compactMap { image -> (width: Int, url: String)? in
+                guard let url = IngestSupport.imageURL(image["url"] as? String)
+                else { return nil }
+                return ((image["width"] as? Int) ?? 0, url)
+            }
+        return sized.min { abs($0.width - 300) < abs($1.width - 300) }?.url
+    }
+
+    /// "From Blonde (2016)" — display copy under the track in the thing sheet.
+    ///
+    /// Nil for a single, where Spotify wraps the one track in an album of the
+    /// same name and the line would only repeat the title back. The year is
+    /// the leading four digits of `release_date`, which the API serves as
+    /// `2016-08-20`, `2016-08` or `2016` depending on
+    /// `release_date_precision` — the year is present and exact in all three,
+    /// and nothing finer is claimed. A date that doesn't start with four
+    /// digits yields no year rather than a guessed one.
+    private static func albumLine(_ album: [String: Any], track: String) -> String? {
+        guard let name = (album["name"] as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+              !name.isEmpty,
+              name.caseInsensitiveCompare(track) != .orderedSame else { return nil }
+        let year = (album["release_date"] as? String).flatMap { raw -> String? in
+            let digits = raw.prefix(4)
+            return digits.count == 4 && digits.allSatisfy(\.isNumber)
+                ? String(digits) : nil
+        }
+        guard let year else { return String(localized: "From \(name)") }
+        return String(localized: "From \(name) (\(year))")
     }
 }

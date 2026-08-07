@@ -112,6 +112,12 @@ enum ScheduleIngest {
                     thing.title = event.title ?? thing.title
                     thing.content = eventLine(event)
                 }
+                // Unconditionally, unlike the block above: an event edited in
+                // Calendar keeps its start, so gating the enrichment on a moved
+                // date would leave notes added this morning unread until the
+                // series next rolls forward — and it reaches rows landed before
+                // this enrichment existed, which is the whole point.
+                enrich(thing, with: event)
                 continue
             }
             let thing = Thing(
@@ -122,6 +128,7 @@ enum ScheduleIngest {
                 capturedAt: when,
                 sourceRef: ref
             )
+            enrich(thing, with: event)
             context.insert(thing)
             added += 1
         }
@@ -251,6 +258,10 @@ enum ScheduleIngest {
                     thing.dueAt = due
                     thing.content = dueLine(reminder)
                 }
+                // Unconditionally — the real list is authoritative on refresh
+                // for these fields too, and this is what reaches rows landed
+                // before the enrichment existed.
+                enrich(thing, with: reminder)
                 continue
             }
             guard !reminder.isCompleted else { continue }
@@ -265,6 +276,7 @@ enum ScheduleIngest {
             // The structured deadline for the "Coming up" lane — capturedAt is
             // the creation time, so the due date rides its own field.
             thing.dueAt = reminder.dueDateComponents?.date
+            enrich(thing, with: reminder)
             context.insert(thing)
             added += 1
         }
@@ -280,6 +292,149 @@ enum ScheduleIngest {
         context.saveHonestly()
         if !removedIDs.isEmpty { SpotlightIndex.remove(ids: removedIDs) }
         return added
+    }
+
+    // MARK: - Enrichment (2026-08-06)
+
+    /// What an event carries besides its title and its clock.
+    ///
+    /// EventKit hands all of this over in the same fetch — nothing here costs a
+    /// request or a permission we don't already hold — and until now every
+    /// field of it was dropped, so an event landed as a name, a time and
+    /// (maybe) a location. The agenda you actually wrote, the video link, whose
+    /// calendar it belongs to and who else is coming were all in hand and all
+    /// discarded.
+    ///
+    /// Three destinations, by the rule each field falls under:
+    ///   · NOTES → `summary`. It is text the PERSON authored and Apple handed
+    ///     us in its own payload — the RSS/Linear/Trello description
+    ///     precedent — so it is first-class display copy, not the
+    ///     retrieval-only `enrichedText` (2026-07-15).
+    ///   · URL → `externalLink`. The video link on a meeting is the one thing
+    ///     you want at the moment the row matters. Note nothing DRAWS this
+    ///     field today (it is read by the Reddit/Snapchat crossing passes,
+    ///     both source-scoped), so this is stored data waiting on a verb, not
+    ///     a control that exists and does nothing.
+    ///   · ATTENDEES → `enrichedText`. Names, so "the review with Ana" finds
+    ///     it; never displayed, because a row full of names is a row you can't
+    ///     read, and the sheet already shows the notes.
+    ///
+    /// `dueAt` stays nil, by the field's own convention: an event carries its
+    /// deadline as `capturedAt` (the start) and only a reminder's deadline
+    /// needs its own field.
+    ///
+    /// Idempotent — it runs on every foreground for every event, so it must
+    /// never append the same tag twice or dirty a row that hasn't changed.
+    private static func enrich(_ thing: Thing, with event: EKEvent) {
+        setSummary(thing, trimmed(event.notes))
+        setEnriched(thing, attendeeNames(event))
+        let link = event.url?.absoluteString
+        if thing.externalLink != link { thing.externalLink = link }
+        addTag(calendarTitle(event), to: thing)
+    }
+
+    /// The two writers that drop the stored vector when the text really moved.
+    ///
+    /// `EmbeddingIndex` composes what it embeds from the title, `summary` and
+    /// `enrichedText`, so a row that gains either keeps a vector computed
+    /// without it until something clears the old one. Load bearing on the
+    /// REFRESH path and only there — a new row has no vector yet, but an event
+    /// already in the corpus that gains its agenda today would otherwise stay
+    /// unfindable by the words it just gained, forever.
+    private static func setSummary(_ thing: Thing, _ text: String?) {
+        guard thing.summary != text else { return }
+        thing.summary = text
+        thing.embedding = nil
+    }
+
+    private static func setEnriched(_ thing: Thing, _ text: String?) {
+        guard thing.enrichedText != text else { return }
+        thing.enrichedText = text
+        thing.embedding = nil
+    }
+
+    /// What a reminder carries besides its title and its due date. Same three
+    /// rules as `enrich(_:with: EKEvent)` above, minus the fields a reminder
+    /// has no equivalent for (there is nobody else on a reminder).
+    ///
+    /// PRIORITY becomes a tag only when it can be said honestly. EventKit's
+    /// value is RFC 5545's 0–9 scale, where 0 means "nobody set one" — so 0
+    /// gets no tag at all rather than a "Low priority" nobody chose, and an
+    /// out-of-range value gets none either.
+    private static func enrich(_ thing: Thing, with reminder: EKReminder) {
+        setSummary(thing, trimmed(reminder.notes))
+        let link = reminder.url?.absoluteString
+        if thing.externalLink != link { thing.externalLink = link }
+        addTag(calendarTitle(reminder), to: thing)
+        addTag(priorityTag(reminder.priority), to: thing)
+    }
+
+    /// The calendar (or list) a row belongs to, as a tag — "Work", "Family",
+    /// the shared calendar somebody invited you to. A real facet to narrow by,
+    /// and the one grouping these rows have that isn't time.
+    private static func calendarTitle(_ item: EKCalendarItem) -> String? {
+        trimmed(item.calendar?.title)
+    }
+
+    /// RFC 5545's priority scale in words. 1–4 high, 5 medium, 6–9 low is
+    /// Apple's own reading of it (the Reminders app's !!! / !! / !), and 0 is
+    /// its documented "not set".
+    private static func priorityTag(_ priority: Int) -> String? {
+        switch priority {
+        case 1...4: return String(localized: "High priority")
+        case 5:     return String(localized: "Medium priority")
+        case 6...9: return String(localized: "Low priority")
+        default:    return nil
+        }
+    }
+
+    /// Who else is on an event, as `Name <email>` when EventKit names both.
+    /// Both halves because this feeds retrieval, where a name without its
+    /// address is half a search term (the `IMAPClient` recipient rule).
+    /// Capped: an all-hands invite is unbounded, and the embedding window
+    /// (`EmbeddingIndex.indexText`) reads the first 800 characters, so an
+    /// uncapped roster would crowd out the event's own words. The overflow is
+    /// COUNTED, never silently dropped.
+    private static func attendeeNames(_ event: EKEvent) -> String? {
+        guard let attendees = event.attendees, !attendees.isEmpty else { return nil }
+        let names: [String] = attendees.compactMap { participant in
+            let name = trimmed(participant.name)
+            // A participant's `url` is a `mailto:` — read the address off the
+            // string rather than `resourceSpecifier`, which carries the rest
+            // of the URL too and is a legacy accessor.
+            let raw = participant.url.absoluteString
+            let email = raw.lowercased().hasPrefix("mailto:")
+                ? trimmed(String(raw.dropFirst("mailto:".count))) : nil
+            switch (name, email) {
+            case let (name?, email?): return name == email ? name : "\(name) <\(email)>"
+            case let (name?, nil):    return name
+            case let (nil, email?):   return email
+            case (nil, nil):          return nil
+            }
+        }
+        guard !names.isEmpty else { return nil }
+        let shown = names.prefix(attendeeCap).joined(separator: ", ")
+        let extra = names.count - min(names.count, attendeeCap)
+        return shown + (extra > 0 ? ", and \(extra) more" : "")
+    }
+
+    private static let attendeeCap = 25
+
+    /// Appends a tag once. These passes re-run on every foreground over the
+    /// same rows, so a plain append would grow a row's tag list without bound.
+    private static func addTag(_ tag: String?, to thing: Thing) {
+        guard let tag, !thing.tags.contains(tag) else { return }
+        thing.tags.append(tag)
+    }
+
+    /// A string field, trimmed, or nil when it's absent or empty — so an empty
+    /// notes field never lands as an empty `summary` that renders as a blank
+    /// block, and never as an empty `enrichedText` that clears `embedding` for
+    /// nothing.
+    private static func trimmed(_ raw: String?) -> String? {
+        guard let s = raw?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !s.isEmpty else { return nil }
+        return s
     }
 
     // MARK: - Pieces

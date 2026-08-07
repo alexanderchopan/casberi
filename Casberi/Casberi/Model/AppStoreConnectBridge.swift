@@ -918,6 +918,25 @@ enum ASCIngest {
             // history one row that silently rewrote itself.
             sourceRef: "asc:version:\(id):\(state.rawValue)"
         )
+        // What's New, IF this account's shape carries it on the version itself.
+        //
+        // Read opportunistically and never asked for, which is the whole point:
+        // Apple's documented home for release notes is `whatsNew` on the
+        // version's `appStoreVersionLocalizations` relationship, and reaching a
+        // relationship needs either `include=` or a request per version —
+        // `ASCFetch`'s no-projection rule and `ASCShape.buildLabel`'s note both
+        // refuse the first, and the second would multiply a pass that already
+        // costs three requests per app. So this lands the text on an account
+        // that happens to serve it beside the state (the `appVersionState` /
+        // `appStoreState` situation: one payload, two shapes in the wild) and
+        // lands nothing otherwise. It never guesses and never costs a request.
+        //
+        // DISPLAY copy when it does arrive — it is what the developer wrote for
+        // the store, which is the substance of a release; the retrieval-only
+        // `enrichedText` ruling (2026-07-15) would make it invisible on every
+        // screen (the customer-review body rule below, same reasoning).
+        let notes = ASCFetch.string(attributes, "releaseNotes")
+        if !notes.isEmpty { thing.summary = notes }
         return (thing, state)
     }
 
@@ -972,6 +991,16 @@ enum ASCIngest {
 
     /// A customer review. Nothing to diff — a review either exists or doesn't,
     /// and `sourceRef` dedupe is the whole mechanism.
+    ///
+    /// YOUR OWN REPLY is deliberately absent, and it is not an oversight
+    /// (2026-08-06). `customerReviewResponses` is a RELATIONSHIP on this
+    /// resource, not an attribute: the payload below carries at most a link
+    /// and a resource id for it, never the text. Reaching the text means
+    /// either an `include=` — which `ASCFetch`'s no-projection rule refuses
+    /// for the 400-cliff reason stated there — or one extra GET per review,
+    /// which on a `limit=20` read is twenty requests per app added to a
+    /// foreground sweep that already carries ~45 bridges. Neither is worth a
+    /// line you wrote and already know. Revisit only with a measured probe.
     @MainActor
     private static func reviewThing(_ row: [String: Any], appID: String, app: String) -> Thing? {
         guard let id = ASCFetch.id(row) else { return nil }

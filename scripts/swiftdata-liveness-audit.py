@@ -358,11 +358,21 @@ def audit_file(path: pathlib.Path, findings: list[str]) -> None:
     # CHILD views, and never generalised to the 25 row/content views that had
     # the identical shape. THE RULE: a View struct storing a `Thing` guards its
     # own body.
-    for m in VIEW_STRUCT.finditer(text):
+    # Read a COMMENT-STRIPPED copy, or a guard NAMED IN PROSE clears the
+    # struct (2026-08-06). This check tested the raw text, so a doc line
+    # mentioning another row's `.live` counted as this row's guard — which is
+    # precisely how `MediaRow`, the row every podcast renders through, carried
+    # no guard at all and passed this audit every night. `_strip_noncode`
+    # preserves length and newlines, so the reported line numbers, which are
+    # still counted against the ORIGINAL text, stay correct.
+    # Same correction `cursor-selftest.sh` and `obsidian-selftest.sh` each made
+    # after their negative guards fired against the prose explaining them.
+    code5 = _strip_noncode(text)
+    for m in VIEW_STRUCT.finditer(code5):
         name, start = m.group(1), m.end()
         nxt = re.search(r"^(?:private |public )?(?:struct|extension|final class) ",
-                        text[start:], re.M)
-        extent = text[start:start + (nxt.start() if nxt else len(text) - start)]
+                        code5[start:], re.M)
+        extent = code5[start:start + (nxt.start() if nxt else len(code5) - start)]
         if not STORED_THING_PROP.search(extent):
             continue
         if "isLive" in extent or ".live" in extent:
@@ -646,6 +656,22 @@ def self_test() -> int:
             "    @ViewBuilder private var liveBody: some View { Text(thing.title) }\n"
             "}\n",
             None,
+        ),
+        # A guard NAMED IN A COMMENT is not a guard. This is `MediaRow`'s own
+        # shape, verbatim in miniature: every podcast row rendered through it,
+        # it held a `Thing`, its body read stored properties unguarded, and one
+        # doc line mentioning `BandRow.live` cleared the check — so the audit
+        # certified it clean for as long as it existed. The mention must sit
+        # INSIDE the struct to reproduce: `extent` starts after the declaration,
+        # so a doc comment above the struct was never in scope and a fixture
+        # written that way passes even against the unfixed check.
+        "leaf-view-guard-only-in-a-comment": (
+            "struct MediaRow: View {\n"
+            "    let thing: Thing\n"
+            "    // Unlike `BandRow.live`, this draws a fixed 48pt box.\n"
+            "    var body: some View { Text(thing.title) }\n"
+            "}\n",
+            "has no isLive guard",
         ),
         # The regression the OLD file-scoped exemption allowed: one held Thing
         # correctly guarded, a second one beside it not. Any `isLive` in the

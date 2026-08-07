@@ -1206,6 +1206,12 @@ enum FarcasterIngest {
     /// Insertions run END-first so earlier offsets stay valid; a tie (two
     /// adjacent mentions at one offset) keeps its original order because the
     /// LATER mention inserts first and ends up second in the text.
+    ///
+    /// The spliced result IS the retrieval copy, so the mentioned handles need
+    /// no second home (checked 2026-08-06): this text lands on `postText`, and
+    /// `Retriever.rank`'s content scan reads `postText` beside `content`,
+    /// `enrichedText` and `summary` — so writing the same @names into
+    /// `enrichedText` would double-count them in ranking and buy nothing.
     @MainActor
     private static func splicingMentions(into text: String, body: [String: Any]) async -> String {
         guard let fids = body["mentions"] as? [Int], !fids.isEmpty,
@@ -1224,36 +1230,88 @@ enum FarcasterIngest {
         return String(decoding: bytes, as: UTF8.self)
     }
 
-    /// EVERY image a cast embeds, in order (2026-07-16 — it used to keep only
-    /// the first, so a four-photo cast lost three). Snapchain serves raw
-    /// protocol data — no hydrated thumbs — so only URLs that are plainly
-    /// images qualify: Farcaster's own image CDN, or a file extension that says
-    /// so. A cast embedding an article link contributes none and keeps the chat
-    /// glyph.
-    private static func imageEmbeds(_ body: [String: Any]) -> [String] {
-        var out: [String] = []
-        for embed in (body["embeds"] as? [[String: Any]]) ?? [] {
-            guard let url = embed["url"] as? String else { continue }
-            let lower = url.lowercased()
-            // Extension check runs on the PATH — a query string
-            // ("photo.jpg?maxwidth=640") defeated hasSuffix on the raw URL.
-            let path = URL(string: lower)?.path ?? lower
-            if lower.contains("imagedelivery.net")
-                || [".jpg", ".jpeg", ".png", ".gif", ".webp"].contains(where: path.hasSuffix) {
-                out.append(url)
-            }
+    /// What ONE embedded URL is (2026-08-06). Snapchain serves raw protocol
+    /// data — no hydrated thumbs, no `$type`, no media table, just a URL — so
+    /// classification is by the URL alone. A URL that can't be classified is
+    /// `.other`, which is today's behaviour and never a guess: an article
+    /// wrongly read as a picture would land a broken thumbnail AND lose its own
+    /// `.link` thing, so the failure of a widening is worse than the gap it
+    /// closes.
+    private enum EmbedMedia { case image, video, other }
+
+    /// Hosts that serve NOTHING BUT media, so a URL on one is a picture even
+    /// with no file extension to say so — which is the gap that made this list
+    /// necessary: a CDN-hosted image with a bare id for a path fell through to
+    /// `linkEmbed` and landed as a naked `.link` thing.
+    ///
+    /// Matched on the LABEL BOUNDARY, never `contains` (the `OEmbed.endpoints`
+    /// rule): `wrpcd.net.attacker.example` must not read as Warpcast's CDN.
+    /// Deliberately short. imgur, tenor and giphy are NOT here because their
+    /// URLs carry their own extension, so the extension rule below already
+    /// reaches them; an IPFS gateway is not here because it serves arbitrary
+    /// bytes (a metadata JSON as readily as a picture), which is exactly the
+    /// "can't classify" case. `media.firefly.land` and `imagedelivery.net` are
+    /// already declared as Farcaster hosts in `NetworkReach`; `wrpcd.net` is
+    /// not, and should be added there.
+    ///
+    /// UNMEASURED: written against the CDNs Farcaster clients publish, with no
+    /// egress to any of them from the build host. Every entry fails SAFE — a
+    /// host that turns out not to serve media just means a row shows a broken
+    /// thumbnail where today it shows a naked link.
+    private static let mediaHosts = ["wrpcd.net", "media.firefly.land"]
+
+    private static func embedMedia(_ url: String) -> EmbedMedia {
+        let lower = url.lowercased()
+        let parsed = URL(string: lower)
+        // Extension check runs on the PATH — a query string
+        // ("photo.jpg?maxwidth=640") defeated hasSuffix on the raw URL.
+        let path = parsed?.path ?? lower
+        if [".mp4", ".m3u8", ".mov", ".webm"].contains(where: path.hasSuffix) { return .video }
+        if [".jpg", ".jpeg", ".png", ".gif", ".webp"].contains(where: path.hasSuffix) {
+            return .image
         }
-        return out
+        // `imagedelivery.net` stays a plain substring match, unlike the boundary
+        // test below, and that asymmetry is load-bearing: Warpcast's proxy wraps
+        // the real URL INSIDE its own
+        // (`wrpcd.net/cdn-cgi/image/…/https://imagedelivery.net/…`), so
+        // Cloudflare is not the outer host and a host-only test would stop
+        // matching URLs this bridge has read correctly since it shipped.
+        if lower.contains("imagedelivery.net") { return .image }
+        if let host = parsed?.host,
+           mediaHosts.contains(where: { host == $0 || host.hasSuffix("." + $0) }) {
+            return .image
+        }
+        return .other
     }
 
-    /// The first embedded URL that ISN'T a picture (item 1 of the
-    /// 2026-07-27 social pass) — a cast sharing an article, not just images.
-    /// Reuses `imageEmbeds`' own filter, inverted.
+    /// Every URL a cast embeds, in order.
+    private static func embedURLs(_ body: [String: Any]) -> [String] {
+        ((body["embeds"] as? [[String: Any]]) ?? []).compactMap { $0["url"] as? String }
+    }
+
+    /// EVERY image a cast embeds, in order (2026-07-16 — it used to keep only
+    /// the first, so a four-photo cast lost three). A cast embedding an article
+    /// link contributes none and keeps the chat glyph.
+    private static func imageEmbeds(_ body: [String: Any]) -> [String] {
+        embedURLs(body).filter { embedMedia($0) == .image }
+    }
+
+    /// The first embedded URL that is neither a picture NOR a video (item 1 of
+    /// the 2026-07-27 social pass) — a cast sharing an article. A Frame or
+    /// miniapp still comes through here on purpose: it IS a link, and its page
+    /// has a real `<title>` for `LinkTitle.enrich` to rename the row with.
+    ///
+    /// VIDEO is excluded as of 2026-08-06. It used to fall through here, so a
+    /// video cast landed a SECOND thing whose title was a naked `.m3u8` and
+    /// whose enrichment fetched a playlist file, found no `<title>`, and left
+    /// the row wearing that URL forever — a permanent junk row beside the cast.
+    /// The cast alone carries it now: its own words, its own permalink, and
+    /// Farcaster plays the video there. Nothing invents a poster frame —
+    /// Snapchain hydrates none, and there is no keyless read that would give one
+    /// — so the row honestly keeps the chat glyph.
     private static func linkEmbed(_ body: [String: Any]) -> String? {
-        let images = Set(imageEmbeds(body))
-        for embed in (body["embeds"] as? [[String: Any]]) ?? [] {
-            guard let url = embed["url"] as? String, !images.contains(url),
-                  url.lowercased().hasPrefix("http") else { continue }
+        for url in embedURLs(body)
+        where embedMedia(url) == .other && url.lowercased().hasPrefix("http") {
             return url
         }
         return nil

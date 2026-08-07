@@ -295,7 +295,7 @@ struct ThingSheetView: View {
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s2)
                         .settleIn(delay: 0.1)
-                    VerbDial(thing: thing, verbs: VerbDerivation.verbs(for: thing),
+                    VerbDial(thing: thing, verbs: sheetVerbs,
                              onVerb: runVerb, onName: nil)
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.14)
@@ -364,7 +364,7 @@ struct ThingSheetView: View {
                     // the feed's OWN consent card) — the rows here were
                     // already plain grey, so the dial changes their shape,
                     // not their weight.
-                    VerbDial(thing: thing, verbs: VerbDerivation.verbs(for: thing),
+                    VerbDial(thing: thing, verbs: sheetVerbs,
                              onVerb: runVerb, onName: nil)
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.2)
@@ -1040,6 +1040,82 @@ struct ThingSheetView: View {
         }
         out.append(Verb(label: "Copy link", icon: "doc.on.doc", action: .copyText))
         return out
+    }
+
+    /// A podcast episode's own audio file, as a HAND-OFF (2026-08-06).
+    ///
+    /// The feed's `<enclosure>` IS the episode — a row's `content` is the
+    /// episode's PAGE (the publisher's show notes), and the media file itself
+    /// landed on `externalLink` with nothing on any screen reading it, so the
+    /// one thing a podcast row is FOR was stored and unreachable.
+    ///
+    /// It is a hand-off, and the word says so by saying where you land, never
+    /// what we do: this app has no audio player and is not getting one here, so
+    /// a disc reading "Play" would be the fake status §83 bans. "Episode"
+    /// follows `walletVerbs`' "Explorer" ruling directly above — the glyph
+    /// already says it opens something, the word's job is the destination — and
+    /// it is medium-neutral on purpose, because the parser accepts a `video/…`
+    /// enclosure too and "Audio" would be a claim we never checked.
+    ///
+    /// Scoped by SOURCE, never by "there is an `externalLink`". That field has
+    /// several fillers now — a Reddit post's first outbound body link, a TikTok
+    /// row's video link, a Cal.com meeting URL, a Snapchat memory's download
+    /// link — and a Reddit row must never grow a listen verb. For these two
+    /// feed sources it has exactly ONE writer (`FeedFollowBridges` and
+    /// `RSSIngest` both fill it only from `item.mediaURL`), which is what makes
+    /// the field's meaning unambiguous here and nowhere else. RSS is in because
+    /// a podcast followed through the generic feed door is the same episode
+    /// wearing a different seat; Reddit, YouTube and Substack ride the same
+    /// ingest and are out.
+    ///
+    /// Three gates, each closing a way this could be a disc that does nothing
+    /// or one that repeats the disc beside it:
+    ///  · `canOpenURL` (prd §275) — an unclaimed scheme is refused
+    ///    ASYNCHRONOUSLY by LaunchServices and NEITHER `UIApplication.open`'s
+    ///    completion nor SwiftUI's `openURL` reports the refusal (measured
+    ///    2026-07-16 for `wc:`), so asking first is the only way to know. That
+    ///    is the whole reason "Open in Photos" could be the sheet's only
+    ///    screenshot verb and do nothing at all, invisibly.
+    ///  · http(s) only — the enclosure is raw third-party feed text (the parser
+    ///    trusts the item's own `type` attribute and never looks at the URL), so
+    ///    without this a hostile feed could put a `tel:`/`sms:` URL under this
+    ///    disc, and those open without any scheme declaration. An episode is
+    ///    fetched over http; anything else is not one.
+    ///  · not the row's own link — when a feed declares no `<link>` the
+    ///    enclosure already stood in as `content` (`openURL` in both ingests),
+    ///    and "Open link" opens exactly this file. Two discs doing one thing is
+    ///    the menu brief §12 bans, wearing two words.
+    ///
+    /// Composed here rather than in `VerbDerivation` for a reason that isn't
+    /// convenience: that derivation runs OFF the main actor inside GenUI
+    /// composition (see `HandOffState`'s own doc) and is called per row for the
+    /// feed's swipe and context menus, while `canOpenURL` is main-actor-only and
+    /// a syscall (prd §260). `HandOffState`'s cached answer can't stand in — it
+    /// probes a FIXED candidate list of schemes each foreground, and this URL
+    /// arrives from somebody's feed, so there is no scheme to pre-probe. The
+    /// sheet is `@MainActor` and opens one thing at a time, so it can just ask.
+    private var episodeVerb: Verb? {
+        guard thing.isLive, thing.kind == .link,
+              thing.source == "Podcasts" || thing.source == "RSS",
+              let raw = thing.externalLink?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !raw.isEmpty,
+              raw != thing.content.trimmingCharacters(in: .whitespacesAndNewlines),
+              let url = URL(string: raw),
+              url.scheme == "https" || url.scheme == "http",
+              UIApplication.shared.canOpenURL(url)
+        else { return nil }
+        return Verb(label: "Episode", icon: "arrow.up.forward.app", action: .openURL(url))
+    }
+
+    /// The dial's verbs: derivation, plus the episode hand-off derivation can't
+    /// gate (above). FIRST, on the Obsidian ruling — for an episode the file is
+    /// the strongest thing you can do with the row, and the page below it is the
+    /// notes — and re-capped at four, so adding one can never turn a sheet into
+    /// a menu; the verb that loses is the last derivation ranked, not this one.
+    private var sheetVerbs: [Verb] {
+        let derived = VerbDerivation.verbs(for: thing)
+        guard let episode = episodeVerb else { return derived }
+        return Array(([episode] + derived).prefix(4))
     }
 
     /// The one verb gate, both layouts: reads pass, writes confirm.

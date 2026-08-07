@@ -3,9 +3,10 @@ import Network
 
 /// A minimal, read-only IMAP client (2026-07-08) — enough to log in with an
 /// app-specific password, select the inbox, and read recent message envelopes
-/// (subject, from, date). No writing, no deleting; mail is a read bridge. Used
-/// by both the iCloud Mail and Gmail bridges (their only difference is the
-/// host), so the IMAP protocol is written once here.
+/// (subject, from, date, recipients and the threading headers). No writing, no
+/// deleting; mail is a read bridge. Used by both the iCloud Mail and Gmail
+/// bridges (their only difference is the host), so the IMAP protocol is written
+/// once here.
 ///
 /// Apple provides no modern mail API — IMAP is the sanctioned door, and an
 /// app-specific password keeps the real account password out of it entirely.
@@ -21,6 +22,27 @@ enum IMAPClient {
         /// A mail thing with no body reads exactly as it did before this
         /// existed (sender only), so a failure here never breaks ingest.
         let body: String?
+        /// Who else was on it (2026-08-06). Both ride the ENVELOPE this client
+        /// already fetches — they are fields 5 and 6 of the same response that
+        /// carries the subject and the sender (RFC 3501 §7.4.2), so nothing
+        /// here costs a request; they were simply parsed past. Until now a mail
+        /// arrived knowing only who sent it, so "the mail where I cc'd Ana" was
+        /// unanswerable from a corpus that held the answer.
+        ///
+        /// Each entry is `Name <box@host>` when the envelope names both, else
+        /// whichever half it has — recipients feed retrieval, and a name with
+        /// no address is half a search term.
+        let to: [String]
+        let cc: [String]
+        /// The threading headers, also already in the ENVELOPE (fields 8 and
+        /// 9). CARRIED, NOT USED (2026-08-06): nothing in the app groups mail
+        /// into threads yet, and grouping is a feature with its own shape
+        /// questions — this is the data that feature needs, parsed at the one
+        /// point it is free, so building it later costs no new round trip and
+        /// no re-fetch of mail already landed. nil when the header is absent
+        /// (`NIL`), which is normal for a message that starts a thread.
+        let messageID: String?
+        let inReplyTo: String?
     }
 
     /// `fetch` is distinct from `select` on purpose (2026-08-02): the heal's
@@ -58,7 +80,8 @@ enum IMAPClient {
             uids: parsed.map(\.uid), maxBytes: bodyByteCap)) ?? [:]
         let withBodies = parsed.map { m in
             Message(uid: m.uid, subject: m.subject, from: m.from, date: m.date,
-                    body: rawBodies[m.uid].flatMap(MailMIME.plainText))
+                    body: rawBodies[m.uid].flatMap(MailMIME.plainText),
+                    to: m.to, cc: m.cc, messageID: m.messageID, inReplyTo: m.inReplyTo)
         }
         #if DEBUG
         NSLog("IMAP %@: %d fetched, %d parsed, %d bodies", host, lines.count, parsed.count,
@@ -375,14 +398,62 @@ private enum EnvelopeParser {
         guard let uid = value(after: "UID ", in: raw),
               let envRange = raw.range(of: "ENVELOPE (") else { return nil }
         let env = String(raw[envRange.upperBound...])
+        // RFC 3501 §7.4.2's fixed order: date, subject, from, sender, reply-to,
+        // to, cc, bcc, in-reply-to, message-id. Everything past `from` is read
+        // by INDEX and only when the list is long enough — a short envelope
+        // (a server that truncates, a malformed response) degrades to the
+        // three fields this parser has always required rather than failing,
+        // which is the same tolerance every other read here has.
         let items = topLevelItems(env)   // [date, subject, from, …]
         guard items.count >= 3 else { return nil }
         let date = MailDate.parse(unquote(items[0]))
         let subject = decodeWord(unquote(items[1]))
         let from = firstFrom(items[2])
+        // Bcc (field 7) is deliberately not read: the copy WE received names
+        // us in it and nobody else, so landing it would add a recipient list
+        // that is either us or empty.
+        let to = items.count > 5 ? addresses(items[5]) : []
+        let cc = items.count > 6 ? addresses(items[6]) : []
+        let inReplyTo = items.count > 8 ? header(items[8]) : nil
+        let messageID = items.count > 9 ? header(items[9]) : nil
         return IMAPClient.Message(uid: uid,
                                   subject: subject.isEmpty ? "(no subject)" : subject,
-                                  from: from, date: date, body: nil)
+                                  from: from, date: date, body: nil,
+                                  to: to, cc: cc,
+                                  messageID: messageID, inReplyTo: inReplyTo)
+    }
+
+    /// A bare envelope header string (`"<abc@host>"`, or `NIL`) — nil when the
+    /// field is absent or empty, never an empty string, so a caller can't
+    /// mistake "no In-Reply-To" for "an In-Reply-To of nothing".
+    private static func header(_ raw: String) -> String? {
+        let s = unquote(raw).trimmingCharacters(in: .whitespaces)
+        return s.isEmpty ? nil : s
+    }
+
+    /// Every address in an envelope address-list: `(("Ana" NIL "ana" "x.com"))`
+    /// → `["Ana <ana@x.com>"]`. Both halves when the envelope carries both —
+    /// this feeds RETRIEVAL, where a name without its address (or the reverse)
+    /// is half a search term, which is why it differs from `firstFrom` below,
+    /// whose job is one display identity.
+    ///
+    /// An absent list is the atom `NIL`, not a group, and a group is required
+    /// here — so `NIL` and anything else unparseable yield an empty list
+    /// rather than the garbage a blind `dropFirst().dropLast()` would make of
+    /// a three-letter atom.
+    private static func addresses(_ group: String) -> [String] {
+        guard group.hasPrefix("("), group.hasSuffix(")") else { return [] }
+        return topLevelItems(String(group.dropFirst().dropLast())).compactMap { entry in
+            guard entry.hasPrefix("("), entry.hasSuffix(")") else { return nil }
+            let addr = topLevelItems(String(entry.dropFirst().dropLast()))
+            guard addr.count >= 4 else { return nil }
+            let name = decodeWord(unquote(addr[0]))
+            let mailbox = unquote(addr[2]), hostPart = unquote(addr[3])
+            let email = mailbox.isEmpty ? "" : "\(mailbox)@\(hostPart)"
+            if !name.isEmpty, !email.isEmpty { return "\(name) <\(email)>" }
+            if !name.isEmpty { return name }
+            return email.isEmpty ? nil : email
+        }
     }
 
     private static func value(after key: String, in s: String) -> String? {

@@ -669,6 +669,15 @@ enum PlaceWords {
         if thing.kind == .file, thing.source == "Files" {
             return "in your folder"
         }
+        // Privacy.com became a `.transaction` on 2026-08-06, and the kind's
+        // default was written for onchain money: its cards are virtual cards
+        // on a bank account, nothing onchain, so "in your wallet" would name a
+        // place this purchase never was. The two onchain card seats keep the
+        // default — a Gnosis Pay or ether.fi spend really does settle from the
+        // wallet the row is about.
+        if thing.kind == .transaction, thing.source == "Privacy" {
+            return "on your card"
+        }
         switch thing.kind {
         case .mail, .file: return "in your inbox"
         case .event:       return "on your calendar"

@@ -135,10 +135,18 @@ enum Corpus {
     /// answer would state a total that silently excluded them.
     ///
     /// Two deliberate absences, each for its own reason:
-    ///   · **Privacy.com** — a real card, and its rows carry the amount only
-    ///     inside a formatted title (`PrivacyBridge.txnThing`) on a `.link`
-    ///     kind. It cannot be totalled without re-parsing prose, which is the
-    ///     one thing money arithmetic here never does.
+    ///   · **Privacy.com** — a real card, and since 2026-08-06 its rows ARE
+    ///     `.transaction` carrying a real `priceValue`/`priceCurrency` in USD,
+    ///     so the old reason (an amount readable only by re-parsing the title)
+    ///     is gone. What keeps it out now is that the arithmetic would be
+    ///     WRONG rather than absent, which is worse: a RETURN is unmeasured —
+    ///     the read filters `result=APPROVED` and the amount falls back from
+    ///     `settled_amount` to `amount`, so a refund lands wearing its positive
+    ///     authorization amount and reads as a purchase, while the card leg
+    ///     subtracts only on a `Refund` tag Privacy doesn't carry — the trap
+    ///     `KeptAskComposers.moneyFlow` names for Apple Wallet, which lands
+    ///     refunds stamped positive and tagged. Measure a return with
+    ///     `-privacyProbe` against a live key, then join.
     ///   · **Stripe** — `StripeRoomSource` documents why its amounts can't do
     ///     arithmetic either, and it wouldn't belong regardless: it reads
     ///     strangers paying you, not you paying anyone.
@@ -535,11 +543,23 @@ final class Thing {
     /// everything else.
     var repoLanguage: String? = nil
 
-    /// A product's current price as a number (2026-07-14), in `priceCurrency` —
-    /// the anchor that lets a re-check say "dropped $40". The row shows the
-    /// formatted price in its title; this is the comparable value, set by the
-    /// Shopify/Deals ingest and the pasted-product parser. Optional + default
-    /// nil keeps CloudKit mirroring happy; nil for every non-product thing.
+    /// A number of money, in `priceCurrency` (2026-07-14). The row shows a
+    /// formatted price in its title; this is the comparable value.
+    ///
+    /// **It carries three different tenses, and summing across them is wrong.**
+    /// The doc used to say "nil for every non-product thing", which stopped
+    /// being true the day the card seats landed:
+    ///   · a PRODUCT price is CURRENT and re-checkable — the anchor that lets a
+    ///     later pass say "dropped $40" (Shopify/Deals, the pasted-product
+    ///     parser);
+    ///   · a TRANSACTION amount is FINAL — what you were charged, and the only
+    ///     tense `Corpus.cardSpendSources` may do arithmetic over;
+    ///   · a SNAPSHOT is true only at `capturedAt` — a trending token's price
+    ///     (GeckoTerminal, 2026-08-06), which must never paint as live. It is
+    ///     safe there only because nothing draws `priceValue` on a `.link`
+    ///     kind, and the sheet's own chart answers "what's it worth now".
+    /// Optional + default nil keeps CloudKit mirroring happy; nil when the
+    /// source quotes no number.
     var priceValue: Double? = nil
     /// The ISO 4217 code (`USD`, `GBP`) `priceValue` is denominated in — so a
     /// re-formatted price never guesses the currency. nil when unknown.
@@ -613,14 +633,22 @@ final class Thing {
     /// YouTube/Podcasts) already uses for the FEED's own identity (the
     /// subreddit/channel/publication `FeedLeaderboard` groups by). Lets a
     /// later corpus-wide pass notice the same person posting across two
-    /// subreddits you follow. nil for every non-Reddit thing, and for posts
-    /// landed before this field.
+    /// subreddits you follow. Since 2026-08-06 an RSS/Substack item fills it
+    /// too, from `<dc:creator>` or an Atom `<author><name>` — so a multi-author
+    /// publication no longer collapses onto the publication's own name. An
+    /// author that merely repeats the feed's name is dropped rather than
+    /// stored. nil when the feed names nobody, and for posts landed before
+    /// this field.
     var postAuthor: String? = nil
 
-    /// The first non-Reddit link found inside a Reddit post's own body,
-    /// captured at landing so a later pass can notice a subreddit discussing
-    /// something already saved from elsewhere without re-parsing the post's
-    /// HTML. nil when the post carries none, or for every non-Reddit thing.
+    /// A second URL a row carries beside its own permalink. Two fillers, and
+    /// the doc used to name only the first:
+    ///   · a Reddit post's first non-Reddit body link, captured at landing so
+    ///     a later pass can notice a subreddit discussing something already
+    ///     saved from elsewhere without re-parsing the post's HTML;
+    ///   · a podcast episode's `<enclosure>` audio URL (2026-08-06) — the
+    ///     episode itself, which the feed states and nothing else stores.
+    /// nil when the row carries neither.
     var externalLink: String? = nil
 
     // MARK: - Notes delight (2026-07-28, NoteLinks.swift)

@@ -65,6 +65,7 @@ enum BitrefillFetch {
             sourceRef: "bitrefill:order:\(id)"
         )
         thing.previewImageURL = IngestSupport.imageURL(product?["image"] as? String)
+        applyAmount(product?["value"], product?["currency"], to: thing)
         return thing
     }
 
@@ -86,7 +87,7 @@ enum BitrefillFetch {
         if let method = (payment?["method"] as? String).map(methodName) {
             title += " in \(method)"
         }
-        return Thing(
+        let thing = Thing(
             kind: .link,
             title: IngestSupport.titleLine(title),
             content: "https://www.bitrefill.com/account/invoices",
@@ -94,6 +95,39 @@ enum BitrefillFetch {
             capturedAt: firstDate(["completed_time", "created_time"], in: invoice) ?? .now,
             sourceRef: "bitrefill:invoice:\(id)"
         )
+        applyAmount(payment?["price"] ?? payment?["amount"] ?? payment?["value"],
+                    payment?["currency"], to: thing)
+        return thing
+    }
+
+    /// The amount as a NUMBER beside the formatted one in the title (2026-08-06).
+    ///
+    /// Both row kinds used to carry their money only inside the title string,
+    /// so every rollup in the app skipped them — a Bitrefill purchase was
+    /// money in the corpus that no total could reach without re-parsing prose,
+    /// which is the one thing money arithmetic here never does. It reads the
+    /// same fields through the same `PriceFormat.parse` the title does, so the
+    /// number and the words can't be read off different values.
+    ///
+    /// Written as a PAIR or not at all, and STRICTER than the title: `money`
+    /// will format an amount whose currency is missing, which is fine for a
+    /// string somebody reads and wrong for a number something sums — Bitrefill
+    /// genuinely serves several currencies (an order's `currency` is the
+    /// product's, an invoice's the payment rail's), so an unnamed one totals
+    /// as whatever the reader assumes. An unreadable amount stays nil on both
+    /// fields rather than landing a 0 — an unread amount is not a free order.
+    ///
+    /// BOTH ROW KINDS carry a POSITIVE number and they point opposite ways: an
+    /// order is money out, a refill is money in. Nothing sums these rows today
+    /// (Bitrefill is deliberately not in `Corpus.cardSpendSources` — its rows
+    /// are `.link`), and anything that ever does must split them on
+    /// `isOrderRef` first, or a top-up will read as shopping.
+    private static func applyAmount(_ value: Any?, _ currency: Any?, to thing: Thing) {
+        guard let amount = PriceFormat.parse(value), amount > 0,
+              let code = (currency as? String)?.trimmingCharacters(in: .whitespaces),
+              !code.isEmpty else { return }
+        thing.priceValue = amount
+        thing.priceCurrency = code
     }
 
     private static func refreshBalance(token: String) async {
@@ -110,8 +144,17 @@ enum BitrefillFetch {
         BitrefillBalance.set(amount: amount, currency: node["currency"] as? String ?? "USD")
         if let previous, amount > previous * 1.0001 {
             let currency = node["currency"] as? String ?? "USD"
-            let text = String(localized: "Bitrefill balance refilled — \(PriceFormat.string(amount, currency: currency)) 💳")
-            await MainActor.run { SourceMoments.shared.fire(text, source: "Bitrefill") }
+            // `PriceFormat.string` is OPTIONAL, and interpolating it directly
+            // rendered the toast as `Optional("$5.00")` — the compiler's
+            // debug description, in user-facing copy. Unwrapping keeps the
+            // format string (and so the localization key) byte-identical.
+            // A price this can't format is the only case that fires nothing,
+            // and the amount IS the news here — a refill toast with no number
+            // says less than staying quiet.
+            if let money = PriceFormat.string(amount, currency: currency) {
+                let text = String(localized: "Bitrefill balance refilled — \(money) 💳")
+                await MainActor.run { SourceMoments.shared.fire(text, source: "Bitrefill") }
+            }
         }
     }
 

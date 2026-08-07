@@ -136,10 +136,29 @@ struct BandRow: View {
         // say (`Model/SocialBridge.swift`).
         case "Slack":
             return SocialThread.contextLabel(for: thing)
-        // The publisher names itself in the trailing slot — BBC News,
-        // TechCrunch — the icon's word twin, the way a social row names its
-        // account. Empty on rows that landed before the name was captured.
-        case "RSS":       let name = thing.authorHandle ?? ""; return name.isEmpty ? nil : name
+        // WHO WROTE IT beats where it's from in this slot (2026-08-06) — the
+        // same ruling the social rows above have kept since 2026-07-16, for
+        // the same reason. An RSS row already LEADS with the publisher's own
+        // mark (`publisherIconURL`), so naming the publisher here is the
+        // icon's word twin: true, but a second telling of a fact the row has
+        // already told. The writer is the fact the row cannot otherwise carry,
+        // and on a multi-author publication it is the only thing separating
+        // one story from the next.
+        //
+        // Safe to prefer because `postAuthor` is never the publisher wearing a
+        // different hat: `FeedParser.author` returns nil for an author that
+        // merely repeats the feed's own name (case-insensitively), which is
+        // precisely why a YouTube entry — whose `<author><name>` IS its
+        // channel — files nothing here. So this can only ever swap a duplicate
+        // for a differentiator, never a name for the same name.
+        //
+        // Falls back to the publisher, unchanged, for the feeds that name
+        // nobody (most of them) and for rows that landed before the name was
+        // captured — no row loses its label.
+        case "RSS":
+            if let author = thing.postAuthor?.trimmingCharacters(in: .whitespaces),
+               !author.isEmpty { return author }
+            let name = thing.authorHandle ?? ""; return name.isEmpty ? nil : name
         // GitHub carries starCount/repoLanguage but rendered as a plain band
         // like any other link — the contribution hero above the feed was the
         // only place either fact showed (2026-07-21 enrichment, matching the
@@ -395,7 +414,24 @@ struct BandRow: View {
                               width: MediaShape.rowArtWidth(.still),
                               height: MediaShape.rowArtHeight,
                               fallback: thing.source)
+                        // A video's poster says so here too (2026-08-06): this
+                        // is the day's one picture promoted TO reading size, so
+                        // it is the row in All most likely to be looked at and
+                        // tapped, which is exactly where a still masquerading
+                        // as a photograph misleads.
+                        .overlay(alignment: .bottomLeading) {
+                            if PosterFrame.isVideo(art) {
+                                VideoMark(size: 16).padding(DS.Space.s1)
+                            }
+                        }
                 } else {
+                    // NOT marked at 26pt, deliberately. A disc large enough to
+                    // read is most of a 26pt thumb, and this slot already
+                    // carries the flag badge's corner — two marks fighting over
+                    // one speck says less than either alone. Nothing is
+                    // promised at this size either: a 26pt thumb invites no tap
+                    // of its own (the row's tap owns the whole band), so the
+                    // affordance this mark exists to correct isn't offered here.
                     RemoteThumb(urlString: art, size: 26, fallback: thing.source)
                 }
             }
@@ -1218,7 +1254,25 @@ struct MediaRow: View {
         live ? 1 : MediaShape.freshness(of: thing.capturedAt)
     }
 
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
+    /// re-evaluates a LEAF view's body on the model's own observation,
+    /// independent of the parent that made it, so a guard in the parent's
+    /// `ForEach` closure cannot protect a row already in the tree. The
+    /// original body moved to `liveBody`; everything it reads now sits behind
+    /// this check.
+    ///
+    /// MISSING until 2026-08-06, and the audit could not see it: check 5
+    /// clears a struct that mentions `isLive`/`.live` anywhere in its extent,
+    /// and this one's DOC COMMENT says "`BandRow.live`" — so a sentence about
+    /// another row's flag stood in for a guard on this one. Exactly the
+    /// negative-guard-reads-the-prose trap `cursor-selftest.sh` and
+    /// `obsidian-selftest.sh` both paid for; worth fixing the audit to strip
+    /// comments before matching, which is a `scripts/` change, not this file's.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         HStack(alignment: .top, spacing: DS.Space.s3) {
             Group {
                 if let url = thing.previewImageURL, !url.isEmpty,
@@ -2239,6 +2293,72 @@ struct SocialThreadCard: View {
     }
 }
 
+/// Is this picture a VIDEO's poster frame? (2026-08-06.)
+///
+/// `app.bsky.embed.video#view` now lands its poster on `previewImageURL`, so a
+/// Bluesky video finally shows something — and a poster drawn identically to a
+/// photo is a small lie: it invites the tap that expects a picture and gets a
+/// still. Nothing on `Thing` records "this is a video" and nothing may be added
+/// to record it, so the answer comes from the one place the fact already lives:
+/// the poster is served by Bluesky's VIDEO service, on its own host, while an
+/// image thumb comes from the image CDN. Both hosts are already declared, side
+/// by side, in `NetworkReach`'s Bluesky endpoint — that registry is where this
+/// host is known in-tree, not a guess made here.
+///
+/// Matched on the LABEL BOUNDARY (`==` or `.` + suffix), the rule
+/// `OEmbed.endpoints` keeps for the same reason: `video.bsky.app.example.com`
+/// must not read as Bluesky's video service.
+///
+/// FAILS CLOSED, and that asymmetry is the whole design. A video that reads as
+/// a photo is exactly today's behaviour — no worse. A photo wearing a video
+/// mark is a claim the record cannot support (§83), on the row where it would
+/// be believed instantly. So an unrecognised host, an unparseable URL, and a
+/// service that re-homes its posters all resolve to "not a video".
+enum PosterFrame {
+    /// Hosts that serve a video poster and nothing else.
+    private static let videoHosts = ["video.bsky.app"]
+
+    static func isVideo(_ urlString: String?) -> Bool {
+        guard let raw = urlString, let host = URL(string: raw)?.host()?.lowercased(),
+              !host.isEmpty else { return false }
+        return videoHosts.contains { host == $0 || host.hasSuffix("." + $0) }
+    }
+}
+
+/// The video mark — a LABEL on the art, never a control.
+///
+/// Reuses the anatomy `BandRow` already draws for its wallet-safety flag: an SF
+/// Symbol on a dark disc, cornered on the picture. Nothing new is invented, and
+/// there is no player — this app has none, and a video's real playback route is
+/// the sheet's existing "Open in app" hand-off (build-brief §6, rung 2).
+///
+/// CORNERED, deliberately, and not a centered `play.circle.fill`. A big glyph in
+/// the middle of a picture is the universal grammar for "tap to play" — it would
+/// promise a player that does not exist, which is the near-dead affordance this
+/// mark was added to remove, restated one size larger. In the corner it reads as
+/// what it is: this picture is a video's cover. The row keeps ONE gesture — the
+/// mark takes no hits, so the tap under it is still the row's own (`ReplyingToRow`
+/// settled this for context inside a row).
+struct VideoMark: View {
+    /// The disc's diameter — stated by the caller, never defaulted, because
+    /// the two pictures this rides are different sizes and a default would be
+    /// right for neither.
+    let size: CGFloat
+
+    var body: some View {
+        Image(systemName: "play.fill")
+            .font(.system(size: size * 0.46, weight: .bold))
+            .foregroundStyle(.white)
+            // The triangle's own optical center sits left of the glyph box, so
+            // a bare centered symbol reads off-center inside a disc.
+            .offset(x: size * 0.03)
+            .frame(width: size, height: size)
+            .background(Circle().fill(.black.opacity(0.55)))
+            .allowsHitTesting(false)
+            .accessibilityLabel(Text("Video"))
+    }
+}
+
 /// A post's attached image at card width. RemoteImageLoader's bytes, not
 /// RemoteThumb's shell (that's a fixed-size thumb): a dead URL COLLAPSES the
 /// block — the card just becomes a text post, never a gray hole (the
@@ -2270,6 +2390,14 @@ struct PostMedia: View {
                 }
                 .frame(height: height)
                 .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                // Only over a picture that actually arrived: marking the
+                // placeholder or the collapsed dead-URL state would claim a
+                // video for a block with nothing in it.
+                .overlay(alignment: .bottomLeading) {
+                    if PosterFrame.isVideo(urlString) {
+                        VideoMark(size: 26).padding(DS.Space.s2)
+                    }
+                }
             } else {
                 DS.fillFaint
                     .frame(height: height)

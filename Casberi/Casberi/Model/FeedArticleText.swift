@@ -22,10 +22,14 @@ import SwiftData
 ///
 /// TWO SOURCES, AND THE OTHER THREE ARE DELIBERATE ABSTENTIONS:
 ///   * RSS and Substack land ARTICLES — a page whose whole point is prose.
-///   * YouTube's link is a watch page. Its description is already in
-///     `summary`, straight from the feed; scraping the page adds player
-///     chrome and recommendation titles, i.e. other people's video names
-///     landing in this video's retrieval text.
+///   * YouTube's link is a watch page. Its description is in `summary`,
+///     straight from the feed; scraping the page adds player chrome and
+///     recommendation titles, i.e. other people's video names landing in this
+///     video's retrieval text. That reason was written before it was TRUE:
+///     a YouTube description rides `<media:description>`, which `FeedParser`
+///     did not match until 2026-08-06, so every video really did land with an
+///     empty `summary` and nothing else to search. The abstention was right
+///     for the wrong reason and is now right for the stated one.
 ///   * Reddit's link is a reddit.com permalink. The selftext is already in
 ///     `summary`; the page's prose is the COMMENTS, which are strangers'
 ///     words filed under a row that is not theirs (§83's shape).
@@ -122,6 +126,13 @@ enum FeedArticleText {
                   (thing.summary?.count ?? 0) < thinSummary,
                   let ref = thing.sourceRef,
                   (attempts[ref] ?? 0) < maxAttempts,
+                  // A podcast episode with no `<link>` of its own carries its
+                  // AUDIO as `content` (2026-08-06, `RSSIngest`) — the same URL
+                  // it files on `externalLink`, which is what identifies one
+                  // here. `fetchReadable` would download the whole file before
+                  // taking its first 512KB as text, and a podcast followed
+                  // through the RSS bridge is an ordinary RSS row otherwise.
+                  thing.externalLink != thing.content,
                   let url = URL(string: thing.content.trimmingCharacters(in: .whitespacesAndNewlines)),
                   url.scheme?.hasPrefix("http") == true
             else { return nil }

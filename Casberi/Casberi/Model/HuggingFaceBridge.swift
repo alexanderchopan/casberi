@@ -9,8 +9,8 @@ import SwiftData
 ///     `karpathy`) and their NEW models, datasets and Spaces land as links.
 ///     This is the GitHub-releases shape pointed at the hub AI publishes to.
 ///   • **Daily Papers** — Hugging Face's own curated daily list, which lands
-///     with a real title, the full abstract and a thumbnail, so a paper row
-///     wears a face instead of a naked arXiv URL.
+///     with a real title, the full abstract, a thumbnail and its first
+///     author, so a paper row wears a face instead of a naked arXiv URL.
 ///
 /// No account, no key, nothing to mint: every endpoint below answers
 /// anonymously (MEASURED 2026-08-03, see each `fetch`). That puts it in the
@@ -183,6 +183,30 @@ enum HuggingFaceIngest {
         let id: String            // "google/gemma-3-27b" — owner included
         let repo: HuggingFaceRepo
         let createdAt: Date
+        /// What the repo DOES — `text-generation`, `image-to-text`. The hub's
+        /// own single most useful field about a model and the closest thing it
+        /// publishes to a subject.
+        let pipeline: String?
+        /// What it loads with — `transformers`, `diffusers`, `gguf`.
+        let library: String?
+        /// A few of the repo's own free-form tags, already filtered (see
+        /// `hubTags(_:)`).
+        let hubTags: [String]
+        /// Behind an access request. NOT a reason to drop the row — see
+        /// `isGated(_:)` and the landing below.
+        let gated: Bool
+
+        /// The row's tags. "Release" always, then what the hub says this repo
+        /// IS. None of these is a COUNT, so the doctrine in this file's header
+        /// is untouched: downloads, likes and trending scores stay out, and
+        /// `lastModified` still isn't read anywhere.
+        var tags: [String] {
+            var out = ["Release"]
+            if gated { out.append("Gated") }
+            if let pipeline = pipeline { out.append(pipeline) }
+            if let library = library { out.append(library) }
+            return (out + hubTags).reduced()
+        }
     }
 
     private struct Paper {
@@ -191,6 +215,9 @@ enum HuggingFaceIngest {
         let abstract: String
         let thumbnail: String?
         let publishedAt: Date
+        /// The first author's name, the way a paper is cited. Nil when the
+        /// payload names nobody — never a stand-in.
+        let leadAuthor: String?
     }
 
     // MARK: - Reads
@@ -219,8 +246,76 @@ enum HuggingFaceIngest {
             // and a disabled one 404s — neither is worth a row.
             if (row["private"] as? Bool) == true { return nil }
             if (row["disabled"] as? Bool) == true { return nil }
-            return Release(id: id, repo: repo, createdAt: created)
+            // A GATED repo is NOT dropped, and the difference from those two
+            // is what the tap finds: a private or disabled page 404s, while a
+            // gated page opens perfectly and shows an access-request form. It
+            // being published IS the news, so it lands wearing the word rather
+            // than being silently withheld — and before 2026-08-06 it landed
+            // wearing nothing at all, as an ordinary link that turned out not
+            // to be openable.
+            return Release(id: id, repo: repo, createdAt: created,
+                           pipeline: Self.term(row["pipeline_tag"]),
+                           library: Self.term(row["library_name"]),
+                           hubTags: Self.hubTags(row["tags"]),
+                           gated: Self.isGated(row["gated"]))
         }
+    }
+
+    /// A single hub field as a tag — trimmed, and nil when it's empty or
+    /// carries anything but a plain identifier. The hub's own spellings are
+    /// kept (`text-generation`, not "Text generation"): they're the words
+    /// people search the hub with, and re-casing them would make a tag that
+    /// matches nothing anyone would type.
+    private static func term(_ raw: Any?) -> String? {
+        guard let s = (raw as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+              !s.isEmpty, s.count <= 40, !s.contains(":") else { return nil }
+        return s
+    }
+
+    /// A few of a repo's own free-form tags. FILTERED and CAPPED, and both
+    /// halves are load-bearing.
+    ///
+    /// A model's `tags` array runs to thirty entries and is mostly machinery —
+    /// `license:apache-2.0`, `arxiv:2307.09288`, `base_model:meta-llama/…`,
+    /// `region:us`, `endpoints_compatible`. Landing it whole would put a dozen
+    /// tags on every row, and tag overlap is exactly what the thing sheet's
+    /// Related shelf and the Themes treemap read — so every Hugging Face row
+    /// would become "related" to every other, which is the failure the
+    /// Watchlist tag already taught this app (`ThingSheetView.streamRelated`
+    /// carries a token exception for precisely that reason).
+    ///
+    /// Three rules, each one an explainable "this names no subject": a
+    /// namespaced entry (anything with a colon) is hub metadata; anything
+    /// under three characters is a language code (`en`, `fr`) — the same bar
+    /// `VisualCorpusMatch` sets on its labels; and the handful of compatibility
+    /// flags below describe the hub's own plumbing. A DENYLIST, not an
+    /// allowlist: an allowlist would silently hide whatever the hub starts
+    /// publishing next, which is the failure `AgentModels` was built to end.
+    private static func hubTags(_ raw: Any?) -> [String] {
+        let stoplist: Set<String> = [
+            "endpoints_compatible", "autotrain_compatible", "compatible",
+            "text-generation-inference", "custom_code", "has_space", "region",
+        ]
+        return ((raw as? [String]) ?? [])
+            .compactMap { term($0) }
+            .filter { $0.count > 2 && !stoplist.contains($0.lowercased()) }
+            .reduced()
+            .prefix(3)
+            .map { $0 }
+    }
+
+    /// `gated` is NOT a Bool on the wire: the hub sends `false` for an open
+    /// repo and the STRINGS `"auto"` or `"manual"` for a gated one. The
+    /// `as? Bool == true` test the `private`/`disabled` fields above use would
+    /// therefore read every gated repo as open — so anything that isn't a
+    /// literal `false` is gated.
+    private static func isGated(_ raw: Any?) -> Bool {
+        if let flag = raw as? Bool { return flag }
+        if let word = raw as? String {
+            return !word.isEmpty && word.lowercased() != "false"
+        }
+        return false
     }
 
     /// Today's curated papers, or nil when the fetch failed. MEASURED
@@ -248,8 +343,31 @@ enum HuggingFaceIngest {
             let thumb = (row["thumbnail"] as? String)?.trimmingCharacters(in: .whitespaces)
             return Paper(arxivID: arxiv, title: title, abstract: abstract,
                          thumbnail: (thumb?.isEmpty == false) ? thumb : nil,
-                         publishedAt: published)
+                         publishedAt: published,
+                         leadAuthor: Self.leadAuthor(paper["authors"]))
         }
+    }
+
+    /// The FIRST author of a paper, which is how a paper is cited and the only
+    /// one of a twenty-name list a single field can honestly hold. Reads
+    /// `paper.authors`, whose entries the hub serves as objects (`name`,
+    /// `user`, `hidden`) — a plain string list is accepted too, since one
+    /// field shape is a thin thing to bet a whole read on. Nil when the list
+    /// is absent or names nobody: a paper with no credited author is better
+    /// than a paper credited to a guess.
+    private static func leadAuthor(_ raw: Any?) -> String? {
+        func clean(_ s: String?) -> String? {
+            guard let s = s?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !s.isEmpty, s.count <= 80 else { return nil }
+            return s
+        }
+        if let rows = raw as? [[String: Any]] {
+            return rows.compactMap { clean($0["name"] as? String) }.first
+        }
+        if let names = raw as? [String] {
+            return names.compactMap { clean($0) }.first
+        }
+        return nil
     }
 
     // MARK: - Land
@@ -312,7 +430,9 @@ enum HuggingFaceIngest {
                     // The REAL publish time, not `.now` — a backfilled release
                     // from 2024 sorts back to 2024 and can't fake urgency.
                     capturedAt: release.createdAt,
-                    tags: ["Release"],
+                    // "Release", then what the hub says this repo is — see
+                    // `Release.tags`. Still no counts anywhere.
+                    tags: release.tags,
                     sourceRef: ref
                 )
                 thing.authorHandle = owner(of: release.id)
@@ -346,6 +466,14 @@ enum HuggingFaceIngest {
                 // anonymity cover, an abstract is a paragraph.
                 if !paper.abstract.isEmpty { thing.enrichedText = paper.abstract }
                 thing.previewImageURL = paper.thumbnail
+                // Who wrote it — the same backend slot a release stamps its
+                // OWNER into, so "that paper by Karpathy" has something to
+                // match. No screen reads it for this source (ShapedRows'
+                // trailing slot has no "Hugging Face" case) and no leaderboard
+                // ranks on it (`FeedInsight.leaderboard` has no case either),
+                // so it can't quietly become a claim that this one person
+                // wrote a twenty-author paper.
+                thing.authorHandle = paper.leadAuthor
                 context.insert(thing)
                 existing.insert(ref)
                 SpotlightIndex.index([thing])

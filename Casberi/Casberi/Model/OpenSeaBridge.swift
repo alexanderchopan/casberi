@@ -204,6 +204,25 @@ enum OpenSeaIngest {
         let name: String
         let url: String
         let image: String
+        /// The chain it was read from. Passed in because the listing payload
+        /// doesn't repeat it, and STORED because a landed row that can't say
+        /// which chain it came from can't be narrowed to one — and the watch
+        /// is a list of chains, so that's the first narrowing anyone wants.
+        let chain: String
+        /// OpenSea's own blurb, when the collection wrote one.
+        let description: String?
+        /// When the collection was created. This endpoint is literally SORTED
+        /// by it, so it is the row's real news moment — a new drop's creation
+        /// IS the event, the way `HuggingFaceIngest` stamps a release with its
+        /// own `createdAt` so a backfill sorts back to where it happened.
+        let created: Date?
+        /// OpenSea's own verified badge (`safelist_status == "verified"`) —
+        /// their judgement, not ours. Every other value the field carries
+        /// (`not_requested`, `requested`, `approved`, …) says nothing we'd
+        /// stand behind, so only the literal word lands and everything else
+        /// is simply untagged. Silence is the honest failure here: a wrong
+        /// "Verified" on an NFT row is exactly the fake status §83 bans.
+        let verified: Bool
 
         init?(json: [String: Any], chain: String) {
             guard let slug = json["collection"] as? String, !slug.isEmpty else { return nil }
@@ -221,8 +240,25 @@ enum OpenSeaIngest {
             self.slug = slug
             self.name = name
             self.image = image
+            self.chain = chain
+            self.description = Self.blurb(json["description"])
+            self.created = Self.createdDate(json["created_date"])
+            self.verified = (json["safelist_status"] as? String)?
+                .lowercased() == "verified"
             self.url = (json["opensea_url"] as? String)
                 ?? "https://opensea.io/collection/\(slug)"
+        }
+
+        /// "NFT", the chain, and the badge when there is one. `Thing.init`
+        /// prepends the type tag and de-dupes, so this is only the
+        /// differentiating half. The chain gets its display spelling
+        /// ("Ethereum", not "ethereum") — an unknown slug falls through as
+        /// itself rather than being dropped, since a chain we stopped
+        /// recognising is still where the row came from.
+        var tags: [String] {
+            var out = ["NFT", OpenSeaChain.from(chain)?.display ?? chain]
+            if verified { out.append("Verified") }
+            return out
         }
 
         /// A name that's really just the contract address (`0x83f2…`) is a
@@ -232,6 +268,60 @@ enum OpenSeaIngest {
             guard t.hasPrefix("0x"), t.count >= 8 else { return false }
             return t.dropFirst(2).allSatisfy { $0.isHexDigit }
         }
+
+        /// The collection's own description, trimmed and bounded. Display copy
+        /// (`summary`), because OpenSea handed it to us in its own payload —
+        /// the 2026-07-22 split — but bounded because this is the one text
+        /// field on the spammiest endpoint in the catalog: the quality filter
+        /// above screens for a name and artwork, neither of which stops a real
+        /// collection from pasting an essay. 600 characters is a paragraph,
+        /// which is what the sheet's summary block is shaped for.
+        private static func blurb(_ raw: Any?) -> String? {
+            guard let s = (raw as? String)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines), !s.isEmpty
+            else { return nil }
+            return s.count > 600 ? String(s.prefix(600)) + "…" : s
+        }
+
+        /// `created_date` as a real date, or nil when nothing reads it.
+        ///
+        /// `IngestSupport.isoDate` first, then a zoneless fallback, and the
+        /// fallback is the point: OpenSea has served this stamp both with and
+        /// without a timezone designator, and `ISO8601DateFormatter` refuses
+        /// the zoneless form outright. Trusting the shared helper alone would
+        /// leave every row quietly falling back to `.now` — a silent no-op
+        /// that looks exactly like the bug this parse exists to fix.
+        /// UNMEASURED against the live API (no egress to api.opensea.io from
+        /// the build host); nil keeps the old `.now` behaviour, so it fails
+        /// safe either way.
+        private static func createdDate(_ raw: Any?) -> Date? {
+            if let date = IngestSupport.isoDate(raw) { return date }
+            guard var s = (raw as? String)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines), !s.isEmpty
+            else { return nil }
+            // Fractional seconds are DROPPED, not parsed: OpenSea writes six
+            // digits where `.withFractionalSeconds` expects three, and a
+            // sub-second on a creation date buys nothing. Cutting to the next
+            // non-digit keeps a trailing `Z`/offset if one is there, so the
+            // zoned-but-six-digit shape re-reads through `isoDate` below.
+            if let dot = s.firstIndex(of: ".") {
+                let tail = s[s.index(after: dot)...]
+                let end = tail.firstIndex(where: { !$0.isNumber }) ?? s.endIndex
+                s.removeSubrange(dot..<end)
+            }
+            return IngestSupport.isoDate(s) ?? zoneless.date(from: s)
+        }
+
+        /// The zoneless form, read as UTC — which is what OpenSea documents
+        /// its timestamps to be. `en_US_POSIX` because a device locale would
+        /// reinterpret the digits (the Snapchat export lesson).
+        private static let zoneless: DateFormatter = {
+            let f = DateFormatter()
+            f.locale = Locale(identifier: "en_US_POSIX")
+            f.timeZone = TimeZone(identifier: "UTC")
+            f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+            return f
+        }()
     }
 
     /// Fetches the newest collections on every watched chain and lands new ones
@@ -279,11 +369,18 @@ enum OpenSeaIngest {
                     title: IngestSupport.titleLine(c.name),
                     content: c.url,
                     source: "OpenSea",
-                    capturedAt: .now,
-                    tags: ["NFT"],
+                    // The collection's OWN creation moment, which is the
+                    // moment this row is news about — not when a sync
+                    // happened to notice it. Falls back to `.now` only when
+                    // the stamp can't be read at all, which is the old
+                    // behaviour and the honest one: a date we couldn't parse
+                    // must not become a date we invented.
+                    capturedAt: c.created ?? .now,
+                    tags: c.tags,
                     sourceRef: ref
                 )
                 thing.previewImageURL = c.image
+                thing.summary = c.description
                 context.insert(thing)
                 existing.insert(ref)
                 SpotlightIndex.index([thing])

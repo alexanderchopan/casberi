@@ -81,7 +81,13 @@ enum StockWatch {
             content: "https://stocktwits.com/symbol/\(stock.symbol)",
             source: "Stocktwits",
             capturedAt: .now,
-            tags: ["Watchlist"],
+            // The market it trades on, when the search told us. It's the fact
+            // that separates $BTC.X from $AAPL, and until now it lived only in
+            // the search sheet's own subtitle (`StocktwitsScreen.detail`) —
+            // read on the way past and then dropped, so a landed watchlist row
+            // couldn't say which market it belonged to. Empty for the rare
+            // result that names none, never a guessed exchange.
+            tags: ["Watchlist"] + (stock.exchange.isEmpty ? [] : [stock.exchange]),
             sourceRef: ref
         )
         context.insert(thing)
@@ -181,6 +187,12 @@ enum StocktwitsIngest {
         let sentiment: String?   // "Bullish" / "Bearish" — author-declared
         let chart: String?       // an attached chart image, when the post carries one
         let avatar: String?
+        /// Every ticker THIS post names, from Stocktwits' own entity
+        /// extraction. A post routinely names several ($NVDA about $AMD), and
+        /// until 2026-08-06 a landed row wore only the STREAM's symbol — so a
+        /// post pulled from the $AAPL stream while arguing about $MSFT was
+        /// filed under $AAPL alone, which is not a missing tag but a wrong one.
+        let symbols: [String]
     }
 
     /// The last ~30 public messages on one ticker's stream, or nil when the
@@ -206,8 +218,33 @@ enum StocktwitsIngest {
                 followers: (user["followers"] as? Int) ?? 0,
                 sentiment: (entities["sentiment"] as? [String: Any])?["basic"] as? String,
                 chart: (entities["chart"] as? [String: Any])?["url"] as? String,
-                avatar: user["avatar_url_ssl"] as? String)
+                avatar: user["avatar_url_ssl"] as? String,
+                symbols: Self.symbols(in: m, entities: entities))
         }
+    }
+
+    /// The tickers a message names. Read from `entities.symbols` and from the
+    /// message's own top-level `symbols` — Stocktwits has served this list in
+    /// both places and the two agree, so reading both costs nothing and means
+    /// a shape change on one of them degrades to "the stream symbol only"
+    /// rather than to nothing at all.
+    ///
+    /// Capped, because "$AAPL $TSLA $NVDA $SPY $QQQ …" is a real and common
+    /// post shape: thirty tags on one row is a row that narrows to nothing and
+    /// a Themes treemap that fills with tickers nobody wrote about. The first
+    /// few are the ones the post is actually about — Stocktwits keeps the
+    /// list in the order the symbols appear in the body.
+    private static func symbols(in message: [String: Any],
+                                entities: [String: Any]) -> [String] {
+        let raw = (entities["symbols"] as? [[String: Any]])
+            ?? (message["symbols"] as? [[String: Any]]) ?? []
+        return raw
+            .compactMap { ($0["symbol"] as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
+            .filter { !$0.isEmpty }
+            .reduced()
+            .prefix(6)
+            .map { $0 }
     }
 
     /// Fetches every watched ticker's stream and lands the standout new
@@ -265,7 +302,13 @@ enum StocktwitsIngest {
                     // The post's own time — it rides "while I was away"
                     // honestly instead of clustering at sync time.
                     capturedAt: post.createdAt ?? .now,
-                    tags: [symbol] + (post.sentiment.map { [$0] } ?? []),
+                    // The stream's symbol LEADS — it's why this post is in the
+                    // corpus at all, and it's the one ticker the person chose
+                    // — then every other ticker the post itself names, so a
+                    // post that landed from $AAPL while arguing about $MSFT is
+                    // findable under both. `Thing.init` de-dupes, so the
+                    // overwhelmingly common single-ticker post is unchanged.
+                    tags: [symbol] + post.symbols + (post.sentiment.map { [$0] } ?? []),
                     sourceRef: ref
                 )
                 thing.authorHandle = post.username

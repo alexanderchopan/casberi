@@ -217,6 +217,26 @@ enum GitHubFeedFetch {
             // re-sync can now tell "still open" from "closed since we last
             // looked" instead of freezing the state from first sight.
             t.mark = (item["state"] as? String) == "closed" ? .done : .todo
+            // Who opened it, and what they wrote. All three ride the SAME
+            // search payload this loop already has in hand — no extra request
+            // — and until 2026-08-06 all three were dropped, so an issue
+            // landed as a bare title and a URL: no author anywhere, and the
+            // words of the issue simply absent from the app.
+            //
+            // The body is DISPLAY copy (`summary`), the Linear/Trello
+            // description precedent: it is text GitHub's own payload authored
+            // and handed us, not text we scraped, so the retrieval-only
+            // `enrichedText` ruling (2026-07-15) doesn't apply and putting it
+            // there would make it invisible on every screen.
+            if let user = item["user"] as? [String: Any] {
+                t.authorHandle = trimmedString(user["login"])
+                t.authorAvatarURL = IngestSupport.imageURL(user["avatar_url"] as? String)
+            }
+            if let body = trimmedString(item["body"]) { t.summary = clampBody(body) }
+            // The repo's own labels — real facets to narrow by ("bug",
+            // "good first issue"), and the only structured signal an issue
+            // row carries besides its state.
+            t.tags += labelNames(item["labels"], excluding: t.tags)
             things.append(t)
             if item["pull_request"] != nil, (item["state"] as? String) == "open",
                let repoURL = item["repository_url"] as? String,
@@ -450,26 +470,40 @@ enum GitHubFeedFetch {
         // (the `involved` feed's PR-verdict cap, applied here).
         let capped = Array(pushTargets.prefix(15))
         _ = await IngestSupport.boundedGather(capped, maxConcurrent: 4) { target -> Void in
-            if let message = await commitMessage(repo: target.repo, sha: target.sha, token: token) {
-                target.thing.title = IngestSupport.titleLine("\(message) · \(target.repo)")
-            }
+            guard let message = await commitMessage(repo: target.repo, sha: target.sha,
+                                                    token: token) else { return }
+            target.thing.title = IngestSupport.titleLine("\(message.subject) · \(target.repo)")
+            // The trailer paragraph — the WHY a commit subject has no room for
+            // — kept for RETRIEVAL only (2026-07-15 ruling): it is text we
+            // pulled out of a payload for search to read, and no contributions
+            // row renders a body. Before 2026-08-06 it was thrown away at the
+            // `split(separator:).first` and the corpus held only the subject.
+            target.thing.enrichedText = message.body
         }
         return things
     }
 
-    /// The head commit's own message (first line only — a multi-line body is
-    /// dropped) for a push event, replacing the branch-name fallback in
-    /// `contributionLine` with what was actually pushed. GitHub's events feed
-    /// no longer carries the message on the event itself (see below), so this
-    /// is a follow-up call keyed off the `head` sha the payload does carry.
-    private static func commitMessage(repo: String, sha: String, token: String) async -> String? {
+    /// The head commit's own message for a push event, replacing the
+    /// branch-name fallback in `contributionLine` with what was actually
+    /// pushed. GitHub's events feed no longer carries the message on the event
+    /// itself (see below), so this is a follow-up call keyed off the `head`
+    /// sha the payload does carry.
+    ///
+    /// Split, not truncated: the `subject` is the first line (the title a row
+    /// shows, which `titleLine` clamps at 80 anyway), and `body` is the WHOLE
+    /// message — subject included, so a retrieval hit on the subject's words
+    /// still lands even when the two are read apart. nil `body` when the
+    /// message is a bare subject, so a one-line commit sets nothing.
+    private static func commitMessage(repo: String, sha: String,
+                                      token: String) async -> (subject: String, body: String?)? {
         guard let root = await IngestSupport.getJSON(
             "\(api)/repos/\(repo)/commits/\(sha)", auth: "Bearer \(token)") as? [String: Any],
               let raw = (root["commit"] as? [String: Any])?["message"] as? String,
-              let message = raw.split(separator: "\n").first.map(String.init)?
-                .trimmingCharacters(in: .whitespaces), !message.isEmpty
+              let subject = raw.split(separator: "\n").first.map(String.init)?
+                .trimmingCharacters(in: .whitespaces), !subject.isEmpty
         else { return nil }
-        return message
+        let whole = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (subject, whole == subject ? nil : clampBody(whole))
     }
 
     private static func contributionLine(_ type: String, repo: String,
@@ -663,6 +697,41 @@ enum GitHubFeedFetch {
     }
 
     // MARK: - Shared
+
+    /// A JSON string field, trimmed, or nil when it's absent, not a string, or
+    /// empty — so an empty `body` never lands as an empty summary that renders
+    /// as a blank block.
+    private static func trimmedString(_ raw: Any?) -> String? {
+        guard let s = (raw as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !s.isEmpty else { return nil }
+        return s
+    }
+
+    /// A body clamped to the ceiling the chat/journal imports already use — a
+    /// GitHub issue body has no length limit worth trusting, and an unbounded
+    /// one would ride into the store, the embedding window and a sheet.
+    private static func clampBody(_ text: String) -> String {
+        text.count > bodyCap ? String(text.prefix(bodyCap)) + "…" : text
+    }
+
+    private static let bodyCap = 4000
+
+    /// The `name`s of an issue's labels, deduped against the tags the thing
+    /// already wears and bounded twice: a label longer than a short phrase is
+    /// a sentence somebody typed into the label field, and a row wearing
+    /// twenty tags is a row you can't read.
+    private static func labelNames(_ raw: Any?, excluding existing: [String]) -> [String] {
+        guard let rows = raw as? [[String: Any]] else { return [] }
+        var seen = Set(existing)
+        var out: [String] = []
+        for row in rows {
+            guard let name = trimmedString(row["name"]), name.count <= 30,
+                  seen.insert(name).inserted else { continue }
+            out.append(name)
+            if out.count == 6 { break }
+        }
+        return out
+    }
 
     /// One GitHub thing — source "GitHub", tagged by feed, one-line title.
     private static func thing(_ kind: ThingKind, title: String, content: String,

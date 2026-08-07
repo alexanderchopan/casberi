@@ -715,6 +715,10 @@ enum BlueskyIngest {
         thing.postText = text
         thing.imageURLs = images.compactMap(IngestSupport.imageURL)
         thing.previewImageURL = thing.imageURLs.first
+        // What the author says their pictures SHOW (2026-08-06) — retrieval
+        // only, never drawn. A brand-new thing's `embedding` is already nil, so
+        // unlike `heal` this needs no re-index nudge.
+        thing.enrichedText = embedAlts(post)
         thing.authorHandle = authorHandle
         thing.authorAvatarURL = IngestSupport.imageURL(author["avatar"] as? String)
         thing.socialContext = why
@@ -792,7 +796,12 @@ enum BlueskyIngest {
     private static func heal(_ thing: Thing?, post: [String: Any],
                              text: String, images: [String],
                              why: String?, channel: String?) {
-        guard let thing else { return }
+        // `landed` was built before this pass' awaits and is handed down here
+        // whole, and every foreground runs the delete-sync heal — so this row
+        // can already be a tombstone by the time a stored property is read off
+        // it (corollaries 4/6). `FarcasterIngest.heal` has always guarded; this
+        // one never did.
+        guard let thing, thing.isLive else { return }
         // WHY it's here heals too — see `FarcasterIngest.heal`, same reasoning:
         // without this the marker would only ever reach posts landed from today
         // on, and an existing corpus would show none of them.
@@ -810,6 +819,14 @@ enum BlueskyIngest {
         }
         if thing.imageURLs.isEmpty, !images.isEmpty {
             thing.imageURLs = images.compactMap(IngestSupport.imageURL)
+            healed = true
+        }
+        // Alt text heals too (2026-08-06): without this it would only ever reach
+        // posts landed from today on, and a corpus already full of image posts
+        // would stay unsearchable by what those images show.
+        if thing.enrichedText == nil, let alts = embedAlts(post) {
+            thing.enrichedText = alts
+            thing.embedding = nil   // re-embed on the richer text
             healed = true
         }
         if thing.quote == nil, let quote = quoteCard(post) {
@@ -956,11 +973,12 @@ enum BlueskyIngest {
         return profile
     }
 
-    /// EVERY image a post attaches, in order, else an external card's single
-    /// thumb (2026-07-16 — it used to keep only the first, so a four-photo post
-    /// lost three). The AppView hydrates ready-to-fetch CDN URLs on the
-    /// post-level embed view. A text-only post returns none and keeps the
-    /// butterfly glyph: the image leads only when the post actually has one.
+    /// EVERY image a post attaches, in order, else a video's poster frame, else
+    /// an external card's single thumb (2026-07-16 — it used to keep only the
+    /// first, so a four-photo post lost three). The AppView hydrates
+    /// ready-to-fetch CDN URLs on the post-level embed view. A text-only post
+    /// returns none and keeps the butterfly glyph: the image leads only when the
+    /// post actually has one.
     private static func embedImages(_ post: [String: Any]) -> [String] {
         guard let embed = post["embed"] as? [String: Any] else { return [] }
         // Images attached directly, or nested under record-with-media.
@@ -969,9 +987,52 @@ enum BlueskyIngest {
             let thumbs = images.compactMap { $0["thumb"] as? String }
             if !thumbs.isEmpty { return thumbs }
         }
+        // A VIDEO post (2026-08-06). `app.bsky.embed.video#view` carries neither
+        // `images` nor `external`, so before this it fell straight through to
+        // the empty return and a video landed text-only wearing the butterfly
+        // glyph — the one post shape with nothing to show. The AppView hydrates
+        // a ready-to-fetch poster frame on `thumbnail`, and it is the only embed
+        // view carrying that key at THIS level (external's thumb is nested under
+        // `external`, a record view has none), so no `$type` test is needed to
+        // tell them apart. READ, never constructed: the `cid` and `playlist`
+        // sitting beside it could be assembled into a thumbnail URL by hand and
+        // that guess would be wrong the day the video service re-shapes its
+        // paths, so a view that hydrates no `thumbnail` (still transcoding)
+        // contributes nothing and keeps the old text-only behaviour.
+        if let thumb = (media["thumbnail"] as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines), !thumb.isEmpty { return [thumb] }
         if let external = media["external"] as? [String: Any],
            let thumb = external["thumb"] as? String { return [thumb] }
         return []
+    }
+
+    /// The ALT TEXT a post's author wrote for its pictures — and a video's own
+    /// alt — joined (2026-08-06). Real words, written by a person, that this
+    /// bridge dropped on the floor from the day it shipped: on Bluesky alt text
+    /// is a first-class habit, so for an image-led post it is often the only
+    /// prose describing what the post is actually about.
+    ///
+    /// Lands on `enrichedText`, RETRIEVAL-ONLY by the 2026-07-15 ruling, and
+    /// deliberately not `summary`: it DESCRIBES a picture rather than being the
+    /// post's own copy, so drawing it under the image would read as a caption
+    /// the author never wrote. nil when nobody wrote any, which is most posts —
+    /// never an empty string standing in for absence (prd §83).
+    private static func embedAlts(_ post: [String: Any]) -> String? {
+        guard let embed = post["embed"] as? [String: Any] else { return nil }
+        let media = (embed["media"] as? [String: Any]) ?? embed
+        var alts: [String] = []
+        for image in (media["images"] as? [[String: Any]]) ?? [] {
+            if let alt = (image["alt"] as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines), !alt.isEmpty {
+                alts.append(alt)
+            }
+        }
+        // The video view's own alt sits at the media level, beside `thumbnail`.
+        if let alt = (media["alt"] as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines), !alt.isEmpty {
+            alts.append(alt)
+        }
+        return alts.isEmpty ? nil : alts.joined(separator: " ")
     }
 
     /// The post's external-link card, when it has one — Bluesky's AppView
@@ -980,12 +1041,21 @@ enum BlueskyIngest {
     /// fetch. A post whose external embed carries an image thumb but no
     /// article (rare) still qualifies — `title` simply comes back nil and
     /// `landLinkedArticle` falls back to a live title fetch.
-    private static func linkEmbed(_ post: [String: Any]) -> (url: String, title: String?, thumb: String?)? {
+    ///
+    /// `desc` (2026-08-06) is the card's `description`, which the AppView has
+    /// hydrated all along and this bridge read past: the shared article landed
+    /// as a headline and a URL while the paragraph under it — the same field
+    /// the RSS bridge lands as `Thing.summary` — sat in the payload unused.
+    private static func linkEmbed(_ post: [String: Any])
+        -> (url: String, title: String?, desc: String?, thumb: String?)? {
         guard let embed = post["embed"] as? [String: Any] else { return nil }
         let media = (embed["media"] as? [String: Any]) ?? embed
         guard let external = media["external"] as? [String: Any],
               let uri = external["uri"] as? String, !uri.isEmpty else { return nil }
-        return (uri, external["title"] as? String, external["thumb"] as? String)
+        return (uri, external["title"] as? String,
+                (external["description"] as? String)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
+                external["thumb"] as? String)
     }
 
     /// Lands a post's shared article as its own `.link` thing — a real,
@@ -993,7 +1063,8 @@ enum BlueskyIngest {
     /// post's `postText`. Dedupes through the SAME `existing` set posts use,
     /// keyed on the URL, so the same article shared twice never lands twice.
     @MainActor
-    private static func landLinkedArticle(_ link: (url: String, title: String?, thumb: String?),
+    private static func landLinkedArticle(_ link: (url: String, title: String?,
+                                                   desc: String?, thumb: String?),
                                           sharedBy handle: String, capturedAt: Date,
                                           existing: inout Set<String>, context: ModelContext) {
         let ref = "link:\(link.url)"
@@ -1010,6 +1081,13 @@ enum BlueskyIngest {
         )
         thing.authorHandle = handle
         thing.previewImageURL = IngestSupport.imageURL(link.thumb)
+        // The card's own paragraph, as DISPLAY copy (2026-08-06) — the
+        // publisher authored it and the AppView handed it to us in its own
+        // payload, which is exactly `Thing.summary`'s contract and exactly what
+        // the RSS bridge does with an item's `<summary>`. Not `enrichedText`:
+        // that field is text WE scraped, and this was given. nil when the card
+        // carried none, never an empty string.
+        thing.summary = link.desc
         context.insert(thing)
         SpotlightIndex.index([thing])
         // Bluesky hydrates the title already; only fall back to a live fetch
@@ -1027,6 +1105,13 @@ enum BlueskyIngest {
     /// this costs no lookup. Two shapes carry it: `embed.record` IS the quoted
     /// record for a plain quote, and is `{record: …}` for record-with-media (a
     /// quote WITH photos), so the nested key is tried first.
+    ///
+    /// The quoted post's OWN pictures are deliberately dropped (2026-08-06).
+    /// `SocialCard` is a face, a handle, the words and a permalink, with no
+    /// image slot — and folding them into this post's `imageURLs` instead would
+    /// draw somebody else's photos as if this author had attached them, which
+    /// is the §83 fake-status ban wearing a picture. The card's permalink walks
+    /// to the real post, where the images are.
     private static func quoteCard(_ post: [String: Any]) -> SocialCard? {
         guard let embed = post["embed"] as? [String: Any],
               let record = embed["record"] as? [String: Any] else { return nil }

@@ -224,8 +224,19 @@ enum RSSIngest {
             let feedName = parsed.title.isEmpty ? feed.displayName : parsed.title
             // Newest 15 per feed — the feed is a firehose; the corpus isn't.
             for item in parsed.items.prefix(15) {
-                let ref = "rss:\(item.guid.isEmpty ? item.link : item.guid)"
+                // An item with neither a <guid> nor a <link> has nothing to key
+                // on, and the bare "rss:" it used to mint collided EVERY such
+                // item onto one row — each pass overwriting the last. The
+                // feed-follow path has always guarded this; this one never did.
+                let key = item.guid.isEmpty ? item.link : item.guid
+                if key.isEmpty { continue }
+                let ref = "rss:\(key)"
                 let icon = Self.publisherIcon(feedIcon: feedIcon, link: item.link, feedURL: feed.url)
+                // A podcast episode often carries only a <guid> and its audio
+                // enclosure — no <link> at all — and landed with an empty
+                // `content`, i.e. a row nothing could open. The audio file IS
+                // the episode, so it stands in (2026-08-06).
+                let openURL = item.link.isEmpty ? item.mediaURL : item.link
                 if existing.contains(ref) {
                     // An already-landed item still in the feed's window can
                     // hand its lead image to the artless row it became.
@@ -248,6 +259,25 @@ enum RSSIngest {
                         if (thing.authorHandle ?? "").isEmpty, !feedName.isEmpty {
                             thing.authorHandle = feedName; touched = true
                         }
+                        // Rows that landed before the fields below existed
+                        // heal in place, within the feed's window — same bar
+                        // as the icon and image backfills above.
+                        if thing.content.isEmpty, !openURL.isEmpty {
+                            thing.content = openURL; touched = true
+                        }
+                        if (thing.externalLink ?? "").isEmpty, !item.mediaURL.isEmpty {
+                            thing.externalLink = item.mediaURL; touched = true
+                        }
+                        if thing.postAuthor == nil,
+                           let author = FeedParser.author(item.author, feedName: feedName) {
+                            thing.postAuthor = author; touched = true
+                        }
+                        // Appended, never assigned — a row's other tags (its
+                        // type tag, a project's) are not this feed's to drop.
+                        for tag in item.categories
+                        where !thing.tags.contains(where: { $0.caseInsensitiveCompare(tag) == .orderedSame }) {
+                            thing.tags.append(tag); touched = true
+                        }
                     }
                     continue
                 }
@@ -255,14 +285,16 @@ enum RSSIngest {
                 let thing = Thing(
                     kind: .link,
                     title: IngestSupport.decodeHTMLEntities(item.title),
-                    content: item.link,
+                    content: openURL,
                     source: "RSS",
                     capturedAt: item.date ?? .now,
+                    tags: item.categories,
                     sourceRef: ref
                 )
                 // The item's lead image — the parser already pulls Media RSS
-                // thumbnails, enclosures, and the first inline <img>; only
-                // PinterestIngest was using it (fixed 2026-07-10).
+                // thumbnails, image enclosures, a per-episode `<itunes:image>`
+                // and the first inline <img>; only PinterestIngest was using
+                // it (fixed 2026-07-10).
                 thing.previewImageURL = IngestSupport.imageURL(item.imageURL)
                 // The publisher's own abstract (2026-07-22) — display copy,
                 // so the sheet reads like a reader instead of a bare link.
@@ -273,6 +305,17 @@ enum RSSIngest {
                 // the trailing label.
                 thing.authorAvatarURL = icon
                 if !feedName.isEmpty { thing.authorHandle = feedName }
+                // The person who wrote it, when the feed names someone other
+                // than itself (`FeedParser.author`) — a multi-author
+                // publication used to collapse onto its own name, since
+                // `authorHandle` is the feed's identity, not a writer's.
+                if let author = FeedParser.author(item.author, feedName: feedName) {
+                    thing.postAuthor = author
+                }
+                // The episode's own audio, when the feed declares one. Kept
+                // whether or not it stood in for `content` above: the row's
+                // bytes are its link, this is the media file itself.
+                if !item.mediaURL.isEmpty { thing.externalLink = item.mediaURL }
                 context.insert(thing)
                 existing.insert(ref)
                 SpotlightIndex.index([thing])
@@ -397,11 +440,27 @@ enum FeedParser {
         /// (2026-07-28) — a per-VIDEO view count, not carried by any other
         /// feed this app follows. nil when the feed doesn't report one.
         var viewCount: Int?
-        /// The entry's Atom `<author><name>` — a channel's own name on
-        /// YouTube (redundant with the feed title, unused), a poster's
-        /// `/u/name` on Reddit (the one thing FeedFollowKind's generic
-        /// authorHandle-as-feed-identity can't carry). Empty when absent.
+        /// The entry's own author — an Atom `<author><name>` or the
+        /// `<dc:creator>` most RSS 2.0 publishers use. A channel's own name on
+        /// YouTube (the same name the feed title carries), a poster's
+        /// `/u/name` on Reddit, the WRITER on a multi-author Substack (the one
+        /// thing FeedFollowKind's generic authorHandle-as-feed-identity can't
+        /// carry). Lands on `Thing.postAuthor` through `FeedParser.author`,
+        /// which drops the ones that only repeat the feed's own name. Empty
+        /// when absent.
         var author = ""
+        /// The item's own media enclosure — a podcast episode's audio (or
+        /// video) file. Never an image: an image enclosure lands on `imageURL`
+        /// above, and the two are read for different things. Empty when the
+        /// item declares none, which is every non-podcast feed.
+        var mediaURL = ""
+        /// What the item files itself under — an RSS `<category>`, an Atom
+        /// `<category term/label>`, an `<itunes:category text>`. On a Reddit
+        /// `u/name` feed this is the ONLY place the payload names which
+        /// subreddit a post is in. Cleaned and capped at `categoryCap`; lands
+        /// on `Thing.tags`, which feeds §308 facet filtering, so junk here
+        /// degrades search.
+        var categories: [String] = []
         /// Every `<a href>` found in the item's own body HTML, in document
         /// order, capped at 5 — Reddit's crossing check reads this for the
         /// post's first OUTBOUND (non-reddit.com) link; every other bridge
@@ -418,7 +477,27 @@ enum FeedParser {
         /// then falls back to the site's favicon. This is publisher identity,
         /// distinct from a per-item lead image (`Item.imageURL`).
         var iconURL = ""
+        /// The FEED's own categories — a show's `<itunes:category>`, a
+        /// channel-level `<category>`. Distinct from `Item.categories`: this
+        /// describes the publication, not the item, so only Podcasts reads it
+        /// (see `FeedFollowIngest.refresh`). Empty when the feed declares none.
+        var categories: [String] = []
         var items: [Item] = []
+    }
+
+    /// The item's own author, when the feed names someone the feed itself
+    /// isn't. `Thing.authorHandle` already carries the feed's identity (the
+    /// channel, publication, subreddit, show), and a YouTube entry's
+    /// `<author><name>` is that same channel — filing it again as a person
+    /// would make a publication read as one. A multi-author Substack is what
+    /// this is for: its posts name their writer while the feed names the
+    /// publication. nil when the feed named nobody, or named only itself.
+    static func author(_ raw: String, feedName: String) -> String? {
+        let author = IngestSupport.decodeHTMLEntities(raw)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !author.isEmpty,
+              author.caseInsensitiveCompare(feedName) != .orderedSame else { return nil }
+        return author
     }
 
     static func parse(_ data: Data) -> Parsed {
@@ -461,25 +540,45 @@ enum FeedParser {
             // Image in an attribute: a Media RSS content/thumbnail or an
             // enclosure. media:thumbnail is always an image; the others only
             // when they say so (or say nothing, as Pinterest's media does).
+            // A podcast's `<enclosure type="audio/…">` is the one enclosure
+            // that isn't an image — it's the episode itself, and it used to be
+            // read for its type and then dropped.
             case "media:thumbnail", "media:content", "enclosure":
-                // Only lands on an item (the inner guard) — a channel-level
-                // image never becomes a row's thumbnail.
-                if current?.imageURL.isEmpty == true, let u = attributes["url"] {
-                    let type = attributes["type"] ?? ""
-                    let medium = attributes["medium"] ?? ""
-                    let isImage = name == "media:thumbnail"
-                        || type.hasPrefix("image") || medium == "image"
-                        || (name == "media:content" && type.isEmpty && medium.isEmpty)
-                    if isImage { current?.imageURL = Self.normalizeImage(u) }
+                guard let u = attributes["url"] else { break }
+                let type = attributes["type"] ?? ""
+                let medium = attributes["medium"] ?? ""
+                let isImage = name == "media:thumbnail"
+                    || type.hasPrefix("image") || medium == "image"
+                    || (name == "media:content" && type.isEmpty && medium.isEmpty)
+                // Both only land on an item (the inner guards) — a
+                // channel-level image never becomes a row's thumbnail.
+                if isImage {
+                    if current?.imageURL.isEmpty == true { current?.imageURL = Self.normalizeImage(u) }
+                } else if name == "enclosure", current?.mediaURL.isEmpty == true,
+                          type.hasPrefix("audio") || type.hasPrefix("video") {
+                    current?.mediaURL = u
                 }
-            // The feed's OWN mark rides an href attribute in the iTunes and
-            // (rarely) Media namespaces — captured only at channel level
-            // (current == nil), so per-EPISODE art never becomes the
-            // publisher icon.
+            // A mark rides an href attribute in the iTunes and (rarely) Media
+            // namespaces, and it means two different things depending on where
+            // it sits: at channel level it's the PUBLISHER's own logo, on an
+            // item it's that episode's own art. Kept apart — per-episode art
+            // must never become the publisher icon, which is what refusing it
+            // outright used to enforce, at the cost of every episode landing
+            // imageless (2026-08-06).
             case "itunes:image", "media:image":
-                if current == nil, result.iconURL.isEmpty, let href = attributes["href"] {
-                    result.iconURL = Self.normalizeImage(href)
+                guard let href = attributes["href"] else { break }
+                if current == nil {
+                    if result.iconURL.isEmpty { result.iconURL = Self.normalizeImage(href) }
+                } else if current?.imageURL.isEmpty == true {
+                    current?.imageURL = Self.normalizeImage(href)
                 }
+            // What the item (or the show) files itself under. Atom and iTunes
+            // put the words in an attribute; RSS 2.0 puts them in the
+            // element's text, read at didEndElement below. Reddit's label
+            // reads "r/swift" where its term is the bare name, so the label
+            // wins.
+            case "category", "itunes:category":
+                noteCategory(attributes["label"] ?? attributes["term"] ?? attributes["text"])
             // A YouTube entry's view count (2026-07-28) — only meaningful on
             // an item, so the channel-level guard matches every other
             // per-item attribute case above.
@@ -525,6 +624,9 @@ enum FeedParser {
                         result.iconURL = Self.normalizeImage(value)
                     }
                 }
+                // RSS 2.0's text form of a channel category (the attribute
+                // forms are read at didStartElement, at either level).
+                if name == "category" { noteCategory(value) }
                 return
             }
             switch name {
@@ -547,7 +649,16 @@ enum FeedParser {
                    elementPath.dropLast().last == "author" {
                     current?.author = value
                 }
-            case "description", "content:encoded", "summary", "content":
+            case "dc:creator":
+                // What most RSS 2.0 publishers name a writer with — Atom's
+                // <author><name> above has no RSS equivalent (RSS's own
+                // <author> is an email address, not a name).
+                if current?.author.isEmpty == true { current?.author = value }
+            case "category":
+                // RSS 2.0's text form; Atom's and iTunes' attribute forms are
+                // read at didStartElement.
+                noteCategory(value)
+            case "description", "content:encoded", "summary", "media:description", "content":
                 // No attribute image yet — pull the first <img> out of the
                 // (usually CDATA) description HTML. This is Pinterest's path.
                 if current?.imageURL.isEmpty == true,
@@ -562,12 +673,20 @@ enum FeedParser {
                 if current?.links.isEmpty == true {
                     current?.links = Self.extractLinks(in: value)
                 }
-                // …and keep the WORDS too (2026-07-22). Until now this blob
+                // …and keep the WORDS too (2026-07-22). Until then this blob
                 // was mined for an image and thrown away, so every RSS,
                 // Reddit, YouTube, Substack, and Podcast thing landed with no
                 // body at all — its sheet re-fetched a link preview to show
                 // what the feed had already handed us. Publisher-authored, so
                 // it's display copy (`Thing.summary`), not `enrichedText`.
+                //
+                // `media:description` is YouTube's, and it joined this list
+                // only on 2026-08-06 — the parser runs with namespace
+                // processing OFF, so element names arrive QUALIFIED and a
+                // `<media:group><media:description>` never matched
+                // "description". A YouTube entry carries no `<summary>` or
+                // `<content>` either, so despite the fix above every video
+                // went on landing with no body at all.
                 //
                 // Keep the LONGEST candidate: a feed often carries both a
                 // short `<description>` and a full `<content:encoded>`, in
@@ -581,6 +700,39 @@ enum FeedParser {
                 current = nil
             default:
                 break
+            }
+        }
+
+        /// A feed category is free text, and it lands on `Thing.tags` — the
+        /// same field §308 facets filter on — so a sentence, a URL or a raw
+        /// "&amp;" would degrade search rather than sharpen it. Cleaned,
+        /// length-capped, deduped case-insensitively, and capped in number:
+        /// four is a subject list, twenty is a keyword-stuffed feed.
+        /// "Uncategorized" is refused by name — it is WordPress's default for
+        /// a post filed under nothing, so it says the opposite of a tag.
+        private static let categoryCap = 4
+        private static let categoryMaxLength = 40
+        private static let categoryStoplist: Set<String> = ["uncategorized"]
+
+        /// Files a category on the current item, or on the FEED when one
+        /// arrives at channel level (`current == nil`) — see
+        /// `Parsed.categories` for why the two are kept apart.
+        private func noteCategory(_ raw: String?) {
+            guard let raw else { return }
+            let t = IngestSupport.decodeHTMLEntities(raw)
+                .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if t.count > Self.categoryMaxLength { return }
+            guard !t.isEmpty, !t.contains("://"),
+                  !Self.categoryStoplist.contains(t.lowercased()) else { return }
+            func fits(_ existing: [String]) -> Bool {
+                existing.count < Self.categoryCap
+                    && !existing.contains { $0.caseInsensitiveCompare(t) == .orderedSame }
+            }
+            if current == nil {
+                if fits(result.categories) { result.categories.append(t) }
+            } else if let own = current?.categories, fits(own) {
+                current?.categories.append(t)
             }
         }
 

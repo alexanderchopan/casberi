@@ -436,6 +436,27 @@ enum ScreenshotTopics {
         // note the reader hasn't reached yet.
         case "Obsidian":  return TopicSource(kinds: [.note], needsOCR: false, includeDomains: false,
                                              text: { $0.enrichedText ?? $0.content })
+        // YouTube, 2026-08-06 — the first room here whose text did not exist
+        // yesterday. `media:description` joined `FeedParser`'s summary list
+        // this morning (the parser runs with namespace processing off, so
+        // `<media:group><media:description>` never matched "description" and
+        // every video landed with no body at all), so a description is stored
+        // for the first time and there is finally something to read.
+        //
+        // `includeDomains` is FALSE and this is the room that needs it most: a
+        // description is a wall of links — sponsor, affiliate, Patreon, merch,
+        // the channel's own other socials — so counting hostnames would rank
+        // the shops a channel plugs and collapse the room onto whichever it
+        // plugs hardest. That is `t.co` swallowing the X room, wearing a
+        // different hostname.
+        //
+        // The text is on `summary`: a YouTube row's `content` is the watch
+        // URL, so the default reader would map a room of `youtube.com/watch`
+        // and call the result what the channels cover. Second room to need
+        // `text:` after Obsidian, and for the opposite reason — the vault
+        // keeps too much on `content`, this keeps none of it there.
+        case "YouTube":   return TopicSource(kinds: [.link], needsOCR: false, includeDomains: false,
+                                             text: { $0.summary ?? "" })
         default:          return nil
         }
     }

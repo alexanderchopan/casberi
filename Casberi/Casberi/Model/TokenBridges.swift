@@ -820,6 +820,12 @@ enum TokenIngest {
             added += 1
         }
         if added > 0 || backfills.values.contains(where: \.any) { context.saveHonestly() }
+        // Notion's search response carries no page body, so the words are a
+        // second read per page (see `notionBodies`). It runs AFTER the landing
+        // loop on purpose: a page that arrived in this very pass can then gain
+        // its body in the same pass rather than the next one. Nothing above is
+        // read after this await.
+        if bridge == .notion { await notionBodies(token, context: context) }
         return added
     }
 
@@ -885,6 +891,13 @@ enum TokenIngest {
             // The book's cover leads every one of its highlights — scrolling
             // groups them visually by what you were reading.
             let cover = IngestSupport.imageURL(book["cover_image_url"] as? String)
+            // The book's own shelf words, shared by every highlight under it:
+            // the tags you put on the BOOK, and Readwise's own category — the
+            // one fixed word that tells a book from an article, a tweet and a
+            // podcast in a room where every row is a paragraph of prose.
+            let bookTags = names(in: book["book_tags"])
+            let category = readwiseCategory(book["category"] as? String)
+            let sourceURL = httpLink(book["source_url"])
             for h in (book["highlights"] as? [[String: Any]]) ?? [] {
                 guard let id = h["id"], let text = h["text"] as? String, !text.isEmpty
                 else { continue }
@@ -910,10 +923,47 @@ enum TokenIngest {
                 if full.count > thing.title.count { parts.append(full) }
                 if !note.isEmpty { parts.append(note) }
                 if !parts.isEmpty { thing.summary = parts.joined(separator: "\n\n") }
+                // WHERE IT CAME FROM (2026-08-06). Until now a highlight
+                // carried no address anywhere: `content` holds "Book — Author",
+                // which is prose and what groups a book's highlights visually,
+                // so the sheet had nothing to open even though the payload
+                // carries three links. It rides `externalLink` rather than
+                // `content` for exactly that reason — moving a URL into
+                // `content` would replace the book line on every row and take
+                // the grouping with it.
+                //
+                // `readwise_url` leads because it names THIS highlight and
+                // every highlight has one; the highlight's own `url` and the
+                // book's `source_url` exist only for things that were on the
+                // web, and are the better answer when they do.
+                thing.externalLink = httpLink(h["readwise_url"])
+                    ?? httpLink(h["url"]) ?? sourceURL
+                // Readwise's category, then your own tags on the highlight,
+                // then the book's — see `tagList` for why that order.
+                thing.tags = tagList(category + names(in: h["tags"]) + bookTags)
                 all.append((when, thing))
             }
         }
         return all.sorted { $0.0 > $1.0 }.prefix(30).map(\.1)
+    }
+
+    /// Readwise's own `category` → one word for the tag rail, or none.
+    ///
+    /// The values are Readwise's fixed vocabulary rather than anything a person
+    /// types, which is what makes a fixed map safe here in a way that reading a
+    /// Trello list name never is (see `trelloMark`). An unrecognized value
+    /// lands NOTHING rather than a machine plural: Readwise adding a sixth kind
+    /// should read as a highlight with no category, not as a tag whose spelling
+    /// we invented.
+    private static func readwiseCategory(_ raw: String?) -> [String] {
+        switch raw {
+        case "books":         ["Book"]
+        case "articles":      ["Article"]
+        case "tweets":        ["Tweet"]
+        case "podcasts":      ["Podcast"]
+        case "supplementals": ["Supplemental"]
+        default:              []
+        }
     }
 
     /// GitHub — the feeds the person turned on (Stars, New releases, Gists,
@@ -925,7 +975,9 @@ enum TokenIngest {
         await GitHubFeedFetch.all(token: token, context: context)
     }
 
-    /// Todoist — open tasks, newest 30.
+    /// Todoist — open tasks, newest 30. Two GETs (the Trello shape): the
+    /// tasks, then the project names, so a task can say which list it came
+    /// from.
     private static func todoist(_ token: String) async -> [Thing]? {
         // The unified v1 API (2026-07-13: REST v2 answers 410 Gone for
         // everything now — the write probe caught it). v1 wraps lists in
@@ -935,6 +987,32 @@ enum TokenIngest {
                                     auth: "Bearer \(token)") as? [String: Any],
               let tasks = root["results"] as? [[String: Any]]
         else { return nil }
+        // Project names, id → name (2026-08-06). A second GET, the Trello
+        // board-name shape and for its reason: a task's project is context the
+        // task itself doesn't carry. A failure here is NOT a failure of the
+        // pass — the tasks already read fine, and a task without its project is
+        // worse-labelled, not wrong; only the first page is read, so a project
+        // past it leaves its tasks untagged rather than mistagged.
+        //
+        // The name lands as a TAG rather than leading the title the way a
+        // Trello board does, and that is a difference in the data, not a
+        // preference: a Trello card name is a fragment written against a board
+        // you were looking at ("Ship v1"), while a Todoist task is a whole
+        // instruction that stands on its own — and every task in the default
+        // project would otherwise read "Inbox · …", spending the title's
+        // 80-character clamp on the least informative word on the row.
+        var projects: [String: String] = [:]
+        if let list = (await IngestSupport.getJSON("https://api.todoist.com/api/v1/projects",
+                                                  auth: "Bearer \(token)")
+                       as? [String: Any])?["results"] as? [[String: Any]] {
+            for project in list {
+                guard let id = project["id"] as? String,
+                      let name = (project["name"] as? String)?
+                        .trimmingCharacters(in: .whitespacesAndNewlines),
+                      !name.isEmpty else { continue }
+                projects[id] = name
+            }
+        }
         let sorted = tasks.sorted {
             (($0["added_at"] as? String) ?? "") > (($1["added_at"] as? String) ?? "")
         }
@@ -965,6 +1043,22 @@ enum TokenIngest {
                 .trimmingCharacters(in: .whitespacesAndNewlines), !notes.isEmpty {
                 thing.summary = notes
             }
+            // YOUR LABELS (2026-08-06) — plain strings in Todoist, and the one
+            // field here already spelled in the corpus's own vocabulary.
+            //
+            // The priority tag is ONE level, and it is Todoist's own word for
+            // it. The API numbers priority the OPPOSITE way round to the app:
+            // `4` is what every Todoist screen calls **P1**, and `1` is the
+            // default no-priority level — so a tag reading "Priority 4" would
+            // be exactly backwards to the person who set it (§83), and only the
+            // service's own label is safe to show. Only the top level lands:
+            // p2 and p3 are ordinary, and four priority words would put one on
+            // nearly every task, which is a tag that no longer narrows
+            // anything.
+            let priority: [String] = (task["priority"] as? Int) == 4 ? ["P1"] : []
+            let project = (task["project_id"] as? String).flatMap { projects[$0] }
+            thing.tags = tagList(priority + ((task["labels"] as? [String]) ?? [])
+                                 + [project].compactMap { $0 })
             return thing
         }
     }
@@ -1044,6 +1138,34 @@ enum TokenIngest {
                 .trimmingCharacters(in: .whitespacesAndNewlines), !notes.isEmpty {
                 thing.summary = notes
             }
+            // THE JOIN LINK (2026-08-06) — the one actionable thing on a
+            // booking, and it was being dropped. `content` holds the Cal.com
+            // booking page, which is where you go to reschedule, not where the
+            // meeting is. `meetingUrl` first (Cal.com's own resolved link),
+            // then `location`, which carries a URL for a room you host
+            // yourself and a machine slug ("integrations:daily") otherwise —
+            // `httpLink` refuses the slug rather than landing a link that
+            // opens nothing.
+            thing.externalLink = httpLink(booking["meetingUrl"])
+                ?? httpLink(booking["location"])
+            // WHO IS COMING, as retrieval text only (2026-08-06). "the call
+            // with Priya" is how a booking actually gets looked up, and the
+            // names were nowhere in the corpus.
+            //
+            // NOT `summary`: that field is the source's own abstract — text the
+            // service AUTHORED, which is what the booking description above
+            // is — and a "With: …" line we composed ourselves is not that.
+            // NAMES ONLY: an attendee's email address is their contact
+            // details, not a fact about this meeting, and it would ride into
+            // Spotlight and every agent grounding payload for a search nobody
+            // types.
+            let attendees = ((booking["attendees"] as? [[String: Any]]) ?? [])
+                .compactMap { ($0["name"] as? String)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            if !attendees.isEmpty {
+                thing.enrichedText = attendees.joined(separator: ", ")
+            }
             return thing
         }
     }
@@ -1063,8 +1185,9 @@ enum TokenIngest {
                   let name = event["name"] as? String,
                   (event["status"] as? String) != "canceled" else { return nil }
             let id = uri.split(separator: "/").last.map(String.init) ?? uri
-            let join = (event["location"] as? [String: Any])?["join_url"] as? String
-            return Thing(
+            let location = event["location"] as? [String: Any]
+            let join = location?["join_url"] as? String
+            let thing = Thing(
                 kind: .event,
                 title: name,
                 content: join ?? "",
@@ -1072,11 +1195,48 @@ enum TokenIngest {
                 capturedAt: IngestSupport.isoDate(event["start_time"]) ?? .now,
                 sourceRef: "calendly:\(id)"
             )
+            // Calendly's own notes on the meeting (2026-08-06) — written by
+            // whoever set the event type up, so display copy, the Todoist
+            // description rule. The plain-text field only: the HTML twin is
+            // markup, not copy.
+            if let notes = (event["meeting_notes_plain"] as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines), !notes.isEmpty {
+                thing.summary = notes
+            }
+            // THE HOST. `event_memberships` is whose booking page this is —
+            // yourself on a personal account, and the teammate whose calendar
+            // it was on a team one, which is the case worth having. It rides
+            // `authorHandle`, the field every "whose" room is keyed by and the
+            // one `Retriever` now scores like a tag, so "the call Dana hosted"
+            // can find it. No surface draws it for an event row today; it is a
+            // stored fact, not a claim on screen.
+            thing.authorHandle = ((event["event_memberships"] as? [[String: Any]]) ?? [])
+                .compactMap { ($0["user_name"] as? String)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines) }
+                .first { !$0.isEmpty }
+            // WHERE, when it is a place rather than a link — retrieval only.
+            // `content` above already carries the join URL for a video call;
+            // an in-person booking's address is a real fact about it, but
+            // composing "Location: …" into `summary` would be putting our own
+            // sentence in the field that means "what the source wrote" (the
+            // Cal.com attendee reasoning).
+            //
+            // `invitees_counter` is deliberately unread: it is a tally, and a
+            // tally is never a thing.
+            if join == nil, let place = (location?["location"] as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines), !place.isEmpty {
+                thing.enrichedText = place
+            }
+            return thing
         }
     }
 
     /// Notion — the pages connected to your integration, newest edits first.
     /// Pages only, by ruling — databases stay behind.
+    ///
+    /// This is the LISTING: titles, properties and covers, which is everything
+    /// `/v1/search` answers with. A page's own words are a second read per page
+    /// and live in `notionBodies`, which `refresh` runs after the landing loop.
     private static func notion(_ token: String) async -> [Thing]? {
         guard let root = await IngestSupport.postJSON("https://api.notion.com/v1/search",
                                     auth: "Bearer \(token)",
@@ -1118,8 +1278,198 @@ enum TokenIngest {
             thing.previewImageURL = IngestSupport.imageURL(
                 ((cover?["external"] as? [String: Any])?["url"] as? String)
                     ?? ((cover?["file"] as? [String: Any])?["url"] as? String))
+            // Everything the page files itself under, and the deadline it
+            // names if it names one (2026-08-06) — until now every property
+            // but the title was read past. See both helpers for what is
+            // deliberately not read: a status never becomes a `mark`, and a
+            // date property is only a deadline when it says so.
+            thing.tags = tagList(notionTags(props))
+            thing.dueAt = notionDue(props)
             return thing
         }
+    }
+
+    /// The words a Notion page files itself under — its `select`, `status` and
+    /// `multi_select` properties, which are the only ones whose values come
+    /// from a fixed list somebody picked from rather than being typed fresh
+    /// each time.
+    ///
+    /// A `status` lands as a TAG and never as a `mark`. Notion's statuses are
+    /// user-created and user-named ("Shipped", "Icebox", "Done ✅"), so reading
+    /// completion out of one would be `trelloMark`'s ruling in a third product:
+    /// pattern-matching somebody's private vocabulary, and wrong for anyone
+    /// whose board isn't in English or doesn't use the word.
+    ///
+    /// Property ORDER is Notion's, which is a dictionary's, which is to say
+    /// none — so the names are sorted before the values are read. Without that,
+    /// a page with more than `tagLimit` options would keep a different dozen on
+    /// every sync.
+    private static func notionTags(_ props: [String: Any]) -> [String] {
+        var out: [String] = []
+        for key in props.keys.sorted() {
+            guard let prop = props[key] as? [String: Any],
+                  let type = prop["type"] as? String else { continue }
+            switch type {
+            case "select", "status":
+                if let name = (prop[type] as? [String: Any])?["name"] as? String {
+                    out.append(name)
+                }
+            case "multi_select":
+                out += names(in: prop["multi_select"])
+            default:
+                continue
+            }
+        }
+        return out
+    }
+
+    /// The property names this reads as a deadline. Tiny and English on
+    /// purpose — see `notionDue`.
+    private static let notionDueNames: Set<String> = [
+        "due", "due date", "duedate", "deadline",
+    ]
+
+    /// A Notion page's DEADLINE, when it names one — and nil the rest of the
+    /// time, which is most of the time.
+    ///
+    /// Notion gives a `date` property no meaning of its own: "Created",
+    /// "Reviewed on", "Published" and "Due" are all the same type, so the only
+    /// thing separating a deadline from a stamp is what somebody called it.
+    /// That is one step from `trelloMark`'s ruling, and only one — the
+    /// difference is which way each fails. Trello's inference would MARK a card
+    /// done off a list name; this one either recognizes a name or sets nothing,
+    /// so a page whose vocabulary this doesn't know keeps its date to itself
+    /// and the row reads exactly as it did before. `dueAt` is loud (Coming up,
+    /// the overdue ask, the sheet's due row, "Add to Reminders"), which is why
+    /// the list names deadlines only: no "date", no "when", nothing that could
+    /// as easily be a start.
+    ///
+    /// The EARLIEST match wins when a page carries two. Not a judgement about
+    /// which is the real deadline — a rule that makes the answer the same on
+    /// every sync, since property order is a dictionary's and picking "the
+    /// first" would flip between runs.
+    private static func notionDue(_ props: [String: Any]) -> Date? {
+        var found: [Date] = []
+        for (key, value) in props {
+            guard notionDueNames.contains(key.lowercased()
+                .trimmingCharacters(in: .whitespacesAndNewlines)),
+                  let prop = value as? [String: Any],
+                  prop["type"] as? String == "date",
+                  let start = (prop["date"] as? [String: Any])?["start"] as? String
+            else { continue }
+            // A Notion date is either a full timestamp or a bare calendar day,
+            // the same fork Todoist's `due` takes.
+            if let when = IngestSupport.isoDate(start) ?? Self.allDayDate(start) {
+                found.append(when)
+            }
+        }
+        return found.min()
+    }
+
+    /// The retrieval clamp on a page body — `ObsidianNote.retrievalLimit`'s
+    /// number, for its reason: long enough that a real page arrives whole,
+    /// bounded enough that one pathological page can't put a megabyte into a
+    /// column every `@Query` may fault.
+    private static let notionBodyLimit = 8_000
+    /// How many pages may have their body read in one sync.
+    private static let notionBodyCap = 6
+    private static let notionAskedKey = "notion.body.asked"
+    /// A bound on the ledger itself, so a huge workspace can't grow a
+    /// UserDefaults array without end. Trimming re-opens a page to being asked
+    /// once more, which costs one request and lands the same text — the safe
+    /// direction for a bound to be wrong in.
+    private static let notionAskedLimit = 2_000
+
+    /// The page's own WORDS (2026-08-06) — the half of Notion this bridge
+    /// never read.
+    ///
+    /// `/v1/search` answers with a page's properties and no body at all, so a
+    /// connected Notion was a list of titles: a page called "Q3 planning" could
+    /// be found by those two words and by nothing written inside it. The body
+    /// costs one request per page (`/v1/blocks/{id}/children`), which is why
+    /// this is a separate bounded pass rather than part of the fetch.
+    ///
+    /// It lands on `enrichedText`, retrieval-only by the 2026-07-15 ruling —
+    /// nothing draws it. That is the right field twice over: the text is ours,
+    /// assembled out of Notion's block tree, not an abstract Notion authored
+    /// and handed over (which is what `summary` means); and a page body is
+    /// exactly what the retriever and the answer path were missing.
+    ///
+    /// Bounded three ways, each a real ceiling rather than a precaution:
+    ///   · TOP-LEVEL BLOCKS ONLY. A nested block's children are their own
+    ///     request, so a page written inside toggles arrives as its outline.
+    ///   · ONE PAGE OF BLOCKS (Notion's own 100 maximum), clamped to
+    ///     `notionBodyLimit`.
+    ///   · ASKED ONCE, ever. A page that answered is never asked again, so an
+    ///     empty one — a heading and a picture, no text — can't cost a request
+    ///     every sync forever. The price is the honest one: a page edited after
+    ///     it landed keeps the body it had. Only an ANSWER spends the ask; a
+    ///     read that never reached Notion is left to try again.
+    ///
+    /// **UNMEASURED**, like the rest of this bridge's newer reads. Every failure
+    /// path leaves the row exactly as it is, so it fails safe.
+    @MainActor
+    private static func notionBodies(_ token: String, context: ModelContext) async {
+        var asked = Set(UserDefaults.standard.stringArray(forKey: notionAskedKey) ?? [])
+        // Refs as plain STRINGS before the first await — nothing below holds a
+        // `Thing` across a suspension (the corollary-6 rule); the rows are
+        // re-fetched after the reads are done.
+        let wanted = IngestSupport.thingsByRef(context, source: "Notion")
+            .filter { $0.value.enrichedText == nil && !asked.contains($0.key) }
+            .keys.sorted().prefix(notionBodyCap)
+        guard !wanted.isEmpty else { return }
+
+        var bodies: [String: String] = [:]
+        for ref in wanted {
+            let read = await notionPageText(String(ref.dropFirst("notion:".count)),
+                                            token: token)
+            guard read.answered else { continue }
+            asked.insert(ref)
+            if !read.text.isEmpty { bodies[ref] = read.text }
+        }
+        UserDefaults.standard.set(Array(asked.prefix(notionAskedLimit)),
+                                  forKey: notionAskedKey)
+        guard !bodies.isEmpty else { return }
+
+        let landed = IngestSupport.thingsByRef(context, source: "Notion")
+        var changed = false
+        for (ref, text) in bodies {
+            guard let thing = landed[ref], thing.enrichedText == nil else { continue }
+            thing.enrichedText = text
+            // The richer text is what the index should read (see
+            // `Thing.enrichedText`), so the vector written from the title alone
+            // is dropped rather than left standing.
+            thing.embedding = nil
+            changed = true
+        }
+        if changed { context.saveHonestly() }
+    }
+
+    /// One page's top-level blocks as plain text.
+    ///
+    /// `answered` separates "Notion says this page has no words" from "the read
+    /// never reached Notion" — only the first may spend the page's one ask.
+    private static func notionPageText(_ id: String,
+                                       token: String) async -> (answered: Bool, text: String) {
+        guard let root = await IngestSupport.getJSON(
+            "https://api.notion.com/v1/blocks/\(id)/children?page_size=100",
+            auth: "Bearer \(token)",
+            headers: ["Notion-Version": "2022-06-28"]) as? [String: Any],
+              let blocks = root["results"] as? [[String: Any]] else { return (false, "") }
+        var lines: [String] = []
+        for block in blocks {
+            // Every text block in Notion's tree keeps its words in the same
+            // place — a `rich_text` array under a key named after the block's
+            // own type — so this needs no list of block types to maintain, and
+            // a type Notion ships tomorrow reads correctly on the day.
+            guard let type = block["type"] as? String,
+                  let body = block[type] as? [String: Any],
+                  let rich = body["rich_text"] as? [[String: Any]] else { continue }
+            let line = rich.compactMap { $0["plain_text"] as? String }.joined()
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !line.isEmpty { lines.append(line) }
+        }
+        return (true, String(lines.joined(separator: "\n").prefix(notionBodyLimit)))
     }
 
     /// Linear — issues assigned to you, via its GraphQL API. Personal keys
@@ -1136,10 +1486,20 @@ enum TokenIngest {
         // resolves to nothing and the body was all it could have shown. Field
         // names confirmed against the live schema by introspection, same trick
         // that caught `duplicate` below.
+        //
+        // `priority`, `priorityLabel`, `labels` and `project` ride along
+        // (2026-08-06): the SELECTION is the ceiling for this bridge, so a
+        // field nobody asks for isn't dropped downstream, it was never on the
+        // wire — which is why none of these four could reach the corpus before.
+        // Note the cliff they share with the App Store Connect bridge's
+        // projections: a field name Linear doesn't serve is a 400 for the WHOLE
+        // query, so the room empties rather than losing one column. All four
+        // are core `Issue` fields; introspect before adding a fifth.
         let query = """
         { viewer { assignedIssues(first: 30, orderBy: updatedAt) \
         { nodes { id identifier title url updatedAt dueDate description \
-        state { type } } } } }
+        priority priorityLabel state { type } labels { nodes { name } } \
+        project { name } } } } }
         """
         guard let root = await IngestSupport.postJSON("https://api.linear.app/graphql",
                                     auth: token,
@@ -1171,8 +1531,81 @@ enum TokenIngest {
                 .trimmingCharacters(in: .whitespacesAndNewlines), !body.isEmpty {
                 thing.summary = body
             }
+            // The four fields the selection above added (2026-08-06).
+            //
+            // The priority tag is ONE level and it is Linear's own word for it
+            // (`priorityLabel` — "Urgent"), never a number: Linear counts
+            // priority UP from 1 = Urgent while Todoist counts it DOWN to
+            // 4 = P1 (see `todoist`), so any shared numeric scale in this file
+            // would be exactly backwards for one of the two. `0` means "no
+            // priority", which is why the test is `== 1` and not `<= 1`.
+            let priority: String? = (node["priority"] as? Double) == 1
+                ? (node["priorityLabel"] as? String) : nil
+            let project = (node["project"] as? [String: Any])?["name"] as? String
+            thing.tags = tagList([priority].compactMap { $0 }
+                                 + names(in: (node["labels"] as? [String: Any])?["nodes"])
+                                 + [project].compactMap { $0 })
             return thing
         }
+    }
+
+    // MARK: - Payload helpers (shared by the bridges above)
+
+    /// How many of a service's own tags one thing may bring — the
+    /// `ObsidianNote.tagLimit` number, for its reason: a service with a
+    /// tag-per-thought habit would otherwise put hundreds of one-use words on
+    /// the feed's filter surface, where the useful dozen become unfindable.
+    private static let tagLimit = 12
+
+    /// A service's own tags, normalized for the corpus's tag rail.
+    ///
+    /// Every app in this file lets you name your own tags and hands them over
+    /// as free text: blank strings, a stray `#`, the same word twice in two
+    /// cases, fifty on one item. `ObsidianNote.normalize` learned those lessons
+    /// for the vault; these are the same rules for the keyed bridges,
+    /// deliberately kept here rather than shared, so a change to how a vault
+    /// reads its frontmatter can never quietly re-tag every bookmark.
+    ///
+    /// ORDER IS THE CONTRACT, because the cap truncates: a caller passes the
+    /// service's own FIXED words first (a Readwise category, a Todoist P1, a
+    /// Raindrop type — words nobody typed, meaning the same thing on every
+    /// account), then the person's own tags, then the container the thing sits
+    /// in (a project, a shelf). A pathological item loses its container name,
+    /// never the word that says what it is.
+    private static func tagList(_ raw: [String]) -> [String] {
+        var seen = Set<String>()
+        var out: [String] = []
+        for candidate in raw {
+            var tag = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+            while tag.hasPrefix("#") { tag.removeFirst() }
+            tag = tag.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !tag.isEmpty, tag.count <= 40,
+                  tag.rangeOfCharacter(from: .letters) != nil,
+                  seen.insert(tag.lowercased()).inserted else { continue }
+            out.append(tag)
+            if out.count == tagLimit { break }
+        }
+        return out
+    }
+
+    /// The `name` field out of a list of objects — the shape four of these
+    /// services hand tags over in (Readwise's `{id, name}`, a Trello label, a
+    /// Notion multi-select option, a Linear label node). An entry with no name
+    /// yields nothing rather than a placeholder.
+    private static func names(in raw: Any?) -> [String] {
+        ((raw as? [[String: Any]]) ?? []).compactMap { $0["name"] as? String }
+    }
+
+    /// A link a payload handed us, or nil. `IngestSupport.imageURL` does this
+    /// for pictures; a permalink needs the same guard and must not be told it
+    /// is one. Anything that isn't a parseable http(s) address — an empty
+    /// string, a Cal.com `location` reading "integrations:daily" — comes back
+    /// nil rather than as something a tap would fail on.
+    private static func httpLink(_ raw: Any?) -> String? {
+        guard let s = (raw as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !s.isEmpty, s.hasPrefix("https://") || s.hasPrefix("http://"),
+              URL(string: s) != nil else { return nil }
+        return s
     }
 
     /// An all-day date ("2026-07-25") → noon local. `IngestSupport.isoDate`
@@ -1230,8 +1663,20 @@ enum TokenIngest {
             predicate: #Predicate { $0.source == "Linear" }))) ?? []
         var changed = false
         for thing in existing {
-            guard let ref = thing.sourceRef, let now = byRef[ref],
-                  now.mark != thing.mark else { continue }
+            guard let ref = thing.sourceRef, let now = byRef[ref] else { continue }
+            // Tags MERGE, never replace (2026-08-06) — the same reasoning in
+            // both reconcilers. Dedupe skips a known ref, so without this an
+            // issue that landed before labels were read would never get them;
+            // and a tag on a landed row is not necessarily ours (a project in
+            // this app IS a tag), so assigning the fresh list wholesale would
+            // delete somebody's filing. A label removed in Linear therefore
+            // stays here, which is the safe direction to be wrong in.
+            let missing = now.tags.filter { !thing.tags.contains($0) }
+            if !missing.isEmpty {
+                thing.tags += missing
+                changed = true
+            }
+            guard now.mark != thing.mark else { continue }
             // The loop-closer moment (delight pass 2026-07-28) — an issue
             // you were carrying resolving is real news; a plain state EDIT
             // (todo → doing) isn't, so this only fires on the genuine
@@ -1256,6 +1701,11 @@ enum TokenIngest {
     /// `filter=open` is the whole read: cards you are carrying. An ARCHIVED
     /// card simply stops arriving, and `reconcileTrello` deliberately does not
     /// mark those done — see its own note.
+    ///
+    /// `badges` is deliberately unread: its checklist, comment and attachment
+    /// numbers are tallies, and a tally is never a thing (module doctrine).
+    /// "3 of 7 done" would also be a state that goes stale the moment somebody
+    /// ticks the next box, on a row nothing re-reads.
     private static func trello(_ token: String) async -> [Thing]? {
         // No key, no requests. This is the honest nil: `refresh` words it as
         // "check the token", which is right — half a credential is a broken
@@ -1312,6 +1762,26 @@ enum TokenIngest {
                 .trimmingCharacters(in: .whitespacesAndNewlines), !desc.isEmpty {
                 thing.summary = desc
             }
+            // YOUR LABELS (2026-08-06). A label with no name is skipped, and
+            // that is not tidiness: a colour-only label is ordinary on a Trello
+            // board and means whatever its members agreed it means, so filing
+            // one as "green" would be inventing the single thing the card
+            // doesn't say.
+            thing.tags = tagList(names(in: card["labels"]))
+            // The card's COVER, when it is a picture that can actually be
+            // loaded. Only a SHARED-SOURCE cover lands — an Unsplash picture,
+            // whose URL is public. A cover backed by an ATTACHMENT is
+            // deliberately skipped: Trello serves attachment bytes only to an
+            // authenticated request, and the loader that draws a row's thumb
+            // sends no Authorization header, so landing one would paint a hole
+            // where a picture was claimed.
+            //
+            // UNMEASURED like the rest of this bridge: `sharedSourceUrl` is
+            // documented as the cover's own source. If it turns out to name a
+            // page rather than a picture, the row shows what it shows today —
+            // nothing — rather than something wrong.
+            thing.previewImageURL = IngestSupport.imageURL(
+                (card["cover"] as? [String: Any])?["sharedSourceUrl"] as? String)
             return thing
         }
     }
@@ -1356,8 +1826,16 @@ enum TokenIngest {
             predicate: #Predicate { $0.source == "Trello" }))) ?? []
         var changed = false
         for thing in existing {
-            guard let ref = thing.sourceRef, let now = byRef[ref],
-                  now.mark != thing.mark else { continue }
+            guard let ref = thing.sourceRef, let now = byRef[ref] else { continue }
+            // Additive, for `reconcileLinear`'s reasons exactly — a card that
+            // landed before labels were read gains them, and nothing this app
+            // or the person filed on the row is taken away.
+            let missing = now.tags.filter { !thing.tags.contains($0) }
+            if !missing.isEmpty {
+                thing.tags += missing
+                changed = true
+            }
+            guard now.mark != thing.mark else { continue }
             let justClosed = now.mark == .done && thing.mark != .done
             thing.mark = now.mark
             changed = true
@@ -1369,11 +1847,34 @@ enum TokenIngest {
         if changed { context.saveHonestly() }
     }
 
-    /// Raindrop — newest 30 bookmarks across all collections.
+    /// Raindrop — newest 30 bookmarks across all collections, then the
+    /// collections themselves (two more GETs) so a bookmark can name the shelf
+    /// it sits on.
     private static func raindrop(_ token: String) async -> [Thing]? {
         guard let root = await IngestSupport.getJSON("https://api.raindrop.io/rest/v1/raindrops/0?perpage=30",
                                    auth: "Bearer \(token)") as? [String: Any],
               let items = root["items"] as? [[String: Any]] else { return nil }
+        // Shelf names, id → title (2026-08-06). Two more GETs — Raindrop serves
+        // top-level collections and nested ones on separate endpoints — in the
+        // Trello board-name shape and for its reason: a failure leaves a
+        // bookmark without its shelf, which is worse-labelled, not wrong.
+        //
+        // System collections are skipped by their own sign: Raindrop numbers
+        // "Unsorted" -1 and "Trash" -99, and neither is a shelf anyone chose.
+        var collections: [Int: String] = [:]
+        for path in ["collections", "collections/childrens"] {
+            guard let list = (await IngestSupport.getJSON(
+                "https://api.raindrop.io/rest/v1/\(path)",
+                auth: "Bearer \(token)") as? [String: Any])?["items"] as? [[String: Any]]
+            else { continue }
+            for collection in list {
+                guard let id = collection["_id"] as? Int, id > 0,
+                      let title = (collection["title"] as? String)?
+                        .trimmingCharacters(in: .whitespacesAndNewlines),
+                      !title.isEmpty else { continue }
+                collections[id] = title
+            }
+        }
         return items.compactMap { item in
             guard let id = item["_id"], let link = item["link"] as? String else { return nil }
             let title = (item["title"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? link
@@ -1395,7 +1896,50 @@ enum TokenIngest {
                 .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             let both = [note, excerpt].filter { !$0.isEmpty }.joined(separator: "\n\n")
             if !both.isEmpty { thing.summary = both }
+            // YOUR TAGS (2026-08-06). Raindrop's are first-class — the field
+            // its whole interface is organized around, and the plainest thing
+            // this bridge was dropping. Raindrop's own `type` leads them (a
+            // fixed word nobody typed) and the shelf trails; see `tagList`.
+            let shelf = (((item["collection"] as? [String: Any])?["$id"] as? Int)
+                         ?? (item["collectionId"] as? Int)).flatMap { collections[$0] }
+            thing.tags = tagList(raindropType(item["type"] as? String)
+                                 + ((item["tags"] as? [String]) ?? [])
+                                 + [shelf].compactMap { $0 })
+            // Every picture Raindrop found on the page, not just the cover
+            // (`media` is its own extraction, and the cover is usually its
+            // first entry). `previewImageURL` above stays the row's single
+            // thumb — this is the set a bigger surface would lay out, the way
+            // a social post's has since 2026-07-16. An entry that names a type
+            // other than an image is skipped rather than filed as one.
+            var images: [String] = []
+            for entry in (item["media"] as? [[String: Any]]) ?? [] {
+                let type = entry["type"] as? String
+                guard type == nil || type == "image",
+                      let url = IngestSupport.imageURL(entry["link"] as? String),
+                      !images.contains(url) else { continue }
+                images.append(url)
+            }
+            thing.imageURLs = images
             return thing
+        }
+    }
+
+    /// Raindrop's own `type` → one word for the tag rail, or none.
+    ///
+    /// Six fixed values, not free text, so a fixed map is safe here the way
+    /// `readwiseCategory`'s is. "link" lands NOTHING on purpose: every Raindrop
+    /// row is already a `.link` kind, so the tag would separate nothing from
+    /// nothing. An unrecognized value lands nothing either — Raindrop adding a
+    /// seventh kind should read as a bookmark with no type, never as a word
+    /// whose spelling we guessed.
+    private static func raindropType(_ raw: String?) -> [String] {
+        switch raw {
+        case "article":  ["Article"]
+        case "image":    ["Image"]
+        case "video":    ["Video"]
+        case "document": ["Document"]
+        case "audio":    ["Audio"]
+        default:         []
         }
     }
 }

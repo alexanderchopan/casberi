@@ -224,7 +224,7 @@ enum BridgeRefresh {
         if !RSSStore.shared.feeds.isEmpty || !FeedFollowStore.substack.isEmpty {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
-                await sweepTimed("feeds.articleText") { await FeedArticleText.sweep(context: context) }
+                _ = await sweepTimed("feeds.articleText") { await FeedArticleText.sweep(context: context) }
             }
         }
         if BlueskyStore.shared.connected {
@@ -322,7 +322,18 @@ enum BridgeRefresh {
                 // self-retiring: it returns immediately once every landed
                 // video has been classified once.
                 if kind == .youtube {
-                    await sweepTimed("youtube.shorts") { await YouTubeShorts.sweep(context: context) }
+                    _ = await sweepTimed("youtube.shorts") { await YouTubeShorts.sweep(context: context) }
+                    // The room's topic map reads a video's own description,
+                    // which only started landing on 2026-08-06 (`media:description`
+                    // is namespaced, so the parser had never matched it). The
+                    // sweep call sites are hand-wired per source, so a
+                    // `topicSource` case with no call HERE is inert — the
+                    // silent no-op X and TikTok both shipped with (§313), where
+                    // a registry answering nil is indistinguishable from a room
+                    // with nothing to say.
+                    _ = await sweepTimed("youtube.topics") {
+                        await ScreenshotTopics.healTopics(source: "YouTube", context: context)
+                    }
                 }
             }
         }

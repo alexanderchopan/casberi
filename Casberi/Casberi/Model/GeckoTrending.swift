@@ -172,6 +172,10 @@ enum TrendingIngest {
         let symbol: String
         let tokenAddress: String
         let image: String?
+        /// The base token's USD price the moment it trended. Nil when the
+        /// payload didn't carry one — never 0, which would read as a
+        /// worthless token rather than an unread field (§83).
+        let priceUSD: Double?
     }
 
     /// The current trending tokens on one chain, or nil when the fetch failed
@@ -210,14 +214,22 @@ enum TrendingIngest {
             // The one quality floor: a pool with almost no liquidity that spikes
             // into "trending" on wash volume is the token equivalent of OpenSea's
             // empty test contracts. GeckoTerminal's own ranking already filters
-            // most of it; this catches the dust it doesn't.
-            let reserve = Self.double(attrs["reserve_in_usd"])
-            guard reserve >= 5_000 else { return nil }
+            // most of it; this catches the dust it doesn't. A pool with no
+            // readable reserve is dust as far as this floor is concerned — it
+            // can't clear a bar it doesn't reach.
+            guard let reserve = Self.number(attrs["reserve_in_usd"]),
+                  reserve >= 5_000 else { return nil }
 
             let name = (token["name"] as? String)?
                 .trimmingCharacters(in: .whitespacesAndNewlines) ?? symbol
+            // A price of exactly 0 is a token nobody quoted, not a free one —
+            // so it reads as absent, the same way `WalletIngest` refuses a
+            // zero price rather than storing it.
+            let price = Self.number(attrs["base_token_price_usd"])
+                .flatMap { $0 > 0 ? $0 : nil }
             return Trend(name: name, symbol: symbol, tokenAddress: tokenAddress,
-                         image: IngestSupport.tokenLogoURL(token["image_url"]))
+                         image: IngestSupport.tokenLogoURL(token["image_url"]),
+                         priceUSD: price)
         }
     }
 
@@ -279,6 +291,22 @@ enum TrendingIngest {
                     sourceRef: ref
                 )
                 thing.previewImageURL = t.image
+                // The base token's price the moment it trended — the same
+                // shape `StocktwitsBridge` and `TokenWatch` stamp one field
+                // over, with the currency carried beside it instead of baked
+                // into the field name. `capturedAt` is the matching WHEN.
+                //
+                // It goes NOWHERE on screen, and that is deliberate: nothing
+                // renders `priceValue` for a `.link` (only the `.product`
+                // branch of `ThingContent` does), and a price read at ingest
+                // must never paint as the price now. The sheet already answers
+                // "what's it worth?" the honest way — `TokenChart.route` reads
+                // the Dexscreener URL in `content` and draws a curve fetched
+                // live every time the sheet opens.
+                if let price = t.priceUSD {
+                    thing.priceValue = price
+                    thing.priceCurrency = "USD"
+                }
                 context.insert(thing)
                 existing.insert(ref)
                 SpotlightIndex.index([thing])
@@ -304,10 +332,43 @@ enum TrendingIngest {
     // MARK: - Parsing helpers
 
     /// GeckoTerminal serves numbers as strings ("57740.3433") — accept either.
-    private static func double(_ raw: Any?) -> Double {
+    /// Nil, never 0, when the field is missing or unreadable: the callers
+    /// above all treat "we didn't read it" and "it is zero" as different
+    /// answers, and collapsing them is the §83 invented value.
+    private static func number(_ raw: Any?) -> Double? {
         if let d = raw as? Double { return d }
-        if let s = raw as? String { return Double(s) ?? 0 }
-        return 0
+        if let i = raw as? Int { return Double(i) }
+        if let s = raw as? String { return Double(s) }
+        return nil
     }
 
+    // MARK: - What this bridge deliberately does NOT land
+    //
+    // `reserve_in_usd` is still read only as the quality floor above, and
+    // `volume_usd.h24`, `price_change_percentage`, `market_cap_usd` and
+    // `fdv_usd` still sit unread in the same payload. Landing them as
+    // `enrichedText` was considered on 2026-08-06 and declined, for two
+    // reasons that both point the same way:
+    //
+    //   • **A stale magnitude is only safe if it says when it was true**, so
+    //     the text has to carry its own moment ("liquidity when this trended:
+    //     about $57K — a reading from then, not now"). That is roughly 150
+    //     characters of BOILERPLATE, identical on every row.
+    //   • `EmbeddingIndex.indexText` is title + content + summary +
+    //     enrichedText, and `vector(for:)` reads the first 500 characters of
+    //     it. A trending row's title is ~12 characters and its `content` is
+    //     already a near-identical Dexscreener URL, so 150 characters of
+    //     shared prose would DOMINATE the vector and make every trending
+    //     token "related" to every other one — the failure the Watchlist tag
+    //     already taught this app.
+    //
+    // And the retrieval it would buy is close to nothing: the retriever does
+    // no numeric comparison, so "which ones had real volume" is unanswerable
+    // either way, and the words themselves appear on every row, so they can't
+    // discriminate between any two of them. A 24h price MOVE is worse still —
+    // a percentage carries no moment inside it the way a dollar figure does,
+    // which is exactly what makes it read as current.
+    //
+    // The price is the one number that escapes all of this: `priceValue` is a
+    // structured field, not prose, so it costs the embedding nothing.
 }

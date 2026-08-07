@@ -142,6 +142,21 @@ enum MailIngest {
             // we honestly have, 2026-07-10). Older rows parse it from the
             // "From …" content at render, so no migration.
             thing.authorHandle = m.from
+            // Who else was on it, for RETRIEVAL only (2026-07-15 ruling) —
+            // `enrichedText`, so nothing renders it and the sheet is unchanged.
+            // A mail used to land knowing only its sender, which made "the mail
+            // where I cc'd Ana" unanswerable over a corpus that held the
+            // answer. It costs no request: `to`/`cc` ride the same ENVELOPE
+            // the subject does. nil, never an empty string, when a message
+            // names nobody — an empty enrichment and no enrichment are
+            // different facts, and only nil says the second one.
+            //
+            // NEW ROWS ONLY. This pass skips a UID it has already landed (the
+            // `existing.contains(ref)` guard above), so mail landed before
+            // 2026-08-06 keeps no recipients — reaching those needs the fuller
+            // `thingsByRef` fetch on every foreground that `heal` already pays
+            // hourly, which is a cost this sweep shouldn't take on unasked.
+            thing.enrichedText = recipientText(m)
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
@@ -149,6 +164,36 @@ enum MailIngest {
         if added > 0 { context.saveHonestly() }
         return added
     }
+
+    /// The recipient lines a mail carries into retrieval, or nil when it names
+    /// nobody but its sender.
+    ///
+    /// Bounded on both axes because a mailing list is unbounded on both: at
+    /// most `recipientCap` names per line, and the whole block clamped, so one
+    /// announcement to four hundred people can't dominate the embedding window
+    /// (`EmbeddingIndex.indexText` reads the first 800 characters) or the
+    /// content scan. The overflow is COUNTED rather than dropped silently —
+    /// "and 380 more" is true, and a list that reads as twenty-five recipients
+    /// when it had four hundred is not.
+    ///
+    /// Labelled in plain English rather than localized: nothing displays this
+    /// string, and the part somebody searches for is a person's name.
+    private static func recipientText(_ m: IMAPClient.Message) -> String? {
+        func line(_ label: String, _ names: [String]) -> String? {
+            guard !names.isEmpty else { return nil }
+            let shown = names.prefix(recipientCap).joined(separator: ", ")
+            let extra = names.count - min(names.count, recipientCap)
+            return "\(label): \(shown)" + (extra > 0 ? ", and \(extra) more" : "")
+        }
+        let block = [line("To", m.to), line("Cc", m.cc)]
+            .compactMap { $0 }.joined(separator: "\n")
+        guard !block.isEmpty else { return nil }
+        return block.count > recipientTextCap
+            ? String(block.prefix(recipientTextCap)) + "…" : block
+    }
+
+    private static let recipientCap = 25
+    private static let recipientTextCap = 2000
 
     @MainActor private static var healRunning: Set<MailProvider> = []
     private static let healInterval: TimeInterval = 3600

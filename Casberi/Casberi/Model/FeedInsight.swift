@@ -38,15 +38,21 @@ enum FeedInsight {
             return counted(things, title: "Your top artists", unit: ("track", "tracks"), key: artist)
         case "Raindrop":
             return counted(things, title: "Where you save from", unit: ("bookmark", "bookmarks"), key: domain)
+        // Substack and RSS lead with the PEOPLE when the feeds name enough of
+        // them (2026-08-06), and with the publications when they don't — see
+        // `bylines`. The fallback is the board these rooms have always drawn,
+        // byte for byte, so a reader whose feeds name nobody loses nothing.
         case "Substack":
-            return counted(things, title: "Your publications", unit: ("post", "posts"), key: handle)
+            return bylines(things, unit: ("post", "posts"))
+                ?? counted(things, title: "Your publications", unit: ("post", "posts"), key: handle)
         // RSS names its publisher in the same `authorHandle` slot Substack and
         // Podcasts use (RSSIngest stamps the feed's title there), so "where my
         // reading comes from" is the identical read — it was simply never
         // wired (2026-07-22). A reader following one feed falls through to the
         // mosaic below, same as a Substack reader with one publication.
         case "RSS":
-            return counted(things, title: "Your publishers", unit: ("story", "stories"), key: handle)
+            return bylines(things, unit: ("story", "stories"))
+                ?? counted(things, title: "Your publishers", unit: ("story", "stories"), key: handle)
         case "Podcasts":
             return counted(things, title: "Your shows", unit: ("episode", "episodes"), key: handle)
         case "Steam":
@@ -143,6 +149,48 @@ enum FeedInsight {
         }
         return board("Saved", title: "Who you save most", unit: ("save", "saves"))
             ?? board("Liked", title: "Whose posts you like", unit: ("like", "likes"))
+    }
+
+    /// Who you actually read (2026-08-06) — the PEOPLE behind the stories,
+    /// which these two rooms could not name until `postAuthor` started landing
+    /// from `<dc:creator>` and Atom's `<author><name>` this morning. Before
+    /// that the only groupable identity a feed item carried was `authorHandle`,
+    /// which is the FEED's — so a publication with a dozen writers ranked as
+    /// one bar wearing the publication's name.
+    ///
+    /// It is a different card from "Your publishers", not a better one, and it
+    /// takes the room's one head slot only when it can describe MOST of the
+    /// room. The threshold is a MAJORITY of the rows carrying a byline —
+    /// strictly more than the rows nobody signed — and it is a coverage test
+    /// rather than a count for a reason `counted`'s own floor can't cover: a
+    /// wire service names nobody at all, so eight bylined stories out of four
+    /// hundred pass "3 things across 2 groups" easily and would put eight
+    /// people's names under the title "Who you read". Majority is the smallest
+    /// line where the board says something true of the room instead of true of
+    /// a corner of it; below it the publisher board keeps the slot unchanged.
+    ///
+    /// The fallback says so the way Instagram's saves→likes fallback does — in
+    /// the TITLE, which changes noun with the ranking ("Who you read" is people,
+    /// "Your publishers" is publications), never quietly re-meaning the bars.
+    ///
+    /// `RSSIngest`'s `FeedParser.author` already drops an author that only
+    /// repeats the feed's own name, so a channel or a publication can never
+    /// rank here as a person — that de-duplication is upstream and this board
+    /// relies on it rather than repeating it.
+    private static func bylines(_ things: [Thing],
+                                unit: (one: String, many: String)) -> Leaderboard? {
+        let named = things.filter { writer($0) != nil }
+        guard named.count * 2 > things.count else { return nil }
+        guard let board = counted(named, title: "Who you read", unit: unit, key: writer)
+        else { return nil }
+        guard named.count < things.count else { return board }
+        // WHAT THE BARS COVER, the topic map's own wording (§313): the bars
+        // hold the bylined rows alone, so a subtitle counting only those reads
+        // as the room's total beside a title that names the room.
+        return Leaderboard(
+            title: board.title,
+            subtitle: String(localized: "\(named.count.formatted()) of \(things.count.formatted()) \(unit.many)"),
+            rows: board.rows)
     }
 
     /// What a card actually spent, month by month (2026-08-05, prd §311).
@@ -541,6 +589,18 @@ enum FeedInsight {
         // the chain — over the years of subjects sitting under it.
         case "Obsidian":
             title = "What you write about"; unit = ("note", "notes"); kinds = [.note]
+        // YouTube, 2026-08-06 — the first room here mapping words the person
+        // did NOT write, which is the whole of the title's job: these are the
+        // descriptions the channels wrote for their own uploads, so the card
+        // says whose subjects it is ranking. "What you write about" over
+        // somebody else's copy would be §83 in one word, and the room's other
+        // heads (a wall of stills, a count of uploads) can't say it at all.
+        //
+        // One kind, no `belongs`: every row a followed channel lands is a
+        // `.link`, and a Short is a video like any other — nothing in this
+        // room belongs to anybody but the channels.
+        case "YouTube":
+            title = "What your channels cover"; unit = ("video", "videos"); kinds = [.link]
         case "Files":
             // The connected folder's images, read the Photos way (2026-08-02):
             // `FilesIngest.heal` already OCRs them into `content` and
@@ -594,6 +654,14 @@ enum FeedInsight {
 
     private static func handle(_ t: Thing) -> String? {
         t.authorHandle.flatMap { $0.isEmpty ? nil : $0 }
+    }
+
+    /// The person who wrote an item, when the feed named one — `postAuthor`,
+    /// never `authorHandle`. Trimmed here rather than left to `counted`, so
+    /// `bylines`' coverage test counts exactly the rows the bars will.
+    private static func writer(_ t: Thing) -> String? {
+        let name = (t.postAuthor ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? nil : name
     }
 
     /// Mail stores the sender in `authorHandle` as "Name <addr>" or a bare

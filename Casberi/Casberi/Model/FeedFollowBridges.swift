@@ -632,6 +632,22 @@ enum FeedFollowIngest {
             return byRef?[ref]
         }
 
+        // Who wrote the item, per bridge — `Thing.postAuthor`, never
+        // `authorHandle` (that is the FEED's identity: the subreddit, the
+        // channel, the publication). Reddit's `/u/name` is always a person and
+        // never the feed's own name, so it lands as it arrives; everywhere
+        // else `FeedParser.author` drops an author that only repeats the feed
+        // — a YouTube entry names its own channel there, and filing that as a
+        // person would make a channel read as one.
+        func itemAuthor(_ raw: String, feedName: String) -> String? {
+            guard !raw.isEmpty else { return nil }
+            guard kind != .reddit else {
+                let name = FeedFollowMoments.normalizedRedditAuthor(raw)
+                return name.isEmpty ? nil : name
+            }
+            return FeedParser.author(raw, feedName: feedName)
+        }
+
         // Concurrent fetch, then processed back in the entries' own order
         // (the same ref landing from two entries should resolve the same
         // way it always did — first-in-list wins). Capped at 4 in flight —
@@ -666,11 +682,23 @@ enum FeedFollowIngest {
             // on (FeedLeaderboard). Feed-follow used to drop it, leaving every
             // YouTube video an indistinguishable `source:"YouTube"` row.
             let feedName = entry.title.isEmpty ? parsed.title : entry.title
+            // Podcasts only: a show's own `<itunes:category>` is true of every
+            // episode it publishes, and an episode almost never files itself
+            // under anything. A blog's or a channel's channel-level categories
+            // are far broader than any one post, so the other three take the
+            // item's own or nothing.
+            let showTags = kind == .podcasts ? parsed.categories : []
             // Newest 15 per feed — the feed is a firehose; the corpus isn't.
             for item in parsed.items.prefix(15) {
                 let stableKey = item.guid.isEmpty ? item.link : item.guid
                 guard !stableKey.isEmpty else { continue }
                 let ref = "\(kind.refPrefix):\(stableKey)"
+                // A podcast episode often carries only a <guid> and its audio
+                // enclosure — no <link> at all — and landed with an empty
+                // `content`, i.e. a row nothing could open. The audio file IS
+                // the episode, so it stands in (2026-08-06).
+                let openURL = item.link.isEmpty ? item.mediaURL : item.link
+                let itemTags = item.categories.isEmpty ? showTags : item.categories
 
                 // A video's views doubling since last checked — self-relative,
                 // so it's checked on EVERY sighting (new or already-landed),
@@ -692,10 +720,34 @@ enum FeedFollowIngest {
                             extraPatched = true
                         }
                     }
-                    if kind == .reddit, !item.author.isEmpty, let thing = storedThing(ref),
-                       thing.postAuthor == nil {
-                        thing.postAuthor = FeedFollowMoments.normalizedRedditAuthor(item.author)
-                        extraPatched = true
+                    // Rows that landed before the fields below existed heal in
+                    // place, within the feed's window — the bar the image and
+                    // handle backfills above already set. Reddit's postAuthor
+                    // backfill (2026-07-28) is the same line, now that every
+                    // bridge lands one.
+                    if let thing = storedThing(ref) {
+                        if thing.content.isEmpty, !openURL.isEmpty {
+                            thing.content = openURL; extraPatched = true
+                        }
+                        // Never on Reddit — see the insert branch below: that
+                        // kind's `externalLink` is the post's own outbound
+                        // link, and a later pass reads it to match against the
+                        // corpus. An enclosure URL there is a media file being
+                        // asked "is this something you saved?", forever.
+                        if kind != .reddit, (thing.externalLink ?? "").isEmpty, !item.mediaURL.isEmpty {
+                            thing.externalLink = item.mediaURL; extraPatched = true
+                        }
+                        if thing.postAuthor == nil,
+                           let author = itemAuthor(item.author, feedName: feedName) {
+                            thing.postAuthor = author; extraPatched = true
+                        }
+                        // Appended, never assigned — a row's other tags (its
+                        // type tag, the `Shorts` one `YouTubeShorts` writes, a
+                        // project's) are not this feed's to drop.
+                        for tag in itemTags
+                        where !thing.tags.contains(where: { $0.caseInsensitiveCompare(tag) == .orderedSame }) {
+                            thing.tags.append(tag); extraPatched = true
+                        }
                     }
                     continue
                 }
@@ -703,26 +755,46 @@ enum FeedFollowIngest {
                 let thing = Thing(
                     kind: .link,
                     title: IngestSupport.decodeHTMLEntities(item.title),
-                    content: item.link,
+                    content: openURL,
                     source: kind.source,
                     capturedAt: item.date ?? .now,
+                    tags: itemTags,
                     sourceRef: ref
                 )
+                // A podcast episode's own art, when it publishes one — the
+                // parser keeps it apart from the show's logo (see the
+                // `itunes:image` case), so a per-episode picture reaches the
+                // row without ever standing in as the publisher's mark.
                 thing.previewImageURL = IngestSupport.imageURL(item.imageURL)
-                // Reddit's selftext, a YouTube description, a Substack lede, a
-                // podcast's show notes — all ride the same feed `<summary>`
-                // the parser now keeps (2026-07-22).
+                // Reddit's selftext, a Substack lede, a podcast's show notes —
+                // the feed's own `<description>`/`<summary>`, kept by the
+                // parser since 2026-07-22. A YouTube description rides
+                // `<media:description>`, which that pass never matched and
+                // 2026-08-06 added, so a video landed summary-less until then.
                 if !item.summary.isEmpty { thing.summary = item.summary }
                 if !feedName.isEmpty { thing.authorHandle = feedName }
-                // Reddit-only (2026-07-28): the actual poster, and the post's
-                // own first outbound link — FeedFollowMoments' corpus-join
-                // and cross-poster passes read these on a later refresh.
+                // Who actually wrote it (`itemAuthor`) — distinct from
+                // `authorHandle`, which is the feed's own identity.
+                if let author = itemAuthor(item.author, feedName: feedName) {
+                    thing.postAuthor = author
+                }
+                // Reddit-only (2026-07-28): the post's own first outbound
+                // link — FeedFollowMoments' corpus-join pass reads it on a
+                // later refresh.
                 if kind == .reddit {
-                    if !item.author.isEmpty {
-                        thing.postAuthor = FeedFollowMoments.normalizedRedditAuthor(item.author)
-                    }
                     thing.externalLink = FeedFollowMoments.firstExternalLink(item.links)
                 }
+                // The episode's own audio, when the feed declares one. Kept
+                // whether or not it stood in for `content` above: the row's
+                // bytes are its link, this is the media file itself.
+                //
+                // `else if`, NOT a second assignment — one field, two owners.
+                // Reddit items carry enclosures (any image or video post), so
+                // an unconditional write here CLOBBERED the outbound link set
+                // one line above, which is the whole input to
+                // `FeedFollowMoments.checkLinkCrossings` — a silent regression
+                // the moment enclosures started being read (2026-08-06).
+                else if !item.mediaURL.isEmpty { thing.externalLink = item.mediaURL }
                 context.insert(thing)
                 existing.insert(ref)
                 SpotlightIndex.index([thing])
