@@ -270,6 +270,17 @@ step "Room-head pure-logic self-test"
   || fail "the room-head logic self-test failed — run scripts/room-heads-selftest.sh"
 print -P "%F{green}✓ room-head self-test%f"
 
+# Pure-logic self-test for the agent's open (prd §332). This is the first screen
+# a person sees every day, and every failure in it renders perfectly: a tile
+# printing a tally, a tile drawn from a reading nobody took, a row filed under
+# two threads, threads that reshuffle between opens over identical data. No
+# crash, no empty state, no log line — a build succeeds and the room simply
+# says something untrue in the largest type on it.
+step "Agent-open pure-logic self-test"
+"$ROOT/scripts/agent-open-selftest.sh" >/dev/null \
+  || fail "the agent-open logic self-test failed — run scripts/agent-open-selftest.sh"
+print -P "%F{green}✓ agent-open self-test%f"
+
 # Pure-logic self-test for the receipts screen's reach map (prd §300). The
 # card's whole job is to be checkable, so a silent wrong answer here is worse
 # than in any other visualization in the app: an undeclared host folded into

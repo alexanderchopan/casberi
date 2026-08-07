@@ -18527,3 +18527,97 @@ own posts twice in one pass.
 stale corpus.
 
 **UNBUILT, UNMEASURED** — same session and same terms as §330.
+
+## §332 — The agent's open answers before it is asked (user: "the content and design of the agent when you open it is terrible. we made all these changes, but i don't see them there", 2026-08-07)
+
+**The report was exactly right, and the cause was structural rather than
+cosmetic.** Every synthesis this app learned in the last month landed BEHIND A
+TAP. The open itself rendered a greeting, one tinted sentence (`dayCard`), and
+two rows of gray question-pills whose entire content was the questions
+themselves. The brief's modules, the room heads, the kept-ask digests, the
+ledger's streaks, the cross-source joins — all of it was one gesture away and
+none of it was on screen. The work shipped; the front door never changed.
+
+**The ruling: the open answers before it is asked.** `AgentOpen` composes the
+rest state from the corpus walk `computeSuggestions()` already pays for, and
+every element is something the app was ALREADY COMPUTING and then discarding:
+
+1. **The noticing** (`AgentOpen.Notice`) — `OnDeviceModel.homeInsight` has
+   always returned `(line, picks: [Int])`, *plural*, because a connection is by
+   definition between things. `HomeInsightStore` kept `picks.min()` and dropped
+   the rest, which made the line an **assertion**: a sentence claiming a
+   connection, with one thing behind it and no way to see the other side. The
+   top two picks are now pinned under the claim as evidence, so it can be
+   checked rather than believed. No new inference, no new model call.
+2. **The tiles** — `KeptAskStore.refreshDigests` runs every kept ask's composer
+   on every foreground (the full wallet read, the watchlist read, the deadline
+   scan) and spent the entire result on deciding whether to light a 7pt dot.
+   The dot said "something moved"; the computation behind it knew what. It is
+   held on `currentDeltas` now and printed. **Not persisted**, deliberately:
+   restoring "ETH is up 2.1%" from UserDefaults at launch is §83's fake status
+   in the one place it is most believed.
+3. **The threads** — `BriefLedger` has recorded which themes ran on which days
+   since §214 and nothing outside the brief ever read a streak.
+
+**No tallies, and the task tiles are where that was nearly lost.** The money
+composers hand back a sentence; the task composers hand back `"3, 3 things
+late"` — a count, then the same count again in words. Printing `delta` raw
+would have put exactly the tally the 2026-07-31 ruling removed from every other
+surface into the biggest type on the screen. A task tile names the SUBJECT and
+lets the remainder trail ("Visa documents", "+2 more"), which is why
+`KeptAsk.subject` travels separately from the strings the composer produced.
+
+**Margins are deterministic, and that is the line this feature is built on.**
+The mockup that led here proposed "this reverses the first draft" — a claim
+only a reader could make. What survives is what a join can prove: a deadline
+(`dueAt`), a date the text itself names (`ScreenshotFacts.dates`, still
+`NSDataDetector` and still refusing a bare clock), a thing kept before
+(`RelatedThings.keptBefore`), replies gathering under your own post. Exactly
+one margin per row, ranked by CONSEQUENCE. A margin that can be wrong poisons
+the rows it exists to enrich.
+
+**Nothing here holds a `Thing`.** The board reads `AgentOpen.Item`, a flat value
+type, and hands back an id string on tap. That makes the entire liveness-
+corollary family (checks 1–6) structurally unreachable on this surface rather
+than merely audited — there is no model to read off. It is also what lets
+`scripts/agent-open-selftest.sh` compile `AgentOpen.swift` WHOLE and unmodified
+with no stubs at all, where `retriever-selftest` needs six.
+
+**The empty composition is a real state.** A new install has nothing to
+synthesize, and the greeting-and-chips screen this replaced is still exactly
+right there — so the board yields, `dayCard` comes back, and the `today` pill
+returns with it. Same for the noticing: on a device with no Apple Intelligence
+`HomeInsightStore` is permanently silent (the §282 shape, where half the
+product silently no-ops), so `CrossSourceEcho` stands in with a fact instead of
+a sentence — and the card's kicker changes wording, because "noticed overnight"
+claims a model looked and saying that when none exists is borrowed status.
+
+**Four defects the harness found that no build could.** Recorded because each
+is a test passing for the wrong reason, which is this codebase's most expensive
+recurring lesson: (1) the unreachable-read fixture paired `digest: "unreachable"`
+with `delta: ""`, so the empty-delta guard one line later caught it and the
+unreachable guard could be deleted with the suite still green; (2) the clamp
+assertion was a `contains` probe that the mid-word cut also satisfied;
+(3) no fixture carried both a deadline and a date-in-text, so the margin
+priority could be inverted with nothing observable changing; (4) the thread
+sort's tie-break could be deleted undetected because no two threads were the
+same size. Plus one real bug with no mutation needed: threads were built by
+iterating a `Dictionary`, and Swift seeds hashing PER PROCESS — so equal-sized
+threads ordered differently on different launches, from the same corpus, with
+nothing in the code to point at. A determinism test that composes twice inside
+one process cannot see it. First-appearance order is explicit now, with a total
+tie-break on top.
+
+**And one in the harness itself:** three drift guards read `✗` on the first run
+because `sed | grep -q` under `pipefail` fails the whole pipeline — `grep -q`
+exits on match, `sed` dies on SIGPIPE. It is size-dependent, which is what makes
+it vicious: the small files raced through before grep quit and passed, and only
+`Composer.swift` at 3,300 lines was slow enough to lose. A guard that reports
+failure exactly when it succeeds is worse than no guard.
+
+**Held open, deliberately unbuilt:** the fold expands nothing in place — it
+hands off to "While I was away?", which already answers with the full list, and
+growing a second lesser list inside the board would be the duplication §248
+removed from the brief. Whether the threads should be tappable as a filtered
+feed view is the user's ruling; today the thread head is a label, not a control,
+because §269 ruled the tag filter is the agent's with no control of its own.

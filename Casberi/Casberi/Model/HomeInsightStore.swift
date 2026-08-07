@@ -33,6 +33,22 @@ final class HomeInsightStore {
     /// model returned no usable picks — the line then stands untappable.
     private(set) var pickedThingID: String?
 
+    /// EVERY thing the line's connection runs through, newest-first — the same
+    /// picks `pickedThingID` takes its single winner from (prd §332).
+    ///
+    /// The model has always returned `picks: [Int]` — plural — because a
+    /// "connection" is by definition between things, and it names them all.
+    /// Until 2026-08-07 this store kept `picks.min()` and dropped the rest,
+    /// which made the line an assertion: a sentence claiming a connection, with
+    /// one thing behind it and no way to see the other side. The agent's open
+    /// (`AgentOpen.Notice`) pins the top two under the claim, so the connection
+    /// can be CHECKED rather than believed. No new inference and no new model
+    /// call — this is the same response, no longer discarded.
+    ///
+    /// Order is the model's own, mapped through the candidate window, so the
+    /// first entry is the newest thing it picked and equals `pickedThingID`.
+    private(set) var pickedThingIDs: [String] = []
+
     /// The corpus+day signature the current line was written from — a refresh
     /// over the same signature is a no-op, so no inference is ever wasted.
     @ObservationIgnored private var signature: String
@@ -42,10 +58,24 @@ final class HomeInsightStore {
     private static let lineKey = "home.insight.line"
     private static let sigKey = "home.insight.sig"
     private static let pickKey = "home.insight.pick"
+    /// The full pick list. A SEPARATE key from `pickKey` rather than a replacement
+    /// for it: a build that rolls back must still find the single pick it knows
+    /// how to read, and a comma-joined list under the old key would resolve to no
+    /// thing at all — the line would keep its door and the door would open nothing.
+    private static let picksKey = "home.insight.picks"
 
     private init() {
         line = UserDefaults.standard.string(forKey: Self.lineKey)
-        pickedThingID = UserDefaults.standard.string(forKey: Self.pickKey)
+        // A local, not `self.pickedThingID`: reading one stored property to
+        // seed another inside `init` needs `self` whole, and `signature` below
+        // isn't set yet.
+        let single = UserDefaults.standard.string(forKey: Self.pickKey)
+        pickedThingID = single
+        // The fallback carries a build that ran BEFORE the list key existed:
+        // its single pick is still a real pick, so the line keeps one piece of
+        // evidence rather than losing its door on the upgrade.
+        pickedThingIDs = UserDefaults.standard.stringArray(forKey: Self.picksKey)
+            ?? [single].compactMap { $0 }
         signature = UserDefaults.standard.string(forKey: Self.sigKey) ?? ""
     }
 
@@ -58,7 +88,7 @@ final class HomeInsightStore {
         // Apple Intelligence off doesn't keep showing a stale one.
         guard OnDeviceModel.isAvailable else {
             signature = ""
-            if line != nil { line = nil; pickedThingID = nil; persist() }
+            if line != nil { line = nil; pickedThingID = nil; pickedThingIDs = []; persist() }
             return
         }
         let recent = Self.window(from: things)
@@ -68,7 +98,7 @@ final class HomeInsightStore {
         // signature so we don't re-check until things actually move.
         guard recent.count >= 3 else {
             signature = sig
-            if line != nil { line = nil; pickedThingID = nil; persist() }
+            if line != nil { line = nil; pickedThingID = nil; pickedThingIDs = []; persist() }
             return
         }
         running = true
@@ -81,11 +111,14 @@ final class HomeInsightStore {
             // refresh sees a match and doesn't re-run for the same corpus.
             signature = sig
             line = result?.line
-            // The door: the NEWEST picked thing (candidates are newest-first,
-            // so the lowest index wins). Bounds re-checked here even though
-            // the model layer validated — this map must never trap.
-            pickedThingID = result?.picks.min()
-                .flatMap { recentIDs.indices.contains($0) ? recentIDs[$0] : nil }
+            // Every valid pick, newest-first — candidates are newest-first, so
+            // sorting the indices ascending IS newest-first, and the door
+            // (`pickedThingID`) falls out as the head rather than being picked
+            // separately. Bounds re-checked here even though the model layer
+            // validated: this map must never trap.
+            pickedThingIDs = (result?.picks ?? []).sorted()
+                .compactMap { recentIDs.indices.contains($0) ? recentIDs[$0] : nil }
+            pickedThingID = pickedThingIDs.first
             persist()
         }
     }
@@ -94,6 +127,8 @@ final class HomeInsightStore {
         let d = UserDefaults.standard
         if let line { d.set(line, forKey: Self.lineKey) } else { d.removeObject(forKey: Self.lineKey) }
         if let pickedThingID { d.set(pickedThingID, forKey: Self.pickKey) } else { d.removeObject(forKey: Self.pickKey) }
+        if pickedThingIDs.isEmpty { d.removeObject(forKey: Self.picksKey) }
+        else { d.set(pickedThingIDs, forKey: Self.picksKey) }
         d.set(signature, forKey: Self.sigKey)
     }
 

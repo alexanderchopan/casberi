@@ -84,6 +84,24 @@ final class KeptAskStore {
     /// without re-running a single composer.
     private(set) var currentDigests: [String: String] = [:]
 
+    /// The current ANSWER for each kept kind — `Result.delta`, the one-line
+    /// reading its own composer wrote.
+    ///
+    /// Held since 2026-08-07 (prd §332). `refreshDigests` has always computed
+    /// this: every composer returns `delta` alongside `digest`, and until now
+    /// `refreshDigests` kept the digest — which decides whether to light a 7pt
+    /// dot — and dropped the delta on the floor. So the app ran the full wallet
+    /// read, the watchlist read and the deadline scan on every foreground, and
+    /// spent the result on the word "something". `AgentOpen.tiles` prints it.
+    ///
+    /// Deliberately NOT persisted, unlike `titles`/`order`: a delta is a
+    /// reading with a shelf life, and restoring "ETH is up 2.1%" from
+    /// UserDefaults at launch would put a stale number in the largest type on
+    /// the screen — §83's fake status in the one place it is most believed. An
+    /// empty map means "not read yet this launch", which the tiles render as
+    /// no tile at all.
+    private(set) var currentDeltas: [String: String] = [:]
+
     /// The bar's pulse condition (ruling 6, combined with the caller's own
     /// "opened this launch" check) — true when some kept ask's current digest
     /// doesn't match what was last seen. A pure, cheap read: string compares
@@ -101,12 +119,15 @@ final class KeptAskStore {
     func refreshDigests(things: [Thing], context: ModelContext) async {
         guard !order.isEmpty else { return }
         var digests: [String: String] = [:]
+        var deltas: [String: String] = [:]
         for kind in order {
             if let result = await KeptAskComposers.compose(kind, things: things, context: context) {
                 digests[kind] = result.digest
+                deltas[kind] = result.delta
             }
         }
         currentDigests = digests
+        currentDeltas = deltas
     }
 
     #if DEBUG

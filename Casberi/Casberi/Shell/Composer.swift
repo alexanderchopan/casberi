@@ -489,6 +489,17 @@ struct Composer: View {
     /// first sentence should be what happened, not how much you own.
     @State private var dayLede = ""
 
+    /// The agent's room as composed for this open (prd §332, 2026-08-07) —
+    /// the noticing, the kept asks wearing their answers, the threaded window,
+    /// the fold. Built once per open on the SAME corpus walk
+    /// `computeSuggestions()` already pays for, so the whole board costs one
+    /// extra pass over an array that is already in memory.
+    ///
+    /// Empty is a real state, not a failure: a new install has nothing to
+    /// synthesize, and the greeting-and-chips rest screen this replaced is
+    /// still exactly right there. `AgentOpen.Composition.isEmpty` is the gate.
+    @State private var composition = AgentOpen.Composition()
+
     /// The one predicate for "the composer is idle and showing its rest-screen
     /// chrome" — open, nothing typed, nothing recording, no answer in flight.
     /// The ask chips, the kept pills, and the placeholder cycle all read it, so
@@ -845,11 +856,195 @@ struct Composer: View {
         } else {
             AskMemory.shown(suggestions.map(\.memoryKey))
         }
+        // The board (prd §332) — built last, so it can see the away pool the
+        // chips above already computed and never pays for a second walk.
+        composition = buildBoard(all: all, awayPool: awayPulse?.pool ?? [])
         #if DEBUG
+        AgentOpenProbe.log(composition)
         NSLog("[Casberi] askTiles: %@",
               suggestions.map { $0.memoryKey + ($0.timely ? "*" : "") + ($0.signal ?? "") }
                   .joined(separator: ","))
         #endif
+    }
+
+    // MARK: - The board (prd §332)
+
+    /// How much of the window the board will ever look at.
+    ///
+    /// A bound, not a cap on what's shown: the two per-item joins below
+    /// (`RelatedThings.keptBefore` walks the corpus, `ScreenshotFacts.dates`
+    /// runs an `NSDataDetector`) are cheap once and expensive a hundred times,
+    /// and this runs synchronously on the main actor while the composer is
+    /// opening. Everything past it still reaches the fold's count, so a busy
+    /// night is never silently under-reported.
+    private static let boardWindowCap = 24
+
+    /// How many screenshots in the window get their text scanned for a moment.
+    /// Above the eleven rows the board can draw, below the point where building
+    /// that many `NSDataDetector`s is felt.
+    private static let dateScanBudget = 12
+
+    /// Compose the open, from the corpus walk `computeSuggestions()` just paid for.
+    ///
+    /// Deliberately synchronous. The alternative — kick a task, repaint on
+    /// arrival — is what `HomeInsightStore` does for a MODEL run, and it is the
+    /// wrong shape here: every input below is already in memory or already in
+    /// UserDefaults, so an async version would trade a few milliseconds for a
+    /// visible one-frame flash of the empty state on every single open.
+    @MainActor
+    private func buildBoard(all: [Thing], awayPool: [Thing]) -> AgentOpen.Composition {
+        // `.live` at this one door — every value below is read off these models
+        // and then never touched again (liveness corollary 4: filter where the
+        // array is handed out, not on a promise that readers re-check).
+        let corpus = all.filter(\.isLive)
+
+        // The window. The away pool is the right subject when there IS one —
+        // it is the span the person actually missed. Below the thread floor it
+        // says nothing, so the day stands in rather than the board vanishing on
+        // someone who never closes the app.
+        let dayStart = Calendar.current.startOfDay(for: .now)
+        var window = awayPool.filter { $0.isLive && !Corpus.isImportReceipt($0) }
+        if window.count < AgentOpen.threadFloor {
+            window = corpus.filter { $0.capturedAt >= dayStart && !Corpus.isImportReceipt($0) }
+        }
+        window = Array(window.sorted { $0.capturedAt > $1.capturedAt }
+                             .prefix(Self.boardWindowCap))
+
+        // One pass for every "you kept this before" answer, not one pass per
+        // row — see `RelatedThings.keptBeforeIndex`. This runs on the main
+        // actor between the tap and the first frame, so the quadratic shape is
+        // the difference between a board and a stutter.
+        let priorKeeps = RelatedThings.keptBeforeIndex(corpus: corpus)
+
+        // A screenshot's own text can name a moment that hasn't happened yet —
+        // the §282 read, reused verbatim (deterministic `NSDataDetector`, never
+        // the model, and a bare clock is already refused inside it).
+        //
+        // Bounded, because `ScreenshotFacts.dates` BUILDS A DETECTOR PER CALL
+        // and then scans the whole OCR transcript. That is the right shape for
+        // the thing sheet, which asks once when a sheet opens; here it would be
+        // one compilation per screenshot in the window, on the main actor,
+        // between the tap and the first frame. At most `dateScanBudget` rows
+        // are asked — comfortably more than the eleven the board can draw, so
+        // nothing visible is lost, and a library-heavy window can't stall the
+        // open.
+        var scansLeft = Self.dateScanBudget
+        let items = window.map { thing -> AgentOpen.Item in
+            var moment: Date?
+            if thing.kind == .screenshot, scansLeft > 0, !thing.content.isEmpty {
+                scansLeft -= 1
+                moment = ScreenshotFacts.dates(in: thing.content).first
+            }
+            return AgentOpen.Item(
+                id: thing.id.uuidString,
+                title: thing.title,
+                source: thing.source,
+                tags: thing.tags,
+                author: thing.authorHandle,
+                capturedAt: thing.capturedAt,
+                dueAt: thing.dueAt,
+                replyCount: thing.replyCount,
+                socialContext: thing.socialContext,
+                priorKeep: priorKeeps.firstKeep(of: thing),
+                datedMoment: moment)
+        }
+
+        let ledger = BriefLedger.snapshot()
+
+        // The quiet line — a source that has landed every time the brief looked
+        // and didn't today. `TodayBrief` composes the identical sentence; it is
+        // spelled again here rather than reached for because that one is built
+        // inside a private observation list, and a shared helper for a single
+        // sentence is the indirection that makes both harder to read.
+        var quiet: String?
+        if !window.isEmpty,
+           let gone = BriefLedger.absent(ledger, landedSources: Set(window.map(\.source))) {
+            let since = gone.since.formatted(.dateTime.month(.abbreviated).day())
+            quiet = String(localized:
+                "Nothing from \(gone.source) today — the first quiet day since \(since).")
+        }
+
+        return AgentOpen.compose(window: items,
+                                 kept: keptAsks(in: corpus),
+                                 notice: boardNotice(corpus: corpus, window: items),
+                                 quiet: quiet,
+                                 streakFor: { BriefLedger.themeStreak(ledger, theme: $0) })
+    }
+
+    /// The kept asks, each carrying the reading its own composer already wrote.
+    private func keptAsks(in corpus: [Thing]) -> [AgentOpen.KeptAsk] {
+        let store = KeptAskStore.shared
+        return store.order.map { kind in
+            let digest = store.currentDigests[kind] ?? ""
+            return AgentOpen.KeptAsk(
+                kind: kind,
+                title: store.titles[kind] ?? kind,
+                delta: store.currentDeltas[kind] ?? "",
+                digest: digest,
+                changed: store.changed(kind, digest: digest),
+                subject: taskSubject(kind, in: corpus))
+        }
+    }
+
+    /// The soonest deadline a task ask is about, so its tile can say the NAME.
+    ///
+    /// Mirrors `KeptAskComposers.overdue`/`upcoming`'s own filters — the same
+    /// `mark != .done`, the same source pair for overdue, the same one-week
+    /// horizon — so the tile can never name a thing its own answer wouldn't
+    /// list. Nil for every other kind: those speak in sentences already.
+    private func taskSubject(_ kind: String, in corpus: [Thing]) -> String? {
+        let open = corpus.filter { $0.mark != .done }
+        switch kind {
+        case "overdue":
+            return open
+                .filter { ($0.source == "Reminders" || $0.source == "Todoist")
+                          && ($0.dueAt ?? .distantFuture) < .now }
+                .min { ($0.dueAt ?? .now) < ($1.dueAt ?? .now) }?.title
+        case "upcoming":
+            let horizon = Calendar.current.date(byAdding: .day, value: 7, to: .now) ?? .now
+            return open
+                .filter { t in
+                    guard let when = t.dueAt else { return false }
+                    return when >= .now && when <= horizon
+                }
+                .min { ($0.dueAt ?? .now) < ($1.dueAt ?? .now) }?.title
+        default:
+            return nil
+        }
+    }
+
+    /// The claim at the top — the model's line when there is one, and a
+    /// deterministic join when there isn't.
+    ///
+    /// The fallback is not a consolation prize: `HomeInsightStore` is gated on
+    /// `OnDeviceModel.isAvailable`, so on every device without Apple
+    /// Intelligence the noticing would otherwise be permanently absent — the
+    /// §282 shape, where half the product silently no-ops. `CrossSourceEcho`
+    /// answers the same question with a fact instead of a sentence: this exact
+    /// link already came through another source.
+    @MainActor
+    private func boardNotice(corpus: [Thing], window: [AgentOpen.Item]) -> AgentOpen.Notice? {
+        let insight = HomeInsightStore.shared
+        if let line = insight.line, !line.isEmpty {
+            let byID = Dictionary(corpus.map { ($0.id.uuidString, $0) },
+                                  uniquingKeysWith: { a, _ in a })
+            let evidence = insight.pickedThingIDs.prefix(2).compactMap { id -> AgentOpen.Item? in
+                guard let thing = byID[id], thing.isLive else { return nil }
+                return AgentOpen.Item(id: id, title: thing.title, source: thing.source,
+                                      capturedAt: thing.capturedAt)
+            }
+            return AgentOpen.Notice(claim: line, evidence: Array(evidence), deterministic: false)
+        }
+        // The deterministic stand-in — the newest thing in the window whose
+        // link this corpus has seen before, under another source's name.
+        for item in window {
+            guard let thing = corpus.first(where: { $0.id.uuidString == item.id }),
+                  thing.isLive,
+                  let echo = CrossSourceEcho.find(for: thing, context: modelContext)
+            else { continue }
+            return AgentOpen.Notice(claim: echo, evidence: [item], deterministic: true)
+        }
+        return nil
     }
 
     /// Fills the grid so the slots span DOORS, not four flavors of one
@@ -1177,13 +1372,19 @@ struct Composer: View {
                 // The pairing line — teaches the sheet's dual nature (ask a
                 // question, or write a fact and send it out) and keeps the
                 // greeting from reading as an orphan label.
-                Text("Ask, or write and send it out.")
-                    .dsText(.subhead13)
-                    .foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, DS.Space.s4)
-                    .padding(.top, DS.Space.s2)
-                    .settleIn(delay: 0.1)
+                // Hidden once the board is up (§332): the pairing line teaches
+                // an empty room what it is for, and a room already full of
+                // answers has taught it. Kept for the empty case, which is
+                // exactly the room that still needs the sentence.
+                if !boardShowing {
+                    Text("Ask, or write and send it out.")
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s2)
+                        .settleIn(delay: 0.1)
+                }
             }
             // The content sizes to ITSELF (no filling scroll) so the sheet can
             // hug it — no stranded empty space. The answer conversation carries
@@ -1638,7 +1839,22 @@ struct Composer: View {
             // — was nowhere near it. Only at rest: once an answer exists the
             // conversation's own scroll is the expanding element.
             if restChrome(keepBrief: false) { Spacer(minLength: DS.Space.s4) }
-            // The day, as the room's lead.
+            // The room, answered (prd §332). Leads everything below it: the
+            // noticing, the kept asks wearing their readings, the window
+            // threaded, the fold. Shows only at rest and only when it has
+            // something — an empty composition falls through to `dayCard` and
+            // the chips, which is the rest screen exactly as it was.
+            if boardShowing {
+                AgentOpenBoard(composition: composition,
+                               onAsk: { question in
+                                   fillDraft(question)
+                                   commit()
+                               },
+                               onOpen: { id in path.append(id) })
+            }
+            // The day, as the room's lead — the FALLBACK now (§332). It stood
+            // in for a synthesis the open couldn't show; the board is that
+            // synthesis, so the two never appear together.
             dayCard
             // Kept asks (docs/agent-brief.md ruling 4/5) — the standing
             // questions someone chose to keep, leading the empty-field chips
@@ -2227,8 +2443,17 @@ struct Composer: View {
     /// while this shows: three controls opening one screen, stacked, is the
     /// duplication the brief itself just stopped doing.
     /// On screen when the room is at rest and the day has something to say.
+    /// The board is on screen — at rest, with something composed.
+    private var boardShowing: Bool {
+        restChrome(keepBrief: false) && !composition.isEmpty
+    }
+
+    /// The day card stands in only where the board doesn't reach: an empty
+    /// composition (a new install, a corpus with nothing in the window). Both
+    /// at once would be the same day said twice, the duplication §248 already
+    /// took out of the brief.
     private var dayCardShowing: Bool {
-        restChrome(keepBrief: false) && !dayLede.isEmpty
+        restChrome(keepBrief: false) && !dayLede.isEmpty && composition.isEmpty
     }
 
     /// The kept kinds as actually docked — minus `today` while the card above
@@ -2239,7 +2464,13 @@ struct Composer: View {
     /// nothing is ever unreachable.
     private var keptKinds: [String] {
         let order = KeptAskStore.shared.order
-        return dayCardShowing ? order.filter { $0 != "today" } : order
+        // A kind the board already answers on a tile does NOT also get a pill.
+        // The tile IS the pill — same tap, same ask — so showing both is one
+        // question wearing two controls, which is exactly what the `today`
+        // filter below has excluded since §248.
+        let onBoard = boardShowing ? Set(composition.tiles.map(\.kind)) : []
+        return order.filter { $0 != "today" || !dayCardShowing }
+                    .filter { !onBoard.contains($0) }
     }
 
     @ViewBuilder

@@ -60,6 +60,80 @@ enum RelatedThings {
             .min { $0.capturedAt < $1.capturedAt }
     }
 
+    // MARK: - Batch lookup
+
+    /// `keptBefore` for MANY things at once, in one pass over the corpus.
+    ///
+    /// The single-thing version normalizes every corpus title and canonicalizes
+    /// every corpus link ON EVERY CALL, which is right for the thing sheet (one
+    /// call, when a sheet opens) and quadratic anywhere else. `AgentOpen` asks
+    /// for up to 24 rows at composer-open time on the main actor: against a
+    /// 3,000-thing corpus that is ~72,000 `components(separatedBy:)` calls
+    /// between the tap and the first frame — the foreground-jank class, bought
+    /// for a margin line.
+    ///
+    /// So the keys are computed ONCE (2n string ops instead of 2·k·n) and the
+    /// lookup is a dictionary hit. Same rules as `keptBefore`, deliberately:
+    /// link match wins, a title match must share a KIND, a shared `sourceRef`
+    /// is our own bookkeeping rather than a second save, and the OLDEST copy is
+    /// the answer — so the two oldest per key are kept, because the oldest may
+    /// be the thing doing the asking.
+    struct KeptBeforeIndex {
+        fileprivate var byLink: [String: [(id: UUID, ref: String?, at: Date)]] = [:]
+        fileprivate var byTitle: [String: [(id: UUID, ref: String?, at: Date)]] = [:]
+
+        /// When `thing` was first kept before, or nil.
+        ///
+        /// Returns a DATE, not a `Thing`: this index outlives the pass that
+        /// built it by exactly one composition, and handing back a model would
+        /// put a `Thing` reference somewhere the liveness rules would have to
+        /// reach. A value can't be tombstoned.
+        func firstKeep(of thing: Thing) -> Date? {
+            guard thing.isLive else { return nil }
+            let ref = thing.sourceRef
+            let id = thing.id
+            func pick(_ bucket: [(id: UUID, ref: String?, at: Date)]?) -> Date? {
+                bucket?.first { other in
+                    guard other.id != id else { return false }
+                    if let a = ref, let b = other.ref, a == b { return false }
+                    return true
+                }?.at
+            }
+            if let link = canonicalLink(thing), let hit = pick(byLink[link]) { return hit }
+            if let title = normalizedTitle(thing.title) {
+                return pick(byTitle[Self.titleKey(title, thing.kind)])
+            }
+            return nil
+        }
+
+        fileprivate static func titleKey(_ title: String, _ kind: ThingKind) -> String {
+            kind.rawValue + "\u{1}" + title
+        }
+    }
+
+    /// Build the index. One pass, oldest-first per key.
+    static func keptBeforeIndex(corpus: [Thing]) -> KeptBeforeIndex {
+        var index = KeptBeforeIndex()
+        for thing in corpus where thing.isLive {
+            let entry = (id: thing.id, ref: thing.sourceRef, at: thing.capturedAt)
+            if let link = canonicalLink(thing) {
+                index.byLink[link, default: []].append(entry)
+            }
+            if let title = normalizedTitle(thing.title) {
+                index.byTitle[KeptBeforeIndex.titleKey(title, thing.kind), default: []].append(entry)
+            }
+        }
+        // Two oldest per key is enough to answer around the asker itself, and
+        // keeps the index flat on a corpus with a long run of same-titled rows.
+        for (k, v) in index.byLink {
+            index.byLink[k] = Array(v.sorted { $0.at < $1.at }.prefix(2))
+        }
+        for (k, v) in index.byTitle {
+            index.byTitle[k] = Array(v.sorted { $0.at < $1.at }.prefix(2))
+        }
+        return index
+    }
+
     /// A title reduced to what it says: lowercased, punctuation and runs of
     /// whitespace collapsed. nil when there's too little left to be a claim —
     /// under 8 characters, or a placeholder every screenshot wears.
