@@ -182,6 +182,25 @@ tail_disclosed() {
   return 1
 }
 
+# Check C: the hosts this app reaches that are NOT https at all.
+#
+# The scan at the top of this file is `https://…`, so it is blind by
+# construction to a host handed straight to a socket — and the app has exactly
+# one of those: `IMAPClient` speaks IMAP itself over NWConnection on port 993,
+# and `MailProvider.host` is a bare string. Result (found 2026-08-06, prd
+# §324): Apple's and Google's mail servers had been reached since 2026-07-08
+# while the screen that lists every host this app reaches named neither. The
+# §289 class in a different protocol — a host the literal scan cannot see.
+#
+# Matched on the `imap.` prefix rather than by parsing `MailProvider`, because
+# the failure to catch is a NEW mail host anywhere in the tree, not a
+# refactor of that one enum.
+imap_hosts() {
+  grep -rohE '"imap\.[a-z0-9.-]+"' --include="*.swift" \
+    --exclude="$(basename "$REGISTRY")" \
+    Casberi/Casberi Casberi/Shared | tr -d '"' | sort -u
+}
+
 # Check B's source of truth: the chain table every Alchemy URL is built from.
 CHAINS_FILE="Casberi/Casberi/Model/WalletIngest.swift"
 alchemy_hosts() {
@@ -219,6 +238,25 @@ if [[ "${1:-}" == "--self-test" ]]; then
   undeclared=$(alchemy_hosts | while read -r h; do grep -q "\"$h\"" "$REGISTRY" || echo "$h"; done)
   [[ -z "$undeclared" ]] || { echo "self-test ✗ check B flagged a declared chain: $undeclared"; fails=1; }
   rm -f "$CHAINS_FILE" "$REGISTRY"; REGISTRY="$REGISTRY_REAL"
+
+  # Check C on the real bug: an IMAP host the registry never named must fail,
+  # and the same host declared must pass. The scan itself is exercised against
+  # the real tree below (it must find the three mail hosts) — a membership
+  # test that runs over an empty host list passes for the wrong reason, which
+  # is precisely how this gap survived a year of green audits.
+  found=$(imap_hosts | wc -l | tr -d ' ')
+  (( found >= 1 )) || { echo "self-test ✗ the IMAP scan found no hosts at all"; fails=1; }
+  REGISTRY_REAL="$REGISTRY"; REGISTRY=$(mktemp)
+  printf '"imap.gmail.com"\n' > "$REGISTRY"
+  undeclared=$(printf 'imap.gmail.com\nimap.example.com\n' \
+    | while read -r h; do grep -q "\"$h\"" "$REGISTRY" || echo "$h"; done)
+  [[ "$undeclared" == "imap.example.com" ]] || {
+    echo "self-test ✗ check C missed an undeclared IMAP host (saw: ${undeclared:-none})"; fails=1; }
+  printf '"imap.gmail.com", "imap.example.com"\n' > "$REGISTRY"
+  undeclared=$(printf 'imap.gmail.com\nimap.example.com\n' \
+    | while read -r h; do grep -q "\"$h\"" "$REGISTRY" || echo "$h"; done)
+  [[ -z "$undeclared" ]] || { echo "self-test ✗ check C flagged a declared host: $undeclared"; fails=1; }
+  rm -f "$REGISTRY"; REGISTRY="$REGISTRY_REAL"
 
   (( fails )) && exit 1
   echo "network-reach-audit: self-test OK"
@@ -261,6 +299,20 @@ if (( ${#undeclared_chains[@]} > 0 )); then
   echo "  Every chain in $CHAINS_FILE builds its own RPC host; add each to the"
   echo "  Wallet entry in NetworkReach.swift:"
   for h in "${undeclared_chains[@]}"; do echo "    · $h"; done
+  exit 1
+fi
+
+undeclared_imap=()
+while read -r host; do
+  [[ -z "$host" ]] && continue
+  grep -q "\"$host\"" "$REGISTRY" || undeclared_imap+=("$host")
+done <<< "$(imap_hosts)"
+
+if (( ${#undeclared_imap[@]} > 0 )); then
+  echo "network-reach-audit: ✗ ${#undeclared_imap[@]} mail server(s) reached but not disclosed."
+  echo "  IMAP isn't https, so the literal scan above cannot see these at all."
+  echo "  Add each to the Mail section of NetworkReach.swift:"
+  for h in "${undeclared_imap[@]}"; do echo "    · $h"; done
   exit 1
 fi
 

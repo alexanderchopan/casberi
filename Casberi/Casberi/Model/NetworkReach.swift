@@ -455,6 +455,34 @@ enum NetworkReach {
                  purpose: "Reads your scheduled events with a token you provide.",
                  hosts: ["api.calendly.com"]),
 
+        // MARK: Mail
+        //
+        // Both of these were MISSING until 2026-08-06 (prd §325), and the
+        // audit that exists to prevent exactly that could not have caught
+        // them: it scans `https://` literals, and an IMAP host is a bare
+        // string handed to a socket (`IMAPClient` speaks the protocol
+        // directly over NWConnection, port 993). So the app has reached
+        // Apple's and Google's mail servers since 2026-07-08 while the screen
+        // that lists every host it reaches said nothing about either. The
+        // §289 class in a new protocol — not a host nobody added, a host the
+        // check cannot see. `network-reach-audit.sh` grew an IMAP check in
+        // the same commit, so the next mail host fails the build instead of
+        // going quiet.
+        //
+        // One entry per inbox rather than a single "Mail" row: the reach
+        // screen splits on whether the owning bridge is CONNECTED, and a
+        // merged row would claim Apple's server is being reached by
+        // somebody who only connected Gmail.
+
+        Endpoint(service: "Gmail",
+                 reach: .whenConnected(bridge: "Gmail"),
+                 purpose: "Reads recent mail over IMAP with the app password you made, straight from \(DS.device) to Google's mail server. Read-only — it can't send, reply or delete.",
+                 hosts: ["imap.gmail.com"]),
+        Endpoint(service: "iCloud Mail",
+                 reach: .whenConnected(bridge: "iCloud Mail"),
+                 purpose: "Reads recent mail over IMAP with the app-specific password you made, straight from \(DS.device) to Apple's mail server. Read-only — it can't send, reply or delete.",
+                 hosts: ["imap.mail.me.com"]),
+
         // MARK: Storage
 
         Endpoint(service: "Dropbox",

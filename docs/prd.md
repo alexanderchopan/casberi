@@ -18221,3 +18221,111 @@ The tagline is **"How your app is doing"** (user), not the first cut's "What
 Apple did to your app" — which was accurate about the verdict rows and cold
 about the rest, and made a seat that also carries your reviews sound like a
 seat about being judged.
+
+## §324 — Where the app stands, not just what happened (user: "how else would you improve the experience", then "do all", 2026-08-06)
+
+§323 landed four kinds of event and led with a plain list of them — the §247 gap
+in its purest form: a room holding exactly the facts a developer refreshes App
+Store Connect for, drawing none of them. Six changes, five built and one
+declined with evidence.
+
+**1. A room head (`ASCRoom` / `ASCRoomSource` / `AppStoreConnectRoomCard`).** A
+row answers *what happened*; nothing answered the question people actually have,
+which is present tense — **where is my build, and how long has it been there?**
+The head states the leading app's standing, its version, and its newest build's
+runway. It spends NOTHING: `ASCStanding` is written by the same pass that lands
+the rows, from the same responses, so no request, no new `Thing` field, no
+CloudKit deploy (the `StripeRoom`/`CloudflareRunway` contract — a head that costs
+a call is a head that can fail, and a room's lede must not fail differently from
+the rows beneath it).
+
+**The duration is the whole card and the thing most easily faked.** Apple
+publishes no timestamp for when a version entered its current state, so the only
+clock available is our own — and on first connect that clock reads zero for a
+version that has been in review since Tuesday. `ASCStanding.observed` is true
+ONLY for a transition this device actually watched, and a duration is shown only
+then; the state stands alone until then. This is the Hyperliquid held-duration
+rule (ground it in our own first sight, never fabricate) with its missing half:
+**say nothing when our own first sight isn't the real one.** Mutation-tested as
+the §83 line for this card.
+
+Ranked, not listed: a rejection (4) outranks Apple holding it (3) outranks a
+build about to expire (2) outranks live (1) outranks a state we can't read (0).
+A rejection outranks an expiring build even though only the build has a clock —
+the rejection stops the release entirely. The order is TOTAL (rank, then soonest
+expiry, then name), because a card that reshuffles between foregrounds over
+identical data reads as broken.
+
+**No shared time axis**, unlike Stripe's and Cloudflare's rails. This room has
+one clock — a TestFlight build's 90-day death — and it belongs to an app rather
+than to the card, so a shared axis would place two apps' unrelated builds on one
+scale and imply a comparison nobody made. Each app gets its own runway capsule,
+full width = the 90 days Apple gives, so the bar shortens as the deadline
+approaches and two apps stay comparable without one.
+
+**2. Reviews render as reviews.** The room fell to `.plain`, so a customer
+review — the one row whose payoff is the words somebody wrote — drew as an
+80-character title with the body stored on `summary` and visible only after a
+tap. That is §313's X finding one room over, and `AppReviewRow` fixes it the same
+way. Verdicts and builds keep the band: one-line facts, and giving them a card
+would spend the room's emphasis on the rows needing it least. The stars are NOT
+re-drawn — they already lead the title, and re-deriving them would mean parsing
+prose apart or storing the rating twice.
+
+**3. The connect screen states, it doesn't just list.** The app rows proved reach
+("Casberi") and said nothing. A role-based credential leaves one question open —
+not "did the key work" but "does it reach the app I meant, and where is that
+app" — and the state was the one thing this screen held and never showed. Same
+standings the head reads, so the two can never phrase the same fact differently.
+
+**4. Expiry noise.** Every build inside the 14-day window landed an expiry row,
+so a superseded build's death sat in the feed beside the live one's — noise
+dressed as a deadline, since the answer to both is one upload. Only the newest
+build may carry one now (`mayExpire: index == 0`, and the read is
+`sort=-uploadedDate`). The older builds aren't dropped: the head's runway shows
+the shelf.
+
+**5. The rejection reason — DECLINED, with evidence.** "Rejected · Casberi 1.4"
+tells you to go read *why* somewhere else, and the why is the whole event. It is
+not in the public API: `appStoreReviewDetail` is the notes YOU give a reviewer,
+and Apple's own message lives in Resolution Center. Resolution Center **is**
+readable — via `GET /iris/v1/resolutionCenterThreads` and
+`…/resolutionCenterMessages` — but `iris` is App Store Connect's private web API,
+undocumented, unversioned, and reported to 400 on include shapes that look
+supported. That is the class §303 declined for Cursor v1 and §242 declined for
+Grok's X-search, and it is a worse bet than either: this bridge's whole promise
+is conduct, and riding a private endpoint is the opposite of a promise you can
+check. Revisit only with a measured probe against a live key.
+
+**6a. A rejection notifies** (`NotifyKind.appRejected`, alarm, severity 65 —
+below `poolProofNeeded`, because money that could be lost outranks a release
+that is merely stopped; above `paymentsSilent`, because silence is a reading we
+inferred and a rejection is a decision somebody made about you). Only the
+ALARMING verdicts qualify: an approval is welcome news you will see the moment
+you open anything, it already rains in-app, and spending the right-hand slot on
+good news is what §306 spent a ruling avoiding. The classifier reads the STATE
+out of the ref (`asc:version:<id>:<STATE>`) rather than the title's prose. Not
+time-sensitive — that entitlement is still absent (§306 amendment).
+
+**6b. Three facets** — `Review`, `Release`, `Build` — so "my one-star reviews"
+narrows a room that mixes what Apple decided, what customers wrote, and what your
+builds did. §308's gating rule earns its keep here more than anywhere: all three
+are ordinary English AND words this corpus is full of (a saved article about a
+release, a note about building something), so they filter only alongside a named
+source and can never quietly empty an unscoped result.
+
+Harness grew to 19 mutations and covers the whole head: `ASCRoom.swift` is
+Foundation-only and compiled WHOLE and unmodified beside the four extracted
+enums. Its sharpest new guards are the ones no rendering could catch — a
+duration quoted from a first sight nobody watched, calendar days measured in
+seconds, a non-total order, and a never-read bridge rendering as fresh.
+
+**Copy, same pass** (user: "make sure the product page and set up page are in
+line w/ our standards of not being wordy"). The connect page carried ~109 words
+before you did anything — §315's Instagram complaint was ~145. Now ~85: the
+fourth step went (it was "Paste all three below", §220's own example of a step
+re-typing what is already on screen, above three labelled fields), the intro
+stopped listing the three shapes twenty words above a checklist listing four
+(24 words, down from 37), and the checklist became the READ BOUNDARY rather than
+a second copy of the arrival list. The product page went 60 → 40 words, against
+a catalog median of 43.
