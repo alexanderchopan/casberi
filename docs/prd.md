@@ -18337,3 +18337,42 @@ a catalog median of 43.
 Both are declared now, one entry per inbox rather than a merged "Mail" row — the screen splits on whether the owning bridge is CONNECTED, and a merged row would tell someone who connected only Gmail that Apple's server was being reached too.
 
 The audit grew **check C** in the same commit (any `"imap.*"` literal must be in the registry), self-tested both ways, plus an assertion that the scan finds a host at all — **a membership test over an empty list passes for the wrong reason, which is exactly how this survived.**
+
+## §326 — Mail is not a category, and Markets moves up (user: "i wanted you to put mail bridges in the life category, and i want markets to come before shopping and notes… mail doesn't need it's own category", 2026-08-06)
+
+Two changes to the catalog wall, four days after §322 set its order.
+
+**Mail stops being a category.** It was the only two-seat band in the catalog —
+Gmail and iCloud Mail — so it drew a half-empty row wherever it sat, and §322's
+comment had already admitted as much ("the only small category… draws a 2-tile
+band wherever it sits"). Its group folds into **Life**, which is where mail
+belongs by the same reasoning that already pulled Home, People and Storage in:
+Life is the band of things that are yours, not a dedicated content type. Life
+goes from 12 seats to 14; nothing else changes shape.
+
+**Markets moves ahead of Shopping and Notes**, landing eighth. The property the
+2026-07-23 ruling exists to protect is untouched — Markets still sits six bands
+away from Wallet, so the catalog does not open with two crypto rows.
+
+Final order: **Wallet · Work · Life · Agents · Media · Social · Reading ·
+Markets · Shopping · Notes.**
+
+**Unlike §322, a seat really does change category here**, and that has one
+consequence worth writing down rather than discovering. `BridgeCatalog.category
+(of:)` now answers "Life" for every Mail-group offer, so a kept ask of the form
+`category:Mail` no longer resolves to anything. Nothing migrates it and nothing
+needs to: `KeptAskComposers.categoryRecap` filters offers by category name and
+finds none, which takes its existing empty-pool branch and composes "Nothing new
+from your Mail apps recently." Checked rather than assumed — the recap was
+already written to tolerate a name it doesn't recognise, which is the same
+behaviour a renamed category would get.
+
+The `group` on each offer is UNCHANGED (Gmail is still `group: "Mail"`), so
+`SourcesTray`, `category(forSource:)` and the website's group-level docs page
+all still resolve. Only the category → groups map moved.
+
+The website mirrors both changes in the same commit (the standing rule): its
+Mail shelf is gone, its two tiles appended to Life, and its shelf order matches
+the app's. `catalog-sync.sh` still passes — it checks the SET of connectable
+offers against the site, which is unchanged by a reshuffle, so the ordering half
+of this is verified by reading rather than by the audit.

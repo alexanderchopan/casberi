@@ -814,16 +814,28 @@ enum BridgeCatalog {
         //   • Life third pulls the Apple apps (Photos, Calendar, Reminders,
         //     Health, Contacts, Files) up where a new phone can connect
         //     something in one tap.
-        //   • Social keeps a mid slot and stays ADJACENT TO MAIL, the pairing
-        //     the wall's band layout was ruled around.
-        // Mail (2 seats) is the only small category in the catalog, so it has
-        // no small neighbour to pair with in ANY order and draws a 2-tile band
-        // wherever it sits — the same as before this move. Nothing else here
-        // changes shape: every other band is ≥4 seats and full-width.
+        //   • Social keeps a mid slot. It used to be ruled adjacent to MAIL;
+        //     that category no longer exists (below), so the pairing dissolved
+        //     rather than being broken.
         //
-        // Ordering only — no seat changed category, so `category:<name>`
-        // kept-asks, `category(of:)`/`category(forSource:)` and the
-        // `SourcesTray` join are all untouched.
+        // MAIL IS NOT ITS OWN CATEGORY (user ruling 2026-08-06, prd §326:
+        // "mail doesn't need it's own category"). It was the only two-seat
+        // category in the catalog and drew a half-empty band wherever it sat.
+        // Its group folds into Life, which is where mail belongs by the same
+        // reasoning that already pulled Home, People and Storage in: a band of
+        // the things that are yours rather than a dedicated content type.
+        //
+        // MARKETS SITS AHEAD OF SHOPPING AND NOTES (same ruling). It stays well
+        // clear of Wallet — seventh, not second — so the 2026-07-23 property
+        // this order exists to protect (no two crypto bands up top) still
+        // holds.
+        //
+        // **Unlike §322, a seat DOES change category here.** Every Mail-group
+        // offer now answers "Life" from `category(of:)`, so a kept ask of the
+        // form `category:Mail` no longer resolves — see `KeptAskComposers`.
+        // Nothing migrates it: the ask simply finds no category and composes
+        // nothing, which is the same outcome as a category being renamed and
+        // is why the recap is written to tolerate an unknown name.
         ("Wallet",  "Wallet",      ["Wallet"]),
         ("Work",    "GitHub",      ["Work"]),
         // Life absorbs Home (user ruling 2026-07-23): HomeKit was the lone app
@@ -833,11 +845,10 @@ enum BridgeCatalog {
         // same reason (user ruling 2026-07-27): Files' folder contents are
         // unpredictable, so it reads as personal-life miscellany, not a
         // dedicated content type.
-        ("Life",    "Photos",      ["Photos", "Schedule", "Fitness", "People", "Home", "Storage"]),
+        ("Life",    "Photos",      ["Photos", "Schedule", "Fitness", "People", "Home", "Storage", "Mail"]),
         ("Agents",  "Claude",      ["Agent"]),
         ("Media",   "Spotify",     ["Watching", "Listening", "Games", "Images"]),
         ("Social",  "Bluesky",     ["Network"]),
-        ("Mail",    "Gmail",       ["Mail"]),
         // Reading sits AHEAD of Shopping (user ruling 2026-08-06, "should
         // reading come before shopping?"). Two reasons, both about the band
         // rather than the taste: Reading is 7 seats to Shopping's 5, and every
@@ -847,8 +858,8 @@ enum BridgeCatalog {
         // catalog: Privacy needs a paid plan, Open Food Facts is a barcode
         // scanner rather than a feed, Bitrefill is crypto gift cards.
         ("Reading", "Readwise",    ["Reading", "Saves"]),
-        ("Shopping", "Shopify",    ["Shopping"]),
         ("Markets", "Kalshi",      ["Markets", "NFTs"]),
+        ("Shopping", "Shopify",    ["Shopping"]),
         ("Notes",   "Apple Notes", ["Notes"]),
     ]
 
