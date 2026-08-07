@@ -3347,6 +3347,27 @@ enum ProbeHooks {
                 NSLog("Seed thing probe: landed for %@", src)
             }
         },
+        // `-demoSeed force|clear` re-runs or removes the furnished demo corpus
+        // (`DemoSeedAll`) — every room's rows plus the bridge state its heads
+        // read. `force` ignores the stored version, which is what makes an
+        // edit to the seed table verifiable without reinstalling; `clear`
+        // removes the rows it owns and forgets the version, so the next launch
+        // seeds again. Neither can fire in a release build or in `-fresh YES`
+        // mode — `DemoSeedAll.seed` is gated the same way `DemoCorpus` is.
+        Hook(key: "demoSeed") { spec, context in
+            Task { @MainActor in
+                if spec == "clear" {
+                    let gone = DemoSeedAll.clear(context)
+                    NSLog("Demo seed probe: cleared %d", gone)
+                } else {
+                    let before = (try? context.fetchCount(FetchDescriptor<Thing>())) ?? 0
+                    DemoSeedAll.seed(context)
+                    let after = (try? context.fetchCount(FetchDescriptor<Thing>())) ?? 0
+                    UserDefaults.standard.set(DemoSeedAll.version, forKey: "demo.fullSeed.version")
+                    NSLog("Demo seed probe: %d landed (%d → %d)", after - before, before, after)
+                }
+            }
+        },
         // `-clearSeedThings YES` deletes every thing a `-seedThing` probe
         // planted (sourceRef "probe:ring-demo-…") — staging cleanup so demo
         // recordings don't show "Ring demo" litter.

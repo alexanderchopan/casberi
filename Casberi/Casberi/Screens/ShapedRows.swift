@@ -1030,6 +1030,19 @@ enum RemoteImageLoader {
     /// skip the decoded cache both ways so a second broadcast can't wear the
     /// first broadcast's frame, and never blacklist the URL.
     static func load(urlString: String, targetSide: CGFloat, cached: Bool = true) async -> Outcome {
+        #if DEBUG
+        // The demo corpus addresses BUNDLED photos through this loader
+        // (`DemoSeedAll`), so a seeded mosaic, pin wall or album cover draws a
+        // real picture with no request. It has to be a URL because that is what
+        // `FeedInsight.Mosaic.Tile` carries — the wall is built from urls, not
+        // from stored bytes — and a demo that hotlinks real images is one that
+        // breaks on a plane and puts an undisclosed host in the source
+        // (`scripts/network-reach-audit.sh`). Debug only: nothing ships a
+        // `sample:` url, so this branch cannot fire in a release build.
+        if urlString.hasPrefix("sample:"), let bundled = UIImage.demoSample(for: urlString) {
+            return .image(bundled, fresh: false)
+        }
+        #endif
         if dead.contains(urlString) { return .dead }
         if cached, let hit = cache.object(forKey: key(urlString, targetSide)) {
             return .image(hit, fresh: false)

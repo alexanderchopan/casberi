@@ -328,4 +328,8 @@ struct BridgeApp: Identifiable, Codable {
         .init(id: "tokens", name: "Tokens", status: .connected, statusLine: "2 tokens watched",
               can: ["Watches the tokens you add.", "Read-only — public price data only."]),
     ]
+        // Every other room the demo corpus furnishes (2026-08-07). Seats and
+        // things are seeded together or the Apps catalog contradicts the feed:
+        // a room full of rows whose app reads "not connected".
+        + DemoSeedAll.seats
 }

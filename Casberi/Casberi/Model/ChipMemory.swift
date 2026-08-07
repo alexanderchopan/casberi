@@ -98,5 +98,25 @@ enum ChipMemory {
         counts = c
         lastVisit = v
     }
+
+    /// Plant visit counts for the furnished demo corpus (`DemoSeedAll`).
+    ///
+    /// Same write as `seedFromLaunchArgs`, without the parsing — it exists
+    /// because affinity is the panel's PRIMARY sort inside a grade, so a demo
+    /// with no visit history ranks its tiles alphabetically once the grades
+    /// tie. That looks arbitrary, and it silently starves whole figure kinds:
+    /// with twenty slots and sixty rooms, every mood rail in the app sat below
+    /// the cut behind rooms whose only advantage was a name starting with A.
+    static func seedDemo(_ visits: [String: Int]) {
+        var c = counts
+        var v = lastVisit
+        let now = Date.now.timeIntervalSinceReferenceDate
+        for (source, n) in visits {
+            c[source] = n
+            v[source] = now
+        }
+        counts = c
+        lastVisit = v
+    }
     #endif
 }

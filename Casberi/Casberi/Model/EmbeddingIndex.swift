@@ -288,6 +288,32 @@ enum EmbeddingIndex {
         return out
     }
 
+    /// A stored blob as plain Doubles, header stripped.
+    ///
+    /// Every other reader here SCORES a packed vector in place (`similarity`
+    /// walks the bytes without ever materialising them) because scoring is all
+    /// retrieval needs. The panel's semantic map (§337) is the one caller that
+    /// has to PROJECT them, so it needs the numbers themselves — which is why
+    /// this exists and why it is the only unpacking path: a second hand-rolled
+    /// one would be a second place to get the header offset wrong, and a wrong
+    /// offset reads a language tag as two coordinates and plots a dot that
+    /// means nothing.
+    ///
+    /// nil for a blob that isn't a whole number of floats — a truncated record
+    /// still projects to a perfectly plausible-looking point.
+    static func unpack(_ packed: Data) -> [Double]? {
+        let start = Header.offset(in: packed)
+        let width = MemoryLayout<Float>.size
+        let bytes = packed.count - start
+        guard bytes > 0, bytes % width == 0 else { return nil }
+        let count = bytes / width
+        return packed.withUnsafeBytes { raw in
+            (0..<count).map {
+                Double(raw.loadUnaligned(fromByteOffset: start + $0 * width, as: Float.self))
+            }
+        }
+    }
+
     /// Euclidean norm of a vector — computed once per query so `similarity`
     /// doesn't recompute the query's magnitude for every thing it scores.
     static func norm(_ v: [Float]) -> Float {

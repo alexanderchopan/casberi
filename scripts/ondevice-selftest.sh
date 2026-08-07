@@ -114,7 +114,16 @@ fi
 # LAST iteration's, and the last file checked normally does NOT match, so the
 # command substitution returns 1 and `VAR=$(…)` aborts the whole script —
 # exit 1, no output, on a perfectly clean tree. Verified by running it.
-THIRD=$(for f in $(grep -rl 'NLEmbedding' --include=*.swift Casberi/ 2>/dev/null); do
+#
+# `--include='*.swift'` is QUOTED, and that is the whole check (2026-08-07).
+# Unquoted, zsh expands it as a glob before grep ever sees it, finds nothing
+# in the working directory, and aborts the command with "no matches found" —
+# so the file list came back EMPTY, `THIRD` was empty, and the guard reported
+# ✓ on every run since it was written while looking at no files at all. The
+# script printed the zsh error on its own line each time and `verify.sh` went
+# on to print a green tick beside it. A check that cannot fail proves nothing,
+# which is this file's own stated standard.
+THIRD=$(for f in $(grep -rl 'NLEmbedding' --include='*.swift' Casberi/ 2>/dev/null); do
           case "$f" in *EmbeddingIndex.swift|*AskCommands.swift) continue;; esac
           sed 's://.*::; s:^ *///.*::' "$f" | grep -q 'NLEmbedding' && echo "$f"
         done || true)

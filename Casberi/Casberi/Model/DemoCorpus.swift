@@ -10,15 +10,28 @@ import UIKit
 /// OpenClaw itself, 2026-07-21.)
 enum DemoCorpus {
 
-    /// Inserts the seed things if the store is empty. Idempotent.
+    /// Inserts the seed things if the store is empty, then furnishes every
+    /// other room (`DemoSeedAll`). Idempotent.
+    ///
+    /// The two halves guard differently ON PURPOSE. This base corpus is
+    /// EMPTY-STORE only: it is the "what does a new person's feed look like"
+    /// set, and pouring it into a store that already has real captures would
+    /// file invented approvals and transactions beside them. `DemoSeedAll` is
+    /// version-guarded instead, so a dev install that already has rows still
+    /// gains the rooms — which is the whole point of it, since a dev
+    /// simulator is never empty for long and the heroes it exists to show
+    /// could otherwise only ever appear on a fresh install.
+    @MainActor
     static func seedIfNeeded(_ context: ModelContext) {
         let count = (try? context.fetchCount(FetchDescriptor<Thing>())) ?? 0
-        guard count == 0 else { return }
-        let seeds = things()
-        stampDeadlines(seeds)
-        stampPhotoThumbnails(seeds)
-        for thing in seeds { context.insert(thing) }
-        context.saveHonestly()
+        if count == 0 {
+            let seeds = things()
+            stampDeadlines(seeds)
+            stampPhotoThumbnails(seeds)
+            for thing in seeds { context.insert(thing) }
+            context.saveHonestly()
+        }
+        DemoSeedAll.seedIfNeeded(context)
     }
 
     /// Gives a few seeds real deadlines so the "Coming up" card has something to
