@@ -18993,3 +18993,59 @@ same deadlines — guarded.
 
 **Held as before:** the rooms' full cards keep their rows. This lifts the rail
 out for the panel; it does not change what either room draws.
+
+## §339 — Every room gets furnished, and the panel finally has something to draw (user: "a couple of the new charts are cramped or you can't tell what they are", 2026-08-07)
+
+**Two screenshots, two failures, both mine.**
+
+**The semantic map printed gibberish.** Each cluster label sat at a fixed 22pt
+below its own centre with no collision handling, so two clusters at similar
+heights printed on top of each other — a real screen read
+"techchstartupsdisrupt" and "finfrastructureanalysis". Two clusters genuinely
+CAN sit at the same height, so a fixed offset was only ever luck. Labels are
+resolved now: sorted top-down, each pushed clear of the last, and one that
+would leave the figure is DROPPED rather than drawn overlapping — an unlabelled
+neighbourhood still shows its shape, where two labels on top of each other
+destroy both. They also get their own GROUND (an ink capsule): white text at
+58% over a field of coloured dots read as neither label nor background.
+
+**The dial had become a ring.** `recency` was normalised across the 7-day
+window, so on any week that is front-loaded — which is most of them — every
+mark pinned to the rim and the centre went dead. It read as a loading spinner.
+Recency buckets by whole DAY now: seven discrete rings that distribute by
+construction rather than by luck of the data, and which say something the old
+radius could not — this hour, and which day. It also earned the one line that
+says what its shape MEANS ("busiest 9a–1p"), because a dial at tile scale can
+carry no legend.
+
+**The map was `.large`, which permitted the tall column — and half width is
+exactly where those labels started colliding.** It is `.bandOnly` now, on a
+taller band than the rails get: its whole claim is spatial, and at rail height
+the clusters stack into one stripe. It also draws only its CLUSTERED dots;
+strays belong to no neighbourhood by definition and were the noise making the
+real structure harder to see.
+
+**Then the fixed data exposed the sankey**, which the demo corpus had never
+populated. Three failures in one figure, each fixed structurally rather than by
+tuning: the corner glyph clipped "Uniswap ×2" — moved to the bottom it merely
+covered "$600" instead, so on a band it now rides the TITLE, because both band
+figures label their left and right edges top and bottom and there is no free
+corner. And every lane converged on one spine midpoint, so at any real
+thickness the ribbons overlapped and the two green lanes merged into a single
+mass; lanes fan to their own spine y now, which removes the blob by
+construction. The band's one claim is that the sides differ in size, and a blob
+makes exactly that unreadable.
+
+**The scroll cap snaps to whole rows.** A flat 520 sliced the river mid-band at
+the fold, which reads as a broken drawing rather than as more content below —
+the one thing a scroll edge must never look like.
+
+**Wording (user: "do not call anything 'corpus' that is user facing, just say
+your things").** The map became "Your things, by meaning", and the three BYOK
+setup screens now offer to answer questions about "your things". `corpus`
+survives only in code and comments, where it is the right word.
+
+**The standing lesson, for the fourth time this week:** every defect in this
+section was invisible to the build, the harness and all 48 audits, and every
+one was obvious in a screenshot within two seconds of looking. The panel now
+gets looked at before it gets committed.

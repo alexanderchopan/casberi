@@ -236,7 +236,11 @@ enum AgentPanel {
         case .runway:  return .any
         case .flow:    return .bandOnly
         case .river:   return .bandOnly
-        case .scatter: return .large
+        // FULL WIDTH ONLY (§339). It was `.large`, which permits the tall
+        // column — and half width is exactly where its cluster labels began
+        // colliding into gibberish ("techchstartupsdisrupt"). A map of a
+        // corpus is a wide figure or it is mush.
+        case .scatter: return .bandOnly
         default:       return .any
         }
     }

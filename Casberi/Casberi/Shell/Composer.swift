@@ -1086,8 +1086,13 @@ struct Composer: View {
         }
         let marks = AgentPanelFigures.dial(entries)
         if !marks.isEmpty {
+            // The dial's own caption says what its SHAPE means — a tile-scale
+            // dial can carry no legend, and "when things land" said nothing a
+            // reader couldn't already see (§339).
+            let caption = AgentPanelFigures.busiestWindow(marks)
+                ?? String(localized: "when things land")
             out.append(card("cross.dial", String(localized: "Your week, by the hour"),
-                            String(localized: "when things land"), .dial(marks)))
+                            caption, .dial(marks)))
         }
         let bands = AgentPanelFigures.river(entries)
         if bands.count >= 2 {
@@ -1118,7 +1123,7 @@ struct Composer: View {
             }
         let map = AgentPanelFigures.scatter(Array(projected))
         if !map.dots.isEmpty, !map.clusters.isEmpty {
-            out.append(card("cross.scatter", String(localized: "Your corpus, by meaning"),
+            out.append(card("cross.scatter", String(localized: "Your things, by meaning"),
                             String(localized: "what sits near what"),
                             .scatter(dots: map.dots, clusters: map.clusters)))
         }
@@ -2098,7 +2103,12 @@ struct Composer: View {
                                    close()
                                })
                 }
-                .frame(maxHeight: 520)
+                // Capped to a WHOLE number of card rows (§339). A flat 520
+                // sliced the river mid-band at the fold, which reads as a
+                // broken drawing rather than as more content below — the one
+                // thing a scroll edge must never look like. 118 is the small
+                // cell, 10 the gutter, so this is four rows exactly.
+                .frame(maxHeight: 118 * 4 + 10 * 3)
                 .scrollIndicators(.hidden)
             }
             // The day, as the room's lead — the FALLBACK now (§332). It stood

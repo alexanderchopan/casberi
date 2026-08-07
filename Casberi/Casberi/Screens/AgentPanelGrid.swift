@@ -28,6 +28,10 @@ struct AgentPanelGrid: View {
     private static let gutter: CGFloat = DS.Space.s2
     private static var double: CGFloat { unit * 2 + gutter }
     private static let bandHeight: CGFloat = 150
+    private static func bandHeight(for figure: AgentPanel.Figure) -> CGFloat {
+        if case .scatter = figure { return 236 }
+        return bandHeight
+    }
 
     /// The room's hue, made safe to FILL with against a near-black well.
     ///
@@ -59,7 +63,11 @@ struct AgentPanelGrid: View {
                 tile(hero, slot: .hero, index: 0).frame(height: Self.double)
             }
             ForEach(Array(bands.enumerated()), id: \.element.key) { i, band in
-                tile(band, slot: .band, index: 1 + i).frame(height: Self.bandHeight)
+                // A map needs vertical room the rails don't — its whole claim
+                // is spatial, and at rail height the clusters stack into one
+                // stripe.
+                tile(band, slot: .band, index: 1 + i)
+                    .frame(height: Self.bandHeight(for: band.figure))
             }
             let rest = Array(tiles.dropFirst())
             // A `.large` figure can't sit in a small cell — it takes the tall
@@ -132,6 +140,21 @@ struct AgentPanelGrid: View {
                     .padding(.horizontal, 2)
                 } else if slot == .hero || slot == .band {
                     HStack(spacing: DS.Space.s2) {
+                        // On a BAND the glyph rides the title, not the well
+                        // (§339). Both band figures label their left AND right
+                        // edges, top and bottom — there is no free corner, and
+                        // moving the badge merely traded a clipped "Uniswap"
+                        // for a covered "$600". Beside the heading it has
+                        // space of its own and reads as a heading mark.
+                        if slot == .band {
+                            Image(systemName: BridgeGlyph.symbol(for: card.source))
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(width: 16, height: 16)
+                                .background(hue, in: RoundedRectangle(cornerRadius: 4,
+                                                                     style: .continuous))
+                                .accessibilityHidden(true)
+                        }
                         Text(card.title)
                             .dsText(.subhead13)
                             .foregroundStyle(DS.textSecondary)
@@ -146,10 +169,15 @@ struct AgentPanelGrid: View {
                 // INTO the panel rather than shapes floating on it. That is the
                 // job a border would do in a system that allowed them; §8
                 // forbids lines, so tone does it.
-                ZStack(alignment: .topTrailing) {
+                ZStack {
                     FigureView(figure: card.figure, slot: slot, hue: hue,
                                rising: card.rising, reduceMotion: reduceMotion)
                         .padding(DS.Space.s2)
+                    // The glyph sits BOTTOM-trailing on a band (§339): the
+                    // sankey and the runway both label their right edge at the
+                    // top, and a badge in that corner clipped "Uniswap" to
+                    // "Uniswap …" on a real corpus. Corner tiles keep it top —
+                    // their figures start below the fold of the well.
                     Image(systemName: BridgeGlyph.symbol(for: card.source))
                         .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(.white)
@@ -157,10 +185,24 @@ struct AgentPanelGrid: View {
                         .background(hue, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
                         .padding(6)
                         .accessibilityHidden(true)
+                        .opacity(slot == .band ? 0 : 1)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity,
+                               alignment: .topTrailing)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(DS.surfaceWell,
                             in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                // A caption under a wordless figure is its READING — what the
+                // shape means — not chrome. Only where the figure earns one
+                // (§339: the dial's busiest window); every other small tile
+                // stays wordless.
+                if slot != .hero, !card.caption.isEmpty {
+                    Text(card.caption)
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                        .padding(.horizontal, 2)
+                }
             }
             .padding(DS.Space.s2 + 1)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
@@ -591,10 +633,32 @@ private struct ScatterFigure: View {
     let clusters: [AgentPanel.DotCluster]
     let t: Double
 
-    /// A cluster's halo radius, precomputed — see the inline note above.
-    private static func halo(_ radius: Double, _ extent: CGFloat) -> CGFloat {
-        let scaled = CGFloat(radius) * extent * 2.2
-        return scaled < 38 ? 38 : scaled
+    /// Cluster labels with their collisions RESOLVED (§339).
+    ///
+    /// The first cut positioned each label at a fixed offset below its own
+    /// centre and hoped. Two clusters at similar heights printed on top of each
+    /// other and the map read as gibberish — "techchstartupsdisrupt" on a real
+    /// corpus. Two clusters genuinely CAN sit at the same height, so a fixed
+    /// offset can only ever be luck.
+    ///
+    /// Sorted top-down, then each label is pushed below the previous one until
+    /// it clears by `gap`. A label that would leave the figure is DROPPED
+    /// rather than drawn overlapping: an unlabelled neighbourhood still shows
+    /// its shape, where two labels on top of each other destroy both.
+    private static func placed(_ clusters: [AgentPanel.DotCluster],
+                               height: CGFloat, py: (Double) -> CGFloat)
+        -> [(cluster: AgentPanel.DotCluster, y: CGFloat)] {
+        let gap: CGFloat = 17
+        var out: [(AgentPanel.DotCluster, CGFloat)] = []
+        var lastY: CGFloat = -.greatestFiniteMagnitude
+        for cluster in clusters.sorted(by: { $0.y < $1.y }) {
+            var y = py(cluster.y) + 20
+            if y - lastY < gap { y = lastY + gap }
+            guard y <= height - 6 else { continue }
+            out.append((cluster, y))
+            lastY = y
+        }
+        return out
     }
 
     var body: some View {
@@ -605,8 +669,8 @@ private struct ScatterFigure: View {
             let py: (Double) -> CGFloat = { inset + CGFloat($0) * max(1, h - inset * 2) }
             ZStack {
                 ForEach(Array(clusters.enumerated()), id: \.offset) { _, cluster in
-                    let cw: CGFloat = Self.halo(cluster.radius, w - inset * 2)
-                    let ch: CGFloat = Self.halo(cluster.radius, h - inset * 2)
+                    let cw = Self.halo(cluster.radius, w - inset * 2)
+                    let ch = Self.halo(cluster.radius, h - inset * 2)
                     Circle()
                         .fill(Color.white.opacity(0.028))
                         .frame(width: cw, height: ch)
@@ -622,18 +686,36 @@ private struct ScatterFigure: View {
                         .position(x: px(dot.x) * t + (w / 2) * (1 - t),
                                   y: py(dot.y) * t + (h / 2) * (1 - t))
                 }
-                ForEach(Array(clusters.enumerated()), id: \.offset) { _, cluster in
-                    Text(cluster.label)
+                // Labels ride their own GROUND (§339): white text at 58% over a
+                // field of coloured dots is the worst case for legibility, and
+                // it read as neither label nor background. An ink pill gives it
+                // a floor — the same job the elevation ladder does everywhere
+                // else, no line involved.
+                ForEach(Array(Self.placed(clusters, height: h, py: py).enumerated()),
+                        id: \.offset) { _, placement in
+                    Text(placement.cluster.label)
                         .dsText(.subhead13)
                         .fontWeight(.semibold)
-                        .foregroundStyle(DS.textSecondary)
+                        .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(DS.surfaceWell.opacity(0.92),
+                                    in: Capsule())
                         .opacity(t)
-                        .position(x: px(cluster.x),
-                                  y: min(h - 8, py(cluster.y) + 22))
+                        .position(x: min(w - 30, max(30, px(placement.cluster.x))),
+                                  y: placement.y)
                 }
             }
         }
+    }
+
+    /// A cluster's halo radius, precomputed — an inline `max()` over CGFloat
+    /// arithmetic inside a `.frame` inside a `ForEach` inside a GeometryReader
+    /// blows up the type-checker, and its error names the whole body.
+    private static func halo(_ radius: Double, _ extent: CGFloat) -> CGFloat {
+        let scaled = CGFloat(radius) * extent * 2.2
+        return scaled < 38 ? 38 : scaled
     }
 }
 
@@ -737,14 +819,29 @@ private struct FlowFigure: View {
         let slots = max(1, lanes.count)
         return ForEach(Array(lanes.enumerated()), id: \.offset) { i, lane in
             let share = scale > 0 ? lane.usd / scale : 0
-            let thickness = max(3, height * 0.42 * share)
+            // Capped against the LANE's own share of the height, not the
+            // whole band: at three lanes a side, `height * 0.42` let the top
+            // ribbon alone cover more than its slot and the three merged into
+            // one blob at the spine (seen on the sim). The band's claim is
+            // that the sides differ in size — a blob makes exactly that
+            // unreadable.
+            let slotHeight = height / Double(slots)
+            let thickness = max(3, min(slotHeight * 0.72, height * 0.34 * share))
             let laneY = height * (Double(i) + 0.5) / Double(slots)
+            // Each lane meets the spine at its OWN y, fanned around the middle
+            // (§339). Converging every lane on one midpoint made the ribbons
+            // overlap near the centre at any real thickness, and the two green
+            // lanes merged into a single mass — the band's one claim is that
+            // the sides differ in size, and a blob makes exactly that
+            // unreadable. Separation is structural now, not a thickness tune.
+            let fan = height * 0.16
+            let spineY = height / 2 + (Double(i) - Double(slots - 1) / 2) * fan
             let midX = (spineEdge + labelEdge) / 2
             Path { p in
                 p.move(to: CGPoint(x: labelEdge, y: laneY))
-                p.addCurve(to: CGPoint(x: spineEdge, y: height / 2),
+                p.addCurve(to: CGPoint(x: spineEdge, y: spineY),
                            control1: CGPoint(x: midX, y: laneY),
-                           control2: CGPoint(x: midX, y: height / 2))
+                           control2: CGPoint(x: midX, y: spineY))
             }
             .trim(from: 0, to: t)
             .stroke(color.opacity(0.42), style: StrokeStyle(lineWidth: thickness, lineCap: .round))

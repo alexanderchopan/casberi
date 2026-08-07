@@ -45,7 +45,6 @@ enum AgentPanelFigures {
         guard let start = cal.date(byAdding: .day, value: -days, to: now) else { return [] }
         let window = entries.filter { $0.at >= start && $0.at <= now }
         guard !window.isEmpty else { return [] }
-        let span = max(1, now.timeIntervalSince(start))
         // Newest first, then capped — a busy corpus draws its most recent
         // `cap` marks rather than a random sample, so the rim is always true.
         return window
@@ -54,11 +53,46 @@ enum AgentPanelFigures {
             .map { entry in
                 let comps = cal.dateComponents([.hour, .minute], from: entry.at)
                 let hour = Double(comps.hour ?? 0) + Double(comps.minute ?? 0) / 60
-                let recency = 1 - (now.timeIntervalSince(entry.at) / span)
-                return AgentPanel.DialMark(hour: hour,
-                                           recency: min(1, max(0, recency)),
-                                           source: entry.source)
+                // Recency buckets by whole DAY, not by elapsed seconds over
+                // the window (§339). Normalising against the span pinned
+                // nearly every mark to the rim on any corpus whose week is
+                // front-loaded — which is most of them — and the dial drew as
+                // a ring with a dead centre, reading as a loading spinner
+                // rather than a clock. Seven discrete rings distribute by
+                // CONSTRUCTION, and they say something the old radius could
+                // not: this hour, and which day.
+                let daysAgo = cal.dateComponents([.day],
+                                                 from: cal.startOfDay(for: entry.at),
+                                                 to: cal.startOfDay(for: now)).day ?? 0
+                let ring = 1 - (Double(min(max(daysAgo, 0), days - 1)) / Double(max(1, days - 1)))
+                return AgentPanel.DialMark(hour: hour, recency: ring, source: entry.source)
             }
+    }
+
+    /// The busiest four-hour stretch, as words — "busiest 9a–1p".
+    ///
+    /// A dial at tile scale can carry no legend, and its shape is the whole
+    /// reading; this is the one line that says what the shape MEANS. A reading,
+    /// not a tally (§213): it names a window, never a count.
+    static func busiestWindow(_ marks: [AgentPanel.DialMark], width: Int = 4) -> String? {
+        guard marks.count >= 8 else { return nil }
+        var perHour = Array(repeating: 0, count: 24)
+        for mark in marks { perHour[min(23, max(0, Int(mark.hour)))] += 1 }
+        var bestStart = 0, bestCount = -1
+        for start in 0..<24 {
+            var total = 0
+            for offset in 0..<width { total += perHour[(start + offset) % 24] }
+            // Ties go to the EARLIER window so the label is stable across
+            // opens on a corpus with two equally busy stretches.
+            if total > bestCount { bestCount = total; bestStart = start }
+        }
+        guard bestCount > 0 else { return nil }
+        return String(localized: "busiest \(clock(bestStart))–\(clock((bestStart + width) % 24))")
+    }
+
+    private static func clock(_ hour: Int) -> String {
+        let h = hour % 12 == 0 ? 12 : hour % 12
+        return "\(h)\(hour < 12 ? "a" : "p")"
     }
 
     // MARK: - 2 · The theme river
@@ -176,10 +210,11 @@ enum AgentPanelFigures {
         for v in centred { xs.append(dot(v, a1)); ys.append(dot(v, a2)) }
         let nx = unit(xs), ny = unit(ys)
 
+        // Dots are built AFTER the clusters below, so an unclustered stray can
+        // be dropped: 300 dots in a tile is mush regardless of layout, and a
+        // stray belongs to no neighbourhood by definition — it is the noise
+        // that makes the real structure harder to see (§339).
         var dots: [AgentPanel.Dot] = []
-        for (i, entry) in sample.enumerated() {
-            dots.append(AgentPanel.Dot(x: nx[i], y: ny[i], source: entry.0.source))
-        }
 
         // Clusters are NAMED BY THE TERMS THAT ARE ACTUALLY THERE — a cell
         // label in a treemap is a word from the data, and this is the same
@@ -212,7 +247,15 @@ enum AgentPanelFigures {
         clusters.sort { a, b in
             a.radius == b.radius ? a.label < b.label : a.radius < b.radius
         }
-        return (dots, Array(clusters.prefix(4)))
+        let kept = Array(clusters.prefix(4))
+        var member = Set<Int>()
+        for cluster in kept {
+            for (term, idx) in byTerm where term == cluster.label { member.formUnion(idx) }
+        }
+        for i in member.sorted() {
+            dots.append(AgentPanel.Dot(x: nx[i], y: ny[i], source: sample[i].0.source))
+        }
+        return (dots, kept)
     }
 
     // MARK: - Shared arithmetic

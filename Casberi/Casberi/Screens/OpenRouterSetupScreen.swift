@@ -23,7 +23,7 @@ struct OpenRouterSetupScreen: View {
             BridgeSetupHeader(
                 name: "OpenRouter",
                 mode: .pasteKey,
-                intro: "Paste a key and OpenRouter can answer questions about your corpus through whichever model you've picked there. It's asked only when you tap for it, never on its own.",
+                intro: "Paste a key and OpenRouter can answer questions about your things through whichever model you've picked there. It's asked only when you tap for it, never on its own.",
                 flipTrigger: flipTrigger)
             setupSection
         }
