@@ -169,6 +169,9 @@ final class FarcasterStore {
         }
         accounts = []
         channels = []
+        // The like rolls go with them (2026-08-07) — reconnecting must not
+        // find a roll naming who liked a cast the corpus no longer holds.
+        SocialLikers.shared.forget(refPrefix: "fc:")
     }
 
     /// Adds a username together with an already-known fid — search resolves
@@ -680,46 +683,105 @@ enum FarcasterIngest {
 
     /// Who liked one of YOUR casts. Fills the cast's own `likeCount` — the
     /// count is a PROPERTY of the cast, never a thing of its own (the module
-    /// doctrine's plainest case) — and does the two things a name makes
-    /// possible: resurfaces the cast when the liker is someone you watch, and
-    /// says so once, out loud.
+    /// doctrine's plainest case) — and does the three things a NAME makes
+    /// possible: says who, resurfaces the cast when the liker is someone you
+    /// watch, and says so once, out loud.
     ///
     /// Snapchain reports no totals, only reaction MESSAGES, so the count is a
     /// page's size and a full page means "at least this many" — `SocialCount`'s
     /// honesty valve. `Thing.likeCount` is a bare Int with nowhere to carry
     /// `atLeast`, so a FULL page is deliberately left unwritten rather than
     /// stored as a total nobody counted.
+    ///
+    /// **The names used to be thrown away (fixed 2026-08-07, prd §330).** This
+    /// read named a liker only when `watched[likerFid]` hit — i.e. only when
+    /// the person who liked your cast was already an account you watch — and
+    /// discarded every other fid on the wire. So "who liked my post?" was
+    /// answerable only about the handful of people you happen to follow here,
+    /// and even for them the answer was a toast that scrolls away. Everyone
+    /// else was an increment.
+    ///
+    /// Bluesky never had this half of the bug, and the reason is the whole
+    /// design constraint here: its AppView hydrates `like.actor.handle` inline,
+    /// so its arm has had every liker's name for free since it shipped and
+    /// calls `Notifications.likes` with all of them. Snapchain reports fids
+    /// ONLY, so a name costs one `userDataByFid` apiece — which is why this
+    /// resolves the newest `SocialLikers.nameCap` and no more, and why the
+    /// §306 notification (written to be "called from the read, because the
+    /// NAMES exist only inside the read itself") had never been wired here at
+    /// all.
     @MainActor
     private static func readLikes(on cast: Thing, hash: String, fid: Int) async {
         guard let root = await IngestSupport.getJSON(
             "\(node)/v1/reactionsByCast?target_fid=\(fid)&target_hash=\(hash)"
             + "&reaction_type=Like&pageSize=\(reactionPage)") as? [String: Any],
               let messages = root["messages"] as? [[String: Any]] else { return }
+        let full = messages.count >= reactionPage
+        // Every liker, not just the watched ones. Your OWN like of your own
+        // cast is dropped from the NAMES (nobody wants to read "Liked by you")
+        // while `likeCount` below keeps counting it, because that number is the
+        // cast's like count as the network reports it, not a roll of others.
+        var likers: [(fid: Int, when: Date?)] = []
+        for message in messages {
+            guard let data = message["data"] as? [String: Any],
+                  let likerFid = data["fid"] as? Int, likerFid != fid else { continue }
+            likers.append((likerFid,
+                           (data["timestamp"] as? Double).map { epoch.addingTimeInterval($0) }))
+        }
+        // Newest first, off the TIMES on the wire rather than the page's own
+        // order: this call passes no `reverse`, and which liker leads the line
+        // is exactly the thing an assumed order would get quietly wrong.
+        likers.sort { ($0.when ?? .distantPast) > ($1.when ?? .distantPast) }
+
         guard cast.isLive else { return }   // the pass awaited; a heal may have landed
-        if messages.count < reactionPage, cast.likeCount != messages.count {
+        if !full, cast.likeCount != messages.count {
             cast.likeCount = messages.count
             healed = true
         }
-        // Names, not numbers: a liker you WATCH is a person the corpus knows,
-        // and their like is the sharpest signal this network produces.
+        // A liker you WATCH is a person the corpus knows, and their like is the
+        // sharpest signal this network produces. Unchanged, and deliberately
+        // before the lookups below so a node that won't answer `userDataByFid`
+        // costs this arm nothing.
         let watched = Dictionary(
             FarcasterStore.shared.accounts.filter { $0.fid != 0 }.map { ($0.fid, $0.username) },
             uniquingKeysWith: { first, _ in first })
-        for message in messages {
-            guard let data = message["data"] as? [String: Any],
-                  let likerFid = data["fid"] as? Int, likerFid != fid,
-                  let liker = watched[likerFid] else { continue }
-            let when = (data["timestamp"] as? Double).map { epoch.addingTimeInterval($0) }
+        for liker in likers {
+            guard let handle = watched[liker.fid] else { continue }
             // §221 from the other direction: that ruling surfaces your post
             // when the liker's OWN likes are being read; this surfaces it
             // whenever they liked it, read from your cast's side. Same
             // restamp, same three guards, so the two can't disagree.
-            resurface(cast, reactedAt: when)
-            if (when ?? .now).timeIntervalSinceNow > -SocialInbound.newsWindow {
+            resurface(cast, reactedAt: liker.when)
+            if (liker.when ?? .now).timeIntervalSinceNow > -SocialInbound.newsWindow {
                 SourceMoments.shared.fire(
-                    String(localized: "@\(liker) liked your cast"), source: "Farcaster")
+                    String(localized: "@\(handle) liked your cast"), source: "Farcaster")
             }
         }
+        guard let ref = cast.sourceRef, !likers.isEmpty else { return }
+
+        // The names. Bounded at `nameCap` because each one is a request here —
+        // and a name that can't be resolved is skipped rather than stood in for
+        // by an fid, which is an identifier, not a person.
+        let nameFids = likers.prefix(SocialLikers.nameCap).map(\.fid)
+        await prefetchProfiles(nameFids)
+        var named: [String] = []
+        var face: String?
+        for likerFid in nameFids {
+            guard let who = await profile(fid: likerFid),
+                  let username = who.username, !username.isEmpty else { continue }
+            if named.isEmpty { face = who.avatarURL }
+            named.append(username)
+        }
+        guard !named.isEmpty, cast.isLive else { return }
+        let newest = likers.first?.when ?? .now
+
+        SocialLikers.shared.record(ref: ref, handles: named, total: likers.count,
+                                   atLeast: full, when: newest)
+        await Notifications.likes(postRef: ref, postTitle: cast.title,
+                                  likers: named, total: likers.count,
+                                  avatarURL: face, source: "Farcaster",
+                                  link: "casberi://thing/\(cast.id.uuidString)",
+                                  when: newest)
     }
 
     /// Who started following you since the last pass. First sight seeds the

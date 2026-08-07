@@ -1146,6 +1146,41 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-likersProbe YES` dumps WHO liked your posts (2026-08-07, prd §330)
+        // — one `liker|` line per post the inbound read has a roll for: the
+        // names it resolved, the total behind them, whether that total is a
+        // floor (the page was full), and the line the row actually draws.
+        //
+        // It exists because an empty roll book has FIVE causes that all render
+        // as a post with no "Liked by" line, and only the last is a bug: no
+        // account is marked `mine`; the first sync of a new account has landed
+        // no own posts yet, so `ownRecentPosts` is empty and the read never ran
+        // (`-inboundProbe` reports that count); nobody has liked anything
+        // inside `ownPostWindow`; the only liker was YOU (self-likes are
+        // dropped from the names on purpose); or the node answered
+        // `reactionsByCast` and then refused every `userDataByFid`, which is
+        // the one that means something is broken — and it is invisible from the
+        // outside, since a roll with no resolvable name is deliberately never
+        // written at all.
+        //
+        // Prints the whole book, not just this source's, because the two arms
+        // reach it by different roads — Bluesky's names ride the like itself,
+        // Farcaster's cost a lookup each — so a book holding one network's
+        // rolls and not the other's is the shape of the bug this fixed.
+        Hook(key: "likersProbe") { _, _ in
+            Task { @MainActor in
+                let rolls = SocialLikers.shared.rolls
+                NSLog("likersProbe: %d posts with a roll (cap %d, names %d each)",
+                      rolls.count, SocialLikers.rollCap, SocialLikers.nameCap)
+                for (ref, roll) in rolls.sorted(by: { $0.value.when > $1.value.when }) {
+                    NSLog("liker| %@ named=%@ total=%d%@ when=%@ line=%@",
+                          ref, roll.handles.joined(separator: ","),
+                          roll.total, roll.atLeast ? " (floor — page was full)" : "",
+                          ISO8601DateFormatter().string(from: roll.when),
+                          roll.line ?? "NONE")
+                }
+            }
+        },
         // `-socialProbe <Bluesky|Farcaster>` reports what the enrichment
         // actually landed across that source's corpus (2026-07-16) — how many
         // posts carry their full text, pictures, a quote, a parent, a context

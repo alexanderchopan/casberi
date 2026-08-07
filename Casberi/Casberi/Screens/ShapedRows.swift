@@ -2055,6 +2055,22 @@ struct PostCard: View {
                 .frame(height: 160)
                 .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
             }
+            // WHO liked it (2026-08-07, prd §330). Under the post, where every
+            // client puts it — and only ever on YOUR OWN posts, because
+            // `SocialLikers` is written by the inbound read alone and that read
+            // only ever asks about your own recent casts. So no "is this mine?"
+            // test is needed here, and none is made: the presence of a roll IS
+            // the answer.
+            //
+            // Names, never a bare number (§239) — `line` returns nil when not
+            // one liker could be named, so a row can never degrade into the
+            // tally the sheet's engagement line already shows.
+            if let line = SocialLikers.shared.roll(for: thing.sourceRef)?.line {
+                Text(line)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+            }
         }
         .padding(.vertical, DS.Space.s2)
     }
