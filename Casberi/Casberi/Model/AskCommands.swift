@@ -477,8 +477,17 @@ enum SemanticExpand {
         let limit = maxDistance
         var out: Set<String> = []
         for term in terms {
-            for (word, distance) in embedding.neighbors(for: term, maximumCount: 8)
-            where distance < limit {
+            // Under `EmbeddingIndex.serialized` for the reason recorded on
+            // `EmbeddingIndex.inferenceQueue`: `NLEmbedding` is not safe to
+            // call from two threads at once, and builds 280/281 died of
+            // exactly that. This is a DIFFERENT model object (words, not
+            // sentences), but the crashing stacks bottomed out in
+            // `fillWordVectors`, which the word and sentence embeddings SHARE
+            // — so a per-object gate would leave this cross-object pair
+            // (neighbours here against a sentence `vector` on the sweep) wide
+            // open. One gate for every model.
+            let near = EmbeddingIndex.serialized { embedding.neighbors(for: term, maximumCount: 8) }
+            for (word, distance) in near where distance < limit {
                 out.insert(word.lowercased())
             }
         }
