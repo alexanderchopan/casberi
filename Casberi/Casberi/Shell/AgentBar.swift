@@ -30,14 +30,32 @@ import SwiftUI
 /// the magnifier stays visible beside the berry, because Find was promoted out
 /// of the risen composer on 2026-07-30 precisely for being undiscoverable, and
 /// a lone berry would re-bury it a month later.
+///
+/// **It rests in the CORNER** (user ruling 2026-08-07). Compact chrome centred
+/// on the bottom edge still sat over the middle of the reading column — the one
+/// column this app exists to serve — while claiming the screen's most
+/// symmetrical position for its least-frequent verb. `RootShell` now pins the
+/// whole floating cluster trailing, so this hugs the bottom-right the way a FAB
+/// does, the reading column runs clear beneath it, and the thumb has less
+/// distance to travel on the hand most people hold a phone in. Two things did
+/// NOT change with it, both deliberately: the magnifier stays beside the berry
+/// (see the paragraph above — a corner move is not a reason to re-bury Find,
+/// and it costs one glyph of width in a shape that no longer spans anything),
+/// and the hold still belongs to the whole pill rather than being split between
+/// two corner circles, which at this size would be two targets too small to
+/// aim a 0.45s press at.
+///
+/// So `expanded` no longer means "span the screen" — it only adds the words.
+/// The teaching grace survives (a bar nobody has used should still say what it
+/// is once); what died is the full-width slab it used to say it from.
 struct AgentBar: View {
     var hasUnseenSignal: Bool
-    /// The words, and the full width. FALSE at rest now (see the type's own
-    /// note) — `RootShell` grants it only as a teaching grace, until the agent
-    /// has been raised once on this device, and `ShellChrome.minimized` folds
-    /// it away early if that first-time reader scrolls before ever asking.
-    /// The flag still drives the STRIP's own 56→48 fold; it simply no longer
-    /// decides this bar's resting shape.
+    /// The words. FALSE at rest (see the type's own note) — `RootShell` grants
+    /// it only as a teaching grace, until the agent has been raised once on
+    /// this device, and `ShellChrome.minimized` folds it away early if that
+    /// first-time reader scrolls before ever asking. It no longer carries a
+    /// width: since 2026-08-07 the pill hugs its contents in the corner in
+    /// BOTH states, so this adds a line of text and nothing else.
     var expanded: Bool = false
     var morphNS: Namespace.ID?
     /// The magnifier (2026-07-30). Find is deterministic and writes nothing —
@@ -87,8 +105,14 @@ struct AgentBar: View {
                 guard !consumeHold() else { return }
                 onFind()
             } label: {
+                // A satellite, not a twin (2026-08-07): in the corner the berry
+                // is the anchor and Find rides beside it, so the glyph steps
+                // down a size to say which is which. The TARGET does not —
+                // it stays the full 44pt circle below, because a control that
+                // reads as secondary still has to be hittable (HIG's floor,
+                // and the catalogue door's own lesson one line down).
                 Image(systemName: "magnifyingglass")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(DS.textSecondary)
                     // The control is the CIRCLE, not the glyph (the catalogue
                     // door's own 2026-07-26 lesson: a `.frame()` around a small
@@ -113,7 +137,6 @@ struct AgentBar: View {
                             .dsText(.body17)
                             .foregroundStyle(DS.textTertiary)
                             .lineLimit(1)
-                        Spacer(minLength: 0)
                     }
                     if hasUnseenSignal {
                         CasberiMark(size: 20).breathing()
@@ -124,7 +147,6 @@ struct AgentBar: View {
                 .padding(.trailing, DS.Space.s4)
                 .padding(.leading, DS.Space.s1)
                 .padding(.vertical, DS.Space.s3)
-                .frame(maxWidth: expanded ? .infinity : nil, alignment: .leading)
                 .contentShape(Capsule())
                 .dsHover()
             }
@@ -138,9 +160,9 @@ struct AgentBar: View {
             .accessibilityAction(named: Text("Your sources"), onSources)
         }
         .padding(.leading, DS.Space.s1)
-        // At rest the glass hugs its two controls instead of spanning the
-        // screen — the shape itself says the bar has yielded to the content.
-        .frame(maxWidth: expanded ? .infinity : nil)
+        // The glass hugs its two controls in BOTH states now (2026-08-07) —
+        // the shape itself says the bar has yielded to the content, and in the
+        // corner there is no full-width state left for it to yield FROM.
         .dsGlass(cornerRadius: DS.Radius.pill, tint: roomTint)
         // A scope change re-tints the bar on the same beat the crown re-tints
         // (`MainSurface.crownPour` animates the same value) — the two ends of
@@ -240,10 +262,19 @@ private struct BarSecondaryMenu: ViewModifier {
 /// artifact is legible before the facts are; the unread dot becomes the
 /// agent's own mark, which says who this is from instead of merely that it's
 /// new; and a chevron says it opens something rather than just sitting there.
-/// It is also INSET from the bar below it (2026-07-22): two full-width glass
-/// slabs stacked read as one confusing double-bar. A step narrower on each
-/// side gives the floating layer a hierarchy — the bar is furniture, the
-/// whisper is today's delivery sitting on top of it.
+///
+/// It used to be INSET from the bar below it (2026-07-22) because two
+/// full-width glass slabs stacked read as one confusing double-bar. That inset
+/// is GONE (2026-08-07) and the hierarchy it bought is now free: the bar
+/// hugged into the bottom-right corner, so the pair is a wide slab above a
+/// small pill and cannot be misread as two bars. The capsule keeps its own
+/// trailing edge aligned with the bar's, so the two read as one corner system.
+///
+/// **It is never put behind a tap** (ruling 2026-08-07, considered and
+/// declined). Folding it into the bar — press the berry, the whisper unfolds —
+/// looks tidier and breaks the feature: this is once-a-day unsolicited news,
+/// and it works precisely because it ARRIVES rather than waits. Behind a press
+/// it becomes a menu item, unopened on the one day it had something to say.
 struct WhisperCapsule: View {
     var title: String
     var lead: String

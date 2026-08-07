@@ -19049,3 +19049,63 @@ survives only in code and comments, where it is the right word.
 section was invisible to the build, the harness and all 48 audits, and every
 one was obvious in a screenshot within two seconds of looking. The panel now
 gets looked at before it gets committed.
+
+## §340 — The bar moves to the corner, and the whisper stays in the open (user: "do we really need the search icon, and what if our icon becomes a fab in the right bottom corner? then when you press it the whisper capsule and search icon open", 2026-08-07)
+
+Three questions in one sentence, and they get three different answers.
+
+**The corner: yes.** §211 made the bar rest COMPACT on the argument that chrome
+is priced by frequency of use — but it left it CENTRED, which is the position
+that costs the most and was never re-examined. A compact pill centred on the
+bottom edge still sits over the middle of the reading column, which is the one
+column this app exists to serve, and it claims the screen's most symmetrical
+spot for its least-frequent verb. Pinned trailing, the column runs clear
+beneath it and the bar is a shorter reach for the thumb of the hand a phone is
+held in. `.trailing`, not a right edge, so RTL gets the mirrored corner free.
+
+Two pieces of scaffolding died with the move, and neither was load-bearing: the
+bar's full-width `expanded` state (the teaching grace survives — `expanded` now
+adds the words and nothing else, because a bar nobody has used should still say
+what it is once), and `PadLayout.agentBarMaxWidth`, the iPad cap written for
+"a capsule holding one placeholder line has no business being 1376pt wide". A
+pill that hugs its own two controls needs no cap at any width. The cap moved
+ONTO the whisper capsule, which is the only element that still wants a width,
+and tightened while it moved (680 → 420): the capsule is a title over a line of
+facts, not a row of chrome, so past a reading column the words drift apart.
+
+**The search icon: it stays.** It is a fair question — §336 landed the same day
+and softened the case, because a bare tap now opens the agent AT REST with its
+field rather than in a wall of synthesized text, so Find is tap → type → chip
+where it used to require asking a question first. But that is still the act of
+faith the magnifier was added to remove on 2026-07-30, and the reason recorded
+there has not changed: Find is deterministic and writes nothing, a genuinely
+different verb from asking, and it spent a month being undiscoverable the last
+time it had no visible door. A corner move is not a reason to re-bury it. It
+costs one glyph of width in a shape that no longer spans anything. It steps
+down a size, though — in the corner the berry is the anchor and Find rides
+beside it, so the glyph says which is which while the TARGET stays the full 44pt
+circle, because a control that reads as secondary still has to be hittable.
+
+**The whisper behind the press: no, and this is the one worth stating.** Folding
+it into the bar looks tidier and breaks the feature. The whisper is once-a-day
+unsolicited news and it works precisely because it ARRIVES rather than waits —
+§165 built it as "the one piece of chrome in the app whose arrival is itself the
+news". Behind a press it becomes a menu item, and it would go unopened on the
+single day it had something to say. The same objection reaches the rest of the
+proposal from the other side: a press that opens a speed-dial puts the app's
+primary verb behind two taps to save nothing.
+
+What the pair loses by not folding, it gets back for free. The 2026-07-22 inset
+— the capsule sitting a step narrower than the bar — existed only because two
+full-width glass slabs stacked read as one confusing double-bar. The bar beneath
+it is no longer a slab, so the hierarchy is now structural: a wide capsule above
+a small pill cannot be misread as two bars. The inset is gone and the capsule
+keeps its trailing edge aligned with the bar's, so the two read as one corner
+system rather than two floating objects that happen to be near each other.
+
+**Untouched deliberately:** the hold that opens the sources tray still belongs
+to the whole pill rather than being split between two corner circles, which at
+this size would be two targets too small to aim a 0.45s press at; and the
+`agentMorph` pairing needed no change at all — the risen surface simply grows
+out of the corner now, diagonally, which is a better read of "this came from
+there" than the symmetric balloon it used to be.

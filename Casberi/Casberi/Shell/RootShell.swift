@@ -1404,7 +1404,15 @@ struct RootShell: View {
                 // narrower to read as SEPARATE from the bar (2026-07-22, the
                 // double-bar ruling) — coordinated, not fused.
                 DSGlassContainer(spacing: 0) {
-                VStack(spacing: DS.Space.s2) {
+                // TRAILING (user ruling 2026-08-07) — the cluster pins to the
+                // bottom-right instead of centring on the bottom edge. Centred
+                // chrome sat over the middle of the reading column, which is
+                // the one column this app exists to serve; in the corner the
+                // column runs clear beneath it and the bar is a shorter reach
+                // for the thumb of the hand a phone is actually held in.
+                // `.trailing` rather than a hard right edge so an RTL layout
+                // gets the mirrored corner for free.
+                VStack(alignment: .trailing, spacing: DS.Space.s2) {
                     // The whisper rides ABOVE the bar (prd §165) — the day
                     // brief's headline, first open of the day only. Tap
                     // raises the agent, same move as the bar's own.
@@ -1444,10 +1452,16 @@ struct RootShell: View {
                                 withAnimation(DS.Motion.standard) { chrome.risingBriefTitle = nil }
                             }
                         }
-                        // Inset a step narrower than the bar (2026-07-22) —
-                        // see WhisperCapsule's own note: stacked full-width
-                        // glass read as a double-bar.
-                        .padding(.horizontal, DS.Space.s3)
+                        // The 2026-07-22 inset is GONE (2026-08-07) — see
+                        // `WhisperCapsule`'s own note. It existed to stop two
+                        // full-width slabs reading as a double-bar, and the bar
+                        // beneath it is no longer a slab. What replaces it is a
+                        // CAP: the capsule holds a title over a line of facts,
+                        // which needs real width to be worth reading, so it
+                        // keeps the phone's whole column and is only bounded on
+                        // a shell wide enough to make that column silly.
+                        .frame(maxWidth: PadLayout.floatingClusterMaxWidth,
+                               alignment: .trailing)
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
                     }
                     AgentBar(hasUnseenSignal: KeptAskStore.shared.anyChanged && !agentEverOpened,
@@ -1507,17 +1521,21 @@ struct RootShell: View {
                     }
                 }
                 }
-                // iPad (2026-07-25): the cluster is a capsule holding one
-                // line, and at 1376pt wide it read as a mile-long bar with a
-                // placeholder floating in it. Capped, and inset past BOTH
-                // shell columns so it floats over the feed it belongs to
-                // rather than straddling the source rail on one side and the
-                // detail pane's content on the other. This ZStack sits
-                // OUTSIDE MainSurface's safe-area insets, so the rail and
-                // pane widths have to be restated here — that is what
-                // `PadLayout` exists to keep in one place.
-                .frame(maxWidth: padShell.isRegular ? PadLayout.agentBarMaxWidth : .infinity)
-                .frame(maxWidth: .infinity)
+                // Pinned to the trailing edge (2026-08-07). The iPad cap the
+                // two frames here used to carry moved ONTO the whisper capsule
+                // above, which is the only element that still wants a width —
+                // the bar hugs its own controls now, so at 1376pt it is a
+                // corner pill rather than the mile-long bar with a placeholder
+                // floating in it that the cap was written for.
+                //
+                // The insets are unchanged and still load-bearing: this ZStack
+                // sits OUTSIDE MainSurface's safe-area insets, so the rail and
+                // pane widths have to be restated here for the cluster to float
+                // over the feed it belongs to rather than over the detail pane's
+                // content — and on iPad the TRAILING inset is what now decides
+                // which edge "the corner" means, which is exactly why that
+                // arithmetic lives in `PadLayout` and not inline.
+                .frame(maxWidth: .infinity, alignment: .trailing)
                 .padding(.leading, padShell.railInset)
                 .padding(.trailing, padShell.paneInset)
                 .padding(.horizontal, DS.Space.s4)

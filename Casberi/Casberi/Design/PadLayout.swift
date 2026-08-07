@@ -78,9 +78,20 @@ enum PadLayout {
     /// because they answer it with more columns rather than longer rows.
     static let wideMaxWidth: CGFloat = 1040
 
-    /// The floating agent bar's cap. A capsule holding one placeholder line
-    /// has no business being 1376pt wide.
-    static let agentBarMaxWidth: CGFloat = 680
+    /// The floating cluster's cap — today that is the whisper capsule alone.
+    ///
+    /// It was `agentBarMaxWidth` (680) and it capped the BAR, because the bar
+    /// spanned the shell and a capsule holding one placeholder line has no
+    /// business being 1376pt wide. Since 2026-08-07 the bar hugs its own two
+    /// controls in the bottom-right corner and needs no cap at any width; the
+    /// whisper above it still does, and wants a tighter one than the bar ever
+    /// did — it is a title over a line of facts, not a row of chrome, so past
+    /// a reading column's worth of width the words simply drift apart.
+    ///
+    /// Deliberately above any iPhone's usable width (the widest is ~430pt, less
+    /// two `s4` insets), so this binds on iPad and Mac only and the phone keeps
+    /// its whole column.
+    static let floatingClusterMaxWidth: CGFloat = 420
 }
 
 /// The shell's two iPad columns, restated for a layer that sits OUTSIDE
