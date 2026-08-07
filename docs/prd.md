@@ -18789,3 +18789,17 @@ it at the bottom with the "N things" count line — so ranks 2 and 3 now state
 their value where they previously showed none and a count line respectively.
 That is the correction working, not a side effect to trim: the cell got bigger
 because it ranks higher, and a bigger cell has room to say more.
+
+**Six cells stands (user, 2026-08-07).** Capping every map at five was raised
+as a possibly-easier route to the same fix — "we can make the treemaps show
+only top 5 … if that is easier, we don't need to show 6 always" — and it isn't
+easier, because the six-cell table was already correct as of §328; the bug was
+a stale copy of it, which a cap would have left in place. Five was then weighed
+on its own merits and declined. It costs a named seller in the x402 room
+(`drawnCap` would fall 5 → 4 to keep room for the folded tail) and a term in
+every topic map, and it buys nothing at full width, where a 1-unit cell is
+about a quarter of the card. The cramping five would have relieved is real only
+at TILE scale, and §334 already measured that and capped tile maps at four.
+Ranks 4–5 are 1×1 under both tables, so §335 makes no cell smaller than the
+five-cell layout already did. Do not re-open this as a rendering fix; it is a
+density preference, and the answer was six.
