@@ -80,7 +80,10 @@ grep -q 'thing.embedding = nil' "Casberi/Casberi/Model/ThreadDigest.swift" \
 # The negative sweep reads a COMMENT-STRIPPED copy: the source DOCUMENTS this
 # rule by naming the very methods it governs, so a guard grepping raw source
 # fires against the prose explaining it (the Obsidian/Cursor lesson).
-STRIPPED="$(mktemp)"; trap 'rm -f "$STRIPPED"' EXIT
+# No `trap … EXIT` here: this script sets one later for its own $TMP, and a
+# second EXIT trap REPLACES the first rather than adding to it — so a trap here
+# would be silently discarded and leak the file. Removed explicitly instead.
+STRIPPED="$(mktemp)"
 sed 's://.*::; s:^ *///.*::' "$EMBED" "$ASKCMD" > "$STRIPPED"
 
 grep -q 'serialized({ model.vector(for: trimmed) })' "$EMBED" \
@@ -106,10 +109,16 @@ fi
 # for them. That scope is only correct while it stays true — a third file
 # taking its own model would be un-swept and invisible, so it fails here
 # instead. (Comment-stripped: several files discuss NLEmbedding in prose.)
+#
+# The `|| true` is load-bearing under `set -e`: the loop's exit status is its
+# LAST iteration's, and the last file checked normally does NOT match, so the
+# command substitution returns 1 and `VAR=$(…)` aborts the whole script —
+# exit 1, no output, on a perfectly clean tree. Verified by running it.
 THIRD=$(for f in $(grep -rl 'NLEmbedding' --include=*.swift Casberi/ 2>/dev/null); do
           case "$f" in *EmbeddingIndex.swift|*AskCommands.swift) continue;; esac
           sed 's://.*::; s:^ *///.*::' "$f" | grep -q 'NLEmbedding' && echo "$f"
-        done)
+        done || true)
+rm -f "$STRIPPED"
 [[ -z "$THIRD" ]] \
   || { echo "✗ a third file holds an NLEmbedding and is not covered by the sweep above: $THIRD"; exit 1; }
 
