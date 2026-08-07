@@ -74,6 +74,14 @@ KNOWN_EXEMPT = {
     # no release build and nobody using Reduce Motion will ever reach it.
     # A conscious ruling, not a snooze.
     "RootShell.swift:RootShell": "the -openAppsDelay probe hook, DEBUG-only",
+    # FlowFigure's entrance is real and lives one struct UP: `FigureView` owns
+    # the one `grown` clock every panel figure shares (with the Reduce Motion
+    # collapse the first check demands) and hands it down as `t`, which
+    # FlowFigure applies as `.opacity(t)`. Splitting a second entrance state
+    # into the child would put two clocks on one tile — the exact double-deal
+    # BerryRain's "ONE gesture deals ONE shower" lesson forbids. The audit
+    # can't follow a value across a struct boundary, so: a conscious ruling.
+    "AgentPanelGrid.swift:FlowFigure": "entrance is FigureView's shared clock, passed as t",
     # `size * 0.3` on the state badge is a FIXED proportion of the mark's own
     # size parameter, not a magnitude read off data — the same shape
     # `WalletFace`'s identicon blobs already draw (`d * 0.5`, `d * 0.42`),

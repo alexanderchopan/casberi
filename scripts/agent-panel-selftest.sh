@@ -54,8 +54,13 @@ func bars(_ values: [Int]) -> [AgentPanel.Bar] {
     values.enumerated().map { AgentPanel.Bar(label: "b\($0.offset)", value: $0.element,
                                              detail: "\($0.element)") }
 }
-func card(_ source: String, _ figure: AgentPanel.Figure, affinity: Int = 0) -> AgentPanel.Card {
-    AgentPanel.Card(source: source, title: "t", caption: "c", figure: figure, affinity: affinity)
+func card(_ source: String, _ figure: AgentPanel.Figure, key: String? = nil,
+          affinity: Int = 0) -> AgentPanel.Card {
+    AgentPanel.Card(source: source, key: key ?? source, title: "t", caption: "c",
+                    figure: figure, affinity: affinity)
+}
+func lanes(_ usds: [Double]) -> [AgentPanel.FlowLane] {
+    usds.enumerated().map { AgentPanel.FlowLane(name: "l\($0.offset)", usd: $0.element, count: 1) }
 }
 
 // ─────────────────── which readings are too thin to draw ───────────────────
@@ -73,6 +78,12 @@ var oneDay = Array(repeating: 0, count: 84); oneDay[40] = 1
 check(!AgentPanel.Figure.pulse(oneDay).isEmpty, "one live day is a real pulse")
 check(AgentPanel.Figure.pulse([1, 2, 3]).isEmpty, "a pulse shorter than a week is not a rhythm")
 
+// The flow — the figure the user asked for by name.
+check(AgentPanel.Figure.flow(inLanes: lanes([100]), outLanes: []).isEmpty,
+      "one side alone is a bar chart pretending to be a flow")
+check(!AgentPanel.Figure.flow(inLanes: lanes([100]), outLanes: lanes([40])).isEmpty,
+      "one lane each side is a real flow")
+
 // ─────────────────── ranking ───────────────────
 print("rank")
 let ranked = AgentPanel.rank([
@@ -87,6 +98,16 @@ let deduped = AgentPanel.rank([
     card("Instagram", .bars(bars([9, 8])), affinity: 5),
 ])
 check(deduped.count == 1, "a doubly-registered room takes one tile, not two")
+
+// …but the dedupe keys on KEY, not source: the Wallet legitimately holds its
+// curve and its flow as two cards. Keying on source would silently drop the
+// sankey, which is exactly the figure the user asked for by name.
+let wallet = AgentPanel.rank([
+    card("Wallet", .curve([1, 2, 3]), key: "wallet.curve", affinity: 5),
+    card("Wallet", .flow(inLanes: lanes([100]), outLanes: lanes([40])),
+         key: "wallet.flow", affinity: 5),
+])
+check(wallet.count == 2, "the Wallet's curve and flow both survive under their own keys")
 
 // Empty figures never become tiles.
 check(AgentPanel.rank([card("X", .treemap(cells(1)))]).isEmpty,
@@ -183,8 +204,14 @@ mutate "a zero leader yields NaN bar widths" \
         }' \
   'let top = bars.map(\.value).max() ?? 0' || rc=1
 mutate "a room can take two tiles" \
-  'guard !out.contains(where: { $0.source == card.source }) else { return }' \
+  'guard !out.contains(where: { $0.key == card.key }) else { return }' \
   'if false { return }' || rc=1
+mutate "dedupe keys on source and eats the sankey" \
+  'guard !out.contains(where: { $0.key == card.key }) else { return }' \
+  'guard !out.contains(where: { $0.source == card.source }) else { return }' || rc=1
+mutate "a one-sided flow draws" \
+  'case .flow(let inL, let outL): return inL.isEmpty || outL.isEmpty' \
+  'case .flow(let inL, let outL): return inL.isEmpty && outL.isEmpty' || rc=1
 mutate "the panel loses its cap" \
   'guard out.count < maxCards else { return }' \
   'if false { return }' || rc=1
@@ -237,6 +264,12 @@ guard_has "affinity rides ChipMemory" "$COMPOSER" 'ChipMemory\.weight\(for:' || 
 guard_has "import receipts are excluded" "$COMPOSER" 'Corpus\.isImportReceipt' || rc=1
 # A tap must land you in the room the tile previewed.
 guard_has "a tile tap switches the room" "$COMPOSER" 'filter\.source = source' || rc=1
+# The sankey rides the room's own composer — the panel must not grow a second
+# flow engine that can disagree with the feed's band.
+guard_has "the flow card rides WalletFlowSource" "$COMPOSER" 'WalletFlowSource\.band\(from:' || rc=1
+# …and it must take a full-width slot: half a sankey is unreadable by the
+# sizing inventory this panel was built against.
+guard_has "a flow figure demands full width" "$GRID" 'case \.flow = figure \{ return true \}' || rc=1
 # §334's tripwire: the moment a figure can be words, the panel is a list again.
 if sed 's|//.*||' "$SRC" | grep -qE 'case text\('; then
   print "  ✗ a Figure case may never be text (§334's tripwire)"; rc=1

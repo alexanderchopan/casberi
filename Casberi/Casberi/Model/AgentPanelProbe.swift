@@ -30,16 +30,8 @@ import Foundation
 enum AgentPanelProbe {
     static func log(_ c: AgentPanel.Composition) {
         guard UserDefaults.standard.string(forKey: "agentOpenProbe")?.isEmpty == false else { return }
-        NSLog("[Casberi] agentPanel| empty=%@ notice=%@ cards=%d",
-              c.isEmpty ? "YES" : "NO",
-              c.notice == nil ? "none" : (c.notice!.deterministic ? "deterministic" : "model"),
-              c.cards.count)
-        if let n = c.notice {
-            NSLog("[Casberi] agentPanelLead| evidence=%d claim=%@", n.evidence.count, n.claim)
-            for e in n.evidence {
-                NSLog("[Casberi] agentPanelEvidence| %@ · %@", e.source, e.title)
-            }
-        }
+        NSLog("[Casberi] agentPanel| empty=%@ cards=%d",
+              c.isEmpty ? "YES" : "NO", c.cards.count)
         // The FIGURE KIND is the field that matters: a room drawing bars where
         // its own screen draws a treemap is the drift this probe exists for,
         // and both render as a perfectly good-looking tile.
@@ -59,6 +51,7 @@ enum AgentPanelProbe {
         case .pulse(let p):   return "pulse(\(p.filter { $0 > 0 }.count) live of \(p.count))"
         case .curve(let v):   return "curve(\(v.count))"
         case .wall(let u):    return "wall(\(u.count))"
+        case .flow(let i, let o): return "flow(\(i.count) in, \(o.count) out)"
         }
     }
 }

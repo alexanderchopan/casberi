@@ -18734,6 +18734,32 @@ place it costs most. It is the harness's first mutation.
 fold, and their harness. They were one day old. The kept-ask pills come back
 unfiltered, since there are no tiles left to duplicate them.
 
+**Amendment, same day — layout B, the lead card removed, and the sankey.** The
+first cut led with a `Notice` card (the model's claim plus evidence chips) over
+a uniform grid. Both halves changed on the user's rulings within hours. (1)
+"One intro sentence and the rest ONLY visualizations": the greeting IS that
+sentence, so the lead card was text synthesis wearing a hero slot — deleted,
+not demoted. The composed line keeps its other homes (the Noticed chip, the
+brief); this surface stopped being one of them. (2) The grid became the BENTO:
+the top-ranked room takes a full-width double-height hero cell, the next a tall
+column beside two smalls, the rest pair off — hierarchy for free, since the
+hero is just `rank`'s first card. The pattern is FIXED (`AgentPanel.Slot.at`),
+never derived from content measurements, because a layout that re-derives
+itself re-shuffles when a figure changes shape. (3) "I want for example the
+sankey diagram to show when it's populated": `.flow` joined the figure set,
+fed by `WalletFlowSource.band` (pure over `[Thing]`, inheriting the room's own
+honesty gates — it declines an unpriceable or single-sided window itself) over
+a fixed 30-day window, since the panel has no range control and a tile is a
+glance. A flow ALWAYS takes a full-width band row regardless of rank — the
+sizing inventory is explicit that three labelled columns cannot survive half
+width — and `FlowFigure` is a reduction of `WalletFlowBand`, not a copy: same
+one-scale rule (both sides share `max(in, out)`, or a $200 outflow week draws
+as wide as a $20,000 inflow week), same equal-hue ribbons, three lanes a side,
+no chips. This forced `Card.key` apart from `Card.source`: the Wallet is the
+one room with two panel-worthy figures, so the one-tile-per-room rule keys on
+`key` — and the harness's sharpest new mutation is reverting that dedupe to
+`source`, which silently eats the sankey the user asked for by name.
+
 **Noted, not fixed (out of scope):** `GenTagMap`'s private six-cell frame table
 still carries the inverted-rank layout that `UnitTreemap` was corrected away
 from on 2026-08-06 — rank 3 drawing smaller than ranks 4–5. The wallet holdings

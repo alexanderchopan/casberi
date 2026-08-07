@@ -59,6 +59,14 @@ enum AgentPanel {
         var tone: Int
     }
 
+    /// One side-lane of the flow band — `WalletFlow.Lane`, flattened.
+    struct FlowLane: Equatable {
+        var name: String
+        var usd: Double
+        /// Legs folded into this lane; the view says "×3" when > 1.
+        var count: Int
+    }
+
     /// What a card draws.
     ///
     /// Every case is a SHAPE, never a sentence. Adding a `.text` case is the
@@ -77,6 +85,11 @@ enum AgentPanel {
         case curve([Double])
         /// A thumbnail wall — for rooms whose content IS pictures.
         case wall([String])
+        /// The money's sankey — inflows, the spine, outflows (§240's band).
+        /// Always a FULL-WIDTH cell: the inventory that sized this panel is
+        /// explicit that three columns of labelled lanes cannot survive half
+        /// width, and the user's ask was the diagram, not a thumbnail of one.
+        case flow(inLanes: [FlowLane], outLanes: [FlowLane])
 
         /// A figure with nothing in it draws nothing, and a tile that draws
         /// nothing is a tile that shouldn't exist. Checked at composition, so
@@ -94,55 +107,41 @@ enum AgentPanel {
             // divider rather than data.
             case .curve(let v):   return v.count < 3
             case .wall(let u):    return u.count < 4
+            // One side alone is a bar chart pretending to be a flow —
+            // `WalletFlow.band` already declines those windows, and this
+            // re-states it so a future caller can't hand one in.
+            case .flow(let inL, let outL): return inL.isEmpty || outL.isEmpty
             }
         }
     }
 
-    // MARK: - The lead
-
-    /// One flat thing, for the lead's evidence chips. Holds no `Thing`.
-    struct Item: Equatable {
-        var id: String
-        var title: String
-        var source: String
-    }
-
-    /// The claim at the top, and the things it is a claim ABOUT.
+    /// The whole surface — the figures, and nothing else.
     ///
-    /// The panel below answers "what do my rooms look like right now"; this
-    /// answers "what should I know". It survived the §334 rewrite unchanged
-    /// because it is the one thing on this surface that is not a figure and
-    /// should not be: a connection across your things is a sentence, and
-    /// drawing it would be decoration.
-    ///
-    /// `evidence` may be empty — the model can return a line with no usable
-    /// picks — and the claim still stands, just unverifiable by tapping.
-    struct Notice: Equatable {
-        var claim: String
-        var evidence: [Item]
-        /// True when a deterministic join stood in for the model's line. The
-        /// card's kicker changes wording on it: "noticed overnight" claims a
-        /// model looked, and saying that where none exists is §83's fake
-        /// status.
-        var deterministic: Bool
-    }
-
-    /// The whole surface.
+    /// §334's first cut led with a `Notice` card (a model-written claim with
+    /// evidence chips). It lasted a day: the user's ruling is "one intro
+    /// sentence and the rest ONLY visualizations", and the greeting already is
+    /// that sentence — so the lead card was text synthesis wearing a hero
+    /// slot, and it is gone rather than demoted. The composed line still
+    /// exists where it always lived (`HomeInsightStore`, the brief, the
+    /// Noticed chip); this surface just stopped being one of its homes.
     struct Composition: Equatable {
-        var notice: Notice?
         var cards: [Card] = []
 
         /// Nothing to show — the caller falls back to the greeting-and-chips
-        /// rest screen, which remains right for a new install. A lead with no
-        /// panel is still a surface worth drawing; a panel with no lead is too.
-        var isEmpty: Bool { notice == nil && cards.isEmpty }
+        /// rest screen, which remains right for a new install.
+        var isEmpty: Bool { cards.isEmpty }
     }
 
     // MARK: - Cards
 
     struct Card: Equatable {
-        /// The room this reading belongs to — also the tap target.
+        /// The room this reading belongs to — the TAP target.
         var source: String
+        /// The dedupe identity, distinct from `source` since 2026-08-07's flow
+        /// amendment: the Wallet is the one room with two panel-worthy figures
+        /// (its balance curve and its sankey), so the one-tile-per-room rule
+        /// keys on this instead. Every other caller passes the source itself.
+        var key: String
         /// The room's OWN hero title ("What your screenshots say"), never a
         /// title invented here: the panel is a window onto the room, and being
         /// able to recognise the card when you get there is the whole point.
@@ -152,6 +151,37 @@ enum AgentPanel {
         var figure: Figure
         /// `ChipMemory`'s decaying tap weight for this source.
         var affinity: Int
+    }
+
+    /// A ranked card's SLOT in the bento (prd §334 amendment, layout B).
+    ///
+    /// Derived from position, never stored: the hero is simply the top-ranked
+    /// card, which `rank` already puts first — so "your most-visited room gets
+    /// the big cell" costs no new signal. The pattern is fixed (hero, then a
+    /// tall beside two smalls, then pairs) because a layout that re-derives
+    /// itself from content measurements re-shuffles when a figure changes
+    /// shape, and a panel that rearranges between opens reads as broken —
+    /// the same total-order reasoning `rank` itself carries.
+    enum Slot: Equatable {
+        /// Full width, double height — the top-ranked room.
+        case hero
+        /// One column, double height — sits beside two smalls.
+        case tall
+        /// One column, single height.
+        case small
+        /// Full width, band height — the flow figure's slot, taken by SHAPE
+        /// rather than rank: a sankey's three labelled columns cannot survive
+        /// half width, so the grid routes every `.flow` here regardless of
+        /// where it ranked.
+        case band
+
+        static func at(_ index: Int) -> Slot {
+            switch index {
+            case 0:  return .hero
+            case 1:  return .tall
+            default: return .small
+            }
+        }
     }
 
     /// How many tiles the panel shows.
@@ -182,12 +212,13 @@ enum AgentPanel {
                 return a.source < b.source
             }
             .reduce(into: [Card]()) { out, card in
-                // One card per room. A room can qualify for several figures
-                // (Instagram has both a treemap and a year), and the room
-                // itself already picks one — but the composer asks the
-                // registries independently, so this is the guard that keeps a
-                // double-registered room from taking two tiles.
-                guard !out.contains(where: { $0.source == card.source }) else { return }
+                // One card per KEY. A room can qualify for several registry
+                // figures (Instagram has both a treemap and a year) and the
+                // room itself picks one, so a double-registered room must not
+                // take two tiles — but the key is not the source, because the
+                // Wallet legitimately holds two (curve and flow) under keys of
+                // their own.
+                guard !out.contains(where: { $0.key == card.key }) else { return }
                 guard out.count < maxCards else { return }
                 out.append(card)
             }
@@ -204,6 +235,7 @@ enum AgentPanel {
         case .rail(let s):    return s.count
         case .curve(let v):   return min(v.count, 8)
         case .wall(let u):    return u.count
+        case .flow(let inL, let outL): return inL.count + outL.count
         // A pulse is scored on its LIVE days, not its length: every registered
         // grid is 53 columns wide, so raw length would rank every heatmap
         // identically and always above everything else.

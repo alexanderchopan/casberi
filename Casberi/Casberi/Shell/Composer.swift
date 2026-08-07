@@ -874,12 +874,6 @@ struct Composer: View {
 
     // MARK: - The panel (prd §334)
 
-    /// How far back the deterministic lead looks for a cross-source echo.
-    /// A bound, not a display cap: `CrossSourceEcho.find` runs a fetch per
-    /// candidate, and this loop sits on the main actor between the tap and the
-    /// first frame.
-    private static let boardWindowCap = 24
-
 
     /// Compose the open: the lead, then every connected room's own figure.
     ///
@@ -895,7 +889,6 @@ struct Composer: View {
         // and then never touched again (liveness corollary 4).
         let corpus = all.filter(\.isLive)
         var out = AgentPanel.Composition()
-        out.notice = boardNotice(corpus: corpus)
 
         // Group by room. Import receipts are excluded everywhere here for the
         // reason every aggregate in this app excludes them: the app's own row
@@ -911,6 +904,12 @@ struct Composer: View {
             cards.append(card)
         }
         if let wallet = walletCurve() { cards.append(wallet) }
+        // The money's sankey (§240's flow band), whenever the window holds a
+        // band worth drawing — the user's ruling by name: "i want for example
+        // the sankey diagram to show when its populated". `WalletFlowSource`
+        // is pure over `[Thing]` and declines an unpriceable or single-sided
+        // window itself, so the panel inherits the room's own honesty gates.
+        if let flow = walletFlow(corpus: corpus) { cards.append(flow) }
         // Dictionary iteration above is per-process in its order; `rank` is a
         // TOTAL sort, which is what makes the panel identical across launches
         // (the §332 hashing bug, one surface over).
@@ -935,7 +934,7 @@ struct Composer: View {
     private func roomFigure(source: String, things: [Thing]) -> AgentPanel.Card? {
         func card(_ title: String, _ caption: String,
                   _ figure: AgentPanel.Figure) -> AgentPanel.Card {
-            AgentPanel.Card(source: source, title: title,
+            AgentPanel.Card(source: source, key: source, title: title,
                             caption: AgentPanel.clamp(caption), figure: figure,
                             affinity: ChipMemory.weight(for: source))
         }
@@ -1009,46 +1008,32 @@ struct Composer: View {
     private func walletCurve() -> AgentPanel.Card? {
         let samples = WalletStore.shared.combinedValueSamples().map(\.usd)
         guard samples.count >= 3 else { return nil }
-        return AgentPanel.Card(source: "Wallet",
+        return AgentPanel.Card(source: "Wallet", key: "wallet.curve",
                                title: String(localized: "Your balance"),
                                caption: "",
                                figure: .curve(samples.suffix(24).map { $0 }),
                                affinity: ChipMemory.weight(for: "Wallet"))
     }
 
-    /// The claim at the top — the model's line when there is one, and a
-    /// deterministic join when there isn't.
+    /// The wallet's flow band — the second Wallet card, under its own key.
     ///
-    /// The fallback is not a consolation prize: `HomeInsightStore` is gated on
-    /// `OnDeviceModel.isAvailable`, so on every device without Apple
-    /// Intelligence the lead would otherwise be permanently absent — the §282
-    /// shape, where half the product silently no-ops.
+    /// The window is the last 30 days rather than the feed's own selectable
+    /// range: the panel has no range control (a tile is a glance, not a
+    /// screen), and a fixed window keeps two opens comparable. Tapping lands
+    /// in the Wallet room, where the real band carries its window chips.
     @MainActor
-    private func boardNotice(corpus: [Thing]) -> AgentPanel.Notice? {
-        let insight = HomeInsightStore.shared
-        let byID = Dictionary(corpus.map { ($0.id.uuidString, $0) },
-                              uniquingKeysWith: { a, _ in a })
-        if let line = insight.line, !line.isEmpty {
-            let evidence = insight.pickedThingIDs.prefix(2).compactMap { id -> AgentPanel.Item? in
-                guard let thing = byID[id], thing.isLive else { return nil }
-                return AgentPanel.Item(id: id, title: thing.title, source: thing.source)
-            }
-            return AgentPanel.Notice(claim: line, evidence: Array(evidence), deterministic: false)
+    private func walletFlow(corpus: [Thing]) -> AgentPanel.Card? {
+        let since = Calendar.current.date(byAdding: .day, value: -30, to: .now)
+        guard let band = WalletFlowSource.band(from: corpus, since: since) else { return nil }
+        func lanes(_ lanes: [WalletFlow.Lane]) -> [AgentPanel.FlowLane] {
+            lanes.map { AgentPanel.FlowLane(name: $0.name, usd: $0.usd, count: $0.count) }
         }
-        // The deterministic stand-in — the newest recent thing whose link this
-        // corpus has already seen under another source's name.
-        let recent = corpus.sorted { $0.capturedAt > $1.capturedAt }.prefix(Self.boardWindowCap)
-        for thing in recent {
-            guard thing.isLive,
-                  let echo = CrossSourceEcho.find(for: thing, context: modelContext)
-            else { continue }
-            return AgentPanel.Notice(
-                claim: echo,
-                evidence: [AgentPanel.Item(id: thing.id.uuidString,
-                                           title: thing.title, source: thing.source)],
-                deterministic: true)
-        }
-        return nil
+        return AgentPanel.Card(source: "Wallet", key: "wallet.flow",
+                               title: String(localized: "Where money moved"),
+                               caption: "",
+                               figure: .flow(inLanes: lanes(band.inLanes),
+                                             outLanes: lanes(band.outLanes)),
+                               affinity: ChipMemory.weight(for: "Wallet"))
     }
 
     /// Fills the grid so the slots span DOORS, not four flavors of one
@@ -1850,7 +1835,6 @@ struct Composer: View {
             // the chips, which is the rest screen exactly as it was.
             if boardShowing {
                 AgentOpenBoard(composition: composition,
-                               onOpen: { id in path.append(id) },
                                onOpenRoom: { source in
                                    // Switch the feed to that room and lower the
                                    // agent — the panel is a window onto the
