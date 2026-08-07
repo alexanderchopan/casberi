@@ -41,6 +41,10 @@ enum NotifyKind: String, Sendable, CaseIterable {
     case poolCleared
     case paymentsSilent
     case priceRose
+    /// App Store Connect turned your release down (2026-08-06, prd §324).
+    /// Only the ALARMING verdicts reach here — an approval is welcome news you
+    /// will see the moment you open anything, and it already rains in-app.
+    case appRejected
     // — arrival
     case moneyIn
     case payoutPaid
@@ -53,7 +57,8 @@ enum NotifyKind: String, Sendable, CaseIterable {
     var cls: NotifyClass {
         switch self {
         case .disputeOpened, .deadlineNear, .approvalGranted,
-             .poolProofNeeded, .poolCleared, .paymentsSilent, .priceRose:
+             .poolProofNeeded, .poolCleared, .paymentsSilent, .priceRose,
+             .appRejected:
             return .alarm
         case .moneyIn, .payoutPaid, .likesReceived, .repliesReceived, .followersGained:
             return .arrival
@@ -73,6 +78,12 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .deadlineNear:     return 90    // a window closing on you
         case .approvalGranted:  return 80    // something CAN take funds
         case .poolProofNeeded:  return 70    // action required, no clock stated
+        // Action required and no clock stated — `poolProofNeeded`'s class,
+        // ranked just below it because that one is money that could be lost
+        // and this is a release that is merely stopped. Above `paymentsSilent`
+        // for the opposite reason: silence is a reading we inferred, a
+        // rejection is a decision somebody made about you.
+        case .appRejected:      return 65
         case .paymentsSilent:   return 60    // revenue stopped; nothing to click
         case .poolCleared:      return 50    // good news, act whenever
         case .priceRose:        return 40    // recurring money, already charged

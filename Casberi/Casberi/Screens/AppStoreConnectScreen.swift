@@ -45,7 +45,7 @@ struct AppStoreConnectScreen: View {
     @State private var flipTrigger = 0
 
     @State private var recent: [Thing] = []
-    @State private var apps: [String] = []
+    @State private var standings: [ASCStanding] = []
 
     private var hasKey: Bool {
         _ = credentialVersion
@@ -66,7 +66,11 @@ struct AppStoreConnectScreen: View {
             BridgeSetupHeader(
                 name: "App Store Connect",
                 mode: .pasteKey,
-                intro: "Add a key and what happens to your apps keeps arriving: a review verdict, a customer review, a build about to expire. Apple has no read-only role, so the promise is ours — Casberi only ever reads.",
+                // Trimmed 2026-08-06: the first cut listed the three shapes
+                // here AND the four reads in the checklist below — two lists of
+                // nearly the same thing, twenty words apart. The intro sells,
+                // the checklist bounds.
+                intro: "Add a key and Apple's verdicts, your customer reviews and expiring builds keep arriving. Apple has no read-only role, so the promise is ours.",
                 connected: hasKey,
                 flipTrigger: flipTrigger)
             if hasKey {
@@ -114,16 +118,17 @@ struct AppStoreConnectScreen: View {
                     }
                 }
                 BridgeStepLines(steps: [bridge.steps[0]], startingAt: 2)
-                // The four reads, as the honest ask. Unlike Stripe's and
-                // PostHog's checklists this is NOT a set of boxes to tick —
-                // Apple grants a ROLE, and the list is what that role will let
-                // this app see. Naming them here is the only way somebody can
-                // check afterwards that nothing else was read, which is the
-                // whole substitute for a scope this API doesn't offer.
-                DSCheckList(lines: ["Your apps, and their review status",
-                                    "Your customer reviews",
-                                    "Your builds, and when they expire",
-                                    "Nothing else — no sales, no analytics"])
+                // The READ BOUNDARY, and the only place it can be stated before
+                // somebody decides to paste. Unlike Stripe's and PostHog's
+                // checklists this is NOT a set of boxes to tick — Apple grants
+                // a ROLE — so it says what the role lets this app see and what
+                // it will never do, which is the whole substitute for a scope
+                // this API doesn't offer. Four short lines, deliberately not a
+                // second copy of the intro's arrival list.
+                DSCheckList(lines: ["Reads your apps' review status",
+                                    "Reads your reviews and builds",
+                                    "Never your sales or analytics",
+                                    "Never submits, releases or replies"])
                 BridgeStepLines(steps: Array(bridge.steps.dropFirst()), startingAt: 3)
                 // Three slabs, ONE verb — `DSSlabField`'s empty-`actionLabel`
                 // form, which exists for exactly this (Steam's profile beside
@@ -174,13 +179,26 @@ struct AppStoreConnectScreen: View {
     private var appsSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                if apps.isEmpty {
+                if standings.isEmpty {
                     Text("Reading your apps…")
                         .dsText(.callout15).foregroundStyle(DS.textTertiary)
                 } else {
-                    ForEach(apps, id: \.self) { name in
-                        Text(name)
-                            .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    // The NAME ALONE proved reach and said nothing (2026-08-06).
+                    // A role-based credential leaves one question open — not
+                    // "did the key work" but "does it reach the app I meant,
+                    // and where is that app" — and the state was the one thing
+                    // this screen held and never showed. Same standings the
+                    // room head reads, so the two can't disagree.
+                    ForEach(standings, id: \.appID) { standing in
+                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                            Text(standing.app.isEmpty ? standing.appID : standing.app)
+                                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                                .lineLimit(1)
+                            Spacer(minLength: DS.Space.s2)
+                            Text(stateLine(standing))
+                                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                                .lineLimit(1)
+                        }
                     }
                 }
                 BridgeSyncStatusRows(syncing: syncing,
@@ -196,7 +214,22 @@ struct AppStoreConnectScreen: View {
 
     private func load() {
         recent = recentBridgeThings(source: ASCShape.source, context: modelContext)
-        apps = ASCState.apps.values.filter { !$0.isEmpty }.sorted()
+        standings = ASCState.standing.values.sorted {
+            ($0.app.isEmpty ? $0.appID : $0.app) < ($1.app.isEmpty ? $1.appID : $1.app)
+        }
+    }
+
+    /// "In review · 2 days", or the state alone when this device never watched
+    /// it arrive — `ASCRoom`'s own wording and its own honest-duration rule, so
+    /// this screen and the room head can never phrase the same fact differently.
+    private func stateLine(_ standing: ASCStanding) -> String {
+        let state = ASCVersionState(rawValue: standing.state)
+        var line = ASCRoom.stateLabel(state)
+        if standing.observed,
+           let wait = ASCRoom.waitLabel(days: ASCRoom.days(from: standing.since, to: .now)) {
+            line += " · \(wait)"
+        }
+        return line
     }
 
     /// All three at once. The key and its ID are both required; the issuer is

@@ -513,6 +513,25 @@ enum ProbeHooks {
         Hook(key: "ascProbe") { _, _ in
             Task { @MainActor in await ASCIngest.diagnose() }
         },
+        // `-ascRoomProbe YES` — what the App Store Connect room LEADS with
+        // (2026-08-06, prd §324): every stored standing, then the card's own
+        // headline and ranked rows. One NSLog per line (the `-todayProbe`
+        // truncation lesson). Spends NOTHING — it composes the card off stored
+        // standings exactly as the room does, so it works against whatever the
+        // last real sync left behind and needs no key.
+        //
+        // An empty head has four causes that render as one nothing: not
+        // connected, no pass has run on this device (a fresh install syncs rows
+        // but not UserDefaults, so the feed is full and the standings empty),
+        // the key sees no apps, or the standings failed to decode. Only the
+        // last is a bug. The `ascStanding|` lines are the raw reading BEFORE
+        // ranking, so a card that led with the wrong app can be told from one
+        // whose data was already wrong.
+        Hook(key: "ascRoomProbe") { _, _ in
+            for line in ASCRoomSource.probeLines() {
+                NSLog("[Casberi] ascRoom| %@", line)
+            }
+        },
         // `-cursorProbe YES` walks the Cursor read phase by phase with the
         // STORED key (connect first via `-tokenBridge "Cursor:<key>"`), and
         // dumps one `cursorAgent|` line per run. Same lesson as the two above:

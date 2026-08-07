@@ -262,11 +262,15 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // App Store Connect owns its own screen the checklist beneath step 2
         // carries the reads rather than this step naming them twice (§220,
         // the PostHog/Stripe precedent).
+        // THREE steps, not four — the fourth was "Paste all three below", which
+        // is §220's own example of a step re-typing what is already on screen
+        // (three labelled fields sit directly beneath it). The role is named
+        // because it is the only lever anyone has over reach; the checklist
+        // under it says what that role lets Casberi see, so this step doesn't.
         case .appStoreConnect: [
             "Generate a key with the Developer role — the narrowest that works.",
             "Download the .p8. Apple only offers it once.",
-            "Copy the Key ID and the Issuer ID from the same page.",
-            "Paste all three below."]
+            "The Key ID and Issuer ID are on the same page."]
         }
     }
 
@@ -437,7 +441,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
             // CONDUCT, and the weakest grade in the catalog: an App Store
             // Connect key carries a ROLE, and no role is read-only for what
             // this reads — the same key could submit a version.
-            String(localized: "Add an App Store Connect key and what happens to your apps keeps arriving: a review verdict, a customer review, a build about to expire. Apple's keys have no read-only role, so the promise is ours to keep — Casberi only ever reads.")
+            String(localized: "Add a key and Apple's verdicts, your customer reviews and expiring builds keep arriving. Apple has no read-only role, so the promise is ours to keep — Casberi only ever reads.")
         }
     }
 

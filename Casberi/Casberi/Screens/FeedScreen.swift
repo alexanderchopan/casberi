@@ -469,7 +469,7 @@ struct FeedScreen: View {
 
     /// The shape a source takes when its chip is in force.
     private enum Shape {
-        case all, photos, wallet, calendar, gmail, chat, social, reminders, safari, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, x, x402, plain
+        case all, photos, wallet, calendar, gmail, chat, social, reminders, safari, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, x, x402, appStoreConnect, plain
         init(source: String) {
             switch source {
             case "All":                 self = .all
@@ -490,6 +490,14 @@ struct FeedScreen: View {
             // Same split as Snapchat: healed images as a grid, the rest as
             // rows.
             case "Files":               self = .files
+            // App Store Connect, 2026-08-06 — its own shape for ONE row type:
+            // a customer review is somebody else's words about your work, and
+            // `.plain` drew it as an 80-character title with the text stored
+            // and never rendered (the §313 X finding, one room over). Verdicts
+            // and builds keep the band — they are one-line facts, and giving
+            // them a card would spend the room's emphasis on the rows that
+            // need it least.
+            case ASCShape.source:       self = .appStoreConnect
             case "Wallet":              self = .wallet
             case "Calendar", "Cal.com", "Calendly": self = .calendar
             case "Gmail", "iCloud Mail": self = .gmail
@@ -1871,6 +1879,17 @@ struct FeedScreen: View {
                     X402RoomCard(room: room) { slug in
                         openBySourceRef("x402:\(slug)", in: visible)
                     }
+                case .appStoreConnect(let room):
+                    AppStoreConnectRoomCard(room: room) { app in
+                        openNewest(source: ASCShape.source, in: visible) { thing in
+                            // The card ranks an APP, which owns many rows, so
+                            // it can't name a `sourceRef` — the honest landing
+                            // is that app's most recent row, matched on the
+                            // link every one of its rows carries (the Apple
+                            // Wallet merchant rule).
+                            thing.content.contains("/apps/\(app.id)")
+                        }
+                    }
                 }
             }
         } else if let anniversary {
@@ -2625,6 +2644,7 @@ struct FeedScreen: View {
         case posthog(PostHogRoom)
         case appleWallet(AppleWalletRoom.Card)
         case x402(X402Room)
+        case appStoreConnect(ASCRoom)
     }
 
     /// Resolve this room's own head, or nil. One `switch` so adding a fourth
@@ -2641,6 +2661,11 @@ struct FeedScreen: View {
             return AppleWalletRoomSource.compose(things: visible).map { .appleWallet($0) }
         case X402Ingest.source:
             return X402RoomSource.compose(things: visible).map { .x402($0) }
+        // The one head here that reads no rows at all — its subject is STATE,
+        // and replaying the feed for it would let this card and the connect
+        // screen disagree about the same corpus. See `ASCRoomSource.compose`.
+        case ASCShape.source:
+            return ASCRoomSource.compose(things: visible).map { .appStoreConnect($0) }
         default:
             return nil
         }
@@ -2665,6 +2690,18 @@ struct FeedScreen: View {
         guard let match = visible.first(where: { $0.isLive && $0.sourceRef == ref })
         else { return }
         openThing(match)
+    }
+
+    /// Open the newest row of a source that a predicate accepts — `openMerchant`
+    /// generalised, for a head that ranks something owning MANY rows and so
+    /// cannot name a single `sourceRef`. Liveness is checked inside the filter,
+    /// before any stored property is read (corollary 3).
+    private func openNewest(source: String, in visible: [Thing],
+                            where matches: (Thing) -> Bool) {
+        let match = visible
+            .filter { $0.isLive && $0.source == source && matches($0) }
+            .max { $0.capturedAt < $1.capturedAt }
+        if let match { openThing(match) }
     }
 
     /// The list-row chrome every insight hero mounts in (clear background, no
@@ -4288,6 +4325,16 @@ struct FeedScreen: View {
                     // so each shelf gets one landmark instead of reading as an
                     // undifferentiated run.
                     CircleX402Row(thing: thing, lead: index == 0)
+                }
+            case .appStoreConnect:
+                if thing.tags.contains("Review") {
+                    AppReviewRow(thing: thing)
+                } else {
+                    BandRow(thing: thing,
+                            emphasized: thing.id == nextEventID,
+                            live: false,
+                            imageOnly: imageOnly,
+                            wideArt: wideArt)
                 }
             case .safari: ReadingRow(thing: thing)
             default:

@@ -2538,3 +2538,69 @@ struct WatchlistLede: View {
     }
 }
 
+
+
+// MARK: - App Store Connect — the review row (2026-08-06, prd §324)
+
+/// A customer review, in the room that holds it.
+///
+/// The §313 X-room finding, one room over: the words are the payoff and they
+/// were stored and never drawn. A review's body lands on `Thing.summary` (the
+/// Cursor display-copy rule — it is the whole reason to keep the row), and
+/// `.plain` rendered the row as `titleLine`'s 80-character clamp with the text
+/// hidden behind a tap. Somebody wrote that about your app; it should be
+/// readable without opening anything.
+///
+/// The stars are already at the head of the title (`ASCShape.reviewTitle`) and
+/// are NOT re-drawn here. Re-deriving them would mean either parsing prose back
+/// apart or storing the rating twice, and the title's own leading glyphs are
+/// exactly the visual this row wants — so it draws the title it was given.
+///
+/// Only reviews take this shape. A verdict and a build keep the band: both are
+/// one-line facts, and giving them a card would spend the room's emphasis on
+/// the rows that need it least.
+struct AppReviewRow: View {
+    let thing: Thing
+
+    /// What they actually wrote. Nil when the review carried only a rating and
+    /// a title, which is common and is not a defect — the row is then just its
+    /// title line, which is still the whole review.
+    private var bodyText: String? {
+        guard let text = thing.summary?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !text.isEmpty, text != thing.title else { return nil }
+        return text
+    }
+
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
+    /// re-evaluates a LEAF view's body on the model's own observation,
+    /// independent of the parent that made it.
+    var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Text(thing.title)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: DS.Space.s2)
+                LiveTimeText(date: thing.capturedAt)
+            }
+            if let bodyText {
+                Text(bodyText)
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    // Six lines, then the sheet. A review long enough to
+                    // overflow this is rare, and an unclamped card would let
+                    // one furious paragraph own the whole room.
+                    .lineLimit(6)
+            }
+            if let handle = thing.authorHandle, !handle.isEmpty {
+                Text(handle)
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+            }
+        }
+        .padding(.vertical, DS.Space.s2)
+    }
+}

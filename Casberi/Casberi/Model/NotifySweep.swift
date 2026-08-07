@@ -135,6 +135,18 @@ enum NotifySweep {
     static func classify(_ thing: Thing, now: Date) -> NotifyKind? {
         guard let ref = thing.sourceRef else { return nil }
 
+        // — App Store Connect: a verdict that STOPS a release. The ref carries
+        //   the state (`asc:version:<id>:<STATE>` — see `ASCIngest`), so this
+        //   reads the decision rather than the title's prose, and only the
+        //   alarming ones qualify. An approval deliberately does not notify: it
+        //   is welcome news you will see the moment you open anything, it
+        //   already rains in-app, and spending the right-hand slot on good news
+        //   is what §306 spent a ruling avoiding.
+        if ref.hasPrefix("asc:version:") {
+            let state = ASCVersionState(rawValue: String(ref.split(separator: ":").last ?? ""))
+            return state?.alarming == true ? .appRejected : nil
+        }
+
         // — Wallet: something gained the power to move funds.
         if ref.hasPrefix("wallet:approval:") || ref.hasPrefix("wallet:permit2:") {
             return .approvalGranted
@@ -263,6 +275,11 @@ enum NotifySweep {
         case .poolCleared:      return String(localized: "Clear to withdraw")
         case .paymentsSilent:   return String(localized: "Payments went quiet")
         case .priceRose:        return String(localized: "A subscription went up")
+        // Deliberately not "Rejected": the ROW's title already leads with the
+        // exact verdict ("Metadata rejected · Casberi 1.4") and rides in the
+        // body, so a headline repeating it would say one word twice. This says
+        // who decided, which the row doesn't.
+        case .appRejected:      return String(localized: "App Review turned it down")
         case .moneyIn:          return String(localized: "Money arrived")
         case .payoutPaid:       return String(localized: "Paid out")
         case .likesReceived:    return String(localized: "Liked your post")

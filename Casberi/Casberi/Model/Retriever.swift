@@ -649,6 +649,19 @@ enum Retriever {
             // YouTube" narrows, "something short" can't quietly empty a
             // result.
             (["shorts", "short"], "Shorts"),
+            // App Store Connect's three halves (2026-08-06, prd §324). The
+            // room mixes what Apple decided, what customers wrote, and what
+            // your builds did — three genuinely different questions, and until
+            // now nothing could ask one of them.
+            //
+            // The gating rule earns its keep here more than anywhere: "review",
+            // "release" and "build" are all ordinary English AND all words this
+            // app's own corpus is full of (a saved article about a release, a
+            // note about building something). Behind a named source they
+            // narrow; unscoped they can never quietly empty a result.
+            (["my reviews", "reviews", "review", "ratings", "rating"], "Review"),
+            (["releases", "release", "versions", "version"], "Release"),
+            (["builds", "build"], "Build"),
         ]
         let haystack = " " + query.lowercased()
             .components(separatedBy: CharacterSet.alphanumerics.inverted)

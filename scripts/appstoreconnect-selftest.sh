@@ -167,6 +167,60 @@ grep -q 'thing.dueAt = expires' "$ASC" \
 grep -qi 'reconcileASC\|reconcileAppStore' "$BRIDGES" \
   && { echo "✗ an App Store Connect reconcile pass appeared — every row here should be final"; exit 1; }
 
+# --- the room head (prd §324) -----------------------------------------------
+ROOM="Casberi/Casberi/Model/ASCRoom.swift"
+ROOMSRC="Casberi/Casberi/Model/ASCRoomSource.swift"
+FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+for f in "$ROOM" "$ROOMSRC" "$FEED"; do
+  [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
+done
+
+# THE HONEST-DURATION PAIR. On first connect a version that has been in review
+# for three days is seen for the first time TODAY, so a duration computed from
+# `since` reads "In review · 0 days" — a confident wrong answer about the one
+# number anybody is watching. `observed` is what stops that, and it may only
+# become true on a transition this device actually watched.
+grep -q 'observed = true' "$ASC" \
+  || { echo "✗ ASCStanding.observed is never set — the head would quote a duration it never watched"; exit 1; }
+grep -q 'standing.observed ? ASCRoom.days' "$ROOMSRC" \
+  || { echo "✗ the room head no longer gates its duration on observed (§83)"; exit 1; }
+
+# ONLY THE NEWEST BUILD MAY CARRY AN EXPIRY ROW. Without this every build in
+# the window lands one, and a superseded build's death sits in the feed beside
+# the live one's.
+grep -q 'mayExpire: index == 0' "$ASC" \
+  || { echo "✗ every build can land an expiry row again — the feed fills with superseded deadlines"; exit 1; }
+
+# The head must be REACHED. A perfect ranking is worthless if no room draws it —
+# the §219 social-roster bug, which shipped and rendered nowhere for weeks.
+grep -q 'ASCRoomSource.compose(things: visible)' "$FEED" \
+  || { echo "✗ the App Store Connect head is not wired into shapedSections — it can never draw"; exit 1; }
+grep -q 'AppStoreConnectRoomCard(room: room)' "$FEED" \
+  || { echo "✗ the head resolves but no card renders it"; exit 1; }
+# …and the review row, for the same reason.
+grep -q 'AppReviewRow(thing: thing)' "$FEED" \
+  || { echo "✗ reviews no longer render as their own row — the words go back to being invisible"; exit 1; }
+
+# THE REJECTION ALARM (prd §324). Only the ALARMING verdicts may notify — an
+# approval is welcome news you will see the moment you open anything, and §306
+# spent a whole ruling on not spending the right-hand slot for good news. The
+# classifier reads the STATE out of the ref rather than the title's prose, so
+# this pins both halves.
+SWEEP="Casberi/Casberi/Model/NotifySweep.swift"
+grep -q 'ref.hasPrefix("asc:version:")' "$SWEEP" \
+  || { echo "✗ a rejection no longer notifies — NotifySweep stopped classifying asc:version rows"; exit 1; }
+grep -q 'state?.alarming == true ? .appRejected : nil' "$SWEEP" \
+  || { echo "✗ the rejection alarm no longer gates on `alarming` — an approval would buzz too"; exit 1; }
+
+# The two windows are spelled SEPARATELY because `ASCRoom` is Foundation-only
+# and cannot read the ingest's constant. Pinned here so they cannot drift: a
+# build could otherwise be ranked "expiring soon" by the card on a day the
+# ingest refuses to land a row for it.
+ingest_days=$(grep -oE 'expiryWindow: TimeInterval = [0-9]+' "$ASC" | grep -oE '[0-9]+$')
+card_days=$(grep -oE 'expirySoonDays = [0-9]+' "$ROOMSRC" | grep -oE '[0-9]+$')
+[[ -n "$ingest_days" && "$ingest_days" == "$card_days" ]] \
+  || { echo "✗ the expiry windows drifted: ingest=${ingest_days}d card=${card_days}d"; exit 1; }
+
 # --- extract the shipped enums ----------------------------------------------
 extract() {  # $1 = source file, $2 = destination
   python3 - "$1" "$SUPPORT" "$2" <<'PY'
@@ -507,6 +561,115 @@ let clampedReview = IngestSupport.titleLine(longReview)
 check("a one-star review keeps its star through the clamp",
       clampedReview.hasPrefix("★☆☆☆☆"))
 
+// ── the room head (prd §324) ───────────────────────────────────────────────
+print("ASCRoom.days — whole CALENDAR days, not seconds/86400")
+let cal = Calendar(identifier: .gregorian)
+func at(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 12) -> Date {
+    cal.date(from: DateComponents(year: y, month: m, day: d, hour: h))!
+}
+check("same day is 0",     ASCRoom.days(from: at(2026, 8, 6), to: at(2026, 8, 6), calendar: cal) == 0)
+check("tomorrow is 1",     ASCRoom.days(from: at(2026, 8, 6), to: at(2026, 8, 7), calendar: cal) == 1)
+// The boundary that a seconds-based version gets wrong: 11pm to 1am next day
+// is two hours, and one calendar day. "Expires Aug 7" means the day.
+check("11pm → 1am next day is 1, not 0",
+      ASCRoom.days(from: at(2026, 8, 6, 23), to: at(2026, 8, 7, 1), calendar: cal) == 1)
+check("the past is negative", ASCRoom.days(from: at(2026, 8, 6), to: at(2026, 8, 1), calendar: cal) == -5)
+
+func app(_ name: String, _ state: ASCVersionState?, days: Int? = nil,
+         build: String = "", expires: Int? = nil) -> ASCRoom.App {
+    ASCRoom.App(id: name.lowercased(), name: name, version: "1.0", state: state,
+                days: days, build: build, expiresInDays: expires)
+}
+
+print("ASCRoom.rank — what a developer needs to see first")
+check("a rejection outranks everything", ASCRoom.rank(app("A", .rejected)) == 4)
+check("metadata rejected ranks with it", ASCRoom.rank(app("A", .metadataRejected)) == 4)
+check("in review is next",               ASCRoom.rank(app("A", .inReview)) == 3)
+check("approved-and-waiting is next",    ASCRoom.rank(app("A", .pendingDeveloperRelease)) == 3)
+check("an expiring build outranks live",
+      ASCRoom.rank(app("A", .readyForSale, expires: 3)) == 2)
+check("a build expiring in three months does not",
+      ASCRoom.rank(app("A", .readyForSale, expires: 80)) == 1)
+check("live with no build ranks 1",      ASCRoom.rank(app("A", .readyForSale)) == 1)
+check("no readable state ranks 0",       ASCRoom.rank(app("A", nil)) == 0)
+// A rejection has no clock and an expiry does — but the rejection stops the
+// release entirely, so it still leads.
+check("a rejection outranks an expiring build",
+      ASCRoom.rank(app("A", .rejected)) > ASCRoom.rank(app("B", .readyForSale, expires: 1)))
+
+print("ASCRoom.ordered — a total order, so two runs never disagree")
+let mixed = [app("Zed", .readyForSale), app("Alpha", .rejected),
+             app("Mid", .readyForSale, expires: 2), app("Beta", .inReview)]
+check("the rejection leads",   ASCRoom.ordered(mixed).first?.name == "Alpha")
+check("then in review",        ASCRoom.ordered(mixed)[1].name == "Beta")
+check("then the expiring one", ASCRoom.ordered(mixed)[2].name == "Mid")
+check("then the quiet one",    ASCRoom.ordered(mixed)[3].name == "Zed")
+// Determinism: a card that reshuffles on every foreground reads as broken.
+check("the order is stable across runs",
+      ASCRoom.ordered(mixed).map(\.name) == ASCRoom.ordered(mixed.reversed()).map(\.name))
+check("ties break by name, not by input order",
+      ASCRoom.ordered([app("Zed", .readyForSale), app("Ann", .readyForSale)])
+        .map(\.name) == ["Ann", "Zed"])
+
+print("ASCRoom.waitLabel — a duration we didn't watch is NOT shown (§83)")
+// The whole point: on first connect a version in review since Tuesday reads as
+// zero, and "In review · 0 days" is a confident wrong answer.
+check("nil days → nil",  ASCRoom.waitLabel(days: nil) == nil)
+check("0 days → nil",    ASCRoom.waitLabel(days: 0) == nil)
+check("negative → nil",  ASCRoom.waitLabel(days: -2) == nil)
+check("1 day is singular", ASCRoom.waitLabel(days: 1) == "1 day")
+check("2 days is plural",  ASCRoom.waitLabel(days: 2) == "2 days")
+
+print("ASCRoom.stateLabel — present tense, and never the feed row's wording")
+check("in review",   ASCRoom.stateLabel(.inReview) == "In review")
+check("live",        ASCRoom.stateLabel(.readyForSale) == "Live")
+check("rejected",    ASCRoom.stateLabel(.rejected) == "Rejected")
+check("unknown says so", ASCRoom.stateLabel(nil) == "Unknown")
+// A standing is not an announcement. "Casberi · Approved — yours to release ·
+// 2 days" is the row's sentence pasted into a card.
+check("a standing reads differently from a verdict",
+      ASCRoom.stateLabel(.pendingDeveloperRelease) != ASCVersionState.pendingDeveloperRelease.verdict)
+// Every state must have SOME label — a blank cell in the card is worse than
+// a plain word.
+check("every state has a label",
+      ASCVersionState.allCases.allSatisfy { !ASCRoom.stateLabel($0).isEmpty })
+
+print("ASCRoom.buildLabel — the runway in words")
+check("no build → nil", ASCRoom.buildLabel(app("A", .readyForSale)) == nil)
+check("a build with no expiry is just its number",
+      ASCRoom.buildLabel(app("A", .readyForSale, build: "267")) == "Build 267")
+check("expiring today",    ASCRoom.buildLabel(app("A", .readyForSale, build: "267", expires: 0)) == "Build 267 · expires today")
+check("expiring tomorrow", ASCRoom.buildLabel(app("A", .readyForSale, build: "267", expires: 1)) == "Build 267 · expires tomorrow")
+check("days left",         ASCRoom.buildLabel(app("A", .readyForSale, build: "267", expires: 9)) == "Build 267 · 9 days left")
+
+print("ASCRoom.headline / note")
+let room = ASCRoom(apps: ASCRoom.ordered(mixed), asOf: at(2026, 8, 6))
+check("the headline states the LEAD, not a count",
+      ASCRoom.headline(room) == "Alpha · Rejected")
+check("a watched duration joins the headline",
+      ASCRoom.headline(ASCRoom(apps: [app("Solo", .inReview, days: 2)], asOf: nil))
+        == "Solo · In review · 2 days")
+// The §83 line, as the headline sees it.
+check("an UNWATCHED state shows no duration",
+      ASCRoom.headline(ASCRoom(apps: [app("Solo", .inReview)], asOf: nil))
+        == "Solo · In review")
+check("an empty room has no lead", ASCRoom(apps: [], asOf: nil).isEmpty)
+check("undrawn apps are counted, never dropped",
+      ASCRoom.note(room, drawn: 2, now: at(2026, 8, 6))?.contains("2 more apps") == true)
+check("one undrawn app is singular",
+      ASCRoom.note(room, drawn: 3, now: at(2026, 8, 6))?.contains("1 more app") == true)
+check("nothing hidden and fresh → no note",
+      ASCRoom.note(room, drawn: 4, now: at(2026, 8, 6)) == nil)
+
+print("ASCRoom.staleNote — a reading from last week is a broken key")
+check("today is not stale",  ASCRoom.staleNote(asOf: at(2026, 8, 6), now: at(2026, 8, 6)) == nil)
+check("yesterday says so",   ASCRoom.staleNote(asOf: at(2026, 8, 5), now: at(2026, 8, 6)) == "read yesterday")
+check("a week says how long", ASCRoom.staleNote(asOf: at(2026, 7, 30), now: at(2026, 8, 6)) == "read 7 days ago")
+// Never-read and read-and-unchanged are different facts and only one is an
+// apology (the `StripeRoom.balanceRead` rule).
+check("never read is NOT the same as unchanged",
+      ASCRoom.staleNote(asOf: nil, now: at(2026, 8, 6)) == "not read on this device yet")
+
 print("")
 if failures == 0 {
     print("✓ app store connect self-test: all assertions passed")
@@ -516,7 +679,7 @@ if failures == 0 {
 }
 SWIFT
 
-if ! swiftc -O -o "$TMP/run" "$TMP/extracted.swift" "$TMP/main.swift" 2>"$TMP/build.log"; then
+if ! swiftc -O -o "$TMP/run" "$TMP/extracted.swift" "$ROOM" "$TMP/main.swift" 2>"$TMP/build.log"; then
   echo "✗ the extracted App Store Connect logic did not compile"
   grep -E 'error:' "$TMP/build.log" | head -20
   exit 1
@@ -551,7 +714,7 @@ PY
   if ! extract "$WORK/AppStoreConnectBridge.swift" "$WORK/extracted.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at extraction)"; return
   fi
-  if ! swiftc -O -o "$TMP/mut" "$WORK/extracted.swift" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -O -o "$TMP/mut" "$WORK/extracted.swift" "$ROOM" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then
@@ -644,5 +807,78 @@ mutate "a rejection also celebrated" \
              .readyForSale, .readyForDistribution, .rejected:
             true'
 
+
+# --- room-head mutations ----------------------------------------------------
+# `ASCRoom.swift` is compiled WHOLE rather than extracted, so it gets its own
+# mutator: same contract, different file.
+mutateRoom() {
+  local name="$1" from="$2" to="$3"
+  rm -rf "$WORK"; mkdir -p "$WORK"
+  cp "$ROOM" "$WORK/ASCRoom.swift"
+  MUT_FROM="$from" MUT_TO="$to" python3 - "$WORK/ASCRoom.swift" <<'PY2'
+import os, sys
+path = sys.argv[1]
+src = open(path).read()
+frm, to = os.environ["MUT_FROM"], os.environ["MUT_TO"]
+if frm not in src:
+    sys.stderr.write("ANCHOR-MISSING\n"); sys.exit(2)
+open(path, "w").write(src.replace(frm, to, 1))
+PY2
+  if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$WORK/ASCRoom.swift"; then
+    echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
+  fi
+  if ! swiftc -O -o "$TMP/mut" "$TMP/extracted.swift" "$WORK/ASCRoom.swift" "$TMP/main.swift" 2>/dev/null; then
+    echo "  ✓ $name (rejected at compile)"; return
+  fi
+  if "$TMP/mut" > /dev/null 2>&1; then
+    echo "  ✗ $name — the harness still passed, so nothing was testing this"; exit 1
+  fi
+  echo "  ✓ $name"
+}
+
+# 13. THE §83 LINE FOR THIS CARD: "In review · 0 days" on a version Apple has
+#     had since Tuesday. This is the mutation the whole `observed` machinery
+#     exists to make impossible.
+mutateRoom "a duration of zero shown as a measurement" \
+  'guard let days, days > 0 else { return nil }' \
+  'guard let days, days >= 0 else { return nil }'
+
+# 14. Calendar days become elapsed seconds — an 11pm read the night before an
+#     expiry reads as "0 days", i.e. today.
+mutateRoom "days measured in seconds, not calendar days" \
+  'let a = calendar.startOfDay(for: now)
+        let b = calendar.startOfDay(for: later)
+        return calendar.dateComponents([.day], from: a, to: b).day ?? 0' \
+  'return Int(later.timeIntervalSince(now) / 86400)'
+
+# 15. The ranking collapses, so a rejected app sorts behind a live one and the
+#     card leads with the thing that needs nothing.
+mutateRoom "a rejection stops leading the card" \
+  'if state.alarming { return 4 }' \
+  'if state.alarming { return 1 }'
+
+# 16. An expiring build no longer outranks a quiet app, so the one deadline
+#     this room has stops reaching the headline.
+mutateRoom "an expiring build ranks no higher than a live app" \
+  'if let expires = app.expiresInDays, expires <= expirySoonDays { return 2 }' \
+  'if let expires = app.expiresInDays, expires <= expirySoonDays { return 1 }'
+
+# 17. The order stops being total, so the card reshuffles between foregrounds
+#     over identical data.
+mutateRoom "ties resolved by input order instead of name" \
+  'return a.name < b.name' \
+  'return false'
+
+# 18. The runway loses its clock — "Build 267" for a build dying tomorrow.
+mutateRoom "the build label drops its expiry" \
+  'guard let days = app.expiresInDays else { return name }' \
+  'return name
+        guard let days = app.expiresInDays else { return name }'
+
+# 19. Never-read renders as up-to-date, so a key that stopped working three
+#     weeks ago shows a confident standing with nothing saying it is old.
+mutateRoom "a never-read bridge reads as fresh" \
+  'guard let asOf else { return String(localized: "not read on this device yet") }' \
+  'guard let asOf else { return nil }'
 echo
 echo "✓ app store connect self-test: assertions and mutations all passed"

@@ -565,9 +565,46 @@ enum ASCShape {
 /// sync of an account with six shipped versions would land six "Live on the
 /// App Store" rows dated today — pure backfill wearing news, which is exactly
 /// the bug `HyperliquidDeFi.sync` shipped and had to be fixed for.
+/// WHERE ONE APP STANDS RIGHT NOW — the state half of this bridge (§216), and
+/// the thing the feed rows structurally cannot say.
+///
+/// A row is an event: "Rejected · Casberi 1.4" is true forever and answers a
+/// question nobody asks twice. The question people actually open App Store
+/// Connect for is the present tense — *where is my build?* — and until this
+/// existed the answer lived nowhere in the app.
+///
+/// It costs NOTHING: every field is already fetched by the pass that lands the
+/// rows, and it is stored beside the diffing ledgers rather than re-read.
+struct ASCStanding: Codable, Equatable {
+    var appID: String
+    var app: String
+    /// The newest version's marketing string, and the state it is in.
+    var version: String
+    var state: String
+    /// When THIS DEVICE first saw that state. Meaningless unless `observed`.
+    var since: Date
+    /// Whether `since` came from a transition we actually watched happen.
+    ///
+    /// Load-bearing, and the §83 line for this card. On first connect a version
+    /// that has been in review for three days is seen for the first time
+    /// *today*, so a duration computed from `since` would read "In review · 0
+    /// days" — a confident wrong answer about the only number anybody is
+    /// watching. Apple publishes no "entered this state at" timestamp, so the
+    /// honest card shows the state with NO duration until it has seen the
+    /// change itself. This is the Hyperliquid held-duration rule (ground it in
+    /// our own first sight, never fabricate) with its missing half: say nothing
+    /// when our own first sight isn't the real one.
+    var observed: Bool
+    /// The newest build, its processing state, and when it dies.
+    var build: String
+    var buildState: String
+    var expires: Date?
+}
+
 enum ASCState {
 
     private static let appsKey     = "asc.apps"
+    private static let standingKey = "asc.standing"
     private static let versionsKey = "asc.versionStates"
     private static let buildsKey   = "asc.buildStates"
     private static let seededKey   = "asc.seeded"
@@ -607,9 +644,27 @@ enum ASCState {
         set { UserDefaults.standard.set(newValue, forKey: readKey) }
     }
 
+    /// Where every app stands, keyed by app id. JSON rather than a UserDefaults
+    /// dictionary because it carries Dates, which a plist dictionary of
+    /// `[String: Any]` would round-trip as `Any` and force every reader to
+    /// re-cast. A decode failure yields an empty book, which costs one silent
+    /// pass and heals on the next — never a crash.
+    static var standing: [String: ASCStanding] {
+        get {
+            guard let data = UserDefaults.standard.data(forKey: standingKey),
+                  let decoded = try? JSONDecoder().decode([String: ASCStanding].self,
+                                                          from: data) else { return [:] }
+            return decoded
+        }
+        set {
+            guard let data = try? JSONEncoder().encode(newValue) else { return }
+            UserDefaults.standard.set(data, forKey: standingKey)
+        }
+    }
+
     static func clear() {
         let d = UserDefaults.standard
-        for key in [appsKey, versionsKey, buildsKey, seededKey, readKey] {
+        for key in [appsKey, versionsKey, buildsKey, seededKey, readKey, standingKey] {
             d.removeObject(forKey: key)
         }
     }
@@ -745,6 +800,7 @@ enum ASCIngest {
         var landed: [Thing] = []
         var versionSeen = ASCState.versionStates
         var buildSeen = ASCState.buildStates
+        var standing = ASCState.standing
         var celebrating: Set<String> = []
         var alarming: Set<String> = []
 
@@ -776,16 +832,37 @@ enum ASCIngest {
                 landed.append(thing)
             }
 
-            for row in buildRows ?? [] {
+            // ONLY THE NEWEST BUILD MAY CARRY AN EXPIRY ROW (2026-08-06). The
+            // read is `sort=-uploadedDate`, so index 0 is it. Before this,
+            // every build inside the window landed one, and a superseded
+            // build's death sat in the feed beside the live one's — noise
+            // dressed as a deadline, since the answer to both is the same
+            // single upload. The older ones are not silently dropped: the room
+            // head's runway shows the whole shelf.
+            let builds = buildRows ?? []
+            for (index, row) in builds.enumerated() {
                 let shaped = buildThings(row, appID: appID, app: app,
-                                         seen: &buildSeen, firstSight: firstSight)
+                                         seen: &buildSeen, firstSight: firstSight,
+                                         mayExpire: index == 0)
                 landed.append(contentsOf: shaped.things)
                 if let ref = shaped.alarmRef { alarming.insert(ref) }
             }
+
+            // Where this app stands, for the room head and the connect screen.
+            // Composed from the SAME rows the landing above read — no extra
+            // request, and it cannot disagree with what landed.
+            standing[appID] = standingFor(appID: appID, app: app,
+                                          versions: versionRows ?? [],
+                                          builds: builds,
+                                          previous: standing[appID])
         }
 
         ASCState.versionStates = versionSeen
         ASCState.buildStates = buildSeen
+        // Apps this key can no longer see drop out rather than lingering as a
+        // standing nothing will ever update again (the `CloudflareDNSLedger`
+        // rule — a stale reading is worse than none, because it renders).
+        ASCState.standing = standing.filter { names.keys.contains($0.key) }
         ASCState.lastRead = .now
         ASCState.seeded = true
 
@@ -844,6 +921,55 @@ enum ASCIngest {
         return (thing, state)
     }
 
+    /// Where one app stands, from the rows this pass already read.
+    ///
+    /// The version chosen is the one with the newest `createdDate`, NOT the
+    /// first row: App Store Connect's default ordering for this collection is
+    /// not documented as newest-first, and picking by position would silently
+    /// report last year's release as the current state on some accounts.
+    ///
+    /// `since`/`observed` are the honest-duration pair — see `ASCStanding`.
+    @MainActor
+    private static func standingFor(appID: String, app: String,
+                                    versions: [[String: Any]], builds: [[String: Any]],
+                                    previous: ASCStanding?) -> ASCStanding {
+        let newest = versions.max { a, b in
+            let da = IngestSupport.isoDate(ASCFetch.attributes(a)["createdDate"]) ?? .distantPast
+            let db = IngestSupport.isoDate(ASCFetch.attributes(b)["createdDate"]) ?? .distantPast
+            return da < db
+        }
+        let vAttrs = newest.map(ASCFetch.attributes) ?? [:]
+        let state = newest.flatMap { ASCFetch.versionState(ASCFetch.attributes($0)) }
+        let stateRaw = state?.rawValue ?? ""
+
+        // A state we have watched CHANGE restarts the clock and is quotable; a
+        // state we are merely seeing for the first time is not.
+        let since: Date
+        let observed: Bool
+        if let previous, previous.state == stateRaw {
+            since = previous.since
+            observed = previous.observed
+        } else if previous != nil {
+            // A real transition, watched by this device. This is the only place
+            // `observed` becomes true.
+            since = .now
+            observed = true
+        } else {
+            since = .now
+            observed = false
+        }
+
+        let bAttrs = builds.first.map(ASCFetch.attributes) ?? [:]
+        let expired = bAttrs["expired"] as? Bool ?? false
+        return ASCStanding(
+            appID: appID, app: app,
+            version: ASCFetch.string(vAttrs, "versionString"),
+            state: stateRaw, since: since, observed: observed,
+            build: ASCFetch.string(bAttrs, "version"),
+            buildState: ASCFetch.string(bAttrs, "processingState"),
+            expires: expired ? nil : IngestSupport.isoDate(bAttrs["expirationDate"]))
+    }
+
     /// A customer review. Nothing to diff — a review either exists or doesn't,
     /// and `sourceRef` dedupe is the whole mechanism.
     @MainActor
@@ -892,7 +1018,8 @@ enum ASCIngest {
     @MainActor
     private static func buildThings(_ row: [String: Any], appID: String, app: String,
                                     seen: inout [String: String],
-                                    firstSight: Bool) -> (things: [Thing], alarmRef: String?) {
+                                    firstSight: Bool,
+                                    mayExpire: Bool) -> (things: [Thing], alarmRef: String?) {
         guard let id = ASCFetch.id(row) else { return ([], nil) }
         let attributes = ASCFetch.attributes(row)
         // A build's `version` attribute is the BUILD NUMBER ("267"), not the
@@ -927,7 +1054,7 @@ enum ASCIngest {
         // (the Aave/Morpho risk-crossing precedent — a position already near
         // liquidation when you start watching is news immediately).
         let expired = attributes["expired"] as? Bool ?? false
-        if !expired, let expires = IngestSupport.isoDate(attributes["expirationDate"]),
+        if mayExpire, !expired, let expires = IngestSupport.isoDate(attributes["expirationDate"]),
            expires > .now, expires.timeIntervalSinceNow < expiryWindow {
             let thing = Thing(
                 kind: .reminder,

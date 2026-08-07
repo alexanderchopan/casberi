@@ -522,7 +522,7 @@ enum BridgeCatalog {
                          "Only ever reads — it can't start an agent"],
               needsSetup: true, added: day(2026, 8, 4)),
         Offer(name: "App Store Connect", tagline: "How your app is doing",           group: "Work",      connectable: true,
-              summary: "What happens to your apps on Apple's side lands in your feed as it happens — a version rejected or approved, a customer review, a TestFlight build about to expire.\n\nConnects with an App Store Connect key. Apple has no read-only role, so the promise is kept by conduct: Casberi only ever reads — it never submits, releases, or replies to anything.",
+              summary: "What Apple does to your apps lands in your feed: a version rejected or approved, a customer review, a build about to expire.\n\nApple has no read-only role, so the promise is kept by conduct — Casberi only ever reads.",
               features: ["A review verdict lands the moment it changes",
                          "Customer reviews arrive with what people wrote",
                          "A TestFlight build warns you before it expires",
