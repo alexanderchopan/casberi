@@ -18673,3 +18673,70 @@ feed may never supply a subject (it is the app talking about itself); and the
 card must be shown to a person before it is shipped, which is what did not
 happen here — it was authored on Linux, UNBUILT by its own commit message, and
 first rendered on the user's device.
+
+## §334 — The agent's open is an instrument panel (user: "what if the agent shows a lead like it does, but then the rest is all / only visualizations from source feeds… show something they don't see on All and give the most info at a glance", 2026-08-07)
+
+**§332's open was still a list, and the user was right about it twice in one
+day.** It led with a claim and then spent the rest of the screen on answer
+tiles and a threaded ledger — rows of text, which is what the feed is for. The
+idea that replaced it is better than a fix, because it surfaces something that
+already existed and had nowhere to be seen.
+
+**The gap it fills is structural.** Every source room computes a hero
+visualization — a treemap of what your screenshots say, a leaderboard of who
+writes you, a mood split, a year of capture — and **none of it is visible
+unless you enter that room, one at a time.** The All feed structurally cannot
+show them: `FeedInsight`'s registries are pure over ONE room's things by
+contract, and a chart of everything at once is a chart of nothing. So there
+were roughly a dozen live readings, already computed on every open, with no
+surface that showed them together. The panel is that surface.
+
+**Only figures, and that is the ruling.** A card earns its slot by DRAWING
+something. Rooms whose hero is a sentence or a row of text — Stripe's rail,
+PostHog's readings, the approvals card — are deliberately absent; they have a
+perfectly good home already, and text tiles are exactly what made the previous
+open read as a list. `AgentPanel.Figure` has six cases and every one is a
+shape: treemap, bars, rail, pulse, curve, wall. **Adding a `.text` case is the
+tripwire for the whole feature**, and the harness fails the build on one.
+
+**It costs nothing.** Every figure is composed from things already in memory
+(the same corpus walk the composer pays for) or bridge state already in
+UserDefaults. No request, no model, no new `Thing` field, no CloudKit deploy —
+which is what lets it render synchronously, and that matters: the alternative
+(kick a task, repaint on arrival) shows a frame of empty panel on every open.
+
+**The tile previews the figure the room actually draws.** `roomFigure`'s chain
+mirrors `FeedScreen.shapedSections` exactly — topic map, leaderboard,
+distribution, mosaic, heatmap — because a tile showing a DIFFERENT figure than
+its room would be worse than no tile: you would tap it looking for the thing
+you just saw. Guarded, since the two can drift silently.
+
+**Order is `ChipMemory`'s tap weight**, the same decaying signal that already
+sorts the source strip — the rooms you actually open lead, and one you never
+visit drifts to the tail without an edit surface. Ties fall to figure richness
+then to the source NAME, so the order is TOTAL. That is not pedantry: §332
+shipped a panel-adjacent bug where equal-sized groups came out of a Dictionary
+and Swift's per-process hash seed reordered them between launches.
+
+**Two sizing facts came from measuring, not taste**, and both were nearly got
+wrong: a six-cell `UnitTreemap` at tile scale gives its last slot one grid unit
+of width, where the label collapses to two clipped characters — so a tile map
+caps at four; and a full 53-week contribution grid at 165pt is ~2.7pt cells,
+unreadable — so the pulse draws the last twelve weeks, the same windowed form
+the social rooms already use.
+
+**A flat curve rides the middle of its tile, never the floor.** A wallet that
+hasn't moved is a real state, and drawing it along the bottom reads as "went to
+zero" — the most alarming possible way to say nothing happened, and §83 in the
+place it costs most. It is the harness's first mutation.
+
+**Deleted with it:** `AgentOpen`'s answer tiles, threaded ledger, margins and
+fold, and their harness. They were one day old. The kept-ask pills come back
+unfiltered, since there are no tiles left to duplicate them.
+
+**Noted, not fixed (out of scope):** `GenTagMap`'s private six-cell frame table
+still carries the inverted-rank layout that `UnitTreemap` was corrected away
+from on 2026-08-06 — rank 3 drawing smaller than ranks 4–5. The wallet holdings
+treemap and the receipts/x402/topic maps therefore disagree about relative cell
+size at six cells, which is the exact thing `UnitTreemap`'s own doc says must
+never happen. Its own fix, its own commit.

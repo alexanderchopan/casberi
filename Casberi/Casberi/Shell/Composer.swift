@@ -498,7 +498,12 @@ struct Composer: View {
     /// Empty is a real state, not a failure: a new install has nothing to
     /// synthesize, and the greeting-and-chips rest screen this replaced is
     /// still exactly right there. `AgentOpen.Composition.isEmpty` is the gate.
-    @State private var composition = AgentOpen.Composition()
+    /// The feed's own filter — the panel's tap target. Injected by `RootShell`
+    /// alongside the route and the detail selection, so this is the same object
+    /// the source chips and `NavigateIntent.source` already drive.
+    @Environment(FeedFilter.self) private var filter
+
+    @State private var composition = AgentPanel.Composition()
 
     /// The one predicate for "the composer is idle and showing its rest-screen
     /// chrome" — open, nothing typed, nothing recording, no answer in flight.
@@ -858,159 +863,157 @@ struct Composer: View {
         }
         // The board (prd §332) — built last, so it can see the away pool the
         // chips above already computed and never pays for a second walk.
-        composition = buildBoard(all: all, awayPool: awayPulse?.pool ?? [])
+        composition = buildPanel(all: all)
         #if DEBUG
-        AgentOpenProbe.log(composition)
+        AgentPanelProbe.log(composition)
         NSLog("[Casberi] askTiles: %@",
               suggestions.map { $0.memoryKey + ($0.timely ? "*" : "") + ($0.signal ?? "") }
                   .joined(separator: ","))
         #endif
     }
 
-    // MARK: - The board (prd §332)
+    // MARK: - The panel (prd §334)
 
-    /// How much of the window the board will ever look at.
-    ///
-    /// A bound, not a cap on what's shown: the two per-item joins below
-    /// (`RelatedThings.keptBefore` walks the corpus, `ScreenshotFacts.dates`
-    /// runs an `NSDataDetector`) are cheap once and expensive a hundred times,
-    /// and this runs synchronously on the main actor while the composer is
-    /// opening. Everything past it still reaches the fold's count, so a busy
-    /// night is never silently under-reported.
+    /// How far back the deterministic lead looks for a cross-source echo.
+    /// A bound, not a display cap: `CrossSourceEcho.find` runs a fetch per
+    /// candidate, and this loop sits on the main actor between the tap and the
+    /// first frame.
     private static let boardWindowCap = 24
 
-    /// How many screenshots in the window get their text scanned for a moment.
-    /// Above the eleven rows the board can draw, below the point where building
-    /// that many `NSDataDetector`s is felt.
-    private static let dateScanBudget = 12
 
-    /// Compose the open, from the corpus walk `computeSuggestions()` just paid for.
+    /// Compose the open: the lead, then every connected room's own figure.
     ///
-    /// Deliberately synchronous. The alternative — kick a task, repaint on
-    /// arrival — is what `HomeInsightStore` does for a MODEL run, and it is the
-    /// wrong shape here: every input below is already in memory or already in
-    /// UserDefaults, so an async version would trade a few milliseconds for a
-    /// visible one-frame flash of the empty state on every single open.
+    /// Synchronous, off the corpus walk `computeSuggestions()` already paid
+    /// for. Every registry below is pure over `[Thing]` by contract and every
+    /// per-room reading it needs is already in memory or in UserDefaults, so
+    /// there is nothing to await — which matters, because the alternative
+    /// (kick a task, repaint on arrival) shows a visible frame of empty panel
+    /// on every single open.
     @MainActor
-    private func buildBoard(all: [Thing], awayPool: [Thing]) -> AgentOpen.Composition {
+    private func buildPanel(all: [Thing]) -> AgentPanel.Composition {
         // `.live` at this one door — every value below is read off these models
-        // and then never touched again (liveness corollary 4: filter where the
-        // array is handed out, not on a promise that readers re-check).
+        // and then never touched again (liveness corollary 4).
         let corpus = all.filter(\.isLive)
+        var out = AgentPanel.Composition()
+        out.notice = boardNotice(corpus: corpus)
 
-        // The window. The away pool is the right subject when there IS one —
-        // it is the span the person actually missed. Below the thread floor it
-        // says nothing, so the day stands in rather than the board vanishing on
-        // someone who never closes the app.
-        let dayStart = Calendar.current.startOfDay(for: .now)
-        var window = awayPool.filter { $0.isLive && !Corpus.isImportReceipt($0) }
-        if window.count < AgentOpen.threadFloor {
-            window = corpus.filter { $0.capturedAt >= dayStart && !Corpus.isImportReceipt($0) }
-        }
-        window = Array(window.sorted { $0.capturedAt > $1.capturedAt }
-                             .prefix(Self.boardWindowCap))
-
-        // One pass for every "you kept this before" answer, not one pass per
-        // row — see `RelatedThings.keptBeforeIndex`. This runs on the main
-        // actor between the tap and the first frame, so the quadratic shape is
-        // the difference between a board and a stutter.
-        let priorKeeps = RelatedThings.keptBeforeIndex(corpus: corpus)
-
-        // A screenshot's own text can name a moment that hasn't happened yet —
-        // the §282 read, reused verbatim (deterministic `NSDataDetector`, never
-        // the model, and a bare clock is already refused inside it).
-        //
-        // Bounded, because `ScreenshotFacts.dates` BUILDS A DETECTOR PER CALL
-        // and then scans the whole OCR transcript. That is the right shape for
-        // the thing sheet, which asks once when a sheet opens; here it would be
-        // one compilation per screenshot in the window, on the main actor,
-        // between the tap and the first frame. At most `dateScanBudget` rows
-        // are asked — comfortably more than the eleven the board can draw, so
-        // nothing visible is lost, and a library-heavy window can't stall the
-        // open.
-        var scansLeft = Self.dateScanBudget
-        let items = window.map { thing -> AgentOpen.Item in
-            var moment: Date?
-            if thing.kind == .screenshot, scansLeft > 0, !thing.content.isEmpty {
-                scansLeft -= 1
-                moment = ScreenshotFacts.dates(in: thing.content).first
-            }
-            return AgentOpen.Item(
-                id: thing.id.uuidString,
-                title: thing.title,
-                source: thing.source,
-                tags: thing.tags,
-                author: thing.authorHandle,
-                capturedAt: thing.capturedAt,
-                dueAt: thing.dueAt,
-                replyCount: thing.replyCount,
-                socialContext: thing.socialContext,
-                priorKeep: priorKeeps.firstKeep(of: thing),
-                datedMoment: moment)
+        // Group by room. Import receipts are excluded everywhere here for the
+        // reason every aggregate in this app excludes them: the app's own row
+        // about a sync is not something the person captured.
+        var bySource: [String: [Thing]] = [:]
+        for thing in corpus where !Corpus.isImportReceipt(thing) {
+            bySource[thing.source, default: []].append(thing)
         }
 
-        let ledger = BriefLedger.snapshot()
-
-        // The quiet line — a source that has landed every time the brief looked
-        // and didn't today. `TodayBrief` composes the identical sentence; it is
-        // spelled again here rather than reached for because that one is built
-        // inside a private observation list, and a shared helper for a single
-        // sentence is the indirection that makes both harder to read.
-        var quiet: String?
-        if !window.isEmpty,
-           let gone = BriefLedger.absent(ledger, landedSources: Set(window.map(\.source))) {
-            let since = gone.since.formatted(.dateTime.month(.abbreviated).day())
-            quiet = String(localized:
-                "Nothing from \(gone.source) today — the first quiet day since \(since).")
+        var cards: [AgentPanel.Card] = []
+        for (source, things) in bySource {
+            guard let card = roomFigure(source: source, things: things) else { continue }
+            cards.append(card)
         }
-
-        return AgentOpen.compose(window: items,
-                                 kept: keptAsks(in: corpus),
-                                 notice: boardNotice(corpus: corpus, window: items),
-                                 quiet: quiet,
-                                 streakFor: { BriefLedger.themeStreak(ledger, theme: $0) })
+        if let wallet = walletCurve() { cards.append(wallet) }
+        // Dictionary iteration above is per-process in its order; `rank` is a
+        // TOTAL sort, which is what makes the panel identical across launches
+        // (the §332 hashing bug, one surface over).
+        out.cards = AgentPanel.rank(cards)
+        return out
     }
 
-    /// The kept asks, each carrying the reading its own composer already wrote.
-    private func keptAsks(in corpus: [Thing]) -> [AgentOpen.KeptAsk] {
-        let store = KeptAskStore.shared
-        return store.order.map { kind in
-            let digest = store.currentDigests[kind] ?? ""
-            return AgentOpen.KeptAsk(
-                kind: kind,
-                title: store.titles[kind] ?? kind,
-                delta: store.currentDeltas[kind] ?? "",
-                digest: digest,
-                changed: store.changed(kind, digest: digest),
-                subject: taskSubject(kind, in: corpus))
-        }
-    }
-
-    /// The soonest deadline a task ask is about, so its tile can say the NAME.
+    /// What a room would LEAD with, as a figure.
     ///
-    /// Mirrors `KeptAskComposers.overdue`/`upcoming`'s own filters — the same
-    /// `mark != .done`, the same source pair for overdue, the same one-week
-    /// horizon — so the tile can never name a thing its own answer wouldn't
-    /// list. Nil for every other kind: those speak in sentences already.
-    private func taskSubject(_ kind: String, in corpus: [Thing]) -> String? {
-        let open = corpus.filter { $0.mark != .done }
-        switch kind {
-        case "overdue":
-            return open
-                .filter { ($0.source == "Reminders" || $0.source == "Todoist")
-                          && ($0.dueAt ?? .distantFuture) < .now }
-                .min { ($0.dueAt ?? .now) < ($1.dueAt ?? .now) }?.title
-        case "upcoming":
-            let horizon = Calendar.current.date(byAdding: .day, value: 7, to: .now) ?? .now
-            return open
-                .filter { t in
-                    guard let when = t.dueAt else { return false }
-                    return when >= .now && when <= horizon
-                }
-                .min { ($0.dueAt ?? .now) < ($1.dueAt ?? .now) }?.title
-        default:
-            return nil
+    /// The chain mirrors `FeedScreen.shapedSections` exactly — topic map,
+    /// leaderboard, distribution, mosaic, heatmap — so the tile shows the same
+    /// reading the room itself shows. That is the whole contract of the panel:
+    /// it is a window onto the room, and a tile that previewed a DIFFERENT
+    /// figure than the room draws would be worse than no tile, because you'd
+    /// tap it looking for what you just saw. **Change the order there, change
+    /// it here** (the `-roomInsightProbe` rule).
+    ///
+    /// Rooms whose hero is text (Stripe's rail, PostHog's readings, the
+    /// approvals card) are deliberately absent: §334 says a card earns its slot
+    /// by drawing something.
+    @MainActor
+    private func roomFigure(source: String, things: [Thing]) -> AgentPanel.Card? {
+        func card(_ title: String, _ caption: String,
+                  _ figure: AgentPanel.Figure) -> AgentPanel.Card {
+            AgentPanel.Card(source: source, title: title,
+                            caption: AgentPanel.clamp(caption), figure: figure,
+                            affinity: ChipMemory.weight(for: source))
         }
+        if let map = FeedInsight.topicMap(source: source, things: things) {
+            // Four rows, not six: the inventory of small forms is explicit that
+            // a six-cell map's last slot is one grid unit wide and its label
+            // collapses to two clipped characters at tile scale.
+            return card(map.title, map.subtitle,
+                        .treemap(map.cells.prefix(4).map {
+                            AgentPanel.Cell(label: $0.label, weight: $0.count)
+                        }))
+        }
+        if let board = FeedInsight.leaderboard(source: source, things: things) {
+            return card(board.title, board.subtitle,
+                        .bars(board.rows.prefix(4).map {
+                            AgentPanel.Bar(label: $0.label, value: $0.value, detail: $0.detail)
+                        }))
+        }
+        if let split = FeedInsight.distribution(source: source, things: things) {
+            let total = max(1, split.segments.reduce(0) { $0 + $1.count })
+            return card(split.title, split.subtitle,
+                        .rail(split.segments.map {
+                            AgentPanel.Segment(label: $0.label,
+                                               share: Double($0.count) / Double(total),
+                                               tone: toneIndex($0.tone))
+                        }))
+        }
+        if let wall = FeedInsight.mosaic(source: source, things: things) {
+            return card(wall.title, wall.subtitle,
+                        .wall(wall.tiles.prefix(4).map(\.url)))
+        }
+        if let label = FeedHeatmap.label(for: source) {
+            let counted = FeedHeatmap.counted(things, label: label)
+            // Twelve weeks, not the room's 53. A full year at tile scale is
+            // ~2.7pt cells — unreadable — while the windowed grid the social
+            // rooms already draw reads fine.
+            return card(label.title, label.units, .pulse(dailyCounts(counted, days: 7 * 12)))
+        }
+        return nil
+    }
+
+    /// `FeedInsight.Tone` as the plain index `AgentPanel` carries, so the model
+    /// layer stays free of SwiftUI's Color.
+    private func toneIndex(_ tone: FeedInsight.Tone) -> Int {
+        switch tone {
+        case .positive: return 1
+        case .negative: return 2
+        default:        return 0
+        }
+    }
+
+    /// Per-day counts over the last `days`, oldest first.
+    private func dailyCounts(_ things: [Thing], days: Int) -> [Int] {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: .now)
+        var buckets = Array(repeating: 0, count: days)
+        for thing in things {
+            let d = cal.dateComponents([.day], from: cal.startOfDay(for: thing.capturedAt),
+                                       to: today).day ?? -1
+            guard d >= 0, d < days else { continue }
+            buckets[days - 1 - d] += 1
+        }
+        return buckets
+    }
+
+    /// The wallet's own curve — the one figure with no room registry behind it,
+    /// because the wallet's hero is a balance line rather than a count of rows.
+    /// Reads the samples already recorded on this device; nil until enough
+    /// aligned points exist, which is the honest state for a new wallet.
+    @MainActor
+    private func walletCurve() -> AgentPanel.Card? {
+        let samples = WalletStore.shared.combinedValueSamples().map(\.usd)
+        guard samples.count >= 3 else { return nil }
+        return AgentPanel.Card(source: "Wallet",
+                               title: String(localized: "Your balance"),
+                               caption: "",
+                               figure: .curve(samples.suffix(24).map { $0 }),
+                               affinity: ChipMemory.weight(for: "Wallet"))
     }
 
     /// The claim at the top — the model's line when there is one, and a
@@ -1018,31 +1021,32 @@ struct Composer: View {
     ///
     /// The fallback is not a consolation prize: `HomeInsightStore` is gated on
     /// `OnDeviceModel.isAvailable`, so on every device without Apple
-    /// Intelligence the noticing would otherwise be permanently absent — the
-    /// §282 shape, where half the product silently no-ops. `CrossSourceEcho`
-    /// answers the same question with a fact instead of a sentence: this exact
-    /// link already came through another source.
+    /// Intelligence the lead would otherwise be permanently absent — the §282
+    /// shape, where half the product silently no-ops.
     @MainActor
-    private func boardNotice(corpus: [Thing], window: [AgentOpen.Item]) -> AgentOpen.Notice? {
+    private func boardNotice(corpus: [Thing]) -> AgentPanel.Notice? {
         let insight = HomeInsightStore.shared
+        let byID = Dictionary(corpus.map { ($0.id.uuidString, $0) },
+                              uniquingKeysWith: { a, _ in a })
         if let line = insight.line, !line.isEmpty {
-            let byID = Dictionary(corpus.map { ($0.id.uuidString, $0) },
-                                  uniquingKeysWith: { a, _ in a })
-            let evidence = insight.pickedThingIDs.prefix(2).compactMap { id -> AgentOpen.Item? in
+            let evidence = insight.pickedThingIDs.prefix(2).compactMap { id -> AgentPanel.Item? in
                 guard let thing = byID[id], thing.isLive else { return nil }
-                return AgentOpen.Item(id: id, title: thing.title, source: thing.source,
-                                      capturedAt: thing.capturedAt)
+                return AgentPanel.Item(id: id, title: thing.title, source: thing.source)
             }
-            return AgentOpen.Notice(claim: line, evidence: Array(evidence), deterministic: false)
+            return AgentPanel.Notice(claim: line, evidence: Array(evidence), deterministic: false)
         }
-        // The deterministic stand-in — the newest thing in the window whose
-        // link this corpus has seen before, under another source's name.
-        for item in window {
-            guard let thing = corpus.first(where: { $0.id.uuidString == item.id }),
-                  thing.isLive,
+        // The deterministic stand-in — the newest recent thing whose link this
+        // corpus has already seen under another source's name.
+        let recent = corpus.sorted { $0.capturedAt > $1.capturedAt }.prefix(Self.boardWindowCap)
+        for thing in recent {
+            guard thing.isLive,
                   let echo = CrossSourceEcho.find(for: thing, context: modelContext)
             else { continue }
-            return AgentOpen.Notice(claim: echo, evidence: [item], deterministic: true)
+            return AgentPanel.Notice(
+                claim: echo,
+                evidence: [AgentPanel.Item(id: thing.id.uuidString,
+                                           title: thing.title, source: thing.source)],
+                deterministic: true)
         }
         return nil
     }
@@ -1846,11 +1850,16 @@ struct Composer: View {
             // the chips, which is the rest screen exactly as it was.
             if boardShowing {
                 AgentOpenBoard(composition: composition,
-                               onAsk: { question in
-                                   fillDraft(question)
-                                   commit()
-                               },
-                               onOpen: { id in path.append(id) })
+                               onOpen: { id in path.append(id) },
+                               onOpenRoom: { source in
+                                   // Switch the feed to that room and lower the
+                                   // agent — the panel is a window onto the
+                                   // room, so the tap should land you in it.
+                                   ChipMemory.visited(source)
+                                   filter.source = source
+                                   filter.tag = "All"
+                                   close()
+                               })
             }
             // The day, as the room's lead — the FALLBACK now (§332). It stood
             // in for a synthesis the open couldn't show; the board is that
@@ -2464,13 +2473,11 @@ struct Composer: View {
     /// nothing is ever unreachable.
     private var keptKinds: [String] {
         let order = KeptAskStore.shared.order
-        // A kind the board already answers on a tile does NOT also get a pill.
-        // The tile IS the pill — same tap, same ask — so showing both is one
-        // question wearing two controls, which is exactly what the `today`
-        // filter below has excluded since §248.
-        let onBoard = boardShowing ? Set(composition.tiles.map(\.kind)) : []
+        // §334 removed the answer TILES, so there is nothing here to suppress
+        // any more: the panel draws figures and the kept pills carry the
+        // standing questions, which are different surfaces doing different
+        // jobs. Only the `today` rule survives, and only while its card shows.
         return order.filter { $0 != "today" || !dayCardShowing }
-                    .filter { !onBoard.contains($0) }
     }
 
     @ViewBuilder
