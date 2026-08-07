@@ -167,6 +167,8 @@ final class BlueskyStore {
         }
         accounts = []
         feeds = []
+        // The like rolls go with them (2026-08-07) — see the Farcaster twin.
+        SocialLikers.shared.forget(refPrefix: "bsky:")
     }
 
     /// Sync's write-back of the AppView's profile facts. One assignment, so
@@ -419,11 +421,16 @@ enum BlueskyIngest {
     /// unlike the Farcaster arm this read is not about the NUMBER at all — it
     /// is only ever about the NAMES, which the count can never carry: a like
     /// from someone you watch resurfaces the post and says so once.
+    /// One page of likers. Named because the roll's `atLeast` flag is exactly
+    /// "the page was full", so the number that bounds the read and the number
+    /// that decides whether a total is a floor must be the same one.
+    private static let likePage = 100
+
     @MainActor
     private static func readLikes(on post: Thing, uri: String, ownHandle: String) async {
         var comps = URLComponents(string: "\(host)/app.bsky.feed.getLikes")!
         comps.queryItems = [URLQueryItem(name: "uri", value: uri),
-                            URLQueryItem(name: "limit", value: "100")]
+                            URLQueryItem(name: "limit", value: String(likePage))]
         guard let url = comps.url,
               let root = await IngestSupport.getJSON(url) as? [String: Any],
               let likes = root["likes"] as? [[String: Any]] else { return }
@@ -455,6 +462,12 @@ enum BlueskyIngest {
             }
         }
         guard let ref = post.sourceRef else { return }
+        // The names, kept where a ROW can read them (2026-08-07, prd §330).
+        // They existed here already and reached only the notification, so
+        // "who liked my post" was answerable on the lock screen and nowhere
+        // inside the app — including the room the post itself lives in.
+        SocialLikers.shared.record(ref: ref, handles: allLikers, total: allLikers.count,
+                                   atLeast: likes.count >= likePage, when: newest ?? .now)
         await Notifications.likes(postRef: ref, postTitle: post.title,
                                   likers: allLikers, avatarURL: firstAvatar,
                                   source: "Bluesky",

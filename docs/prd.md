@@ -18406,3 +18406,124 @@ Still no new `Thing` property across the whole pass — the catalog, the chains 
 **A lane's typical price is a median of SELLER medians, and the source says so plainly.** The true median for a lane needs every listing's price, and storing 310 of them per seller to answer one line is not a trade worth making. Each seller's own median is a real central value, so the middle of those is a fair "what a typical seller here typically charges" — which is exactly the softness the word "typically" claims, and no more. Naming the approximation in the code is the point: an unlabelled median-of-medians is how a number stops being checkable.
 
 `@State`, so the selection resets on leaving the room — the lifetime `bookView` already has, and the right one for a VIEW filter: how you are looking right now, not a setting you configured. That lifetime is also part of why this doesn't reopen §269: nothing persists, nothing syncs, and the agent neither reads nor writes it.
+
+## §330 — Who liked your post (user: "farcaster feed is not showing my likes", then "who liked my posts i mean", 2026-08-07)
+
+**The bug, and it is older and wider than the report.** §239 built the inbound
+half of a social account — what happened to YOU — and stated its own rule in
+five words: **names, not numbers**. Half of that rule never reached a screen.
+
+`readLikes` on both networks filled the post's `likeCount` and then discarded
+every liker's identity, with one exception: a liker who was already an account
+you WATCH. That exception did two things, neither of them an answer — it
+resurfaced the post (§221, correct, untouched here) and fired a `SourceMoments`
+toast, which is a line that scrolls past in a second and lands nothing. So the
+plainest question the inbound half exists to answer, *who liked my post*, had
+no answer anywhere in the app: not on the row, not in the sheet, not in the
+corpus. Everyone who wasn't already in your watch list was an increment.
+
+**Farcaster had it worse, and the reason is the design constraint.** Bluesky's
+AppView hydrates `like.actor.handle` inline on every like, so its arm has held
+every liker's name for free since it shipped and already called
+`Notifications.likes` — the §306 notification written to be "called from the
+read, because the NAMES exist only inside the read itself". Snapchain reports
+**fids only**. A name there costs one `userDataByFid` apiece, so the §306 pass
+wired the network where names were free and left the one where they weren't;
+`Notifications.likes` had never had a Farcaster caller at all. A Farcaster like
+was a bare integer end to end.
+
+**The ruling.** Both reads now keep the names.
+
+- Farcaster resolves the **newest three** likers through the profile cache the
+  bridge already keeps per launch, and no more. Three is what a line can show
+  anyway, and it bounds the added cost of the pass at `3 × ownPostPage`
+  lookups — naming a hundred likers of a popular cast would be a hundred
+  requests to write one sentence. The rest are **counted, never named**.
+- The order is taken from the **timestamps on the wire**, not the page's order:
+  this call passes no `reverse`, and which liker leads the line is exactly the
+  thing an assumed order gets quietly wrong.
+- Your own like of your own cast is dropped from the names (nobody needs to read
+  "Liked by you") while `likeCount` keeps counting it — that number is the
+  cast's like count as the network reports it, not a roll of other people.
+- A full page means **at least** this many, so the count wears a `+`
+  ("Liked by @a, @b and 97+ others") — `SocialCount`'s honesty valve reaching
+  the one place a total is spoken out loud.
+
+**A roll with no names is never written**, which is the doctrine holding rather
+than a nicety: a total with nobody named is the tally §239 forbids, and it is
+also exactly what the sheet's engagement line already shows. If not one liker
+could be resolved, the row says nothing.
+
+**Storage: a store, not a `Thing` field.** Two reasons pointing the same way.
+The doctrine is explicit that a like never lands as a record — it is a PROPERTY
+of your post — and a new stored property is a CloudKit Production deploy
+(docs/cloudkit-deploy.md) for a fact re-read from the network on every
+foreground pass. So `Model/SocialLikers.swift` is bridge state in UserDefaults,
+the `ASCState`/`X402State` shape, bounded at 60 posts (the reads only ever ask
+about your own recent posts) and dropped on disconnect. **No new `Thing`
+property, so no CloudKit deploy** — `cloudkit-schema-audit.py` confirms it.
+
+**Where it shows.** `PostCard`, under the post, where every client puts it. It
+needs no "is this mine?" test and makes none: `SocialLikers` is written by the
+inbound read alone, and that read only ever asks about your own casts, so the
+presence of a roll IS the answer.
+
+Probe: `-likersProbe YES`. It exists because an empty roll book has five causes
+that all render as a post with no line under it — no account marked `mine`; a
+first sync whose own posts hadn't landed yet, so the read never ran; nobody
+liked anything inside `ownPostWindow`; the only liker was you; or the node
+answered `reactionsByCast` and then refused every `userDataByFid` — and only
+the last is a bug. It prints the whole book across both networks on purpose: a
+book holding one network's rolls and not the other's is the shape of the bug
+this fixed.
+
+**UNBUILT, UNMEASURED** — authored on Linux with no Xcode and no egress to
+either node. Every static gate passes (`catalog-sync`, the liveness audit, the
+reach audit, the CloudKit schema audit, the Info.plist/keychain/receipts/
+setup-copy/design-motion audits); `verify.sh` has not run. Build it and open a
+Farcaster room with an account marked `mine` before trusting the line, and read
+`-likersProbe` beside it — the row and the probe are drawn from the same roll,
+so if they disagree, the reading is wrong, not the drawing.
+
+## §331 — "Mine" was a no-op for anyone who doesn't post weekly (user: "when i marked a farcaster profile as mine i expected to see likes given to me. i even tapped that", 2026-08-07)
+
+§330 made the names visible. This is the other half of the same report: the
+person did the right thing, tapped the right switch, and still saw nothing.
+
+**Two causes, both silent.**
+
+**1. The window was a gate.** `SocialInbound.ownRecentPosts` filtered your own
+posts to the last seven days and the inbound reads asked about nothing else. So
+if your newest cast was eight days old, the whole inbound half — likes
+received, replies received — read **nothing at all, forever**. No error, no
+empty state, nothing on any screen to say why; `mine` was a switch that did
+nothing for anyone who posts less than weekly, which is most people.
+
+The window's reasoning was sound and survives: a month-old post gains a like a
+week, and re-asking about it before a fresh one is spend with no news in it. It
+is a PREFERENCE now, not a requirement — when the window holds nothing, the
+read falls back to your newest posts regardless of age. **The cost is
+unchanged**, because `ownPostPage` bounds the result either way, and that is
+what makes this a floor rather than a widening: somebody who posts daily gets
+exactly the old behaviour, and somebody who doesn't stops being told nothing.
+
+**2. The copy promised the one thing that almost never happened.** The footer
+read "Mine — this account is yours: replies, new followers, and likes bring
+your posts back." That last clause described the §221 resurface, which fires
+only when the liker is already an account you WATCH — so for almost every like
+it promised an outcome that could not occur. And it never said you would see
+WHO, because until §330 you couldn't. It now names the three reads plainly:
+"who liked your posts, who replied, and who started following."
+
+**A third cause is left alone, deliberately**, because it is real and
+self-correcting: the very first sync of a newly added account has landed none
+of your own posts yet (`landed` is snapshotted before they arrive), so the
+inbound reads begin on the second pass. That is documented on `ownRecentPosts`
+and reported by `-inboundProbe`, and papering over it would mean fetching your
+own posts twice in one pass.
+
+`-inboundProbe` now says which road the eligible posts came by — a run reading
+"all outside the 7d window — newest-first fallback" is this fix working, not a
+stale corpus.
+
+**UNBUILT, UNMEASURED** — same session and same terms as §330.

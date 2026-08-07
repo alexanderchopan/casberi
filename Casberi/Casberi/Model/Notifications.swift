@@ -293,19 +293,30 @@ enum Notifications {
     ///
     /// Names, never numbers — the same rule the read itself follows. "3 people
     /// liked your post" is a tally; "Liked by paulg and 2 others" is people.
+    ///
+    /// `total` is how many people liked it in all, when that is MORE than the
+    /// names on hand (2026-08-07, prd §330). Bluesky hydrates every liker's
+    /// handle inline and so passes none — its names are the total. Farcaster
+    /// reports fids only, and a name there costs a request apiece, so it
+    /// resolves the newest few and reports the rest as a count: "and 39 others"
+    /// is still people, and it is the honest shape when naming all forty would
+    /// be forty requests to write one line.
     static func likes(postRef: String, postTitle: String,
-                      likers: [String], avatarURL: String?,
+                      likers: [String], total: Int? = nil, avatarURL: String?,
                       source: String, link: String, when: Date) async {
         guard !likers.isEmpty else { return }
         let id = "likes:" + postRef
         let countKey = "notify.likeCount." + postRef
         let previous = store.integer(forKey: countKey)
-        guard likers.count > previous else { return }
-        store.set(likers.count, forKey: countKey)
+        // Never below what we can name — a caller that under-reports its total
+        // must not be able to make the copy read "and -1 others".
+        let count = max(total ?? likers.count, likers.count)
+        guard count > previous else { return }
+        store.set(count, forKey: countKey)
         ledger.release(id)
 
         let lead = likers[0]
-        let others = likers.count - 1
+        let others = count - 1
         let title: String
         switch others {
         case 0:  title = String(localized: "Liked by \(lead)")
