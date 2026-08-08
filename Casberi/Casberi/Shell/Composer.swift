@@ -2103,12 +2103,16 @@ struct Composer: View {
                                    close()
                                })
                 }
-                // Capped to a WHOLE number of card rows (§339). A flat 520
-                // sliced the river mid-band at the fold, which reads as a
-                // broken drawing rather than as more content below — the one
-                // thing a scroll edge must never look like. 118 is the small
-                // cell, 10 the gutter, so this is four rows exactly.
-                .frame(maxHeight: 118 * 4 + 10 * 3)
+                // FILLS the space it is given (§340). §339 capped this at a
+                // whole number of card rows to stop a figure being sliced at
+                // the fold — which fixed the slice and introduced a worse
+                // problem: a fixed 502pt knows nothing about the device, so on
+                // a real phone the panel stopped half way down and the input
+                // bar floated in the middle of a black screen. The sheet
+                // already knows how much room there is; taking all of it lets
+                // the scroll end where the screen does, which is the only
+                // place a scroll edge never looks broken.
+                .frame(maxHeight: .infinity)
                 .scrollIndicators(.hidden)
             }
             // The day, as the room's lead — the FALLBACK now (§332). It stood

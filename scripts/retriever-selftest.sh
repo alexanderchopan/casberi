@@ -394,6 +394,29 @@ let elsewhereSame = Thing(title: "Receipt for the hotel", source: "Gmail", kind:
 check("a scope that answers is not widened",
       rank("photos receipt", [inRoom, elsewhereSame]) == [inRoom.title])
 
+// §340: a source name introduced as a SUBJECT is not a scope. Reported live —
+// "what did I post about a wallet" scoped to the Wallet room, stripped the word
+// from the terms, and returned that room's newest transactions. NON-EMPTY, so
+// §318's escape hatch above never fired and the person's own post was never
+// reached by anything. This is the case the empty-result fallback cannot cover.
+//
+// Sources are named explicitly because `BridgeCatalog` is stubbed here, so the
+// default list is empty and every one of these would pass vacuously.
+//
+// Asserted on `sourceFilter` DIRECTLY, not through `rank`: routing it through
+// the whole engine lets term matching decide the outcome, and the first cut of
+// these fixtures failed for exactly that reason — "wallet" does not match
+// "wallets", so the check proved nothing about scoping either way.
+check("\"about a <source>\" is a subject, not a room",
+      Retriever.sourceFilter(in: "what did I post about a wallet", sources: ["Wallet"]) == nil)
+check("\"a <source>\" is a common noun, not a room",
+      Retriever.sourceFilter(in: "I saved a wallet article", sources: ["Wallet"]) == nil)
+check("\"about <source>\" is a subject too",
+      Retriever.sourceFilter(in: "what did I read about wallet", sources: ["Wallet"]) == nil)
+// …and §307's own phrasing is untouched: a bare source name still scopes.
+check("a bare source name still scopes",
+      Retriever.sourceFilter(in: "search my wallet stuff", sources: ["Wallet"])?.source == "Wallet")
+
 print("the honest-nothing path survives")
 check("a query nothing says returns nothing",
       rank("tokyo", [all4, one4, two4]).isEmpty)

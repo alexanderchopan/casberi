@@ -712,6 +712,22 @@ enum Retriever {
         for source in sources {
             let needle = padded(source)
             guard needle.count > 2, haystack.contains(needle) else { continue }
+            // A SOURCE NAME INTRODUCED AS A SUBJECT IS NOT A SCOPE (2026-08-07,
+            // prd §340). §318's escape hatch only fires when the scoped read
+            // comes back EMPTY — and the case reported here never does: "what
+            // did I post about a wallet" scoped to the Wallet room, stripped
+            // "wallet" from the terms, and returned that room's newest
+            // transactions. Non-empty, so the fallback never ran, and the
+            // Farcaster post the person actually wrote never reached a model.
+            //
+            // English marks the difference plainly. "about X" makes X the
+            // SUBJECT of the question, and an indefinite article ("a wallet",
+            // "an email") makes it a common noun. Neither can be a room. "my X
+            // stuff" and "search my X" carry no such marker and are untouched,
+            // so every query §307 fixed still scopes.
+            if ["about", "a", "an"].contains(where: { haystack.contains(" \($0)" + needle) }) {
+                continue
+            }
             let words = Set(needle.split(separator: " ").map(String.init))
             if best == nil || words.count > best!.words.count {
                 best = (source, words)

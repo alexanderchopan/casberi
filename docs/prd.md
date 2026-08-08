@@ -19109,3 +19109,44 @@ this size would be two targets too small to aim a 0.45s press at; and the
 `agentMorph` pairing needed no change at all — the risen surface simply grows
 out of the corner now, diagonally, which is a better read of "this came from
 there" than the symmetric balloon it used to be.
+
+## §340 — A source name used as a subject is not a room (user: "i posted about a wallet, but when i asked what i read or posted about a wallet it wasnt found. the on device intelligence is just really really poor", 2026-08-07)
+
+**The model was not involved.** "What did I post about a wallet" hit §307's
+rule that a source name SCOPES the search — and Wallet is a room. So the query
+scoped to it, stripped "wallet" from the terms, and returned that room's newest
+transactions. §318 already built an escape hatch for exactly this class, but it
+fires only when the scoped read comes back EMPTY, and this one didn't: it
+returned the wrong room's rows, non-empty, so the fallback never ran and the
+person's Farcaster post never reached anything.
+
+**Worth stating plainly, because the user reached the opposite conclusion and
+it is the natural one:** a keyed agent would have failed identically. BYOK
+swaps the MODEL, not the retrieval — both paths call `Retriever.rank`, and no
+model can answer from a grounding set that never contained the row. Where a
+keyed agent genuinely helps is reasoning over what was retrieved; it cannot
+rescue a retrieval that excluded the answer. Reading this report as "the
+on-device intelligence is poor" would have sent the fix to the wrong half of
+the system entirely.
+
+**The rule is a linguistic marker, not a threshold.** English marks the
+difference plainly: "about X" makes X the SUBJECT of the question, and an
+indefinite article ("a wallet", "an email") makes it a common noun. Neither can
+be a room. "my X stuff" and "search my X" carry no such marker, so every query
+§307 fixed still scopes — which is the constraint that ruled out the tempting
+alternatives (widening whenever the scope looks weak would have undone §307,
+and stemming the source word out of the terms would have left the wrong room
+still selected).
+
+**Two harness lessons, both the recurring one.** The first fixtures asserted
+through `rank`, where term matching decides the outcome — "wallet" does not
+match "wallets", so they failed for a reason that had nothing to do with
+scoping and would equally have PASSED for one. They assert on `sourceFilter`
+directly now. And they named no sources, so they ran against a stubbed
+`BridgeCatalog` with an empty list and would have passed vacuously forever.
+
+**Also fixed: the panel stopped half way down the screen.** §339 capped the
+scroll at "four whole card rows" to stop a figure being sliced at the fold —
+a fixed 502pt that knows nothing about the device, so on a real phone the input
+bar floated in the middle of black. It fills the sheet now, and the scroll ends
+where the screen does, which is the only place an edge never looks broken.
