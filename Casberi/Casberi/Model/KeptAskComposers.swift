@@ -66,7 +66,19 @@ enum KeptAskComposers {
             return contextRecap(String(kind.dropFirst("context:".count)), things: things)
         }
         if kind.hasPrefix("category:") {
-            return categoryRecap(String(kind.dropFirst("category:".count)), things: things)
+            // Scoped "What's going on" briefs (scoped-brief-spec.md) — the
+            // SAME pipeline `"today"` runs above, scoped to one catalog
+            // category instead of the whole corpus. Was its own plain
+            // "N things from your X apps this week" recap; that composer
+            // (`categoryRecap`) is gone rather than kept alongside this, since
+            // a kept `category:<c>` pill re-running through this dispatch
+            // must show what the spec calls the SAME "daily brief format" a
+            // scoped chip tap or free-text ask gets — two different answers
+            // for the same kind string would be the drift `KeptAskComposers`'
+            // own header rule (one composer per kind) exists to prevent.
+            return await TodayBrief.compose(things: things, context: context,
+                                            presenting: presenting,
+                                            category: String(kind.dropFirst("category:".count)))
         }
         if kind.hasPrefix("handle:") {
             return handleRecap(String(kind.dropFirst("handle:".count)), things: things)
@@ -476,16 +488,22 @@ enum KeptAskComposers {
 
         /// The raw pool this target scopes to, BEFORE any recency windowing —
         /// `RootShell`'s live synthesis path windows/caps this itself; the
-        /// deterministic composers below window it again, independently
-        /// (the same "light duplication of window logic" `contextRecap`/
-        /// `categoryRecap` already own, not a shared dependency).
+        /// deterministic composers below window it again, independently (the
+        /// same "light duplication of window logic" `contextRecap` and
+        /// `TodayBrief.compose(category:)`'s own Stage-1 filter each own, not
+        /// a shared dependency).
         func pool(in things: [Thing]) -> [Thing] {
             switch self {
             case .source(let s): return things.filter { $0.source == s }
             case .handle(let h): return things.filter { $0.authorHandle == h }
             case .category(let c):
+                // `c` is a BRIEF SCOPE (Money/Work/Life), not a raw catalog
+                // category — same join `TodayBrief.compose(category:)` uses,
+                // so a kept `category:Money` pill and a live ask can never
+                // disagree about which sources it covers.
                 let sources = Set(BridgeCatalog.offers
-                    .filter { BridgeCatalog.category(of: $0) == c }.map(\.name))
+                    .filter { BriefScope.scope(forCatalogCategory: BridgeCatalog.category(of: $0)) == c }
+                    .map(\.name))
                 return things.filter { sources.contains($0.source) }
             }
         }
@@ -554,6 +572,29 @@ enum KeptAskComposers {
             }
             name = words.joined(separator: " ")
             guard !name.isEmpty else { continue }
+            // Checked BEFORE `bestHandle` (moved 2026-08-08, found live: "how's
+            // my work stuff" resolved to "@workspaces" — a real demo handle,
+            // matched because `bestHandle` is a SUBSTRING test
+            // (`lower.contains(name)`, so "workspaces".contains("work") is
+            // true) and used to run first). An EXACT match against the brief
+            // scope's small, fixed vocabulary ("money"/"work"/"life") must
+            // beat a fuzzy match against arbitrary corpus handles, or any
+            // scope name that happens to prefix a real handle is
+            // unreachable by voice for as long as that handle is connected.
+            // Checked in this order so BOTH vocabularies resolve: the brief
+            // SCOPE name directly ("money", "work", "life" — what the chips
+            // and the "How's my X stuff?" phrasing actually send), and the
+            // app catalog's own ten category names ("wallet", "markets",
+            // "agents", "notes", …), mapped through the same join
+            // `TodayBrief.compose(category:)` uses — so "what's going on
+            // with wallet" and "what's going on with money" answer
+            // identically rather than one silently falling through.
+            if let scope = BriefScope.scopes.first(where: { $0.lowercased() == name }) {
+                return (.category(scope), synth)
+            }
+            if let cat = BridgeCatalog.categories.first(where: { $0.name.lowercased() == name })?.name {
+                return (.category(BriefScope.scope(forCatalogCategory: cat)), synth)
+            }
             if let handle = bestHandle(matching: name, things: things) {
                 return (.handle(handle), synth)
             }
@@ -566,9 +607,6 @@ enum KeptAskComposers {
             if let source = Set(things.map(\.source))
                 .first(where: { $0.lowercased() == name && Corpus.earnsRoom($0) }) {
                 return (.source(source), synth)
-            }
-            if let cat = BridgeCatalog.categories.first(where: { $0.name.lowercased() == name })?.name {
-                return (.category(cat), synth)
             }
         }
         return nil
@@ -594,6 +632,17 @@ enum KeptAskComposers {
         ("what's new from ", false), ("whats new from ", false),
         ("what's up with my ", false), ("whats up with my ", false),
         ("how's my ", false), ("hows my ", false),
+        // Scoped "What's going on" briefs (scoped-brief-spec.md): "what's
+        // going on with work" names a CATEGORY the same way "how's my Work
+        // stuff" already does — `namedAskTarget`'s own category-name match
+        // below only fires once the prefix is stripped and the remainder is
+        // an exact `BridgeCatalog.categories` name, so a real subject that
+        // ISN'T a category ("what's going on with sam") still falls through
+        // exactly as before (the bare, subjectless phrase stays
+        // `TodayBrief.matches`' own exact match, checked earlier and
+        // unaffected — this prefix only ever fires with a trailing name).
+        ("what's going on with ", false), ("whats going on with ", false),
+        ("what's going on in ", false), ("whats going on in ", false),
         // Person/sender phrasings (2026-07-22) — resolve to the same handle
         // scope (a sender's name lives in `authorHandle` like a publisher's).
         // Deliberately SPECIFIC prefixes: a bare "what's " would fuzzy-match
@@ -773,34 +822,14 @@ enum KeptAskComposers {
     }
 
     // MARK: - What's up with my <category>
-
-    /// A whole-CATEGORY recap ("How's my Markets stuff?") — the app catalog's
-    /// own vocabulary (`BridgeCatalog.categories`), not just one source.
-    /// Same 3-day/week widening as `contextRecap`, scoped to every source the
-    /// category owns (`BridgeCatalog.category(of:) == category`) rather than
-    /// one — light duplication of the window logic, same precedent noted
-    /// above.
-    private static func categoryRecap(_ category: String, things: [Thing]) -> Result? {
-        let sourcesInCategory = Set(BridgeCatalog.offers
-            .filter { BridgeCatalog.category(of: $0) == category }
-            .map(\.name))
-        let now = Date.now
-        var pool = things.filter { sourcesInCategory.contains($0.source) && $0.capturedAt >= now.addingTimeInterval(-3 * 86_400) }
-        var windowWords = "in the last three days"
-        if pool.isEmpty {
-            pool = things.filter { sourcesInCategory.contains($0.source) && $0.capturedAt >= now.addingTimeInterval(-7 * 86_400) }
-            windowWords = "in the last week"
-        }
-        guard !pool.isEmpty else {
-            return Result(delta: "", digest: "0",
-                          doc: ["root = Stack([ins])",
-                                "ins = Insight(\"\(genSafe("Nothing new from your \(category) apps recently."))\")"])
-        }
-        let line = String(localized: "\(pool.count) thing from your \(category) apps \(windowWords).")
-        return Result(delta: "\(pool.count) things", digest: "\(pool.count)",
-                      doc: recapDoc(line: line, pool: pool,
-                                    barsEyebrow: "This week", rowsTitle: category))
-    }
+    //
+    // The whole-CATEGORY recap ("How's my Markets stuff?") used to live here
+    // as its own plain "N things from your X apps this week" composer. It's
+    // gone (scoped-brief-spec.md): `category:<c>` now dispatches straight to
+    // `TodayBrief.compose(category:)` above, which is the SAME signal-board
+    // pipeline `"today"` runs — the spec's own "one pipeline, two parameters,
+    // not a new feature" — rather than a second, plainer answer shape for the
+    // same question.
 
     /// A recap document: the summary line, a `Bars` chart of when the pool's
     /// things landed over the last week (dropped when too few to shape), then

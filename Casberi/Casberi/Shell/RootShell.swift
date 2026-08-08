@@ -789,6 +789,18 @@ struct RootShell: View {
             // probe below — hooks run in list order, and the probe must read a
             // ledger that's already seeded.
             BriefLedger.seedFromLaunchArgs()
+            // Debug hook: `-briefScope "<Scope>:<hoursAgo>[,…]"` (or `clear`)
+            // seeds a scoped brief's own "since I last checked" stamp, so a
+            // window that spans real days verifies in one launch instead of
+            // a real wait. WAS DECLARED (the function existed in
+            // `BriefScope.swift` since the feature shipped) but never called
+            // from anywhere — found live, 2026-08-08: seeding "Money:20" had
+            // no effect, and `BriefScope.since(category:)` was silently
+            // reading whatever a PRIOR launch's real `markViewed` call had
+            // left behind instead. Declared here, before every brief-composing
+            // probe below, for the same list-order reason `BriefLedger`'s
+            // sits here.
+            BriefScope.seedFromLaunchArgs()
             // Debug hook: `-todayProbe YES` composes the Today brief (prd
             // §166) over the real corpus and logs the whole doc — every module
             // it chose and every observation that fired — so the composer

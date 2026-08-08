@@ -468,6 +468,25 @@ struct Composer: View {
             self.signal = signal
         }
     }
+    /// A scoped "What's going on" chip (scoped-brief-spec.md) — one per BRIEF
+    /// SCOPE (`BriefScope.scopes`: Money, Work, Life) the corpus holds a
+    /// connected app in. No "Everything" chip (user, 2026-08-08) — that
+    /// brief is already the default you get by asking nothing in particular,
+    /// reachable via the whisper capsule or the kept "today" pill. Deliberately
+    /// a SEPARATE small type from `AskOption` rather than another `kind` on
+    /// it: `AskOption.query` special-cases "handle" to send a canonical
+    /// string different from its display title, and folding a second special
+    /// case in there for "send the recognized phrase, show the bare scope
+    /// name" risked disturbing the existing away/handle/today display-vs-send
+    /// split this file already leans on elsewhere. `query` here is a phrase
+    /// `KeptAskComposers.namedAskTarget` already recognizes, so firing it
+    /// runs the exact same pipeline a typed ask would.
+    private struct CategoryChip: Identifiable {
+        let id: String
+        let title: String
+        let query: String
+    }
+    @State private var categoryChips: [CategoryChip] = []
     @State private var suggestions: [AskOption] = []
     /// Real-corpus example phrasings mixed into the empty field's cycling
     /// invitation (2026-07-22) — teaches the widened ask vocabulary
@@ -861,6 +880,12 @@ struct Composer: View {
         } else {
             AskMemory.shown(suggestions.map(\.memoryKey))
         }
+        // Category chips (scoped-brief-spec.md) — one per BRIEF SCOPE the
+        // corpus holds at least one connected thing in. ALWAYS offered rather
+        // than ranked/decayed/capped like `suggestions` above: the spec
+        // frames these as a fixed row of scope pickers under the input, not
+        // a suggestion competing for a slot.
+        categoryChips = Self.computeCategoryChips(all: all)
         // The board (prd §332) — built last, so it can see the away pool the
         // chips above already computed and never pays for a second walk.
         composition = buildPanel(all: all)
@@ -870,6 +895,46 @@ struct Composer: View {
               suggestions.map { $0.memoryKey + ($0.timely ? "*" : "") + ($0.signal ?? "") }
                   .joined(separator: ","))
         #endif
+    }
+
+    /// Every BRIEF SCOPE with at least one thing in the corpus, as chips —
+    /// three (`BriefScope.scopes`: Money, Work, Life), deliberately fewer
+    /// than the app catalog's own ten categories (user, 2026-08-08: "how many
+    /// categories do we... want to offer to search across, lets limit
+    /// those"). "Connected" needs no separate check for the same reason
+    /// `computeSuggestions`' own category-sibling chip doesn't (line ~700
+    /// above): a source with no connected bridge can never have landed a
+    /// `Thing`. A scope with nothing connected simply has no chip (spec's
+    /// edge case — "don't render its chip").
+    ///
+    /// NO "Everything" chip (user, 2026-08-08: "do we need an everything
+    /// chip? i mean everything is the default") — the unscoped brief is
+    /// already reachable two other ways (the whisper capsule, the kept
+    /// "today" pill), and a fourth door to it crowded a row whose whole
+    /// point is three tight, purposeful choices. `TodayBrief.title` and
+    /// `.matches` are UNCHANGED — typing "what's going on" or tapping either
+    /// of those still works exactly as before; only the dedicated CHIP for
+    /// it is gone.
+    ///
+    /// `query` sends a phrase already wired to resolve to this exact scope —
+    /// "How's my <scope> stuff?", the same phrase `namedAskTarget`'s "how's
+    /// my " prefix already resolves to `.category(scope)`
+    /// (`KeptAskComposers.swift`) — so a tap runs through the identical
+    /// pipeline a typed ask would, never a shortcut that could answer
+    /// differently.
+    private static func computeCategoryChips(all: [Thing]) -> [CategoryChip] {
+        guard !all.isEmpty else { return [] }
+        let present = Set(all.map(\.source))
+        var chips: [CategoryChip] = []
+        for scope in BriefScope.scopes {
+            let sources = Set(BridgeCatalog.offers
+                .filter { BriefScope.scope(forCatalogCategory: BridgeCatalog.category(of: $0)) == scope }
+                .map(\.name))
+            guard sources.contains(where: present.contains) else { continue }
+            chips.append(CategoryChip(id: scope, title: scope,
+                                      query: "How's my \(scope) stuff?"))
+        }
+        return chips
     }
 
     // MARK: - The panel (prd §334)
@@ -2195,6 +2260,10 @@ struct Composer: View {
             // once there's typed text to carry out.
             askChips
             takeChips
+            // The scope pickers (scoped-brief-spec.md) — "under the input",
+            // the last band before it, always offered rather than competing
+            // with `askChips`'/`takeChips`' own ranked/typed rows.
+            categoryChipsRow
             // The input, pinned to the bottom — a friendly rounded bar.
             inputBar
         }
@@ -3051,6 +3120,79 @@ struct Composer: View {
             // Clear air between the greeting and the chips — a separate
             // band (ask), not stuck to the header.
             .padding(.top, DS.Space.s4)
+            .padding(.bottom, DS.Space.s2)
+        }
+    }
+
+    /// Category chips (scoped-brief-spec.md) — "How's my Money stuff?",
+    /// "How's my Work stuff?", "How's my Life stuff?", one per BRIEF SCOPE
+    /// the corpus holds a connected app in. No "Everything" chip (user,
+    /// 2026-08-08) — that brief is already the default and reachable via the
+    /// whisper capsule or the kept "today" pill. Deliberately a SEPARATE,
+    /// always-offered row from `askChips` above: those rank, decay and
+    /// compete for one of 7 slots (tap-learning, §95), while these are scope
+    /// pickers under the input a person reaches for repeatedly — decaying
+    /// "Work" behind an unrelated chip because it went untapped for a while
+    /// would be exactly the wrong lesson for a control whose job is to
+    /// always be there.
+    ///
+    /// A LABELED two-row band (user ruling, 2026-08-08) — "What's going on"
+    /// as a section label, every chip in a row beneath it, both always
+    /// visible together. No expand step, no tap-to-reveal, no typing: three
+    /// parent verbs now sit in the composer — Find and Send-to in the typed-
+    /// draft band (`takeChips`, needs `hasDraft`), What's-going-on here in
+    /// the REST band (needs `!hasDraft`) — because unlike Find/Send-to, which
+    /// act on text you've already typed, asking what's going on needs no
+    /// typed input at all; that's the point of a chip. The two bands are
+    /// mutually exclusive by construction (`restChrome`'s `!hasDraft` vs.
+    /// `takeChips`' `hasDraft`), so they never compete for the same line.
+    ///
+    /// Tapping a chip runs the query IMMEDIATELY (spec: "Do not prefill the
+    /// input and wait for send") — the same `draft = …; commit()` mechanism
+    /// `askChips` already uses, minus `AskMemory.tapped`: a fixed scope
+    /// picker isn't part of the decaying-suggestion vocabulary that counter
+    /// tracks.
+    ///
+    /// NOT gated on `!boardShowing` (user, 2026-08-08) — that exclusion
+    /// predates this row and belonged to the instrument panel alone. For
+    /// anyone with a real corpus the panel almost always has something to
+    /// draw, so inheriting its gate made this row nearly invisible in
+    /// practice: exactly the corpus where "what's going on with Work?" is
+    /// worth asking. The panel is a visualization; this is a control —
+    /// a control shouldn't disappear because a visualization is present.
+    @ViewBuilder
+    private var categoryChipsRow: some View {
+        if restChrome(keepBrief: true), !categoryChips.isEmpty {
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text("What's going on")
+                    .dsText(.subhead13)
+                    .foregroundStyle(DS.textTertiary)
+                    .padding(.horizontal, DS.Space.s4)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: DS.Space.s2) {
+                        ForEach(categoryChips) { chip in
+                            Button {
+                                DSHaptic.selection()
+                                draft = chip.query
+                                commit()
+                            } label: {
+                                Text(chip.title)
+                                    .dsText(.callout15)
+                                    .foregroundStyle(DS.textPrimary)
+                                    .lineLimit(1)
+                                    .padding(.horizontal, DS.Space.s4)
+                                    .padding(.vertical, DS.Space.s3)
+                                    .background(DS.gray100,
+                                                in: RoundedRectangle(cornerRadius: DS.Radius.control,
+                                                                     style: .continuous))
+                                    .dsHover()
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, DS.Space.s4)
+                }
+            }
             .padding(.bottom, DS.Space.s2)
         }
     }
