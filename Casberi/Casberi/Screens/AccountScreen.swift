@@ -281,14 +281,28 @@ struct SettingsScreen: View {
     /// a re-entered demo would destroy that person's real readings. A watched
     /// real wallet fails the same way through the seeded balance curve. So
     /// this reads true only when every connected bridge is a demo seat (by
-    /// NAME, against the same table `BridgeApp.demo` draws from — a `BridgeApp`
-    /// carries no "is demo" flag of its own) and no wallet is watched. After a
-    /// clean exit `bridgeStore.bridges` is `[]`, which satisfies this
-    /// trivially — re-entry is available the moment the last one ends.
+    /// NAME) and no wallet is watched. After a clean exit `bridgeStore.bridges`
+    /// is `[]`, which satisfies this trivially — re-entry is available the
+    /// moment the last one ends.
+    ///
+    /// **Checks against `BridgeApp.demo` WHOLE, not `DemoSeedAll.seats` alone
+    /// (fixed 2026-08-08, reported "I don't see the Settings row").**
+    /// `BridgeApp.demo` is `[Gmail, Calendar, ChatGPT, Reminders, Photos,
+    /// Claude, Wallet, Tokens] + DemoSeedAll.seats` — eight OLDER static
+    /// entries that predate `DemoMode` and seed automatically on every DEBUG
+    /// install that's been through onboarding (`BridgeStore.init`,
+    /// `DemoState.seedsDemoData`), independent of whether `DemoMode.begin`
+    /// was ever called. The first cut here only excused `DemoSeedAll.seats`,
+    /// so on the ordinary case — any dev/debug install, which is EVERY
+    /// install this got tested on — those eight static names failed
+    /// `allSatisfy` and the row never appeared. Reading the same array
+    /// `DemoMode.begin` actually writes (`store.bridges = BridgeApp.demo`)
+    /// is also the more honest source of truth: this gate can never drift
+    /// from what "a demo seat" means somewhere else again.
     private var demoReentryAvailable: Bool {
         guard !DemoMode.isActive else { return false }
         guard WalletStore.shared.addresses.isEmpty else { return false }
-        let demoNames = Set(DemoSeedAll.seats.map(\.name))
+        let demoNames = Set(BridgeApp.demo.map(\.name))
         return bridgeStore.bridges.allSatisfy { demoNames.contains($0.name) }
     }
 

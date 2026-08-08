@@ -100,9 +100,13 @@ KNOWN_NON_REACH=(
   # match against and deliberately never send to. The host we DO reach for these
   # rows is `www.tiktok.com`, disclosed in the registry as "TikTok video names".
   www.tiktokv.com tiktokv.com tiktokv.us
-  # Demo / placeholder content only
+  # Demo / placeholder content only. These are the URLs the furnished demo
+  # SEEDS as saved links — rows a person taps to open in their own browser.
+  # The demo reaches nothing by design (`BridgeRefresh.refreshAllConnected`
+  # returns immediately while `DemoMode.isActive`), so none of these is ever
+  # fetched by us.
   picsum.photos www.allbirds.com www.google.com www.nasa.gov
-  developer.apple.com www. example.com
+  developer.apple.com developer.mozilla.org www. example.com
 )
 
 # Every host literal the app references (app + shared sources), minus our own
