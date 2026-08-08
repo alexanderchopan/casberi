@@ -30,8 +30,13 @@ enum DayBrief {
 
     /// Everything that landed since the boundary, preserving the caller's
     /// order (every caller fetches newest-first).
-    static func landed(_ things: [Thing], now: Date = .now) -> [Thing] {
-        let start = windowStart(now: now)
+    ///
+    /// `since` overrides the boundary entirely (nil = the usual `windowStart`)
+    /// — the hook a category-scoped brief uses to reach back to its own
+    /// per-category "last checked" moment (`BriefScope.since(category:)`)
+    /// instead of the whole day's away-window/midnight boundary.
+    static func landed(_ things: [Thing], now: Date = .now, since: Date? = nil) -> [Thing] {
+        let start = since ?? windowStart(now: now)
         return things.filter { $0.capturedAt > start }
     }
 

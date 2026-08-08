@@ -114,8 +114,30 @@ enum TodayBrief {
     /// false so a new caller is silent by construction; the three display
     /// routes (the typed ask, the kept pill's tap, the whisper's tap — all
     /// three funnel through `RootShell.answerDocument`) pass true.
+    ///
+    /// `category` scopes the brief to one app-catalog category (`BridgeCatalog
+    /// .categories`' own names — "Work", "Social", …) — nil is the unscoped,
+    /// whole-corpus brief this function has always composed (spec: scoped-
+    /// brief-spec.md, "one pipeline, two parameters, not a new feature").
+    /// Everything downstream of the Stage-1 filter below — the lede's mention/
+    /// deadline rungs, the themes map, the leads, the synthesis notes — reads
+    /// `things`/`landed`, so filtering those two arrays ONCE, here, scopes the
+    /// whole pipeline for free; only the wallet/markets modules read live
+    /// bridge state INSTEAD of `things` (holdings, watchlist moves, DeFi risk,
+    /// resolved markets), so those are separately gated below on the category
+    /// actually being Wallet/Markets/unscoped.
+    ///
+    /// Stage 2 of the spec ("item filtering… only items relevant to the
+    /// requested category") collapses into Stage 1 here: every catalog offer
+    /// carries exactly ONE category (`BridgeCatalog.category(of:)` returns a
+    /// single name), so there is no source in this catalog today whose things
+    /// legitimately split across categories the way the spec's email example
+    /// does. A `Thing` is scoped by its `source`'s one category, full stop —
+    /// if a future bridge genuinely needs per-item relevance (a unified inbox
+    /// spanning Work and Social), that's a new signal to filter on, not
+    /// something to fake here with `things` alone.
     static func compose(things: [Thing], context: ModelContext,
-                        presenting: Bool = false) async -> KeptAskComposers.Result? {
+                        presenting: Bool = false, category: String? = nil) async -> KeptAskComposers.Result? {
         // Filtered on ENTRY as well as after the awaits below (crash fix,
         // build 250). The caller's array can ALREADY be stale: `RootShell`
         // fetches it, then awaits `KeptAskStore.refreshDigests` before handing
@@ -124,9 +146,42 @@ enum TodayBrief {
         // before this function ever suspends.
         var things = things.live
         let now = Date.now
-        var landed = DayBrief.landed(things, now: now)
-        let move = DayBrief.walletMove(now: now)
-        let windowStart = DayBrief.windowStart(now: now)
+
+        // Stage 1 (deterministic app selection, spec's own term): the
+        // category's candidate sources are every catalog offer whose
+        // `BridgeCatalog.category(of:)` names it — "connected" needs no
+        // separate check, since a source with no connected bridge can never
+        // have landed a `Thing` in the first place.
+        if let category {
+            let candidateSources = Set(BridgeCatalog.offers
+                .filter { BridgeCatalog.category(of: $0) == category }.map(\.name))
+            // A category with literally nothing ever landed from it is not
+            // "quiet since you last checked", it's not connected at all — the
+            // spec's own edge case, distinct from "connected but nothing new"
+            // below. Checked against the WHOLE corpus, before any window.
+            guard things.contains(where: { candidateSources.contains($0.source) }) else {
+                return KeptAskComposers.Result(
+                    delta: "", digest: String(localized: "unconnected"),
+                    doc: ["root = Stack([ins])",
+                          "ins = Insight(\"\(genSafe(String(localized:
+                              "No apps connected in \(category) yet — add one from Apps.")))\")"])
+            }
+            things = things.filter { candidateSources.contains($0.source) }
+        }
+        // Wallet/Markets modules below read LIVE bridge state instead of
+        // `things` (holdings, watchlist prices, DeFi risk, resolved markets),
+        // so the Stage-1 filter above can't scope them — gated explicitly.
+        let scopedToWallet = category == nil || category == "Wallet"
+        let scopedToMarkets = category == nil || category == "Markets"
+
+        // The window boundary: the whole day's away-window/midnight boundary
+        // for the unscoped brief (UNCHANGED — spec: "the scheduled daily
+        // brief keeps its current window"), or this category's own "since I
+        // last checked" moment for a scoped ask.
+        let windowStart = category.map { BriefScope.since(category: $0, now: now) }
+            ?? DayBrief.windowStart(now: now)
+        var landed = DayBrief.landed(things, now: now, since: windowStart)
+        let move = scopedToWallet ? DayBrief.walletMove(now: now) : nil
         // The ledger is read ONCE here and threaded through every module that
         // asks it something (the `ChipMemory.snapshot()` discipline) — five
         // separate reads would decode the same JSON five times per rise.
@@ -155,8 +210,8 @@ enum TodayBrief {
         // portfolio read (measured at 6.8s) to build a hero nobody would ever
         // see. The lede doesn't touch holdings either, so the widget line it
         // publishes is unaffected.
-        async let holdingsRead = presenting ? liveHoldings() : []
-        async let movesRead = liveMoves(context: context)
+        async let holdingsRead = (presenting && scopedToWallet) ? liveHoldings() : []
+        async let movesRead = scopedToMarkets ? liveMoves(context: context) : []
         // Gated on `presenting` (2026-07-25): the risk rung only ever reaches
         // the LEDE, and the digest — the one thing the background path uses —
         // is `DayBrief.detail`, which never carries it. So on the digest
@@ -168,7 +223,7 @@ enum TodayBrief {
         // chain latency there to compute a sentence nobody is looking at is
         // work with no reader. The cost of the gate: `-todayProbe` composes
         // with `presenting: false`, so it can't show the risk rung.
-        async let riskRead = presenting ? worstDebt() : nil
+        async let riskRead = (presenting && scopedToWallet) ? worstDebt() : nil
         // Where an open's wait actually goes, per read (2026-08-04). DEBUG-only
         // and free in release, the same bargain `LaunchPerf`'s span markers
         // make — kept rather than deleted because "the brief feels slow" is a
@@ -236,8 +291,16 @@ enum TodayBrief {
         // Publishing is NOT recording: the ledger's `presenting` discipline is
         // about claiming "I already told you this", and a widget line is the
         // telling, not a claim about it.
-        publishLedeToWidget(lede.text)
-        publishThemesToWidget(things: things, now: now)
+        //
+        // SKIPPED for a scoped brief (`category != nil`): the widget's whole
+        // promise is the DAY'S lede/themes, and a "What's going on with Work?"
+        // ask overwriting that with a Work-only sentence would make the
+        // Lock Screen lie about the rest of the corpus the next time it's
+        // glanced at, unrelated to whether anyone actually opened the widget.
+        if category == nil {
+            publishLedeToWidget(lede.text)
+            publishThemesToWidget(things: things, now: now)
+        }
 
         // 2. The money hero — the CROWN (2026-07-25), the day's one fused
         // visualization and the only read where a number is itself the event.
@@ -266,7 +329,7 @@ enum TodayBrief {
         // A watched market that resolved — an EVENT, so it follows the pair
         // rather than joining it (a tile pair is state at a glance; this is
         // news). Silent on every day nothing settled, like every module here.
-        if let resolved = marketResolvedToday(MarketsAsk.moves(context: context), now: now) {
+        if scopedToMarkets, let resolved = marketResolvedToday(MarketsAsk.moves(context: context), now: now) {
             ids.append("tmkt")
             lines.append(resolved)
         }
@@ -324,9 +387,13 @@ enum TodayBrief {
         // The synthesis card (B3) — only the observations that fired. Sits
         // BELOW the summaries (2026-07-25): it used to open the screen,
         // which made the agent's read the crown instead of the money.
+        // A scoped brief covers fewer apps, so more of what actually fired
+        // earns a line instead of losing the last seat to the unscoped
+        // brief's cap (spec: "depth scales inversely with scope").
         let notes = observations(things: things, landed: landed, move: move, moves: moves,
                                  now: now, ledger: ledger, ledeTookRisk: lede.tookRisk,
-                                 topic: topic, leads: Set(leadIDs))
+                                 topic: topic, leads: Set(leadIDs),
+                                 cap: category == nil ? 3 : 6)
         // The agent's READ of the day (2026-08-07) — a genuine model paragraph
         // leading the synthesis section, where the deterministic notes below are
         // single facts. The fix for "the brief feels generic": the notes are a
@@ -360,26 +427,53 @@ enum TodayBrief {
         // What this window's brief showed — the memory every §214 read is
         // built on. Written last, so it records what was actually composed,
         // and only when a person is looking at it.
-        if presenting {
+        //
+        // SKIPPED for a scoped brief. `BriefLedger` tracks the WHOLE day's
+        // streaks/themes/absence — recording a Work-only slice into it under
+        // the unscoped brief's own `windowStart` would corrupt tomorrow's
+        // "ETH has done the lifting N days running" and theme-continuity
+        // reads with a fact that was never about the whole day. A category's
+        // own continuity is `BriefScope`'s job (below), not this ledger's.
+        if presenting, category == nil {
             BriefLedger.record(into: ledger, windowStart: windowStart, leadIDs: leadIDs,
                                ledeSymbol: lede.symbol, themes: themeNames,
                                sources: Array(Set(landed.map(\.source))), now: now)
         }
+        // A brief a person actually saw counts as having checked every
+        // category it covers (spec: "update it when a brief containing that
+        // category renders") — this category alone when scoped, every
+        // category at once for the unscoped/"Everything" brief.
+        if presenting {
+            BriefScope.markViewed(category: category, at: now)
+        }
 
-        // Nothing to draw at all — an honest empty day, not an empty screen.
+        // Nothing to draw at all — an honest empty window, not an empty
+        // screen. The scoped wording names WHEN rather than claiming "today",
+        // since a scoped window is "since you last checked", not necessarily
+        // today at all (spec: "render the brief shell with a single line
+        // stating nothing new since [time]").
         guard !ids.isEmpty else {
+            let since = windowStart.formatted(.dateTime.hour().minute())
+            let line = category.map { String(localized: "Nothing new in \($0) since \(since).") }
+                ?? String(localized: "Nothing has landed yet today.")
             return KeptAskComposers.Result(
                 delta: "", digest: String(localized: "quiet"),
-                doc: ["root = Stack([ins])",
-                      "ins = Insight(\"\(genSafe(String(localized: "Nothing has landed yet today.")))\")"])
+                doc: ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"])
         }
-        // The digest IS the whisper's own detail line — so the kept pill's
-        // trailing signal and the capsule that teases this screen say the
-        // same thing, and the changed-dot fires on exactly the days the
-        // whisper would have changed. (The whisper's TITLE is deliberately
-        // not part of it: a pill that already reads "How's my day?" doesn't
-        // need "Your Wednesday brief" repeated after it.)
-        let digest = DayBrief.detail(things: things, now: now) ?? String(localized: "quiet")
+        // The digest IS the whisper's own detail line for the unscoped brief
+        // — so the kept pill's trailing signal and the capsule that teases
+        // this screen say the same thing, and the changed-dot fires on
+        // exactly the days the whisper would have changed. (The whisper's
+        // TITLE is deliberately not part of it: a pill that already reads
+        // "How's my day?" doesn't need "Your Wednesday brief" repeated after
+        // it.) A scoped brief has no whisper to match, and `DayBrief.detail`
+        // reads whole-corpus wallet state regardless of `things` — so its
+        // digest is built straight from what this window actually composed:
+        // count plus which modules fired, which changes on exactly the asks
+        // that would show something new.
+        let digest = category == nil
+            ? (DayBrief.detail(things: things, now: now) ?? String(localized: "quiet"))
+            : "\(landed.count)|\(ids.joined(separator: ","))"
         // The CHAPTERS (2026-07-31) — which modules open a new movement, so
         // the rank order this file spent three rulings establishing is
         // legible as rhythm rather than only as sequence. Every module
@@ -419,10 +513,15 @@ enum TodayBrief {
     /// (§166's cards) are composed BEFORE this now, so an observation can see
     /// what the screen is already about to render in full and decline to say
     /// it a second time.
+    ///
+    /// `cap` is the depth knob a scoped brief raises (spec: "depth scales
+    /// inversely with scope" — fewer apps in view, so more of what fired
+    /// earns a seat instead of losing it to the unscoped brief's 3-note
+    /// ceiling). Defaults to 3, the unscoped brief's original, unchanged cap.
     static func observations(things: [Thing], landed: [Thing], move: DayBrief.WalletMove?,
                              moves: [TokensAsk.Move], now: Date,
                              ledger: [BriefLedger.Entry], ledeTookRisk: Bool,
-                             topic: Topic? = nil, leads: Set<String> = []) -> [Note] {
+                             topic: Topic? = nil, leads: Set<String> = [], cap: Int = 3) -> [Note] {
         var out: [Note] = []
 
         // The money's own sentence, displaced. When a liquidation risk takes
@@ -536,7 +635,7 @@ enum TodayBrief {
         // A watchlist leader worth naming — only a real move, and only when
         // it clearly leads the rest (a 0.2% "leader" is noise wearing a
         // ranking). Skipped once three observations already fired.
-        if out.count < 3, let leader = moves.max(by: { abs($0.change) < abs($1.change) }),
+        if out.count < cap, let leader = moves.max(by: { abs($0.change) < abs($1.change) }),
            abs(leader.change) >= 0.03 {
             out.append(Note(glyph: "chart.xyaxis.line",
                             text: String(format: "%@ leads your watchlist at %+.1f%%.",
@@ -544,7 +643,7 @@ enum TodayBrief {
                             thingID: leader.thing.id.uuidString))
         }
 
-        return Array(out.prefix(3))
+        return Array(out.prefix(cap))
     }
 
     /// The day's real facts, flattened to plain lines for the model's read of
