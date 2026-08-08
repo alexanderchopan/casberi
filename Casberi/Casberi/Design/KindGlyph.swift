@@ -241,6 +241,32 @@ enum BridgeGlyph {
         case "npm":       return "shippingbox.fill"
         case "pypi":      return "shippingbox"
         case "homekit":   return "homekit"
+        case "stripe":       return "banknote"
+        case "posthog":      return "chart.bar.xaxis"
+        case "cloudflare":   return "cloud.fill"
+        case "cursor":       return "cursorarrow"
+        case "stocktwits":   return "bubble.left.and.bubble.right"
+        case "hugging face": return "face.smiling"
+        case "circle x402":  return "dollarsign.circle"
+        // DeFi protocols the wallet rides — each a distinct glyph even where
+        // the shape (lending, a lock, a swap) rhymes, the ether.fi/Gnosis Pay
+        // rule in reverse: these are genuinely different objects and must not
+        // read as one thing listed twice.
+        case "aave":         return "a.circle"
+        case "morpho":       return "building.2"
+        case "uniswap":      return "arrow.triangle.2.circlepath"
+        case "hyperliquid":  return "waveform.path.ecg"
+        case "aerodrome":    return "lock.rotation"
+        // Railgun shields the same way Privacy Pools does, but the two are
+        // separate protocols — `shield.lefthalf.filled` is already taken.
+        case "railgun":      return "eye.slash"
+        case "polymarket":   return "questionmark.circle"
+        // A BYOK provider, not a chat import — Venice/Bankr/OpenRouter each
+        // already wear their own mark, so Grok gets one rather than folding
+        // into ChatGPT/Claude/Gemini's shared "bubble.left" (those three
+        // really are one shape: "import your chats"; a BYOK key is not).
+        case "grok":         return "bolt.circle"
+        case "openrouter":   return "arrow.triangle.branch"
         default:          return "app"
         }
     }

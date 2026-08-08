@@ -41,6 +41,16 @@ enum AgentPanel {
         var weight: Int
     }
 
+    /// One thumbnail in a wall (spec "Agent panel tiles" item 4). Carries a
+    /// LABEL beside its url so a slow-loading image (Pinterest, an OpenSea
+    /// drop) shows words while it waits rather than a bare gray box that
+    /// reads as broken — `Mosaic.Tile` has no per-item title, so every tile
+    /// in a room's wall shares that room's own mosaic title.
+    struct WallTile: Equatable {
+        var url: String
+        var label: String
+    }
+
     /// One ranked bar. `detail` is the room's own right-aligned display
     /// ("23", "3.4h") — never recomputed here, so the panel and the room can
     /// never disagree about a number.
@@ -57,6 +67,10 @@ enum AgentPanel {
         /// The room's own tone index — 0 neutral, 1 positive, 2 negative — kept
         /// as an Int so this file stays free of SwiftUI's Color.
         var tone: Int
+        /// The segment's own count, threaded through at compose (spec item
+        /// 5) — "• Pending" said the word and hid the number; the label
+        /// line now reads "Pending · 3".
+        var count: Int
     }
 
     /// One side-lane of the flow band — `WalletFlow.Lane`, flattened.
@@ -134,7 +148,7 @@ enum AgentPanel {
         /// A value curve — "where this is heading".
         case curve([Double])
         /// A thumbnail wall — for rooms whose content IS pictures.
-        case wall([String])
+        case wall([WallTile])
         /// The money's sankey — inflows, the spine, outflows (§240's band).
         /// Always a FULL-WIDTH cell: the inventory that sized this panel is
         /// explicit that three columns of labelled lanes cannot survive half
@@ -161,6 +175,15 @@ enum AgentPanel {
         /// the small cell precisely because it is one axis with no labels.
         case runway(marks: [RunwayMark], span: String)
 
+        /// The wallet's own hero (spec "Agent panel tiles" item 2, user: "a
+        /// lot of space for a simple sparkline" → "treemap of holdings is
+        /// useful there i think no?") — worth beside what it's made of, one
+        /// composite card instead of a curve alone over a hero-sized well.
+        /// Hero-only: at any smaller slot the two halves crush past
+        /// readability, so `fit` routes it to `.large` (the tall column,
+        /// never a small cell).
+        case worth(curve: [Double], cells: [Cell])
+
         /// A figure with nothing in it draws nothing, and a tile that draws
         /// nothing is a tile that shouldn't exist. Checked at composition, so
         /// an empty room can never mint a blank card.
@@ -176,7 +199,11 @@ enum AgentPanel {
             // flat pair it renders as a rule across the tile, which reads as a
             // divider rather than data.
             case .curve(let v):   return v.count < 3
-            case .wall(let u):    return u.count < 4
+            // Loosened from "needs a full 4-grid" (spec item 4) — a tile now
+            // shows its label even on a failed/slow url, so a room with only
+            // two landed images can still draw something real instead of
+            // being excluded for want of a complete grid.
+            case .wall(let u):    return u.filter { !$0.label.isEmpty || !$0.url.isEmpty }.count < 2
             // One side alone is a bar chart pretending to be a flow —
             // `WalletFlow.band` already declines those windows, and this
             // re-states it so a future caller can't hand one in.
@@ -192,6 +219,10 @@ enum AgentPanel {
             // One dot on an axis is a dot. A runway's claim is the SPREAD —
             // what is close versus what is far — and one deadline has none.
             case .runway(let m, _): return m.count < 2
+            // Both halves must clear their OWN standalone floor — a worth
+            // card with one crushed half is worse than the plain curve it
+            // replaces, so a thin composite never half-draws.
+            case .worth(let v, let c): return v.count < 3 || c.count < 2
             }
         }
     }
@@ -241,6 +272,9 @@ enum AgentPanel {
         // colliding into gibberish ("techchstartupsdisrupt"). A map of a
         // corpus is a wide figure or it is mush.
         case .scatter: return .bandOnly
+        // Curve beside a treemap — two halves that each need real width, so
+        // a small cell crushes both past readability (spec item 2).
+        case .worth:   return .large
         default:       return .any
         }
     }
@@ -416,6 +450,9 @@ enum AgentPanel {
         // grid is 53 columns wide, so raw length would rank every heatmap
         // identically and always above everything else.
         case .pulse(let p):   return p.filter { $0 > 0 }.count
+        // Scored on its curve half, matching plain `.curve`'s own rule — the
+        // treemap half is a bonus this figure carries, not what ranks it.
+        case .worth(let v, _): return min(v.count, 8)
         }
     }
 

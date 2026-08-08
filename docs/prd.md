@@ -19232,3 +19232,122 @@ entrance is really phased, not just declared to be.
 
 `scripts/design-motion-audit.py` and `scripts/agent-panel-selftest.sh` both
 pass unchanged; `verify.sh --build-only` is green end to end.
+
+## §343 — A real mark on every tile, a wallet hero that shows what it's made of (user: "how would you improve the design on these tiles and also we need to make sure icons are always present when its for a source. write it to spec so i can have sonnet do it")
+
+Executed from a written spec (`docs/agent-panel-tiles.md`, Fable → Sonnet)
+against the shipped §342 panel. Eight items; the eighth turned out to be
+half-done already and the sixth turned out not to apply at all — both are
+recorded here because a spec that's followed without checking its own
+premises against the real code is how a "fix" lands on nothing.
+
+**Every source tile now wears a real mark, mechanically guaranteed.**
+`BridgeGlyph.symbol(for:)`'s `default: return "app"` was reachable from at
+minimum Stripe, PostHog, Cloudflare, Cursor, Stocktwits, Hugging Face, and
+seven DeFi protocols the wallet rides (Aave, Morpho, Uniswap, Hyperliquid,
+Aerodrome, Railgun, Polymarket) plus two BYOK providers (Grok, OpenRouter) —
+16 offers total, found by DIFFING the catalog against the glyph table rather
+than guessing from a list (the spec's own "at minimum" hedge undercounted by
+six). Each got a considered case, distinct from its neighbors on purpose —
+Railgun and Privacy Pools both shield, so `eye.slash` sits beside
+`shield.lefthalf.filled` rather than sharing it, the ether.fi/Gnosis Pay rule
+in reverse: those two ARE the same object, these two are not. Cross-source
+cards (`source == "All"` — the Day Dial, Theme River, Semantic Map) stopped
+wearing a fake brand badge and now show a FIGURE glyph on the person's own
+accent (`DS.tint`), since the corpus these draw is theirs, not any room's. A
+monogram backstop (the source's own first letter, App Store Connect's
+`"character"` precedent) covers anything still falling through, so the
+generic grid glyph is now structurally unreachable from the panel.
+
+**Made mechanical, not just fixed once**: a new coverage check in
+`agent-panel-selftest.sh` extracts every `Offer(name:...)` from
+`BridgeCatalog.swift` (comments stripped first — its own doc line reads
+`` `Offer(name: "…"` `` as prose describing this exact check, and an
+unstripped regex "discovered" a phantom offer named "…" on the first draft,
+the Obsidian/Cursor lesson paid again) and diffs it against every case in
+`BridgeGlyph.symbol`. Self-tested: a fake offer injected into the extracted
+set must fail the check, or the check proves nothing. `-agentOpenProbe`
+gained a `mark=` field per card; run live against the seeded demo corpus (20
+cards, every real room), every single line read a real symbol or
+`CROSS-SOURCE` — zero fell through.
+
+**The wallet hero is a composite now — curve beside what it's made of**
+(user: "a lot of space for a simple sparkline" → "treemap of holdings is
+useful there i think no?"). A new `.worth(curve:cells:)` figure, hero-only
+(`fit` routes it to `.large`), renders the existing `curve()` and `treemap()`
+renderers side by side (58/42 split) with no new clock — both already read
+the shared `phase()`, so the composite choreographs itself. Degrades to the
+plain `.curve` when there isn't a real holdings breakdown to show, never
+padded.
+
+**That degrade was firing on EVERY real corpus, and the bug explains why:**
+`WalletStore.combinedValueSamples()` builds each merged point as
+`ValueSample(at: moment, usd: total)` — a two-argument call, so `holdings`
+sat on its struct default (`nil`) on every single combined sample, forever.
+Reading `window.last?.holdings` off that series found nothing, `cells` was
+always empty, and `.worth` could never fire on ANY corpus — a defect no
+build or audit could see, since the fallback renders as a perfectly normal
+hero. Caught by the harness this codebase already trusts for exactly this
+shape of bug: `-agentOpenProbe` against the real seeded demo corpus logged
+`Wallet · curve(6) · Your balance` where a corpus with real holdings should
+have said `worth(...)`. Fixed by reading each watched wallet's own RAW
+per-address samples directly (`WalletStore.valueSamples(forAddress:)`, the
+same shape `holdingsDeltas` already uses for the identical reason) and
+summing by symbol across wallets — cache-only, no network read, matching
+§341's "the panel spends nothing" rule. Re-probed: `Wallet · worth(curve 6,
+holdings 3)`.
+
+**Chips stopped reading as buttons.** The treemap rows (`treemap()`) had
+saturated fills (0.44 opacity) and the count sealed inside the pill on the
+leader only, so "Orthogonal 310" read as one token and every other row
+looked countless. Fills dropped a step (0.32, −0.07/rank); the count moved
+OUTSIDE the pill on every row, `DS.textTertiary`, so the pill's width still
+says the proportion and the number beside it says it precisely — they can no
+longer fuse.
+
+**A wall is never four gray boxes.** `Mosaic.Tile` turned out to carry no
+per-item title at all (the spec assumed one; grounded against `FeedInsight
+.swift` and found otherwise) — so `.wall([String])` became
+`.wall([WallTile])` carrying the room's own mosaic title as a SHARED label,
+shown as the loading/failed placeholder instead of a bare `DS.fillLine`
+rect. The empty-gate loosened to match: two tiles carrying a label or url
+now qualify (previously required a full 4-grid), so a room with only two
+landed images can still draw something real.
+
+**The rail's leading word carries its count** — `Segment` gained a `count:
+Int` field threaded from `FeedInsight.Distribution`'s own count, so "•
+Pending" reads "Pending · 3" beside the bar chart's own numbers.
+
+**Item 6 ("a bare count names its window") does not apply, and forcing it
+would have been dishonest.** `roomFigure`'s `things` parameter is always a
+room's FULL live history — `buildPanel` groups the whole corpus by source
+with no day-window anywhere in the call chain — so subtitles like "8,775
+saved messages" are genuine all-time totals. Appending a fabricated "· 7d"
+would have violated the exact §83 rule the spec's own item 6 text invoked
+("never guess a span"). Dial and river already carry real window language
+("when things land", "ten weeks") from their own composers. Skipped, on
+purpose, and recorded here so the next session doesn't rediscover the same
+dead end.
+
+**Item 7**: the leaderboard's first-row trailing number sat under the corner
+badge ("4,820" clipped on the demo corpus) — a targeted `.padding(.trailing,
+22)` on the first row only, `slot != .band`, since bands hide the badge
+already and shapes survive overlap where text doesn't.
+
+**Item 8, half already done**: `barsView` already wrapped its rows in
+symmetric `Spacer(minLength: 0)`s (centered) by the time this pass reached
+it — the spec's premise ("bottom-aligns via one leading Spacer") described a
+version of the file that predated it. `treemap()` genuinely top-aligned
+(dead space below a short chip list) and got the same symmetric-Spacer
+treatment to match.
+
+Verified: `agent-panel-selftest.sh` green (new fixtures + mutations for
+`.worth`'s dual floor, the wall's loosened gate, the glyph coverage check and
+its self-test); `design-motion-audit.py` 0 findings; two full `xcodebuild`
+passes (the second after the holdings-merge fix) both `BUILD SUCCEEDED`;
+`-agentOpenProbe` against the live seeded demo corpus confirmed every mark
+and the corrected `.worth` composition. `verify.sh`'s own full run could not
+be used for this pass — a concurrent session's in-flight `DemoSeedAll.swift`
+carried an undisclosed host literal that failed the network-reach audit
+unrelated to this work (since committed as `894481c`, off this session's
+critical path).

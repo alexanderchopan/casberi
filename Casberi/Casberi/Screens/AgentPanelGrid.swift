@@ -147,13 +147,7 @@ struct AgentPanelGrid: View {
                         // for a covered "$600". Beside the heading it has
                         // space of its own and reads as a heading mark.
                         if slot == .band {
-                            Image(systemName: BridgeGlyph.symbol(for: card.source))
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundStyle(.white)
-                                .frame(width: 16, height: 16)
-                                .background(hue, in: RoundedRectangle(cornerRadius: 4,
-                                                                     style: .continuous))
-                                .accessibilityHidden(true)
+                            TileBadge(card: card, hue: hue, size: 16, cornerRadius: 4)
                         }
                         Text(card.title)
                             .dsText(.subhead13)
@@ -178,13 +172,8 @@ struct AgentPanelGrid: View {
                     // top, and a badge in that corner clipped "Uniswap" to
                     // "Uniswap …" on a real corpus. Corner tiles keep it top —
                     // their figures start below the fold of the well.
-                    Image(systemName: BridgeGlyph.symbol(for: card.source))
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 18, height: 18)
-                        .background(hue, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                    TileBadge(card: card, hue: hue, size: 18, cornerRadius: 5)
                         .padding(6)
-                        .accessibilityHidden(true)
                         .opacity(slot == .band ? 0 : 1)
                         .frame(maxWidth: .infinity, maxHeight: .infinity,
                                alignment: .topTrailing)
@@ -215,6 +204,72 @@ struct AgentPanelGrid: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(card.source): \(card.title)")
         .modifier(TileEntrance(index: index, reduceMotion: reduceMotion))
+    }
+}
+
+/// The one mark every source tile wears — never the generic "app" grid glyph
+/// (spec "Agent panel tiles" item 1, user: "we need to make sure icons are
+/// always present when its for a source"). Three layers, checked in order:
+///
+/// 1. A CROSS-SOURCE card (`card.source == "All"` — the Day Dial, Theme
+///    River, Semantic Map) wears a FIGURE glyph on the person's own accent
+///    rather than a brand mark, since the corpus these draw is theirs, not
+///    any one room's.
+/// 2. A real source with a `BridgeGlyph` case wears its symbol on its hue,
+///    exactly as before.
+/// 3. Anything still falling through to `BridgeGlyph`'s generic `"app"`
+///    default wears its own first letter instead — a monogram is a mark,
+///    a grid icon is an apology. Precedent: App Store Connect's own glyph is
+///    deliberately a letter (`KindGlyph.swift`'s `"character"` case) because
+///    the App Store's mark is Apple's trademark and can't be borrowed.
+///
+/// `BridgeGlyph`'s own default is left untouched — settings' seat chips also
+/// read it, and this fallback belongs to the panel alone.
+private struct TileBadge: View {
+    let card: AgentPanel.Card
+    let hue: Color
+    let size: CGFloat
+    let cornerRadius: CGFloat
+
+    private static func crossSourceSymbol(for figure: AgentPanel.Figure) -> String {
+        switch figure {
+        case .dial:    return "clock"
+        case .river:   return "water.waves"
+        case .scatter: return "sparkles"
+        case .treemap: return "square.grid.2x2"
+        default:       return "circle.grid.2x2"
+        }
+    }
+
+    var body: some View {
+        Group {
+            if card.source == "All" {
+                Image(systemName: Self.crossSourceSymbol(for: card.figure))
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: size, height: size)
+                    .background(DS.tint, in: RoundedRectangle(cornerRadius: cornerRadius,
+                                                              style: .continuous))
+            } else {
+                let symbol = BridgeGlyph.symbol(for: card.source)
+                if symbol == "app" {
+                    Text(card.source.prefix(1).uppercased())
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: size, height: size)
+                        .background(hue, in: RoundedRectangle(cornerRadius: cornerRadius,
+                                                              style: .continuous))
+                } else {
+                    Image(systemName: symbol)
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: size, height: size)
+                        .background(hue, in: RoundedRectangle(cornerRadius: cornerRadius,
+                                                              style: .continuous))
+                }
+            }
+        }
+        .accessibilityHidden(true)
     }
 }
 
@@ -297,6 +352,8 @@ private struct FigureView: View {
                 RunwayFigure(marks: m, span: span, slot: slot,
                              axis: phase(0, 0.25), drop: phase(0.25, 0.75),
                              words: phase(0.8, 1.0))
+            case .worth(let values, let cells):
+                worth(values, cells)
             }
         }
         .onAppear {
@@ -318,33 +375,42 @@ private struct FigureView: View {
         let total = max(1, shown.reduce(0) { $0 + $1.weight })
         return GeometryReader { geo in
             VStack(spacing: 3) {
+                // Symmetric margin reads designed; the old top-align left
+                // dead space below a short cell count (spec item 8).
+                Spacer(minLength: 0)
                 ForEach(Array(shown.enumerated()), id: \.offset) { i, cell in
                     let share = Double(cell.weight) / Double(total)
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(hue.opacity(0.44 - 0.09 * Double(i)))
-                            .frame(width: max(26, geo.size.width * (0.30 + 0.70 * share)
-                                                  * phase(0.10 + 0.10 * Double(i),
-                                                          0.45 + 0.10 * Double(i))))
-                        HStack(spacing: 5) {
+                    let pillWidth = max(26, geo.size.width * (0.30 + 0.70 * share)
+                                          * phase(0.10 + 0.10 * Double(i),
+                                                  0.45 + 0.10 * Double(i)))
+                    HStack(spacing: 6) {
+                        // Saturated fills + bold white text read as tappable
+                        // buttons — honesty: they're not, the TILE is the
+                        // button (spec item 3). A step down keeps rank
+                        // legible without the button read.
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(hue.opacity(0.32 - 0.07 * Double(i)))
                             Text(cell.label)
                                 .dsText(i == 0 ? .callout15 : .subhead13)
                                 .fontWeight(i == 0 ? .semibold : .regular)
                                 .foregroundStyle(DS.textPrimary)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.8)
-                            if i == 0 {
-                                Text("\(cell.weight)")
-                                    .dsText(.subhead13)
-                                    .foregroundStyle(DS.textPrimary.opacity(0.7))
-                                    .monospacedDigit()
-                            }
-                            Spacer(minLength: 0)
+                                .padding(.horizontal, 7)
                         }
-                        .padding(.horizontal, 7)
+                        .frame(width: pillWidth, alignment: .leading)
+                        // The count moves OUTSIDE the pill, on every row —
+                        // inside, "Orthogonal 310" read as one token and a
+                        // tail row with no count looked countless.
+                        Text("\(cell.weight)")
+                            .dsText(.subhead13)
+                            .foregroundStyle(DS.textTertiary)
+                            .monospacedDigit()
+                        Spacer(minLength: 0)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                Spacer(minLength: 0)
             }
         }
     }
@@ -368,6 +434,11 @@ private struct FigureView: View {
                                 .dsText(.subhead13)
                                 .foregroundStyle(DS.textTertiary)
                                 .monospacedDigit()
+                                // The FIRST row sits under the corner badge —
+                                // "4,820" clipped there on the demo corpus
+                                // (spec item 7). Shapes survive overlap;
+                                // text doesn't, so only text gets the inset.
+                                .padding(.trailing, i == 0 && slot != .band ? 22 : 0)
                         }
                         ZStack(alignment: .leading) {
                             // The empty TRACK is structure and lands first, so
@@ -412,6 +483,12 @@ private struct FigureView: View {
                             .dsText(.subhead13)
                             .foregroundStyle(DS.textSecondary)
                             .lineLimit(1)
+                        // The word alone hid the number (spec item 5):
+                        // "• Pending" with no count beside it.
+                        Text("\(seg.count)")
+                            .dsText(.subhead13)
+                            .foregroundStyle(DS.textTertiary)
+                            .monospacedDigit()
                     }
                 }
             }
@@ -515,8 +592,25 @@ private struct FigureView: View {
         }
     }
 
-    private func wall(_ urls: [String]) -> some View {
-        let shown = Array(urls.prefix(4))
+    /// Worth beside what it's made of (spec item 2) — the wallet hero's
+    /// composite. Reuses `curve()` and `treemap()` untouched: both already
+    /// read `phase()`, so the pair choreographs itself with no new clock and
+    /// no new struct. A GeometryReader splits the width 58/42 rather than an
+    /// even half, since the curve needs more run than four holding rows do.
+    private func worth(_ values: [Double], _ cells: [AgentPanel.Cell]) -> some View {
+        GeometryReader { geo in
+            let gap: CGFloat = DS.Space.s2
+            let curveWidth = (geo.size.width - gap) * 0.58
+            let mapWidth = (geo.size.width - gap) * 0.42
+            HStack(spacing: gap) {
+                curve(values).frame(width: curveWidth)
+                treemap(cells).frame(width: mapWidth)
+            }
+        }
+    }
+
+    private func wall(_ tiles: [AgentPanel.WallTile]) -> some View {
+        let shown = Array(tiles.prefix(4))
         return GeometryReader { geo in
             let gap: CGFloat = 3
             let cellH = max(18, (geo.size.height - gap) / 2)
@@ -527,13 +621,15 @@ private struct FigureView: View {
                         ForEach(0..<2, id: \.self) { col in
                             let i = row * 2 + col
                             Group {
-                                if i < shown.count {
-                                    AsyncImage(url: URL(string: shown[i])) { image in
+                                if i < shown.count, let url = URL(string: shown[i].url),
+                                   !shown[i].url.isEmpty {
+                                    AsyncImage(url: url) { image in
                                         image.resizable().scaledToFill()
                                     } placeholder: {
-                                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                            .fill(DS.fillLine)
+                                        wallPlaceholder(shown[i].label)
                                     }
+                                } else if i < shown.count {
+                                    wallPlaceholder(shown[i].label)
                                 } else {
                                     RoundedRectangle(cornerRadius: 4, style: .continuous)
                                         .fill(DS.fillLine)
@@ -550,6 +646,25 @@ private struct FigureView: View {
                 }
             }
         }
+    }
+
+    /// A wall's loading/failed state — the tile's own label, not a bare gray
+    /// box (spec item 4: "a wall is never four gray boxes"). A room whose
+    /// images are remote and slow drew four indistinguishable blanks that
+    /// read as broken; this makes the wait itself content.
+    private func wallPlaceholder(_ label: String) -> some View {
+        RoundedRectangle(cornerRadius: 4, style: .continuous)
+            .fill(DS.fillLine)
+            .overlay {
+                if !label.isEmpty {
+                    Text(label)
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .padding(4)
+                }
+            }
     }
 }
 

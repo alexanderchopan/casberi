@@ -1183,12 +1183,19 @@ struct Composer: View {
                         .rail(split.segments.map {
                             AgentPanel.Segment(label: $0.label,
                                                share: Double($0.count) / Double(total),
-                                               tone: toneIndex($0.tone))
+                                               tone: toneIndex($0.tone),
+                                               count: $0.count)
                         }))
         }
         if let wall = FeedInsight.mosaic(source: source, things: things) {
+            // `Mosaic.Tile` carries no per-item title, so every tile shares
+            // the room's own mosaic title as its loading/failed label (spec
+            // item 4) — "Your pins" while a Pinterest thumbnail is still
+            // fetching reads as content; a bare gray box reads as broken.
             return card(wall.title, wall.subtitle,
-                        .wall(wall.tiles.prefix(4).map(\.url)))
+                        .wall(wall.tiles.prefix(4).map {
+                            AgentPanel.WallTile(url: $0.url, label: wall.title)
+                        }))
         }
         if let label = FeedHeatmap.label(for: source) {
             let counted = FeedHeatmap.counted(things, label: label)
@@ -1268,10 +1275,44 @@ struct Composer: View {
         let reading = flat
             ? AgentPanel.compactUSD(last)
             : AgentPanel.compactUSD(last) + String(format: " · %+.1f%%", pct)
+        // "a lot of space for a simple sparkline" → "treemap of holdings is
+        // useful there i think no?" (spec item 2, 2026-08-07). The hero
+        // already gets double height for one line and one curve; the newest
+        // CACHED per-wallet holdings (recorded at each wallet's own normal
+        // sync, never a fresh read here — the panel spends nothing) fill the
+        // other half with what the balance is actually made of.
+        //
+        // NOT read off `window`/`samples` — `combinedValueSamples()` builds
+        // each merged point as `ValueSample(at:usd:)` with no third argument,
+        // so `holdings` is always its struct default (nil) on every combined
+        // sample; reading `window.last?.holdings` here always found an empty
+        // dict and `.worth` could never fire, caught only by an
+        // `-agentOpenProbe` reading `curve(6)` where a real corpus should
+        // have said `worth(...)`. `holdingsDeltas` has the same shape for the
+        // same reason: per-wallet symbol breakdowns only ever survive on the
+        // RAW per-address samples, so each watched wallet's newest
+        // holdings-bearing sample is read directly and summed by symbol.
+        var mergedHoldings: [String: Double] = [:]
+        for entry in WalletStore.shared.addresses {
+            guard let holdings = WalletStore.shared.valueSamples(forAddress: entry.address)
+                .last(where: { $0.holdings != nil })?.holdings else { continue }
+            for (symbol, usd) in holdings { mergedHoldings[symbol, default: 0] += usd }
+        }
+        // `treemapWeight` is the same sqrt-scaled function the real Wallet
+        // room's own treemap uses, so the two never disagree about
+        // proportion the way §341 found them disagreeing about the number
+        // itself.
+        let cells: [AgentPanel.Cell] = mergedHoldings
+            .sorted { $0.value > $1.value }
+            .prefix(4)
+            .map { AgentPanel.Cell(label: $0.key, weight: WalletIngest.treemapWeight($0.value)) }
+        let figure: AgentPanel.Figure = cells.count >= 2
+            ? .worth(curve: samples, cells: cells)
+            : .curve(samples)
         return AgentPanel.Card(source: "Wallet", key: "wallet.curve",
                                title: String(localized: "Your balance"),
                                caption: windowLabel,
-                               figure: .curve(samples),
+                               figure: figure,
                                affinity: ChipMemory.weight(for: "Wallet"),
                                reading: reading,
                                rising: flat ? nil : pct > 0)

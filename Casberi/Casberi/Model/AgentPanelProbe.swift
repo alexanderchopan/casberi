@@ -36,9 +36,19 @@ enum AgentPanelProbe {
         // its own screen draws a treemap is the drift this probe exists for,
         // and both render as a perfectly good-looking tile.
         for card in c.cards {
-            NSLog("[Casberi] agentPanelCard| %@ · %@ · %@ · affinity=%d",
-                  card.source, kind(card.figure), card.title, card.affinity)
+            NSLog("[Casberi] agentPanelCard| %@ · %@ · %@ · affinity=%d · mark=%@",
+                  card.source, kind(card.figure), card.title, card.affinity, mark(card))
         }
+    }
+
+    /// Mirrors `TileBadge`'s three-layer choice in `AgentPanelGrid.swift` —
+    /// which mark a card's badge actually resolves to, so a fallthrough to
+    /// the generic glyph is visible in one launch instead of requiring a
+    /// screenshot per room.
+    private static func mark(_ card: AgentPanel.Card) -> String {
+        if card.source == "All" { return "CROSS-SOURCE" }
+        let symbol = BridgeGlyph.symbol(for: card.source)
+        return symbol == "app" ? "MONOGRAM(\(card.source.prefix(1).uppercased()))" : symbol
     }
 
     private static func kind(_ figure: AgentPanel.Figure) -> String {
@@ -64,6 +74,7 @@ enum AgentPanelProbe {
             let over = m.filter(\.overdue).count
             let soon = m.filter(\.urgent).count
             return "runway(\(m.count) over \(span), \(over) overdue, \(soon) urgent)"
+        case .worth(let v, let c): return "worth(curve \(v.count), holdings \(c.count))"
         }
     }
 }

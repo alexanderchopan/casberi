@@ -59,6 +59,9 @@ func card(_ source: String, _ figure: AgentPanel.Figure, key: String? = nil,
     AgentPanel.Card(source: source, key: key ?? source, title: "t", caption: "c",
                     figure: figure, affinity: affinity)
 }
+func walltiles(_ labels: [String]) -> [AgentPanel.WallTile] {
+    labels.map { AgentPanel.WallTile(url: "https://x/\($0)", label: $0) }
+}
 func lanes(_ usds: [Double]) -> [AgentPanel.FlowLane] {
     usds.enumerated().map { AgentPanel.FlowLane(name: "l\($0.offset)", usd: $0.element, count: 1) }
 }
@@ -70,7 +73,16 @@ check(!AgentPanel.Figure.treemap(cells(2)).isEmpty, "two cells is a map")
 check(AgentPanel.Figure.rail([]).isEmpty, "an empty rail draws nothing")
 check(AgentPanel.Figure.curve([1, 2]).isEmpty, "two points is a line between dots, not a curve")
 check(!AgentPanel.Figure.curve([1, 2, 3]).isEmpty, "three points is a curve")
-check(AgentPanel.Figure.wall(["a", "b", "c"]).isEmpty, "a wall needs a full grid")
+// The wall (spec item 4) — loosened from "needs a full 4-grid" so a tile with
+// a label but a failed/empty url can still draw something real.
+check(AgentPanel.Figure.wall(walltiles([])).isEmpty, "an empty wall draws nothing")
+check(AgentPanel.Figure.wall([AgentPanel.WallTile(url: "https://x", label: "")]).isEmpty,
+      "one tile alone is not a wall")
+check(!AgentPanel.Figure.wall(walltiles(["a", "b"])).isEmpty,
+      "two labeled tiles is enough, short of a full 4-grid")
+check(AgentPanel.Figure.wall([AgentPanel.WallTile(url: "", label: ""),
+                              AgentPanel.WallTile(url: "", label: "")]).isEmpty,
+      "two tiles with neither a url nor a label say nothing")
 
 // The runway (§338) — Stripe's and Cloudflare's rail, the figure that GAINS
 // from a small cell.
@@ -95,6 +107,17 @@ check(AgentPanel.Figure.flow(inLanes: lanes([100]), outLanes: []).isEmpty,
       "one side alone is a bar chart pretending to be a flow")
 check(!AgentPanel.Figure.flow(inLanes: lanes([100]), outLanes: lanes([40])).isEmpty,
       "one lane each side is a real flow")
+
+// The wallet hero (spec "Agent panel tiles" item 2) — worth beside what it's
+// made of. Both halves must clear their OWN floor independently.
+check(AgentPanel.Figure.worth(curve: [1, 2], cells: cells(3)).isEmpty,
+      "a two-point curve half fails on its own, even with a good map")
+check(AgentPanel.Figure.worth(curve: [1, 2, 3], cells: cells(1)).isEmpty,
+      "a one-cell map half fails on its own, even with a good curve")
+check(!AgentPanel.Figure.worth(curve: [1, 2, 3], cells: cells(2)).isEmpty,
+      "both halves clearing their floor makes a real worth card")
+check(AgentPanel.fit(.worth(curve: [1, 2, 3], cells: cells(2))) == .large,
+      "worth needs the hero's width — a small cell crushes both halves")
 
 // ─────────────────── ranking ───────────────────
 print("rank")
@@ -287,6 +310,15 @@ mutate "an all-zero year counts as a drawable pulse" \
 mutate "a two-point curve draws as a rule across the tile" \
   'case .curve(let v):   return v.count < 3' \
   'case .curve(let v):   return v.count < 2' || rc=1
+mutate "a worth card can half-draw on a thin map" \
+  'case .worth(let v, let c): return v.count < 3 || c.count < 2' \
+  'case .worth(let v, let c): return v.count < 3 && c.count < 2' || rc=1
+mutate "a wall of four gray boxes draws as a wall" \
+  'case .wall(let u):    return u.filter { !$0.label.isEmpty || !$0.url.isEmpty }.count < 2' \
+  'case .wall(let u):    return u.count < 2' || rc=1
+mutate "worth crushes into a small cell" \
+  'case .worth:   return .large' \
+  'case .worth:   return .any' || rc=1
 mutate "empty figures become blank tiles" \
   'filter { !$0.figure.isEmpty }' \
   'filter { _ in true }' || rc=1
@@ -344,6 +376,68 @@ else
 fi
 # The entrance must honour Reduce Motion.
 guard_has "tile entrance honours Reduce Motion" "$GRID" 'reduceMotion \? nil' || rc=1
+
+print ""
+print "Glyph coverage — every catalog offer has a real mark"
+# Every source tile draws BridgeGlyph.symbol(for: card.source), and that
+# table's `default:` returns "app" — the generic grid glyph the user singled
+# out as reading like nothing. This proves EVERY connectable catalog offer
+# has its own case, so a new offer can't silently wear the generic glyph on
+# the panel just because nobody remembered to add one (prd §"Agent panel
+# tiles" item 1, 2026-08-07). `KNOWN_EXEMPT` is a conscious ruling, not a
+# snooze — empty by design; an entry needs a reason comment beside it.
+GLYPH="Casberi/Casberi/Design/KindGlyph.swift"
+CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
+glyph_coverage() {
+  local catalog_file="$1" glyph_file="$2"
+  python3 - "$catalog_file" "$glyph_file" <<'PY'
+import re, sys
+catalog_path, glyph_path = sys.argv[1], sys.argv[2]
+KNOWN_EXEMPT = set()
+
+catalog = open(catalog_path).read()
+# Comments stripped FIRST — this file's own doc comment on the offers array
+# reads `Offer(name: "…"` as prose describing this exact check, and an
+# unstripped regex would "discover" a phantom offer named "…" (caught
+# exactly this way on the first run of this check).
+catalog_code = re.sub(r'//.*', '', catalog)
+offers = set(m.lower() for m in re.findall(r'Offer\(name:\s*"([^"]+)"', catalog_code))
+if not offers:
+    print("  ✗ extracted zero offers — the harness is stale"); sys.exit(1)
+
+glyph = open(glyph_path).read()
+start = glyph.index('static func symbol(for name: String) -> String {')
+end = glyph.index('\n    }\n}', start)
+body = glyph[start:end]
+cases = set()
+for c in re.findall(r'case ((?:"[^"]+",?\s*)+):', body):
+    for m in re.findall(r'"([^"]+)"', c):
+        cases.add(m.strip().lower())
+
+missing = sorted((offers - cases) - KNOWN_EXEMPT)
+if missing:
+    print(f"  ✗ {len(missing)} offer(s) with no glyph case: {', '.join(missing)}")
+    sys.exit(1)
+print(f"  ✓ all {len(offers)} catalog offers resolve to a real glyph")
+PY
+}
+if glyph_coverage "$CATALOG" "$GLYPH"; then :; else rc=1; fi
+
+# Self-test the check itself: inject a fake offer name absent from KindGlyph
+# and prove the coverage check actually fails on it — a check that can't
+# fail proves nothing.
+FAKE_CATALOG="$WORK/fake-catalog.swift"
+{ cat "$CATALOG"; echo '        Offer(name: "ZzzNotARealOfferXyz", tagline: "t", group: "g", connectable: true,'; } > "$FAKE_CATALOG"
+python3 - "$FAKE_CATALOG" >/dev/null 2>&1 <<'PY'
+import sys
+# quick sanity the fake line actually landed
+assert 'ZzzNotARealOfferXyz' in open(sys.argv[1]).read()
+PY
+if glyph_coverage "$FAKE_CATALOG" "$GLYPH" >/dev/null 2>&1; then
+  print "  ✗ glyph coverage self-test — a fake offer with no case SURVIVED"; rc=1
+else
+  print "  ✓ glyph coverage self-test — a fake unmapped offer is caught"
+fi
 
 print ""
 if [[ $rc -ne 0 ]]; then print "✗ agent-panel self-test FAILED"; exit 1; fi
