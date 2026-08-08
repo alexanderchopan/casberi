@@ -3121,37 +3121,62 @@ struct Composer: View {
     /// unrelated chip because it went untapped for a while would be exactly
     /// the wrong lesson for a control whose job is to always be there.
     ///
-    /// Tapping runs the query IMMEDIATELY (spec: "Do not prefill the input
-    /// and wait for send") — the same `draft = …; commit()` mechanism
+    /// A LABELED two-row band (user ruling, 2026-08-08) — "What's going on"
+    /// as a section label, every chip in a row beneath it, both always
+    /// visible together. No expand step, no tap-to-reveal, no typing: three
+    /// parent verbs now sit in the composer — Find and Send-to in the typed-
+    /// draft band (`takeChips`, needs `hasDraft`), What's-going-on here in
+    /// the REST band (needs `!hasDraft`) — because unlike Find/Send-to, which
+    /// act on text you've already typed, asking what's going on needs no
+    /// typed input at all; that's the point of a chip. The two bands are
+    /// mutually exclusive by construction (`restChrome`'s `!hasDraft` vs.
+    /// `takeChips`' `hasDraft`), so they never compete for the same line.
+    ///
+    /// Tapping a chip runs the query IMMEDIATELY (spec: "Do not prefill the
+    /// input and wait for send") — the same `draft = …; commit()` mechanism
     /// `askChips` already uses, minus `AskMemory.tapped`: a fixed scope
     /// picker isn't part of the decaying-suggestion vocabulary that counter
     /// tracks.
+    ///
+    /// NOT gated on `!boardShowing` (user, 2026-08-08) — that exclusion
+    /// predates this row and belonged to the instrument panel alone. For
+    /// anyone with a real corpus the panel almost always has something to
+    /// draw, so inheriting its gate made this row nearly invisible in
+    /// practice: exactly the corpus where "what's going on with Work?" is
+    /// worth asking. The panel is a visualization; this is a control —
+    /// a control shouldn't disappear because a visualization is present.
     @ViewBuilder
     private var categoryChipsRow: some View {
-        if restChrome(keepBrief: true), !boardShowing, !categoryChips.isEmpty {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DS.Space.s2) {
-                    ForEach(categoryChips) { chip in
-                        Button {
-                            DSHaptic.selection()
-                            draft = chip.query
-                            commit()
-                        } label: {
-                            Text(chip.title)
-                                .dsText(.callout15)
-                                .foregroundStyle(DS.textPrimary)
-                                .lineLimit(1)
-                                .padding(.horizontal, DS.Space.s4)
-                                .padding(.vertical, DS.Space.s3)
-                                .background(DS.gray100,
-                                            in: RoundedRectangle(cornerRadius: DS.Radius.control,
-                                                                 style: .continuous))
-                                .dsHover()
+        if restChrome(keepBrief: true), !categoryChips.isEmpty {
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text("What's going on")
+                    .dsText(.subhead13)
+                    .foregroundStyle(DS.textTertiary)
+                    .padding(.horizontal, DS.Space.s4)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: DS.Space.s2) {
+                        ForEach(categoryChips) { chip in
+                            Button {
+                                DSHaptic.selection()
+                                draft = chip.query
+                                commit()
+                            } label: {
+                                Text(chip.title)
+                                    .dsText(.callout15)
+                                    .foregroundStyle(DS.textPrimary)
+                                    .lineLimit(1)
+                                    .padding(.horizontal, DS.Space.s4)
+                                    .padding(.vertical, DS.Space.s3)
+                                    .background(DS.gray100,
+                                                in: RoundedRectangle(cornerRadius: DS.Radius.control,
+                                                                     style: .continuous))
+                                    .dsHover()
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
+                    .padding(.horizontal, DS.Space.s4)
                 }
-                .padding(.horizontal, DS.Space.s4)
             }
             .padding(.bottom, DS.Space.s2)
         }
