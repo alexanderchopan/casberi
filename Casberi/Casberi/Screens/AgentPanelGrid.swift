@@ -234,9 +234,30 @@ private struct FigureView: View {
     let hue: Color
     let rising: Bool?
     let reduceMotion: Bool
-    @State private var grown = false
 
-    private var t: Double { grown || reduceMotion ? 1 : 0 }
+    /// The tile's ONE clock, 0 → 1 over the whole entrance (prd §342).
+    ///
+    /// Replaces the old `grown` Bool. A monotonic Double driven once from
+    /// `onAppear` — deliberately NOT `PhaseAnimator`/`KeyframeAnimator`, which
+    /// re-run on state-identity changes and both replay on view recycling
+    /// inside `List`/`LazyVGrid`. That replay is what got the row sparkline's
+    /// draw-on reverted (see `Sparkline`'s own doc); a value that only ever
+    /// counts up cannot replay.
+    @State private var paint: Double = 0
+
+    /// Maps the master clock onto a sub-interval, clamped 0…1.
+    ///
+    /// The phase grammar every figure shares — STRUCTURE (0…0.25), DATA
+    /// (0.15…0.80), MEANING (0.70…1.0) — because that is the order a hand
+    /// draws a chart: the axis, then the data, then the words. The overlap
+    /// between structure and data is deliberate; a strict sequence reads
+    /// mechanical.
+    private func phase(_ from: Double, _ to: Double) -> Double {
+        min(1, max(0, (paint - from) / max(0.001, to - from)))
+    }
+
+    /// The settled clock, for anything that only cares "is it done".
+    private var t: Double { paint }
     /// How many entries a slot has room for — measured against the 118pt small
     /// cell, not guessed: three bar rows at their own spacing overflow it, and
     /// an overflowing figure clips silently.
@@ -259,16 +280,34 @@ private struct FigureView: View {
             case .pulse(let counts):  pulse(counts)
             case .curve(let values):  curve(values)
             case .wall(let urls):     wall(urls)
-            case .flow(let i, let o): FlowFigure(inLanes: i, outLanes: o, hue: hue, t: t)
-            case .dial(let marks):    DialFigure(marks: marks, slot: slot, t: t)
-            case .river(let bands):   RiverFigure(bands: bands, t: t)
-            case .scatter(let d, let c): ScatterFigure(dots: d, clusters: c, t: t)
+            case .flow(let i, let o):
+                FlowFigure(inLanes: i, outLanes: o, hue: hue,
+                           spine: phase(0, 0.2), inflow: phase(0.2, 0.6),
+                           outflow: phase(0.35, 0.75), words: phase(0.7, 1.0))
+            case .dial(let marks):
+                DialFigure(marks: marks, slot: slot, ring: phase(0, 0.25),
+                           sweep: phase(0.2, 0.85), words: phase(0.85, 1.0),
+                           reduceMotion: reduceMotion)
+            case .river(let bands):
+                RiverFigure(bands: bands, fill: phase(0.05, 0.8), words: phase(0.75, 1.0))
+            case .scatter(let d, let c):
+                ScatterFigure(dots: d, clusters: c, halos: phase(0, 0.2),
+                              drift: phase(0.1, 0.7), words: phase(0.75, 1.0))
             case .runway(let m, let span):
-                RunwayFigure(marks: m, span: span, slot: slot, t: t)
+                RunwayFigure(marks: m, span: span, slot: slot,
+                             axis: phase(0, 0.25), drop: phase(0.25, 0.75),
+                             words: phase(0.8, 1.0))
             }
         }
-        .animation(reduceMotion ? nil : DS.Motion.standard.delay(0.08), value: grown)
-        .onAppear { grown = true }
+        .onAppear {
+            // A LazyVGrid recycle re-fires `onAppear`; the tiles sit in a plain
+            // VStack today, so this is latent rather than live — guarded anyway,
+            // because the whole reason `paint` is monotonic is that a replayed
+            // entrance is the one failure this design cannot show.
+            guard paint == 0 else { return }
+            guard !reduceMotion else { paint = 1; return }
+            withAnimation(.easeOut(duration: 1.1)) { paint = 1 }
+        }
     }
 
     /// Rank-ordered proportional rows. The LEADER wears real type with its
@@ -284,7 +323,9 @@ private struct FigureView: View {
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 4, style: .continuous)
                             .fill(hue.opacity(0.44 - 0.09 * Double(i)))
-                            .frame(width: max(26, geo.size.width * (0.30 + 0.70 * share) * t))
+                            .frame(width: max(26, geo.size.width * (0.30 + 0.70 * share)
+                                                  * phase(0.10 + 0.10 * Double(i),
+                                                          0.45 + 0.10 * Double(i))))
                         HStack(spacing: 5) {
                             Text(cell.label)
                                 .dsText(i == 0 ? .callout15 : .subhead13)
@@ -328,9 +369,21 @@ private struct FigureView: View {
                                 .foregroundStyle(DS.textTertiary)
                                 .monospacedDigit()
                         }
-                        Capsule()
-                            .fill(hue.opacity(i == 0 ? 0.95 : 0.45))
-                            .frame(width: max(3, geo.size.width * shares[i] * t), height: 4)
+                        ZStack(alignment: .leading) {
+                            // The empty TRACK is structure and lands first, so
+                            // the fill reads as filling a track rather than as
+                            // a line simply getting longer.
+                            Capsule()
+                                .fill(DS.fillLine)
+                                .frame(width: geo.size.width, height: 4)
+                                .opacity(phase(0, 0.25))
+                            Capsule()
+                                .fill(hue.opacity(i == 0 ? 0.95 : 0.45))
+                                .frame(width: max(3, geo.size.width * shares[i]
+                                                     * phase(0.15 + 0.08 * Double(i),
+                                                             0.55 + 0.08 * Double(i))),
+                                       height: 4)
+                        }
                     }
                 }
                 Spacer(minLength: 0)
@@ -345,7 +398,7 @@ private struct FigureView: View {
                     ForEach(Array(segments.prefix(4).enumerated()), id: \.offset) { _, seg in
                         RoundedRectangle(cornerRadius: 3, style: .continuous)
                             .fill(tone(seg.tone))
-                            .frame(width: max(2, geo.size.width * seg.share * t))
+                            .frame(width: max(2, geo.size.width * seg.share * phase(0.15, 0.7)))
                     }
                     Spacer(minLength: 0)
                 }
@@ -383,18 +436,32 @@ private struct FigureView: View {
         let weeks = stride(from: 0, to: shown.count, by: 7).map {
             Array(shown[$0..<min($0 + 7, shown.count)])
         }
+        let reach = Double(weeksShown + 6)
         return HStack(spacing: 2) {
-            ForEach(Array(weeks.enumerated()), id: \.offset) { _, week in
+            ForEach(Array(weeks.enumerated()), id: \.offset) { w, week in
                 VStack(spacing: 2) {
-                    ForEach(Array(week.enumerated()), id: \.offset) { _, level in
+                    ForEach(Array(week.enumerated()), id: \.offset) { d, level in
                         RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-                            .fill(level == 0 ? DS.fillLine : hue.opacity(0.25 + 0.19 * Double(level)))
+                            .fill(DS.fillLine)
+                            .overlay {
+                                if level > 0 {
+                                    // Live cells take their hue in a DIAGONAL
+                                    // sweep, the way a hand shades a grid.
+                                    // Deterministic on (week, day): a seeded
+                                    // scatter re-rolls identically but reads as
+                                    // noise, where a diagonal reads as intent.
+                                    RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                                        .fill(hue.opacity(0.25 + 0.19 * Double(level)))
+                                        .opacity(phase(0.2 + 0.5 * Double(w + d) / reach,
+                                                       0.32 + 0.5 * Double(w + d) / reach))
+                                }
+                            }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                 }
             }
         }
-        .opacity(t)
+        .opacity(phase(0, 0.3))
     }
 
     private func curve(_ values: [Double]) -> some View {
@@ -427,11 +494,23 @@ private struct FigureView: View {
                     }
                     .fill(LinearGradient(colors: [stroke.opacity(0.24), stroke.opacity(0)],
                                          startPoint: .top, endPoint: .bottom))
-                    .opacity(t)
+                    // The fill blooms AFTER the line lands: a stroke that then
+                    // gains weight, not a shape that fades up.
+                    .opacity(phase(0.72, 1.0))
                 }
-                line.trim(from: 0, to: t)
+                line.trim(from: 0, to: phase(0.10, 0.75))
                     .stroke(stroke, style: StrokeStyle(lineWidth: slot == .small ? 2 : 2.5,
                                                        lineCap: .round, lineJoin: .round))
+                // THE PEN TIP — a bright nib at the head of the stroke while it
+                // draws, gone the instant it settles, so the settled frame is
+                // byte-identical to before this change (§342's own rule).
+                if paint < 1 {
+                    let head = phase(0.10, 0.75)
+                    line.trim(from: max(0, head - 0.03), to: head)
+                        .stroke(stroke,
+                                style: StrokeStyle(lineWidth: (slot == .small ? 2 : 2.5) + 1.5,
+                                                   lineCap: .round, lineJoin: .round))
+                }
             }
         }
     }
@@ -463,12 +542,14 @@ private struct FigureView: View {
                             .frame(width: cellW, height: cellH)
                             .clipped()
                             .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                            .opacity(phase(0.1 + 0.12 * Double(i), 0.4 + 0.12 * Double(i)))
+                            .offset(y: 6 * (1 - phase(0.1 + 0.12 * Double(i),
+                                                      0.4 + 0.12 * Double(i))))
                         }
                     }
                 }
             }
         }
-        .opacity(t)
     }
 }
 
@@ -483,7 +564,13 @@ private struct FigureView: View {
 private struct DialFigure: View {
     let marks: [AgentPanel.DialMark]
     let slot: AgentPanel.Slot
-    let t: Double
+    /// STRUCTURE — the ring strokes itself from 12 o'clock.
+    let ring: Double
+    /// DATA — the radar sweep gating each mark by its own hour.
+    let sweep: Double
+    /// MEANING — the busiest-window caption.
+    let words: Double
+    let reduceMotion: Bool
 
     private var showsHours: Bool { slot != .small }
 
@@ -494,8 +581,12 @@ private struct DialFigure: View {
             let rMax = side / 2 - (showsHours ? 14 : 3)
             let rMin = rMax * 0.34
             ZStack {
+                // The ring DRAWS ITSELF from 12 o'clock — structure before
+                // data, the way a hand starts a clock face.
                 Circle()
+                    .trim(from: 0, to: ring)
                     .stroke(DS.fillLine, lineWidth: 1)
+                    .rotationEffect(.degrees(-90))
                     .frame(width: rMax * 2, height: rMax * 2)
                     .position(x: cx, y: cy)
                 if showsHours {
@@ -506,6 +597,7 @@ private struct DialFigure: View {
                         Text(Self.hourLabel(h))
                             .dsText(.subhead13)
                             .foregroundStyle(DS.textTertiary)
+                            .opacity(ring)
                             .position(x: cx + cos(a) * (rMax + 10),
                                       y: cy + sin(a) * (rMax + 10))
                     }
@@ -517,8 +609,12 @@ private struct DialFigure: View {
                         .fill(AgentPanelGrid.panelHue(for: mark.source))
                         .frame(width: 3.4, height: 3.4)
                         // The radar sweep: a mark appears once the hand has
-                        // passed its hour, so the figure fills clockwise.
-                        .opacity(t >= mark.hour / 24 ? 0.42 + mark.recency * 0.5 : 0)
+                        // passed its hour, so the figure fills clockwise — and
+                        // it FADES rather than pops, which is the difference
+                        // between a sweep and a stutter.
+                        .opacity(sweep >= mark.hour / 24 ? 0.42 + mark.recency * 0.5 : 0)
+                        .animation(reduceMotion ? nil : .easeOut(duration: 0.15),
+                                   value: sweep >= mark.hour / 24)
                         .position(x: cx + cos(a) * r, y: cy + sin(a) * r)
                 }
             }
@@ -548,7 +644,10 @@ private struct DialFigure: View {
 /// collapses into a smear.
 private struct RiverFigure: View {
     let bands: [AgentPanel.RiverBand]
-    let t: Double
+    /// DATA — the leading edge sweeping right.
+    let fill: Double
+    /// MEANING — the legend.
+    let words: Double
 
     /// Fixed hues assigned by RANK, not by room — a theme spans rooms by
     /// definition. Stable across opens because `river` returns a totally
@@ -597,7 +696,17 @@ private struct RiverFigure: View {
                 }
                 // Fills left to right — a MASK, so the bands keep their shape
                 // instead of stretching into it.
-                .mask(alignment: .leading) { Rectangle().frame(width: w * t) }
+                // A WET EDGE, not a guillotine: the mask's leading front
+                // fades over 24pt so the river reads as flowing rather than as
+                // a rectangle being dragged across a picture.
+                .mask(alignment: .leading) {
+                    HStack(spacing: 0) {
+                        Rectangle().frame(width: max(0, w * fill - 24))
+                        LinearGradient(colors: [.black, .clear],
+                                       startPoint: .leading, endPoint: .trailing)
+                            .frame(width: min(24, w * fill))
+                    }
+                }
                 .overlay(alignment: .bottomLeading) {
                     HStack(spacing: 9) {
                         ForEach(Array(bands.prefix(3).enumerated()), id: \.offset) { i, band in
@@ -612,7 +721,7 @@ private struct RiverFigure: View {
                             }
                         }
                     }
-                    .opacity(t)
+                    .opacity(words)
                 }
             }
         }
@@ -631,7 +740,12 @@ private struct RiverFigure: View {
 private struct ScatterFigure: View {
     let dots: [AgentPanel.Dot]
     let clusters: [AgentPanel.DotCluster]
-    let t: Double
+    /// STRUCTURE — the neighbourhoods exist before their members arrive.
+    let halos: Double
+    /// DATA — dots drifting home from the centre.
+    let drift: Double
+    /// MEANING — the cluster labels.
+    let words: Double
 
     /// Cluster labels with their collisions RESOLVED (§339).
     ///
@@ -674,17 +788,18 @@ private struct ScatterFigure: View {
                     Circle()
                         .fill(Color.white.opacity(0.028))
                         .frame(width: cw, height: ch)
+                        .opacity(halos)
                         .position(x: px(cluster.x), y: py(cluster.y))
                 }
                 ForEach(Array(dots.enumerated()), id: \.offset) { _, dot in
                     Circle()
                         .fill(AgentPanelGrid.panelHue(for: dot.source))
                         .frame(width: 4, height: 4)
-                        .opacity(0.85 * t)
+                        .opacity(0.85 * drift)
                         // Dots drift home from the centre — the picture
                         // assembling itself out of a single point.
-                        .position(x: px(dot.x) * t + (w / 2) * (1 - t),
-                                  y: py(dot.y) * t + (h / 2) * (1 - t))
+                        .position(x: px(dot.x) * drift + (w / 2) * (1 - drift),
+                                  y: py(dot.y) * drift + (h / 2) * (1 - drift))
                 }
                 // Labels ride their own GROUND (§339): white text at 58% over a
                 // field of coloured dots is the worst case for legibility, and
@@ -702,7 +817,8 @@ private struct ScatterFigure: View {
                         .padding(.vertical, 2)
                         .background(DS.surfaceWell.opacity(0.92),
                                     in: Capsule())
-                        .opacity(t)
+                        .opacity(words)
+                        .offset(y: 4 * (1 - words))
                         .position(x: min(w - 30, max(30, px(placement.cluster.x))),
                                   y: placement.y)
                 }
@@ -731,7 +847,12 @@ private struct RunwayFigure: View {
     let marks: [AgentPanel.RunwayMark]
     let span: String
     let slot: AgentPanel.Slot
-    let t: Double
+    /// STRUCTURE — the axis drawing left to right, then the "now" tick.
+    let axis: Double
+    /// DATA — deadlines LANDING on the axis.
+    let drop: Double
+    /// MEANING — the span label.
+    let words: Double
 
     var body: some View {
         GeometryReader { geo in
@@ -740,28 +861,33 @@ private struct RunwayFigure: View {
             ZStack(alignment: .topLeading) {
                 Capsule()
                     .fill(DS.fillLine)
-                    .frame(width: w * t, height: 2)
-                    .position(x: w * t / 2, y: axisY)
-                // "Now" — the tick every mark is measured from.
+                    .frame(width: w * axis, height: 2)
+                    .position(x: w * axis / 2, y: axisY)
+                // "Now" — the tick every mark is measured from. Pops at the
+                // END of the structure phase, once the axis it sits on exists.
                 Capsule()
                     .fill(DS.textTertiary)
                     .frame(width: 2, height: 10)
+                    .scaleEffect(axis >= 1 ? 1 : 0)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.5), value: axis >= 1)
                     .position(x: 1, y: axisY)
                 ForEach(Array(marks.enumerated()), id: \.offset) { i, mark in
+                    // Deadlines LAND — scaling down onto the axis rather than
+                    // rising out of it. A deadline arrives; it does not grow.
+                    let landed = min(1, max(0, (drop - Double(i) * 0.14) / 0.5))
                     Circle()
                         .fill(colour(mark))
                         .frame(width: mark.overdue ? 9 : 7, height: mark.overdue ? 9 : 7)
+                        .scaleEffect(1.6 - 0.6 * landed)
+                        .opacity(landed)
                         .position(x: max(4, w * mark.position), y: axisY)
-                        .opacity(t)
-                        .animation(DS.Motion.standard.delay(0.1 + Double(min(i, 6)) * 0.05),
-                                   value: t)
                 }
                 if slot != .small {
                     Text(span)
                         .dsText(.subhead13)
                         .foregroundStyle(DS.textTertiary)
                         .position(x: w - 22, y: axisY + 20)
-                        .opacity(t)
+                        .opacity(words)
                 }
             }
         }
@@ -785,7 +911,14 @@ private struct FlowFigure: View {
     let inLanes: [AgentPanel.FlowLane]
     let outLanes: [AgentPanel.FlowLane]
     let hue: Color
-    let t: Double
+    /// STRUCTURE — the spine growing from its centre.
+    let spine: Double
+    /// DATA — inflows, then outflows. Money in before money out, always,
+    /// because that is the story a flow tells.
+    let inflow: Double
+    let outflow: Double
+    /// MEANING — the lane labels.
+    let words: Double
 
     private var shownIn: [AgentPanel.FlowLane] { Array(inLanes.prefix(3)) }
     private var shownOut: [AgentPanel.FlowLane] { Array(outLanes.prefix(3)) }
@@ -800,11 +933,12 @@ private struct FlowFigure: View {
             let spineX = w / 2
             ZStack {
                 ribbons(spineEdge: spineX - 5, labelEdge: labelW, lanes: shownIn,
-                        height: h, color: Color(hex: "#30d158"))
+                        height: h, color: Color(hex: "#30d158"), grown: inflow)
                 ribbons(spineEdge: spineX + 5, labelEdge: w - labelW, lanes: shownOut,
-                        height: h, color: Color(hex: "#ff453a"))
+                        height: h, color: Color(hex: "#ff453a"), grown: outflow)
                 Capsule().fill(hue)
                     .frame(width: 4, height: h * 0.84)
+                    .scaleEffect(y: spine, anchor: .center)
                     .position(x: spineX, y: h / 2)
                 labels(shownIn, x: 0, width: labelW - 8, height: h, alignment: .leading)
                 labels(shownOut, x: w - labelW + 8, width: labelW - 8, height: h,
@@ -815,7 +949,7 @@ private struct FlowFigure: View {
 
     private func ribbons(spineEdge: CGFloat, labelEdge: CGFloat,
                          lanes: [AgentPanel.FlowLane], height: CGFloat,
-                         color: Color) -> some View {
+                         color: Color, grown: Double) -> some View {
         let slots = max(1, lanes.count)
         return ForEach(Array(lanes.enumerated()), id: \.offset) { i, lane in
             let share = scale > 0 ? lane.usd / scale : 0
@@ -837,13 +971,15 @@ private struct FlowFigure: View {
             let fan = height * 0.16
             let spineY = height / 2 + (Double(i) - Double(slots - 1) / 2) * fan
             let midX = (spineEdge + labelEdge) / 2
+            // Drawn FROM the spine outward, so `trim` grows away from it —
+            // the ribbons flow out of the wallet rather than reaching into it.
             Path { p in
-                p.move(to: CGPoint(x: labelEdge, y: laneY))
-                p.addCurve(to: CGPoint(x: spineEdge, y: spineY),
-                           control1: CGPoint(x: midX, y: laneY),
-                           control2: CGPoint(x: midX, y: spineY))
+                p.move(to: CGPoint(x: spineEdge, y: spineY))
+                p.addCurve(to: CGPoint(x: labelEdge, y: laneY),
+                           control1: CGPoint(x: midX, y: spineY),
+                           control2: CGPoint(x: midX, y: laneY))
             }
-            .trim(from: 0, to: t)
+            .trim(from: 0, to: grown)
             .stroke(color.opacity(0.42), style: StrokeStyle(lineWidth: thickness, lineCap: .round))
         }
     }
@@ -865,13 +1001,11 @@ private struct FlowFigure: View {
             }
             .frame(width: width, alignment: alignment)
             .position(x: x + width / 2, y: height * (Double(i) + 0.5) / Double(slots))
-            .opacity(t)
+            .opacity(words)
         }
     }
 
-    private func compactUSD(_ usd: Double) -> String {
-        usd >= 1000 ? String(format: "$%.1fk", usd / 1000) : String(format: "$%.0f", usd)
-    }
+    private func compactUSD(_ usd: Double) -> String { AgentPanel.compactUSD(usd) }
 }
 
 /// One tile's staggered rise. Honours Reduce Motion — the audit's first check,

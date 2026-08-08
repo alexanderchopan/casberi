@@ -19150,3 +19150,85 @@ scroll at "four whole card rows" to stop a figure being sliced at the fold —
 a fixed 502pt that knows nothing about the device, so on a real phone the input
 bar floated in the middle of black. It fills the sheet now, and the scroll ends
 where the screen does, which is the only place an edge never looks broken.
+
+## §341 — Three formatters, one wrong; a wallet curve that said "today" and meant four days (user: "which do you recommend? i think last 24 hours is what someone is looking for naturally", 2026-08-07)
+
+**"$7258k" beside "$7.0M".** Both numbers described the same watched wallet,
+one tap apart — the panel's hero card and the real Wallet room. Reading the
+panel's own formatter explained it: `Composer.compactMoney` stopped at K,
+so a balance past a million just kept counting thousands. `TodayBrief
+.compactUSD` had the identical ceiling, independently. `WalletIngest
+.HoldingsGroup.subline` — the ONE formatter that was already right, because
+it's what the room itself prints — was never reached by either. Three
+formatters for one kind of number is how a codebase ships this: not one
+wrong formula copied twice, but two separate authors independently stopping
+at the same tier and never comparing their output to the screen three taps
+away. `AgentPanel.compactUSD` is now the single implementation (K/M/B,
+`WalletIngest`'s own tiers) and both callers redirect to it — a screen
+showing the same wallet twice can no longer disagree with itself about what
+it's worth.
+
+**The curve's window was a sample COUNT, and a sample count is not a time
+span.** `walletCurve()` read the newest 24 points off `combinedValueSamples`,
+and `recordSample` throttles to one every four hours — so "24 samples" was
+quietly spanning about four days, varying with how often the app happened to
+be opened, while sitting beside a Wallet room that labels its own range.
+Asked which window reads right, the answer was measured against how someone
+actually reaches for this card: a day is the span a glance at a hero number
+implies, so the curve now filters to samples inside the last 24 hours and
+falls back only when that window is too thin to draw (under 3 points, the
+existing curve floor) — to the newest 6 samples of whatever span they cover,
+labelled with how many days that actually is. **The label is not
+decoration — it's the fix.** A curve captioned "today" that quietly isn't is
+exactly the §83 failure ("no fake status") this change exists to close, so
+the fallback SAYS its real span rather than borrowing today's word for a
+wider one.
+
+## §342 — The panel draws itself now (user, as "Fable": "the charts and stuff need to draw themselves and paint on and it needs to be like generative UI but really high class... i also need you to be explicit b/c i use opus to do the implementation." Then, to Opus: "ok Opus please execute this spec")
+
+**The brief was written down before it was built**, in `docs/agent-panel
+-motion.md` — an implementation spec explicit enough that a different model
+picking it up cold could execute it without re-deriving the design. That
+document is the record of what each figure's entrance means and why; this
+entry records that it was carried out and how it was checked, not the
+choreography itself.
+
+**One clock, not a library of them.** Every card in the panel shared a
+single `grown: Bool` flip before this — a figure was either fully drawn or
+not there yet, nothing between. It's now a single monotonic `paint: Double`
+per card, driven once by `withAnimation(.easeOut(duration: 1.1))` on
+appear (guarded so a SwiftUI re-evaluation can't re-fire it), with every
+figure deriving its own sub-phases from the same number via a `phase(from:
+to:)` helper. Deliberately NOT `PhaseAnimator`/`KeyframeAnimator` — both
+replay on view recycling, which is exactly the bug class the liveness
+corollaries above exist to keep out of this codebase; a card that scrolls
+off-screen and back must not repaint itself as if it just arrived.
+
+**The grammar is structure, then data, then meaning** — the order a hand
+draws a chart, applied to every figure the panel has: a curve's line grows
+from a pen-tip rather than fading in whole; bars fill an empty track that's
+already drawn; a treemap wipes row by row in reading order; a pulse's dots
+shade in on a diagonal sweep; a dial self-strokes its ring before its radar
+sweep passes once; a river's bands rise inside a wet-edge mask; a sankey's
+ribbons flow outward from a spine; a runway's marks land like dots settling;
+a scatter's halos bloom before their dots resolve. Labels and numbers are
+always last — the meaning is earned by the shape arriving first, not printed
+over an empty frame.
+
+**Reduce Motion collapses to the end state instantly**, no animation at
+all — checked, not assumed: `xcrun simctl spawn ... defaults write
+com.apple.Accessibility ReduceMotionEnabled -bool true`, confirmed live via
+Settings → Accessibility → Motion, then a screenshot taken ~2s after launch
+showing every figure fully settled with zero animation artifact.
+
+**Verified against real paint, not just a passing build.** A static check
+can confirm an entrance exists; it can't confirm what it looks like
+mid-flight. `xcrun simctl io recordVideo` captured a real launch while
+`ffmpeg -i <file> -ss <t> -frames:v 1` (seek AFTER `-i`, or it snaps to the
+nearest keyframe instead of the requested time) pulled frames from inside
+the 1.1s window — the dial's ring visibly incomplete, the scatter map's dots
+still in pre-final clustered positions with brighter halos. Proof the
+entrance is really phased, not just declared to be.
+
+`scripts/design-motion-audit.py` and `scripts/agent-panel-selftest.sh` both
+pass unchanged; `verify.sh --build-only` is green end to end.

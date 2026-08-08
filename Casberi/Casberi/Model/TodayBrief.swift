@@ -1541,11 +1541,11 @@ enum TodayBrief {
 
     /// $20,480 → "$20,480"; big numbers compact, matching the wallet room's
     /// own money grammar.
+    /// The SAME ceiling bug the panel had (§341): this stopped at K, so a
+    /// watched wallet holding $7.26M read "$7258K" in the brief while the
+    /// Wallet room said "$7.0M". One formatter now, tiered like the room's.
     private static func compactUSD(_ usd: Double) -> String {
-        if usd >= 100_000 {
-            return "$" + (usd / 1000).formatted(.number.precision(.fractionLength(0))) + "K"
-        }
-        return "$" + usd.formatted(.number.precision(.fractionLength(0)))
+        AgentPanel.compactUSD(usd)
     }
 
     private static func shortTime(_ date: Date) -> String {

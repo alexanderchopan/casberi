@@ -192,6 +192,20 @@ check(lv[0] == 0 && lv[2] == 4, "the busiest day is the brightest")
 check(AgentPanel.levels([1, 1, 1]).allSatisfy { $0 == 4 },
       "a uniformly busy room still shows its own shape, not one dim wall")
 
+print("money")
+// §341, reported live: a watched wallet holding $7.26M rendered "$7258k" on the
+// hero while the Wallet room three taps away said "$7.0M". Two surfaces, one
+// number, two answers — and the panel is a WINDOW onto that room.
+check(AgentPanel.compactUSD(7_258_000) == "$7.3M", "millions render as millions")
+check(AgentPanel.compactUSD(7_000_000) == "$7.0M", "…matching the Wallet room's own tiering")
+check(AgentPanel.compactUSD(2_400_000_000) == "$2.4B", "billions have a tier too")
+check(AgentPanel.compactUSD(12_480) == "$12K", "tens of thousands stay whole")
+check(AgentPanel.compactUSD(1_500) == "$1.5K", "thousands keep one decimal")
+check(AgentPanel.compactUSD(640) == "$640", "under a thousand is plain")
+// A negative must not lose its tier — `abs` picks the tier, the sign rides the
+// value, and getting that backwards prints "$-7258065" for a drawdown.
+check(AgentPanel.compactUSD(-7_258_000) == "$-7.3M", "a negative keeps its tier")
+
 print("clamp")
 check(AgentPanel.clamp("short") == "short", "a short caption is untouched")
 check(AgentPanel.clamp("the quick brown fox jumps over", max: 15) == "the quick…",

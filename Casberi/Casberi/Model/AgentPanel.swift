@@ -461,6 +461,27 @@ enum AgentPanel {
         }
     }
 
+    /// Money, compact — the ONE formatter the panel uses (prd §341).
+    ///
+    /// The tiers mirror `WalletIngest.HoldingsGroup.subline`, which is what the
+    /// Wallet room itself prints, because the panel is a window onto that room
+    /// and the two must never disagree about the same number. They did: the
+    /// panel's own formatter stopped at K, so a watched wallet holding $7.26M
+    /// rendered "$7258k" on the hero while the room three taps away said
+    /// "$7.0M". `TodayBrief.compactUSD` had the identical ceiling and the
+    /// identical bug.
+    ///
+    /// A B tier exists because the app watches whoever you point it at, and
+    /// "$7258k" is exactly what a missing tier looks like one order up.
+    static func compactUSD(_ usd: Double) -> String {
+        let v = abs(usd)
+        if v >= 1_000_000_000 { return String(format: "$%.1fB", usd / 1_000_000_000) }
+        if v >= 1_000_000     { return String(format: "$%.1fM", usd / 1_000_000) }
+        if v >= 10_000        { return String(format: "$%.0fK", usd / 1_000) }
+        if v >= 1_000         { return String(format: "$%.1fK", usd / 1_000) }
+        return String(format: "$%.0f", usd)
+    }
+
     /// Trim a room's subtitle to something that fits under a tile title.
     static func clamp(_ s: String, max n: Int = 34) -> String {
         let t = s.trimmingCharacters(in: .whitespacesAndNewlines)

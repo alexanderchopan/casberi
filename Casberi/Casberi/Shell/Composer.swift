@@ -1230,33 +1230,56 @@ struct Composer: View {
     /// aligned points exist, which is the honest state for a new wallet.
     @MainActor
     private func walletCurve() -> AgentPanel.Card? {
-        let samples = WalletStore.shared.combinedValueSamples().map(\.usd)
+        // A TIME window, not a sample count (prd §341, user: "last 24 hours is
+        // what someone is looking for naturally").
+        //
+        // It read the newest 24 SAMPLES, and `recordSample` throttles to one
+        // every four hours — so the hero's percentage was silently spanning
+        // about four days while sitting beside a Wallet room labelling its own
+        // range. Worse, a sample-count window means a DIFFERENT span depending
+        // on how often the app was opened, so the same number meant something
+        // different week to week.
+        let all = WalletStore.shared.combinedValueSamples()
+        let dayAgo = Date.now.addingTimeInterval(-24 * 3600)
+        let recent = all.filter { $0.at >= dayAgo }
+        // Under the curve's own floor the day says nothing, so it widens — and
+        // SAYS SO. A curve labelled "today" that isn't is the §83 failure this
+        // whole change exists to close.
+        let useDay = recent.count >= 3
+        let window = useDay ? recent : Array(all.suffix(6))
+        let samples = window.map(\.usd)
         guard samples.count >= 3 else { return nil }
-        let window = Array(samples.suffix(24))
+        let windowLabel: String = {
+            if useDay { return String(localized: "today") }
+            guard let first = window.first?.at else { return "" }
+            let days = max(1, Calendar.current.dateComponents([.day],
+                                                              from: first, to: .now).day ?? 1)
+            return String(localized: "\(days)d")
+        }()
+        // (Already windowed above.)
         // The hero's ONE reading — the balance with its move, which is a
         // reading and not a tally (§213 bans counting things; a number the
         // room already says about itself is not a count).
-        let first = window.first ?? 0, last = window.last ?? 0
+        let first = samples.first ?? 0, last = samples.last ?? 0
         let pct = first > 0 ? (last - first) / first * 100 : 0
         // §83's flat rule: a change that rounds to zero has no direction, so
         // it gets no sign, no colour and no pill.
         let flat = abs(pct) < 0.05
         let reading = flat
-            ? String(format: "$%@", compactMoney(last))
-            : String(format: "$%@ · %+.1f%%", compactMoney(last), pct)
+            ? AgentPanel.compactUSD(last)
+            : AgentPanel.compactUSD(last) + String(format: " · %+.1f%%", pct)
         return AgentPanel.Card(source: "Wallet", key: "wallet.curve",
                                title: String(localized: "Your balance"),
-                               caption: "",
-                               figure: .curve(window),
+                               caption: windowLabel,
+                               figure: .curve(samples),
                                affinity: ChipMemory.weight(for: "Wallet"),
                                reading: reading,
                                rising: flat ? nil : pct > 0)
     }
 
-    private func compactMoney(_ usd: Double) -> String {
-        usd >= 10_000 ? String(format: "%.0fk", usd / 1000)
-                      : String(format: "%.0f", usd)
-    }
+    /// Deleted in favour of `AgentPanel.compactUSD` (§341) — this one stopped
+    /// at K, so a watched wallet holding $7.26M rendered "$7258k" beside a
+    /// Wallet room saying "$7.0M".
 
     /// The wallet's flow band — the second Wallet card, under its own key.
     ///
