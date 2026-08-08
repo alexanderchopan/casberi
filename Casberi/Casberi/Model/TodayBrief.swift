@@ -160,11 +160,10 @@ enum TodayBrief {
             // spec's own edge case, distinct from "connected but nothing new"
             // below. Checked against the WHOLE corpus, before any window.
             guard things.contains(where: { candidateSources.contains($0.source) }) else {
+                let line = String(localized: "No apps connected in \(category) yet — add one from Apps.")
                 return KeptAskComposers.Result(
                     delta: "", digest: String(localized: "unconnected"),
-                    doc: ["root = Stack([ins])",
-                          "ins = Insight(\"\(genSafe(String(localized:
-                              "No apps connected in \(category) yet — add one from Apps.")))\")"])
+                    doc: ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"])
             }
             things = things.filter { candidateSources.contains($0.source) }
         }
