@@ -19351,3 +19351,52 @@ be used for this pass — a concurrent session's in-flight `DemoSeedAll.swift`
 carried an undisclosed host literal that failed the network-reach audit
 unrelated to this work (since committed as `894481c`, off this session's
 critical path).
+
+## §344 — A wall's placeholder was never a loading state, because nothing was ever loading (user: "will these show images?" over an OpenSea wall reading "New dro…" in every cell)
+
+**§343's own fix hid the real bug.** The labeled placeholder built for "a
+wall is never four gray boxes" worked exactly as designed and never once
+handed off to a real picture, on ANY corpus — demo or otherwise. `wall()`
+drew each cell with a plain SwiftUI `AsyncImage(url:)`, which knows exactly
+one transport: `http(s)`. Every other image surface in this app —
+`RemoteThumb`, the media-shaped view, the social post grid — reads through
+`RemoteImageLoader.load(urlString:targetSide:cached:)` instead, and that
+loader carries a DEBUG-only branch the plain `AsyncImage` has no way to
+reach: a url beginning `sample:` resolves to a BUNDLED asset
+(`UIImage.demoSample(for:)`), because the demo corpus addresses its stock
+photos through that scheme rather than hotlinking a real host (the
+`network-reach-audit.sh` reasoning `ShapedRows.swift` already states in its
+own comment). So a wall in the demo sat on its placeholder forever, not
+because anything failed, but because nothing was ever asked to load in a
+form it could act on — `AsyncImage` doesn't fail loudly on an unfetchable
+scheme, it just never leaves the loading state, which is indistinguishable
+from a slow network at a glance and exactly why the mistake read as
+"working as designed" through two builds and a live probe.
+
+**Fixed by riding the existing loader, not inventing a second one.** A new
+`WallTileImage` view mirrors `RemoteThumb`'s own shape — a synchronous cache
+probe, then `RemoteImageLoader.load`, a fade-in only for a FRESH network
+arrival (a cache hit assigns flat, so a re-appearing image never reads as
+reloading) — so a wall tile can no longer disagree with every other
+thumbnail in the app about whether a url is reachable. The old
+`wallPlaceholder` free function is gone; its content (the tile's label over
+`DS.fillLine`) moved inside `WallTileImage`'s own `else` branch, since it's
+now the loader's own idle state rather than something the caller hands in.
+
+**What this predicts correctly and what it doesn't.** Real connected rooms
+(a real OpenSea/Pinterest/Shopify account) were NEVER broken by this — their
+`previewImageURL`s are genuine `https://` links, which `AsyncImage` could
+always fetch; the bug was demo-only, and it was total, because every
+image-bearing demo room routes through the identical `sample:` scheme. The
+two walls looking identical on screen (OpenSea's "4 collections" and
+Pinterest's "Your pins" drawing the same four soccer photos) is a SEPARATE,
+correct observation about the demo's own asset pool — `DemoSeedAll.art(_:)`
+cycles every image-seeding room through the same four bundled files
+(`sample-screenshot-1`…`4`), by design, not a rendering defect; a real
+connected room's wall would show that room's own distinct art.
+
+Verified: `agent-panel-selftest.sh` and `design-motion-audit.py` both green
+(unaffected — `WallTileImage` lives in `AgentPanelGrid.swift`, outside the
+Foundation-only harness); a full `xcodebuild` `BUILD SUCCEEDED`; a live
+screenshot against the seeded demo corpus shows the OpenSea wall drawing
+real bundled photos where it drew "New dro…" placeholders before.

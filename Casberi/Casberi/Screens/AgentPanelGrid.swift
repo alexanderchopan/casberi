@@ -621,15 +621,8 @@ private struct FigureView: View {
                         ForEach(0..<2, id: \.self) { col in
                             let i = row * 2 + col
                             Group {
-                                if i < shown.count, let url = URL(string: shown[i].url),
-                                   !shown[i].url.isEmpty {
-                                    AsyncImage(url: url) { image in
-                                        image.resizable().scaledToFill()
-                                    } placeholder: {
-                                        wallPlaceholder(shown[i].label)
-                                    }
-                                } else if i < shown.count {
-                                    wallPlaceholder(shown[i].label)
+                                if i < shown.count {
+                                    WallTileImage(tile: shown[i], side: cellW)
                                 } else {
                                     RoundedRectangle(cornerRadius: 4, style: .continuous)
                                         .fill(DS.fillLine)
@@ -648,23 +641,61 @@ private struct FigureView: View {
         }
     }
 
-    /// A wall's loading/failed state — the tile's own label, not a bare gray
-    /// box (spec item 4: "a wall is never four gray boxes"). A room whose
-    /// images are remote and slow drew four indistinguishable blanks that
-    /// read as broken; this makes the wait itself content.
-    private func wallPlaceholder(_ label: String) -> some View {
-        RoundedRectangle(cornerRadius: 4, style: .continuous)
-            .fill(DS.fillLine)
-            .overlay {
-                if !label.isEmpty {
-                    Text(label)
-                        .dsText(.subhead13)
-                        .foregroundStyle(DS.textSecondary)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(2)
-                        .padding(4)
-                }
+}
+
+/// One wall cell — real image when it loads, the tile's own LABEL while it
+/// doesn't (spec item 4: "a wall is never four gray boxes"). Rides the same
+/// `RemoteImageLoader` every other image view in this app uses, NOT a bare
+/// `AsyncImage(url:)` — that was the actual bug a real screenshot caught:
+/// the demo corpus addresses its bundled photos through a `sample:demo-
+/// shot-N` scheme (`DemoSeedAll`, `Design/DemoSampleImage.swift`), which
+/// `RemoteImageLoader.load` special-cases in DEBUG to resolve a bundled
+/// asset with no network — a plain `AsyncImage` only knows `http(s)`, so it
+/// silently sat on the placeholder forever for EVERY demo wall (OpenSea,
+/// Pinterest), never a bug in the image, always the loader. `RemoteThumb`
+/// (`ShapedRows.swift`) is the pattern this mirrors — same loader, same
+/// `.task(id:)` shape — so a wall tile can never disagree with every other
+/// thumbnail in the app about whether a URL is reachable.
+private struct WallTileImage: View {
+    let tile: AgentPanel.WallTile
+    let side: CGFloat
+    @State private var image: UIImage?
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image).resizable().scaledToFill()
+            } else {
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .fill(DS.fillLine)
+                    .overlay {
+                        if !tile.label.isEmpty {
+                            Text(tile.label)
+                                .dsText(.subhead13)
+                                .foregroundStyle(DS.textSecondary)
+                                .multilineTextAlignment(.center)
+                                .lineLimit(2)
+                                .padding(4)
+                        }
+                    }
             }
+        }
+        .task(id: tile.url) { await load() }
+    }
+
+    private func load() async {
+        guard !tile.url.isEmpty else { return }
+        if let hit = RemoteImageLoader.cachedImage(urlString: tile.url, targetSide: side * 3) {
+            image = hit
+            return
+        }
+        switch await RemoteImageLoader.load(urlString: tile.url, targetSide: side * 3) {
+        case .image(let thumb, let fresh):
+            if fresh { withAnimation(DS.Motion.standard) { image = thumb } }
+            else { image = thumb }
+        case .transientFailure, .dead:
+            break
+        }
     }
 }
 
