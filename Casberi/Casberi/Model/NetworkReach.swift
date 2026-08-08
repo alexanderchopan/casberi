@@ -428,6 +428,10 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Linear"),
                  purpose: "Reads issues assigned to you with an API key you provide.",
                  hosts: ["api.linear.app"]),
+        Endpoint(service: "GitLab",
+                 reach: .whenConnected(bridge: "GitLab"),
+                 purpose: "Reads issues and merge requests assigned to you with a read-only token you provide.",
+                 hosts: ["gitlab.com"]),
         Endpoint(service: "Notion",
                  reach: .whenConnected(bridge: "Notion"),
                  purpose: "Reads pages you share with the integration, using a token you provide.",
@@ -456,6 +460,17 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Calendly"),
                  purpose: "Reads your scheduled events with a token you provide.",
                  hosts: ["api.calendly.com"]),
+        // A fully dynamic host, the Shopify shape: the site is the person's
+        // OWN Jira Cloud domain (`<name>.atlassian.net`), built at runtime
+        // from what they typed, so there is no literal tail this registry —
+        // or `network-reach-audit.sh`'s scan — can name. `JiraAuth`'s calls
+        // pass `service: "Jira"` to `NetworkLedger`, which is what the
+        // receipts screen reads instead (prd §205's own "fully dynamic"
+        // carve-out, and `network-reach-audit.sh`'s own comment on it).
+        Endpoint(service: "Jira",
+                 reach: .whenConnected(bridge: "Jira"),
+                 purpose: "Reads the issues assigned to you from your Jira site, with an API token and email you provide.",
+                 hosts: ["your Jira site"]),
 
         // MARK: Mail
         //

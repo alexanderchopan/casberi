@@ -601,6 +601,28 @@ enum FeedInsight {
         // room belongs to anybody but the channels.
         case "YouTube":
             title = "What your channels cover"; unit = ("video", "videos"); kinds = [.link]
+        // The three chat imports, 2026-08-08. The rooms that had the least to
+        // lead with — no pictures, no authors, no counts worth ranking, and
+        // (until the transcript landed) no text either, so they led with a
+        // year heatmap over a corpus of subjects.
+        //
+        // TITLE, and it is a §83 question rather than a wording one. A
+        // ChatGPT or Claude transcript is BOTH voices: the person's asks and
+        // the model's answers, which are the longer half by far. "What you ask
+        // about" over that would credit the person with words they didn't
+        // write, which is exactly what YouTube's card refuses to do one case
+        // above. So these two say what they really rank — what the
+        // conversations were about — and only Gemini, whose export carries the
+        // asks and nothing else (see `GeminiImport.turns`), can honestly say
+        // "ask".
+        //
+        // One kind, no `belongs`: every row in these rooms is a `.chat` the
+        // person had, there is no somebody-else half to leave out, and the
+        // import receipt is excluded by the loop below.
+        case "ChatGPT", "Claude":
+            title = "What your chats are about"; unit = ("chat", "chats"); kinds = [.chat]
+        case "Gemini":
+            title = "What you ask about"; unit = ("prompt", "prompts"); kinds = [.chat]
         case "Files":
             // The connected folder's images, read the Photos way (2026-08-02):
             // `FilesIngest.heal` already OCRs them into `content` and

@@ -575,6 +575,23 @@ enum BridgeRefresh {
                 _ = await HuggingFaceIngest.refresh(context: context)
             }
         }
+        // What became of the pull request a Cursor agent opened (2026-08-08,
+        // prd §340). Its own line rather than a rider on the Cursor bridge,
+        // because it spends the GITHUB token: it is gated on both seats being
+        // connected, and `reconcile` re-checks the token itself so a
+        // disconnect between the two reads can't fire a keyless request.
+        //
+        // Behind `dueForHeal` like x402's faces and Instagram's captions — a
+        // PR merges on human time, not on foreground time, so asking on every
+        // activation would spend a request per open PR to learn nothing.
+        if TokenVault.get(TokenBridge.cursor.tokenKey)?.isEmpty == false,
+           TokenVault.get(TokenBridge.github.tokenKey)?.isEmpty == false,
+           BridgeRefresh.dueForHeal("cursor.pullRequests") {
+            let s = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await CursorPullRequests.reconcile(context: context)
+            }
+        }
         // npm and PyPI are keyless watch lists, so — like Hugging Face and
         // GeckoTerminal above — they need their own line here rather than
         // riding `TokenBridge.allCases`. One slot each: they are separate
@@ -602,6 +619,24 @@ enum BridgeRefresh {
         // network pass, so unlike the topic map it goes behind `dueForHeal` —
         // at most once per `healInterval`, `perPass` rows at a time, paced,
         // and self-terminating once every row carries its caption.
+        // The chat imports' topic map (2026-08-08, prd §340). `ScreenshotTopics
+        // .topicSource` and `FeedInsight.topicMap` both gained cases for these
+        // three rooms the same day their transcripts started landing — and
+        // both would have been reachable-but-never-reached without this, the
+        // exact §313 X finding: a registry entry nothing calls into is a
+        // no-op indistinguishable from having nothing to say. No network
+        // component, unlike Instagram's captions — the transcript these terms
+        // are read from already lands at import, so this is purely a
+        // `content`-in-store operation like Files' and Obsidian's.
+        for (seatID, source) in [("gpt", "ChatGPT"), ("claude", "Claude"), ("gemini", "Gemini")]
+        where connected(seatID) {
+            let s = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await sweepTimed("\(seatID).topics") {
+                    await ScreenshotTopics.healTopics(source: source, context: context)
+                }
+            }
+        }
         if connected("instagram") {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)

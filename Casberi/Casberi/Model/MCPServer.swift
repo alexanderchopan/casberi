@@ -90,6 +90,12 @@ final class MCPServer {
     private(set) var lastError: String?
 
     private var listener: NWListener?
+    /// The port the live listener actually bound. Kept so `start()` can tell a
+    /// redundant call (same port, already up) from a real move to a new one.
+    private var boundPort: UInt16?
+    /// Set when a rebind is waiting for an in-flight cancellation to land —
+    /// see `start()`.
+    private var restartPending = false
     private let queue = DispatchQueue(label: "com.casberi.mcp.listener")
 
     private init() {}
@@ -101,8 +107,35 @@ final class MCPServer {
         start()
     }
 
+    /// Bring the listener up, idempotently.
+    ///
+    /// **This used to `stop()` and rebind unconditionally, and that left the
+    /// listener dead** (measured 2026-08-08, prd §340). `NWListener.cancel()`
+    /// is ASYNCHRONOUS: the port is still held when the new bind runs a moment
+    /// later, so the rebind fails with `NWError 48 — Address already in use`,
+    /// and the app is left with NO listener while the switch still reads on.
+    ///
+    /// It was not a rare interleaving. Two call sites reach this in one launch
+    /// (`RootShell`'s `startIfEnabled` and, on Mac, the settings toggle's own
+    /// `onChange`), and a person flipping the switch off and on does it by
+    /// hand. The symptom is the worst kind: the error names the port as taken,
+    /// which reads as some OTHER program holding it, when it is us holding it
+    /// against ourselves.
+    ///
+    /// So: already up on the right port is a no-op, and a genuine move to a
+    /// different port waits for the cancellation to actually land before
+    /// binding again, rather than racing it.
     func start() {
-        stop()
+        if listener != nil, running, boundPort == Self.port { return }
+        if listener != nil {
+            restartPending = true
+            stop()
+            return
+        }
+        bind()
+    }
+
+    private func bind() {
         lastError = nil
         let parameters = NWParameters.tcp
         // Rail 1, first half: bind the listener itself to loopback, so the
@@ -126,6 +159,13 @@ final class MCPServer {
                         self?.lastError = error.localizedDescription
                     case .cancelled:
                         self?.running = false
+                        // The other half of `start()`'s fix: a rebind waiting
+                        // on this cancellation can now proceed, because the
+                        // port is genuinely free only at this point.
+                        if self?.restartPending == true {
+                            self?.restartPending = false
+                            self?.bind()
+                        }
                     default:
                         break
                     }
@@ -136,6 +176,7 @@ final class MCPServer {
             }
             listener.start(queue: queue)
             self.listener = listener
+            self.boundPort = Self.port
         } catch {
             lastError = error.localizedDescription
         }
@@ -144,6 +185,7 @@ final class MCPServer {
     func stop() {
         listener?.cancel()
         listener = nil
+        boundPort = nil
         running = false
     }
 

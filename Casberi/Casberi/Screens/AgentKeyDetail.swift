@@ -288,9 +288,13 @@ struct MCPServerRow: View {
                 error = MCPServer.shared.lastError
             }
             if enabled {
-                // Not proven: said before the address, not after it, so
-                // nobody reads the address as a promise.
-                Text("Untested against a real client — if yours can't connect, that's worth telling us.")
+                // Measured 2026-08-08 (prd §340): the standard MCP inspector
+                // connects to this over HTTP and both lists and calls the
+                // tools. What is NOT claimed is any particular product — the
+                // sentence says which client was checked rather than implying
+                // all of them, and keeps the invitation to report a failure,
+                // because that is still how a specific one gets found.
+                Text("Checked with the standard MCP tools on this Mac. If your client can't connect, that's worth telling us.")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: DS.Space.s2) {

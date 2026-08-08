@@ -17,12 +17,24 @@ enum ClaudeImport {
     struct Summary {
         var imported = 0
         var skipped = 0
+        /// Conversations already here that gained their transcript and message
+        /// count on this pass — see `ChatGPTImport.Summary.healed`, which this
+        /// mirrors exactly. A re-import is the only thing that can reach a
+        /// chat landed before this build.
+        var healed = 0
+        /// Conversations the cap refused (§307/§309).
+        var dropped = 0
+        /// Conversations whose transcript hit `ChatTranscript.cap`.
+        var clamped = 0
         var failed = false
     }
 
+    /// The newest N conversations — `ChatGPTImport.conversationCap`'s number
+    /// and its reasoning, including why it wasn't raised here.
+    static let conversationCap = 500
+
     /// Parses a `conversations.json` (Claude data export) and lands each
-    /// conversation as one chat thing. Caps at the newest 500 — a years-deep
-    /// export shouldn't flood the corpus in one tap.
+    /// conversation as one chat thing.
     @MainActor
     static func run(data: Data, context: ModelContext) -> Summary {
         guard let root = try? JSONSerialization.jsonObject(with: data),
@@ -30,14 +42,17 @@ enum ClaudeImport {
             return Summary(failed: true)
         }
 
-        let existing = IngestSupport.existingSourceRefs(context, source: "Claude")
+        // A dictionary, not a ref set — an already-imported conversation is
+        // repaired here, not skipped (2026-08-08).
+        let existing = IngestSupport.thingsByRef(context, source: "Claude")
 
-        // Newest first (by last-updated), cap 500.
+        // Newest first (by last-updated), capped.
         let sorted = conversations.sorted {
             (stamp($0) ?? .distantPast) > (stamp($1) ?? .distantPast)
-        }.prefix(500)
+        }.prefix(conversationCap)
 
         var summary = Summary()
+        summary.dropped = max(0, conversations.count - conversationCap)
         for convo in sorted {
             let name = (convo["name"] as? String)?
                 .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -53,23 +68,76 @@ enum ClaudeImport {
             let id = (convo["uuid"] as? String)
                 ?? "\(title)-\(when?.timeIntervalSince1970 ?? 0)"
             let ref = "claude:\(id)"
-            guard !existing.contains(ref) else { summary.skipped += 1; continue }
+
+            let script = transcript(convo)
+            if script.clamped { summary.clamped += 1 }
+
+            if let already = existing[ref] {
+                // A held `Thing` — liveness before any stored read.
+                guard already.isLive else { summary.skipped += 1; continue }
+                if ChatImportLanding.apply(script, to: already) {
+                    summary.healed += 1
+                } else {
+                    summary.skipped += 1
+                }
+                continue
+            }
 
             let thing = Thing(
                 kind: .chat,
                 title: title,
                 // Don't echo the opener as the subtitle when it's the title.
+                // UNCHANGED by the transcript pass: `content` stays the
+                // opening ask (what `ChatBubbles` draws), and the conversation
+                // lands on `enrichedText`, which is retrieval-only.
                 content: title == opener ? "" : opener,
                 source: "Claude",
                 capturedAt: when ?? .now,
                 sourceRef: ref
             )
             context.insert(thing)
+            ChatImportLanding.apply(script, to: thing)
             SpotlightIndex.index([thing])
             summary.imported += 1
         }
-        if summary.imported > 0 { context.saveHonestly() }
+        if summary.imported > 0 || summary.healed > 0 { context.saveHonestly() }
         return summary
+    }
+
+    // MARK: - The conversation itself
+
+    /// Every message that was really said, in order.
+    ///
+    /// Flat, unlike ChatGPT's graph: `chat_messages` is already chronological
+    /// and carries no branches, so there is nothing to walk — which makes the
+    /// interesting part the FILTER. A sender that is neither human nor
+    /// assistant is chrome, and a content block that isn't prose (a
+    /// `tool_use`, a `tool_result`, a `thinking` block) is machinery this room
+    /// has no business holding.
+    static func turns(_ convo: [String: Any]) -> [(speaker: String, text: String)] {
+        guard let messages = convo["chat_messages"] as? [[String: Any]] else { return [] }
+        return messages.compactMap { message in
+            guard let sender = message["sender"] as? String,
+                  let speaker = speakerName(sender) else { return nil }
+            let text = messageText(message)
+            return text.isEmpty ? nil : (speaker, text)
+        }
+    }
+
+    /// Who said it. Anything else returns nil — Claude's export has carried a
+    /// third sender before, and a room of somebody's chats is the wrong place
+    /// to guess what a new one means.
+    private static func speakerName(_ sender: String) -> String? {
+        switch sender {
+        case "human": return "You"
+        case "assistant": return "Claude"
+        default: return nil
+        }
+    }
+
+    /// The whole conversation, flattened and clamped.
+    static func transcript(_ convo: [String: Any]) -> ChatTranscript {
+        ChatTranscript.make(turns(convo))
     }
 
     /// When the conversation last moved — `updated_at`, falling back to
@@ -95,10 +163,21 @@ enum ClaudeImport {
 
     /// A message's text — the top-level `text`, or the joined `content` blocks
     /// (newer exports carry structured content and leave `text` empty).
+    ///
+    /// The block filter (2026-08-08) is what keeps tool noise out of a
+    /// transcript: a `tool_use` block carries its arguments and a `thinking`
+    /// block carries reasoning nobody wrote, and both can sit in the same
+    /// array as the prose. An untyped block is read as text — that is the
+    /// older export's shape, where `type` is absent and the block IS the
+    /// words.
     private static func messageText(_ message: [String: Any]) -> String {
         if let text = message["text"] as? String, !text.isEmpty { return text }
         guard let content = message["content"] as? [[String: Any]] else { return "" }
-        return content.compactMap { $0["text"] as? String }.joined(separator: " ")
+        return content
+            .filter { (($0["type"] as? String) ?? "text") == "text" }
+            .compactMap { $0["text"] as? String }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
     }
 
     // MARK: - Dates (ISO-8601, tolerant of Claude's 6-digit microseconds)

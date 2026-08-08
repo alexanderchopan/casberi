@@ -86,11 +86,6 @@ struct ThingSheetView: View {
     /// per sheet open, like `replies`/`approvalCheck` below, is the honest
     /// place to pay that cost.
     @State private var crossSourceEcho: String?
-    /// You WROTE about this link once, somewhere else (2026-08-05, prd §307) —
-    /// an X post from 2019 that carried this exact URL. Fetched on open beside
-    /// `crossSourceEcho`, and held as plain values rather than the `Thing`, so
-    /// a heal landing under the open sheet can't leave a stale model here.
-    @State private var writtenAbout: (source: String, date: Date)?
     /// An Obsidian note's own `[[wikilink]]` targets, resolved against notes
     /// already landed (2026-07-28) — fetched once on open, like `replies`
     /// above. Held as `KeyedThing` (see `ThingRowKeying.swift`) rather than
@@ -99,10 +94,18 @@ struct ThingSheetView: View {
     /// otherwise leave a stale row that traps on read — `liveLinkedNotes`
     /// filters to `.isLive` at render time before anything reads through it.
     @State private var linkedNotes: [KeyedThing] = []
-    /// The notes that link TO this one — the half a note cannot carry itself
-    /// (2026-08-06, `NoteLinks.backlinks`). Read on open like `linkedNotes`,
-    /// never persisted.
-    @State private var backlinks: [KeyedThing] = []
+    /// WHAT POINTS AT THIS (2026-08-08, prd §340) — the incoming half, for any
+    /// thing rather than only an Obsidian note: the notes that wikilink here,
+    /// and the posts and notes whose own text carries this thing's link.
+    /// Replaces the Obsidian-only `backlinks` shelf and the dead "You wrote"
+    /// spec row, which said one of these facts and could not be tapped.
+    ///
+    /// Plain VALUES, not `KeyedThing`s — a `ThingLinks.Tie` carries an id and
+    /// display strings, so a delete-sync heal landing under the open sheet
+    /// leaves nothing model-shaped here to tombstone (the liveness class is
+    /// avoided by construction rather than guarded, as in `writtenAbout` before
+    /// it). The walk pays one equality fetch at tap time instead.
+    @State private var pointingAt: [ThingLinks.Tie] = []
     /// Walking into a linked note (2026-07-28) — a plain re-presentation of
     /// this same sheet over the target, the recursive shape already used
     /// elsewhere in this app (e.g. `-agentThingProbe`'s Stack push).
@@ -388,8 +391,8 @@ struct ThingSheetView: View {
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s4)
                 }
-                if !liveBacklinks.isEmpty {
-                    backlinksSection
+                if !pointingAt.isEmpty {
+                    pointsAtSection
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s4)
                 }
@@ -442,14 +445,15 @@ struct ThingSheetView: View {
             // constructing the Task for the common non-link case.
             if thing.kind == .link {
                 crossSourceEcho = CrossSourceEcho.find(for: thing, context: modelContext)
-                writtenAbout = CrossSourceEcho.writtenAbout(thing, context: modelContext)
             }
-            if thing.source == "Obsidian" {
-                if !thing.wikilinks.isEmpty {
-                    linkedNotes = NoteLinks.resolve(thing.wikilinks, context: modelContext).keyed
-                }
-                backlinks = NoteLinks.backlinks(to: thing, context: modelContext).keyed
+            if thing.source == "Obsidian", !thing.wikilinks.isEmpty {
+                linkedNotes = NoteLinks.resolve(thing.wikilinks, context: modelContext).keyed
             }
+            // What points AT this, for every thing rather than only a note
+            // (prd §340). Its own fetches are scoped and skipped where they
+            // can't answer — a thing with no link and no distinctive title
+            // costs nothing here.
+            pointingAt = ThingLinksSource.ties(for: thing, context: modelContext)
             // The gate is a string check — non-approval things spend nothing.
             if WalletPrepare.applies(to: thing) {
                 Task { approvalCheck = await WalletPrepare.check(for: thing) }
@@ -829,12 +833,11 @@ struct ThingSheetView: View {
             && !(contentShown && ThingContentView.showsLinkPreview(thing))
             && Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content)?.host() != nil
         let hasEcho = crossSourceEcho != nil
-        let hasWritten = writtenAbout != nil
         let hasAgent = thing.provenance.agent != nil
         let hasFrom = showsWho
         let hasCounterparty = showsWho && thing.source == "Wallet"
             && !(thing.counterpartyAddress ?? "").isEmpty
-        let anyRow = hasEvent || hasDue || hasSite || hasEcho || hasWritten || hasAgent || hasFrom || hasCounterparty
+        let anyRow = hasEvent || hasDue || hasSite || hasEcho || hasAgent || hasFrom || hasCounterparty
 
         if anyRow {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
@@ -862,14 +865,11 @@ struct ThingSheetView: View {
                 if hasEcho, let crossSourceEcho {
                     specRow("Also", "Saved from \(crossSourceEcho)")
                 }
-                // The read no single service can make: this link, inside
-                // something you WROTE somewhere else, years before you saved
-                // it here. Exact URL containment, never a topical guess — see
-                // `CrossSourceEcho.writtenAbout`.
-                if hasWritten, let writtenAbout {
-                    specRow("You wrote",
-                            "Linked on \(writtenAbout.source), \(writtenAbout.date.formatted(.dateTime.month(.abbreviated).year()))")
-                }
+                // "You wrote · Linked on X, Apr 2019" retired here 2026-08-08
+                // (prd §340): the read is unchanged and better placed. It named
+                // only the EARLIEST post carrying this link and could not be
+                // tapped; the "Points at this" shelf below lists every one of
+                // them and walks into it.
                 if hasAgent, let agent = thing.provenance.agent {
                     specRow("By", "\(agent)\(thing.provenance.machine.map { " on \($0)" } ?? "")")
                 }
@@ -1236,24 +1236,64 @@ struct ThingSheetView: View {
         linkedNotes.filter { $0.thing.isLive }
     }
 
-    /// `backlinks` filtered to still-live models — the corollary-2 guard, same
-    /// as `liveLinkedNotes` above.
-    private var liveBacklinks: [KeyedThing] {
-        backlinks.filter { $0.thing.isLive }
-    }
-
     private var noteLinksSection: some View {
         noteLinkList("Links to", notes: liveLinkedNotes)
     }
 
-    /// The inverse graph (2026-08-06). Obsidian's own most-used panel, and the
-    /// one direction a note cannot show from inside itself: its outgoing links
-    /// are written in its text, its incoming ones in everybody else's. Drawn
-    /// UNDER "Links to" and with an inbound arrow, so the two can't be read as
-    /// one list — a note that both links to and is linked from another would
-    /// otherwise show it twice with no way to tell the directions apart.
-    private var backlinksSection: some View {
-        noteLinkList("Linked from", notes: liveBacklinks, icon: "arrow.down.left")
+    /// The inverse graph, generalized (2026-08-08, prd §340). A thing's own
+    /// outgoing links are written in its text; its incoming ones are written in
+    /// everybody else's, which is the one direction a corpus can show and a
+    /// single app cannot.
+    ///
+    /// Drawn UNDER "Links to" and with an inbound arrow, so the two can never
+    /// read as one list — a note that both links to and is linked from another
+    /// would otherwise appear twice with no way to tell the directions apart
+    /// (`backlinksSection`'s rule, kept).
+    ///
+    /// Each row says WHY it is here (`Tie.detail`), because two different facts
+    /// share this shelf now: somebody wrote `[[this]]`, or somebody wrote this
+    /// thing's URL. An unlabelled mixed list would make the weaker one look
+    /// like the stronger.
+    private var pointsAtSection: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            Text("Points at this")
+                .dsText(.label12)
+                .foregroundStyle(DS.textTertiary)
+            ForEach(pointingAt, id: \.id) { tie in
+                Button {
+                    walkTo(tie)
+                } label: {
+                    HStack(spacing: DS.Space.s2) {
+                        Image(systemName: "arrow.down.left")
+                            .accessibilityHidden(true)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(DS.textTertiary)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(tie.title)
+                                .dsText(.callout15)
+                                .foregroundStyle(DS.textPrimary)
+                                .lineLimit(1)
+                            Text(tie.detail)
+                                .dsText(.label12)
+                                .foregroundStyle(DS.textTertiary)
+                                .lineLimit(1)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .dsHover()
+            }
+        }
+    }
+
+    /// Walks into a tie's real row. Resolved at TAP time, not held — and a row
+    /// deleted since the shelf was drawn simply doesn't open, rather than
+    /// opening a sheet over a tombstone.
+    private func walkTo(_ tie: ThingLinks.Tie) {
+        guard let target = ThingLinksSource.resolve(tie, context: modelContext) else { return }
+        walkingToNote = KeyedThing(target)
     }
 
     @ViewBuilder

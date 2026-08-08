@@ -2793,7 +2793,18 @@ struct RootShell: View {
             AnswerTools.Snapshot(id: t.id.uuidString, title: t.title,
                                  kind: t.kind.typeTag, source: t.source,
                                  when: shortTime(t.capturedAt),
-                                 text: answerSnippet(t, terms: terms))
+                                 text: answerSnippet(t, terms: terms),
+                                 // The graph fields (prd §340) — carried on the
+                                 // snapshot so `linked_things` can answer from
+                                 // the same rows the other tools search, rather
+                                 // than reaching back into SwiftData off its
+                                 // actor. `mentions` early-outs per field, so a
+                                 // row with no URL in it costs a `contains`.
+                                 at: t.capturedAt,
+                                 link: ThingLinks.canonicalLink(t.content),
+                                 mentions: ThingLinksSource.mentions(of: t),
+                                 wikilinks: t.wikilinks,
+                                 sourceRef: t.sourceRef)
         }
     }
 

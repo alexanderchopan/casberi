@@ -32,6 +32,13 @@ enum ProbeHooks {
         // deliberately NOT here: they are identifiers, useless without the
         // key, and seeing them in `probeArgs:` is how a 401 gets diagnosed.
         "-ascKey",
+        // A real email address — PII, not a secret the app treats as one,
+        // redacted for Trello's reason: anything identifying stays out of the
+        // log so nobody has to remember which ones are safe. `-jiraDomain` is
+        // deliberately NOT here, `-ascKeyID`'s reasoning exactly: it's an
+        // identifier, useless without the token, and seeing it in
+        // `probeArgs:` is how a "couldn't reach the site" gets diagnosed.
+        "-jiraEmail",
         // Not a credential the app USES, but by construction the value is a
         // sample secret — the whole point of the probe is to hand it one.
         // Printing it verbatim in `probeArgs:` would put a real key in the
@@ -453,6 +460,31 @@ enum ProbeHooks {
         Hook(key: "trelloProbe") { _, _ in
             Task { @MainActor in await TrelloAuth.diagnose() }
         },
+        // Jira takes THREE credentials too, so it takes three hooks — the two
+        // below are declared BEFORE `-jiraProbe` and before the `-tokenBridge
+        // "Jira:<token>"` line a launch would also pass, because hooks run in
+        // list order and a request can only be built once all three have
+        // landed (the `-ascKeyID`/`-trelloKey` rule).
+        //
+        // `-jiraDomain <site>.atlassian.net` — the site, normalized the same
+        // way a pasted address-bar URL is (see `JiraAuth.normalizedDomain`).
+        Hook(key: "jiraDomain") { value, _ in
+            JiraAuth.setDomain(value)
+            NSLog("[Casberi] jiraDomain: set")
+        },
+        // `-jiraEmail <email>` — the Atlassian account a token gets minted
+        // for; Basic auth needs it on every request.
+        Hook(key: "jiraEmail") { value, _ in
+            JiraAuth.setEmail(value)
+            NSLog("[Casberi] jiraEmail: set")
+        },
+        // `-jiraProbe YES` walks the Jira read phase by phase with the STORED
+        // credentials (connect the token via `-tokenBridge "Jira:<token>"`) —
+        // the measure tool for a bridge authored against the docs and never
+        // run live (see `JiraAuth`'s UNMEASURED note).
+        Hook(key: "jiraProbe") { _, _ in
+            Task { @MainActor in await JiraAuth.diagnose() }
+        },
         // `-cloudflareProbe YES` walks the Cloudflare read phase by phase with
         // the STORED token (connect first via `-tokenBridge "Cloudflare:<t>"`).
         // The `-kalshiBookProbe` lesson: an empty Cloudflare room has five
@@ -530,6 +562,22 @@ enum ProbeHooks {
         Hook(key: "ascRoomProbe") { _, _ in
             for line in ASCRoomSource.probeLines() {
                 NSLog("[Casberi] ascRoom| %@", line)
+            }
+        },
+        // `-cursorRoomProbe YES` — the Cursor room head's reading, one line at
+        // a time (2026-08-08, prd §340). An empty head has five causes that
+        // render as one nothing, and only the last two are bugs: not
+        // connected, fewer than two placed runs (the healthy new-connection
+        // case), everything still in flight, a run whose repository could not
+        // be named, or the outcome falling back to title-parsing on rows that
+        // should carry the tag. `CursorRoomSource.probeLines` names which.
+        Hook(key: "cursorRoomProbe") { _, context in
+            var descriptor = FetchDescriptor<Thing>(
+                predicate: #Predicate { $0.source == "Cursor" })
+            descriptor.fetchLimit = 200
+            let rows = (try? context.fetch(descriptor)) ?? []
+            for line in CursorRoomSource.probeLines(things: rows) {
+                NSLog("[Casberi] %@", line)
             }
         },
         // `-cursorProbe YES` walks the Cursor read phase by phase with the
@@ -2903,6 +2951,35 @@ enum ProbeHooks {
                 for t in near { NSLog("relatedNear| %@ · %@", t.title, t.source) }
             }
         },
+        // `-linksProbe "<title prefix>"` — what the thing sheet's "Points at
+        // this" shelf shows (prd §340): every other thing whose text names or
+        // links this one, and why. Keyed on a title prefix like `-relatedProbe`.
+        //
+        // An empty result is the healthy common case (most things are pointed
+        // at by nothing) — the probe exists to make sure a REAL edge (a note
+        // that wikilinks the subject, a post whose text carries its link)
+        // isn't silently missed, not to prove every thing has one.
+        Hook(key: "linksProbe") { prefix, context in
+            Task { @MainActor in
+                var descriptor = FetchDescriptor<Thing>(
+                    sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+                descriptor.fetchLimit = 300
+                let all = (try? context.fetch(descriptor)) ?? []
+                guard let subject = all.first(where: {
+                    $0.isLive && $0.title.lowercased().hasPrefix(prefix.lowercased())
+                }) else {
+                    NSLog("linksProbe: no thing whose title starts with %@", prefix)
+                    return
+                }
+                NSLog("linksProbe: subject=%@ · %@ link=%@", subject.title, subject.source,
+                      ThingLinks.canonicalLink(subject.content) ?? "none")
+                let ties = ThingLinksSource.ties(for: subject, context: context)
+                NSLog("linksProbe: pointingAt=%d", ties.count)
+                for tie in ties {
+                    NSLog("linksTie| %@ · %@ · %@", tie.title, tie.edge.reason, tie.source)
+                }
+            }
+        },
         // `-factsProbe "<title prefix>"` — the upcoming moments a screenshot's
         // own OCR text names, and where each half came from. Logs the
         // DETERMINISTIC dates and the MODEL's label separately, on purpose:
@@ -3163,6 +3240,17 @@ enum ProbeHooks {
                 note("posthogHead", source == "PostHog"
                      ? PostHogRoomSource.compose(things: things).map {
                         "\(PostHogRoom.headline($0)) · \($0.metrics.count) metrics"
+                     } : nil)
+                // Unlike the three above this one DOES read `things` (the
+                // runs ARE the subject — see `CursorRoomSource`'s own note),
+                // so the gate here is belt-and-braces rather than the whole
+                // correctness: `compose` already filters to `source ==
+                // CursorRoomSource.source` internally, and would return nil
+                // for any other room's `things` on its own. Gated anyway, so
+                // this line reads the same way as its three neighbours.
+                note("cursorHead", source == CursorRoomSource.source
+                     ? CursorRoomSource.compose(things: things).map {
+                        "\(CursorRoom.headline($0)) · \($0.repos.count) repos"
                      } : nil)
                 // 2. the anniversary — memories room only, and only with pixels
                 let echo = source == "Snapchat"
@@ -4004,6 +4092,75 @@ enum ProbeHooks {
             NSLog("viProbe: %d hit(s) for [%@]: %@", hits.count,
                   labels.joined(separator: ", "),
                   hits.isEmpty ? "—" : hits.map(\.title).joined(separator: " · "))
+        },
+        // `-cursorPRProbe YES` — what became of the pull requests your agents
+        // opened, WITHOUT changing anything (2026-08-08, prd §340).
+        //
+        // An unchanged room has five causes that look identical from the feed:
+        // no GitHub token, no Cursor row carrying a PR at all, every PR
+        // already resolved, every PR still genuinely open, or a url shape this
+        // build can't parse. Only the last is a bug, and it is the invisible
+        // one — the row just keeps saying a pull request was opened, forever.
+        // `parsed=NO` is what separates it in one launch.
+        Hook(key: "cursorPRProbe") { _, context in
+            Task { @MainActor in await CursorPullRequests.diagnose(context: context) }
+        },
+        // `-cursorPRSync YES` — actually run the loop-closer and report how
+        // many rows changed. A DIFFERENT word from the probe above, not a flag
+        // on it, for `-librarianProbe`'s reason: this one spends requests, so
+        // it must never be something a headless sweep runs by accident.
+        Hook(key: "cursorPRSync") { _, context in
+            Task { @MainActor in
+                let changed = await CursorPullRequests.reconcile(context: context)
+                NSLog("[Casberi] cursorPRSync: %d row(s) resolved", changed)
+            }
+        },
+        // `-mcpServe YES` — turn the loopback MCP listener on and hand a test
+        // client what it needs to reach it (2026-08-08, prd §340).
+        //
+        // This exists because `MCPServer` could not be measured at all. It
+        // compiles out everywhere but Catalyst, so no simulator can exercise
+        // it; its switch lives in a Mac settings row, so no headless run can
+        // reach it; and its pairing token is written to the DATA-PROTECTION
+        // keychain, which `security(1)` cannot read — three separate walls
+        // between a listener that says it is unproven and anything that could
+        // prove it.
+        //
+        // **The token is written to a FILE, never logged.** It is the
+        // credential — `MCPServerRow` copies it with `DSPasteboard.
+        // copySensitive` for that reason — so this follows `-macSnapshot`'s
+        // rule that the log line names the PATH and the value stays out of it.
+        // Under DEBUG only, so it cannot ship; and the path is inside the
+        // app's own container, which nothing else can read.
+        Hook(key: "mcpServe") { _, _ in
+            #if targetEnvironment(macCatalyst)
+            MCPServer.isEnabled = true
+            MCPServer.shared.start()
+            // The listener reaches `.ready` on its own queue, so a census
+            // taken synchronously here reports "not running" on a listener
+            // that is seconds from being fine — the reason this waits before
+            // it reports rather than reporting twice.
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(2))
+                let server = MCPServer.shared
+                NSLog("[Casberi] mcpServe| endpoint=%@ running=%@ error=%@",
+                      MCPServer.endpoint,
+                      server.running ? "YES" : "no",
+                      server.lastError ?? "—")
+                let path = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("mcp-pairing-token").path
+                do {
+                    try MCPPairing.token().write(toFile: path, atomically: true,
+                                                 encoding: .utf8)
+                    NSLog("[Casberi] mcpServe| tokenFile=%@", path)
+                } catch {
+                    NSLog("[Casberi] mcpServe| tokenFile FAILED: %@",
+                          error.localizedDescription)
+                }
+            }
+            #else
+            NSLog("[Casberi] mcpServe| Catalyst only — there is no listener on this platform")
+            #endif
         },
     ]
 }

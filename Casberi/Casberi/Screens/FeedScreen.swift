@@ -479,7 +479,7 @@ struct FeedScreen: View {
 
     /// The shape a source takes when its chip is in force.
     private enum Shape {
-        case all, photos, wallet, calendar, gmail, chat, social, reminders, safari, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, x, x402, appStoreConnect, plain
+        case all, photos, wallet, calendar, gmail, chat, social, reminders, safari, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, x, x402, appStoreConnect, cursor, plain
         init(source: String) {
             switch source {
             case "All":                 self = .all
@@ -541,6 +541,12 @@ struct FeedScreen: View {
             // price, and none of them has a trailing slot that must NOT be a
             // time.
             case X402Ingest.source:     self = .x402
+            // Its own case rather than joining `.chat` (2026-08-08, prd §340).
+            // A Cursor row is a REPORT — an outcome, a repository and a
+            // paragraph the agent wrote about what it did — where a chat row
+            // is an excerpt of a conversation; and `.plain`, which this fell
+            // to before, drew the outcome and the report away entirely.
+            case "Cursor":              self = .cursor
             case "Reminders", "Todoist": self = .reminders
             case "Safari":              self = .safari
             // Obsidian joins the notes room — the vault is notes (prd §59).
@@ -1946,6 +1952,17 @@ struct FeedScreen: View {
                             thing.content.contains("/apps/\(app.id)")
                         }
                     }
+                case .cursor(let room):
+                    CursorRoomCard(room: room) { repo in
+                        // The card ranks a REPOSITORY, which owns many rows, so
+                        // it can't name a `sourceRef` — the honest landing is
+                        // that repo's most recent run, matched on the stored
+                        // `authorHandle` (the App Store Connect app rule, one
+                        // field over).
+                        openNewest(source: CursorRoomSource.source, in: visible) { thing in
+                            thing.authorHandle == repo.name
+                        }
+                    }
                 }
             }
         } else if let anniversary {
@@ -2057,6 +2074,13 @@ struct FeedScreen: View {
             // the new-since divider is a chronological mark, and in a room
             // where every row shares one timestamp it would land arbitrarily.
             groupedSections(x402Lanes(visible), nextEventID: nextEventID)
+        case .cursor:
+            // Repositories, not days — see `cursorRepos`. Keeps `boundary:`,
+            // unlike x402: these rows carry the run's REAL start, so they span
+            // real time and the new-since divider means something.
+            let repos = cursorRepos(visible)
+            groupedSections(repos, nextEventID: nextEventID,
+                            boundary: boundaryThingID(in: repos))
         case .tokens:
             watchlistLedeSection(visible)
             watchlistSection(visible, nextEventID: nextEventID)
@@ -2756,6 +2780,48 @@ struct FeedScreen: View {
             .sorted { ($0.1.count, $1.0) > ($1.1.count, $0.0) }
     }
 
+    /// The Cursor room grouped by REPOSITORY rather than by day (2026-08-08,
+    /// prd §340) — the `x402Lanes` shape, for the same reason.
+    ///
+    /// A day is the wrong axis for agent runs. You launch several against one
+    /// repository in an afternoon and then nothing for a week, so day-grouping
+    /// produces one enormous "Today" and a scatter of singletons, and the
+    /// question a person actually arrives with — *what has been happening on
+    /// this project* — is the one the screen refuses to answer.
+    ///
+    /// Within a repository, FAILURES LEAD (then newest first). That inverts the
+    /// chronology deliberately and for the same reason the room head ranks them
+    /// first: a failed run is the one that still needs you, and burying it under
+    /// three successes because they happened later is the room hiding its own
+    /// news. Repositories themselves are ordered by run count, with the name as
+    /// a tiebreak so the ordering is TOTAL — a room that reshuffles between
+    /// opens over identical data reads as broken.
+    private func cursorRepos(_ visible: [Thing]) -> [(String, [Thing])] {
+        var repos: [String: [Thing]] = [:]
+        // Live at the BOUNDARY, before any stored property is read (corollary
+        // 4) — `visible` may be a debounced snapshot.
+        for thing in visible.live {
+            // The repo is stored on `authorHandle` at landing. A row that
+            // predates that, or a run whose source carried no usable
+            // repository, gets a shelf rather than vanishing — the same
+            // refusal the x402 room makes, and the §307 rule that a row we
+            // can't file is never silently dropped.
+            let repo = thing.authorHandle?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let label = (repo?.isEmpty == false ? repo! : String(localized: "Somewhere else"))
+            repos[label, default: []].append(thing)
+        }
+        return repos
+            .map { label, rows in
+                (label, rows.sorted {
+                    let a = CursorAgentStatus.failed(tags: $0.tags)
+                    let b = CursorAgentStatus.failed(tags: $1.tags)
+                    if a != b { return a }
+                    return $0.capturedAt > $1.capturedAt
+                })
+            }
+            .sorted { ($0.1.count, $1.0) > ($1.1.count, $0.0) }
+    }
+
     private enum SourceHead {
         case runway(CloudflareRunway)
         case stripe(StripeRoom)
@@ -2763,6 +2829,7 @@ struct FeedScreen: View {
         case appleWallet(AppleWalletRoom.Card)
         case x402(X402Room)
         case appStoreConnect(ASCRoom)
+        case cursor(CursorRoom)
     }
 
     /// Resolve this room's own head, or nil. One `switch` so adding a fourth
@@ -2784,6 +2851,8 @@ struct FeedScreen: View {
         // screen disagree about the same corpus. See `ASCRoomSource.compose`.
         case ASCShape.source:
             return ASCRoomSource.compose(things: visible).map { .appStoreConnect($0) }
+        case CursorRoomSource.source:
+            return CursorRoomSource.compose(things: visible).map { .cursor($0) }
         default:
             return nil
         }
@@ -4463,6 +4532,18 @@ struct FeedScreen: View {
                             live: false,
                             imageOnly: imageOnly,
                             wideArt: wideArt)
+                }
+            case .cursor:
+                // Our own note about the sync keeps its plain band, the way
+                // the x402 and X rooms treat theirs — it is not a run.
+                if Corpus.isImportReceipt(thing) {
+                    BandRow(thing: thing,
+                            emphasized: thing.id == nextEventID,
+                            live: false,
+                            imageOnly: imageOnly,
+                            wideArt: wideArt)
+                } else {
+                    CursorRow(thing: thing)
                 }
             case .safari: ReadingRow(thing: thing)
             default:

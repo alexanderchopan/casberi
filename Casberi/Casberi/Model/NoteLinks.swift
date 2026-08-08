@@ -51,37 +51,14 @@ enum NoteLinks {
         }
         return out
     }
-
-    /// The INVERSE graph (2026-08-06): which landed notes link TO this one.
-    ///
-    /// Obsidian's own most-used panel, and the half a note cannot carry
-    /// itself — a note's outgoing links are written in its text, its incoming
-    /// ones are written in everybody else's. So this is the one direction the
-    /// vault's structure can only be seen from outside the file, which is
-    /// exactly the thing a corpus is for.
-    ///
-    /// Deliberately the same shape as `resolve`: read at sheet-open time,
-    /// never persisted, and honest about a link that doesn't resolve — the
-    /// match is a note's own TITLE, which for this bridge is its filename, so
-    /// a renamed note stops being linked-to the moment the vault says it is.
-    /// Capped, because a daily-note vault has hub notes with hundreds of
-    /// backlinks and a sheet is not a graph view.
-    static let backlinkCap = 20
-
-    @MainActor
-    static func backlinks(to note: Thing, context: ModelContext) -> [Thing] {
-        guard note.isLive, note.source == "Obsidian" else { return [] }
-        let title = note.title.lowercased()
-        guard !title.isEmpty else { return [] }
-        let noteID = note.id
-        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == "Obsidian" })
-        guard let notes = try? context.fetch(descriptor) else { return [] }
-        var out: [Thing] = []
-        for candidate in notes where candidate.isLive && candidate.id != noteID {
-            guard candidate.wikilinks.contains(where: { $0.lowercased() == title }) else { continue }
-            out.append(candidate)
-            if out.count == backlinkCap { break }
-        }
-        return out
-    }
 }
+
+// The INVERSE graph — which landed notes link TO this one — shipped here
+// 2026-08-06 and retired 2026-08-08 (prd §340), superseded by
+// `ThingLinksSource.ties`/`ThingLinks.pointingAt`: the same wikilink read,
+// generalized so it answers for any thing rather than only an Obsidian note,
+// and joined with the mention edge on one shelf ("Points at this") instead of
+// two ("Links to" / "Linked from"). `resolve` above stays — it is the
+// OUTGOING half, still Obsidian-specific because only a vault-shaped bridge
+// populates `Thing.wikilinks`, and `ThingLinks` reads that same stored array
+// rather than owning a second copy of it.

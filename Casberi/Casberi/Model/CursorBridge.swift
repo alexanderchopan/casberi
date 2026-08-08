@@ -113,6 +113,48 @@ enum CursorAgentStatus: String {
         case .creating, .running:    nil   // never landed
         }
     }
+
+    /// The outcome as a STABLE marker, and nil for a plain success.
+    ///
+    /// This exists because `leadClause` is localized and the title is the only
+    /// place the outcome was ever recorded (2026-08-08, prd §340). A room that
+    /// wants to rank failures first, or a facet that wants to filter to them,
+    /// would have to parse the title back — and that comparison is against
+    /// whatever language the device was in WHEN THE ROW LANDED. Change the
+    /// language and every past failure silently reads as a success, which is
+    /// the §83 fake status in the one place it is most expensive.
+    ///
+    /// So the outcome is landed as a tag as well, in English, never localized:
+    /// a tag is stable, survives a language change, and doubles as the §308
+    /// facet that makes "cursor failed runs" answerable. Deliberately three
+    /// distinct words rather than one "Failed" bucket — an expired run and a
+    /// crashed one are different facts, and a person filtering for one does
+    /// not mean the other.
+    var facetTag: String? {
+        switch self {
+        case .finished:              nil
+        case .error:                 "Failed"
+        case .expired:               "Expired"
+        case .cancelled:             "Cancelled"
+        case .creating, .running:    nil   // never landed
+        }
+    }
+
+    /// Every tag this type can produce — so a reader can recognise an outcome
+    /// tag without hard-coding the list a second time and letting the two
+    /// drift (the `ToolScore.rank` lesson).
+    static var facetTags: [String] {
+        [Self.error, .expired, .cancelled].compactMap(\.facetTag)
+    }
+
+    /// Whether a landed row's tags say the run did NOT simply succeed.
+    /// Absence of an outcome tag means success — which is also the right
+    /// answer for a row landed before this tag existed and never re-read,
+    /// since those were overwhelmingly successes and the alternative is
+    /// claiming a failure we cannot evidence.
+    static func failed(tags: [String]) -> Bool {
+        tags.contains { facetTags.contains($0) }
+    }
 }
 
 enum CursorFetch {
@@ -172,6 +214,14 @@ enum CursorFetch {
         // its keep — the page is where you go to read what went wrong.
         let link = trimmed(target["prUrl"]) ?? trimmed(target["url"]) ?? ""
 
+        // The outcome and the PR ride as tags beside the run marker — stable,
+        // unlocalized, and filterable (see `facetTag`). "PR" is landed only
+        // when there really is a pull request, so the facet can never promise
+        // a link that isn't there.
+        var tags = ["Agent run"]
+        if let outcome = runStatus.facetTag { tags.append(outcome) }
+        if trimmed(target["prUrl"]) != nil { tags.append("PR") }
+
         let thing = Thing(
             kind: .link,
             title: IngestSupport.titleLine(title(row: row, source: source, status: runStatus)),
@@ -181,9 +231,14 @@ enum CursorFetch {
             // history sorted back to where it happened, and can't fake a day's
             // worth of urgency (the Hugging Face rule).
             capturedAt: IngestSupport.isoDate(row["createdAt"]) ?? .now,
-            tags: ["Agent run"],
+            tags: tags,
             sourceRef: "cursor:agent:\(id)"
         )
+        // The repo, kept as data rather than only inside the title. Without it
+        // a room grouping by repository has to re-parse a clamped display
+        // string, and `titleLine`'s 80-character cut can take the repo with it
+        // on a long agent name.
+        if let repo = repoLabel(source) { thing.authorHandle = repo }
         // What the agent says it did. Display copy, the way a Trello card's
         // back and a Readwise highlight's full text are — this is the whole
         // reason to keep a finished run, so it must not ride the
@@ -255,6 +310,27 @@ enum CursorFetch {
         guard let s = (raw as? String)?
             .trimmingCharacters(in: .whitespacesAndNewlines), !s.isEmpty else { return nil }
         return s
+    }
+
+    // MARK: - Reading a landed row back
+
+    /// The title with any leading outcome clause removed, for a row that draws
+    /// the outcome itself. One place, so the row and the room head cannot
+    /// drift into disagreeing about what a title says.
+    ///
+    /// It strips against the CURRENT localization and against the English
+    /// words too, because a row landed before a language change wears the old
+    /// one. Failing to strip is the safe direction — the outcome then appears
+    /// twice, which is redundant but true; stripping too eagerly would eat a
+    /// real repository or agent name.
+    static func displayTitle(_ title: String) -> String {
+        let separator = " · "
+        guard let range = title.range(of: separator) else { return title }
+        let head = String(title[title.startIndex..<range.lowerBound])
+        let known = Set(CursorAgentStatus.facetTags
+            + [CursorAgentStatus.error, .expired, .cancelled].compactMap(\.leadClause))
+        guard known.contains(head) else { return title }
+        return String(title[range.upperBound...])
     }
 
     // MARK: - Probe

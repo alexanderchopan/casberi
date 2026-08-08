@@ -662,6 +662,21 @@ enum Retriever {
             (["my reviews", "reviews", "review", "ratings", "rating"], "Review"),
             (["releases", "release", "versions", "version"], "Release"),
             (["builds", "build"], "Build"),
+            // The Cursor room's halves (2026-08-08, prd §340). "Failed" is the
+            // one people actually arrive with — a finished agent run you have
+            // not looked at is fine, a failed one is why you opened the app —
+            // and until now the outcome existed only inside a display title,
+            // so it could not be asked for at all.
+            //
+            // Three words rather than one bucket, because an expired run and a
+            // crashed one are different facts. "PR" last, and deliberately not
+            // given the phrase "pull request" alone: behind a named source it
+            // narrows honestly, and the gating rule keeps an ordinary sentence
+            // about a pull request from emptying a result elsewhere.
+            (["failed runs", "failures", "failed", "broke", "errored"], "Failed"),
+            (["expired runs", "expired"], "Expired"),
+            (["cancelled runs", "cancelled", "canceled"], "Cancelled"),
+            (["pull requests", "pull request", "prs"], "PR"),
         ]
         let haystack = " " + query.lowercased()
             .components(separatedBy: CharacterSet.alphanumerics.inverted)

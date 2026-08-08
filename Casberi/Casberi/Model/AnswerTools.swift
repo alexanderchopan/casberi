@@ -37,6 +37,30 @@ enum AnswerTools {
         let source: String
         let when: String
         let text: String
+        /// The graph fields (2026-08-08, prd §340) — what `linked_things` needs
+        /// and no other tool reads. Defaulted so a snapshot built for a
+        /// non-graph purpose stays a one-line construction, and because an
+        /// absent edge field must mean "no edge", never a crash.
+        ///
+        /// `at` is the real `Date` beside the display `when`: an edge list is
+        /// ordered newest-first, and a formatted string like "3 days ago" can't
+        /// be sorted.
+        var at: Date = .distantPast
+        /// The canonical link this thing IS.
+        var link: String? = nil
+        /// The canonical links this thing's own text NAMES.
+        var mentions: [String] = []
+        /// The note titles this thing's text names inside `[[…]]`.
+        var wikilinks: [String] = []
+        var sourceRef: String? = nil
+
+        /// This snapshot as the pure edge model's node — one conversion, so the
+        /// agent and the thing sheet compute ties from identical inputs.
+        var node: ThingLinks.Node {
+            ThingLinks.Node(id: id, title: title, source: source, when: at,
+                            link: link, mentions: mentions,
+                            wikilinks: wikilinks, sourceRef: sourceRef)
+        }
     }
 
     /// The agent's answer: the prose it wrote, and the ids of the things its
@@ -161,8 +185,61 @@ struct RecentThingsTool: Tool {
     }
 }
 
-/// One serialization for both tools' rows — number-free (the model gets a
-/// list), title/kind/source/when plus the excerpt when it adds anything.
+/// Follows a graph edge already in the corpus (2026-08-06, prd §340) —
+/// `ThingLinks.pointingAt` over the same snapshot `SearchThingsTool` reads,
+/// the on-device door to the thing sheet's "Points at this" shelf. Search
+/// finds things using the same WORDS; this finds things the person actually
+/// connected — a note that wikilinks an article, a post whose text carries
+/// its URL — which is a different question and the one a multi-hop ask
+/// ("what have I written about the place my note mentions?") actually needs.
+@available(iOS 26.0, *)
+struct LinkedThingsTool: Tool {
+    let name = "linked_things"
+    let description = """
+    What else points at a particular thing you've already found — notes that \
+    link to it by name, and posts or notes whose own text carries its link. \
+    Use this to follow a trail rather than searching again with different \
+    words. Returns nothing for most things, which is normal.
+    """
+    let corpus: [AnswerTools.Snapshot]
+    let sink: ToolHitSink
+
+    @Generable
+    struct Arguments {
+        @Guide(description: "The exact title of a thing you've already seen in a result.")
+        var title: String
+    }
+
+    /// Exact, case-insensitive title match only — the model is asked to copy a
+    /// title it has already seen, and a loose match would silently answer
+    /// about the wrong thing (`AgentCorpusTools.linked`'s identical rule, kept
+    /// in step since a keyed and an on-device answer must not disagree about
+    /// what "linked_things" means).
+    func call(arguments: Arguments) async throws -> [String] {
+        let needle = arguments.title.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !needle.isEmpty,
+              let target = corpus.first(where: { $0.title.lowercased() == needle }) else {
+            return ["No saved thing titled \"\(arguments.title)\" was found."]
+        }
+        let nodes = corpus.map(\.node)
+        let ties = ThingLinks.pointingAt(target.node, in: nodes, limit: 8)
+        guard !ties.isEmpty else { return ["Nothing points at \"\(target.title)\"."] }
+        let bySnapshotID = Dictionary(uniqueKeysWithValues: corpus.map { ($0.id, $0) })
+        let hits = ties.compactMap { bySnapshotID[$0.id] }
+        sink.record(hits.map(\.id))
+        return zip(ties, hits).map { tie, snap in
+            var line = "\(tie.title) — \(tie.edge.reason), from \(tie.source), \(snap.when)"
+            if !snap.text.isEmpty { line += " — \(snap.text)" }
+            return line
+        }
+    }
+}
+
+/// One serialization for both keyword tools' rows — number-free (the model
+/// gets a list), title/kind/source/when plus the excerpt when it adds
+/// anything. `LinkedThingsTool` above cannot share this: a tie's own reason
+/// has nowhere to sit in a row shaped for keyword hits, the identical split
+/// `AgentCorpusTools.serialize`/`linked` keeps.
 @available(iOS 26.0, *)
 private func lineFor(_ snap: AnswerTools.Snapshot) -> String {
     var line = "\(snap.title) — \(snap.kind), from \(snap.source), \(snap.when)"
@@ -178,6 +255,7 @@ enum AnswerToolsModel {
         let tools: [any Tool] = [
             SearchThingsTool(corpus: corpus, sink: sink),
             RecentThingsTool(corpus: corpus, sink: sink),
+            LinkedThingsTool(corpus: corpus, sink: sink),
         ]
         let instructions = """
         You help someone find and make sense of the things they have saved. \

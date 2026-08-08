@@ -457,6 +457,29 @@ enum ScreenshotTopics {
         // keeps too much on `content`, this keeps none of it there.
         case "YouTube":   return TopicSource(kinds: [.link], needsOCR: false, includeDomains: false,
                                              text: { $0.summary ?? "" })
+        // The three chat imports, 2026-08-08 — and until this morning there
+        // was nothing here to read. Every one of them parsed a whole
+        // conversation at import and stored a title plus one line, so the
+        // rooms held no text at all: unsearchable by anything said in them,
+        // almost nothing for `EmbeddingIndex` to index, and no map possible
+        // because there was no corpus to map. `ChatTranscript` is what
+        // changed; this is the registry that turns it into a room's face.
+        //
+        // `includeDomains` is FALSE, and this is a room where getting it wrong
+        // would be loud: people paste links into chats constantly and ask
+        // about them, so counting hostnames would rank the sites they pasted
+        // and call the result what they talk about — `t.co` swallowing the X
+        // room, in a room with far more links in it. Obsidian's shape exactly,
+        // for the same reason: this is a corpus of WRITING.
+        //
+        // The text comes off `enrichedText` (the transcript), falling back to
+        // `content` for a row a re-import hasn't reached yet — that fallback
+        // is the opening ask alone, which is what these rooms had before, so a
+        // partially-repaired room degrades to its old reading rather than to
+        // nothing.
+        case "ChatGPT", "Claude", "Gemini":
+            return TopicSource(kinds: [.chat], needsOCR: false, includeDomains: false,
+                               text: { $0.enrichedText ?? $0.content })
         default:          return nil
         }
     }

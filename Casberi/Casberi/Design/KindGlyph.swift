@@ -141,6 +141,11 @@ enum BridgeGlyph {
         case "bookmarks": return "bookmark.fill"
         case "safari":    return "globe"
         case "github":    return "curlybraces"
+        // Merge, not braces — GitHub's own glyph is already "curlybraces",
+        // and this bridge's whole read is issues AND merge requests, so the
+        // fallback should say what's distinct about it rather than repeat
+        // GitHub's mark if the bundled asset ever fails to load.
+        case "gitlab":    return "arrow.triangle.merge"
         case "linear":    return "list.bullet.rectangle"
         // The lists ARE the mark — a board read as columns. Both this and the
         // hue exist so a seat whose bundled art ever fails to load still reads
@@ -148,6 +153,10 @@ enum BridgeGlyph {
         // Trello had neither, so its tile rendered as a generic gray square on
         // the simulator and on TestFlight).
         case "trello":    return "rectangle.split.3x1"
+        // An issue tracker's whole subject is a queue with a status —
+        // Linear's own glyph reasoning, one degree more literal: Jira's
+        // vocabulary is tickets, not a board of cards.
+        case "jira":      return "checklist"
         case "notion":    return "doc.richtext"
         case "x", "twitter": return "bookmark"
         case "instagram": return "camera"

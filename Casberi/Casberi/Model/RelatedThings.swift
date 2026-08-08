@@ -147,31 +147,21 @@ enum RelatedThings {
         return stripped
     }
 
-    /// Tracking parameters that make one link look like two. Conservative: a
-    /// query string is often load-bearing (a video timestamp, a search), so
-    /// only the parameters that exist purely to attribute a click come off.
-    private static let trackingParams: Set<String> = [
-        "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
-        "fbclid", "gclid", "igshid", "mc_cid", "mc_eid", "ref", "ref_src",
-        "s", "si", "spm", "_branch_match_id",
-    ]
-
     /// The thing's link, reduced so two saves of one page match: scheme and
     /// `www.` dropped, host lowercased, tracking parameters removed, trailing
     /// slash gone. nil when the thing carries no http(s) link.
+    ///
+    /// The rule itself moved to `ThingLinks.canonicalLink(_ raw:)` (2026-08-08)
+    /// when the "points at this" shelf needed the identical form to match a URL
+    /// written inside somebody's post against the same page saved here. Two
+    /// canonicalizers drift, and then "you kept this before" and "mentions
+    /// this" disagree about whether two saves of one page are the same page,
+    /// for a reason invisible from either file — `AgentCorpusTools.rank` /
+    /// `ToolScore.rank`'s split, avoided in advance. This stays as the
+    /// `Thing`-shaped door because every caller here holds a `Thing`, and the
+    /// pure file must not.
     static func canonicalLink(_ thing: Thing) -> String? {
-        let candidate = thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard candidate.hasPrefix("http://") || candidate.hasPrefix("https://"),
-              var comps = URLComponents(string: candidate),
-              var host = comps.host?.lowercased()
-        else { return nil }
-        if host.hasPrefix("www.") { host = String(host.dropFirst(4)) }
-        let kept = (comps.queryItems ?? []).filter { !trackingParams.contains($0.name.lowercased()) }
-        comps.queryItems = kept.isEmpty ? nil : kept.sorted { $0.name < $1.name }
-        var path = comps.path
-        while path.count > 1, path.hasSuffix("/") { path.removeLast() }
-        let query = comps.query.map { "?\($0)" } ?? ""
-        return host + path + query
+        ThingLinks.canonicalLink(thing.content)
     }
 
     // MARK: - Neighbours

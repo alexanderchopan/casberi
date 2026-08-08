@@ -42,6 +42,10 @@ KNOWN_NON_REACH=(
   app.privacy.com app.raindrop.io calendly.com linear.app www.notion.so
   venice.ai bankr.bot www.kraken.com portal.cdp.coinbase.com
   www.binance.com exchange.gemini.com console.x.ai
+  # id.atlassian.com — where a Jira API token is minted. Never fetched: the
+  # read is the person's own Jira site, a fully dynamic host disclosed in
+  # NetworkReach as prose ("your Jira site"), a different host by construction.
+  id.atlassian.com
   # Stripe's dashboard — where a landed row opens on tap, and where you mint
   # the restricted key. Never fetched; `api.stripe.com` is the read, and it
   # IS disclosed in NetworkReach.

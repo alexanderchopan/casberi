@@ -20,18 +20,26 @@ import Foundation
 /// returned, in the order they surfaced. The model still cannot invent a
 /// thing — it can only ask to see more of them.
 ///
-/// Three tools, and the third is the one that is easy to leave out and
-/// shouldn't be: `list_sources`. A model cannot filter by a source whose name
-/// it has never seen, and this corpus's source names are the person's own
-/// connected apps — so without it, "what did I save from Linear?" degrades to
-/// a keyword search for the word "Linear", which is exactly the §307 bug in
-/// miniature.
+/// Four tools now (`linked_things` joined 2026-08-08, prd §340), and two of
+/// them are easy to leave out and shouldn't be. `list_sources`: a model cannot
+/// filter by a source whose name it has never seen, and this corpus's source
+/// names are the person's own connected apps — so without it, "what did I save
+/// from Linear?" degrades to a keyword search for the word "Linear", which is
+/// exactly the §307 bug in miniature. `linked_things`: `search_things` only
+/// ever finds things that use the same WORDS as the query, which is a
+/// different question from "what did this person actually connect to that
+/// thing" — a note that wikilinks an article, a post whose text carries its
+/// URL. Those edges (`ThingLinks`) already power the thing sheet's "Points at
+/// this" shelf; this is the same read, so a multi-hop ask ("what have I
+/// written about the place my March note mentions?") can follow a real
+/// connection instead of guessing a second search term.
 ///
 /// **Redaction happens HERE, not at the call site.** `AgentAnswer.synthesize`
 /// scrubs the candidates it was handed (prd §277), but a tool result is corpus
 /// text this file fetches AFTER that gate and hands straight to somebody
 /// else's API — so it would have sailed past the tripwire entirely. Every
-/// title and excerpt leaving through `serialize` goes through
+/// title and excerpt leaving through `serialize` (and `linked_things`'s own
+/// serialization, which cannot share `serialize` — see below) goes through
 /// `SecretScan.redacted` first, and a thing whose full text `carriesSecret`
 /// is dropped from the result rather than redacted, because a tool result is
 /// evidence the model will quote and a half-redacted quote is worse than a
@@ -164,6 +172,20 @@ enum AgentCorpusTools {
                  "Optional: only things of this kind — note, link, screenshot, chat, event, reminder, mail, voice, product, transaction."),
              ],
              required: []),
+        Spec(name: "linked_things",
+             description: """
+             What else in the person's things POINTS AT a particular thing — \
+             notes that link to it by name, and posts or notes whose own text \
+             carries its link. Use this to follow a trail rather than searching \
+             again with different words: search finds things that use the same \
+             words, this finds things the person actually connected. Returns \
+             nothing for most things, which is normal.
+             """,
+             properties: [
+                ("title", "string",
+                 "The title of the thing to look up, copied exactly from a result you have already seen."),
+             ],
+             required: ["title"]),
         Spec(name: "list_sources",
              description: """
              The apps and services this person has connected, with how many \
@@ -261,6 +283,8 @@ enum AgentCorpusTools {
             let scoped = filter(corpus, source: string("source"), kind: string("kind"))
             content = serialize(Array(scoped.prefix(pageLimit)), sink: sink,
                                 empty: "Nothing recent matches that filter.")
+        case "linked_things":
+            content = linked(string("title"), corpus: corpus, sink: sink)
         case "list_sources":
             content = sourceCensus(corpus)
         default:
@@ -309,6 +333,58 @@ enum AgentCorpusTools {
         .sorted { $0.1 > $1.1 }
         .prefix(limit)
         .map(\.0)
+    }
+
+    /// Finds the thing named `title` and reports what points at it —
+    /// `ThingLinks.pointingAt`, over the same snapshot every other tool reads.
+    ///
+    /// Matched by EXACT title, case-insensitive, never a fuzzy or substring
+    /// match: the tool's own description asks the model to copy a title it has
+    /// already seen in a result, and a loose match here would silently answer
+    /// about the wrong thing — the same failure `list_sources` names a source
+    /// wrong would cause, one tool over. A title matching two different things
+    /// (a duplicate save) picks the first, which is an accepted imprecision
+    /// against building a disambiguation round nobody asked for.
+    ///
+    /// Cannot share `serialize` above: a tie's own reason (`links here` /
+    /// `mentions this`) has nowhere to sit in a row shaped for keyword hits, so
+    /// this is `serialize`'s redaction discipline (the same drop-not-redact
+    /// rule, the same "N more are hidden" honesty) with `edge.reason` where
+    /// `kind` sits in the other one.
+    private static func linked(_ title: String, corpus: [AnswerTools.Snapshot],
+                               sink: Sink) -> String {
+        let needle = title.lowercased()
+        guard !needle.isEmpty else { return "Provide a title to look up." }
+        guard let target = corpus.first(where: { $0.title.lowercased() == needle }) else {
+            return "No saved thing titled \"\(title)\" was found — copy the title exactly from a result already shown."
+        }
+        let nodes = corpus.map(\.node)
+        let ties = ThingLinks.pointingAt(target.node, in: nodes, limit: pageLimit)
+        guard !ties.isEmpty else {
+            return "Nothing in the person's things points at \"\(target.title)\"."
+        }
+        let bySnapshotID = Dictionary(uniqueKeysWithValues: corpus.map { ($0.id, $0) })
+        let safe = ties.filter { tie in
+            guard let snap = bySnapshotID[tie.id] else { return false }
+            return !SecretScan.carriesSecret(snap.title + " " + snap.text)
+        }
+        guard !safe.isEmpty else {
+            return "Nothing in the person's things points at \"\(target.title)\"."
+        }
+        let labels = sink.label(safe.map(\.id))
+        var lines: [String] = []
+        for (label, tie) in zip(labels, safe) {
+            guard let snap = bySnapshotID[tie.id] else { continue }
+            var line = "#\(label) \(SecretScan.redacted(tie.title)) — \(tie.edge.reason), from \(tie.source), \(snap.when)"
+            let excerpt = SecretScan.redacted(snap.text)
+            if !excerpt.isEmpty { line += " — \(excerpt)" }
+            lines.append(line)
+        }
+        if safe.count < ties.count {
+            let hidden = ties.count - safe.count
+            lines.append("(\(hidden) more matched but are hidden because they contain a password or key.)")
+        }
+        return lines.joined(separator: "\n")
     }
 
     /// Renders hits as numbered lines and records them in the sink, dropping

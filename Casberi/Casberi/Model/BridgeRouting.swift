@@ -44,6 +44,10 @@ enum BridgeRouter {
         case chatgpt
         case instagram
         case claude
+        /// Claude Code (2026-08-08) — an import like the three chat seats, but
+        /// of a folder that is already on this machine rather than of a file
+        /// somebody has to request and wait for.
+        case claudeCode
         case gemini
         case venice
         case bankr
@@ -176,7 +180,7 @@ enum BridgeRouter {
                  // 2026-07-31 — so a verified key left the raised sheet sitting
                  // there, alone among the agent seats (audit, 2026-07-31).
                  .venice, .bankr, .openRouter, .grok,
-                 .chatgpt, .claude, .gemini,
+                 .chatgpt, .claude, .claudeCode, .gemini,
                  .kindle, .dayOne, .appleJournal, .appleNotes, .bookmarks:
                 true
             // Snapchat is an import, but NOT a one-shot: landing the export
@@ -201,7 +205,7 @@ enum BridgeRouter {
         /// `AppDetailScreen` to say which of those two worlds an offer is in.
         var isFileImport: Bool {
             switch self {
-            case .chatgpt, .claude, .gemini, .instagram, .snapchat, .tiktok, .x,
+            case .chatgpt, .claude, .claudeCode, .gemini, .instagram, .snapchat, .tiktok, .x,
                  .kindle, .dayOne, .appleJournal, .bookmarks:
                 true
             default:
@@ -236,6 +240,7 @@ enum BridgeRouter {
             case .rss:            "rss"
             case .chatgpt:        "gpt"
             case .claude:         "claude"
+            case .claudeCode:     "claudecode"
             case .gemini:         "gemini"
             case .venice:         "venice"
             case .bankr:          "bankr"
@@ -347,6 +352,7 @@ enum BridgeRouter {
         Row(offer: "ChatGPT",   id: "gpt",    destination: .chatgpt),
         Row(offer: "Instagram", id: "instagram", destination: .instagram),
         Row(offer: "Claude",    id: "claude", destination: .claude),
+        Row(offer: "Claude Code", id: "claudecode", destination: .claudeCode),
         Row(offer: "Gemini",    id: "gemini", destination: .gemini),
         Row(offer: "Venice",    id: "venice", destination: .venice),
         Row(offer: "Bankr",     id: "bankr",  destination: .bankr),
@@ -443,6 +449,7 @@ struct BridgeDestinationView: View {
         case .chatgpt:        ChatGPTImportScreen()
         case .instagram:      InstagramImportScreen()
         case .claude:         ClaudeImportScreen()
+        case .claudeCode:     ClaudeCodeImportScreen()
         case .gemini:         GeminiImportScreen()
         case .venice:         VeniceSetupScreen()
         case .bankr:          BankrSetupScreen()
