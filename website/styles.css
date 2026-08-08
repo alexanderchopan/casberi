@@ -137,6 +137,13 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
    in the app (scaledToFill, clipped to the squircle). */
 .ai-posthog img { width: 100%; height: 100%; border-radius: inherit; }
 .ai-trello    { background: #0052cc; }
+/* Jira carries no bundled mark yet (App Store Connect's shape, minus the
+   trademark reason — this one is just waiting on the asset): a monogram on
+   Atlassian's own documented Jira blue, mirroring KindGlyph/AppIconTile's
+   in-app fallback. The two must move together, or the site and the app
+   disagree about what this seat looks like. Sized up like .ai-appstoreconnect's
+   "A" — a lone letterform reads small against tiles whose artwork fills 52%. */
+.ai-jira      { background: #0052cc; font-size: 23px; }
 .ai-cursor    { background: #000; }
 .ai-stripe    { background: #635bff; }
 /* Stripe's mark is the wordmark, so its tile is full-bleed square

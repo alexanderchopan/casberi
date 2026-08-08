@@ -142,6 +142,11 @@ extension DS {
         // and this only stops the tile falling back to gray.
         case "vercel":              return Color.fixed("#000000")
         case "pagerduty":           return Color.fixed("#04ac38")   // icon-sampled from the bundled mark's own field
+        // Atlassian's documented Jira blue — no bundled mark yet, so the hue
+        // and the glyph together are this seat's whole identity until one
+        // lands (the App Store Connect/Cursor case: a real color even without
+        // an asset, rather than falling to the gray default).
+        case "jira":                return Color.fixed("#0052cc")
         // npm's documented red. PyPI's blue is deliberately DIFFERENT rather
         // than a shared "package" colour — the two seats sit together in the
         // Work group, and a shared field plus a near-shared glyph would read

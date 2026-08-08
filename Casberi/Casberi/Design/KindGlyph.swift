@@ -148,6 +148,10 @@ enum BridgeGlyph {
         // Trello had neither, so its tile rendered as a generic gray square on
         // the simulator and on TestFlight).
         case "trello":    return "rectangle.split.3x1"
+        // An issue tracker's whole subject is a queue with a status —
+        // Linear's own glyph reasoning, one degree more literal: Jira's
+        // vocabulary is tickets, not a board of cards.
+        case "jira":      return "checklist"
         case "notion":    return "doc.richtext"
         case "x", "twitter": return "bookmark"
         case "instagram": return "camera"

@@ -30,6 +30,12 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     /// requests — see `ASCAuth`. It rides `TokenBridge` for the vault slot and
     /// the seat id, and routes to its own `Destination`.
     case appStoreConnect = "App Store Connect"
+    /// Jira takes THREE credentials too, Trello's shape rather than App Store
+    /// Connect's: a site and an email are stored beside the token (see
+    /// `JiraAuth`), but nothing is SIGNED — Basic auth over the token is
+    /// enough, so unlike ASC this still rides the generic dedupe-and-land
+    /// loop in `TokenIngest.refresh` and needs no `Destination` of its own.
+    case jira     = "Jira"
 
     var id: String { rawValue }
 
@@ -56,6 +62,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .vercel:   "vercel"
         case .pagerduty: "pagerduty"
         case .appStoreConnect: "appstoreconnect"
+        case .jira:      "jira"
         }
     }
 
@@ -115,6 +122,12 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // for, in the order it asks for them.
         case .appStoreConnect:
             URL(string: "https://appstoreconnect.apple.com/access/integrations/api")
+        // Where a token is MINTED, tied to the Atlassian account's email —
+        // not a per-site page, because the site itself is the OTHER two
+        // fields this bridge asks for (see `JiraAuth`), entered in the stage
+        // before this door (`TokenSetupScreen.jiraSiteSection`, Trello's
+        // two-stage shape).
+        case .jira:      URL(string: "https://id.atlassian.com/manage-profile/security/api-tokens")
         }
     }
 
@@ -143,6 +156,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .vercel:    "vercel.com → Settings → Tokens"
         case .pagerduty: "pagerduty.com → Integrations → API Access Keys"
         case .appStoreConnect: "App Store Connect → Users and Access → Integrations"
+        case .jira:      "id.atlassian.com → API tokens"
         }
     }
 
@@ -271,6 +285,15 @@ enum TokenBridge: String, CaseIterable, Identifiable {
             "Generate a key with the Developer role — the narrowest that works.",
             "Download the .p8. Apple only offers it once.",
             "The Key ID and Issuer ID are on the same page."]
+        // Jira's steps are the SECOND stage only — the site stage carries its
+        // own (`TokenSetupScreen.jiraSiteSection`), Trello's exact reason:
+        // this is the one bridge here besides Trello that needs two pastes.
+        // No scope to name: a Jira API token carries the same access as your
+        // account (see `canLine`), so there is no box to tick the way
+        // Cloudflare's or Sentry's steps name one.
+        case .jira: [
+            "Create an API token — name it Casberi.",
+            "Copy it and paste it below."]
         }
     }
 
@@ -307,6 +330,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // every one of these files really starts with — and it doubles as the
         // hint that the whole file goes in, not just its first line.
         case .appStoreConnect: "-----BEGIN PRIVATE KEY-----"
+        case .jira:      "API token"
         }
     }
 
@@ -337,6 +361,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .vercel:   "token"
         case .pagerduty: "API key"
         case .appStoreConnect: "private key"
+        case .jira:      "API token"
         }
     }
 
@@ -366,6 +391,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // would be a list, and "items" says nothing. "updates" is Stripe's
         // and PostHog's answer to the same problem.
         case .appStoreConnect: "updates"
+        case .jira:      "issues"
         }
     }
 
@@ -442,6 +468,12 @@ enum TokenBridge: String, CaseIterable, Identifiable {
             // Connect key carries a ROLE, and no role is read-only for what
             // this reads — the same key could submit a version.
             String(localized: "Add a key and Apple's verdicts, your customer reviews and expiring builds keep arriving. Apple has no read-only role, and Casberi only ever reads.")
+        case .jira:
+            // CONDUCT. A Jira API token carries the same access as the
+            // account it's minted for — Atlassian has no read-only token —
+            // so the promise, like Privacy's and Cursor's, is what this code
+            // does rather than what the token can't.
+            String(localized: "Paste a token and the issues assigned to you keep arriving with their due dates. Jira has no read-only token — Casberi only ever reads.")
         }
     }
 
@@ -501,6 +533,11 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // this line has to change in the same commit
         // (`scripts/appstoreconnect-selftest.sh` fails the build if it isn't).
         case .appStoreConnect: "Reads your apps' review status, your customer reviews, and your builds. Apple has no read-only role. Casberi only reads — it never submits a version, releases one, removes an app from sale, replies to a review, uploads a build, or changes anything. It never reads your sales, your proceeds, or anything about the people who use your apps."
+        // The Privacy.com/Cursor sentence: a Jira API token carries no scopes
+        // and no read-only grade at all, so the promise is kept the same way
+        // — by naming the verbs this code doesn't use. If a write is ever
+        // added to `jira()`, this line has to change in the same commit.
+        case .jira:      "Reads the issues assigned to you — the project, the status, and when each is due. A Jira token has the same access as your account. Casberi only ever reads — it never transitions, comments on, or edits an issue."
         }
     }
 
@@ -564,6 +601,11 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // silent as a key Apple refused.
         case .appStoreConnect:
             String(localized: "Apple answered — nothing has changed. Casberi lands what happens to your apps, so a first sync notes where everything stands and stays quiet until a verdict, a review, or a build expiry actually arrives.")
+        // Trello's exact ambiguity, on a different filter: `jiraJQL` asks for
+        // issues assigned to you specifically, so a working token can read a
+        // busy site and still land nothing if nothing is assigned to you.
+        case .jira:
+            String(localized: "Jira answered — no issues are assigned to you. Casberi reads issues where you're the assignee, so check that against the site and project you meant.")
         default:
             nil
         }
@@ -612,6 +654,12 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // Diffing a new account's versions against the old account's ledger
         // would announce a stranger's rejection as yours.
         case .appStoreConnect: ASCAuth.clear()
+        // Cleared on a real Remove only, Trello's key reasoning exactly: the
+        // site and email name the ACCOUNT the token is minted for, and a
+        // fresh token pasted over an expired one is minted for the same
+        // account, so clearing them on a reconnect would delete what the very
+        // next line depends on.
+        case .jira:      if !reconnecting { JiraAuth.clear() }
         default:         break
         }
     }
@@ -724,6 +772,176 @@ enum TrelloAuth {
     }
 }
 
+/// Jira Cloud's credentials — a site, an email, and an API token minted
+/// against that email (2026-08-08). Three values because Jira's REST API has
+/// no single bearer secret the way Readwise's or Todoist's do: a token minted
+/// at `id.atlassian.com` names an ATLASSIAN ACCOUNT, and that account can sit
+/// on any number of sites (`<name>.atlassian.net`), so the token alone names
+/// neither which site to read nor whose issues "assigned to you" means.
+///
+/// The TOKEN itself rides `TokenBridge.jira.tokenKey` — the vault slot the
+/// generic dispatch in `TokenIngest.refresh` already checks for `connected`,
+/// Trello's exact shape. The site and email are two more Keychain slots,
+/// stored beside it for Trello's own reason: each is useless apart from the
+/// token it authenticates, so cleartext UserDefaults would scatter one
+/// credential across two storage tiers for no reason.
+///
+/// Auth is HTTP Basic — `email:token`, base64 — Jira Cloud's documented
+/// scheme for every REST call (the `ZerionAPI`/`RedditBridge` shape here,
+/// not Trello's OAuth-flavoured header, since Jira issues no authorize link
+/// this app could build for you).
+///
+/// UNMEASURED (2026-08-08): authored against Atlassian's published REST API
+/// v3 reference, no live site, no egress to any `*.atlassian.net` host from
+/// this build host. Every read fails to nil rather than guessing, so it
+/// fails safe — verify with `-jiraDomain` + `-jiraEmail` +
+/// `-tokenBridge "Jira:<token>"` + `-jiraProbe YES` before trusting it.
+enum JiraAuth {
+    /// The site, e.g. "yourteam.atlassian.net" — WITHOUT a scheme. Stored
+    /// normalized (see `normalizedDomain`) so a pasted address-bar URL — the
+    /// likeliest paste, and a paste Trello's Power-Up key never had to guard
+    /// against — can't corrupt every request built from it.
+    static let domainVaultKey = "jira.domain"
+    /// The Atlassian account email the token was minted for. Not the bearer
+    /// secret, but Basic auth needs it on every request, so it travels with
+    /// the token rather than being retyped each launch.
+    static let emailVaultKey = "jira.email"
+
+    static var storedDomain: String? { TokenVault.get(domainVaultKey) }
+    static var storedEmail: String? { TokenVault.get(emailVaultKey) }
+
+    /// Strips a scheme and anything after the host — the address-bar paste
+    /// Trello's key field never had to worry about, since a Power-Up key has
+    /// no plausible "looks like a URL" paste.
+    static func normalizedDomain(_ raw: String) -> String {
+        var d = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        for prefix in ["https://", "http://"] where d.hasPrefix(prefix) {
+            d.removeFirst(prefix.count)
+        }
+        if let slash = d.firstIndex(of: "/") { d = String(d[..<slash]) }
+        return d
+    }
+
+    static func setDomain(_ raw: String) { TokenVault.set(normalizedDomain(raw), for: domainVaultKey) }
+    static func setEmail(_ raw: String) {
+        TokenVault.set(raw.trimmingCharacters(in: .whitespacesAndNewlines), for: emailVaultKey)
+    }
+    static func clear() {
+        TokenVault.delete(domainVaultKey)
+        TokenVault.delete(emailVaultKey)
+    }
+
+    /// `email:token`, base64 — Jira Cloud's documented Basic-auth scheme. A
+    /// credential in a URL is a credential in every log that ever holds it
+    /// (Trello's reasoning for its own header), so this rides the
+    /// Authorization header like everything else in this file.
+    static func header(email: String, token: String) -> String? {
+        guard let data = "\(email):\(token)".data(using: .utf8) else { return nil }
+        return "Basic \(data.base64EncodedString())"
+    }
+
+    /// Every issue assigned to you, newest-updated first — no status filter,
+    /// `linear()`'s shape rather than Trello's `filter=open`: Jira's
+    /// `statusCategory` is a FIXED three-value field regardless of a
+    /// project's custom workflow names (see `TokenIngest.jiraMark`), so
+    /// filtering server-side would only cost this bridge the ability to see
+    /// an issue move to Done — `TokenIngest.reconcileJira` needs to see it
+    /// arrive to close it here.
+    static let jql = "assignee = currentUser() ORDER BY updated DESC"
+    /// The selection is the ceiling (the Linear/App-Store-Connect lesson): a
+    /// field not asked for here can never reach the corpus, no matter what
+    /// `TokenIngest.jira` tries to read off it. `description` is deliberately
+    /// NOT here — Jira v3 renders it as Atlassian Document Format, a JSON
+    /// node tree rather than a markdown string like Linear's, so a card-back
+    /// summary needs a tree walk this bridge doesn't do yet; asking for a
+    /// field nothing reads would cost a request for nothing.
+    static let fields = "summary,status,duedate,priority,project,updated,labels"
+
+    static func searchURL(domain: String) -> String {
+        var c = URLComponents()
+        c.scheme = "https"
+        c.host = domain
+        c.path = "/rest/api/3/search"
+        c.queryItems = [
+            URLQueryItem(name: "jql", value: jql),
+            URLQueryItem(name: "fields", value: fields),
+            URLQueryItem(name: "maxResults", value: "50"),
+        ]
+        // Falls back to a hand-built string only if URLComponents somehow
+        // can't encode the JQL (it always can) — never silently drops the
+        // query and hits the bare search root, which would read as "no
+        // issues" rather than "couldn't build the request".
+        return c.url?.absoluteString
+            ?? "https://\(domain)/rest/api/3/search?jql=\(jql)&fields=\(fields)&maxResults=50"
+    }
+
+    /// The measure tool for a bridge built from docs and never run (see the
+    /// UNMEASURED note above). Reports the RAW shape, phase by phase: an
+    /// empty Jira room has causes that all render as the same sentence — no
+    /// site stored, no email, a token Jira refuses (401), a site name that
+    /// isn't a real Jira Cloud host (unreachable), or a perfectly good read
+    /// of an account with nothing assigned. One NSLog per line — a joined
+    /// multi-line message gets truncated by the log reader (the
+    /// `-todayProbe` lesson).
+    @MainActor
+    static func diagnose() async {
+        guard let domain = storedDomain, !domain.isEmpty else {
+            NSLog("[Casberi] jira| no site stored — paste one first (-jiraDomain <site>.atlassian.net)")
+            return
+        }
+        guard let email = storedEmail, !email.isEmpty else {
+            NSLog("[Casberi] jira| site stored, no email — paste one (-jiraEmail you@company.com)")
+            return
+        }
+        guard let token = TokenVault.get(TokenBridge.jira.tokenKey) else {
+            NSLog("[Casberi] jira| site and email stored, no token — mint one at id.atlassian.com and paste it (-tokenBridge \"Jira:<token>\")")
+            return
+        }
+        guard let auth = header(email: email, token: token) else {
+            NSLog("[Casberi] jira| couldn't build the auth header")
+            return
+        }
+        let myself = await IngestSupport.getJSONStatus(
+            "https://\(domain)/rest/api/3/myself", auth: auth, service: "Jira")
+        NSLog("[Casberi] jira| GET /myself HTTP %d", myself.status)
+        guard myself.status != 401 else {
+            NSLog("[Casberi] jira| 401 — Jira refused the token. Check the email matches the account the token was minted for.")
+            return
+        }
+        guard myself.status == 200 else {
+            NSLog("[Casberi] jira| couldn't reach %@ — check the site name (no https://, no trailing slash)", domain)
+            return
+        }
+        if let me = myself.json as? [String: Any] {
+            NSLog("[Casberi] jira| signed in as %@ (%@)",
+                  (me["displayName"] as? String) ?? "—", (me["emailAddress"] as? String) ?? "—")
+        }
+        let search = await IngestSupport.getJSONStatus(searchURL(domain: domain), auth: auth, service: "Jira")
+        NSLog("[Casberi] jira| GET /search HTTP %d", search.status)
+        guard let root = search.json as? [String: Any],
+              let issues = root["issues"] as? [[String: Any]] else {
+            NSLog("[Casberi] jira| issues payload missing — shape drift, or the JQL was refused")
+            return
+        }
+        NSLog("[Casberi] jira| %d issues assigned to you", issues.count)
+        // The decisive lines: which fields are ACTUALLY on the wire. Every
+        // shaping decision in `TokenIngest.jira` rests on these, and a
+        // rename empties the room with no error anywhere.
+        for issue in issues.prefix(10) {
+            let fields = (issue["fields"] as? [String: Any]) ?? [:]
+            let status = fields["status"] as? [String: Any]
+            let category = (status?["statusCategory"] as? [String: Any])?["key"] as? String
+            NSLog("[Casberi] jiraIssue| key=%@ summary=%@ status=%@ category=%@ due=%@ project=%@",
+                  (issue["key"] as? String) ?? "MISSING",
+                  (fields["summary"] as? String) ?? "—",
+                  (status?["name"] as? String) ?? "MISSING",
+                  category ?? "MISSING",
+                  (fields["duedate"] as? String) ?? "nil",
+                  ((fields["project"] as? [String: Any])?["name"] as? String) ?? "MISSING")
+        }
+    }
+}
+
 enum TokenIngest {
 
     @MainActor private static var running: Set<TokenBridge> = []
@@ -793,6 +1011,9 @@ enum TokenIngest {
         // landing, the Linear shape exactly — dedupe never revisits a known
         // ref, so without this the state stamped at first sight is frozen.
         if bridge == .trello { reconcileTrello(incoming, context: context) }
+        // An issue's status is the one field here that CHANGES after landing,
+        // Trello's/Linear's exact shape — dedupe never revisits a known ref.
+        if bridge == .jira { reconcileJira(incoming, context: context) }
         // Cloudflare needs BOTH halves — its rows are states wearing a date,
         // so a landed row's due date has to keep moving as the date approaches
         // (the dedupe below never revisits a known ref), and a row whose
@@ -864,6 +1085,7 @@ enum TokenIngest {
         case .sentry:   ownSweepUnreachable(.sentry)
         case .pagerduty: ownSweepUnreachable(.pagerduty)
         case .appStoreConnect: ownSweepUnreachable(.appStoreConnect)
+        case .jira:     await jira(token)
         }
     }
 
@@ -1842,6 +2064,134 @@ enum TokenIngest {
             if justClosed {
                 SourceMoments.shared.fire(
                     String(localized: "Done: \(thing.title)"), source: "Trello")
+            }
+        }
+        if changed { context.saveHonestly() }
+    }
+
+    /// Jira — the issues assigned to you, across every project, newest-
+    /// updated 50 (`JiraAuth.jql`'s own note on why nothing is filtered
+    /// server-side). No key, no email, no requests: the honest nil `refresh`
+    /// words as "check the token" — Trello's rule, and right for the same
+    /// reason: two missing credentials out of three is a broken connection,
+    /// not a partial one.
+    private static func jira(_ token: String) async -> [Thing]? {
+        guard let domain = JiraAuth.storedDomain, !domain.isEmpty,
+              let email = JiraAuth.storedEmail, !email.isEmpty,
+              let auth = JiraAuth.header(email: email, token: token) else { return nil }
+        guard let root = await IngestSupport.getJSON(
+            JiraAuth.searchURL(domain: domain), auth: auth, service: "Jira") as? [String: Any],
+              let issues = root["issues"] as? [[String: Any]] else { return nil }
+        return issues.compactMap { issue in
+            guard let key = issue["key"] as? String,
+                  let fields = issue["fields"] as? [String: Any],
+                  let summary = (fields["summary"] as? String)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines), !summary.isEmpty
+            else { return nil }
+            // The key LEADS, the Linear-identifier/Trello-board rule — but
+            // unlike either, nothing else needs joining in front of it: a
+            // Jira key already carries its project's own short code
+            // ("PROJ-123"), so it is legible on its own the way a bare Trello
+            // card name or a bare Linear title isn't.
+            let thing = Thing(
+                kind: .reminder,
+                title: "\(key) · \(summary)",
+                content: "https://\(domain)/browse/\(key)",
+                source: "Jira",
+                capturedAt: jiraDate(fields["updated"]) ?? .now,
+                sourceRef: "jira:\(domain):\(key)"
+            )
+            let status = fields["status"] as? [String: Any]
+            let category = (status?["statusCategory"] as? [String: Any])?["key"] as? String
+            thing.mark = jiraMark(category)
+            // `duedate` is a bare calendar day ("2026-08-20"), Todoist's and
+            // Linear's shape — noon local, never midnight (`allDayDate`'s own
+            // reasoning). Trello's `due` needs none of this because it's
+            // already a full timestamp; Jira's isn't.
+            thing.dueAt = (fields["duedate"] as? String).flatMap(Self.allDayDate)
+            // YOUR LABELS, Trello's exact ruling and for the same reason: a
+            // project's workflow STATUS name is user-renamed per project
+            // (`jiraMark`'s own note), so pattern-matching it into a tag would
+            // mean tagging with arbitrary per-project vocabulary and getting
+            // it wrong for any project that isn't in English or doesn't use
+            // the word. Priority is the same shape one field over — Jira's
+            // default five levels can be renamed or replaced per instance, so
+            // there is no fixed "Urgent" this file can safely assume the way
+            // `linearMark` can. Labels and the project name are the only two
+            // fields here nobody can rename out from under this bridge.
+            thing.tags = tagList(names(in: fields["labels"])
+                                 + [(fields["project"] as? [String: Any])?["name"] as? String]
+                                    .compactMap { $0 })
+            return thing
+        }
+    }
+
+    /// Jira's own status-category vocabulary → the corpus's mark. FIXED
+    /// across every project regardless of a workflow's custom status names —
+    /// Jira ships exactly three categories ("new", "indeterminate", "done")
+    /// and every custom status belongs to one of them, the `state { type }`
+    /// shape `linearMark` already leans on for the identical reason.
+    /// Unrecognized reads `.none` — `linearMark`'s own ruling: a mark we
+    /// can't justify is worse than no mark.
+    private static func jiraMark(_ category: String?) -> Mark {
+        switch category {
+        case "new":           return .todo
+        case "indeterminate": return .doing
+        case "done":          return .done
+        default:              return .none
+        }
+    }
+
+    /// Jira's own timestamp shape — a millisecond offset with NO colon
+    /// ("2026-08-06T10:15:30.000+0000", Atlassian's documented example) —
+    /// which `IngestSupport.isoDate`'s `ISO8601DateFormatter` does not parse:
+    /// `.withInternetDateTime` expects a colon-separated zone ("+00:00") or a
+    /// bare "Z", and Jira's format has neither. A dedicated `DateFormatter`
+    /// reads it instead, `allDayDate`'s own precedent for a field
+    /// `ISO8601DateFormatter` can't. UNMEASURED like the rest of this bridge
+    /// — re-verify against a real `updated` value before trusting it.
+    private static func jiraDate(_ raw: Any?) -> Date? {
+        guard let s = raw as? String else { return nil }
+        return jiraDateFormatter.date(from: s)
+    }
+    private static let jiraDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .gregorian)
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+        return f
+    }()
+
+    /// Re-marks Jira issues already in the corpus on every sync — an issue
+    /// closed in Jira has to stop reading as open here (`reconcileTrello`'s
+    /// own shape, and the same loop-closer moment). Scoped to issues this
+    /// pass actually SAW, `reconcileLinear`'s reasoning rather than Trello's
+    /// own caveat: `JiraAuth.jql` carries no status filter at all (unlike
+    /// Trello's `filter=open`), so an issue that stops arriving really did
+    /// fall out of the newest-50 window rather than close, and one that DID
+    /// arrive carries a mark that's fresh as of this very pass.
+    @MainActor
+    static func reconcileJira(_ fresh: [Thing], context: ModelContext) {
+        let byRef = Dictionary(fresh.map { ($0.sourceRef ?? "", $0) },
+                               uniquingKeysWith: { a, _ in a })
+        guard !byRef.isEmpty else { return }
+        let existing = (try? context.fetch(FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == "Jira" }))) ?? []
+        var changed = false
+        for thing in existing {
+            guard let ref = thing.sourceRef, let now = byRef[ref] else { continue }
+            let missing = now.tags.filter { !thing.tags.contains($0) }
+            if !missing.isEmpty {
+                thing.tags += missing
+                changed = true
+            }
+            guard now.mark != thing.mark else { continue }
+            let justClosed = now.mark == .done && thing.mark != .done
+            thing.mark = now.mark
+            changed = true
+            if justClosed {
+                SourceMoments.shared.fire(
+                    String(localized: "Done: \(thing.title)"), source: "Jira")
             }
         }
         if changed { context.saveHonestly() }

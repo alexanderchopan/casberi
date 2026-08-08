@@ -76,9 +76,13 @@ NOTE_ALLOWANCE = {
     # GitHub's sign-in path, the manual token path, the feed picker and the
     # private-watch field are four separate forms; at most two are ever on
     # screen together.
-    "TokenSetupScreen.swift": 5,
     # Trello's two-stage form (key, then token) plus the shared keychain note.
     # Counted above.
+    # Jira's own two-stage form (site+email, then token) adds a fifth note
+    # (2026-08-08) — its own branch, never on screen at the same time as
+    # Trello's or GitHub's, the same "not stacked" ruling this dict exists
+    # to record.
+    "TokenSetupScreen.swift": 6,
     "HandleSetupScreen.swift": 3,
     # Day One, Apple Journal, Apple Notes and Bookmarks are four screens in
     # one file.

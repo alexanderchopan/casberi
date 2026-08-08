@@ -32,6 +32,13 @@ enum ProbeHooks {
         // deliberately NOT here: they are identifiers, useless without the
         // key, and seeing them in `probeArgs:` is how a 401 gets diagnosed.
         "-ascKey",
+        // A real email address — PII, not a secret the app treats as one,
+        // redacted for Trello's reason: anything identifying stays out of the
+        // log so nobody has to remember which ones are safe. `-jiraDomain` is
+        // deliberately NOT here, `-ascKeyID`'s reasoning exactly: it's an
+        // identifier, useless without the token, and seeing it in
+        // `probeArgs:` is how a "couldn't reach the site" gets diagnosed.
+        "-jiraEmail",
         // Not a credential the app USES, but by construction the value is a
         // sample secret — the whole point of the probe is to hand it one.
         // Printing it verbatim in `probeArgs:` would put a real key in the
@@ -452,6 +459,31 @@ enum ProbeHooks {
         // the docs and never run live (see `TrelloAuth`'s UNMEASURED note).
         Hook(key: "trelloProbe") { _, _ in
             Task { @MainActor in await TrelloAuth.diagnose() }
+        },
+        // Jira takes THREE credentials too, so it takes three hooks — the two
+        // below are declared BEFORE `-jiraProbe` and before the `-tokenBridge
+        // "Jira:<token>"` line a launch would also pass, because hooks run in
+        // list order and a request can only be built once all three have
+        // landed (the `-ascKeyID`/`-trelloKey` rule).
+        //
+        // `-jiraDomain <site>.atlassian.net` — the site, normalized the same
+        // way a pasted address-bar URL is (see `JiraAuth.normalizedDomain`).
+        Hook(key: "jiraDomain") { value, _ in
+            JiraAuth.setDomain(value)
+            NSLog("[Casberi] jiraDomain: set")
+        },
+        // `-jiraEmail <email>` — the Atlassian account a token gets minted
+        // for; Basic auth needs it on every request.
+        Hook(key: "jiraEmail") { value, _ in
+            JiraAuth.setEmail(value)
+            NSLog("[Casberi] jiraEmail: set")
+        },
+        // `-jiraProbe YES` walks the Jira read phase by phase with the STORED
+        // credentials (connect the token via `-tokenBridge "Jira:<token>"`) —
+        // the measure tool for a bridge authored against the docs and never
+        // run live (see `JiraAuth`'s UNMEASURED note).
+        Hook(key: "jiraProbe") { _, _ in
+            Task { @MainActor in await JiraAuth.diagnose() }
         },
         // `-cloudflareProbe YES` walks the Cloudflare read phase by phase with
         // the STORED token (connect first via `-tokenBridge "Cloudflare:<t>"`).

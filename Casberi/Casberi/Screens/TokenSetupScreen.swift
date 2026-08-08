@@ -72,6 +72,14 @@ struct TokenSetupScreen: View {
     @State private var trelloKeyField = ""
     @State private var trelloKey: String? = TrelloAuth.storedKey
 
+    /// Jira only — stage one (2026-08-08): the site and email a token gets
+    /// minted for, Trello's two-stage shape one field longer. Mirrored into
+    /// `@State` for the same reason Trello's key is: storing to the Keychain
+    /// doesn't itself re-render the form.
+    @State private var jiraDomainField = ""
+    @State private var jiraEmailField = ""
+    @State private var jiraSite: String? = JiraAuth.storedDomain
+
     var body: some View {
         List {
             if bridge.connected {
@@ -158,6 +166,15 @@ struct TokenSetupScreen: View {
         if bridge == .trello {
             trelloKeySection
             if trelloKey != nil { setupSection }
+        // Jira's two stages — Trello's shape, though for a different reason:
+        // the door below doesn't depend on the site or email at all (it's a
+        // fixed page, `TokenBridge.jira.setupURL`), but a token pasted before
+        // either is stored would authenticate against nobody knows which
+        // site. Staying two stages keeps the "what does this connect to"
+        // question answered before the credential that proves it.
+        } else if bridge == .jira {
+            jiraSiteSection
+            if jiraSite != nil { setupSection }
         } else if manualPathOpen || !deviceFlowOffered {
             setupSection
         }
@@ -208,6 +225,53 @@ struct TokenSetupScreen: View {
         TrelloAuth.setKey(key)
         trelloKey = key
         trelloKeyField = ""
+        DSHaptic.tap()
+    }
+
+    /// Jira only — stage one. Two fields, not one: Jira's REST API has no
+    /// bearer secret that alone names a site or an account, so a token means
+    /// nothing until both are stored (see `JiraAuth`). Unlike Trello's key,
+    /// neither value is minted from the other — they're just two things the
+    /// person already knows — so this is one section with two fields and one
+    /// verb, the ASC "three slabs, one verb" shape a field shorter.
+    private var jiraSiteSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                DSSlabField(placeholder: String(localized: "yourteam.atlassian.net"),
+                            text: $jiraDomainField, actionLabel: "",
+                            keyboard: .URL, action: {})
+                DSSlabField(placeholder: String(localized: "you@company.com"),
+                            text: $jiraEmailField,
+                            actionLabel: jiraSite == nil
+                                ? String(localized: "NEXT") : String(localized: "REPLACE"),
+                            keyboard: .emailAddress,
+                            isArmed: !jiraDomainField.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                && !jiraEmailField.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                            action: saveJiraSite)
+                DSSlabNote(text: "Your site, and the email the token below gets minted for — Jira needs both to know whose issues \"assigned to you\" means.")
+            }
+        }
+        .dsSlabSection()
+    }
+
+    private func saveJiraSite() {
+        let domain = JiraAuth.normalizedDomain(jiraDomainField)
+        let email = jiraEmailField.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !domain.isEmpty, !email.isEmpty else { return }
+        // A token is minted against a site AND an email, so changing either
+        // invalidates the one already stored — Trello's key reasoning,
+        // applied to two fields instead of one.
+        if (domain != jiraSite || email != JiraAuth.storedEmail), bridge.connected {
+            TokenVault.delete(bridge.tokenKey)
+            store.bridges.removeAll { $0.id == bridge.bridgeID }
+            result = String(localized: "New site stored — paste a token minted for it below to finish.")
+            resultIsError = false
+        }
+        JiraAuth.setDomain(domain)
+        JiraAuth.setEmail(email)
+        jiraSite = domain
+        jiraDomainField = ""
+        jiraEmailField = ""
         DSHaptic.tap()
     }
 
