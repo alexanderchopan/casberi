@@ -39,4 +39,26 @@ enum AppVisit {
         let closed = Date(timeIntervalSince1970: stamp)
         frozen = now.timeIntervalSince(closed) >= minimumAway ? closed..<now : nil
     }
+
+    /// The demo's away window (2026-08-07) — `markOpened` freezes from
+    /// whatever `markClosed` last wrote, so a fake close 3h back gives the
+    /// "While I was away?" tile and answer something real to compose on the
+    /// very first demo open, rather than waiting on an hour of genuine idle
+    /// time no one watching a demo will sit through.
+    @MainActor
+    static func seedDemo() {
+        markClosed(now: .now.addingTimeInterval(-3 * 3600))
+        markOpened()
+    }
+
+    /// Forgets the demo's fake close stamp — without this, a real close/open
+    /// cycle immediately after exiting the demo could still read the fake
+    /// gap. Ordinary use overwrites `closedKey` on the next real background
+    /// regardless, so this is a courtesy against the narrow window before
+    /// that happens, not a correctness requirement.
+    @MainActor
+    static func forgetDemo() {
+        UserDefaults.standard.removeObject(forKey: closedKey)
+        frozen = nil
+    }
 }

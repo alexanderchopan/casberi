@@ -74,6 +74,33 @@ enum AskMemory {
         madeCounts[key, default: 0] >= mintThreshold
     }
 
+    // MARK: - Demo (2026-08-07)
+
+    /// Plant BOTH counters for the demo — non-DEBUG, called from `DemoMode`.
+    /// `neglect` primes a stale-looking tile so live demotion is visible on
+    /// the very first composer open (matching CLAUDE.md's own documented
+    /// proof: seed one above `neglectThreshold`, watch it sort last); `made`
+    /// primes the "you ask this a lot — keep it?" upgrade for a kind that
+    /// is NOT already kept (a kept kind never reads this counter, so seeding
+    /// one would be invisible). Named-key removal in `forgetDemo` below.
+    static func seedDemo(neglect: [String: Int], made: [String: Int]) {
+        var c = counts
+        for (key, n) in neglect { c[key] = n }
+        counts = c
+        var m = madeCounts
+        for (key, n) in made { m[key] = n }
+        madeCounts = m
+    }
+
+    static func forgetDemo(neglect: [String], made: [String]) {
+        var c = counts
+        for key in neglect { c.removeValue(forKey: key) }
+        counts = c
+        var m = madeCounts
+        for key in made { m.removeValue(forKey: key) }
+        madeCounts = m
+    }
+
     #if DEBUG
     /// `-askStats "<key>:<n>[,<key>:<n>…]"` or `-askStats clear` — seed the
     /// counters headlessly so the decay verifies without ten launches. Runs

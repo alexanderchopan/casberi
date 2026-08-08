@@ -53,18 +53,66 @@ enum DemoMode {
 
     /// The standing questions a furnished install would plausibly have kept.
     ///
-    /// Deliberately only two, and both composable from state this seed
-    /// guarantees: `today` composes over whatever the corpus holds, and
-    /// `wallet` has the seeded address and its balance curve behind it. The
-    /// tempting additions (`context:<source>`, `overdue`, a `search:`) all
-    /// depend on a composer finding something in a window, and a kept ask
-    /// whose composer comes back empty renders as a chip that answers
-    /// nothing — worse than not offering it. Widen this only against a real
-    /// run, not by reasoning about what the seed probably contains.
+    /// Four now (2026-08-07, was two) — each checked against the actual seed
+    /// rather than reasoned about, because a kept ask whose composer comes
+    /// back empty renders as a chip that answers nothing, worse than not
+    /// offering it:
+    ///   • `today` composes over whatever the corpus holds.
+    ///   • `wallet` has the seeded address and its balance curve behind it.
+    ///   • `showtag:Release` — `Corpus.tags.contains("Release")` matches 7
+    ///     seeded rows (the Vercel deploys + npm/PyPI releases in
+    ///     `DemoSeedAll.infra`), which is also the exact count the Themes
+    ///     treemap draws ("Release · 7 things") — the same fact, two places.
+    ///   • `context:Linear` — two Linear issues land inside 3 days
+    ///     (`DemoSeedAll.work`'s `issues` at days 1 and 2), so the composer's
+    ///     3-day window (not its 7-day fallback) is what actually answers.
+    /// Widen further only against a real run, never by reasoning about what
+    /// the seed probably contains — re-verify both counts if `infra`/`work`
+    /// changes.
     private static let keptAsks: [(kind: String, title: String)] = [
         ("today", String(localized: "How's my day?")),
         ("wallet", String(localized: "How's my wallet?")),
+        ("showtag:Release", String(localized: "Show Release")),
+        ("context:Linear", String(localized: "What's new in Linear?")),
     ]
+
+    /// The prior-window brief history, the tap-learning counters, and the
+    /// away window — the agent's MEMORY, as distinct from its corpus. A
+    /// furnished feed with none of this composes a Today brief with no
+    /// streak lede, offers composer tiles in a flat unlearned order, and can
+    /// never answer "while I was away" on a fresh install — three flagship
+    /// surfaces reading as day-one over data staged to look lived-in.
+    ///
+    /// `symbol`/`themes` are read off the SAME facts the live corpus will
+    /// independently produce, not invented: "ETH" because the seeded wallet
+    /// curve is 62% ETH (`DemoSeedAll.seedBridgeState`'s `holdings` split),
+    /// "Release"/"Alert" because those are real `Thing.tags` values on rows
+    /// the Themes treemap already counts — so `BriefLedger.symbolStreak`/
+    /// `themeStreak`, which compare a seeded PAST entry against what the LIVE
+    /// compose produces, actually match rather than silently miss.
+    private static let ledgerSymbol = "ETH"
+    private static let ledgerThemes = ["Release", "Alert"]
+    private static let ledgerSources = ["X", "Photos", "Obsidian", "Linear"]
+    private static let ledgerDays = 6
+
+    /// A stale tile (offered past `AskMemory.neglectThreshold` with no tap)
+    /// so the composer's live demotion is visible on the first open — the
+    /// exact proof CLAUDE.md documents for the real feature ("seed pulse:12,
+    /// watch pulse move last"). `week` is a real composer kind (`Shell/
+    /// Composer.swift`'s `AskOption(kind: "week", …)`), always offered, so
+    /// there's always something for it to demote BEHIND.
+    private static let neglectedAsk = "week"
+    /// A kind that is NOT in `keptAsks` above, primed past
+    /// `AskMemory.mintThreshold` so its "you ask this a lot — keep it?"
+    /// upgrade is already showing rather than requiring three live taps in
+    /// the middle of a demo. `overdue`'s composer (`KeptAskComposers
+    /// .overdue`) reads ONLY `Reminders`/`Todoist` rows with a past `dueAt`
+    /// — `DemoSeedAll.schedule`'s Todoist task "Book the dentist" is dated
+    /// one day overdue, the single row that qualifies. (The composer never
+    /// returns nil — an empty overdue list still composes "Nothing
+    /// overdue." — so this is checked for a REAL non-empty answer, not
+    /// merely a non-crashing one.)
+    private static let primedMintAsk = "overdue"
 
     /// Set while the rows have been promised but not yet poured.
     private static let pendingKey = "demo.mode.pourPending"
@@ -95,6 +143,19 @@ enum DemoMode {
         // its own.
         store.bridges = BridgeApp.demo
         for ask in keptAsks { KeptAskStore.shared.keep(ask.kind, title: ask.title) }
+
+        // The agent's MEMORY, not just its corpus (2026-08-07) — see the
+        // property docs above for what's seeded and why each composes
+        // non-empty. The checkpoint runs BEFORE the ledger seed so it
+        // captures the true pre-demo state (empty, on every real first
+        // entry) rather than the state this call is about to create.
+        BriefLedger.demoCheckpoint()
+        BriefLedger.seedDemo(days: ledgerDays, symbol: ledgerSymbol,
+                             themes: ledgerThemes, sources: ledgerSources)
+        AskMemory.seedDemo(neglect: [neglectedAsk: AskMemory.neglectThreshold + 2],
+                           made: [primedMintAsk: AskMemory.mintThreshold])
+        AppVisit.seedDemo()
+
         NSLog("[Casberi] demoMode: began")
     }
 
@@ -110,10 +171,32 @@ enum DemoMode {
     /// the next launch finishes the job, because `seed` dedupes on
     /// `sourceRef`.
     ///
+    /// True while a pour is actually running on this process — an in-memory
+    /// guard, not persisted (`pendingKey` is the cross-launch one).
+    ///
+    /// Necessary because THIS FUNCTION HAS TWO INDEPENDENT CALL SITES on the
+    /// same launch (`RootShell.handleActivation`'s unconditional call, added
+    /// so a pour interrupted mid-flight resumes on the next foreground —
+    /// see that call site's own comment — and `-demoEnter YES`'s headless
+    /// probe hook), and `pendingKey` alone does NOT serialize them: this
+    /// function is `async` and suspends every chunk (`Task.sleep`, the
+    /// entrance beat), so a SECOND call starting while the first is
+    /// suspended mid-pour reads `pendingKey` still `true` (it's only cleared
+    /// at the very end) and `landed` from an INCOMPLETE snapshot — then
+    /// inserts its own copy of whatever the first call hasn't gotten to yet.
+    /// Caught exactly that way on the sim (2026-08-07): a fresh `-demoEnter`
+    /// launch poured 370 rows, then 406 more on the SAME launch — 776
+    /// against a ~360-row corpus, the duplicate-`sourceRef` class this
+    /// codebase has no unique constraint to catch for free.
+    private static var pouring = false
+
     /// Idempotent and self-clearing; cheap to call on every launch.
     @MainActor
     static func pourIfNeeded(context: ModelContext) async {
         guard UserDefaults.standard.bool(forKey: pendingKey) else { return }
+        guard !pouring else { return }
+        pouring = true
+        defer { pouring = false }
 
         // State before rows: the crown, the balance curve and the seller
         // tables are what the room HEADS read, and a head that arrives after
@@ -134,6 +217,141 @@ enum DemoMode {
         NSLog("[Casberi] demoMode: poured %d rows", rows.count)
     }
 
+    /// How stale the newest demo row may get before a re-stamp fires. Under
+    /// this, "Standup · 9:33 AM" dated yesterday still reads as a normal
+    /// morning's lag; past it, a demo whose whole job is showing the app
+    /// ALIVE starts showing the opposite.
+    private static let staleAfter: TimeInterval = 20 * 3600
+
+    /// Freshness re-stamp (2026-08-07) — a demo left alive for a week shows
+    /// every row a week stale, the seat lines still say "Synced 4m ago", and
+    /// the whisper never fires because nothing landed "today". Called on
+    /// every activation while `isActive`; a no-op the moment the newest demo
+    /// row is recent enough, so most calls cost one fetch and nothing more.
+    ///
+    /// **Whole days only**, and that's deliberate, not a rounding
+    /// convenience: shifting by a whole number of days moves every row's DATE
+    /// without touching its TIME OF DAY, so the day-dial's hour spread is
+    /// untouched, and it moves every row by the SAME amount, so the RELATIVE
+    /// spacing between rows — which is what a heatmap's "there was a cluster
+    /// here" shape actually shows — survives even though each row's absolute
+    /// weekday drifts. A demo whose interesting feature is a shape, not a
+    /// specific Tuesday, should keep the shape.
+    ///
+    /// Scoped to what THIS file owns: `DemoSeedAll.refPrefixes` for Things,
+    /// the demo wallet's balance curve, and the ledger entries `seedDemo`
+    /// planted (`BriefLedger.shiftDemoWindows`) — never a real wallet or a
+    /// real ledger entry recorded during the live session, which is why the
+    /// ledger half tracks its OWN seeded set rather than shifting everything
+    /// with a `windowStart` in the past.
+    /// The `pouring` reasoning applies here too, one function over: this
+    /// `async` function suspends (the chunked write loop's own yield), so a
+    /// second concurrent call would read the "newest row" date from BEFORE
+    /// the first call's shift landed and compute the identical `shiftDays`
+    /// again — double-shifting every row rather than duplicating them, a
+    /// different failure with the same root cause. Guarded even though no
+    /// second call site exists yet, on the same reasoning `pouring` itself
+    /// is: `pourIfNeeded` had exactly one call site too, right up until it
+    /// didn't.
+    private static var restamping = false
+
+    @MainActor
+    static func restampIfStale(context: ModelContext) async {
+        guard isActive else { return }
+        guard !restamping else { return }
+        // NOT just `!restamping` — a pour IN PROGRESS anywhere must also
+        // hold this off, and the reason is a real bug this exact function
+        // shipped once already (caught on the sim, 2026-08-07): `pouring`'s
+        // guard makes a second, blocked `pourIfNeeded` call return
+        // INSTANTLY — which `handleActivation`'s sequential `await
+        // pourIfNeeded(); await restampIfStale()` cannot distinguish from
+        // "nothing was pending, safe to proceed". So the caller whose pour
+        // got blocked walked straight into a restamp against a corpus only
+        // PARTIALLY landed by the OTHER caller's still-running pour — an
+        // early row or two, dated hours apart on purpose, read as stale
+        // relative to a corpus that hadn't finished arriving, and
+        // "re-stamped 24 rows" logged while "poured 406 rows" was still four
+        // seconds from finishing. Deferring to ANY in-flight pour, not just
+        // one this call started, is what actually closes it.
+        guard !pouring else { return }
+        restamping = true
+        defer { restamping = false }
+
+        var newest = FetchDescriptor<Thing>(
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        newest.propertiesToFetch = [\.capturedAt, \.sourceRef]
+        newest.fetchLimit = 1
+        // The newest row overall, not the newest DEMO row — on a demo-clean
+        // install (the only state this mode is entered from) every row is
+        // demo-owned, so the distinction only matters on a dev install with
+        // real data mixed in, where the right answer is to do nothing rather
+        // than misjudge staleness off a stranger's timeline.
+        guard let head = (try? context.fetch(newest))?.first,
+              let ref = head.sourceRef, DemoSeedAll.refPrefixes.contains(where: ref.hasPrefix),
+              Date.now.timeIntervalSince(head.capturedAt) > staleAfter
+        else { return }
+
+        let calendar = Calendar.current
+        let shiftDays = calendar.dateComponents(
+            [.day], from: calendar.startOfDay(for: head.capturedAt),
+            to: calendar.startOfDay(for: .now)).day ?? 0
+        guard shiftDays > 0 else { return }
+
+        var descriptor = FetchDescriptor<Thing>()
+        descriptor.propertiesToFetch = [\.sourceRef, \.createdAt, \.capturedAt, \.dueAt]
+        let all = (try? context.fetch(descriptor)) ?? []
+        let rows = all.filter { thing in
+            guard let ref = thing.sourceRef else { return false }
+            return DemoSeedAll.refPrefixes.contains { ref.hasPrefix($0) }
+        }
+
+        // `ImportCommit`'s shape: chunked, saved and yielded between chunks —
+        // this is a main-actor write into a context a live `@Query` is
+        // watching, so shifting several hundred rows in one pass would hold
+        // the thread through exactly the frames someone is looking at.
+        // Liveness is re-checked INSIDE the loop per row (corollary 3/6):
+        // this function is `async` and yields between chunks, so a row held
+        // from before a suspension may no longer be live after one.
+        let chunk = 40
+        for start in stride(from: 0, to: rows.count, by: chunk) {
+            for thing in rows[start..<min(start + chunk, rows.count)] where thing.isLive {
+                if let shifted = calendar.date(byAdding: .day, value: shiftDays, to: thing.createdAt) {
+                    thing.createdAt = shifted
+                }
+                if let shifted = calendar.date(byAdding: .day, value: shiftDays, to: thing.capturedAt) {
+                    thing.capturedAt = shifted
+                }
+                if let due = thing.dueAt,
+                   let shifted = calendar.date(byAdding: .day, value: shiftDays, to: due) {
+                    thing.dueAt = shifted
+                }
+            }
+            context.saveHonestly()
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+
+        // The wallet curve — same key `seedBridgeState` writes, read via the
+        // shared accessor so the format can't drift between the two call
+        // sites (2026-08-07: was a duplicated string literal in three
+        // places before this).
+        let key = WalletStore.historyKey(DemoSeedAll.demoWallet)
+        if let data = UserDefaults.standard.data(forKey: key),
+           let samples = try? JSONDecoder().decode([WalletStore.ValueSample].self, from: data) {
+            let shifted = samples.map { sample in
+                WalletStore.ValueSample(
+                    at: calendar.date(byAdding: .day, value: shiftDays, to: sample.at) ?? sample.at,
+                    usd: sample.usd, holdings: sample.holdings)
+            }
+            if let reencoded = try? JSONEncoder().encode(shifted) {
+                UserDefaults.standard.set(reencoded, forKey: key)
+            }
+        }
+
+        BriefLedger.shiftDemoWindows(byDays: shiftDays)
+
+        NSLog("[Casberi] demoMode: re-stamped %d rows forward %d day(s)", rows.count, shiftDays)
+    }
+
     /// Leave, and leave nothing behind.
     ///
     /// The verb is EXIT, not delete — the person never chose to keep any of
@@ -151,6 +369,17 @@ enum DemoMode {
         // otherwise the rows the person just removed pour straight back in,
         // and the app looks like it refused to let go.
         UserDefaults.standard.set(false, forKey: pendingKey)
+
+        // The mirror of `begin`'s memory seed. `restoreDemoCheckpoint`
+        // removes both the fake prior windows AND any real window recorded
+        // DURING the live session (a Today-brief compose over the demo
+        // corpus is real, but its facts describe a corpus that no longer
+        // exists after this line) — see its own doc for why a blanket wipe
+        // isn't used instead.
+        BriefLedger.restoreDemoCheckpoint()
+        AskMemory.forgetDemo(neglect: [neglectedAsk], made: [primedMintAsk])
+        AppVisit.forgetDemo()
+
         NSLog("[Casberi] demoMode: exited, %d rows removed", rows)
     }
 }

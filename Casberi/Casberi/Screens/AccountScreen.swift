@@ -12,6 +12,8 @@ struct SettingsScreen: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
+    @Environment(BridgeStore.self) private var bridgeStore
+    @Environment(HomeRoute.self) private var route
     /// Drives the Data tile's badge: a green lock on device, a blue cloud once
     /// the person turns iCloud sync on.
     @AppStorage("icloud.sync") private var icloudSync = false
@@ -264,9 +266,60 @@ struct SettingsScreen: View {
         ].sorted { $0.title < $1.title }
     }
 
+    /// Whether "See the demo" belongs on screen — the demo mode's re-entry
+    /// door (2026-08-07, prd §217 amendment). `hasSeen` makes the fork's own
+    /// demo card hide itself forever after one entry, which was correct for
+    /// the fork (offering a tour of the room you just walked out of is a
+    /// dead end) but left the demo enterable EXACTLY ONCE per install — the
+    /// wrong shape for its actual audience, someone showing the app to other
+    /// people, repeatedly, on a real phone.
+    ///
+    /// Gated on a DEMO-CLEAN corpus, and the gate is load-bearing, not
+    /// decorative: `seedBridgeState` writes PostHog metrics named
+    /// `signed_up`/`answer_asked`, and `DemoMode.exit` FORGETS those by
+    /// name — on a lived-in install with a real PostHog connection, exiting
+    /// a re-entered demo would destroy that person's real readings. A watched
+    /// real wallet fails the same way through the seeded balance curve. So
+    /// this reads true only when every connected bridge is a demo seat (by
+    /// NAME, against the same table `BridgeApp.demo` draws from — a `BridgeApp`
+    /// carries no "is demo" flag of its own) and no wallet is watched. After a
+    /// clean exit `bridgeStore.bridges` is `[]`, which satisfies this
+    /// trivially — re-entry is available the moment the last one ends.
+    private var demoReentryAvailable: Bool {
+        guard !DemoMode.isActive else { return false }
+        guard WalletStore.shared.addresses.isEmpty else { return false }
+        let demoNames = Set(DemoSeedAll.seats.map(\.name))
+        return bridgeStore.bridges.allSatisfy { demoNames.contains($0.name) }
+    }
+
+    /// A single-row group, present only when `demoReentryAvailable` — kept
+    /// separate from `secondaryRows` rather than folded in with an `if`
+    /// inline, since `secondaryRows`' A–Z sort would otherwise need to run
+    /// twice (once to build the base list, once after a conditional insert)
+    /// for one row.
+    private var demoRow: [RowSpec] {
+        guard demoReentryAvailable else { return [] }
+        return [RowSpec(
+            title: "See the demo",
+            value: String(localized: "Sample data from every source"),
+            badge: ("sparkles", .orange),
+            action: {
+                DSHaptic.tap()
+                DemoMode.begin(store: bridgeStore)
+                // Land on the feed BEFORE the pour starts, the same split
+                // the fork card and the greeting's CTA both use — a feed
+                // revealed already full reads as a screenshot, watched
+                // filling it reads as what the app does.
+                route.path = []
+                Task { @MainActor in
+                    await DemoMode.pourIfNeeded(context: modelContext)
+                }
+            })]
+    }
+
     /// Every row in one A–Z field — the You/App groups are retired.
     private var allRows: [RowSpec] {
-        (primaryRows + secondaryRows).sorted { $0.title < $1.title }
+        (primaryRows + secondaryRows + demoRow).sorted { $0.title < $1.title }
     }
 
     private func rowList(_ rows: [RowSpec]) -> some View {

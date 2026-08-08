@@ -225,6 +225,17 @@ sweep feed     -seedThing "Bluesky:0" -deeplink "casberi://feed"
 sweep composer -openComposer YES
 sweep apps     -deeplink "casberi://account"
 sweep settings -deeplink "casberi://settings"
+# The demo banner (`Screens/DemoBanner.swift`) has NEVER been rendered on
+# Mac — its Catalyst padding branch (`topInset`'s `isMacCatalystApp` check)
+# was written and verified only against the iOS Simulator. `-demoEnter YES`
+# (2026-08-07) is release-gated correctly but the ~330-row pour is untested
+# on this platform's timing; `-onboarded YES` is already global (see
+# `launch()` above) so no cover blocks it. 4s of settle (the same
+# `-snapshotDelay` every other sweep row gets) may be tight for a pour that
+# measured ~1.6s on the simulator plus Catalyst's own slower first frame —
+# widen it here first if this row starts failing before assuming the banner
+# itself regressed.
+sweep demo     -demoEnter YES -deeplink "casberi://feed"
 
 # ── 4. On-device end-to-end (deterministic — these gate the run) ───────────
 # Everything here is local: no network, no keys, no credits. A failure is a

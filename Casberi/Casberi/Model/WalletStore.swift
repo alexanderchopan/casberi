@@ -158,7 +158,10 @@ final class WalletStore {
         var holdings: [String: Double]? = nil
     }
 
-    private static func historyKey(_ address: String) -> String {
+    /// Internal, not private (2026-08-07) — `DemoSeedAll`'s seed and
+    /// `DemoMode`'s staleness re-stamp both need this exact key, and a
+    /// literal duplicated a third time is how the two silently drift.
+    static func historyKey(_ address: String) -> String {
         "wallet.history.\(address.lowercased())"
     }
 

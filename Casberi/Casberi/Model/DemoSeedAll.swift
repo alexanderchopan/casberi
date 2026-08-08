@@ -357,7 +357,7 @@ enum DemoSeedAll {
         ]
         out += likes.enumerated().map { i, l in
             row(.link, l.0, source: "X", ref: "demo:x:like:\(i)", days: l.2, hour: 22,
-                content: "https://x.com/i/status/demo\(i)", tags: ["Liked"]) { t in
+                tags: ["Liked"]) { t in
                 t.postText = l.0
                 t.authorHandle = l.1
                 t.socialContext = "liked"
@@ -392,7 +392,7 @@ enum DemoSeedAll {
         ]
         out += saved.enumerated().map { i, s in
             row(.link, s.0, source: "Instagram", ref: "demo:ig:save:\(i)", days: s.2, hour: 23,
-                content: "https://instagram.com/p/demo\(i)", tags: ["Saved"]) { t in
+                tags: ["Saved"]) { t in
                 t.authorHandle = s.1
                 t.previewImageURL = art(i)
             }
@@ -410,7 +410,7 @@ enum DemoSeedAll {
         ]
         out += captions.enumerated().map { i, c in
             row(.link, c.0, source: "TikTok", ref: "demo:tt:post:\(i)", days: c.2, hour: 18,
-                content: "https://www.tiktok.com/video/demo\(i)", tags: ["Post"]) { t in
+                tags: ["Post"]) { t in
                 t.ocrTopics = c.1
                 t.topicsAt = .now
                 t.authorHandle = "you"
@@ -439,7 +439,7 @@ enum DemoSeedAll {
         ]
         out += saved.enumerated().map { i, s in
             row(.link, s.0, source: "TikTok", ref: "demo:tt:save:\(i)", days: s.2, hour: 22,
-                content: "https://www.tiktok.com/video/save\(i)", tags: ["Saved", "Liked"]) { t in
+                tags: ["Saved", "Liked"]) { t in
                 t.authorHandle = s.1
                 t.previewImageURL = art(i + 1)
             }
@@ -488,8 +488,7 @@ enum DemoSeedAll {
             ("A tour of modern type systems", "Strange Loop", ["Compilers", "Systems"], 47),
         ]
         return videos.enumerated().map { i, v in
-            row(.link, v.0, source: "YouTube", ref: "demo:yt:\(i)", days: v.3, hour: 20,
-                content: "https://www.youtube.com/watch?v=demo\(i)") { t in
+            row(.link, v.0, source: "YouTube", ref: "demo:yt:\(i)", days: v.3, hour: 20) { t in
                 t.authorHandle = v.1
                 t.postAuthor = v.1
                 t.ocrTopics = v.2
@@ -568,8 +567,7 @@ enum DemoSeedAll {
             ("The end of the settings screen", "Cara Vale", "Latency Club", 46),
         ]
         out += substack.enumerated().map { i, s in
-            row(.link, s.0, source: "Substack", ref: "demo:substack:\(i)", days: s.3, hour: 7,
-                content: "https://example.com/substack/demo\(i)") { t in
+            row(.link, s.0, source: "Substack", ref: "demo:substack:\(i)", days: s.3, hour: 7) { t in
                 t.postAuthor = s.1
                 t.authorHandle = s.2
                 t.previewImageURL = art(i)
@@ -586,8 +584,7 @@ enum DemoSeedAll {
             ("Local-first, one year on", "Fay Ng", "The Verge", 41),
         ]
         out += rss.enumerated().map { i, r in
-            row(.link, r.0, source: "RSS", ref: "demo:rss:\(i)", days: r.3, hour: 6,
-                content: "https://example.com/story/demo\(i)") { t in
+            row(.link, r.0, source: "RSS", ref: "demo:rss:\(i)", days: r.3, hour: 6) { t in
                 t.postAuthor = r.1
                 t.authorHandle = r.2
                 t.previewImageURL = art(i)
@@ -607,8 +604,7 @@ enum DemoSeedAll {
             ("Says — Nils Frahm", 27), ("Ode — Marconi Union", 36),
         ]
         out += spotify.enumerated().map { i, s in
-            row(.link, s.0, source: "Spotify", ref: "demo:spotify:\(i)", days: s.1, hour: 18,
-                content: "https://open.spotify.com/track/demo\(i)") { t in
+            row(.link, s.0, source: "Spotify", ref: "demo:spotify:\(i)", days: s.1, hour: 18) { t in
                 t.previewImageURL = art(i)
             }
         }
@@ -618,8 +614,7 @@ enum DemoSeedAll {
             ("Svefn-g-englar — Sigur Rós", 30), ("Hoppípolla — Sigur Rós", 43),
         ]
         out += music.enumerated().map { i, m in
-            row(.link, m.0, source: "Apple Music", ref: "demo:music:\(i)", days: m.1, hour: 8,
-                content: "https://example.com/track/demo\(i)") { t in
+            row(.link, m.0, source: "Apple Music", ref: "demo:music:\(i)", days: m.1, hour: 8) { t in
                 t.previewImageURL = art(i + 2)
             }
         }
@@ -632,8 +627,7 @@ enum DemoSeedAll {
             ("Roasting at altitude", "Filter Stories", 39),
         ]
         out += shows.enumerated().map { i, s in
-            row(.link, s.0, source: "Podcasts", ref: "demo:podcast:\(i)", days: s.2, hour: 7,
-                content: "https://example.com/podcast/demo\(i)") { t in
+            row(.link, s.0, source: "Podcasts", ref: "demo:podcast:\(i)", days: s.2, hour: 7) { t in
                 t.authorHandle = s.1
                 t.previewImageURL = art(i)
             }
@@ -695,8 +689,7 @@ enum DemoSeedAll {
             ("Tram 28 is a trap (kind of)", "r/travel", 20),
         ]
         out += reddit.enumerated().map { i, r in
-            row(.link, r.0, source: "Reddit", ref: "demo:reddit:\(i)", days: r.2, hour: 22,
-                content: "https://reddit.com/\(r.1)/comments/demo\(i)") { t in
+            row(.link, r.0, source: "Reddit", ref: "demo:reddit:\(i)", days: r.2, hour: 22) { t in
                 t.authorHandle = r.1
                 t.previewImageURL = art(i)
             }
@@ -706,7 +699,13 @@ enum DemoSeedAll {
             ("https://developer.apple.com/documentation/swiftui", 7),
             ("https://github.com/apple/swift-evolution", 11),
             ("https://github.com/swiftlang/swift/blob/main/README.md", 19),
-            ("https://example.com/reading/scroll-driven", 26),
+            // A real, stable page — not `example.com` (2026-08-08, P4): every
+            // OTHER row in this array is a real doc URL whose title is
+            // DERIVED from the URL's own last path component, so the fix
+            // has to be a real matching page, not a dropped link (dropping it
+            // would leave `URL(string:)?.lastPathComponent` with nothing to
+            // read and the row with no title at all).
+            ("https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_scroll-driven_animations", 26),
             ("https://developer.apple.com/documentation/swiftdata", 34),
         ]
         out += raindrop.enumerated().map { i, u in
@@ -717,7 +716,10 @@ enum DemoSeedAll {
         let bookmarks: [(String, String, Double)] = [
             ("Human Interface Guidelines", "https://developer.apple.com/design", 5),
             ("Swift concurrency notes", "https://github.com/apple/swift-evolution", 13),
-            ("The grid system", "https://example.com/reading/grid", 29),
+            // No real page named "The grid system" exists to link — title
+            // and URL are independent fields here, unlike `raindrop` above,
+            // so the P4 fix is to drop the URL rather than invent a match.
+            ("The grid system", "", 29),
         ]
         out += bookmarks.enumerated().map { i, b in
             row(.link, b.0, source: "Bookmarks", ref: "demo:bookmarks:\(i)", days: b.2, hour: 12,
@@ -729,8 +731,7 @@ enum DemoSeedAll {
             ("Kitchen — tile grid", 31), ("Studio — cork board", 44),
         ]
         out += pinterest.enumerated().map { i, p in
-            row(.link, p.0, source: "Pinterest", ref: "demo:pin:\(i)", days: p.1, hour: 21,
-                content: "https://example.com/pin/demo\(i)") { t in
+            row(.link, p.0, source: "Pinterest", ref: "demo:pin:\(i)", days: p.1, hour: 21) { t in
                 t.previewImageURL = art(i)
             }
         }
@@ -753,8 +754,7 @@ enum DemoSeedAll {
             ("Base fees are basically nothing now.", "/base", "you", 15, 30),
         ]
         out += casts.enumerated().map { i, c in
-            row(.chat, c.0, source: "Farcaster", ref: "demo:fc:\(i)", days: c.4, hour: 13,
-                content: "https://farcaster.xyz/you/0xdemo\(i)") { t in
+            row(.chat, c.0, source: "Farcaster", ref: "demo:fc:\(i)", days: c.4, hour: 13) { t in
                 t.postText = c.0
                 t.channelName = c.1
                 t.authorHandle = c.2
@@ -818,24 +818,35 @@ enum DemoSeedAll {
             ("ETH", "Ethereum", 3_180, 1), ("SOL", "Solana", 176, 2),
             ("DEGEN", "Degen", 0.0071, 5),
         ]
+        // No dexscreener content URL on any row here (P4, 2026-08-07) — this
+        // is sharper than the usual dead-door case: `TokenChart.route(from:)`
+        // does NO validation, it blindly reads `pathComponents[0]`/`[1]` off
+        // any URL whose host contains "dexscreener.com". A fabricated
+        // `/base/demo0` path parses clean as `chain: "base", address:
+        // "demo0"`, and `ThingChart.kind(for:)` would hand that straight to
+        // `TokenChartContent`, which fetches a LIVE price curve for that
+        // bogus address the moment the row is opened — a real network call
+        // for garbage data, on the sheet's PRIMARY content, and one that
+        // `BridgeRefresh`'s demo gate can't see because it's a per-view
+        // on-open fetch, not part of the foreground sweep. Dropping the
+        // content URL means `route(from:)`'s host check fails and nothing is
+        // ever attempted.
         out += tokens.enumerated().map { i, t in
             row(.link, "\(t.1) (\(t.0))", source: "Tokens", ref: "demo:token:\(i)",
-                days: t.3, hour: 12, content: "https://dexscreener.com/base/demo\(i)") { thing in
+                days: t.3, hour: 12) { thing in
                 thing.watchPriceUsd = t.2
             }
         }
         out += (0..<3).map { i in
             row(.link, ["Trending on Base", "Trending on Solana", "Trending on Ethereum"][i],
-                source: "GeckoTerminal", ref: "demo:gecko:\(i)", days: Double(1 + i * 3), hour: 14,
-                content: "https://dexscreener.com/base/trending\(i)")
+                source: "GeckoTerminal", ref: "demo:gecko:\(i)", days: Double(1 + i * 3), hour: 14)
         }
         let drops: [(String, Double)] = [
             ("Terraforms by Mathcastles", 2), ("Opepen Edition", 5),
             ("Checks — VV Edition", 9), ("Blocks of Base", 16),
         ]
         out += drops.enumerated().map { i, d in
-            row(.link, d.0, source: "OpenSea", ref: "demo:opensea:\(i)", days: d.1, hour: 19,
-                content: "https://opensea.io/collection/demo\(i)") { t in
+            row(.link, d.0, source: "OpenSea", ref: "demo:opensea:\(i)", days: d.1, hour: 19) { t in
                 t.previewImageURL = art(i)
             }
         }
@@ -957,8 +968,13 @@ enum DemoSeedAll {
             ("Bought 300 USDC with Cash App on Peer", "Cash App", 38),
         ]
         out += fills.enumerated().map { i, f in
+            // Plain descriptive content, matching every sibling `.transaction`
+            // row in this room (`moves`/`pools` above both use "Base · …") —
+            // not a fabricated basescan.org tx link (P4, 2026-08-07): a real
+            // host with a fake hash reads as "transaction not found" on a
+            // trusted explorer, which is a sharper dead door than most.
             row(.transaction, f.0, source: "Peer", ref: "demo:peer:\(i)", days: f.2, hour: 12,
-                content: "https://basescan.org/tx/0xdemo\(i)") { t in
+                content: "Base · \(f.1)") { t in
                 t.authorHandle = f.1
                 t.walletAddress = demoWallet
             }
@@ -1035,85 +1051,45 @@ enum DemoSeedAll {
 
     // MARK: Work — the rooms whose rows are one-line facts
 
-    /// The eight seats that claimed a connection and furnished nothing
-    /// (2026-08-07, reported as "the source tray doesn't show all the
-    /// sources").
+    /// Cloudflare's certificate expiries — the one row-shape no other
+    /// function in this file provides (2026-08-07, revised).
     ///
-    /// A seat with no landed row gets NO CHIP, and that rule is correct —
-    /// `MainSurface.newestPerSource` asks each candidate for its newest row
-    /// and drops the ones that answer nothing, because a room you cannot open
-    /// is not worth a slot. So the defect was never in the strip; it was that
-    /// `seatTable` named 66 apps while `rooms()` furnished 58, and the eight
-    /// in the gap sat in the catalog marked "Synced 20m ago" over a room with
-    /// nothing in it. The catalog contradicting the feed is the exact failure
-    /// widening `BridgeApp.demo` was meant to end.
+    /// This function used to also seed Sentry/PagerDuty/Vercel/npm/PyPI/
+    /// Cal.com/Calendly, written in an earlier session against a version of
+    /// this file where those eight sources furnished nothing at all (a real
+    /// bug: a seat claiming "Synced 20m ago" in the catalog over a room with
+    /// no rows, reported as "the source tray doesn't show all the sources").
+    /// A LATER, independent pass (`work`'s `ops` array, `schedule`'s Cal.com/
+    /// Calendly bookings) fixed the same gap its own way while this file was
+    /// being edited concurrently — and because `Thing.sourceRef` carries NO
+    /// unique constraint, the two fixes didn't conflict loudly, they
+    /// silently DUPLICATED: `demo:sentry:0`, `demo:sentry:1`,
+    /// `demo:pagerduty:4` and `demo:vercel:2` were each about to land as TWO
+    /// separate `Thing`s sharing one ref — exactly the class this file's own
+    /// `seed()` doc warns about ("a leaderboard's subtitle sums the rows it
+    /// counted... five forced runs read 43,875 saved messages"). Caught
+    /// before either build ran, not after.
     ///
-    /// Each row is the shape its real bridge lands, not filler: Sentry and
-    /// PagerDuty land an incident, Vercel a deployment, npm/PyPI a release,
-    /// Cloudflare an expiry with a real `dueAt`, and the two schedulers land
-    /// bookings — which is also why they are dated across days rather than
-    /// stacked on one, so the rails and dials they feed have a spread to draw.
+    /// `ops` covers Sentry/PagerDuty/Vercel/Cloudflare/npm/PyPI with real
+    /// non-empty rows and SAFE plain-text `content` (no P4 fabricated-URL
+    /// issue there to begin with); `schedule` covers Cal.com/Calendly the
+    /// same way. Only Cloudflare needed anything beyond what they already
+    /// give it: its room head (`CloudflareRunwaySource.compose`) reads
+    /// `Thing.dueAt` off real rows to build its runway, and `ops`'s two
+    /// Cloudflare rows set none — a runway with no dated row is an empty
+    /// rail. These two, at their OWN ref namespace (`demo:cloudflare:0/1`,
+    /// distinct from `ops`'s `demo:cloudflare:5/6`), are what's left.
     private static func infra() -> [Thing] {
-        var out: [Thing] = []
-        let incidents: [(String, String, Double, Int)] = [
-            ("Resolved: checkout 500s on /api/pay", "Sentry", 1, 9),
-            ("New issue: EXC_BAD_ACCESS in EmbeddingIndex", "Sentry", 3, 16),
-            ("Regression: nil unwrap in FeedInsight", "Sentry", 9, 11),
-            ("Resolved: API latency above 2s", "PagerDuty", 2, 21),
-            ("Acknowledged: database connections saturated", "PagerDuty", 11, 3),
-        ]
-        out += incidents.enumerated().map { i, s in
-            row(.link, s.0, source: s.1, ref: "demo:\(s.1.lowercased()):\(i)",
-                days: s.2, hour: s.3,
-                content: "https://example.com/\(s.1.lowercased())/\(i)",
-                tags: ["Alert"])
-        }
-        let deploys: [(String, Double, Int)] = [
-            ("Deployed casberi-site to production", 0.5, 14),
-            ("Preview ready for panel-figures", 2, 17),
-            ("Deployed casberi-site to production", 8, 10),
-        ]
-        out += deploys.enumerated().map { i, d in
-            row(.link, d.0, source: "Vercel", ref: "demo:vercel:\(i)", days: d.1, hour: d.2,
-                content: "https://example.com/vercel/\(i)", tags: ["Release"])
-        }
-        let releases: [(String, String, Double)] = [
-            ("casberi-sdk 2.4.0 published", "npm", 1),
-            ("casberi-sdk 2.3.1 published", "npm", 13),
-            ("casberi-py 0.9.0 published", "PyPI", 4),
-            ("casberi-py 0.8.2 published", "PyPI", 21),
-        ]
-        out += releases.enumerated().map { i, r in
-            row(.link, r.0, source: r.1, ref: "demo:\(r.1.lowercased()):\(i)",
-                days: r.2, hour: 12,
-                content: "https://example.com/\(r.1.lowercased())/\(i)", tags: ["Release"])
-        }
-        // Cloudflare's room head is a RUNWAY, so these need a real `dueAt` or
-        // the head has nothing to measure — a certificate with no expiry is
-        // exactly the row that renders as an empty rail.
         let certs: [(String, Double, Double)] = [
             ("casberi.app certificate renews", 3, -34),
             ("api.casberi.app certificate renews", 6, -71),
         ]
-        out += certs.enumerated().map { i, c in
+        return certs.enumerated().map { i, c in
             row(.reminder, c.0, source: "Cloudflare", ref: "demo:cloudflare:\(i)",
                 days: c.1, hour: 8, content: "Auto-renews") { t in
                 t.dueAt = at(c.2, 8)
             }
         }
-        let bookings: [(String, String, Double, Double)] = [
-            ("Intro call with Priya", "Cal.com", 4, -1),
-            ("Design review with Sam", "Cal.com", 6, -3),
-            ("Investor update", "Calendly", 5, -2),
-            ("Onboarding walkthrough", "Calendly", 9, -6),
-        ]
-        out += bookings.enumerated().map { i, b in
-            row(.event, b.0, source: b.1, ref: "demo:\(b.1.lowercased()):\(i)",
-                days: b.2, hour: 13, content: "30 minutes") { t in
-                t.dueAt = at(b.3, 13)
-            }
-        }
-        return out
     }
 
     private static func work() -> [Thing] {
@@ -1142,8 +1118,7 @@ enum DemoSeedAll {
             ("Review requested: receipts reach map (#402)", 14),
         ]
         out += github.enumerated().map { i, g in
-            row(.link, g.0, source: "GitHub", ref: "demo:github:\(i)", days: g.1, hour: 15,
-                content: "https://github.com/demo/casberi/pull/\(412 - i)") { t in
+            row(.link, g.0, source: "GitHub", ref: "demo:github:\(i)", days: g.1, hour: 15) { t in
                 t.starCount = 128 + i
                 t.repoLanguage = "Swift"
             }
@@ -1176,8 +1151,7 @@ enum DemoSeedAll {
             ("Failed · casberi · migrate the schema", 9),
         ]
         out += cursor.enumerated().map { i, c in
-            row(.link, c.0, source: "Cursor", ref: "demo:cursor:\(i)", days: c.1, hour: 22,
-                content: "https://github.com/demo/casberi/pull/\(420 + i)") { t in
+            row(.link, c.0, source: "Cursor", ref: "demo:cursor:\(i)", days: c.1, hour: 22) { t in
                 t.summary = "Ran for 6 minutes. Opened a PR with the change and a test."
             }
         }
@@ -1213,8 +1187,7 @@ enum DemoSeedAll {
             ("Subscription canceled · Pro monthly", 11),
         ]
         out += stripe.enumerated().map { i, s in
-            row(.transaction, s.0, source: "Stripe", ref: "demo:stripe:\(i)", days: s.1, hour: 13,
-                content: "https://dashboard.stripe.com/demo\(i)") { t in
+            row(.transaction, s.0, source: "Stripe", ref: "demo:stripe:\(i)", days: s.1, hour: 13) { t in
                 if i == 1 { t.dueAt = at(-5, 17) }
             }
         }
@@ -1223,8 +1196,7 @@ enum DemoSeedAll {
             ("New dataset · open-espresso-1k", 6),
         ]
         out += hf.enumerated().map { i, h in
-            row(.link, h.0, source: "Hugging Face", ref: "demo:hf:\(i)", days: h.1, hour: 9,
-                content: "https://huggingface.co/demo\(i)") { t in
+            row(.link, h.0, source: "Hugging Face", ref: "demo:hf:\(i)", days: h.1, hour: 9) { t in
                 if i == 1 {
                     t.enrichedText = "We study how retrieval quality scales with corpus size."
                     t.previewImageURL = art(i)
@@ -1240,9 +1212,12 @@ enum DemoSeedAll {
                 content: "Casberi · production")
         }
         out += (0..<2).map { i in
+            // No `twitch.tv/demo` content (P4, 2026-08-07) — "demo" is a
+            // short, plausible handle that could belong to a REAL channel,
+            // which is worse than an obvious dead link: tapping it could land
+            // on a real stranger's stream with no warning it isn't ours.
             row(.link, ["Live now · building the panel", "Offline · last streamed Tuesday"][i],
-                source: "Twitch", ref: "demo:twitch:\(i)", days: Double(1 + i * 5), hour: 21,
-                content: "https://twitch.tv/demo") { t in
+                source: "Twitch", ref: "demo:twitch:\(i)", days: Double(1 + i * 5), hour: 21) { t in
                 t.previewImageURL = art(i)
             }
         }
@@ -1369,13 +1344,11 @@ enum DemoSeedAll {
         out += (0..<2).map { i in
             row(.link, ["Will the Fed cut in December?",
                         "Highest temperature in Lisbon this week?"][i],
-                source: "Kalshi", ref: "demo:kalshi:\(i)", days: Double(1 + i * 3), hour: 16,
-                content: "https://kalshi.com/markets/demo\(i)")
+                source: "Kalshi", ref: "demo:kalshi:\(i)", days: Double(1 + i * 3), hour: 16)
         }
         out += (0..<2).map { i in
             row(.link, ["Champions League winner", "Will SpaceX launch Starship again in 2026?"][i],
-                source: "Polymarket", ref: "demo:polymarket:\(i)", days: Double(2 + i * 4), hour: 20,
-                content: "https://polymarket.com/event/demo\(i)")
+                source: "Polymarket", ref: "demo:polymarket:\(i)", days: Double(2 + i * 4), hour: 20)
         }
         return out
     }
@@ -1383,8 +1356,11 @@ enum DemoSeedAll {
     // MARK: - Bridge state (the room heads that read UserDefaults, not rows)
 
     /// The demo wallet — one address, so `combinedValueSamples` has a complete
-    /// set (it only starts once EVERY watched wallet has a sample).
-    private static let demoWallet = "0x1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d"
+    /// set (it only starts once EVERY watched wallet has a sample). Internal,
+    /// not private (2026-08-07): `DemoMode.restampIfStale` needs this exact
+    /// address to find and shift the wallet curve it seeds below — a second
+    /// copy of the literal is how that drifts silently.
+    static let demoWallet = "0x1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d"
 
     /// Three heads compose from stored bridge state rather than corpus rows, so
     /// no amount of seeded things can make them draw: PostHog's metric curve,
@@ -1409,7 +1385,7 @@ enum DemoSeedAll {
         // first gets a scaled copy so the stacked line has distinct bands
         // rather than one doubled.
         for (n, entry) in WalletStore.shared.addresses.enumerated() {
-            let key = "wallet.history.\(entry.address.lowercased())"
+            let key = WalletStore.historyKey(entry.address)
             let existing = (UserDefaults.standard.data(forKey: key))
                 .flatMap { try? JSONDecoder().decode([WalletStore.ValueSample].self, from: $0) }
             guard (existing?.count ?? 0) < 3 else { continue }

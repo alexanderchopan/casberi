@@ -432,6 +432,40 @@ struct RootShell: View {
             // one dispatch table in ProbeHooks.
             ProbeHooks.runAll(context: modelContext)
             #endif
+            #if DEBUG
+            // `-demoEnter YES` — enter the demo headlessly, without walking
+            // onboarding, for the screenshot pipeline and the screen-audit
+            // skill (2026-08-07). Lives HERE rather than in `ProbeHooks`
+            // because `DemoMode.begin` needs a `BridgeStore`, which that
+            // file's dispatch table doesn't carry — every hook there gets
+            // only `(String, ModelContext)`. Pours immediately rather than
+            // waiting for the next activation, so one launch is enough.
+            if UserDefaults.standard.bool(forKey: "demoEnter") {
+                DemoMode.begin(store: bridges)
+                Task { @MainActor in
+                    await DemoMode.pourIfNeeded(context: modelContext)
+                    NSLog("[Casberi] demoEnter: ready")
+                }
+            }
+            // `-demoProbe YES` — one NSLog per fact, the `-todayProbe`
+            // truncation lesson (a joined multi-line message gets cut by the
+            // log reader). Waits a beat so a `-demoEnter` on the SAME launch
+            // has landed its rows first.
+            if UserDefaults.standard.bool(forKey: "demoProbe") {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(3))
+                    let count = (try? modelContext.fetchCount(FetchDescriptor<Thing>())) ?? 0
+                    NSLog("[Casberi] demoProbe| active=%@ hasSeen=%@ pending=%@ things=%d",
+                          DemoMode.isActive ? "YES" : "NO",
+                          DemoMode.hasSeen ? "YES" : "NO",
+                          UserDefaults.standard.bool(forKey: "demo.mode.pourPending") ? "YES" : "NO",
+                          count)
+                    NSLog("[Casberi] demoProbe| seats=%d", bridges.bridges.count)
+                    NSLog("[Casberi] demoProbe| keptAsks=%@",
+                          KeptAskStore.shared.order.joined(separator: ", "))
+                }
+            }
+            #endif
             // Debug hook: `simctl launch ... -deeplink casberi://feed` lands in
             // UserDefaults; routes without the system open-in dialog.
             #if DEBUG
@@ -1137,6 +1171,25 @@ struct RootShell: View {
         // were away" grounds on it; things landing from here on are
         // arriving while you're present.
         AppVisit.markOpened()
+        // A STRANDED POUR resumes here (2026-08-07, found while writing the
+        // spec for this feature's next pass). `pourIfNeeded` originally had
+        // ONE call site — the onboarding cover's `onDismiss` — on the
+        // assumption that a kill mid-pour would resume "on the next
+        // launch". It never could: `onboarded` is already true by the time
+        // the pour starts, so the cover never presents again and
+        // `onDismiss` never fires. The person was left in demo mode (banner
+        // up, seats connected) over a half-poured corpus, forever. This is
+        // unconditional and safe — `pourIfNeeded` returns immediately unless
+        // `demo.mode.pourPending` is actually set, which only a genuine
+        // interruption leaves behind. Chained with the FRESHNESS re-stamp in
+        // the same Task, sequentially — a pour that just landed rows has
+        // nothing stale to fix, and running both against the context from
+        // one Task avoids two independent writers touching it in the same
+        // window.
+        Task { @MainActor in
+            await DemoMode.pourIfNeeded(context: modelContext)
+            await DemoMode.restampIfStale(context: modelContext)
+        }
         // Returning crossfades from placeholder to content (§14);
         // leaving redacts instantly — the snapshot must already hide.
         withAnimation(.easeOut(duration: 0.2)) { redactNow = false }

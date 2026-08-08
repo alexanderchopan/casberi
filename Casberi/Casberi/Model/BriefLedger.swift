@@ -213,6 +213,94 @@ enum BriefLedger {
     static let absenceFloor = 4
     static let absenceSpanDays = 5
 
+    // MARK: - Demo (2026-08-07)
+
+    /// Pre-demo checkpoint — the window identities that existed before the
+    /// demo touched this ledger, so exit can restore to EXACTLY that rather
+    /// than a blanket wipe. Necessary because this ledger has no per-entry
+    /// owner the way a `Thing` has `sourceRef`: a real Today-brief compose
+    /// during the live demo session (over the demo corpus, since that's all
+    /// that exists) appends a REAL entry for today's real window — teardown
+    /// must remove that too, or a later real brief could read continuity
+    /// from a day spent looking at someone else's data.
+    private static let checkpointKey = "brief.ledger.demoCheckpoint"
+
+    static func demoCheckpoint() {
+        let existing = snapshot().map { $0.windowStart.timeIntervalSinceReferenceDate }
+        UserDefaults.standard.set(existing, forKey: checkpointKey)
+    }
+
+    static func restoreDemoCheckpoint() {
+        guard let kept = UserDefaults.standard.array(forKey: checkpointKey) as? [Double] else { return }
+        let keptSet = Set(kept)
+        write(snapshot().filter { keptSet.contains($0.windowStart.timeIntervalSinceReferenceDate) })
+        UserDefaults.standard.removeObject(forKey: checkpointKey)
+        UserDefaults.standard.removeObject(forKey: seededKey)
+    }
+
+    /// Which of the entries currently in the ledger were planted by
+    /// `seedDemo` — as opposed to a real entry recorded live during the demo
+    /// session (`KeptAskStore.refreshDigests` composing "today" over the demo
+    /// corpus, which is real and correctly dated when it happens). Needed
+    /// because `shiftDemoWindows` below must move only the seeded ones — a
+    /// live entry's date is already right and shifting it would be the exact
+    /// bug the freshness re-stamp exists to prevent, one level down.
+    private static let seededKey = "brief.ledger.demoSeededWindows"
+
+    /// Plant prior-window entries for the demo — the non-DEBUG twin of
+    /// `seedFromLaunchArgs` below. That hook is `#if DEBUG` by design (a
+    /// probe convenience); this is called from `DemoMode`, which — like
+    /// every demo file — carries NO `#if DEBUG` on purpose (the Release-break
+    /// class: `ChipMemory.seedDemo` shipped inside `#if DEBUG` and broke
+    /// `xcodebuild -configuration Release` outright, since nothing that calls
+    /// it is DEBUG-gated). One entry per calendar day, ending yesterday, same
+    /// shape as the probe hook so the brief's streak/continuity/absence reads
+    /// all have real prior windows to compare against on the very first open.
+    static func seedDemo(days: Int, symbol: String, themes: [String], sources: [String]) {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: .now)
+        var entries = snapshot()
+        var seededStarts: [Double] = []
+        for back in 1...max(days, 1) {
+            guard let day = calendar.date(byAdding: .day, value: -back, to: today) else { continue }
+            entries.append(Entry(windowStart: day, day: day, at: day,
+                                 ledeSymbol: symbol, themes: themes, sources: sources))
+            seededStarts.append(day.timeIntervalSinceReferenceDate)
+        }
+        write(entries)
+        UserDefaults.standard.set(seededStarts, forKey: seededKey)
+    }
+
+    /// The ledger half of the demo's freshness re-stamp (`DemoMode
+    /// .restampIfStale`). Without this, a demo left alive a week shows a
+    /// FRESH corpus (Things re-stamp separately) sitting on a `BriefLedger`
+    /// still claiming "ETH did the lifting" six days back from the ORIGINAL
+    /// entry date — `symbolStreak`/`themeStreak` walk back from yesterday and
+    /// stop at the first missing day, so a ledger that didn't move with the
+    /// rest of the demo would silently read the streak as broken (zero, not
+    /// six) the moment real time outran the seeded dates. Shifts only the
+    /// entries `seedDemo` planted, tracked via `seededKey` — a live entry is
+    /// left exactly where it was recorded.
+    static func shiftDemoWindows(byDays days: Int) {
+        guard days != 0,
+              let raw = UserDefaults.standard.array(forKey: seededKey) as? [Double]
+        else { return }
+        let seededSet = Set(raw)
+        let calendar = Calendar.current
+        var shiftedStarts: [Double] = []
+        let entries = snapshot().map { entry -> Entry in
+            guard seededSet.contains(entry.windowStart.timeIntervalSinceReferenceDate) else { return entry }
+            var shifted = entry
+            shifted.windowStart = calendar.date(byAdding: .day, value: days, to: entry.windowStart) ?? entry.windowStart
+            shifted.day = calendar.date(byAdding: .day, value: days, to: entry.day) ?? entry.day
+            shifted.at = calendar.date(byAdding: .day, value: days, to: entry.at) ?? entry.at
+            shiftedStarts.append(shifted.windowStart.timeIntervalSinceReferenceDate)
+            return shifted
+        }
+        write(entries)
+        UserDefaults.standard.set(shiftedStarts, forKey: seededKey)
+    }
+
     #if DEBUG
     /// `-briefLedger clear` empties the ledger;
     /// `-briefLedger "days=6;symbol=ETH;themes=Foldables,Recipes;sources=RSS,Bluesky"`

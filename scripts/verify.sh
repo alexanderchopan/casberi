@@ -340,6 +340,21 @@ step "On-device pure-logic self-test"
   || fail "the on-device logic self-test failed — run scripts/ondevice-selftest.sh"
 print -P "%F{green}✓ on-device self-test%f"
 
+# The demo mode's guard rails (prd §217 amendment, 2026-08-07) — every check
+# re-catches a bug that already shipped once during this feature's own
+# development: `ChipMemory.seedDemo` inside `#if DEBUG` broke the Release
+# build outright, invisible to every other check here (they all compile
+# DEBUG); and two sessions independently re-fixed the same "eight seats
+# furnish nothing" bug, which without `Thing.sourceRef`'s missing unique
+# constraint would have silently landed duplicate rows. `--self-test` first,
+# same reason as every sibling: a check that can't fail proves nothing.
+step "Demo mode guard rails"
+python3 "$ROOT/scripts/demo-selftest.py" --self-test >/dev/null \
+  || fail "the demo guard's own self-test failed — run scripts/demo-selftest.py --self-test --verbose"
+python3 "$ROOT/scripts/demo-selftest.py" >/dev/null \
+  || fail "the demo guard found a real violation — run scripts/demo-selftest.py --verbose"
+print -P "%F{green}✓ demo guard rails%f"
+
 # ── 1. Build ────────────────────────────────────────────────────────
 step "Building Casberi (derivedData: $DD)"
 xcodebuild -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \
