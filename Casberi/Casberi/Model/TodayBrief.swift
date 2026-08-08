@@ -122,10 +122,16 @@ enum TodayBrief {
     /// Everything downstream of the Stage-1 filter below — the lede's mention/
     /// deadline rungs, the themes map, the leads, the synthesis notes — reads
     /// `things`/`landed`, so filtering those two arrays ONCE, here, scopes the
-    /// whole pipeline for free; only the wallet/markets modules read live
-    /// bridge state INSTEAD of `things` (holdings, watchlist moves, DeFi risk,
-    /// resolved markets), so those are separately gated below on the category
-    /// actually being Wallet/Markets/unscoped.
+    /// whole pipeline for free; only the money modules read live bridge state
+    /// INSTEAD of `things` (holdings, watchlist moves, DeFi risk, resolved
+    /// markets), so those are separately gated below on the SCOPE actually
+    /// being Money/unscoped.
+    ///
+    /// `category` here is a BRIEF SCOPE (`BriefScope.scopes` — "Money",
+    /// "Work", "Life"), NOT one of the app catalog's own ten categories
+    /// (`BridgeCatalog.categories`, unchanged everywhere else). The two
+    /// taxonomies are deliberately different sizes: `BriefScope.scope(
+    /// forCatalogCategory:)` is the one join between them.
     ///
     /// Stage 2 of the spec ("item filtering… only items relevant to the
     /// requested category") collapses into Stage 1 here: every catalog offer
@@ -148,14 +154,15 @@ enum TodayBrief {
         let now = Date.now
 
         // Stage 1 (deterministic app selection, spec's own term): the
-        // category's candidate sources are every catalog offer whose
-        // `BridgeCatalog.category(of:)` names it — "connected" needs no
-        // separate check, since a source with no connected bridge can never
-        // have landed a `Thing` in the first place.
+        // scope's candidate sources are every catalog offer whose category
+        // maps to it (`BriefScope.scope(forCatalogCategory:)`) — "connected"
+        // needs no separate check, since a source with no connected bridge
+        // can never have landed a `Thing` in the first place.
         if let category {
             let candidateSources = Set(BridgeCatalog.offers
-                .filter { BridgeCatalog.category(of: $0) == category }.map(\.name))
-            // A category with literally nothing ever landed from it is not
+                .filter { BriefScope.scope(forCatalogCategory: BridgeCatalog.category(of: $0)) == category }
+                .map(\.name))
+            // A scope with literally nothing ever landed from it is not
             // "quiet since you last checked", it's not connected at all — the
             // spec's own edge case, distinct from "connected but nothing new"
             // below. Checked against the WHOLE corpus, before any window.
@@ -167,11 +174,13 @@ enum TodayBrief {
             }
             things = things.filter { candidateSources.contains($0.source) }
         }
-        // Wallet/Markets modules below read LIVE bridge state instead of
-        // `things` (holdings, watchlist prices, DeFi risk, resolved markets),
-        // so the Stage-1 filter above can't scope them — gated explicitly.
-        let scopedToWallet = category == nil || category == "Wallet"
-        let scopedToMarkets = category == nil || category == "Markets"
+        // The money modules below read LIVE bridge state instead of `things`
+        // (holdings, watchlist prices, DeFi risk, resolved markets), so the
+        // Stage-1 filter above can't scope them — gated explicitly. ONE gate
+        // now (was two: Wallet, Markets) — those merged into a single "Money"
+        // scope (user, 2026-08-08), so a wallet balance and a watchlist mover
+        // answer the same question again.
+        let scopedToMoney = category == nil || category == "Money"
 
         // The window boundary: the whole day's away-window/midnight boundary
         // for the unscoped brief (UNCHANGED — spec: "the scheduled daily
@@ -180,7 +189,14 @@ enum TodayBrief {
         let windowStart = category.map { BriefScope.since(category: $0, now: now) }
             ?? DayBrief.windowStart(now: now)
         var landed = DayBrief.landed(things, now: now, since: windowStart)
-        let move = scopedToWallet ? DayBrief.walletMove(now: now) : nil
+        // A scoped Money brief measures the move against ITS OWN window
+        // (`windowStart` is `BriefScope.since(category: "Money")` there),
+        // not the unscoped brief's fixed ~20h floor — the item list below
+        // already spans the real gap since you last checked, and the hero's
+        // delta must span the same one or the two disagree on screen.
+        let move = scopedToMoney
+            ? DayBrief.walletMove(now: now, since: category != nil ? windowStart : nil)
+            : nil
         // The ledger is read ONCE here and threaded through every module that
         // asks it something (the `ChipMemory.snapshot()` discipline) — five
         // separate reads would decode the same JSON five times per rise.
@@ -209,8 +225,8 @@ enum TodayBrief {
         // portfolio read (measured at 6.8s) to build a hero nobody would ever
         // see. The lede doesn't touch holdings either, so the widget line it
         // publishes is unaffected.
-        async let holdingsRead = (presenting && scopedToWallet) ? liveHoldings() : []
-        async let movesRead = scopedToMarkets ? liveMoves(context: context) : []
+        async let holdingsRead = (presenting && scopedToMoney) ? liveHoldings() : []
+        async let movesRead = scopedToMoney ? liveMoves(context: context) : []
         // Gated on `presenting` (2026-07-25): the risk rung only ever reaches
         // the LEDE, and the digest — the one thing the background path uses —
         // is `DayBrief.detail`, which never carries it. So on the digest
@@ -222,7 +238,7 @@ enum TodayBrief {
         // chain latency there to compute a sentence nobody is looking at is
         // work with no reader. The cost of the gate: `-todayProbe` composes
         // with `presenting: false`, so it can't show the risk rung.
-        async let riskRead = (presenting && scopedToWallet) ? worstDebt() : nil
+        async let riskRead = (presenting && scopedToMoney) ? worstDebt() : nil
         // Where an open's wait actually goes, per read (2026-08-04). DEBUG-only
         // and free in release, the same bargain `LaunchPerf`'s span markers
         // make — kept rather than deleted because "the brief feels slow" is a
@@ -312,12 +328,21 @@ enum TodayBrief {
         // above it (user ruling 2026-07-23: "keep wallet and watchlist
         // together") — the watchlist IS money, so putting anything between it
         // and the wallet splits one story across two places.
+        //
+        // The RUNWAY (user, 2026-08-08: "Work is the only room organized by
+        // deadlines") supersedes the single `nextTile` once there are enough
+        // deadlines to show a real spread — composed FIRST so the pair below
+        // can skip `nextTile` rather than repeat its own top item a second
+        // time (the leads-vs-observations precedent above: never the same
+        // fact told twice). Below the ≥2 floor, `nextTile` alone is the
+        // honest degrade — one deadline is a fact, not a runway.
+        let runway = runwayCard(things)
         var tiles: [String] = []
         if let movers = moversTile(moves) {
             tiles.append("tmov")
             lines.append(movers)
         }
-        if let next = nextTile(things) {
+        if runway == nil, let next = nextTile(things) {
             tiles.append("tnext")
             lines.append(next)
         }
@@ -325,10 +350,14 @@ enum TodayBrief {
             ids.append("pair")
             lines.append("pair = TilePair([\(tiles.joined(separator: ", "))])")
         }
+        if let runway {
+            ids.append("runway")
+            lines += runway
+        }
         // A watched market that resolved — an EVENT, so it follows the pair
         // rather than joining it (a tile pair is state at a glance; this is
         // news). Silent on every day nothing settled, like every module here.
-        if scopedToMarkets, let resolved = marketResolvedToday(MarketsAsk.moves(context: context), now: now) {
+        if scopedToMoney, let resolved = marketResolvedToday(MarketsAsk.moves(context: context), now: now) {
             ids.append("tmkt")
             lines.append(resolved)
         }
@@ -376,6 +405,14 @@ enum TodayBrief {
             leadRefs.append("men")
             leadLines += mention.lines
             leadIDs.append(mention.id)
+        }
+        // Who's around (2026-08-08) — leads before the reading card: a face
+        // is a stronger claim than an article, the same ordering `mention`
+        // already gets over `reading` for the identical reason.
+        if let people = peopleRow(landed) {
+            leadRefs.append("people")
+            leadLines += people.lines
+            leadIDs.append(people.id)
         }
         if let reading = readingCard(landed, topic: topic, told: told, weights: weights) {
             leadRefs.append("read")
@@ -1454,6 +1491,39 @@ enum TodayBrief {
         return "tnext = NextTile(\"\(String(localized: "Up next"))\", \"\(genSafe(clamp(next.title, max: 40)))\", \"\(genSafe(when))\", \"\(genSafe(alert))\", \"\(next.id.uuidString)\")"
     }
 
+    /// The runway (user, 2026-08-08: "Work is the only room organized by
+    /// deadlines") — several upcoming/overdue items on one axis, where
+    /// `nextTile` above only ever names the nearest one. Reuses `LeadRow`
+    /// (title/meta/image/id/source) under one `Widget`, the exact shape
+    /// `readingCard` already wraps several refs in — no new doc-line type,
+    /// so there's nothing here that isn't already proven to render.
+    ///
+    /// The ≥2 floor is the minimum this module doctrine already applies
+    /// elsewhere (a runway's whole claim is the SPREAD — `AgentPanel.Figure
+    /// .runway`'s own rule, "one dot on an axis is a dot"). Below it,
+    /// `nextTile`'s plain single row is the honest degrade for a thin
+    /// scope — a real fact stated plainly, never a chart strained to fill
+    /// space (spec: "depth scales inversely with scope").
+    private static func runwayCard(_ things: [Thing]) -> [String]? {
+        let open = things.filter { $0.mark != .done && $0.dueAt != nil }
+        let ranked = open.sorted { ($0.dueAt ?? .distantFuture) < ($1.dueAt ?? .distantFuture) }
+        guard ranked.count >= 2 else { return nil }
+        let now = Date.now
+        let shown = Array(ranked.prefix(4))
+        var refs: [String] = []
+        var doc: [String] = [""]
+        for (i, item) in shown.enumerated() {
+            let due = item.dueAt ?? now
+            let meta = due < now
+                ? String(localized: "overdue")
+                : due.formatted(.dateTime.weekday(.abbreviated).hour().minute())
+            refs.append("d\(i)")
+            doc.append("d\(i) = LeadRow(\"\(genSafe(clamp(item.title, max: 40)))\", \"\(genSafe(meta))\", \"\", \"\(item.id.uuidString)\", \"\(genSafe(item.source))\")")
+        }
+        doc[0] = "runway = Widget(\"\(String(localized: "Coming up"))\", \"\", [\(refs.joined(separator: ", "))])"
+        return doc
+    }
+
     // MARK: - The themes map
 
     /// `TagMap(eyebrow, subline, [cells], "plain")` — what you're actually
@@ -1530,6 +1600,43 @@ enum TodayBrief {
 
     /// The mention that names you, rendered as the real post — author, their
     /// words, their avatar. The card's title says WHY it's here.
+    /// "Who's around" — Life's people row (user, 2026-08-08: "life should be
+    /// rich with avatars"). Named, with a face, never counted (the likers-
+    /// feature doctrine: a roll with nobody named is exactly the tally this
+    /// app avoids). Reuses `LeadPost` — the SAME doc-line `mentionCard`
+    /// already proves renders an avatar — for each person, wrapped under one
+    /// `Widget` the way `readingCard` already wraps several refs. No new
+    /// rendering surface.
+    ///
+    /// A person needs BOTH a handle and a real avatar URL to earn a row —
+    /// someone named with no face is `mentionCard`'s territory, not this
+    /// one's; the whole point here is faces. Deduped by handle so the same
+    /// person appearing three times (a reply, a like, a mention) is one row,
+    /// not three. Newest-first, capped at 3 — a row of faces is a glance,
+    /// not a directory.
+    private static func peopleRow(_ landed: [Thing]) -> (lines: [String], id: String)? {
+        var seen = Set<String>()
+        var people: [Thing] = []
+        for thing in landed.sorted(by: { $0.capturedAt > $1.capturedAt }) {
+            guard let handle = thing.authorHandle, let avatar = thing.authorAvatarURL,
+                  !avatar.isEmpty, seen.insert(handle.lowercased()).inserted
+            else { continue }
+            people.append(thing)
+            if people.count == 3 { break }
+        }
+        guard people.count >= 2 else { return nil }
+        var refs: [String] = []
+        var doc: [String] = [""]
+        for (i, thing) in people.enumerated() {
+            let author = thing.authorHandle ?? thing.source
+            let words = thing.postText ?? thing.title
+            refs.append("p\(i)")
+            doc.append("p\(i) = LeadPost(\"\(genSafe(author))\", \"\(genSafe(clamp(words, max: 120)))\", \"\(genSafe(thing.authorAvatarURL ?? ""))\", \"\", \"\(thing.id.uuidString)\")")
+        }
+        doc[0] = "people = Widget(\"\(String(localized: "Who's around"))\", \"\", [\(refs.joined(separator: ", "))])"
+        return (doc, people[0].id.uuidString)
+    }
+
     private static func mentionCard(_ landed: [Thing], told: Set<String>,
                                     weights: ChipMemory.Weights)
         -> (lines: [String], id: String)? {

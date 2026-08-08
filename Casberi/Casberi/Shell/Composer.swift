@@ -468,17 +468,19 @@ struct Composer: View {
             self.signal = signal
         }
     }
-    /// A scoped "What's going on" chip (scoped-brief-spec.md) — one per app
-    /// catalog category the corpus holds a connected app in, plus
-    /// "Everything". Deliberately a SEPARATE small type from `AskOption`
-    /// rather than another `kind` on it: `AskOption.query` special-cases
-    /// "handle" to send a canonical string different from its display title,
-    /// and folding a second special case in there for "send the recognized
-    /// phrase, show the bare category name" risked disturbing the existing
-    /// away/handle/today display-vs-send split this file already leans on
-    /// elsewhere. `query` here is a phrase `KeptAskComposers.namedAskTarget`
-    /// (or, for "Everything", `TodayBrief.matches`) already recognizes, so
-    /// firing it runs the exact same pipeline a typed ask would.
+    /// A scoped "What's going on" chip (scoped-brief-spec.md) — one per BRIEF
+    /// SCOPE (`BriefScope.scopes`: Money, Work, Life) the corpus holds a
+    /// connected app in. No "Everything" chip (user, 2026-08-08) — that
+    /// brief is already the default you get by asking nothing in particular,
+    /// reachable via the whisper capsule or the kept "today" pill. Deliberately
+    /// a SEPARATE small type from `AskOption` rather than another `kind` on
+    /// it: `AskOption.query` special-cases "handle" to send a canonical
+    /// string different from its display title, and folding a second special
+    /// case in there for "send the recognized phrase, show the bare scope
+    /// name" risked disturbing the existing away/handle/today display-vs-send
+    /// split this file already leans on elsewhere. `query` here is a phrase
+    /// `KeptAskComposers.namedAskTarget` already recognizes, so firing it
+    /// runs the exact same pipeline a typed ask would.
     private struct CategoryChip: Identifiable {
         let id: String
         let title: String
@@ -878,11 +880,11 @@ struct Composer: View {
         } else {
             AskMemory.shown(suggestions.map(\.memoryKey))
         }
-        // Category chips (scoped-brief-spec.md) — one per catalog category
-        // the corpus holds at least one connected thing in, plus
-        // "Everything". ALWAYS offered rather than ranked/decayed/capped like
-        // `suggestions` above: the spec frames these as a fixed row of scope
-        // pickers under the input, not a suggestion competing for a slot.
+        // Category chips (scoped-brief-spec.md) — one per BRIEF SCOPE the
+        // corpus holds at least one connected thing in. ALWAYS offered rather
+        // than ranked/decayed/capped like `suggestions` above: the spec
+        // frames these as a fixed row of scope pickers under the input, not
+        // a suggestion competing for a slot.
         categoryChips = Self.computeCategoryChips(all: all)
         // The board (prd §332) — built last, so it can see the away pool the
         // chips above already computed and never pays for a second walk.
@@ -895,32 +897,42 @@ struct Composer: View {
         #endif
     }
 
-    /// Every catalog category with at least one thing in the corpus, as
-    /// chips — "connected" needs no separate check for the same reason
+    /// Every BRIEF SCOPE with at least one thing in the corpus, as chips —
+    /// three (`BriefScope.scopes`: Money, Work, Life), deliberately fewer
+    /// than the app catalog's own ten categories (user, 2026-08-08: "how many
+    /// categories do we... want to offer to search across, lets limit
+    /// those"). "Connected" needs no separate check for the same reason
     /// `computeSuggestions`' own category-sibling chip doesn't (line ~700
     /// above): a source with no connected bridge can never have landed a
-    /// `Thing`. "Everything" always leads when the corpus isn't empty (spec:
-    /// "plus an Everything chip"); a category with nothing connected simply
-    /// has no chip (spec's edge case — "don't render its chip").
+    /// `Thing`. A scope with nothing connected simply has no chip (spec's
+    /// edge case — "don't render its chip").
+    ///
+    /// NO "Everything" chip (user, 2026-08-08: "do we need an everything
+    /// chip? i mean everything is the default") — the unscoped brief is
+    /// already reachable two other ways (the whisper capsule, the kept
+    /// "today" pill), and a fourth door to it crowded a row whose whole
+    /// point is three tight, purposeful choices. `TodayBrief.title` and
+    /// `.matches` are UNCHANGED — typing "what's going on" or tapping either
+    /// of those still works exactly as before; only the dedicated CHIP for
+    /// it is gone.
     ///
     /// `query` sends a phrase already wired to resolve to this exact scope —
-    /// `TodayBrief.title` ("What's going on?") for Everything, matching
-    /// `TodayBrief.matches` exactly; "How's my <cat> stuff?" for a category,
-    /// the same phrase `namedAskTarget`'s "how's my " prefix already resolves
-    /// to `.category(cat)` (`KeptAskComposers.swift`) — so a tap runs through
-    /// the identical pipeline a typed ask would, never a shortcut that could
-    /// answer differently.
+    /// "How's my <scope> stuff?", the same phrase `namedAskTarget`'s "how's
+    /// my " prefix already resolves to `.category(scope)`
+    /// (`KeptAskComposers.swift`) — so a tap runs through the identical
+    /// pipeline a typed ask would, never a shortcut that could answer
+    /// differently.
     private static func computeCategoryChips(all: [Thing]) -> [CategoryChip] {
         guard !all.isEmpty else { return [] }
         let present = Set(all.map(\.source))
-        var chips = [CategoryChip(id: "", title: String(localized: "Everything"),
-                                  query: TodayBrief.title)]
-        for cat in BridgeCatalog.categories.map(\.name) {
+        var chips: [CategoryChip] = []
+        for scope in BriefScope.scopes {
             let sources = Set(BridgeCatalog.offers
-                .filter { BridgeCatalog.category(of: $0) == cat }.map(\.name))
+                .filter { BriefScope.scope(forCatalogCategory: BridgeCatalog.category(of: $0)) == scope }
+                .map(\.name))
             guard sources.contains(where: present.contains) else { continue }
-            chips.append(CategoryChip(id: cat, title: cat,
-                                      query: "How's my \(cat) stuff?"))
+            chips.append(CategoryChip(id: scope, title: scope,
+                                      query: "How's my \(scope) stuff?"))
         }
         return chips
     }
@@ -3112,14 +3124,17 @@ struct Composer: View {
         }
     }
 
-    /// Category chips (scoped-brief-spec.md) — "How's my Work stuff?", "How's
-    /// my Social stuff?", "Everything", one per catalog category the corpus
-    /// holds a connected app in. Deliberately a SEPARATE, always-offered row
-    /// from `askChips` above: those rank, decay and compete for one of 7
-    /// slots (tap-learning, §95), while these are scope pickers under the
-    /// input a person reaches for repeatedly — decaying "Work" behind an
-    /// unrelated chip because it went untapped for a while would be exactly
-    /// the wrong lesson for a control whose job is to always be there.
+    /// Category chips (scoped-brief-spec.md) — "How's my Money stuff?",
+    /// "How's my Work stuff?", "How's my Life stuff?", one per BRIEF SCOPE
+    /// the corpus holds a connected app in. No "Everything" chip (user,
+    /// 2026-08-08) — that brief is already the default and reachable via the
+    /// whisper capsule or the kept "today" pill. Deliberately a SEPARATE,
+    /// always-offered row from `askChips` above: those rank, decay and
+    /// compete for one of 7 slots (tap-learning, §95), while these are scope
+    /// pickers under the input a person reaches for repeatedly — decaying
+    /// "Work" behind an unrelated chip because it went untapped for a while
+    /// would be exactly the wrong lesson for a control whose job is to
+    /// always be there.
     ///
     /// A LABELED two-row band (user ruling, 2026-08-08) — "What's going on"
     /// as a section label, every chip in a row beneath it, both always

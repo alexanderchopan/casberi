@@ -237,12 +237,18 @@ enum DayBrief {
         let anchorUSD: Double
     }
 
-    static func walletMove(now: Date = .now) -> WalletMove? {
+    /// `since` overrides the anchor entirely (nil = the usual ~20h-ago
+    /// `dayScale` floor) — the hook a category-scoped Money brief uses to
+    /// measure the move against its OWN "since you last checked" moment
+    /// instead of a fixed day window (prd: scoped-brief-spec.md). Without
+    /// this a Money brief opened four days apart still measured a ~20h
+    /// delta while its item list below correctly spanned the real four
+    /// days — two clocks on one screen, disagreeing about the same window.
+    static func walletMove(now: Date = .now, since: Date? = nil) -> WalletMove? {
         let samples = WalletStore.shared.combinedValueSamples()
+        let anchor = since ?? now.addingTimeInterval(-dayScale)
         guard let latest = samples.last, latest.usd > 0,
-              let base = samples.last(where: {
-                  $0.at <= now.addingTimeInterval(-dayScale)
-              }),
+              let base = samples.last(where: { $0.at <= anchor }),
               base.usd > 0
         else { return nil }
         let pct = (latest.usd - base.usd) / base.usd * 100

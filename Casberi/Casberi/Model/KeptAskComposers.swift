@@ -497,8 +497,13 @@ enum KeptAskComposers {
             case .source(let s): return things.filter { $0.source == s }
             case .handle(let h): return things.filter { $0.authorHandle == h }
             case .category(let c):
+                // `c` is a BRIEF SCOPE (Money/Work/Life), not a raw catalog
+                // category — same join `TodayBrief.compose(category:)` uses,
+                // so a kept `category:Money` pill and a live ask can never
+                // disagree about which sources it covers.
                 let sources = Set(BridgeCatalog.offers
-                    .filter { BridgeCatalog.category(of: $0) == c }.map(\.name))
+                    .filter { BriefScope.scope(forCatalogCategory: BridgeCatalog.category(of: $0)) == c }
+                    .map(\.name))
                 return things.filter { sources.contains($0.source) }
             }
         }
@@ -567,6 +572,29 @@ enum KeptAskComposers {
             }
             name = words.joined(separator: " ")
             guard !name.isEmpty else { continue }
+            // Checked BEFORE `bestHandle` (moved 2026-08-08, found live: "how's
+            // my work stuff" resolved to "@workspaces" — a real demo handle,
+            // matched because `bestHandle` is a SUBSTRING test
+            // (`lower.contains(name)`, so "workspaces".contains("work") is
+            // true) and used to run first). An EXACT match against the brief
+            // scope's small, fixed vocabulary ("money"/"work"/"life") must
+            // beat a fuzzy match against arbitrary corpus handles, or any
+            // scope name that happens to prefix a real handle is
+            // unreachable by voice for as long as that handle is connected.
+            // Checked in this order so BOTH vocabularies resolve: the brief
+            // SCOPE name directly ("money", "work", "life" — what the chips
+            // and the "How's my X stuff?" phrasing actually send), and the
+            // app catalog's own ten category names ("wallet", "markets",
+            // "agents", "notes", …), mapped through the same join
+            // `TodayBrief.compose(category:)` uses — so "what's going on
+            // with wallet" and "what's going on with money" answer
+            // identically rather than one silently falling through.
+            if let scope = BriefScope.scopes.first(where: { $0.lowercased() == name }) {
+                return (.category(scope), synth)
+            }
+            if let cat = BridgeCatalog.categories.first(where: { $0.name.lowercased() == name })?.name {
+                return (.category(BriefScope.scope(forCatalogCategory: cat)), synth)
+            }
             if let handle = bestHandle(matching: name, things: things) {
                 return (.handle(handle), synth)
             }
@@ -579,9 +607,6 @@ enum KeptAskComposers {
             if let source = Set(things.map(\.source))
                 .first(where: { $0.lowercased() == name && Corpus.earnsRoom($0) }) {
                 return (.source(source), synth)
-            }
-            if let cat = BridgeCatalog.categories.first(where: { $0.name.lowercased() == name })?.name {
-                return (.category(cat), synth)
             }
         }
         return nil
