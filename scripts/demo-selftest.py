@@ -28,6 +28,27 @@ tree:
      content, from a mode whose entire promise is that it reaches nothing.
      Check B is the general form of the fix for that class.
 
+Checks D and E (2026-08-08) generalize incident 2 into a standing rule rather
+than a one-time fix: the app's REAL catalog (`BridgeCatalog.offers`) and the
+demo's claimed-connected seats (`DemoSeedAll.seatTable`) are two lists a
+person edits separately, with nothing forcing them to agree — exactly how
+"eight seats furnish nothing" happened, and it happened WITHOUT either list
+being individually wrong. Asked directly (user, 2026-08-08: "as we add new
+features to the app does the demo get also updated? if so should we make
+that a rule?") — the answer this file gives is the same one `catalog-sync.sh`
+already gave for the same shape of problem: not a written reminder (this
+codebase's CLAUDE.md documents rules like that being forgotten and re-broken
+repeatedly), a build-time check.
+
+**What D/E do NOT claim to check, and why that's deliberate rather than lazy:**
+a bridge gaining a new CAPABILITY — a new figure kind, a new field a room
+head reads — has no textual signature to grep for; whether the demo's
+existing rows still exercise it is a judgment call, not a fact a regex can
+verify. That case stays a human step (`-demoProbe`/`-roomInsightProbe`
+against the demo corpus after a rendering change), documented in CLAUDE.md's
+demo entry, not pretended into a mechanical check that would either miss
+real gaps or false-positive on unrelated code.
+
 Static and source-only — no build, no simulator, matches the DEMO(2026-08-07)
 addendum to `docs/demo-spec.md`.
 
@@ -51,6 +72,33 @@ DEMO_FILES = {
     "BriefLedger": CASBERI / "Model/BriefLedger.swift",
     "AskMemory": CASBERI / "Model/AskMemory.swift",
     "AppVisit": CASBERI / "Model/AppVisit.swift",
+    # Read-only reference for checks D/E — never mutated by this file's own
+    # fixtures, since the fixtures exist to break the DEMO side of the sync,
+    # not the catalog.
+    "BridgeCatalog": CASBERI / "Model/BridgeCatalog.swift",
+}
+
+# `DemoSeedAll.seatTable` names that legitimately have no ENTRY in
+# `BridgeCatalog.offers` at all — a conscious ruling per name, the
+# `KNOWN_EXEMPT` pattern this codebase uses everywhere else for "we checked,
+# this one's real". Adding a name here without checking is how this class of
+# audit rots; each entry states what it IS instead.
+KNOWN_NO_CATALOG_SEAT = {
+    # An always-on device capability (voice notes recorded in-app), not a
+    # connectable bridge — there is nothing in the catalog to connect.
+    "Voice",
+}
+
+# `DemoSeedAll.seatTable` names whose real `Thing.source` differs from
+# `BridgeCatalog.offers`' DISPLAY name — the catalog name is marketing
+# copy (`AppDetailScreen`'s hero), the source name is what every ingest
+# actually stamps on a row, and this codebase already lets them diverge on
+# purpose. Verified against the real bridge file before adding, not guessed:
+# `Model/PrivacyPoolsBridge.swift` stamps `source: "Privacy Pools"` on every
+# row it lands, while the catalog leads with the branded "0xBow Privacy
+# Pools" on its product page. The demo is right to match the SOURCE name.
+KNOWN_CATALOG_ALIAS = {
+    "Privacy Pools": "0xBow Privacy Pools",
 }
 
 # Function names that must never be reachable only from inside `#if DEBUG` —
@@ -202,11 +250,79 @@ def check_c_no_source_collision(files_text):
               f'"{source}"' in body, False)
 
 
+def extract_seat_table(demo_src):
+    """The (name, statusLine, capability) tuples `DemoSeedAll.seatTable`
+    declares — the seats the demo claims are connected. Returns (names,
+    body_span) so callers needing "does this name appear OUTSIDE the table"
+    (check E) can exclude the table's own declaration from the search."""
+    clean = strip_comments(demo_src)
+    m = re.search(
+        r'private static let seatTable: \[\(String, String, String\)\] = \[(.*?)\n    \]',
+        clean, re.DOTALL)
+    if not m:
+        return None, None
+    names = re.findall(r'\("([^"]+)"', m.group(1))
+    return names, (m.start(1), m.end(1))
+
+
+def extract_catalog_names(catalog_src):
+    """Every `Offer(name: "…")` in `BridgeCatalog.swift` — connectable or
+    not, since check D asks "does a real catalog entry exist", not "can you
+    tap Connect on it today"."""
+    clean = strip_comments(catalog_src)
+    return set(re.findall(r'Offer\(name:\s*"([^"]+)"', clean))
+
+
+def check_d_seat_names_are_real(files_text):
+    """Check D — every `seatTable` name resolves to a real catalog offer
+    (through `KNOWN_CATALOG_ALIAS` where the source name and the catalog's
+    display name deliberately differ), or is named in
+    `KNOWN_NO_CATALOG_SEAT` as a non-bridge capability. Catches a rename or
+    retirement in the real catalog that the demo's seat list didn't follow —
+    the seat would still LAND rows (check E's job), but under a name the
+    catalog no longer recognizes, so the Apps screen and the feed would
+    disagree about what "connected" means for it."""
+    names, _ = extract_seat_table(files_text["DemoSeedAll"])
+    if names is None:
+        check("D · seatTable found", False, True)
+        return
+    catalog_names = extract_catalog_names(files_text["BridgeCatalog"])
+    for name in names:
+        if name in KNOWN_NO_CATALOG_SEAT:
+            continue
+        resolved = KNOWN_CATALOG_ALIAS.get(name, name)
+        check(f'D · seatTable "{name}" resolves to a real catalog offer',
+              resolved in catalog_names, True)
+
+
+def check_e_seat_names_have_rows(files_text):
+    """Check E — every `seatTable` name appears as a literal string
+    somewhere OUTSIDE the table's own declaration — i.e., in one of the
+    room-building functions, which is where a real seeded row's `source:`
+    would carry it (directly or via a tuple element, both of which still
+    contain the literal). This is the exact shape of "eight seats furnish
+    nothing": a name sitting in `seatTable` with no matching row anywhere
+    else in the file."""
+    demo_src = files_text["DemoSeedAll"]
+    clean = strip_comments(demo_src)
+    names, span = extract_seat_table(demo_src)
+    if names is None:
+        check("E · seatTable found", False, True)
+        return
+    clean_names, clean_span = extract_seat_table(clean)
+    rest = clean[:clean_span[0]] + clean[clean_span[1]:]
+    for name in names:
+        check(f'E · seatTable "{name}" has a seeded row',
+              f'"{name}"' in rest, True)
+
+
 def run_checks(files_text):
     before = len(failures)
     check_a_release_reachable(files_text)
     check_b_reaches_nothing(files_text)
     check_c_no_source_collision(files_text)
+    check_d_seat_names_are_real(files_text)
+    check_e_seat_names_have_rows(files_text)
     return len(failures) == before
 
 
@@ -266,6 +382,26 @@ def self_test():
         )),
         check_c_no_source_collision, True)
 
+    ok &= verify_fixture(
+        "a seatTable name with no matching catalog offer is caught",
+        lambda f: f.__setitem__("DemoSeedAll", f["DemoSeedAll"].replace(
+            '("Voice", "3 notes", "Transcribes on device."),',
+            '("Voice", "3 notes", "Transcribes on device."),\n'
+            '        ("Totally Fake Bridge Name", "Synced", "Does nothing real."),',
+            1,
+        )),
+        check_d_seat_names_are_real, True)
+
+    ok &= verify_fixture(
+        "a seatTable name with no seeded row anywhere else is caught",
+        lambda f: f.__setitem__("DemoSeedAll", f["DemoSeedAll"].replace(
+            '("Voice", "3 notes", "Transcribes on device."),',
+            '("Voice", "3 notes", "Transcribes on device."),\n'
+            '        ("Quandrafloop Sync Test", "Synced", "Nowhere else in the file."),',
+            1,
+        )),
+        check_e_seat_names_have_rows, True)
+
     # And the clean tree must pass all three, so the fixtures above are
     # proven against a REAL failure, not a checker that always fails.
     global SILENT
@@ -298,8 +434,10 @@ def main():
     files_text = {k: read(v) for k, v in DEMO_FILES.items()}
     ok = run_checks(files_text)
     if ok:
+        seat_names, _ = extract_seat_table(files_text["DemoSeedAll"])
         print(f"✓ demo guard: {len(DEMO_FACING_FUNCS)} functions Release-reachable, "
-              "no network verbs, no source collisions")
+              "no network verbs, no source collisions, "
+              f"{len(seat_names or [])} catalog seats real and seeded")
         sys.exit(0)
     else:
         print(f"✗ demo guard: {len(failures)} check(s) failed")
