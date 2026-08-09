@@ -19400,3 +19400,35 @@ Verified: `agent-panel-selftest.sh` and `design-motion-audit.py` both green
 Foundation-only harness); a full `xcodebuild` `BUILD SUCCEEDED`; a live
 screenshot against the seeded demo corpus shows the OpenSea wall drawing
 real bundled photos where it drew "New dro…" placeholders before.
+
+## §345 — The social roster's per-face number was a fake status, not a fact (user: "that number doesn't mean anything… these people have made more actions than just those numbers, so those numbers seem incorrect and not even useful — I say we remove them")
+
+**§337's own change (2026-08-08, "Richer roster") was the one that shipped
+this.** Ranking `SocialRosterHero`'s faces by activity instead of insertion
+order is sound — a watched account with nothing landed shouldn't outrank one
+leading the feed — but the same patch also PRINTED the count under each
+face ("114", "31", "29"…) as if it told you something about the person. It
+told you something about the SYNC instead: `postCounts` is `visible.reduce`
+over `Thing`s already landed in this room, so it counts how many of that
+account's posts Casberi happens to have ingested, bounded by whatever
+window/cap the feed and the bridge's own sync history apply — not the
+account's real cast count, replies, likes, or anything else "an action"
+could mean. A heavy poster whose sync only reached a fraction of their casts
+reads as quiet; a bot account that floods the ingested window reads as the
+most active person in the room. §83's honesty rule ("no dead controls, no
+fake status") was written for exactly this shape: a real-looking number that
+answers a different question than the one it visually poses.
+
+**Fix: the ranking stays, the printed digit doesn't.** `SocialRosterHero`
+dropped its `postCounts` property and the `Text("\(count)")` under each face
+entirely — the row-order signal ("who's actually been active in this room")
+survives because `FeedScreen` still computes `postCounts` and sorts
+`rankedAccounts` by it; only the display, the part making an unverifiable
+claim, is gone. No self-test or catalog check named this field, so nothing
+else needed touching.
+
+**UNVERIFIED this pass — authored without Xcode, no simulator to build
+against.** The diff is a two-property, one-Text removal with no new control
+flow, but `scripts/verify.sh`'s own gate ("build + verify on simulator
+before presenting") could not run here; confirm with a real build before
+merging.

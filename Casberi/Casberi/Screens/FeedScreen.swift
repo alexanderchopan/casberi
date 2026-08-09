@@ -2006,7 +2006,7 @@ struct FeedScreen: View {
             }
             insightSection {
                 SocialRosterHero(source: source, accounts: rankedAccounts,
-                                  freshHandles: freshHandles, postCounts: postCounts) { account in
+                                  freshHandles: freshHandles) { account in
                     DSHaptic.tap()
                     openPerson = SocialProfile(source: source, handle: account.key,
                                                displayName: account.title, bio: nil,
