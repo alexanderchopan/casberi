@@ -19432,3 +19432,59 @@ against.** The diff is a two-property, one-Text removal with no new control
 flow, but `scripts/verify.sh`'s own gate ("build + verify on simulator
 before presenting") could not run here; confirm with a real build before
 merging.
+
+## §346 — The All feed's leading slot said seven different things and none of them was "which app" (design review, 2026-08-09)
+
+The 26pt leader renders a face, a publisher mark, a wallet blockie, a mail
+initial, a coin logo, the thing's own picture, or the app glyph as a
+fallback — and for every branch except the glyph, nothing on the row named
+the source at all, because the trailing slot deliberately answers "why it's
+here" (`BandRow.project`), never "where from". Fine in a scoped room (the
+room IS the source); a real gap in the unscoped All room, where faces and
+pictures dominate and reading the source means recognizing an avatar.
+
+Fixed the iOS-notification-badge way: a 12pt `BridgeIcon` brand mark on a
+17pt `DS.page`-colored plate, bottom-trailing on the leader, offset 3pt past
+its edge. Shown only when the leader ISN'T already the glyph (no
+double-telling), suppressed by the wallet security flag when both would
+claim the same corner (safety outranks provenance), and opt-in from
+`FeedScreen` — only the unscoped All room asks for it (`sourceBadge: shape
+== .all`), never a scoped source room. The leader's if/else branch became an
+enum (`BandRow.Leader`) so the badge's gate and the render read off ONE
+definition instead of two that could drift.
+
+Verified: `verify.sh`'s full static head green (liveness audit, catalog-sync,
+design-motion, the rest); a full `xcodebuild` `BUILD SUCCEEDED`; the
+5-screen sweep completed with no crash.
+
+## §347 — "New since last seen" rides the trailing time text, not a badge that needs dismissing (design review, 2026-08-09)
+
+A background arrival — a new RSS post, a mail, a social row — landed with NO
+signal at all: `BerryRain` and `RowEntrance`'s cascade are both gated to a
+manual pull-to-refresh or a small set of hand-picked "moments" (a GitHub
+major release, a wallet/token new high), by explicit rule ("repeating the
+berry shower per moment would read as spam, not delight"). For a genuinely
+alarm-class arrival — a Stripe dispute, an ASC rejection — the app already
+has something stronger: `chrome.flash(tone: .failure)`, a 2-second toast
+with a failure haptic. But the toast only helps if you're looking at that
+exact second, and a corner badge that needs a tap to clear (the first design
+considered) reintroduces a control where the row wants a STATE.
+
+Landed on the row's OWN trailing time text (`now`, `2h`, …) wearing a color
+while new — the same slot that already tints for a countdown (`DS.tint`) and
+turns `DS.confirm` for Live, so this is one more state in an existing
+color-carries-state vocabulary, not a new one. `DS.destructive` instead of
+`DS.tint` when the arrival is also alarm-class, reusing
+`NotifySweep.classify(_:now:)`'s own definition rather than a second opinion
+about what counts urgent. "Seen" needs no new clock: it reads the SAME
+app-group stamp the home-screen widget's new-ring already writes on
+backgrounding (`RootShell.handleDeactivation` → `"widget.lastSeen"`) — one
+timestamp, two readers. No per-row field, no CloudKit deploy, nothing to tap
+or dismiss; it clears on its own the next time the app is left and
+reopened, because that stamp only advances on backgrounding.
+
+Verified: `verify.sh`'s full static head green; a full `xcodebuild` `BUILD
+SUCCEEDED`; the 5-screen sweep completed with no crash. `ThingVoice.rowLabel`
+now speaks "new"/"needs attention" for the same reason the security flags
+already do — a tinted timestamp is a visual-only fact, so a reader who can't
+see color needs the word.

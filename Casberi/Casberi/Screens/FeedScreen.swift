@@ -4581,11 +4581,18 @@ struct FeedScreen: View {
                     // never a faked probability.
                     PredictionRow(thing: thing, pulse: odds)
                 } else {
+                    // The source badge (2026-08-09): only the unscoped All
+                    // room asks for it — `.all` is this same `default` arm's
+                    // OTHER tenant (a single-source room with no shape case
+                    // of its own, e.g. Instagram/TikTok, falls here too as
+                    // `.plain`), where the room itself already says the
+                    // source and a badge would double-tell it.
                     BandRow(thing: thing,
                             emphasized: thing.id == nextEventID,
                             live: isLive(thing),
                             imageOnly: imageOnly,
-                            wideArt: wideArt)
+                            wideArt: wideArt,
+                            sourceBadge: shape == .all)
                 }
             }
         }

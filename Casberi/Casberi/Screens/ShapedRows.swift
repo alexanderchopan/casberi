@@ -65,6 +65,20 @@ struct BandRow: View {
     /// that gate is wordless screenshots, which carry no identity leader and
     /// so can never satisfy `artRidesBesideIdentity`.
     var wideArt: Bool = false
+    /// Which app a row is FROM, when the leading slot is already busy saying
+    /// something else (2026-08-09). The 26pt leader answers "who/what" — a
+    /// face, a publisher mark, a blockie, a sender initial, the thing's own
+    /// picture — and only falls back to the app glyph when none of those
+    /// apply; the trailing slot answers "why it's here" (`project`, above),
+    /// never "which app". So on every row EXCEPT the glyph fallback, nothing
+    /// on the row named the source at all — fine in a single-source room
+    /// (the room IS the source), a real gap in a mixed feed of faces and
+    /// pictures. A small brand mark rides the leader's own corner instead —
+    /// the iOS notification-badge move, not a second row element. Opt-in
+    /// from the feed, like `moneyColumn`/`imageOnly`/`wideArt`: only the
+    /// unscoped All room asks for it (see `leaderIsGlyph` for the
+    /// per-row suppression, and the flag overlay below for precedence).
+    var sourceBadge: Bool = false
 
     private var done: Bool { thing.mark == .done }
 
@@ -289,6 +303,107 @@ struct BandRow: View {
         return mins < 60 ? "in \(max(1, mins)) min" : "in \(mins / 60)h"
     }
 
+    /// What the 26pt leading slot renders — lifted out of the if/else chain
+    /// so the badge can ask "is this the app glyph?" without a second
+    /// property re-stating the chain's own conditions (which would drift).
+    /// One definition; the `Group` below only switches on it.
+    private enum Leader: Equatable {
+        case avatar(String)
+        case blockie(String)
+        case initial(String)
+        case publisher(String)
+        case thumb(String, perishable: Bool, circular: Bool)
+        case screenshot
+        case photoData
+        /// The app glyph fallback — the one case the source badge suppresses
+        /// itself for (naming the source beside the source glyph is the
+        /// double-telling the badge exists to avoid).
+        case glyph
+    }
+
+    private var leader: Leader {
+        if let avatar = identityAvatarURL {
+            // Whose post this is, when several accounts are followed.
+            return .avatar(avatar)
+        } else if let addr = identiconAddress {
+            return .blockie(addr)
+        } else if let sender = mailSender, SenderInitial.letter(of: sender) != nil {
+            return .initial(sender)
+        } else if let publisher = publisherIconURL {
+            // Where the story is FROM leads the row; its picture rides
+            // after the title (below), like a post's attached image.
+            return .publisher(publisher)
+        } else if let image = thing.previewImageURL, !image.isEmpty,
+                  thing.source != "Twitch" || live {
+            // A token's coin logo is circular in the fat row — keep the
+            // same shape while its pulse hasn't landed yet, so the coin
+            // doesn't morph squircle→circle when the price arrives. A dead
+            // Twitch frame (stream ended, `live` false) falls through to the
+            // glyph — never a stale frame masquerading as a live one.
+            return .thumb(image, perishable: thing.source == "Twitch",
+                          circular: thing.source == "Tokens")
+        } else if thing.kind == .screenshot, thing.sourceRef != nil {
+            return .screenshot
+        } else if thing.previewImageData != nil {
+            // A folder-picked image (Files, 2026-07-27) carries its own
+            // bytes with no PHAsset behind it — PhotoWell already reads
+            // `previewImageData` before ever touching Photos, so this just
+            // needs the gate widened past `.screenshot`.
+            return .photoData
+        } else {
+            return .glyph
+        }
+    }
+
+    private var leaderIsGlyph: Bool { leader == .glyph }
+
+    /// "New since last seen" (2026-08-09) — the trailing time text tints
+    /// while a row landed after your last visit, and clears on its own the
+    /// next time you leave and come back. No per-row field, nothing to
+    /// dismiss: this reuses the SAME app-group stamp the home-screen
+    /// widget's own new-ring already writes on backgrounding
+    /// (`RootShell.handleDeactivation` → `"widget.lastSeen"`) — one clock,
+    /// two readers, rather than a second one that could drift from it. Zero
+    /// (never backgrounded yet) reads as "nothing is new", matching the
+    /// widget's own `hasNew` guard — otherwise a fresh install would tint
+    /// its entire seeded corpus.
+    private var newSinceLastSeen: Bool {
+        let stamp = UserDefaults(suiteName: SharedStore.appGroup)?
+            .double(forKey: "widget.lastSeen") ?? 0
+        guard stamp > 0 else { return false }
+        return thing.capturedAt.timeIntervalSince1970 > stamp
+    }
+
+    /// Reuses the notification sweep's own classifier rather than a second
+    /// opinion about what counts urgent — a dispute, a deadline, a risk
+    /// crossing already have exactly one definition in this app
+    /// (`NotifySweep.classify`), and the row shouldn't disagree with the
+    /// lock screen about which of its own things are alarms.
+    private var isAlarmClass: Bool {
+        newSinceLastSeen && NotifySweep.classify(thing, now: .now)?.cls == .alarm
+    }
+
+    /// The trailing time's ink: ordinary tertiary, `DS.tint` when new (the
+    /// same slot the next-event countdown already tints), `DS.destructive`
+    /// when the new arrival is also alarm-class — one more state in the row's
+    /// existing color-carries-state vocabulary, not a new visual language.
+    private var timeInk: Color {
+        guard newSinceLastSeen else { return DS.textTertiary }
+        return isAlarmClass ? DS.destructive : DS.tint
+    }
+
+    /// The badge itself — a 12pt brand mark (`BridgeIcon`, no new asset or
+    /// color table: brand color is identity, not decoration) on a `DS.page`
+    /// plate sized to leave a 2.5pt ring showing on every side. Page-colored
+    /// rather than surface-colored: feed rows sit directly on the page, not
+    /// a card.
+    private var sourceBadgeView: some View {
+        RoundedRectangle(cornerRadius: DS.Radius.appIcon(17), style: .continuous)
+            .fill(DS.page)
+            .frame(width: 17, height: 17)
+            .overlay(BridgeIcon(name: thing.source, size: 12))
+    }
+
     /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
     /// re-evaluates a LEAF view's body on the model's own observation,
     /// independent of the parent that made it, so a guard in the parent's
@@ -315,35 +430,22 @@ struct BandRow: View {
             // may still hold a frame a failed or disconnected sync never
             // saw end).
             Group {
-                if let avatar = identityAvatarURL {
-                    // Whose post this is, when several accounts are followed.
+                switch leader {
+                case .avatar(let avatar):
                     RemoteThumb(urlString: avatar, size: 26, fallback: thing.source,
                                 circular: true)
-                } else if let addr = identiconAddress {
+                case .blockie(let addr):
                     WalletBlockie(address: addr, size: 26)
-                } else if let sender = mailSender, SenderInitial.letter(of: sender) != nil {
+                case .initial(let sender):
                     SenderInitial(sender: sender, size: 26)
-                } else if let publisher = publisherIconURL {
-                    // Where the story is FROM leads the row; its picture rides
-                    // after the title (below), like a post's attached image.
+                case .publisher(let publisher):
                     RemoteThumb(urlString: publisher, size: 26, fallback: thing.source)
-                } else if let image = thing.previewImageURL, !image.isEmpty,
-                          thing.source != "Twitch" || live {
-                    // A token's coin logo is circular in the fat row — keep the
-                    // same shape while its pulse hasn't landed yet, so the coin
-                    // doesn't morph squircle→circle when the price arrives.
+                case .thumb(let image, let perishable, let circular):
                     RemoteThumb(urlString: image, size: 26, fallback: thing.source,
-                                perishable: thing.source == "Twitch",
-                                circular: thing.source == "Tokens")
-                } else if thing.kind == .screenshot, thing.sourceRef != nil {
+                                perishable: perishable, circular: circular)
+                case .screenshot, .photoData:
                     PhotoWell(thing: thing, size: 26)
-                } else if thing.previewImageData != nil {
-                    // A folder-picked image (Files, 2026-07-27) carries its
-                    // own bytes with no PHAsset behind it — PhotoWell already
-                    // reads `previewImageData` before ever touching Photos,
-                    // so this just needs the gate widened past `.screenshot`.
-                    PhotoWell(thing: thing, size: 26)
-                } else {
+                case .glyph:
                     BridgeIcon(name: thing.source, size: 26)
                 }
             }
@@ -354,6 +456,11 @@ struct BandRow: View {
             // `securityWarning`, same glyph and color at a bigger scale). A
             // spoofed symbol earns the badge for the same reason a poisoned
             // address does: the row is where the lie is read.
+            //
+            // The source badge (2026-08-09) shares this corner and loses to
+            // the flag on purpose — safety outranks provenance. Suppressed
+            // on `imageOnly` rows: the badge there rides the 104×58 photo
+            // instead (below), not this redundant 26pt echo of it.
             .overlay(alignment: .bottomTrailing) {
                 if thing.isFlagged {
                     Image(systemName: "exclamationmark.triangle.fill")
@@ -361,6 +468,9 @@ struct BandRow: View {
                         .foregroundStyle(DS.destructive)
                         .padding(3)
                         .background(Circle().fill(.black.opacity(0.55)))
+                } else if sourceBadge, !imageOnly, !leaderIsGlyph {
+                    sourceBadgeView
+                        .offset(x: 3, y: 3)
                 }
             }
             if imageOnly {
@@ -374,6 +484,21 @@ struct BandRow: View {
                                                 style: .continuous))
                     // The picture notices the cursor (Mac delight, 2026-08-03).
                     .macHoverBloom()
+                    // The badge rides the picture itself here, inset rather
+                    // than overhanging — at 104×58 an overhanging badge reads
+                    // detached from what it's marking (2026-08-09).
+                    .overlay(alignment: .bottomTrailing) {
+                        if thing.isFlagged {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 9))
+                                .foregroundStyle(DS.destructive)
+                                .padding(3)
+                                .background(Circle().fill(.black.opacity(0.55)))
+                        } else if sourceBadge, !leaderIsGlyph {
+                            sourceBadgeView
+                                .padding(4)
+                        }
+                    }
                 Spacer(minLength: 0)
             } else {
             Text(titleText)
@@ -462,7 +587,9 @@ struct BandRow: View {
                 } else if let countdown {
                     Text(countdown).dsText(.label12).foregroundStyle(DS.tint)
                 } else {
-                    LiveTimeText(date: thing.capturedAt)
+                    LiveTimeText(date: thing.capturedAt, color: timeInk)
+                        .fontWeight(newSinceLastSeen ? .semibold : .regular)
+                        .animation(DS.Motion.standard, value: newSinceLastSeen)
                 }
                 if let project {
                     Text(project)
@@ -478,7 +605,9 @@ struct BandRow: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(ThingVoice.rowLabel(for: thing, title: titleText,
                                                 project: project, live: live,
-                                                countdown: countdown))
+                                                countdown: countdown,
+                                                isNew: newSinceLastSeen,
+                                                isAlarm: isAlarmClass))
     }
 }
 
@@ -593,7 +722,8 @@ struct LiveTimeText: View {
 /// never sees it.
 enum ThingVoice {
     static func rowLabel(for thing: Thing, title: String, project: String? = nil,
-                         live: Bool = false, countdown: String? = nil) -> String {
+                         live: Bool = false, countdown: String? = nil,
+                         isNew: Bool = false, isAlarm: Bool = false) -> String {
         var parts: [String] = [thing.kind.typeTag, title]
         if thing.source != thing.kind.typeTag {
             parts.append(String(localized: "from \(thing.source)"))
@@ -615,6 +745,10 @@ enum ThingVoice {
         if thing.hasSecurityFlag("spam") {
             parts.append(String(localized: "Warning, this transfer is spam, you did not send it"))
         }
+        // Visual-only, same as the flags above: the tinted time text IS the
+        // whole signal, so a reader who can't see color needs the word.
+        if isAlarm { parts.append(String(localized: "needs attention")) }
+        else if isNew { parts.append(String(localized: "new")) }
         if thing.mark == .done { parts.append(String(localized: "done")) }
         if live { parts.append(String(localized: "live now")) }
         else if let countdown, !countdown.isEmpty { parts.append(countdown) }
