@@ -487,6 +487,29 @@ struct StartFollowScreen: View {
                                buttonLabel: "Follow",
                                focus: $fieldFocused,
                                action: follow)
+                // Farcaster's pack (2026-08-08) — this screen otherwise
+                // requires already knowing a name, which is exactly the
+                // wall a starter pack exists to route around. Shown only
+                // for Farcaster: Bluesky's own pack lives one screen later,
+                // on its setup screen, once connected.
+                if network == .farcaster {
+                    Text("or")
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                    // Syncs the moment the follow lands (sheet still open,
+                    // "Followed N" showing) but only ENDS onboarding once
+                    // the tray actually closes — calling `onStart` while the
+                    // sheet is still presented would tear down this screen
+                    // out from under it, the dismiss-during-transition class
+                    // of bug this codebase's SwiftData liveness corollaries
+                    // exist to avoid (see CLAUDE.md's build-142 note).
+                    FarcasterPackDoor(
+                        onImport: { _ in
+                            Task { @MainActor in _ = await FarcasterIngest.refresh(context: modelContext) }
+                        },
+                        onDismissAfterFollow: { onStart(nil) }
+                    )
+                }
             }
             .padding(.horizontal, DS.Space.s4)
             .padding(.bottom, DS.Space.s8)

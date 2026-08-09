@@ -1985,8 +1985,28 @@ struct FeedScreen: View {
             let freshHandles: Set<String> = newSince.map { since in
                 Set(visible.compactMap { $0.capturedAt > since ? $0.authorHandle : nil })
             } ?? []
+            // Richer roster (2026-08-08): who's actually been active in this
+            // room, not insertion order — a watched account with nothing
+            // landed shouldn't outrank one leading the feed. Purely derived
+            // from `visible` (the room's own things, already boundary-
+            // filtered live), no new field/request/store — the same
+            // discipline `FeedInsight`'s other readings follow.
+            let postCounts: [String: Int] = visible.reduce(into: [:]) { counts, thing in
+                guard let handle = thing.authorHandle, !handle.isEmpty else { return }
+                counts[handle, default: 0] += 1
+            }
+            // Stable sort (Swift's `sorted` guarantee): ties keep the
+            // account list's own order rather than reshuffling on every
+            // re-render over equal counts.
+            let rankedAccounts = rosterAccounts.sorted { a, b in
+                let ca = postCounts[a.key] ?? 0, cb = postCounts[b.key] ?? 0
+                if ca != cb { return ca > cb }
+                let fa = freshHandles.contains(a.key), fb = freshHandles.contains(b.key)
+                return fa && !fb
+            }
             insightSection {
-                SocialRosterHero(source: source, accounts: rosterAccounts, freshHandles: freshHandles) { account in
+                SocialRosterHero(source: source, accounts: rankedAccounts,
+                                  freshHandles: freshHandles, postCounts: postCounts) { account in
                     DSHaptic.tap()
                     openPerson = SocialProfile(source: source, handle: account.key,
                                                displayName: account.title, bio: nil,

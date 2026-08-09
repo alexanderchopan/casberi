@@ -2185,10 +2185,17 @@ struct PostImageGrid: View {
 /// says anything worth knowing about a chat-shaped list of posts. Faces do.
 struct SocialRosterHero: View {
     let source: String
+    /// Already ranked by the caller (most active in this room first) —
+    /// this view draws them in the order given rather than re-sorting.
     let accounts: [SocialAccount]
     /// Watched-account keys with a post landed after this room's own
     /// last-visit stamp — the ring criterion.
     let freshHandles: Set<String>
+    /// How many of this room's landed posts are theirs (2026-08-08) — the
+    /// fact behind the ranking, shown so the order reads as earned rather
+    /// than arbitrary. Missing/zero entries render with no subtitle rather
+    /// than a hollow "0".
+    let postCounts: [String: Int]
     let onTap: (SocialAccount) -> Void
 
     var body: some View {
@@ -2213,7 +2220,8 @@ struct SocialRosterHero: View {
 
     private func faceSlot(_ account: SocialAccount) -> some View {
         let fresh = freshHandles.contains(account.key)
-        return VStack(spacing: 6) {
+        let count = postCounts[account.key] ?? 0
+        return VStack(spacing: 4) {
             Group {
                 if let avatar = account.avatarURL, !avatar.isEmpty {
                     RemoteThumb(urlString: avatar, size: 52, fallback: source, circular: true)
@@ -2229,6 +2237,14 @@ struct SocialRosterHero: View {
                 .dsText(.label12).fontWeight(.semibold)
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(1)
+            // Only when there's a real signal to show — a lone post looks
+            // identical to every never-posted watch, so it says nothing a
+            // reader couldn't already assume.
+            if count > 1 {
+                Text("\(count)")
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+            }
         }
         .frame(width: 60)
         .contentShape(Rectangle())

@@ -505,6 +505,14 @@ struct HandleSetupScreen: View {
                 StarterPacksDoor(onImport: { _ in Task { await sync() } })
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
+            } else if bridge == .farcaster {
+                // Farcaster's own pack (2026-08-08) — a pinned list, not a
+                // browse endpoint (Farcaster's client API has none keyless;
+                // see `FarcasterStarterPack`'s doc comment), so this door
+                // opens straight to a face grid instead of a search field.
+                FarcasterPackDoor(onImport: { _ in Task { await sync() } })
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
             }
             topicsSection
             if showHomeHint {

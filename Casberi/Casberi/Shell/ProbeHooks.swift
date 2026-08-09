@@ -1153,6 +1153,30 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-fcPackProbe YES` reads then follows the pinned Farcaster starter
+        // pack headlessly (`FarcasterStarterPack`, 2026-08-08) — no sheet
+        // needed, since there's nothing to search or pick between (Farcaster's
+        // client API has no keyless browse/search, so unlike Bluesky's this
+        // pack is pinned in code, not fetched). Reports hydration the same way
+        // `-followsProbe`/`-starterPackProbe` do — a landed count alone can't
+        // tell a hydrated face from a blank one — then actually follows, so a
+        // rerun's delta (should read 0 new) proves the dedupe.
+        Hook(key: "fcPackProbe") { spec, _ in
+            Task { @MainActor in
+                let members = await FarcasterStarterPack.members()
+                let faces = members.filter { $0.avatarURL != nil }.count
+                let named = members.filter { $0.displayName != nil }.count
+                NSLog("fcPackProbe: %d of %d pinned resolved, %d with a face, %d with a display name",
+                      members.count, FarcasterStarterPack.people.count, faces, named)
+                for m in members.prefix(3) {
+                    NSLog("fcPackProbe member · %@ (@%@) fid=%d face=%@",
+                          m.displayName ?? m.username, m.username, m.fid, m.avatarURL ?? "nil")
+                }
+                guard spec == "YES" else { return }
+                let n = FarcasterStarterPack.followAll()
+                NSLog("fcPackProbe: followed %d new", n)
+            }
+        },
         // `-inboundProbe YES` reports the INBOUND half's state across both
         // networks (2026-07-31) — which accounts are marked yours, how many of
         // your own recent posts are eligible for the likes/replies reads, how
