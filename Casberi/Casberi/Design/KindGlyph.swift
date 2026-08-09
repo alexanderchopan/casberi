@@ -254,6 +254,10 @@ enum BridgeGlyph {
         case "posthog":      return "chart.bar.xaxis"
         case "cloudflare":   return "cloud.fill"
         case "cursor":       return "cursorarrow"
+        // A session transcript is a terminal recording, not a chat — the
+        // "claude"/"chatgpt"/"gemini" bubble is the wrong claim here (those
+        // are message-shaped imports; this one imports what a CLI wrote).
+        case "claude code":  return "terminal"
         case "stocktwits":   return "bubble.left.and.bubble.right"
         case "hugging face": return "face.smiling"
         case "circle x402":  return "dollarsign.circle"

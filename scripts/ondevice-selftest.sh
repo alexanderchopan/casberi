@@ -6,7 +6,11 @@
 #     — Header           (the 12-byte language tag on every stored vector)
 #   Casberi/Casberi/Model/RelatedThings.swift
 #     — normalizedTitle  (what makes two saves "the same thing")
-#     — canonicalLink    (same, for links, once the tracking junk is off)
+#     — canonicalLink    (the Thing-shaped door onto ThingLinks below)
+#   Casberi/Casberi/Model/ThingLinks.swift
+#     — canonicalLink / trackingParams (same, for links, once the tracking
+#       junk is off — moved here 2026-08-08 so the "points at this" shelf and
+#       the Related shelf share one definition of "the same link")
 #   Casberi/Casberi/Model/ScreenshotFacts.swift
 #     — dates            (the deterministic half of the calendar hand-off)
 #   Casberi/Casberi/Model/ScreenshotNaming.swift
@@ -43,7 +47,12 @@ FACTS="Casberi/Casberi/Model/ScreenshotFacts.swift"
 NAMING="Casberi/Casberi/Model/ScreenshotNaming.swift"
 RETRIEVER="Casberi/Casberi/Model/Retriever.swift"
 ASKCMD="Casberi/Casberi/Model/AskCommands.swift"
-for f in "$EMBED" "$RELATED" "$FACTS" "$NAMING" "$RETRIEVER" "$ASKCMD"; do
+# trackingParams + the real canonicalLink(_ raw:) moved out of RELATED into
+# here (2026-08-08, prd §340) so "you kept this before" and "mentions this"
+# share one canonicalizer; RELATED's own canonicalLink is now a one-line
+# forward into this file, extracted separately below.
+THINGLINKS="Casberi/Casberi/Model/ThingLinks.swift"
+for f in "$EMBED" "$RELATED" "$FACTS" "$NAMING" "$RETRIEVER" "$ASKCMD" "$THINGLINKS"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -135,9 +144,31 @@ TMP=$(mktemp -d /tmp/ondevice-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT
 
 # --- extract the shipped functions -----------------------------------------
-python3 - "$EMBED" "$RELATED" "$FACTS" "$NAMING" "$TMP/extracted.swift" <<'PY'
+python3 - "$EMBED" "$RELATED" "$FACTS" "$NAMING" "$THINGLINKS" "$TMP/extracted.swift" <<'PY'
 import sys
-embed, related, facts, naming, out = sys.argv[1:6]
+embed, related, facts, naming, thinglinks, out = sys.argv[1:7]
+
+def _find_close(src, open_index, open_ch, close_ch):
+    """Depth-match `open_ch`/`close_ch` from `open_index`, treating a
+    double-quoted string literal's contents as opaque — a bare `}`/`]` typed
+    inside a string (e.g. a punctuation-stripping character set, as
+    ThingLinks.canonicalLink's own trim loop carries) would otherwise close
+    the match early, silently truncating the extraction mid-body."""
+    depth, k, in_string = 0, open_index, False
+    while k < len(src):
+        c = src[k]
+        if in_string:
+            if c == "\\": k += 2; continue
+            if c == '"': in_string = False
+        elif c == '"':
+            in_string = True
+        elif c == open_ch:
+            depth += 1
+        elif c == close_ch:
+            depth -= 1
+            if depth == 0: return k
+        k += 1
+    sys.exit(f"✗ extraction failed: unterminated {open_ch!r}...{close_ch!r} block")
 
 def block(path, signature, kind="brace"):
     """The whole declaration whose header line contains `signature`,
@@ -148,13 +179,7 @@ def block(path, signature, kind="brace"):
         sys.exit(f"✗ extraction failed: {signature!r} not found in {path}")
     start = src.rfind("\n", 0, i) + 1
     j = src.index("{", i)
-    depth, k = 0, j
-    while k < len(src):
-        if src[k] == "{": depth += 1
-        elif src[k] == "}":
-            depth -= 1
-            if depth == 0: break
-        k += 1
+    k = _find_close(src, j, "{", "}")
     return src[start:k+1].replace("private ", "")
 
 def line(path, signature):
@@ -176,13 +201,7 @@ def bracket(path, signature):
         sys.exit(f"✗ extraction failed: {signature!r} not found in {path}")
     start = src.rfind("\n", 0, i) + 1
     j = src.index("[", i)
-    depth, k = 0, j
-    while k < len(src):
-        if src[k] == "[": depth += 1
-        elif src[k] == "]":
-            depth -= 1
-            if depth == 0: break
-        k += 1
+    k = _find_close(src, j, "[", "]")
     return src[start:k+1].replace("private ", "")
 
 pieces = [
@@ -198,9 +217,18 @@ pieces = [
     "enum EmbeddingIndex {",
     block(embed, "enum Header {"),
     "}\n",
+    # The real canonicalizer lives here now (2026-08-08, prd §340) — shared
+    # with the "points at this" shelf, so RelatedThings' own canonicalLink
+    # below is just the Thing-shaped door onto it.
+    "enum ThingLinks {",
+    bracket(thinglinks, "static let trackingParams"),
+    # The specific `(_ raw: String)` signature, not a prefix match against the
+    # earlier plural `canonicalLinks(in:)` — `find` would otherwise return
+    # that extraction function instead of the canonicalizer itself.
+    block(thinglinks, "static func canonicalLink(_ raw: String)"),
+    "}\n",
     "enum RelatedThings {",
     block(related, "static func normalizedTitle"),
-    bracket(related, "static let trackingParams"),
     block(related, "static func canonicalLink"),
     "}\n",
     "enum ScreenshotFacts {",

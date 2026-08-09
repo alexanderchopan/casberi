@@ -152,9 +152,23 @@ grep -q 'installedSchemes.contains("obsidian")' "$VERBS" \
   || { echo "✗ the Obsidian verb is ungated — an unclaimed scheme is refused"; \
        echo "  asynchronously and reports success, so it would be a disc that does nothing"; exit 1; }
 
-grep -q 'static func backlinks' "$LINKS" \
-  || { echo "✗ NoteLinks.backlinks is gone — the inverse graph is the half a note"; \
+# The inverse graph retired OUT of this file 2026-08-08 (prd §340), into
+# ThingLinks.pointingAt/ThingLinksSource — generalized to any thing, not just
+# an Obsidian note. This guard moved with it: the claim is no longer "NoteLinks
+# carries a backlinks function" but "the successor still exists and still
+# reads Obsidian's wikilinks", which is what NoteLinks.swift's own trailer
+# comment documents as the replacement.
+THINGLINKS="Casberi/Casberi/Model/ThingLinks.swift"
+THINGLINKS_SRC="Casberi/Casberi/Model/ThingLinksSource.swift"
+for f in "$THINGLINKS" "$THINGLINKS_SRC"; do
+  [[ -f "$f" ]] || { echo "✗ $f not found — the inverse graph's new home is gone"; exit 1; }
+done
+grep -q 'static func pointingAt' "$THINGLINKS" \
+  || { echo "✗ ThingLinks.pointingAt is gone — the inverse graph is the half a note"; \
        echo "  cannot carry itself"; exit 1; }
+grep -q '"Obsidian"' "$THINGLINKS_SRC" \
+  || { echo "✗ ThingLinksSource no longer names Obsidian as a wikilink source —"; \
+       echo "  a vault's backlinks would silently stop feeding the shelf"; exit 1; }
 
 TMP=$(mktemp -d /tmp/obsidian-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT
