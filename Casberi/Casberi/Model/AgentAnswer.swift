@@ -286,6 +286,10 @@ enum AgentKey {
         // The model choice goes too: it was picked from that key's own list,
         // and a different key on the same provider may not be entitled to it.
         AgentModelStore.set(nil, for: provider)
+        // The credit reading goes with it (2026-08-09) — a different
+        // OpenRouter key may carry a different limit entirely, and the old
+        // bucket must not suppress a real crossing on the new one.
+        if provider == .openrouter { OpenRouterCredits.clear() }
     }
 
     /// The tail of a stored key for the settings line ("…3kQA") — enough to
@@ -520,6 +524,17 @@ enum AgentAnswer {
                 || (json["api_key_blocked"] as? Bool ?? false)
                 || (json["api_key_disabled"] as? Bool ?? false)
             return blocked ? .blocked : .accepted
+        }
+        // OpenRouter's sibling read (2026-08-09): the SAME free `/v1/auth/key`
+        // response Grok's block above reads for its own reason also carries
+        // the key's real spend (`data.usage`, in dollars) and — when the key
+        // has one — a hard `data.limit`/`data.limit_remaining`. Never fails
+        // the check on a parse miss (unlike Grok's block flags, this is
+        // purely informational — a key that answers 200 here is accepted
+        // whether or not its body happens to parse).
+        if provider == .openrouter, verdict == .accepted,
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            OpenRouterCredits.record(json: json)
         }
         return verdict
     }

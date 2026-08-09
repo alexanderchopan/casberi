@@ -354,6 +354,155 @@ mutate "money arrivals stop collapsing (four dust transfers, four buzzes)" \
 mutate "the two groups share one count, so an alarm absorbs transfers" \
        's/matching: \{ \$0\.kind == \.moneyIn \}/matching: { \$0.cls != .whisper }/'
 
+# ── NotifySweep.classify() — the actual bridge-specific dispatch ───────────
+#
+# Everything above tests NotifyPlan.swift's PURE judgement (severity, batching,
+# quiet hours) — it has never once exercised NotifySweep.swift's classify(),
+# the function that decides WHICH rows become notifications at all. That gap
+# is real: classify() depends on the real `Thing` (a SwiftData @Model class)
+# plus ASCVersionState/WalletIngest/StripeWatch/AppleWalletBridge, none of
+# which a Foundation-only harness can compile against directly. This section
+# compiles NotifySweep.swift and NotifyPlan.swift WHOLE AND UNMODIFIED against
+# a plain stand-in Thing and minimal stubs for the other four types — the
+# `retriever-selftest.sh`/`cursor-selftest.sh` shape, sized to what classify()
+# actually touches.
+#
+# Scoped ON PURPOSE to the branches this pass ADDED (positionAtRisk,
+# agentRunFailed, runningLow) — the pre-existing branches (ASC, wallet
+# approvals, Privacy Pools, Peer, social, Apple Wallet, money-in, Stripe) are
+# a real coverage gap too, but backfilling them is its own pass, not a side
+# effect of this one; the stubs for those four types exist ONLY so the file
+# compiles, and are not asserted against.
+echo "── NotifySweep.classify() (the branches this pass added) ──"
+sweepwork="$(mktemp -d)"
+trap 'rm -rf "$sweepwork"' EXIT
+
+cat > "$sweepwork/Stubs.swift" <<'SWIFT'
+import Foundation
+
+// A plain stand-in for the real `Thing` (Shared/Thing.swift) — every stored
+// property `NotifySweep.swift` reads, nothing else. Not a SwiftData @Model:
+// classify()/plans()/skipCensus()/art() never touch a ModelContext, only
+// property values, so a plain class is the whole story.
+final class Thing {
+    var id = UUID()
+    var sourceRef: String?
+    var socialContext: String?
+    var source: String = "You"
+    var tags: [String] = []
+    var dueAt: Date?
+    var transferDirection: String?
+    var transferUSD: Double?
+    var isFlagged: Bool = false
+    var isLive: Bool = true
+    var capturedAt: Date = Date()
+    var title: String = ""
+    var previewImageData: Data?
+    var authorAvatarURL: String?
+}
+
+// COMPILE-ONLY stand-ins for the four other types classify() names — real
+// shapes live in AppStoreConnectBridge.swift/WalletIngest.swift/
+// StripeBridge.swift/AppleWalletBridge.swift respectively. Good enough for
+// the ASC/wallet-approval/Stripe/Apple-Wallet branches to COMPILE; this
+// harness does not assert anything about those branches (see header above).
+enum ASCVersionState: String {
+    case rejected = "REJECTED", metadataRejected = "METADATA_REJECTED"
+    case invalidBinary = "INVALID_BINARY", inReview = "IN_REVIEW"
+    var alarming: Bool { self == .rejected || self == .metadataRejected || self == .invalidBinary }
+}
+enum WalletIngest { static let holdingFloor: Double = 1.0 }
+enum StripeWatch { static let source = "Stripe" }
+enum AppleWalletBridge { static let sourceName = "Apple Wallet" }
+SWIFT
+
+cat > "$sweepwork/main.swift" <<'SWIFT'
+import Foundation
+
+var checks = 0, bad = 0
+func ok(_ cond: Bool, _ what: String) {
+    checks += 1
+    if !cond { bad += 1; print("  ✗ \(what)") }
+}
+
+func row(ref: String, source: String = "Wallet", tags: [String] = []) -> Thing {
+    let t = Thing()
+    t.sourceRef = ref
+    t.source = source
+    t.tags = tags
+    return t
+}
+
+// `NotifySweep` is `@MainActor` (it drives real bridge reads elsewhere in the
+// app); a bare command-line `main.swift`'s top-level code is nonisolated, so
+// this runs the whole fixture pass through `assumeIsolated` — a runtime
+// assertion that we're really on the main actor's executor, true here since
+// this process is single-threaded and never hops.
+@MainActor
+func runFixtures() {
+    let now = Date()
+
+    // ── positionAtRisk: Aave/Morpho share `wallet:defi:`, Hyperliquid its own ──
+    ok(NotifySweep.classify(row(ref: "wallet:defi:aave:ethereum:0xabc:1700000000"), now: now) == .positionAtRisk,
+       "an Aave risk-crossing row classifies as positionAtRisk")
+    ok(NotifySweep.classify(row(ref: "wallet:defi:morpho:base:0xabc:1700000000"), now: now) == .positionAtRisk,
+       "a Morpho risk-crossing row classifies as positionAtRisk")
+    ok(NotifySweep.classify(row(ref: "hyperliquid:risk:eth-0xabc:1700000000"), now: now) == .positionAtRisk,
+       "a Hyperliquid liquidation-proximity row classifies as positionAtRisk")
+    // A ROOM head or any other Wallet row outside the `wallet:defi:` namespace
+    // must not be swallowed by a loose prefix.
+    ok(NotifySweep.classify(row(ref: "wallet:approval:ethereum:0xabc:1700000000"), now: now) != .positionAtRisk,
+       "an approval ref is not mistaken for a risk crossing")
+
+    // ── agentRunFailed: Cursor, and ONLY the error outcome ────────────────────
+    ok(NotifySweep.classify(row(ref: "cursor:agent:abc123", source: "Cursor", tags: ["Agent run", "Failed"]), now: now)
+       == .agentRunFailed, "a Cursor run tagged Failed classifies as agentRunFailed")
+    ok(NotifySweep.classify(row(ref: "cursor:agent:abc123", source: "Cursor", tags: ["Agent run", "Expired"]), now: now)
+       == nil, "an Expired Cursor run does not alarm — administrative, not a failure")
+    ok(NotifySweep.classify(row(ref: "cursor:agent:abc123", source: "Cursor", tags: ["Agent run", "Cancelled"]), now: now)
+       == nil, "a Cancelled Cursor run does not alarm")
+    ok(NotifySweep.classify(row(ref: "cursor:agent:abc123", source: "Cursor", tags: ["Agent run", "PR"]), now: now)
+       == nil, "a successful Cursor run (no outcome tag) does not alarm")
+
+    // ── runningLow: four bridges, one kind ─────────────────────────────────────
+    ok(NotifySweep.classify(row(ref: "openrouter:credits:low:1700000000", source: "OpenRouter"), now: now)
+       == .runningLow, "OpenRouter's low-credit crossing classifies as runningLow")
+    ok(NotifySweep.classify(row(ref: "bitrefill:balance:low:1700000000", source: "Bitrefill"), now: now)
+       == .runningLow, "Bitrefill's low-balance crossing classifies as runningLow")
+    ok(NotifySweep.classify(row(ref: "stripe:runway:low:1700000000", source: "Stripe", tags: ["Runway"]), now: now)
+       == .runningLow, "Stripe's runway-low crossing classifies as runningLow")
+    ok(NotifySweep.classify(row(ref: "github:ratelimit:low:1700000000", source: "GitHub"), now: now)
+       == .runningLow, "GitHub's rate-limit crossing classifies as runningLow")
+    // The stripe:runway: prefix must win BEFORE the tag-based Stripe dispute/
+    // silence block further down `classify` — a runway row carries no
+    // "Dispute"/"Silence" tag, so if the prefix check didn't return early
+    // this would fall through to nil instead.
+    ok(NotifySweep.classify(row(ref: "stripe:runway:low:1700000000", source: "Stripe"), now: now) != nil,
+       "a runway row is classified by its ref prefix, not by falling through to Stripe's tag checks")
+
+    // ── headline() never returns empty for a kind classify() can produce ──────
+    for k: NotifyKind in [.positionAtRisk, .agentRunFailed, .runningLow] {
+        ok(!NotifySweep.headline(k).isEmpty, "\(k) has a non-empty headline")
+    }
+}
+
+MainActor.assumeIsolated { runFixtures() }
+
+if bad == 0 { print("  \(checks) assertions passed"); exit(0) }
+print("  \(bad) of \(checks) FAILED")
+exit(1)
+SWIFT
+
+cp "$PLAN" "$sweepwork/NotifyPlan.swift"
+cp "$SWEEP" "$sweepwork/NotifySweep.swift"
+rm -f "$sweepwork/harness"
+( cd "$sweepwork" && swiftc -O -o harness Stubs.swift NotifyPlan.swift NotifySweep.swift main.swift 2>&1 | grep -E 'error:' || true )
+if [[ -x "$sweepwork/harness" ]]; then
+  "$sweepwork/harness" || fail=1
+else
+  echo "  ✗ classify() fixtures: did not compile"; fail=1
+fi
+
 if [[ $fail -eq 0 ]]; then
   echo "✓ notify self-test passed"
 else

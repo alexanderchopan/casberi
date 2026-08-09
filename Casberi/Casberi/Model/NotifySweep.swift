@@ -151,6 +151,30 @@ enum NotifySweep {
         if ref.hasPrefix("wallet:approval:") || ref.hasPrefix("wallet:permit2:") {
             return .approvalGranted
         }
+        // — DeFi liquidation proximity (2026-08-09): Aave and Morpho share the
+        //   `wallet:defi:` prefix (`WalletDeFi.sync`/`MorphoDeFi.sync`),
+        //   Hyperliquid mints its own (`HyperliquidDeFi`'s risk bucket). Both
+        //   land ONLY on a fresh crossing already (the bucket-crossing shape
+        //   this file's sibling functions use), so nothing here re-filters —
+        //   every row landed under either prefix IS the crossing.
+        if ref.hasPrefix("wallet:defi:") || ref.hasPrefix("hyperliquid:risk:") {
+            return .positionAtRisk
+        }
+        // — Cursor: a cloud agent run that ended in an ERROR, and only that —
+        //   Expired/Cancelled are administrative, not something gone wrong.
+        //   Tag-based rather than ref-based (`cursor:agent:<id>` alone can't
+        //   say which outcome), the Stripe/Apple-Wallet tag-check shape.
+        if ref.hasPrefix("cursor:agent:"), thing.tags.contains("Failed") {
+            return .agentRunFailed
+        }
+        // — Running low: a key/balance/quota crossed under its own floor
+        //   (2026-08-09) — OpenRouter credits, a Bitrefill balance, a Stripe
+        //   payout runway, a GitHub rate limit. Four different bridges, one
+        //   kind, since the news reads the same regardless of which number.
+        if ref.hasPrefix("openrouter:credits:low:") || ref.hasPrefix("bitrefill:balance:low:")
+            || ref.hasPrefix("stripe:runway:low:") || ref.hasPrefix("github:ratelimit:low:") {
+            return .runningLow
+        }
         // — Privacy Pools: the two status flips, and only those. A deposit and
         //   a ragequit are things that happened because YOU did them; being
         //   told about your own tap is noise.
@@ -270,6 +294,7 @@ enum NotifySweep {
         switch kind {
         case .disputeOpened:    return String(localized: "Money challenged")
         case .deadlineNear:     return String(localized: "Due soon")
+        case .positionAtRisk:   return String(localized: "Close to liquidation")
         case .approvalGranted:  return String(localized: "Something new can move your funds")
         case .poolProofNeeded:  return String(localized: "Privacy Pools needs a response")
         case .poolCleared:      return String(localized: "Clear to withdraw")
@@ -280,6 +305,8 @@ enum NotifySweep {
         // body, so a headline repeating it would say one word twice. This says
         // who decided, which the row doesn't.
         case .appRejected:      return String(localized: "App Review turned it down")
+        case .agentRunFailed:   return String(localized: "A Cursor agent run failed")
+        case .runningLow:       return String(localized: "Running low")
         case .moneyIn:          return String(localized: "Money arrived")
         case .payoutPaid:       return String(localized: "Paid out")
         case .likesReceived:    return String(localized: "Liked your post")

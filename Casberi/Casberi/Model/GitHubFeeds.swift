@@ -105,6 +105,84 @@ final class GitHubFeeds {
     }
 }
 
+/// GitHub's own request budget, read off two headers EVERY authenticated
+/// response already carries — no endpoint of its own, so this piggybacks
+/// whatever call the caller was making anyway rather than spending a new one
+/// (2026-08-09). `login(token:)` below is the one call every refresh already
+/// makes unconditionally, so it's the natural place to read them.
+///
+/// The DeFi health-factor bucket shape (`WalletDeFi.sync`/`MorphoDeFi.sync`)
+/// applied to a rate limit instead of a health factor: a Thing lands once, on
+/// the crossing under the floor, never re-lands while it stays low, and
+/// re-arms the moment GitHub's own hourly reset brings the budget back up.
+/// ABSOLUTE, not relative-to-history like Bitrefill's/Stripe's own balances
+/// below — GitHub states its own ceiling on every response, so there's no
+/// need to build a baseline first, and (like the Aave/Morpho risk crossing)
+/// this can fire on the very FIRST read if the budget is already spent: a
+/// token connected mid-throttle is exactly the case worth surfacing right
+/// away, not after building up history to notice it.
+///
+/// UNMEASURED against a live token on this build host, though the header
+/// names themselves (`X-RateLimit-Remaining`/`X-RateLimit-Limit`) are
+/// GitHub's own long-documented, stable REST convention — the crossing
+/// FRACTION below is a guess, not measured.
+enum GitHubRateLimit {
+    private static let limitKey = "github.ratelimit.limit"
+    private static let remainingKey = "github.ratelimit.remaining"
+    private static let bucketKey = "github.ratelimit.bucket"   // "low" | "ok"
+
+    /// Under 10% of the hourly budget counts as running low. GitHub's
+    /// authenticated REST budget is 5,000/hour, so this is ~500 requests —
+    /// comfortably above what one foreground sweep spends (a handful of feed
+    /// reads), low enough to mean "keep going like this and you'll be
+    /// throttled soon." A guess, not measured against real usage.
+    static let lowFraction = 0.1
+
+    static func isLow(limit: Int, remaining: Int) -> Bool {
+        guard limit > 0, remaining >= 0 else { return false }
+        return Double(remaining) <= Double(limit) * lowFraction
+    }
+
+    /// Reads the two headers off a response, updates the stored bucket, and
+    /// hands back a Thing ONLY on a fresh crossing into "low" — nil is the
+    /// normal answer on every other pass (no headers, still healthy, or
+    /// already alerted for this crossing). Pure: the caller (`login`, then
+    /// `all`) appends the result to the ordinary `[Thing]` array the generic
+    /// dedupe-and-land loop in `TokenIngest.refresh` already inserts, the
+    /// same shape `BitrefillFetch.refreshBalance` uses for its own low-
+    /// balance alert — no separate `ModelContext` plumbing needed.
+    static func checkLow(_ response: HTTPURLResponse) -> Thing? {
+        guard let remainingText = response.value(forHTTPHeaderField: "X-RateLimit-Remaining"),
+              let limitText = response.value(forHTTPHeaderField: "X-RateLimit-Limit"),
+              let remaining = Int(remainingText), let limit = Int(limitText)
+        else { return nil }
+        let d = UserDefaults.standard
+        d.set(limit, forKey: limitKey)
+        d.set(remaining, forKey: remainingKey)
+        let bucket = isLow(limit: limit, remaining: remaining) ? "low" : "ok"
+        let last = d.string(forKey: bucketKey)
+        d.set(bucket, forKey: bucketKey)
+        guard bucket == "low", last != "low" else { return nil }
+        let title = String(localized:
+            "Your GitHub API rate limit is running low — \(remaining) of \(limit) requests left this hour")
+        return Thing(kind: .reminder, title: IngestSupport.titleLine(title),
+                    content: "https://github.com/settings/tokens",
+                    source: "GitHub", capturedAt: .now,
+                    sourceRef: "github:ratelimit:low:\(Int(Date.now.timeIntervalSince1970))")
+    }
+
+    /// The last-read numbers, for the probe and for a disconnect's cleanup —
+    /// `TokenBridge.onRemove()`'s per-bridge teardown reads this the way
+    /// `BitrefillBalance.clear()`/`StripeAccount.clear()` clear their own
+    /// cached readings.
+    static func clear() {
+        let d = UserDefaults.standard
+        d.removeObject(forKey: limitKey)
+        d.removeObject(forKey: remainingKey)
+        d.removeObject(forKey: bucketKey)
+    }
+}
+
 /// The per-feed fetches — each one or two GETs against GitHub's own API with
 /// the stored token, landing things the caller dedupes on `sourceRef`. Mirrors
 /// the other TokenIngest fetches: build Thing values here (off-main), the
@@ -127,11 +205,16 @@ enum GitHubFeedFetch {
 
     /// Who the token belongs to — the identity every activity feed needs, and
     /// the one call that tells a bad token from an empty feed (a rejected token
-    /// answers 401 here, so the caller can retire it).
-    static func login(token: String) async -> String? {
-        guard let user = await IngestSupport.getJSON("\(api)/user", auth: "Bearer \(token)")
-                as? [String: Any] else { return nil }
-        return user["login"] as? String
+    /// answers 401 here, so the caller can retire it). Also the one call every
+    /// refresh makes unconditionally, so it doubles as where the rate-limit
+    /// headers get read (`alert`, 2026-08-09) — nil on every pass but the rare
+    /// one where the budget just crossed under the floor.
+    static func login(token: String) async -> (login: String, alert: Thing?)? {
+        let (json, status, response) = await IngestSupport.getJSONResponse(
+            "\(api)/user", auth: "Bearer \(token)")
+        guard status == 200, let user = json as? [String: Any],
+              let login = user["login"] as? String else { return nil }
+        return (login, response.flatMap(GitHubRateLimit.checkLow))
     }
 
     /// Every enabled feed, combined, plus new releases from directly-watched
@@ -148,7 +231,8 @@ enum GitHubFeedFetch {
         let feeds = Array(GitHubFeeds.enabledFromDefaults())
         let watchedRepos = GitHubRepoWatch.watchedRepos(context: context)
         guard !feeds.isEmpty || !watchedRepos.isEmpty else { return [] }
-        guard let login = await login(token: token) else { return nil }
+        guard let identity = await login(token: token) else { return nil }
+        let login = identity.login
 
         // A repo that's both starred and directly watched would otherwise
         // have its `.../releases` endpoint hit twice this refresh (once via
@@ -169,6 +253,7 @@ enum GitHubFeedFetch {
 
         var things = await feedBatches.flatMap { $0 }
         things += await extraReleases
+        if let alert = identity.alert { things.append(alert) }
         return things
     }
 

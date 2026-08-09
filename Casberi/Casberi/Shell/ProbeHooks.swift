@@ -454,6 +454,34 @@ enum ProbeHooks {
                       n.map(String.init) ?? "FAILED")
             }
         },
+        // `-bitrefillBalanceProbe YES` — the low-balance crossing, phase by
+        // phase (2026-08-09, connect first via `-tokenBridge "Bitrefill:<key>"`).
+        // Runs the SAME balance read a real sync makes (no separate request),
+        // and reports before/after/high-water-mark/bucket so the crossing
+        // decision is visible without waiting for a real spending spree. An
+        // account fresh to this device never lands an alert on its FIRST run
+        // — the high-water mark has just been seeded from that very read, so
+        // there's no history yet to call the balance low relative to.
+        Hook(key: "bitrefillBalanceProbe") { _, _ in
+            guard let token = TokenVault.get(TokenBridge.bitrefill.tokenKey) else {
+                NSLog("[Casberi] bitrefillBalanceProbe: no stored token — connect via -tokenBridge \"Bitrefill:<key>\"")
+                return
+            }
+            Task {
+                let before = BitrefillBalance.rawAmount
+                let alert = await BitrefillFetch.probeBalance(token: token)
+                NSLog("[Casberi] bitrefillBalanceProbe: before=%@ now=%@ high=%@ bucket=%@",
+                      before.map { String(format: "%.4f", $0) } ?? "none",
+                      BitrefillBalance.rawAmount.map { String(format: "%.4f", $0) } ?? "none",
+                      BitrefillBalance.highAmount.map { String(format: "%.4f", $0) } ?? "none",
+                      BitrefillBalance.bucket ?? "none")
+                if let alert {
+                    NSLog("[Casberi] bitrefillBalanceProbe: WOULD LAND → %@", alert.title)
+                } else {
+                    NSLog("[Casberi] bitrefillBalanceProbe: nothing to land (no history yet, not low, or already alerted)")
+                }
+            }
+        },
         // `-trelloProbe YES` reports Trello's read phase by phase with the
         // STORED credentials — the measure tool for a bridge authored against
         // the docs and never run live (see `TrelloAuth`'s UNMEASURED note).
@@ -3387,12 +3415,50 @@ enum ProbeHooks {
                 NSLog("GitHub feed probe: no token — connect GitHub first"); return
             }
             Task { @MainActor in
-                guard let login = await GitHubFeedFetch.login(token: token) else {
+                guard let identity = await GitHubFeedFetch.login(token: token) else {
                     NSLog("GitHub feed probe (%@): FAILED — token rejected", feed.rawValue); return
                 }
-                let things = await GitHubFeedFetch.fetch(feed, login: login, token: token)
+                let things = await GitHubFeedFetch.fetch(feed, login: identity.login, token: token)
                 NSLog("GitHub feed probe (%@): %@", feed.rawValue,
                       things.map { "\($0.count) things" } ?? "FAILED")
+            }
+        },
+        // `-githubRateLimitProbe YES` — the rate-limit crossing, phase by
+        // phase (2026-08-09). Reads the STORED token, hits `/user` (the same
+        // call `login(token:)` makes every refresh — no extra request), and
+        // NSLogs the two headers plus the bucket decision, then whether a
+        // Thing would land. An empty/quiet result has three causes and only
+        // one is a bug: no token, GitHub didn't answer the two headers at
+        // all (would be a real drift — they've been stable and documented for
+        // years), or the budget is simply nowhere near the floor.
+        Hook(key: "githubRateLimitProbe") { _, _ in
+            guard let token = TokenVault.get(TokenBridge.github.tokenKey) else {
+                NSLog("[Casberi] githubRateLimitProbe: no stored token — connect via -tokenBridge \"GitHub:<token>\"")
+                return
+            }
+            Task {
+                let (_, status, response) = await IngestSupport.getJSONResponse(
+                    "https://api.github.com/user", auth: "Bearer \(token)")
+                guard let response else {
+                    NSLog("[Casberi] githubRateLimitProbe: HTTP %d — unreachable, no response to read headers from", status)
+                    return
+                }
+                let remainingText = response.value(forHTTPHeaderField: "X-RateLimit-Remaining") ?? "(absent)"
+                let limitText = response.value(forHTTPHeaderField: "X-RateLimit-Limit") ?? "(absent)"
+                let resetText = response.value(forHTTPHeaderField: "X-RateLimit-Reset") ?? "(absent)"
+                NSLog("[Casberi] githubRateLimitProbe: HTTP %d remaining=%@ limit=%@ reset=%@",
+                      status, remainingText, limitText, resetText)
+                if let remaining = Int(remainingText), let limit = Int(limitText) {
+                    NSLog("[Casberi] githubRateLimitProbe: low=%@ (floor=%.0f%% of %d = %d)",
+                          GitHubRateLimit.isLow(limit: limit, remaining: remaining) ? "YES" : "no",
+                          GitHubRateLimit.lowFraction * 100, limit,
+                          Int(Double(limit) * GitHubRateLimit.lowFraction))
+                }
+                if let alert = GitHubRateLimit.checkLow(response) {
+                    NSLog("[Casberi] githubRateLimitProbe: WOULD LAND → %@", alert.title)
+                } else {
+                    NSLog("[Casberi] githubRateLimitProbe: nothing to land (not low, or this crossing already alerted)")
+                }
             }
         },
         // `-ghGraphDemo YES` seeds a synthetic contribution year and

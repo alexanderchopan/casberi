@@ -645,6 +645,10 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     func onRemove(reconnecting: Bool = false) {
         switch self {
         case .bitrefill: BitrefillBalance.clear()
+        // Cleared on BOTH callers — a fresh token may belong to a different
+        // account with a different budget, and the stale bucket must not
+        // suppress a real crossing on the new one.
+        case .github:    GitHubRateLimit.clear()
         case .oneclaw:   OneClawAccess.clear()
         case .posthog:   PostHogAccount.clear()
         case .stripe:    StripeAccount.clear()

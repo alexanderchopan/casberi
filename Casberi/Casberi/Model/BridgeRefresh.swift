@@ -385,6 +385,22 @@ enum BridgeRefresh {
                 _ = await TokenIngest.refresh(bridge, context: context)
             }
         }
+        // OpenRouter's credit reading (2026-08-09) — not a `TokenBridge` case
+        // (it's an agent key, not a bridge token), so it needs its own line
+        // rather than riding the loop above. `AgentAnswer.check` is the free
+        // "who am I" read every provider gets at connect time; re-running it
+        // here is what turns a one-time key-check into a periodic monitor,
+        // behind `dueForHeal`'s 10-minute throttle so a busy foreground sweep
+        // doesn't hit OpenRouter every single activation.
+        if connected("openrouter"), BridgeRefresh.dueForHeal("openrouter.credits"),
+           let key = TokenVault.get(AgentProvider.openrouter.vaultKey) {
+            let s = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await AgentAnswer.check(key, provider: .openrouter)
+                let existing = IngestSupport.existingSourceRefs(context)
+                OpenRouterCredits.drainPending(context: context, existing: existing)
+            }
+        }
         // Peer & Privacy Pools ride the watched wallets automatically (prd
         // §207) — reflect that in the catalog every foreground: connected
         // while a wallet is watched, dropped when the last one goes.

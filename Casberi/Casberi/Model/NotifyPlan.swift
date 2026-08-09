@@ -36,6 +36,15 @@ enum NotifyKind: String, Sendable, CaseIterable {
     // — alarm
     case disputeOpened
     case deadlineNear
+    /// A leveraged/borrowed position crossed close to liquidation — Aave,
+    /// Morpho and Hyperliquid all land this shape (`WalletDeFi.sync`/
+    /// `MorphoDeFi.sync`/`HyperliquidDeFi`'s risk-crossing bucket), and share
+    /// ONE kind here because the news is the same regardless of which
+    /// protocol: your collateral is close to being sold. (2026-08-09 —
+    /// these landed as Things since 2026-07-24/07-30 but were never wired
+    /// into `NotifySweep.classify`, so none of them ever reached a lock
+    /// screen.)
+    case positionAtRisk
     case approvalGranted
     case poolProofNeeded
     case poolCleared
@@ -45,6 +54,19 @@ enum NotifyKind: String, Sendable, CaseIterable {
     /// Only the ALARMING verdicts reach here — an approval is welcome news you
     /// will see the moment you open anything, and it already rains in-app.
     case appRejected
+    /// A Cursor cloud agent run finished with an ERROR (2026-08-09) — not
+    /// Expired/Cancelled, which are administrative outcomes rather than
+    /// something having gone wrong. Same wiring gap as `positionAtRisk`: the
+    /// row has landed with a "Failed" tag since the bridge shipped, and
+    /// nothing ever turned that into a notification.
+    case agentRunFailed
+    /// A key/balance/quota crossed under its own "about to stop working"
+    /// floor — OpenRouter credits, a Bitrefill balance, a Stripe payout
+    /// runway, a GitHub API rate limit (2026-08-09). One kind for all four:
+    /// each is a different NUMBER but the same shape of news ("do something
+    /// before this becomes a problem"), and none of them carries a real
+    /// clock the way a Stripe dispute's evidence deadline does.
+    case runningLow
     // — arrival
     case moneyIn
     case payoutPaid
@@ -56,9 +78,9 @@ enum NotifyKind: String, Sendable, CaseIterable {
 
     var cls: NotifyClass {
         switch self {
-        case .disputeOpened, .deadlineNear, .approvalGranted,
+        case .disputeOpened, .deadlineNear, .positionAtRisk, .approvalGranted,
              .poolProofNeeded, .poolCleared, .paymentsSilent, .priceRose,
-             .appRejected:
+             .appRejected, .agentRunFailed, .runningLow:
             return .alarm
         case .moneyIn, .payoutPaid, .likesReceived, .repliesReceived, .followersGained:
             return .arrival
@@ -76,6 +98,13 @@ enum NotifyKind: String, Sendable, CaseIterable {
         switch self {
         case .disputeOpened:    return 100   // money leaving, with a deadline
         case .deadlineNear:     return 90    // a window closing on you
+        // Real risk of loss with NO fixed deadline (it could cross the
+        // liquidation line on the next block, or never) — ranked just under
+        // `deadlineNear` rather than above it, since `isTimeSensitive` below
+        // withholds the Focus-breaking level from exactly this shape of
+        // urgency (no clock stated), and severity here is about which alarm
+        // wins a BATCH, not about how loudly it should ring.
+        case .positionAtRisk:   return 85
         case .approvalGranted:  return 80    // something CAN take funds
         case .poolProofNeeded:  return 70    // action required, no clock stated
         // Action required and no clock stated — `poolProofNeeded`'s class,
@@ -87,13 +116,24 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .paymentsSilent:   return 60    // revenue stopped; nothing to click
         case .poolCleared:      return 50    // good news, act whenever
         case .priceRose:        return 40    // recurring money, already charged
+        // Something you asked to run did not finish — worth knowing, not
+        // urgent: nothing is moving or at risk, a rerun costs a tap.
+        case .agentRunFailed:   return 35
+        // The lowest alarm on purpose — "do this soon" rather than "something
+        // is wrong right now". Ranked under a price rise (money already
+        // left, so at least that one is definite) but still a real severity,
+        // never the `default: 0` an unlisted alarm would silently fall to
+        // and tie with the arrivals it must always outrank in a batch.
+        case .runningLow:       return 20
         default:                return 0     // arrivals/whisper never compete
         }
     }
 
     /// Only a deadline may claim the interruption level that breaks a Focus.
     /// Over-claiming is how a class gets buried by iOS's own summary, so the
-    /// two that carry a real clock are the only two that ask.
+    /// two that carry a real clock are the only two that ask —
+    /// `positionAtRisk` deliberately withholds it despite the real urgency:
+    /// a liquidation proximity has no stated clock, only a live market price.
     var isTimeSensitive: Bool {
         self == .disputeOpened || self == .deadlineNear
     }

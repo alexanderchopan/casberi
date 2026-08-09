@@ -243,6 +243,100 @@ enum StripeSilence {
     }
 }
 
+// MARK: - The payout-runway alert
+
+/// "Your Stripe payout runway is low" (2026-08-09) — the balance's own
+/// low-crossing alert, `BitrefillBalance.checkLow`'s shape applied to
+/// `StripeState.Balance` instead of a personal top-up account.
+///
+/// **This is money you've EARNED and are waiting to be paid out, not a
+/// prepaid quota** — nothing here is "running out of credits", and the copy
+/// says "payout runway" on purpose rather than borrowing OpenRouter's
+/// language for a completely different kind of number. Conflating the two
+/// would be exactly the §83 fake-status problem this codebase names
+/// everywhere else: a balance reading near zero and a service about to stop
+/// answering questions are not the same fact wearing different words.
+///
+/// **The false alarm this had to be built to avoid, and could not fully
+/// solve — documented rather than hidden.** Most Stripe accounts sweep their
+/// `available` balance to (near) zero automatically on every scheduled
+/// payout, which is a completely healthy, ordinary state — not evidence of
+/// anything. Two guards cut the false-positive rate without claiming to
+/// eliminate it: (1) reads AVAILABLE + PENDING together, not available
+/// alone, since pending money is already collected and still arriving, so a
+/// business mid-payout-cycle with a healthy pending balance is not "running
+/// low" even while available briefly reads near zero; (2) requires the same
+/// activity gate `StripeSilence` uses (`verdict != nil` — real, recent
+/// charge volume, not a dormant or brand-new account) before it will say
+/// anything at all. What it does NOT solve: an active business on a daily
+/// automatic payout schedule with thin margins could still see this fire on
+/// a normal day. Re-measure against a real account before trusting the
+/// fraction below — it is a guess, not a measured threshold, exactly like
+/// every other number in this file's UNMEASURED-against-a-live-account
+/// ceiling.
+enum StripeRunway {
+    /// Under 10% of the account's own recent high (available+pending
+    /// combined) — a guess, `BitrefillBalance.lowFraction`'s reasoning:
+    /// relative to the account's OWN history, since there's no absolute
+    /// dollar figure that means the same thing for a $50/month side project
+    /// and a business clearing six figures.
+    static let lowFraction = 0.1
+    /// The smallest high-water mark worth alarming about, in the primary
+    /// currency's own MAJOR units (compared after `StripeMoney.divisor`
+    /// converts minor→major, so it means roughly the same thing across a
+    /// zero-decimal currency like JPY and a three-decimal one like BHD as it
+    /// does for USD) — below this the account has never held enough for
+    /// "running low" to mean anything. A guess, not measured.
+    static let minimumHigh = 20.0
+
+    /// `reading` is inout for the same reason `silenceThings` takes it that
+    /// way: both the bucket and the high-water mark live with the balance,
+    /// and both are readings of the same windowed pass. Returns nil unless
+    /// there's a genuine NEW crossing to report.
+    static func check(reading: inout StripeState.Balance, pulse: [Date]?) -> Thing? {
+        // The activity gate: no real charge history, no runway opinion.
+        guard let pulse, StripeSilence.verdict(timestamps: pulse, now: .now) != nil else {
+            return nil
+        }
+        var combined: [String: Int] = [:]
+        for (c, v) in reading.available { combined[c, default: 0] += v }
+        for (c, v) in reading.pending   { combined[c, default: 0] += v }
+        guard !combined.isEmpty else { return nil }
+
+        var high = reading.highCombined
+        for (c, v) in combined { high[c] = max(high[c] ?? 0, v) }
+        reading.highCombined = high
+
+        // The currency this business is actually measured in — its biggest
+        // historical balance, not necessarily its biggest CURRENT one (a
+        // currency that's momentarily ahead only because everything else
+        // just got paid out shouldn't steal the read).
+        guard let (primary, primaryHigh) = high.max(by: { $0.value < $1.value }), primaryHigh > 0
+        else { return nil }
+        let primaryHighMajor = (Decimal(primaryHigh) / StripeMoney.divisor(for: primary)) as NSDecimalNumber
+        guard primaryHighMajor.doubleValue >= minimumHigh else {
+            reading.runwayLow = false
+            return nil
+        }
+
+        let current = combined[primary] ?? 0
+        guard Double(current) < Double(primaryHigh) * lowFraction else {
+            reading.runwayLow = false
+            return nil
+        }
+        guard !reading.runwayLow else { return nil }
+        reading.runwayLow = true
+
+        let text = StripeMoney.text(current, currency: primary)
+        let title = "Your Stripe payout runway is low — \(text) available and pending"
+        return Thing(kind: .reminder, title: IngestSupport.titleLine(title),
+                    content: StripeAccount.dashboardURL("balance"),
+                    source: StripeWatch.source, capturedAt: .now,
+                    tags: ["Runway"],
+                    sourceRef: "stripe:runway:low:\(Int(Date.now.timeIntervalSince1970))")
+    }
+}
+
 // MARK: - Per-account state (not Things)
 
 /// What the bridge knows between refreshes that isn't a Thing: the balance
@@ -266,6 +360,15 @@ enum StripeState {
         /// a Bool for the same reason: the alert's own day is stamped into its
         /// sourceRef, so a stored "since" would be a field nothing reads.
         var silent: Bool = false
+        /// The payout-runway alert's own bucket (2026-08-09, `StripeRunway`)
+        /// — the `silent` shape applied to a low balance: one alert per
+        /// crossing, cleared the moment the balance recovers.
+        var runwayLow: Bool = false
+        /// The highest AVAILABLE+PENDING this account has shown since Casberi
+        /// started watching it, in MINOR UNITS, per currency — the runway
+        /// alert's own high-water mark (`BitrefillBalance.checkLow`'s shape).
+        /// Not the account's real historical peak; a reconnect resets it.
+        var highCombined: [String: Int] = [:]
     }
 
     private static let key = "stripe.balance"
@@ -693,6 +796,9 @@ enum StripeIngest {
         async let pulseTask = stale ? StripeFetch.chargePulse(key: key) : nil
         let page = await eventPage(key: key)
 
+        // `silence` in name only by history — it now carries every alert
+        // that rides the balance window (the payments-silence alarm AND the
+        // payout-runway one below), not just the first.
         var silence: [Thing] = []
         if var reading = await balanceTask {
             reading.arrivesAt = await arrivalTask
@@ -700,7 +806,17 @@ enum StripeIngest {
             // event pass: it's a STATE too (an account either is or isn't
             // taking money right now), and it costs a request the events don't.
             reading.silent = StripeState.balance().silent
-            silence = silenceThings(await pulseTask, reading: &reading)
+            // The runway bucket + high-water mark are STATE the same way —
+            // carried forward from the persisted reading before this pass's
+            // fresh `StripeFetch.balance` (which built a brand-new `Balance()`
+            // with neither field set) can overwrite them.
+            reading.runwayLow = StripeState.balance().runwayLow
+            reading.highCombined = StripeState.balance().highCombined
+            let pulse = await pulseTask
+            silence = silenceThings(pulse, reading: &reading)
+            if let runway = StripeRunway.check(reading: &reading, pulse: pulse) {
+                silence.append(runway)
+            }
             StripeState.set(reading)
         }
 
@@ -948,8 +1064,9 @@ enum StripeIngest {
     /// first (`-tokenBridge "Stripe:<rk_live_key>"`), then this reads the
     /// STORED key and NSLogs the RAW shapes: HTTP status per endpoint (so 401
     /// wrong-key, 403 missing-scope and 0 unreachable stay distinct), the
-    /// resolved account, the balance buckets, and one line PER event with the
-    /// title it would land wearing.
+    /// resolved account, the balance buckets, the payout-runway crossing
+    /// decision (2026-08-09), and one line PER event with the title it would
+    /// land wearing.
     ///
     /// One NSLog per line on purpose — a joined multi-line message gets
     /// truncated by the log reader (the `-todayProbe` lesson).
@@ -980,11 +1097,28 @@ enum StripeIngest {
             NSLog("[Casberi] stripeProbe account: UNREADABLE (the account scope is optional — events still work)")
         }
 
-        if let reading = await StripeFetch.balance(key: key) {
+        if var reading = await StripeFetch.balance(key: key) {
             NSLog("[Casberi] stripeProbe balance available: %@",
                   reading.available.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: " ") )
             NSLog("[Casberi] stripeProbe balance pending: %@",
                   reading.pending.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: " ") )
+            // The runway crossing decision, over the STORED bucket/high-water
+            // mark (so re-running this probe doesn't reset history) — does
+            // NOT persist the result, so a probe run can't itself land a
+            // duplicate alert the real sweep would also want to land.
+            reading.runwayLow = StripeState.balance().runwayLow
+            reading.highCombined = StripeState.balance().highCombined
+            let pulse = await StripeFetch.chargePulse(key: key)
+            let activity = pulse.flatMap { StripeSilence.verdict(timestamps: $0, now: .now) }
+            NSLog("[Casberi] stripeProbe runway: activityGate=%@ (needs %d+ recent charges, not dormant)",
+                  activity != nil ? "PASS" : "no charge history yet — runway stays silent",
+                  StripeSilence.minCharges)
+            if let runway = StripeRunway.check(reading: &reading, pulse: pulse) {
+                NSLog("[Casberi] stripeProbe runway: WOULD LAND → %@", runway.title)
+            } else {
+                NSLog("[Casberi] stripeProbe runway: nothing to land (no activity yet, not low, or already alerted) high=%@",
+                      reading.highCombined.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: " "))
+            }
         } else {
             NSLog("[Casberi] stripeProbe balance: UNREADABLE")
         }

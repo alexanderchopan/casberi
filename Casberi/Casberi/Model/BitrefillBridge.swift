@@ -34,13 +34,24 @@ enum BitrefillFetch {
     static func things(token: String) async -> [Thing]? {
         guard let orders = await list("\(api)/orders?limit=50", token: token) else { return nil }
         async let invoicesTask = list("\(api)/invoices?limit=50", token: token)
-        async let balanceTask: Void = refreshBalance(token: token)
+        async let balanceTask: Thing? = refreshBalance(token: token)
         var things = orders.compactMap(orderThing)
         if let invoices = await invoicesTask {
             things += invoices.compactMap(depositThing)
         }
-        await balanceTask
+        // The low-balance alert, when this read crossed into it — appended
+        // to the ordinary array like every other row here, so the generic
+        // dedupe-and-land loop in `TokenIngest.refresh` inserts it with no
+        // extra plumbing. nil on every pass but the rare one that crosses.
+        if let alert = await balanceTask { things.append(alert) }
         return things
+    }
+
+    /// `-bitrefillBalanceProbe`'s door into the private read below — reads
+    /// the STORED balance and runs the exact same crossing check a real sync
+    /// would, without duplicating the request logic.
+    static func probeBalance(token: String) async -> Thing? {
+        await refreshBalance(token: token)
     }
 
     /// A purchase: "Amazon.com · $50", the product's artwork as the thumb,
@@ -130,20 +141,24 @@ enum BitrefillFetch {
         thing.priceCurrency = code
     }
 
-    private static func refreshBalance(token: String) async {
+    /// Returns the low-balance alert Thing when this read just crossed into
+    /// it (2026-08-09) — nil on every other pass, the same "nil unless
+    /// there's real news" contract every fetch here follows.
+    @discardableResult
+    private static func refreshBalance(token: String) async -> Thing? {
         guard let root = await IngestSupport.getJSON("\(api)/accounts/balance",
                                                      auth: "Bearer \(token)") as? [String: Any]
-        else { return }
+        else { return nil }
         let node = (root["data"] as? [String: Any]) ?? root
-        guard let amount = PriceFormat.parse(node["balance"] ?? node["amount"]) else { return }
+        guard let amount = PriceFormat.parse(node["balance"] ?? node["amount"]) else { return nil }
+        let currency = node["currency"] as? String ?? "USD"
         // A refill landing is a moment (delight pass 2026-07-21): the balance
         // rising above what it last read, never a drop (topping up isn't
         // news the other direction) — same asymmetric shape as every other
         // moment here. The FIRST read for an account seeds the mark silently.
         let previous = BitrefillBalance.rawAmount
-        BitrefillBalance.set(amount: amount, currency: node["currency"] as? String ?? "USD")
+        BitrefillBalance.set(amount: amount, currency: currency)
         if let previous, amount > previous * 1.0001 {
-            let currency = node["currency"] as? String ?? "USD"
             // `PriceFormat.string` is OPTIONAL, and interpolating it directly
             // rendered the toast as `Optional("$5.00")` — the compiler's
             // debug description, in user-facing copy. Unwrapping keeps the
@@ -156,6 +171,7 @@ enum BitrefillFetch {
                 await MainActor.run { SourceMoments.shared.fire(text, source: "Bitrefill") }
             }
         }
+        return BitrefillBalance.checkLow(amount: amount, currency: currency)
     }
 
     /// The v2 list envelope — `{"meta": …, "data": […]}` — with a fallback
@@ -209,6 +225,9 @@ enum BitrefillFetch {
 enum BitrefillBalance {
     private static let amountKey   = "bitrefill.balance.amount"
     private static let currencyKey = "bitrefill.balance.currency"
+    private static let highAmountKey   = "bitrefill.balance.high"
+    private static let highCurrencyKey = "bitrefill.balance.highCurrency"
+    private static let bucketKey       = "bitrefill.balance.bucket"   // "low" | "ok"
 
     static func set(amount: Double, currency: String) {
         UserDefaults.standard.set(amount, forKey: amountKey)
@@ -218,6 +237,9 @@ enum BitrefillBalance {
     static func clear() {
         UserDefaults.standard.removeObject(forKey: amountKey)
         UserDefaults.standard.removeObject(forKey: currencyKey)
+        UserDefaults.standard.removeObject(forKey: highAmountKey)
+        UserDefaults.standard.removeObject(forKey: highCurrencyKey)
+        UserDefaults.standard.removeObject(forKey: bucketKey)
     }
 
     static var formatted: String? {
@@ -231,5 +253,66 @@ enum BitrefillBalance {
     static var rawAmount: Double? {
         guard UserDefaults.standard.object(forKey: amountKey) != nil else { return nil }
         return UserDefaults.standard.double(forKey: amountKey)
+    }
+
+    /// The highest balance seen since Casberi started watching this account,
+    /// and the current bucket — read-only, for `-bitrefillBalanceProbe`.
+    static var highAmount: Double? {
+        UserDefaults.standard.object(forKey: highAmountKey) as? Double
+    }
+    static var bucket: String? { UserDefaults.standard.string(forKey: bucketKey) }
+
+    /// How far under the account's own recent high the balance must fall to
+    /// count as "running low" — RELATIVE, not an absolute dollar amount,
+    /// because a Bitrefill balance is a personal top-up account with no
+    /// natural ceiling: $10 is plenty for one person's gift-card habit and
+    /// nothing for another's. A guess, not measured — no Bitrefill account
+    /// is reachable from this build host.
+    static let lowFraction = 0.2
+
+    /// The smallest high-water mark worth alarming about at all — below
+    /// this the account has never held enough for "running low" to mean
+    /// anything (same reasoning, same guess-not-measured caveat).
+    static let minimumHigh = 5.0
+
+    /// Lands a Thing the moment the CURRENT balance crosses under
+    /// `lowFraction` of the account's own high-water mark — the DeFi
+    /// health-factor bucket shape (`WalletDeFi.sync`/`MorphoDeFi.sync`)
+    /// applied to a balance instead of a health factor. Fires once per
+    /// crossing (never re-lands while it stays low) and re-arms the moment
+    /// a top-up clears it, so a spending spree costs at most one alert, not
+    /// one per order.
+    ///
+    /// UNLIKE the absolute GitHub/OpenRouter thresholds, this needs history
+    /// before it can say anything: the high-water mark is SEEDED from the
+    /// very first read (there is no "before" to compare against yet), so a
+    /// freshly-connected account never fires on its first sync no matter how
+    /// small its balance is — there's nothing yet to call it low RELATIVE
+    /// to. A currency change resets the high-water mark rather than
+    /// comparing across currencies (a payout-currency switch isn't "running
+    /// low", it's a different number system).
+    static func checkLow(amount: Double, currency: String) -> Thing? {
+        let d = UserDefaults.standard
+        let storedHigh = d.object(forKey: highAmountKey) as? Double
+        let storedCurrency = d.string(forKey: highCurrencyKey)
+        let high = (storedCurrency == currency ? max(storedHigh ?? amount, amount) : amount)
+        d.set(high, forKey: highAmountKey)
+        d.set(currency, forKey: highCurrencyKey)
+
+        guard high >= minimumHigh else {
+            d.set("ok", forKey: bucketKey)
+            return nil
+        }
+        let bucket = amount < high * lowFraction ? "low" : "ok"
+        let last = d.string(forKey: bucketKey)
+        d.set(bucket, forKey: bucketKey)
+        guard bucket == "low", last != "low" else { return nil }
+
+        let amountText = PriceFormat.string(amount, currency: currency) ?? "\(currency) \(amount)"
+        let title = String(localized: "Your Bitrefill balance is running low — \(amountText) left")
+        return Thing(kind: .reminder, title: IngestSupport.titleLine(title),
+                    content: "https://www.bitrefill.com/account/balance",
+                    source: "Bitrefill", capturedAt: .now,
+                    sourceRef: "bitrefill:balance:low:\(Int(Date.now.timeIntervalSince1970))")
     }
 }

@@ -709,6 +709,43 @@ struct RootShell: View {
                           entry.reportedUSD.map { String(format: "$%.4f", $0) } ?? "-")
                 }
             }
+            // Debug hook: `-agentCreditsProbe YES` runs OpenRouter's free
+            // key-check read (`/v1/auth/key`, no tokens billed) with the
+            // STORED key and NSLogs the credit-crossing decision (2026-08-09)
+            // — the measure tool for a bridge that has never been checked
+            // against a live key on this build host. An empty result has
+            // three causes and only one is a bug: no OpenRouter key stored,
+            // the key was rejected (same failure `-byokProbe` would show),
+            // or the key genuinely carries no `limit` (an unlimited/free-tier
+            // key — OpenRouter's own documented meaning for an absent field,
+            // not a read failure).
+            if UserDefaults.standard.bool(forKey: "agentCreditsProbe") {
+                if !AgentKey.isConfigured(.openrouter) {
+                    NSLog("[Casberi] agentCreditsProbe: no OpenRouter key stored — connect via -byokKey \"openrouter:<key>\"")
+                } else if let key = TokenVault.get(AgentProvider.openrouter.vaultKey) {
+                    Task {
+                        let outcome = await AgentAnswer.check(key, provider: .openrouter)
+                        NSLog("[Casberi] agentCreditsProbe: key check → %@", String(describing: outcome))
+                        if let limit = OpenRouterCredits.limit, let remaining = OpenRouterCredits.remaining {
+                            NSLog("[Casberi] agentCreditsProbe: limit=$%.2f remaining=$%.2f bucket=%@ (floor=%@)",
+                                  limit, remaining, OpenRouterCredits.bucket ?? "none",
+                                  limit >= OpenRouterCredits.largeLimitFloor
+                                    ? "$\(OpenRouterCredits.lowAbsoluteFloor) absolute"
+                                    : "\(Int(OpenRouterCredits.lowFraction * 100))% relative")
+                        } else {
+                            NSLog("[Casberi] agentCreditsProbe: no `limit` on this key (unlimited/free-tier — OpenRouter's own meaning) or unreadable")
+                        }
+                        await MainActor.run {
+                            let existing = IngestSupport.existingSourceRefs(modelContext)
+                            if let thing = OpenRouterCredits.drainPending(context: modelContext, existing: existing) {
+                                NSLog("[Casberi] agentCreditsProbe: WOULD LAND → %@", thing.title)
+                            } else {
+                                NSLog("[Casberi] agentCreditsProbe: nothing to land (not low, or already alerted this crossing)")
+                            }
+                        }
+                    }
+                }
+            }
             // Debug hook: `-librarianProbe YES` reports whether the keyed
             // librarian (prd §282's passes, run on a key) is reachable and how
             // much work is waiting — WITHOUT spending anything. `-librarianProbe

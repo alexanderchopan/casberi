@@ -317,6 +317,25 @@ enum IngestSupport {
         return (try? JSONSerialization.jsonObject(with: data), http.statusCode)
     }
 
+    /// Like `getJSONStatus`, but ALSO hands back the raw `HTTPURLResponse` —
+    /// for a caller that needs a response HEADER, not just the status or the
+    /// body (2026-08-09: GitHub's `X-RateLimit-Remaining`/`X-RateLimit-Limit`,
+    /// which every authenticated response carries and no endpoint of its own
+    /// exposes). The response comes back even on a non-200, since a header
+    /// can be worth reading off a failed call too; the body stays nil unless
+    /// the status was 200, exactly like `getJSONStatus`.
+    static func getJSONResponse(_ url: String, auth: String? = nil,
+                                headers: [String: String] = [:],
+                                service: String? = nil)
+        async -> (json: Any?, status: Int, response: HTTPURLResponse?) {
+        guard let u = URL(string: url) else { return (nil, 0, nil) }
+        var request = URLRequest(url: u)
+        apply(auth: auth, headers: headers, to: &request)
+        guard let (data, http) = await send(request, service: service) else { return (nil, 0, nil) }
+        guard http.statusCode == 200 else { return (nil, http.statusCode, http) }
+        return (try? JSONSerialization.jsonObject(with: data), http.statusCode, http)
+    }
+
     /// Like `postJSON`, but hands back the HTTP status alongside the decoded
     /// body so a caller can back off on a 429 (rate limit) or a transient 5xx
     /// instead of treating every non-200 as a permanent failure (2026-07-17:

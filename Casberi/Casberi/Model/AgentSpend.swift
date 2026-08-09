@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 /// What the person's own key was asked to do (2026-08-06) — the receipt for
 /// the one path in this app that costs somebody money.
@@ -195,5 +196,121 @@ extension AgentSpend.Entry {
             return "\(n)"
         }
         return "\(short(inputTokens)) in · \(short(outputTokens)) out"
+    }
+}
+
+/// OpenRouter's own credit ceiling (2026-08-09) — parsed at the exact call
+/// site `AgentAnswer.check` already makes for OpenRouter's `/v1/auth/key`
+/// (`data.usage`/`data.limit`/`data.limit_remaining`), the free "who am I"
+/// read every provider here gets checked with before its key saves. Riding
+/// that call rather than opening a second one: `check` runs at connect time
+/// and — since 2026-08-09 — from `BridgeRefresh`'s foreground sweep behind
+/// `dueForHeal("openrouter.credits")`, so this reading is at most ~10 minutes
+/// stale, the same STATE-not-EVENT window Stripe's balance uses (§216).
+///
+/// **Two thresholds, either sufficient — a guess, not measured** (no
+/// OpenRouter key is stored on this build host to calibrate against).
+/// RELATIVE (under 15% of the limit remaining) catches a modest key well
+/// before it's exhausted; ABSOLUTE (under $3 remaining, and used instead of
+/// the relative test once the limit itself is "large") catches a big limit
+/// where 15% is still real money and the relative test alone would fire too
+/// late — a $500 limit's 15% is $75, plenty to keep answering on, so the
+/// absolute floor is the one that actually means "about to stop working"
+/// there. The two rules agree exactly at the boundary (15% of $20 is $3).
+///
+/// Landing the Thing needs a `ModelContext`, which `AgentAnswer.check`
+/// doesn't have (it runs from setup-screen `Task`s and the foreground
+/// sweep's own `Task`, neither of which threads one into a nonisolated,
+/// non-`@MainActor` static func) — so `record` only marks a bucket crossing
+/// as PENDING; `drainPending` is the one place with a real context in hand
+/// and does the actual insert, the DeFi health-factor bucket shape
+/// (`WalletDeFi.sync`/`MorphoDeFi.sync`) split across two functions instead
+/// of one.
+enum OpenRouterCredits {
+    private static let limitKey     = "openrouter.credits.limit"
+    private static let remainingKey = "openrouter.credits.remaining"
+    private static let bucketKey    = "openrouter.credits.bucket"      // "low" | "ok"
+    private static let pendingKey   = "openrouter.credits.pendingLowThing"
+
+    static let lowFraction     = 0.15
+    static let largeLimitFloor = 20.0
+    static let lowAbsoluteFloor = 3.0
+
+    static func isLow(limit: Double, remaining: Double) -> Bool {
+        guard limit > 0, remaining >= 0 else { return false }
+        return limit >= largeLimitFloor ? remaining <= lowAbsoluteFloor
+                                        : remaining <= limit * lowFraction
+    }
+
+    /// Pure UserDefaults + `AgentSpend` (thread-safe, no actor requirement) —
+    /// safe to call from `check`'s nonisolated context. `data.limit` absent
+    /// means an unlimited/free-tier key, OpenRouter's own documented
+    /// meaning, not a read failure — clears any stale reading rather than
+    /// treating a now-unlimited key as still "low".
+    static func record(json: [String: Any]) {
+        guard let data = json["data"] as? [String: Any] else { return }
+        if let usage = data["usage"] as? Double {
+            AgentSpend.shared.recordReported(provider: .openrouter, usd: usage)
+        }
+        let d = UserDefaults.standard
+        guard let limit = data["limit"] as? Double else {
+            d.removeObject(forKey: limitKey)
+            d.removeObject(forKey: remainingKey)
+            d.set("ok", forKey: bucketKey)
+            return
+        }
+        let remaining = (data["limit_remaining"] as? Double) ?? limit
+        d.set(limit, forKey: limitKey)
+        d.set(remaining, forKey: remainingKey)
+        let bucket = isLow(limit: limit, remaining: remaining) ? "low" : "ok"
+        let last = d.string(forKey: bucketKey)
+        d.set(bucket, forKey: bucketKey)
+        if bucket == "low", last != "low" {
+            d.set(true, forKey: pendingKey)
+        }
+    }
+
+    /// Lands the Thing a `record()` above marked pending. Reads its numbers
+    /// back from the SAME UserDefaults `record` just wrote, so a stale
+    /// figure can never be landed twice, and clears the pending flag whether
+    /// or not a Thing actually comes out the other end (a dedupe hit, or the
+    /// numbers having gone missing between the two calls, are both "nothing
+    /// to do", not "try again next time" — the crossing already happened
+    /// once and `record` will mark a fresh one if it happens again).
+    @MainActor
+    @discardableResult
+    static func drainPending(context: ModelContext, existing: Set<String>) -> Thing? {
+        let d = UserDefaults.standard
+        guard d.bool(forKey: pendingKey) else { return nil }
+        d.set(false, forKey: pendingKey)
+        guard let limit = d.object(forKey: limitKey) as? Double,
+              let remaining = d.object(forKey: remainingKey) as? Double
+        else { return nil }
+        let ref = "openrouter:credits:low:\(Int(Date.now.timeIntervalSince1970))"
+        guard !existing.contains(ref) else { return nil }
+        let limitText = String(format: "$%.2f", limit)
+        let remainingText = String(format: "$%.2f", max(0, remaining))
+        let title = String(localized:
+            "Your OpenRouter credits are running low — \(remainingText) left of \(limitText)")
+        let thing = Thing(kind: .reminder, title: IngestSupport.titleLine(title),
+                          content: "https://openrouter.ai/settings/credits",
+                          source: "OpenRouter", capturedAt: .now, sourceRef: ref)
+        context.insert(thing)
+        SpotlightIndex.index([thing])
+        context.saveHonestly()
+        return thing
+    }
+
+    /// Read-only, for `-agentCreditsProbe` and the settings row.
+    static var limit: Double? { UserDefaults.standard.object(forKey: limitKey) as? Double }
+    static var remaining: Double? { UserDefaults.standard.object(forKey: remainingKey) as? Double }
+    static var bucket: String? { UserDefaults.standard.string(forKey: bucketKey) }
+
+    static func clear() {
+        let d = UserDefaults.standard
+        d.removeObject(forKey: limitKey)
+        d.removeObject(forKey: remainingKey)
+        d.removeObject(forKey: bucketKey)
+        d.removeObject(forKey: pendingKey)
     }
 }
