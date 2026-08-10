@@ -1111,11 +1111,14 @@ struct FeedScreen: View {
     private func bundleable(_ t: Thing) -> Bool {
         t.kind != .screenshot && t.kind != .voice && t.kind != .approval
             && t.source != "You" && t.source != "Voice"
-            // Social posts read individually — you follow an account to SEE the
-            // posts, so Bluesky/Farcaster never collapse into an "N links"
-            // bundle (user, 2026-07-12). They're deliberate reads, not machine
-            // bulk like an RSS sync or a wallet backfill.
-            && t.source != "Bluesky" && t.source != "Farcaster"
+            // REVERSED 2026-08-09 (user: following 140 Farcaster accounts
+            // made "deliberate reads" the wrong call at that follow count —
+            // the 2026-07-12 ruling above held for a handful of watched
+            // accounts, not a feed wide enough to flood All on its own).
+            // Bluesky/Farcaster now bundle the same as any other source:
+            // 3+ same-day posts collapse into one row, still fully readable
+            // one tap away in the source's own `.social` room, which never
+            // bundles (`bundle(_:)` runs only in the day-grouped All path).
             // Same reasoning for watched tokens: each row wears its own
             // sparkline (TokenPulse) — collapsing 3+ into "Tokens · N things"
             // silently drops every one of them.
