@@ -452,10 +452,14 @@ enum FoundationAnswer {
     /// two must never bleed into each other). The model writes into a one-field
     /// `@Generable` layout (the same `respond(to:generating:)` path `compose`
     /// uses), declining by putting the single word NONE in the field, which we
-    /// map to nil so the caller shows no line. @MainActor to match the other
-    /// model paths — the `await respond` yields the main actor for the whole
-    /// inference, so this never blocks the UI.
-    @MainActor
+    /// map to nil so the caller shows no line.
+    ///
+    /// NOT `@MainActor` (reversed 2026-08-09, the `dayRead` finding — see its
+    /// comment for the measurement) — it was pinned on the same unmeasured
+    /// "await respond yields the main actor" assumption, which video-verified
+    /// on `dayRead` turned out false: the calling thread froze solid for the
+    /// whole inference. This throwaway session touches no shared MainActor
+    /// state either, so it runs off the main actor too.
     static func homeInsight(candidates: [OnDeviceModel.Candidate]) async -> (line: String, picks: [Int])? {
         guard OnDeviceModel.isAvailable, candidates.count >= 3 else { return nil }
         let session = LanguageModelSession(instructions: OnDeviceModel.homeInsightInstructions)
@@ -556,7 +560,10 @@ enum FoundationAnswer {
     /// phrase per line, two-to-five words, the original query and any duplicate
     /// dropped, `NONE` mapped to nothing. Fails to nil throughout, so the caller
     /// searches the literal words alone on any decline.
-    @MainActor
+    ///
+    /// NOT `@MainActor` (reversed 2026-08-09, the `dayRead` finding) — same
+    /// throwaway-session shape, same corrected reasoning: nothing shared to
+    /// protect, and pinning it to the main actor is what froze the UI.
     static func expandQuery(_ query: String) async -> [String]? {
         guard OnDeviceModel.isAvailable else { return nil }
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -601,7 +608,24 @@ enum FoundationAnswer {
     /// the same NONE-declines-honestly rail `homeInsight` keeps. Never streams:
     /// the brief anchors to its own top and is composed once (§288), so a
     /// growing paragraph would fight that anchor.
-    @MainActor
+    ///
+    /// NOT `@MainActor` (reversed 2026-08-09) — it was, on the documented
+    /// assumption that "the `await respond` yields the main actor for the
+    /// whole inference, so this never blocks the UI." That assumption was
+    /// never measured and is wrong: captured on-device (video, 50ms frames),
+    /// the composer's skeleton pulse — which needs nothing but the main run
+    /// loop to keep committing CATransactions — went completely static
+    /// (pixel-identical across 550ms, several full animation cycles) for the
+    /// ~2.1s `dayRead` was in flight, matching the user's own report exactly
+    /// ("a black screen loads and hangs, then the stuff paints"). Whatever
+    /// `session.respond(to:)` does under the hood here does not hand the
+    /// calling thread back to the run loop the way plain Swift concurrency
+    /// suspension should. `dayRead` opens its OWN throwaway
+    /// `LanguageModelSession` (never `WarmModel`/`ConversationModel`, the
+    /// shared MainActor state those two guard), so nothing here needs
+    /// exclusive main-thread access — running it off the main actor lets the
+    /// caller's `await` suspend for real, freeing the main thread so the
+    /// skeleton can actually animate while this runs.
     static func dayRead(evidence: String, continuity: String?) async -> String? {
         guard OnDeviceModel.isAvailable else { return nil }
         let trimmed = evidence.trimmingCharacters(in: .whitespacesAndNewlines)

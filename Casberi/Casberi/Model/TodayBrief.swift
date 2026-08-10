@@ -144,6 +144,11 @@ enum TodayBrief {
     /// something to fake here with `things` alone.
     static func compose(things: [Thing], context: ModelContext,
                         presenting: Bool = false, category: String? = nil) async -> KeptAskComposers.Result? {
+        #if DEBUG
+        let composeT0 = Date.now
+        defer { NSLog("[Casberi] composeTimingDEBUG| category=%@ TOTAL=%dms",
+                      category ?? "nil", Int(Date.now.timeIntervalSince(composeT0) * 1000)) }
+        #endif
         // Filtered on ENTRY as well as after the awaits below (crash fix,
         // build 250). The caller's array can ALREADY be stale: `RootShell`
         // fetches it, then awaits `KeptAskStore.refreshDigests` before handing
@@ -443,6 +448,10 @@ enum TodayBrief {
         // Nil off Apple-Intelligence devices and on a thin day; the notes card
         // then stands alone exactly as before (zero regression). Grounded on the
         // day's own facts with the prior briefs' topics as continuity.
+        #if DEBUG
+        NSLog("[Casberi] composeTimingDEBUG| beforeModelRead=%dms",
+              Int(Date.now.timeIntervalSince(composeT0) * 1000))
+        #endif
         if presenting,
            let read = await OnDeviceModel.dayRead(
                evidence: dayReadEvidence(landed: landed, notes: notes, topic: topic),
@@ -450,6 +459,10 @@ enum TodayBrief {
             ids.append("read")
             lines.append("read = Insight(\"\(genSafe(read))\")")
         }
+        #if DEBUG
+        NSLog("[Casberi] composeTimingDEBUG| afterModelRead=%dms",
+              Int(Date.now.timeIntervalSince(composeT0) * 1000))
+        #endif
         if !notes.isEmpty {
             ids.append("notes")
             lines.append("notes = DayNotes([\(notes.indices.map { "n\($0)" }.joined(separator: ", "))])")

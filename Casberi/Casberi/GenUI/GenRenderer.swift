@@ -2767,6 +2767,32 @@ private struct GenAppsInvite: View {
 
 // MARK: - Skeletons
 
+/// The shared breathing loop every `GenSkeleton*` fill uses (2026-08-09,
+/// reverses the 2026-07-31 "plain static fill" ruling — see `GenSkeletonBlock`
+/// below for why). One gentle opacity pulse, not a sweeping gradient: this is
+/// a loading state, not decoration, so it should read as "waiting" at a
+/// glance and nothing more. Honors Reduce Motion by never animating at all —
+/// the fill just sits at full opacity, identical to the old static behavior.
+private struct GenSkeletonPulse: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var lit = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(reduceMotion || lit ? 1 : 0.5)
+            .onAppear {
+                guard !reduceMotion else { return }
+                withAnimation(.easeInOut(duration: 0.85).repeatForever(autoreverses: true)) {
+                    lit = true
+                }
+            }
+    }
+}
+
+private extension View {
+    func genSkeletonPulse() -> some View { modifier(GenSkeletonPulse()) }
+}
+
 struct GenSkeletonRow: View {
     var body: some View {
         HStack(spacing: DS.Space.s3) {
@@ -2777,6 +2803,7 @@ struct GenSkeletonRow: View {
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s3)
+        .genSkeletonPulse()
     }
 }
 
@@ -2786,6 +2813,7 @@ struct GenSkeletonTile: View {
         RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
             .fill(DS.surfaceSheet)
             .frame(minHeight: minHeight)
+            .genSkeletonPulse()
     }
 }
 
@@ -2801,11 +2829,16 @@ struct GenSkeletonTile: View {
 /// this shipped for and is the majority of its own family, and either choice
 /// is an 8pt one-time settle on resolve, not a functional gap.
 ///
-/// A plain static fill, deliberately — a shimmering skeleton would be a
-/// decorative loop, and this app sanctions those only while something real is
-/// pending (`GenTagMap`'s starter preview is the surviving one; the agent's
-/// breathing berry retired 2026-07-31, and THIS view took its place as the
-/// in-flight state — see `Composer`'s answer stream).
+/// PULSES now (2026-08-09, user: "i don't want to see something say
+/// 'thinking' i'd rather see it look like generative UI preparing to
+/// populate" — measured live: the on-device brief read alone takes ~2.1s,
+/// and a perfectly static gray block for two full seconds against this app's
+/// black chrome reads as nothing happening, not as loading). This reverses
+/// the 2026-07-31 ruling ("a shimmering skeleton would be a decorative loop,
+/// sanctioned only while something real is pending") — every call site of
+/// this view genuinely IS something real pending by construction, so the
+/// restraint argument didn't hold once a wait got long enough to matter. One
+/// gentle opacity breathe, not a sweep — see `GenSkeletonPulse`.
 struct GenSkeletonBlock: View {
     var minHeight: CGFloat = 96
     var body: some View {
@@ -2814,6 +2847,7 @@ struct GenSkeletonBlock: View {
             .frame(maxWidth: .infinity, minHeight: minHeight)
             .padding(.horizontal, DS.Space.s4)
             .padding(.top, DS.Space.s2)
+            .genSkeletonPulse()
     }
 }
 

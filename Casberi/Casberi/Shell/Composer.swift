@@ -523,6 +523,15 @@ struct Composer: View {
     @Environment(FeedFilter.self) private var filter
 
     @State private var composition = AgentPanel.Composition()
+    /// True from the moment `.task(id: isOpen)` starts computing the panel
+    /// until `composition` actually has cards (2026-08-09, measured live:
+    /// ~720ms of unbroken synchronous work over a real corpus, entirely on
+    /// the main actor with no yield point — nothing could paint until it
+    /// finished, which is what "opens on a black screen, then everything
+    /// appears at once" actually was). `boardShowing` requires `!composition
+    /// .isEmpty`, so `AgentOpenBoard` never even mounts during that window —
+    /// this flag exists to show something IN that gap, not after it.
+    @State private var panelLoading = false
 
     /// The one predicate for "the composer is idle and showing its rest-screen
     /// chrome" — open, nothing typed, nothing recording, no answer in flight.
@@ -647,6 +656,7 @@ struct Composer: View {
         // counter the same way, so the "keep it?" upgrade verifies in one
         // launch too.
         AskMemory.seedMadeFromLaunchArgs()
+        let composerT0 = Date.now
         #endif
         tagPool = tagCandidates()   // one corpus walk per open, not per keystroke
         var out: [AskOption] = []
@@ -654,6 +664,10 @@ struct Composer: View {
         // the Codable ThingKind enum (it throws at runtime, and try? made
         // the miss silent).
         let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
+        #if DEBUG
+        NSLog("[Casberi] composerPerfDEBUG| afterFetch=%dms count=%d",
+              Int(Date.now.timeIntervalSince(composerT0) * 1000), all.count)
+        #endif
         // NOTHING about the corpus itself goes under the greeting (user
         // ruling 2026-07-31: "casberi is about insight and management, over
         // tons of stuff, seeing numbers is just annoyance"). Three lines died
@@ -886,10 +900,16 @@ struct Composer: View {
         // frames these as a fixed row of scope pickers under the input, not
         // a suggestion competing for a slot.
         categoryChips = Self.computeCategoryChips(all: all)
+        #if DEBUG
+        NSLog("[Casberi] composerPerfDEBUG| beforeBuildPanel=%dms",
+              Int(Date.now.timeIntervalSince(composerT0) * 1000))
+        #endif
         // The board (prd §332) — built last, so it can see the away pool the
         // chips above already computed and never pays for a second walk.
         composition = buildPanel(all: all)
         #if DEBUG
+        NSLog("[Casberi] composerPerfDEBUG| TOTAL=%dms cards=%d",
+              Int(Date.now.timeIntervalSince(composerT0) * 1000), composition.cards.count)
         AgentPanelProbe.log(composition)
         NSLog("[Casberi] askTiles: %@",
               suggestions.map { $0.memoryKey + ($0.timely ? "*" : "") + ($0.signal ?? "") }
@@ -1825,14 +1845,16 @@ struct Composer: View {
                                         // answer coming (2026-07-31). A
                                         // breathing berry stood here from
                                         // 2026-07-13 — and the brief takes
-                                        // 20-25 seconds to assemble, which
-                                        // made this the longest, most visible
-                                        // logo moment in the app, inside the
-                                        // one screen the user ruled it out of
-                                        // ("i like our logo in the search /
-                                        // whisper bar, but not inside the
-                                        // daily brief itself"). Skeleton rows
-                                        // are the app's own loading grammar
+                                        // several real seconds to assemble
+                                        // (measured: the on-device model read
+                                        // alone is ~2.1s), which made this the
+                                        // longest, most visible logo moment in
+                                        // the app, inside the one screen the
+                                        // user ruled it out of ("i like our
+                                        // logo in the search / whisper bar,
+                                        // but not inside the daily brief
+                                        // itself"). Skeleton rows are the
+                                        // app's own loading grammar
                                         // (`GenSkeletonRow`, what a streaming
                                         // module already shows before its line
                                         // lands), so the wait now says "an
@@ -1842,12 +1864,29 @@ struct Composer: View {
                                         // build brief asked for all along: no
                                         // thinking indicators, agency renders
                                         // as results.
+                                        //
+                                        // THREE shapes, not one (2026-08-09,
+                                        // user: "i'd rather see it look like
+                                        // generative UI preparing to
+                                        // populate") — a short lede-shaped
+                                        // line, a tall hero-shaped block, then
+                                        // note-shaped rows, echoing the real
+                                        // brief's own layout (`DayLede` →
+                                        // `MoneyHero`/`TagMap` → `DayNotes`)
+                                        // rather than one undifferentiated
+                                        // rectangle. Each pulses on its own
+                                        // clock (`GenSkeletonPulse`), so the
+                                        // group breathes like something is
+                                        // actually assembling.
                                         if inFlight {
-                                            // Self-padded (its own card
-                                            // margins) — see GenSkeletonBlock.
-                                            GenSkeletonBlock(minHeight: 84)
-                                                .transition(.opacity)
-                                                .accessibilityLabel("Working")
+                                            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                                                GenSkeletonBlock(minHeight: 26)
+                                                GenSkeletonBlock(minHeight: 120)
+                                                GenSkeletonRow()
+                                                GenSkeletonRow()
+                                            }
+                                            .transition(.opacity)
+                                            .accessibilityLabel("Working")
                                         }
                                         GenRender(id: "root", els: answerStream.els)
                                             .textSelection(.enabled)
@@ -2204,8 +2243,27 @@ struct Composer: View {
             // under the panel, which is a full surface of its own and needs no
             // pushing down. Left in, it opened a ~300pt hole between the
             // greeting and the first tile (seen on the sim, §336).
-            if restChrome(keepBrief: false), !boardShowing {
+            if restChrome(keepBrief: false), !boardShowing, !panelLoading {
                 Spacer(minLength: DS.Space.s4)
+            }
+            // The panel's own loading state (2026-08-09) — a bento-shaped
+            // skeleton, hero tile plus a pair of smalls, echoing
+            // `AgentPanelGrid`'s own `double`/`unit` sizing so the eventual
+            // swap-in doesn't jump. Fills the exact gap `AgentOpenBoard`
+            // leaves: `boardShowing` requires `!composition.isEmpty`, so
+            // nothing below could ever show anything while the panel is
+            // still computing.
+            else if restChrome(keepBrief: false), panelLoading {
+                VStack(spacing: DS.Space.s2) {
+                    GenSkeletonTile(minHeight: 236)
+                    HStack(spacing: DS.Space.s2) {
+                        GenSkeletonTile(minHeight: 118)
+                        GenSkeletonTile(minHeight: 118)
+                    }
+                }
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s3)
+                .accessibilityLabel("Working")
             }
             // The room, answered (prd §332). Leads everything below it: the
             // noticing, the kept asks wearing their readings, the window
@@ -2312,7 +2370,18 @@ struct Composer: View {
         .modifier(MorphMatch(ns: embedded ? glassNamespace : nil))
         .task(id: isOpen) {
             if isOpen {
+                // Flip BEFORE the heavy synchronous work, then yield once —
+                // guarantees SwiftUI gets one real render pass with the
+                // skeleton board visible before `computeSuggestions()`
+                // occupies the main actor for ~700ms+ with no yield point of
+                // its own (2026-08-09). Without the yield, the state flip and
+                // the expensive call are back-to-back in the same run-loop
+                // turn and nothing paints in between — the exact "black
+                // screen, then everything at once" this exists to fix.
+                panelLoading = true
+                await Task.yield()
                 computeSuggestions()
+                panelLoading = false
                 // Kept asks share AskMemory's own decay counters with the
                 // suggestion tiles (ruling 5: "ignored asks decay dim") —
                 // bumped once per open here, exactly how computeSuggestions()
@@ -3569,6 +3638,14 @@ struct Composer: View {
             // state now; the first real content to appear IS the answer.
             answerStream.paint([])
             Task { @MainActor in
+                // One guaranteed render pass with the skeleton visible
+                // before any of `answer(q:)`'s own synchronous work runs
+                // (2026-08-09) — `answering`/`inFlight` just flipped above,
+                // but without this yield the state change and the heavy
+                // call sit in the same run-loop turn, so nothing paints in
+                // between on a corpus large enough for that work to take
+                // real time.
+                await Task.yield()
                 var streamed = false
                 let paintPartial: ([String]) -> Void = { partialDoc in
                     // Prose arriving live — paint each growing snapshot; the
