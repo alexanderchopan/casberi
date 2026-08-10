@@ -451,8 +451,11 @@ struct AppsScreen: View {
     private func celebrateConnect(_ offer: BridgeCatalog.Offer) {
         // Glyph-colored marks bloom their glyph (Tokens' green) — a
         // near-black tile hue is no payoff (BridgeGlyph.signalColor's rule).
+        // An app with no honest color at all blooms neutral, not blue
+        // (2026-08-10) — a fake brand color is exactly what this payoff
+        // shouldn't invent.
         connectHue = BridgeGlyph.glyphTint(for: offer.name)
-            ?? DS.brandHue(for: offer.name) ?? DS.tint
+            ?? DS.brandHue(for: offer.name) ?? DS.neutralBadge
         connectToken += 1
         chrome.flash(BridgeConnect.landingMessage(offer.name), tone: .success)
     }

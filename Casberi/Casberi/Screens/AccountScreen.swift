@@ -205,7 +205,10 @@ struct SettingsScreen: View {
             // "will this thing interrupt me" without opening it.
             RowSpec(title: "Notifications",
                     value: notifySummary,
-                    badge: ("bell.badge.fill", DS.tint),
+                    // A fixed accent regardless of what's actually on — the
+                    // badge previews no state here, so it takes the neutral
+                    // tone (2026-08-10, was DS.tint).
+                    badge: ("bell.badge.fill", DS.neutralBadge),
                     action: { detail = .notifications }),
             // The app's own language — an override that switches Casberi live,
             // on top of the device language (LanguageStore). One tap opens the
@@ -382,25 +385,22 @@ struct AccountRow: View {
                     .clipShape(Circle())
             } else if let badge {
                 // The row's trust mark: the same colored-glyph-in-a-squircle
-                // the Apps page speaks.
-                RoundedRectangle(cornerRadius: DS.Radius.appIcon(34), style: .continuous)
-                    .fill(badge.color.opacity(0.16))
-                    .frame(width: 34, height: 34)
-                    .overlay(
-                        Image(systemName: badge.symbol)
-                            .accessibilityHidden(true)
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(badge.color)
-                            // Two rows genuinely SWAP their glyph rather than
-                            // opening anything — Theme's sun/moon and
-                            // Privacy's lock/cloud — and for a setting that
-                            // flips in place the swap IS the feedback. A row
-                            // whose symbol never changes never transitions,
-                            // so this costs the others nothing.
-                            .contentTransition(reduceMotion ? .identity
-                                               : .symbolEffect(.replace.downUp))
-                            .symbolEffect(.bounce, value: bounce)
-                    )
+                // the Apps page speaks — `IconChip`'s `.wash` style since
+                // 2026-08-10.
+                IconChip(tone: badge.color, size: 34, style: .wash) {
+                    Image(systemName: badge.symbol)
+                        .accessibilityHidden(true)
+                        .font(.system(size: 16, weight: .semibold))
+                        // Two rows genuinely SWAP their glyph rather than
+                        // opening anything — Theme's sun/moon and
+                        // Privacy's lock/cloud — and for a setting that
+                        // flips in place the swap IS the feedback. A row
+                        // whose symbol never changes never transitions,
+                        // so this costs the others nothing.
+                        .contentTransition(reduceMotion ? .identity
+                                           : .symbolEffect(.replace.downUp))
+                        .symbolEffect(.bounce, value: bounce)
+                }
             }
             // The title doubles as its own catalog key — localized at
             // render so the stored English still drives sort/id.

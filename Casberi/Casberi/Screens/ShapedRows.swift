@@ -2133,7 +2133,9 @@ struct PostCard: View {
                 if let why = SocialThread.contextLabel(for: thing) {
                     Text(why)
                         .dsText(.label12).fontWeight(.semibold)
-                        .foregroundStyle(DS.washHue(for: thing.source) ?? DS.tint)
+                        // A source with no honest brand color labels itself
+                        // neutral, not blue (2026-08-10).
+                        .foregroundStyle(DS.washHue(for: thing.source) ?? DS.neutralBadge)
                         .lineLimit(1)
                 }
                 Spacer()
@@ -2418,7 +2420,9 @@ struct SocialThreadCard: View {
                 if let why = SocialThread.contextLabel(for: head) {
                     Text(why)
                         .dsText(.label12).fontWeight(.semibold)
-                        .foregroundStyle(DS.washHue(for: head.source) ?? DS.tint)
+                        // A source with no honest brand color labels itself
+                        // neutral, not blue (2026-08-10).
+                        .foregroundStyle(DS.washHue(for: head.source) ?? DS.neutralBadge)
                         .lineLimit(1)
                 }
                 Spacer()

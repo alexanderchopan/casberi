@@ -281,7 +281,10 @@ struct WalletFlowBand: View {
     }
 
     private var spineTint: Color {
-        spineAddress.map(WalletFace.tint(for:)) ?? DS.tint
+        // No single address to key on (a combined, all-wallets band) has no
+        // one identity to wear, so the spine goes neutral rather than blue
+        // (2026-08-10) — each real wallet still gets its own `WalletFace`.
+        spineAddress.map(WalletFace.tint(for:)) ?? DS.neutralBadge
     }
 
     /// One side's segments. Slabs stack with the model's own budgeted gap;

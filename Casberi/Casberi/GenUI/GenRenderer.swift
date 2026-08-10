@@ -592,7 +592,12 @@ private struct GenInsight: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Space.s4)
-        .background(DS.tintDim, in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        // The agent-voice card's own elevated tone (2026-08-10) — the
+        // ceiling step of the same neutral ramp every treemap now shares
+        // (`DS.ink(magnitude: 1)`), not a hue. It still separates from a
+        // plain `dsWidgetSurface` card the way the old tint wash did; it
+        // just says "the agent is speaking" with lightness instead of color.
+        .background(DS.ink(magnitude: 1), in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s4)
         .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
@@ -1994,15 +1999,16 @@ private struct GenFlexThumb: View {
     }
 }
 
-/// Coach(text) — the one-time teaching line, Feed's coach style verbatim:
-/// tinted words on the page, retired forever by the surface once the
-/// lesson is learned (the flag lives with the surface, not here).
+/// Coach(text) — the one-time teaching line: emphasized neutral words on the
+/// page (2026-08-10, was tint — a tip doesn't need a hue to read as a tip),
+/// retired forever by the surface once the lesson is learned (the flag lives
+/// with the surface, not here).
 private struct GenCoach: View {
     let el: GenEl
     var body: some View {
         Text(el.str(0))
             .dsText(.subhead13)
-            .foregroundStyle(DS.tint)
+            .foregroundStyle(DS.textSecondary)
             .padding(.horizontal, DS.Space.s4)
             .padding(.top, DS.Space.s4)
     }
@@ -2294,7 +2300,10 @@ private struct GenPhotoTile: View {
     }
 }
 
-/// VoiceTile(span, title, subline) — waveform over a caption.
+/// VoiceTile(span, title, subline) — waveform over a caption. Neutral bars
+/// (2026-08-10, was tint) — the same illustrative-not-data grammar
+/// `GenPhotoTile`'s placeholder shades just above use: this waveform isn't
+/// real audio, so it shouldn't wear a color that implies it means something.
 private struct GenVoiceTile: View {
     let el: GenEl
     private let bars: [CGFloat] = [8, 14, 20, 12, 18, 8, 16, 22, 10, 14, 6, 12]
@@ -2302,7 +2311,7 @@ private struct GenVoiceTile: View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             HStack(alignment: .center, spacing: 2) {
                 ForEach(Array(bars.enumerated()), id: \.offset) { _, h in
-                    Capsule().fill(DS.tint).frame(width: 3, height: h)
+                    Capsule().fill(DS.gray300).frame(width: 3, height: h)
                 }
             }
             .frame(height: 24)
@@ -3499,12 +3508,15 @@ private struct GenDayNotes: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(DS.Space.s4)
-                // The TINTED surface `Insight` already wears everywhere else
-                // (2026-07-22), not a plain card: one grammar for agent voice
-                // — tinted surface = the agent talking, ink cards = your
-                // things. On `dsWidgetSurface` the synthesis card was
-                // indistinguishable from the modules it's summarizing.
-                .background(DS.tintDim,
+                // The elevated surface `Insight` already wears everywhere
+                // else (2026-08-10, was a tint wash until the treemap-ink
+                // pass retired hue-as-category app-wide): one grammar for
+                // agent voice — the neutral ramp's ceiling tone
+                // (`DS.ink(magnitude: 1)`), ink cards = your things. On
+                // `dsWidgetSurface` the synthesis card was indistinguishable
+                // from the modules it's summarizing; lightness alone still
+                // separates them.
+                .background(DS.ink(magnitude: 1),
                             in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.top, DS.Space.s2)
@@ -3514,9 +3526,10 @@ private struct GenDayNotes: View {
 }
 
 /// DayNote(glyph, text, thingID) — one observation. The glyph is the source's
-/// own SF mark, in tint; the sentence carries the fact. A note that names a
-/// real thing opens it (staying inside the agent, ruling 9); one that doesn't
-/// is plain text, never a dead control.
+/// own SF mark, now in the same neutral ramp (2026-08-10, was tint) — the
+/// sentence carries the fact. A note that names a real thing opens it
+/// (staying inside the agent, ruling 9); one that doesn't is plain text,
+/// never a dead control.
 private struct GenDayNoteLine: View {
     let el: GenEl
     @Environment(\.genThingOpen) private var thingOpen
@@ -3527,7 +3540,7 @@ private struct GenDayNoteLine: View {
         let line = HStack(alignment: .top, spacing: DS.Space.s3) {
             Image(systemName: el.str(0).isEmpty ? "sparkles" : el.str(0))
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(DS.tint)
+                .foregroundStyle(DS.textSecondary)
                 .frame(width: 20)
                 .padding(.top, 2)
                 .accessibilityHidden(true)

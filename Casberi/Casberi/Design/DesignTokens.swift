@@ -29,6 +29,17 @@ enum DS {
     /// The one sheet-surface token — cards, tiles, trays. Brief §8.
     static let surfaceSheet   = Color.adaptive(dark: "#111113", light: "#ffffff")
 
+    /// The neutral tone for an `IconChip` badge with no real identity or
+    /// state to preview (2026-08-10 — the same "unknown gets no invented
+    /// color" ruling `TokenHue`/`brandHue` follow, one level up). FIXED
+    /// rather than adaptive: the badge grammar pairs this with either a
+    /// SOLID fill + white glyph or a soft wash, both of which need to stay
+    /// legible in both themes the way a real brand hue does — not swap
+    /// toward an unreadable pastel in light mode the way the UI grays do.
+    /// Apple's own systemGray, which is built for exactly this "works
+    /// against anything" job.
+    static let neutralBadge = Color.fixed("#6e6e73")
+
     static let gray100  = Color.adaptive(dark: "#2c2c2e", light: "#e5e5ea")
     static let gray200  = Color.adaptive(dark: "#3a3a3c", light: "#d1d1d6")
     static let gray300  = Color.adaptive(dark: "#48484a", light: "#c7c7cc")

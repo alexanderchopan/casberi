@@ -1057,7 +1057,10 @@ struct MainSurface: View {
                 ThingMilestones.check(source: lead.source, count: sourceCount, chrome: chrome)
                 if firstEver {
                     UserDefaults.standard.set(true, forKey: bloomedKey)
-                    let hue = DS.washHue(for: lead.source) ?? DS.tint
+                    // A source with no honest brand color to show blooms
+                    // neutral, not blue (2026-08-10) — the same "unknown
+                    // gets no invented hue" ruling `TokenHue` followed.
+                    let hue = DS.washHue(for: lead.source) ?? DS.neutralBadge
                     bloomGen += 1
                     let gen = bloomGen
                     withAnimation(.easeOut(duration: 0.45)) { bloomHue = hue }

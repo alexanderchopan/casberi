@@ -244,28 +244,24 @@ private struct TileBadge: View {
     var body: some View {
         Group {
             if card.source == "All" {
-                Image(systemName: Self.crossSourceSymbol(for: card.figure))
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: size, height: size)
-                    .background(DS.tint, in: RoundedRectangle(cornerRadius: cornerRadius,
-                                                              style: .continuous))
+                // Cross-source, not brand-less — but "all of them at once"
+                // has no single identity either, so it takes the same
+                // neutral badge an unbranded source would (2026-08-10, was
+                // DS.tint).
+                IconChip(tone: DS.neutralBadge, size: size, radius: cornerRadius) {
+                    Image(systemName: Self.crossSourceSymbol(for: card.figure))
+                        .font(.system(size: 9, weight: .bold))
+                }
             } else {
                 let symbol = BridgeGlyph.symbol(for: card.source)
-                if symbol == "app" {
-                    Text(card.source.prefix(1).uppercased())
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(width: size, height: size)
-                        .background(hue, in: RoundedRectangle(cornerRadius: cornerRadius,
-                                                              style: .continuous))
-                } else {
-                    Image(systemName: symbol)
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(width: size, height: size)
-                        .background(hue, in: RoundedRectangle(cornerRadius: cornerRadius,
-                                                              style: .continuous))
+                IconChip(tone: hue, size: size, radius: cornerRadius) {
+                    if symbol == "app" {
+                        Text(card.source.prefix(1).uppercased())
+                            .font(.system(size: 9, weight: .bold))
+                    } else {
+                        Image(systemName: symbol)
+                            .font(.system(size: 9, weight: .bold))
+                    }
                 }
             }
         }

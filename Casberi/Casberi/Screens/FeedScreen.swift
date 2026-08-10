@@ -3703,7 +3703,10 @@ struct FeedScreen: View {
 
     private func walletSwitcherChip(label: String, address: String?) -> some View {
         let isOn = walletChipIsOn(address)
-        let tint = address.map(WalletFace.tint) ?? DS.tint
+        // "All wallets" has no one identity to wear, so its chip goes
+        // neutral rather than blue (2026-08-10) — each real wallet still
+        // gets its own `WalletFace` hue mid-flight.
+        let tint = address.map(WalletFace.tint) ?? DS.neutralBadge
         return Button {
             DSHaptic.selection()
             withAnimation(DS.Motion.standard) { selectedWallet = address }

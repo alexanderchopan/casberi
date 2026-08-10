@@ -82,9 +82,10 @@ struct AppDetailScreen: View {
         .background(alignment: .top) { brandWash }
         // The connect payoff blooms over the content, then recedes.
         // The payoff must carry light — Tokens blooms its glyph green, not
-        // its near-black tile (signalColor's whole point).
+        // its near-black tile (signalColor's whole point). An app with no
+        // honest color at all blooms neutral, not blue (2026-08-10).
         .connectBloom(hue: BridgeGlyph.glyphTint(for: offer.name)
-                          ?? DS.brandHue(for: offer.name) ?? DS.tint,
+                          ?? DS.brandHue(for: offer.name) ?? DS.neutralBadge,
                       token: connectToken)
         // …and the app's own mark falls through the bloom (2026-08-04). Same
         // token, so the two halves of the payoff can never drift apart.

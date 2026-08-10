@@ -601,18 +601,14 @@ struct AccountDetailSheet: View {
         }
     }
 
-    /// The colored squircle badge — the Apps-page glyph in a solid tone. The
-    /// key and color trays' `aliveRow` still wears it; the Privacy tray's rows
-    /// dropped it in the Statement pass (2026-08-03).
+    /// The colored squircle badge — the Apps-page glyph in a solid tone
+    /// (`IconChip` since 2026-08-10). The key and color trays' `aliveRow`
+    /// still wears it; the Privacy tray's rows dropped it in the Statement
+    /// pass (2026-08-03).
     private func badge(_ glyph: String, _ tone: Color) -> some View {
-        RoundedRectangle(cornerRadius: DS.Radius.appIcon(38), style: .continuous)
-            .fill(tone)
-            .frame(width: 38, height: 38)
-            .overlay(
-                Image(systemName: glyph)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.white)
-            )
+        IconChip(tone: tone, size: 38) {
+            Image(systemName: glyph).font(.system(size: 16, weight: .semibold))
+        }
     }
 
     /// An alive row — badge + title + live value. The Apps-page grammar, shared
@@ -627,7 +623,10 @@ struct AccountDetailSheet: View {
     /// to that, and there are only ever three.
     private var notifyCard: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
-            aliveRow("bell.badge.fill", DS.tint, "Notifications", notifyStatusLine)
+            // A fixed accent regardless of what's actually on — the badge
+            // previews no state here, so it takes the neutral tone
+            // (2026-08-10, was DS.tint).
+            aliveRow("bell.badge.fill", DS.neutralBadge, "Notifications", notifyStatusLine)
             toggleRow("Alarms", "A dispute, a new approval on your wallet, a deadline inside three days.",
                       isOn: Binding(get: { notifySettings.alarms },
                                     set: { notifySettings.alarms = $0; saveNotify() }))

@@ -241,18 +241,23 @@ extension DS {
 
     /// The brand hue as a CARD fill — a near-black brand mark (X's, #000000)
     /// would render its story card as an empty void, so a too-dark hue lifts
-    /// toward the app tint instead of showing raw (design audit fix,
+    /// toward a neutral instead of showing raw (design audit fix,
     /// 2026-07-12). A near-WHITE mark (ChatGPT's #ffffff) is the mirror
     /// failure — white card, white text, nothing visible (user report
     /// 2026-07-14) — and a neutral mark has no honest hue to show, so it
-    /// takes the tint card outright, same ground the Pair card wears. Icons
-    /// and other identity uses keep the true `brandHue`; only this
-    /// fill-legibility path substitutes.
+    /// takes a plain neutral card outright. Was the app tint until
+    /// 2026-08-10: a card with no honest brand color to show fell back to
+    /// blue as if THAT were the brand, the same fake-identity problem
+    /// `TokenHue` had for an unknown token — now it falls back to the same
+    /// neutral gray the app's other illustrative fills use (`GenVoiceTile`'s
+    /// waveform, `GenPhotoTile`'s placeholders), which reads as "we don't
+    /// know" rather than "this app is blue." Icons and other identity uses
+    /// keep the true `brandHue`; only this fill-legibility path substitutes.
     static func legibleCardFill(for source: String) -> Color {
-        let hue = brandHue(for: source) ?? DS.tint
+        guard let hue = brandHue(for: source) else { return DS.gray200 }
         let lum = luminance(of: hue)
-        if lum < 0.12 { return hue.mix(with: DS.tint, by: 0.6) }
-        if lum > 0.90 { return DS.tint }
+        if lum < 0.12 { return hue.mix(with: DS.gray200, by: 0.6) }
+        if lum > 0.90 { return DS.gray200 }
         return hue
     }
 }

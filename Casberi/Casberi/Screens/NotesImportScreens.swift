@@ -204,12 +204,12 @@ struct NotesShareScreen: View {
                     if let url = URL(string: "mobilenotes://") { openURL(url) }
                 } label: {
                     HStack(spacing: DS.Space.s3) {
-                        Image(systemName: "arrow.up.right")
-                            .font(.system(size: 15))
-                            .foregroundStyle(DS.tint)
-                            .frame(width: 28, height: 28)
-                            .background(DS.tintDim,
-                                        in: RoundedRectangle(cornerRadius: DS.Radius.appIcon(28), style: .continuous))
+                        // The list row's own chrome already says this is
+                        // tappable — the chip previews no state, so it's
+                        // neutral (`IconChip`, 2026-08-10, was tint).
+                        IconChip(tone: DS.neutralBadge, size: 28, style: .wash) {
+                            Image(systemName: "arrow.up.right").font(.system(size: 15))
+                        }
                         Text("Open Notes")
                             .dsText(.body17).foregroundStyle(DS.textPrimary)
                         Spacer()
@@ -356,26 +356,6 @@ private let bookmarksRecentDescriptor: FetchDescriptor<Thing> = {
 }()
 
 // MARK: - Shared rows (the import-screen grammar, extracted from ChatGPT's)
-
-struct ImportStepRow: View {
-    let n: Int
-    let text: String
-    init(_ n: Int, _ text: String) { self.n = n; self.text = text }
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-            Text("\(n)")
-                .dsText(.subhead13).fontWeight(.bold)
-                .foregroundStyle(DS.tint)
-                .frame(width: 16)
-            Text(LocalizedStringKey(text))
-                .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
-        }
-        .padding(.vertical, DS.Space.s1)
-    }
-}
 
 /// The numbered how-to card — every step in ONE list row (a VStack), so no
 /// inter-row separator can be drawn between them. A Section of separate rows
