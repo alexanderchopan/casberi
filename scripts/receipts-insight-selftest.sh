@@ -42,7 +42,12 @@ grep -q 'NetworkReceiptsInsight.compose(rows: receipts.map' "$SCREEN" \
   || { echo "✗ the card no longer composes from the screen's own resolved receipts — the map and the rows below could disagree about who owns a host"; exit 1; }
 grep -q 'UnitTreemap(count: reach.cells.count' "$SCREEN" \
   || { echo "✗ the card no longer tiles the composed cells"; exit 1; }
-grep -q 'cell.declared ? DS.tint : DS.attention' "$SCREEN" \
+# 2026-08-10: every OTHER treemap in the app moved from a tinted wash to the
+# neutral DS.ink(magnitude:) ramp, and this card moved with them for its
+# DECLARED cells — but attention is a state, not decoration, so an undeclared
+# cell was deliberately kept out of that ramp (DS.wash(DS.attention, …)
+# instead of DS.ink(…)), the one place this map departs from the shared rule.
+grep -q 'DS.wash(DS.attention, magnitude: cell.share)' "$SCREEN" \
   || { echo "✗ an undeclared cell no longer wears attention — the finding would be drawn as an ordinary service"; exit 1; }
 grep -q 'if cell.isTail { return DS.fillLine }' "$SCREEN" \
   || { echo "✗ the tail no longer takes a neutral fill — a sum of small services would out-shout the largest single one"; exit 1; }
