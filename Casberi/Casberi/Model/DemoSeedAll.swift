@@ -56,7 +56,16 @@ enum DemoSeedAll {
     /// belong to a demo import or to one the developer ran themselves, and
     /// `clear` is a debug verb — but it is the one prefix here that could reach
     /// a row this file did not write.
-    static let refPrefixes = ["demo:", "sample:demo-shot-", "files:demo/", "import:receipt:"]
+    /// `cloudflare:cert:demo` is here for the SAME reason as the first two —
+    /// `CloudflareRunwaySource.item(ref:)` matches `hasPrefix("cloudflare:
+    /// cert:")` exactly, so `infra()`'s two rows can't carry a `demo:` ref and
+    /// still compose. The `demo` suffix on the id (`cloudflare:cert:demo0`)
+    /// is what keeps this scoped to rows this file actually wrote, since a
+    /// real connected Cloudflare account's OWN cert refs share the same
+    /// prefix (`cloudflare:cert:<real zone id>`) and must never be swept up
+    /// by `clear`/`teardown`.
+    static let refPrefixes = ["demo:", "sample:demo-shot-", "files:demo/",
+                              "import:receipt:", "cloudflare:cert:demo"]
 
     // MARK: - Entry point
 
@@ -131,6 +140,19 @@ enum DemoSeedAll {
         "Snapchat": 5, "YouTube": 5, "Instagram": 4, "Privacy Pools": 4,
         "Farcaster": 4, "Apple Wallet": 3, "Circle x402": 3, "TikTok": 3,
         "Gmail": 2, "Files": 2, "Pinterest": 5, "OpenSea": 3,
+        // Cloudflare (2026-08-08) — the `runway` figure kind had NO room
+        // above the panel's 20-card cap, and the reason wasn't affinity, it
+        // was that `runway` could not draw at all: `CloudflareRunwaySource
+        // .compose` returns nil without a saved `CloudflareEstateStore`
+        // snapshot, which nothing here seeded until `seedCloudflareEstate`
+        // (see `seedBridgeState`). Found via `-agentOpenProbe` over a fully
+        // poured demo — a coverage sweep across every `AgentPanel.Figure`
+        // case, not a guess. Now that the figure genuinely composes, it
+        // needs the same affinity boost every other single-figure-kind room
+        // here got (Pinterest/OpenSea for `wall`), or it still loses the
+        // ranking race on affinity=0 and the fix is invisible in the panel
+        // that motivated it.
+        "Cloudflare": 4,
     ]
 
     /// The PostHog metrics `seedBridgeState` plants, named once for the same
@@ -168,6 +190,13 @@ enum DemoSeedAll {
         for event in demoMetrics { PostHogState.forget(event) }
         ChipMemory.forgetDemo(Array(demoVisits.keys))
         X402State.forget()
+        // Same shape as PostHog above, and the same accepted risk: one
+        // global cache, no per-account key, so this can't tell a demo
+        // estate from a real one it might have overwritten — exactly what
+        // `AccountScreen.demoReentryAvailable`'s own gate already exists to
+        // keep off a lived-in install (a real Cloudflare bridge reads as
+        // "Cloudflare" too, indistinguishable by name).
+        CloudflareEstateStore.clear()
 
         // `clear` REMOVES the version stamp, which is right for the dev verb
         // it was written for (`-demoSeed clear`, where the next launch should
@@ -1077,19 +1106,47 @@ enum DemoSeedAll {
     /// give it: its room head (`CloudflareRunwaySource.compose`) reads
     /// `Thing.dueAt` off real rows to build its runway, and `ops`'s two
     /// Cloudflare rows set none — a runway with no dated row is an empty
-    /// rail. These two, at their OWN ref namespace (`demo:cloudflare:0/1`,
-    /// distinct from `ops`'s `demo:cloudflare:5/6`), are what's left.
+    /// rail. These two are what's left.
+    ///
+    /// **The ref must be `cloudflare:cert:<id>`, not a `demo:`-prefixed one
+    /// (found 2026-08-08, via `-agentOpenProbe` — the panel's `runway` figure
+    /// never appeared for the demo corpus, one of three figure kinds a
+    /// coverage sweep flagged as missing).** `CloudflareRunwaySource.item(
+    /// ref:…)` matches `hasPrefix("cloudflare:cert:")` EXACTLY — a
+    /// `demo:cloudflare:0` ref, which is what every other room's seeder uses,
+    /// fails that check and the row is silently dropped before it ever
+    /// becomes a rail item. Kept out of the general `demo:` ref family on
+    /// purpose (the real bridge's own convention is the only one the parser
+    /// honours), so `DemoSeedAll.refPrefixes`/`teardown` carry an explicit
+    /// second entry for it — see there.
     private static func infra() -> [Thing] {
-        let certs: [(String, Double, Double)] = [
-            ("casberi.app certificate renews", 3, -34),
-            ("api.casberi.app certificate renews", 6, -71),
+        let certs: [(String, String, Double, Double)] = [
+            ("demo0", "casberi.app certificate renews", 3, -34),
+            ("demo1", "api.casberi.app certificate renews", 6, -71),
         ]
-        return certs.enumerated().map { i, c in
-            row(.reminder, c.0, source: "Cloudflare", ref: "demo:cloudflare:\(i)",
-                days: c.1, hour: 8, content: "Auto-renews") { t in
-                t.dueAt = at(c.2, 8)
+        return certs.map { id, title, days, dueDays in
+            row(.reminder, title, source: "Cloudflare", ref: "cloudflare:cert:\(id)",
+                days: days, hour: 8, content: "Auto-renews") { t in
+                t.dueAt = at(dueDays, 8)
             }
         }
+    }
+
+    /// `CloudflareEstateStore`'s saved state — the SECOND thing the runway
+    /// figure needs beyond the two rows above. `CloudflareRunwaySource
+    /// .compose` bails at its very first guard (`guard let estate =
+    /// CloudflareEstateStore.load() else { return nil }`) with NO estate
+    /// saved, regardless of how many Cloudflare things exist — the exact
+    /// "room head reads UserDefaults, not rows" shape the wallet curve,
+    /// PostHog metrics and x402 sellers already needed a seed for, just not
+    /// one this file had gotten to. `zoneNames` keys match `infra()`'s cert
+    /// ids exactly, so `item()`'s `estate.zoneNames[id]` lookup resolves a
+    /// real name instead of falling back to the row's own title.
+    @MainActor
+    private static func seedCloudflareEstate() {
+        CloudflareEstateStore.save(CloudflareEstate(
+            zoneNames: ["demo0": "casberi.app", "demo1": "api.casberi.app"],
+            autoRenew: [:], zonesSeen: 2, zonesCovered: 2))
     }
 
     private static func work() -> [Thing] {
@@ -1442,6 +1499,10 @@ enum DemoSeedAll {
             .init(slug: "tollbit", name: "TollBit", services: 12, minPrice: 300,
                   maxPrice: 3_000, hasFree: true, lanes: ["Content"]),
         ], listings: 955, medianPrice: 1_000)
+
+        // 5 · Cloudflare's estate snapshot — see `seedCloudflareEstate`'s own
+        // doc for why the two cert rows alone don't reach the runway figure.
+        seedCloudflareEstate()
     }
 
     // MARK: - Seats
