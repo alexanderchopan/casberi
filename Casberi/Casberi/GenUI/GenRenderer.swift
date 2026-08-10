@@ -378,6 +378,8 @@ struct GenRender: View {
         case "TakeawayCard": GenTakeawayCard(el: el).mountIn()
         case "ApprovalCard": GenApprovalCard(el: el).mountIn()
         case "Alerts":       GenAlerts(el: el).mountIn()
+        case "Runway":       GenRunway(el: el).mountIn()
+        case "ContactSheet": GenContactSheet(el: el).mountIn()
 
         // Answer-column charts (2026-07-21, prd §146) — richer generative UI
         // for the agent's answers. Each draws a REAL visualization the answer
@@ -3017,6 +3019,196 @@ private struct GenTakeawayCard: View {
         .dsWidgetSurface()
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s2)
+    }
+}
+
+/// `ContactSheet(label, subline, "url|thingID;…", moreCount)` — what you
+/// actually SAW, as its own pictures (2026-08-10).
+///
+/// The brief had no image module at all before this: every one of its
+/// visualizations is geometry standing in for data — a treemap's rectangles, a
+/// bar's height, a runway's dots — and the Life scope is the one place the
+/// corpus holds real photographs (measured on a demo corpus: 99 of 277 Life
+/// things carry a picture, against 4 of 71 for Money and 1 of 74 for Work).
+/// Drawing them is therefore both the most different thing this screen can do
+/// and the one most specific to what Life IS. A treemap of Life's tags is a
+/// diagram of your life; this is your life.
+///
+/// Deliberately NOT `GenPhotoTile`, which draws four flat grey rounded
+/// rectangles as an illustration of "photos exist". These are the bytes.
+///
+/// The tail is COUNTED, never truncated silently (§300's folded-tail rule): a
+/// sheet that shows nine of ninety and says so is honest, one that shows nine
+/// and stops looks like a quiet library.
+private struct GenContactSheet: View {
+    let el: GenEl
+    @Environment(\.genThingOpen) private var thingOpen
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private struct Shot { let url: String; let id: String }
+
+    private var shots: [Shot] {
+        el.str(2).split(separator: ";").compactMap { row in
+            let f = row.split(separator: "|", omittingEmptySubsequences: false)
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+            guard let u = f.first, !u.isEmpty else { return nil }
+            return Shot(url: u, id: f.count > 1 ? f[1] : "")
+        }
+    }
+
+    private let columns = [GridItem(.adaptive(minimum: 74), spacing: 6)]
+
+    var body: some View {
+        let shots = shots
+        Group {
+            if !shots.isEmpty {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    if !el.str(0).isEmpty {
+                        Text(el.str(0))
+                            .dsText(.callout15).fontWeight(.semibold)
+                            .foregroundStyle(DS.textPrimary)
+                    }
+                    if !el.str(1).isEmpty {
+                        Text(el.str(1))
+                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    }
+                    LazyVGrid(columns: columns, spacing: 6) {
+                        ForEach(Array(shots.enumerated()), id: \.offset) { i, shot in
+                            Button { thingOpen?(shot.id) } label: {
+                                RemoteArt(urlString: shot.url,
+                                          width: 74, height: 74,
+                                          fallback: nil,
+                                          cornerRadius: DS.Radius.control)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(shot.id.isEmpty)
+                            .chartArrival(index: i, reduceMotion: reduceMotion)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(DS.Space.s4)
+                .dsWidgetSurface()
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s2)
+            }
+        }
+    }
+}
+
+/// `Runway(label, "dueEpoch|source;…", nowEpoch)` — the deadlines ahead of you
+/// on ONE shared time axis (2026-08-10, user: "suggest some new visualizations
+/// we can put on work and life that are different from each other and
+/// different than rest of the app").
+///
+/// It is the brief's only shared time axis, and that is what makes it new
+/// rather than a fourth way to draw a ranking. Every other module here shows
+/// magnitude — a treemap's area, a bar's height, a sparkline's slope — and
+/// answers "how much". This answers WHEN, with the gap between two dots
+/// meaning real elapsed time, so a wall of four deadlines in one afternoon and
+/// four spread over a fortnight draw as visibly different shapes. A list
+/// cannot say that: `AgentPanel.Figure.runway`'s own rule, "one dot on an axis
+/// is a dot", is the same observation from the other side.
+///
+/// NOW is the fixed reference and always drawn, even when nothing is overdue —
+/// a dot's distance from the present is the entire reading, so an axis that
+/// silently rescaled to start at the first deadline would make "due in an
+/// hour" and "due in three weeks" look identical.
+///
+/// The axis is a FILL, not a rule — the no-hairlines ban is about lines that
+/// divide, and this is a measured extent (`ShareBar`'s own reasoning).
+private struct GenRunway: View {
+    let el: GenEl
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private struct Dot { let at: Date; let source: String }
+
+    private var now: Date {
+        Date(timeIntervalSince1970: Double(el.str(2)) ?? Date.now.timeIntervalSince1970)
+    }
+
+    private var dots: [Dot] {
+        el.str(1).split(separator: ";").compactMap { row in
+            let f = row.split(separator: "|", omittingEmptySubsequences: false)
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+            guard let secs = Double(f.first ?? "") else { return nil }
+            return Dot(at: Date(timeIntervalSince1970: secs),
+                       source: f.count > 1 ? f[1] : "")
+        }
+    }
+
+    /// The window always CONTAINS now, so an overdue item pushes the left edge
+    /// back and everything ahead stays right of the marker. Padded by a
+    /// twentieth on each side so a dot at either extreme isn't clipped by the
+    /// track's own end. A plain method, not a `let` inside the body: a `func`
+    /// declared inside a `ViewBuilder` doesn't compile, and inlining the maths
+    /// per dot recomputes the window on every element.
+    private func window(_ dots: [Dot], _ now: Date) -> (start: Double, span: Double) {
+        let times = dots.map(\.at.timeIntervalSince1970) + [now.timeIntervalSince1970]
+        let lo = times.min() ?? 0, hi = times.max() ?? 1
+        let pad = max((hi - lo) * 0.05, 1)
+        let start = lo - pad
+        return (start, max((hi + pad) - start, 1))
+    }
+
+    var body: some View {
+        let dots = dots
+        let now = now
+        let win = window(dots, now)
+        Group {
+            if dots.count >= 2 {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    if !el.str(0).isEmpty {
+                        Text(el.str(0))
+                            .dsText(.callout15).fontWeight(.semibold)
+                            .foregroundStyle(DS.textPrimary)
+                    }
+                    GeometryReader { geo in
+                        let w = geo.size.width
+                        let nowX = CGFloat((now.timeIntervalSince1970 - win.start) / win.span) * w
+                        ZStack(alignment: .topLeading) {
+                            Capsule()
+                                .fill(DS.gray100)
+                                .frame(height: 4)
+                                .offset(y: 13)
+                            // NOW — a full-height mark, so it reads as the
+                            // axis's origin rather than as another deadline.
+                            Capsule()
+                                .fill(DS.textTertiary)
+                                .frame(width: 2, height: 18)
+                                .offset(x: nowX - 1, y: 6)
+                            ForEach(Array(dots.enumerated()), id: \.offset) { i, dot in
+                                let dx = CGFloat((dot.at.timeIntervalSince1970 - win.start) / win.span) * w
+                                // Overdue wears attention, ahead wears the
+                                // neutral ramp — the ONE thing on this axis
+                                // that colour is allowed to say, because
+                                // "already past" is a different state, not a
+                                // bigger quantity (§300's own rule for the
+                                // undeclared-host cell).
+                                Circle()
+                                    .fill(dot.at < now ? DS.attention : DS.textSecondary)
+                                    .frame(width: 10, height: 10)
+                                    .offset(x: min(max(dx - 5, 0), max(w - 10, 0)), y: 10)
+                                    .chartArrival(index: i, reduceMotion: reduceMotion)
+                            }
+                        }
+                    }
+                    .frame(height: 30)
+                    HStack {
+                        Text(el.str(3).isEmpty ? "now" : el.str(3))
+                            .dsText(.label12).foregroundStyle(DS.textTertiary)
+                        Spacer(minLength: 0)
+                        if !el.str(4).isEmpty {
+                            Text(el.str(4))
+                                .dsText(.label12).foregroundStyle(DS.textTertiary)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s2)
+            }
+        }
     }
 }
 

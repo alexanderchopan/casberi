@@ -374,6 +374,10 @@ enum TodayBrief {
             lines.append("pair = TilePair([\(tiles.joined(separator: ", "))])")
         }
         if let runway {
+            // Two ids, one module: the axis and its rows are separate elements
+            // so the axis can be a `Runway` and the rows a `Widget`, but they
+            // are one reading and neither opens a chapter of its own.
+            ids.append("axis")
             ids.append("runway")
             lines += runway
         }
@@ -407,6 +411,21 @@ enum TodayBrief {
             ids.append("themes")
             lines.append(themes.line)
             themeNames = themes.names
+        }
+
+        // 4b. The contact sheet (2026-08-10, user: "on life, the treemap alone
+        // is insufficient") — directly under the themes map, and the pairing is
+        // the argument for it: the treemap says what your things were ABOUT in
+        // words you may not have chosen, and the sheet shows the things. One
+        // abstracts, one shows; the treemap alone left Life as a diagram.
+        //
+        // Composed over `things` rather than `landed` — a window's worth of
+        // pictures is usually a handful and often none, and this is a "what
+        // your life looks like" module rather than a "what arrived" one. The
+        // ≥6 floor keeps it silent where that isn't true.
+        if let sheet = contactSheet(things) {
+            ids.append("sheet")
+            lines.append(sheet)
         }
 
         // 5 and 6 COMPOSE in the other order than they render (2026-07-31).
@@ -1609,6 +1628,67 @@ enum TodayBrief {
     /// `nextTile`'s plain single row is the honest degrade for a thin
     /// scope — a real fact stated plainly, never a chart strained to fill
     /// space (spec: "depth scales inversely with scope").
+    /// The contact sheet (2026-08-10) — the pictures this scope actually
+    /// landed, drawn as themselves.
+    ///
+    /// Only ever fires where there ARE pictures, which in practice means Life:
+    /// measured across a demo corpus, 99 of 277 Life things carry an image
+    /// against 4 of 71 for Money and 1 of 74 for Work (`-scopeMaterialProbe`).
+    /// That asymmetry is the point rather than a limitation — it is what makes
+    /// the Life brief look like nothing else in the app, and the floor below
+    /// means the other scopes decline it on their own without a scope test
+    /// here.
+    ///
+    /// URL images only. `previewImageData` is stored bytes with no URL to hand
+    /// a remote loader, and plumbing a second image path through the doc
+    /// grammar (which is strings) would mean base64 in a doc line — so a
+    /// screenshot whose only copy is local contributes to neither the sheet
+    /// nor its count. Stated because the gap is invisible: the sheet would
+    /// simply look emptier than the library is.
+    ///
+    /// The ≥6 floor is a SHAPE floor, the runway's own reasoning: under two
+    /// full rows this is a handful of thumbnails, which the leads already do
+    /// better with room and a title.
+    private static func contactSheet(_ things: [Thing]) -> String? {
+        // Newest first — a contact sheet is "what you saw", and the most
+        // recent is what that question means.
+        let withArt = things
+            .filter { !($0.previewImageURL ?? "").isEmpty || !$0.imageURLs.isEmpty }
+            .sorted { $0.capturedAt > $1.capturedAt }
+        guard withArt.count >= 6 else { return nil }
+        // ONE picture per thing, never every image a post carries: a single
+        // eight-image post would otherwise fill the sheet and read as eight
+        // separate moments. And one per distinct IMAGE — a repeated picture
+        // says nothing the first one didn't, and the same URL appearing twice
+        // is either a genuine duplicate or a placeholder several rows share
+        // (which is exactly what the demo corpus does: four bundled shots
+        // across dozens of rows, so an undeduped sheet drew the same stadium
+        // nine times and looked broken).
+        var seenArt = Set<String>()
+        var shown: [String] = []
+        for t in withArt {
+            let url = !(t.previewImageURL ?? "").isEmpty ? (t.previewImageURL ?? "") : (t.imageURLs.first ?? "")
+            guard !url.isEmpty, seenArt.insert(url).inserted else { continue }
+            shown.append("\(genSafe(url))|\(t.id.uuidString)")
+            if shown.count == 12 { break }
+        }
+        guard shown.count >= 4 else { return nil }
+        // Counts the things this sheet stands for, not the pictures it dropped
+        // as duplicates — "69 more" should mean more of your life, not more
+        // copies of one image.
+        let more = withArt.count - shown.count
+        let subline = more > 0 ? String(localized: "\(more) more") : ""
+        return "sheet = ContactSheet(\"\(String(localized: "What you saw"))\", \"\(genSafe(subline))\", \"\(shown.joined(separator: ";"))\", \"\(more)\")"
+    }
+
+    /// Since 2026-08-10 it leads with an AXIS (`Runway`) and keeps the rows
+    /// beneath it. The rows stay because they are the tap targets and the only
+    /// place the titles are readable; the axis is added because the list could
+    /// not show the one thing a runway is for — the SPREAD. Four deadlines in
+    /// one afternoon and four across a fortnight rendered as the same four
+    /// rows. The axis draws every deadline it knows about, not just the four
+    /// listed: the shape is the point, and truncating it to the visible rows
+    /// would understate a pile-up precisely when there is one.
     private static func runwayCard(_ things: [Thing], excluding alerted: Set<UUID> = []) -> [String]? {
         let open = things.filter { $0.mark != .done && $0.dueAt != nil && !alerted.contains($0.id) }
         let ranked = open.sorted { ($0.dueAt ?? .distantFuture) < ($1.dueAt ?? .distantFuture) }
@@ -1626,7 +1706,21 @@ enum TodayBrief {
             doc.append("d\(i) = LeadRow(\"\(genSafe(clamp(item.title, max: 40)))\", \"\(genSafe(meta))\", \"\", \"\(item.id.uuidString)\", \"\(genSafe(item.source))\")")
         }
         doc[0] = "runway = Widget(\"\(String(localized: "Coming up"))\", \"\", [\(refs.joined(separator: ", "))])"
-        return doc
+        // The axis, over EVERY deadline (see the note above), plus the two end
+        // labels. The far label names the last dot's own day rather than a
+        // computed "in N days" — a date is a fact the row can be checked
+        // against, a duration is arithmetic the reader has to trust.
+        let lanes = ranked.map { item -> String in
+            let due = item.dueAt ?? now
+            return "\(Int(due.timeIntervalSince1970))|\(genSafe(item.source))"
+        }
+        let far = (ranked.last?.dueAt ?? now).formatted(.dateTime.month(.abbreviated).day())
+        let overdue = ranked.filter { ($0.dueAt ?? .distantFuture) < now }.count
+        let near = overdue > 0
+            ? String(localized: "\(overdue) overdue")
+            : String(localized: "now")
+        return ["axis = Runway(\"\", \"\(lanes.joined(separator: ";"))\", \"\(Int(now.timeIntervalSince1970))\", \"\(genSafe(near))\", \"\(genSafe(far))\")"]
+            + doc
     }
 
     // MARK: - The themes map
