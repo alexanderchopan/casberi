@@ -93,6 +93,10 @@ enum BridgeRefresh {
         // stalls a foreground sweep causes — the thing `perf.sh` cannot see,
         // since none of its three numbers touch this path. See `SweepClock`.
         SweepClock.beginPass(force: force)
+        // What the LAST pass learned about who is still letting us in — see
+        // `BridgeHealth.reconcile` for why it reads the previous pass rather
+        // than this one. Pure local bookkeeping over ~60 seats, no request.
+        BridgeHealth.reconcile(store: store)
         // Returns this slot's DELAY IN MILLISECONDS, not its index — so every
         // `stagger(s)` below carries its pass's pace with it.
         var nextSlot = 0

@@ -403,6 +403,13 @@ enum IngestSupport {
         NetworkLedger.shared.record(request, as: service)
         guard let (data, response) = try? await session.data(for: request),
               let http = response as? HTTPURLResponse else { return nil }
+        // Whether the bridge is still being let in (2026-08-10). This funnel
+        // already held the status and handed it only to the immediate caller,
+        // who almost always maps it to nil and loses it — so a revoked key was
+        // indistinguishable from a quiet week anywhere outside this line.
+        // Costs no request: the response is already in hand.
+        BridgeHealth.record(host: request.url?.host, status: http.statusCode,
+                            named: service)
         return (data, http)
     }
 

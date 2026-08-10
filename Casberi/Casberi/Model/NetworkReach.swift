@@ -586,6 +586,17 @@ enum NetworkReach {
         endpoints.contains { $0.service == service }
     }
 
+    /// Which bridge owns a service, when one does (2026-08-10, `BridgeHealth`).
+    /// nil for `.always` and `.onTapWithKey` — those reach out without any seat
+    /// behind them, so there is no tile for a refusal to appear on and nothing
+    /// to reconnect.
+    static func bridge(forService service: String) -> String? {
+        guard let endpoint = endpoints.first(where: { $0.service == service })
+        else { return nil }
+        if case .whenConnected(let bridge) = endpoint.reach { return bridge }
+        return nil
+    }
+
     static func service(forHost host: String) -> String? {
         let needle = host.lowercased()
         var best: (service: String, length: Int)?

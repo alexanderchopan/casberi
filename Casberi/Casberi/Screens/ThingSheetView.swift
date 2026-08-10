@@ -1220,6 +1220,28 @@ struct ThingSheetView: View {
                         Chip(text: "Copy as context", style: .neutral, glyph: "doc.on.doc")
                     }
                     .buttonStyle(.plain)
+                    // PIN (2026-08-10). A chip and not a disc, on the rule the
+                    // dial already states: it is capped at four so that adding
+                    // a verb can never turn a sheet into a menu, and a fifth
+                    // disc would evict a derived verb that is more specific to
+                    // this row than pinning is. It belongs in the sheet as well
+                    // as the row's long-press because reading a thing is when
+                    // you learn it is worth keeping.
+                    Button {
+                        DSHaptic.tap()
+                        let pinned = Pinboard.toggle(thing)
+                        chrome.pinPulse += 1
+                        verbResult = pinned ? String(localized: "Pinned")
+                                            : String(localized: "Unpinned")
+                        verbResultIsError = false
+                    } label: {
+                        Chip(text: Pinboard.isPinned(thing)
+                                ? String(localized: "Unpin")
+                                : String(localized: "Pin"),
+                             style: .neutral,
+                             glyph: Pinboard.isPinned(thing) ? "pin.slash" : "pin")
+                    }
+                    .buttonStyle(.plain)
                 }
                 .padding(.top, DS.Space.s4)
             }

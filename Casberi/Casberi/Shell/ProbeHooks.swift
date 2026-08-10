@@ -201,6 +201,31 @@ enum ProbeHooks {
         // row that ought to be `by-host` quietly turning into `named-by` is a
         // registry entry someone dropped, and it would be invisible in a
         // declared/undeclared tally alone.
+        // `-bridgeHealthProbe YES` — who is still letting us in (2026-08-10).
+        // One `bridgeHealth|` line per seat that has ever answered (the
+        // `-todayProbe` truncation lesson), naming the last status, the last
+        // 2xx, and whether it is currently shut out.
+        //
+        // It exists because "no seats flagged" is the HEALTHY answer and has
+        // four other causes that read identically: nothing connected, no sweep
+        // has run on this device yet (the record is per-device UserDefaults,
+        // so a fresh install starts blank however long the bridge has been
+        // connected), every host answering fine, or a host whose calls the
+        // reach registry cannot attribute to a seat — and only the last is a
+        // bug. The `attributed=` tally is what separates it.
+        Hook(key: "bridgeHealthProbe") { _, _ in
+            let book = BridgeHealth.allRecords()
+            let iso = ISO8601DateFormatter()
+            for row in book {
+                NSLog("bridgeHealth| %@ · status=%@ · lastOK=%@ · shutOut=%@",
+                      row.bridge,
+                      row.record.lastStatus.map(String.init) ?? "never",
+                      row.record.lastOK.map { iso.string(from: $0) } ?? "never",
+                      row.record.authFailedAt.map { iso.string(from: $0) } ?? "no")
+            }
+            NSLog("bridgeHealthProbe: attributed=%d shutOut=%d",
+                  book.count, BridgeHealth.allNeedingReconnect().count)
+        },
         Hook(key: "receiptsProbe") { _, _ in
             let rows = NetworkLedger.shared.snapshot()
             var undeclared = 0
@@ -2432,6 +2457,40 @@ enum ProbeHooks {
         // re-landing is the wallet path's historical bug class (the swap-legs
         // fix of 2026-07-13 exists for exactly this). A standing probe turns
         // "did it re-land?" from an argument into a number.
+        // `-scopeMaterialProbe YES` — what each brief scope actually HAS to
+        // draw with (2026-08-10). Written before building the four new scope
+        // visualizations rather than after, because every one of them rests on
+        // a field being populated often enough to make a shape, and "does the
+        // corpus carry this" is exactly the question that gets assumed and
+        // turns out false (§313's treemap counting t.co, §307's topicSource
+        // returning nil for X). One line per scope: how many things, how many
+        // carry a picture, a face, a deadline, a release-shaped event.
+        //
+        // Counts only — never a title, a handle or a URL. This walks somebody's
+        // whole corpus, and a probe that prints what is in it is a probe nobody
+        // can safely run in a sweep (`-secretScanProbe`'s own rule).
+        Hook(key: "scopeMaterialProbe") { _, context in
+            let all = ((try? context.fetch(FetchDescriptor<Thing>())) ?? []).live
+            let now = Date.now
+            for scope in BriefScope.scopes {
+                let sources = Set(BridgeCatalog.offers
+                    .filter { BriefScope.scope(forCatalogCategory: BridgeCatalog.category(of: $0)) == scope }
+                    .map(\.name))
+                let mine = all.filter { sources.contains($0.source) }
+                // A PICTURE is any of the three the app can actually draw —
+                // stored bytes, a preview URL, or a post's own image list.
+                let pics = mine.filter {
+                    $0.previewImageData != nil || !($0.previewImageURL ?? "").isEmpty
+                        || !$0.imageURLs.isEmpty
+                }
+                let faces = mine.filter { !($0.authorAvatarURL ?? "").isEmpty }
+                let named = Set(mine.compactMap { $0.authorHandle ?? $0.postAuthor })
+                let due = mine.filter { $0.mark != .done && $0.dueAt != nil }
+                let ahead = due.filter { ($0.dueAt ?? .distantPast) >= now }
+                NSLog("scopeMaterial| %@ things=%d pics=%d faces=%d people=%d due=%d ahead=%d",
+                      scope, mine.count, pics.count, faces.count, named.count, due.count, ahead.count)
+            }
+        },
         Hook(key: "corpusDupeProbe") { _, context in
             let refs = ((try? context.fetch(FetchDescriptor<Thing>())) ?? [])
                 .compactMap(\.sourceRef)

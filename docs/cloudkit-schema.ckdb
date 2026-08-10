@@ -30,6 +30,7 @@ DEFINE SCHEMA
         CD_ocrAt                TIMESTAMP QUERYABLE SORTABLE,
         CD_ocrTopics            BYTES QUERYABLE SORTABLE,
         CD_parent               BYTES QUERYABLE SORTABLE,
+        CD_pinnedAt             TIMESTAMP QUERYABLE SORTABLE,
         CD_postAuthor           STRING QUERYABLE SEARCHABLE SORTABLE,
         CD_postText             STRING QUERYABLE SEARCHABLE SORTABLE,
         CD_previewImageData     BYTES QUERYABLE SORTABLE,

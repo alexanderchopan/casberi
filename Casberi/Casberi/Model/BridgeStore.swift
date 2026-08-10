@@ -69,6 +69,12 @@ final class BridgeStore {
         guard let i = bridges.firstIndex(where: { $0.id == id }) else { return }
         bridges[i].status = .connected
         bridges[i].statusLine = proof ?? "Synced just now"
+        // A fresh credential must not inherit the old one's refusal
+        // (2026-08-10). Without this, pasting a new key leaves the stale
+        // `authFailedAt` in place and the very next sweep re-flags the seat —
+        // telling someone their brand-new key is broken before it has been
+        // used once, which is worse than the silence this feature replaced.
+        BridgeHealth.forget(bridges[i].name)
     }
 
     /// Flags a connected bridge as needing attention (access revoked upstream,
@@ -86,7 +92,8 @@ final class BridgeStore {
         // invalidation for nothing. `reconcileWalletSeats` now calls this for
         // each of nine seats on every foreground, which for a person with no
         // wallet is nine of them (review, 2026-07-30).
-        guard bridges.contains(where: { $0.id == id }) else { return }
+        guard let seat = bridges.first(where: { $0.id == id }) else { return }
+        BridgeHealth.forget(seat.name)
         bridges.removeAll { $0.id == id }
     }
 

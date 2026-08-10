@@ -714,6 +714,30 @@ final class Thing {
     /// `VerbDetection.backfill`.
     var detectedAt: Date? = nil
 
+    // MARK: - Pinned (2026-08-10)
+
+    /// When YOU pinned this thing — the app's one editorial verb over its own
+    /// corpus, and the only field here a person writes directly.
+    ///
+    /// **Why not `Mark.saved`,** which already exists and looks free: `mark` is
+    /// owned by the task bridges. Linear, GitHub, Trello and Jira all write it
+    /// from their own state (`thing.mark = now.mark` on every reconcile), so
+    /// pinning an issue would overwrite its state and the next sync would
+    /// silently unpin it. A pin has to be a field nothing else touches.
+    ///
+    /// **Why a date and not a `Bool`:** the pinned room is a LIST, and a list
+    /// needs an order. Pin order is when you acted, which is the whole
+    /// difference between this room and every other one in the app — every
+    /// other room sorts on `capturedAt`, i.e. when the thing happened. A Bool
+    /// would leave the list sorted by the corpus's clock rather than yours.
+    ///
+    /// nil = not pinned, which is almost every row. Additive optional, so
+    /// SwiftData infers it with no migration stage — but it IS a new CloudKit
+    /// field, so it ships only once `CD_pinnedAt` is deployed to Production
+    /// (see docs/cloudkit-deploy.md). Unpinning writes nil; nothing about a
+    /// pin is permanent to the person, only the column is permanent to iCloud.
+    var pinnedAt: Date? = nil
+
     init(
         id: UUID = UUID(),
         kind: ThingKind,

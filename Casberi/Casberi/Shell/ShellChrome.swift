@@ -256,6 +256,15 @@ final class ShellChrome {
     /// `composerRequest` is one: two Returns in a row are two opens.
     var walkOpenPulse = 0
 
+    /// Someone pinned or unpinned something (2026-08-10). The chip strip caches
+    /// its label set and refreshes it from mount, foreground and a corpus COUNT
+    /// change — and a pin changes no count, so without this the Pinned chip
+    /// would not appear until the next foreground, i.e. the one moment the
+    /// person is looking for proof the verb worked. A counter, not a flag, for
+    /// `walkOpenPulse`'s reason: the first pin and the first unpin are two
+    /// distinct events and both change whether the room exists.
+    var pinPulse = 0
+
     /// Something is raised over the shell — the risen agent, the sources tray,
     /// a deep-linked thing or person, the onboarding cover. Written by
     /// `RootShell` only, as one expression over every presentation it owns.

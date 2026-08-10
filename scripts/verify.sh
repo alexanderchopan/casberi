@@ -215,6 +215,16 @@ step "Sweep-clock self-test"
   || fail "the sweep-clock self-test failed — run scripts/sweep-clock-selftest.sh"
 print -P "%F{green}✓ sweep-clock self-test%f"
 
+# The one check a live probe can never replace: no key for most of these
+# bridges exists on any machine this is built on, so nothing here or on a
+# device can produce the 401 the feature exists to notice. Also carries the
+# drift guards tying the state machine to the transport funnel that feeds it
+# and the sweep that surfaces it.
+step "Bridge-health self-test"
+"$ROOT/scripts/bridge-health-selftest.sh" >/dev/null \
+  || fail "the bridge-health self-test failed — run scripts/bridge-health-selftest.sh"
+print -P "%F{green}✓ bridge-health self-test%f"
+
 step "Sentry pure-logic self-test"
 "$ROOT/scripts/sentry-selftest.sh" >/dev/null \
   || fail "the Sentry logic self-test failed — run scripts/sentry-selftest.sh"

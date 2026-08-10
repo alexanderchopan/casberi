@@ -54,6 +54,25 @@ struct NetworkReachScreen: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
+                // The other half of "goes straight", said out loud (2026-08-10).
+                //
+                // Nothing on this screen ever claimed otherwise, so this is not
+                // a correction — it is the §83 rule applied to a SILENCE. A
+                // person with iCloud Private Relay switched on, reading a list
+                // of sixty services this app reaches, can reasonably conclude
+                // those reaches are relayed and their address hidden. They are
+                // not: Private Relay covers Safari browsing, DNS and insecure
+                // connections, and an app's own HTTPS requests are none of
+                // those. Leaving that to be assumed on the one screen whose
+                // entire job is making the privacy claim checkable would be the
+                // fake status this app refuses everywhere else — and the more
+                // careful the rest of the screen is, the more it would be
+                // trusted.
+                Text("Going straight also means each service sees your IP address, the same way any app or website does. iCloud Private Relay doesn't change that — it covers Safari browsing, not an app's own requests.")
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
             }
 
             group(String(localized: "Reaching now"), reachingNow,

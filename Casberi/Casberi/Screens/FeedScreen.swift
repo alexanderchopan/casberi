@@ -176,6 +176,24 @@ struct FeedScreen: View {
             // plainly at the edge instead.
             d.fetchLimit = Self.allRoomFetchLimit
             _things = Query(d)
+        } else if Pinboard.isPinnedRoom(source) {
+            // The pinned room is the one room that is not a source, so it is
+            // the one room whose rows are not selected by `source` and not
+            // sorted by `capturedAt`.
+            //
+            // The sort is the point: every other room orders by when the thing
+            // HAPPENED, and this one orders by when YOU acted. A pin you made
+            // this morning on a two-year-old screenshot belongs at the top —
+            // that is what makes this a list you built rather than another
+            // slice of the same river. See `Thing.pinnedAt`.
+            //
+            // Unbounded deliberately, unlike the All room above: this list is
+            // as long as you made it by hand, so there is no corpus-scale
+            // growth to bound and a ceiling here could hide a row you pinned
+            // on purpose — the one place in the app where that would be
+            // unambiguously wrong.
+            _things = Query(filter: #Predicate<Thing> { $0.pinnedAt != nil },
+                            sort: \Thing.pinnedAt, order: .reverse)
         } else {
             _things = Query(filter: #Predicate<Thing> { $0.source == source },
                             sort: \Thing.capturedAt, order: .reverse)
@@ -4440,6 +4458,26 @@ struct FeedScreen: View {
                         Label(translate.label, systemImage: translate.icon)
                     }
                 }
+                // PIN (2026-08-10). This menu's own doc calls itself READS
+                // ONLY, and a pin is a write, so the exception is stated
+                // rather than assumed: that rule exists to keep a one-slip yes
+                // off anything irreversible or outward-facing ("Approve/Deny
+                // are consent"). A pin reaches no network, tells no service,
+                // and its undo is the identical gesture on the identical row.
+                // It is also the only verb here the person performs ON their
+                // own corpus, so the long-press — the row's whole verb surface
+                // since the swipe was measured unreachable — is the only place
+                // it can live for a row.
+                Button {
+                    let pinned = Pinboard.toggle(thing)
+                    chrome.pinPulse += 1
+                    DSHaptic.tap()
+                    chrome.flash(pinned ? String(localized: "Pinned")
+                                        : String(localized: "Unpinned"))
+                } label: {
+                    Label(Pinboard.isPinned(thing) ? "Unpin" : "Pin",
+                          systemImage: Pinboard.isPinned(thing) ? "pin.slash" : "pin")
+                }
                 ThingShareLink(thing: thing) {
                     Label("Share", systemImage: "square.and.arrow.up")
                 }
@@ -4912,6 +4950,15 @@ struct FeedScreen: View {
 
     private var emptyLine: String {
         let tagLabel = ThingKind.from(typeTag: filter.tag)?.typeTagPlural ?? filter.tag
+        // The pinned room is normally unreachable while empty — its chip only
+        // exists once something is pinned — but `feedLabels` gives the SELECTED
+        // source a page whether or not it has a chip, so unpinning the last
+        // thing while standing here lands exactly on this line. It says what
+        // the verb is rather than that the room is empty, because unlike every
+        // other room nothing will ever arrive here on its own.
+        if Pinboard.isPinnedRoom(source) {
+            return String(localized: "Nothing pinned. Press and hold anything to pin it.")
+        }
         switch (source != "All", filter.tag != "All") {
         case (true, true):   return "Nothing from \(source) under \(tagLabel) yet."
         case (true, false):  return "Nothing from \(source) yet."

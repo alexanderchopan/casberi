@@ -30,6 +30,19 @@ fields, no type mismatches, the two environments level. That clears the last
 server-side blocker; what remains unproven is a real device round-trip, which
 needs build 231+ installed with sync switched on.
 
+## Open: `CD_pinnedAt` is in Development, not yet in Production (2026-08-10)
+
+The pin verb added `Thing.pinnedAt`. Development was imported and verified by
+re-export the same session (59 → 60 `CD_*` fields); Production is **one field
+behind and nothing else** (`--live production` reports `1 missing, 0
+mismatched`), so the Console diff is a single added timestamp.
+
+Until it is promoted, pins work locally and silently fail to mirror on any
+build signed against Production — which is the partial-sync failure described
+above, wearing the one field a person would most expect to follow them between
+devices. Promote before the next TestFlight ship, then re-run
+`scripts/cloudkit-schema-audit.py --live production` to confirm it landed.
+
 ## The drift is invisible — so it's checked, not remembered
 
 `scripts/cloudkit-schema-audit.py` runs in `verify.sh`'s static head and fails
