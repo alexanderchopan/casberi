@@ -4,8 +4,10 @@ import SwiftUI
 /// where the app bundles one, an honestly-neutral monogram where it doesn't
 /// (2026-08-01, user ruling: "reuse BridgeIcon where the name is a known app").
 ///
-/// The rule is `TokenHue`'s and `TokenIcon`'s, kept deliberately: a name
-/// OUTSIDE the known set gets no invented artwork and no invented colour. A
+/// The rule is `TokenIcon`'s, kept deliberately (and was `TokenHue`'s too,
+/// for color, before that file's 2026-08-10 retirement in favor of the
+/// neutral ink ramp every treemap now shares): a name OUTSIDE the known set
+/// gets no invented artwork and no invented colour. A
 /// hashed hue would look exactly as confident as a real one while meaning
 /// nothing — so an unknown counterparty wears the neutral fill every other
 /// unnamed thing in this app wears, and half a row of real logos beside half a
@@ -101,9 +103,10 @@ struct AssetMark: View {
 /// on both.
 enum BrandMark {
     /// Wrapped, bridged and staked forms wear their underlying asset's mark —
-    /// the `TokenHue` rule ("a wrapper is a representation, not a different
-    /// identity") applied to artwork. Only forms whose target asset is
-    /// actually bundled are listed; anything else falls through honestly.
+    /// the wrapper-shares-identity rule ("a wrapper is a representation, not
+    /// a different identity", first stated for `TokenHue`'s color table)
+    /// applied to artwork. Only forms whose target asset is actually bundled
+    /// are listed; anything else falls through honestly.
     ///
     /// stETH and wstETH are NOT here: they have their own bundled marks now,
     /// and Lido's mark is a different thing from Ethereum's.

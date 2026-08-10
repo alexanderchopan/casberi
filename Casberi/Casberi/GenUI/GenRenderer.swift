@@ -1417,9 +1417,10 @@ struct ImageMosaicHero: View {
 /// A treemap of what a screenshot library is ABOUT — the terms and names OCR
 /// lifts off the pixels (`Thing.ocrTopics`), sized by how many screenshots each
 /// covers (2026-07-30, the Photos feed's hero, ahead of the capture-year
-/// heatmap). §145 wash: one hue, opacity by share, the biggest cell brightest —
-/// magnitude is the only thing the fill says, exactly as the wallet holdings
-/// map and the All feed's themes map read.
+/// heatmap). The neutral ink ramp (`DS.ink(magnitude:)`, 2026-08-10): a
+/// lightness step, opacity by share, the biggest cell brightest — magnitude
+/// is the only thing the fill says, exactly as the wallet holdings map and
+/// the All feed's themes map read.
 ///
 /// Display-only, like `LeaderboardHero` and `DistributionHero`: every cell is a
 /// fact the pixels state, and none is a door — the honesty rule bars a
@@ -1452,7 +1453,7 @@ struct TopicMapHero: View {
                 .background {
                     ZStack {
                         DS.surfaceSheet
-                        DS.tint(magnitude: Double(cell.count) / Double(maxCount))
+                        DS.ink(magnitude: Double(cell.count) / Double(maxCount))
                     }
                     .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
                 }
@@ -2514,47 +2515,23 @@ private struct GenTagMap: View {
                         // the exact sheet surface the Settings tiles and
                         // Pinned card use. Magnitude is size, the treemap's
                         // real voice; identity is the label ink and the
-                        // token/bridge icons. TOKEN cells additionally wear
-                        // the sanctioned magnitude wash (prd §145, 2026-07-21
-                        // — the user re-ruled with the smaller map in front
-                        // of them, amending 2026-07-10's no-wash ruling for
-                        // this mode only): DS.tint(magnitude:) at the cell's
-                        // true USD share, largest brightest. The preview
-                        // breathes the surface itself: shape without
-                        // claiming substance.
+                        // token/bridge icons. Every map wears the same
+                        // neutral ink ramp (2026-08-10, `DS.ink(magnitude:)`)
+                        // — a lightness step, opacity by share, biggest cell
+                        // brightest. One neutral ramp on purpose, twice over:
+                        // a per-theme palette was pitched and declined
+                        // ("I don't want all these random colors", 2026-07-21)
+                        // for the themes map, and this ruling now retires
+                        // §158's later carve-out for TOKEN cells too ("i
+                        // don't want brand hue really", 2026-08-10) — hue no
+                        // longer does identity work anywhere on this fill;
+                        // that job stays with the label ink and the
+                        // token/bridge icons. The preview breathes the
+                        // surface itself: shape without claiming substance.
                         ZStack {
                             DS.surfaceSheet
                             if !preview {
-                                // Every map wears it now, not just token maps
-                                // (2026-07-21, user: "applying the same wash to
-                                // the themes") — the Themes lede on the All
-                                // feed was the last flat treemap in the app.
-                                // One tint, opacity by share, biggest cell
-                                // brightest. One hue on purpose: a per-theme
-                                // palette was pitched the same day and declined
-                                // ("I don't want all these random colors"), so
-                                // magnitude stays the only thing the fill says.
-                                // A TOKEN map's cell additionally wears the
-                                // token's OWN color, at that same magnitude
-                                // opacity (prd §158, 2026-07-21): hue is
-                                // identity, size and saturation are still
-                                // magnitude. A token whose brand color we
-                                // don't actually know keeps the neutral wash —
-                                // see TokenHue.
-                                //
-                                // The `iconMode` guard is load-bearing, not
-                                // leftover: `item.tag` is a project NAME on a
-                                // theme map, and a tag that happens to spell a
-                                // ticker ("OP", "ARB") would otherwise paint
-                                // that theme in a token's brand color — hue
-                                // claiming an identity it doesn't have.
-                                if iconMode == "token",
-                                   let wash = TokenHue.wash(for: item.tag,
-                                                            share: usdShare(of: item)) {
-                                    wash
-                                } else {
-                                    DS.tint(magnitude: usdShare(of: item))
-                                }
+                                DS.ink(magnitude: usdShare(of: item))
                             }
                         }
                         .opacity((preview ? (breathe ? 0.55 : 0.85) : 1)
@@ -3689,7 +3666,7 @@ private extension View {
 /// Fused rather than stacked on purpose — the wallet is the only always-on
 /// aggregate in the brief, so it earns both shapes at once, while every other
 /// module carries exactly one. The compact treemap here draws the same cells
-/// (and the same `TokenHue` washes at the same squared magnitude) the full
+/// (and the same `DS.ink` washes at the same squared magnitude) the full
 /// `TagMap` draws elsewhere, so the small read and the big one can't disagree
 /// about which holding is largest.
 /// DayLede(text, dateline, figure, direction) — the day brief's opening
@@ -3990,11 +3967,7 @@ private struct GenMoneyHero: View {
         // order for the entrance delay is narrative order for free: ETH
         // enters first because ETH matters most.
         .miniTreemapCellChrome(index: index, cellsShown: cellsShown, reduceMotion: reduceMotion) {
-            if let wash = TokenHue.wash(for: item.tag, share: share(item)) {
-                wash
-            } else {
-                DS.tint(magnitude: share(item))
-            }
+            DS.ink(magnitude: share(item))
         }
     }
 }
@@ -4537,7 +4510,7 @@ private struct GenSourceMix: View {
                 .minimumScaleFactor(0.8)
         }
         .miniTreemapCellChrome(index: index, cellsShown: cellsShown, reduceMotion: reduceMotion) {
-            DS.tint(magnitude: share(item))
+            DS.ink(magnitude: share(item))
         }
     }
 }

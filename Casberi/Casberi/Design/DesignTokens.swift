@@ -9,7 +9,9 @@ import SwiftUI
 ///   • One sheet surface token for cards, tiles, trays. Washes are dead.
 ///   • Text ramp: primary (white) / secondary (60%) / tertiary (30%).
 ///   • Color carries identity, state, or magnitude — never decoration.
-///     Magnitude = tint at opacity scaled by count (`DS.tint(magnitude:)`).
+///     Magnitude = a neutral lightness ramp scaled by count (`DS.ink(magnitude:)`,
+///     2026-08-10 — supersedes the tinted wash on every treemap, and §158's
+///     per-token brand hue on the wallet's holdings map; see `DS.ink`'s own doc).
 ///
 /// RECONCILIATION NOTE (flagged for M0 review): the prototype CSS renders
 /// cards at radius 18 / sheets 22, but brief §8 *and* PRD design-principle 1
@@ -133,6 +135,48 @@ enum DS {
     /// thing.
     static func wash(_ color: Color, magnitude t: Double) -> Color {
         color.opacity(0.06 + 0.22 * min(max(t, 0), 1))
+    }
+
+    /// The neutral magnitude fill every treemap cell wears now (2026-08-10,
+    /// user: "i don't want brand hue... we need to match [the wallet's]
+    /// style" — the deep-near-black tones the wallet's own cards already sit
+    /// on, "Darker" of three depths tried against a real screenshot).
+    /// Supersedes `tint(magnitude:)` on every `UnitTreemap`/`MiniTreemap`
+    /// cell, AND §158's per-token brand hue (`TokenHue`, now deleted) on the
+    /// wallet's own holdings map — that ruling gave hue an identity job on
+    /// this same fill, and this ruling takes it back: every treemap in the
+    /// app reads as one family again, magnitude the only thing any of them
+    /// say, none of them the app's tint.
+    ///
+    /// A flat lightness step between two neutral tones, not an opacity ramp
+    /// over a hue — floor and ceiling were picked by eye against the wallet's
+    /// real `surfaceSheet` (`#111113` dark / `#ffffff` light) so the
+    /// brightest cell visibly lifts off the card without the board asserting
+    /// itself the way the tint wash did. Because the result is always fully
+    /// opaque, a caller no longer needs a `surfaceWell` base under it to keep
+    /// a low-magnitude cell from vanishing into the card (`X402RoomCard`'s
+    /// and the receipts map's old workaround) — harmless to keep, since ink
+    /// paints over it either way.
+    static func ink(magnitude t: Double) -> Color {
+        let clamped = CGFloat(min(max(t, 0), 1))
+        return Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .light
+                ? Self.inkStep(clamped, floor: (0.9333, 0.9373, 0.9529), ceiling: (0.7843, 0.7922, 0.8196))
+                : Self.inkStep(clamped, floor: (0.0745, 0.0745, 0.0863), ceiling: (0.1451, 0.1490, 0.1686))
+        })
+    }
+
+    /// One lightness step, `t` of the way from `floor` to `ceiling` — the
+    /// arithmetic `ink(magnitude:)` needs twice (light and dark), pulled out
+    /// because a single expression combining both branches was too much for
+    /// the type checker to resolve in reasonable time.
+    private static func inkStep(_ t: CGFloat,
+                                 floor: (CGFloat, CGFloat, CGFloat),
+                                 ceiling: (CGFloat, CGFloat, CGFloat)) -> UIColor {
+        UIColor(red: floor.0 + (ceiling.0 - floor.0) * t,
+                green: floor.1 + (ceiling.1 - floor.1) * t,
+                blue: floor.2 + (ceiling.2 - floor.2) * t,
+                alpha: 1)
     }
 
     // MARK: - Semantic state  — orange attention, red destructive, green confirm

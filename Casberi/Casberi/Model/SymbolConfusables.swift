@@ -25,7 +25,8 @@ import Foundation
 ///    clause 1 can't see: `DAl` (lowercase L), `U5DT`, `S0L`, `3TH`.
 ///
 /// Deliberately a tight known-symbol set rather than a guess at "does this
-/// look like any token anywhere" — the same choice TokenHue/TokenIcon make.
+/// look like any token anywhere" — the same choice `TokenIcon`'s bundled set
+/// makes (and `TokenHue`'s color table made, before its 2026-08-10 retirement).
 /// A short list of the symbols actually worth impersonating produces a
 /// warning we can stand behind; a general resemblance engine produces noise.
 enum SymbolConfusables {

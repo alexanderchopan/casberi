@@ -297,12 +297,16 @@ private struct ReachCard: View {
                             : "\(cell.label), \(cell.count) requests\(cell.declared ? "" : ", not on the list")")
     }
 
-    /// Magnitude in the opacity, STATE in the hue — the one place this map
-    /// departs from §145's single-hue rule, and it earns it: an undeclared
-    /// host is not a smaller version of a declared one. The tail takes a flat
-    /// neutral because "everything else" has no magnitude of its own.
+    /// Magnitude in the neutral ink ramp, STATE in the hue — the one place
+    /// this map departs from the ramp's rule, and it earns it: an undeclared
+    /// host is not a smaller version of a declared one, so it keeps a real
+    /// color (2026-08-10: `DS.ink(magnitude:)` replaced the tinted wash for
+    /// every OTHER treemap in the app, but attention is a state, not a
+    /// decoration, and stays orange). The tail takes a flat neutral because
+    /// "everything else" has no magnitude of its own.
     private func fill(_ cell: NetworkReceiptsInsight.Cell) -> Color {
         if cell.isTail { return DS.fillLine }
-        return DS.wash(cell.declared ? DS.tint : DS.attention, magnitude: cell.share)
+        return cell.declared ? DS.ink(magnitude: cell.share)
+                              : DS.wash(DS.attention, magnitude: cell.share)
     }
 }

@@ -89,11 +89,14 @@ struct X402RoomCard: View {
         .background {
             ZStack {
                 // The well, not the sheet: this card's own surface IS
-                // `dsWidgetSurface`, so a tile washed over the same tone would
-                // vanish at low share.
+                // `dsWidgetSurface`. Harmless now that the fill is the
+                // neutral ink ramp (2026-08-10) rather than a translucent
+                // brand wash — ink is fully opaque at every magnitude, so it
+                // can no longer vanish into a matching base — but left as-is
+                // rather than churned for its own sake.
                 DS.surfaceWell
                 if !cell.isTail {
-                    Self.mark.opacity(0.10 + 0.26 * X402Room.share(cell, in: room))
+                    DS.ink(magnitude: X402Room.share(cell, in: room))
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
