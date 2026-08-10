@@ -395,10 +395,15 @@ enum ObsidianIngest {
 
     /// The parsed note's words and subjects onto the thing.
     ///
-    /// `enrichedText` carries the FULL body (retrieval-only by the 2026-07-15
-    /// ruling — nothing draws it) while `content` keeps the excerpt, so open
-    /// and route logic are untouched and a long note stops being findable only
-    /// by its opening paragraph. Clearing `embedding` is what makes the
+    /// `enrichedText` carries the FULL body while `content` keeps the row
+    /// excerpt, so open and route logic are untouched and a long note stops
+    /// being findable only by its opening paragraph. `enrichedText` is
+    /// retrieval-only everywhere else by the 2026-07-15 ruling, but the note
+    /// sheet reads it too now (2026-08-09, `ThingContent.swift`'s `default:`
+    /// case) — a note is the one corpus in this app written to be read back,
+    /// and clamping the sheet to the 300-char excerpt meant the vault bridge
+    /// indexed a person's words for search and displayed none of them.
+    /// Clearing `embedding` is what makes the
     /// re-read reach the semantic index too: without it an edited note keeps
     /// the vector it was first embedded with, and search would answer with
     /// what the note USED to be about.

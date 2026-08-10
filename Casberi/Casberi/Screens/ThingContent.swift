@@ -291,7 +291,29 @@ struct ThingContentView: View {
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.bottom, DS.Space.s3)
             }
-            if !thing.content.isEmpty {
+            // Obsidian notes get the same exception, for a different reason
+            // (2026-08-09): `enrichedText` here isn't a payoff fact carved out
+            // of an otherwise-discarded read, it's the note's own words, just
+            // clamped further out (8,000 chars vs. the 300-char row excerpt on
+            // `content`). Until now the vault bridge read a person's notes,
+            // indexed them for search, and showed nobody the note — you could
+            // ask about it but never open it and actually read it back.
+            // `enrichedText` is a strict prefix-superset of `content` here
+            // (both come off the same parsed body), so when it's present it
+            // REPLACES the excerpt below rather than repeating its first 300
+            // characters twice. A note not yet re-read by the current reader
+            // (or still an evicted iCloud placeholder) has no `enrichedText`
+            // yet and falls through to the excerpt, same as before.
+            if thing.source == "Obsidian",
+               let body = thing.enrichedText?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !body.isEmpty {
+                Text(body)
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.bottom, DS.Space.s3)
+            } else if !thing.content.isEmpty {
                 Text(thing.content)
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
                     .lineLimit(12)
