@@ -428,6 +428,19 @@ enum TodayBrief {
             lines.append(sheet)
         }
 
+        // 4c. Who's around (2026-08-10, user: "life should be rich with
+        // avatars", and "avatars are there for social stuff like farcaster and
+        // bluesky"). Under the sheet, and the three together are the answer to
+        // "the treemap alone is insufficient": subjects, then scenes, then
+        // people. It declines on its own below three names, which is why it
+        // needs no scope test — Money and Work rarely name three people, and
+        // when they genuinely do (a busy GitHub or a Stocktwits watchlist) the
+        // roster is a true reading there too.
+        if let faces = faces(things) {
+            ids.append("faces")
+            lines.append(faces)
+        }
+
         // 5 and 6 COMPOSE in the other order than they render (2026-07-31).
         // The leads are the screen's richest statement of a single thing — the
         // post in full, the read with its image and its tap — so an
@@ -1813,6 +1826,91 @@ enum TodayBrief {
     /// person appearing three times (a reply, a like, a mention) is one row,
     /// not three. Newest-first, capped at 3 — a row of faces is a glance,
     /// not a directory.
+    /// Who turned up, ranked by how often (2026-08-10).
+    ///
+    /// Distinct from `peopleRow` below, which promotes ONE recent post per
+    /// person and requires an avatar. This counts appearances across the whole
+    /// scope and needs no picture — so it answers "who is around in my life"
+    /// where that one answers "what did they just say".
+    ///
+    /// **`authorAvatarURL` is real and populated**, contrary to a first read of
+    /// `-scopeMaterialProbe` (which measured a demo corpus and found zero, and
+    /// was wrong about the product): `FarcasterIngest`, `BlueskyIngest`,
+    /// `NostrIngest`, `RSSIngest`, `StocktwitsBridge`, `GitHubFeeds`,
+    /// `SocialInbound` and `XArchiveImport` all write it. Coverage is UNEVEN
+    /// rather than absent — a Farcaster cast carries a face, an X-archive like
+    /// names a handle and carries none — which is exactly why the view falls
+    /// back to a monogram instead of gating on a picture the way `peopleRow`
+    /// does. Gating here would silently drop the people whose bridges simply
+    /// don't serve avatars.
+    ///
+    /// YOU are excluded. Every social bridge stamps your own handle on your own
+    /// posts, so an unfiltered count ranks you first by a wide margin in every
+    /// corpus — a roster of yourself is not "who's around". Matched on the
+    /// literal handle "you" (what the demo seeds) plus every watched account
+    /// the social stores know to be yours.
+    private static func faces(_ things: [Thing]) -> String? {
+        var counts: [String: Int] = [:]
+        var newest: [String: Thing] = [:]
+        var avatar: [String: String] = [:]
+        let mine = ownHandles()
+        for t in things {
+            // A PERSON, not a byline. `authorHandle` is written by RSS,
+            // Substack, Podcasts and YouTube too, where it holds a
+            // PUBLICATION — so an unscoped roster drew "The Verge", "Small
+            // Things" and a podcast as the people in someone's life (seen on
+            // the sim, 2026-08-10). `SocialThread.contextSources` is already the
+            // app's own answer to "does this source name a human": the
+            // thread-capable networks plus Slack and X, which name people and
+            // will never name a masthead. Instagram/TikTok/Snapchat handles
+            // are people too but live outside that set; they are left out
+            // rather than special-cased, because the set is maintained for
+            // this exact distinction and forking it here would give the app
+            // two answers to one question.
+            guard SocialThread.hasContext(t.source) else { continue }
+            guard let raw = t.authorHandle ?? t.postAuthor else { continue }
+            let handle = raw.trimmingCharacters(in: CharacterSet(charactersIn: "@ "))
+            guard !handle.isEmpty, !mine.contains(handle.lowercased()) else { continue }
+            let key = handle.lowercased()
+            counts[key, default: 0] += 1
+            if let prior = newest[key], prior.capturedAt >= t.capturedAt {} else { newest[key] = t }
+            // Keep the first avatar any of this person's rows carried — one
+            // bridge may serve a face while another names them bare.
+            if avatar[key] == nil, let a = t.authorAvatarURL, !a.isEmpty { avatar[key] = a }
+        }
+        // Count first, then newest — a total order, so the roster can't
+        // reshuffle between two opens over identical data.
+        let ranked = counts.sorted {
+            $0.value != $1.value
+                ? $0.value > $1.value
+                : (newest[$0.key]?.capturedAt ?? .distantPast) > (newest[$1.key]?.capturedAt ?? .distantPast)
+        }
+        guard ranked.count >= 3 else { return nil }
+        let shown = ranked.prefix(6).compactMap { (key, n) -> String? in
+            guard let t = newest[key] else { return nil }
+            let display = (t.authorHandle ?? t.postAuthor ?? key)
+                .trimmingCharacters(in: CharacterSet(charactersIn: "@ "))
+            return [genSafe(display), genSafe(avatar[key] ?? ""), "\(n)", t.id.uuidString]
+                .joined(separator: "|")
+        }
+        guard shown.count >= 3 else { return nil }
+        let more = ranked.count - shown.count
+        let subline = more > 0 ? String(localized: "and \(more) more") : ""
+        return "faces = Faces(\"\(String(localized: "Who's around"))\", \"\(genSafe(subline))\", \"\(shown.joined(separator: ";"))\")"
+    }
+
+    /// The handles that are YOURS — every account the social stores have been
+    /// told you own, plus the literal "you" the demo stamps. Lowercased and
+    /// stripped of a leading @, matching `faces`' own key.
+    private static func ownHandles() -> Set<String> {
+        var out: Set<String> = ["you"]
+        for name in FarcasterStore.shared.accounts.filter(\.mine).map(\.username)
+            + BlueskyStore.shared.accounts.filter(\.mine).map(\.handle) {
+            out.insert(name.trimmingCharacters(in: CharacterSet(charactersIn: "@ ")).lowercased())
+        }
+        return out
+    }
+
     private static func peopleRow(_ landed: [Thing]) -> (lines: [String], id: String)? {
         var seen = Set<String>()
         var people: [Thing] = []

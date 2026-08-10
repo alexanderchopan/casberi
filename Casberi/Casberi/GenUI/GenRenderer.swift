@@ -380,6 +380,7 @@ struct GenRender: View {
         case "Alerts":       GenAlerts(el: el).mountIn()
         case "Runway":       GenRunway(el: el).mountIn()
         case "ContactSheet": GenContactSheet(el: el).mountIn()
+        case "Faces":        GenFaces(el: el).mountIn()
 
         // Answer-column charts (2026-07-21, prd §146) — richer generative UI
         // for the agent's answers. Each draws a REAL visualization the answer
@@ -3019,6 +3020,122 @@ private struct GenTakeawayCard: View {
         .dsWidgetSurface()
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s2)
+    }
+}
+
+/// `Faces(label, subline, "handle|avatarURL|count|thingID;…")` — who turned up,
+/// as faces sized by how often (2026-08-10, user: "life should be rich with
+/// avatars").
+///
+/// The treemap already tells you Life's subjects and draws them as lettered
+/// rectangles; people are the one thing in this corpus with a FACE, and
+/// rendering them as more rectangles was the specific poverty this fixes.
+/// Size carries frequency — the same grammar the treemap uses for area, moved
+/// onto a shape that can also be a likeness.
+///
+/// A monogram where a bridge gave us no avatar, never a blank or a silhouette:
+/// `RemoteThumb`'s own fallback, so the circle is always a real circle and the
+/// row never has a hole in it. That matters more here than elsewhere because
+/// avatar coverage is genuinely uneven — Farcaster, Bluesky, Nostr, RSS,
+/// Stocktwits and GitHub all populate `authorAvatarURL`, while an X archive or
+/// a TikTok save names the person and carries no picture.
+private struct GenFaces: View {
+    let el: GenEl
+    @Environment(\.genThingOpen) private var thingOpen
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private struct Person {
+        let handle: String, avatar: String, count: Int, id: String
+    }
+
+    private var people: [Person] {
+        el.str(2).split(separator: ";").compactMap { row in
+            let f = row.split(separator: "|", omittingEmptySubsequences: false)
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+            guard f.count >= 4, !f[0].isEmpty else { return nil }
+            return Person(handle: f[0], avatar: f[1], count: Int(f[2]) ?? 1, id: f[3])
+        }
+    }
+
+    /// Diameter from rank, not from the raw count — a person who appeared 40
+    /// times beside one who appeared twice would otherwise draw a face and a
+    /// dot. The treemap's `sqrt` reasoning, solved by ranking instead: the
+    /// order is the claim, and every face stays big enough to be a face.
+    private func size(_ i: Int) -> CGFloat { [64, 56, 50, 44, 40, 38].indices.contains(i) ? [64, 56, 50, 44, 40, 38][i] : 36 }
+
+    var body: some View {
+        let people = people
+        Group {
+            if people.count >= 3 {
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
+                    if !el.str(0).isEmpty {
+                        Text(el.str(0))
+                            .dsText(.callout15).fontWeight(.semibold)
+                            .foregroundStyle(DS.textPrimary)
+                    }
+                    if !el.str(1).isEmpty {
+                        Text(el.str(1))
+                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    }
+                    // A horizontal roster rather than a wrapping cluster: the
+                    // faces are different SIZES, and a wrap packs unequal
+                    // circles into ragged rows that read as an accident. One
+                    // line, biggest first, also makes the ranking the reading
+                    // order — the app's own strip idiom (the source chips, the
+                    // kept pills), bottom-aligned so the sizes step down from a
+                    // shared baseline instead of floating.
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(alignment: .bottom, spacing: DS.Space.s3) {
+                            ForEach(Array(people.enumerated()), id: \.offset) { i, p in
+                                Button { thingOpen?(p.id) } label: {
+                                    VStack(spacing: 5) {
+                                        // An INITIAL in the person's own hue
+                                        // where no avatar came down, not
+                                        // `RemoteThumb`'s bridge fallback:
+                                        // that one resolves a BRIDGE name to
+                                        // an app icon, so handing it a handle
+                                        // drew the same generic glyph for
+                                        // everybody and made five distinct
+                                        // people identical (seen on the sim,
+                                        // 2026-08-10). `ProjectHue` keys the
+                                        // colour off the name, so a person
+                                        // keeps their circle between opens.
+                                        if p.avatar.isEmpty {
+                                            Circle()
+                                                .fill(ProjectHue.color(for: p.handle))
+                                                .overlay(
+                                                    Text(String(p.handle.prefix(1)).uppercased())
+                                                        .dsText(.heading17)
+                                                        .foregroundStyle(.white)
+                                                )
+                                                .frame(width: size(i), height: size(i))
+                                        } else {
+                                            RemoteThumb(urlString: p.avatar,
+                                                        size: size(i),
+                                                        fallback: p.handle,
+                                                        circular: true)
+                                        }
+                                        Text(p.handle)
+                                            .dsText(.label12)
+                                            .foregroundStyle(DS.textTertiary)
+                                            .lineLimit(1)
+                                            .frame(maxWidth: size(i) + 16)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(p.id.isEmpty)
+                                .chartArrival(index: i, reduceMotion: reduceMotion)
+                            }
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(DS.Space.s4)
+                .dsWidgetSurface()
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s2)
+            }
+        }
     }
 }
 
