@@ -30,18 +30,20 @@ fields, no type mismatches, the two environments level. That clears the last
 server-side blocker; what remains unproven is a real device round-trip, which
 needs build 231+ installed with sync switched on.
 
-## Open: `CD_pinnedAt` is in Development, not yet in Production (2026-08-10)
+## `CD_pinnedAt` — deployed to both environments (2026-08-10)
 
-The pin verb added `Thing.pinnedAt`. Development was imported and verified by
-re-export the same session (59 → 60 `CD_*` fields); Production is **one field
-behind and nothing else** (`--live production` reports `1 missing, 0
-mismatched`), so the Console diff is a single added timestamp.
+The pin verb added `Thing.pinnedAt`. Development was imported via `cktool` and
+verified by re-export (59 → 60 `CD_*` fields); Production was promoted in the
+Console the same session and confirmed with
+`scripts/cloudkit-schema-audit.py --live production` — **all 58 stored
+properties present in live production, no missing fields, no type
+mismatches.** Pins sync on a Production-signed build.
 
-Until it is promoted, pins work locally and silently fail to mirror on any
-build signed against Production — which is the partial-sync failure described
-above, wearing the one field a person would most expect to follow them between
-devices. Promote before the next TestFlight ship, then re-run
-`scripts/cloudkit-schema-audit.py --live production` to confirm it landed.
+Worth keeping as the worked example of the rule at the top of this file: the
+whole round trip — model property, checked-in `.ckdb`, Development import,
+Console promotion, live re-export — happened in the session that added the
+field, which is the only way this does not drift. The 2026-08-01 incident was
+20 fields deep precisely because that loop was never closed once.
 
 ## The drift is invisible — so it's checked, not remembered
 
