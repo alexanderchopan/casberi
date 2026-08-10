@@ -1188,7 +1188,18 @@ enum DemoSeedAll {
         ]
         out += stripe.enumerated().map { i, s in
             row(.transaction, s.0, source: "Stripe", ref: "demo:stripe:\(i)", days: s.1, hour: 13) { t in
-                if i == 1 { t.dueAt = at(-5, 17) }
+                // The dispute wears the SAME markers `StripeBridge` stamps on a
+                // real one — `tag: "Dispute"` plus the evidence `dueAt`
+                // (2026-08-10). Without the tag it had a deadline and nothing
+                // else, so `NotifySweep.classify` answered nil and the demo
+                // could not show the alerts callout at all: the row read as a
+                // dispute to a human and as an ordinary transaction to every
+                // piece of code that asks what it is. That is the §334 seat
+                // problem one level down — a demo row that furnishes the feed
+                // but exercises none of the logic keyed off it — and it is why
+                // a demo row should carry a real bridge's markers, not just its
+                // words.
+                if i == 1 { t.dueAt = at(-5, 17); t.tags = ["Dispute"] }
             }
         }
         let hf: [(String, Double)] = [

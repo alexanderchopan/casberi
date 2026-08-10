@@ -322,6 +322,24 @@ enum TodayBrief {
             publishThemesToWidget(things: things, now: now)
         }
 
+        // 1b. What NEEDS YOU (2026-08-10) — above the crown, and the only
+        // module ranked purely by urgency rather than by what the scope is
+        // "about". It sits under the lede rather than over it because the lede
+        // is one sentence naming the day and this is the list you act on: the
+        // sentence frames, the callout demands. Everything below reports.
+        //
+        // Reads the WHOLE scope, not `landed` — an alert does not stop being
+        // an alert because it arrived before the window opened. That is the
+        // deliberate divergence from every other module here, all of which are
+        // "what's new"; a dispute opened on Monday is still what needs you on
+        // Thursday, and scoping this to the window would hide exactly the
+        // alerts that have been waiting longest.
+        let alerts = alertsCard(things, now: now)
+        if let alerts {
+            ids.append("alerts")
+            lines.append(alerts.line)
+        }
+
         // 2. The money hero — the CROWN (2026-07-25), the day's one fused
         // visualization and the only read where a number is itself the event.
         if let hero = moneyHero(move: move, holdings: holdings, landed: landed) {
@@ -341,13 +359,13 @@ enum TodayBrief {
         // time (the leads-vs-observations precedent above: never the same
         // fact told twice). Below the ≥2 floor, `nextTile` alone is the
         // honest degrade — one deadline is a fact, not a runway.
-        let runway = runwayCard(things)
+        let runway = runwayCard(things, excluding: alerts?.ids ?? [])
         var tiles: [String] = []
         if let movers = moversTile(moves) {
             tiles.append("tmov")
             lines.append(movers)
         }
-        if runway == nil, let next = nextTile(things) {
+        if runway == nil, let next = nextTile(things, excluding: alerts?.ids ?? []) {
             tiles.append("tnext")
             lines.append(next)
         }
@@ -536,9 +554,18 @@ enum TodayBrief {
         // them (a resolved market is money news), and the second lead stays
         // glued to the first. Composed rather than hard-coded in the renderer
         // because only this file knows which of them actually fired.
-        let chapters = ["hero", "themes", "read", "notes", leadRefs.first]
+        let chapters = ["alerts", "hero", "themes", "read", "notes", leadRefs.first]
             .compactMap { $0 }
             .filter { ids.contains($0) && $0 != ids.first }
+        // WHICH MODULES a scope actually composed (2026-08-09). Kept for the
+        // same reason `briefPerf` above is: "the Work brief looks empty" is a
+        // recurring report whose cause is never guessable from the screen —
+        // a module can be missing because its data is thin, because its gate
+        // is scoped out, or because it silently lost a registry entry, and
+        // those look identical. One compact line per compose says which.
+        #if DEBUG
+        NSLog("[Casberi] briefModules| category=%@ ids=%@", category ?? "nil", ids.joined(separator: ","))
+        #endif
         return KeptAskComposers.Result(delta: digest, digest: digest,
                                        doc: ["root = Stack([\(ids.joined(separator: ", "))], \"\(chapters.joined(separator: ","))\")"] + lines)
     }
@@ -606,20 +633,6 @@ enum TodayBrief {
         }
         if let person = personEcho(landed) {
             out.append(person)
-        }
-
-        // A source that has landed something every time the brief looked, and
-        // didn't today. Rare by construction (four unbroken appearances and
-        // five days of calendar), and gated on the day having landed SOMETHING
-        // — on a genuinely empty day every source is quiet and naming one
-        // would be a coincidence dressed as an observation.
-        if !landed.isEmpty,
-           let gone = BriefLedger.absent(ledger, landedSources: Set(landed.map(\.source)),
-                                         now: now) {
-            let since = gone.since.formatted(.dateTime.month(.abbreviated).day())
-            out.append(Note(glyph: "moon.zzz",
-                            text: String(localized:
-                                "Nothing from \(gone.source) today — the first quiet day since \(since).")))
         }
 
         // On this day (2026-07-28) — the corpus's own anniversary, promoted
@@ -1481,8 +1494,11 @@ enum TodayBrief {
         return "tmkt = Row(\"\(tileSafe(just.thing.title))\", \"\(just.thing.kind.typeTag)\", \"\(just.thing.source)\", \"\(answer)\", \"\(just.thing.id.uuidString)\")"
     }
 
-    private static func nextTile(_ things: [Thing]) -> String? {
-        let open = things.filter { $0.mark != .done && $0.dueAt != nil }
+    private static func nextTile(_ things: [Thing], excluding alerted: Set<UUID> = []) -> String? {
+        // Same exclusion the runway takes, and for the same reason — this is
+        // the degrade path below the runway's ≥2 floor, so without it a lone
+        // dispute would be the alarm AND "Up next" (2026-08-10).
+        let open = things.filter { $0.mark != .done && $0.dueAt != nil && !alerted.contains($0.id) }
         let ahead = open.filter { ($0.dueAt ?? .distantPast) >= .now }
             .sorted { ($0.dueAt ?? .now) < ($1.dueAt ?? .now) }
         let overdue = open.filter { ($0.dueAt ?? .distantFuture) < .now }
@@ -1504,6 +1520,82 @@ enum TodayBrief {
         return "tnext = NextTile(\"\(String(localized: "Up next"))\", \"\(genSafe(clamp(next.title, max: 40)))\", \"\(genSafe(when))\", \"\(genSafe(alert))\", \"\(next.id.uuidString)\")"
     }
 
+    /// The ALERTS callout (user, 2026-08-10: "we have things that qualify as
+    /// alerts like disputes … they should be shown as their own thing as a
+    /// call out in some way b/c they are more important") — the things in this
+    /// window that want something from you, above everything that merely
+    /// reports.
+    ///
+    /// Membership is `NotifySweep.classify` + `.alarm`, NOT a judgement made
+    /// here. That reuse is the point: the app already decides what is worth
+    /// interrupting someone for, mechanically, under `notify-selftest.sh`'s 79
+    /// assertions — so the callout and the lock screen cannot drift into
+    /// disagreeing about whether a dispute is urgent. A second rule set here
+    /// would be a second opinion, and the one that got edited less often would
+    /// quietly become wrong.
+    ///
+    /// Deliberately does NOT consult `NotifyLedger`: that ledger answers "have
+    /// we already BUZZED about this", which is the right question for a
+    /// notification and the wrong one for a screen. A dispute you were
+    /// notified about on Tuesday is still your most important open item on
+    /// Wednesday — suppressing it here would hide the alert precisely because
+    /// it was important enough to announce.
+    ///
+    /// Scoped by the caller's own Stage-1 filter (`things` is already this
+    /// scope's), so Money shows disputes and approvals, Work shows rejections
+    /// and failed runs, Life shows its own deadlines — each from the same
+    /// classifier, with no per-scope alert table to keep in sync.
+    ///
+    /// NO floor, unlike every other module here: one alert is not "a spread
+    /// too thin to draw", it is one thing that wants you. The ≥2 rule the
+    /// runway keeps is about whether a SHAPE is legible; this module has no
+    /// shape to be illegible.
+    private static func alertsCard(_ things: [Thing], now: Date) -> (line: String, ids: Set<UUID>)? {
+        struct Ranked { let thing: Thing; let kind: NotifyKind }
+        let alarms: [Ranked] = things.compactMap { t in
+            guard let k = NotifySweep.classify(t, now: now), k.cls == .alarm else { return nil }
+            return Ranked(thing: t, kind: k)
+        }
+        // Severity first, then newest — the same total order `NotifySweep`
+        // uses to pick which alarm wins a batch, so the row that would have
+        // reached the lock screen is the row that leads here.
+        let ranked = alarms.sorted {
+            $0.kind.severity != $1.kind.severity
+                ? $0.kind.severity > $1.kind.severity
+                : $0.thing.capturedAt > $1.thing.capturedAt
+        }
+        guard !ranked.isEmpty else { return nil }
+        let shownAlerts = Array(ranked.prefix(3))
+        let rows = shownAlerts.map { r -> String in
+            // A deadline's own clock when it has one, else when it landed —
+            // never a manufactured urgency word. `dueAt` is the only real
+            // clock any of these carry (§306's own finding).
+            let meta: String
+            if let due = r.thing.dueAt {
+                meta = due < now
+                    ? String(localized: "overdue")
+                    : due.formatted(.dateTime.weekday(.abbreviated).hour().minute())
+            } else {
+                meta = r.thing.capturedAt.formatted(.dateTime.weekday(.abbreviated).hour().minute())
+            }
+            return [genSafe(clamp(r.thing.title, max: 46)), genSafe(meta),
+                    genSafe(r.thing.source), r.thing.id.uuidString].joined(separator: "|")
+        }
+        let eyebrow = ranked.count == 1
+            ? String(localized: "Needs you")
+            : String(localized: "Needs you · \(ranked.count)")
+        // The ids go back to the caller so the runway can SKIP them (2026-08-10).
+        // Only the rows actually drawn — an alert past the cap of 3 was never
+        // shown, so the runway naming it is the honest place to see it, not a
+        // repeat. This is the leads-vs-observations rule ("never the same fact
+        // told twice") applied to the pair it now affects: a Stripe dispute
+        // carries a `dueAt`, which is exactly what `runwayCard` selects on, so
+        // without this every dispute appears once as an alarm and again four
+        // rows below as an ordinary deadline.
+        return ("alerts = Alerts(\"\(eyebrow)\", \"\(rows.joined(separator: ";"))\")",
+                Set(shownAlerts.map { $0.thing.id }))
+    }
+
     /// The runway (user, 2026-08-08: "Work is the only room organized by
     /// deadlines") — several upcoming/overdue items on one axis, where
     /// `nextTile` above only ever names the nearest one. Reuses `LeadRow`
@@ -1517,8 +1609,8 @@ enum TodayBrief {
     /// `nextTile`'s plain single row is the honest degrade for a thin
     /// scope — a real fact stated plainly, never a chart strained to fill
     /// space (spec: "depth scales inversely with scope").
-    private static func runwayCard(_ things: [Thing]) -> [String]? {
-        let open = things.filter { $0.mark != .done && $0.dueAt != nil }
+    private static func runwayCard(_ things: [Thing], excluding alerted: Set<UUID> = []) -> [String]? {
+        let open = things.filter { $0.mark != .done && $0.dueAt != nil && !alerted.contains($0.id) }
         let ranked = open.sorted { ($0.dueAt ?? .distantFuture) < ($1.dueAt ?? .distantFuture) }
         guard ranked.count >= 2 else { return nil }
         let now = Date.now

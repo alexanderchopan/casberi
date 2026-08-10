@@ -377,6 +377,7 @@ struct GenRender: View {
         case "PostRow":      GenPostRow(el: el).mountIn()
         case "TakeawayCard": GenTakeawayCard(el: el).mountIn()
         case "ApprovalCard": GenApprovalCard(el: el).mountIn()
+        case "Alerts":       GenAlerts(el: el).mountIn()
 
         // Answer-column charts (2026-07-21, prd §146) — richer generative UI
         // for the agent's answers. Each draws a REAL visualization the answer
@@ -3019,6 +3020,104 @@ private struct GenTakeawayCard: View {
     }
 }
 
+/// `Alerts(eyebrow, "title|meta|source|thingID;…")` — the things in this scope
+/// that WANT SOMETHING, called out above everything else (2026-08-10, user:
+/// "we have things that qualify as alerts like disputes … they should be shown
+/// as their own thing as a call out in some way b/c they are more important").
+///
+/// Its membership is NOT a judgement made here: `TodayBrief.alertsCard` runs
+/// the shipped `NotifySweep.classify` and keeps the `.alarm` class, ranked by
+/// `NotifyKind.severity`. That is deliberate and is the whole reason this is
+/// trustworthy — the app already decides, mechanically and under a 79-assertion
+/// self-test, what is worth breaking into someone's day for. A second opinion
+/// living in the brief would drift from the lock screen's within a month, and
+/// then a dispute would be an emergency in one place and a list item in the
+/// other.
+///
+/// Drawn as a distinct BLOCK rather than as rows in a card, and it is the one
+/// module in the brief allowed `DS.attention`: everything else here reports,
+/// and this is the only thing that asks. A per-row severity hue was drawn
+/// first and cut — five rows in three colours reads as a status dashboard and
+/// makes the least urgent row look like a warning; rank already carries
+/// severity, so colour would be saying it twice.
+private struct GenAlerts: View {
+    let el: GenEl
+    @Environment(\.genThingOpen) private var thingOpen
+
+    private struct Item {
+        let title: String, meta: String, source: String, id: String
+    }
+
+    /// Semicolon-separated rows, pipe-separated fields — the `WalletFlow`
+    /// lane grammar, which is already the app's shape for "several records in
+    /// one arg". Short of four fields the row is dropped rather than padded:
+    /// a half-parsed alert is the one kind this module must never draw.
+    private var items: [Item] {
+        el.str(1).split(separator: ";").compactMap { row in
+            let f = row.split(separator: "|", omittingEmptySubsequences: false)
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+            guard f.count >= 4, !f[0].isEmpty else { return nil }
+            return Item(title: f[0], meta: f[1], source: f[2], id: f[3])
+        }
+    }
+
+    var body: some View {
+        let items = items
+        Group {
+            if !items.isEmpty {
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
+                    HStack(spacing: DS.Space.s2) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(DS.attention)
+                            .accessibilityHidden(true)
+                        Text(el.str(0))
+                            .dsText(.callout15).fontWeight(.semibold)
+                            .foregroundStyle(DS.textPrimary)
+                    }
+                    ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                        Button { thingOpen?(item.id) } label: {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(item.title)
+                                    .dsText(.heading17)
+                                    .foregroundStyle(DS.textPrimary)
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .multilineTextAlignment(.leading)
+                                HStack(spacing: DS.Space.s1) {
+                                    if !item.source.isEmpty {
+                                        BridgeIcon(name: item.source, size: 14)
+                                    }
+                                    if !item.meta.isEmpty {
+                                        Text(item.meta)
+                                            .dsText(.subhead13)
+                                            .foregroundStyle(DS.textSecondary)
+                                            .lineLimit(1)
+                                    }
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(item.id.isEmpty)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(DS.Space.s4)
+                // The one tinted surface in the brief. `attention` at low
+                // opacity rather than `dsWidgetSurface` — against the neutral
+                // cards below it this reads as a different KIND of thing at a
+                // glance, which is the entire request.
+                .background(DS.attention.opacity(0.12),
+                            in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s2)
+            }
+        }
+    }
+}
+
 /// ApprovalCard(eyebrow, title, ask) — the consent card's display form; the
 /// live Approve/Deny pills belong to the Feed's interactive twin.
 private struct GenApprovalCard: View {
@@ -4056,11 +4155,28 @@ private struct GenLeadRow: View {
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(3)
                         .fixedSize(horizontal: false, vertical: true)
-                    if !el.str(1).isEmpty {
-                        Text(el.str(1))
-                            .dsText(.subhead13)
-                            .foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
+                    // The source's own mark leads the meta line (2026-08-10,
+                    // user: "there should be icons of where something is from
+                    // on the list items"). `str(4)` has always carried the
+                    // source — it was reachable ONLY as `RemoteArt`'s fallback,
+                    // so a row with no banner (which is every row in a runway
+                    // of deadlines) said nothing about where it came from, and
+                    // four reminders from three different apps read as one
+                    // undifferentiated list. Drawn at meta scale, beside the
+                    // meta rather than above the title: which app this is from
+                    // is context for the fact, not the headline.
+                    if !el.str(1).isEmpty || !el.str(4).isEmpty {
+                        HStack(spacing: DS.Space.s1) {
+                            if !el.str(4).isEmpty {
+                                BridgeIcon(name: el.str(4), size: 14)
+                            }
+                            if !el.str(1).isEmpty {
+                                Text(el.str(1))
+                                    .dsText(.subhead13)
+                                    .foregroundStyle(DS.textTertiary)
+                                    .lineLimit(1)
+                            }
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)

@@ -361,6 +361,22 @@ struct Composer: View {
             kind = "search:\(q.trimmingCharacters(in: CharacterSet(charactersIn: "? ")))"
         }
         guard let kind, !KeptAskStore.shared.isKept(kind) else { return nil }
+        // A SCOPE ask is never keepable (2026-08-10, user: "why would it show
+        // on how's my work stuff if that is already a default chip"). Money /
+        // Work / Life have a permanent, always-visible chip row of their own
+        // (`categoryChipsRow`), so keeping one mints a pin that duplicates a
+        // control already on screen — and, since a pinned ask sorts above the
+        // chips, pushes the real chip down under a copy of itself. This was
+        // right before the scoped briefs shipped, when `category:Work` was the
+        // only door to that room; the chips replaced that door and nothing
+        // told this recognizer. Other `category:` kinds are untouched — a
+        // catalog category with no chip (there are none today, but the
+        // mapping is data) is still a legitimate thing to pin.
+        if let scope = kind.hasPrefix("category:")
+            ? String(kind.dropFirst("category:".count)) : nil,
+           BriefScope.scopes.contains(scope) {
+            return nil
+        }
         return kind
     }
 
@@ -3084,6 +3100,29 @@ struct Composer: View {
                         .dsHover()
                     }
                     .buttonStyle(.plain)
+                    // Keeping was ONE-WAY until now (2026-08-10, user: "how
+                    // does someone remove it"). `KeptAskStore.remove` has
+                    // existed since the store did, and its only callers were a
+                    // DEBUG clear-all and the demo teardown — so a pill kept by
+                    // mistake, or one whose question stopped mattering, stayed
+                    // on the rest screen for the life of the install. That is
+                    // the honesty rule's own shape inverted: not a dead
+                    // control, but a live one with no undo.
+                    //
+                    // A context menu rather than a swipe or an × : these pills
+                    // sit in a HORIZONTAL scroller, where a swipe is the scroll
+                    // gesture (the 2026-07-08 arbitration lesson), and an ×
+                    // on every pill would put a destructive control permanently
+                    // beside a routine one. Long-press is also what the feed's
+                    // own rows already use for their secondary verbs.
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            DSHaptic.selection()
+                            KeptAskStore.shared.remove(kind)
+                        } label: {
+                            Label("Stop keeping this", systemImage: "pin.slash")
+                        }
+                    }
                 }
                 }
                 // The inset rides the content, not the scroll view — see
