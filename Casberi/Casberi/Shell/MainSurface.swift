@@ -169,6 +169,26 @@ struct MainSurface: View {
         }
     }
 
+    /// The rail: the same source strip turned 90° down the leading edge of
+    /// every regular-width surface (see `showsRail`), ridden as the stack's
+    /// own `.safeAreaInset(edge: .leading)` — see `body` for why.
+    ///
+    /// It adds NO container material of its own. The doors and the "All" chip
+    /// already wear glass inside `SourceChips`, and a slab behind them would
+    /// be glass on glass; a source chip is an app icon and stays unfrosted by
+    /// the same 2026-07-20 ruling the horizontal strip follows. What the move
+    /// changes is not how much glass the rail wears but what is behind it.
+    ///
+    /// `SourceChips` pins `PadLayout.railWidth` on its vertical branch, so
+    /// the width this inset reserves is the same number `PadShellInsets`
+    /// holds the agent bar clear by — one constant, not two that can drift.
+    @ViewBuilder
+    private var railInset: some View {
+        if showsRail {
+            sourceStrip(axis: .vertical)
+        }
+    }
+
     /// The corpus MINUS search-only sources (Contacts) — the same rule Home and
     /// Feed already share (`Corpus.surfaced`), so the chip row lists exactly the
     /// sources the feed shows.
@@ -399,7 +419,20 @@ struct MainSurface: View {
             ChipMemory.weight(for: $0, counts: counts, lastVisit: lastVisit)
                 > ChipMemory.weight(for: $1, counts: counts, lastVisit: lastVisit)
         }
-        return ["All"] + learned
+        // Pinned sits second, right after All, and does NOT enter the learned
+        // sort above (2026-08-10). Two reasons it is placed rather than ranked:
+        // it is not a source, so `ChipMemory`'s recency-and-visits weighting has
+        // nothing meaningful to say about it; and its position is the one thing
+        // about it that should never move, because a list you built by hand is
+        // useless if you have to hunt for the door to it.
+        //
+        // Gated on something actually being pinned — an empty Pinned room would
+        // be a chip that opens nothing, which is the dead control §83 forbids.
+        // It disappears again when you unpin the last thing, and that is
+        // correct: the room's whole content is your own list, so an empty one
+        // has nothing to explain.
+        let pinned = Pinboard.hasAny(in: modelContext) ? [Pinboard.room] : []
+        return ["All"] + pinned + learned
     }
 
     /// The pager's pages — every chip is a feed now (the board's own
@@ -689,45 +722,40 @@ struct MainSurface: View {
     }
 
     var body: some View {
-        // On iPad the rail sits OUTSIDE the NavigationStack (2026-07-25), so
-        // a pushed room — Apps, Settings, a bridge setup form — is inset
-        // beside it rather than covering it. Primary navigation that
-        // disappears the moment you use it is the phone's compromise, made
-        // because a phone has no room to keep it; an iPad does. It is the
-        // same argument ruling 6 already made for the agent bar.
+        // The rail rides the NavigationStack's own LEADING safe-area inset
+        // (2026-08-10) rather than sitting beside it in an HStack — the same
+        // mechanism the phone's strip has used on `.top` since 2026-07-20,
+        // one axis apart. It is still applied to the STACK and not inside its
+        // content closure, so it survives into every pushed room, which is
+        // the property the whole rail was built on (see `showsRail`).
         //
-        // It carries the shell's field itself rather than relying on a
-        // background behind the stack — an opaque UIKit backing means nothing
-        // behind a NavigationStack ever shows through (the standing gotcha),
-        // and the pour is the same top-anchored 500pt gradient on both sides,
-        // so the two line up with no seam.
-        HStack(spacing: 0) {
-            if showsRail {
-                sourceStrip(axis: .vertical)
-                    .background {
-                        ZStack(alignment: .top) {
-                            DS.themedPage
-                            // Poured only while the FEED is beside it (§274).
-                            // A pushed room (Apps, Settings, a bridge form)
-                            // paints its own opaque page with no pour — the
-                            // standing NavigationStack-backing gotcha — so
-                            // the rail keeping its pour drew a hard vertical
-                            // edge where blue field met flat ink, exactly on
-                            // the no-hairlines law, made of background
-                            // (caught in the rail flip's own verify sweep).
-                            // The stack root's copy below is untouched: a
-                            // pushed room covers it, so it never seams.
-                            if route.path.isEmpty {
-                                crownPour.transition(.opacity)
-                            }
-                        }
-                        .animation(DS.Motion.standard, value: route.path.isEmpty)
-                        .ignoresSafeArea()
-                    }
-            }
-            surface
-        }
-        // Measured on the WHOLE surface, not the stack beside the rail:
+        // Why it moved. As an HStack sibling the rail was a column the feed
+        // started BESIDE, so nothing ever passed behind it — and the glass
+        // its doors and "All" chip wear was blurring a flat themed fill,
+        // paying a backdrop blur for nothing. That is the 2026-07-20 lesson
+        // verbatim ("it was a VStack sibling, which meant nothing ever passed
+        // behind the chips, so the glass they wear blurred a flat color and
+        // rendered indistinguishable from a solid fill"), which the rail was
+        // built without a year later. As an inset the stack spans the full
+        // width, rows travel UNDER the rail, and the material finally has
+        // something to blur — paired with `dsSoftScrollEdges()`, which gained
+        // a `.leading` edge on regular width in the same change so rows melt
+        // under the rail instead of meeting it with a hard edge.
+        //
+        // Two things this DELETES rather than fixes. The rail no longer
+        // carries the shell's field itself: outside the stack's opaque UIKit
+        // backing (the standing gotcha) it had to paint its own copy of
+        // `DS.themedPage` plus the pour, and that copy then had to be gated
+        // on `route.path.isEmpty` — because a pushed room paints an opaque
+        // page with no pour, so a rail that kept pouring met it as a hard
+        // vertical edge, the no-hairlines law broken with a background. Glass
+        // over the stack has no seam to manage and nothing to gate: it
+        // samples whatever the room behind it painted, feed or Apps or a
+        // bridge form, and the pour reaches under it because the stack is now
+        // full-width.
+        surface
+        // Measured on the WHOLE surface — the stack now spans it, but this
+        // stays true of the pane too:
         // `minWidthForPane` and `paneWidth(for:)` are both stated against the
         // device's total width (and `RootShell` reads the same number for the
         // agent bar), so measuring the post-rail remainder here would put the
@@ -802,6 +830,10 @@ struct MainSurface: View {
         // from connecting an exchange and find no room to browse its book from,
         // which is the whole point of connecting one (prd §234).
         .onChange(of: liveRoomChipCount) { _, _ in refreshLiveChips() }
+        // A pin changes no corpus count, so it needs its own signal (see
+        // `ShellChrome.pinPulse`). `refreshLiveChips`, never `freezeChips`:
+        // the strip must not re-sort under the thumb that just pinned.
+        .onChange(of: chrome.pinPulse) { _, _ in refreshLiveChips() }
     }
 
     /// Which edge the incoming room slides from — set by `go(to:)` BEFORE the
@@ -932,11 +964,12 @@ struct MainSurface: View {
             // chips (the 56pt Stories size is a 2026-07-10 ruling, not
             // being revisited here).
             //
-            // On iPad it insets the LEADING edge instead as a vertical rail
-            // (2026-07-25). Same view, same inset mechanism, one axis apart:
-            // `safeAreaInset` reserves the rail's width so every feed page's
-            // rows start beside it rather than under it, and the crown pour
-            // painted by this surface's own background still runs behind it.
+            // On a regular-width surface the strip folds away here (see
+            // `topInset`'s `showsRail` gate) and returns as the rail — same
+            // view, same inset mechanism, one axis apart. The rail's own
+            // inset is applied to the STACK rather than in here, because the
+            // two differ on exactly one thing: this strip is allowed to
+            // vanish into a pushed room and the rail is not.
             .safeAreaInset(edge: .top, spacing: 0) { topInset }
             // The detail pane (2026-07-25) — the iPad half of "a row tap
             // opens a thing". A trailing inset rather than an HStack sibling
@@ -1164,6 +1197,12 @@ struct MainSurface: View {
         .sheet(item: $route.connectForm) { destination in
             ConnectFormSheet(destination: destination)
         }
+        // The rail (2026-08-10) — see `body` and `railInset`. On the STACK,
+        // deliberately, not inside its content closure like the `.top` strip
+        // above: the strip is allowed to vanish into a pushed room and the
+        // rail is not, and that one line of placement is the whole difference
+        // between them.
+        .safeAreaInset(edge: .leading, spacing: 0) { railInset }
         .tint(DS.tint)
     }
 }

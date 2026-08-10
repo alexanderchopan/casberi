@@ -141,6 +141,19 @@ struct StartHereScreen: View {
         .scrollIndicators(.hidden)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
+        // The cards scroll UNDER the "See all N apps" link below
+        // (`safeAreaInset(edge: .bottom)`), and that link is deliberately bare
+        // secondary text rather than a button — so with nothing dissolving the
+        // content as it arrives, a card passing beneath put gray text straight
+        // on top of a moving tile (2026-08-10). Every other scrolling screen in
+        // the app already wears this; this one was simply missed.
+        //
+        // The fix is the scroll edge and NOT glass on the link: a glass capsule
+        // would fix the legibility by promoting the link to button weight,
+        // which is exactly what the sibling ruling in `HowItWorksSheet`
+        // ("Text, not a second button: two equal buttons is a decision") exists
+        // to prevent on this same fork.
+        .dsSoftScrollEdges()
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(isPresented: $showFollow) {
             StartFollowScreen(onStart: onStart)
@@ -518,6 +531,11 @@ struct StartFollowScreen: View {
         .scrollIndicators(.hidden)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
+        // The follow form's own scroll, same treatment — it has no bottom
+        // inset of its own, but it does sit under the shell's agent bar like
+        // every other screen, which is the pairing this modifier was widened
+        // for in 2026-07-23.
+        .dsSoftScrollEdges()
         .navigationBarTitleDisplayMode(.inline)
         .tint(DS.tint)
         .onAppear { fieldFocused = true }

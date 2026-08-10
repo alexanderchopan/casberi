@@ -305,12 +305,35 @@ extension View {
     /// pairs with the strip (2026-07-23): the bar had the same geometry as the
     /// strip — content passing beneath it — but no dissolve, so rows met its
     /// glass with a hard edge. One `Edge.Set` call softens the pair.
-    @ViewBuilder
+    /// The LEADING edge joins them on a regular-width surface (2026-08-10),
+    /// and only there — that is where `MainSurface` hangs the source rail,
+    /// and the rail is the same geometry as the strip one axis over: chrome
+    /// the content now travels beneath (see `MainSurface.body`). Without it
+    /// rows meet the rail's glass with a hard edge, which is the exact
+    /// mismatch the bottom edge was added to fix for the agent bar in
+    /// 2026-07-23.
+    ///
+    /// Gated on the size class rather than added to the set unconditionally:
+    /// there is no rail on iPhone, so a leading effect there would dissolve
+    /// the left edge of every row on 62 screens against no chrome at all —
+    /// a fade that reads as a rendering fault because nothing explains it.
+    /// The gate is the same one `PadLayout` uses, for the same reason.
     func dsSoftScrollEdges() -> some View {
+        modifier(DSSoftScrollEdges())
+    }
+}
+
+private struct DSSoftScrollEdges: ViewModifier {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
-            self.scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
+            let edges: Edge.Set = horizontalSizeClass == .regular
+                ? [.top, .bottom, .leading]
+                : [.top, .bottom]
+            content.scrollEdgeEffectStyle(.soft, for: edges)
         } else {
-            self
+            content
         }
     }
 }
