@@ -257,6 +257,13 @@ enum BridgeCatalog {
     static let allOffers: [Offer] = [
         Offer(name: "Wallet",     group: "Wallet"),
         Offer(name: "Peer",       group: "Wallet"),
+        // The 0xBow-shaped alias, on purpose: the real catalog names this
+        // offer "0xBow Privacy Pools" while every landed thing carries
+        // `source: "Privacy Pools"` — a real mismatch `fold`/`foldAll`
+        // silently failed to bridge on their first cut (found LIVE,
+        // 2026-08-11, reading the strip's own `chipLabels:` NSLog — this
+        // stub had no aliased member and so could not have caught it).
+        Offer(name: "0xBow Vault", group: "Wallet"),
         Offer(name: "Tokens",     group: "Markets"),
         Offer(name: "Kalshi",     group: "Markets"),
         Offer(name: "Polymarket", group: "Markets"),
@@ -295,7 +302,7 @@ let wallet = CategoryFold.memberSet(of: "Wallet")
 check("Markets spans both category groups",
       CategoryFold.members(of: "Markets") == ["Tokens", "Kalshi", "Polymarket", "OpenSea"])
 check("Wallet has its own members",
-      CategoryFold.members(of: "Wallet") == ["Wallet", "Peer"])
+      CategoryFold.members(of: "Wallet") == ["Wallet", "Peer", "0xBow Vault"])
 check("a non-member is not a member", !CategoryFold.isMember("Photos", of: "Markets"))
 check("a category name is recognized", CategoryFold.isCategory("Markets"))
 check("a category name is recognized (Wallet)", CategoryFold.isCategory("Wallet"))
@@ -332,6 +339,22 @@ check("folding is idempotent",
 check("a category name equal to its own member folds to a no-op",
       CategoryFold.fold(["All", "Wallet", "Photos"], category: "Wallet", members: wallet)
         == ["All", "Wallet", "Photos"])
+
+// --- fold: THE ALIAS BUG, found live 2026-08-11 ------------------------------
+// "Vault" here is what a landed THING'S OWN `source` would say (the
+// `Thing.source` string) — never the catalog's display name "0xBow Vault",
+// which only `BridgeCatalog.offer(forSource:)`'s suffix match can bridge. A
+// `fold` that tested `members.contains(label)` directly (the shipped bug)
+// would see "Vault" ∉ {"Wallet","Peer","0xBow Vault"} and never fold it —
+// exactly what happened to the real "Privacy Pools" source against the real
+// "0xBow Privacy Pools" catalog offer, caught only by reading the strip's own
+// live NSLog output, not by this file's own self-test (before this pair of
+// assertions, the stub had no aliased member to expose it).
+check("an ALIASED source (short name vs. the catalog's longer display name) still folds",
+      CategoryFold.fold(["All", "Vault", "Photos"], category: "Wallet", members: wallet)
+        == ["All", "Wallet", "Photos"])
+check("foldAll resolves the same alias",
+      CategoryFold.foldAll(["All", "Vault", "Kalshi"]) == ["All", "Wallet", "Markets"])
 
 // --- foldAll: disjoint composability across every category ------------------
 // The property a single-category harness cannot test: category A's fold
@@ -450,6 +473,9 @@ mutate "fold inserts the category once per member instead of once" \
   'if !placed { folded.append(category); placed = true }|||folded.append(category)' || mfail=1
 mutate "a floor creeps back into fold — the ruling this file exists to enforce" \
   'guard !members.isEmpty else { return ordered }|||let present = ordered.filter { members.contains($0) }; guard present.count >= 2 else { return ordered }' || mfail=1
+mutate "fold tests the raw member set instead of resolving each label's own category (THE SHIPPED BUG)" \
+  'guard BridgeCatalog.category(forSource: label) == category
+            else { folded.append(label); continue }|||guard members.contains(label) else { folded.append(label); continue }' || mfail=1
 mutate "foldAll stops after the first category instead of walking all of them" \
   'for category in BridgeCatalog.categories {
             chips = fold(chips, category: category.name, members: memberSetCache[category.name] ?? [])

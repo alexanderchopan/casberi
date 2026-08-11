@@ -83,12 +83,30 @@ enum CategoryFold {
     /// learning still decides where the cluster sits), and — unlike
     /// `MarketsRoom.fold` — there is no floor: a single present member still
     /// folds, because the strip no longer shows a bare source chip at all.
+    ///
+    /// **Membership is resolved PER LABEL through `BridgeCatalog.category(forSource:)`,
+    /// never by testing `members.contains(label)` directly (bug found live,
+    /// 2026-08-11 — see the type doc's own reasoning for why this file exists
+    /// and got it wrong on its first pass anyway).** `members` names CATALOG
+    /// OFFERS ("0xBow Privacy Pools"), but a chip's label is the THING'S OWN
+    /// `source` string ("Privacy Pools") — the exact alias family
+    /// `BridgeCatalog.offer(forSource:)` suffix-matches for, because a source
+    /// string and its catalog display name are allowed to differ. Checking the
+    /// raw member set against a label meant Privacy Pools (and any other
+    /// aliased seat) never folded at all — it sat beside "Wallet" as its own
+    /// chip, silently contradicting the ONE thing this fold claims to do,
+    /// caught only by reading the strip's own live `chipLabels:` NSLog output
+    /// rather than by this file's own self-test, whose stub catalog had no
+    /// aliased member to expose it (fixed in `category-fold-selftest.sh`
+    /// alongside this). `members` stays as a cheap SKIP for a category with
+    /// nothing to ever match, not as the membership test itself.
     static func fold(_ ordered: [String], category: String, members: Set<String>) -> [String] {
         guard !members.isEmpty else { return ordered }
         var folded: [String] = []
         var placed = false
         for label in ordered {
-            guard members.contains(label) else { folded.append(label); continue }
+            guard BridgeCatalog.category(forSource: label) == category
+            else { folded.append(label); continue }
             if !placed { folded.append(category); placed = true }
         }
         return folded

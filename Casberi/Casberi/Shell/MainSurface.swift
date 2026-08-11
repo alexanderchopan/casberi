@@ -337,6 +337,20 @@ struct MainSurface: View {
     /// Two freezes closer together than this cannot mean two different orders.
     private static let freezeCoalesce: TimeInterval = 1.0
 
+    /// The category strip's fixed order (user ruling 2026-08-11) — see
+    /// `computedChips()`'s own comment for the reasoning. "Voice" is not a
+    /// catalog category (it has no offer at all — an always-on device
+    /// capability, `KNOWN_NO_CATALOG_SEAT` in `demo-selftest.py`), so it never
+    /// folds and never appears in `CategoryFold`'s own name set, but it is
+    /// still one of the fixed positions a person actually sees in the strip.
+    /// Anything absent from this list (a category renamed out from under it,
+    /// or a legacy/unresolved source with nowhere to fold) keeps its relative
+    /// learned-order position at the tail — see the `?? Int.max` fallback.
+    private static let categoryOrder: [String] = [
+        "Wallet", "Markets", "Work", "Agents", "Life", "Social",
+        "Media", "Reading", "Notes", "Voice", "Shopping",
+    ]
+
     private func freezeChips(force: Bool = false) {
         // Coalesced (2026-08-11). A cold launch fires this TWICE within
         // milliseconds — `onAppear` and the first `.active` scenePhase — and on
@@ -573,7 +587,20 @@ struct MainSurface: View {
         // `CategoryFold.foldAll`. Nothing above this line knows any fold
         // exists.
         let unfolded = ["All"] + pinned + learned
-        let labels = CategoryFold.foldAll(unfolded)
+        let folded = CategoryFold.foldAll(unfolded)
+        // The category chips sit in a FIXED order (user ruling 2026-08-11:
+        // "wallet, markets, work, agents, life, social, media, reading, notes,
+        // voice, shopping" — Wallet first because it's "more important to
+        // users", Social placed "after life and before media" on request) —
+        // not the learned order every other kind of chip still earns. "All"
+        // and Pinned are untouched (never part of this ordering) and split
+        // off first so the sort below only ever touches what comes after
+        // them; a stable sort keeps their relative position exact.
+        let head = Array(folded.prefix(1 + pinned.count))
+        let rest = Array(folded.dropFirst(1 + pinned.count))
+            .sorted { (Self.categoryOrder.firstIndex(of: $0) ?? Int.max)
+                    < (Self.categoryOrder.firstIndex(of: $1) ?? Int.max) }
+        let labels = head + rest
         // The tray gets the SOURCES, so Pinned is dropped from its list for the
         // same reason a folded category label is: it is a room, not a source.
         // The tray groups by catalog category itself and the catalog has never
