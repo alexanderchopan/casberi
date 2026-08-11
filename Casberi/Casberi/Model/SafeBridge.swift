@@ -50,6 +50,37 @@ import SwiftData
 /// might not and always re-fetched the whole queue instead); and the `gno`
 /// segment (Gnosis Chain) answers cleanly — not previously in this bridge's
 /// chain list despite Gnosis Pay accounts being Safes themselves.
+///
+/// Three enrichments (2026-08-11), all keyless, no new endpoint:
+/// (4) Row titles now name an AMOUNT ("a transfer of 1,500 USDC to
+///     alice.eth") when the target token's symbol/decimals are cached
+///     (`prefetchFacts`, riding the same `WalletApprovals.tokenFacts` read
+///     the approvals card uses), and call an unlimited ERC-20 approval
+///     "unlimited" rather than a number nobody can read.
+/// (5) A pending transaction's eventual RESOLUTION — executed, or replaced
+///     by a rival at the same nonce — now lands its own closing thing,
+///     with how long it sat pending read off Safe's own `submissionDate`/
+///     `executionDate` (`resolveTracking`/`landOutcome`). Before this the
+///     feed opened the question ("2 of 3 signatures collected") and never
+///     answered it; a replaced transaction — usually a co-signer rejecting
+///     it — was previously invisible outside the sheet's own live recheck.
+/// (6) Safe's own "reject" shape (a zero-value, no-data call to the Safe
+///     itself, proposed to burn a nonce so a rival can't execute) is named
+///     for what it is instead of falling through to the generic "a
+///     transaction" — the one Safe-native action whose whole point is that
+///     it moves nothing, previously described identically to a mystery.
+/// (7) This bridge finally reaches the lock screen (`NotifySweep.classify`):
+///     a pending transaction tagged "Your turn" at landing time fires
+///     `.safeSignatureNeeded` — the clearest "needs YOU" shape this app has,
+///     since a co-signer's own app has no way to page you — and a config
+///     change tagged "Module added" reuses `.approvalGranted` (structurally
+///     the same "something new can move your funds" news). Both tags are
+///     set structurally at landing time, never parsed from the title, the
+///     Stripe/Cursor/Apple-Wallet shape. An owner/threshold/guard change
+///     alone still doesn't notify — real news, but not the fund-draining-
+///     outside-the-threshold shape the right-hand slot is reserved for; nor
+///     does an executed or replaced outcome (5) — closure with nothing left
+///     to act on, so it stays a feed row rather than a buzz.
 enum SafeBridge {
 
     private struct Chain {
@@ -167,6 +198,11 @@ enum SafeBridge {
             UserDefaults.standard.removeObject(forKey: isSafeCheckedAtKey(chain.seg, address))
             UserDefaults.standard.removeObject(forKey: ownerCacheKey(chain.seg, address))
         }
+        let lower = address.lowercased()
+        let tracking = loadTracking().filter {
+            $0.value.safeAddress.lowercased() != lower && ($0.value.ownerAddress?.lowercased() ?? "") != lower
+        }
+        saveTracking(tracking)
     }
 
     /// `[String: Any]` (raw JSON) isn't provably `Sendable` to the compiler
@@ -369,6 +405,17 @@ enum SafeBridge {
         return out
     }
 
+    /// The chain's native gas token symbol — `WalletIngest.nativeSymbol`
+    /// wherever a chain has a WalletChainStore id; Gnosis Chain (`network ==
+    /// nil`, see `Chain`'s own doc) isn't in that table, so its native
+    /// token is named here instead of guessed as "ETH".
+    private static func nativeSymbol(_ chain: Chain) -> String {
+        if let network = chain.network, let symbol = WalletIngest.nativeSymbol(forNetwork: network) {
+            return symbol
+        }
+        return "xDAI"
+    }
+
     private static func label(_ addr: String) -> String {
         WalletIngest.knownLabel(for: addr) ?? WalletStore.shortAddress(addr)
     }
@@ -377,25 +424,102 @@ enum SafeBridge {
         params.first { ($0["name"] as? String)?.caseInsensitiveCompare(name) == .orderedSame }?["value"] as? String
     }
 
-    /// "a transfer to <label>" / "an approval for <label>" / "a batch of 3
-    /// transfers" / the decoded contract call's humanized method name / the
-    /// honest "a transaction" when nothing is known — never a guess.
-    private static func describe(_ tx: [String: Any]) -> String {
-        if let decoded = tx["dataDecoded"] as? [String: Any] {
-            return describe(decoded: decoded, fallbackTo: tx["to"] as? String)
+    // MARK: - Amounts (2026-08-11)
+
+    private typealias TokenFacts = [String: (symbol: String?, decimals: Int?)]
+
+    /// Every ERC-20 a batch of transactions might quote an amount for — a
+    /// plain transfer/approve's own target, at any nesting level inside a
+    /// multiSend batch — fetched ONCE per pass off the same cached-forever
+    /// read the approvals card already uses, rather than once per
+    /// transaction. Gnosis Chain (`chain.network == nil`) can't resolve a
+    /// network id to key the read on, so it falls back to no amount stated
+    /// there — the same "a read that answers with nothing states nothing"
+    /// rule `tokenFacts` itself follows.
+    private static func prefetchFacts(chain: Chain, txs: [[String: Any]]) async -> TokenFacts {
+        guard let network = chain.network else { return [:] }
+        var contracts = Set<String>()
+        for tx in txs { contracts.formUnion(neededContracts(tx)) }
+        guard !contracts.isEmpty else { return [:] }
+        var out: TokenFacts = [:]
+        for contract in contracts.prefix(12) {
+            out[contract] = await WalletApprovals.tokenFacts(network: network, contract: contract)
         }
-        if let valueStr = tx["value"] as? String, let value = Double(valueStr), value > 0 {
-            if let to = tx["to"] as? String {
-                return String(localized: "a transfer to \(label(to))")
+        return out
+    }
+
+    /// Every contract a decoded `transfer`/`approve` names as its target,
+    /// top-level or nested inside a multiSend batch.
+    private static func neededContracts(_ tx: [String: Any]) -> Set<String> {
+        var out = Set<String>()
+        func walk(_ decoded: [String: Any]?, to: String?) {
+            guard let decoded, let method = decoded["method"] as? String else { return }
+            if method == "multiSend" {
+                let params = (decoded["parameters"] as? [[String: Any]]) ?? []
+                for call in (batchCalls(params) ?? []) {
+                    walk(call["dataDecoded"] as? [String: Any], to: call["to"] as? String)
+                }
+                return
             }
-            return String(localized: "a transfer")
+            if method == "transfer" || method == "approve", let to {
+                out.insert(to.lowercased())
+            }
+        }
+        walk(tx["dataDecoded"] as? [String: Any], to: tx["to"] as? String)
+        return out
+    }
+
+    /// "1,500 USDC" for a decoded call's amount param, given its target
+    /// contract's cached facts — nil when either isn't known, which leaves
+    /// the caller's older, amount-free wording untouched rather than
+    /// guessing at decimals.
+    private static func tokenAmountText(contract: String?, rawParam: String?, facts: TokenFacts) -> String? {
+        guard let contract, let rawParam, let raw = Double(rawParam),
+              let fact = facts[contract.lowercased()],
+              let symbol = fact.symbol, let decimals = fact.decimals
+        else { return nil }
+        return "\(WalletIngest.format(raw / pow(10, Double(decimals)))) \(symbol)"
+    }
+
+    /// "a transfer of 1,500 USDC to <label>" / "an approval for <label> to
+    /// spend 1,500 USDC" / "an unlimited approval for <label>" / "a batch of
+    /// 3 transfers" / "a rejection" / the decoded contract call's humanized
+    /// method name / the honest "a transaction" when nothing is known —
+    /// never a guess. `facts` (2026-08-11) names the amount when the target
+    /// token's symbol/decimals are cached; absent, the older amount-free
+    /// wording stands.
+    private static func describe(_ tx: [String: Any], chain: Chain, safeAddress: String,
+                                 facts: TokenFacts) -> String {
+        if let decoded = tx["dataDecoded"] as? [String: Any] {
+            return describe(decoded: decoded, fallbackTo: tx["to"] as? String, chain: chain, facts: facts)
+        }
+        let to = tx["to"] as? String
+        let rawValue = Double(tx["value"] as? String ?? "0") ?? 0
+        let dataStr = tx["data"] as? String
+        let hasData = !(dataStr == nil || dataStr == "0x")
+        // Safe's own "reject" shape: a zero-value, no-data call to the Safe
+        // ITSELF, proposed solely to burn this nonce so a rival pending
+        // transaction can never execute. It carries no `dataDecoded` (there's
+        // nothing to decode), so without this check it fell through to the
+        // generic "a transaction" — the one Safe-native action whose whole
+        // point is that it moves nothing, described identically to a mystery.
+        if rawValue == 0, !hasData, let to, to.lowercased() == safeAddress.lowercased() {
+            return String(localized: "a rejection — blocks any other transaction at this nonce")
+        }
+        if rawValue > 0 {
+            let amountText = "\(WalletIngest.format(rawValue / pow(10, 18))) \(nativeSymbol(chain))"
+            if let to {
+                return String(localized: "a transfer of \(amountText) to \(label(to))")
+            }
+            return String(localized: "a transfer of \(amountText)")
         }
         return String(localized: "a transaction")
     }
 
     /// One decoded call, described. Split out from `describe` so a batch's
     /// NESTED calls are named by the exact same rules as a top-level one.
-    private static func describe(decoded: [String: Any], fallbackTo: String?) -> String {
+    private static func describe(decoded: [String: Any], fallbackTo: String?, chain: Chain,
+                                 facts: TokenFacts) -> String {
         guard let method = decoded["method"] as? String, !method.isEmpty else {
             return String(localized: "a transaction")
         }
@@ -408,12 +532,25 @@ enum SafeBridge {
         // own `valueDecoded` (measured: 114 nested entries, each with its own
         // `dataDecoded`), so a batch is named by what it actually DOES.
         if method == "multiSend", let inner = batchCalls(params) {
-            return describeBatch(inner)
+            return describeBatch(inner, chain: chain, facts: facts)
         }
         if method == "transfer", let to = param(params, "to") {
+            if let amountText = tokenAmountText(contract: fallbackTo, rawParam: param(params, "value"), facts: facts) {
+                return String(localized: "a transfer of \(amountText) to \(label(to))")
+            }
             return String(localized: "a transfer to \(label(to))")
         }
         if method == "approve", let spender = param(params, "spender") {
+            // ERC-20's own max-uint256 approval, the same threshold the
+            // approvals card prices a grant unlimited at — read here so the
+            // two surfaces can never disagree about which grants are
+            // unlimited.
+            if let raw = param(params, "value").flatMap(Double.init), raw >= WalletApprovals.unlimitedThreshold {
+                return String(localized: "an unlimited approval for \(label(spender))")
+            }
+            if let amountText = tokenAmountText(contract: fallbackTo, rawParam: param(params, "value"), facts: facts) {
+                return String(localized: "an approval for \(label(spender)) to spend \(amountText)")
+            }
             return String(localized: "an approval for \(label(spender))")
         }
         if params.isEmpty, let fallbackTo {
@@ -438,9 +575,9 @@ enum SafeBridge {
     /// batch names its verb ("a batch of 12 transfers"), a mixed one stays
     /// honestly generic ("a batch of 5 actions") rather than naming whichever
     /// call happened to be first.
-    private static func describeBatch(_ calls: [[String: Any]]) -> String {
+    private static func describeBatch(_ calls: [[String: Any]], chain: Chain, facts: TokenFacts) -> String {
         if calls.count == 1, let only = calls[0]["dataDecoded"] as? [String: Any] {
-            return describe(decoded: only, fallbackTo: calls[0]["to"] as? String)
+            return describe(decoded: only, fallbackTo: calls[0]["to"] as? String, chain: chain, facts: facts)
         }
         let methods = Set(calls.compactMap { ($0["dataDecoded"] as? [String: Any])?["method"] as? String })
         guard methods.count == 1, let verb = methods.first else {
@@ -546,6 +683,7 @@ enum SafeBridge {
 
             guard let pending = await pendingQueue(chain: chain, address: safeAddress) else { continue }
             let currentNonce = await safeDetail(chain: chain, address: safeAddress)?.nonce
+            let facts = await prefetchFacts(chain: chain, txs: pending)
             for tx in pending {
                 guard let safeTxHash = tx["safeTxHash"] as? String else { continue }
                 // STRANDED: the Safe has already executed past this nonce, so
@@ -554,33 +692,51 @@ enum SafeBridge {
                 // ask for a signature that cannot possibly help, which is the
                 // dead control the honesty rule forbids. It still shows in
                 // the sheet's own recheck (as `.replaced`) if it was landed
-                // before it went stale.
+                // before it went stale, and `resolveTracking` below lands its
+                // own closing thing the pass it goes stale.
                 if let currentNonce, let txNonce = tx["nonce"] as? Int, txNonce < currentNonce {
                     continue
                 }
                 let ref = "wallet:safe:\(chain.seg):\(safeTxHash)"
-                guard !existing.contains(ref) else { continue }
-                let required = (tx["confirmationsRequired"] as? Int) ?? 0
-                let have = (tx["confirmations"] as? [[String: Any]])?.count ?? 0
-                var title = String(localized:
-                    "\(have) of \(required) signatures collected on \(describe(tx))")
-                // Only when we know exactly which of the Safe's owners is
-                // "you" — reached via a signer's own watched EOA — can we
-                // honestly say whose turn it is. Watching the Safe's own
-                // address doesn't tell us which of its N owners you are.
-                if let owner = candidate.viaOwner {
-                    title += hasSigned(tx, owner: owner)
-                        ? String(localized: " — waiting on others")
-                        : String(localized: " — your signature is needed")
+                if !existing.contains(ref) {
+                    let required = (tx["confirmationsRequired"] as? Int) ?? 0
+                    let have = (tx["confirmations"] as? [[String: Any]])?.count ?? 0
+                    var title = String(localized:
+                        "\(have) of \(required) signatures collected on \(describe(tx, chain: chain, safeAddress: safeAddress, facts: facts))")
+                    // Only when we know exactly which of the Safe's owners is
+                    // "you" — reached via a signer's own watched EOA — can we
+                    // honestly say whose turn it is. Watching the Safe's own
+                    // address doesn't tell us which of its N owners you are.
+                    var yourTurn = false
+                    if let owner = candidate.viaOwner {
+                        if hasSigned(tx, owner: owner) {
+                            title += String(localized: " — waiting on others")
+                        } else {
+                            title += String(localized: " — your signature is needed")
+                            yourTurn = true
+                        }
+                    }
+                    let thing = Thing(kind: .transaction, title: title, source: "Wallet", sourceRef: ref)
+                    thing.walletAddress = candidate.viaOwner ?? safeAddress
+                    // Tagged structurally (not parsed from the title above) so
+                    // `NotifySweep.classify` can tell "your turn" apart from
+                    // "waiting on others" without the localized-string trap —
+                    // the Stripe/Cursor/Apple-Wallet tag shape.
+                    if yourTurn { thing.tags = ["Your turn"] }
+                    context.insert(thing)
+                    SpotlightIndex.index([thing])
+                    added += 1
+                    noteThresholdIfMet(chain: chain, safeTxHash: safeTxHash, have: have, required: required,
+                                       tx: tx, safeAddress: safeAddress, facts: facts)
                 }
-                let thing = Thing(kind: .transaction, title: title, source: "Wallet", sourceRef: ref)
-                thing.walletAddress = candidate.viaOwner ?? safeAddress
-                context.insert(thing)
-                SpotlightIndex.index([thing])
-                added += 1
-                noteThresholdIfMet(chain: chain, safeTxHash: safeTxHash,
-                                   have: have, required: required, tx: tx)
+                // Seed/keep tracking so this pending transaction's eventual
+                // resolution (executed, or replaced by a rival at the same
+                // nonce) can land its own closing thing — regardless of
+                // whether it was landed just now or in an earlier pass.
+                trackIfNeeded(ref: ref, seg: chain.seg, safeAddress: safeAddress, ownerAddress: candidate.viaOwner)
             }
+            added += await resolveTracking(context: context, chain: chain, safeAddress: safeAddress,
+                                           pending: pending, currentNonce: currentNonce, existing: existing)
         }
         if added > 0 { context.saveHonestly() }
         return added
@@ -597,16 +753,143 @@ enum SafeBridge {
     /// first seen already-complete is history, not news — the same
     /// seed-the-baseline-silently rule every sibling cursor obeys).
     @MainActor
-    private static func noteThresholdIfMet(chain: Chain, safeTxHash: String,
-                                           have: Int, required: Int, tx: [String: Any]) {
+    private static func noteThresholdIfMet(chain: Chain, safeTxHash: String, have: Int, required: Int,
+                                           tx: [String: Any], safeAddress: String, facts: TokenFacts) {
         guard required > 0, have >= required else { return }
         let key = "moment.safe.ready.\(chain.seg).\(safeTxHash)"
         let defaults = UserDefaults.standard
         guard defaults.object(forKey: key) == nil else { return }
         defaults.set(true, forKey: key)
         SourceMoments.shared.fire(
-            String(localized: "Fully signed — \(describe(tx)) is ready to execute"),
+            String(localized: "Fully signed — \(describe(tx, chain: chain, safeAddress: safeAddress, facts: facts)) is ready to execute"),
             source: "Wallet")
+    }
+
+    // MARK: - Loop closers (2026-08-11)
+
+    /// The "N of M signatures collected" thing opens a question the feed
+    /// never used to answer: what happened? The threshold-met moment above
+    /// closes it early, sometimes — but a Safe with a 1-of-1 threshold, or
+    /// one where the last signature lands outside the app's own foreground
+    /// pass, never crosses that moment at all, and a REPLACED transaction
+    /// (a co-signer rejecting it, or a rival executing at the same nonce)
+    /// never had a closing moment to begin with. This tracks every pending
+    /// transaction this app has shown, and lands a second thing the pass it
+    /// leaves the live queue — executed, or replaced — so the feed states
+    /// an ending instead of just going quiet.
+    private struct TrackEntry: Codable {
+        let seg: String
+        let safeAddress: String
+        let ownerAddress: String?
+    }
+    private static let trackingKey = "wallet.safe.tracking.v1"
+
+    private static func loadTracking() -> [String: TrackEntry] {
+        guard let data = UserDefaults.standard.data(forKey: trackingKey),
+              let decoded = try? JSONDecoder().decode([String: TrackEntry].self, from: data)
+        else { return [:] }
+        return decoded
+    }
+    private static func saveTracking(_ dict: [String: TrackEntry]) {
+        guard let data = try? JSONEncoder().encode(dict) else { return }
+        UserDefaults.standard.set(data, forKey: trackingKey)
+    }
+
+    private static func trackIfNeeded(ref: String, seg: String, safeAddress: String, ownerAddress: String?) {
+        var tracking = loadTracking()
+        guard tracking[ref] == nil else { return }
+        tracking[ref] = TrackEntry(seg: seg, safeAddress: safeAddress, ownerAddress: ownerAddress)
+        saveTracking(tracking)
+    }
+
+    /// "under a day" / "a day" / "N days" — composes into both the executed
+    /// and replaced closing sentences below.
+    private static func elapsedPhrase(_ seconds: TimeInterval) -> String {
+        let days = max(0, Int(seconds / 86_400))
+        if days == 0 { return String(localized: "under a day") }
+        if days == 1 { return String(localized: "a day") }
+        return String(localized: "\(days) days")
+    }
+
+    /// Lands the closing thing for one resolved transaction and stops
+    /// tracking it. Duration reads Safe's OWN `submissionDate`/`executionDate`
+    /// (the transaction's real clock) rather than an app-observed timestamp —
+    /// more accurate, and needs nothing persisted beyond the tracking entry
+    /// itself.
+    @MainActor
+    private static func landOutcome(context: ModelContext, chain: Chain, hash: String, tx: [String: Any],
+                                    executed: Bool, safeAddress: String, ownerAddress: String?,
+                                    existing: Set<String>) async -> Int {
+        let ref = "wallet:safeoutcome:\(chain.seg):\(hash)"
+        guard !existing.contains(ref) else { return 0 }
+        let facts = await prefetchFacts(chain: chain, txs: [tx])
+        let description = describe(tx, chain: chain, safeAddress: safeAddress, facts: facts)
+        let elapsed = ClaudeImport.parseDate(tx["submissionDate"] as? String).map { start -> String in
+            let end = executed ? (ClaudeImport.parseDate(tx["executionDate"] as? String) ?? .now) : .now
+            return elapsedPhrase(end.timeIntervalSince(start))
+        }
+        let title: String
+        if executed {
+            title = elapsed.map { String(localized: "Executed after \($0) — \(description) went through") }
+                ?? String(localized: "Executed — \(description) went through")
+        } else {
+            title = elapsed.map {
+                String(localized: "Replaced after \($0) — \(description) never executed; a rival transaction went through at the same nonce instead")
+            } ?? String(localized: "Replaced — \(description) never executed; a rival transaction went through at the same nonce instead")
+        }
+        let thing = Thing(kind: .transaction, title: title, source: "Wallet", sourceRef: ref)
+        thing.walletAddress = ownerAddress ?? safeAddress
+        context.insert(thing)
+        SpotlightIndex.index([thing])
+        return 1
+    }
+
+    /// Checks every tracked pending transaction for THIS (chain, Safe)
+    /// against this pass's own queue read — no extra request for the common
+    /// case (still pending). A tracked hash that vanished from the
+    /// `executed=false` queue is executed (confirmed via the single-tx
+    /// endpoint rather than assumed, so a flaky page can't read as a false
+    /// "went through"); one that's still listed but now stranded (its nonce
+    /// fell behind the Safe's current nonce) was replaced by a rival.
+    @MainActor
+    private static func resolveTracking(context: ModelContext, chain: Chain, safeAddress: String,
+                                        pending: [[String: Any]], currentNonce: Int?,
+                                        existing: Set<String>) async -> Int {
+        var tracking = loadTracking()
+        let scoped = tracking.filter {
+            $0.value.seg == chain.seg && $0.value.safeAddress.lowercased() == safeAddress.lowercased()
+        }
+        guard !scoped.isEmpty else { return 0 }
+        var byHash: [String: [String: Any]] = [:]
+        for tx in pending {
+            guard let h = tx["safeTxHash"] as? String else { continue }
+            byHash[h] = tx
+        }
+        var added = 0
+        for (ref, entry) in scoped {
+            let hash = ref.split(separator: ":", maxSplits: 3).map(String.init).last ?? ""
+            guard !hash.isEmpty else { tracking.removeValue(forKey: ref); continue }
+            if let tx = byHash[hash] {
+                let txNonce = tx["nonce"] as? Int
+                if let currentNonce, let txNonce, txNonce < currentNonce {
+                    added += await landOutcome(context: context, chain: chain, hash: hash, tx: tx,
+                                               executed: false, safeAddress: safeAddress,
+                                               ownerAddress: entry.ownerAddress, existing: existing)
+                    tracking.removeValue(forKey: ref)
+                }
+                continue   // still live — leave tracked
+            }
+            guard let root = await IngestSupport.getJSON(
+                    "\(baseURL(chain.seg))/multisig-transactions/\(hash)/") as? [String: Any]
+            else { continue }   // unreachable this pass — recheck next time
+            guard (root["isExecuted"] as? Bool) == true else { continue }
+            added += await landOutcome(context: context, chain: chain, hash: hash, tx: root,
+                                       executed: true, safeAddress: safeAddress,
+                                       ownerAddress: entry.ownerAddress, existing: existing)
+            tracking.removeValue(forKey: ref)
+        }
+        saveTracking(tracking)
+        return added
     }
 
     /// The discovery moment: the reverse lookup found Safes this person is a
@@ -718,6 +1001,13 @@ enum SafeBridge {
             : String(localized: "Your Safe's settings changed: \(phrases.joined(separator: ", "))")
         let thing = Thing(kind: .transaction, title: title, source: "Wallet", sourceRef: ref)
         thing.walletAddress = ownerAddress
+        // Tagged structurally, not parsed from `title` — a module can move
+        // this Safe's funds WITHOUT a signature, which is the same shape of
+        // news as an ERC-20/permit2 approval landing (`NotifySweep.classify`
+        // reuses `.approvalGranted` for it rather than a near-duplicate kind).
+        if !Set(config.modules).subtracting(previous.modules).isEmpty {
+            thing.tags = ["Module added"]
+        }
         context.insert(thing)
         SpotlightIndex.index([thing])
         return true
@@ -929,7 +1219,10 @@ enum SafeBridge {
                     // positions holding more than one transaction.
                     let byNonce = Dictionary(grouping: live) { ($0["nonce"] as? Int) ?? -1 }
                     let contested = byNonce.values.filter { $0.count > 1 }.count
-                    let titles = live.prefix(3).map(describe).joined(separator: "; ")
+                    let facts = await prefetchFacts(chain: chain, txs: Array(live.prefix(3)))
+                    let titles = live.prefix(3)
+                        .map { describe($0, chain: chain, safeAddress: safeAddress, facts: facts) }
+                        .joined(separator: "; ")
                     lines.append("\(WalletStore.shortAddress(address)) \(chain.seg): signer on "
                         + "\(WalletStore.shortAddress(safeAddress)), \(pending.count) pending "
                         + "(\(yourTurn) need your signature, \(stranded) stranded, "

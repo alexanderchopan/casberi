@@ -67,6 +67,15 @@ enum NotifyKind: String, Sendable, CaseIterable {
     /// before this becomes a problem"), and none of them carries a real
     /// clock the way a Stripe dispute's evidence deadline does.
     case runningLow
+    /// A Safe transaction is pending and specifically waiting on the watched
+    /// signer's OWN signature (2026-08-11) — tagged "Your turn" at landing
+    /// time (`SafeBridge.sync`), never parsed from the title. The clearest
+    /// "needs YOU" shape this app has: money is stuck behind a decision only
+    /// you can make, and a co-signer's own app has no way to page you.
+    /// `approvalGranted` covers a Safe MODULE being enabled instead of a new
+    /// kind — that's structurally the same "something new can move your
+    /// funds" news an ERC-20 approval carries.
+    case safeSignatureNeeded
     // — arrival
     case moneyIn
     case payoutPaid
@@ -80,7 +89,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         switch self {
         case .disputeOpened, .deadlineNear, .positionAtRisk, .approvalGranted,
              .poolProofNeeded, .poolCleared, .paymentsSilent, .priceRose,
-             .appRejected, .agentRunFailed, .runningLow:
+             .appRejected, .agentRunFailed, .runningLow, .safeSignatureNeeded:
             return .alarm
         case .moneyIn, .payoutPaid, .likesReceived, .repliesReceived, .followersGained:
             return .arrival
@@ -106,6 +115,12 @@ enum NotifyKind: String, Sendable, CaseIterable {
         // wins a BATCH, not about how loudly it should ring.
         case .positionAtRisk:   return 85
         case .approvalGranted:  return 80    // something CAN take funds
+        // Action required, no clock stated — the exact shape of
+        // `poolProofNeeded` below, ranked one above it: a Safe signature
+        // blocks a specific, already-decided transaction from a co-signer
+        // who is waiting on YOU, where a proof request is a compliance step
+        // with no other person on the other end of it.
+        case .safeSignatureNeeded: return 71
         case .poolProofNeeded:  return 70    // action required, no clock stated
         // Action required and no clock stated — `poolProofNeeded`'s class,
         // ranked just below it because that one is money that could be lost

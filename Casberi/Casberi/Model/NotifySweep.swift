@@ -151,6 +151,23 @@ enum NotifySweep {
         if ref.hasPrefix("wallet:approval:") || ref.hasPrefix("wallet:permit2:") {
             return .approvalGranted
         }
+        // — Safe: a pending transaction is specifically waiting on the
+        //   watched signer's OWN signature — tagged at landing time
+        //   (`SafeBridge.sync`), never parsed from the title. "Waiting on
+        //   others" never notifies: nothing is asked of you there.
+        if ref.hasPrefix("wallet:safe:"), thing.tags.contains("Your turn") {
+            return .safeSignatureNeeded
+        }
+        // — Safe: a module was enabled that can move this Safe's funds
+        //   WITHOUT a signature — the same "something new can move your
+        //   funds" news an ERC-20/permit2 approval carries, so it reuses
+        //   that kind rather than a near-duplicate. An owner/threshold/guard
+        //   change alone doesn't notify (tag absent) — real, but not the
+        //   fund-draining-outside-the-threshold shape this file reserves the
+        //   right-hand slot for.
+        if ref.hasPrefix("wallet:safeconfig:"), thing.tags.contains("Module added") {
+            return .approvalGranted
+        }
         // — DeFi liquidation proximity (2026-08-09): Aave and Morpho share the
         //   `wallet:defi:` prefix (`WalletDeFi.sync`/`MorphoDeFi.sync`),
         //   Hyperliquid mints its own (`HyperliquidDeFi`'s risk bucket). Both
@@ -296,6 +313,7 @@ enum NotifySweep {
         case .deadlineNear:     return String(localized: "Due soon")
         case .positionAtRisk:   return String(localized: "Close to liquidation")
         case .approvalGranted:  return String(localized: "Something new can move your funds")
+        case .safeSignatureNeeded: return String(localized: "Your signature is needed")
         case .poolProofNeeded:  return String(localized: "Privacy Pools needs a response")
         case .poolCleared:      return String(localized: "Clear to withdraw")
         case .paymentsSilent:   return String(localized: "Payments went quiet")
