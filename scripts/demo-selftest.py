@@ -178,6 +178,8 @@ DEMO_FACING_FUNCS = [
     ("DemoSeedAll", "static func seedBridgeStateForDemo"),
     ("SafeBridge", "static func seedDemoSnapshot"),
     ("SafeBridge", "static func clearDemoSnapshot"),
+    ("DemoSeedAll", "static func seedAddressBook"),
+    ("DemoSeedAll", "static func forgetAddressBook"),
 ]
 
 # Network verbs that must never appear in the two files the demo's "reaches
@@ -625,6 +627,70 @@ def check_h_state_owning_bridges_seed_themselves(files_text):
               has_hook, True)
 
 
+def extract_move_counterparties(demo_src):
+    """The counterparty NAME out of each `walletRoom()` transfer tuple —
+    every line of the `moves` table carries exactly two quoted strings, the
+    amount and then the name."""
+    clean = strip_comments(demo_src)
+    m = re.search(r'let moves: \[\(Bool, String, String, Double, Double\)\] = \[(.*?)\n        \]',
+                  clean, re.DOTALL)
+    if not m:
+        return None
+    names = set()
+    for line in m.group(1).splitlines():
+        quoted = re.findall(r'"([^"]*)"', line)
+        if len(quoted) == 2:
+            names.add(quoted[1])
+    return names
+
+
+def extract_book_counterparties(demo_src):
+    """The names `demoCounterparties` puts in the address book."""
+    clean = strip_comments(demo_src)
+    m = re.search(r'static let demoCounterparties:.*?= \[(.*?)\n    \]', clean, re.DOTALL)
+    if not m:
+        return None
+    return set(re.findall(r'\("([^"]+)",\s*\.\w+\)', m.group(1)))
+
+
+def check_i_wallet_counterparties_are_named(files_text):
+    """Check I — the wallet's transfer counterparties and the demo address
+    book name the SAME set of people, both ways.
+
+    A name in the transfers but not the book is a counterparty with no face:
+    the row reads fine (it carries `transferCounterparty` as text) while
+    everything reading the BOOK — a saved name, an avatar, the whole
+    `AddressConnections` graph — has nothing to draw. That is exactly the
+    state the demo shipped in until 2026-08-11, and it was invisible from
+    the feed, which is why it took probing the book (`1 named`, that one
+    being the demo wallet itself) to see it.
+
+    A name in the book but not the transfers is the inverse: a person in
+    your address book you have never transacted with, which for a synthetic
+    counterparty is a phantom nobody can explain.
+
+    Deliberately not a check that the ADDRESSES agree — they can't disagree
+    by construction, since both sides call `counterpartyAddress(for:)`. That
+    shared derivation is the fix; this guards the two NAME lists that feed
+    it."""
+    demo_src = files_text["DemoSeedAll"]
+    moves = extract_move_counterparties(demo_src)
+    book = extract_book_counterparties(demo_src)
+    if moves is None or book is None:
+        check("I · wallet moves and demoCounterparties both found",
+              False, True)
+        return
+    for name in sorted(moves - book):
+        check(f'I · transfer counterparty "{name}" is named in the address book',
+              False, True)
+    for name in sorted(book - moves):
+        check(f'I · address-book name "{name}" appears in a real transfer',
+              False, True)
+    if moves == book:
+        check(f'I · {len(moves)} wallet counterparties all have book entries',
+              True, True)
+
+
 def run_checks(files_text):
     before = len(failures)
     check_a_release_reachable(files_text)
@@ -635,6 +701,7 @@ def run_checks(files_text):
     check_f_shape_coverage(files_text)
     check_g_catalog_offers_have_demo_seats(files_text)
     check_h_state_owning_bridges_seed_themselves(files_text)
+    check_i_wallet_counterparties_are_named(files_text)
     return len(failures) == before
 
 
@@ -746,6 +813,16 @@ def self_test():
         lambda f: f.__setitem__("SafeBridge", f["SafeBridge"].replace(
             "static func seedDemoSnapshot", "static func plantDemoSnapshot", 1)),
         check_h_state_owning_bridges_seed_themselves, True)
+
+    ok &= verify_fixture(
+        "a wallet counterparty with no address-book entry is caught",
+        # Drop Mia from the book table while her two transfers stay — the
+        # exact shape the demo shipped in: the row still reads fine off
+        # `transferCounterparty`, and nothing reading the book can draw her.
+        lambda f: f.__setitem__("DemoSeedAll", f["DemoSeedAll"].replace(
+            '("Sam", .wallet), ("Mia", .wallet), ("Coinbase", .wallet),',
+            '("Sam", .wallet), ("Coinbase", .wallet),', 1)),
+        check_i_wallet_counterparties_are_named, True)
 
     # And the clean tree must pass all three, so the fixtures above are
     # proven against a REAL failure, not a checker that always fails.

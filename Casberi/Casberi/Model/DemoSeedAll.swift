@@ -268,6 +268,7 @@ enum DemoSeedAll {
         ASCState.standing = [:]
         ASCState.lastRead = nil
         SafeBridge.clearDemoSnapshot()
+        forgetAddressBook()
 
         // `clear` REMOVES the version stamp, which is right for the dev verb
         // it was written for (`-demoSeed clear`, where the next launch should
@@ -421,6 +422,71 @@ enum DemoSeedAll {
                 t.topicsAt = .now
                 t.enrichedText = "\(n.0)\n\nWritten in the vault. \(n.1.joined(separator: ", "))."
             }
+        }
+    }
+
+    /// The counterparties the wallet transfers name, and the synthetic address
+    /// each one owns (2026-08-11). Ordered as the address book should read.
+    ///
+    /// `kind` is not decoration — the book draws a face for a `wallet`, the
+    /// machinery mark for a `contract`, and its own mark for a `safe`, so the
+    /// three named here are what make the demo exercise all three rather than
+    /// twelve identical rows. Assigned by what each counterparty really IS: a
+    /// person or an exchange deposit address is a wallet, a router or an
+    /// orchestrator is a contract, and Gnosis Pay settles through a Safe.
+    static let demoCounterparties: [(name: String, kind: AddressBook.Kind)] = [
+        ("Sam", .wallet), ("Mia", .wallet), ("Coinbase", .wallet),
+        ("Stripe", .wallet), ("Bitrefill", .wallet),
+        ("Uniswap", .contract), ("Peer", .contract),
+        ("Gnosis Pay", .safe),
+    ]
+
+    /// One stable synthetic address per counterparty NAME — same name, same
+    /// address, every time, so a landed row and its book entry are the same
+    /// address rather than two that merely look alike. Derived from the name's
+    /// own hash rather than a table of literals so a new counterparty above
+    /// needs nothing else.
+    static func counterpartyAddress(for name: String) -> String {
+        // A stable, deterministic digest of the name — `hashValue` is seeded
+        // per process and would hand back a different address every launch,
+        // which for an address is not a cosmetic difference: rows landed on
+        // one launch would stop matching the book on the next.
+        var digest: UInt64 = 0xcbf2_9ce4_8422_2325
+        for byte in name.utf8 {
+            digest = (digest ^ UInt64(byte)) &* 0x0000_0100_0000_01B3
+        }
+        return "0x" + String(repeating: "0", count: 24)
+            + String(format: "%016lx", digest)
+    }
+
+    /// Names those counterparties in the address book, so the wallet's people
+    /// have faces and the connections card has nodes to draw (2026-08-11).
+    ///
+    /// Found by probing the demo's own book: `1 named · 1/5 watched`, that one
+    /// being the demo wallet itself. Every transfer carried a counterparty
+    /// NAME on the row, so the feed read correctly, and nothing that reads the
+    /// BOOK — a saved name, a face, `AddressConnections`' whole graph — had a
+    /// single entry to draw. The rows were never the gap; the book was.
+    ///
+    /// `setName` MERGES by design (it fills provenance/kind without erasing a
+    /// rename), so this is safe on a dev install that already names one of
+    /// these addresses — and the addresses are synthetic, so a real book can't
+    /// collide with them anyway.
+    @MainActor
+    static func seedAddressBook() {
+        for party in demoCounterparties {
+            _ = AddressBook.shared.setName(party.name,
+                                           for: counterpartyAddress(for: party.name),
+                                           kind: party.kind)
+        }
+    }
+
+    /// Unwinds `seedAddressBook`, BY ADDRESS — never a blanket wipe, since a
+    /// dev install's book holds real people under the same store.
+    @MainActor
+    static func forgetAddressBook() {
+        for party in demoCounterparties {
+            AddressBook.shared.remove(counterpartyAddress(for: party.name))
         }
     }
 
@@ -1058,8 +1124,14 @@ enum DemoSeedAll {
                 t.transferDirection = m.0 ? "received" : "sent"
                 t.transferAmount = m.1
                 t.transferCounterparty = m.2
-                t.counterpartyAddress = "0x" + String(repeating: "0", count: 36)
-                    + String(format: "%04x", UInt16(0x1a00 + i))
+                // Keyed on the NAME, not the row index (2026-08-11). Indexed
+                // addresses gave one counterparty a different address per
+                // transfer, so "Sam" was two strangers to anything reading
+                // addresses rather than the title — the address book couldn't
+                // name them, and `AddressConnections` drew each as its own
+                // node. One name, one address: the rows and the book below
+                // now agree by construction.
+                t.counterpartyAddress = counterpartyAddress(for: m.2)
                 t.transferUSD = m.3
             }
         }
@@ -1750,6 +1822,10 @@ enum DemoSeedAll {
             (ref: "wallet:safe:eth:demo1", have: 1, required: 3, yourTurn: false, daysAgo: 9,
              descriptionText: "an approval for Uniswap to spend 2,000 USDC"),
         ])
+
+        // 7 · The address book — the counterparties the transfers above name,
+        // so the wallet's people have faces. See `seedAddressBook`.
+        seedAddressBook()
     }
 
     // MARK: - Seats
