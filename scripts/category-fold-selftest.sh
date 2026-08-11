@@ -59,7 +59,7 @@ ROOM="Casberi/Casberi/Model/MarketsRoom.swift"
 MAIN="Casberi/Casberi/Shell/MainSurface.swift"
 CHIPS="Casberi/Casberi/Shell/SourceChips.swift"
 FEED="Casberi/Casberi/Screens/FeedScreen.swift"
-SWITCHER="Casberi/Casberi/Screens/MarketsVenueSwitcher.swift"
+SWITCHER="Casberi/Casberi/Screens/CategoryVenueSwitcher.swift"
 BROWSE="Casberi/Casberi/Screens/PredictionBrowseSection.swift"
 ROOT="Casberi/Casberi/Shell/RootShell.swift"
 APP="Casberi/Casberi/CasberiApp.swift"
@@ -153,13 +153,20 @@ grep -q 'chrome.chipCaught(CategoryFold.chipLabel(' "$TMP/main.nc" \
 grep -qE 'if CategoryFold\.isCategory\(label\)' "$CHIPS" \
   || { echo "✗ SourceChips no longer branches on CategoryFold.isCategory — a folded chip"; \
        echo "  would render through the generic BridgeIcon path and show a missing brand icon."; exit 1; }
-grep -q 'MarketsVenueSwitcher(' "$FEED" \
-  || { echo "✗ FeedScreen no longer mounts the Markets venue switcher — a folded Markets seat has no way out"; exit 1; }
+grep -q 'CategoryVenueSwitcher(' "$FEED" \
+  || { echo "✗ FeedScreen no longer mounts the generic venue switcher — a folded category seat has no way out"; exit 1; }
 # PINNED, not a List section — `walletSwitcherBar`'s 2026-07-20 ruling. As a
 # section it scrolls away with the room it names, and its glass blurs nothing.
-grep -qE 'safeAreaInset\(edge: \.top, spacing: 0\) \{ marketsSwitcher \}' "$FEED" \
-  || { echo "✗ the Markets venue switcher is no longer pinned — it would scroll away with the"; \
+grep -qE 'safeAreaInset\(edge: \.top, spacing: 0\) \{ categorySwitcher \}' "$FEED" \
+  || { echo "✗ the category venue switcher is no longer pinned — it would scroll away with the"; \
        echo "  room it scopes, and its glass would have nothing moving behind it."; exit 1; }
+# EVERY category, not Markets alone — the whole point of this follow-up
+# (user: "each category should have a switcher"). A gate re-narrowed to
+# `MarketsRoom.isMember(source)` would silently take the switcher away from
+# every other category while this exact grep still finds `CategoryVenueSwitcher(`.
+grep -qE 'let category = BridgeCatalog\.category\(forSource: source\)' "$FEED" \
+  || { echo "✗ the switcher no longer resolves ITS OWN category from the room's source —"; \
+       echo "  it would still be gated to Markets alone (or one other hardcoded category)."; exit 1; }
 
 # The switcher and the prediction book must not BOTH offer a venue control —
 # two capsules over one book, each able to change which venue you're reading,

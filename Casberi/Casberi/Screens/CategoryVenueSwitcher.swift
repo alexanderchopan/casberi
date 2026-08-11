@@ -1,30 +1,37 @@
 import SwiftUI
 
-/// The folded Markets room's one control (2026-08-10) — see `MarketsRoom`.
+/// Every folded category room's one control (prd §351, 2026-08-11 —
+/// generalizes what was `MarketsVenueSwitcher`, built for Markets alone on
+/// 2026-08-10; renamed rather than wrapped because nothing inside this file
+/// was ever Markets-specific — only its name and the one call site were).
 ///
 /// `PredictionVenueSwitcher`'s shape, widened from two venues to every present
-/// market seat: glass capsule, a selection fill traveling on matched geometry,
-/// brand mark beside each name. Two things differ, both forced by there being
-/// up to seven scopes instead of three.
+/// member of a folded category: glass capsule, a selection fill traveling on
+/// matched geometry, brand mark beside each name. Two things differ, both
+/// forced by there being up to seven scopes instead of three.
 ///
 /// **It scrolls, and it names its venues in words.** A row of seven marks is
-/// the strip's own hunt problem reproduced one layer down, and market seats are
-/// the worst marks in the catalog to hunt through — several are a letter in a
-/// circle and two of them are the same letter. The mark stays as recognition;
-/// the word is what you read.
+/// the strip's own hunt problem reproduced one layer down, and several
+/// catalog marks are the worst possible icons to hunt through on their own
+/// (two market seats are literally the same letter in a circle). The mark
+/// stays as recognition; the word is what you read.
 ///
 /// **It centers the active scope on appear**, the `SourceChips` rule: a
 /// selection you cannot see reads as no selection, and with seven scopes the
 /// one you are standing in can easily start off-screen.
 ///
-/// No "All" scope, deliberately. A merged list is the one thing this aggregate
-/// must not offer — a token's 24h percent, a stock's session percent and a
-/// market's probability points do not convert, so a single ranked list across
-/// them would be this app's first invented number. Cross-venue comparison
-/// survives where it is real: two prediction venues pricing the SAME question
-/// draw each other's bar on the card itself (`PredictionBrowseSection`'s twin).
-struct MarketsVenueSwitcher: View {
-    /// Present market seats, in catalog order (`ShellChrome.categoryVenues["Markets"]`).
+/// No "All" scope, deliberately, and this generalizes past Markets rather
+/// than being Markets' own reasoning: a merged list across a folded
+/// category's members is not this control's job for ANY category — Markets'
+/// probability points and a stock's session percent don't convert, and
+/// neither do a Peer fill's token amount and a Privacy Pools deposit's. Where
+/// a merged reading is real it lives on the room itself (Wallet's own balance
+/// composes across its riders; two prediction venues pricing the SAME
+/// question draw each other's bar via `PredictionBrowseSection`'s twin) —
+/// never invented here.
+struct CategoryVenueSwitcher: View {
+    /// Present members of one folded category, in catalog order
+    /// (`ShellChrome.categoryVenues[category]`).
     let venues: [String]
     /// The seat currently showing — a real source, always.
     let active: String

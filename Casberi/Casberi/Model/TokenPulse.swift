@@ -40,6 +40,84 @@ final class TokenPulse {
         return pulses[ref]
     }
 
+    /// Demo mode (prd §351 follow-up, 2026-08-11, user: "how come on tokens
+    /// there isn't a sparkline and up down percent") — the same problem
+    /// `-seedWalletHistory` solves for the balance curve, here for the
+    /// Tokens room. `DemoMode.begin` runs `BridgeRefresh.refreshAllConnected`
+    /// as a no-op (the fake wallet address must never get a real balance
+    /// overwritten with zero), and that took `refresh()` above down with it —
+    /// so every demo-watched token's pulse stayed nil forever and its row
+    /// showed nothing but a timestamp. This writes `pulses` DIRECTLY, the
+    /// same dictionary `refresh()` writes, so a row can't tell the difference
+    /// — but it never calls `TokenChart.fetch` and therefore never touches
+    /// the network, which matters here specifically: `DemoSeedAll.rooms()`
+    /// deliberately drops the Dexscreener content URL from every demo token
+    /// row (P4, 2026-08-07) so `ThingChart.kind(for:)` can never route a
+    /// sheet-open into a live fetch for a fabricated address. Seeding
+    /// `pulses` by ref rather than by route keeps that guarantee intact.
+    ///
+    /// The curve is a deterministic wiggle around the seeded
+    /// `thing.watchPriceUsd` (`sin`, not `Double.random` — this file's own
+    /// corpus-wide rule: a demo that reshuffles between two opens over
+    /// identical data reads as broken), 24 points for a day's worth of an
+    /// hourly close, ANCHORED so `closes.first`/`closes.last` land exactly on
+    /// `price / (1 + change24h)` and `price` — the row's pill reads
+    /// `change24h` directly, but the sheet's chart (`TokenChart.from(closes:)`)
+    /// derives its OWN change from the closes array's first-vs-last, with no
+    /// knowledge `change24h` exists. Unanchored, the two independently-true
+    /// numbers disagreed (measured: a seeded +2.3% rendered as -1.6% on the
+    /// chart) — the same row silently telling two different stories depending
+    /// on which control you looked at. The wiggle stays OFF the two endpoints
+    /// for exactly this reason: perturbing them would reopen the same gap by
+    /// a smaller amount instead of closing it.
+    func seedDemo(_ tokens: [(ref: String, price: Double, change24h: Double, phase: Double)]) {
+        var seeded: [String: Pulse] = [:]
+        for t in tokens {
+            let start = t.price / (1 + t.change24h)
+            let closes = (0..<24).map { i -> Double in
+                let trend = start + (t.price - start) * (Double(i) / 23.0)
+                guard i > 0, i < 23 else { return trend }
+                return trend * (1 + 0.01 * sin(Double(i) * 0.9 + t.phase))
+            }
+            seeded[t.ref] = Pulse(closes: closes, change24h: t.change24h, price: t.price,
+                                  marketCap: nil, fdv: nil, fetchedAt: .now)
+        }
+        pulses.merge(seeded) { _, new in new }
+    }
+
+    /// `demoTokens` in one place — `seedDemo` above takes raw tuples (kept
+    /// generic/testable), everything else calls through here so the per-token
+    /// direction/phase constants are spelled exactly once.
+    private static func demoTokens() -> [(ref: String, price: Double, change24h: Double, phase: Double)] {
+        DemoSeedAll.tokenSeeds.enumerated().map { i, t in
+            (ref: "demo:token:\(i)", price: t.price,
+             change24h: [0.023, -0.011, 0.084][i % 3], phase: Double(i) * 2.1)
+        }
+    }
+
+    func seedDemo() { seedDemo(Self.demoTokens()) }
+
+    /// Re-seeds if the process just (re)started with demo mode already
+    /// active — `pulses` is in-memory only (real prices are perishable, this
+    /// file's own opening doc), so a fresh launch starts empty and
+    /// `DemoMode.begin()`'s one-time `seedDemo()` call never runs again for
+    /// the rest of that demo session. Called from the exact place a REAL
+    /// launch's foreground sweep would have refreshed this cache instead —
+    /// see `BridgeRefresh.refreshAllConnected`'s `DemoMode.isActive` gate.
+    /// Cheap to call on every such gate hit: it's a dictionary-emptiness
+    /// check, and it only actually seeds when something is missing.
+    func reseedDemoIfNeeded() {
+        guard Self.demoTokens().contains(where: { pulses[$0.ref] == nil }) else { return }
+        seedDemo()
+    }
+
+    /// Reverses `seedDemo` — called from `DemoMode.exit` so a real Tokens
+    /// connection afterward starts from a genuinely empty cache rather than
+    /// one still wearing fabricated demo prices.
+    func teardownDemo(_ refs: [String]) {
+        for ref in refs { pulses.removeValue(forKey: ref) }
+    }
+
     /// Fetches 24h curves for watched tokens whose pulse is stale (15 min —
     /// the foreground cadence; TokenChart is up to 4 GETs per token across
     /// its three tiers, so a same-minute re-foreground shouldn't refetch the

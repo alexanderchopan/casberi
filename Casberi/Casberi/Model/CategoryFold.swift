@@ -36,6 +36,16 @@ import Foundation
 /// Wallet's own room content, and it does not build a switcher for any
 /// category besides Markets — both are flagged in §351 as their own passes.
 enum CategoryFold {
+    /// How many members must be PRESENT before a category's own venue
+    /// SWITCHER draws (`CategoryVenueSwitcher`, wired generically in
+    /// `FeedScreen.categorySwitcher` — prd §351, "each category should have a
+    /// switcher"). A different question from whether the CHIP folds, which
+    /// has no floor at all: a single member still folds to its category
+    /// word, but a switcher offering one scope is not a control
+    /// (`PredictionVenueSwitcher`'s own rule, inherited from Markets, the
+    /// first category to earn one).
+    static let switcherFloor = 2
+
     /// Every catalog category's members, resolved once — `static let`, not a
     /// computed property, for the same perf reason `MarketsRoom.members` was:
     /// this is read on every strip body evaluation (through `isCategory`,

@@ -374,11 +374,22 @@ struct SourceChips: View {
                     // so the whole strip reads as one visual language rather
                     // than three different chip shapes glued together.
                     if CategoryFold.isCategory(label) {
+                        // A longer name ("Shopping", "Reading") scaled to fit
+                        // one line inside the bare circle touched its curve on
+                        // both sides with no air at all (reported 2026-08-11:
+                        // "hug the edges too much") — "All" never showed this
+                        // because three characters never needed the room. The
+                        // fix is inset the TEXT'S OWN BOX, not the circle:
+                        // padding here shrinks what `minimumScaleFactor` has to
+                        // fit inside, so the glyphs themselves end up smaller
+                        // and centered with a margin, while the circle itself
+                        // stays exactly `iconSize` like every other chip.
                         Text(label).dsText(.label12)
                             .foregroundStyle(DS.textPrimary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.55)
                             .multilineTextAlignment(.center)
+                            .padding(.horizontal, 5)
                             .frame(width: iconSize, height: iconSize)
                             .clipShape(Circle())
                             .dsGlass(cornerRadius: iconSize / 2)

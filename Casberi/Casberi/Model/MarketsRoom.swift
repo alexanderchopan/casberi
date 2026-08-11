@@ -59,11 +59,15 @@ enum MarketsRoom {
     static func isRoom(_ label: String) -> Bool { label == room }
 
     /// How many member seats must be PRESENT before the room's own venue
-    /// SWITCHER draws (`PredictionRoomBook`/`FeedScreen.marketsSwitcher`).
+    /// SWITCHER draws (`PredictionRoomBook`, which needs to know whether
+    /// `FeedScreen.categorySwitcher` is already covering the Markets scope).
     /// Distinct from the chip fold, which now has no floor at all — see the
     /// type doc. Renamed from `foldFloor` (2026-08-11): the old name described
-    /// a floor on folding, which no longer exists.
-    static let switcherFloor = 2
+    /// a floor on folding, which no longer exists. Aliases
+    /// `CategoryFold.switcherFloor` (2026-08-11, same day) once that floor
+    /// generalized past Markets — kept here under its old name since
+    /// `PredictionRoomBook` and this file's own history both spell it this way.
+    static let switcherFloor = CategoryFold.switcherFloor
 
     /// The member seats, in CATALOG order.
     static let members: [String] = CategoryFold.members(of: room)

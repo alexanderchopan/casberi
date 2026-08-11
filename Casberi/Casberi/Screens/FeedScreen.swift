@@ -1523,43 +1523,51 @@ struct FeedScreen: View {
         }
     }
 
-    /// The folded Markets room's venue switcher (2026-08-10) — see
-    /// `MarketsRoom` for why the market seats share one chip and what that
-    /// makes this control.
+    /// Whichever folded category room this is, its venue switcher (prd §351
+    /// follow-up, 2026-08-11, user: "each category should have a switcher" —
+    /// generalizes what was `marketsSwitcher`, Markets-only since 2026-08-10).
+    /// See `CategoryFold` for why the members of a category share one chip
+    /// and what that makes this control.
     ///
     /// **PINNED, not a List section** — `walletSwitcherBar`'s own ruling
     /// (2026-07-20, prd §136), which applies here with more force than it did
     /// there. As a section it scrolled away with the content it scopes, and its
     /// glass had nothing moving behind it; as a `safeAreaInset` bar it floats
     /// under the shell's chip strip, the room travels beneath it, and the
-    /// material earns its blur. The wallet switcher scopes one room's rows —
-    /// this one says which ROOM you are in, so losing it to a scroll is
-    /// strictly worse. It shares that inset because Wallet is not a
-    /// `MarketsRoom` member, so the two can never both render.
+    /// material earns its blur. `walletSwitcherBar` scopes ONE room's rows to
+    /// one watched address — a different axis entirely, not this control in
+    /// disguise — so the two stack as separate insets rather than one
+    /// standing down for the other; both can render together now that Wallet
+    /// is a category like any other (Peer/Privacy Pools/Gnosis Pay/Railgun/the
+    /// balance room itself all move through THIS switcher, while
+    /// `walletSwitcherBar` still moves between watched addresses within
+    /// whichever of those rooms you're in).
     ///
     /// Each scope is that seat's own room, whole and unchanged — this view
     /// mounts nothing and shapes nothing, it only asks the shell to switch
     /// rooms.
     ///
-    /// Gated on `chrome.categoryVenues[MarketsRoom.room]`, which the strip
-    /// fills whenever a Markets seat is folded — but the SWITCHER draws only
-    /// at `MarketsRoom.switcherFloor` (≥2 present venues), so a single
-    /// connected market seat still folds to the "Markets" chip (prd §351)
+    /// Gated on `chrome.categoryVenues[category]`, which the strip fills
+    /// whenever a category is folded — but the SWITCHER draws only at
+    /// `CategoryFold.switcherFloor` (≥2 present venues), so a category with a
+    /// single connected member still folds to its word chip (prd §351)
     /// without growing a switcher with one scope in it. The venues arrive in
     /// LEARNED order (that is what `CategoryFold.landing` needs); `scopes`
-    /// puts them in catalog order for display, because a capsule of four
-    /// words is not long enough to earn learned order and one that reshuffles
-    /// between opens reads as broken.
-    @ViewBuilder private var marketsSwitcher: some View {
-        let venues = chrome.categoryVenues[MarketsRoom.room] ?? []
-        if venues.count >= MarketsRoom.switcherFloor, MarketsRoom.isMember(source) {
-            MarketsVenueSwitcher(
-                venues: CategoryFold.scopes(category: MarketsRoom.room, present: Set(venues)),
-                active: source) { venue in
-                chrome.sourceRequest = venue
+    /// puts them in catalog order for display, because a capsule this short
+    /// has not earned learned order and one that reshuffles between opens
+    /// reads as broken.
+    @ViewBuilder private var categorySwitcher: some View {
+        if let category = BridgeCatalog.category(forSource: source) {
+            let venues = chrome.categoryVenues[category] ?? []
+            if venues.count >= CategoryFold.switcherFloor {
+                CategoryVenueSwitcher(
+                    venues: CategoryFold.scopes(category: category, present: Set(venues)),
+                    active: source) { venue in
+                    chrome.sourceRequest = venue
+                }
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.bottom, DS.Space.s2)
             }
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.bottom, DS.Space.s2)
         }
     }
 
@@ -1750,11 +1758,13 @@ struct FeedScreen: View {
             chrome.pullTension = clamped
         }
         .safeAreaInset(edge: .top, spacing: 0) { walletSwitcherBar }
-        // The folded Markets room's venue switcher, pinned for the same reason
-        // and on the same edge — see `marketsSwitcher`. A second inset rather
-        // than a shared one so each stays self-gating; only one of the two can
-        // ever render, since Wallet is not a `MarketsRoom` member.
-        .safeAreaInset(edge: .top, spacing: 0) { marketsSwitcher }
+        // Whichever folded category room this is, pinned for the same reason
+        // and on the same edge — see `categorySwitcher`. A second inset
+        // rather than a shared one so each stays self-gating; the two CAN
+        // both render now (Wallet is a category like any other), and they
+        // scope different things (which watched address vs. which room), so
+        // stacking is correct rather than a collision to prevent.
+        .safeAreaInset(edge: .top, spacing: 0) { categorySwitcher }
         .dsSoftScrollEdges()
         // Arrival is `isActive`, not `onAppear` (2026-07-16, the pager): a
         // mounted neighbour appears without ever being looked at, so landing

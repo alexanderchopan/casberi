@@ -42,6 +42,16 @@ enum DemoSeedAll {
     static let version = 1
     private static let versionKey = "demo.fullSeed.version"
 
+    /// The three demo-watched tokens — (symbol, name, price, ref index),
+    /// pulled up to a shared constant (2026-08-11) so `TokenPulse.seedDemo`
+    /// can seed the SAME refs `rooms()` lands things under, rather than a
+    /// second copy that can drift from it (the demo-parity discipline this
+    /// file's own header states as a rule).
+    static let tokenSeeds: [(symbol: String, name: String, price: Double, dayOffset: Double)] = [
+        ("ETH", "Ethereum", 3_180, 1), ("SOL", "Solana", 176, 2),
+        ("DEGEN", "Degen", 0.0071, 5),
+    ]
+
     /// The `sourceRef` namespaces this seeder owns — what `clear` deletes.
     ///
     /// Two of them are NOT `demo:` and can't be: `ScreenshotIngest`'s sample
@@ -904,10 +914,6 @@ enum DemoSeedAll {
                 t.postText = m.0
             }
         }
-        let tokens: [(String, String, Double, Double)] = [
-            ("ETH", "Ethereum", 3_180, 1), ("SOL", "Solana", 176, 2),
-            ("DEGEN", "Degen", 0.0071, 5),
-        ]
         // No dexscreener content URL on any row here (P4, 2026-08-07) — this
         // is sharper than the usual dead-door case: `TokenChart.route(from:)`
         // does NO validation, it blindly reads `pathComponents[0]`/`[1]` off
@@ -920,11 +926,13 @@ enum DemoSeedAll {
         // `BridgeRefresh`'s demo gate can't see because it's a per-view
         // on-open fetch, not part of the foreground sweep. Dropping the
         // content URL means `route(from:)`'s host check fails and nothing is
-        // ever attempted.
-        out += tokens.enumerated().map { i, t in
-            row(.link, "\(t.1) (\(t.0))", source: "Tokens", ref: "demo:token:\(i)",
-                days: t.3, hour: 12) { thing in
-                thing.watchPriceUsd = t.2
+        // ever attempted. `TokenPulse.seedDemo` (2026-08-11) is what gives
+        // these rows a sparkline/price/chart instead — a synthetic in-memory
+        // pulse, never a URL, so it can never trigger a fetch either.
+        out += tokenSeeds.enumerated().map { i, t in
+            row(.link, "\(t.name) (\(t.symbol))", source: "Tokens", ref: "demo:token:\(i)",
+                days: t.dayOffset, hour: 12) { thing in
+                thing.watchPriceUsd = t.price
             }
         }
         out += (0..<3).map { i in

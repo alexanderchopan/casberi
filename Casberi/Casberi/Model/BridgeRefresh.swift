@@ -81,7 +81,17 @@ enum BridgeRefresh {
         // is no fresher data to get — only real requests and a chance to
         // corrupt the seed. Nothing about the demo is time-sensitive, so the
         // gesture costs nothing by doing nothing.
-        if DemoMode.isActive { return }
+        //
+        // ONE exception, and it's a re-seed not a read (2026-08-11):
+        // `TokenPulse.pulses` is in-memory only, so a fresh launch/relaunch
+        // starts it empty — this is the exact spot a REAL launch's sweep
+        // would have refreshed it, so it's the right spot for the demo's
+        // synthetic equivalent too. No network, never reads `DemoMode`'s own
+        // wallet address, and it's a no-op once already seeded this process.
+        if DemoMode.isActive {
+            TokenPulse.shared.reseedDemoIfNeeded()
+            return
+        }
         if !force, let last = lastSweep, Date.now.timeIntervalSince(last) < minSweepInterval { return }
         lastSweep = .now
         // This pass's pace, fixed here rather than read per slot — see

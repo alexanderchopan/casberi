@@ -87,7 +87,7 @@ struct PredictionRoomBook: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             // The venue switcher stands down under the Markets fold
-            // (2026-08-10). Both venues are then scopes of `MarketsVenueSwitcher`
+            // (2026-08-10). Both venues are then scopes of `CategoryVenueSwitcher`
             // one level up, and two capsules stacked over one book — each able
             // to change which venue you are reading — is two controls for one
             // act, with no way to tell from either which of them won.

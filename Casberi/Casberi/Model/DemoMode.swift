@@ -155,6 +155,13 @@ enum DemoMode {
         AskMemory.seedDemo(neglect: [neglectedAsk: AskMemory.neglectThreshold + 2],
                            made: [primedMintAsk: AskMemory.mintThreshold])
         AppVisit.seedDemo()
+        // The Tokens room's sparkline/price/percent (2026-08-11) — see
+        // `TokenPulse.seedDemo`'s own doc for why this can't just be
+        // `BridgeRefresh.refreshAllConnected` running for real. Only the
+        // FIRST seed for this demo session happens here — `pulses` is
+        // in-memory only, so every later relaunch reseeds from
+        // `BridgeRefresh`'s own gate instead (`TokenPulse.reseedDemoIfNeeded`).
+        TokenPulse.shared.seedDemo()
 
         NSLog("[Casberi] demoMode: began")
     }
@@ -379,6 +386,7 @@ enum DemoMode {
         BriefLedger.restoreDemoCheckpoint()
         AskMemory.forgetDemo(neglect: [neglectedAsk], made: [primedMintAsk])
         AppVisit.forgetDemo()
+        TokenPulse.shared.teardownDemo(DemoSeedAll.tokenSeeds.indices.map { "demo:token:\($0)" })
 
         NSLog("[Casberi] demoMode: exited, %d rows removed", rows)
     }

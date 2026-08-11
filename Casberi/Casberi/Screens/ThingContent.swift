@@ -20,9 +20,25 @@ enum ThingChart {
     case stock(ticker: String)
     case postHogMetric(event: String)
     case polymarket(conditionId: String)
+    /// A watched token with NO resolvable Dexscreener route but a real
+    /// `TokenPulse` entry already in memory (2026-08-11) — currently only
+    /// reachable in demo mode, where `DemoSeedAll.rooms()` deliberately omits
+    /// the content URL (P4, 2026-08-07: a fabricated route would hand
+    /// `TokenChartContent` a bogus chain/address to actually FETCH on sheet
+    /// open) while `TokenPulse.seedDemo` still gives the row's sparkline real
+    /// numbers. Draws from that SAME cached pulse, locally, so the sheet
+    /// isn't empty under the one row that has data but no address to fetch
+    /// it by.
+    case watchedPulse(ref: String)
 
     /// Charts are a `.link` affordance only — a `.product` previews its page
     /// even when the URL would otherwise parse.
+    ///
+    /// `@MainActor` (2026-08-11): the `.watchedPulse` fallback reads
+    /// `TokenPulse.shared`, itself `@MainActor` — every real call site is
+    /// already a SwiftUI view body, so this costs nothing new, it just
+    /// states what was already true.
+    @MainActor
     static func kind(for thing: Thing) -> ThingChart? {
         guard thing.kind == .link else { return nil }
         if let route = TokenChart.route(from: thing.content) {
@@ -46,6 +62,14 @@ enum ThingChart {
         // the condition id comes off the sourceRef instead.
         if thing.source == "Polymarket", let id = PolymarketBridge.conditionId(from: thing) {
             return .polymarket(conditionId: id)
+        }
+        // The demo-only fallback above's own reasoning: only reached once
+        // every real route has already failed to match, so a genuine
+        // Tokens row with a real Dexscreener content URL always takes the
+        // `.token` branch above and never this one.
+        if thing.source == "Tokens", let ref = thing.sourceRef,
+           TokenPulse.shared.pulse(for: thing) != nil {
+            return .watchedPulse(ref: ref)
         }
         return nil
     }
@@ -150,6 +174,8 @@ struct ThingContentView: View {
                     PostHogMetricContent(thing: thing, event: event)
                 case .polymarket(let conditionId):
                     PolymarketMarketContent(conditionId: conditionId, url: thing.content)
+                case .watchedPulse(let ref):
+                    TokenPulseChartContent(thing: thing, ref: ref)
                 }
             } else if thing.source == X402Ingest.source {
                 if let url = Capture.detectURL(in: thing.content) {
@@ -1182,6 +1208,40 @@ private struct TokenChartContent: View {
         .background(DS.fillFaint,
                     in: RoundedRectangle(cornerRadius: DS.Radius.widget,
                                          style: .continuous))
+    }
+}
+
+/// A watched token with a `TokenPulse` entry but no fetchable route
+/// (`ThingChart.watchedPulse`, 2026-08-11) — currently the demo's own case
+/// only (see that case's doc). Draws the SAME `TokenChartView` every real
+/// token chart uses, but its `fetch` closure reads the already-cached pulse
+/// locally via `TokenChart.from(closes:)` and never calls `TokenChart.fetch`
+/// — no network, ever, regardless of which range chip is tapped, since a
+/// synthetic pulse carries exactly one window's worth of closes. No stat
+/// strip (liquidity/volume/FDV are real Dexscreener pair facts this thing
+/// was never given) and no Watch row (this IS the watchlist's own thing,
+/// `TokenChartContent`'s own `offersWatch` reasoning).
+private struct TokenPulseChartContent: View {
+    let thing: Thing
+    let ref: String
+
+    private var since: (price: Double, date: Date)? {
+        guard let p = thing.watchPriceUsd, p > 0 else { return nil }
+        return (p, thing.capturedAt)
+    }
+
+    var body: some View {
+        if thing.isLive, let pulse = TokenPulse.shared.pulse(for: thing) {
+            // EmptyView, not a link fallback: `TokenChart.from(closes:)` only
+            // returns nil under 2 points, which a seeded 24-point pulse never
+            // is — the `.dead` phase this would cover is unreachable here.
+            TokenChartView<TokenRange, EmptyView>(
+                memoryKey: "pulse.\(ref)",
+                fetch: { _ in TokenChart.from(closes: pulse.closes) },
+                since: since, hero: true) { EmptyView() }
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.bottom, DS.Space.s3)
+        }
     }
 }
 
