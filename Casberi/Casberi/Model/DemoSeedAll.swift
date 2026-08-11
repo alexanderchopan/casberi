@@ -181,6 +181,22 @@ enum DemoSeedAll {
         // ranking race on affinity=0 and the fix is invisible in the panel
         // that motivated it.
         "Cloudflare": 4,
+        // PostHog (2026-08-10) — the SECOND half of the Cloudflare lesson, and
+        // the half that comment above predicted: `curve` is PostHog's alone (the
+        // wallet's is `worth(curve:cells:)`, a different case), the state behind
+        // it has been seeded correctly since the room-head pass — a 7-point
+        // series, `fetchedAt` stamped — so the card composes perfectly and then
+        // ranks 21st on affinity=0 and is cut by the 20-card cap. Every run,
+        // identically: the visit table is a fixed seed, so the ranking is
+        // deterministic and "re-run to see if it's consistent" cannot tell this
+        // apart from a wiring gap. Four verify runs and a manual re-run all
+        // reported the same one missing kind, which is what settled it.
+        //
+        // At 4 it clears the affinity=3 tail. That evicts one of
+        // TikTok/OpenSea/Apple Wallet/Circle x402, each of whose figure kind is
+        // already drawn by a room ranked above it — so the cap costs a card and
+        // never a KIND, which is the only thing this seed is protecting.
+        "PostHog": 4,
     ]
 
     /// The PostHog metrics `seedBridgeState` plants, named once for the same

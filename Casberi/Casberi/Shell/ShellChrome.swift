@@ -238,6 +238,12 @@ final class ShellChrome {
     /// So: two lists, each honest about its own surface. Anything that WRITES a
     /// source takes this one; only the positional shortcut takes `chipOrder`,
     /// and it resolves the label before writing (see `CasberiApp`).
+    ///
+    /// SOURCES ONLY, which is the same rule read from the other end: the Pinned
+    /// room is left out of this list too (2026-08-10). It is a real destination
+    /// and a real chip, but no thing carries "Pinned" as its source and the
+    /// catalog has no seat for it — so in the tray's category grid it could only
+    /// ever be an "Other" cell wearing the generic placeholder mark.
     var sourceOrder: [String] = ["All"]
 
     /// The market seats that earned a chip this session, in catalog order

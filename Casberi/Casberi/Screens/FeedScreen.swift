@@ -649,11 +649,27 @@ struct FeedScreen: View {
     /// lookup and the answer path, but never as feed rows or a source chip
     /// (ruling 2026-07-12): hundreds of names would bury the day's captures.
     /// One rule (`Corpus.surfaced`), shared with Home's synthesis.
-    private var feedThings: [Thing] { Corpus.surfaced(things) }
+    ///
+    /// The pinned room is the one exception, and it is the same exception its
+    /// `@Query` already makes: its rows are selected by YOUR act, not by a
+    /// source, so the corpus-shaped rules don't apply to it. A contact you
+    /// pinned is a contact you asked to keep in front of you — dropping it here
+    /// would make the verb silently fail on exactly the rows the search-only
+    /// rule exists to keep OUT of a river you didn't build.
+    private var feedThings: [Thing] {
+        Pinboard.isPinnedRoom(source) ? things : Corpus.surfaced(things)
+    }
 
     private func liveVisible() -> [Thing] {
         feedThings.filter { thing in
-            (source == "All" || thing.source == source)
+            // The pinned room's membership is decided entirely by the `@Query`
+            // above (`pinnedAt != nil`), so there is no source to match against
+            // — and matching one is how this room shipped EMPTY (2026-08-10):
+            // "Pinned" is not a source any thing carries, so `thing.source ==
+            // source` was false for every row the query had just correctly
+            // handed over, and the room drew its own "nothing pinned" line over
+            // a list that wasn't.
+            (source == "All" || Pinboard.isPinnedRoom(source) || thing.source == source)
                 // A bulk import (Instagram, Snapchat) keeps its own room but
                 // stays OUT of All — thousands of things dated across years
                 // would bury the day's real captures. All sees its receipt
@@ -2222,7 +2238,17 @@ struct FeedScreen: View {
             let days = chronoGroups(visible)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         default:
-            if filter.tag != "All" && shape == .all {
+            if Pinboard.isPinnedRoom(source) {
+                // ONE group, in the `@Query`'s own order — which is pin order,
+                // newest pin first. Every other room here day-groups on
+                // `capturedAt`, and doing that to this one would sort your list
+                // by the corpus's clock instead of yours: a pin you made this
+                // morning on a two-year-old screenshot would land under a 2024
+                // header, below things you pinned weeks ago. That is exactly
+                // the failure `Thing.pinnedAt` is a DATE rather than a Bool to
+                // avoid, and it would arrive by the back door.
+                daySection(Pinboard.room, visible, nextEventID: nextEventID)
+            } else if filter.tag != "All" && shape == .all {
                 daySection(filterLabel, visible, nextEventID: nextEventID)
             } else if shape == .all {
                 // The Themes treemap leads the unfiltered All room (2026-07-18,
@@ -5207,6 +5233,10 @@ struct FeedScreen: View {
              ? "Showing your most recent \(rows.count) — open a source to go further back"
              : source == "All"
              ? "That's everything · \(rows.count == 1 ? "1 thing" : "\(rows.count) things")"
+             // "from Pinned" would name a source that doesn't exist. This room
+             // is the one place the sentence is about something you did.
+             : Pinboard.isPinnedRoom(source)
+             ? "That's everything you've pinned · \(countLabel(rows))"
              : "That's everything from \(source) · \(countLabel(rows))")
             .dsText(.subhead13)
             .foregroundStyle(DS.textTertiary)

@@ -499,6 +499,13 @@ struct MainSurface: View {
         // landing. Nothing above this line knows the fold exists.
         let unfolded = ["All"] + pinned + learned
         let labels = MarketsRoom.fold(unfolded, members: MarketsRoom.memberSet)
+        // The tray gets the SOURCES, so Pinned is dropped from its list for the
+        // same reason the folded "Markets" label is: it is a room, not a source.
+        // The tray groups by catalog category and the catalog has never heard of
+        // it, so it landed in the trailing "Other" block wearing the generic
+        // placeholder mark — a cell that looks like a connection nobody can name,
+        // on the one screen whose job is to name every source.
+        let sources = ["All"] + learned
         // Venues only when the fold actually happened. Below the floor each
         // seat keeps its own chip, so a switcher would be a second control over
         // the same act — and `ShellChrome.marketVenues` being empty is exactly
@@ -514,7 +521,7 @@ struct MainSurface: View {
         // opens reads as broken. Two orders, each where it belongs.
         let venues = labels.contains(MarketsRoom.room)
             ? learned.filter { MarketsRoom.isMember($0) } : []
-        return (labels, venues, unfolded)
+        return (labels, venues, sources)
     }
 
     // `feedLabels` retired here (2026-08-10). It existed to guarantee the

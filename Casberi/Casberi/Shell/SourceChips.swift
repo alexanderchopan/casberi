@@ -355,6 +355,9 @@ struct SourceChips: View {
                         .frame(width: iconSize, height: iconSize)
                         .clipShape(Circle())
                         .dsGlass(cornerRadius: iconSize / 2)
+                case Pinboard.room:
+                    // The pinned room (2026-08-10) — see `PinnedChipMark`.
+                    PinnedChipMark(size: iconSize)
                 case MarketsRoom.room:
                     // The folded market seats (2026-08-10) — see
                     // `MarketsChipMark` for why it wears their marks rather
@@ -515,6 +518,43 @@ private struct MarketsChipMark: View {
         }
         .frame(width: size, height: size)
         .clipShape(Circle())
+    }
+}
+
+/// The pinned room's chip face (2026-08-10) — a pin on the same glass circle
+/// "All" wears.
+///
+/// **Why it needs its own case at all.** Every other chip in this strip resolves
+/// through `BridgeIcon`, which looks a name up in the catalog — and the pinned
+/// room is not in the catalog and never will be, because it is not a source.
+/// So it fell through to the generic placeholder and shipped as an anonymous
+/// grey square beside twenty real brand marks, which is exactly the one chip in
+/// the row nobody could name.
+///
+/// **Why a glyph is right here and wrong for `MarketsChipMark`.** That doc's
+/// rule — this strip's grammar is brand identity, so a taxonomy symbol would be
+/// chrome dressed as content — holds for a folder over four of the person's own
+/// seats. It does not hold here: this room has no seats to draw, and the one
+/// thing it stands for is a verb the person performed. "All" already occupies
+/// exactly that footing (a neutral word on glass), so the two non-source rooms
+/// read as a pair rather than as one odd chip.
+///
+/// Drawn in the tint, unlike "All"'s ink: this is the one room whose contents
+/// you chose, and the tint is what the app uses everywhere else to mean yours.
+private struct PinnedChipMark: View {
+    let size: CGFloat
+
+    var body: some View {
+        Image(systemName: "pin.fill")
+            // Fixed against the circle, not the text size: the neighbouring
+            // chips are app icons that don't scale at all, so a glyph that grew
+            // would break the strip's rhythm — the same reason "All" stops at
+            // its circle instead of spilling over the door beside it.
+            .font(.system(size: size * 0.42, weight: .semibold))
+            .foregroundStyle(DS.tint)
+            .frame(width: size, height: size)
+            .clipShape(Circle())
+            .dsGlass(cornerRadius: size / 2)
     }
 }
 
