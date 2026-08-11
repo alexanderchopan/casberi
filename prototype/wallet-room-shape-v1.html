@@ -1,0 +1,390 @@
+<meta charset="utf-8">
+<title>Wallet — the third shape</title>
+<style>
+  /* Real tokens, DesignTokens.swift
+     page #000 / #fff · fillFaint #ffffff0f / #00000008
+     textPrimary #fff / #000 · textSecondary #ebebf599 / #3c3c43d6
+     textTertiary #ebebf57e / #3c3c43bd
+     tint #0a84ff · attention #ff9f0a · positive #30d158 · negative #ff453a
+     Space s1 4 · s2 10 · s3 14 · s4 18
+     Strip capsules: height 46, padH 14, gap 10 (§352, shipped)
+     Switcher capsule: subhead13, padH 14 padV 10, glass 999 (CategoryVenueSwitcher, shipped)
+     walletSwitcherBar: identical grammar, WalletFace 18 (shipped) */
+
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    background: #0b0b0d; color: #ebebf5cc;
+    padding: 32px 28px 64px;
+    -webkit-font-smoothing: antialiased;
+  }
+  body.light { background: #f2f2f7; color: #3c3c43d6; }
+
+  h1 { font: 700 22px/28px ui-rounded, -apple-system, system-ui; color: #fff; }
+  body.light h1 { color: #000; }
+  .sub { margin-top: 6px; max-width: 94ch; font-size: 13px; opacity: .72; }
+
+  .bar { display: flex; gap: 10px; align-items: center; margin: 18px 0 26px; flex-wrap: wrap; }
+  button {
+    font: 500 13px/1 inherit; color: inherit; cursor: pointer;
+    background: #ffffff14; border: 0; border-radius: 9999px; padding: 9px 15px;
+  }
+  body.light button { background: #00000010; }
+
+  .row { display: flex; gap: 26px; flex-wrap: wrap; align-items: flex-start; }
+  .panel { margin-bottom: 38px; }
+  .panel > h2 { font: 600 14px/18px inherit; color: #fff; }
+  body.light .panel > h2 { color: #000; }
+  .panel > .note { font-size: 12px; line-height: 17px; opacity: .62; margin: 3px 0 12px; max-width: 62ch; }
+
+  /* ---------- phone stage ---------- */
+  .stage {
+    width: 402px; border-radius: 22px; padding: 14px 0 0;
+    background: #000; overflow: hidden; position: relative; height: 620px;
+  }
+  body.light .stage { background: #fff; box-shadow: 0 1px 8px #0000001f; }
+  .stage::after { /* content fade at the bottom lip */
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 46px;
+    background: linear-gradient(#0000, #000); pointer-events: none;
+  }
+  body.light .stage::after { background: linear-gradient(#fff0, #fff); }
+  .cap { font-size: 10.5px; opacity: .45; padding: 0 18px 8px; }
+
+  /* ---------- the category strip (§351/§352, shipped — unchanged here) ---------- */
+  .strip { display: flex; align-items: center; gap: 10px; padding: 0 18px 10px; overflow: hidden; }
+  .door {
+    flex: 0 0 auto; width: 46px; height: 46px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: #ffffff0f; font: 600 15px/1 inherit; color: #fff;
+  }
+  body.light .door { background: #00000008; color: #000; }
+  .door.avatar { background: linear-gradient(135deg,#8a6cf0,#e06c8a); }
+  .cap-slot { flex: 0 0 auto; padding: 5px 0; display: grid; place-items: center; }
+  .cap-chip {
+    height: 46px; border-radius: 23px; display: flex; align-items: center;
+    padding: 0 14px; background: #ffffff0f; color: #fff; font: 500 12px/1 inherit;
+    white-space: nowrap;
+  }
+  body.light .cap-chip { background: #00000008; color: #000; }
+  .cap-chip.circle { width: 46px; padding: 0; justify-content: center; border-radius: 50%; }
+  .cap-slot.active .cap-chip { box-shadow: 0 0 0 2.5px #0a84ff; }
+
+  /* ---------- pinned glass bars (both reuse the shipped switcher grammar) ---------- */
+  .pinbar { padding: 0 18px 10px; }
+  .glass {
+    display: inline-flex; align-items: center; gap: 10px; padding: 4px;
+    border-radius: 999px; max-width: 100%; overflow: hidden;
+    background: #ffffff12; backdrop-filter: blur(14px);
+    box-shadow: inset 0 0 0 .5px #ffffff14;
+  }
+  body.light .glass { background: #ffffffb8; box-shadow: inset 0 0 0 .5px #00000010, 0 1px 6px #00000014; }
+  .pill {
+    display: flex; align-items: center; gap: 5px;
+    padding: 10px 14px; border-radius: 999px; white-space: nowrap;
+    font: 400 13px/1 inherit; color: #ebebf599;
+    background: #ffffff0f; position: relative;
+  }
+  body.light .pill { color: #3c3c43d6; background: #00000008; }
+  .pill.on { font-weight: 600; color: #fff; }
+  body.light .pill.on { color: #000; }
+  .pill.on::before {
+    content: ""; position: absolute; inset: 0; border-radius: 999px;
+    background: var(--sel, #0a84ff2e);
+  }
+  .pill > * { position: relative; }
+
+  /* identicon faces (walletSwitcherBar) */
+  .face { width: 18px; height: 18px; border-radius: 50%; flex: 0 0 auto; }
+  .face.v { background: conic-gradient(from 40deg, #30d158, #0a84ff, #30d158); }
+  .face.l { background: conic-gradient(from 200deg, #ff9f0a, #bf5af2, #ff9f0a); }
+
+  /* seat marks (bridge icons stand-ins) */
+  .mark {
+    width: 18px; height: 18px; border-radius: 50%; flex: 0 0 auto;
+    display: grid; place-items: center; font: 700 9px/1 inherit; color: #fff;
+  }
+  .m-wallet { background: #0a84ff; }
+  .m-peer { background: #12b8a6; }
+  .m-pp { background: #7a5af8; }
+  .m-gp { background: #04795b; }
+  .m-rg { background: #2c3e6b; }
+
+  /* ---------- scrolling content ---------- */
+  .content { padding: 2px 18px 20px; display: flex; flex-direction: column; gap: 12px; }
+
+  .card {
+    border-radius: 18px; background: #ffffff0a; padding: 16px;
+  }
+  body.light .card { background: #00000006; }
+  .card .kicker { font-size: 12px; color: #ebebf57e; }
+  body.light .card .kicker { color: #3c3c43bd; }
+  .balline { display: flex; align-items: baseline; gap: 10px; margin-top: 3px; }
+  .balline .big { font: 700 32px/36px ui-rounded, -apple-system, system-ui; color: #fff; letter-spacing: 0; }
+  body.light .balline .big { color: #000; }
+  .delta {
+    font: 600 12px/1 inherit; color: #30d158; background: #30d15821;
+    padding: 4px 8px; border-radius: 999px;
+  }
+  .attr { font-size: 12px; color: #ebebf599; margin-top: 5px; }
+  body.light .attr { color: #3c3c43d6; }
+
+  .facechips { display: flex; gap: 8px; margin-top: 12px; overflow: hidden; }
+  .facechip {
+    display: flex; align-items: center; gap: 6px; padding: 7px 11px;
+    border-radius: 999px; background: #ffffff0a; font-size: 12px; color: #fff; white-space: nowrap;
+  }
+  body.light .facechip { background: #00000008; color: #000; }
+  .facechip small { color: #30d158; font-weight: 600; font-size: 11px; }
+  .facechip small.dn { color: #ff453a; }
+  .warnline {
+    margin: 14px -16px -16px; padding: 10px 16px; font-size: 12px; color: #ebebf599;
+    background: #ffffff07; border-radius: 0 0 18px 18px;
+  }
+  body.light .warnline { background: #00000005; color: #3c3c43d6; }
+
+  /* ---------- THE PROPOSAL: the seat row ---------- */
+  .seatrow { display: flex; gap: 8px; overflow: hidden; }
+  .seat {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 7px;
+    padding: 9px 13px; border-radius: 999px; background: #ffffff0a;
+    font-size: 12px; color: #fff; white-space: nowrap;
+  }
+  body.light .seat { background: #00000008; color: #000; }
+  .seat .fact { color: #ebebf599; font-size: 11.5px; }
+  body.light .seat .fact { color: #3c3c43d6; }
+  .seat .fact.needs { color: #ff9f0a; font-weight: 600; }
+  .seat .chev { color: #ebebf54d; font-size: 11px; }
+
+  /* option B: mini cards */
+  .seatgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .seatcard { border-radius: 16px; background: #ffffff0a; padding: 12px 13px; }
+  body.light .seatcard { background: #00000006; }
+  .seatcard .head { display: flex; align-items: center; gap: 7px; font: 600 12px/1 inherit; color: #fff; }
+  body.light .seatcard .head { color: #000; }
+  .seatcard .fact { font-size: 11.5px; color: #ebebf599; margin-top: 6px; line-height: 15px; }
+  body.light .seatcard .fact { color: #3c3c43d6; }
+  .seatcard .fact.needs { color: #ff9f0a; font-weight: 600; }
+
+  /* treemap + rows hints */
+  .tmap { display: grid; grid-template-columns: 3fr 2fr; grid-template-rows: 64px 44px; gap: 4px; }
+  .cell { border-radius: 10px; display: flex; align-items: flex-end; padding: 8px; font: 600 11px/1 inherit; color: #fff; }
+  .c1 { background: #0a84ff44; grid-row: 1 / 3; }
+  .c2 { background: #30d15833; }
+  .c3 { background: #bf5af233; }
+  .trow { display: flex; align-items: center; gap: 11px; padding: 11px 2px; }
+  .trow .ic { width: 34px; height: 34px; border-radius: 50%; background: #ffffff0d; flex: 0 0 auto; display: grid; place-items: center; font-size: 14px; }
+  body.light .trow .ic { background: #00000008; }
+  .trow .tt { font-size: 13px; color: #fff; }
+  body.light .trow .tt { color: #000; }
+  .trow .ts { font-size: 11.5px; color: #ebebf57e; margin-top: 1px; }
+  body.light .trow .ts { color: #3c3c43bd; }
+
+  /* room head (Privacy Pools member room) */
+  .split { display: flex; height: 10px; border-radius: 6px; overflow: hidden; gap: 2px; margin-top: 12px; }
+  .split .sA { background: #30d158; flex: 6; }
+  .split .sB { background: #ff9f0a; flex: 1.4; }
+  .split .sGap { background: #ffffff14; flex: 1; }
+  body.light .split .sGap { background: #00000010; }
+  .legend { display: flex; gap: 14px; margin-top: 8px; font-size: 11px; color: #ebebf57e; }
+  body.light .legend { color: #3c3c43bd; }
+  .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+
+  .rules { max-width: 720px; font-size: 13px; line-height: 20px; }
+  .rules li { margin: 8px 0 8px 18px; }
+  .rules b { color: #fff; font-weight: 600; }
+  body.light .rules b { color: #000; }
+</style>
+
+<h1>Wallet — the third shape</h1>
+<p class="sub">
+  §351 folded Peer / Privacy Pools / Gnosis Pay / Railgun under the "Wallet" chip and left two things open:
+  what the Wallet chip lands on, and how you move between the members without stacking three pinned bars.
+  The proposal: <b>the chip always lands on the balance room</b> (Wallet has a home; Markets doesn't) ·
+  <b>satellites are an in-content seat row there</b> (doors scroll away; only scope controls pin — §136's own test) ·
+  <b>member rooms get the Markets capsule with "Wallet" leading</b> (the way home). The address bar only exists
+  when <code>source == "Wallet"</code>, the switcher only when it isn't — so nowhere renders more than two bars.
+</p>
+<div class="bar">
+  <button onclick="document.body.classList.toggle('light')">Toggle light</button>
+</div>
+
+<div class="row">
+<div class="panel">
+  <h2>1 · The balance room — where "Wallet" always lands</h2>
+  <p class="note">Strip + address bar pinned (both shipped, unchanged). New: the seat row under the balance
+  card — each satellite says its §349 room-head fact and opens its room. It scrolls with the content.</p>
+  <div class="stage">
+    <div class="strip">
+      <div class="door avatar">A</div>
+      <div class="cap-slot"><div class="cap-chip circle">All</div></div>
+      <div class="cap-slot active"><div class="cap-chip">Wallet</div></div>
+      <div class="cap-slot"><div class="cap-chip">Work</div></div>
+      <div class="cap-slot"><div class="cap-chip">Social</div></div>
+      <div class="cap-slot"><div class="cap-chip">Markets</div></div>
+    </div>
+    <div class="pinbar">
+      <div class="glass">
+        <div class="pill on"><span>All</span></div>
+        <div class="pill"><span class="face v"></span><span>vitalik.eth</span></div>
+        <div class="pill"><span class="face l"></span><span>Ledger</span></div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="card">
+        <div class="kicker">Across your wallets</div>
+        <div class="balline"><span class="big">$4,182</span><span class="delta">+2.4%</span></div>
+        <div class="attr">Up $98 today. ETH did the lifting.</div>
+        <div class="facechips">
+          <div class="facechip"><span class="face v"></span> vitalik.eth <small>+2.9%</small></div>
+          <div class="facechip"><span class="face l"></span> Ledger <small class="dn">−0.4%</small></div>
+        </div>
+        <div class="warnline">2 approvals worth a look ›</div>
+      </div>
+
+      <!-- THE SEAT ROW -->
+      <div class="seatrow">
+        <div class="seat"><span class="mark m-pp">0x</span> Privacy Pools <span class="fact needs">1 needs proof</span><span class="chev">›</span></div>
+        <div class="seat"><span class="mark m-peer">P</span> Peer <span class="fact">Mostly Cash App</span><span class="chev">›</span></div>
+        <div class="seat"><span class="mark m-gp">G</span> Gnosis Pay <span class="fact">12 spends</span><span class="chev">›</span></div>
+      </div>
+
+      <div class="tmap">
+        <div class="cell c1">ETH</div>
+        <div class="cell c2">USDC</div>
+        <div class="cell c3">AERO</div>
+      </div>
+      <div class="trow"><div class="ic">↓</div><div><div class="tt">Received 0.05 ETH</div><div class="ts">vitalik.eth · 2:14 PM</div></div></div>
+    </div>
+  </div>
+  <p class="cap" style="padding-top:8px">The seat needing you leads the row — the §349 heads already rank by
+  exactly that. Attention orange on the fact, not a dashed ring (dashed = reconnect, a different claim).</p>
+</div>
+
+<div class="panel">
+  <h2>2 · Scrolled — why the seat row is content, not chrome</h2>
+  <p class="note">Deep in the stream, the address bar is still there ("whose transaction was that?" — §137's
+  reason to pin). The seat row is gone: a door is tapped at the top, never needed mid-stream.</p>
+  <div class="stage">
+    <div class="strip">
+      <div class="door avatar">A</div>
+      <div class="cap-slot"><div class="cap-chip circle">All</div></div>
+      <div class="cap-slot active"><div class="cap-chip">Wallet</div></div>
+      <div class="cap-slot"><div class="cap-chip">Work</div></div>
+      <div class="cap-slot"><div class="cap-chip">Social</div></div>
+      <div class="cap-slot"><div class="cap-chip">Markets</div></div>
+    </div>
+    <div class="pinbar">
+      <div class="glass">
+        <div class="pill"><span>All</span></div>
+        <div class="pill on" style="--sel:#30d1582e"><span class="face v"></span><span>vitalik.eth</span></div>
+        <div class="pill"><span class="face l"></span><span>Ledger</span></div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="trow"><div class="ic">↓</div><div><div class="tt">Received 0.05 ETH</div><div class="ts">2:14 PM</div></div></div>
+      <div class="trow"><div class="ic">↑</div><div><div class="tt">Sent 120 USDC</div><div class="ts">11:02 AM</div></div></div>
+      <div class="trow"><div class="ic">⚠︎</div><div><div class="tt">Approval — Permit2, unlimited USDC</div><div class="ts">Yesterday · Revoke.cash ↗</div></div></div>
+      <div class="trow"><div class="ic">↓</div><div><div class="tt">Received 0.2 ETH</div><div class="ts">Yesterday</div></div></div>
+      <div class="trow"><div class="ic">↑</div><div><div class="tt">Swap 0.1 ETH → AERO</div><div class="ts">Monday</div></div></div>
+      <div class="trow"><div class="ic">↓</div><div><div class="tt">Received 40 USDC</div><div class="ts">Monday</div></div></div>
+      <div class="trow"><div class="ic">↑</div><div><div class="tt">Sent 0.01 ETH</div><div class="ts">Sunday</div></div></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="row">
+<div class="panel">
+  <h2>3 · A member room — Privacy Pools</h2>
+  <p class="note">The Markets capsule, generalized: "Wallet" leads as the way home, members follow in catalog
+  order. The address bar never renders here (<code>source ≠ "Wallet"</code>), so it's strip + one switcher —
+  never three layers.</p>
+  <div class="stage">
+    <div class="strip">
+      <div class="door avatar">A</div>
+      <div class="cap-slot"><div class="cap-chip circle">All</div></div>
+      <div class="cap-slot active"><div class="cap-chip">Wallet</div></div>
+      <div class="cap-slot"><div class="cap-chip">Work</div></div>
+      <div class="cap-slot"><div class="cap-chip">Social</div></div>
+      <div class="cap-slot"><div class="cap-chip">Markets</div></div>
+    </div>
+    <div class="pinbar">
+      <div class="glass">
+        <div class="pill"><span class="mark m-wallet" style="width:16px;height:16px;font-size:8px">W</span><span>Wallet</span></div>
+        <div class="pill"><span>Peer</span></div>
+        <div class="pill on" style="--sel:#7a5af82e"><span>Privacy Pools</span></div>
+        <div class="pill"><span>Gnosis Pay</span></div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="card">
+        <div class="kicker">Privacy Pools</div>
+        <div class="balline" style="margin-top:6px"><span class="big" style="font-size:20px;line-height:26px">1 deposit needs your proof</span></div>
+        <div class="attr">6 cleared · 1 waiting on review</div>
+        <div class="split"><span class="sA"></span><span class="sB"></span><span class="sGap"></span></div>
+        <div class="legend">
+          <span><i style="background:#30d158"></i>Cleared</span>
+          <span><i style="background:#ff9f0a"></i>Needs you</span>
+          <span><i style="background:#ffffff2e"></i>Unknown</span>
+        </div>
+      </div>
+      <div class="trow"><div class="ic">◍</div><div><div class="tt">Put 0.0700 ETH into Privacy Pools</div><div class="ts">Cleared to withdraw · July 30</div></div></div>
+      <div class="trow"><div class="ic">◍</div><div><div class="tt">Put 0.0500 ETH into Privacy Pools</div><div class="ts">Needs proof — open 0xBow · July 18</div></div></div>
+    </div>
+  </div>
+  <p class="cap" style="padding-top:8px">The switcher's leading pill wears Wallet's mark so home reads as home,
+  not as a fifth sibling. Selection fill takes the seat's own hue mid-flight (the shipped matched-geometry move).</p>
+</div>
+
+<div class="panel">
+  <h2>4 · Seat row, option B — mini cards</h2>
+  <p class="note">Same facts, two-up cards instead of a scrolling row. More room for the fact (Railgun fits
+  without scrolling), one more row of vertical cost before the treemap. My lean is option A — the room's
+  head already leads with a card, and two card surfaces back-to-back compete.</p>
+  <div class="stage" style="height:346px">
+    <div class="content" style="padding-top:14px">
+      <div class="card" style="padding:12px 16px">
+        <div class="kicker">Across your wallets</div>
+        <div class="balline"><span class="big" style="font-size:26px;line-height:30px">$4,182</span><span class="delta">+2.4%</span></div>
+      </div>
+      <div class="seatgrid">
+        <div class="seatcard">
+          <div class="head"><span class="mark m-pp">0x</span> Privacy Pools</div>
+          <div class="fact needs">1 deposit needs proof</div>
+        </div>
+        <div class="seatcard">
+          <div class="head"><span class="mark m-peer">P</span> Peer</div>
+          <div class="fact">Mostly Cash App · 14 fills</div>
+        </div>
+        <div class="seatcard">
+          <div class="head"><span class="mark m-gp">G</span> Gnosis Pay</div>
+          <div class="fact">12 spends this month</div>
+        </div>
+        <div class="seatcard">
+          <div class="head"><span class="mark m-rg">R</span> Railgun</div>
+          <div class="fact">Quiet 3 weeks</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="panel">
+  <h2>What this encodes</h2>
+  <ul class="rules">
+    <li><b>Wallet lands home, always.</b> <code>CategoryFold.landing</code> gets a per-category anchor:
+      Wallet resolves to the balance room, never last-visited. Markets keeps last-visited — no venue there is home.</li>
+    <li><b>Two bars, never three.</b> The address bar gates on <code>source == "Wallet"</code> (shipped);
+      the member switcher gates on <code>source != "Wallet"</code> within the fold. Mutually exclusive by the same
+      test, one <code>safeAreaInset</code> — the §352 stack can't occur.</li>
+    <li><b>Doors scroll, scopes pin.</b> The seat row is content (§136: pinning is earned by needing the control
+      mid-stream). Facts come free from the §349 room heads — no new reads.</li>
+    <li><b>Attention is words, not rings.</b> "1 needs proof" in attention orange on the seat itself; the dashed
+      ring stays reserved for a connection that needs reconnecting.</li>
+  </ul>
+</div>
+
+<script></script>

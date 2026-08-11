@@ -29,12 +29,13 @@ import Foundation
 /// the same result.
 ///
 /// **What this does NOT do.** It does not decide what a category chip's ROOM
-/// looks like once you're inside it — that is still per-category (Markets
-/// keeps its own venue switcher; most categories have none yet and simply
-/// land on the resolved member, reachable individually through the Sources
-/// Tray in the meantime, per §351's own recommendation). It does not touch
-/// Wallet's own room content, and it does not build a switcher for any
-/// category besides Markets — both are flagged in §351 as their own passes.
+/// looks like once you're inside it — every folded category with ≥2 present
+/// members gets the generic `CategoryVenueSwitcher` (the §351 follow-up,
+/// "each category should have a switcher"; this doc once said only Markets
+/// had one, which cost a session a wrong answer), and anything beyond that
+/// is the room's own business. It does not touch Wallet's own room content:
+/// §354 ruled Wallet behaves like every other category, its one divergence
+/// being the landing anchor below.
 enum CategoryFold {
     /// How many members must be PRESENT before a category's own venue
     /// SWITCHER draws (`CategoryVenueSwitcher`, wired generically in
@@ -154,9 +155,25 @@ enum CategoryFold {
         "categoryFold.lastVenue.\(category)"
     }
 
-    /// The member the folded chip opens onto: where you left off in THIS
+    /// A category whose chip always opens on ONE member, regardless of where
+    /// you last stood — Wallet, and only Wallet (user ruling, prd §354,
+    /// 2026-08-11: "wallet should always land on balance room"). The balance
+    /// room is the SUBJECT — Peer, Privacy Pools, Gnosis Pay and Railgun are
+    /// ledgers riding the same watched addresses — so the chip reopening on
+    /// whichever rider you last glanced at reads as landing somewhere
+    /// strange, where Markets reopening on the venue you live in is the whole
+    /// point of remembering (no venue there is home). The riders stay
+    /// reachable through the category switcher, and `remember` still records
+    /// them: the memory is the fallback for the day the anchor is somehow
+    /// absent, and the switcher's own centering reads the active seat
+    /// regardless.
+    private static let anchors: [String: String] = ["Wallet": "Wallet"]
+
+    /// The member the folded chip opens onto: the category's anchor when it
+    /// has one and that member is present, else where you left off in THIS
     /// category, else the highest-ranked present member.
     static func landing(category: String, present: [String]) -> String? {
+        if let anchor = anchors[category], present.contains(anchor) { return anchor }
         if let last = UserDefaults.standard.string(forKey: lastVenueKey(category)),
            present.contains(last) { return last }
         return present.first

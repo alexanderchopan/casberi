@@ -20099,3 +20099,63 @@ book for no reason — gone with the bump. Verified by `xcodebuild` + the
 liveness and design-motion audits per the standing no-sim instruction;
 nobody has watched a pull rain on a device since the change (the pull path
 itself is untouched).
+
+## §354 — The Wallet chip always lands on the balance room (user: "i agree wallet should always land on balance room", "i don't think the seat rows should go under the balance it needs to be like all the other categories", "we have shipped the switcher for every section already!", 2026-08-11)
+
+**The ruling is one line: Wallet is a category like every other one, with a
+single divergence — its chip opens on the balance room, always, never on
+whichever rider you last visited.** `CategoryFold.landing` grew a per-category
+anchor table (`anchors`, holding exactly one entry) that answers before the
+last-visited memory does. Everything else about Wallet stays generic: the same
+folded word chip, the same `CategoryVenueSwitcher`, the same
+`FeedFilter.source` invariant. No seat row under the balance card, no mini
+cards, no Wallet-shaped anything — all three were proposed, mocked
+(`prototype/wallet-room-shape-v1.html`) and declined in the same sitting.
+
+**Why Wallet earns an anchor and Markets must not have one.** The balance room
+is the SUBJECT — Peer, Privacy Pools, Gnosis Pay and Railgun are ledgers riding
+the same watched addresses, and each answers a question you go looking for
+rather than one you open the app to see. So the chip reopening on a rider reads
+as landing somewhere strange. Markets is the opposite: no venue there is home,
+which is exactly why `remember` exists, and giving it an anchor would break the
+one thing that ruling was written for. The anchor is also gated on its member
+being PRESENT, or it would be a room with no door — the same rule a vanished
+remembered venue already obeyed.
+
+**The defect it introduced, caught before it shipped.** Wallet's category name
+and its anchor member are the SAME STRING, so `chipAccessibilityLabel` began
+composing "Wallet, opens on Wallet: Wallet, Peer, Privacy Pools" — a sentence
+that reads as a bug to the one person who cannot see the strip to check, on the
+only surface where this feature's landing is spoken at all. The phrase is now
+suppressed when the landing equals the chip's own word. Worth naming as a
+class: an identity case (`category == member`) is invisible in every category
+but this one, and it is the category the ruling is about.
+
+**A correction worth recording, because it cost a session a wrong answer.**
+This pass opened by telling the user that Wallet's members had no switcher and
+would need one built — they had, on the §351 follow-up ("each category should
+have a switcher"), and `FeedScreen.categorySwitcher` has been fully generic
+since (gated on `BridgeCatalog.category(forSource:)`, floored at
+`switcherFloor`). The wrong answer came from trusting `CategoryFold`'s own type
+doc, which still read "it does not build a switcher for any category besides
+Markets" hours after that stopped being true. The doc is corrected in the same
+commit. **A stale doc comment in this tree is not a cosmetic debt — it is
+consumed as fact by the next session, and it out-ranks the code in a reader's
+attention precisely because it claims to explain it.**
+
+**Still open, unchanged by this pass.** §352's three-pinned-layer stack inside a
+Wallet member room (strip, category switcher, `walletSwitcherBar`) — three
+genuinely different axes, none wrong alone. The user's own proposal for it, made
+while this shipped and not yet ruled on: draw the watched wallets as AVATARS
+WITH THE NAME BELOW, the grammar the wallet setup page and the social surfaces
+already use, so the three layers stop looking like three rows of the same
+control.
+
+Guarded in `category-fold-selftest.sh`: three assertions (the anchor beats a
+real remembered rider, an absent anchor falls back, Markets still reopens where
+you left off), two mutations (anchor removed; anchor ignoring presence), and two
+mutation-proven drift guards on the spoken label. Verified by the harness's own
+`swiftc` compile of `CategoryFold.swift` plus the static audits, per the
+standing no-sim instruction; the app build was blocked at commit time by a
+concurrent session's in-flight `SourceChips.swift`, which is unrelated to this
+change and touches none of its call sites.

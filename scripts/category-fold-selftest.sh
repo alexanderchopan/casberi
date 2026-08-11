@@ -530,6 +530,21 @@ check("refuses to remember a source the catalog has never heard of",
       UserDefaults.standard.string(forKey: mKey) == "Polymarket"
         && UserDefaults.standard.string(forKey: wKey) == "Peer"
         && UserDefaults.standard.string(forKey: lifeKey) == nil)
+
+// --- the Wallet anchor (prd §354): the chip always lands home ---------------
+// wKey still holds "Peer" from above — the anchor must BEAT a real, present
+// memory, or it does nothing for the exact person it exists for (one who
+// actually visits the riders).
+check("Wallet lands on the balance room despite a remembered rider",
+      CategoryFold.landing(category: "Wallet", present: ["Peer", "Wallet", "Vault"]) == "Wallet")
+// The anchor answers only when its member is PRESENT — otherwise it would be
+// a room with no door, the same rule as a vanished remembered venue.
+check("an absent anchor falls back to the memory",
+      CategoryFold.landing(category: "Wallet", present: ["Peer", "Vault"]) == "Peer")
+// Markets has no anchor: reopening where you left off is the point there —
+// no venue is home, so §354's ruling is Wallet's alone.
+check("Markets still reopens where you left off (no anchor)",
+      CategoryFold.landing(category: "Markets", present: ["Tokens", "Polymarket"]) == "Polymarket")
 [mKey, wKey, lifeKey].forEach { UserDefaults.standard.removeObject(forKey: $0) }
 
 print(failures == 0 ? "category-fold-selftest: OK" : "category-fold-selftest: \(failures) FAILURE(S)")
@@ -596,6 +611,11 @@ mutate "scopes tests the raw member set instead of resolving each present source
   'let filtered = present.filter { BridgeCatalog.category(forSource: $0) == category }|||let filtered = present.filter { order.contains($0) }' || mfail=1
 mutate "landing ignores whether the remembered venue is still present" \
   'present.contains(last) { return last }|||!last.isEmpty { return last }' || mfail=1
+mutate "the Wallet anchor is gone — the chip reopens on whichever rider you last visited (prd §354)" \
+  'if let anchor = anchors[category], present.contains(anchor) { return anchor }
+        if let last|||if let last' || mfail=1
+mutate "the anchor ignores whether its member is present — a room with no door" \
+  'anchors[category], present.contains(anchor) { return anchor }|||anchors[category] { return anchor }' || mfail=1
 mutate "remember accepts a source that belongs to no category" \
   'guard let category = BridgeCatalog.category(forSource: source) else { return }|||let category = BridgeCatalog.category(forSource: source) ?? "Life"' || mfail=1
 

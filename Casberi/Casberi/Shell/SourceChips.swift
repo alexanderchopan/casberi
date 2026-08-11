@@ -632,7 +632,12 @@ struct SourceChips: View {
         // that reason. Not said for the chip you are already standing in,
         // where the room itself is the answer and "opens on" would be a lie
         // about a tap you have already made.
-        if !isActive, let opens = CategoryFold.landing(category: label, present: venues) {
+        //
+        // Nor said when the landing IS the category's own name (prd §354's
+        // Wallet anchor, whose category name and anchor member are the same
+        // word): "Wallet, opens on Wallet" is a sentence that reads as a bug
+        // to the one person who cannot see the strip to check.
+        if !isActive, let opens = CategoryFold.landing(category: label, present: venues), opens != label {
             return broken
                 ? String(localized: "\(label), opens on \(opens): \(joined), needs reconnecting")
                 : String(localized: "\(label), opens on \(opens): \(joined)")
