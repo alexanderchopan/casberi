@@ -87,11 +87,13 @@ src = re.sub(r'(?<!:)//.*$', '', src, flags=re.M)
 print(src)
 PY
 }
-strip_comments "$MAIN"   > "$TMP/main.nc"
-strip_comments "$BROWSE" > "$TMP/browse.nc"
-strip_comments "$BOOK"   > "$TMP/book.nc"
-strip_comments "$ROOT"   > "$TMP/root.nc"
-strip_comments "$APP"    > "$TMP/app.nc"
+strip_comments "$MAIN"     > "$TMP/main.nc"
+strip_comments "$BROWSE"   > "$TMP/browse.nc"
+strip_comments "$BOOK"     > "$TMP/book.nc"
+strip_comments "$ROOT"     > "$TMP/root.nc"
+strip_comments "$APP"      > "$TMP/app.nc"
+strip_comments "$CHIPS"    > "$TMP/chips.nc"
+strip_comments "$SWITCHER" > "$TMP/switcher.nc"
 
 # --- drift guards -----------------------------------------------------------
 # Wiring the compiled functions cannot prove on their own. A perfect `fold` is
@@ -150,9 +152,84 @@ grep -q 'chrome.chipCaught(CategoryFold.chipLabel(' "$TMP/main.nc" \
 # reversal of its 2026-07-09/07-10 icon-only ruling, scoped to category
 # chips). A category chip rendered through the generic icon path would render
 # as a missing brand icon — there is no catalog entry named "Work".
-grep -qE 'if CategoryFold\.isCategory\(label\)' "$CHIPS" \
+grep -qE 'CategoryFold\.isCategory\(label\)' "$TMP/chips.nc" \
   || { echo "✗ SourceChips no longer branches on CategoryFold.isCategory — a folded chip"; \
        echo "  would render through the generic BridgeIcon path and show a missing brand icon."; exit 1; }
+grep -q 'categoryCapsule(label' "$TMP/chips.nc" \
+  || { echo "✗ a category chip no longer renders as a capsule — back inside \"All\"'s fixed"; \
+       echo "  circle, every word shrinks independently to fit and one strip draws four type sizes."; exit 1; }
+
+# THE CHIP IS ITS OWN SHAPE, whatever that shape is (design pass 2026-08-11).
+# Both of these read as decoration and are not: a `Circle()` in a capsule's
+# frame draws a ring through the MIDDLE of a wide chip and makes only its
+# middle pressable — the 2026-07-26 "press it several times" bug wearing a new
+# shape, and invisible to every other check here because a circular capsule in
+# a SQUARE frame is exactly a circle, so every circle chip looks untouched
+# either way.
+#
+# SCOPED TO THE CHIP'S OWN BODY, and that is not fussiness — the catalogue door
+# beside it is a fixed 46pt square and its `contentShape(Circle())` is correct,
+# so a file-wide grep fires on the one shape that is right (caught on this
+# guard's first run). "All" keeps its `clipShape(Circle())` inside the chip for
+# the same reason, which is why the negatives name the two uses that are wrong
+# rather than banning the word.
+python3 - "$TMP/chips.nc" <<'PY3'
+import re, sys
+src = open(sys.argv[1]).read()
+
+def between(a, b, what):
+    try:
+        return src[src.index(a):src.index(b)]
+    except ValueError:
+        sys.exit("✗ %s not found in SourceChips — this guard is testing nothing" % what)
+
+# PER FUNCTION, not per file — both of the traps below were live on this
+# guard's first mutation run and each is the same shape: a check satisfied by
+# a DIFFERENT, correct copy of the words elsewhere in the file.
+chip = between("private func chip(_ label:", "private func chipAccessibilityLabel", "chip(_:)")
+mark = between("private func landingMark(", "private func categoryCapsule(", "landingMark(_:venues:isCategory:)")
+
+if "contentShape(Circle())" in chip:
+    sys.exit("✗ a chip's hit region is a Circle again — the ends of every category\n"
+             "  capsule would look pressable and not be.")
+# `\s*` spans the newline ON PURPOSE: reverting the ring to `Circle()` leaves
+# `.strokeBorder` on its own line, so the single-line spelling of this check
+# passed the very mutation it exists to catch.
+if re.search(r"Circle\(\)\s*\.strokeBorder", chip):
+    sys.exit("✗ the chip ring is a Circle again — it would draw through the middle of a\n"
+             "  capsule, and the sliding active ring would have to swap shape mid-flight.")
+if "contentShape(Capsule(style: .circular))" not in chip:
+    sys.exit("✗ the chip's hit region is no longer the circular capsule both shapes share.")
+
+# Scoped to `landingMark` because `chipAccessibilityLabel` carries its own
+# correct `venues.count > 1`, which satisfied a file-wide grep for it while the
+# mark's own gate was mutated wide open.
+if "venues.count > 1" not in mark:
+    sys.exit("✗ the landing mark is no longer gated on a category having more than one\n"
+             "  member — every single-seat chip would wear its own logo beside its own name.")
+if "activeSource" not in mark:
+    sys.exit("✗ the landing mark no longer reads the live source for the chip you are in —\n"
+             "  it would race CategoryFold.remember and be intermittently one room stale.")
+PY3
+
+# The landing mark states which seat a folded chip opens on. Drawn from the
+# LIVE source for the chip you're standing in — `CategoryFold.remember` is
+# written by an onChange on that same source, so a mark read from the
+# remembered value is right or one room stale depending on handler ordering.
+grep -q 'activeSource: filter.source' "$TMP/main.nc" \
+  || { echo "✗ the strip is no longer handed the live source — the landing mark on the chip"; \
+       echo "  you're standing in would race CategoryFold.remember and be intermittently stale."; exit 1; }
+
+# The switcher is where the folded chip's dashed ring RESOLVES to a seat. Without
+# this the ring says "something in here needs you" and the tap it invites arrives
+# at a row of identical capsules (prd §351's own promise, unkept until 2026-08-11).
+grep -q 'DS.attention' "$TMP/switcher.nc" \
+  || { echo "✗ the venue switcher no longer marks a broken seat — the folded chip's dashed"; \
+       echo "  ring would name nothing, and only VoiceOver could say which seat it meant."; exit 1; }
+grep -q 'BridgeCatalog.offer(forSource: venue)' "$TMP/switcher.nc" \
+  || { echo "✗ the switcher resolves attention by raw name — the alias family (Privacy Pools"; \
+       echo "  against 0xBow Privacy Pools) would silently never light, which is the whole"; \
+       echo "  reason the strip and the tray both resolve through the catalog."; exit 1; }
 grep -q 'CategoryVenueSwitcher(' "$FEED" \
   || { echo "✗ FeedScreen no longer mounts the generic venue switcher — a folded category seat has no way out"; exit 1; }
 # PINNED, not a List section — `walletSwitcherBar`'s 2026-07-20 ruling. As a

@@ -88,13 +88,16 @@
 
   .pin { color: #0a84ff; font-size: 19px; }
 
-  /* --- capsule chips (option A) --- */
+  /* --- capsule chips (option A — BUILT 2026-08-11, metrics are the shipped
+         ones: height = iconSize 46 so the strip's vertical rhythm is
+         untouched, padding s3 14, mark 18, gap between chips s2 10) --- */
   .cap-chip {
-    flex: 0 0 auto; height: 44px; border-radius: 22px;
-    display: flex; align-items: center; gap: 7px; padding: 0 15px;
-    background: #ffffff0f; color: #fff; font: 500 13px/1 inherit;
+    flex: 0 0 auto; height: 46px; border-radius: 23px;
+    display: flex; align-items: center; gap: 6px; padding: 0 14px;
+    background: #ffffff0f; color: #fff; font: 500 12px/1 inherit;
     position: relative;
   }
+  .strip.tight { gap: 10px; }
   body.light .cap-chip { background: #00000008; color: #000; }
   .cap-slot { flex: 0 0 auto; padding: 5px 0; position: relative; display: grid; place-items: center; }
   .cap-slot.active .cap-chip { box-shadow: 0 0 0 2.5px #0a84ff; }
@@ -104,7 +107,7 @@
 
   /* landing mark: the resolved member's own icon, in the capsule or badged on a circle */
   .mark {
-    width: 20px; height: 20px; border-radius: 50%;
+    width: 18px; height: 18px; border-radius: 50%;
     display: grid; place-items: center; font: 700 10px/1 inherit; color: #fff;
     flex: 0 0 auto;
   }
@@ -151,6 +154,12 @@
   WORD, but it landed wearing "All"'s glass circle verbatim. Panels below: what shipped, the two
   cheap corrections, and the capsule treatment that fits a strip whose chips are now words with a
   hard cap of eleven. Doors, rings, order and the central invariant are untouched in every option.
+</p>
+<p class="sub" style="opacity:.9">
+  <strong>Built 2026-08-11: A + A/C + D</strong> — capsules, the landing member's mark, and the
+  switcher carrying the dashed attention ring down to the seat. Panel 0 is what it replaces and
+  panel B the correction that is no longer needed. Metrics here are the shipped ones. The rail
+  panel at the end is the one part no option above covered.
 </p>
 <div class="bar">
   <button class="on" onclick="document.body.classList.remove('light');mark(this)">Dark</button>
@@ -218,7 +227,7 @@
 </div>
 
 <div class="panel">
-  <h2>A · Capsules — the container words actually fit <span style="opacity:.5;font-weight:400">(recommended)</span></h2>
+  <h2 id="built">A · Capsules — the container words actually fit <span style="opacity:.5;font-weight:400">(recommended)</span></h2>
   <p class="note">
     The 2026-07-09 "labels made the row scroll" ruling was against per-source labels — dozens of
     them. Categories are capped at eleven and most people show five or six, so the objection that
@@ -228,7 +237,7 @@
     capsules, marks in circles, one grammar each.
   </p>
   <div class="stage"><div class="cap">at rest</div>
-    <div class="strip">
+    <div class="strip tight">
       <div class="door avatar">A</div><div class="door grid">⊞</div>
       <div class="cap-slot"><div class="cap-chip word-only circle">All</div></div>
       <div class="cap-slot"><div class="cap-chip word-only circle pin" style="font-size:18px">&#9884;</div></div>
@@ -240,7 +249,7 @@
     </div>
   </div>
   <div class="stage"><div class="cap">minimized · 36pt capsules — the word stays legible where the 40pt circle did not</div>
-    <div class="strip">
+    <div class="strip tight">
       <div class="door avatar">A</div><div class="door grid">⊞</div>
       <div class="cap-slot min"><div class="cap-chip word-only circle" style="width:36px">All</div></div>
       <div class="cap-slot min active"><div class="cap-chip">Wallet</div></div>
@@ -264,7 +273,7 @@
     word doesn't).
   </p>
   <div class="stage"><div class="cap">Wallet last left on the balance room · Work opens on GitHub · Markets on Kalshi</div>
-    <div class="strip">
+    <div class="strip tight">
       <div class="door avatar">A</div><div class="door grid">⊞</div>
       <div class="cap-slot"><div class="cap-chip word-only circle">All</div></div>
       <div class="cap-slot active"><div class="cap-chip"><span class="mark m-wal">W</span>Wallet</div></div>
@@ -276,7 +285,7 @@
     </div>
   </div>
   <div class="stage"><div class="cap">same idea if circles stay: an 18pt badge, bottom-trailing (busier — shown for comparison)</div>
-    <div class="strip">
+    <div class="strip tight">
       <div class="door avatar">A</div><div class="door grid">⊞</div>
       <div class="slot"><div class="chip fs9">All</div></div>
       <div class="slot active"><div class="chip fs9">Wallet</div><span class="badge m-wal">W</span></div>
@@ -297,7 +306,7 @@
     actually resolves. (VoiceOver already names the seats; this is the sighted equivalent.)
   </p>
   <div class="stage"><div class="cap">inside Work, landed on GitHub · Stripe's key was revoked</div>
-    <div class="strip">
+    <div class="strip tight">
       <div class="door avatar">A</div><div class="door grid">⊞</div>
       <div class="cap-slot"><div class="cap-chip word-only circle">All</div></div>
       <div class="cap-slot broken active" style="--x:1"><div class="cap-chip">Work</div></div>
@@ -313,6 +322,31 @@
       <div class="scope"><span class="mark m-kal" style="background:#f5a623;color:#3b2600">T</span>Trello</div>
     </div>
     <div class="legend" style="padding:0 18px">dashed = needs reconnecting, same vocabulary both tiers</div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>E · The iPad/Mac rail — the one surface no option above covered</h2>
+  <p class="note">
+    The rail is a FIXED 88pt column, so a capsule there cannot size to its word. It sizes to the
+    rail instead (68pt, uniform), which makes the type uniform for free: the container bounds the
+    longest name, so nothing else has to. The landing mark sits the rail out — at 68pt a mark plus
+    "Shopping" doesn't fit at a readable size, and a mark that appears for the short names and
+    vanishes for the long ones is worse than none in a column whose whole grammar is uniformity.
+    VoiceOver still speaks it, and the switcher is one tap away.
+  </p>
+  <div class="stage" style="width: 300px; height: 420px">
+    <div class="cap">88pt rail · doors fixed at the head, chips scroll below</div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:10px; width:88px; padding-top:4px">
+      <div class="door avatar">A</div>
+      <div class="door grid">⊞</div>
+      <div style="height:6px"></div>
+      <div class="cap-slot"><div class="cap-chip word-only circle" style="width:46px">All</div></div>
+      <div class="cap-slot active"><div class="cap-chip" style="width:68px; justify-content:center">Wallet</div></div>
+      <div class="cap-slot"><div class="cap-chip" style="width:68px; justify-content:center">Markets</div></div>
+      <div class="cap-slot broken"><div class="cap-chip" style="width:68px; justify-content:center">Work</div></div>
+      <div class="cap-slot"><div class="cap-chip" style="width:68px; justify-content:center">Shopping</div></div>
+    </div>
   </div>
 </div>
 

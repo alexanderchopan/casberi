@@ -19948,3 +19948,128 @@ static self-tests above (`category-fold-selftest.sh`, `swiftdata-liveness-audit.
 `design-motion-audit.py`), per this project's standing instruction to verify
 that way rather than by driving the sim; nobody has looked at the folded word
 chips render on a device or watched the ring/switcher/landing behavior live.
+
+## §352 — The strip's word chips get a container that fits them (user: "let's do the capsules and your other suggestions"; 2026-08-11)
+
+**The design pass §351 called for and its own ship deferred.** §351 ended by
+flagging that it had skipped the mock ("the strip's word-chip visual was not
+mocked separately as pixels first... a deviation from the stated plan worth
+flagging as such") and shipped the word inside "All"'s glass circle instead.
+`prototype/source-chips-category-v1.html` is that mock, and this is the
+ruling it produced: **a mark gets a circle, a word gets a capsule.**
+
+**What was wrong with the circle, precisely.** A 46pt circle is sized for a
+brand mark. A word in one has to be shrunk to fit, and `minimumScaleFactor`
+shrinks EACH LABEL INDEPENDENTLY — so a real strip drew "Life" near full size
+beside a ~7pt "Shopping": one row, four type sizes, in the surface whose only
+job is to be scanned, and worse again at the 40pt minimized step. The first
+correction made it worse in the way worth recording: padding the text's own box
+inside the circle fixed the reported symptom ("hug the edges too much") by
+taking room away from the glyphs, so the longest names shrank FURTHER from the
+shortest. A container that grows has neither problem and needs neither knob.
+
+**This does not reopen the icon-only ruling** (2026-07-09/07-10, "labels made
+the row scroll"). That ruling was about labelling every SOURCE — an unbounded
+set. Categories are capped at eleven by `BridgeCatalog.categories` and most
+corpora show five or six, which is the whole reason the fold was worth doing;
+the objection that produced the circle does not survive that change of scale.
+Per-source icon-only chips stand everywhere else.
+
+**Four decisions with their reasons, so a later pass doesn't undo one by
+tidying.** (1) The capsule's HEIGHT is `iconSize`, unchanged — so the strip's
+vertical rhythm, the leading-dissolve mask, the doors and the inset the shell
+reserves are all untouched, and only width is new. (2) The chip gap tightens
+`s3`→`s2`: a capsule carries its own edges and needs less air than a bare
+circle, which buys back most of the on-screen chip count the wider shape costs
+(arithmetic on the 12pt label, NOT measured on a device: ~3.8 chips visible for
+circles, ~3.3 for capsules at the tighter gap, ~2.7 for a category carrying a
+landing mark — re-measure before trading it away). (3) Both the ring and the
+hit region become `Capsule(style: .circular)` rather than `Circle()`, which is
+not a cosmetic swap: a circular capsule in a SQUARE frame is exactly a circle,
+so every circle chip is pixel-identical, while the ONE active ring that slides
+between chips can now morph between the two shapes instead of swapping form
+mid-flight — and a `Circle()` hit region inside a capsule would leave the ends
+of every category chip looking pressable and not being it, which is the
+2026-07-26 "press it several times" bug in a new shape. (4) On the phone the
+word never scales: the capsule is what gives, all the way up the Dynamic Type
+ramp, and the strip simply scrolls further.
+
+**The landing mark, and the question it answers.** A folded chip opens on its
+last-visited member, held in `UserDefaults` and drawn nowhere — so tapping
+"Work" reached GitHub or Stripe with the chip looking identical either way. The
+resolved seat's own brand mark now sits inside the capsule, which also gives
+back some of what folding took (the strip was the most colourful thing on
+screen and became a row of identical grey glass). Drawn ONLY for a category
+with more than one present member — with one member the word already names it,
+and drawing it anyway would put a seat's logo beside its own category's name on
+most chips in the strip. It reads the LIVE source for the chip you are standing
+in (`SourceChips.activeSource`, handed down from `filter.source`) rather than
+the remembered one, because `CategoryFold.remember` is written by an `onChange`
+on that same source: a mark read from the remembered value is correct or one
+room stale depending on which handler happens to run first, which is a race
+whose only symptom is a mark that is occasionally, unreproducibly wrong. It
+joins the coin-flip's key too — moving between two seats inside a folded
+category changes what the chip says while `isActive` never moves, and that is
+exactly the moment the identity flip was built for.
+
+**The rail is a third answer, not a copy of either.** `PadLayout.railWidth` is a
+FIXED 88pt column, so a capsule there cannot size to its word; it sizes to the
+rail (68pt, uniform), which makes the type uniform for free — the container
+bounds the longest name, so nothing else has to. The landing mark sits the rail
+out: at 68pt a mark plus the longest category name does not fit at a readable
+size, and a mark that appears for the short names and vanishes for the long
+ones is worse than none in a column whose grammar is uniformity. VoiceOver
+speaks the landing on both surfaces regardless (`chipAccessibilityLabel` reads
+`CategoryFold.landing` directly rather than the drawn mark, for exactly that
+reason), and it is never said for the chip you are already standing in, where
+"opens on" would be a lie about a tap you have already made.
+
+**The switcher finally resolves the ring it was promised to resolve.** §351's
+own text says a folded chip's dashed ring is "one tap from naming which seat it
+is" — and `CategoryVenueSwitcher` drew no attention state at all, so that tap
+arrived at a row of identical capsules and VoiceOver was the only place the
+members were even named. The broken seat wears the same dashed orange one tier
+down, resolved through `BridgeCatalog.offer(forSource:)` exactly as the strip
+and the Sources Tray do (the alias family — Privacy Pools against 0xBow Privacy
+Pools — is precisely where a raw name comparison silently answers no).
+**Selection and attention are NOT exclusive here, and that is a property of
+this control rather than a departure from the 2026-07-21 ruling**: selection is
+a FILL in this capsule and a RING up in the strip, so the two cues never
+compete for the same pixels — and the seat you are standing in being the broken
+one is in fact the likeliest way to find yourself looking at it.
+
+**Guarded, and the guards were mutation-tested — two of them were asleep on the
+first run, both the same shape.** `category-fold-selftest.sh` gains checks that
+a category renders the capsule, that neither the ring nor the hit region is a
+`Circle()`, that the mark is gated on >1 member and reads the live source, and
+that the switcher marks a broken seat through the catalog. Nine mutations, all
+caught — but only after fixing two guards that passed the very mutation they
+existed to catch: the ring check spelled `Circle().strokeBorder` on one line,
+while reverting the ring leaves `.strokeBorder` on the NEXT line, and the mark
+gate grepped the file for `venues.count > 1`, which `chipAccessibilityLabel`
+carries its own correct copy of. Both are the "right result for the wrong
+reason" class this tree keeps paying for; both are now scoped to the function
+they govern. The negative guards read a COMMENT-STRIPPED copy (the
+Obsidian/Cursor lesson, earned again — this file's own comments name the shapes
+it must never use), and a third trap was live on the first run: a file-wide ban
+on `contentShape(Circle())` fires on the catalogue DOOR beside the chips, which
+is a fixed square and correctly a circle.
+
+**UNVERIFIED, and more so than §351 was.** Authored on Linux with no Xcode and
+no simulator: it has never been compiled, `verify.sh` has not run, and nobody
+has seen a capsule render. The static audits that CAN run on this host are
+green (`swiftdata-liveness-audit.py`, `design-motion-audit.py`,
+`catalog-sync.sh`, `network-reach-audit.sh`, and every drift guard in
+`category-fold-selftest.sh` up to its `swiftc` step). Every width figure above
+is arithmetic on the type ramp, not a measurement. Next: build, run
+`scripts/verify.sh`, and look at the strip — at rest, minimized, on the rail,
+and at an accessibility text size, which is the one case where a growing
+capsule behaves differently from the circle it replaces.
+
+**Not touched, still open (§351's own list, unchanged).** Wallet's third shape —
+moving between Peer/Privacy Pools/Gnosis Pay/Railgun and the balance room from
+INSIDE the Wallet room — and the stack that pass has to answer for: inside a
+Wallet member room the strip, the category switcher and `walletSwitcherBar` are
+now three pinned glass layers above the content. They are three genuinely
+different axes (rooms, seats, addresses) and none is wrong on its own, which is
+exactly why it needs a design pass rather than a deletion.
