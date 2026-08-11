@@ -345,6 +345,38 @@ enum SafeBridge {
         ((UserDefaults.standard.array(forKey: detectedKey) as? [String]) ?? []).count
     }
 
+    /// Demo-only direct seed of the detected registry and the pending
+    /// tracking snapshot (2026-08-11) — bypasses the network entirely, the
+    /// `CloudflareEstateStore.save`/`ASCState.standing` shape every other
+    /// bridge-STATE room head's demo seed already uses. `SafeRoomSource`
+    /// reads bridge state, not `Thing` rows, so a demo corpus seeding only
+    /// the `.transaction` things (`DemoSeedAll.wallet`) would leave
+    /// `detectedCount() == 0` and the room head would never compose — this
+    /// is the other half. NOT gated `#if DEBUG`: the furnished demo is a
+    /// Release-reachable mode, and `demo-selftest.py` check A fails the
+    /// build on a demo-facing seed function that isn't.
+    static func seedDemoSnapshot(safeAddress: String,
+                                 pending: [(ref: String, have: Int, required: Int,
+                                           yourTurn: Bool, daysAgo: Double, descriptionText: String)]) {
+        rememberDetected(chains[0], safeAddress)
+        for p in pending {
+            trackPending(ref: p.ref, seg: chains[0].seg, safeAddress: safeAddress, ownerAddress: safeAddress,
+                        have: p.have, required: p.required, yourTurn: p.yourTurn,
+                        submittedAt: Date.now.addingTimeInterval(-p.daysAgo * 86_400),
+                        descriptionText: p.descriptionText)
+        }
+    }
+
+    /// Unwinds `seedDemoSnapshot` — called from `DemoSeedAll.teardown`. Same
+    /// accepted risk as Cloudflare/ASC's own demo teardown: one registry, no
+    /// per-account key, so this can't tell a demo detection from a real one
+    /// it might overwrite — exactly what `AccountScreen.demoReentryAvailable`
+    /// exists to keep off a lived-in install.
+    static func clearDemoSnapshot() {
+        UserDefaults.standard.removeObject(forKey: detectedKey)
+        saveTracking([:])
+    }
+
     /// Every owner across every detected Safe, deduped — read straight off the
     /// config snapshots `syncConfig` already persists, so the roster costs no
     /// network at all and is available synchronously for a screen's body.

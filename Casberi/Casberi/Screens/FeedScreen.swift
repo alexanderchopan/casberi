@@ -2092,6 +2092,14 @@ struct FeedScreen: View {
                             thing.priceCurrency == token.symbol
                         }
                     }
+                case .safe(let room):
+                    SafeRoomCard(room: room) { entry in
+                        // Unlike its siblings, a Safe entry OWNS a single row
+                        // — the tracking snapshot is keyed by the pending
+                        // thing's own `sourceRef` — so this is a direct
+                        // lookup, not a newest-of-many match.
+                        openBySourceRef(entry.ref, in: visible)
+                    }
                 }
             }
         } else if let anniversary {
@@ -2989,17 +2997,22 @@ struct FeedScreen: View {
         case x402(X402Room)
         case appStoreConnect(ASCRoom)
         case cursor(CursorRoom)
-        // The three WALLET-RIDING seats that own a source room (2026-08-10,
-        // prd §349). The other five — Safe, Aave, Morpho, Hyperliquid,
-        // Aerodrome — land under `source: "Wallet"` and have no room of their
-        // own to head; their readings are the Wallet room's balance card, DeFi
-        // tiles and composition strip, which is where they belong.
+        // The WALLET-RIDING seats that own a source room (2026-08-10, prd
+        // §349). Aave/Morpho/Hyperliquid/Aerodrome/Uniswap still land under
+        // `source: "Wallet"` and have no room of their own to head; their
+        // readings are the Wallet room's balance card, DeFi tiles and
+        // composition strip, which is where they belong.
         case peer(PeerRoom)
         case privacyPools(PrivacyPoolsRoom)
         case gnosisPay(GnosisPayRoom)
         // A fourth wallet-riding seat (2026-08-11) — grouped by TOKEN rather
         // than by rail, since Railgun has no funding platform to rank.
         case railgun(RailgunRoom)
+        // Safe (2026-08-11) — the fifth, and the one that earned its own
+        // source rather than joining the fold at "Wallet" (`SafeBridge`'s
+        // top-of-file doc, amendment (8)). Ranked by "your turn" rather than
+        // a proportion — a Safe has no lead-token/lead-rail shape.
+        case safe(SafeRoom)
     }
 
     /// Resolve this room's own head, or nil. One `switch` so adding a fourth
@@ -3031,6 +3044,8 @@ struct FeedScreen: View {
             return GnosisPayRoomSource.compose(things: visible).map { .gnosisPay($0) }
         case RailgunRoomSource.source:
             return RailgunRoomSource.compose(things: visible).map { .railgun($0) }
+        case SafeRoomSource.source:
+            return SafeRoomSource.compose(things: visible).map { .safe($0) }
         default:
             return nil
         }

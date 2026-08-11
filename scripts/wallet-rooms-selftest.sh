@@ -1,16 +1,17 @@
 #!/bin/zsh
-# Casberi wallet-room self-test — the SHIPPED pure judgement behind the FOUR
+# Casberi wallet-room self-test — the SHIPPED pure judgement behind the FIVE
 # WALLET-RIDING feed-room heads (prd §349, 2026-08-10; Railgun added §350,
-# 2026-08-11):
+# Safe added §349's own amendment, both 2026-08-11):
 #
 #   Casberi/Casberi/Model/PeerRoom.swift
 #   Casberi/Casberi/Model/PrivacyPoolsRoom.swift
 #   Casberi/Casberi/Model/GnosisPayRoom.swift
 #   Casberi/Casberi/Model/RailgunRoom.swift
+#   Casberi/Casberi/Model/SafeRoom.swift
 #
-# All four are Foundation-only BY DESIGN, so all four are compiled WHOLE AND
+# All five are Foundation-only BY DESIGN, so all five are compiled WHOLE AND
 # UNMODIFIED rather than extracted — the strongest form of "the harness ran the
-# shipped logic". Everything that touches `Thing` lives in the
+# shipped logic". Everything that touches `Thing`/`SafeBridge` lives in the
 # `…RoomSource.swift` half, which no harness can compile and which contains no
 # judgement to test.
 #
@@ -48,7 +49,8 @@ PEER="Casberi/Casberi/Model/PeerRoom.swift"
 POOLS="Casberi/Casberi/Model/PrivacyPoolsRoom.swift"
 GNOSIS="Casberi/Casberi/Model/GnosisPayRoom.swift"
 RAILGUN="Casberi/Casberi/Model/RailgunRoom.swift"
-for f in "$PEER" "$POOLS" "$GNOSIS" "$RAILGUN"; do
+SAFE="Casberi/Casberi/Model/SafeRoom.swift"
+for f in "$PEER" "$POOLS" "$GNOSIS" "$RAILGUN" "$SAFE"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -56,6 +58,7 @@ SRC_PEER="Casberi/Casberi/Model/PeerRoomSource.swift"
 SRC_POOLS="Casberi/Casberi/Model/PrivacyPoolsRoomSource.swift"
 SRC_GNOSIS="Casberi/Casberi/Model/GnosisPayRoomSource.swift"
 SRC_RAILGUN="Casberi/Casberi/Model/RailgunRoomSource.swift"
+SRC_SAFE="Casberi/Casberi/Model/SafeRoomSource.swift"
 BR_PEER="Casberi/Casberi/Model/PeerBridge.swift"
 BR_POOLS="Casberi/Casberi/Model/PrivacyPoolsBridge.swift"
 BR_GNOSIS="Casberi/Casberi/Model/GnosisPayBridge.swift"
@@ -64,6 +67,7 @@ CARD_PEER="Casberi/Casberi/Screens/PeerRoomCard.swift"
 CARD_POOLS="Casberi/Casberi/Screens/PrivacyPoolsRoomCard.swift"
 CARD_GNOSIS="Casberi/Casberi/Screens/GnosisPayRoomCard.swift"
 CARD_RAILGUN="Casberi/Casberi/Screens/RailgunRoomCard.swift"
+CARD_SAFE="Casberi/Casberi/Screens/SafeRoomCard.swift"
 FEED="Casberi/Casberi/Screens/FeedScreen.swift"
 PROBES="Casberi/Casberi/Shell/ProbeHooks.swift"
 
@@ -164,6 +168,8 @@ grep -q 'case .gnosisPay(let room)' "$FEED" \
   || { echo "✗ the Gnosis Pay head is no longer rendered from the sourceHead chain"; exit 1; }
 grep -q 'case .railgun(let room)' "$FEED" \
   || { echo "✗ the Railgun head is no longer rendered from the sourceHead chain"; exit 1; }
+grep -q 'case .safe(let room)' "$FEED" \
+  || { echo "✗ the Safe head is no longer rendered from the sourceHead chain"; exit 1; }
 grep -q 'case PeerRoomSource.source:' "$FEED" \
   || { echo "✗ the sourceHead switch no longer claims the Peer room"; exit 1; }
 grep -q 'case PrivacyPoolsRoomSource.source:' "$FEED" \
@@ -172,6 +178,8 @@ grep -q 'case GnosisPayRoomSource.source:' "$FEED" \
   || { echo "✗ the sourceHead switch no longer claims the Gnosis Pay room"; exit 1; }
 grep -q 'case RailgunRoomSource.source:' "$FEED" \
   || { echo "✗ the sourceHead switch no longer claims the Railgun room"; exit 1; }
+grep -q 'case SafeRoomSource.source:' "$FEED" \
+  || { echo "✗ the sourceHead switch no longer claims the Safe room"; exit 1; }
 
 # The cards draw through the SHIPPED arithmetic and honour the row caps, so a
 # card cannot quietly re-rank or over-draw what the room composed.
@@ -181,6 +189,8 @@ grep -q 'room.currencies.prefix(GnosisPayRoomSource.rowCap)' "$CARD_GNOSIS" \
   || { echo "✗ the Gnosis Pay card no longer honours the currency cap"; exit 1; }
 grep -q 'room.tokens.prefix(RailgunRoomSource.rowCap)' "$CARD_RAILGUN" \
   || { echo "✗ the Railgun card no longer honours the token cap"; exit 1; }
+grep -q 'room.entries.prefix(SafeRoomSource.rowCap)' "$CARD_SAFE" \
+  || { echo "✗ the Safe card no longer honours the entry cap"; exit 1; }
 # The strip exists so that superseding `FeedInsight.cardMonths` costs nothing.
 # A head outranks the generic registries, so a head that draws less than the
 # card it displaced is a regression wearing a new feature.
@@ -210,12 +220,20 @@ grep -q 'note("gnosisPayHead"' "$PROBES" \
   || { echo "✗ -roomInsightProbe no longer mirrors the Gnosis Pay head"; exit 1; }
 grep -q 'note("railgunHead"' "$PROBES" \
   || { echo "✗ -roomInsightProbe no longer mirrors the Railgun head"; exit 1; }
-# Each head gets its own probe, because for these four seats an empty room is
+grep -q 'note("safeHead"' "$PROBES" \
+  || { echo "✗ -roomInsightProbe no longer mirrors the Safe head"; exit 1; }
+# Each head gets its own probe, because for these five seats an empty room is
 # usually the HEALTHY answer and only one or two causes per room are bugs.
-for key in peerRoomProbe privacyPoolsRoomProbe gnosisPayRoomProbe railgunRoomProbe; do
+for key in peerRoomProbe privacyPoolsRoomProbe gnosisPayRoomProbe railgunRoomProbe safeRoomProbe; do
   grep -q "Hook(key: \"$key\")" "$PROBES" \
     || { echo "✗ -$key is gone — an empty head's several causes would be indistinguishable"; exit 1; }
 done
+
+# Safe's own `sourceName` — the 2026-08-11 re-source (SafeBridge's top-of-file
+# doc, amendment 8). Change it here and the room head silently stops
+# composing over a corpus whose rows still carry the OLD source string.
+grep -q 'static let sourceName = "Safe"' "Casberi/Casberi/Model/SafeBridge.swift" \
+  || { echo "✗ SafeBridge.sourceName changed"; exit 1; }
 
 cat > "$TMP/main.swift" <<'SWIFT'
 import Foundation
@@ -734,12 +752,61 @@ check("share is a fraction of the busiest token's moves", RailgunRoom.share(move
 check("a zero denominator can't divide by zero", RailgunRoom.share(moves: 3, of: 0) == 0)
 
 print("")
+print("Safe — ranking is your-turn first, then oldest first")
+func safeEntry(_ ref: String, have: Int = 1, required: Int = 3, yourTurn: Bool = false,
+               submittedAt: Date? = nil) -> SafeRoom.Entry {
+    SafeRoom.Entry(ref: ref, safeAddress: "0xSafe", have: have, required: required,
+                   yourTurn: yourTurn, submittedAt: submittedAt, descriptionText: "a transfer")
+}
+check("your turn always outranks waiting on others, even when it arrived later",
+      SafeRoom.ordered([safeEntry("a", yourTurn: false, submittedAt: day(-9)),
+                        safeEntry("b", yourTurn: true, submittedAt: day(-1))]).first?.ref == "b")
+check("within the same group, the longest-waiting entry leads",
+      SafeRoom.ordered([safeEntry("a", submittedAt: day(-1)),
+                        safeEntry("b", submittedAt: day(-9))]).first?.ref == "b")
+check("a nil submittedAt sorts as if it arrived at the dawn of time — never hides a real wait behind an unknown one",
+      SafeRoom.ordered([safeEntry("a", submittedAt: day(-1)),
+                        safeEntry("b", submittedAt: nil)]).first?.ref == "b")
+check("a full tie breaks on ref, for a total order that never reshuffles on identical data",
+      SafeRoom.ordered([safeEntry("b"), safeEntry("a")]).first?.ref == "a")
+
+print("")
+print("Safe — words")
+let safeRoomYourTurn = SafeRoom.compose(
+    entries: [safeEntry("a", have: 2, required: 3, yourTurn: true, submittedAt: day(-2))],
+    safeCount: 1, moduleCount: 0)
+check("your-turn count leads the headline over a bare pending count",
+      SafeRoom.headline(safeRoomYourTurn).contains("Your signature is needed"))
+let safeRoomWaiting = SafeRoom.compose(
+    entries: [safeEntry("a", have: 1, required: 3, yourTurn: false, submittedAt: day(-2))],
+    safeCount: 1, moduleCount: 0)
+check("nobody's turn but something is pending — 'waiting on others', not the your-turn wording",
+      SafeRoom.headline(safeRoomWaiting).contains("waiting on others"))
+let safeRoomQuiet = SafeRoom.compose(entries: [], safeCount: 2, moduleCount: 0)
+check("a quiet room with more than one Safe pluralises 'Safes'",
+      SafeRoom.headline(safeRoomQuiet).contains("Safes"))
+let safeRoomModule = SafeRoom.compose(entries: [], safeCount: 1, moduleCount: 1)
+check("a module warning is stated even with nothing pending — the highest-stakes fact this bridge can carry",
+      SafeRoom.note(safeRoomModule)?.contains("without a signature") == true)
+check("no module means no note at all — a second sentence that says nothing doesn't get to exist",
+      SafeRoom.note(safeRoomWaiting) == nil)
+check("a Safe never detected at all is no card", SafeRoom.compose(entries: [], safeCount: 0, moduleCount: 0).isEmpty)
+check("today reads as 'today', not '0 days'",
+      SafeRoom.waitLabel(safeEntry("a", submittedAt: t0), now: t0) == "today")
+check("a nil submittedAt reads as 'waiting', never a fabricated duration",
+      SafeRoom.waitLabel(safeEntry("a", submittedAt: nil), now: t0) == "waiting")
+let safeFoot = SafeRoom.footnote(SafeRoom.compose(entries: [safeEntry("a"), safeEntry("b"), safeEntry("c"), safeEntry("d")],
+                                                  safeCount: 1, moduleCount: 0), drawn: 3)
+check("entries beyond the row cap are counted in the footnote, never silently dropped",
+      safeFoot == "1 more pending")
+
+print("")
 if failures > 0 { print("\(failures) failed"); exit(1) }
 print("all assertions passed")
 SWIFT
 
-echo "wallet-rooms-selftest: compiling the four heads WHOLE and unmodified…"
-swiftc -O -o "$TMP/run" "$PEER" "$POOLS" "$GNOSIS" "$RAILGUN" "$TMP/main.swift" \
+echo "wallet-rooms-selftest: compiling the five heads WHOLE and unmodified…"
+swiftc -O -o "$TMP/run" "$PEER" "$POOLS" "$GNOSIS" "$RAILGUN" "$SAFE" "$TMP/main.swift" \
   || { echo "✗ the shipped room heads do not compile Foundation-only — something reached Thing/SwiftUI"; exit 1; }
 "$TMP/run" || exit 1
 
@@ -755,13 +822,15 @@ mutate() {
   cp "$POOLS" "$TMP/PrivacyPoolsRoom.swift"
   cp "$GNOSIS" "$TMP/GnosisPayRoom.swift"
   cp "$RAILGUN" "$TMP/RailgunRoom.swift"
-  local a="$TMP/PeerRoom.swift" b="$TMP/PrivacyPoolsRoom.swift" c="$TMP/GnosisPayRoom.swift" d="$TMP/RailgunRoom.swift"
+  cp "$SAFE" "$TMP/SafeRoom.swift"
+  local a="$TMP/PeerRoom.swift" b="$TMP/PrivacyPoolsRoom.swift" c="$TMP/GnosisPayRoom.swift" d="$TMP/RailgunRoom.swift" e="$TMP/SafeRoom.swift"
   local target
   case "$which" in
     peer)    target="$a" ;;
     pools)   target="$b" ;;
     gnosis)  target="$c" ;;
     railgun) target="$d" ;;
+    safe)    target="$e" ;;
   esac
   FRM="$frm" TO="$to" python3 - "$target" <<'PY'
 import os, sys
@@ -775,7 +844,7 @@ PY
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$target"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mut" "$a" "$b" "$c" "$d" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -O -o "$TMP/mut" "$a" "$b" "$c" "$d" "$e" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then
@@ -932,6 +1001,21 @@ mutate "tokens are ranked by recency before move count" railgun \
             if a.newest != b.newest { return a.newest > b.newest }' \
   'if a.newest != b.newest { return a.newest > b.newest }
             if a.moves != b.moves { return a.moves > b.moves }'
+
+# A signature request only YOU can unblock loses its priority — the exact bug
+# that would make the room's own reason for existing (surfacing what's
+# waiting on you) silently stop working while every other reading stays
+# correct.
+mutate "your turn no longer outranks waiting on others" safe \
+  'if a.yourTurn != b.yourTurn { return a.yourTurn && !b.yourTurn }' \
+  'if false { return a.yourTurn && !b.yourTurn }'
+# The longest-waiting entry within a group loses its lead — a transaction
+# that has sat for nine days ranks behind one from yesterday, which is
+# exactly backwards for a card whose whole point is surfacing what has been
+# ignored longest.
+mutate "the oldest pending entry no longer leads within its group" safe \
+  'if da != db { return da < db }' \
+  'if da != db { return da > db }'
 
 echo ""
 echo "wallet-rooms-selftest: OK — assertions pass and every mutation is caught."

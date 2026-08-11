@@ -690,6 +690,15 @@ enum ProbeHooks {
                 NSLog("[Casberi] %@", line)
             }
         },
+        // The fifth wallet-riding room head (2026-08-11), and the one that
+        // reads no `Thing` at all — its subject is `SafeBridge`'s own
+        // tracking state, the `ASCRoomSource` shape. Pair with
+        // `-approvalProbe`/`-safeProbe` to land a pending queue first.
+        Hook(key: "safeRoomProbe") { _, _ in
+            for line in SafeRoomSource.probeLines() {
+                NSLog("[Casberi] %@", line)
+            }
+        },
         // `-cursorProbe YES` walks the Cursor read phase by phase with the
         // STORED key (connect first via `-tokenBridge "Cursor:<key>"`), and
         // dumps one `cursorAgent|` line per run. Same lesson as the two above:
@@ -3451,6 +3460,14 @@ enum ProbeHooks {
                 note("railgunHead", source == RailgunRoomSource.source
                      ? RailgunRoomSource.compose(things: things).map {
                         "\(RailgunRoom.headline($0)) · \($0.tokens.count) tokens"
+                     } : nil)
+                // The fifth (2026-08-11) — reads no `things` at all (see
+                // `SafeRoomSource`'s own doc), so `compose` is called
+                // unconditionally; the `source ==` gate still decides whether
+                // this LINE prints, matching every sibling in this block.
+                note("safeHead", source == SafeRoomSource.source
+                     ? SafeRoomSource.compose().map {
+                        "\(SafeRoom.headline($0)) · \($0.pendingCount) pending"
                      } : nil)
                 // Three more per-source heads that shipped without a line
                 // here — exactly the drift this probe's own header warns
