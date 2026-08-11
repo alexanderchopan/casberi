@@ -731,12 +731,6 @@ struct MainSurface: View {
         // One walk for all three, not three (2026-08-11) — see `chipSnapshot`.
         let chips = chipSnapshot()
         return SourceChips(labels: chips.labels, active: chips.active,
-                    // The chip and the SOURCE are two different strings under
-                    // the fold — see `SourceChips.activeSource`, which draws
-                    // the landing mark off the live source rather than the
-                    // remembered one. Free here: `chipSnapshot` already read
-                    // `filter.source` to resolve `chips.active`.
-                    activeSource: filter.source,
                     axis: axis,
                     categoryVenues: chips.venues,
                     minimized: chrome.minimized,

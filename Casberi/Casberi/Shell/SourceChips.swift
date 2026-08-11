@@ -46,17 +46,6 @@ struct SourceChips: View {
     /// The full ordered label list — "All", then real sources.
     let labels: [String]
     let active: String
-    /// The SOURCE showing right now, where `active` is the CHIP showing right
-    /// now — for a folded category those are two different strings ("GitHub"
-    /// against "Work"), which is the whole point of the fold.
-    ///
-    /// Needed only by `landingMark`, and needed there rather than reading the
-    /// remembered venue for a reason worth keeping: `CategoryFold.remember` is
-    /// driven by an `onChange` on this same source, so a chip that read the
-    /// REMEMBERED value would be correct or one room stale depending on whether
-    /// that handler happened to run before this body — a race with no symptom
-    /// except a mark that is occasionally, unreproducibly wrong.
-    var activeSource: String = ""
     /// `.horizontal` is the iPhone strip; `.vertical` is the iPad rail.
     var axis: Axis = .horizontal
     /// The seats behind every folded category chip, in learned order, keyed by
@@ -64,10 +53,13 @@ struct SourceChips: View {
     /// `marketVenues`, a single array Markets alone ever filled).
     ///
     /// Passed in rather than read off `ShellChrome`, because the strip renders
-    /// once BEFORE the shell's `onAppear` has published anything — and a folded
-    /// chip whose venue list is empty draws as a bare grey circle. The owner
+    /// once BEFORE the shell's `onAppear` has published anything. The owner
     /// hands over a value with its own fallback (`MainSurface.chipSnapshot`), so
-    /// the mark and the labels can never disagree with the chip beside them.
+    /// the venues and the labels can never disagree with the chip beside them.
+    ///
+    /// Still needed with the landing mark gone (2026-08-11): a category chip's
+    /// dashed attention ring answers for every seat behind it, and the tap
+    /// resolves through this list.
     var categoryVenues: [String: [String]] = [:]
     /// Folded while the feed scrolls down (2026-07-30, `ShellChrome.minimized`).
     ///
@@ -91,8 +83,6 @@ struct SourceChips: View {
     private var chipSize: CGFloat { folds ? 48 : 56 }
     /// The air inside a capsule, left and right of its content.
     private var capsulePadH: CGFloat { folds ? DS.Space.s2 : DS.Space.s3 }
-    /// The landing mark inside a capsule — see `landingMark`.
-    private var markSize: CGFloat { folds ? 16 : 18 }
 
     /// The gap between chips, tightened from `s3` (14) when category chips
     /// became capsules.
@@ -102,9 +92,8 @@ struct SourceChips: View {
     /// chip count the wider shape costs. Arithmetic on the 12pt label rather
     /// than a device measurement: against the ~269pt of visible strip left by
     /// the two fixed doors, 56pt circles at a 14pt gap show ~3.8 chips, and
-    /// capsules at this 10pt gap show ~3.3 (~2.7 for a category carrying a
-    /// landing mark, which most do not — see `landingMark`). At the old gap it
-    /// was ~3.0. Re-measure on a device before trading it away.
+    /// capsules at this 10pt gap show ~3.3. At the old gap it was ~3.0.
+    /// Re-measure on a device before trading it away.
     private static let chipGap: CGFloat = DS.Space.s2
 
     /// A capsule chip's fixed width on the iPad rail, which is a column of a
@@ -378,59 +367,62 @@ struct SourceChips: View {
         onApps()
     }
 
-    /// Which seat a folded category chip will actually open on, as that seat's
-    /// own brand mark inside the capsule.
-    ///
-    /// **The question it answers is one the fold created and nothing else on
-    /// screen answers.** A category chip resolves to its last-visited member
-    /// (`CategoryFold.landing`), so tapping "Work" opens GitHub or Stripe
-    /// depending on state held in `UserDefaults` and drawn nowhere — the chip
-    /// looked identical either way. The mark states it before the tap, and it
-    /// gives back some of what folding took: the strip used to be the most
-    /// colourful thing on screen and became a row of identical grey glass.
-    ///
-    /// Drawn only where it says something. A category with ONE present member
-    /// has its answer in the word already, and the mark would just be that
-    /// seat's logo next to its category's name for every such chip in the
-    /// strip — which is most of them on a typical corpus, and the reason the
-    /// width cost in `chipGap` above is smaller in practice than at worst case.
-    private func landingMark(_ label: String, venues: [String], isCategory: Bool) -> String? {
-        // The rail sits this out: at `railChipWidth` a mark plus the longest
-        // category name does not fit at a readable size, and a mark that
-        // appears for the short names and vanishes for the long ones is worse
-        // than none in a column whose grammar is uniformity. The rail's
-        // switcher is a tap away and names every member in words.
-        guard isCategory, axis == .horizontal, venues.count > 1 else { return nil }
-        // The chip you are standing IN shows the room you are standing in,
-        // read live rather than remembered — see `activeSource`.
-        if label == active, venues.contains(activeSource) { return activeSource }
-        return CategoryFold.landing(category: label, present: venues)
-    }
-
     /// A folded category chip: its word at full size, in a capsule that grows
-    /// to hold it, with the landing mark ahead of the word when there is one.
+    /// to hold it.
+    ///
+    /// **A WORD ONLY — no brand mark rides in here (user ruling 2026-08-11).**
+    /// The capsule briefly carried the landing seat's own logo ahead of the
+    /// word, to answer a question the fold created: a category chip opens on
+    /// its last-visited member (`CategoryFold.landing`), so tapping "Work"
+    /// reaches GitHub or Stripe depending on state held in `UserDefaults` and
+    /// drawn nowhere. In practice the strip read worse, not better — "honestly
+    /// i think it just looks confusing for those logos to be in the category
+    /// chips" — because a mark drawn only where it says something (a category
+    /// with ≥2 present members, phone only) appears on some chips and not
+    /// others, so the row loses the one grammar that made the fold legible:
+    /// every source-bearing chip is a word.
+    ///
+    /// Nor does any single category get one as an exception (offered for
+    /// Wallet, declined the same day): a lone marked chip in a row of words
+    /// rebuilds exactly the inconsistency above, and the wallet glyph is
+    /// ambiguous in a second way — it is also Apple Wallet's own seat mark, so
+    /// it would read as that one app rather than the category. The colour the
+    /// fold took back is a real cost, and the answer to it is somewhere other
+    /// than the chips.
+    /// **The word is TINT, not ink (user ruling 2026-08-11: "should we make the
+    /// words in the category chips be blue? so they stand out… they are for
+    /// navigation").** Tinted text is how iOS says "this is a control" — and
+    /// with the fold, these words ARE the app's navigation, sitting in a strip
+    /// that otherwise reads as content-coloured glass. `DS.tint` rather than a
+    /// hardcoded blue for two reasons the design system states outright: it is
+    /// the ONE accent (brief §8 principle 2) and it is routed through
+    /// `ThemeStore`, so a tint swap carries the chips with it; and it is the
+    /// only colour token that carries the Increase Contrast guarantee, which
+    /// matters here precisely because this is a WORD and not a fill (the
+    /// shipped blue measures 3.8:1 on the light well — fine for a fill, thin
+    /// for a word — and steps to a measured ≥4.5:1 pair under that setting).
+    ///
+    /// Uniform across every category chip, active or not. The active chip is
+    /// already named by the sliding tint RING, so tinting only the active word
+    /// would say the same thing twice and leave the rest reading as inert
+    /// labels — the opposite of the point.
     @ViewBuilder
-    private func categoryCapsule(_ label: String, mark: String?) -> some View {
-        HStack(spacing: 6) {
-            if let mark {
-                BridgeIcon(name: mark, size: markSize, circular: true)
-            }
-            Text(label)
-                .dsText(.label12)
-                .foregroundStyle(DS.textPrimary)
-                .lineLimit(1)
-                // Nothing to scale on the phone: the capsule is what gives, so
-                // the word keeps its size all the way up the Dynamic Type ramp
-                // and the strip simply scrolls further. On the rail the width
-                // is fixed, so the word gives instead — the same trade "All"
-                // makes inside its circle, and the reason this floor is 0.6
-                // rather than the 0.55 that produced the sizes this pass is
-                // fixing: here it applies to a 68pt box, not a 46pt circle.
-                .minimumScaleFactor(axis == .vertical ? 0.6 : 1)
-        }
-        .padding(.horizontal, capsulePadH)
-        .frame(width: axis == .vertical ? Self.railChipWidth : nil, height: iconSize)
-        .dsGlass(cornerRadius: iconSize / 2)
+    private func categoryCapsule(_ label: String) -> some View {
+        Text(label)
+            .dsText(.label12)
+            .foregroundStyle(DS.tint)
+            .lineLimit(1)
+            // Nothing to scale on the phone: the capsule is what gives, so
+            // the word keeps its size all the way up the Dynamic Type ramp
+            // and the strip simply scrolls further. On the rail the width
+            // is fixed, so the word gives instead — the same trade "All"
+            // makes inside its circle, and the reason this floor is 0.6
+            // rather than the 0.55 that produced the sizes this pass is
+            // fixing: here it applies to a 68pt box, not a 46pt circle.
+            .minimumScaleFactor(axis == .vertical ? 0.6 : 1)
+            .padding(.horizontal, capsulePadH)
+            .frame(width: axis == .vertical ? Self.railChipWidth : nil, height: iconSize)
+            .dsGlass(cornerRadius: iconSize / 2)
     }
 
     @ViewBuilder
@@ -442,7 +434,6 @@ struct SourceChips: View {
         let seat = BridgeCatalog.offer(forSource: label)?.name ?? label
         let isCategory = CategoryFold.isCategory(label)
         let venues = categoryVenues[label] ?? []
-        let mark = landingMark(label, venues: venues, isCategory: isCategory)
         // A folded CATEGORY chip answers for every seat behind it (prd §351,
         // generalizing the Markets-only reasoning this line used to carry):
         // with the members' own circles gone, a broken seat would otherwise
@@ -470,8 +461,14 @@ struct SourceChips: View {
                     // it just stops at the circle instead of spilling over the
                     // door. The neighbouring chips are app icons, which don't
                     // scale at all, so the strip's rhythm is fixed by design.
+                    // Tint, with the category words beside it (2026-08-11):
+                    // "All" is a navigation word in a strip of navigation
+                    // words, and leaving it ink while every other word went
+                    // tint would read as one chip singled out for no reason.
+                    // Its circle-not-capsule shape is the documented exception
+                    // above; its COLOUR is not one.
                     Text("All").dsText(.label12)
-                        .foregroundStyle(DS.textPrimary)
+                        .foregroundStyle(DS.tint)
                         .lineLimit(1)
                         .minimumScaleFactor(0.55)
                         .frame(width: iconSize, height: iconSize)
@@ -500,7 +497,7 @@ struct SourceChips: View {
                     // from the shortest. A container that grows has neither
                     // problem and needs neither knob.
                     if isCategory {
-                        categoryCapsule(label, mark: mark)
+                        categoryCapsule(label)
                     } else {
                         // Reachable only for a label the catalog has never
                         // heard of (an uncategorized source) — every real
@@ -522,13 +519,13 @@ struct SourceChips: View {
             // the one you're landing on flips in. A first-ever thing from
             // this source flips it too (the bloom's beat, same vocabulary).
             //
-            // The landing mark joins that key (2026-08-11): moving between two
-            // seats INSIDE a folded category changes what the chip says while
-            // `isActive` never moves, and that is exactly the moment this flip
-            // was built for — "the chip is where switching sources actually
-            // happens" is still true, the fold just moved some of those
-            // switches to the switcher below it.
-            .coinFlip(trigger: "\(isActive)-\(chrome.bloomTicks[label] ?? 0)-\(mark ?? "")")
+            // The landing mark briefly joined this key (2026-08-11), because
+            // moving between two seats inside a folded category changed what
+            // the chip DREW while `isActive` never moved. With the mark gone
+            // (see `categoryCapsule`) a category chip's face no longer depends
+            // on which member is showing, so there is nothing to flip and the
+            // key is back to what it was.
+            .coinFlip(trigger: "\(isActive)-\(chrome.bloomTicks[label] ?? 0)")
             // The catch bob — a thing landing from this source while the
             // person watches bumps its chip once, the flight's landing
             // generalized to bridge arrivals (delight 2026-07-13).

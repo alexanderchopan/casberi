@@ -187,7 +187,7 @@ def between(a, b, what):
 # guard's first mutation run and each is the same shape: a check satisfied by
 # a DIFFERENT, correct copy of the words elsewhere in the file.
 chip = between("private func chip(_ label:", "private func chipAccessibilityLabel", "chip(_:)")
-mark = between("private func landingMark(", "private func categoryCapsule(", "landingMark(_:venues:isCategory:)")
+capsule = between("private func categoryCapsule(", "private func chip(_ label:", "categoryCapsule(_:)")
 
 if "contentShape(Circle())" in chip:
     sys.exit("✗ a chip's hit region is a Circle again — the ends of every category\n"
@@ -201,24 +201,44 @@ if re.search(r"Circle\(\)\s*\.strokeBorder", chip):
 if "contentShape(Capsule(style: .circular))" not in chip:
     sys.exit("✗ the chip's hit region is no longer the circular capsule both shapes share.")
 
-# Scoped to `landingMark` because `chipAccessibilityLabel` carries its own
-# correct `venues.count > 1`, which satisfied a file-wide grep for it while the
-# mark's own gate was mutated wide open.
-if "venues.count > 1" not in mark:
-    sys.exit("✗ the landing mark is no longer gated on a category having more than one\n"
-             "  member — every single-seat chip would wear its own logo beside its own name.")
-if "activeSource" not in mark:
-    sys.exit("✗ the landing mark no longer reads the live source for the chip you are in —\n"
-             "  it would race CategoryFold.remember and be intermittently one room stale.")
+# A CATEGORY CHIP IS A WORD — no brand mark inside the capsule (user ruling
+# 2026-08-11, "honestly i think it just looks confusing for those logos to be in
+# the category chips"). The landing mark shipped hours earlier the same day and
+# is DELETED, not deprecated: it drew only where it said something (≥2 present
+# members, phone only), so it appeared on some chips and not others and cost the
+# strip the one grammar that makes the fold legible. Scoped to the capsule's own
+# body — `chip(_:)` beside it draws `BridgeIcon` correctly for the uncategorized
+# fallback, and the two fixed doors are marks by design, so a file-wide grep
+# would fire on the uses that are right.
+if "BridgeIcon" in capsule:
+    sys.exit("✗ a brand mark is back inside a category capsule — the row would read as words\n"
+             "  for some categories and word-plus-logo for others, which is the treatment\n"
+             "  2026-08-11 removed. Wallet-as-an-exception was offered and declined too.")
+if "markSize" in capsule:
+    sys.exit("✗ the landing mark's metric is back in the capsule — see above.")
+
+# "opens on X" must be suppressed when X IS the chip's own word (prd §354).
+# Wallet's category name and its anchor member are the same string, so without
+# this VoiceOver says "Wallet, opens on Wallet: Wallet, Peer, …" — a sentence
+# that reads as a bug to the one person who cannot see the strip to check, and
+# the only surface where this feature's landing is spoken at all. Scoped to
+# the function that speaks it.
+speech = between("private func chipAccessibilityLabel", "\n}", "chipAccessibilityLabel(...)")
+if "opens on" not in speech:
+    sys.exit("✗ the chip no longer speaks where it opens — the fold's landing would be\n"
+             "  invisible AND unspoken, which for a folded category is no way to know at all.")
+if not re.search(r"opens\s*!=\s*label", speech):
+    sys.exit("✗ the 'opens on' phrase is no longer suppressed when the landing is the\n"
+             "  category's own name — VoiceOver would say \"Wallet, opens on Wallet\" (prd §354).")
 PY3
 
-# The landing mark states which seat a folded chip opens on. Drawn from the
-# LIVE source for the chip you're standing in — `CategoryFold.remember` is
-# written by an onChange on that same source, so a mark read from the
-# remembered value is right or one room stale depending on handler ordering.
-grep -q 'activeSource: filter.source' "$TMP/main.nc" \
-  || { echo "✗ the strip is no longer handed the live source — the landing mark on the chip"; \
-       echo "  you're standing in would race CategoryFold.remember and be intermittently stale."; exit 1; }
+# The mark's INPUT is gone from the call site too, or the next pass re-adds the
+# view and finds the wiring still there waiting for it.
+grep -q 'activeSource' "$TMP/main.nc" \
+  && { echo "✗ MainSurface still hands the strip a live source for the landing mark, which no"; \
+       echo "  longer exists — SourceChips.activeSource was deleted with it (2026-08-11)."; exit 1; }
+grep -q 'activeSource' "$TMP/chips.nc" \
+  && { echo "✗ SourceChips still carries activeSource — its only reader was the landing mark."; exit 1; }
 
 # The switcher is where the folded chip's dashed ring RESOLVES to a seat. Without
 # this the ring says "something in here needs you" and the tap it invites arrives
@@ -313,6 +333,33 @@ markets = next((g for n, g in entries if n == "Markets"), None)
 if markets is None:
     sys.exit('✗ BridgeCatalog.categories no longer has a "Markets" category — MarketsVenueSwitcher targets it by name')
 print(f"  ✓ real catalog: {len(entries)} categories, every one names ≥1 real offer")
+
+# Every SEATLESS source (a device capability the catalog has nothing to
+# connect — "Voice") must name a category that really exists. Its whole job is
+# to keep such a source inside the fold instead of sitting alone beside a row
+# of category words (user ruling 2026-08-11); a category renamed out from under
+# this table sends it silently back to the strip's bare circle and the tray's
+# "Other" block, which looks exactly like the bug it fixed.
+names = {n for n, _ in entries}
+table = re.search(r'categoryBySeatlessSource:\s*\[String:\s*String\]\s*=\s*\[(.*?)\n    \]', src, re.S)
+if not table:
+    sys.exit("✗ BridgeCatalog.categoryBySeatlessSource not found — a seatless source"
+             " (Voice) is filed nowhere again")
+pairs = re.findall(r'"([^"]+)"\s*:\s*"([^"]+)"', table.group(1))
+if not pairs:
+    sys.exit("✗ categoryBySeatlessSource parsed to zero entries")
+for source, category in pairs:
+    if category not in names:
+        sys.exit(f'✗ categoryBySeatlessSource maps "{source}" → "{category}",'
+                 f" which is not a real category (have: {sorted(names)})")
+    # It must ALSO be genuinely seatless: gaining a real offer makes the entry
+    # dead code, and the live `offer(forSource:)` answer would then win.
+    if re.search(r'name:\s*"%s"' % re.escape(source), src):
+        sys.exit(f'✗ "{source}" now has a real catalog offer — drop it from'
+                 " categoryBySeatlessSource, whose entries are for sources with no seat")
+if "Voice" not in dict(pairs):
+    sys.exit('✗ "Voice" is no longer filed by categoryBySeatlessSource')
+print(f"  ✓ seatless sources: {len(pairs)} filed, every one into a real category")
 PY
 
 # --- the fixture catalog -----------------------------------------------------

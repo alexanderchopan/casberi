@@ -915,8 +915,39 @@ enum BridgeCatalog {
     /// decides what to do with it, because "we don't know" and "Life" are
     /// different answers and `category(of:)`'s default must not leak here.
     static func category(forSource source: String) -> String? {
-        offer(forSource: source).map(category(of:))
+        if let offer = offer(forSource: source) { return category(of: offer) }
+        return categoryBySeatlessSource[source]
     }
+
+    /// Sources with NO catalog seat, and the category they belong to anyway
+    /// (2026-08-11).
+    ///
+    /// The catalog lists what you CONNECT, and a voice note connects nothing —
+    /// the mic is an always-on device capability, which is why `offer(forSource:)`
+    /// answers nil for it and why `demo-selftest.py` carries "Voice" in its own
+    /// `KNOWN_NO_CATALOG_SEAT`. Every category-shaped read then filed it
+    /// nowhere: the Sources Tray put it in the trailing "Other" block, and the
+    /// source strip left it as the one bare brand circle sitting outside the
+    /// fold beside a row of category words — "voice looks stupid by itself…
+    /// notes is better" (user ruling 2026-08-11). A voice note is notes by any
+    /// reading.
+    ///
+    /// **A CATEGORY, never a synthetic `Offer`.** Inventing an offer would be
+    /// the cheaper-looking fix and would be wrong in four places at once: it
+    /// would give Voice a product page and a Connect button for a capability
+    /// with nothing to connect, put a tile in the catalog grid and on the
+    /// website (which `catalog-sync.sh` enforces as one set), and make
+    /// `SourceChips.chip` look for a BridgeApp seat named "Voice" when it
+    /// decides whether to draw the needs-reconnecting ring. Mapping the
+    /// category alone leaves all of that untouched — `offer(forSource:)` still
+    /// answers nil, so seat resolution is unchanged everywhere.
+    ///
+    /// The value must name a real `categories` entry; `category-fold-selftest.sh`
+    /// fails the build if it ever stops doing so (a category renamed out from
+    /// under this table would silently put Voice back in "Other").
+    private static let categoryBySeatlessSource: [String: String] = [
+        "Voice": "Notes",
+    ]
 
     /// The catalog offer a landed SOURCE belongs to — the join itself, factored
     /// out of `category(forSource:)` because grouping was never the only thing

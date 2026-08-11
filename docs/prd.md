@@ -20159,3 +20159,109 @@ mutation-proven drift guards on the spoken label. Verified by the harness's own
 standing no-sim instruction; the app build was blocked at commit time by a
 concurrent session's in-flight `SourceChips.swift`, which is unrelated to this
 change and touches none of its call sites.
+
+## §355 — The category chips lose the logos and gain tint, and a seatless source gets a home (user: "voice looks stupid by itself please put it in the life category", "or notes", "notes is better", "honestly i think it just looks confusing for those logos to be in the category chips", "should we make the words in the category chips be blue? so they stand out", "they are for navigation"; 2026-08-11)
+
+**Three rulings on the strip §351–§352 built, all in one sitting, and two of
+them retire something shipped hours earlier the same day.** Recorded together
+because they share one subject — what a category chip is allowed to say — and
+because reading them apart would make the second look like a reversal rather
+than a correction.
+
+**1. A category chip is a WORD. The landing mark is deleted, not deprecated.**
+§352 gave the capsule the landing seat's own brand mark ahead of the word, to
+answer a question the fold created: a category chip opens on its last-visited
+member (`CategoryFold.landing`), so tapping "Work" reaches GitHub or Stripe
+depending on state held in `UserDefaults` and drawn nowhere. The reasoning was
+sound and the result was not — "honestly i think it just looks confusing for
+those logos to be in the category chips." **The defect is that it was drawn
+only where it said something**: gated on a category having ≥2 present members,
+and phone-only (the rail has no width for it). So it appeared on some chips and
+not others, and the row lost the one grammar that makes the fold legible —
+every source-bearing chip is a word. A mark that is present or absent depending
+on how many seats you happen to have connected is not a signal anybody can
+learn.
+
+**Wallet-as-an-exception was offered and declined the same day** ("we could
+have wallet just be the wallet icon if we wanted if you thought that made sense
+or just have it say wallet"). Two reasons: a single marked chip in a row of
+words rebuilds exactly the inconsistency above, and the wallet glyph is
+ambiguous in a second way — it is also Apple Wallet's own seat mark, so it
+would read as that one app rather than the category that holds eight
+wallet-riding seats. **The colour the fold took back is a real cost** (the strip
+used to be the most colourful thing on screen), and it is not paid back here;
+that is a separate pass, and the answer to it is somewhere other than the
+chips.
+
+`SourceChips.activeSource` went with it — the property existed solely so the
+mark on the chip you were standing IN could be read live rather than from
+`CategoryFold.remember`, which an `onChange` on that same source writes. It was
+correct and is now unreachable, so it is gone from the view and from
+`MainSurface`'s call site rather than left wired for a treatment that no longer
+exists. Same for the mark's term in the `coinFlip` key: a category chip's face
+no longer depends on which member is showing, so there is nothing to flip.
+
+**2. The words are TINT, not ink.** "should we make the words in the category
+chips be blue? so they stand out… they are for navigation" — yes, and the
+reason is the one the user gave. With the fold, these words ARE the app's
+navigation, and they sit in a strip that otherwise reads as content-coloured
+glass. Tinted text is how iOS says "this is a control."
+
+**`DS.tint`, never a hardcoded blue**, for two reasons the design system states
+outright: it is the ONE accent (brief §8 principle 2) routed through
+`ThemeStore`, so a tint swap carries the chips with it rather than stranding
+them on a literal; and it is **the only colour token carrying the Increase
+Contrast guarantee**, which matters here precisely because this paints a WORD
+and not a fill — the shipped blue measures 3.8:1 on the light well (fine for a
+fill, thin for a word) and steps to a measured ≥4.5:1 pair under that setting.
+`DS.bleed`'s own doc already forbids the alternative in as many words: "never
+route a chip, glyph, or state fill through this."
+
+**Uniform across every category chip, active or not**, and **"All" goes with
+them**. The active chip is already named by the sliding tint RING, so tinting
+only the active word would say the same thing twice and leave every other word
+reading as an inert label — the opposite of the point. "All" is a navigation
+word in a strip of navigation words; its circle-not-capsule SHAPE is §352's
+documented exception, but its colour is not one, and leaving it ink would single
+out one chip for no reason a person could name.
+
+**3. A source with no catalog seat still belongs to a category.** "voice looks
+stupid by itself please put it in the life category… or notes… notes is
+better." Voice was the one bare brand circle sitting outside the fold beside a
+row of category words, and the cause is structural rather than an oversight in
+the fold: **the catalog lists what you CONNECT, and a voice note connects
+nothing.** The mic is an always-on device capability, so `BridgeCatalog.offer(forSource:)`
+answers nil for it, so `category(forSource:)` did too — and every
+category-shaped read then filed it nowhere. The strip left it unfolded; the
+Sources Tray, one surface over, put it in the trailing "Other" block. Both
+symptoms, one join point.
+
+`BridgeCatalog.categoryBySeatlessSource` maps it, and **a CATEGORY is all it
+maps — never a synthetic `Offer`.** Inventing an offer is the cheaper-looking
+fix and is wrong in four places at once: it would give Voice a product page and
+a Connect button for a capability with nothing to connect, put a tile in the
+catalog grid AND on the website (`catalog-sync.sh` enforces those as one set),
+and make `SourceChips.chip` look for a `BridgeApp` seat named "Voice" when it
+decides whether to draw the needs-reconnecting ring. Mapping the category alone
+leaves all of it untouched: `offer(forSource:)` still answers nil, so seat
+resolution is unchanged everywhere, and `demo-selftest.py`'s own
+`KNOWN_NO_CATALOG_SEAT` entry for "Voice" stays true.
+
+Fixing it at the shared join point is what makes the tray agree with the strip
+for free — the same property that made §351's fold safe to generalize, used
+once more.
+
+**Guarded in `category-fold-selftest.sh`, and the landing mark's guards were
+INVERTED rather than deleted** (the `BridgeFooterNote` pattern, §315): the
+harness had pinned `landingMark`'s existence and its two gates, so removing the
+view failed the build with "this guard is testing nothing" — which is the
+harness working. It now asserts the opposite, scoped to `categoryCapsule`'s own
+body because `chip(_:)` beside it draws `BridgeIcon` correctly for the
+uncategorized fallback and the two fixed doors are marks by design, so a
+file-wide grep would fire on the uses that are right. Plus: `activeSource` is
+absent from both the view and the call site (or a later pass re-adds the mark
+and finds the wiring still waiting for it), and every
+`categoryBySeatlessSource` value names a real category — a category renamed out
+from under that table sends Voice silently back to the bare circle and the
+"Other" block, which looks exactly like the bug it fixed. All four
+mutation-proven: each was made to fail before being trusted.
