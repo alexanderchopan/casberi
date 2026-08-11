@@ -325,16 +325,59 @@ struct MainSurface: View {
     /// never mid-session, which is the whole point. One walk serves both the
     /// freeze and the live cache, since at this instant they are the same list.
     private func freezeChips() {
-        let live = computedChipLabels
-        liveChips = live
-        frozenChips = live
+        let computed = computedChips()
+        liveChips = computed.labels
+        frozenChips = computed.labels
+        marketVenues = computed.venues
+        sourceOrder = computed.sources
     }
 
     /// Refresh the live set WITHOUT re-freezing — a source arriving or leaving
     /// mid-session must be reflected (that's what earns a new room its head
     /// slot in `chipLabels`), but re-freezing here would slide the strip under
     /// a thumb, which is the one thing the freeze exists to prevent.
-    private func refreshLiveChips() { liveChips = computedChipLabels }
+    private func refreshLiveChips() {
+        let computed = computedChips()
+        liveChips = computed.labels
+        // The venue list is NOT frozen with the order (unlike `frozenChips`):
+        // it decides which scopes the switcher offers, and a seat that just
+        // landed its first row must be reachable from inside the room the same
+        // foreground — the fold is what took away its own chip, so if this
+        // waited it would be a source with no door at all.
+        marketVenues = computed.venues
+        sourceOrder = computed.sources
+    }
+
+    /// The market seats behind the folded chip, in LEARNED order, published to
+    /// `ShellChrome` for the room's switcher (see that property).
+    @State private var marketVenues: [String] = []
+
+    /// Every source room, unfolded — the sources tray's list. See
+    /// `ShellChrome.sourceOrder` for why it is not `chipLabels`.
+    @State private var sourceOrder: [String] = ["All"]
+
+    /// The venue list the STRIP draws its folded mark from.
+    ///
+    /// Reads the `@State` mirror, but falls back to a fresh computation when
+    /// the mirror is empty while the labels already carry the folded chip —
+    /// which is exactly the first body pass, before `onAppear` runs
+    /// `freezeChips()`. Without this the folded chip renders as a bare grey
+    /// circle with no marks on every cold launch (and, briefly, with no
+    /// attention ring and no venue names in its accessibility label). The
+    /// fallback costs one extra walk in that one frame and never fires again.
+    private var displayedMarketVenues: [String] {
+        if marketVenues.isEmpty && chipLabels.contains(MarketsRoom.room) {
+            return computedChips().venues
+        }
+        return marketVenues
+    }
+
+    /// The chip that should read as active. `filter.source` is always a REAL
+    /// seat, so inside a folded market room it names a source with no circle of
+    /// its own — and an active room with no lit chip reads as no filter at all.
+    private var activeChip: String {
+        MarketsRoom.chipLabel(for: filter.source, folded: chipLabels)
+    }
 
     /// Every source that owns at least one row, newest first — one indexed
     /// `fetchLimit: 1` read per candidate name.
@@ -378,7 +421,23 @@ struct MainSurface: View {
     /// amends §131, 2026-07-21) sorts ahead of it. `sorted` is stable, so a
     /// zero-weight tie keeps the recency order untouched — this only ever
     /// promotes a chip you use, never reorders the rest.
-    private var computedChipLabels: [String] {
+    private var computedChipLabels: [String] { computedChips().labels }
+
+    /// The strip's labels AND the market seats behind its folded chip, from ONE
+    /// walk (2026-08-10).
+    ///
+    /// All three answers come out of the same pass because the expensive half
+    /// is `newestPerSource()` — one indexed fetch per candidate seat — and
+    /// asking it three times to learn three things about the same list would
+    /// triple the strip's whole cost.
+    ///
+    /// They are derived from the same instant, so the tuple is internally
+    /// consistent. That is NOT the same as the VIEW seeing them consistently:
+    /// `chipLabels` can compute inline on the first body pass while the `@State`
+    /// mirrors are still empty, which is why `sourceStrip` hands the strip a
+    /// venue list with its own fallback rather than reading the mirror (see
+    /// `displayedMarketVenues`).
+    private func computedChips() -> (labels: [String], venues: [String], sources: [String]) {
         // Asked SOURCE BY SOURCE since 2026-08-06, not by walking the corpus.
         //
         // This used to read `feedThings`, i.e. the whole corpus materialised as
@@ -432,27 +491,46 @@ struct MainSurface: View {
         // correct: the room's whole content is your own list, so an empty one
         // has nothing to explain.
         let pinned = Pinboard.hasAny(in: modelContext) ? [Pinboard.room] : []
-        return ["All"] + pinned + learned
+        // The market seats fold into ONE chip (2026-08-10) — see `MarketsRoom`.
+        // Applied LAST, over the finished list, so the fold is a presentation
+        // of the learned order rather than a competitor to it: the folded chip
+        // inherits the position of the best-ranked seat it replaces, and every
+        // member's weight is still recorded and still ranks the switcher's
+        // landing. Nothing above this line knows the fold exists.
+        let unfolded = ["All"] + pinned + learned
+        let labels = MarketsRoom.fold(unfolded, members: MarketsRoom.memberSet)
+        // Venues only when the fold actually happened. Below the floor each
+        // seat keeps its own chip, so a switcher would be a second control over
+        // the same act — and `ShellChrome.marketVenues` being empty is exactly
+        // how the room knows not to draw one.
+        //
+        // LEARNED order, not catalog order, and the distinction is load-bearing
+        // in one place: `MarketsRoom.landing` takes the first entry as its
+        // fallback, so catalog order would open the folded chip on Tokens for
+        // somebody who lives in Kalshi — "the fold does not cost a tap" failing
+        // on the very first tap. The switcher re-sorts this into catalog order
+        // for DISPLAY (`FeedScreen.marketsSwitcher`), because a four-word
+        // capsule has not earned learned order and one that reshuffles between
+        // opens reads as broken. Two orders, each where it belongs.
+        let venues = labels.contains(MarketsRoom.room)
+            ? learned.filter { MarketsRoom.isMember($0) } : []
+        return (labels, venues, unfolded)
     }
 
-    /// The pager's pages — every chip is a feed now (the board's own
-    /// non-swiping page retired with it, 2026-07-20).
-    private var feedLabels: [String] {
-        var labels = chipLabels
-        // The selected source ALWAYS gets a page, even with nothing in it.
-        // The chip row is built from things that exist, but `filter.source` is
-        // written unvalidated — a deep link (casberi://feed/source/Gmail), a
-        // bridge connected but not yet synced, or deleting the last thing from
-        // the room you're standing in all name a source with no chip. Without
-        // this, the selection matches no `.tag`, and a TabView with an
-        // unmatched selection quietly renders a DIFFERENT page: the Gmail wash
-        // painted over the All feed, no chip lit, and the honest "Nothing from
-        // Gmail yet" empty state unreachable (measured 2026-07-16).
-        if !labels.contains(filter.source) {
-            labels.append(filter.source)
-        }
-        return labels
-    }
+    // `feedLabels` retired here (2026-08-10). It existed to guarantee the
+    // selected source always had a PAGE — `filter.source` is written
+    // unvalidated (a deep link, a bridge connected but not yet synced, the last
+    // thing in the room you're standing in being deleted), and a
+    // `TabView(.page)` with an unmatched selection quietly renders a DIFFERENT
+    // page: the Gmail wash over the All feed, no chip lit, and the honest
+    // "Nothing from Gmail yet" empty state unreachable (measured 2026-07-16).
+    //
+    // §265 replaced the pager with ONE `FeedScreen(source: filter.source)`
+    // carrying `.id(filter.source)`, which renders whatever the filter names
+    // whether or not a chip exists for it — so the guarantee became structural
+    // and this became a list nothing read. Its last two callers (`go(to:)` and
+    // `step(_:)`) moved to `chipLabels`, which is the right domain for both:
+    // one asks where a chip sits, the other walks chips.
 
     // The per-source brand-hue wash that once flooded this surface is gone
     // (user ruling 2026-07-18: full ink). A feed's identity lives in its chip
@@ -537,23 +615,35 @@ struct MainSurface: View {
     /// call site for the taps so the strip and the rail can never drift on
     /// what a chip actually DOES.
     private func sourceStrip(axis: Axis) -> some View {
-        SourceChips(labels: chipLabels, active: filter.source,
+        SourceChips(labels: chipLabels, active: activeChip,
                     axis: axis,
+                    marketVenues: displayedMarketVenues,
                     minimized: chrome.minimized,
                     onApps: { route.present(.apps) },
                     onSettings: { route.present(.settings) },
                     refreshSpin: chrome.refreshPulse,
                     zoomNS: doorNS) { label in
-            if label == filter.source {
+            // Compared against the CHIP, not the source: re-tapping the folded
+            // Markets chip while standing in Kalshi is a re-tap of the chip
+            // you're on, and comparing raw sources would read it as a switch
+            // and silently do nothing (the guard in `go(to:)` catches it).
+            if label == activeChip {
                 // Re-tapping the chip you're already on pops back to
                 // root (the old per-tab habit) instead of doing nothing.
                 chrome.popHome += 1
                 return
             }
+            let before = filter.source
             go(to: label)
-            // Tap-learning (ChipMemory) counts an actual switch, not
-            // the re-tap-to-pop branch above.
-            ChipMemory.visited(label)
+            // Tap-learning (ChipMemory) counts an actual switch, not the
+            // re-tap-to-pop branch above — and counts the SEAT, never the
+            // folded label, so the weights keep ranking real venues and the
+            // fold's own position stays derived from them. Gated on the source
+            // really moving, because `go` can refuse (a folded chip with
+            // nothing to resolve to), and crediting a visit for a tap that
+            // changed nothing would inflate the weight of the room you are
+            // already standing in.
+            if filter.source != before { ChipMemory.visited(filter.source) }
         }
     }
 
@@ -799,6 +889,34 @@ struct MainSurface: View {
         .onChange(of: chipLabels, initial: true) { _, labels in
             chrome.chipOrder = labels
         }
+        // The folded room's scopes — see `ShellChrome.marketVenues`.
+        .onChange(of: marketVenues, initial: true) { _, venues in
+            chrome.marketVenues = venues
+        }
+        // …and the UNFOLDED list the sources tray shows. Two lists on purpose;
+        // see `ShellChrome.sourceOrder`.
+        .onChange(of: sourceOrder, initial: true) { _, sources in
+            chrome.sourceOrder = sources
+        }
+        // Where the folded chip reopens (2026-08-10). Keyed off `filter.source`
+        // itself rather than written inside `go(to:)`, so EVERY route into a
+        // market room counts: a chip tap, a swipe, the room's own switcher, and
+        // a deep link (casberi://feed/source/Kalshi), which writes the filter
+        // directly and never passes through `go`. `MarketsRoom.remember`
+        // ignores anything that isn't a member, so this costs a set lookup on
+        // every source switch and nothing else.
+        .onChange(of: filter.source, initial: true) { _, source in
+            MarketsRoom.remember(source)
+        }
+        // A room asking to move to another room — the Markets switcher. See
+        // `ShellChrome.sourceRequest` for why it takes this hop instead of
+        // writing the filter itself.
+        .onChange(of: chrome.sourceRequest) { _, request in
+            guard let request else { return }
+            chrome.sourceRequest = nil
+            go(to: request)
+            ChipMemory.visited(request)
+        }
         // The keyboard walk stands down inside a pushed room (2026-07-31):
         // Settings and every bridge setup form are full of text fields, and a
         // menu item holding a bare Return or ↓ would take those keys from
@@ -855,20 +973,63 @@ struct MainSurface: View {
         if filter.tag != "All" {
             withAnimation(DS.Motion.standard) { filter.tag = "All" }
         }
-        guard label != filter.source else { return }
-        let labels = feedLabels
-        let from = labels.firstIndex(of: filter.source) ?? 0
-        let to = labels.firstIndex(of: label) ?? from
-        slideEdge = to >= from ? .trailing : .leading
-        withAnimation(DS.Motion.standard) {
-            filter.source = label
+        // Resolve a folded chip label to the seat it opens (2026-08-10). This
+        // is the ONE place the fold becomes a real source, which is what keeps
+        // "Markets" out of `filter.source` and therefore out of every query,
+        // shape, empty state and deep link downstream. A chip that resolves to
+        // nothing does nothing, rather than routing to a room that isn't there.
+        let target: String
+        if MarketsRoom.isRoom(label) {
+            guard let landing = MarketsRoom.landing(present: marketVenues) else { return }
+            target = landing
+        } else {
+            target = label
         }
+        guard target != filter.source else { return }
+        slideEdge = direction(from: filter.source, to: target)
+        withAnimation(DS.Motion.standard) {
+            filter.source = target
+        }
+    }
+
+    /// Which edge the incoming room slides from.
+    ///
+    /// Two orders, because the fold gives a market seat two different notions
+    /// of "where it sits": inside the folded room the venues have no chip
+    /// positions at all, so a switcher move reads its direction from the
+    /// switcher's own order — otherwise every venue tap would slide the same
+    /// way and the capsule's travel would contradict the room's.
+    private func direction(from: String, to: String) -> Edge {
+        // Against the switcher's DISPLAYED order (catalog), not the learned
+        // order `marketVenues` carries — the slide has to agree with the
+        // capsule the finger just touched, or the room travels one way while
+        // the selection fill travels the other.
+        let shown = MarketsRoom.scopes(present: Set(marketVenues))
+        if let a = shown.firstIndex(of: from), let b = shown.firstIndex(of: to) {
+            return b >= a ? .trailing : .leading
+        }
+        let labels = chipLabels
+        let a = labels.firstIndex(of: MarketsRoom.chipLabel(for: from, folded: labels)) ?? 0
+        let b = labels.firstIndex(of: MarketsRoom.chipLabel(for: to, folded: labels)) ?? a
+        return b >= a ? .trailing : .leading
     }
 
     /// One step left or right in the strip's order. The swipe's whole job.
     private func step(_ delta: Int) {
-        let labels = feedLabels
-        guard let idx = labels.firstIndex(of: filter.source),
+        // Walks CHIPS, not sources (2026-08-10): the folded market seats are
+        // one stop, so a swipe crosses the whole cluster in one step and moving
+        // between venues is the switcher's job. Stepping through the members
+        // instead would make a five-venue fold five swipes wide while showing
+        // one chip, which is the strip lying about how far away things are.
+        var labels = chipLabels
+        // The room you are standing in may have no chip at all — a deep link
+        // (casberi://feed/source/Gmail), a bridge connected but not yet synced,
+        // or deleting the last row in the room you're in. It still has to be
+        // somewhere in the walk, or the swipe silently dies exactly there and
+        // the only way out is the strip. This is the guarantee the retired
+        // `feedLabels` used to make for the pager's pages, kept.
+        if !labels.contains(activeChip) { labels.append(activeChip) }
+        guard let idx = labels.firstIndex(of: activeChip),
               labels.indices.contains(idx + delta) else { return }
         DSHaptic.selection()
         go(to: labels[idx + delta])
@@ -1024,6 +1185,21 @@ struct MainSurface: View {
                 freezeChips()
                 #if DEBUG
                 NSLog("[Casberi] chipLabels: %@", chipLabels.joined(separator: ", "))
+                // The Markets fold, reported from where it is actually decided
+                // (2026-08-10) rather than re-derived in `ProbeHooks` — which
+                // cannot reach `BridgeStore` anyway, and a probe that
+                // recomputes an answer can only ever prove its own copy of the
+                // rule. An unfolded strip has THREE causes that look identical
+                // from outside — fewer than `foldFloor` market seats present,
+                // none present, or the catalog category renamed out from under
+                // `MarketsRoom.members` — so all three are printed rather than
+                // just the verdict.
+                NSLog("marketsFold| folded=%@ venues=%d [%@] landing=%@ members=%d",
+                      chipLabels.contains(MarketsRoom.room) ? "YES" : "NO",
+                      marketVenues.count,
+                      marketVenues.joined(separator: ", "),
+                      MarketsRoom.landing(present: marketVenues) ?? "none",
+                      MarketsRoom.members.count)
                 #endif
                 // A door push that raced launch — casberi://settings arriving
                 // before the first frame — used to get silently dropped by
@@ -1071,7 +1247,14 @@ struct MainSurface: View {
                 }
                 let firstEver = !hasOlder
                     && !UserDefaults.standard.bool(forKey: bloomedKey)
-                chrome.chipCaught(lead.source, firstEver: firstEver)
+                // Bobbed and flipped on the CHIP that's actually showing
+                // (2026-08-10): a folded market seat has no circle of its own,
+                // so keying the catch on the raw source would silently drop
+                // every arrival celebration for the whole cluster — the bloom
+                // fires against a chip that isn't in the strip and nothing
+                // moves. The hue below still reads the real source.
+                chrome.chipCaught(MarketsRoom.chipLabel(for: lead.source, folded: chipLabels),
+                                  firstEver: firstEver)
                 // A repo you star shipping a MAJOR release (a clean x.0.0) is a
                 // moment worth marking: the berry rain falls and a toast names
                 // it. One celebration per arrival batch — the marker is stamped

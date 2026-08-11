@@ -224,6 +224,53 @@ final class ShellChrome {
     /// valid; MainSurface keeps this in sync via `.onChange(of: chipLabels)`.
     var chipOrder: [String] = ["All"]
 
+    /// The same order BEFORE the Markets fold — every source room, one entry
+    /// each (2026-08-10).
+    ///
+    /// It exists because `chipOrder` and the sources tray want different
+    /// things, and folding taught that the hard way: `chipOrder` is "what the
+    /// strip is showing", so ⌘1–⌘9 can stay positional against what you can
+    /// see, and it therefore carries the folded LABEL "Markets". The tray is
+    /// the one screen whose own doc says it "claims to show every source" — fed
+    /// the folded list it would drop all seven market seats and grow a
+    /// "Markets" cell that writes a non-source into `FeedFilter.source`.
+    ///
+    /// So: two lists, each honest about its own surface. Anything that WRITES a
+    /// source takes this one; only the positional shortcut takes `chipOrder`,
+    /// and it resolves the label before writing (see `CasberiApp`).
+    var sourceOrder: [String] = ["All"]
+
+    /// The market seats that earned a chip this session, in catalog order
+    /// (2026-08-10) — the scopes the folded Markets room's switcher offers.
+    ///
+    /// Published here rather than recomputed in `FeedScreen` because the answer
+    /// is the STRIP's: "which seats are present" is exactly what
+    /// `MainSurface.computedChipLabels` walks the corpus and the bridge list to
+    /// decide, and it is deliberately frozen for the session (see `chipLabels`).
+    /// A second derivation in the room would pay that cost again per page and
+    /// could disagree with the strip about which venues exist — which, since the
+    /// fold hides the individual chips, would leave a venue with no door at all.
+    ///
+    /// Empty means no fold: either fewer than `MarketsRoom.foldFloor` seats are
+    /// present, or none are. The room checks this rather than counting members
+    /// itself, so the switcher can never appear over an unfolded strip.
+    var marketVenues: [String] = []
+
+    /// A room switch asked for from INSIDE a room — today only the folded
+    /// Markets room's venue switcher (2026-08-10).
+    ///
+    /// Routed through `MainSurface.go(to:)` rather than letting the switcher
+    /// write `FeedFilter.source` itself, because `go` is the one door every
+    /// chip tap and swipe already walks through (§265) and it does three things
+    /// a direct write would silently skip: it clears a kind filter that would
+    /// otherwise empty the room you land in, it decides which edge the incoming
+    /// room slides from, and it is where the fold resolves a label to a seat.
+    /// A second writer would drift from all three the first time one changed.
+    ///
+    /// Cleared by the reader, so a repeat request for the same venue still
+    /// fires rather than being swallowed as "no change".
+    var sourceRequest: String?
+
     // MARK: - The keyboard walk (Mac, 2026-07-31)
 
     /// The rows the ACTIVE feed page is showing, as ids only — the list half

@@ -27,7 +27,8 @@ enum Pinboard {
     /// `isPinnedRoom` everywhere else — a literal repeated across the chip
     /// strip, the pager, the query and the empty state is four chances to
     /// disagree, and the room silently renders the wrong page when they do
-    /// (the `TabView` unmatched-selection trap `feedLabels` already documents).
+    /// (the `TabView` unmatched-selection trap `MainSurface` documents where
+    /// `feedLabels` used to live).
     static let room = "Pinned"
 
     static func isPinnedRoom(_ source: String) -> Bool { source == room }

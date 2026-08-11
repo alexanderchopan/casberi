@@ -1507,6 +1507,44 @@ struct FeedScreen: View {
         }
     }
 
+    /// The folded Markets room's venue switcher (2026-08-10) — see
+    /// `MarketsRoom` for why the market seats share one chip and what that
+    /// makes this control.
+    ///
+    /// **PINNED, not a List section** — `walletSwitcherBar`'s own ruling
+    /// (2026-07-20, prd §136), which applies here with more force than it did
+    /// there. As a section it scrolled away with the content it scopes, and its
+    /// glass had nothing moving behind it; as a `safeAreaInset` bar it floats
+    /// under the shell's chip strip, the room travels beneath it, and the
+    /// material earns its blur. The wallet switcher scopes one room's rows —
+    /// this one says which ROOM you are in, so losing it to a scroll is
+    /// strictly worse. It shares that inset because Wallet is not a
+    /// `MarketsRoom` member, so the two can never both render.
+    ///
+    /// Each scope is that seat's own room, whole and unchanged — this view
+    /// mounts nothing and shapes nothing, it only asks the shell to switch
+    /// rooms.
+    ///
+    /// Gated on `chrome.marketVenues`, which the strip fills only when the fold
+    /// actually happened, so a single connected market seat keeps its own chip
+    /// and never grows a switcher with one scope in it. The venues arrive in
+    /// LEARNED order (that is what `MarketsRoom.landing` needs); `scopes` puts
+    /// them in catalog order for display, because a capsule of four words is
+    /// not long enough to earn learned order and one that reshuffles between
+    /// opens reads as broken.
+    @ViewBuilder private var marketsSwitcher: some View {
+        if chrome.marketVenues.count >= MarketsRoom.foldFloor,
+           MarketsRoom.isMember(source) {
+            MarketsVenueSwitcher(
+                venues: MarketsRoom.scopes(present: Set(chrome.marketVenues)),
+                active: source) { venue in
+                chrome.sourceRequest = venue
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.bottom, DS.Space.s2)
+        }
+    }
+
     private var feedList: some View {
         List {
             Group {
@@ -1694,6 +1732,11 @@ struct FeedScreen: View {
             chrome.pullTension = clamped
         }
         .safeAreaInset(edge: .top, spacing: 0) { walletSwitcherBar }
+        // The folded Markets room's venue switcher, pinned for the same reason
+        // and on the same edge — see `marketsSwitcher`. A second inset rather
+        // than a shared one so each stays self-gating; only one of the two can
+        // ever render, since Wallet is not a `MarketsRoom` member.
+        .safeAreaInset(edge: .top, spacing: 0) { marketsSwitcher }
         .dsSoftScrollEdges()
         // Arrival is `isActive`, not `onAppear` (2026-07-16, the pager): a
         // mounted neighbour appears without ever being looked at, so landing
@@ -4961,9 +5004,9 @@ struct FeedScreen: View {
     private var emptyLine: String {
         let tagLabel = ThingKind.from(typeTag: filter.tag)?.typeTagPlural ?? filter.tag
         // The pinned room is normally unreachable while empty — its chip only
-        // exists once something is pinned — but `feedLabels` gives the SELECTED
-        // source a page whether or not it has a chip, so unpinning the last
-        // thing while standing here lands exactly on this line. It says what
+        // exists once something is pinned — but the shell renders whatever
+        // `filter.source` names whether or not it has a chip, so unpinning the
+        // last thing while standing here lands exactly on this line. It says what
         // the verb is rather than that the room is empty, because unlike every
         // other room nothing will ever arrive here on its own.
         if Pinboard.isPinnedRoom(source) {

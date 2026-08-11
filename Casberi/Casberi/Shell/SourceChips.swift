@@ -27,6 +27,14 @@ struct SourceChips: View {
     let active: String
     /// `.horizontal` is the iPhone strip; `.vertical` is the iPad rail.
     var axis: Axis = .horizontal
+    /// The seats behind the folded Markets chip, in learned order (2026-08-10).
+    ///
+    /// Passed in rather than read off `ShellChrome`, because the strip renders
+    /// once BEFORE the shell's `onAppear` has published anything — and a folded
+    /// chip whose venue list is empty draws as a bare grey circle. The owner
+    /// hands over a value with its own fallback (`displayedMarketVenues`), so
+    /// the mark and the labels can never disagree with the chip beside them.
+    var marketVenues: [String] = []
     /// Folded while the feed scrolls down (2026-07-30, `ShellChrome.minimized`).
     ///
     /// The strip does NOT leave — that ruling stands and is the whole reason
@@ -314,8 +322,16 @@ struct SourceChips: View {
         // The strip and the tray it opens must agree about which seats are in
         // trouble, so this line and that one stay identical.
         let seat = BridgeCatalog.offer(forSource: label)?.name ?? label
+        // The folded Markets chip answers for the seats behind it: with the
+        // members' own circles gone, a broken Kalshi would otherwise have no
+        // ring anywhere in the strip and the connection could sit dead with
+        // nothing on any surface to say so. The DASHED attention ring is
+        // exactly as legible on a folder as on a brand mark, and the room's
+        // switcher is one tap from naming which venue it is.
+        let attentionSeats: Set<String> = MarketsRoom.isRoom(label)
+            ? Set(marketVenues) : [seat]
         let broken = bridges.bridges.contains {
-            $0.name == seat && $0.status == .attention
+            attentionSeats.contains($0.name) && $0.status == .attention
         }
         Button {
             DSHaptic.selection()
@@ -339,6 +355,11 @@ struct SourceChips: View {
                         .frame(width: iconSize, height: iconSize)
                         .clipShape(Circle())
                         .dsGlass(cornerRadius: iconSize / 2)
+                case MarketsRoom.room:
+                    // The folded market seats (2026-08-10) — see
+                    // `MarketsChipMark` for why it wears their marks rather
+                    // than a glyph of its own.
+                    MarketsChipMark(venues: marketVenues, size: iconSize)
                 default:
                     BridgeIcon(name: label, size: iconSize, circular: true)
                 }
@@ -424,7 +445,76 @@ struct SourceChips: View {
     }
 
     private func chipAccessibilityLabel(_ label: String, broken: Bool) -> String {
-        label + (broken ? ", needs reconnecting" : "")
+        // The folded chip NAMES its venues: every other chip in this strip is a
+        // brand mark whose label is the brand, and a cluster is the one mark
+        // where the picture genuinely carries more than its own word.
+        guard MarketsRoom.isRoom(label), !marketVenues.isEmpty else {
+            return broken ? String(localized: "\(label), needs reconnecting") : label
+        }
+        let venues = ListFormatter.localizedString(byJoining: marketVenues)
+        return broken
+            ? String(localized: "Markets: \(venues), needs reconnecting")
+            : String(localized: "Markets: \(venues)")
+    }
+}
+
+/// The folded Markets chip's face (2026-08-10) — the member seats' own marks,
+/// clustered on a recessed well.
+///
+/// The well is here because a folder needs a GROUND for its contents to sit
+/// on, and for no other reason — explicitly NOT because it matches the
+/// neutral chips, which wear glass (`dsGlass` on "All", `dsGlassDoor` on both
+/// doors) and have since 2026-08-06, when the avatar's flat grey well was
+/// removed as a bug. Glass would be wrong here anyway: it exists to blur what
+/// passes behind the floating layer, and what is behind this circle is four
+/// opaque brand marks of its own.
+///
+/// **Why a folder and not a glyph.** This strip's whole grammar is un-frosted
+/// brand identity (ruling 2026-07-20: "an icon IS content"), so a generic
+/// markets symbol would be the only chip in the row standing for the app's
+/// taxonomy instead of one of the person's own connections — chrome wearing a
+/// content chip's clothes. A cluster keeps the promise: it says exactly which
+/// seats are inside, and it differs between someone watching two tokens and
+/// someone deep in four venues, because it is drawn from their seats.
+///
+/// Rows of two, ragged last row centered — the iOS folder's own shape, and the
+/// reason it needs no special case per count: two venues draw one row, three
+/// draw a row of two above a centered one, four draw a square. Capped at four
+/// because a fifth mark inside 46 points is a smudge, and the cap is silent on
+/// purpose — this is a door, not an inventory, and the switcher behind it names
+/// every venue in words.
+private struct MarketsChipMark: View {
+    let venues: [String]
+    let size: CGFloat
+
+    /// 16pt marks with a 3pt gutter inside a 46pt circle — two of them plus the
+    /// gutter span 35pt, which leaves the cluster clear of the curve at the
+    /// corners where a square inscribed in a circle runs out of room.
+    private var cell: CGFloat { size * 0.348 }
+    private var gap: CGFloat { size * 0.065 }
+
+    private var rows: [[String]] {
+        let shown = Array(venues.prefix(4))
+        return stride(from: 0, to: shown.count, by: 2).map {
+            Array(shown[$0..<min($0 + 2, shown.count)])
+        }
+    }
+
+    var body: some View {
+        ZStack {
+            Circle().fill(DS.surfaceWell)
+            VStack(spacing: gap) {
+                ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                    HStack(spacing: gap) {
+                        ForEach(row, id: \.self) { venue in
+                            BridgeIcon(name: venue, size: cell, circular: true)
+                        }
+                    }
+                }
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(Circle())
     }
 }
 

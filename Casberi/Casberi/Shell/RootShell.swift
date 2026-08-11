@@ -1079,11 +1079,16 @@ struct RootShell: View {
         // HERE, beside the bar that raises it, so it opens over a pushed room
         // (Apps, Settings, a bridge setup form) the same way it opens over the
         // feed; the chip strip it complements only exists on `MainSurface`.
-        // `chrome.chipOrder` is the strip's own frozen order, mirrored live —
-        // the same array Mac's ⌘1–⌘9 counts along, so the grid and the strip
-        // can never disagree about where a source sits.
+        // `chrome.sourceOrder` is the strip's own frozen order, mirrored live —
+        // and deliberately the UNFOLDED one (2026-08-10). The Markets fold
+        // collapses seven seats into one chip up in the strip, which is right
+        // there and wrong here: this grid is the screen that claims to show
+        // EVERY source, so it keeps naming all seven. Handing it the folded
+        // list would have dropped them all AND grown a "Markets" cell whose tap
+        // writes a non-source into `filter.source` — a room whose predicate
+        // matches nothing, forever, under a chip that lights up as if it worked.
         .sheet(isPresented: $sourcesOpen) {
-            rootPresented(SourcesTray(labels: chrome.chipOrder, active: filter.source) { label in
+            rootPresented(SourcesTray(labels: chrome.sourceOrder, active: filter.source) { label in
                 // Land ON the feed that was named. A pick made from a pushed
                 // room would otherwise switch the source BEHIND a Settings
                 // screen still standing on the stack — the tray would close

@@ -103,6 +103,13 @@ private struct BrowseCard: Identifiable {
     /// to find, and a header, a card shape and the `.all` scope's one special
     /// behaviour all went away with it.
     let twinProbability: Double?
+    /// Whose price `twinProbability` is — the OTHER venue's name, so the bar
+    /// can wear the right mark. Hardcoded to Polymarket until 2026-08-10, which
+    /// was harmless only while the twin existed in the merged `.all` scope on
+    /// Kalshi cards alone; a Polymarket card showing Kalshi's price under a
+    /// Polymarket mark would be the §83 fake status, in the one place on this
+    /// card where the whole point is which exchange said what.
+    let twinVenue: String?
     /// The Tokens-watchlist name this question crosses, if any (2026-07-30)
     /// — "You're already watching ETH" surfaced BEFORE following, the same
     /// join `PredictionMoments.checkCrossings` fires as a post-follow moment.
@@ -215,6 +222,16 @@ struct PredictionBrowseSection: View {
     /// sourceRefs already in the corpus, across BOTH venues — read once per
     /// load so each row can mark itself followed without its own fetch.
     @State private var followedRefs: Set<String> = []
+    /// Both exchanges connected? The only condition the twin read actually
+    /// needs (2026-08-10) — see `loadIfNeeded`. Computed here rather than
+    /// passed down from `PredictionRoomBook`, which asks the same question for
+    /// its own switcher: one derivation each, from the same store, so neither
+    /// can hand the other a stale answer.
+    private var bothConnected: Bool {
+        let connected = Set(store.bridges.filter { $0.status == .connected }.map(\.name))
+        return connected.contains("Kalshi") && connected.contains("Polymarket")
+    }
+
     @State private var loaded = false
     /// Bumped by the empty state's Retry — `.task(id:)` only re-fires when
     /// its id string actually CHANGES, so a genuine one-off failure (the
@@ -470,9 +487,19 @@ struct PredictionBrowseSection: View {
         let pCats = await pc
         // Same disagreement read, resolved onto the cards that have a
         // counterpart rather than into a section of its own (prd §298).
-        let pairs = scope == .all ? await PredictionDisagreement.find(among: kRows) : []
-        let twins = Dictionary(pairs.map { ("kalshi:\($0.kalshi.ticker)", $0.polymarket.probability) },
-                               uniquingKeysWith: { first, _ in first })
+        //
+        // UN-GATED from `.all` (2026-08-10). It used to require the merged
+        // scope, which the Markets fold retires — so left alone, the one
+        // reading an aggregate produces that neither venue can produce alone
+        // would have quietly disappeared with it. The real condition was never
+        // "you are standing in the merged view", it was "both books exist to
+        // compare", and `find` fetches the counterpart itself rather than
+        // reading rows this load gathered. So the comparison is now a property
+        // of any card in any scope, which is strictly more of it than before:
+        // previously you saw a disagreement only if you happened to widen the
+        // scope first.
+        // …and it is read AFTER the book is committed, never before — see the
+        // deferred block at the end of this function.
         let tokens = PredictionCrossings.watchedTokens(context: modelContext)
 
         // The bug this fixes: `.task(id:)` cancels the PREVIOUS
@@ -504,9 +531,43 @@ struct PredictionBrowseSection: View {
         polymarketRows = pRows
         kalshiCategories = kCats
         polymarketCategories = pCats
-        twinPrices = twins
         watchedTokens = tokens
         loaded = true
+
+        // --- the twin price, AFTER the book is on screen ------------------
+        //
+        // Deferred deliberately (2026-08-10). Un-gating this from `.all` turned
+        // it from something you saw once after a deliberate switcher tap into
+        // something that runs on EVERY room load — and `find` is six sequential
+        // Polymarket searches. Computed before `loaded = true` it holds the
+        // skeleton up for all six round trips, so the whole book waits on a
+        // decoration. The rows paint first now and the second bar arrives when
+        // it arrives, which is also the honest rendering: the twin is a fact
+        // about another exchange, not part of this one's book.
+        //
+        // `twinPrices` is NOT cleared before the read. Its keys are per-market
+        // refs, so a stale one can only match a market that is still on screen
+        // — and clearing would blink every twin bar off and back on for the
+        // duration of the read. It IS cleared when the comparison stops being
+        // possible at all, or a disconnected venue's prices would sit there
+        // forever claiming to be current.
+        guard bothConnected else {
+            if !twinPrices.isEmpty { twinPrices = [:] }
+            return
+        }
+        // Kalshi's side needs its own rows, which `.polymarket` never fetches;
+        // the reverse walk covers exactly that case, and reads Kalshi's cached
+        // listing once rather than per row (see `findReverse`).
+        let kPairs = kRows.isEmpty ? [] : await PredictionDisagreement.find(among: kRows)
+        let pPairs = scope == .polymarket
+            ? await PredictionDisagreement.findReverse(among: pRows) : []
+        var twins: [String: Double] = [:]
+        for pair in kPairs { twins["kalshi:\(pair.kalshi.ticker)"] = pair.polymarket.probability }
+        for pair in pPairs { twins["polymarket:\(pair.polymarket.conditionId)"] = pair.kalshi.probability }
+        // The same superseded-call guard the book above gets, for the same
+        // reason: a cancelled load must not stomp a newer one's twins.
+        guard !Task.isCancelled else { return }
+        twinPrices = twins
     }
 
     // MARK: - Card construction
@@ -529,6 +590,7 @@ struct PredictionBrowseSection: View {
                           isThin: race.outcomes.first?.isThin ?? false,
                           twinProbability: race.outcomes.first
                               .flatMap { twinPrices["kalshi:\($0.ticker)"] },
+                          twinVenue: "Polymarket",
                           crossing: PredictionCrossings.crossing(for: race.title, tokens: watchedTokens.live))
     }
 
@@ -548,7 +610,8 @@ struct PredictionBrowseSection: View {
                           previousProbability: race.outcomes.first?.previousProbability,
                           deltaLabel: "vs last week",
                           isThin: race.outcomes.first?.isThin ?? false,
-                          twinProbability: nil,
+                          twinProbability: twinPrices["polymarket:\(race.outcomes.first?.conditionId ?? "")"],
+                          twinVenue: "Kalshi",
                           crossing: PredictionCrossings.crossing(for: race.title, tokens: watchedTokens.live))
     }
 
@@ -626,9 +689,9 @@ struct PredictionBrowseSection: View {
 
             // The other exchange, when it prices the same question — what
             // replaced the "They disagree" section (prd §298).
-            if let twin = card.twinProbability {
+            if let twin = card.twinProbability, let twinVenue = card.twinVenue {
                 HStack(spacing: DS.Space.s2) {
-                    BridgeIcon(name: "Polymarket", size: 16, circular: true)
+                    BridgeIcon(name: twinVenue, size: 16, circular: true)
                     PredictionOddsBar(probability: twin).frame(height: 8)
                     Text("\(Int((twin * 100).rounded()))%")
                         .dsText(.callout15).fontWeight(.semibold).monospacedDigit()

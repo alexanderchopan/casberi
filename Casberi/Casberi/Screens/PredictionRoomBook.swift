@@ -29,6 +29,13 @@ struct PredictionRoomBook: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
+    @Environment(ShellChrome.self) private var chrome
+
+    /// Is the strip showing the folded Markets chip? Then the room already
+    /// wears a venue switcher and this one must not (see `body`).
+    private var foldedIntoMarkets: Bool {
+        chrome.marketVenues.count >= MarketsRoom.foldFloor
+    }
 
     @State private var scope: PredictionVenueScope = .all
     @State private var didSetScope = false
@@ -76,11 +83,22 @@ struct PredictionRoomBook: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
-            if bothConnected {
+            // The venue switcher stands down under the Markets fold
+            // (2026-08-10). Both venues are then scopes of `MarketsVenueSwitcher`
+            // one level up, and two capsules stacked over one book — each able
+            // to change which venue you are reading — is two controls for one
+            // act, with no way to tell from either which of them won.
+            //
+            // What that costs is the merged `.all` scope, and it is a smaller
+            // loss than it looks: the merged book's real payoff was the twin
+            // price, which `PredictionBrowseSection` now draws in EVERY scope
+            // (see `bothConnected` there), so the comparison survives on the
+            // cards while the confusing double control does not.
+            if bothConnected && !foldedIntoMarkets {
                 PredictionVenueSwitcher(scope: $scope)
             }
             PredictionBrowseSection(
-                scope: bothConnected ? scope : ownScope,
+                scope: bothConnected && !foldedIntoMarkets ? scope : ownScope,
                 onWatchedKalshi: { _ in registerIfNeeded(name: "Kalshi", id: "kalshi") },
                 onWatchedPolymarket: { _ in registerIfNeeded(name: "Polymarket", id: "polymarket") },
                 onPreview: onPreview)
