@@ -131,6 +131,39 @@ SKIP_BUMP=1 \
      re-tune would either leak a phrase to Spotlight or quietly stop
      Spotlight finding people's notes.
 
+   **Demo parity is a REQUIRED step of every ship (user ruling 2026-08-08) —
+   never ship without checking it, and never wait to be asked**, the same
+   standing the public-beta handoff itself carries. `verify.sh` runs two
+   checks for this, and they are NOT the same kind of gate as the four above,
+   which is worth understanding rather than skimming past:
+
+   - **`demo-selftest.py` checks D/E** (its own static half, always
+     hard-fails) — every name `DemoSeedAll.seatTable` claims as a connected
+     demo seat resolves to a real `BridgeCatalog.offers` entry and has an
+     actual seeded row. This is the CATALOG-NAME half of parity: a bridge
+     that gets renamed or retired, or a demo seat added with nothing behind
+     it, fails the build outright.
+   - **The "Demo panel figure-kind coverage" step**, in the simulator tail —
+     runs the real furnished demo through the real agent-panel composer and
+     checks every `AgentPanel.Figure` case actually draws. This is the
+     RENDERING half, and it is deliberately **WARN-only, never a hard fail**:
+     the panel caps at 20 cards ranked by affinity, so a figure kind that
+     genuinely composes can still lose one run's ranking race (measured:
+     PostHog's `curve` present in two runs, absent in a third, identical
+     build). A warning here is NOT something to skim past and ship anyway —
+     it found a real, shipped-adjacent bug on its first real run (`runway`
+     never drew because `CloudflareRunwaySource.compose` needed a
+     `CloudflareEstateStore` snapshot nothing had ever seeded, 2026-08-08).
+     **When it warns:** re-run once to see if the miss is consistent (a real
+     gap warns every time; ranking noise doesn't), and if it's consistent,
+     fix the actual wiring before shipping, the way the Cloudflare estate
+     seed got fixed — don't just re-run until it happens to pass.
+
+   Neither check requires remembering to update the demo when something new
+   ships elsewhere — see CLAUDE.md's demo-mode entry for what they do and
+   don't cover (catalog/rendering consistency, not "every new feature must
+   appear in the demo").
+
    Running these individually is not a substitute for `verify.sh`, and
    picking the audits you happen to remember is exactly the failure mode: the
    Stripe ship ran `catalog-sync.sh` and the liveness audit by hand, both
