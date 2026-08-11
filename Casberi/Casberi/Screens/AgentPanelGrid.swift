@@ -250,17 +250,21 @@ private struct TileBadge: View {
                 // DS.tint).
                 IconChip(tone: DS.neutralBadge, size: size, radius: cornerRadius) {
                     Image(systemName: Self.crossSourceSymbol(for: card.figure))
-                        .font(.system(size: 9, weight: .bold))
+                        .dsGlyph(9, weight: .bold)
                 }
             } else {
                 let symbol = BridgeGlyph.symbol(for: card.source)
                 IconChip(tone: hue, size: size, radius: cornerRadius) {
                     if symbol == "app" {
                         Text(card.source.prefix(1).uppercased())
-                            .font(.system(size: 9, weight: .bold))
+                            // A letter standing in for a missing brand mark IS
+                            // a glyph — same rung as the two symbols either
+                            // side of it, so the chip never changes size with
+                            // which fallback it drew.
+                            .dsGlyph(9, weight: .bold)
                     } else {
                         Image(systemName: symbol)
-                            .font(.system(size: 9, weight: .bold))
+                            .dsGlyph(9, weight: .bold)
                     }
                 }
             }
@@ -1011,7 +1015,7 @@ private struct RunwayFigure: View {
                     .fill(DS.textTertiary)
                     .frame(width: 2, height: 10)
                     .scaleEffect(axis >= 1 ? 1 : 0)
-                    .animation(.spring(response: 0.3, dampingFraction: 0.5), value: axis >= 1)
+                    .animation(DS.Motion.bubble, value: axis >= 1)
                     .position(x: 1, y: axisY)
                 ForEach(Array(marks.enumerated()), id: \.offset) { i, mark in
                     // Deadlines LAND — scaling down onto the axis rather than

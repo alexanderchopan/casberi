@@ -112,7 +112,7 @@ struct AgentBar: View {
                 // reads as secondary still has to be hittable (HIG's floor,
                 // and the catalogue door's own lesson one line down).
                 Image(systemName: "magnifyingglass")
-                    .font(.system(size: 15, weight: .semibold))
+                    .dsGlyph(15)
                     .foregroundStyle(DS.textSecondary)
                     // The control is the CIRCLE, not the glyph (the catalogue
                     // door's own 2026-07-26 lesson: a `.frame()` around a small
@@ -319,7 +319,7 @@ struct WhisperCapsule: View {
                 }
                 Spacer(minLength: DS.Space.s2)
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .dsGlyph(12)
                     .foregroundStyle(DS.textTertiary)
                     .accessibilityHidden(true)
             }

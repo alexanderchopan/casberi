@@ -600,7 +600,7 @@ struct HandleSetupScreen: View {
                     Text("See in Feed")
                     Spacer()
                     Image(systemName: "arrow.right")
-                        .font(.system(size: 13, weight: .semibold))
+                        .dsGlyph(13)
                         .foregroundStyle(DS.textTertiary)
                 }
                 .dsText(.body17).foregroundStyle(DS.tint)
@@ -746,7 +746,7 @@ struct HandleSetupScreen: View {
                 .frame(width: 56, height: 56)
                 .overlay {
                     Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .semibold))
+                        .dsGlyph(16)
                         .foregroundStyle(DS.textTertiary)
                 }
             Text("Watch").dsText(.label12).foregroundStyle(DS.textTertiary)
@@ -832,7 +832,7 @@ struct HandleSetupScreen: View {
             if let imageURL, !imageURL.isEmpty {
                 RemoteThumb(urlString: imageURL, size: 32, fallback: bridge.rawValue, circular: false)
             } else {
-                BridgeIcon(name: bridge.rawValue, size: 32, circular: false)
+                BridgeIcon(name: bridge.rawValue, size: DS.Mark.list, circular: false)
             }
             VStack(alignment: .leading, spacing: 1) {
                 Text(title).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)

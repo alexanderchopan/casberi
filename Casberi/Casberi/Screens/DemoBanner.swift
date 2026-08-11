@@ -44,7 +44,7 @@ struct DemoBanner: View {
     var body: some View {
         HStack(spacing: DS.Space.s3) {
             Image(systemName: "sparkles")
-                .font(.system(size: 15, weight: .semibold))
+                .dsGlyph(15)
                 .foregroundStyle(.orange)
 
             Text("Demo — none of this is yours")

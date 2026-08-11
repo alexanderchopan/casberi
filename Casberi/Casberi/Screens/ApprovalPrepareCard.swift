@@ -53,7 +53,7 @@ struct ApprovalPrepareCard: View {
                 // their wallet or on Revoke.cash, and the chain now says so.
                 HStack(spacing: DS.Space.s2) {
                     Image(systemName: "checkmark.circle")
-                        .font(.system(size: 15))
+                        .dsGlyph(15, weight: .regular)
                         .foregroundStyle(DS.confirm)
                     Text("No longer active — this approval has been revoked.")
                         .dsText(.callout15).foregroundStyle(DS.confirm)
@@ -106,7 +106,7 @@ struct ApprovalPrepareCard: View {
         Button(action: action) {
             HStack(spacing: DS.Space.s2) {
                 Image(systemName: icon)
-                    .font(.system(size: 13))
+                    .dsGlyph(13, weight: .regular)
                     .foregroundStyle(DS.textSecondary)
                     .frame(width: 18, alignment: .center)
                 Text(label)

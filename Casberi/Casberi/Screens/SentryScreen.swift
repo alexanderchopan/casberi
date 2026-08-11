@@ -172,7 +172,7 @@ struct SentryScreen: View {
                 HStack(spacing: DS.Space.s3) {
                     // Square, not round — an organization is a topic, not a
                     // person (the mark grammar ruling, prd §184).
-                    BridgeIcon(name: "Sentry", size: 32, circular: false)
+                    BridgeIcon(name: "Sentry", size: DS.Mark.list, circular: false)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(SentryAccount.orgName.isEmpty ? org : SentryAccount.orgName)
                             .dsText(.body17).foregroundStyle(DS.textPrimary)

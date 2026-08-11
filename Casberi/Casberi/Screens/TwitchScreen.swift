@@ -77,7 +77,7 @@ struct TwitchScreen: View {
             if TwitchAuth.connected {
                 HStack(spacing: DS.Space.s3) {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 20))
+                        .dsGlyph(20, weight: .regular)
                         .foregroundStyle(DS.confirm)
                     Text("Connected — live follows land in your feed.")
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
@@ -104,7 +104,7 @@ struct TwitchScreen: View {
                         Button(action: { copyCode(code.userCode) }) {
                             HStack(spacing: DS.Space.s1) {
                                 Image(systemName: codeCopied ? "checkmark" : "doc.on.doc")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .dsGlyph(13)
                                 Text(codeCopied ? "Copied" : "Copy").dsText(.subhead13).fontWeight(.semibold)
                             }
                             .foregroundStyle(codeCopied ? DS.confirm : DS.tint)

@@ -205,7 +205,7 @@ struct WalletBalanceHeadline: View {
                         // the tap.
                         if onOpen != nil {
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 10, weight: .semibold))
+                                .dsGlyph(10)
                                 .foregroundStyle(DS.textTertiary)
                         }
                     }
@@ -493,7 +493,7 @@ struct WalletCompositionStrip: View {
                         .lineLimit(1)
                     if door {
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 9, weight: .semibold))
+                            .dsGlyph(9)
                             .foregroundStyle(DS.textTertiary)
                     }
                 }
@@ -981,7 +981,7 @@ struct WalletConcentrationLine: View {
                             .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                             .lineLimit(1)
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 10, weight: .semibold))
+                            .dsGlyph(10)
                             .foregroundStyle(DS.textTertiary)
                     }
                     Spacer(minLength: 0)
@@ -1513,7 +1513,7 @@ struct WalletWorthALookTray: View {
             } label: {
                 HStack(spacing: DS.Space.s3) {
                     Image(systemName: "photo.badge.exclamationmark.fill")
-                        .font(.system(size: 13, weight: .semibold))
+                        .dsGlyph(13)
                         .foregroundStyle(DS.textSecondary)
                         .frame(width: 28, height: 28)
                         .background(Circle().fill(DS.surfaceSheet))
@@ -1530,7 +1530,7 @@ struct WalletWorthALookTray: View {
                     }
                     Spacer(minLength: 0)
                     Image(systemName: awareExpanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 11, weight: .semibold))
+                        .dsGlyph(11)
                         .foregroundStyle(DS.textTertiary)
                 }
                 .padding(.horizontal, DS.Space.s3).padding(.vertical, DS.Space.s3)
@@ -1590,7 +1590,7 @@ struct WalletWorthALookTray: View {
                            door: (label: String, url: URL)?) -> some View {
         HStack(alignment: .top, spacing: DS.Space.s3) {
             Image(systemName: icon)
-                .font(.system(size: 13, weight: .semibold))
+                .dsGlyph(13)
                 .foregroundStyle(hot ? DS.destructive : DS.attention)
                 .frame(width: 28, height: 28)
                 .background(
@@ -1613,7 +1613,7 @@ struct WalletWorthALookTray: View {
                     HStack(spacing: 3) {
                         Text(door.label)
                         Image(systemName: "arrow.up.right")
-                            .font(.system(size: 9, weight: .bold))
+                            .dsGlyph(9, weight: .bold)
                     }
                     .dsText(.subhead13).fontWeight(.semibold)
                     .foregroundStyle(DS.tint)
@@ -1771,7 +1771,7 @@ struct WalletWorthALookTray: View {
                     .lineLimit(1).truncationMode(.tail)
                 Spacer(minLength: DS.Space.s2)
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .dsGlyph(12)
                     .foregroundStyle(DS.textTertiary)
             }
             .frame(height: Self.rowHeight)
@@ -1803,7 +1803,7 @@ struct WalletSeeAllRow: View {
                     .dsText(.callout15).fontWeight(.semibold)
                     .monospacedDigit()
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
+                    .dsGlyph(11)
             }
             .foregroundStyle(DS.tint)
             .frame(maxWidth: .infinity)

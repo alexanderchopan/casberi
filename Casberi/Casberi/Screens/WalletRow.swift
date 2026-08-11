@@ -94,7 +94,7 @@ struct WalletRow<Trailing: View>: View {
         switch mark {
         case .symbol(let name, let tint):
             Image(systemName: name)
-                .font(.system(size: 14, weight: .semibold))
+                .dsGlyph(14)
                 .foregroundStyle(tint)
                 .frame(width: Self.markSize, height: Self.markSize)
                 .background(Circle().fill(tint.opacity(0.16)))
@@ -123,7 +123,7 @@ struct WalletRow<Trailing: View>: View {
                 .overlay(alignment: .bottomTrailing) {
                     if flagged {
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 9))
+                            .dsGlyph(9, weight: .regular)
                             .foregroundStyle(DS.destructive)
                             .padding(3)
                             .background(Circle().fill(.black.opacity(0.55)))
@@ -159,7 +159,7 @@ extension WalletRow where Trailing == EmptyView {
 struct WalletRowChevron: View {
     var body: some View {
         Image(systemName: "chevron.right")
-            .font(.system(size: 12, weight: .semibold))
+            .dsGlyph(12)
             .foregroundStyle(DS.textTertiary)
             .accessibilityHidden(true)
     }
@@ -222,7 +222,7 @@ struct WalletSectionLabel: View {
                             .dsText(.label12).fontWeight(.semibold)
                             .monospacedDigit()
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 9, weight: .bold))
+                            .dsGlyph(9, weight: .bold)
                     }
                     .foregroundStyle(DS.tint)
                     .contentShape(Rectangle())

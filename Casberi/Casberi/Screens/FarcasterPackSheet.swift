@@ -22,14 +22,14 @@ struct FarcasterPackDoor: View {
             open = true
         } label: {
             HStack(spacing: DS.Space.s3) {
-                BridgeIcon(name: "Farcaster", size: 32, circular: false)
+                BridgeIcon(name: "Farcaster", size: DS.Mark.list, circular: false)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Follow a starter pack").dsText(.body17).foregroundStyle(DS.textPrimary)
                     Text("A hand-picked list, in one tap").dsText(.label12).foregroundStyle(DS.textTertiary)
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
+                    .dsGlyph(13)
                     .foregroundStyle(DS.textTertiary)
             }
             .dsListCardRow()

@@ -107,7 +107,7 @@ struct AssetRosterAddSlot: View {
                        height: AssetRosterSlot<EmptyView>.markSize)
                 .overlay {
                     Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .semibold))
+                        .dsGlyph(16)
                         .foregroundStyle(DS.textTertiary)
                 }
             Text("Watch")

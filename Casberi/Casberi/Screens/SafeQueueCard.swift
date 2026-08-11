@@ -115,7 +115,7 @@ struct SafeQueueCard: View {
                         .overlay(alignment: .bottomTrailing) {
                             if signer.signed {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 10, weight: .bold))
+                                    .dsGlyph(10, weight: .bold)
                                     .foregroundStyle(DS.confirm)
                                     .background(Circle().fill(DS.page).padding(1))
                                     .offset(x: 2, y: 2)
@@ -157,7 +157,7 @@ struct SafeQueueCard: View {
     private var conflictNote: some View {
         HStack(alignment: .top, spacing: DS.Space.s2) {
             Image(systemName: "arrow.triangle.branch")
-                .font(.system(size: 13))
+                .dsGlyph(13, weight: .regular)
                 .foregroundStyle(DS.textSecondary)
                 .frame(width: 18)
             Text(check.conflicts == 1
@@ -173,7 +173,7 @@ struct SafeQueueCard: View {
     private func statusLine(icon: String, tone: Color, text: LocalizedStringKey) -> some View {
         HStack(spacing: DS.Space.s2) {
             Image(systemName: icon)
-                .font(.system(size: 15))
+                .dsGlyph(15, weight: .regular)
                 .foregroundStyle(tone)
             Text(text)
                 .dsText(.callout15).foregroundStyle(tone)
@@ -186,7 +186,7 @@ struct SafeQueueCard: View {
         Button(action: action) {
             HStack(spacing: DS.Space.s2) {
                 Image(systemName: icon)
-                    .font(.system(size: 13))
+                    .dsGlyph(13, weight: .regular)
                     .foregroundStyle(DS.textSecondary)
                     .frame(width: 18, alignment: .center)
                 Text(label)

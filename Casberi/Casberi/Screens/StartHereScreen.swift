@@ -416,7 +416,7 @@ struct StartFigureMark: View {
             // The demo is not one figure — it is all of them — so it keeps a
             // glyph rather than pretending to preview a single room.
             Image(systemName: "sparkles")
-                .font(.system(size: 24, weight: .semibold))
+                .dsGlyph(24)
                 .foregroundStyle(hue)
         }
     }

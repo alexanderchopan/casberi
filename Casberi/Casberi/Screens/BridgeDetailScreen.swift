@@ -108,7 +108,7 @@ struct BridgeDetailScreen: View {
                                     }
                                     Spacer()
                                     Image(systemName: "chevron.right")
-                                        .font(.system(size: 13, weight: .semibold))
+                                        .dsGlyph(13)
                                         .foregroundStyle(DS.textTertiary)
                                 }
                                 .padding(.horizontal, DS.Space.s4)

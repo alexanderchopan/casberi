@@ -35,7 +35,7 @@ struct DiagnosticsScreen: View {
                     HStack(spacing: DS.Space.s2) {
                         Image(systemName: "stethoscope")
                             .accessibilityHidden(true)
-                            .font(.system(size: 15, weight: .semibold))
+                            .dsGlyph(15)
                             .foregroundStyle(DS.textSecondary)
                             .symbolEffect(.pulse, options: .repeating, isActive: running)
                         Text("Running…").dsText(.subhead13).foregroundStyle(DS.textTertiary)

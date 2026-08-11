@@ -15,14 +15,14 @@ struct StarterPacksDoor: View {
             open = true
         } label: {
             HStack(spacing: DS.Space.s3) {
-                BridgeIcon(name: "Bluesky", size: 32, circular: false)
+                BridgeIcon(name: "Bluesky", size: DS.Mark.list, circular: false)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Follow a starter pack").dsText(.body17).foregroundStyle(DS.textPrimary)
                     Text("Someone's curated list, in one tap").dsText(.label12).foregroundStyle(DS.textTertiary)
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
+                    .dsGlyph(13)
                     .foregroundStyle(DS.textTertiary)
             }
             .dsListCardRow()
@@ -76,7 +76,7 @@ struct StarterPackImportSheet: View {
     private var searchField: some View {
         HStack(spacing: DS.Space.s2) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 14, weight: .medium))
+                .dsGlyph(14, weight: .medium)
                 .foregroundStyle(DS.textTertiary)
             TextField("Search starter packs", text: $query)
                 .dsText(.body17)
@@ -133,7 +133,7 @@ struct StarterPackImportSheet: View {
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
+                    .dsGlyph(13)
                     .foregroundStyle(DS.textTertiary)
             }
             .padding(DS.Space.s3)
@@ -154,7 +154,7 @@ struct StarterPackImportSheet: View {
                 followed = nil
             } label: {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 15, weight: .semibold))
+                    .dsGlyph(15)
                     .foregroundStyle(DS.textSecondary)
             }
             .buttonStyle(.plain)

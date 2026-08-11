@@ -118,7 +118,7 @@ struct AppDetailScreen: View {
 
     private var header: some View {
         HStack(alignment: .top, spacing: DS.Space.s4) {
-            BridgeIcon(name: offer.name, size: 72)
+            BridgeIcon(name: offer.name, size: DS.Mark.hero)
                 // The mark coin-flips as its page opens — the same greeting the
                 // thing-sheet and feed-switch icons give (delight, 2026-07-12).
                 .coinFlip(trigger: offer.name)

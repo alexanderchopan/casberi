@@ -446,7 +446,7 @@ struct BandRow: View {
                 case .screenshot, .photoData:
                     PhotoWell(thing: thing, size: 26)
                 case .glyph:
-                    BridgeIcon(name: thing.source, size: 26)
+                    BridgeIcon(name: thing.source, size: DS.Mark.row)
                 }
             }
             // Wallet safety warning (2026-07-20; any flag since prd §160,
@@ -464,7 +464,7 @@ struct BandRow: View {
             .overlay(alignment: .bottomTrailing) {
                 if thing.isFlagged {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 9))
+                        .dsGlyph(9, weight: .regular)
                         .foregroundStyle(DS.destructive)
                         .padding(3)
                         .background(Circle().fill(.black.opacity(0.55)))
@@ -490,7 +490,7 @@ struct BandRow: View {
                     .overlay(alignment: .bottomTrailing) {
                         if thing.isFlagged {
                             Image(systemName: "exclamationmark.triangle.fill")
-                                .font(.system(size: 9))
+                                .dsGlyph(9, weight: .regular)
                                 .foregroundStyle(DS.destructive)
                                 .padding(3)
                                 .background(Circle().fill(.black.opacity(0.55)))
@@ -787,7 +787,7 @@ struct TokenRow: View {
                 RemoteThumb(urlString: image, size: DS.Face.list, fallback: thing.source,
                             circular: true)
             } else {
-                BridgeIcon(name: thing.source, size: 38)
+                BridgeIcon(name: thing.source, size: DS.Mark.list)
             }
             VStack(alignment: .leading, spacing: 1) {
                 Text(tokenName)
@@ -874,7 +874,7 @@ struct PredictionRow: View {
 
     @ViewBuilder private var liveBody: some View {
         HStack(spacing: DS.Space.s3) {
-            BridgeIcon(name: thing.source, size: 38)
+            BridgeIcon(name: thing.source, size: DS.Mark.list)
             VStack(alignment: .leading, spacing: 1) {
                 Text(thing.title)
                     .dsText(.body17).fontWeight(.semibold)
@@ -1438,7 +1438,7 @@ struct MediaRow: View {
                     ZStack {
                         RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous)
                             .fill(DS.fillFaint)
-                        BridgeIcon(name: thing.source, size: 26)
+                        BridgeIcon(name: thing.source, size: DS.Mark.row)
                     }
                     .frame(width: MediaShape.rowArtWidth(art), height: MediaShape.rowArtHeight)
                 }
@@ -1513,9 +1513,9 @@ struct MusicRow: View {
         let parts = self.parts   // one split per render, read twice below
         HStack(spacing: DS.Space.s3) {
             if let art = thing.previewImageURL, !art.isEmpty {
-                RemoteThumb(urlString: art, size: 44, fallback: thing.source)
+                RemoteThumb(urlString: art, size: DS.Mark.tile, fallback: thing.source)
             } else {
-                BridgeIcon(name: thing.source, size: 44)
+                BridgeIcon(name: thing.source, size: DS.Mark.tile)
             }
             VStack(alignment: .leading, spacing: 1) {
                 Text(parts.title)
@@ -1678,7 +1678,7 @@ struct BundleRow: View {
                             .offset(x: CGFloat(step) * 4)
                             .accessibilityHidden(true)
                     }
-                    BridgeIcon(name: source, size: 26)
+                    BridgeIcon(name: source, size: DS.Mark.row)
                 }
                 .frame(width: 26 + 8, alignment: .leading)
             } else {
@@ -2051,7 +2051,7 @@ struct ExcerptRow: View {
 
     @ViewBuilder private var liveBody: some View {
         HStack(alignment: .top, spacing: DS.Space.s3) {
-            BridgeIcon(name: thing.source, size: 26)
+            BridgeIcon(name: thing.source, size: DS.Mark.row)
             VStack(alignment: .leading, spacing: 2) {
                 Text(thing.title)
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
@@ -2118,7 +2118,7 @@ struct PostCard: View {
                     RemoteThumb(urlString: avatar, size: DS.Face.row, fallback: thing.source,
                                 circular: true)
                 } else {
-                    BridgeIcon(name: thing.source, size: 26)
+                    BridgeIcon(name: thing.source, size: DS.Mark.row)
                 }
                 Text(author)
                     .dsText(.subhead13).fontWeight(.medium)
@@ -2411,7 +2411,7 @@ struct SocialThreadCard: View {
                     RemoteThumb(urlString: avatar, size: DS.Face.row, fallback: head.source,
                                 circular: true)
                 } else {
-                    BridgeIcon(name: head.source, size: 26)
+                    BridgeIcon(name: head.source, size: DS.Mark.row)
                 }
                 Text(author)
                     .dsText(.subhead13).fontWeight(.medium)
@@ -2636,7 +2636,7 @@ struct ReadingRow: View {
             if let art = thing.previewImageURL, !art.isEmpty {
                 RemoteThumb(urlString: art, size: 56, fallback: thing.source)
             } else {
-                BridgeIcon(name: thing.source, size: 26)
+                BridgeIcon(name: thing.source, size: DS.Mark.row)
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(thing.title)

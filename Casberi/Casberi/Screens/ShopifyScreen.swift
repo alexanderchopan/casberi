@@ -82,7 +82,7 @@ struct ShopifyScreen: View {
         Section {
             ForEach(shopify.shops) { shop in
                 HStack(spacing: DS.Space.s3) {
-                    BridgeIcon(name: "Shopify", size: 32, circular: false)
+                    BridgeIcon(name: "Shopify", size: DS.Mark.list, circular: false)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(shop.displayName)
                             .dsText(.body17).foregroundStyle(DS.textPrimary)

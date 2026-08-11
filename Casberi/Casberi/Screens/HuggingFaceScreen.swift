@@ -103,7 +103,7 @@ struct HuggingFaceScreen: View {
                 HStack(spacing: DS.Space.s3) {
                     // Square, not round — an org publishing models is a topic,
                     // not a person (the mark grammar ruling, prd §184).
-                    BridgeIcon(name: "Hugging Face", size: 32, circular: false)
+                    BridgeIcon(name: "Hugging Face", size: DS.Mark.list, circular: false)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(author)
                             .dsText(.body17).foregroundStyle(DS.textPrimary)

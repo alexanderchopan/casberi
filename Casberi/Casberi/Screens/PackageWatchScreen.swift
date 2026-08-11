@@ -105,7 +105,7 @@ struct PackageWatchScreen: View {
                 HStack(spacing: DS.Space.s3) {
                     // Square, not round — a package is a topic, not a person
                     // (the mark grammar ruling, prd §184).
-                    BridgeIcon(name: registry.displayName, size: 32, circular: false)
+                    BridgeIcon(name: registry.displayName, size: DS.Mark.list, circular: false)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(name)
                             .dsText(.body17).foregroundStyle(DS.textPrimary)

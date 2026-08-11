@@ -129,6 +129,14 @@ struct SearchCasberiIntent: AppIntent {
 /// its own process and on its own schedule, and handing it live SwiftData
 /// models would be the held-reference crash class (`ThingRowKeying`) reached
 /// from the one place the app cannot see it happen.
+///
+/// On the RAMP since 2026-08-11, not raw sizes. It shipped at 17/15/12 — the
+/// reading band as it stood BEFORE the 2026-07-25 pass moved it to 18/16/14
+/// (Typography.swift) — so the app's own answer rendered a point denser in
+/// Siri than in the composer, and none of it scaled with Dynamic Type. Exactly
+/// the "frozen while its neighbours grew" drift that ramp's own comments name.
+/// The row is the feed's own idiom (`body17` title over `subhead13` meta), so
+/// what Siri shows and what the feed shows are now one shape.
 struct IntentRowsSnippet: View {
     struct Row: Identifiable {
         let id: UUID
@@ -154,21 +162,21 @@ struct IntentRowsSnippet: View {
         VStack(alignment: .leading, spacing: 10) {
             if let answer, !answer.isEmpty {
                 Text(answer)
-                    .font(.system(size: 17, weight: .regular))
+                    .dsText(.body17)
                     .fixedSize(horizontal: false, vertical: true)
             }
             ForEach(rows) { row in
                 HStack(spacing: 10) {
                     Image(systemName: row.symbol)
-                        .font(.system(size: 13, weight: .semibold))
+                        .dsGlyph(13)
                         .foregroundStyle(.secondary)
                         .frame(width: 18)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(row.title)
-                            .font(.system(size: 15, weight: .medium))
+                            .dsText(.body17)
                             .lineLimit(1)
                         Text(row.subtitle)
-                            .font(.system(size: 12))
+                            .dsText(.subhead13)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }

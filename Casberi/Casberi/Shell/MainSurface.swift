@@ -913,7 +913,7 @@ struct MainSurface: View {
                     .dsText(.subhead13)
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
+                    .dsGlyph(11)
                     .foregroundStyle(DS.textTertiary)
             }
             .lineLimit(1)

@@ -614,7 +614,7 @@ struct WalletScreen: View {
                 .frame(width: rosterFaceSize, height: rosterFaceSize)
                 .overlay {
                     Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .semibold))
+                        .dsGlyph(16)
                         .foregroundStyle(DS.textTertiary)
                 }
             // Sits in the NAME's slot, so it takes the name's rung — a filled
@@ -762,7 +762,7 @@ struct WalletScreen: View {
         } label: {
             HStack(spacing: DS.Space.s1) {
                 Image(systemName: "folder.badge.plus")
-                    .font(.system(size: 12, weight: .semibold))
+                    .dsGlyph(12)
                 Text("New group")
                     .dsText(.subhead13).fontWeight(.semibold)
                     .lineLimit(1)
@@ -954,7 +954,7 @@ struct WalletScreen: View {
                         HStack(spacing: 3) {
                             Text(bookSort.label).dsText(.label12).fontWeight(.semibold)
                             Image(systemName: "arrow.up.arrow.down")
-                                .font(.system(size: 10, weight: .bold))
+                                .dsGlyph(10, weight: .bold)
                         }
                         .foregroundStyle(bookSort == .recent ? DS.textTertiary : DS.tint)
                     }
@@ -1026,7 +1026,7 @@ struct WalletScreen: View {
                     // the difference is right beside it.
                     if colliding {
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 11, weight: .semibold))
+                            .dsGlyph(11)
                             .foregroundStyle(DS.destructive)
                     }
                 }
@@ -1078,7 +1078,7 @@ struct WalletScreen: View {
             toggleWatch(entry, currentlyWatched: watched)
         } label: {
             Image(systemName: watched ? "star.fill" : "star")
-                .font(.system(size: 17, weight: .medium))
+                .dsGlyph(17, weight: .medium)
                 .foregroundStyle(watched ? DS.tint : DS.textTertiary)
                 .frame(width: 32, height: 32)
                 .contentShape(Rectangle())
@@ -1187,7 +1187,7 @@ struct WalletScreen: View {
     private func noticeLine(_ glyph: String, _ tone: Color, _ text: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
             Image(systemName: glyph)
-                .font(.system(size: 12, weight: .semibold))
+                .dsGlyph(12)
                 .foregroundStyle(tone)
             Text(text)
                 .dsText(.subhead13).foregroundStyle(DS.textSecondary)
@@ -1234,7 +1234,7 @@ struct WalletScreen: View {
         } label: {
             HStack(spacing: DS.Space.s1) {
                 Image(systemName: "sparkles")
-                    .font(.system(size: 12, weight: .semibold))
+                    .dsGlyph(12)
                 Text("Peek at vitalik.eth")
                     .dsText(.subhead13).fontWeight(.medium)
             }

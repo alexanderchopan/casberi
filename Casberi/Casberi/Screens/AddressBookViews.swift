@@ -156,7 +156,7 @@ struct NewGroupSheet: View {
     private var filterField: some View {
         HStack(spacing: DS.Space.s2) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 14, weight: .medium))
+                .dsGlyph(14, weight: .medium)
                 .foregroundStyle(DS.textTertiary)
             TextField("Filter your addresses", text: $filter)
                 .dsText(.body17)
@@ -205,7 +205,7 @@ struct NewGroupSheet: View {
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "checkmark")
-                    .font(.system(size: 16, weight: .bold))
+                    .dsGlyph(16, weight: .bold)
                     .foregroundStyle(DS.tint)
                     .opacity(on ? 1 : 0)
             }
@@ -339,7 +339,7 @@ struct CopyAddressButton: View {
                         .foregroundStyle(copied ? DS.confirm : DS.tint)
                 } else {
                     Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                        .font(.system(size: 12, weight: .semibold))
+                        .dsGlyph(12)
                         .foregroundStyle(copied ? DS.confirm : DS.textSecondary)
                         .frame(width: 28, height: 28)
                         .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: 9,
@@ -631,7 +631,7 @@ struct AddressCard: View {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 HStack(spacing: DS.Space.s2) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 13, weight: .semibold))
+                        .dsGlyph(13)
                         .foregroundStyle(DS.destructive)
                     Text("Another address looks just like this one")
                         .dsText(.body17).fontWeight(.semibold)
@@ -671,7 +671,7 @@ struct AddressCard: View {
         } label: {
             HStack(spacing: DS.Space.s2) {
                 Image(systemName: "folder")
-                    .font(.system(size: 13, weight: .semibold))
+                    .dsGlyph(13)
                     .foregroundStyle(DS.textTertiary)
                 Text(groups.isEmpty ? String(localized: "Add to a group")
                                     : groups.joined(separator: ", "))
@@ -680,7 +680,7 @@ struct AddressCard: View {
                     .lineLimit(1)
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 10, weight: .semibold))
+                    .dsGlyph(10)
                     .foregroundStyle(DS.textTertiary)
             }
             .padding(DS.Space.s3)
@@ -757,7 +757,7 @@ struct AddressCard: View {
                                 .foregroundStyle(DS.tint)
                             Spacer(minLength: 0)
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 11, weight: .semibold))
+                                .dsGlyph(11)
                                 .foregroundStyle(DS.textTertiary)
                         }
                         .contentShape(Rectangle())
@@ -848,7 +848,7 @@ struct AddressCard: View {
                 HStack(spacing: DS.Space.s2) {
                     Text(link.label).dsText(.callout15).foregroundStyle(DS.textSecondary)
                     Image(systemName: "arrow.up.right")
-                        .font(.system(size: 12, weight: .semibold))
+                        .dsGlyph(12)
                         .foregroundStyle(DS.textTertiary)
                     Spacer(minLength: 0)
                 }

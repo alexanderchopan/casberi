@@ -262,7 +262,7 @@ struct TransferStageView: View {
             if !sharedHistory.isEmpty {
                 Image(systemName: "chevron.down")
                     .accessibilityHidden(true)
-                    .font(.system(size: 13, weight: .semibold))
+                    .dsGlyph(13)
                     .foregroundStyle(DS.textTertiary)
                     .rotationEffect(.degrees(historyShown ? 180 : 0))
             }
@@ -555,7 +555,7 @@ struct MovedStageView: View {
     private var arrow: some View {
         Image(systemName: "arrow.right")
             .accessibilityHidden(true)
-            .font(.system(size: 20, weight: .semibold))
+            .dsGlyph(20)
             .foregroundStyle(.white.opacity(0.8))
             .frame(height: 50)
     }
@@ -600,7 +600,7 @@ struct SwapStageView: View {
                 Text(verbatim: stage.outAmount)
                 Image(systemName: "arrow.right")
                     .accessibilityHidden(true)
-                    .font(.system(size: 16, weight: .semibold))
+                    .dsGlyph(16)
                     .foregroundStyle(.white.opacity(0.6))
                 Text(verbatim: stage.inAmount)
             }
@@ -686,7 +686,7 @@ struct VerbDial: View {
                 .frame(width: 52, height: 52)
                 .overlay {
                     Image(systemName: icon)
-                        .font(.system(size: 19))
+                        .dsGlyph(19, weight: .regular)
                         .foregroundStyle(DS.textPrimary)
                 }
             Text(LocalizedStringKey(label))

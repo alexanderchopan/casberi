@@ -118,7 +118,7 @@ struct X402SellerContent: View {
         if let docs = seller.docsURL, let url = URL(string: docs) {
             Link(destination: url) {
                 HStack(spacing: DS.Space.s1) {
-                    Image(systemName: "book").font(.system(size: 12, weight: .semibold))
+                    Image(systemName: "book").dsGlyph(12)
                     Text(String(localized: "Read their docs")).dsText(.callout15)
                 }
                 .foregroundStyle(DS.tint)

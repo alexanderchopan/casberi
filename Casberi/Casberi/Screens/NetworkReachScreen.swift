@@ -134,14 +134,14 @@ struct NetworkReachScreen: View {
     @ViewBuilder
     private func leadingIcon(_ endpoint: NetworkReach.Endpoint) -> some View {
         if isCatalogService(endpoint.service) {
-            BridgeIcon(name: endpoint.service, size: 38)
+            BridgeIcon(name: endpoint.service, size: DS.Mark.list)
         } else {
-            RoundedRectangle(cornerRadius: DS.Radius.appIcon(38), style: .continuous)
+            RoundedRectangle(cornerRadius: DS.Radius.appIcon(DS.Mark.list), style: .continuous)
                 .fill(DS.gray200)
-                .frame(width: 38, height: 38)
+                .frame(width: DS.Mark.list, height: DS.Mark.list)
                 .overlay(
                     Image(systemName: infraSymbol(endpoint))
-                        .font(.system(size: 16, weight: .semibold))
+                        .dsGlyph(16)
                         .foregroundStyle(DS.textSecondary)
                 )
         }

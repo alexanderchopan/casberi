@@ -111,7 +111,7 @@ struct FollowImportSheet: View {
     private var filterField: some View {
         HStack(spacing: DS.Space.s2) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 14, weight: .medium))
+                .dsGlyph(14, weight: .medium)
                 .foregroundStyle(DS.textTertiary)
             TextField("Filter these people", text: $filter)
                 .dsText(.body17)
@@ -173,7 +173,7 @@ struct FollowImportSheet: View {
                     Text("Watching").dsText(.label12).foregroundStyle(DS.textTertiary)
                 } else {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 16, weight: .bold))
+                        .dsGlyph(16, weight: .bold)
                         .foregroundStyle(DS.tint)
                         .opacity(on ? 1 : 0)
                 }

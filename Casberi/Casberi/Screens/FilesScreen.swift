@@ -91,7 +91,7 @@ struct FilesScreen: View {
             if files.connected {
                 HStack(spacing: DS.Space.s3) {
                     Image(systemName: "icloud")
-                        .font(.system(size: 17, weight: .medium))
+                        .dsGlyph(17, weight: .medium)
                         .foregroundStyle(DS.tint)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(files.folderName.isEmpty ? "Folder" : files.folderName)

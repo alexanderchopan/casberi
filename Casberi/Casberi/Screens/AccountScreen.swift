@@ -390,7 +390,7 @@ struct AccountRow: View {
                 IconChip(tone: badge.color, size: 34, style: .wash) {
                     Image(systemName: badge.symbol)
                         .accessibilityHidden(true)
-                        .font(.system(size: 16, weight: .semibold))
+                        .dsGlyph(16)
                         // Two rows genuinely SWAP their glyph rather than
                         // opening anything — Theme's sun/moon and
                         // Privacy's lock/cloud — and for a setting that

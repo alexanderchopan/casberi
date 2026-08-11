@@ -206,7 +206,7 @@ struct ThingSheetView: View {
                     if let onBack {
                         Button(action: onBack) {
                             Image(systemName: "chevron.left")
-                                .font(.system(size: 13, weight: .semibold))
+                                .dsGlyph(13)
                                 .foregroundStyle(DS.textPrimary)
                                 .frame(width: 30, height: 30)
                                 .background(Circle().fill(.white.opacity(0.08)))
@@ -927,7 +927,7 @@ struct ThingSheetView: View {
                     .lineLimit(1)
                 Image(systemName: "square.and.pencil")
                     .accessibilityHidden(true)
-                    .font(.system(size: 12))
+                    .dsGlyph(12, weight: .regular)
                     .foregroundStyle(DS.textTertiary)
                     .padding(.leading, DS.Space.s2)
                 Spacer(minLength: 0)
@@ -983,7 +983,7 @@ struct ThingSheetView: View {
         HStack(alignment: .top, spacing: DS.Space.s2) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .accessibilityHidden(true)
-                .font(.system(size: 15, weight: .semibold))
+                .dsGlyph(15)
                 .foregroundStyle(DS.destructive)
             Text(text)
                 .dsText(.callout15).foregroundStyle(DS.destructive)
@@ -1288,7 +1288,7 @@ struct ThingSheetView: View {
                     HStack(spacing: DS.Space.s2) {
                         Image(systemName: "arrow.down.left")
                             .accessibilityHidden(true)
-                            .font(.system(size: 11, weight: .semibold))
+                            .dsGlyph(11)
                             .foregroundStyle(DS.textTertiary)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(tie.title)
@@ -1337,7 +1337,7 @@ struct ThingSheetView: View {
                         HStack(spacing: DS.Space.s2) {
                             Image(systemName: icon)
                                 .accessibilityHidden(true)
-                                .font(.system(size: 11, weight: .semibold))
+                                .dsGlyph(11)
                                 .foregroundStyle(DS.textTertiary)
                             Text(linked.title)
                                 .dsText(.callout15)
@@ -1399,7 +1399,7 @@ struct ThingSheetView: View {
                 HStack(spacing: DS.Space.s2) {
                     Image(systemName: "calendar.badge.plus")
                         .accessibilityHidden(true)
-                        .font(.system(size: 11, weight: .semibold))
+                        .dsGlyph(11)
                         .foregroundStyle(DS.textTertiary)
                     Text("\(fact.label) · \(fact.date.formatted(date: .abbreviated, time: .shortened))")
                         .dsText(.callout15)
@@ -1435,7 +1435,7 @@ struct ThingSheetView: View {
                 HStack(spacing: DS.Space.s2) {
                     Image(systemName: "arrow.triangle.2.circlepath")
                         .accessibilityHidden(true)
-                        .font(.system(size: 11, weight: .semibold))
+                        .dsGlyph(11)
                         .foregroundStyle(DS.textTertiary)
                     Text("You kept this \(copy.capturedAt.formatted(.relative(presentation: .named))) · \(copy.source)")
                         .dsText(.callout15)

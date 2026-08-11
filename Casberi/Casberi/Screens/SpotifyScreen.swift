@@ -72,7 +72,7 @@ struct SpotifyScreen: View {
             if SpotifyAuth.connected {
                 HStack(spacing: DS.Space.s3) {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 20))
+                        .dsGlyph(20, weight: .regular)
                         .foregroundStyle(DS.confirm)
                     Text("Connected — liked songs land in your feed.")
                         .dsText(.body17).foregroundStyle(DS.textPrimary)

@@ -139,7 +139,7 @@ struct HowItWorksSheet: View {
                 let frac = (Double(i) * 0.381966).truncatingRemainder(dividingBy: 1)
                 let x = DS.Space.s4 + CGFloat(frac) * (geo.size.width - DS.Space.s4 * 2)
                 let tilt = Double(Self.jitter[i % Self.jitter.count])
-                BridgeIcon(name: name, size: 64)
+                BridgeIcon(name: name, size: DS.Mark.hero)
                     .rotationEffect(.degrees(rainFell ? tilt * 3.4 : tilt * 0.5))
                     .position(x: x + Self.jitter[(i + 3) % Self.jitter.count],
                               y: rainFell ? geo.size.height + 140 : -120)
@@ -349,7 +349,7 @@ struct HowItWorksSheet: View {
                 // space would undo a ruling to fix a layout problem.
                 HStack(alignment: .top, spacing: DS.Space.s3) {
                     Image(systemName: point.glyph)
-                        .font(.system(size: 23, weight: .semibold))
+                        .dsGlyph(23)
                         .foregroundStyle(point.hue)
                         .frame(width: 50, height: 50)
                         .background(point.hue.opacity(0.16),
@@ -386,7 +386,7 @@ struct HowItWorksSheet: View {
     private var catalogStrip: some View {
         HStack(spacing: DS.Space.s2) {
             ForEach(Array(Self.stripApps.enumerated()), id: \.element) { i, name in
-                BridgeIcon(name: name, size: 34)
+                BridgeIcon(name: name, size: DS.Mark.list)
                     .rotationEffect(.degrees(Self.stripTilt[i % Self.stripTilt.count]))
             }
         }

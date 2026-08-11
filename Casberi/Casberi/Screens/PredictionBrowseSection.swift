@@ -377,7 +377,7 @@ struct PredictionBrowseSection: View {
                         }
                     } label: {
                         Image(systemName: searching ? "xmark" : "magnifyingglass")
-                            .font(.system(size: 13, weight: .semibold))
+                            .dsGlyph(13)
                             .foregroundStyle(searching ? .white : DS.textSecondary)
                             .frame(width: 34, height: 30)
                             .background(Capsule().fill(searching ? DS.tint : DS.fillFaint))
@@ -668,7 +668,7 @@ struct PredictionBrowseSection: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(alignment: .top, spacing: DS.Space.s2) {
                 if let venueBadge = card.venueBadge {
-                    BridgeIcon(name: venueBadge, size: 18, circular: false)
+                    BridgeIcon(name: venueBadge, size: DS.Mark.badge, circular: false)
                 }
                 Text(card.title).dsText(.body17).fontWeight(.semibold).lineLimit(2)
             }
@@ -786,7 +786,7 @@ struct PredictionBrowseSection: View {
                     .frame(width: 42, alignment: .trailing)
                 if outcome.isFollowed {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 12, weight: .bold))
+                        .dsGlyph(12, weight: .bold)
                         .foregroundStyle(DS.confirm)
                         .frame(width: 16)
                 }
@@ -857,7 +857,7 @@ struct PredictionBrowseSection: View {
         } else {
             Button { follow(outcome.preview) } label: {
                 Image(systemName: "plus")
-                    .font(.system(size: 13, weight: .bold))
+                    .dsGlyph(13, weight: .bold)
                     .foregroundStyle(DS.tint)
                     .frame(width: 30, height: 30)
                     .background(Circle().fill(DS.fillFaint))

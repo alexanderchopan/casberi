@@ -236,7 +236,7 @@ struct TokenWatchScreen: View {
             HStack(spacing: 3) {
                 Text(TokenWatchOrder.shared.mode.label)
                 Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 10, weight: .semibold))
+                    .dsGlyph(10)
             }
             .dsText(.label12).foregroundStyle(DS.textTertiary)
         }

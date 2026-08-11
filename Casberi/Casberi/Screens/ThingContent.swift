@@ -380,7 +380,7 @@ private struct ScreenshotContent: View {
                         VStack(spacing: DS.Space.s1) {
                             Image(systemName: "photo")
                                 .accessibilityHidden(true)
-                                .font(.system(size: 22))
+                                .dsGlyph(22, weight: .regular)
                                 .foregroundStyle(DS.textTertiary)
                             Text("In your photos")
                                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
@@ -633,7 +633,7 @@ private struct StoredArtContent: View {
                     .overlay(
                         Image(systemName: "music.note")
                             .accessibilityHidden(true)
-                            .font(.system(size: 22))
+                            .dsGlyph(22, weight: .regular)
                             .foregroundStyle(DS.textTertiary)
                     )
             }
@@ -744,7 +744,7 @@ private struct VoiceContent: View {
                         toggle()
                     } label: {
                         Image(systemName: playing ? "pause.circle.fill" : "play.circle.fill")
-                            .font(.system(size: 28))
+                            .dsGlyph(28, weight: .regular)
                             .foregroundStyle(DS.tint)
                     }
                     .buttonStyle(.plain)
@@ -866,7 +866,7 @@ private struct FileChip: View {
             HStack(spacing: DS.Space.s3) {
                 Image(systemName: "doc")
                     .accessibilityHidden(true)
-                    .font(.system(size: 17, weight: .medium))
+                    .dsGlyph(17, weight: .medium)
                     .foregroundStyle(DS.tint)
                 Text(name)
                     .dsText(.callout15).foregroundStyle(DS.textPrimary)
@@ -962,7 +962,7 @@ private struct ReminderDueRow: View {
         HStack(spacing: DS.Space.s3) {
             Image(systemName: "clock")
                 .accessibilityHidden(true)
-                .font(.system(size: 15, weight: .medium))
+                .dsGlyph(15, weight: .medium)
                 .foregroundStyle(overdue ? DS.destructive : DS.tint)
             Text(due.formatted(.dateTime.month(.abbreviated).day().hour().minute()))
                 .dsText(.body17)
@@ -1009,7 +1009,7 @@ private struct ScheduleCard: View {
         HStack(spacing: DS.Space.s3) {
             Image(systemName: "clock")
                 .accessibilityHidden(true)
-                .font(.system(size: 15, weight: .medium))
+                .dsGlyph(15, weight: .medium)
                 .foregroundStyle(DS.tint)
             Text(text)
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
@@ -1111,7 +1111,7 @@ private struct TokenChartContent: View {
             HStack(spacing: DS.Space.s2) {
                 Image(systemName: "checkmark")
                     .accessibilityHidden(true)
-                    .font(.system(size: 15, weight: .bold))
+                    .dsGlyph(15, weight: .bold)
                     .foregroundStyle(DS.confirm)
                 Text("Watching \(watchedTitle)")
                     .dsText(.callout15).fontWeight(.semibold)

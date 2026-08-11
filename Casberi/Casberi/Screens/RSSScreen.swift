@@ -185,7 +185,7 @@ struct RSSScreen: View {
                 HStack(spacing: DS.Space.s3) {
                     // Square, not round — a publication is a topic, not a
                     // person (the mark grammar ruling, prd §184).
-                    BridgeIcon(name: "RSS", size: 32, circular: false)
+                    BridgeIcon(name: "RSS", size: DS.Mark.list, circular: false)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(feed.displayName)
                             .dsText(.body17).foregroundStyle(DS.textPrimary)

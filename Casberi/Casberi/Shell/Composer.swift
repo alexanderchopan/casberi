@@ -2756,7 +2756,7 @@ struct Composer: View {
                                    : String(localized: "Answered on \(DS.device)"))
         return HStack(spacing: DS.Space.s1) {
             Image(systemName: glyph)
-                .font(.system(size: 10))
+                .dsGlyph(10, weight: .regular)
                 .accessibilityHidden(true)
             Text(words)
                 .fixedSize(horizontal: false, vertical: true)
@@ -2989,7 +2989,7 @@ struct Composer: View {
                     }
                     Spacer(minLength: DS.Space.s2)
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
+                        .dsGlyph(12)
                         .foregroundStyle(DS.textTertiary)
                         .padding(.top, 4)
                         .accessibilityHidden(true)
@@ -3092,7 +3092,7 @@ struct Composer: View {
                                 Circle().fill(DS.tint).frame(width: 7, height: 7)
                             } else {
                                 Image(systemName: "pin.fill")
-                                    .font(.system(size: 12, weight: .semibold))
+                                    .dsGlyph(12)
                                     .foregroundStyle(DS.tint)
                                     .accessibilityHidden(true)
                             }
@@ -3192,7 +3192,7 @@ struct Composer: View {
                             } else {
                                 Image(systemName: isAway ? "sparkles" : ask.glyph)
                                     .accessibilityHidden(true)
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .dsGlyph(13)
                                     .foregroundStyle(DS.tint)
                                     // The Noticed chip is the agent's one
                                     // spontaneous connection — it earns a single
@@ -3332,7 +3332,7 @@ struct Composer: View {
                 close()
             } label: {
                 Image(systemName: "chevron.down")
-                    .font(.system(size: 16, weight: .semibold))
+                    .dsGlyph(16)
                     .foregroundStyle(DS.textTertiary)
                     .frame(width: 32, height: 36)
                     .contentShape(Rectangle())
@@ -3347,7 +3347,7 @@ struct Composer: View {
                 else { DSHaptic.tap(); Task { await voice.start() } }
             } label: {
                 Image(systemName: isRecording ? "stop.circle.fill" : "mic")
-                    .font(.system(size: 17))
+                    .dsGlyph(17, weight: .regular)
                     .foregroundStyle(isRecording ? DS.destructive : DS.textSecondary)
                     .frame(width: 36, height: 36)
                     .background(DS.fillFaint, in: Circle())
@@ -3508,7 +3508,7 @@ struct Composer: View {
                             HStack(spacing: DS.Space.s2) {
                                 Image(systemName: "magnifyingglass")
                                     .accessibilityHidden(true)
-                                    .font(.system(size: 14, weight: .semibold))
+                                    .dsGlyph(14)
                                 Text("Find")
                                     .dsText(.callout15).fontWeight(.semibold)
                             }
@@ -3532,7 +3532,7 @@ struct Composer: View {
                             HStack(spacing: DS.Space.s2) {
                                 Image(systemName: "key.fill")
                                     .accessibilityHidden(true)
-                                    .font(.system(size: 14, weight: .medium))
+                                    .dsGlyph(14, weight: .medium)
                                 Text("Ask \(askProvider?.agent ?? AgentKey.active?.agent ?? "your key")")
                                     .dsText(.callout15).fontWeight(.semibold)
                             }
@@ -3559,7 +3559,7 @@ struct Composer: View {
                                     HStack(spacing: DS.Space.s2) {
                                         Image(systemName: tool.glyph)
                                             .accessibilityHidden(true)
-                                            .font(.system(size: 14, weight: .medium))
+                                            .dsGlyph(14, weight: .medium)
                                             .foregroundStyle(DS.tint)
                                         Text(tool.label)
                                             .dsText(.callout15).fontWeight(.semibold)
@@ -3872,7 +3872,7 @@ struct Chip: View {
     var body: some View {
         HStack(spacing: DS.Space.s1) {
             if let glyph {
-                Image(systemName: glyph).font(.system(size: 12))
+                Image(systemName: glyph).dsGlyph(12, weight: .regular)
                     .accessibilityHidden(true)
             }
             // A chip is a capsule — its label never breaks across lines

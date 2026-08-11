@@ -152,7 +152,7 @@ struct AvatarDoor: View {
                 .clipShape(Circle())
         } else {
             Image(systemName: "person.crop.circle")
-                .font(.system(size: 26))
+                .dsGlyph(26, weight: .regular)
                 .foregroundStyle(DS.textSecondary)
         }
     }
@@ -171,7 +171,7 @@ struct AppsDoor: View {
 
     var body: some View {
         Image(systemName: needsAttention ? "square.grid.2x2.fill" : "square.grid.2x2")
-            .font(.system(size: 21, weight: .semibold))
+            .dsGlyph(21)
             .foregroundStyle(needsAttention ? DS.attention : DS.tint)
             .symbolEffect(.pulse, options: .repeating, isActive: needsAttention)
     }

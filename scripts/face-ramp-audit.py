@@ -25,7 +25,13 @@ DELIBERATELY NOT COVERED, so this can't become a lint that cries wolf: the
 source strip's and Sources Tray's chip metrics (`iconSize`), which are sized
 by their own grid rather than by adjacent text and are already named
 constants; and any SQUARE `BridgeIcon`, which is a brand mark in a tile, not
-a face.
+a face — that one is not unchecked, it belongs to the OTHER ramp:
+`design-ramp-audit.py` holds it to `DS.Mark`. The two ramps agree on their
+first three rungs by construction (`DS.Mark.badge`/`.row`/`.list` are the
+`DS.Face` values), because in a row a mark and a face stand in the same slot
+and must never disagree; they diverge above it, where a brand mark heads a
+card or a screen and a face never does. `circular:` is what tells the two
+apart, which is why they stay two checks.
 
 Static, self-tested, no build. Exit non-zero on failure.
 """

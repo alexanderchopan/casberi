@@ -73,7 +73,7 @@ struct AgentKeyPicker: View {
             // assets, no remote image (the site rule's own ban, applied in
             // app). Dimmed for a provider with no key, so "connected" reads
             // at a glance rather than only in the subline.
-            BridgeIcon(name: provider.agent, size: 28)
+            BridgeIcon(name: provider.agent, size: DS.Mark.row)
                 .opacity(isConfigured ? 1 : 0.45)
             VStack(alignment: .leading, spacing: 1) {
                 Text(provider.agent)
@@ -93,7 +93,7 @@ struct AgentKeyPicker: View {
                 // rule: a button that performs its own current state is one).
                 HStack(spacing: 4) {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 13))
+                        .dsGlyph(13, weight: .regular)
                     Text("Active").dsText(.label12).fontWeight(.semibold)
                 }
                 .foregroundStyle(DS.confirm)

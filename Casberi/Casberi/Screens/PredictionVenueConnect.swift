@@ -106,7 +106,7 @@ struct PredictionVenueConnect: View {
     @ViewBuilder
     private func venueRow(_ v: PredictionSource, subtitle: String?) -> some View {
         HStack(spacing: DS.Space.s3) {
-            BridgeIcon(name: v.rawValue, size: 38)
+            BridgeIcon(name: v.rawValue, size: DS.Mark.list)
             VStack(alignment: .leading, spacing: 1) {
                 Text("Follow \(v.rawValue) prediction markets")
                     .dsText(.body17).foregroundStyle(DS.textPrimary)

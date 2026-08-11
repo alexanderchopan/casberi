@@ -41,7 +41,7 @@ struct LanguagePickerSheet: View {
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "checkmark")
-                    .font(.system(size: 16, weight: .bold))
+                    .dsGlyph(16, weight: .bold)
                     .foregroundStyle(DS.tint)
                     .opacity(selected ? 1 : 0)
             }

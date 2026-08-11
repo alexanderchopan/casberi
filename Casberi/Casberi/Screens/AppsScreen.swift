@@ -757,7 +757,7 @@ struct AppsScreen: View {
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: DS.Space.s6)
             HStack(spacing: DS.Space.s2) {
-                BridgeIcon(name: iconName, size: 32)
+                BridgeIcon(name: iconName, size: DS.Mark.list)
                 Text(name).dsText(.callout15).foregroundStyle(.white)
                 Spacer()
                 // Reserves the verb's seat inside the tappable card so the
@@ -789,7 +789,7 @@ struct AppsScreen: View {
                 .overlay(alignment: .bottomTrailing) {
                     Image(systemName: BridgeGlyph.symbol(for: iconName))
                         .accessibilityHidden(true)
-                        .font(.system(size: 150, weight: .semibold))
+                        .dsGlyph(150)
                         .foregroundStyle((BridgeGlyph.glyphTint(for: iconName) ?? .white).opacity(0.10))
                         .rotationEffect(.degrees(-12))
                         // The ghost glyph drifts a touch against the drag — the
@@ -833,7 +833,7 @@ struct AppsScreen: View {
     private var searchField: some View {
         HStack(spacing: DS.Space.s2) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 15, weight: .medium))
+                .dsGlyph(15, weight: .medium)
                 .foregroundStyle(DS.textTertiary)
             TextField("Search apps", text: $query)
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
@@ -847,7 +847,7 @@ struct AppsScreen: View {
                     DSHaptic.tap()
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 15))
+                        .dsGlyph(15, weight: .regular)
                         .foregroundStyle(DS.textTertiary)
                 }
                 .buttonStyle(.plain)
@@ -884,7 +884,7 @@ struct AppsScreen: View {
                         } label: {
                             HStack(spacing: DS.Space.s2) {
                                 Image(systemName: BridgeGlyph.symbol(for: cat.exemplar))
-                                    .font(.system(size: 15, weight: .medium))
+                                    .dsGlyph(15, weight: .medium)
                                     .foregroundStyle(BridgeGlyph.color(for: cat.exemplar))
                                 Text(LocalizedStringKey(cat.name))
                                     .dsText(.callout15).fontWeight(.medium)
@@ -1051,7 +1051,7 @@ struct AppsScreen: View {
         }()
         return NavigationLink(value: destination) {
             VStack(spacing: DS.Space.s1) {
-                BridgeIcon(name: entry.offer.name, size: 48)
+                BridgeIcon(name: entry.offer.name, size: DS.Mark.tile)
                     .saturation(soon ? 0 : 1)
                     .opacity(soon ? 0.5 : 1)
                     .overlay(alignment: .topTrailing) {
@@ -1114,7 +1114,7 @@ struct AppsScreen: View {
         return HStack(spacing: DS.Space.s3) {
             NavigationLink(value: destination) {
                 HStack(spacing: DS.Space.s3) {
-                    BridgeIcon(name: entry.offer.name, size: 44)
+                    BridgeIcon(name: entry.offer.name, size: DS.Mark.tile)
                         .saturation(soon ? 0 : 1)
                         .opacity(soon ? 0.5 : 1)
                         .overlay(alignment: .topTrailing) {
@@ -1404,7 +1404,7 @@ private struct AppPeek: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             HStack(spacing: DS.Space.s3) {
-                BridgeIcon(name: offer.name, size: 44)
+                BridgeIcon(name: offer.name, size: DS.Mark.tile)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(offer.name).dsText(.body17).fontWeight(.semibold)
                         .foregroundStyle(DS.textPrimary)

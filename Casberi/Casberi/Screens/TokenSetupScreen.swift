@@ -374,7 +374,7 @@ struct TokenSetupScreen: View {
                         Button(action: { copyCode(code.userCode) }) {
                             HStack(spacing: DS.Space.s1) {
                                 Image(systemName: codeCopied ? "checkmark" : "doc.on.doc")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .dsGlyph(13)
                                 Text(codeCopied ? "Copied" : "Copy").dsText(.subhead13).fontWeight(.semibold)
                             }
                             .foregroundStyle(codeCopied ? DS.confirm : DS.tint)
@@ -502,7 +502,7 @@ struct TokenSetupScreen: View {
                     Text("Prefer a token by hand?")
                         .dsText(.callout15).foregroundStyle(DS.textSecondary)
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 11, weight: .semibold))
+                        .dsGlyph(11)
                         .foregroundStyle(DS.textTertiary)
                         .rotationEffect(.degrees(manualPathOpen ? 180 : 0))
                     Spacer(minLength: 0)

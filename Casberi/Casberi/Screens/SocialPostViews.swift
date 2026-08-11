@@ -553,7 +553,7 @@ struct SocialProfileCard: View {
         } label: {
             HStack(spacing: DS.Space.s2) {
                 Image(systemName: "person.2")
-                    .font(.system(size: 14, weight: .semibold))
+                    .dsGlyph(14)
                     .foregroundStyle(DS.textSecondary)
                 Text("Who they follow")
                     .dsText(.callout15).foregroundStyle(DS.textPrimary)
@@ -590,7 +590,7 @@ struct SocialProfileCard: View {
         if watched {
             HStack(spacing: DS.Space.s2) {
                 Image(systemName: "checkmark")
-                    .font(.system(size: 14, weight: .semibold))
+                    .dsGlyph(14)
                     .foregroundStyle(DS.confirm)
                 Text("Watching @\(shown.shortHandle)")
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
@@ -605,7 +605,7 @@ struct SocialProfileCard: View {
             } label: {
                 HStack(spacing: DS.Space.s2) {
                     Image(systemName: "eye")
-                        .font(.system(size: 14, weight: .semibold))
+                        .dsGlyph(14)
                         .foregroundStyle(DS.textSecondary)
                     Text("Watch @\(shown.shortHandle)")
                         .dsText(.callout15).foregroundStyle(DS.textPrimary)
@@ -629,7 +629,7 @@ struct SocialProfileCard: View {
         } label: {
             HStack(spacing: DS.Space.s2) {
                 Image(systemName: "wallet.pass")
-                    .font(.system(size: 14, weight: .semibold))
+                    .dsGlyph(14)
                     .foregroundStyle(DS.textSecondary)
                 Text("Watch their wallet")
                     .dsText(.callout15).foregroundStyle(DS.textPrimary)
@@ -657,7 +657,7 @@ struct SocialProfileCard: View {
                     } label: {
                         HStack(spacing: DS.Space.s2) {
                             Image(systemName: "magnifyingglass")
-                                .font(.system(size: 14, weight: .semibold))
+                                .dsGlyph(14)
                                 .foregroundStyle(DS.textSecondary)
                             Text("Look for them on \(other)")
                                 .dsText(.callout15).foregroundStyle(DS.textPrimary)

@@ -59,7 +59,7 @@ struct PairClientSheet: View {
                 .frame(width: 36, height: 36)
                 .overlay(
                     Image(systemName: "hand.raised.fill")
-                        .font(.system(size: 16, weight: .semibold))
+                        .dsGlyph(16)
                         .foregroundStyle(.white)
                 )
             VStack(alignment: .leading, spacing: 2) {

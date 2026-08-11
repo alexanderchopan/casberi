@@ -192,7 +192,7 @@ struct SwipeHintNudge: ViewModifier {
             .background(alignment: .trailing) {
                 if active {
                     Image(systemName: "pin.fill")
-                        .font(.system(size: 14, weight: .semibold))
+                        .dsGlyph(14)
                         .foregroundStyle(DS.tint)
                         .opacity(nudge < -8 ? Double(min(1, -nudge / 48)) : 0)
                 }

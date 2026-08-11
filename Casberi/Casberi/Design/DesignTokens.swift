@@ -375,6 +375,57 @@ enum DS {
         static let shelf: CGFloat = 56
     }
 
+    /// How big an APP's own brand mark draws (`BridgeIcon`) — the catalog
+    /// squircle standing for a source, a bridge, a venue. `Face` is the ramp for
+    /// a PERSON; this is the ramp for a THING WITH A LOGO, and they are separate
+    /// because they answer to different neighbours: a face is sized by the text
+    /// beside it, a mark is sized by whether it is identifying a row, a card, or
+    /// a whole screen.
+    ///
+    /// **Why this exists.** `BridgeIcon` was called at 14 different literal
+    /// sizes (12·14·16·18·20·26·28·32·34·38·44·48·54·60·64·72) across ~40 sites,
+    /// the same accumulation `Face` was pulled out of on 2026-08-11. Two
+    /// findings made it worth doing rather than merely tidy:
+    ///
+    /// - `ShapedRows.TokenRow` drew its thumbnail at `Face.list` (36) and its
+    ///   fallback mark at 38 **in the same `HStack`**, so a row's leading square
+    ///   changed size depending on whether the art had loaded. Two points do not
+    ///   separate, they wobble — the `rowTitle17` lesson (Typography.swift), in
+    ///   a new place.
+    /// - A bridge's setup header drew at 60 and its CONNECTED header at 54 —
+    ///   the same screen, two states, two sizes.
+    ///
+    /// **The first three rungs are `Face`'s own values, deliberately.** In a row
+    /// the mark and the face are interchangeable — `BridgeIcon` is already what
+    /// stands in when a person has no picture — so they must not disagree, and
+    /// spelling them as `Face.badge`/`.row`/`.list` makes that structural rather
+    /// than a coincidence anyone could edit away.
+    ///
+    /// Deliberately NOT in this ramp: `SourceChips.iconSize` and the Sources
+    /// Tray's (sized by their own grid — `Face`'s own carve-out), and
+    /// `ShapedRows.sourceBadgeView`'s 12pt mark, which is sized by the 17pt well
+    /// it overlays rather than by anything beside it.
+    enum Mark {
+        /// Inside a meta line — a mark against caption text, never taller than
+        /// the line it sits in.
+        static let inline: CGFloat = 14
+        /// Beside dense inline text, or as a card's venue badge.
+        static let badge: CGFloat = Face.badge
+        /// A row's leading identity, sized to its title+meta block.
+        static let row: CGFloat = Face.row
+        /// A taller band row or a service list you read down — and the size a
+        /// row's thumbnail already uses, so a mark and a picture in the same
+        /// slot are the same square.
+        static let list: CGFloat = Face.list
+        /// A catalog cell or card where the mark IS the item's identity, not a
+        /// label on it.
+        static let tile: CGFloat = 44
+        /// A screen's own head — a product page, a setup or connected header.
+        /// One rung, so the page you connect from and the page you connect on
+        /// introduce themselves at the same size.
+        static let hero: CGFloat = 60
+    }
+
     // MARK: - Radii  (brief §8 is law; control/pill fill the gaps §8 omits)
 
     enum Radius {

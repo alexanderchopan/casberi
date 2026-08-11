@@ -214,4 +214,50 @@ extension View {
     func dsText(_ style: DSTextStyle) -> some View {
         modifier(DSTextModifier(style: style))
     }
+
+    /// An SF Symbol's point size, scaled for Dynamic Type (2026-08-11).
+    ///
+    /// **Why this exists.** A glyph is sized with `.font(.system(size:))`, which
+    /// is a FROZEN size — while every label around it goes through `dsText` and
+    /// grows with the person's text setting. The app had ~150 of these, so at an
+    /// accessibility size the words grew and the icons beside them did not:
+    /// chevrons shrinking away from their rows, a symbol sitting a third the
+    /// height of the label it belongs to. Nothing about it is visible at the
+    /// default size, which is why it survived every ramp pass.
+    ///
+    /// The anchor is derived from the size rather than passed per call site,
+    /// and that is deliberate: `relative:` is a real judgement (`heading17`
+    /// anchors to `.headline`, `subhead13` to `.footnote`) and 150 hand-made
+    /// judgements is how a ramp drifts. A glyph is chosen to match the text
+    /// beside it, so its size already implies the rung — the table below is the
+    /// ramp's own size→anchor mapping read backwards, and a glyph therefore
+    /// scales on the same curve as the label it was drawn to match.
+    func dsGlyph(_ size: CGFloat, weight: Font.Weight = .semibold) -> some View {
+        modifier(DSGlyphModifier(size: size, weight: weight))
+    }
+}
+
+private struct DSGlyphModifier: ViewModifier {
+    let size: CGFloat
+    let weight: Font.Weight
+    @Environment(\.sizeCategory) private var sizeCategory
+
+    /// The ramp's own rungs, read backwards: which text style does a glyph of
+    /// this size sit beside? `tab10`/`label11` → caption2, `label12` →
+    /// caption1, `subhead13` → footnote, `callout15` → subheadline, and the
+    /// reading band and up → body.
+    private var anchor: UIFont.TextStyle {
+        switch size {
+        case ..<12:   return .caption2
+        case ..<13:   return .caption1
+        case ..<15:   return .footnote
+        case ..<17:   return .subheadline
+        default:      return .body
+        }
+    }
+
+    func body(content: Content) -> some View {
+        content.font(.system(size: UIFontMetrics(forTextStyle: anchor).scaledValue(for: size),
+                             weight: weight))
+    }
 }

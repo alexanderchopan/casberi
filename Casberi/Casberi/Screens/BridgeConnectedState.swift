@@ -75,7 +75,7 @@ struct BridgeConnectedState: View {
     /// Identity leads — the app's own mark beside whose connection this is.
     private var header: some View {
         HStack(spacing: DS.Space.s3) {
-            BridgeIcon(name: name, size: 54)
+            BridgeIcon(name: name, size: DS.Mark.hero)
             VStack(alignment: .leading, spacing: 2) {
                 // The account when we hold one, else the bridge's own name —
                 // the honest lead when there's no account to name.
@@ -100,7 +100,7 @@ struct BridgeConnectedState: View {
         if let bridge, !bridge.statusLine.isEmpty {
             HStack(spacing: DS.Space.s1) {
                 Image(systemName: bridge.status.glyph)
-                    .font(.system(size: 9, weight: .bold))
+                    .dsGlyph(9, weight: .bold)
                 // The number ROLLS UP (2026-08-04). This is the one moment a
                 // connect page is allowed to show what landed — §236 ruled the
                 // page is a yes/no and the things themselves live in the feed,

@@ -1404,7 +1404,7 @@ struct FeedScreen: View {
             // in three hues (2026-07-21). Sized to the old 6pt dot's
             // footprint so the header's rhythm is unchanged.
             Image(systemName: bridge.status.glyph)
-                .font(.system(size: 8, weight: .bold))
+                .dsGlyph(8, weight: .bold)
                 .foregroundStyle(bridge.status == .connected ? DS.confirm
                                                              : bridge.status.color)
                 .frame(width: 8, height: 8)
@@ -1459,7 +1459,7 @@ struct FeedScreen: View {
                 if showAddHint {
                     Image(systemName: "plus")
                         .accessibilityHidden(true)
-                        .font(.system(size: 12, weight: .semibold))
+                        .dsGlyph(12)
                         .foregroundStyle(DS.tint)
                 } else {
                     // Names the destination (2026-07-15, user: the quiet
@@ -1494,7 +1494,7 @@ struct FeedScreen: View {
                 if case .openURL(let url) = headerCompose.run { openExternal(url) }
             } label: {
                 HStack(spacing: DS.Space.s1) {
-                    Image(systemName: "plus").font(.system(size: 13, weight: .semibold))
+                    Image(systemName: "plus").dsGlyph(13)
                         .accessibilityHidden(true)
                     Text(LocalizedStringKey(headerCompose.label))
                         .dsText(.subhead13).fontWeight(.medium)
@@ -2865,7 +2865,7 @@ struct FeedScreen: View {
             Spacer(minLength: 0)
             Image(systemName: "chevron.down")
                 .accessibilityHidden(true)
-                .font(.system(size: 12, weight: .semibold))
+                .dsGlyph(12)
                 .foregroundStyle(DS.textTertiary)
         }
         .padding(.horizontal, DS.Space.s4)
@@ -3945,7 +3945,7 @@ struct FeedScreen: View {
         } label: {
             VStack(spacing: DS.Space.s1) {
                 Image(systemName: "plus")
-                    .font(.system(size: 13, weight: .semibold))
+                    .dsGlyph(13)
                     .foregroundStyle(DS.tint)
                     .frame(width: DS.Face.list, height: DS.Face.list)
                     .background(Circle().fill(DS.fillFaint))
@@ -4315,7 +4315,7 @@ struct FeedScreen: View {
                         .dsText(.callout15).fontWeight(.semibold)
                         .monospacedDigit()
                     Image(systemName: pastEventsExpanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 11, weight: .semibold))
+                        .dsGlyph(11)
                         .accessibilityHidden(true)
                 }
                 .foregroundStyle(DS.tint)
@@ -4445,7 +4445,7 @@ struct FeedScreen: View {
                             Spacer()
                             Image(systemName: "chevron.down")
                                 .accessibilityHidden(true)
-                                .font(.system(size: 12, weight: .semibold))
+                                .dsGlyph(12)
                                 .foregroundStyle(DS.textTertiary)
                         }
                         .padding(.vertical, DS.Space.s1)
@@ -4984,7 +4984,7 @@ struct FeedScreen: View {
                             .dsText(.callout15).fontWeight(.semibold)
                         Image(systemName: "chevron.right")
                             .accessibilityHidden(true)
-                            .font(.system(size: 12, weight: .semibold))
+                            .dsGlyph(12)
                     }
                     .foregroundStyle(DS.tint)
                     .padding(.horizontal, DS.Space.s4)
@@ -5020,7 +5020,7 @@ struct FeedScreen: View {
                         .dsText(.callout15).fontWeight(.semibold)
                     Image(systemName: "chevron.right")
                         .accessibilityHidden(true)
-                        .font(.system(size: 12, weight: .semibold))
+                        .dsGlyph(12)
                 }
                 .foregroundStyle(DS.tint)
                 .padding(.horizontal, DS.Space.s4)
@@ -5061,7 +5061,7 @@ struct FeedScreen: View {
     private var filteredEmptyState: some View {
         VStack(spacing: DS.Space.s3) {
             if source != "All" {
-                BridgeIcon(name: source, size: 44)
+                BridgeIcon(name: source, size: DS.Mark.tile)
             } else if let kind = ThingKind.from(typeTag: filter.tag) {
                 KindGlyph(kind: kind, size: 44)
             }
@@ -5140,7 +5140,7 @@ struct FeedScreen: View {
             HStack(spacing: DS.Space.s1) {
                 Image(systemName: "sparkles")
                     .accessibilityHidden(true)
-                    .font(.system(size: 12, weight: .semibold))
+                    .dsGlyph(12)
                 Text(label)
                     .dsText(.subhead13).fontWeight(.medium)
             }

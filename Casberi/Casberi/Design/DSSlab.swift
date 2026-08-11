@@ -159,7 +159,7 @@ struct DSSlabButton: View {
                     ProgressView().controlSize(.small).tint(.white)
                 } else if let systemImage {
                     Image(systemName: systemImage)
-                        .font(.system(size: 15, weight: .semibold))
+                        .dsGlyph(15)
                 }
                 Text(LocalizedStringKey(title))
                     .dsText(.body17).fontWeight(.semibold)
@@ -199,7 +199,7 @@ struct DSSlabDoor: View {
             HStack(spacing: DS.Space.s3) {
                 if let systemImage {
                     Image(systemName: systemImage)
-                        .font(.system(size: 15, weight: .medium))
+                        .dsGlyph(15, weight: .medium)
                         .foregroundStyle(DS.textSecondary)
                 }
                 Text(LocalizedStringKey(title))
@@ -212,7 +212,7 @@ struct DSSlabDoor: View {
                         .lineLimit(1)
                 }
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .dsGlyph(12)
                     .foregroundStyle(DS.textTertiary)
             }
             .padding(.horizontal, DS.Space.s4)
@@ -306,7 +306,7 @@ struct DSCheckList: View {
             ForEach(lines, id: \.self) { line in
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                     Image(systemName: systemImage)
-                        .font(.system(size: 11, weight: .bold))
+                        .dsGlyph(11, weight: .bold)
                         .foregroundStyle(tint ?? DS.confirm)
                     Text(LocalizedStringKey(line))
                         .dsText(.callout15).foregroundStyle(DS.textSecondary)

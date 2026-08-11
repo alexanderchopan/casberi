@@ -55,7 +55,7 @@ struct SafeRoomCard: View {
                 } icon: {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(DS.attention)
-                        .font(.system(size: 11))
+                        .dsGlyph(11, weight: .regular)
                 }
                 .padding(.top, DS.Space.s1)
             }

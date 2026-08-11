@@ -117,7 +117,7 @@ struct BridgeSetupHeader: View {
                 // one line the screen wants read, and an all-gray pre-connect
                 // screen read as disabled.
                 HStack(alignment: .center, spacing: DS.Space.s3) {
-                    BridgeIcon(name: name, size: 60)
+                    BridgeIcon(name: name, size: DS.Mark.hero)
                         .settleIn()
                         .coinFlip(trigger: flipTrigger)
                     VStack(alignment: .leading, spacing: DS.Space.s1) {
@@ -168,7 +168,7 @@ struct BridgeSetupHeader: View {
     private func modeChip(_ mode: BridgeSetupMode) -> some View {
         HStack(spacing: DS.Space.s1) {
             Image(systemName: mode.glyph)
-                .font(.system(size: 10, weight: .semibold))
+                .dsGlyph(10)
             Text(mode.label).dsText(.label12)
         }
         .foregroundStyle(DS.textSecondary)
@@ -265,7 +265,7 @@ struct BridgeStepLines: View {
                         Group {
                             if done {
                                 Image(systemName: "checkmark")
-                                    .font(.system(size: 12, weight: .bold))
+                                    .dsGlyph(12, weight: .bold)
                                     .foregroundStyle(DS.confirm)
                                     .transition(.scale.combined(with: .opacity))
                             } else {

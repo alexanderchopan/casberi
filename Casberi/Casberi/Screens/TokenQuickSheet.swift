@@ -83,7 +83,7 @@ struct TokenQuickSheet: View {
                                 Text("No live price for this token — view on Dexscreener")
                                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
                                 Image(systemName: "arrow.up.right")
-                                    .font(.system(size: 12, weight: .medium))
+                                    .dsGlyph(12, weight: .medium)
                                     .foregroundStyle(DS.textTertiary)
                             }
                             .padding(DS.Space.s3)
@@ -180,7 +180,7 @@ struct TokenQuickSheet: View {
         if let watchedTitle {
             HStack(spacing: DS.Space.s4) {
                 Image(systemName: "checkmark")
-                    .font(.system(size: 18))
+                    .dsGlyph(18, weight: .regular)
                     .foregroundStyle(DS.confirm)
                     .frame(width: 26, alignment: .center)
                 Text("Watching \(watchedTitle)")
@@ -202,7 +202,7 @@ struct TokenQuickSheet: View {
             } label: {
                 HStack(spacing: DS.Space.s4) {
                     Image(systemName: "eye")
-                        .font(.system(size: 18))
+                        .dsGlyph(18, weight: .regular)
                         .foregroundStyle(DS.textSecondary)
                         .frame(width: 26, alignment: .center)
                     Text("Watch this token")

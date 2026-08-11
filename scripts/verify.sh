@@ -362,6 +362,24 @@ python3 "$ROOT/scripts/face-ramp-audit.py" >/dev/null \
   || fail "the face-ramp audit failed — run python3 scripts/face-ramp-audit.py"
 print -P "%F{green}✓ face-ramp audit%f"
 
+# The design system's THIRD mechanical check, and the complement of the one
+# above: `DS.Face` is the ramp for a ROUND identity mark, `DS.Mark` the ramp
+# for a SQUARE brand mark, which that audit's own header leaves out by name.
+# Same failure shape — `BridgeIcon` had drifted to fourteen literals, and two
+# were real defects: a token row's leading square CHANGED SIZE depending on
+# whether its art had loaded (thumbnail 36, fallback mark 38, same HStack), and
+# a bridge's setup header drew at 60 while its connected header drew at 54.
+# It also carries the glyph half: an SF Symbol sized with a frozen
+# `.font(.system(size:))` does not grow with the label beside it, so at an
+# accessibility size the words grow and the icons don't. All of it renders
+# perfectly in a build and in a default-size screenshot.
+step "Design-ramp audit"
+python3 "$ROOT/scripts/design-ramp-audit.py" --self-test >/dev/null \
+  || fail "the design-ramp audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/design-ramp-audit.py" >/dev/null \
+  || fail "a glyph is frozen or a brand mark is off the DS.Mark ramp — run python3 scripts/design-ramp-audit.py"
+print -P "%F{green}✓ design-ramp audit%f"
+
 # A localization sweep (2026-08-04) found 194 previously-translated strings
 # had regressed into bare Swift literals — unreachable, rendering English in
 # every language — plus missing InfoPlist/AppShortcuts catalogs and 44

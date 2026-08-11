@@ -1164,7 +1164,7 @@ struct CalendarHeatmapHero: View {
                 // rendered image, just what the card already says.
                 ShareLink(item: "\(title) — \(subtitle) 🍇", subject: Text(title)) {
                     Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 13, weight: .semibold))
+                        .dsGlyph(13)
                         .foregroundStyle(DS.textTertiary)
                 }
                 .accessibilityLabel("Share")
@@ -1214,7 +1214,7 @@ struct CalendarHeatmapHero: View {
                             .lineLimit(1)
                         Image(systemName: "chevron.right")
                             .accessibilityHidden(true)
-                            .font(.system(size: 11, weight: .semibold))
+                            .dsGlyph(11)
                             .foregroundStyle(DS.textTertiary)
                     }
                     .padding(.top, DS.Space.s1)
@@ -1516,7 +1516,7 @@ struct LiveStreamHero: View {
                         } else {
                             ZStack {
                                 DS.fillFaint
-                                BridgeIcon(name: "Twitch", size: 44)
+                                BridgeIcon(name: "Twitch", size: DS.Mark.tile)
                             }
                         }
                     }
@@ -1581,7 +1581,7 @@ private struct ShelfSizePin: View {
     var body: some View {
         Button(action: onTap) {
             Image(systemName: "pin.fill")
-                .font(.system(size: 15, weight: .semibold))
+                .dsGlyph(15)
                 .foregroundStyle(onImage ? AnyShapeStyle(.white.opacity(0.95))
                                          : AnyShapeStyle(DS.textSecondary))
                 .rotationEffect(.degrees(-35))
@@ -1976,7 +1976,7 @@ private struct GenFlexThumb: View {
                     DS.gray200
                     Image(systemName: "photo")
                         .accessibilityHidden(true)
-                        .font(.system(size: 24, weight: .medium))
+                        .dsGlyph(24, weight: .medium)
                         .foregroundStyle(DS.textTertiary)
                 }
             } else {
@@ -2448,7 +2448,7 @@ private struct GenTagMap: View {
                     // corner like every other module's pin (ruling 2026-07-12).
                     if preview == false, sizeToggle == nil, pinBorn {
                         Image(systemName: "pin.fill")
-                            .font(.system(size: 11, weight: .semibold))
+                            .dsGlyph(11)
                             .foregroundStyle(DS.textSecondary)
                             .rotationEffect(.degrees(-35), anchor: .bottomLeading)
                             .accessibilityLabel("Pinned")
@@ -2667,7 +2667,7 @@ private struct GenTagMap: View {
         } else {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 if iconMode == "source" {
-                    BridgeIcon(name: item.tag, size: 20)
+                    BridgeIcon(name: item.tag, size: DS.Mark.badge)
                 }
                 Text(item.tag)
                     .dsText(.body17)
@@ -2743,7 +2743,7 @@ private struct GenAppsInvite: View {
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right")
                     .accessibilityHidden(true)
-                    .font(.system(size: 14, weight: .semibold))
+                    .dsGlyph(14)
                     .foregroundStyle(DS.textTertiary)
             }
             .padding(DS.Space.s4)
@@ -3377,7 +3377,7 @@ private struct GenAlerts: View {
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     HStack(spacing: DS.Space.s2) {
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 13, weight: .semibold))
+                            .dsGlyph(13)
                             .foregroundStyle(DS.attention)
                             .accessibilityHidden(true)
                         Text(el.str(0))
@@ -3395,7 +3395,7 @@ private struct GenAlerts: View {
                                     .multilineTextAlignment(.leading)
                                 HStack(spacing: DS.Space.s1) {
                                     if !item.source.isEmpty {
-                                        BridgeIcon(name: item.source, size: 14)
+                                        BridgeIcon(name: item.source, size: DS.Mark.inline)
                                     }
                                     if !item.meta.isEmpty {
                                         Text(item.meta)
@@ -3947,7 +3947,7 @@ private struct GenDayNoteLine: View {
         let id = el.str(2)
         let line = HStack(alignment: .top, spacing: DS.Space.s3) {
             Image(systemName: el.str(0).isEmpty ? "sparkles" : el.str(0))
-                .font(.system(size: 14, weight: .semibold))
+                .dsGlyph(14)
                 .foregroundStyle(DS.textSecondary)
                 .frame(width: 20)
                 .padding(.top, 2)
@@ -3962,7 +3962,7 @@ private struct GenDayNoteLine: View {
             // chevron rather than a dead one.
             if !id.isEmpty {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .dsGlyph(12)
                     .foregroundStyle(DS.textTertiary)
                     .padding(.top, 3)
                     .accessibilityHidden(true)
@@ -4300,7 +4300,7 @@ private struct GenMoneyHero: View {
                         }
                         Spacer(minLength: DS.Space.s2)
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .semibold))
+                            .dsGlyph(12)
                             .foregroundStyle(DS.textTertiary)
                             .accessibilityHidden(true)
                     }
@@ -4477,7 +4477,7 @@ private struct GenLeadRow: View {
                     if !el.str(1).isEmpty || !el.str(4).isEmpty {
                         HStack(spacing: DS.Space.s1) {
                             if !el.str(4).isEmpty {
-                                BridgeIcon(name: el.str(4), size: 14)
+                                BridgeIcon(name: el.str(4), size: DS.Mark.inline)
                             }
                             if !el.str(1).isEmpty {
                                 Text(el.str(1))
@@ -4575,7 +4575,7 @@ private struct GenAskMore: View {
                             .foregroundStyle(DS.tint)
                             .multilineTextAlignment(.leading)
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 11, weight: .semibold))
+                            .dsGlyph(11)
                             .foregroundStyle(DS.tint)
                             .accessibilityHidden(true)
                     }
@@ -4934,7 +4934,7 @@ private struct GenSourceMix: View {
     private func cell(_ item: KindCountRow.Item, index: Int) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: DS.Space.s1) {
-                BridgeIcon(name: item.tag, size: 16)
+                BridgeIcon(name: item.tag, size: DS.Mark.inline)
                 Text(item.tag)
                     .dsText(.label12)
                     .foregroundStyle(DS.textPrimary)

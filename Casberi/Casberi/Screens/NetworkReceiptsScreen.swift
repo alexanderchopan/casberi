@@ -163,14 +163,14 @@ struct NetworkReceiptsScreen: View {
     @ViewBuilder
     private func leadingIcon(_ service: String?) -> some View {
         if let service, BridgeCatalog.offers.contains(where: { $0.name == service }) {
-            BridgeIcon(name: service, size: 38)
+            BridgeIcon(name: service, size: DS.Mark.list)
         } else {
-            RoundedRectangle(cornerRadius: DS.Radius.appIcon(38), style: .continuous)
+            RoundedRectangle(cornerRadius: DS.Radius.appIcon(DS.Mark.list), style: .continuous)
                 .fill(service == nil ? DS.attention.opacity(0.16) : DS.gray200)
-                .frame(width: 38, height: 38)
+                .frame(width: DS.Mark.list, height: DS.Mark.list)
                 .overlay {
                     Image(systemName: service == nil ? "questionmark" : "network")
-                        .font(.system(size: 16, weight: .semibold))
+                        .dsGlyph(16)
                         .foregroundStyle(service == nil ? DS.attention : DS.textSecondary)
                 }
         }
@@ -228,7 +228,7 @@ private struct ReachCard: View {
         let tone = clean ? DS.confirm : DS.attention
         return HStack(spacing: 4) {
             Image(systemName: clean ? "checkmark" : "exclamationmark.triangle.fill")
-                .font(.system(size: 10, weight: .bold))
+                .dsGlyph(10, weight: .bold)
             Text(word).dsText(.label12).fontWeight(.semibold)
         }
         .foregroundStyle(tone)

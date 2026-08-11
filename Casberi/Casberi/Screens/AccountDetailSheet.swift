@@ -181,7 +181,7 @@ struct AccountDetailSheet: View {
     private func actionLabel(_ title: String, icon: String,
                              fg: Color, bg: Color) -> some View {
         HStack(spacing: DS.Space.s2) {
-            Image(systemName: icon).font(.system(size: 15, weight: .semibold))
+            Image(systemName: icon).dsGlyph(15)
             Text(title).dsText(.callout15).fontWeight(.semibold)
         }
         .foregroundStyle(fg)
@@ -271,7 +271,7 @@ struct AccountDetailSheet: View {
             // guarantee still reads at a glance without a badge painting it.
             HStack(spacing: DS.Space.s2) {
                 Image(systemName: "sparkles")
-                    .font(.system(size: 13, weight: .semibold))
+                    .dsGlyph(13)
                 Text("Private — answers run on \(DS.device)")
                     .dsText(.subhead13).fontWeight(.semibold)
             }
@@ -358,7 +358,7 @@ struct AccountDetailSheet: View {
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
+                    .dsGlyph(13)
                     .foregroundStyle(DS.textTertiary)
             }
             .contentShape(Rectangle())
@@ -524,7 +524,7 @@ struct AccountDetailSheet: View {
                             .overlay {
                                 if selected {
                                     Image(systemName: "checkmark")
-                                        .font(.system(size: 15, weight: .bold))
+                                        .dsGlyph(15, weight: .bold)
                                         // White reads on the five saturated
                                         // fills; on the neutral chip it would
                                         // vanish in the light theme.
@@ -592,7 +592,7 @@ struct AccountDetailSheet: View {
     /// pass (2026-08-03).
     private func badge(_ glyph: String, _ tone: Color) -> some View {
         IconChip(tone: tone, size: 38) {
-            Image(systemName: glyph).font(.system(size: 16, weight: .semibold))
+            Image(systemName: glyph).dsGlyph(16)
         }
     }
 
