@@ -170,6 +170,12 @@ enum BridgeGlyph {
         case "apple music": return "music.note"
         case "spotify":   return "music.note.list"
         case "wallet":    return "wallet.bifold"
+        // The folded Markets chip's own glyph (2026-08-11) — the same generic
+        // treatment Wallet already wears, and the same symbol/color the
+        // catalog's Markets category chip uses via its Kalshi exemplar
+        // (`BridgeCatalog.categories`), so the two "Markets" marks in the app
+        // agree with each other rather than inventing a third convention.
+        case "markets":   return "percent"
         case "peer":      return "arrow.left.arrow.right"
         case "privacy pools", "0xbow privacy pools": return "shield.lefthalf.filled"
         case "gnosis pay": return "creditcard"

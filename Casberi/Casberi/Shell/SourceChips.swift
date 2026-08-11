@@ -358,11 +358,6 @@ struct SourceChips: View {
                 case Pinboard.room:
                     // The pinned room (2026-08-10) — see `PinnedChipMark`.
                     PinnedChipMark(size: iconSize)
-                case MarketsRoom.room:
-                    // The folded market seats (2026-08-10) — see
-                    // `MarketsChipMark` for why it wears their marks rather
-                    // than a glyph of its own.
-                    MarketsChipMark(venues: marketVenues, size: iconSize)
                 default:
                     BridgeIcon(name: label, size: iconSize, circular: true)
                 }
@@ -448,9 +443,9 @@ struct SourceChips: View {
     }
 
     private func chipAccessibilityLabel(_ label: String, broken: Bool) -> String {
-        // The folded chip NAMES its venues: every other chip in this strip is a
-        // brand mark whose label is the brand, and a cluster is the one mark
-        // where the picture genuinely carries more than its own word.
+        // The folded chip's own face is a generic glyph (2026-08-11) that
+        // names none of its members, so VoiceOver is the one place left that
+        // still says which venues are behind it — spoken, not drawn.
         guard MarketsRoom.isRoom(label), !marketVenues.isEmpty else {
             return broken ? String(localized: "\(label), needs reconnecting") : label
         }
@@ -458,66 +453,6 @@ struct SourceChips: View {
         return broken
             ? String(localized: "Markets: \(venues), needs reconnecting")
             : String(localized: "Markets: \(venues)")
-    }
-}
-
-/// The folded Markets chip's face (2026-08-10) — the member seats' own marks,
-/// clustered on a recessed well.
-///
-/// The well is here because a folder needs a GROUND for its contents to sit
-/// on, and for no other reason — explicitly NOT because it matches the
-/// neutral chips, which wear glass (`dsGlass` on "All", `dsGlassDoor` on both
-/// doors) and have since 2026-08-06, when the avatar's flat grey well was
-/// removed as a bug. Glass would be wrong here anyway: it exists to blur what
-/// passes behind the floating layer, and what is behind this circle is four
-/// opaque brand marks of its own.
-///
-/// **Why a folder and not a glyph.** This strip's whole grammar is un-frosted
-/// brand identity (ruling 2026-07-20: "an icon IS content"), so a generic
-/// markets symbol would be the only chip in the row standing for the app's
-/// taxonomy instead of one of the person's own connections — chrome wearing a
-/// content chip's clothes. A cluster keeps the promise: it says exactly which
-/// seats are inside, and it differs between someone watching two tokens and
-/// someone deep in four venues, because it is drawn from their seats.
-///
-/// Rows of two, ragged last row centered — the iOS folder's own shape, and the
-/// reason it needs no special case per count: two venues draw one row, three
-/// draw a row of two above a centered one, four draw a square. Capped at four
-/// because a fifth mark inside 46 points is a smudge, and the cap is silent on
-/// purpose — this is a door, not an inventory, and the switcher behind it names
-/// every venue in words.
-private struct MarketsChipMark: View {
-    let venues: [String]
-    let size: CGFloat
-
-    /// 16pt marks with a 3pt gutter inside a 46pt circle — two of them plus the
-    /// gutter span 35pt, which leaves the cluster clear of the curve at the
-    /// corners where a square inscribed in a circle runs out of room.
-    private var cell: CGFloat { size * 0.348 }
-    private var gap: CGFloat { size * 0.065 }
-
-    private var rows: [[String]] {
-        let shown = Array(venues.prefix(4))
-        return stride(from: 0, to: shown.count, by: 2).map {
-            Array(shown[$0..<min($0 + 2, shown.count)])
-        }
-    }
-
-    var body: some View {
-        ZStack {
-            Circle().fill(DS.surfaceWell)
-            VStack(spacing: gap) {
-                ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                    HStack(spacing: gap) {
-                        ForEach(row, id: \.self) { venue in
-                            BridgeIcon(name: venue, size: cell, circular: true)
-                        }
-                    }
-                }
-            }
-        }
-        .frame(width: size, height: size)
-        .clipShape(Circle())
     }
 }
 
@@ -531,13 +466,14 @@ private struct MarketsChipMark: View {
 /// grey square beside twenty real brand marks, which is exactly the one chip in
 /// the row nobody could name.
 ///
-/// **Why a glyph is right here and wrong for `MarketsChipMark`.** That doc's
-/// rule — this strip's grammar is brand identity, so a taxonomy symbol would be
-/// chrome dressed as content — holds for a folder over four of the person's own
-/// seats. It does not hold here: this room has no seats to draw, and the one
-/// thing it stands for is a verb the person performed. "All" already occupies
-/// exactly that footing (a neutral word on glass), so the two non-source rooms
-/// read as a pair rather than as one odd chip.
+/// **Why a glyph is right here, and why Markets' own glyph (2026-08-11,
+/// `BridgeGlyph.symbol(for: "markets")`) doesn't need a case like this one.**
+/// Markets resolves through the ordinary `BridgeIcon` path because it names a
+/// real catalog entry — the same generic-glyph shape `default` already gives
+/// "Wallet". The pinned room can't take that path at all (it isn't a source),
+/// which is the actual reason it needs a bespoke case here. "All" already
+/// occupies the same footing (a neutral word on glass), so the two non-source
+/// rooms read as a pair rather than as one odd chip.
 ///
 /// Drawn in the tint, unlike "All"'s ink: this is the one room whose contents
 /// you chose, and the tint is what the app uses everywhere else to mean yours.

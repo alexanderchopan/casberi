@@ -54,6 +54,7 @@ extension DS {
         case "bookmarks":           return Color.fixed("#8d6e63")   // a neutral bookmark-ribbon brown — no single brand here (Safari + Chrome, one file format)
         case "safari":              return Color.fixed("#1d9bf6")
         case "wallet":              return Color.fixed("#2461ff")
+        case "markets":             return Color.fixed("#4fae7b")   // Kalshi's green — matches the catalog's own Markets-category glyph (its Kalshi exemplar), so the folded chip and the category chip agree
         case "peer":                return Color.fixed("#4b47f6")   // an indigo in their family — approximate; re-sample when bundling the official mark
         case "gnosis pay":          return Color.fixed("#4830c0")   // the owl's indigo (icon-sampled from the bundled mark)
         case "apple wallet":        return Color.fixed("#1d1d1f")   // Apple Card graphite — the titanium card's own near-black
