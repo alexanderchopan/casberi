@@ -90,8 +90,19 @@ strip_comments "$APP"    > "$TMP/app.nc"
 
 grep -q 'MarketsRoom.fold(' "$TMP/main.nc" \
   || { echo "✗ MainSurface no longer folds the chip list — the market seats never collapse"; exit 1; }
-grep -q 'active: activeChip' "$TMP/main.nc" \
+# Two greps, not one, because the thing that must hold is a DERIVATION and the
+# variable carrying it has already been renamed once: `active:` took the
+# `activeChip` property until 2026-08-11, when the strip's three arguments were
+# folded into one `chipSnapshot()` walk (that property resolved the label a
+# second and third time, at 34% of the main thread on a cold launch). Pinning
+# one spelling makes this fail on a rename that changed nothing — which is
+# exactly what it did — so accept either name, then prove separately that the
+# name is fed by `MarketsRoom.chipLabel`. `active: filter.source` still fails.
+grep -qE 'active: (activeChip|chips\.active)' "$TMP/main.nc" \
   || { echo "✗ the strip is passed a raw source again — standing in a folded seat would light NO chip"; exit 1; }
+grep -q 'MarketsRoom.chipLabel(for: filter.source' "$TMP/main.nc" \
+  || { echo "✗ the active chip is no longer resolved through MarketsRoom.chipLabel —"; \
+       echo "  whatever the strip is handed as 'active' is a raw seat, not a folded label."; exit 1; }
 
 # THE CENTRAL INVARIANT, and the reason this harness earns its slot in
 # verify.sh. "Markets" is a chip LABEL; `FeedFilter.source` must always hold a

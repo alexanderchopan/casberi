@@ -32,7 +32,7 @@ struct SourceChips: View {
     /// Passed in rather than read off `ShellChrome`, because the strip renders
     /// once BEFORE the shell's `onAppear` has published anything — and a folded
     /// chip whose venue list is empty draws as a bare grey circle. The owner
-    /// hands over a value with its own fallback (`displayedMarketVenues`), so
+    /// hands over a value with its own fallback (`MainSurface.chipSnapshot`), so
     /// the mark and the labels can never disagree with the chip beside them.
     var marketVenues: [String] = []
     /// Folded while the feed scrolls down (2026-07-30, `ShellChrome.minimized`).

@@ -303,7 +303,15 @@ struct MainSurface: View {
     }
 
     private var chipLabels: [String] {
-        let live = liveChips ?? computedChipLabels
+        foldedLabels(live: liveChips ?? computedChipLabels)
+    }
+
+    /// `chipLabels` over an ALREADY-RESOLVED live list.
+    ///
+    /// Split out (2026-08-11) so `chipSnapshot` can fold the strip's three
+    /// answers out of ONE walk. Pure set arithmetic over two arrays — the
+    /// expensive half is entirely in resolving `live`.
+    private func foldedLabels(live: [String]) -> [String] {
         guard !frozenChips.isEmpty else { return live }
         // Anything the freeze knows about keeps its frozen slot; a source whose
         // last thing was deleted meanwhile drops out.
@@ -324,7 +332,27 @@ struct MainSurface: View {
     /// Freeze the order as it stands. Called at mount and on every foreground —
     /// never mid-session, which is the whole point. One walk serves both the
     /// freeze and the live cache, since at this instant they are the same list.
-    private func freezeChips() {
+    /// When the strip last froze. See `freezeChips(force:)`.
+    @State private var lastFreeze: Date?
+    /// Two freezes closer together than this cannot mean two different orders.
+    private static let freezeCoalesce: TimeInterval = 1.0
+
+    private func freezeChips(force: Bool = false) {
+        // Coalesced (2026-08-11). A cold launch fires this TWICE within
+        // milliseconds — `onAppear` and the first `.active` scenePhase — and on
+        // the Mac every focus flip fires it again. That was genuinely free
+        // while this was a pure local sort over an already-materialised array,
+        // which is what the call site below still says; since 2026-08-06 it is
+        // `newestPerSource()`, one indexed store read per candidate seat, and a
+        // cold-launch profile put the pair at ~640 of 4,300 main-thread samples.
+        //
+        // `force` belongs to the `onAppear` call and only it: that one runs
+        // AFTER `-chipStats` seeds `ChipMemory`, so letting it be the freeze
+        // that gets skipped would quietly stop the probe deciding the order it
+        // exists to decide.
+        if !force, let lastFreeze,
+           Date().timeIntervalSince(lastFreeze) < Self.freezeCoalesce { return }
+        lastFreeze = Date()
         let computed = computedChips()
         liveChips = computed.labels
         frozenChips = computed.labels
@@ -356,28 +384,70 @@ struct MainSurface: View {
     /// `ShellChrome.sourceOrder` for why it is not `chipLabels`.
     @State private var sourceOrder: [String] = ["All"]
 
-    /// The venue list the STRIP draws its folded mark from.
+    /// Everything the strip needs, from AT MOST ONE walk (2026-08-11).
     ///
-    /// Reads the `@State` mirror, but falls back to a fresh computation when
-    /// the mirror is empty while the labels already carry the folded chip —
-    /// which is exactly the first body pass, before `onAppear` runs
-    /// `freezeChips()`. Without this the folded chip renders as a bare grey
-    /// circle with no marks on every cold launch (and, briefly, with no
-    /// attention ring and no venue names in its accessibility label). The
-    /// fallback costs one extra walk in that one frame and never fires again.
-    private var displayedMarketVenues: [String] {
-        if marketVenues.isEmpty && chipLabels.contains(MarketsRoom.room) {
-            return computedChips().venues
+    /// The strip's three arguments — labels, the active chip, and the folded
+    /// room's venues — are all derived from the same list, and each used to
+    /// resolve it independently: `chipLabels` walked, `activeChip` walked
+    /// again through `chipLabels`, and `displayedMarketVenues` walked a third
+    /// time (and a fourth, since its own guard read `chipLabels`). A cold
+    /// launch profile on a 6,000-row corpus put that at **34% of the main
+    /// thread** — `MainSurface.topInset` 1603 of 4722 samples, nearly all of it
+    /// inside `newestPerSource`'s per-seat SQLite reads, and launch at 3.5–4.4s
+    /// against 2.8–2.9s before the markets fold added the last two call sites.
+    ///
+    /// Each answer is still exactly what it was; they are simply asked once.
+    /// `walk()` is lazy AND memoised, so the steady state — `liveChips` warm,
+    /// `marketVenues` mirrored — costs zero walks rather than one per reader.
+    ///
+    /// The venue fallback keeps its reason for existing (see below) but no
+    /// longer pays for it up front: it used to test `marketVenues.isEmpty`
+    /// FIRST, which is true for everyone who has not folded a Markets chip —
+    /// i.e. almost everyone — and then evaluate the expensive half of the `&&`
+    /// on every single body pass to prove a fold it was never going to find.
+    private func chipSnapshot() -> (labels: [String], active: String, venues: [String]) {
+        var walked: (labels: [String], venues: [String], sources: [String])?
+        func walk() -> (labels: [String], venues: [String], sources: [String]) {
+            if let walked { return walked }
+            let fresh = computedChips()
+            walked = fresh
+            return fresh
         }
-        return marketVenues
+        let labels = foldedLabels(live: liveChips ?? walk().labels)
+        // The mirror, but falling back to a fresh computation when it is empty
+        // while the labels already carry the folded chip — which is exactly the
+        // first body pass, before `onAppear` runs `freezeChips()`. Without this
+        // the folded chip renders as a bare grey circle with no marks on every
+        // cold launch (and, briefly, with no attention ring and no venue names
+        // in its accessibility label).
+        let venues: [String]
+        if !marketVenues.isEmpty {
+            venues = marketVenues
+        } else if labels.contains(MarketsRoom.room) {
+            venues = walk().venues
+        } else {
+            venues = []
+        }
+        // `filter.source` is always a REAL seat, so inside a folded market room
+        // it names a source with no circle of its own — and an active room with
+        // no lit chip reads as no filter at all.
+        return (labels, MarketsRoom.chipLabel(for: filter.source, folded: labels), venues)
     }
 
-    /// The chip that should read as active. `filter.source` is always a REAL
-    /// seat, so inside a folded market room it names a source with no circle of
-    /// its own — and an active room with no lit chip reads as no filter at all.
+    /// The chip that should read as active. See `chipSnapshot`, which is what
+    /// the strip itself uses; this serves the readers that need it alone.
     private var activeChip: String {
         MarketsRoom.chipLabel(for: filter.source, folded: chipLabels)
     }
+
+    /// A cheap stand-in for `chipLabels` as an `.onChange` key.
+    ///
+    /// `.onChange(of:)` evaluates its key on EVERY body pass, so keying the
+    /// `chrome.chipOrder` mirror off `chipLabels` put a fifth full walk on the
+    /// body path. These two `@State` arrays are the only inputs `foldedLabels`
+    /// has, so they change exactly when the folded order does — and the walk
+    /// then happens once, inside the handler, where it is rare.
+    private var chipOrderKey: [String] { (liveChips ?? []) + ["\u{0}"] + frozenChips }
 
     /// Every source that owns at least one row, newest first — one indexed
     /// `fetchLimit: 1` read per candidate name.
@@ -436,7 +506,7 @@ struct MainSurface: View {
     /// `chipLabels` can compute inline on the first body pass while the `@State`
     /// mirrors are still empty, which is why `sourceStrip` hands the strip a
     /// venue list with its own fallback rather than reading the mirror (see
-    /// `displayedMarketVenues`).
+    /// `chipSnapshot`).
     private func computedChips() -> (labels: [String], venues: [String], sources: [String]) {
         // Asked SOURCE BY SOURCE since 2026-08-06, not by walking the corpus.
         //
@@ -622,9 +692,11 @@ struct MainSurface: View {
     /// call site for the taps so the strip and the rail can never drift on
     /// what a chip actually DOES.
     private func sourceStrip(axis: Axis) -> some View {
-        SourceChips(labels: chipLabels, active: activeChip,
+        // One walk for all three, not three (2026-08-11) — see `chipSnapshot`.
+        let chips = chipSnapshot()
+        return SourceChips(labels: chips.labels, active: chips.active,
                     axis: axis,
-                    marketVenues: displayedMarketVenues,
+                    marketVenues: chips.venues,
                     minimized: chrome.minimized,
                     onApps: { route.present(.apps) },
                     onSettings: { route.present(.settings) },
@@ -634,7 +706,7 @@ struct MainSurface: View {
             // Markets chip while standing in Kalshi is a re-tap of the chip
             // you're on, and comparing raw sources would read it as a switch
             // and silently do nothing (the guard in `go(to:)` catches it).
-            if label == activeChip {
+            if label == chips.active {
                 // Re-tapping the chip you're already on pops back to
                 // root (the old per-tab habit) instead of doing nothing.
                 chrome.popHome += 1
@@ -893,8 +965,16 @@ struct MainSurface: View {
             }
         }
         // Mac's ⌘1–⌘9 (2026-07-28) reads this mirror — see `ShellChrome.chipOrder`.
-        .onChange(of: chipLabels, initial: true) { _, labels in
-            chrome.chipOrder = labels
+        .onChange(of: chipOrderKey, initial: true) { _, _ in
+            // Nothing to publish until the strip has resolved its own order.
+            // The initial fire lands BEFORE `onAppear`, so without this guard
+            // `chipLabels` walks the store here for an answer `freezeChips` is
+            // about to compute a few milliseconds later — measured at 634 of
+            // 4376 main-thread samples on a cold launch, a second full walk for
+            // nothing. Setting `liveChips` moves this key, so the handler runs
+            // again the moment there is something true to publish.
+            guard liveChips != nil else { return }
+            chrome.chipOrder = chipLabels
         }
         // The folded room's scopes — see `ShellChrome.marketVenues`.
         .onChange(of: marketVenues, initial: true) { _, venues in
@@ -942,8 +1022,10 @@ struct MainSurface: View {
         // The Mac's foreground (2026-08-01): Catalyst never delivers the
         // scenePhase transition above (the scene is .active before the
         // observer attaches — see RootShell.handleActivation), so the strip
-        // re-sorts on the AppKit focus-in instead. `freezeChips` is a pure
-        // local sort, so the extra fires a Mac's focus flips produce are free.
+        // re-sorts on the AppKit focus-in instead. The extra fires a Mac's
+        // focus flips produce are absorbed by `freezeChips(force:)`'s
+        // coalescing window — they were free when this was a local sort, and
+        // stopped being free when it became one store read per seat.
         .onReceive(NotificationCenter.default.publisher(
             for: UIApplication.didBecomeActiveNotification)) { _ in
             if ProcessInfo.processInfo.isMacCatalystApp { freezeChips() }
@@ -1188,8 +1270,10 @@ struct MainSurface: View {
                 ChipMemory.seedFromLaunchArgs()
                 #endif
                 // The session's order, taken once (see `chipLabels`). AFTER the
-                // seed above, so `-chipStats` still decides what freezes.
-                freezeChips()
+                // seed above, so `-chipStats` still decides what freezes —
+                // which is also why this one is `force`ed past the coalescing
+                // window in `freezeChips(force:)`.
+                freezeChips(force: true)
                 #if DEBUG
                 NSLog("[Casberi] chipLabels: %@", chipLabels.joined(separator: ", "))
                 // The Markets fold, reported from where it is actually decided
