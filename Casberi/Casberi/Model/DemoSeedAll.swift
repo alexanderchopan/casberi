@@ -65,7 +65,35 @@ enum DemoSeedAll {
     /// prefix (`cloudflare:cert:<real zone id>`) and must never be swept up
     /// by `clear`/`teardown`.
     static let refPrefixes = ["demo:", "sample:demo-shot-", "files:demo/",
-                              "import:receipt:", "cloudflare:cert:demo"]
+                              "import:receipt:", "cloudflare:cert:demo",
+                              // Peer/Privacy Pools rows carry the REAL
+                              // bridges' own ref prefixes (2026-08-10, so
+                              // their room heads' ref-shape matching
+                              // recognises them) rather than the generic
+                              // "demo:" family every other seed uses — so
+                              // exit() needs its own entries or these rows
+                              // outlive the demo, indistinguishable from a
+                              // real synced deposit/fill.
+                              "peer:demo", "privacypools:dep:demo",
+                              // The two PostHog WATCH rows (2026-08-10) carry
+                              // the real `PostHogWatch.metricRef` shape for
+                              // the same reason — no "demo" segment is
+                              // possible here since the event name itself
+                              // must be real for the room head to read it.
+                              // Scoped to the EXACT two names the demo uses
+                              // (never a bare "posthog:metric:" prefix, which
+                              // would sweep up a real custom watch) — the
+                              // same accepted risk `PostHogState.forget`
+                              // already carries for these same two names:
+                              // a real PostHog connection watching a metric
+                              // literally called "signed_up" or
+                              // "answer_asked" would lose it on demo exit.
+                              // Not reachable through the UI (`demoReentryAvailable`
+                              // hides the re-entry door the moment anything
+                              // real is connected), only through the DEBUG
+                              // `-demoEnter` hook.
+                              PostHogWatch.metricRef("signed_up"),
+                              PostHogWatch.metricRef("answer_asked")]
 
     // MARK: - Entry point
 
@@ -197,6 +225,17 @@ enum DemoSeedAll {
         // keep off a lived-in install (a real Cloudflare bridge reads as
         // "Cloudflare" too, indistinguishable by name).
         CloudflareEstateStore.clear()
+
+        // Apple Wallet's own bespoke connected flag, and App Store Connect's
+        // planted standing — same accepted risk as Cloudflare above: a real
+        // Apple Wallet or App Store Connect bridge answers to the same name
+        // and there is no per-account key to tell a demo estate from a real
+        // one, which is exactly what `demoReentryAvailable`'s gate exists to
+        // keep off a lived-in install.
+        AppleWalletBridge.connected = false
+        ASCState.apps = [:]
+        ASCState.standing = [:]
+        ASCState.lastRead = nil
 
         // `clear` REMOVES the version stamp, which is right for the dev verb
         // it was written for (`-demoSeed clear`, where the next launch should
@@ -981,7 +1020,13 @@ enum DemoSeedAll {
             ("Put 0.0900 ETH into Privacy Pools", "Cleared", 45),
         ]
         out += pools.enumerated().map { i, p in
-            row(.transaction, p.0, source: "Privacy Pools", ref: "demo:pools:\(i)",
+            // The ref must carry `PrivacyPoolsRoom.depositPrefix` — the room
+            // head's `row(ref:tags:)` matches on that exact prefix, and a
+            // `"demo:"`-prefixed ref (the family every other seed uses) falls
+            // through as unrecognised, silently zeroing this card. Found
+            // building the room-head coverage check (2026-08-10): all six
+            // seeded deposits were landing and going straight to `nil`.
+            row(.transaction, p.0, source: "Privacy Pools", ref: "privacypools:dep:demo\(i)",
                 days: p.2, hour: 20, content: "Ethereum · 0xBow",
                 tags: ["Shielded", p.1]) { t in
                 t.walletAddress = demoWallet
@@ -1002,7 +1047,12 @@ enum DemoSeedAll {
             // not a fabricated basescan.org tx link (P4, 2026-08-07): a real
             // host with a fake hash reads as "transaction not found" on a
             // trusted explorer, which is a sharper dead door than most.
-            row(.transaction, f.0, source: "Peer", ref: "demo:peer:\(i)", days: f.2, hour: 12,
+            // Ref must carry the real bare `"peer:"` prefix (never
+            // `"peer:sell:"`/`"peer:expired:"`, which mean something else) or
+            // `PeerRoom.kind(ref:)` returns nil and the fill is dropped before
+            // it's even counted toward `fellThrough` — the same
+            // `"demo:"`-prefix miss as the Privacy Pools fix above.
+            row(.transaction, f.0, source: "Peer", ref: "peer:demo\(i)", days: f.2, hour: 12,
                 content: "Base · \(f.1)") { t in
                 t.authorHandle = f.1
                 t.walletAddress = demoWallet
@@ -1210,6 +1260,13 @@ enum DemoSeedAll {
         out += cursor.enumerated().map { i, c in
             row(.link, c.0, source: "Cursor", ref: "demo:cursor:\(i)", days: c.1, hour: 22) { t in
                 t.summary = "Ran for 6 minutes. Opened a PR with the change and a test."
+                // `CursorRoomSource` groups on `authorHandle` (where
+                // `CursorFetch` stamps the real repo, §340), never the
+                // clamped title — without it `CursorRoom.compose` sees zero
+                // repos and the head is nil no matter how many rows landed.
+                // Found by the room-head coverage check's own first run
+                // (2026-08-10): all three seeded runs were missing it.
+                t.authorHandle = "alexanderchopan/casberi"
             }
         }
         let ops: [(String, String, String, Double)] = [
@@ -1278,6 +1335,18 @@ enum DemoSeedAll {
         out += posthog.enumerated().map { i, p in
             row(.note, p.0, source: "PostHog", ref: "demo:posthog:\(i)", days: p.1, hour: 16,
                 content: "Casberi · production")
+        }
+        // The room head reads WATCH rows, not these alert rows — a watch IS
+        // the `Thing` (`PostHogWatch.add`, the TokenWatch precedent), keyed
+        // on `sourceRef: "posthog:metric:<event>"`, kind `.link`, tagged
+        // "Watchlist". Without one for each event `PostHogRoomSource.compose`
+        // has nothing to iterate and the head stays nil forever — found
+        // building the room-head coverage check (2026-08-10): three alert
+        // rows landed and the card never once appeared.
+        out += ["signed_up", "answer_asked"].map { event in
+            row(.link, IngestSupport.titleLine(event), source: "PostHog",
+                ref: PostHogWatch.metricRef(event), days: 3, hour: 16,
+                content: "https://us.posthog.com", tags: ["Watchlist"])
         }
         out += (0..<2).map { i in
             // No `twitch.tv/demo` content (P4, 2026-08-07) — "demo" is a
@@ -1474,11 +1543,37 @@ enum DemoSeedAll {
         // is true because these are a READING, not a first sight: a metric
         // first seen at its current total has announced nothing legitimately.
         var metrics = PostHogState.all()
+        // `fetchedAt` is what tells `PostHogRoomSource.compose` a reading has
+        // ever been READ on this device (vs. a fresh row with no state
+        // behind it) — omitting it left both metrics permanently "unread"
+        // and the head nil no matter how the watch rows above were seeded.
         metrics["signed_up"] = PostHogState.Metric(
-            total: 1_042, series: [18, 24, 31, 27, 44, 39, 52], announced: 1_000, seeded: true)
+            total: 1_042, series: [18, 24, 31, 27, 44, 39, 52], announced: 1_000,
+            seeded: true, fetchedAt: .now)
         metrics["answer_asked"] = PostHogState.Metric(
-            total: 6_310, series: [210, 240, 198, 265, 288, 240, 301], announced: 5_000, seeded: true)
+            total: 6_310, series: [210, 240, 198, 265, 288, 240, 301], announced: 5_000,
+            seeded: true, fetchedAt: .now)
         PostHogState.replace(metrics)
+
+        // 2b · Apple Wallet — its room head gates on its own bespoke
+        // `connected` flag (a plain UserDefaults bool, distinct from the
+        // generic catalog "connected" status `seats` grants below), which
+        // nothing was ever setting. Found the same way as the PostHog gap.
+        AppleWalletBridge.connected = true
+
+        // 2c · App Store Connect — its room head gates on `ASCAuth.configured`
+        // (a REAL `.p8` key in the Keychain), which a demo must never fake —
+        // so `ASCRoomSource.compose` widens for `DemoMode.isActive` instead,
+        // and this plants the standing it reads once that door is open.
+        // Matches the alert row above ("In review · Casberi 1.4", build 285).
+        ASCState.apps = ["casberi": "Casberi"]
+        ASCState.standing = [
+            "casberi": ASCStanding(
+                appID: "casberi", app: "Casberi", version: "1.4",
+                state: ASCVersionState.inReview.rawValue, since: at(1, 10), observed: true,
+                build: "285", buildState: ASCBuildState.valid.rawValue, expires: nil),
+        ]
+        ASCState.lastRead = .now
 
         // 3 · A visit history, so the panel ranks on something.
         ChipMemory.seedDemo(demoVisits)

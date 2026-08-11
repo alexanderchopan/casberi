@@ -133,36 +133,63 @@ SKIP_BUMP=1 \
 
    **Demo parity is a REQUIRED step of every ship (user ruling 2026-08-08) —
    never ship without checking it, and never wait to be asked**, the same
-   standing the public-beta handoff itself carries. `verify.sh` runs two
-   checks for this, and they are NOT the same kind of gate as the four above,
+   standing the public-beta handoff itself carries. `verify.sh` runs FOUR
+   checks for this now (extended 2026-08-10 to "all parts of the app", user
+   ruling — see CLAUDE.md's demo-mode entry), and they split into two kinds
+   depending on whether the surface has runtime ranking to protect against,
    which is worth understanding rather than skimming past:
 
-   - **`demo-selftest.py` checks D/E** (its own static half, always
-     hard-fails) — every name `DemoSeedAll.seatTable` claims as a connected
-     demo seat resolves to a real `BridgeCatalog.offers` entry and has an
-     actual seeded row. This is the CATALOG-NAME half of parity: a bridge
-     that gets renamed or retired, or a demo seat added with nothing behind
-     it, fails the build outright.
+   - **`demo-selftest.py` checks D/E** (static, always hard-fails) — every
+     name `DemoSeedAll.seatTable` claims as a connected demo seat resolves to
+     a real `BridgeCatalog.offers` entry and has an actual seeded row. The
+     CATALOG-NAME half: a bridge that gets renamed or retired, or a demo seat
+     added with nothing behind it, fails the build outright.
+   - **`demo-selftest.py` check F** (static, always hard-fails) — every
+     `FeedScreen.Shape` case (the room-rendering taxonomy) has a seeded
+     source that maps to it. Shape assignment is a pure function of a
+     source's name with no ranking involved, so unlike the two checks below
+     it can be proven from source text alone.
    - **The "Demo panel figure-kind coverage" step**, in the simulator tail —
      runs the real furnished demo through the real agent-panel composer and
-     checks every `AgentPanel.Figure` case actually draws. This is the
-     RENDERING half, and it is deliberately **WARN-only, never a hard fail**:
-     the panel caps at 20 cards ranked by affinity, so a figure kind that
-     genuinely composes can still lose one run's ranking race (measured:
-     PostHog's `curve` present in two runs, absent in a third, identical
-     build). A warning here is NOT something to skim past and ship anyway —
-     it found a real, shipped-adjacent bug on its first real run (`runway`
-     never drew because `CloudflareRunwaySource.compose` needed a
-     `CloudflareEstateStore` snapshot nothing had ever seeded, 2026-08-08).
-     **When it warns:** re-run once to see if the miss is consistent (a real
-     gap warns every time; ranking noise doesn't), and if it's consistent,
-     fix the actual wiring before shipping, the way the Cloudflare estate
-     seed got fixed — don't just re-run until it happens to pass.
+     checks every `AgentPanel.Figure` case actually draws. **WARN-only,
+     never a hard fail**: the panel caps at 20 cards ranked by affinity, so a
+     figure kind that genuinely composes can still lose one run's ranking
+     race (measured: PostHog's `curve` present in two runs, absent in a
+     third, identical build). A warning here is NOT something to skim past
+     and ship anyway — it found a real, shipped-adjacent bug on its first
+     real run (`runway` never drew because `CloudflareRunwaySource.compose`
+     needed a `CloudflareEstateStore` snapshot nothing had ever seeded,
+     2026-08-08). **When it warns:** re-run once to see if the miss is
+     consistent (a real gap warns every time; ranking noise doesn't), and if
+     it's consistent, fix the actual wiring before shipping — don't just
+     re-run until it happens to pass.
+   - **The "Demo room-head coverage" step**, in the simulator tail — runs
+     `-roomInsightProbe <Source>` for each of the ten `FeedScreen.SourceHead`
+     cases (Cloudflare's runway, Stripe, PostHog, Apple Wallet, Circle x402,
+     App Store Connect, Cursor, Peer, Privacy Pools, Gnosis Pay) and checks
+     each one's own head actually composes. **HARD FAIL, unlike the panel
+     check above** — a room head has no ranking or cap to compete against
+     (`sourceHead(_:)` gates one source at a time, so exactly one candidate
+     is ever asked), so a demo corpus that can make a head compose makes it
+     compose every single run; an absence is a real gap, not ranking noise.
+     Found SIX real gaps on its first run (2026-08-10): Peer/Privacy Pools
+     seeded rows carrying `"demo:"`-prefixed refs instead of the real
+     bridges' own ref shapes; PostHog seeding readings but no watch row (and
+     the readings never stamped `fetchedAt`); Apple Wallet's bespoke
+     `connected` flag never being set; App Store Connect's head gating on a
+     real Keychain credential a demo must never fake (fixed by widening the
+     gate for `DemoMode.isActive` and seeding `ASCState` directly); and
+     Cursor's seeded runs never stamping `authorHandle`, the field the head
+     groups repos on. All six render as one silent "no card" from outside —
+     exactly why this step exists rather than trusting a screenshot.
 
-   Neither check requires remembering to update the demo when something new
-   ships elsewhere — see CLAUDE.md's demo-mode entry for what they do and
-   don't cover (catalog/rendering consistency, not "every new feature must
-   appear in the demo").
+   None of the four checks require remembering to update the demo when
+   something new ships elsewhere — see CLAUDE.md's demo-mode entry for what
+   they do and don't cover (catalog/rendering consistency for the surfaces
+   they name, not "every new feature must appear in the demo"; a bridge
+   gaining a capability with no textual signature — a new figure kind, a new
+   field a room head reads — still needs the human step, `-roomInsightProbe`/
+   `-agentOpenProbe` against the demo corpus after a rendering change).
 
    Running these individually is not a substitute for `verify.sh`, and
    picking the audits you happen to remember is exactly the failure mode: the

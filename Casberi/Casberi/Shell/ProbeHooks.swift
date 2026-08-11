@@ -3425,6 +3425,25 @@ enum ProbeHooks {
                      ? GnosisPayRoomSource.compose(things: things).map {
                         "\(GnosisPayRoom.headline($0)) · \($0.currencies.count) currencies"
                      } : nil)
+                // Three more per-source heads that shipped without a line
+                // here — exactly the drift this probe's own header warns
+                // against, and exactly how it was found (2026-08-10): a
+                // `-roomInsightProbe` sweep across every `SourceHead` case
+                // reported "leads with NOTHING" for all three, which read as
+                // three demo gaps until this probe's own card list turned
+                // out to be the thing that had drifted, not the demo.
+                note("appleWallet", source == AppleWalletBridge.sourceName
+                     ? AppleWalletRoomSource.compose(things: things).map {
+                        "\($0.headline) · \($0.merchants.count) merchants"
+                     } : nil)
+                note("x402", source == X402Ingest.source
+                     ? X402RoomSource.compose(things: things).map {
+                        "\(X402Room.headline($0)) · \($0.sellers) sellers"
+                     } : nil)
+                note("appStoreConnect", source == ASCShape.source
+                     ? ASCRoomSource.compose(things: things).map {
+                        "\(ASCRoom.headline($0)) · \($0.apps.count) apps"
+                     } : nil)
                 // 2. the anniversary — memories room only, and only with pixels
                 let echo = source == "Snapchat"
                     ? OnThisDay.find(in: things.filter {

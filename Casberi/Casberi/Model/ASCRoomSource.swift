@@ -34,7 +34,14 @@ enum ASCRoomSource {
     /// source of standing, read by both.
     @MainActor
     static func compose(things: [Thing] = [], now: Date = .now) -> ASCRoom? {
-        guard ASCAuth.configured else { return nil }
+        // The furnished demo has no real `.p8` key and must never fake one
+        // into the Keychain (`ASCAuth` signs real requests with whatever it
+        // finds there) — so it plants `ASCState.standing` directly and this
+        // gate widens for it alone. Found building the room-head coverage
+        // check (2026-08-10): this is the one head of the ten that stayed
+        // nil in the demo for a reason none of the others share — a real
+        // credential check, not a data gap.
+        guard ASCAuth.configured || DemoMode.isActive else { return nil }
         let apps = ASCState.standing.values.map { standing -> ASCRoom.App in
             ASCRoom.App(
                 id: standing.appID,

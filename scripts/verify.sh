@@ -588,4 +588,91 @@ else
   fi
 fi
 
+# ── 6. Demo room-head coverage (headless, HARD FAIL) ─────────────────
+# Extends the same "does the demo have parity" question (2026-08-08 ruling)
+# to a second surface: `FeedScreen.SourceHead` (prd §349's runway/stripeHead/
+# posthogHead/appleWallet/x402/appStoreConnect/cursorHead/peerHead/
+# privacyPoolsHead/gnosisPayHead) — the per-source hero card a room draws
+# when you open it directly, read via `-roomInsightProbe <Source>` the same
+# way the panel check above reads `-agentOpenProbe`.
+#
+# UNLIKE the panel check, this is a HARD FAIL, not a warning — and that's a
+# considered difference, not an oversight. The agent panel caps at 20 cards
+# ranked by affinity, so a kind that CAN compose can still lose one run's
+# ranking race; a room head has no such competition; `sourceHead(_:)` is
+# gated one-source-at-a-time (`case "Cloudflare": …`, `case "Stripe": …`),
+# so exactly one candidate is ever even asked, and a demo corpus that can
+# make it compose makes it compose every time. There's no ranking noise
+# here to protect against — an absence is a real gap, full stop.
+#
+# It found SIX real gaps on its first real run (2026-08-10), not a
+# hypothetical, and each was a distinct failure shape worth remembering:
+#   • Peer/Privacy Pools rows carried "demo:"-prefixed refs, but their room
+#     heads match on the REAL bridges' own ref shapes (`peer:…`,
+#     `privacypools:dep:…`) — every seeded fill/deposit was silently
+#     dropped before it was even counted.
+#   • PostHog's demo seeded READINGS (`PostHogState.Metric`) but never a
+#     WATCH row (`sourceRef: "posthog:metric:<event>"`) — the head has
+#     nothing to iterate without one, and even with one the seeded readings
+#     never stamped `fetchedAt`, so they read as permanently "unread".
+#   • Apple Wallet's head gates on its own bespoke `connected` UserDefaults
+#     flag, distinct from the generic catalog "connected" status every
+#     other seat gets — nothing was setting it.
+#   • App Store Connect's head gates on a REAL Keychain credential
+#     (`ASCAuth.configured`), which a demo must never fake — so the gate
+#     widens for `DemoMode.isActive` instead, and `ASCState` is seeded
+#     directly.
+#   • This probe's OWN card list (`ProbeHooks.swift`) had gone stale —
+#     `appleWallet`/`x402`/`appStoreConnect` shipped without a line here,
+#     which is the exact registry-drift class this probe's own header
+#     warns about and would have reported three false "gaps" forever.
+#
+# The (name, source) pairs mirror `ProbeHooks.swift`'s `roomInsightProbe`
+# hook and `FeedScreen.sourceHead(_:)`'s switch — change one, change all
+# three (the same acknowledged fragility that hook's own header already
+# carries; there is no clean way to derive a Swift `case` → source-string
+# mapping from a shell script without hand-parsing the same switch this
+# hook already mirrors by hand).
+step "Demo room-head coverage"
+ROOMHEAD_LOG="$OUT/demo-roomhead-coverage.log"
+if [[ -z "$POURED" ]]; then
+  print -P "%F{yellow}⚠ demo never finished pouring (see the panel-coverage step above) — skipping room-head coverage%f"
+else
+  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  typeset -A ROOM_HEADS=(
+    runway            "Cloudflare"
+    stripeHead        "Stripe"
+    posthogHead       "PostHog"
+    appleWallet       "Apple Wallet"
+    x402              "Circle x402"
+    appStoreConnect   "App Store Connect"
+    cursorHead        "Cursor"
+    peerHead          "Peer"
+    privacyPoolsHead  "Privacy Pools"
+    gnosisPayHead     "Gnosis Pay"
+  )
+  MISSING_HEADS=()
+  for name in "${(k)ROOM_HEADS[@]}"; do
+    src="${ROOM_HEADS[$name]}"
+    xcrun simctl spawn "$DEVICE" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "roomInsight"' \
+      --style compact > "$ROOMHEAD_LOG.$name" 2>/dev/null &
+    RHPID=$!
+    sleep 1
+    xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+    xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES -roomInsightProbe "$src" >/dev/null 2>&1 || true
+    for i in {1..10}; do
+      sleep 1
+      grep -q "roomInsight: leads with" "$ROOMHEAD_LOG.$name" 2>/dev/null && break
+    done
+    kill $RHPID 2>/dev/null || true
+    grep -q "roomInsight: leads with $name\$" "$ROOMHEAD_LOG.$name" 2>/dev/null || MISSING_HEADS+=("$name ($src)")
+  done
+  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  if (( ${#MISSING_HEADS[@]} == 0 )); then
+    print -P "%F{green}✓ demo room-head coverage (10/10)%f"
+  else
+    fail "demo room head(s) never compose: ${MISSING_HEADS[*]} — see $ROOMHEAD_LOG.<name>"
+  fi
+fi
+
 print -P "%F{green}✓ verify complete → $OUT%f"
