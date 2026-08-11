@@ -72,6 +72,14 @@ import SwiftData
 ///   hash lands as plain "Bought … on Peer", never a guess.
 enum PeerBridge {
 
+    /// The `Thing.source` every row here lands under. Named so
+    /// `PeerRoomSource` filters on a constant rather than on a literal of its
+    /// own — a room that spells its own source name is a room that empties
+    /// silently the day the seat is renamed. The landing sites below still
+    /// spell it inline; `scripts/wallet-rooms-selftest.sh` drift-guards that
+    /// they still agree with this.
+    static let sourceName = "Peer"
+
     /// Peer's home chain. The RPC hosts and range cap are the Wallet bridge's
     /// measured Base values (WalletApprovals, 2026-07-16) — same public host,
     /// same 9k-block getLogs ceiling; don't raise without re-measuring.

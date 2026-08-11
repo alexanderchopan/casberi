@@ -177,6 +177,18 @@ enum PrivacyPoolsBridge {
     /// bare watch.
     static let evidence = WalletSeatEvidence("privacypools.accounts")
 
+    /// What a DEPOSIT row's `sourceRef` begins with. One constant because the
+    /// landing and the status poll's `retag` must agree on it and, from §311
+    /// until 2026-08-10, silently did not — see `retag`. `PrivacyPoolsRoomSource`
+    /// reads it too, so the room's own count of deposits can never drift from
+    /// what the bridge actually lands.
+    static let depositRefPrefix = PrivacyPoolsRoom.depositPrefix
+
+    /// The `Thing.source` every row here lands under — see
+    /// `PeerBridge.sourceName` for why the room reads a constant rather than
+    /// spelling its own copy.
+    static let sourceName = "Privacy Pools"
+
     // MARK: - Pending-status watchlist (flat UserDefaults, keyless seat)
 
     private static let pendingKey = "privacypools.pending"
@@ -464,7 +476,7 @@ enum PrivacyPoolsBridge {
             // the deposit anyway (keyed by commitment), just without status
             // polling — the thing is real either way.
             let label = await label(for: deposit, wallet: wallet)
-            let ref = "privacypools:dep:" + (label ?? deposit.commitment)
+            let ref = depositRefPrefix + (label ?? deposit.commitment)
             guard !existing.contains(ref), seen.insert(ref).inserted else { continue }
 
             let amount = pool.map {
@@ -606,13 +618,22 @@ enum PrivacyPoolsBridge {
     /// Silent when the deposit isn't here — a status can arrive for a label
     /// whose deposit predates the tag or was removed, and inventing a row for
     /// it would be worse than saying nothing.
+    ///
+    /// The ref is built from `depositRefPrefix` rather than spelled again, and
+    /// that is a FIX, not tidiness. §311 shipped this lookup spelled
+    /// `"privacypools:deposit:"` while `landDeposits` lands
+    /// `"privacypools:dep:"`, so the fetch matched nothing, ever: every deposit
+    /// on every device stayed tagged `Pending` for life, including the ones the
+    /// ASP had already cleared. Nothing could see it — the alert row still
+    /// landed and still rained, the deposit row still drew, and the only
+    /// casualty was the tag nobody was reading yet. One constant, so the two
+    /// halves cannot disagree about a string again.
     @MainActor
     private static func retag(label: String, to state: String, context: ModelContext) {
-        let ref = "privacypools:deposit:" + label
+        let ref = depositRefPrefix + label
         let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == ref })
         guard let thing = (try? context.fetch(descriptor))?.first, thing.isLive else { return }
-        let states = ["Pending", "Cleared", "Declined", "Needs proof"]
-        var tags = thing.tags.filter { !states.contains($0) }
+        var tags = thing.tags.filter { !PrivacyPoolsRoom.states.contains($0) }
         tags.append(state)
         guard tags != thing.tags else { return }
         thing.tags = tags

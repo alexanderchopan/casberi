@@ -303,6 +303,19 @@ step "Room-head pure-logic self-test"
   || fail "the room-head logic self-test failed — run scripts/room-heads-selftest.sh"
 print -P "%F{green}✓ room-head self-test%f"
 
+# Pure-logic self-test for the three WALLET-RIDING room heads — Peer, Privacy
+# Pools, Gnosis Pay (prd §349). These seats ride the watched wallets, so there
+# is no key to mint and nothing on this host can make a fill settle, a screener
+# rule, or a card get swiped: the harness is the only proof these numbers are
+# right. Every failure is a silent wrong answer — every SALE counted as a
+# purchase (`peer:sell:` also starts `peer:`), a deposit with no state tag
+# claimed as "in review", EUR added to GBP, "up 400%" against a window the room
+# never observed.
+step "Wallet-room pure-logic self-test"
+"$ROOT/scripts/wallet-rooms-selftest.sh" >/dev/null \
+  || fail "the wallet-room logic self-test failed — run scripts/wallet-rooms-selftest.sh"
+print -P "%F{green}✓ wallet-room self-test%f"
+
 # Pure-logic self-test for the agent's open (prd §332). This is the first screen
 # a person sees every day, and every failure in it renders perfectly: a tile
 # printing a tally, a tile drawn from a reading nobody took, a row filed under

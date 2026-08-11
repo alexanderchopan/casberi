@@ -633,6 +633,51 @@ enum ProbeHooks {
                 NSLog("[Casberi] %@", line)
             }
         },
+        // The three WALLET-RIDING room heads (2026-08-10, prd §349). Each rides
+        // the watched wallets — no key, no account — so all three are probed by
+        // landing rows and nothing else; pair with `-walletAddress` plus the
+        // seat's own sync probe (`-peerProbe`, `-privacyPoolsProbe`,
+        // `-gnosisPayProbe`) to land some first.
+        //
+        // Each `probeLines` names every cause of an empty head, because for
+        // these seats "nothing" is usually the HEALTHY answer — most wallets
+        // have never touched Peer, never deposited into a pool, and hold no
+        // Gnosis Pay card — and only one or two causes per room are bugs.
+        Hook(key: "peerRoomProbe") { _, context in
+            let source = PeerRoomSource.source
+            var descriptor = FetchDescriptor<Thing>(
+                predicate: #Predicate { $0.source == source })
+            descriptor.fetchLimit = 500
+            let rows = (try? context.fetch(descriptor)) ?? []
+            for line in PeerRoomSource.probeLines(things: rows) {
+                NSLog("[Casberi] %@", line)
+            }
+        },
+        Hook(key: "privacyPoolsRoomProbe") { _, context in
+            let source = PrivacyPoolsRoomSource.source
+            var descriptor = FetchDescriptor<Thing>(
+                predicate: #Predicate { $0.source == source })
+            descriptor.fetchLimit = 500
+            let rows = (try? context.fetch(descriptor)) ?? []
+            for line in PrivacyPoolsRoomSource.probeLines(things: rows) {
+                NSLog("[Casberi] %@", line)
+            }
+        },
+        // Card spends are NOT rare (`GnosisPayBridge` lands them uncapped for
+        // exactly that reason), so this one fetches the widest window of the
+        // three. The head reads a 30-day window off the newest of them; a limit
+        // that cut into the room's history would make `knowsPriorWindow` answer
+        // no and silently withdraw the comparison.
+        Hook(key: "gnosisPayRoomProbe") { _, context in
+            let source = GnosisPayRoomSource.source
+            var descriptor = FetchDescriptor<Thing>(
+                predicate: #Predicate { $0.source == source })
+            descriptor.fetchLimit = 2000
+            let rows = (try? context.fetch(descriptor)) ?? []
+            for line in GnosisPayRoomSource.probeLines(things: rows) {
+                NSLog("[Casberi] %@", line)
+            }
+        },
         // `-cursorProbe YES` walks the Cursor read phase by phase with the
         // STORED key (connect first via `-tokenBridge "Cursor:<key>"`), and
         // dumps one `cursorAgent|` line per run. Same lesson as the two above:
@@ -3362,6 +3407,23 @@ enum ProbeHooks {
                 note("cursorHead", source == CursorRoomSource.source
                      ? CursorRoomSource.compose(things: things).map {
                         "\(CursorRoom.headline($0)) · \($0.repos.count) repos"
+                     } : nil)
+                // The three wallet-riding heads (2026-08-10, prd §349). Like
+                // `cursorHead` these read `things` — the fills, the deposits
+                // and the spends ARE the subject — so each `compose` would
+                // already answer nil for another room's rows on its own. Gated
+                // anyway, so every line in this block reads the same way.
+                note("peerHead", source == PeerRoomSource.source
+                     ? PeerRoomSource.compose(things: things).map {
+                        "\(PeerRoom.headline($0)) · \($0.rails.count) rails"
+                     } : nil)
+                note("privacyPoolsHead", source == PrivacyPoolsRoomSource.source
+                     ? PrivacyPoolsRoomSource.compose(things: things).map {
+                        "\(PrivacyPoolsRoom.headline($0)) · \($0.deposits) deposits"
+                     } : nil)
+                note("gnosisPayHead", source == GnosisPayRoomSource.source
+                     ? GnosisPayRoomSource.compose(things: things).map {
+                        "\(GnosisPayRoom.headline($0)) · \($0.currencies.count) currencies"
                      } : nil)
                 // 2. the anniversary — memories room only, and only with pixels
                 let echo = source == "Snapchat"

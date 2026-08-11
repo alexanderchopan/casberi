@@ -19566,3 +19566,142 @@ the one thing to judge by eye is the card fill, which is `DS.surfaceWell` (a
 recessed compartment, the token whose documented purpose matches and which is
 far stronger in light mode); `DS.fillFaint` is the raised alternative and a
 one-token swap.
+
+## §349 — The wallet-riding seats get their own room heads, and one of them had been lying about its deposits for a month (user: "don't fold these seats into Wallet; instead give each source room its own head with more detail", 2026-08-10)
+
+**The first finding is that the premise was three-eighths true, and the other
+five-eighths shouldn't be built.** The brief named eight wallet-riding seats —
+Peer, Safe, 0xBow Privacy Pools, Gnosis Pay, Aave, Morpho, Hyperliquid,
+Aerodrome — as earning a source chip and then leading with a plain row list.
+Counted against the source names each bridge actually stamps, only **three**
+land under a source of their own: `"Peer"`, `"Privacy Pools"`, `"Gnosis Pay"`.
+The other five — Safe, Aave, Morpho, Hyperliquid, Aerodrome — land under
+`source: "Wallet"` and have no room to head; their rows sit in the Wallet room
+beside the balance card, the DeFi tiles and the composition strip, which is the
+arrangement the ruling was protecting in the first place. Giving them a head
+would mean giving them a source first, and that is not a card change: every one
+of those bridges dedupes through `IngestSupport.existingSourceRefs(context,
+source: "Wallet")`, so re-sourcing them would re-land the entire history on
+every device and orphan what CloudKit already holds. So: three heads, and the
+count is stated here rather than quietly delivered, because "we built the three
+that exist" and "we built eight" look identical in a diff.
+
+**The second finding is that all three already had heads, added five days ago,
+and I nearly replaced them without noticing.** The brief said these rooms "are
+plain row lists". They were not: §311 (2026-08-05) registered every one of them
+in the GENERIC insight registries — Peer got `counted(…, "How you fund")`
+ranking funding rails, Gnosis Pay got `cardMonths(…, "What the card spent")`
+over twelve months, Privacy Pools got `shieldedReview` as a `Distribution` over
+the very state tags this pass just repaired. Because `sourceHead` outranks
+`leaderboard` and `distribution` in `shapedSections`, a bespoke head **silently
+displaces** whatever the registry was drawing. Found by grepping
+`FeedInsight.swift` for the three source names before finishing, not by any
+check — and the consequence would have been a genuine loss: `cardMonths` shows
+a year of spending and the first cut of `GnosisPayRoom` showed thirty days. The
+head now carries a trailing-12-month strip of its own, so displacing that card
+costs nothing; it also states which currency the strip is in and counts what
+that choice leaves out, where `cardMonths` picked a currency off whichever row
+it met first and silently skipped every spend in another. **The §311 entries
+stay** — a head can return nil below its minimums, and the chain then falls
+through to them exactly as `topicMap` falls through to `leaderboard`. Three
+drift guards keep them there, because "unreachable" and "the fallback" look the
+same from a call graph.
+
+Worth stating plainly since it bears on the brief's premise a third time:
+`shieldedReview` required at least TWO distinct state segments, and the retag
+bug meant every deposit anywhere was `Pending` — one segment. So Privacy Pools'
+§311 card has never rendered for anybody, on any device, and the room really was
+a plain row list — for a reason nobody could see from the room.
+
+**Peer leads with the RAIL, and refuses to state money.** §311 put the funding
+rail on `authorHandle` as data precisely so something could group on it, and
+nothing ever did. `PeerRoom` ranks rails by settled fills, splits bought from
+sold, and counts what it cannot place. It states no amounts at all: `PeerBridge`
+stamps no `priceValue` and no `transferUSD`, so the figure exists only as prose
+inside a title, the token differs per fill, and a parsed sum would add USDC to
+ETH and print one number. Two things the card is forbidden to do, both encoded:
+a `peer:sell:` ref must be read before the bare `peer:` prefix (every ref begins
+`peer:`, so the naive order folds the whole sell side into the buy side and
+reports an account that mostly sells as one that only buys), and a fall-through
+may never date the room — an expired fill lands with `capturedAt: .now` because
+nothing happened on chain, so its timestamp records when WE LOOKED, and letting
+it into `newest` makes a dormant room read as active this morning.
+
+**Privacy Pools leads with where each deposit STANDS — and the tag it reads had
+never once moved.** §311 shipped `retag` fetching `"privacypools:deposit:" +
+label` while `landDeposits` lands `"privacypools:dep:" + label`. The fetch
+matched nothing, on every device, from §311 until today: every deposit stayed
+tagged `Pending` for life, cleared ones included. Nothing could see it — the
+alert row still landed, still rained, and the tag nobody was reading yet was the
+only casualty, which is exactly why it survived. Both halves now build the ref
+from one constant (`PrivacyPoolsBridge.depositRefPrefix` ←
+`PrivacyPoolsRoom.depositPrefix`), and the harness fails the build on the dead
+spelling returning. The card ranks by what needs YOU, not by size — one deposit
+stuck on proof-of-innocence outranks forty that cleared, because the forty need
+nothing from anybody — and it draws a split bar, which `CursorRoom` refused for
+itself and which is honest here for a stated reason: these states are mutually
+exclusive and cover every deposit the room holds, so the bar says "this is where
+all of it sits", where a pass/fail bar over the newest thirty agent runs would
+have been a success rate over a window nobody chose. Two refusals: an alert row
+is never counted as a second deposit (that would report a cleared deposit twice,
+once as itself and once as its own announcement), and a deposit with no state
+tag is `untagged`, never defaulted to pending — the bar's denominator includes
+it, so the drawn segments legitimately fall short and **the gap in the bar is
+the unknown**. The anonymity-set cover is deliberately NOT on this card: §228
+stores it as a sentence on `enrichedText`, there is no number to add up, and the
+lines are snapshots taken at different moments, so summing them would present
+several past pool sizes as one current figure.
+
+**Gnosis Pay leads with the money, because it is the only one of the three that
+can.** Its bridge stamps `priceValue` and `priceCurrency` — by its own note,
+"without these an amount can never be re-formatted or compared" — so the head
+totals real numbers off real fields. Per currency, never across: EURe + GBPe
+needs an exchange rate this app does not have, so the rows rank by spend COUNT
+(the only ordering that never compares magnitudes across codes) and the headline
+names one currency and says there are others. The comparison to the previous 30
+days is **refused rather than estimated**: a first sync backfills about six days,
+so on a young room the prior window is not quiet, it is unobserved, and "up 400%"
+against it would be a fabrication — `knowsPriorWindow` requires a spend older
+than the comparison window before any change is claimed, and the card says out
+loud that it isn't watching long enough yet rather than leaving a blank that
+reads as "no change". No merchant board, ever: §222's measured ceiling is that
+merchant names never reach the chain, so the card `AppleWalletRoom` draws would
+here be invented. No net totals either — refunds settle off-chain.
+
+**No new `Thing` field, so no CloudKit Production deploy**, and no request: all
+three compose from rows already landed plus, for nothing, no bridge state at all
+(the `StripeRoom`/`CursorRoom` contract — a head that costs a call is a head that
+can fail, and a room's lede must not fail differently from the rows beneath it).
+
+**`scripts/wallet-rooms-selftest.sh`** compiles all three heads WHOLE and
+unmodified (Foundation-only by design) — 135 assertions, 20 mutations, 36 drift
+guards, wired into `verify.sh`. Its reason to exist is stronger than the
+Stripe/PostHog harnesses': those bridges could at least be measured by anyone
+willing to mint a key, while these three ride the watched wallets and nothing on
+this host can make a fill settle, a screener rule, or a card get swiped. Three
+lessons re-earned on its own first runs. (1) **Four assertions were wrong, not
+the code** — a six-row Peer fixture I read as three buys held four, and the
+harness caught me rather than the source; a fixture whose expected numbers are
+computed in your head is a test of your arithmetic. (2) **`PeerRoom.isEmpty`
+added `unplaced` to `fills`, which already contains it** — a fill is counted as
+bought or sold before its rail is looked at, so one unplaced fill scored two and
+drew a whole card over a single row, which is exactly what `minimumFills` exists
+to prevent. Found by reading the diff, not by any check: every assertion in the
+suite passed either way, because none of them held a room with exactly one
+unplaced fill. There is one now, and a mutation. (The same review found the
+Gnosis Pay card drawing the lead currency's bar twice on a multi-currency
+account — once standing alone, once inside its own row.) (3) The negative guard for
+the retag bug had to read a **comment-stripped** copy, because three files now
+DOCUMENT the dead spelling by quoting it (that is how the fix explains itself),
+so a guard grepping raw source fires against the prose explaining the fix — the
+Obsidian and Cursor lesson, earned a third time. Both halves of that guard were
+then proved able to FIRE, by reintroducing the bug and by planting the dead
+string as code: a guard that cannot fail certifies nothing.
+
+Also: `-peerRoomProbe`, `-privacyPoolsRoomProbe` and `-gnosisPayRoomProbe`, one
+line per fill/row/spend, because for these three seats an empty head is usually
+the HEALTHY answer (most wallets have never touched Peer, never deposited into a
+pool, and hold no Gnosis Pay card) and only one or two causes per room are bugs;
+and three `note(…Head)` lines in `-roomInsightProbe`, which that probe's own doc
+requires — a head in `shapedSections` with no mirror there makes the probe
+confidently report that a room "leads with NOTHING" when it leads with a card.

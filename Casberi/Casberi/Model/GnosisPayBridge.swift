@@ -56,6 +56,11 @@ import SwiftData
 /// auth — hence this host pair, which differs from the siblings' on purpose.
 enum GnosisPayBridge {
 
+    /// The `Thing.source` every row here lands under — see
+    /// `PeerBridge.sourceName` for why the room reads a constant rather than
+    /// spelling its own copy.
+    static let sourceName = "Gnosis Pay"
+
     private static let rpcs = ["https://rpc.gnosischain.com",
                                "https://rpc.gnosis.gateway.fm"]
 
