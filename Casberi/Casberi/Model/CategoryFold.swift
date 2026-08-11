@@ -146,6 +146,28 @@ enum CategoryFold {
         return category
     }
 
+    /// What a seat is CALLED in a switcher capsule, which is not always what
+    /// it is (prd §356, user: "we could make the 'wallet' room be 'wallets'
+    /// plural to make it different").
+    ///
+    /// Exactly one seat renames today, for one reason: standing in the balance
+    /// room lit the word "Wallet" TWICE, once as the category chip and once as
+    /// the seat pill, with no way to tell which control you were reading. The
+    /// plural is also the truer word — the room shows up to five addresses and
+    /// its own balance card has always said "Across your wallets".
+    ///
+    /// **DISPLAY ONLY, and this is the central invariant read backwards.**
+    /// `fold`/`landing`/`chipLabel` exist to keep a category NAME out of
+    /// `FeedFilter.source`; this keeps a display LABEL out of it too. The seat
+    /// stays the literal `"Wallet"` everywhere it counts — every landed
+    /// `Thing.source`, every dedupe key, `FeedScreen.Shape(source:)`, the
+    /// `casberi://feed` links and the CloudKit rows — so nothing downstream
+    /// can tell this function ran. Renaming the SEAT instead would re-land
+    /// every wallet row on every device.
+    static func venueLabel(_ venue: String) -> String {
+        venue == walletRoom ? String(localized: "Wallets") : venue
+    }
+
     // MARK: - Where a category chip opens
 
     /// One persisted "last visited member" per category — `MarketsRoom` had
@@ -167,7 +189,22 @@ enum CategoryFold {
     /// them: the memory is the fallback for the day the anchor is somehow
     /// absent, and the switcher's own centering reads the active seat
     /// regardless.
-    private static let anchors: [String: String] = ["Wallet": "Wallet"]
+    private static let anchors: [String: String] = [walletCategory: walletRoom]
+
+    /// The Wallet category's name, and the balance room inside it — the two
+    /// strings §354's anchor and §356's face rail both key on, spelled once so
+    /// a catalog rename breaks a build rather than silently switching the
+    /// anchor off and the rail out.
+    static let walletCategory = "Wallet"
+
+    /// The balance room's SOURCE — the literal every landed wallet `Thing`
+    /// carries, which dedupe, `FeedScreen.Shape(source:)`, the deep links and
+    /// the CloudKit rows all key on. It happens to equal `walletCategory`
+    /// today, and the pair is spelled separately anyway: they are a category
+    /// and a seat, they are only accidentally the same word, and that
+    /// coincidence is exactly what §356's "Wallets" display label exists to
+    /// hide from the reader — never from the data.
+    static let walletRoom = "Wallet"
 
     /// The member the folded chip opens onto: the category's anchor when it
     /// has one and that member is present, else where you left off in THIS

@@ -106,7 +106,7 @@ struct CategoryVenueSwitcher: View {
         } label: {
             HStack(spacing: 5) {
                 BridgeIcon(name: venue, size: DS.Face.badge, circular: true)
-                Text(venue)
+                Text(CategoryFold.venueLabel(venue))
                     .dsText(.subhead13)
                     .fontWeight(isOn ? .semibold : .regular)
                     .foregroundStyle(isOn ? DS.textPrimary : DS.textSecondary)

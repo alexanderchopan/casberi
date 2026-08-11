@@ -52,6 +52,25 @@ final class ShellChrome {
     var popHome = 0
 
 
+    /// Which watched wallet the Wallet CATEGORY is scoped to — nil = all of
+    /// them (prd §356, 2026-08-11). Holds the RESOLVED-or-watched spelling the
+    /// user's own list carries; matched through `WalletStore.scopeMatches`,
+    /// never a raw compare (things are stamped with resolved hex while the
+    /// scope is the watched spelling).
+    ///
+    /// **It lives here rather than on `FeedScreen` because it has to survive a
+    /// room change.** `MainSurface` renders one `FeedScreen(source:)` carrying
+    /// `.id(filter.source)`, so every move between Wallets / Peer / Privacy
+    /// Pools / Gnosis Pay / Railgun DESTROYS the screen and its `@State` with
+    /// it — which is exactly why scoping used to be possible in the balance
+    /// room alone and evaporated the moment you left it. A scope is a property
+    /// of the category, not of one room in it.
+    ///
+    /// Cleared when the watched list can no longer honour it (a scoped wallet
+    /// removed, or the list falling back to one) — a scope pointing at a gone
+    /// wallet is a feed with no rows and no way to explain itself.
+    var walletScope: String?
+
     /// The crown pour's hue override (prd §159, 2026-07-21). nil = Casberi's
     /// own tint, the permanent field; the Wallet feed sets a scoped wallet's
     /// face tint here while you stand in that wallet, so the whole crown —

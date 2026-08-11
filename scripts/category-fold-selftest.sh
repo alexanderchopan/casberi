@@ -252,6 +252,33 @@ grep -q 'BridgeCatalog.offer(forSource: venue)' "$TMP/switcher.nc" \
        echo "  reason the strip and the tray both resolve through the catalog."; exit 1; }
 grep -q 'CategoryVenueSwitcher(' "$FEED" \
   || { echo "✗ FeedScreen no longer mounts the generic venue switcher — a folded category seat has no way out"; exit 1; }
+
+# §356: "Wallets" is a DISPLAY label over the seat `"Wallet"`, and the seat is
+# what `FeedFilter.source` takes. The switcher must therefore render
+# `venueLabel(venue)` and hand back the RAW `venue` — passing the label to
+# `onPick` would write "Wallets" into `filter.source`, which matches no landed
+# Thing, no Shape case and no deep link, and empties the room it just opened.
+grep -q 'Text(CategoryFold.venueLabel(venue))' "$TMP/switcher.nc" \
+  || { echo "✗ the venue switcher no longer draws its label through CategoryFold.venueLabel —"; \
+       echo "  the balance room reads \"Wallet\" in the same breath as its own category chip (§356)."; exit 1; }
+grep -qE 'onPick\(venueLabel|onPick\(CategoryFold\.venueLabel' "$TMP/switcher.nc" \
+  && { echo "✗ the switcher hands a DISPLAY LABEL back to its caller — \"Wallets\" would land in"; \
+       echo "  FeedFilter.source, which no Thing, Shape or deep link answers to (§356)."; exit 1; }
+# The scope must live on the shell, or it dies with the room. `MainSurface`
+# gives FeedScreen `.id(filter.source)`, so `@State` here is destroyed on every
+# room change — which is the bug §356 exists to fix.
+grep -q 'var walletScope' "Casberi/Casberi/Shell/ShellChrome.swift" \
+  || { echo "✗ ShellChrome.walletScope is gone — the wallet scope would return to @State on a"; \
+       echo "  screen carrying .id(filter.source), so it dies on every room change (§356)."; exit 1; }
+grep -qE '@State private var selectedWallet' "$FEED" \
+  && { echo "✗ selectedWallet is @State on FeedScreen again — .id(filter.source) destroys it on"; \
+       echo "  every room change, so the scope silently evaporates when you leave the room."; exit 1; }
+# The scope filter must be gated on the ROOM, or a scope set in the balance
+# room reaches Social and Work, where every walletAddress is nil — so those
+# rooms render EMPTY with nothing on screen able to explain why.
+grep -q 'guard roomTakesWalletScope' "$FEED" \
+  || { echo "✗ walletScopeAllows no longer gates on the room — a live wallet scope would empty"; \
+       echo "  every non-wallet room, since their rows carry no walletAddress (§356)."; exit 1; }
 # PINNED, not a List section — `walletSwitcherBar`'s 2026-07-20 ruling. As a
 # section it scrolls away with the room it names, and its glass blurs nothing.
 grep -qE 'safeAreaInset\(edge: \.top, spacing: 0\) \{ categorySwitcher \}' "$FEED" \

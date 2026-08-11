@@ -20321,3 +20321,81 @@ its own — you can only see the problem by listing all forty-seven at once.
 
 Verified by `xcodebuild` plus the static audits per the standing no-sim
 instruction; nobody has looked at the moved faces on a device.
+
+## §356 — The wallet scope spans the category, and the switcher becomes a face shelf (user: "if a user is on ALL wallets they see all in the rooms, and if they choose one wallet and switch rooms they still see which one they are on and it only shows that wallet", "we need the avatars to show the names below them like we do in social", "we could make the 'wallet' room be 'wallets' plural to make it different", 2026-08-11)
+
+**Three rulings, one pass.**
+
+**1 · The scope survives a room change, and reaches every wallet room.** It
+used to be `@State` on `FeedScreen` — and `MainSurface` renders its single
+`FeedScreen(source:)` under `.id(filter.source)`, so **every move between
+Wallets / Peer / Privacy Pools / Gnosis Pay / Railgun destroyed the screen and
+its state with it.** That is why scoping worked in the balance room alone and
+evaporated the instant you left: `walletSwitcherBar` gated on
+`source == "Wallet"`, so the other four rooms merged all five watched wallets
+with no control anywhere. The scope now lives on `ShellChrome.walletScope`,
+which is the honest home — **a scope is a property of the CATEGORY, not of one
+room inside it.** Found by asking whether Peer showed all watched wallets; the
+answer was yes, for every wallet room, and neither the code nor any screen said
+so.
+
+**The filter is gated on the ROOM, never on the scope's own nil-ness**, and
+that became load-bearing the moment the scope outlived its room: ungated,
+`walletScopeAllows` reaches Social and Work, where every row's `walletAddress`
+is nil, so `scopeMatches` answers false for all of them and those rooms render
+**EMPTY** with nothing on screen able to explain why. Both crown-hue writers
+widened with it (`pourHue`, `refreshHue`) — a scope live in Peer with the crown
+back on Casberi blue says the scope isn't real. `loadWalletLive`/`streamBlock`
+deliberately stay balance-room-only: the holdings treemap and DeFi tiles are
+that room's own content, not the category's.
+
+**2 · The switcher is a face shelf.** `ShapedRows.faceSlot`'s construction — a
+circular face over its name — the grammar the social roster and the wallet
+manager's own roster already share. The point is not decoration: the three
+stacked controls were three glass capsules of word pills, so they read as one
+confused control. Now **categories are words in circles, rooms are word pills,
+wallets are faces**, and the layer you are operating is legible from its shape.
+`DS.Face.list` (36) rather than `.shelf` (56) even though this *is* a face
+shelf — §355's shelf tier is for IN-CONTENT shelves where the face is the
+content; pinned above a room this is chrome and stays subordinate to it. **A
+gap in §355 worth naming: the ramp has no "pinned chrome" tier.** The rail
+takes no glass, unlike the pill row above it — the design law already says a
+mark someone recognizes stays opaque, and it stops a third glass bar stacking
+under the other two. Selection is opacity and weight, **never a ring** (§351:
+a tint ring means the active chip and a dashed orange one means needs
+reconnecting; a third would be a third meaning for one mark).
+
+**"All" cannot be a pile of the faces themselves.** It was drawn that way first
+— honest, literally what it is — and it does not survive the five-wallet cap
+(§170): an overlapped composite is mush at 36pt. It takes the strip's own "All"
+treatment instead, a word in a circle, which reads the same at any count.
+
+**3 · The balance room's pill reads "Wallets".** Standing in it lit the word
+"Wallet" TWICE — once as the category chip, once as the seat pill — with no way
+to tell which control you were reading. The plural is also the truer word: the
+room holds up to five addresses and its own balance card has always said
+"Across your wallets". **DISPLAY ONLY, which is the central invariant read
+backwards**: `fold`/`landing`/`chipLabel` exist to keep a category NAME out of
+`FeedFilter.source`, and `venueLabel` keeps a display LABEL out of it too. The
+seat stays the literal `"Wallet"` in every `Thing.source`, every dedupe key,
+`FeedScreen.Shape(source:)`, the deep links and the CloudKit rows — renaming
+the SEAT would re-land every wallet row on every device.
+
+**Rooms sit ABOVE the faces, and that is what already shipped.** The proposal
+was the other way round (faces above rooms); reading the code settled it —
+the two pinned bars are stacked `safeAreaInset`s and the later modifier sits
+further from content, so `walletSwitcherBar` (applied first) has always been
+the lower one. It is also the better order: the strip and the room switcher are
+the SAME spine (a category genuinely contains its seats), so they belong
+adjacent with nothing wedged between them, while the wallet scope is a filter
+cutting across whichever room you land in and belongs beside the rows it
+filters. The card does NOT repeat the scope's name — the rail is pinned and
+already shows the lit face and its name, and printing it twice is the
+duplication §210 flagged.
+
+Guarded in `category-fold-selftest.sh`, mutation-proven: the switcher must draw
+`venueLabel(venue)` and must never hand a label back to `onPick`; the scope
+must live on `ShellChrome` and must not return to `@State`; and the filter must
+gate on the room. Verified by `xcodebuild` plus the static audits per the
+standing no-sim instruction — **nobody has watched the rail render, scoped a
+room, or seen the "Wallets" pill on a device.**

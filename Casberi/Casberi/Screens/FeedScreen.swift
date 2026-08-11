@@ -275,12 +275,21 @@ struct FeedScreen: View {
     // contributions has landed (an empty grid is a skeleton, not content).
     @State private var githubGraph = GitHubGraphStore.shared
     @Bindable private var wallet = WalletStore.shared
-    /// The wallet the Wallet feed is scoped to (prd §128) — nil is "All", the
-    /// combined view. Set by the switcher chip strip at the top of the wallet
-    /// feed; scopes the balance lede, holdings treemap, NFT strip, and the
-    /// transaction rows to one watched wallet. Only meaningful on the Wallet
-    /// page (each FeedScreen owns one source); nil everywhere else.
-    @State private var selectedWallet: String?
+    /// The wallet this room is scoped to (prd §128, widened by §356) — nil is
+    /// "All". Scopes the balance lede, holdings treemap, NFT strip and the
+    /// rows to one watched wallet.
+    ///
+    /// **A window onto `ShellChrome.walletScope`, not `@State`, and that is
+    /// the whole of §356.** It used to be `@State` here, which made it a
+    /// property of ONE room: `MainSurface` gives its single `FeedScreen` an
+    /// `.id(filter.source)`, so moving to Peer destroys this screen and every
+    /// bit of its state — which is why the scope silently evaporated on a room
+    /// change and why no wallet room but the balance room could be narrowed at
+    /// all. Held on the shell, one scope now spans the whole category.
+    private var selectedWallet: String? {
+        get { chrome.walletScope }
+        nonmutating set { chrome.walletScope = newValue }
+    }
     /// The Wallet feed's live reads (2026-07-20) — Aave positions and the
     /// warnings rolled up from them plus Safe/poisoning/delegation. Never a
     /// landed thing: re-read each time this feed comes forward or its scope
@@ -300,7 +309,6 @@ struct FeedScreen: View {
     /// The wallet switcher's selection fill — ONE capsule that slides from
     /// the old chip to the new (the source chips' own ruling, 2026-07-14:
     /// "selection is an object traveling, not two states blinking").
-    @Namespace private var walletSwitcherNS
     /// Bumped when this page lands — rows replay their shape's
     /// entrance (each shape arrives its own way, ruling 2026-07-07).
     /// Memo for the feed's two expensive derivations (PERF 2026-07-31).
@@ -738,14 +746,27 @@ struct FeedScreen: View {
         return debouncedAllSnapshot?.count ?? things.count
     }
 
-    /// The Wallet feed's per-wallet scope (prd §128) — everything passes in
-    /// "All" (selectedWallet nil, and it's never set off the Wallet page); when
-    /// scoped, only transactions from that watched wallet. Matched through
-    /// `WalletStore.scopeMatches` (2026-07-20): things are stamped with the
-    /// RESOLVED hex while the scope is the WATCHED spelling, so the old raw
-    /// compare emptied an ENS/SNS-watched wallet's scoped feed entirely.
+    /// Is this room one the wallet scope may narrow (prd §356) — every seat in
+    /// the Wallet category, which is what the face rail is offered on.
+    ///
+    /// **The gate is the room, never the scope's own nil-ness**, and that
+    /// distinction became load-bearing the moment §356 moved the scope onto
+    /// the shell: a scope set in the balance room now outlives the room, so an
+    /// ungated filter would reach Social and Work — where every row's
+    /// `walletAddress` is nil, so `scopeMatches` answers false for all of them
+    /// and the room renders EMPTY with nothing on screen able to explain why.
+    private var roomTakesWalletScope: Bool {
+        BridgeCatalog.category(forSource: source) == CategoryFold.walletCategory
+    }
+
+    /// The per-wallet scope (prd §128, widened to the whole Wallet category by
+    /// §356) — everything passes in "All"; when scoped, only rows belonging to
+    /// that watched wallet. Matched through `WalletStore.scopeMatches`
+    /// (2026-07-20): things are stamped with the RESOLVED hex while the scope
+    /// is the WATCHED spelling, so a raw compare empties an ENS/SNS-watched
+    /// wallet's scoped feed entirely.
     private func walletScopeAllows(_ thing: Thing) -> Bool {
-        guard let scope = selectedWallet else { return true }
+        guard roomTakesWalletScope, let scope = selectedWallet else { return true }
         return wallet.scopeMatches(thing.walletAddress, scope: scope)
     }
     private var filterLabel: String {
@@ -1800,7 +1821,7 @@ struct FeedScreen: View {
         // Scoping to a wallet (or back to All) re-paints the treemap/NFT strip
         // AND re-reads the live tiles for that scope; the rows and balance
         // re-derive from state.
-        .onChange(of: selectedWallet) {
+        .onChange(of: chrome.walletScope) {
             if isActive {
                 streamBlock(); loadWalletLive()
                 // A scope switch retints the crown mid-flight with the
@@ -2681,7 +2702,7 @@ struct FeedScreen: View {
         // Casberi's own blue. Written unconditionally, not just by the Wallet
         // page, so arriving on ANY page resets a scoped tint the wallet page
         // left behind; no leave() bookkeeping to race the pager's ordering.
-        chrome.pourHue = source == "Wallet" ? selectedWallet.map(WalletFace.tint) : nil
+        chrome.pourHue = roomTakesWalletScope ? selectedWallet.map(WalletFace.tint) : nil
         // And how much of it this room gets (prd §297, 2026-08-03) — the rule
         // and its reasoning live together on `ShellChrome`. Written
         // unconditionally beside the hue for the same reason: arriving on any
@@ -3858,64 +3879,87 @@ struct FeedScreen: View {
     /// transaction that was — and its glass had nothing moving behind it.
     /// As a `safeAreaInset` bar it floats under the shell's chip strip, the
     /// stream travels beneath it, and the material finally earns its blur.
+    /// **A face shelf since §356, and offered in EVERY wallet room** (was
+    /// `source == "Wallet"`, i.e. the balance room alone, which is why leaving
+    /// it silently dropped your scope and why Peer / Privacy Pools / Gnosis
+    /// Pay / Railgun each merged all five watched wallets with no way to
+    /// narrow them). It draws the social roster's own construction —
+    /// `ShapedRows.faceSlot`'s circular face over a name — rather than a row
+    /// of word pills, so the three stacked controls stop being three glass
+    /// capsules of words: categories are words in circles, rooms are word
+    /// pills, wallets are FACES.
+    ///
+    /// `DS.Face.list` (36), not `.shelf` (56), even though this IS a face
+    /// shelf: the ramp's shelf tier is for in-content shelves where the face
+    /// is the content, and pinned above a room the rail is chrome and stays
+    /// subordinate to it. The 44pt slot keeps the touch target legal.
+    ///
+    /// **No glass, unlike the room switcher above it.** The design law already
+    /// says a mark someone recognizes stays opaque — frosting a face only
+    /// muddies the one thing it exists to be — so the faces sit ON the page
+    /// rather than in a capsule of their own, which also stops a third glass
+    /// bar from stacking under the other two.
     @ViewBuilder
     private var walletSwitcherBar: some View {
-        if source == "Wallet", wallet.addresses.count > 1 {
+        if roomTakesWalletScope, wallet.addresses.count > 1 {
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DS.Space.s2) {
+                HStack(spacing: 2) {
                     walletSwitcherChip(label: "All", address: nil)
                     ForEach(wallet.addresses) { addr in
                         walletSwitcherChip(label: addr.label.isEmpty ? addr.short : addr.label,
                                            address: addr.address)
                     }
                 }
-                .padding(4)
-                // Glass, by the law's own terms: scoping is a CONTROL, so the
-                // switcher wears the floating material — one bar of glass for
-                // the whole strip rather than a pane per chip.
-                .dsGlass(cornerRadius: 999)
                 .padding(.horizontal, DS.Space.s4)
-                .padding(.vertical, DS.Space.s2)
+                .padding(.vertical, DS.Space.s1)
             }
             .scrollIndicators(.hidden)
         }
     }
 
+    /// One face over its name — `ShapedRows.faceSlot`'s construction, the
+    /// grammar the wallet manager's own roster and the social roster already
+    /// share (prd §356).
+    ///
+    /// **Selection is opacity and weight, never a ring** (§351's rule, which
+    /// this control has to respect rather than restate): a tint ring already
+    /// means "the active chip" one tier up in the strip and a dashed orange
+    /// one means "needs reconnecting", so a third ring here would be a third
+    /// meaning for the same mark. The face itself is the identity, so it can
+    /// carry selection by simply being the only one at full strength.
     private func walletSwitcherChip(label: String, address: String?) -> some View {
         let isOn = walletChipIsOn(address)
-        // "All wallets" has no one identity to wear, so its chip goes
-        // neutral rather than blue (2026-08-10) — each real wallet still
-        // gets its own `WalletFace` hue mid-flight.
-        let tint = address.map(WalletFace.tint) ?? DS.neutralBadge
         return Button {
             DSHaptic.selection()
             withAnimation(DS.Motion.standard) { selectedWallet = address }
         } label: {
-            HStack(spacing: 5) {
-                if let address { WalletFace(address: address, size: DS.Face.badge) }
+            VStack(spacing: DS.Space.s1) {
+                if let address {
+                    WalletFace(address: address, size: DS.Face.list, circular: true)
+                } else {
+                    // "All" has no identity to wear, and it CANNOT be a pile
+                    // of the faces themselves — at the five-wallet cap
+                    // (§170) an overlapped composite is mush at this size.
+                    // It takes the strip's own "All" treatment instead: a
+                    // word in a circle, which reads the same at any count.
+                    Text("All")
+                        .dsText(.label11).fontWeight(.semibold)
+                        .foregroundStyle(isOn ? DS.textPrimary : DS.textSecondary)
+                        .frame(width: DS.Face.list, height: DS.Face.list)
+                        .background(Circle().fill(DS.fillFaint))
+                }
                 Text(label)
-                    .dsText(.subhead13)
+                    .dsText(.label12)
                     .fontWeight(isOn ? .semibold : .regular)
                     .foregroundStyle(isOn ? DS.textPrimary : DS.textSecondary)
                     .lineLimit(1)
             }
-            .padding(.horizontal, DS.Space.s3)
-            .padding(.vertical, DS.Space.s2)
-            // The selection fill is ONE object that travels chip to chip on a
-            // scope switch (matched geometry), tinting itself to the landing
-            // wallet's own hue mid-flight — identity color doing the work.
-            // Unselected chips keep their static faint fill underneath.
-            .background {
-                ZStack {
-                    Capsule(style: .continuous).fill(DS.fillFaint)
-                    if isOn {
-                        Capsule(style: .continuous).fill(tint.opacity(0.18))
-                            .matchedGeometryEffect(id: "walletSwitcherSelection",
-                                                   in: walletSwitcherNS)
-                    }
-                }
-            }
-            .contentShape(Capsule(style: .continuous))
+            // A 44pt-wide slot is the touch floor; the extra width is what
+            // gives a name room to read rather than truncate at the face.
+            .frame(width: 66)
+            .opacity(isOn ? 1 : 0.4)
+            .padding(.vertical, DS.Space.s1)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         // Chips ease at the strip's edges instead of clipping flat — the
@@ -5532,7 +5576,7 @@ struct FeedScreen: View {
         // (prd §171, 2026-07-22) — the crown already retints on a scope
         // switch (§159), so the refresh that follows should agree. Every
         // other room keeps the source's hue; "All" keeps the default berry.
-        chrome.refreshHue = source == "Wallet"
+        chrome.refreshHue = roomTakesWalletScope
             ? (selectedWallet.map(WalletFace.tint) ?? DS.washHue(for: source))
             : (source == "All" ? nil : DS.washHue(for: source))
         // BEFORE the pulse, not after (2026-08-05). The pulse is what re-fires

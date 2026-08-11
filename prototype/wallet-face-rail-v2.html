@@ -1,0 +1,265 @@
+<meta charset="utf-8">
+<title>Wallet faces above the rooms</title>
+<style>
+  /* Real tokens. DS.Face.list 36 (prd §355) in a 44pt slot — the touch floor.
+     Strip chips 46 · seat pills subhead13 padH s3 · Space s2 10 s3 14 s4 18 */
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font: 14px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+         background: #0b0b0d; color: #ebebf5cc; padding: 30px 26px 60px; -webkit-font-smoothing: antialiased; }
+  body.light { background: #f2f2f7; color: #3c3c43d6; }
+  h1 { font: 700 21px/27px ui-rounded, -apple-system, system-ui; color: #fff; }
+  body.light h1 { color: #000; }
+  .sub { margin-top: 5px; max-width: 98ch; font-size: 13px; opacity: .74; }
+  .bar { margin: 16px 0 22px; }
+  button { font: 500 13px/1 inherit; color: inherit; cursor: pointer; background: #ffffff14;
+           border: 0; border-radius: 999px; padding: 9px 15px; }
+  body.light button { background: #00000010; }
+  .row { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+  .col { width: 372px; }
+  .col > h2 { font: 600 13.5px/18px inherit; color: #fff; }
+  body.light .col > h2 { color: #000; }
+  .col > .note { font-size: 12px; line-height: 17px; opacity: .64; margin: 3px 0 9px; min-height: 68px; }
+  .tag { display: inline-block; font: 600 10.5px/1 inherit; padding: 4px 8px; border-radius: 999px; margin-bottom: 6px; }
+  .win { background: #30d1582b; color: #4ade80; }
+  .cost { background: #ff9f0a26; color: #ffb340; }
+  .alt { background: #ffffff14; color: #ebebf599; }
+  body.light .alt { background: #00000010; color: #3c3c43d6; }
+
+  .stage { border-radius: 22px; background: #000; overflow: hidden; padding: 10px 0 0; position: relative; height: 470px; }
+  body.light .stage { background: #fff; box-shadow: 0 1px 8px #0000001f; }
+  .stage::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 38px;
+                  background: linear-gradient(#0000,#000); pointer-events: none; }
+  body.light .stage::after { background: linear-gradient(#fff0,#fff); }
+
+  /* top doors — the app's global chrome, fixed */
+  .doors { display: flex; align-items: center; justify-content: space-between; padding: 0 18px 8px; }
+  .door { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
+          background: linear-gradient(135deg,#8a6cf0,#e06c8a); font: 600 14px/1 inherit; color: #fff; }
+  .door.g { background: #ffffff0f; color: #ebebf599; font-size: 16px; }
+  body.light .door.g { background: #00000008; color: #3c3c43d6; }
+
+  /* THE FACE RAIL — DS.Face.list 36 in a 44 slot */
+  .rail { display: flex; gap: 2px; padding: 0 18px 8px; overflow: hidden; align-items: center; }
+  .fslot { flex: 0 0 auto; width: 44px; height: 44px; display: grid; place-items: center;
+           border-radius: 50%; opacity: .45; }
+  .fslot.on { opacity: 1; }
+  .fslot.on::after { content: ""; position: absolute; }
+  .f { width: 36px; height: 36px; border-radius: 50%; }
+  .fv { background: conic-gradient(from 40deg,#30d158,#0a84ff,#7a5af8,#30d158); }
+  .fl { background: conic-gradient(from 200deg,#ff9f0a,#bf5af2,#ff453a,#ff9f0a); }
+  .fh { background: conic-gradient(from 310deg,#0a84ff,#12b8a6,#30d158,#0a84ff); }
+  .allf { width: 36px; height: 36px; position: relative; }
+  .allf i { position: absolute; width: 17px; height: 17px; border-radius: 50%; box-shadow: 0 0 0 2px #000; }
+  body.light .allf i { box-shadow: 0 0 0 2px #fff; }
+  .allf .a1 { left: 0; top: 2px; } .allf .a2 { left: 9px; top: 15px; } .allf .a3 { left: 18px; top: 2px; }
+  .railcap { font: 600 11px/1 inherit; color: #ebebf54d; padding: 0 18px 5px; }
+  body.light .railcap { color: #3c3c4359; }
+
+  /* strip */
+  .strip { display: flex; align-items: center; gap: 9px; padding: 0 18px 9px; overflow: hidden; }
+  .cchip { flex: 0 0 auto; height: 44px; border-radius: 22px; display: flex; align-items: center;
+           padding: 0 13px; background: #ffffff0f; color: #fff; font: 500 12px/1 inherit; white-space: nowrap; }
+  body.light .cchip { background: #00000008; color: #000; }
+  .cchip.circle { width: 44px; padding: 0; justify-content: center; border-radius: 50%; }
+  .cchip.act { box-shadow: 0 0 0 2.5px #0a84ff; }
+
+  /* seat switcher */
+  .pinbar { padding: 0 18px 9px; }
+  .glass { display: inline-flex; align-items: center; gap: 7px; padding: 4px; border-radius: 999px;
+           max-width: 100%; overflow: hidden; background: #ffffff12; backdrop-filter: blur(14px);
+           box-shadow: inset 0 0 0 .5px #ffffff14; }
+  body.light .glass { background: #ffffffb8; box-shadow: inset 0 0 0 .5px #00000010; }
+  .pill { padding: 9px 13px; border-radius: 999px; white-space: nowrap; font: 400 13px/17px inherit;
+          color: #ebebf599; background: #ffffff0f; }
+  body.light .pill { color: #3c3c43d6; background: #00000008; }
+  .pill.on { font-weight: 600; color: #fff; background: #0a84ff2e; }
+  body.light .pill.on { color: #000; background: #0a84ff24; }
+
+  /* content */
+  .content { padding: 2px 18px 16px; display: flex; flex-direction: column; gap: 9px; }
+  .card { border-radius: 18px; background: #ffffff0a; padding: 14px; }
+  body.light .card { background: #00000006; }
+  .kicker { font-size: 12px; color: #ebebf57e; } body.light .kicker { color: #3c3c43bd; }
+  .kicker b { color: #ebebf5cc; } body.light .kicker b { color: #3c3c43d6; }
+  .balline { display: flex; align-items: baseline; gap: 8px; margin-top: 2px; }
+  .big { font: 700 27px/31px ui-rounded, -apple-system, system-ui; color: #fff; }
+  body.light .big { color: #000; }
+  .delta { font: 600 11.5px/1 inherit; color: #30d158; background: #30d15821; padding: 4px 7px; border-radius: 999px; }
+  .trow { display: flex; align-items: center; gap: 10px; padding: 8px 2px; }
+  .ic { width: 30px; height: 30px; border-radius: 50%; background: #ffffff0d; display: grid; place-items: center; font-size: 12px; flex: 0 0 auto; }
+  body.light .ic { background: #00000008; }
+  .tt { font-size: 12.5px; color: #fff; } body.light .tt { color: #000; }
+  .ts { font-size: 11px; color: #ebebf57e; margin-top: 1px; } body.light .ts { color: #3c3c43bd; }
+  .who { margin-left: auto; font-size: 11px; color: #ebebf57e; } body.light .who { color: #3c3c43bd; }
+
+  .gap { height: 52px; display: grid; place-items: center; font-size: 11px; color: #ff9f0a;
+         border: 1px dashed #ff9f0a55; border-radius: 10px; margin: 0 18px 9px; }
+
+  .verdict { max-width: 780px; margin-top: 32px; font-size: 13px; line-height: 20px; }
+  .verdict h2 { font: 600 15px/20px inherit; color: #fff; margin-bottom: 8px; }
+  body.light .verdict h2 { color: #000; }
+  .verdict li { margin: 9px 0 9px 18px; }
+  .verdict b { color: #fff; font-weight: 600; } body.light .verdict b { color: #000; }
+</style>
+
+<h1>Wallet faces above the rooms</h1>
+<p class="sub">
+  Your proposal: the wallet scope sits <b>above</b> the room chips and <b>persists across rooms</b> — pick a
+  wallet, switch to Peer, still see that wallet. It fixes the real gap (no wallet room can be scoped today, not
+  just Peer) and it reads top-to-bottom as broad→narrow: <b>whose → where → which seat</b>. Faces are
+  <code>DS.Face.list</code> (36) in 44pt slots — the touch floor, without the height a 56 shelf would cost.
+</p>
+<div class="bar"><button onclick="document.body.classList.toggle('light')">Toggle light</button></div>
+
+<div class="row">
+
+  <!-- 1 · all wallets -->
+  <div class="col">
+    <span class="tag alt">Proposal · unscoped</span>
+    <h2>1 · All wallets, balance room</h2>
+    <p class="note">The rail leads. "All" wears the wallets themselves, overlapped. Rows carry whose they are
+    in the trailing slot — which the feed already does today (<code>ShapedRows.project</code>).</p>
+    <div class="stage">
+      <div class="doors"><div class="door">A</div><div class="door g">⊞</div></div>
+      <div class="railcap">whose</div>
+      <div class="rail">
+        <div class="fslot on"><span class="allf"><i class="fv a1"></i><i class="fl a2"></i><i class="fh a3"></i></span></div>
+        <div class="fslot"><span class="f fv"></span></div>
+        <div class="fslot"><span class="f fl"></span></div>
+        <div class="fslot"><span class="f fh"></span></div>
+      </div>
+      <div class="railcap">where</div>
+      <div class="strip">
+        <div class="cchip circle">All</div><div class="cchip act">Wallet</div>
+        <div class="cchip">Work</div><div class="cchip">Social</div>
+      </div>
+      <div class="pinbar"><div class="glass">
+        <div class="pill on">Wallet</div><div class="pill">Peer</div><div class="pill">Privacy Pools</div>
+      </div></div>
+      <div class="content">
+        <div class="card">
+          <div class="kicker">Across your wallets</div>
+          <div class="balline"><span class="big">$4,182</span><span class="delta">+2.4%</span></div>
+        </div>
+        <div class="trow"><div class="ic">↓</div><div><div class="tt">Received 0.05 ETH</div><div class="ts">2:14 PM</div></div><div class="who">vitalik.eth</div></div>
+        <div class="trow"><div class="ic">↑</div><div><div class="tt">Sent 120 USDC</div><div class="ts">11:02 AM</div></div><div class="who">Ledger</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2 · THE WIN -->
+  <div class="col">
+    <span class="tag win">Proposal · the win</span>
+    <h2>2 · Scoped, then switch to Peer</h2>
+    <p class="note">Tap vitalik.eth, move to the Peer seat — the scope <b>survives the room switch</b> and Peer
+    shows only that wallet's fills. Impossible today: <code>walletSwitcherBar</code> gates on
+    <code>source == "Wallet"</code>, so every wallet room merges all five with no control.</p>
+    <div class="stage">
+      <div class="doors"><div class="door">A</div><div class="door g">⊞</div></div>
+      <div class="railcap">whose</div>
+      <div class="rail">
+        <div class="fslot"><span class="allf"><i class="fv a1"></i><i class="fl a2"></i><i class="fh a3"></i></span></div>
+        <div class="fslot on"><span class="f fv"></span></div>
+        <div class="fslot"><span class="f fl"></span></div>
+        <div class="fslot"><span class="f fh"></span></div>
+      </div>
+      <div class="railcap">where</div>
+      <div class="strip">
+        <div class="cchip circle">All</div><div class="cchip act">Wallet</div>
+        <div class="cchip">Work</div><div class="cchip">Social</div>
+      </div>
+      <div class="pinbar"><div class="glass">
+        <div class="pill">Wallet</div><div class="pill on">Peer</div><div class="pill">Privacy Pools</div>
+      </div></div>
+      <div class="content">
+        <div class="card">
+          <div class="kicker"><b>vitalik.eth</b> · Peer</div>
+          <div class="balline"><span class="big" style="font-size:17px;line-height:23px">Mostly Cash App — 9 fills</span></div>
+        </div>
+        <div class="trow"><div class="ic">◈</div><div><div class="tt">Bought 25 USDC with Venmo</div><div class="ts">July 30</div></div></div>
+        <div class="trow"><div class="ic">◈</div><div><div class="tt">Bought 10 USDC with Cash App</div><div class="ts">July 22</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3 · THE COST -->
+  <div class="col">
+    <span class="tag cost">Proposal · the cost</span>
+    <h2>3 · A non-wallet room</h2>
+    <p class="note">A wallet scope means nothing for a Bluesky post, so the rail can't render here — and the
+    strip jumps <b>up 57pt</b>. The app's primary navigation changes position depending on which room you're
+    in, on every entry and exit.</p>
+    <div class="stage">
+      <div class="doors"><div class="door">A</div><div class="door g">⊞</div></div>
+      <div class="gap">rail absent — strip moves up 57pt</div>
+      <div class="strip">
+        <div class="cchip circle">All</div><div class="cchip">Wallet</div>
+        <div class="cchip">Work</div><div class="cchip act">Social</div>
+      </div>
+      <div class="pinbar"><div class="glass">
+        <div class="pill on">Bluesky</div><div class="pill">Farcaster</div>
+      </div></div>
+      <div class="content">
+        <div class="trow"><div class="ic">◍</div><div><div class="tt">Posted about the new release</div><div class="ts">1:40 PM</div></div></div>
+        <div class="trow"><div class="ic">◍</div><div><div class="tt">Liked a post by dwr</div><div class="ts">Yesterday</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 · ALTERNATIVE -->
+  <div class="col">
+    <span class="tag alt">Alternative</span>
+    <h2>4 · Same win, rail stays below</h2>
+    <p class="note">Keep the persistence — the whole functional gain — but leave the rail where the address bar
+    already sits. Appearing and disappearing <i>below</i> the strip moves only the room's own content, never
+    the navigation above it.</p>
+    <div class="stage">
+      <div class="doors"><div class="door">A</div><div class="door g">⊞</div></div>
+      <div class="railcap">where</div>
+      <div class="strip">
+        <div class="cchip circle">All</div><div class="cchip act">Wallet</div>
+        <div class="cchip">Work</div><div class="cchip">Social</div>
+      </div>
+      <div class="pinbar"><div class="glass">
+        <div class="pill">Wallet</div><div class="pill on">Peer</div><div class="pill">Privacy Pools</div>
+      </div></div>
+      <div class="railcap">whose</div>
+      <div class="rail">
+        <div class="fslot"><span class="allf"><i class="fv a1"></i><i class="fl a2"></i><i class="fh a3"></i></span></div>
+        <div class="fslot on"><span class="f fv"></span></div>
+        <div class="fslot"><span class="f fl"></span></div>
+        <div class="fslot"><span class="f fh"></span></div>
+      </div>
+      <div class="content">
+        <div class="card">
+          <div class="kicker"><b>vitalik.eth</b> · Peer</div>
+          <div class="balline"><span class="big" style="font-size:17px;line-height:23px">Mostly Cash App — 9 fills</span></div>
+        </div>
+        <div class="trow"><div class="ic">◈</div><div><div class="tt">Bought 25 USDC with Venmo</div><div class="ts">July 30</div></div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="verdict">
+  <h2>What I think</h2>
+  <ul>
+    <li><b>The persistence half is right, and it's the whole prize.</b> A wallet scope that survives a room
+      switch and reaches every wallet room fixes a real gap — today no wallet room but the balance room can be
+      narrowed at all. It also means the scope stops being a property of one room and becomes what it actually
+      is: a filter over everything wallet-shaped.</li>
+    <li><b>The position half costs more than it pays.</b> Above the chips, the rail can only appear in wallet
+      rooms — a wallet scope is meaningless over a Bluesky post — so the strip changes vertical position every
+      time you enter or leave a wallet room. The strip is the app's primary navigation and its position is half
+      of what makes an icon-only chip findable (the 2026-07-30 ruling). Below, the same appear/disappear moves
+      only the room's own content.</li>
+    <li><b>You still get the hierarchy you're after, because the rail is only ever there in wallet rooms.</b>
+      When it's visible, the reading is room → whose, and the room is already named by a lit chip. What sells
+      "whose" is the face being lit and the card naming it — not which of two adjacent bars sits higher.</li>
+    <li><b>Either way, one thing has to change beyond position:</b> the scope has to be readable when it isn't
+      "All" — hence the card's kicker saying <b>vitalik.eth · Peer</b> in 2 and 4. Without it a scoped Peer room
+      and an unscoped one with one busy wallet look identical.</li>
+  </ul>
+</div>

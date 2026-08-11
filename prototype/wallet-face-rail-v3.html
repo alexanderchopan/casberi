@@ -1,0 +1,223 @@
+<meta charset="utf-8">
+<title>Wallet faces between strip and rooms</title>
+<style>
+  /* Real tokens. DS.Face.list 36 (prd §355) in 44pt slots.
+     Rail: face 36 + gap 4 + label12 16 + pad 8 = 64pt. Strip chips 46 · Space s2 10 s3 14 s4 18 */
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font: 14px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+         background: #0b0b0d; color: #ebebf5cc; padding: 30px 26px 60px; -webkit-font-smoothing: antialiased; }
+  body.light { background: #f2f2f7; color: #3c3c43d6; }
+  h1 { font: 700 21px/27px ui-rounded, -apple-system, system-ui; color: #fff; }
+  body.light h1 { color: #000; }
+  .sub { margin-top: 5px; max-width: 92ch; font-size: 13px; opacity: .74; }
+  .bar { margin: 16px 0 22px; }
+  button { font: 500 13px/1 inherit; color: inherit; cursor: pointer; background: #ffffff14;
+           border: 0; border-radius: 999px; padding: 9px 15px; }
+  body.light button { background: #00000010; }
+  .row { display: flex; gap: 22px; align-items: flex-start; flex-wrap: wrap; }
+  .col { width: 388px; }
+  .col > h2 { font: 600 14px/18px inherit; color: #fff; }
+  body.light .col > h2 { color: #000; }
+  .col > .note { font-size: 12px; line-height: 17px; opacity: .64; margin: 3px 0 10px; min-height: 51px; }
+
+  .stage { border-radius: 22px; background: #000; overflow: hidden; padding: 12px 0 0; position: relative; height: 486px; }
+  body.light .stage { background: #fff; box-shadow: 0 1px 8px #0000001f; }
+  .stage::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 38px;
+                  background: linear-gradient(#0000,#000); pointer-events: none; }
+  body.light .stage::after { background: linear-gradient(#fff0,#fff); }
+
+  /* 1 · category strip (shipped, never moves) */
+  .strip { display: flex; align-items: center; gap: 10px; padding: 0 18px 10px; overflow: hidden; }
+  .door { flex: 0 0 auto; width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center;
+          background: linear-gradient(135deg,#8a6cf0,#e06c8a); font: 600 15px/1 inherit; color: #fff; }
+  .cchip { flex: 0 0 auto; height: 46px; border-radius: 23px; display: flex; align-items: center;
+           padding: 0 14px; background: #ffffff0f; color: #fff; font: 500 12px/1 inherit; white-space: nowrap; }
+  body.light .cchip { background: #00000008; color: #000; }
+  .cchip.circle { width: 46px; padding: 0; justify-content: center; border-radius: 50%; }
+  .cchip.act { box-shadow: 0 0 0 2.5px #0a84ff; }
+
+  /* 2 · wallet faces — DS.Face.list 36 with the name below, the social face
+     shelf's own construction (ShapedRows.faceSlot: VStack(spacing: 4) →
+     circular face → name). Slot 66 wide so a name has room; 36 + 4 + 16 + 8
+     padding = a 64pt bar. */
+  .rail { display: flex; gap: 2px; padding: 0 18px 8px; overflow: hidden; align-items: flex-start; }
+  .fslot { flex: 0 0 auto; width: 66px; display: flex; flex-direction: column; align-items: center;
+           gap: 4px; padding: 4px 0; opacity: .4; }
+  .fslot.on { opacity: 1; }
+  .f { width: 36px; height: 36px; border-radius: 50%; }
+  .nm { font: 400 12px/16px inherit; color: #ebebf599; max-width: 66px; overflow: hidden;
+        text-overflow: ellipsis; white-space: nowrap; }
+  body.light .nm { color: #3c3c43d6; }
+  .fslot.on .nm { font-weight: 600; color: #fff; }
+  body.light .fslot.on .nm { color: #000; }
+  /* "All" wears the strip's own All treatment — a glass circle with the word.
+     NOT a composite of faces: it has to survive five watched wallets. */
+  .allchip { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+             background: #ffffff14; color: #ebebf599; font: 600 11px/1 inherit; }
+  body.light .allchip { background: #00000010; color: #3c3c43d6; }
+  .fslot.on .allchip { background: #ffffff26; color: #fff; }
+  body.light .fslot.on .allchip { background: #0000001c; color: #000; }
+  .fv { background: conic-gradient(from 40deg,#30d158,#0a84ff,#7a5af8,#30d158); }
+  .fl { background: conic-gradient(from 200deg,#ff9f0a,#bf5af2,#ff453a,#ff9f0a); }
+  .fh { background: conic-gradient(from 310deg,#0a84ff,#12b8a6,#30d158,#0a84ff); }
+  .fc { background: conic-gradient(from 90deg,#bf5af2,#ff9f0a,#0a84ff,#bf5af2); }
+  .fd { background: conic-gradient(from 150deg,#12b8a6,#30d158,#ff453a,#12b8a6); }
+
+  /* 3 · wallet rooms */
+  .pinbar { padding: 0 18px 10px; }
+  .glass { display: inline-flex; align-items: center; gap: 7px; padding: 4px; border-radius: 999px;
+           max-width: 100%; overflow: hidden; background: #ffffff12; backdrop-filter: blur(14px);
+           box-shadow: inset 0 0 0 .5px #ffffff14; }
+  body.light .glass { background: #ffffffb8; box-shadow: inset 0 0 0 .5px #00000010; }
+  .pill { padding: 10px 14px; border-radius: 999px; white-space: nowrap; font: 400 13px/18px inherit;
+          color: #ebebf599; background: #ffffff0f; }
+  body.light .pill { color: #3c3c43d6; background: #00000008; }
+  .pill.on { font-weight: 600; color: #fff; background: #0a84ff2e; }
+  body.light .pill.on { color: #000; background: #0a84ff24; }
+
+  /* content */
+  .content { padding: 2px 18px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .card { border-radius: 18px; background: #ffffff0a; padding: 15px; }
+  body.light .card { background: #00000006; }
+  .kicker { font-size: 12px; color: #ebebf57e; } body.light .kicker { color: #3c3c43bd; }
+  .kicker b { color: #ebebf5cc; } body.light .kicker b { color: #3c3c43d6; }
+  .balline { display: flex; align-items: baseline; gap: 9px; margin-top: 3px; }
+  .big { font: 700 29px/33px ui-rounded, -apple-system, system-ui; color: #fff; }
+  body.light .big { color: #000; }
+  .mid { font: 700 17px/23px ui-rounded, -apple-system, system-ui; color: #fff; margin-top: 3px; }
+  body.light .mid { color: #000; }
+  .delta { font: 600 12px/1 inherit; color: #30d158; background: #30d15821; padding: 4px 8px; border-radius: 999px; }
+  .trow { display: flex; align-items: center; gap: 11px; padding: 9px 2px; }
+  .ic { width: 32px; height: 32px; border-radius: 50%; background: #ffffff0d; display: grid; place-items: center;
+        font-size: 13px; flex: 0 0 auto; }
+  body.light .ic { background: #00000008; }
+  .tt { font-size: 13px; color: #fff; } body.light .tt { color: #000; }
+  .ts { font-size: 11.5px; color: #ebebf57e; margin-top: 1px; } body.light .ts { color: #3c3c43bd; }
+  .who { margin-left: auto; font-size: 11px; color: #ebebf57e; } body.light .who { color: #3c3c43bd; }
+
+  .verdict { max-width: 780px; margin-top: 30px; font-size: 13px; line-height: 20px; }
+  .verdict h2 { font: 600 15px/20px inherit; color: #fff; margin-bottom: 8px; }
+  body.light .verdict h2 { color: #000; }
+  .verdict li { margin: 9px 0 9px 18px; }
+  .verdict b { color: #fff; font-weight: 600; } body.light .verdict b { color: #000; }
+</style>
+
+<h1>Wallet faces between the strip and the rooms</h1>
+<p class="sub">
+  Your hierarchy: <b>category chips → wallet faces → wallet rooms</b>. The strip never moves; the faces appear
+  only inside the Wallet category, and the scope they set <b>persists as you move between rooms</b>. Faces are
+  <code>DS.Face.list</code> (36) with the name below — the social face shelf's own construction (<code>ShapedRows.faceSlot</code>). Everything drawn is UI; no annotation labels this time.
+</p>
+<div class="bar"><button onclick="document.body.classList.toggle('light')">Toggle light</button></div>
+
+<div class="row">
+
+  <div class="col">
+    <h2>1 · All wallets, balance room</h2>
+    <p class="note">"All" is selected. Rows say whose they are in the trailing slot, which the feed already
+    does today.</p>
+    <div class="stage">
+      <div class="strip">
+        <div class="door">A</div>
+        <div class="cchip circle">All</div><div class="cchip act">Wallet</div>
+        <div class="cchip">Work</div><div class="cchip">Social</div>
+      </div>
+      <div class="rail">
+        <div class="fslot on"><span class="allchip">All</span><span class="nm">All</span></div>
+        <div class="fslot"><span class="f fv"></span><span class="nm">vitalik.eth</span></div>
+        <div class="fslot"><span class="f fl"></span><span class="nm">Ledger</span></div>
+        <div class="fslot"><span class="f fh"></span><span class="nm">Hot</span></div>
+      </div>
+      <div class="pinbar"><div class="glass">
+        <div class="pill on">Wallets</div><div class="pill">Peer</div><div class="pill">Privacy Pools</div>
+      </div></div>
+      <div class="content">
+        <div class="card">
+          <div class="kicker">Across your wallets</div>
+          <div class="balline"><span class="big">$4,182</span><span class="delta">+2.4%</span></div>
+        </div>
+        <div class="trow"><div class="ic">↓</div><div><div class="tt">Received 0.05 ETH</div><div class="ts">2:14 PM</div></div><div class="who">vitalik.eth</div></div>
+        <div class="trow"><div class="ic">↑</div><div><div class="tt">Sent 120 USDC</div><div class="ts">11:02 AM</div></div><div class="who">Ledger</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <h2>2 · One wallet, moved to Peer</h2>
+    <p class="note">The face stays lit as you change room below it — so Peer shows that wallet alone, which no
+    wallet room can do today. The card names the scope, or scoped and unscoped look identical.</p>
+    <div class="stage">
+      <div class="strip">
+        <div class="door">A</div>
+        <div class="cchip circle">All</div><div class="cchip act">Wallet</div>
+        <div class="cchip">Work</div><div class="cchip">Social</div>
+      </div>
+      <div class="rail">
+        <div class="fslot"><span class="allchip">All</span><span class="nm">All</span></div>
+        <div class="fslot on"><span class="f fv"></span><span class="nm">vitalik.eth</span></div>
+        <div class="fslot"><span class="f fl"></span><span class="nm">Ledger</span></div>
+        <div class="fslot"><span class="f fh"></span><span class="nm">Hot</span></div>
+      </div>
+      <div class="pinbar"><div class="glass">
+        <div class="pill">Wallets</div><div class="pill on">Peer</div><div class="pill">Privacy Pools</div>
+      </div></div>
+      <div class="content">
+        <div class="card">
+          <div class="kicker"><b>vitalik.eth</b></div>
+          <div class="mid">Mostly Cash App — 9 fills</div>
+        </div>
+        <div class="trow"><div class="ic">◈</div><div><div class="tt">Bought 25 USDC with Venmo</div><div class="ts">July 30</div></div></div>
+        <div class="trow"><div class="ic">◈</div><div><div class="tt">Bought 10 USDC with Cash App</div><div class="ts">July 22</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <h2>3 · Five wallets — the cap</h2>
+    <p class="note">Why "All" can't be a pile of faces: at the 5-wallet cap a composite is mush at 36pt. It
+    wears the strip's own All treatment instead — a word in a circle, which scales to any count.</p>
+    <div class="stage">
+      <div class="strip">
+        <div class="door">A</div>
+        <div class="cchip circle">All</div><div class="cchip act">Wallet</div>
+        <div class="cchip">Work</div><div class="cchip">Social</div>
+      </div>
+      <div class="rail">
+        <div class="fslot on"><span class="allchip">All</span><span class="nm">All</span></div>
+        <div class="fslot"><span class="f fv"></span><span class="nm">vitalik.eth</span></div>
+        <div class="fslot"><span class="f fl"></span><span class="nm">Ledger</span></div>
+        <div class="fslot"><span class="f fh"></span><span class="nm">Hot</span></div>
+        <div class="fslot"><span class="f fc"></span><span class="nm">Cold</span></div>
+        <div class="fslot"><span class="f fd"></span><span class="nm">Savings</span></div>
+      </div>
+      <div class="pinbar"><div class="glass">
+        <div class="pill on">Wallets</div><div class="pill">Peer</div><div class="pill">Privacy Pools</div>
+      </div></div>
+      <div class="content">
+        <div class="card">
+          <div class="kicker">Across your wallets</div>
+          <div class="balline"><span class="big">$9,704</span><span class="delta">+1.1%</span></div>
+        </div>
+        <div class="trow"><div class="ic">↓</div><div><div class="tt">Received 0.05 ETH</div><div class="ts">2:14 PM</div></div><div class="who">vitalik.eth</div></div>
+        <div class="trow"><div class="ic">◈</div><div><div class="tt">Bought 25 USDC</div><div class="ts">July 30</div></div><div class="who">Cold</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="verdict">
+  <h2>Notes</h2>
+  <ul>
+    <li><b>The strip never moves.</b> The faces sit inside the Wallet category, below the chips — so entering
+      and leaving a wallet room changes only what's under the strip, never the strip's own position.</li>
+    <li><b>Selection is opacity and weight, not a ring.</b> A ring already means "active chip" up in the strip
+      and dashed orange means "needs reconnecting"; a third ring would collide. Unselected faces sit at 40%.</li>
+    <li><b>Faces are 36 in a 44pt slot.</b> The slot is the tap target, so it clears the 44pt floor while the
+      face stays subordinate to the room beneath it. A 56 shelf face is for in-content shelves, where the face
+      is the content rather than the chrome.</li>
+    <li><b>The card has to name the scope</b> — "vitalik.eth" in 2. Without it, a scoped Peer room and an
+      unscoped one belonging mostly to one busy wallet render identically.</li>
+  </ul>
+</div>
