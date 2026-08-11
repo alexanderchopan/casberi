@@ -348,7 +348,7 @@ enum DemoSeedAll {
         var out: [Thing] = []
         out += photos()
         out += obsidian()
-        out += appleNotes()
+        out += ownCaptures()
         out += xArchive()
         out += instagram()
         out += tiktok()
@@ -424,18 +424,32 @@ enum DemoSeedAll {
         }
     }
 
-    /// Apple Notes (2026-08-11 — the Notes category's own real gap: seeded
-    /// nowhere, connected nowhere, found by checking every category by hand
-    /// against `BridgeCatalog`). Plain notes, no tags/topics the way Obsidian's
-    /// vault carries — Apple Notes has no such structure to seed honestly.
-    private static func appleNotes() -> [Thing] {
+    /// What the person captured THEMSELVES — the share sheet, a drop, a paste
+    /// (2026-08-11). `source: "You"` is `Thing`'s own default and the honest
+    /// provenance of every own-capture; it is `chiplessSources`, so these earn
+    /// no chip and no room by the 2026-08-02 ruling, and land in All where
+    /// your own things belong.
+    ///
+    /// **These were seeded as `source: "Apple Notes"` for one day and that was
+    /// wrong** — a demo-parity audit read "Apple Notes is a catalog offer with
+    /// no demo seat" as a gap and furnished one, without checking whether the
+    /// real app ever creates that seat. It deliberately never does:
+    /// `NotesShareScreen` is an INSTRUCTION CARD, not a bridge — its own intro
+    /// says "there is nothing to connect", and unlike its neighbours (Day One,
+    /// Apple Journal, Bookmarks) it calls no `registerConnected`. iOS never
+    /// tells a share extension which app a share came from, so a note shared
+    /// out of Apple Notes lands exactly like any other own-capture, under
+    /// "You" — which is what these rows now say. The catalog entry is right to
+    /// exist and right to stay; the demo was claiming a connected state the
+    /// screen behind it explicitly refuses to claim (§83's fake status).
+    private static func ownCaptures() -> [Thing] {
         let notes: [(String, Double)] = [
             ("Packing list", 3), ("Wifi passwords", 8), ("Gift ideas", 14),
             ("Book recs from Sam", 21), ("Standup talking points", 26),
             ("Recipe — weeknight pasta", 34), ("Car maintenance log", 48),
         ]
         return notes.enumerated().map { i, n in
-            row(.note, n.0, source: "Apple Notes", ref: "demo:applenotes:\(i)",
+            row(.note, n.0, source: "You", ref: "demo:own:\(i)",
                 days: n.1, hour: 21, content: n.0)
         }
     }
@@ -1761,7 +1775,6 @@ enum DemoSeedAll {
     /// name · status line · the one sentence the seat says it can do.
     private static let seatTable: [(String, String, String)] = [
         ("Obsidian", "Synced 4m ago", "Reads the notes in your vault."),
-        ("Apple Notes", "Synced 6m ago", "Reads the notes on your device."),
         ("Files", "Synced 12m ago", "Reads a folder you point it at."),
         ("Dropbox", "Synced 1h ago", "Reads the folder you name."),
         ("X", "Imported 412 posts", "Holds the archive you exported."),
