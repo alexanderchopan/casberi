@@ -314,7 +314,7 @@ struct BridgeStepLines: View {
 struct FacePile: View {
     let urls: [String]
     let fallback: String
-    var size: CGFloat = 22
+    var size: CGFloat = DS.Face.badge
 
     var body: some View {
         HStack(spacing: -size * 0.34) {
@@ -525,7 +525,7 @@ func debouncedSearch<T>(_ query: String, minLength: Int = 2,
 struct BridgeLogo: View {
     let imageURL: String?
     let fallbackIcon: String
-    var size: CGFloat = 28
+    var size: CGFloat = DS.Face.row
 
     var body: some View {
         if let imageURL, !imageURL.isEmpty {
@@ -651,7 +651,7 @@ struct ChipLiveNote: View {
     var body: some View {
         Section {
             HStack(alignment: .top, spacing: DS.Space.s3) {
-                BridgeIcon(name: name, size: 22, circular: true)
+                BridgeIcon(name: name, size: DS.Face.badge, circular: true)
                     .overlay(Circle().strokeBorder(DS.gray100, lineWidth: 1.5))
                 Text("\(name) is in your feed strip. Tap its chip \(verb)")
                     .dsText(.subhead13).foregroundStyle(DS.textSecondary)

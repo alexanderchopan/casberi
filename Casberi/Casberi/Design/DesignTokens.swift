@@ -331,6 +331,50 @@ enum DS {
         static let iPadWideMaxWidth: CGFloat = PadLayout.wideMaxWidth
     }
 
+    // MARK: - Faces  (round identity marks — prd §355, 2026-08-11)
+
+    /// How big a round identity mark draws: a person's avatar, a wallet's
+    /// identicon, or the app icon standing in for one when there is no
+    /// picture. Four tiers, because a face's size is decided by WHAT IT SITS
+    /// BESIDE, not by taste.
+    ///
+    /// **Why this exists.** These were 16 different literals across 47 call
+    /// sites (14·16·18·20·22·24·26·28·32·36·38·40·50·52·56·60), every one
+    /// spelled at its own call site with no shared ramp — so two shelves doing
+    /// the identical job disagreed (social's roster at 52, the wallet setup
+    /// roster at 60) and two picker lists disagreed (32 and 36). That is drift,
+    /// not hierarchy: nobody chose it, it accumulated one screen at a time.
+    /// Asked directly whether every avatar should just be ONE size (user,
+    /// 2026-08-11, "why not the same size, it would make the app more
+    /// cohesive"), the answer is no for one concrete reason — see `shelf`.
+    ///
+    /// **Cohesion comes from a small shared ramp, not from one value.** This is
+    /// the type ramp's own method (`label12`/`subhead13` are not one size
+    /// either), applied to the other thing this app draws constantly.
+    ///
+    /// Deliberately NOT in this ramp: the source strip's chip metrics
+    /// (`SourceChips.iconSize`) and the Sources Tray's, which are sized by
+    /// their own grid rather than by adjacent text, and are already named
+    /// constants of their own.
+    enum Face {
+        /// Inside a pill, or beside dense inline text — a mark, not a portrait.
+        static let badge: CGFloat = 20
+        /// A row's leading identity, sized to its two-line title+meta block.
+        /// A face here is never the tap target; the whole row is.
+        static let row: CGFloat = 26
+        /// A list or picker you tap through — bigger than a feed row because
+        /// choosing between people is the screen's whole job.
+        static let list: CGFloat = 36
+        /// A horizontal face shelf, a profile head, a sheet's stage.
+        ///
+        /// **This tier is why one universal size cannot work.** A face here is
+        /// itself the tap target, so it is floored by the 44pt minimum touch
+        /// target; a face at `row` sits beside 13pt text and at 44+ would stand
+        /// three times the height of the words it belongs to and outshout them.
+        /// One value would either break every row or break every tap.
+        static let shelf: CGFloat = 56
+    }
+
     // MARK: - Radii  (brief §8 is law; control/pill fill the gaps §8 omits)
 
     enum Radius {

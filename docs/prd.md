@@ -20265,3 +20265,59 @@ and finds the wiring still waiting for it), and every
 from under that table sends Voice silently back to the bare circle and the
 "Other" block, which looks exactly like the bug it fixed. All four
 mutation-proven: each was made to fail before being trusted.
+
+## §355 — Faces get a ramp, not a number (user: "shouldn't our avatars all be the same size? why do we have different sizes", then "why not the same size, i don't get it, it would make the app more cohesive", then "ok lets do what you recommend", 2026-08-11)
+
+**The ruling: round identity marks draw at one of FOUR named tiers
+(`DS.Face.badge`/`row`/`list`/`shelf` = 20/26/36/56), never at a number typed
+at the call site.** A face's size is decided by what it sits BESIDE, so one
+universal size was the wrong fix to a real problem — but sixteen literals was
+not a hierarchy either.
+
+**What was actually there.** Sixteen distinct values across forty-seven call
+sites — 14·16·18·20·22·24·26·28·32·36·38·40·50·52·56·60. The tell that this
+was drift rather than design: **two horizontal face shelves doing the
+identical job disagreed** (the social roster at 52, the wallet setup roster at
+60 — both `VStack { circular face; name below }`), and **two picker lists
+disagreed** (32 and 36). Nobody chose that. It accumulated one screen at a
+time because every call site spelled its own number and NOTHING ANYWHERE COULD
+SEE THE SET. It cost this session a wrong answer too: asked which size the
+social surfaces use, there was no single answer to give.
+
+**Why not one size, which is what the user asked for twice and is the better
+instinct than the status quo.** A face in a shelf IS the tap target, so it is
+floored by the 44pt minimum; a face in a feed row sits beside 13pt text, and at
+44+ it stands three times the height of the words it belongs to and outshouts
+them. One value either breaks every row or breaks every tap. **Cohesion comes
+from a small SHARED ramp, not from one value** — which is the type ramp's own
+method (`label12`/`subhead13` are not one size either), applied to the other
+thing this app draws constantly.
+
+**Scope.** `WalletFace` always, plus `RemoteThumb`/`BridgeIcon` at
+`circular: true` — a round mark standing where an avatar would, whether it is
+a person, a wallet identicon, or an app icon covering for a missing picture.
+Deliberately excluded, so the ramp can't become a lint that cries wolf: the
+source strip's and Sources Tray's chip metrics (`iconSize`), sized by their own
+grid rather than by adjacent text and already named constants; and any SQUARE
+`BridgeIcon`, which is a brand mark in a tile, not a face. Four shared views
+and named constants now resolve to tiers rather than holding numbers
+(`rosterFaceSize`, `WalletRow.markSize`, `FacePile.size`, `BridgeLogo.size`).
+
+**What visibly moved**, all small: 14/16/18/22 → 20 (12 sites), 24/28 → 26 (3),
+32/38 → 36 (5), 40/50/52/60 → 56 (5). The two that move most are a wallet
+face on the thing sheet's stage (40 → 56) and the social roster shelf
+(52 → 56); the wallet setup roster shrinks 60 → 56 and now matches the social
+shelf it always should have.
+
+**Mechanical, per this codebase's own standing doctrine** —
+`scripts/face-ramp-audit.py`, self-tested against seven fixtures (including a
+named constant that resolves to a raw number, which is the shape that would
+otherwise smuggle a value back in), wired into `verify.sh` beside the
+design-motion audit. This is the design system's SECOND mechanical check and it
+exists for exactly the reason the first one does: **the rule lived in memory
+and memory lost.** A single wrong face size is invisible in a build, in a
+screenshot and in review, because any one of these values renders perfectly on
+its own — you can only see the problem by listing all forty-seven at once.
+
+Verified by `xcodebuild` plus the static audits per the standing no-sim
+instruction; nobody has looked at the moved faces on a device.

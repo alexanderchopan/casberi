@@ -146,7 +146,7 @@ struct PredictionVenueConnect: View {
         return HStack(alignment: .top, spacing: DS.Space.s3) {
             HStack(spacing: -6) {
                 ForEach(icons, id: \.self) { v in
-                    BridgeIcon(name: v.rawValue, size: 22, circular: true)
+                    BridgeIcon(name: v.rawValue, size: DS.Face.badge, circular: true)
                         .overlay(Circle().strokeBorder(DS.gray100, lineWidth: 1.5))
                 }
             }

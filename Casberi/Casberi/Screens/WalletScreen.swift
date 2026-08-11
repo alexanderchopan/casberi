@@ -159,7 +159,7 @@ struct WalletScreen: View {
 
     @Query(walletRecentDescriptor) private var recent: [Thing]
 
-    private let rosterFaceSize: CGFloat = 60
+    private let rosterFaceSize: CGFloat = DS.Face.shelf
     private let rosterSlotWidth: CGFloat = 74
     /// The two label lines under a roster face, height-locked so a watched
     /// slot and an empty one line up. Named rather than written twice: the

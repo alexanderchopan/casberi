@@ -768,7 +768,7 @@ struct WalletFaceChips: View {
                     .foregroundStyle(DS.textSecondary)
                     .lineLimit(1)
             } else {
-                WalletFace(address: entry.id, size: 20, circular: true)
+                WalletFace(address: entry.id, size: DS.Face.badge, circular: true)
             }
             Text(TokenStats.compact(entry.value))
                 .dsText(.label12).fontWeight(.semibold)
@@ -1046,7 +1046,7 @@ struct WalletAllocationTray: View {
             HStack(spacing: DS.Space.s3) {
                 ForEach(position.holders) { holder in
                     HStack(spacing: 5) {
-                        WalletFace(address: holder.address, size: 16)
+                        WalletFace(address: holder.address, size: DS.Face.badge)
                         Text(holder.label)
                             .dsText(.label12).foregroundStyle(DS.textSecondary)
                             .lineLimit(1)

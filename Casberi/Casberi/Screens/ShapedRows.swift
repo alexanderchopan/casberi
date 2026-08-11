@@ -432,7 +432,7 @@ struct BandRow: View {
             Group {
                 switch leader {
                 case .avatar(let avatar):
-                    RemoteThumb(urlString: avatar, size: 26, fallback: thing.source,
+                    RemoteThumb(urlString: avatar, size: DS.Face.row, fallback: thing.source,
                                 circular: true)
                 case .blockie(let addr):
                     WalletBlockie(address: addr, size: 26)
@@ -784,7 +784,7 @@ struct TokenRow: View {
     @ViewBuilder private var liveBody: some View {
         HStack(spacing: DS.Space.s3) {
             if let image = thing.previewImageURL, !image.isEmpty {
-                RemoteThumb(urlString: image, size: 38, fallback: thing.source,
+                RemoteThumb(urlString: image, size: DS.Face.list, fallback: thing.source,
                             circular: true)
             } else {
                 BridgeIcon(name: thing.source, size: 38)
@@ -2115,7 +2115,7 @@ struct PostCard: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(spacing: DS.Space.s2) {
                 if let avatar = thing.authorAvatarURL, !avatar.isEmpty {
-                    RemoteThumb(urlString: avatar, size: 26, fallback: thing.source,
+                    RemoteThumb(urlString: avatar, size: DS.Face.row, fallback: thing.source,
                                 circular: true)
                 } else {
                     BridgeIcon(name: thing.source, size: 26)
@@ -2354,9 +2354,9 @@ struct SocialRosterHero: View {
         return VStack(spacing: 4) {
             Group {
                 if let avatar = account.avatarURL, !avatar.isEmpty {
-                    RemoteThumb(urlString: avatar, size: 52, fallback: source, circular: true)
+                    RemoteThumb(urlString: avatar, size: DS.Face.shelf, fallback: source, circular: true)
                 } else {
-                    BridgeIcon(name: source, size: 52, circular: true)
+                    BridgeIcon(name: source, size: DS.Face.shelf, circular: true)
                 }
             }
             .overlay(
@@ -2408,7 +2408,7 @@ struct SocialThreadCard: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(spacing: DS.Space.s2) {
                 if let avatar = head.authorAvatarURL, !avatar.isEmpty {
-                    RemoteThumb(urlString: avatar, size: 26, fallback: head.source,
+                    RemoteThumb(urlString: avatar, size: DS.Face.row, fallback: head.source,
                                 circular: true)
                 } else {
                     BridgeIcon(name: head.source, size: 26)

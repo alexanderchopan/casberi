@@ -285,7 +285,7 @@ struct NewGroupSheet: View {
 /// contracts with no grouping UI at all.
 struct AddressMark: View {
     let entry: AddressBook.Entry
-    var size: CGFloat = 32
+    var size: CGFloat = DS.Face.list
 
     var body: some View {
         Group {

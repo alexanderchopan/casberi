@@ -109,7 +109,7 @@ struct SafeScreen: View {
                         .dsText(.callout15).foregroundStyle(DS.textPrimary)
                     ForEach(coSigners, id: \.self) { address in
                         HStack(spacing: DS.Space.s2) {
-                            WalletFace(address: address, size: 26, circular: true)
+                            WalletFace(address: address, size: DS.Face.row, circular: true)
                             Text(verbatim: WalletIngest.knownLabel(for: address)
                                  ?? WalletStore.shortAddress(address))
                                 .dsText(.subhead13).foregroundStyle(DS.textSecondary)

@@ -2728,7 +2728,7 @@ private struct GenAppsInvite: View {
             HStack(spacing: DS.Space.s3) {
                 HStack(spacing: -6) {
                     ForEach(Self.sampleApps, id: \.self) { name in
-                        BridgeIcon(name: name, size: 26, circular: true)
+                        BridgeIcon(name: name, size: DS.Face.row, circular: true)
                             .overlay(Circle().strokeBorder(DS.surfaceSheet, lineWidth: 1.5))
                     }
                 }

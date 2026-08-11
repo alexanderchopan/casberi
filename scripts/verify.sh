@@ -350,6 +350,18 @@ python3 "$ROOT/scripts/design-motion-audit.py" >/dev/null \
   || fail "the design-motion audit failed — run python3 scripts/design-motion-audit.py"
 print -P "%F{green}✓ design-motion audit%f"
 
+# The design system's SECOND mechanical check, and it exists for the same
+# reason the first one does: the rule lived in memory and memory lost. Face
+# sizes had drifted to sixteen literals across forty-seven call sites — two
+# face shelves doing the identical job disagreed, and so did two picker lists
+# — because every call site spelled its own number and nothing could see the
+# set. Invisible in a build and in a screenshot: any single value renders
+# perfectly on its own.
+step "Face-ramp audit"
+python3 "$ROOT/scripts/face-ramp-audit.py" >/dev/null \
+  || fail "the face-ramp audit failed — run python3 scripts/face-ramp-audit.py"
+print -P "%F{green}✓ face-ramp audit%f"
+
 # A localization sweep (2026-08-04) found 194 previously-translated strings
 # had regressed into bare Swift literals — unreachable, rendering English in
 # every language — plus missing InfoPlist/AppShortcuts catalogs and 44

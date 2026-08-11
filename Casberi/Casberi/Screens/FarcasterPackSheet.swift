@@ -94,9 +94,9 @@ struct FarcasterPackSheet: View {
                 ForEach(members) { member in
                     HStack(spacing: DS.Space.s3) {
                         if let avatar = member.avatarURL, !avatar.isEmpty {
-                            RemoteThumb(urlString: avatar, size: 32, fallback: "Farcaster", circular: true)
+                            RemoteThumb(urlString: avatar, size: DS.Face.list, fallback: "Farcaster", circular: true)
                         } else {
-                            BridgeIcon(name: "Farcaster", size: 32, circular: true)
+                            BridgeIcon(name: "Farcaster", size: DS.Face.list, circular: true)
                         }
                         Text(member.displayName?.isEmpty == false ? member.displayName! : member.username)
                             .dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)

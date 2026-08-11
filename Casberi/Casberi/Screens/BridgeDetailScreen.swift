@@ -217,7 +217,7 @@ struct BridgeDetailScreen: View {
 
     private func header(_ bridge: BridgeApp) -> some View {
         HStack(spacing: DS.Space.s3) {
-            BridgeIcon(name: bridge.name, size: 56, circular: true)
+            BridgeIcon(name: bridge.name, size: DS.Face.shelf, circular: true)
                 .padding(3)
                 .overlay(Circle().strokeBorder(bridge.status.color, lineWidth: 2))
             VStack(alignment: .leading, spacing: 2) {

@@ -103,9 +103,9 @@ struct PersonRoomScreen: View {
     @ViewBuilder private var header: some View {
         HStack(spacing: DS.Space.s3) {
             if let avatar = shown.avatarURL, !avatar.isEmpty {
-                RemoteThumb(urlString: avatar, size: 56, fallback: profile.source, circular: true)
+                RemoteThumb(urlString: avatar, size: DS.Face.shelf, fallback: profile.source, circular: true)
             } else {
-                BridgeIcon(name: profile.source, size: 56, circular: true)
+                BridgeIcon(name: profile.source, size: DS.Face.shelf, circular: true)
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(shown.title).dsText(.heading17).foregroundStyle(DS.textPrimary)

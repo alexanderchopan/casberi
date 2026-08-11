@@ -1376,7 +1376,7 @@ struct FeedScreen: View {
     @ViewBuilder
     private func sourceStatusMark(_ bridge: BridgeApp) -> some View {
         if bridge.name == "Wallet", wallet.addresses.count == 1, let only = wallet.addresses.first {
-            WalletFace(address: only.address, size: 16, circular: true)
+            WalletFace(address: only.address, size: DS.Face.badge, circular: true)
                 .accessibilityLabel(Text("\(bridge.status.spoken). \(wallet.displayName(for: only))"))
         } else {
             // A glyph, not a bare dot: the three states were one shape
@@ -3892,7 +3892,7 @@ struct FeedScreen: View {
             withAnimation(DS.Motion.standard) { selectedWallet = address }
         } label: {
             HStack(spacing: 5) {
-                if let address { WalletFace(address: address, size: 18) }
+                if let address { WalletFace(address: address, size: DS.Face.badge) }
                 Text(label)
                     .dsText(.subhead13)
                     .fontWeight(isOn ? .semibold : .regular)

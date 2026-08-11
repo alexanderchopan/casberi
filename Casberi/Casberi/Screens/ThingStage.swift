@@ -392,7 +392,7 @@ struct TransferStageView: View {
         let address = thing.counterpartyAddress ?? stage.titledName ?? "?"
         let kind = AddressBook.shared.entry(for: address)?.kind ?? .unknown
         let circular = kind != .contract && kind != .safe
-        return WalletFace(address: address, size: 40, circular: circular)
+        return WalletFace(address: address, size: DS.Face.shelf, circular: circular)
             .overlay {
                 // The ring matches the face's own shape — a round ring on a
                 // contract's squircle would draw a second, disagreeing edge.
@@ -562,7 +562,7 @@ struct MovedStageView: View {
 
     private func party(address: String, label: String) -> some View {
         VStack(spacing: DS.Space.s2) {
-            WalletFace(address: address, size: 50)
+            WalletFace(address: address, size: DS.Face.shelf)
                 .overlay(
                     RoundedRectangle(cornerRadius: DS.Radius.appIcon(50), style: .continuous)
                         .strokeBorder(.white.opacity(0.25), lineWidth: 3)

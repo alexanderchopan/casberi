@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+"""Casberi face-ramp audit — every round identity mark takes a `DS.Face` tier
+(prd §355, 2026-08-11), never a raw number.
+
+WHY THIS IS MECHANICAL AND NOT A NOTE IN A DOC. The ramp exists because these
+sizes had drifted to SIXTEEN different literals across FORTY-SEVEN call sites
+(14·16·18·20·22·24·26·28·32·36·38·40·50·52·56·60) — two horizontal face
+shelves doing the identical job disagreed (52 against 60), and so did two
+picker lists (32 against 36). Nobody chose that. It accumulated one screen at
+a time, over months, because every call site spelled its own number and
+NOTHING ANYWHERE COULD SEE THE SET. That is the exact failure mode this
+codebase already answers with a script everywhere else (`catalog-sync.sh`,
+the liveness audit, the keychain audit): a rule that lives only in someone's
+memory is re-broken by the next screen that needs an avatar, and the drift is
+invisible in every build, every screenshot and every review, because ANY of
+these values renders perfectly on its own. You can only see it by listing all
+47 at once, which is what this does.
+
+WHAT COUNTS AS A FACE. `WalletFace` always (it draws nothing else), plus
+`RemoteThumb`/`BridgeIcon` when `circular: true` — a round mark standing in
+the same slot a person's avatar would, whether it is a face, a wallet
+identicon, or an app icon covering for a missing picture.
+
+DELIBERATELY NOT COVERED, so this can't become a lint that cries wolf: the
+source strip's and Sources Tray's chip metrics (`iconSize`), which are sized
+by their own grid rather than by adjacent text and are already named
+constants; and any SQUARE `BridgeIcon`, which is a brand mark in a tile, not
+a face.
+
+Static, self-tested, no build. Exit non-zero on failure.
+"""
+import re
+import sys
+import pathlib
+import collections
+
+CALL = re.compile(r'\b(WalletFace|RemoteThumb|BridgeIcon)\s*\((.{0,240}?)\)', re.S)
+SIZE = re.compile(r'size:\s*([A-Za-z0-9_.]+)')
+TIERS = ("badge", "row", "list", "shelf")
+
+# A named constant is allowed only if it RESOLVES to a tier — checked below by
+# reading its own declaration. `iconSize` is the documented chip-metric escape.
+CHIP_METRICS = {"iconSize", "Self.iconSize"}
+
+
+def faces(src: str):
+    """Yield (kind, size_expr, line) for every face-shaped call in `src`."""
+    for m in CALL.finditer(src):
+        kind, args = m.group(1), m.group(2)
+        sz = SIZE.search(args)
+        if not sz:
+            continue
+        if kind != "WalletFace" and "circular: true" not in args:
+            continue
+        yield kind, sz.group(1), src[: m.start()].count("\n") + 1
+
+
+def resolves_to_tier(name: str, src: str) -> bool:
+    """Does a named constant's own declaration read a DS.Face tier?"""
+    bare = name.split(".")[-1]
+    decl = re.search(
+        r'(?:let|var)\s+%s\s*:?[^=\n]*=\s*([^\n]+)' % re.escape(bare), src)
+    if not decl:
+        decl = re.search(
+            r'(?:let|var)\s+%s\s*:[^{\n]+\{\s*([^}\n]+)\}' % re.escape(bare), src)
+    return bool(decl and "DS.Face." in decl.group(1))
+
+
+def audit(root: pathlib.Path):
+    findings, counts = [], collections.Counter()
+    for f in sorted(root.rglob("*.swift")):
+        src = f.read_text()
+        for kind, size, line in faces(src):
+            if size.startswith("DS.Face."):
+                counts[size] += 1
+                continue
+            if size in CHIP_METRICS:
+                continue
+            if size.isdigit():
+                findings.append(
+                    f"{f}:{line} {kind}(size: {size}) — a raw number. Use a "
+                    f"DS.Face tier ({', '.join(TIERS)}).")
+            elif not resolves_to_tier(size, src):
+                findings.append(
+                    f"{f}:{line} {kind}(size: {size}) — `{size}` does not "
+                    f"resolve to a DS.Face tier in this file.")
+    return findings, counts
+
+
+DIRTY_RAW = 'WalletFace(address: a, size: 44, circular: true)'
+DIRTY_THUMB = 'RemoteThumb(urlString: u, size: 52,\n  circular: true)'
+DIRTY_CONST = ('private let myFace: CGFloat = 60\n'
+               'WalletFace(address: a, size: myFace, circular: true)')
+CLEAN_TIER = 'WalletFace(address: a, size: DS.Face.shelf, circular: true)'
+CLEAN_CONST = ('private let rosterFaceSize: CGFloat = DS.Face.shelf\n'
+               'WalletFace(address: a, size: rosterFaceSize, circular: true)')
+CLEAN_SQUARE = 'BridgeIcon(name: n, size: 46)'          # square mark, not a face
+CLEAN_CHIP = 'BridgeIcon(name: n, size: iconSize, circular: true)'
+
+
+def self_test(tmp: pathlib.Path) -> None:
+    """A check that cannot fail proves nothing — prove each shape."""
+    cases = [
+        ("a raw number", DIRTY_RAW, True),
+        ("a raw number on a multi-line circular thumb", DIRTY_THUMB, True),
+        ("a constant that resolves to a raw number", DIRTY_CONST, True),
+        ("a tier used directly", CLEAN_TIER, False),
+        ("a constant that resolves to a tier", CLEAN_CONST, False),
+        ("a SQUARE brand mark (not a face)", CLEAN_SQUARE, False),
+        ("the documented chip-metric escape", CLEAN_CHIP, False),
+    ]
+    for label, body, should_flag in cases:
+        d = tmp / "selftest"
+        d.mkdir(exist_ok=True)
+        (d / "F.swift").write_text(body)
+        found, _ = audit(d)
+        if bool(found) != should_flag:
+            sys.exit(f"✗ self-test FAILED: {label} — "
+                     f"{'not flagged' if should_flag else 'wrongly flagged'}")
+        print(f"  ✓ self-test: {label}")
+
+
+def main() -> None:
+    here = pathlib.Path(__file__).resolve().parent.parent
+    import tempfile
+    with tempfile.TemporaryDirectory() as t:
+        print("face-ramp-audit: self-test…")
+        self_test(pathlib.Path(t))
+
+    findings, counts = audit(here / "Casberi")
+    if findings:
+        print("\nface-ramp-audit: FAILURES\n")
+        for f in findings:
+            print("  ✗ " + f)
+        print("\n  The ramp is DS.Face.badge/row/list/shelf "
+              "(Design/DesignTokens.swift). A face's size is decided by what "
+              "it sits beside — see the tier docs before adding a value.")
+        sys.exit(1)
+
+    total = sum(counts.values())
+    spread = " · ".join(f"{k.split('.')[-1]} {v}" for k, v in sorted(counts.items()))
+    print(f"\nface-ramp-audit: OK — {total} face draws, all on the ramp ({spread}).")
+
+
+if __name__ == "__main__":
+    main()

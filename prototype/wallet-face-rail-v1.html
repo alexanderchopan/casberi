@@ -1,0 +1,307 @@
+<meta charset="utf-8">
+<title>Wallet switcher — faces instead of pills</title>
+<style>
+  /* Real tokens, DesignTokens.swift
+     page #000/#fff · fillFaint #ffffff0f/#00000008
+     textPrimary #fff/#000 · textSecondary #ebebf599/#3c3c43d6 · textTertiary #ebebf57e/#3c3c43bd
+     tint #0a84ff · positive #30d158 · negative #ff453a
+     Space s2 10 · s3 14 · s4 18 · label12 12/16 · subhead13 13/18
+     SHIPPED walletSwitcherBar: WalletFace 18 (squircle) + subhead13,
+       padH s3 14, padV s2 10, glass capsule padding 4  →  bar 46pt
+     SHIPPED setup roster (WalletScreen.rosterSlot), the grammar being borrowed:
+       VStack(spacing: 6) { WalletFace(size: 60, circular: true); label12 semibold } */
+
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    background: #0b0b0d; color: #ebebf5cc; padding: 30px 26px 60px;
+    -webkit-font-smoothing: antialiased;
+  }
+  body.light { background: #f2f2f7; color: #3c3c43d6; }
+  h1 { font: 700 21px/27px ui-rounded, -apple-system, system-ui; color: #fff; }
+  body.light h1 { color: #000; }
+  .sub { margin-top: 5px; max-width: 96ch; font-size: 13px; opacity: .74; }
+  .bar { margin: 16px 0 24px; }
+  button {
+    font: 500 13px/1 inherit; color: inherit; cursor: pointer;
+    background: #ffffff14; border: 0; border-radius: 999px; padding: 9px 15px;
+  }
+  body.light button { background: #00000010; }
+
+  .row { display: flex; gap: 22px; align-items: flex-start; flex-wrap: wrap; }
+  .col { width: 402px; }
+  .col > h2 { font: 600 14px/18px inherit; color: #fff; margin-bottom: 2px; }
+  body.light .col > h2 { color: #000; }
+  .col > .note { font-size: 12px; line-height: 17px; opacity: .64; margin-bottom: 10px; min-height: 51px; }
+  .tag {
+    display: inline-block; font: 600 10.5px/1 inherit; padding: 4px 8px;
+    border-radius: 999px; margin-bottom: 6px;
+  }
+  .tag.now { background: #ffffff14; color: #ebebf599; }
+  body.light .tag.now { background: #00000010; color: #3c3c43d6; }
+  .tag.new { background: #0a84ff2b; color: #4da3ff; }
+  body.light .tag.new { background: #0a84ff1f; color: #0a6dd6; }
+
+  /* ---- phone stage ---- */
+  .stage { border-radius: 22px; background: #000; overflow: hidden; padding: 12px 0 0; position: relative; }
+  body.light .stage { background: #fff; box-shadow: 0 1px 8px #0000001f; }
+  .stage::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 40px;
+    background: linear-gradient(#0000, #000); pointer-events: none;
+  }
+  body.light .stage::after { background: linear-gradient(#fff0, #fff); }
+
+  /* layer 1 — category strip (shipped, identical in all three) */
+  .strip { display: flex; align-items: center; gap: 10px; padding: 0 18px 10px; overflow: hidden; }
+  .door { flex: 0 0 auto; width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center;
+          background: linear-gradient(135deg,#8a6cf0,#e06c8a); font: 600 15px/1 inherit; color: #fff; }
+  .cchip { flex: 0 0 auto; height: 46px; border-radius: 23px; display: flex; align-items: center;
+           padding: 0 14px; background: #ffffff0f; color: #fff; font: 500 12px/1 inherit; white-space: nowrap; }
+  body.light .cchip { background: #00000008; color: #000; }
+  .cchip.circle { width: 46px; padding: 0; justify-content: center; border-radius: 50%; }
+  .cchip.act { box-shadow: 0 0 0 2.5px #0a84ff; }
+
+  /* layers 2 & 3 — glass */
+  .pinbar { padding: 0 18px 10px; }
+  .glass { display: inline-flex; align-items: center; gap: 8px; padding: 4px; border-radius: 999px;
+           max-width: 100%; overflow: hidden; background: #ffffff12; backdrop-filter: blur(14px);
+           box-shadow: inset 0 0 0 .5px #ffffff14; }
+  body.light .glass { background: #ffffffb8; box-shadow: inset 0 0 0 .5px #00000010, 0 1px 6px #00000014; }
+
+  /* layer 2 — seat switcher (word pills, shipped) */
+  .pill { display: flex; align-items: center; padding: 10px 14px; border-radius: 999px; white-space: nowrap;
+          font: 400 13px/18px inherit; color: #ebebf599; background: #ffffff0f; position: relative; }
+  body.light .pill { color: #3c3c43d6; background: #00000008; }
+  .pill.on { font-weight: 600; color: #fff; background: #0a84ff2e; }
+  body.light .pill.on { color: #000; background: #0a84ff24; }
+
+  /* layer 3a — SHIPPED address pills (face + word) */
+  .wpill { display: flex; align-items: center; gap: 5px; padding: 10px 14px; border-radius: 999px;
+           white-space: nowrap; font: 400 13px/18px inherit; color: #ebebf599; background: #ffffff0f; }
+  body.light .wpill { color: #3c3c43d6; background: #00000008; }
+  .wpill.on { font-weight: 600; color: #fff; background: #30d1582e; }
+  body.light .wpill.on { color: #000; background: #30d15826; }
+
+  /* faces */
+  .f { border-radius: 50%; flex: 0 0 auto; }
+  .f18 { width: 18px; height: 18px; }
+  .f40 { width: 40px; height: 40px; }
+  .f14 { width: 14px; height: 14px; }
+  .fv { background: conic-gradient(from 40deg,#30d158,#0a84ff,#7a5af8,#30d158); }
+  .fl { background: conic-gradient(from 200deg,#ff9f0a,#bf5af2,#ff453a,#ff9f0a); }
+  .fh { background: conic-gradient(from 310deg,#0a84ff,#12b8a6,#30d158,#0a84ff); }
+
+  /* layer 3b — THE PROPOSAL: face rail */
+  .rail { display: flex; gap: 4px; padding: 0 18px 10px; overflow: hidden; }
+  .slot { flex: 0 0 auto; width: 66px; display: flex; flex-direction: column; align-items: center; gap: 6px;
+          padding: 4px 0; opacity: .5; }
+  .slot.on { opacity: 1; }
+  .slot .nm { font: 400 12px/16px inherit; color: #ebebf599; max-width: 66px; overflow: hidden;
+              text-overflow: ellipsis; white-space: nowrap; }
+  body.light .slot .nm { color: #3c3c43d6; }
+  .slot.on .nm { font-weight: 600; color: #fff; }
+  body.light .slot.on .nm { color: #000; }
+  /* faces-only variant */
+  .rail.bare .slot { width: 48px; }
+  .rail.bare .nm { display: none; }
+
+  /* the "All" mark — the wallet faces themselves, overlapped */
+  .allmark { width: 40px; height: 40px; position: relative; flex: 0 0 auto; }
+  .allmark .f { position: absolute; box-shadow: 0 0 0 2px #000; }
+  body.light .allmark .f { box-shadow: 0 0 0 2px #fff; }
+  .allmark .a1 { left: 0; top: 4px; }
+  .allmark .a2 { left: 11px; top: 13px; }
+  .allmark .a3 { left: 22px; top: 4px; }
+  .allmark.sm { width: 18px; height: 18px; }
+  .allmark.sm .f { width: 9px; height: 9px; box-shadow: 0 0 0 1.5px #000; }
+  body.light .allmark.sm .f { box-shadow: 0 0 0 1.5px #fff; }
+  .allmark.sm .a1 { left: 0; top: 2px; } .allmark.sm .a2 { left: 5px; top: 7px; } .allmark.sm .a3 { left: 10px; top: 2px; }
+
+  /* content */
+  .content { padding: 2px 18px 18px; display: flex; flex-direction: column; gap: 10px; }
+  .card { border-radius: 18px; background: #ffffff0a; padding: 15px; }
+  body.light .card { background: #00000006; }
+  .kicker { font-size: 12px; color: #ebebf57e; }
+  body.light .kicker { color: #3c3c43bd; }
+  .kicker b { color: #ebebf5cc; font-weight: 600; }
+  body.light .kicker b { color: #3c3c43d6; }
+  .balline { display: flex; align-items: baseline; gap: 9px; margin-top: 3px; }
+  .big { font: 700 30px/34px ui-rounded, -apple-system, system-ui; color: #fff; }
+  body.light .big { color: #000; }
+  .delta { font: 600 12px/1 inherit; color: #30d158; background: #30d15821; padding: 4px 8px; border-radius: 999px; }
+  .attr { font-size: 12px; color: #ebebf599; margin-top: 5px; }
+  body.light .attr { color: #3c3c43d6; }
+  .trow { display: flex; align-items: center; gap: 11px; padding: 9px 2px; }
+  .ic { width: 32px; height: 32px; border-radius: 50%; background: #ffffff0d; flex: 0 0 auto;
+        display: grid; place-items: center; font-size: 13px; }
+  body.light .ic { background: #00000008; }
+  .tt { font-size: 13px; color: #fff; }
+  body.light .tt { color: #000; }
+  .ts { font-size: 11.5px; color: #ebebf57e; margin-top: 1px; }
+  body.light .ts { color: #3c3c43bd; }
+
+  .h { font: 600 11px/1 inherit; color: #ebebf54d; padding: 0 18px 6px; }
+  body.light .h { color: #3c3c4366; }
+  .metric { margin-top: 8px; font: 500 11.5px/16px inherit; color: #ebebf57e; }
+  body.light .metric { color: #3c3c43bd; }
+  .metric b { color: #ff9f0a; font-weight: 700; }
+  .metric b.ok { color: #30d158; }
+
+  .decide { max-width: 760px; margin-top: 34px; font-size: 13px; line-height: 20px; }
+  .decide h2 { font: 600 15px/20px inherit; color: #fff; margin-bottom: 8px; }
+  body.light .decide h2 { color: #000; }
+  .decide li { margin: 9px 0 9px 18px; }
+  .decide b { color: #fff; font-weight: 600; }
+  body.light .decide b { color: #000; }
+</style>
+
+<h1>Wallet switcher — faces instead of pills</h1>
+<p class="sub">
+  The three-layer problem isn't that there are three bars — it's that all three are the <b>same grammar</b>
+  (a glass capsule holding word pills), so they read as one confused control. Drawing the wallets as faces
+  gives each layer its own shape: <b>categories are words in circles</b>, <b>seats are word pills</b>,
+  <b>wallets are faces</b>. Borrowed from <code>WalletScreen.rosterSlot</code>, which already does exactly
+  this at 60pt on the setup page.
+</p>
+<div class="bar"><button onclick="document.body.classList.toggle('light')">Toggle light</button></div>
+
+<div class="row">
+
+  <!-- ============ A · SHIPPED ============ -->
+  <div class="col">
+    <span class="tag now">Shipped</span>
+    <h2>A · Three bars, one grammar</h2>
+    <p class="note">Every layer is a glass capsule of word pills. The only thing separating layer 3 is an
+    18pt face tucked inside the pill — too small to change the row's read.</p>
+    <div class="stage">
+      <div class="h">1 · category</div>
+      <div class="strip">
+        <div class="door">A</div>
+        <div class="cchip circle">All</div>
+        <div class="cchip act">Wallet</div>
+        <div class="cchip">Work</div>
+        <div class="cchip">Social</div>
+      </div>
+      <div class="h">2 · seat</div>
+      <div class="pinbar"><div class="glass">
+        <div class="pill on">Wallet</div><div class="pill">Peer</div><div class="pill">Privacy Pools</div>
+      </div></div>
+      <div class="h">3 · address</div>
+      <div class="pinbar"><div class="glass">
+        <div class="wpill on"><span class="allmark sm"><i class="f fv"></i><i class="f fl"></i><i class="f fh"></i></span>All</div>
+        <div class="wpill"><span class="f f18 fv"></span>vitalik.eth</div>
+        <div class="wpill"><span class="f f18 fl"></span>Ledger</div>
+      </div></div>
+      <div class="content">
+        <div class="card">
+          <div class="kicker">Across your wallets</div>
+          <div class="balline"><span class="big">$4,182</span><span class="delta">+2.4%</span></div>
+          <div class="attr">Up $98 today. ETH did the lifting.</div>
+        </div>
+        <div class="trow"><div class="ic">↓</div><div><div class="tt">Received 0.05 ETH</div><div class="ts">2:14 PM</div></div></div>
+      </div>
+    </div>
+    <div class="metric">chrome above content: <b>46 + 46 + 46 = 138pt</b></div>
+  </div>
+
+  <!-- ============ B · FACES + NAMES ============ -->
+  <div class="col">
+    <span class="tag new">Proposal</span>
+    <h2>B · Faces with names</h2>
+    <p class="note">The setup page's grammar scaled into a bar: 40pt circular face, 6pt gap, label12 name.
+    Layer 3 now looks nothing like layers 1–2. Costs 24pt of pinned height.</p>
+    <div class="stage">
+      <div class="h">1 · category</div>
+      <div class="strip">
+        <div class="door">A</div>
+        <div class="cchip circle">All</div>
+        <div class="cchip act">Wallet</div>
+        <div class="cchip">Work</div>
+        <div class="cchip">Social</div>
+      </div>
+      <div class="h">2 · seat</div>
+      <div class="pinbar"><div class="glass">
+        <div class="pill on">Wallet</div><div class="pill">Peer</div><div class="pill">Privacy Pools</div>
+      </div></div>
+      <div class="h">3 · address</div>
+      <div class="rail">
+        <div class="slot on">
+          <span class="allmark"><i class="f f14 fv a1"></i><i class="f f14 fl a2"></i><i class="f f14 fh a3"></i></span>
+          <span class="nm">All</span>
+        </div>
+        <div class="slot"><span class="f f40 fv"></span><span class="nm">vitalik.eth</span></div>
+        <div class="slot"><span class="f f40 fl"></span><span class="nm">Ledger</span></div>
+        <div class="slot"><span class="f f40 fh"></span><span class="nm">Hot</span></div>
+      </div>
+      <div class="content">
+        <div class="card">
+          <div class="kicker">Across your wallets</div>
+          <div class="balline"><span class="big">$4,182</span><span class="delta">+2.4%</span></div>
+          <div class="attr">Up $98 today. ETH did the lifting.</div>
+        </div>
+        <div class="trow"><div class="ic">↓</div><div><div class="tt">Received 0.05 ETH</div><div class="ts">2:14 PM</div></div></div>
+      </div>
+    </div>
+    <div class="metric">chrome above content: <b>46 + 46 + 70 = 162pt</b> &nbsp;(+24)</div>
+  </div>
+
+  <!-- ============ C · FACES ONLY ============ -->
+  <div class="col">
+    <span class="tag new">Proposal</span>
+    <h2>C · Faces only, card says who</h2>
+    <p class="note">Same rail, no captions — the card below already names the scope, so the name moves there
+    instead of being printed twice. Nearly free in height, and it kills a duplication §210 already flagged.</p>
+    <div class="stage">
+      <div class="h">1 · category</div>
+      <div class="strip">
+        <div class="door">A</div>
+        <div class="cchip circle">All</div>
+        <div class="cchip act">Wallet</div>
+        <div class="cchip">Work</div>
+        <div class="cchip">Social</div>
+      </div>
+      <div class="h">2 · seat</div>
+      <div class="pinbar"><div class="glass">
+        <div class="pill on">Wallet</div><div class="pill">Peer</div><div class="pill">Privacy Pools</div>
+      </div></div>
+      <div class="h">3 · address</div>
+      <div class="rail bare">
+        <div class="slot"><span class="allmark"><i class="f f14 fv a1"></i><i class="f f14 fl a2"></i><i class="f f14 fh a3"></i></span></div>
+        <div class="slot on"><span class="f f40 fv"></span></div>
+        <div class="slot"><span class="f f40 fl"></span></div>
+        <div class="slot"><span class="f f40 fh"></span></div>
+      </div>
+      <div class="content">
+        <div class="card">
+          <div class="kicker"><b>vitalik.eth</b> · 0x4f2a…9c1</div>
+          <div class="balline"><span class="big">$2,904</span><span class="delta">+2.9%</span></div>
+          <div class="attr">Up $81 today. ETH did the lifting.</div>
+        </div>
+        <div class="trow"><div class="ic">↓</div><div><div class="tt">Received 0.05 ETH</div><div class="ts">2:14 PM</div></div></div>
+      </div>
+    </div>
+    <div class="metric">chrome above content: <b>46 + 46 + 48 = 140pt</b> &nbsp;<b class="ok">(+2)</b></div>
+  </div>
+
+</div>
+
+<div class="decide">
+  <h2>What's encoded, and what you'd be deciding</h2>
+  <ul>
+    <li><b>Selection is opacity and weight, never a ring.</b> §351 made selection a <i>fill</i> in the seat
+      switcher and a <i>ring</i> in the strip precisely so the two never compete, and a dashed orange ring
+      already means "needs reconnecting". So a selected face is full opacity with a semibold name; the rest
+      sit at 50%. No new cue enters the vocabulary.</li>
+    <li><b>"All" wears the wallets themselves.</b> It has no identity of its own, so it draws as the actual
+      faces overlapped — literally what it is, no new metaphor, and it finally gives the combined balance a
+      mark instead of a neutral grey capsule.</li>
+    <li><b>Faces go on the glass, not in it.</b> The design law already says a mark someone recognizes stays
+      opaque — frosting it only muddies it. Which is also why the rail needs no glass capsule of its own:
+      faces are content, and content doesn't wear the material.</li>
+    <li><b>B versus C is the real decision, and it's about height.</b> B is truer to the setup page you cited
+      and never makes you look elsewhere to know whose room you're in. C costs almost nothing, and it removes
+      a name the card underneath is already printing. B's captions can't be shown only on the selected wallet
+      — the label slot has to stay reserved or the bar's height jumps as you tap.</li>
+  </ul>
+</div>

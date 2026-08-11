@@ -155,9 +155,9 @@ struct FollowImportSheet: View {
         } label: {
             HStack(spacing: DS.Space.s3) {
                 if let avatar = person.hit.avatarURL {
-                    RemoteThumb(urlString: avatar, size: 36, fallback: source, circular: true)
+                    RemoteThumb(urlString: avatar, size: DS.Face.list, fallback: source, circular: true)
                 } else {
-                    BridgeIcon(name: source, size: 36, circular: true)
+                    BridgeIcon(name: source, size: DS.Face.list, circular: true)
                 }
                 VStack(alignment: .leading, spacing: 1) {
                     Text(person.hit.displayName).dsText(.heading17)

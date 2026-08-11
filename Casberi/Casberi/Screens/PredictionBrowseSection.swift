@@ -37,7 +37,7 @@ struct PredictionVenueSwitcher: View {
             withAnimation(DS.Motion.standard) { scope = value }
         } label: {
             HStack(spacing: 5) {
-                if let icon { BridgeIcon(name: icon, size: 14, circular: true) }
+                if let icon { BridgeIcon(name: icon, size: DS.Face.badge, circular: true) }
                 Text(value.rawValue)
                     .dsText(.subhead13)
                     .fontWeight(isOn ? .semibold : .regular)
@@ -691,7 +691,7 @@ struct PredictionBrowseSection: View {
             // replaced the "They disagree" section (prd §298).
             if let twin = card.twinProbability, let twinVenue = card.twinVenue {
                 HStack(spacing: DS.Space.s2) {
-                    BridgeIcon(name: twinVenue, size: 16, circular: true)
+                    BridgeIcon(name: twinVenue, size: DS.Face.badge, circular: true)
                     PredictionOddsBar(probability: twin).frame(height: 8)
                     Text("\(Int((twin * 100).rounded()))%")
                         .dsText(.callout15).fontWeight(.semibold).monospacedDigit()
@@ -1028,7 +1028,7 @@ struct PredictionBrowseSection: View {
         Button { acceptTwin(offer) } label: {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 HStack(spacing: DS.Space.s2) {
-                    BridgeIcon(name: offer.source.rawValue, size: 18, circular: true)
+                    BridgeIcon(name: offer.source.rawValue, size: DS.Face.badge, circular: true)
                     Text(offer.line).dsText(.callout15).foregroundStyle(DS.textPrimary)
                         .multilineTextAlignment(.leading)
                 }

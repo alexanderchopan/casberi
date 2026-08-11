@@ -122,9 +122,9 @@ struct StarterPackImportSheet: View {
         } label: {
             HStack(spacing: DS.Space.s3) {
                 if let avatar = pack.creatorAvatarURL, !avatar.isEmpty {
-                    RemoteThumb(urlString: avatar, size: 36, fallback: "Bluesky", circular: true)
+                    RemoteThumb(urlString: avatar, size: DS.Face.list, fallback: "Bluesky", circular: true)
                 } else {
-                    BridgeIcon(name: "Bluesky", size: 36, circular: true)
+                    BridgeIcon(name: "Bluesky", size: DS.Face.list, circular: true)
                 }
                 VStack(alignment: .leading, spacing: 1) {
                     Text(pack.name).dsText(.heading17).foregroundStyle(DS.textPrimary).lineLimit(1)
@@ -187,9 +187,9 @@ struct StarterPackImportSheet: View {
                 ForEach(members) { member in
                     HStack(spacing: DS.Space.s3) {
                         if let avatar = member.avatarURL, !avatar.isEmpty {
-                            RemoteThumb(urlString: avatar, size: 32, fallback: "Bluesky", circular: true)
+                            RemoteThumb(urlString: avatar, size: DS.Face.list, fallback: "Bluesky", circular: true)
                         } else {
-                            BridgeIcon(name: "Bluesky", size: 32, circular: true)
+                            BridgeIcon(name: "Bluesky", size: DS.Face.list, circular: true)
                         }
                         Text(member.displayName?.isEmpty == false ? member.displayName! : member.handle)
                             .dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)

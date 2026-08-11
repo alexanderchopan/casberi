@@ -249,7 +249,7 @@ struct WalletFlowBand: View {
                 .frame(width: spineWidth, height: bandHeight - 4)
                 .offset(x: spineX, y: 2)
             if let spineAddress {
-                WalletFace(address: spineAddress, size: 28, circular: true)
+                WalletFace(address: spineAddress, size: DS.Face.row, circular: true)
                     .overlay(Circle().stroke(DS.page, lineWidth: 3))
                     .scaleEffect(entered ? 1 : 0.4)
                     .animation(faceAnimation, value: entered)

@@ -618,7 +618,7 @@ struct HandleSetupScreen: View {
         Section {
             ForEach(accountNames, id: \.self) { name in
                 HStack(spacing: DS.Space.s3) {
-                    BridgeIcon(name: bridge.rawValue, size: 28, circular: true)
+                    BridgeIcon(name: bridge.rawValue, size: DS.Face.row, circular: true)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(bridge.shortName(name)).dsText(.body17)
                             .foregroundStyle(DS.textPrimary)
@@ -702,9 +702,9 @@ struct HandleSetupScreen: View {
     private func rosterFace(_ account: SocialAccount) -> some View {
         VStack(spacing: 6) {
             if let avatar = account.avatarURL {
-                RemoteThumb(urlString: avatar, size: 56, fallback: bridge.rawValue, circular: true)
+                RemoteThumb(urlString: avatar, size: DS.Face.shelf, fallback: bridge.rawValue, circular: true)
             } else {
-                BridgeIcon(name: bridge.rawValue, size: 56, circular: true)
+                BridgeIcon(name: bridge.rawValue, size: DS.Face.shelf, circular: true)
             }
             VStack(spacing: 0) {
                 Text(account.title)

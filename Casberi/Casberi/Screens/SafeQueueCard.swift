@@ -110,7 +110,7 @@ struct SafeQueueCard: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             ForEach(check.roster) { signer in
                 HStack(spacing: DS.Space.s2) {
-                    WalletFace(address: signer.address, size: 24, circular: true)
+                    WalletFace(address: signer.address, size: DS.Face.row, circular: true)
                         .opacity(signer.signed ? 1 : 0.38)
                         .overlay(alignment: .bottomTrailing) {
                             if signer.signed {

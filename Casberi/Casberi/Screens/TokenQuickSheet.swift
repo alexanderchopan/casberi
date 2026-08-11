@@ -64,7 +64,7 @@ struct TokenQuickSheet: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: DS.Space.s2) {
-                    BridgeIcon(name: "Tokens", size: 18, circular: true)
+                    BridgeIcon(name: "Tokens", size: DS.Face.badge, circular: true)
                     Text("Token · held in a watched wallet")
                         .dsText(.label12).foregroundStyle(DS.textTertiary)
                 }

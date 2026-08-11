@@ -105,7 +105,7 @@ struct CategoryVenueSwitcher: View {
             onPick(venue)
         } label: {
             HStack(spacing: 5) {
-                BridgeIcon(name: venue, size: 14, circular: true)
+                BridgeIcon(name: venue, size: DS.Face.badge, circular: true)
                 Text(venue)
                     .dsText(.subhead13)
                     .fontWeight(isOn ? .semibold : .regular)

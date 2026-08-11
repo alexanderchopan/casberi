@@ -157,9 +157,9 @@ struct SocialQuoteCard: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(spacing: DS.Space.s2) {
                 if let avatar = card.avatarURL {
-                    RemoteThumb(urlString: avatar, size: 20, fallback: source, circular: true)
+                    RemoteThumb(urlString: avatar, size: DS.Face.badge, fallback: source, circular: true)
                 } else {
-                    BridgeIcon(name: source, size: 20, circular: true)
+                    BridgeIcon(name: source, size: DS.Face.badge, circular: true)
                 }
                 Text("@\(SocialThread.shortHandle(card.handle))")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
@@ -281,10 +281,10 @@ struct SocialPostThread: View {
                 } label: {
                     HStack(spacing: DS.Space.s2) {
                         if let avatar = post.avatarURL {
-                            RemoteThumb(urlString: avatar, size: 26, fallback: source,
+                            RemoteThumb(urlString: avatar, size: DS.Face.row, fallback: source,
                                         circular: true)
                         } else {
-                            BridgeIcon(name: source, size: 26, circular: true)
+                            BridgeIcon(name: source, size: DS.Face.row, circular: true)
                         }
                         Text("@\(SocialThread.shortHandle(post.handle))")
                             .dsText(.subhead13).foregroundStyle(DS.textTertiary)
@@ -400,9 +400,9 @@ struct SocialRepliesSection: View {
     @ViewBuilder
     private func avatarIcon(_ reply: SocialReply) -> some View {
         if let avatar = reply.avatarURL {
-            RemoteThumb(urlString: avatar, size: 20, fallback: source, circular: true)
+            RemoteThumb(urlString: avatar, size: DS.Face.badge, fallback: source, circular: true)
         } else {
-            BridgeIcon(name: source, size: 20, circular: true)
+            BridgeIcon(name: source, size: DS.Face.badge, circular: true)
         }
     }
 
@@ -570,9 +570,9 @@ struct SocialProfileCard: View {
     private var header: some View {
         HStack(spacing: DS.Space.s3) {
             if let avatar = shown.avatarURL {
-                RemoteThumb(urlString: avatar, size: 56, fallback: shown.source, circular: true)
+                RemoteThumb(urlString: avatar, size: DS.Face.shelf, fallback: shown.source, circular: true)
             } else {
-                BridgeIcon(name: shown.source, size: 56, circular: true)
+                BridgeIcon(name: shown.source, size: DS.Face.shelf, circular: true)
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text("@\(shown.shortHandle)")

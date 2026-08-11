@@ -66,7 +66,7 @@ struct WalletRow<Trailing: View>: View {
     var titleWraps = false
     @ViewBuilder var trailing: Trailing
 
-    private static var markSize: CGFloat { 34 }
+    private static var markSize: CGFloat { DS.Face.list }
 
     var body: some View {
         HStack(alignment: titleWraps ? .top : .center, spacing: DS.Space.s3) {

@@ -684,7 +684,7 @@ struct ThingSheetView: View {
                         source: thing.source, handle: thing.authorHandle ?? "",
                         displayName: nil, bio: nil, avatarURL: avatar)
                 } label: {
-                    RemoteThumb(urlString: avatar, size: 18, fallback: thing.source, circular: true)
+                    RemoteThumb(urlString: avatar, size: DS.Face.badge, fallback: thing.source, circular: true)
                         .coinFlip(trigger: thing.id)
                 }
                 .buttonStyle(.plain)
@@ -753,7 +753,7 @@ struct ThingSheetView: View {
     /// whether it goes anywhere.
     private var sourceLine: some View {
         HStack(spacing: DS.Space.s2) {
-            BridgeIcon(name: thing.source, size: 18, circular: true)
+            BridgeIcon(name: thing.source, size: DS.Face.badge, circular: true)
                 // The mark coin-flips as the sheet opens (delight, 2026-07-12).
                 .coinFlip(trigger: thing.id)
             Text("\(thing.kind.typeTag) · \(shortTime(thing.capturedAt)) ago")
