@@ -610,7 +610,7 @@ struct Composer: View {
     /// conversation and the docked chips retire, exactly as before.
     private var briefLanding: Bool {
         answering && !inFlight && answerStream.completed && turns.isEmpty
-            && TodayBrief.matches(currentQuestion)
+            && TodayBrief.matchesAny(currentQuestion)
     }
 
     /// The brief as the turn being answered RIGHT NOW — true from the moment it
@@ -619,8 +619,12 @@ struct Composer: View {
     /// SETTLED state (it waits on `answerStream.completed`) and so can't speak
     /// for the window where the document is still painting — which is exactly
     /// the window the scroll behaviour below has to get right.
+    /// Any brief — the whole day OR one scope (2026-08-10). It was
+    /// `matches`, which only ever recognised the UNSCOPED question, so every
+    /// Money/Work/Life brief took the `.bottom` scroll anchor and opened at
+    /// its own footer after the document painted.
     private var briefInView: Bool {
-        turns.isEmpty && TodayBrief.matches(currentQuestion)
+        turns.isEmpty && TodayBrief.matchesAny(currentQuestion)
     }
 
     /// The ask kinds the Today brief ALREADY answers on screen — its money hero

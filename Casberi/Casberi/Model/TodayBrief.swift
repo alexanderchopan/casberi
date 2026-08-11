@@ -100,6 +100,37 @@ enum TodayBrief {
             || q.contains("catch me up on today")
     }
 
+    /// The same question asked of ONE scope — "How's my Money stuff?", "what's
+    /// going on with my work stuff" (2026-08-10).
+    ///
+    /// Separate from `matches` on purpose: that one ROUTES an unscoped ask to
+    /// this composer, and widening it would send a scoped ask down the
+    /// unscoped path. This one only answers "is what's on screen a brief",
+    /// which is what the scroll anchor needs — and getting that wrong is
+    /// exactly the reported bug: `briefInView` was false for every scoped
+    /// brief, so `.defaultScrollAnchor` took its `.bottom` branch and a
+    /// composed document with a masthead opened at its own footer, the same
+    /// complaint §288 already fixed once for the unscoped brief.
+    ///
+    /// Both halves are required — a scope NAME and a brief-shaped QUESTION —
+    /// so an ordinary search that happens to say "money" ("money transfer
+    /// receipt") is not mistaken for a brief and yanked to the top.
+    static func matchesScoped(_ query: String) -> Bool {
+        let q = query.lowercased()
+            .replacingOccurrences(of: "\u{2019}", with: "'")
+            .trimmingCharacters(in: CharacterSet(charactersIn: "? "))
+        let asksHow = q.hasPrefix("how's my") || q.hasPrefix("hows my")
+            || q.hasPrefix("how is my") || q.contains("what's going on")
+            || q.contains("whats going on")
+        guard asksHow else { return false }
+        return BriefScope.scopes.contains { q.contains($0.lowercased()) }
+    }
+
+    /// A brief of ANY kind is on screen — the whole day or one scope.
+    static func matchesAny(_ query: String) -> Bool {
+        matches(query) || matchesScoped(query)
+    }
+
     /// The canonical question — what the whisper sends, and the title a kept
     /// pill wears. Matches the screen's own name (§193) so the pill, the
     /// capsule, and the masthead all say one thing.
@@ -423,7 +454,15 @@ enum TodayBrief {
         // pictures is usually a handful and often none, and this is a "what
         // your life looks like" module rather than a "what arrived" one. The
         // ≥6 floor keeps it silent where that isn't true.
-        if let sheet = contactSheet(things) {
+        // NOT in Money (2026-08-10, user: "on 'what's going on with my money
+        // stuff' it shows 'what you saw', which goes in life and work not
+        // money"). Money's own reading is the crown and the flow band — what
+        // you HAVE and where it MOVED, both of them numbers — and a wall of
+        // photographs above them answers a question nobody asked of that
+        // scope. It reached Money at all because this shipped ungated: the
+        // ≥6-picture floor was doing the scoping by accident, and a corpus
+        // with enough screenshots filed under a money source cleared it.
+        if category != "Money", let sheet = contactSheet(things) {
             ids.append("sheet")
             lines.append(sheet)
         }
