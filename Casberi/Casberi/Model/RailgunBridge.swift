@@ -76,6 +76,12 @@ import SwiftData
 /// never wrong.
 enum RailgunBridge {
 
+    /// The `Thing.source` every row here lands under. Named so
+    /// `RailgunRoomSource` filters on a constant rather than a literal of its
+    /// own — the `PeerBridge.sourceName` reasoning, added 2026-08-11 when
+    /// this seat got a room head of its own.
+    static let sourceName = "Railgun"
+
     /// Mainnet only for now. Railgun also runs on BSC, Polygon and Arbitrum;
     /// each has its own contract addresses and its own host reliability to
     /// measure, and the Privacy Pools precedent is to add chains only after
@@ -231,7 +237,7 @@ enum RailgunBridge {
             .filter { ENS.isHexAddress($0) }
         return await syncLocked(
             context: context, addresses: addresses,
-            existing: IngestSupport.existingSourceRefs(context, source: "Railgun"))
+            existing: IngestSupport.existingSourceRefs(context, source: sourceName))
     }
 
     @MainActor
@@ -244,7 +250,7 @@ enum RailgunBridge {
         // Evidence-gated seat + a forward-reading cursor: shields landed
         // before the mark existed sit behind it, so one fetch over what they
         // landed rebuilds it. Runs once, ever.
-        evidence.backfillFromCorpus(context, source: "Railgun")
+        evidence.backfillFromCorpus(context, source: sourceName)
 
         // The dedupe set is rebuilt HERE against this bridge's OWN source,
         // rather than trusted from the caller. `WalletIngest.refresh` hands
@@ -258,7 +264,7 @@ enum RailgunBridge {
         // unioned in rather than dropped so a correctly-scoped one still
         // counts.
         let known = existing.union(
-            IngestSupport.existingSourceRefs(context, source: "Railgun"))
+            IngestSupport.existingSourceRefs(context, source: sourceName))
 
         for address in addresses {
             let key = cursorKey(address)
@@ -356,7 +362,7 @@ enum RailgunBridge {
                 for thing in landed
                 where thing.transferDirection == "received"
                     && Date.now.timeIntervalSince(thing.capturedAt) < 86_400 {
-                    SourceMoments.shared.fire(thing.title, source: "Railgun")
+                    SourceMoments.shared.fire(thing.title, source: sourceName)
                 }
             }
             defaults.set(scanned, forKey: key)
@@ -387,7 +393,7 @@ enum RailgunBridge {
         }
         let n = await syncLocked(
             context: context, addresses: addresses,
-            existing: IngestSupport.existingSourceRefs(context, source: "Railgun"))
+            existing: IngestSupport.existingSourceRefs(context, source: sourceName))
         dumpRows(context: context)
         return n
     }
@@ -398,14 +404,18 @@ enum RailgunBridge {
     /// which is the whole decimals trap, so the probe shows the money it wrote.
     @MainActor
     private static func dumpRows(context: ModelContext) {
+        // `#Predicate` needs a plain local capture — a type-qualified static
+        // member reference (`RailgunBridge.sourceName`) inside the macro's
+        // closure fails to compile.
+        let source = sourceName
         var descriptor = FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.source == "Railgun" },
+            predicate: #Predicate { $0.source == source },
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
         descriptor.fetchLimit = 12
         let rows = (try? context.fetch(descriptor)) ?? []
         NSLog("[Casberi] railgunRows: %d in corpus (newest %d shown)",
               (try? context.fetchCount(FetchDescriptor<Thing>(
-                  predicate: #Predicate { $0.source == "Railgun" }))) ?? rows.count,
+                  predicate: #Predicate { $0.source == source }))) ?? rows.count,
               rows.count)
         let stamp = ISO8601DateFormatter()
         for row in rows where row.isLive {
@@ -555,12 +565,23 @@ enum RailgunBridge {
                 kind: .transaction,
                 title: title,
                 content: "https://etherscan.io/tx/\(move.txHash)",
-                source: "Railgun",
+                source: sourceName,
                 capturedAt: times[move.block] ?? .now,
                 sourceRef: ref)
             thing.walletAddress = wallet
             thing.transferAmount = amountLine
             thing.transferDirection = direction == .shield ? "sent" : "received"
+            // The move as DATA (2026-08-11) — the same generic
+            // `priceValue`/`priceCurrency` meaning `GnosisPayRoom` and
+            // `PeerRoom` already read: this row's amount, in this token,
+            // never summed across tokens. Only when BOTH a real symbol (not
+            // the `shortAddress` fallback) and a real decimals were read —
+            // the same guard `amountLine` uses, so a room built on these two
+            // fields can never disagree with the title about what's known.
+            if let decimals = info?.decimals, let symbol = info?.symbol {
+                thing.priceValue = move.raw / pow(10, Double(decimals))
+                thing.priceCurrency = symbol
+            }
             if direction == .unshield {
                 // The honesty note rides `enrichedText` — the thing sheet's
                 // body and search, never the title (it's context, not a

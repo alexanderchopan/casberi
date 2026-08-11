@@ -19705,3 +19705,79 @@ pool, and hold no Gnosis Pay card) and only one or two causes per room are bugs;
 and three `note(…Head)` lines in `-roomInsightProbe`, which that probe's own doc
 requires — a head in `shapedSections` with no mirror there makes the probe
 confidently report that a room "leads with NOTHING" when it leads with a card.
+
+## §350 — Railgun's fourth room head, and two new readings off already-landed rows (user: "how can we enrich our Peer, 0xbow, and Railgun feeds", then "let's do all", 2026-08-11)
+
+Three enrichments, all reading data the bridges already fetch — no new host,
+no live-network guess, and (mostly) no new `Thing` field.
+
+**Railgun gets the room head its three siblings already had (§349).** It was
+the one wallet-riding seat with none — a plain list of shields and unshields,
+no standing answer to "what am I actually moving through this". `RailgunRoom`
+groups by TOKEN rather than by rail (Railgun has no funding platform to rank),
+the same shape `PeerRoom`/`PrivacyPoolsRoom`/`GnosisPayRoom` already established:
+`RailgunBridge` now stamps `priceValue`/`priceCurrency` on a move whenever a
+real symbol AND real decimals were read (the same guard `amountLine` already
+used, so the room can never know more than the title does), reusing the
+generic "amount, in this currency, never summed across currencies" meaning
+`GnosisPayRoom` defined. `RailgunBridge` also gained a `sourceName` constant
+(it was spelling `"Railgun"` eight times inline) — the `PeerBridge.sourceName`
+reasoning, so `RailgunRoomSource` filters on a constant rather than a literal
+of its own. Wired into `FeedScreen.sourceHead` as a fourth case, `-railgunRoomProbe`,
+and a `railgunHead` line in `-roomInsightProbe`.
+
+**Peer's fills get a second grouping axis.** `PeerRoom`'s own doc argues
+against drawing money because "the token differs per fill, so a sum over
+parsed numbers would add USDC to ETH" — but that objection is about
+RE-PARSING PROSE. Grouping by token FIRST, off the same structured
+`priceValue`/`priceCurrency` fields Railgun now uses, and summing only WITHIN
+a token, never crosses that line: `PeerRoom.Token` sits beside `Rail` as a
+second reading of the identical fills, drawn as one extra line under the
+card's existing note ("340.5 USDC bought · 12.0 sold"), silent whenever no
+token amount is fully known. `PeerBridge` also now reads `IntentSignaled`'s
+own `timestamp` word (word 6 — free, it's the same event `conversionRate`
+already reads) and appends "This filled in 3m 40s via Cash App" to the
+existing rate line — a fact about ONE fill, not a room-level average, so it
+costs no new field.
+
+**0xBow gets two readings off rows it already lands.** (1) The oldest deposit
+IN each state (`Segment.oldestAt`, tracked as a min alongside the existing
+count) lets the headline say "1 deposit is still in review — the oldest has
+waited 9 days" once the wait clears a 3-day floor — before this the room
+counted a segment but never said how stale its oldest member was, so a
+three-day wait and a three-week one read identically. (2) Observed REVIEW
+TIME: `PrivacyPoolsBridge` already lands a deposit under
+`privacypools:dep:<label>` and, on the SAME poll pass that flips its state,
+an alert under `privacypools:status:<label>` — same label suffix on both, by
+construction. Pairing them (deposit `capturedAt` → alert `capturedAt`) gives
+a real, MEDIAN (not mean — the `StripeSilence` discipline; a POI deposit that
+took months would drag a mean into overstating everyone else's wait) days-to-
+resolve figure, stated as "review has taken about N days here" in the
+footnote — never a claim about 0xBow's screener in general, only what THIS
+device watched both ends of. No new field, no new read: both timestamps were
+already on rows the room already reads.
+
+**Deliberately NOT built, and why.** (1) Railgun's "recover the unattributable
+half via the RelayAdapt leg" — a relayer-routed shield still emits
+`Transfer(from: wallet, to: RelayAdapt)`, both topics indexed, so a
+wallet-scoped query on THAT leg could recover part of the 51.5% §268 already
+excludes. Left unbuilt because it needs a live measurement this host can't
+make (no egress to re-run `WalletApprovals`-shaped `eth_getLogs` against a
+real Railgun user's wallet) — exactly the discipline §268 itself already
+modeled once. (2) 0xBow's live Proof-of-Innocence read (`ppoi.fdi.network`,
+already scoped in §268's own "not built" note) — the riskiest of everything
+considered, since both documented POI endpoints are dead and the live one was
+found only by reverse-engineering a frontend bundle; §242's rule is to not
+ship user-facing copy against an unsupported host, and that rule still holds.
+(3) Extending `wallet-rooms-selftest.sh`'s 135-assertion harness to cover the
+two new room-side readings, and seeding Railgun into `DemoSeedAll` /
+`verify.sh`'s room-head coverage list — real gaps, left as the next pass
+rather than guessed at under time pressure; `RailgunRoom.swift` is
+Foundation-only and harness-compilable, it just isn't harnessed yet.
+
+**UNVERIFIED end-to-end** — authored without a live wallet that has actually
+used Peer, 0xBow or Railgun on this host, so none of the three new readings
+has been checked against real settled data. Every new field read is guarded
+the same way the row that stamps it already is (a nil `priceValue`/`priceCurrency`
+just means the reading stays silent, never a guess), so the failure mode is
+"says less than it could", not "says something wrong".

@@ -678,6 +678,18 @@ enum ProbeHooks {
                 NSLog("[Casberi] %@", line)
             }
         },
+        // The fourth wallet-riding room head (2026-08-11) — pair with
+        // `-railgunProbe` to land moves first.
+        Hook(key: "railgunRoomProbe") { _, context in
+            let source = RailgunRoomSource.source
+            var descriptor = FetchDescriptor<Thing>(
+                predicate: #Predicate { $0.source == source })
+            descriptor.fetchLimit = 500
+            let rows = (try? context.fetch(descriptor)) ?? []
+            for line in RailgunRoomSource.probeLines(things: rows) {
+                NSLog("[Casberi] %@", line)
+            }
+        },
         // `-cursorProbe YES` walks the Cursor read phase by phase with the
         // STORED key (connect first via `-tokenBridge "Cursor:<key>"`), and
         // dumps one `cursorAgent|` line per run. Same lesson as the two above:
@@ -3434,6 +3446,11 @@ enum ProbeHooks {
                 note("gnosisPayHead", source == GnosisPayRoomSource.source
                      ? GnosisPayRoomSource.compose(things: things).map {
                         "\(GnosisPayRoom.headline($0)) · \($0.currencies.count) currencies"
+                     } : nil)
+                // The fourth wallet-riding head (2026-08-11).
+                note("railgunHead", source == RailgunRoomSource.source
+                     ? RailgunRoomSource.compose(things: things).map {
+                        "\(RailgunRoom.headline($0)) · \($0.tokens.count) tokens"
                      } : nil)
                 // Three more per-source heads that shipped without a line
                 // here — exactly the drift this probe's own header warns

@@ -47,7 +47,14 @@ enum PeerRoomSource {
                           // string. Nil on every expired row and on any fill
                           // whose IntentSignaled event could not be found.
                           rail: thing.authorHandle,
-                          at: thing.capturedAt)
+                          at: thing.capturedAt,
+                          // priceValue/priceCurrency (2026-08-11) — the SAME
+                          // generic "amount, in this currency, never summed
+                          // across currencies" meaning `GnosisPayRoom` reads,
+                          // reused rather than a new field. Nil on any fill
+                          // whose token decimals couldn't be read.
+                          token: thing.priceCurrency,
+                          amount: thing.priceValue)
     }
 
     /// The probe's lines — driven by `-peerRoomProbe`, and deliberately calling
@@ -84,6 +91,8 @@ enum PeerRoomSource {
             let kind = PeerRoom.kind(ref: sight.ref)
             out.append("peerRoomFill| kind=\(kind?.rawValue ?? "UNRECOGNISED")"
                        + " rail=\(sight.rail ?? "UNPLACED")"
+                       + " token=\(sight.token ?? "UNPRICED")"
+                       + " amount=\(sight.amount.map { String($0) } ?? "unknown")"
                        + " dated=\(kind?.settled == true ? "real" : "when-we-looked")"
                        + " at=\(sight.at.formatted(.iso8601))"
                        + " ref=\(sight.ref ?? "none")")
@@ -98,8 +107,11 @@ enum PeerRoomSource {
         out.append("footnote=\(PeerRoom.footnote(room, drawn: min(rowCap, room.rails.count), now: now) ?? "none")")
         out.append("totals| bought=\(room.bought) sold=\(room.sold)"
                    + " unplaced=\(room.unplaced) fellThrough=\(room.fellThrough)"
-                   + " rails=\(room.rails.count)"
+                   + " rails=\(room.rails.count) tokens=\(room.tokens.count)"
                    + " newestSettled=\(room.newest?.formatted(.iso8601) ?? "none")")
+        for token in room.tokens {
+            out.append("peerRoomToken| \(token.symbol) · \(PeerRoom.tokenLine(token))")
+        }
         let top = room.lead?.fills ?? 0
         for rail in room.rails.prefix(rowCap) {
             out.append("peerRoomRail| \(rail.name)"

@@ -2080,6 +2080,16 @@ struct FeedScreen: View {
                             thing.priceCurrency == currency.code
                         }
                     }
+                case .railgun(let room):
+                    RailgunRoomCard(room: room) { token in
+                        // A token owns many moves, so the honest landing is
+                        // its most recent one, matched on the same
+                        // `priceCurrency` field the room groups by (the
+                        // Gnosis Pay currency rule, one field over).
+                        openNewest(source: RailgunRoomSource.source, in: visible) { thing in
+                            thing.priceCurrency == token.symbol
+                        }
+                    }
                 }
             }
         } else if let anniversary {
@@ -2985,6 +2995,9 @@ struct FeedScreen: View {
         case peer(PeerRoom)
         case privacyPools(PrivacyPoolsRoom)
         case gnosisPay(GnosisPayRoom)
+        // A fourth wallet-riding seat (2026-08-11) — grouped by TOKEN rather
+        // than by rail, since Railgun has no funding platform to rank.
+        case railgun(RailgunRoom)
     }
 
     /// Resolve this room's own head, or nil. One `switch` so adding a fourth
@@ -3014,6 +3027,8 @@ struct FeedScreen: View {
             return PrivacyPoolsRoomSource.compose(things: visible).map { .privacyPools($0) }
         case GnosisPayRoomSource.source:
             return GnosisPayRoomSource.compose(things: visible).map { .gnosisPay($0) }
+        case RailgunRoomSource.source:
+            return RailgunRoomSource.compose(things: visible).map { .railgun($0) }
         default:
             return nil
         }

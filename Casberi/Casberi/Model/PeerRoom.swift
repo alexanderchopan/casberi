@@ -91,7 +91,7 @@ struct PeerRoom: Equatable {
         return nil
     }
 
-    /// One landed row, reduced to the three facts this card reads. The source
+    /// One landed row, reduced to the facts this card reads. The source
     /// builds these, so every judgement below is harness-testable with no
     /// `Thing` in sight.
     struct Sighting: Equatable {
@@ -101,6 +101,18 @@ struct PeerRoom: Equatable {
         /// expired row (the bridge stamps no rail there).
         let rail: String?
         let at: Date
+        /// `Thing.priceCurrency` — the settled TOKEN's symbol, as data
+        /// (2026-08-11). Reused rather than a new field: `GnosisPayRoom`
+        /// already establishes the meaning "this row's amount, in this
+        /// currency, never summed across currencies" for `priceValue` +
+        /// `priceCurrency`, and a Peer fill's token is exactly that kind of
+        /// currency. Defaulted so every existing caller (and the harness
+        /// below) keeps compiling unchanged.
+        var token: String? = nil
+        /// `Thing.priceValue` — the settled amount in `token`'s own units.
+        /// Nil whenever the bridge could not honestly scale the raw amount
+        /// (an unread `decimals()`), same guard as the existing rate line.
+        var amount: Double? = nil
     }
 
     /// One rail's standing, already reduced to what the card draws.
@@ -117,10 +129,35 @@ struct PeerRoom: Equatable {
         let newest: Date
     }
 
+    /// One token's standing — the SAME shape as `Rail`, keyed by the settled
+    /// currency instead of the funding rail (2026-08-11). A second grouping
+    /// axis over the same fills, not a replacement: the room's own doc argues
+    /// against drawing money because "the token differs per fill, so a sum
+    /// over parsed numbers would add USDC to ETH" — that objection is about
+    /// RE-PARSING PROSE, and grouping by token FIRST off structured
+    /// `priceValue`/`priceCurrency` before summing never mixes currencies, so
+    /// it doesn't apply here.
+    struct Token: Identifiable, Equatable {
+        var id: String { symbol }
+        let symbol: String
+        let bought: Int
+        let sold: Int
+        /// Sum of `amount` across BOUGHT fills — nil unless every bought fill
+        /// for this token carried a known amount. A partial sum presented as
+        /// complete is the failure the `PrivacyPoolsRoom` split-bar gap and
+        /// the import drop counters both exist to prevent; the honest move
+        /// here is silence, not a number missing some of its inputs.
+        let boughtAmount: Double?
+        let soldAmount: Double?
+        var fills: Int { bought + sold }
+    }
+
     /// Ranked — see `ordered`. Holds EVERY rail, not just the drawn ones, so
     /// the headline and the note can never disagree about how many there are
     /// (the `StripeRoom` bug, caught in its own review).
     let rails: [Rail]
+    /// Ranked the same way as `rails` (fills, then recency, then name).
+    let tokens: [Token]
     /// Settled fills that were PLACED on a rail. `unplaced` is not in here.
     let bought: Int
     let sold: Int
@@ -143,6 +180,7 @@ struct PeerRoom: Equatable {
     /// `minimumFills` on its own and draw a card over one row.
     var fills: Int { bought + sold }
     var lead: Rail? { rails.first }
+    var leadToken: Token? { tokens.first }
 
     /// Nothing worth a card.
     ///
@@ -163,6 +201,14 @@ struct PeerRoom: Equatable {
         // fill with no rail has nowhere to land by construction rather than by
         // remembering to exclude it.
         var buckets: [String: (bought: Int, sold: Int, newest: Date)] = [:]
+        // Same shape, keyed by TOKEN instead of rail. `known` tracks whether
+        // every fill counted into a direction actually carried an amount —
+        // one unpriced fill in a token's bought column means the whole
+        // bought sum for that token stays nil rather than quietly excluding
+        // just that one fill's contribution.
+        var tokenBuckets: [String: (bought: Int, sold: Int,
+                                    boughtAmount: Double, boughtKnown: Bool,
+                                    soldAmount: Double, soldKnown: Bool)] = [:]
 
         for sighting in sightings {
             guard let kind = kind(ref: sighting.ref) else { continue }
@@ -178,12 +224,34 @@ struct PeerRoom: Equatable {
             if kind == .bought { bucket.bought += 1 } else { bucket.sold += 1 }
             if sighting.at > bucket.newest { bucket.newest = sighting.at }
             buckets[name] = bucket
+
+            let symbol = sighting.token?.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let symbol, !symbol.isEmpty else { continue }
+            var tb = tokenBuckets[symbol] ?? (bought: 0, sold: 0,
+                                              boughtAmount: 0, boughtKnown: true,
+                                              soldAmount: 0, soldKnown: true)
+            if kind == .bought {
+                tb.bought += 1
+                if let amount = sighting.amount { tb.boughtAmount += amount }
+                else { tb.boughtKnown = false }
+            } else {
+                tb.sold += 1
+                if let amount = sighting.amount { tb.soldAmount += amount }
+                else { tb.soldKnown = false }
+            }
+            tokenBuckets[symbol] = tb
         }
 
         let rails = buckets.map { name, bucket in
             Rail(name: name, bought: bucket.bought, sold: bucket.sold, newest: bucket.newest)
         }
-        return PeerRoom(rails: ordered(rails), bought: bought, sold: sold,
+        let tokens = tokenBuckets.map { symbol, tb in
+            Token(symbol: symbol, bought: tb.bought, sold: tb.sold,
+                 boughtAmount: (tb.bought > 0 && tb.boughtKnown) ? tb.boughtAmount : nil,
+                 soldAmount: (tb.sold > 0 && tb.soldKnown) ? tb.soldAmount : nil)
+        }
+        return PeerRoom(rails: ordered(rails), tokens: orderedTokens(tokens),
+                        bought: bought, sold: sold,
                         unplaced: unplaced, fellThrough: fellThrough, newest: newest)
     }
 
@@ -204,6 +272,16 @@ struct PeerRoom: Equatable {
             if a.fills != b.fills { return a.fills > b.fills }
             if a.newest != b.newest { return a.newest > b.newest }
             return a.name < b.name
+        }
+    }
+
+    /// Fills, then symbol — TOTAL, the same reasoning as `ordered(_:[Rail])`.
+    /// No recency tie-break: a token's `boughtAmount`/`soldAmount` carry no
+    /// single "newest" the way a `Rail` does, so nothing here can read one.
+    static func orderedTokens(_ tokens: [Token]) -> [Token] {
+        tokens.sorted { a, b in
+            if a.fills != b.fills { return a.fills > b.fills }
+            return a.symbol < b.symbol
         }
     }
 
@@ -254,6 +332,48 @@ struct PeerRoom: Equatable {
         }
         return rail.bought == 1 ? String(localized: "1 purchase")
                                 : String(localized: "\(rail.bought) purchases")
+    }
+
+    /// "340.5 USDC" — plain units, not `.formatted(.currency())`: a crypto
+    /// symbol like "USDC" is not an ISO 4217 code, and asking that formatter
+    /// for one would either crash or print something nobody typed. Kept
+    /// self-contained (not `WalletIngest.format`) so this file stays
+    /// Foundation-only and harness-compilable.
+    static func amountText(_ amount: Double, symbol: String) -> String {
+        let formatted = amount.formatted(.number.precision(.fractionLength(0...4)))
+        return "\(formatted) \(symbol)"
+    }
+
+    /// The line beside a token: how much moved, in real units — unlike
+    /// `railLine`, a bare count is never enough here, because HOW MUCH is
+    /// this card's whole reason to group by token at all. Falls back to a
+    /// count only when the amount itself isn't fully known (see `Token`).
+    static func tokenLine(_ token: Token) -> String {
+        if let bought = token.boughtAmount, let sold = token.soldAmount,
+           token.bought > 0, token.sold > 0 {
+            return String(localized: "\(amountText(bought, symbol: token.symbol)) in · \(amountText(sold, symbol: token.symbol)) out")
+        }
+        if token.sold > 0 {
+            if let sold = token.soldAmount {
+                return String(localized: "\(amountText(sold, symbol: token.symbol)) sold")
+            }
+            return token.sold == 1 ? String(localized: "1 sale") : String(localized: "\(token.sold) sales")
+        }
+        if let bought = token.boughtAmount {
+            return String(localized: "\(amountText(bought, symbol: token.symbol)) bought")
+        }
+        return token.bought == 1 ? String(localized: "1 purchase") : String(localized: "\(token.bought) purchases")
+    }
+
+    /// A second, optional line naming what's actually moving. Silent (nil)
+    /// whenever the room has no token grouping at all — an account this
+    /// build never priced a fill for, which is a real and common shape (a
+    /// token whose `decimals()` never answered).
+    static func tokenNote(_ room: PeerRoom) -> String? {
+        guard let lead = room.leadToken else { return nil }
+        let line = tokenLine(lead)
+        guard room.tokens.count > 1 else { return line }
+        return String(localized: "\(line) · \(room.tokens.count) tokens")
     }
 
     /// The one line at the top of the card.

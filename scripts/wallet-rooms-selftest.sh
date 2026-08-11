@@ -1,23 +1,25 @@
 #!/bin/zsh
-# Casberi wallet-room self-test — the SHIPPED pure judgement behind the three
-# WALLET-RIDING feed-room heads (prd §349, 2026-08-10):
+# Casberi wallet-room self-test — the SHIPPED pure judgement behind the FOUR
+# WALLET-RIDING feed-room heads (prd §349, 2026-08-10; Railgun added §350,
+# 2026-08-11):
 #
 #   Casberi/Casberi/Model/PeerRoom.swift
 #   Casberi/Casberi/Model/PrivacyPoolsRoom.swift
 #   Casberi/Casberi/Model/GnosisPayRoom.swift
+#   Casberi/Casberi/Model/RailgunRoom.swift
 #
-# All three are Foundation-only BY DESIGN, so all three are compiled WHOLE AND
+# All four are Foundation-only BY DESIGN, so all four are compiled WHOLE AND
 # UNMODIFIED rather than extracted — the strongest form of "the harness ran the
 # shipped logic". Everything that touches `Thing` lives in the
 # `…RoomSource.swift` half, which no harness can compile and which contains no
 # judgement to test.
 #
-# WHY A HARNESS AND NOT A LIVE CHECK. These three seats ride the WATCHED
+# WHY A HARNESS AND NOT A LIVE CHECK. These four seats ride the WATCHED
 # WALLETS: there is no key to mint, no account to open, and nothing on this host
-# can make a Peer fill settle, a 0xBow screener rule, or a Gnosis Pay card get
-# swiped. A room's numbers can only ever be checked by somebody who already has
-# the history — and every failure mode here is a SILENT WRONG ANSWER that
-# renders perfectly:
+# can make a Peer fill settle, a 0xBow screener rule, a Gnosis Pay card get
+# swiped, or a Railgun shield land. A room's numbers can only ever be checked by
+# somebody who already has the history — and every failure mode here is a
+# SILENT WRONG ANSWER that renders perfectly:
 #
 #   · every SALE counted as a purchase, because `peer:sell:` also starts
 #     `peer:` — a card reporting that you only ever buy, on an account that
@@ -33,6 +35,9 @@
 #   · EUR added to GBP and printed as one figure
 #   · "up 400%" against a window the room was never watching
 #   · a spend whose amount could not be read folded into a total as zero
+#   · a shield with no readable token bucketed under an invented "Unknown"
+#   · a token's shielded amount presented as complete when one shield in it
+#     carried no readable amount at all
 #
 # Pure, local, deterministic — no network, no simulator. Exit non-zero on
 # failure.
@@ -42,19 +47,23 @@ cd "$(dirname "$0")/.."
 PEER="Casberi/Casberi/Model/PeerRoom.swift"
 POOLS="Casberi/Casberi/Model/PrivacyPoolsRoom.swift"
 GNOSIS="Casberi/Casberi/Model/GnosisPayRoom.swift"
-for f in "$PEER" "$POOLS" "$GNOSIS"; do
+RAILGUN="Casberi/Casberi/Model/RailgunRoom.swift"
+for f in "$PEER" "$POOLS" "$GNOSIS" "$RAILGUN"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
 SRC_PEER="Casberi/Casberi/Model/PeerRoomSource.swift"
 SRC_POOLS="Casberi/Casberi/Model/PrivacyPoolsRoomSource.swift"
 SRC_GNOSIS="Casberi/Casberi/Model/GnosisPayRoomSource.swift"
+SRC_RAILGUN="Casberi/Casberi/Model/RailgunRoomSource.swift"
 BR_PEER="Casberi/Casberi/Model/PeerBridge.swift"
 BR_POOLS="Casberi/Casberi/Model/PrivacyPoolsBridge.swift"
 BR_GNOSIS="Casberi/Casberi/Model/GnosisPayBridge.swift"
+BR_RAILGUN="Casberi/Casberi/Model/RailgunBridge.swift"
 CARD_PEER="Casberi/Casberi/Screens/PeerRoomCard.swift"
 CARD_POOLS="Casberi/Casberi/Screens/PrivacyPoolsRoomCard.swift"
 CARD_GNOSIS="Casberi/Casberi/Screens/GnosisPayRoomCard.swift"
+CARD_RAILGUN="Casberi/Casberi/Screens/RailgunRoomCard.swift"
 FEED="Casberi/Casberi/Screens/FeedScreen.swift"
 PROBES="Casberi/Casberi/Shell/ProbeHooks.swift"
 
@@ -127,11 +136,20 @@ grep -q 'static let sourceName = "Gnosis Pay"' "$BR_GNOSIS" \
   || { echo "✗ GnosisPayBridge.sourceName changed"; exit 1; }
 grep -q 'source: "Gnosis Pay"' "$BR_GNOSIS" \
   || { echo "✗ GnosisPayBridge no longer lands rows under \"Gnosis Pay\""; exit 1; }
+grep -q 'static let sourceName = "Railgun"' "$BR_RAILGUN" \
+  || { echo "✗ RailgunBridge.sourceName changed"; exit 1; }
+
+# The move as DATA, still stamped by the bridge that lands it (prd §350) —
+# without this the Railgun head composes perfectly over nothing.
+grep -q 'thing.priceValue = move.raw / pow(10, Double(decimals))' "$BR_RAILGUN" \
+  || { echo "✗ RailgunBridge no longer stamps priceValue on a move — every shield/unshield would be unpriced"; exit 1; }
+grep -q 'thing.priceCurrency = symbol' "$BR_RAILGUN" \
+  || { echo "✗ RailgunBridge no longer stamps priceCurrency — moves would drop out of every token grouping"; exit 1; }
 
 # Corollary 4 — filtered live at the boundary, before any stored property is
 # read. The caller hands these a debounced snapshot and the foreground sweep
 # deletes rows while it is held.
-for f in "$SRC_PEER" "$SRC_POOLS" "$SRC_GNOSIS"; do
+for f in "$SRC_PEER" "$SRC_POOLS" "$SRC_GNOSIS" "$SRC_RAILGUN"; do
   grep -q 'things.live' "$f" \
     || { echo "✗ $f no longer filters live at the boundary (corollary 4)"; exit 1; }
 done
@@ -144,12 +162,16 @@ grep -q 'case .privacyPools(let room)' "$FEED" \
   || { echo "✗ the Privacy Pools head is no longer rendered from the sourceHead chain"; exit 1; }
 grep -q 'case .gnosisPay(let room)' "$FEED" \
   || { echo "✗ the Gnosis Pay head is no longer rendered from the sourceHead chain"; exit 1; }
+grep -q 'case .railgun(let room)' "$FEED" \
+  || { echo "✗ the Railgun head is no longer rendered from the sourceHead chain"; exit 1; }
 grep -q 'case PeerRoomSource.source:' "$FEED" \
   || { echo "✗ the sourceHead switch no longer claims the Peer room"; exit 1; }
 grep -q 'case PrivacyPoolsRoomSource.source:' "$FEED" \
   || { echo "✗ the sourceHead switch no longer claims the Privacy Pools room"; exit 1; }
 grep -q 'case GnosisPayRoomSource.source:' "$FEED" \
   || { echo "✗ the sourceHead switch no longer claims the Gnosis Pay room"; exit 1; }
+grep -q 'case RailgunRoomSource.source:' "$FEED" \
+  || { echo "✗ the sourceHead switch no longer claims the Railgun room"; exit 1; }
 
 # The cards draw through the SHIPPED arithmetic and honour the row caps, so a
 # card cannot quietly re-rank or over-draw what the room composed.
@@ -157,6 +179,8 @@ grep -q 'room.rails.prefix(PeerRoomSource.rowCap)' "$CARD_PEER" \
   || { echo "✗ the Peer card no longer honours the rail cap — the footnote would count rows that are drawn anyway"; exit 1; }
 grep -q 'room.currencies.prefix(GnosisPayRoomSource.rowCap)' "$CARD_GNOSIS" \
   || { echo "✗ the Gnosis Pay card no longer honours the currency cap"; exit 1; }
+grep -q 'room.tokens.prefix(RailgunRoomSource.rowCap)' "$CARD_RAILGUN" \
+  || { echo "✗ the Railgun card no longer honours the token cap"; exit 1; }
 # The strip exists so that superseding `FeedInsight.cardMonths` costs nothing.
 # A head outranks the generic registries, so a head that draws less than the
 # card it displaced is a regression wearing a new feature.
@@ -184,9 +208,11 @@ grep -q 'note("privacyPoolsHead"' "$PROBES" \
   || { echo "✗ -roomInsightProbe no longer mirrors the Privacy Pools head"; exit 1; }
 grep -q 'note("gnosisPayHead"' "$PROBES" \
   || { echo "✗ -roomInsightProbe no longer mirrors the Gnosis Pay head"; exit 1; }
-# Each head gets its own probe, because for these three seats an empty room is
+grep -q 'note("railgunHead"' "$PROBES" \
+  || { echo "✗ -roomInsightProbe no longer mirrors the Railgun head"; exit 1; }
+# Each head gets its own probe, because for these four seats an empty room is
 # usually the HEALTHY answer and only one or two causes per room are bugs.
-for key in peerRoomProbe privacyPoolsRoomProbe gnosisPayRoomProbe; do
+for key in peerRoomProbe privacyPoolsRoomProbe gnosisPayRoomProbe railgunRoomProbe; do
   grep -q "Hook(key: \"$key\")" "$PROBES" \
     || { echo "✗ -$key is gone — an empty head's several causes would be indistinguishable"; exit 1; }
 done
@@ -391,7 +417,42 @@ let lopsided = PrivacyPoolsRoom.compose(rows:
     (0..<40).map { pp("privacypools:dep:c\($0)", ["Cleared"]) }
     + [pp("privacypools:dep:stuck", ["Needs proof"])])
 check("one stuck deposit still leads forty cleared ones", lopsided.lead?.state == .needsProof)
-check("and the headline says so", PrivacyPoolsRoom.headline(lopsided) == "A deposit needs your proof")
+check("and the headline says so",
+      PrivacyPoolsRoom.headline(lopsided, now: t0) == "A deposit needs your proof")
+
+print("")
+print("Privacy Pools — oldest-in-state and observed review time")
+let staleRoom = PrivacyPoolsRoom.compose(rows: [
+    pp("privacypools:dep:old", ["Pending"], at: day(-10)),
+])
+check("the headline names the wait once it clears the floor",
+      PrivacyPoolsRoom.headline(staleRoom, now: t0).contains("10 days"))
+let freshRoom = PrivacyPoolsRoom.compose(rows: [
+    pp("privacypools:dep:new", ["Pending"], at: day(-1)),
+])
+check("a wait under the floor says nothing extra",
+      PrivacyPoolsRoom.headline(freshRoom, now: t0) == "1 deposit is still in review")
+
+// A deposit and its own status alert share the SAME label suffix — that is
+// what lets the room pair "when it landed" to "when we saw it resolve" with
+// no new field and no new read.
+let reviewed = PrivacyPoolsRoom.compose(rows: [
+    pp("privacypools:dep:r1", ["Cleared"], at: day(-9)),
+    pp("privacypools:status:r1", [], at: day(-4)),
+])
+check("a deposit paired with its own status alert yields a real review time",
+      reviewed.reviewDays == 5)
+let unresolved = PrivacyPoolsRoom.compose(rows: [
+    pp("privacypools:dep:r2", ["Pending"], at: day(-9)),
+])
+check("no observed resolution means no review-time claim", unresolved.reviewDays == nil)
+let reversed = PrivacyPoolsRoom.compose(rows: [
+    pp("privacypools:dep:r3", ["Cleared"], at: day(-1)),
+    pp("privacypools:status:r3", [], at: day(-9)),
+])
+check("a resolution dated before its own deposit is never used", reversed.reviewDays == nil)
+check("median, not mean, over several observed reviews",
+      PrivacyPoolsRoom.medianDays([1, 3, 100]) == 3)
 
 print("")
 print("Privacy Pools — the split")
@@ -600,12 +661,85 @@ check("unreadable spends are named — that is money missing from the total abov
       gpFoot.contains("2 spends have no readable amount"))
 
 print("")
+print("Railgun — reading a row")
+check("a shield is read from its ref", RailgunRoom.direction(ref: "railgun:shield:0xabc:0") == .shield)
+check("an unshield is read from its ref", RailgunRoom.direction(ref: "railgun:unshield:0xabc:0") == .unshield)
+check("a ref this build doesn't know is nil, never guessed",
+      RailgunRoom.direction(ref: "railgun:0xabc") == nil)
+check("no ref at all is nil", RailgunRoom.direction(ref: nil) == nil)
+
+func move(_ ref: String, token: String? = nil, amount: Double? = nil, at: Date = t0) -> RailgunRoom.Sighting {
+    RailgunRoom.Sighting(ref: ref, token: token, amount: amount, at: at)
+}
+
+print("")
+print("Railgun — composing")
+let railgun = RailgunRoom.compose(moves: [
+    move("railgun:shield:1:0", token: "ETH", amount: 1.0, at: day(-1)),
+    move("railgun:shield:2:0", token: "ETH", amount: 2.0, at: day(-3)),
+    move("railgun:unshield:3:0", token: "ETH", amount: 0.5, at: day(-5)),
+    move("railgun:shield:4:0", token: "USDC", amount: 100, at: day(-2)),
+    move("railgun:shield:5:0", at: day(-6)),                    // no token at all
+    move("railgun:shield:6:0", token: "WBTC", at: day(-1)),     // token known, amount not
+])
+check("shields are counted", railgun.shields == 5)
+check("unshields are counted apart", railgun.unshields == 1)
+// Counted as a shield AND as unplaced: the move is real, the token is not known.
+check("a move with no readable token is counted, not bucketed", railgun.unplaced == 1)
+check("no 'Unknown' token was invented", railgun.tokens.allSatisfy { $0.symbol != "Unknown" })
+check("three real tokens", railgun.tokens.count == 3)
+check("the busiest token leads", railgun.lead?.symbol == "ETH")
+check("a token counts both directions", railgun.lead?.moves == 3)
+check("the newest move dates the room, regardless of token", railgun.newest == day(-1))
+
+print("")
+print("Railgun — token amounts")
+let eth = railgun.tokens.first { $0.symbol == "ETH" }!
+check("a token's shielded amount sums only its shields", eth.shieldedAmount == 3.0)
+check("a token's unshielded amount sums only its unshields", eth.unshieldedAmount == 0.5)
+let wbtc = railgun.tokens.first { $0.symbol == "WBTC" }!
+check("a token with an unknown amount states no total at all, never a partial one",
+      wbtc.shieldedAmount == nil)
+
+print("")
+print("Railgun — ranking is total")
+func rgToken(_ s: String, shields: Int, unshields: Int = 0, at: Date = t0) -> RailgunRoom.Token {
+    RailgunRoom.Token(symbol: s, shields: shields, unshields: unshields,
+                      shieldedAmount: nil, unshieldedAmount: nil, newest: at)
+}
+check("more moves wins",
+      RailgunRoom.ordered([rgToken("A", shields: 1), rgToken("B", shields: 9)]).first?.symbol == "B")
+check("more moves wins even against a fresher runner-up",
+      RailgunRoom.ordered([rgToken("A", shields: 9, at: day(-9)),
+                           rgToken("B", shields: 1, at: day(-1))]).first?.symbol == "A")
+check("a tie on moves breaks on recency",
+      RailgunRoom.ordered([rgToken("A", shields: 2, at: day(-9)),
+                           rgToken("B", shields: 2, at: day(-1))]).first?.symbol == "B")
+check("a full tie breaks on symbol",
+      RailgunRoom.ordered([rgToken("B", shields: 2, at: t0),
+                           rgToken("A", shields: 2, at: t0)]).first?.symbol == "A")
+
+print("")
+print("Railgun — words")
+check("the headline names the leading token", RailgunRoom.headline(railgun).contains("ETH"))
+check("a card with no moves at all says so",
+      RailgunRoom.headline(RailgunRoom.compose(moves: [])) == "Nothing has moved yet")
+check("both directions are named in the note",
+      RailgunRoom.note(railgun).contains("shielded") && RailgunRoom.note(railgun).contains("received"))
+let rgFoot = RailgunRoom.footnote(railgun, drawn: 3, now: t0) ?? ""
+check("unplaced moves are named — a move missing from every token bucket above",
+      rgFoot.contains("1 move has no readable token"))
+check("a room with no moves at all is no card", RailgunRoom.compose(moves: []).isEmpty)
+check("share is a fraction of the busiest token's moves", RailgunRoom.share(moves: 3, of: 6) == 0.5)
+check("a zero denominator can't divide by zero", RailgunRoom.share(moves: 3, of: 0) == 0)
+
+print("")
 if failures > 0 { print("\(failures) failed"); exit(1) }
 print("all assertions passed")
 SWIFT
 
-echo "wallet-rooms-selftest: compiling the three heads WHOLE and unmodified…"
-swiftc -O -o "$TMP/run" "$PEER" "$POOLS" "$GNOSIS" "$TMP/main.swift" \
+echo "wallet-rooms-selftest: compiling the four heads WHOLE and unmodified…"
+swiftc -O -o "$TMP/run" "$PEER" "$POOLS" "$GNOSIS" "$RAILGUN" "$TMP/main.swift" \
   || { echo "✗ the shipped room heads do not compile Foundation-only — something reached Thing/SwiftUI"; exit 1; }
 "$TMP/run" || exit 1
 
@@ -620,12 +754,14 @@ mutate() {
   cp "$PEER" "$TMP/PeerRoom.swift"
   cp "$POOLS" "$TMP/PrivacyPoolsRoom.swift"
   cp "$GNOSIS" "$TMP/GnosisPayRoom.swift"
-  local a="$TMP/PeerRoom.swift" b="$TMP/PrivacyPoolsRoom.swift" c="$TMP/GnosisPayRoom.swift"
+  cp "$RAILGUN" "$TMP/RailgunRoom.swift"
+  local a="$TMP/PeerRoom.swift" b="$TMP/PrivacyPoolsRoom.swift" c="$TMP/GnosisPayRoom.swift" d="$TMP/RailgunRoom.swift"
   local target
   case "$which" in
-    peer)   target="$a" ;;
-    pools)  target="$b" ;;
-    gnosis) target="$c" ;;
+    peer)    target="$a" ;;
+    pools)   target="$b" ;;
+    gnosis)  target="$c" ;;
+    railgun) target="$d" ;;
   esac
   FRM="$frm" TO="$to" python3 - "$target" <<'PY'
 import os, sys
@@ -639,7 +775,7 @@ PY
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$target"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mut" "$a" "$b" "$c" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -O -o "$TMP/mut" "$a" "$b" "$c" "$d" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then
@@ -725,6 +861,12 @@ mutate "untagged deposits drop out of the split's denominator" pools \
 mutate "a state's raw value stops mirroring the bridge's tag" pools \
   'case needsProof   = "Needs proof"' \
   'case needsProof   = "NeedsProof"'
+# A resolution dated before its own deposit is not evidence of anything, and
+# using it anyway would let a clock oddity invent a negative — or worse, a
+# fabricated positive — review time.
+mutate "a review-time pair no longer checks the resolution came after the deposit" pools \
+  'guard let resolved = resolvedAt[label], resolved >= landed else { return nil }' \
+  'guard let resolved = resolvedAt[label] else { return nil }'
 
 # The cross-currency sum this file exists to refuse.
 mutate "every currency lands in one bucket" gnosis \
@@ -774,6 +916,22 @@ mutate "spends in another currency are folded into the strip" gnosis \
 mutate "currencies are ranked by amount instead of count" gnosis \
   'if a.spends != b.spends { return a.spends > b.spends }' \
   'if a.total != b.total { return a.total > b.total }'
+
+# A partial sum presented as complete — the failure `PeerRoom.Token` and
+# `RailgunRoom.Token` both exist to refuse. One shield with an unreadable
+# amount would otherwise silently understate the token's real total rather
+# than say nothing.
+mutate "a token's shielded amount is shown even when one shield's amount is unknown" railgun \
+  'shieldedAmount: (b.shields > 0 && b.shieldedKnown) ? b.shieldedAmount : nil,' \
+  'shieldedAmount: (b.shields > 0) ? b.shieldedAmount : nil,'
+# Reordering the rank so recency beats volume — the same class of bug
+# `PeerRoom.ordered` and `GnosisPayRoom.ordered` are both mutation-tested
+# against: a token with nine moves losing to one with a single, fresher move.
+mutate "tokens are ranked by recency before move count" railgun \
+  'if a.moves != b.moves { return a.moves > b.moves }
+            if a.newest != b.newest { return a.newest > b.newest }' \
+  'if a.newest != b.newest { return a.newest > b.newest }
+            if a.moves != b.moves { return a.moves > b.moves }'
 
 echo ""
 echo "wallet-rooms-selftest: OK — assertions pass and every mutation is caught."

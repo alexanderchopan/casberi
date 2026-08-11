@@ -86,17 +86,19 @@ enum PrivacyPoolsRoomSource {
                        + " and nothing reclaimed)")
             return out
         }
-        out.append("headline=\(PrivacyPoolsRoom.headline(room))")
+        out.append("headline=\(PrivacyPoolsRoom.headline(room, now: now))")
         out.append("note=\(PrivacyPoolsRoom.note(room))")
         out.append("footnote=\(PrivacyPoolsRoom.footnote(room, now: now) ?? "none")")
         out.append("totals| deposits=\(room.deposits) waiting=\(room.waiting)"
                    + " untagged=\(room.untagged) reclaimed=\(room.reclaimed)"
-                   + " newest=\(room.newest?.formatted(.iso8601) ?? "none")")
+                   + " newest=\(room.newest?.formatted(.iso8601) ?? "none")"
+                   + " reviewDaysObserved=\(room.reviewDays.map(String.init) ?? "none")")
         for segment in room.segments {
             out.append("privacyPoolsSegment| \(segment.state.rawValue)"
                        + " · \(PrivacyPoolsRoom.segmentLine(segment))"
                        + " · rank=\(PrivacyPoolsRoom.rank(segment.state))"
-                       + " · share=\(String(format: "%.2f", PrivacyPoolsRoom.share(count: segment.count, of: room.deposits)))")
+                       + " · share=\(String(format: "%.2f", PrivacyPoolsRoom.share(count: segment.count, of: room.deposits)))"
+                       + " · oldestAt=\(segment.oldestAt?.formatted(.iso8601) ?? "none")")
         }
         // The bridge's own watchlist, printed BESIDE the corpus reading rather
         // than folded into it. The card deliberately does not read this (one

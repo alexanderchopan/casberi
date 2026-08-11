@@ -504,7 +504,19 @@ enum PeerBridge {
             // Rate context (prd §237): a decimals-less token can't honestly
             // scale rawAmount into a real-units figure, so the line stays off.
             if story.token?.decimals != nil {
-                thing.enrichedText = await rateLine(story: story, tokenAmount: tokenAmount)
+                let rate = await rateLine(story: story, tokenAmount: tokenAmount)
+                let speed = speedLine(signaledAt: story.signaledAt,
+                                      fulfilledAt: thing.capturedAt, method: story.method)
+                thing.enrichedText = [rate, speed].compactMap { $0 }
+                    .joined(separator: " ").nilIfEmpty
+            }
+            // The settled amount as DATA (2026-08-11), the same generic
+            // `priceValue`/`priceCurrency` meaning `GnosisPayRoom` already
+            // established — "this row's amount, in this currency, never
+            // summed across currencies". No new field; see `PeerRoom.Token`.
+            if let symbol = story.token?.symbol, story.token?.decimals != nil {
+                thing.priceValue = tokenAmount
+                thing.priceCurrency = symbol
             }
             out.append(thing)
         }
@@ -522,6 +534,13 @@ enum PeerBridge {
         /// paid is `tokenAmount * conversionRateRaw / 1e18` (prd §237's rate
         /// line); nil when the signal itself couldn't be found.
         var conversionRateRaw: Double?
+        /// The intent's own `timestamp` field (word 6) — when the BUYER
+        /// signaled, not when the block that emitted the signal was mined
+        /// (those can differ; the event states its own moment). Free: it
+        /// rides the exact same `eth_getLogs` response `conversionRateRaw`
+        /// already reads, one more word off data already in hand. Nil when
+        /// the signal couldn't be found, same as everything else in `Story`.
+        var signaledAt: Date?
     }
 
     /// Joins a fill to its IntentSignaled event (same orchestrator, indexed by
@@ -555,6 +574,10 @@ enum PeerBridge {
         if let m = word(data, 0) { story.method = paymentMethods["0x" + m] }
         if let c = word(data, 4) { story.currency = currencies["0x" + c] }
         if let r = word(data, 5) { story.conversionRateRaw = WalletIngest.hexToDouble("0x" + r) }
+        if let t = word(data, 6) {
+            let epoch = WalletIngest.hexToDouble("0x" + t)
+            if epoch > 0 { story.signaledAt = Date(timeIntervalSince1970: epoch) }
+        }
         if let topics = signal["topics"] as? [String], topics.count == 4 {
             story.escrow = "0x" + topics[2].suffix(40)
             story.depositId = topics[3]
@@ -597,6 +620,33 @@ enum PeerBridge {
             : String(localized: "below market")
         let pctText = WalletIngest.format(abs(spreadPct))
         return String(localized: "You paid \(fiatText) for \(whatText) on Peer — about \(pctText)% \(direction).")
+    }
+
+    /// "This filled in 3m 40s via Cash App" (2026-08-11) — how long the
+    /// buyer waited between signaling the intent and the fill settling.
+    /// Both endpoints are onchain moments already read for other reasons
+    /// (`story.signaledAt` off the SAME IntentSignaled data `rateLine`
+    /// reads; `fulfilledAt` is the block time the row is already stamped
+    /// with), so this costs nothing extra to compute.
+    ///
+    /// Prose only, appended to the SAME `enrichedText` line rather than
+    /// stamped as its own field — a per-rail "settles in ~4m on Cash App"
+    /// AVERAGE would need a structured seconds-duration field with no other
+    /// honest reuse in `Thing`, and one fill's speed is a real fact about
+    /// that fill without needing to become a room-level statistic. Silent
+    /// (nil) whenever either endpoint isn't known, and whenever the signal
+    /// somehow reads AFTER the fill (a clock or RPC oddity — never guess at
+    /// a negative duration).
+    private static func speedLine(signaledAt: Date?, fulfilledAt: Date, method: String?) -> String? {
+        guard let signaledAt else { return nil }
+        let seconds = fulfilledAt.timeIntervalSince(signaledAt)
+        guard seconds > 0 else { return nil }
+        let duration = Duration.seconds(seconds)
+            .formatted(.units(allowed: [.hours, .minutes, .seconds], width: .narrow, maximumUnitCount: 2))
+        if let method {
+            return String(localized: "This filled in \(duration) via \(method).")
+        }
+        return String(localized: "This filled in \(duration).")
     }
 
     /// Only symbols that are UNAMBIGUOUS on their own — "$" alone could mean
@@ -820,6 +870,15 @@ enum PeerBridge {
                                       escrow: nil, depositId: nil, token: token,
                                       conversionRateRaw: signal.conversionRateRaw)
                     thing.enrichedText = await rateLine(story: story, tokenAmount: tokenAmount)
+                }
+                // Same reuse as the buy side — see `PeerRoom.Token`. No
+                // settlement-speed line here: unlike a buy, a sell's
+                // `capturedAt` is already the SIGNAL's own timestamp, so
+                // computing "how long this took" would need the fulfillment
+                // log's block time too, a read this pass doesn't make.
+                if let symbol = token?.symbol, token?.decimals != nil {
+                    thing.priceValue = tokenAmount
+                    thing.priceCurrency = symbol
                 }
                 out.append(thing)
             } else if now - signal.timestamp > intentExpirySeconds {

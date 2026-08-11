@@ -116,6 +116,18 @@ struct PrivacyPoolsRoom: Equatable {
         return nil
     }
 
+    /// The deposit's ASP label, off either a deposit ref or its status alert
+    /// — `PrivacyPoolsBridge` lands both under the SAME label suffix
+    /// (`depositPrefix + label`, `statusPrefix + label`), which is what lets
+    /// this card join "when it landed" to "when we saw it resolve" without a
+    /// new field or a second read. Nil for a ref shape neither prefix names.
+    static func label(ref: String?) -> String? {
+        guard let ref else { return nil }
+        if ref.hasPrefix(depositPrefix) { return String(ref.dropFirst(depositPrefix.count)) }
+        if ref.hasPrefix(statusPrefix) { return String(ref.dropFirst(statusPrefix.count)) }
+        return nil
+    }
+
     /// The one state tag on a row, or nil.
     ///
     /// Nil is a real answer and is counted as `untagged`, never defaulted to
@@ -144,6 +156,13 @@ struct PrivacyPoolsRoom: Equatable {
         var id: String { state.rawValue }
         let state: State
         let count: Int
+        /// The OLDEST deposit currently in this state (2026-08-11) — the
+        /// room used to say "3 deposits in review" with no way to tell a
+        /// three-day wait from a three-week one. `capturedAt` is when the
+        /// deposit LANDED, which is the honest floor for "how long has this
+        /// been sitting" even though a deposit can spend part of that window
+        /// unwatched (before the wallet was connected).
+        let oldestAt: Date?
     }
 
     /// Ranked — see `ordered`. Only states with at least one deposit appear, so
@@ -158,6 +177,12 @@ struct PrivacyPoolsRoom: Equatable {
     /// The newest deposit, for the idle clause. Over deposits only: an alert
     /// row is stamped when we polled, not when anything was deposited.
     let newest: Date?
+    /// The MEDIAN days between a deposit landing and this device observing
+    /// its status alert (2026-08-11) — see `compose` for how it's paired,
+    /// and the type doc for why it's a real but partial sample rather than a
+    /// claim about the screener in general. Nil when no deposit has both
+    /// ends observed yet.
+    let reviewDays: Int?
 
     /// Below this there is nothing a card can say that the row does not.
     static let minimumDeposits = 1
@@ -184,26 +209,74 @@ struct PrivacyPoolsRoom: Equatable {
 
     static func compose(rows sightings: [Sighting]) -> PrivacyPoolsRoom {
         var counts: [State: Int] = [:]
+        var oldestByState: [State: Date] = [:]
         var untagged = 0, reclaimed = 0
         var newest: Date?
+        // Label → when the deposit landed, and label → when this device saw
+        // its STATUS alert (approved/declined only — never the poi alert,
+        // which isn't a resolution). Both keyed the same way `retag` and
+        // `landDeposits` already key them, so no new read is needed to pair
+        // them; see `compose`'s reviewDays clause below.
+        var depositAt: [String: Date] = [:]
+        var resolvedAt: [String: Date] = [:]
 
         for sighting in sightings {
             switch row(ref: sighting.ref, tags: sighting.tags) {
             case .deposit(let state):
                 if newest == nil || sighting.at > newest! { newest = sighting.at }
-                if let state { counts[state, default: 0] += 1 } else { untagged += 1 }
+                if let state {
+                    counts[state, default: 0] += 1
+                    if oldestByState[state] == nil || sighting.at < oldestByState[state]! {
+                        oldestByState[state] = sighting.at
+                    }
+                } else {
+                    untagged += 1
+                }
+                if let label = label(ref: sighting.ref) { depositAt[label] = sighting.at }
             case .reclaimed:
                 reclaimed += 1
-            // An alert is news about a deposit already counted, and a ref this
-            // build does not know is not evidence of anything.
-            case .alert, .none:
+            // An alert about a deposit already counted; a ref this build does
+            // not know is not evidence of anything. A STATUS alert (not a poi
+            // one) also marks the moment this device saw that deposit resolve.
+            case .alert:
+                if let ref = sighting.ref, ref.hasPrefix(statusPrefix),
+                   let label = label(ref: ref) {
+                    resolvedAt[label] = sighting.at
+                }
+            case .none:
                 continue
             }
         }
 
-        let segments = counts.map { Segment(state: $0.key, count: $0.value) }
+        let segments = counts.map {
+            Segment(state: $0.key, count: $0.value, oldestAt: oldestByState[$0.key])
+        }
+
+        // Observed review time: only labels whose landing AND resolution
+        // this device both saw — never estimated, never a claim about the
+        // screener's typical speed, only what actually happened here. A
+        // negative gap (a resolution somehow before the deposit) is treated
+        // as unusable rather than as a real zero.
+        let durations = depositAt.compactMap { label, landed -> Int? in
+            guard let resolved = resolvedAt[label], resolved >= landed else { return nil }
+            return days(from: landed, to: resolved)
+        }
+
         return PrivacyPoolsRoom(segments: ordered(segments), untagged: untagged,
-                                reclaimed: reclaimed, newest: newest)
+                                reclaimed: reclaimed, newest: newest,
+                                reviewDays: medianDays(durations))
+    }
+
+    /// The middle value, sorted — MEDIAN rather than mean, the
+    /// `StripeSilence` discipline: one deposit that took months to resolve
+    /// (POI, most likely) would drag a mean into overstating every other
+    /// deposit's real wait.
+    static func medianDays(_ values: [Int]) -> Int? {
+        guard !values.isEmpty else { return nil }
+        let sorted = values.sorted()
+        let mid = sorted.count / 2
+        if sorted.count % 2 == 1 { return sorted[mid] }
+        return (sorted[mid - 1] + sorted[mid]) / 2
     }
 
     // MARK: - Ranking
@@ -292,12 +365,30 @@ struct PrivacyPoolsRoom: Equatable {
         String(localized: "\(segment.count) \(meaning(segment.state))")
     }
 
+    /// Below this the wait isn't worth naming — a deposit a few hours into
+    /// review reading "waited 0 days" is noise, not news.
+    static let noteworthyWaitDays = 3
+
+    /// "— the oldest has waited 9 days" (2026-08-11), appended to a headline
+    /// that is already naming a state someone is WAITING on. Silent under
+    /// `noteworthyWaitDays`, and silent for a `nil` segment (the `.declined`
+    /// and `.cleared` headline branches never call this — a cleared deposit
+    /// finished waiting, and how long a decline took to arrive isn't the
+    /// fact that matters once it has).
+    static func ageClause(_ segment: Segment?, now: Date = .now) -> String {
+        guard let oldestAt = segment?.oldestAt else { return "" }
+        let waited = days(from: oldestAt, to: now)
+        guard waited >= noteworthyWaitDays else { return "" }
+        return String(localized: " — the oldest has waited \(waited) days")
+    }
+
     /// The one line at the top of the card. Trouble leads, always — see `rank`.
-    static func headline(_ room: PrivacyPoolsRoom) -> String {
+    static func headline(_ room: PrivacyPoolsRoom, now: Date = .now) -> String {
         if let stuck = room.needsYou {
-            return stuck.count == 1
+            let base = stuck.count == 1
                 ? String(localized: "A deposit needs your proof")
                 : String(localized: "\(stuck.count) deposits need your proof")
+            return base + ageClause(stuck, now: now)
         }
         guard let lead = room.lead else {
             // Nothing tagged at all. Two shapes reach here and both are real:
@@ -316,9 +407,10 @@ struct PrivacyPoolsRoom: Equatable {
                 ? String(localized: "A deposit was declined")
                 : String(localized: "\(lead.count) deposits were declined")
         case .pending:
-            return lead.count == 1
+            let base = lead.count == 1
                 ? String(localized: "1 deposit is still in review")
                 : String(localized: "\(lead.count) deposits are still in review")
+            return base + ageClause(lead, now: now)
         case .cleared:
             return lead.count == 1
                 ? String(localized: "Your deposit is ready to withdraw")
@@ -366,6 +458,13 @@ struct PrivacyPoolsRoom: Equatable {
             parts.append(room.reclaimed == 1
                          ? String(localized: "1 reclaimed")
                          : String(localized: "\(room.reclaimed) reclaimed"))
+        }
+        // Only what THIS device has actually watched resolve — never a claim
+        // about 0xBow's screener in general. See `compose`'s `reviewDays`.
+        if let reviewDays = room.reviewDays {
+            parts.append(reviewDays == 0
+                         ? String(localized: "review has taken same-day here")
+                         : String(localized: "review has taken about \(reviewDays) days here"))
         }
         if let idle = idleNote(newest: room.newest, now: now) { parts.append(idle) }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")

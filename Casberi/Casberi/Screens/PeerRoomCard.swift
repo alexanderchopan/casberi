@@ -60,6 +60,17 @@ struct PeerRoomCard: View {
                 .foregroundStyle(DS.textSecondary)
                 .padding(.top, DS.Space.s1)
 
+            // The rail grouping and the token grouping are two different
+            // readings of the same fills (2026-08-11) — this line is the
+            // second one, and it stays silent (see `tokenNote`) rather than
+            // repeat the rail note in different words.
+            if let tokenNote = PeerRoom.tokenNote(room) {
+                Text(tokenNote)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .padding(.top, DS.Space.s1)
+            }
+
             // Only the rails BEYOND the lead get a row — the lead is already in
             // the headline, and repeating its name directly underneath is the
             // card arguing with itself. Its bar still draws, because the
