@@ -81,7 +81,29 @@ import SwiftData
 ///     outside-the-threshold shape the right-hand slot is reserved for; nor
 ///     does an executed or replaced outcome (5) — closure with nothing left
 ///     to act on, so it stays a feed row rather than a buzz.
+/// (8) Safe gets its OWN source and its own room head (2026-08-11, prd §349
+///     amendment). It used to land under `source: "Wallet"` like Aave/Morpho/
+///     Hyperliquid/Aerodrome — folded in as a sub-lens because it had no chip
+///     of its own to fold. That premise no longer held: Peer/Privacy Pools/
+///     Gnosis Pay/Railgun/ether.fi all already carry their own chip, so
+///     "Wallet" was one lens with its own chip beside five that shared it —
+///     an inconsistency, not a design. `sourceName` is now `"Safe"`;
+///     `retagToOwnSource` is a one-time pass that re-stamps every ALREADY-
+///     LANDED Safe row (found by its `wallet:safe*` ref prefix, which never
+///     changed) from `"Wallet"` to `"Safe"`, so nobody's existing queue items
+///     vanish from the feed history the day this ships. `Model/SafeRoom.swift`
+///     draws the room head — the signature queue as rings, ranked "your turn"
+///     first then longest-waiting — off the SAME tracking snapshot this file
+///     already keeps for the loop-closers in (5), extended with the fields a
+///     card needs (`have`/`required`/`yourTurn`/`submittedAt`/a cached
+///     description), so the head spends no extra read.
 enum SafeBridge {
+
+    /// The seat's own source name — `PeerBridge.sourceName`/
+    /// `GnosisPayBridge.sourceName`'s shape, joined 2026-08-11. Read here
+    /// rather than spelled as a literal at every landing site, the same
+    /// reason those two are.
+    static let sourceName = "Safe"
 
     private struct Chain {
         let network: String?   // WalletChainStore id; nil = not chain-toggle-gated (always active)
@@ -698,25 +720,23 @@ enum SafeBridge {
                     continue
                 }
                 let ref = "wallet:safe:\(chain.seg):\(safeTxHash)"
+                let required = (tx["confirmationsRequired"] as? Int) ?? 0
+                let have = (tx["confirmations"] as? [[String: Any]])?.count ?? 0
+                let description = describe(tx, chain: chain, safeAddress: safeAddress, facts: facts)
+                // Only when we know exactly which of the Safe's owners is
+                // "you" — reached via a signer's own watched EOA — can we
+                // honestly say whose turn it is. Watching the Safe's own
+                // address doesn't tell us which of its N owners you are.
+                let yourTurn = candidate.viaOwner.map { !hasSigned(tx, owner: $0) } ?? false
                 if !existing.contains(ref) {
-                    let required = (tx["confirmationsRequired"] as? Int) ?? 0
-                    let have = (tx["confirmations"] as? [[String: Any]])?.count ?? 0
                     var title = String(localized:
-                        "\(have) of \(required) signatures collected on \(describe(tx, chain: chain, safeAddress: safeAddress, facts: facts))")
-                    // Only when we know exactly which of the Safe's owners is
-                    // "you" — reached via a signer's own watched EOA — can we
-                    // honestly say whose turn it is. Watching the Safe's own
-                    // address doesn't tell us which of its N owners you are.
-                    var yourTurn = false
+                        "\(have) of \(required) signatures collected on \(description)")
                     if let owner = candidate.viaOwner {
-                        if hasSigned(tx, owner: owner) {
-                            title += String(localized: " — waiting on others")
-                        } else {
-                            title += String(localized: " — your signature is needed")
-                            yourTurn = true
-                        }
+                        title += hasSigned(tx, owner: owner)
+                            ? String(localized: " — waiting on others")
+                            : String(localized: " — your signature is needed")
                     }
-                    let thing = Thing(kind: .transaction, title: title, source: "Wallet", sourceRef: ref)
+                    let thing = Thing(kind: .transaction, title: title, source: sourceName, sourceRef: ref)
                     thing.walletAddress = candidate.viaOwner ?? safeAddress
                     // Tagged structurally (not parsed from the title above) so
                     // `NotifySweep.classify` can tell "your turn" apart from
@@ -729,11 +749,15 @@ enum SafeBridge {
                     noteThresholdIfMet(chain: chain, safeTxHash: safeTxHash, have: have, required: required,
                                        tx: tx, safeAddress: safeAddress, facts: facts)
                 }
-                // Seed/keep tracking so this pending transaction's eventual
+                // Seed/refresh tracking so this pending transaction's eventual
                 // resolution (executed, or replaced by a rival at the same
-                // nonce) can land its own closing thing — regardless of
-                // whether it was landed just now or in an earlier pass.
-                trackIfNeeded(ref: ref, seg: chain.seg, safeAddress: safeAddress, ownerAddress: candidate.viaOwner)
+                // nonce) can land its own closing thing, and so
+                // `SafeRoomSource` always reads this pass's live counts
+                // rather than whatever was true when the thing first landed.
+                trackPending(ref: ref, seg: chain.seg, safeAddress: safeAddress, ownerAddress: candidate.viaOwner,
+                            have: have, required: required, yourTurn: yourTurn,
+                            submittedAt: ClaudeImport.parseDate(tx["submissionDate"] as? String),
+                            descriptionText: description)
             }
             added += await resolveTracking(context: context, chain: chain, safeAddress: safeAddress,
                                            pending: pending, currentNonce: currentNonce, existing: existing)
@@ -762,7 +786,7 @@ enum SafeBridge {
         defaults.set(true, forKey: key)
         SourceMoments.shared.fire(
             String(localized: "Fully signed — \(describe(tx, chain: chain, safeAddress: safeAddress, facts: facts)) is ready to execute"),
-            source: "Wallet")
+            source: sourceName)
     }
 
     // MARK: - Loop closers (2026-08-11)
@@ -777,10 +801,23 @@ enum SafeBridge {
     /// transaction this app has shown, and lands a second thing the pass it
     /// leaves the live queue — executed, or replaced — so the feed states
     /// an ending instead of just going quiet.
+    /// The five new fields (2026-08-11) are all OPTIONAL on purpose, not
+    /// because any of them is genuinely absent — every upsert below writes
+    /// all five — but because a decode of the pre-2026-08-11 shape (`seg`/
+    /// `safeAddress`/`ownerAddress` only) must not fail the WHOLE dictionary:
+    /// `loadTracking`'s `try?` falls back to `[:]` on any decode error, which
+    /// would silently drop every in-flight tracking entry on the update that
+    /// ships this. Losing them is harmless self-healing (`sync` re-seeds
+    /// within one pass), but a shape change should not be the reason.
     private struct TrackEntry: Codable {
         let seg: String
         let safeAddress: String
         let ownerAddress: String?
+        var have: Int?
+        var required: Int?
+        var yourTurn: Bool?
+        var submittedAt: Date?
+        var descriptionText: String?
     }
     private static let trackingKey = "wallet.safe.tracking.v1"
 
@@ -795,11 +832,49 @@ enum SafeBridge {
         UserDefaults.standard.set(data, forKey: trackingKey)
     }
 
-    private static func trackIfNeeded(ref: String, seg: String, safeAddress: String, ownerAddress: String?) {
+    /// Seeds OR refreshes one pending transaction's tracking entry — called
+    /// every pass for every live pending tx, not just newly-landed ones, so
+    /// `have`/`required` stay current for `SafeRoomSource` even when no new
+    /// `Thing` lands (2026-08-11). The loop-closer identity fields
+    /// (`seg`/`safeAddress`/`ownerAddress`) are set once and never rewritten.
+    private static func trackPending(ref: String, seg: String, safeAddress: String, ownerAddress: String?,
+                                     have: Int, required: Int, yourTurn: Bool,
+                                     submittedAt: Date?, descriptionText: String) {
         var tracking = loadTracking()
-        guard tracking[ref] == nil else { return }
-        tracking[ref] = TrackEntry(seg: seg, safeAddress: safeAddress, ownerAddress: ownerAddress)
+        var entry = tracking[ref] ?? TrackEntry(seg: seg, safeAddress: safeAddress, ownerAddress: ownerAddress)
+        entry.have = have
+        entry.required = required
+        entry.yourTurn = yourTurn
+        entry.submittedAt = submittedAt
+        entry.descriptionText = descriptionText
+        tracking[ref] = entry
         saveTracking(tracking)
+    }
+
+    /// One currently-open pending transaction, for `SafeRoomSource` — the
+    /// public-facing shape of `TrackEntry`, read fresh off the tracking store
+    /// every call rather than cached again, since `loadTracking` is already a
+    /// single UserDefaults read.
+    struct PendingSnapshot {
+        let ref: String
+        let safeAddress: String
+        let ownerAddress: String?
+        let have: Int
+        let required: Int
+        let yourTurn: Bool
+        let submittedAt: Date?
+        let descriptionText: String
+    }
+
+    /// Every pending transaction this app is currently watching for a
+    /// resolution — i.e. exactly the set `resolveTracking` will check next
+    /// pass. Costs no network: it is the loop-closer's own persisted state.
+    static func pendingSnapshot() -> [PendingSnapshot] {
+        loadTracking().map { ref, e in
+            PendingSnapshot(ref: ref, safeAddress: e.safeAddress, ownerAddress: e.ownerAddress,
+                            have: e.have ?? 0, required: e.required ?? 0, yourTurn: e.yourTurn ?? false,
+                            submittedAt: e.submittedAt, descriptionText: e.descriptionText ?? "")
+        }
     }
 
     /// "under a day" / "a day" / "N days" — composes into both the executed
@@ -837,7 +912,7 @@ enum SafeBridge {
                 String(localized: "Replaced after \($0) — \(description) never executed; a rival transaction went through at the same nonce instead")
             } ?? String(localized: "Replaced — \(description) never executed; a rival transaction went through at the same nonce instead")
         }
-        let thing = Thing(kind: .transaction, title: title, source: "Wallet", sourceRef: ref)
+        let thing = Thing(kind: .transaction, title: title, source: sourceName, sourceRef: ref)
         thing.walletAddress = ownerAddress ?? safeAddress
         context.insert(thing)
         SpotlightIndex.index([thing])
@@ -907,7 +982,7 @@ enum SafeBridge {
             count == 1
                 ? String(localized: "You're a signer on a Safe — its queue is in your feed")
                 : String(localized: "You're a signer on \(count) Safes — their queues are in your feed"),
-            source: "Wallet")
+            source: sourceName)
     }
 
     @MainActor private static var running = false
@@ -915,9 +990,8 @@ enum SafeBridge {
     /// A standalone sync for `SafeScreen`'s on-appear, matching
     /// `PeerBridge.syncNow`/`PrivacyPoolsBridge.syncNow`'s shape: resolves the
     /// watched wallets itself and reads the existing-refs set scoped to
-    /// "Wallet" (the same source `WalletIngest.refresh`'s own pass uses —
-    /// Safe things fold into the Wallet feed rather than earning their own
-    /// chip, like approvals and delegation already do).
+    /// `sourceName` (2026-08-11 — Safe earned its own chip, so this is no
+    /// longer the "Wallet" set `WalletIngest.refresh`'s own pass uses).
     @MainActor
     static func syncNow(context: ModelContext) async -> Int? {
         guard !running else { return 0 }
@@ -927,7 +1001,7 @@ enum SafeBridge {
         let addresses = await WalletIngest.resolvedAddresses(watched).filter { ENS.isHexAddress($0) }
         guard !addresses.isEmpty else { return 0 }
         return await sync(context: context, addresses: addresses,
-                          existing: IngestSupport.existingSourceRefs(context, source: "Wallet"))
+                          existing: IngestSupport.existingSourceRefs(context, source: sourceName))
     }
 
     /// Phrases describing what changed between two config snapshots — empty
@@ -999,7 +1073,7 @@ enum SafeBridge {
         let title = phrases.count == 1
             ? String(localized: "Your Safe \(phrases[0])")
             : String(localized: "Your Safe's settings changed: \(phrases.joined(separator: ", "))")
-        let thing = Thing(kind: .transaction, title: title, source: "Wallet", sourceRef: ref)
+        let thing = Thing(kind: .transaction, title: title, source: sourceName, sourceRef: ref)
         thing.walletAddress = ownerAddress
         // Tagged structurally, not parsed from `title` — a module can move
         // this Safe's funds WITHOUT a signature, which is the same shape of

@@ -620,9 +620,15 @@ enum WalletIngest {
         // pass — detection + queue read per wallet per active EVM chain,
         // landing a thing for every newly seen pending transaction. Inside
         // the running guard like everything above.
+        //
+        // Safe lands under its OWN source now (2026-08-11, `SafeBridge.sourceName`
+        // — see that file's top-of-file doc), so it needs its own existing-refs
+        // set rather than the shared `source: "Wallet"` one every sub-bridge
+        // above still reads.
         let safeAdded = await SafeBridge.sync(context: context,
                                               addresses: evmAddresses,
-                                              existing: existing)
+                                              existing: IngestSupport.existingSourceRefs(
+                                                  context, source: SafeBridge.sourceName))
         added += safeAdded
 
         // `reachedAny` speaks only for the EVM TRANSFER sync, which a

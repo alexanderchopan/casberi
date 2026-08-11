@@ -341,7 +341,7 @@ struct RootShell: View {
                 // One-time migrations run once per install (bump the version
                 // when adding one) — steady-state launches skip the scans.
                 let migrationsKey = "migrations.version"
-                let migrationsCurrent = 5
+                let migrationsCurrent = 6
                 let migrationsStored = UserDefaults.standard.integer(forKey: migrationsKey)
                 if migrationsStored < migrationsCurrent {
                     if migrationsStored < 1 {
@@ -417,6 +417,27 @@ struct RootShell: View {
                         // backup-restorable policy until they're written again —
                         // which, for a key you paste once, is never.
                         _ = TokenVault.migrateToDeviceOnly()
+                    }
+                    if migrationsStored < 6 {
+                        // One-time re-source (2026-08-11, `SafeBridge`'s own
+                        // top-of-file doc) — the Dexscreener→Tokens rename's
+                        // shape, minus the ref rewrite: every already-landed
+                        // Safe row carries a `wallet:safe*` ref that never
+                        // changed, so only `.source` moves, from "Wallet" to
+                        // `SafeBridge.sourceName`. Fetched by the plain,
+                        // well-worn `source ==` equality and filtered on the
+                        // ref prefix IN SWIFT rather than inside the
+                        // predicate — `sourceRef` is optional, and this file
+                        // has no precedent combining `?? ""` with
+                        // `.starts(with:)` inside a `#Predicate`; a one-time
+                        // migration is exactly the wrong place to be the
+                        // first to find out that combination traps.
+                        let wallet = (try? modelContext.fetch(FetchDescriptor<Thing>(
+                            predicate: #Predicate { $0.source == "Wallet" }
+                        ))) ?? []
+                        for thing in wallet where thing.sourceRef?.hasPrefix("wallet:safe") == true {
+                            thing.source = SafeBridge.sourceName
+                        }
                     }
                     modelContext.saveHonestly()
                     UserDefaults.standard.set(migrationsCurrent, forKey: migrationsKey)
