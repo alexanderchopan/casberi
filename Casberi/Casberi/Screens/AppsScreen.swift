@@ -30,11 +30,10 @@ struct AppsScreen: View {
     @State private var connectHue: Color = DS.tint
     @State private var connectToken = 0
     // The store's first-ever connect used to rain the app's generic berries
-    // once, guarded by an `apps.storeFirstConnect.done` flag. Retired
-    // 2026-08-04: every connect now rains the CONNECTED APP's own mark
-    // (`.connectRain` below), which is a better version of the same moment and
-    // made the first-only flag both redundant and a source of two showers at
-    // once on the very first connect.
+    // once, then (2026-08-04) every connect rained the CONNECTED APP's own
+    // mark. Both retired — the rain is pull-to-refresh's payoff alone (user
+    // ruling 2026-08-11); the bloom and the connected tile's promote lift
+    // carry the connect moment now.
     /// Bumped when a jump chip lands on a shelf — the header flashes once so
     /// the tap has an arrival, not just a silent scroll.
     @State private var shelfLand: [String: Int] = [:]
@@ -289,14 +288,10 @@ struct AppsScreen: View {
         .scrollIndicators(.hidden)
         // The connect payoff blooms the app's hue over the whole store, then
         // recedes — the same beat the product page gives, now on every Connect.
+        // (The glyph rain that fell through the bloom retired 2026-08-11,
+        // user ruling: berry rain is pull-to-refresh's payoff alone. The
+        // bloom + tile promote carry the moment.)
         .connectBloom(hue: connectHue, token: connectToken)
-        // …and the connected app's own mark falls through it (2026-08-04).
-        // Keyed to `connectLiftToken`/`justConnectedName` rather than the
-        // bloom's token, because those are set by `handleConnectChange` for
-        // EVERY connect path — a setup screen's sheet dismisses back onto this
-        // store, and before this only a one-tap connect made from the store
-        // itself got a payoff here.
-        .connectRain(name: justConnectedName ?? "", token: connectLiftToken)
         .onAppear {
             // Seed the connect-count milestone to the highest already-passed
             // threshold so arriving past one never fires a late toast.

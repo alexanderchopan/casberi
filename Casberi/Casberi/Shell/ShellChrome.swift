@@ -201,9 +201,10 @@ final class ShellChrome {
     var pullTension: CGFloat = 0
     /// The hue the NEXT `refreshPulse` bump should rain in — a specific
     /// source's own brand hue when the pull happened inside its feed (set by
-    /// FeedScreen's `.refreshable`, cleared to nil for "All") or a moment's
-    /// own source (set by MainSurface's SourceMoments drain). nil rains the
-    /// app's default berry blue (delight pass 2026-07-21).
+    /// FeedScreen's `performPull`, cleared to nil for "All"). nil rains the
+    /// app's default berry blue (delight pass 2026-07-21). The pull is the
+    /// only writer since 2026-08-11 — SourceMoments used to set it too, back
+    /// when moments dealt the rain.
     var refreshHue: Color? = nil
 
     /// Mac's ⌘R (Mac polish, 2026-07-28): a trackpad's overscroll gesture is

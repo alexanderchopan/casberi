@@ -684,10 +684,7 @@ struct TokenSetupScreen: View {
                 // The handshake, acknowledged: the icon coin-flips in time with
                 // the haptic. Gated on `registerConnected` returning true — the
                 // seat really changed — so a routine re-sync of a live bridge
-                // never celebrates. (The glyph rain deliberately isn't fired
-                // here: a `.token` screen raised by Connect dismisses on
-                // success, so the shower belongs to the product page that
-                // outlives it — see `ConnectRain`.)
+                // never celebrates.
                 flipTrigger += 1
             }
         } while syncPending

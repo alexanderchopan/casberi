@@ -252,14 +252,6 @@ struct Composer: View {
     /// The first-ever kept ask earns its own line, sibling to "Your first
     /// thing" (RootShell) — persisted so it fires exactly once per install.
     @AppStorage("composer.firstKeptAsk.done") private var firstKeptAskDone = false
-    /// Deals one small berry shower over a genuinely large "while I was
-    /// away" haul — an arrival worth marking, the same vocabulary the wallet
-    /// pass already uses for NFT/portfolio arrivals (prd §79).
-    @State private var awayRainTrigger = 0
-    /// Guards the away rain to once per open — a follow-up re-ask of the
-    /// same away question must not replay it.
-    @State private var awayRainPlayedThisOpen = false
-
     /// The keepable text of a synthesis answer — a synthesis is one Insight
     /// carrying the prose (RootShell's proseDoc). Only that shape is worth
     /// keeping: a lookup answer IS the things, which already live in the feed;
@@ -2364,10 +2356,6 @@ struct Composer: View {
             inputBar
         }
         .frame(maxWidth: .infinity, alignment: .top)
-        // A genuinely large "while I was away" haul deals one small berry
-        // shower over the answer (delight, 2026-07-21) — an arrival worth
-        // marking, contained to the bubble's own bounds by the clip below.
-        .overlay { BerryRain(trigger: awayRainTrigger) }
         // Report the content's natural height so the hosting sheet hugs it.
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { h in
             if embedded { onHeight(h) }
@@ -2650,7 +2638,6 @@ struct Composer: View {
         pendingKeyedFollowUp = false
         inFlight = false
         keepJustLanded = false
-        awayRainPlayedThisOpen = false
         askGeneration += 1   // any in-flight answer Task retires silently
         path = NavigationPath()
         onLowerAgent()
@@ -3774,17 +3761,11 @@ struct Composer: View {
                 // The settle haptic is keyed to honesty (delight, 2026-07-21):
                 // real content earns the tick, the "nothing matches" fallback
                 // earns nothing — celebrating a miss would violate the
-                // honesty rule. A genuinely large away haul earns a small
-                // berry shower too, the same arrival vocabulary the wallet
-                // pass already uses (prd §79) — once per open, even across
-                // follow-up re-asks of the same question.
+                // honesty rule. (A large away haul used to earn a berry
+                // shower here too — retired 2026-08-11, user ruling: the
+                // rain is pull-to-refresh's payoff alone.)
                 if !docHasFallback(finalDoc) {
                     DSHaptic.success()
-                }
-                if keepableAskKind == "away", !awayRainPlayedThisOpen,
-                   let count = StatusAsk.pulse(q, things: settledThings)?.pool.count, count >= 20 {
-                    awayRainPlayedThisOpen = true
-                    awayRainTrigger += 1
                 }
                 // The first brief ever, marked (delight, 2026-07-22) — the
                 // SAME persisted-flag idiom `MainSurface`'s `bloom.seen.

@@ -20073,3 +20073,29 @@ Wallet member room the strip, the category switcher and `walletSwitcherBar` are
 now three pinned glass layers above the content. They are three genuinely
 different axes (rooms, seats, addresses) and none is wrong on its own, which is
 exactly why it needs a design pass rather than a deletion.
+
+## §353 — The berry rain belongs to the pull alone (user: "we have too much berry rain confetti firing, can you make it so it only occurs on pull to refresh", 2026-08-11)
+
+The shower had accumulated SIX triggers since 2026-07-14, each individually
+argued for and together firing constantly: pull-to-refresh (the original),
+SourceMoments' drain (every wallet/token high, refill, quiet-account-return —
+the biggest offender, since every new bridge that gained a moment widened
+it), a starred repo's major release, a large "while I was away" haul in the
+composer, an OPML import of ≥10 feeds, and every app connect (the 2026-08-04
+glyph rain on the store and product page) — plus the theme-colour swatch's
+pick preview. The ruling: **the rain is pull-to-refresh's payoff alone.**
+Everything else keeps its OTHER feedback — toasts (moments, releases), the
+connect bloom + tile promote, haptics, the import receipt line — and none of
+it rains. `chrome.refreshPulse`'s writers are now exactly `FeedScreen.
+performPull` and the `-berryPulse` debug hook (which exists to simulate the
+pull); `chrome.refreshHue`'s only writer is `performPull`. `ConnectRain` and
+`BerryRain`'s whole glyph arm (param, cache, rasteriser, the 1.5× size rule)
+were deleted rather than left dormant — the modifier had no caller left, and
+this codebase treats a parameter nothing can pass as a stale claim. A side
+benefit worth naming: the non-pull `refreshPulse` bumps also re-fired
+`PredictionBrowseSection`'s `.task(id:)` and spun the avatar door, so a
+GitHub release landing while you stood in a market room reloaded that room's
+book for no reason — gone with the bump. Verified by `xcodebuild` + the
+liveness and design-motion audits per the standing no-sim instruction;
+nobody has watched a pull rain on a device since the change (the pull path
+itself is untouched).

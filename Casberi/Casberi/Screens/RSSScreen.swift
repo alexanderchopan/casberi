@@ -30,11 +30,6 @@ struct RSSScreen: View {
     @State private var resultIsError = false
     @State private var importingOPML = false
     @State private var opmlParsed: OPMLImport.Parsed?
-    /// Bumped once per big import — the local per-screen pulse (AppsScreen's
-    /// `firstConnectPulse` pattern), not the shell's global `chrome.
-    /// refreshPulse`: that overlay paints on MainSurface, BEHIND this sheet,
-    /// so a global bump would rain invisibly under the sheet that earned it.
-    @State private var celebratePulse = 0
     @State private var exportURL: URL?
     /// Tracked so a SECOND file share while this sheet is already open still
     /// lands — `HomeRoute.openSetup(forOffer:)` re-sets `connectForm` to the
@@ -73,7 +68,6 @@ struct RSSScreen: View {
         .dsPageBackground()
         .dsSoftScrollEdges()
         .dsScreenTitle("RSS")
-        .overlay { BerryRain(trigger: celebratePulse) }
         .onAppear {
             refreshExportURL()
             // A file handed in via AirDrop/Share Sheet before this screen
@@ -293,9 +287,6 @@ struct RSSScreen: View {
         let addedLine = "\(summary.added) feeds added\(summary.skipped > 0 ? " · \(summary.skipped) already followed" : "")"
         lastResult = addedLine
         DSHaptic.success()
-        // A big migration from another reader is a genuinely earned moment;
-        // a two-feed add isn't — gated so the shower stays rare and real.
-        if summary.added >= 10 { celebratePulse += 1 }
         Task {
             await sync()
             // `sync()` just overwrote the status with its own per-visit

@@ -1405,14 +1405,16 @@ struct MainSurface: View {
                 chrome.chipCaught(CategoryFold.chipLabel(for: lead.source, folded: chipLabels),
                                   firstEver: firstEver)
                 // A repo you star shipping a MAJOR release (a clean x.0.0) is a
-                // moment worth marking: the berry rain falls and a toast names
-                // it. One celebration per arrival batch — the marker is stamped
-                // at ingest (GitHubFeedFetch.isMajorRelease).
+                // moment worth marking: a toast names it. One celebration per
+                // arrival batch — the marker is stamped at ingest
+                // (GitHubFeedFetch.isMajorRelease). It used to bump
+                // `refreshPulse` for a berry shower too; the rain is the
+                // PULL's payoff alone now (user ruling 2026-08-11 — ambient
+                // celebrations had it firing constantly).
                 if let major = surfaced.first(where: {
                     fresh.contains($0.id) && $0.source == "GitHub"
                         && $0.tags.contains(GitHubFeedFetch.majorReleaseTag)
                 }) {
-                    chrome.refreshPulse += 1
                     chrome.flash(String(localized: "\(major.title) is out 🎉"))
                 }
                 // A source crossing a round total of things is a quiet
@@ -1439,21 +1441,17 @@ struct MainSurface: View {
                 }
             }
             // A source moment landed (a wallet or token new high, a Bitrefill
-            // refill, a quiet account posting again) — deal the same berry
-            // rain + toast the starred-repo release uses, tinted to the
-            // moment's own source hue when it names one, so every source's
-            // celebration reads the same family in its own color. The line
-            // names the moment.
+            // refill, a quiet account posting again) — a toast names the
+            // moment. Moments used to deal the berry rain too (tinted to the
+            // moment's source hue), and with every bridge that gained one the
+            // shower fired more and more often while just reading the feed —
+            // the rain is the PULL's payoff alone now (user ruling
+            // 2026-08-11). A queue (not a single slot) means a moment fired
+            // while backgrounded survives here until this drain runs on
+            // foreground.
             .onChange(of: sourceMoments.pulse) {
                 let moments = sourceMoments.drain()
                 guard !moments.isEmpty else { return }
-                // Rain once for the whole batch (repeating the berry shower
-                // per moment would read as spam, not delight); tinted to the
-                // newest moment's hue. A queue (not a single slot) means a
-                // moment fired while backgrounded survives here until this
-                // drain runs on foreground.
-                chrome.refreshHue = moments.last?.source.flatMap { DS.washHue(for: $0) }
-                chrome.refreshPulse += 1
                 // Toasts are one slot (ShellChrome.flash crossfades, never
                 // stacks) — showing only `moments.last` silently dropped
                 // every other moment in a busy pass (a widening blind spot

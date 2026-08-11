@@ -66,18 +66,11 @@ struct AccountDetailSheet: View {
     /// Bumped whenever a key is saved or removed so `AgentSpendRow` re-reads
     /// the ledger, which is a static store SwiftUI cannot observe.
     @State private var keyTick = 0
-    /// One shower per colour actually CHOSEN (prd §204's pour, dealt as the
-    /// app's own rain) — the setting you just picked falling through the sheet
-    /// in its own colour, so a swatch tap answers "what did I just change?"
-    /// before you close the tray and look. Re-tapping the colour already in
-    /// force pours nothing: one pick, one shower.
     /// Mirrored rather than read live: `Notifications.settings` is a computed
     /// UserDefaults pair, which SwiftUI cannot observe, so a toggle bound
     /// straight to it would not redraw its own switch.
     @State private var notifySettings = Notifications.settings
     @State private var notifyAuthorized = false
-    @State private var bleedPulse = 0
-    @State private var bleedHue: Color?
 
     var body: some View {
         DSTray(title: title, height: sheetHeight) {
@@ -92,9 +85,6 @@ struct AccountDetailSheet: View {
             case .notifications:
                 notifyCard
             }
-        }
-        .overlay {
-            if detail == .color { BerryRain(trigger: bleedPulse, hue: bleedHue) }
         }
         .onAppear { if detail == .data { exportURL = buildExport() } }
         .sheet(item: $privacyPage) { page in
@@ -500,8 +490,9 @@ struct AccountDetailSheet: View {
     /// family. Tapping a swatch is the whole interaction — no separate
     /// Save; `ThemeStore.shared.bleed` is the live setting, same as Theme's
     /// direct toggle. Ink leads the row because it is the DEFAULT (2026-08-04):
-    /// it pours nothing, and so it deals no shower either — a pick that removes
-    /// the pour must not answer with one.
+    /// it pours nothing. (A chosen swatch used to answer with a berry shower
+    /// in its own colour — retired 2026-08-11, user ruling: the rain is
+    /// pull-to-refresh's payoff alone.)
     private var bleedCard: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
             aliveRow("paintbrush.pointed.fill", DS.bleedMark, "Crown pour", bleedSubline)
@@ -510,12 +501,6 @@ struct AccountDetailSheet: View {
                     let selected = ThemeStore.shared.bleed.id == option.id
                     Button {
                         DSHaptic.tap()
-                        // A real change pours; re-picking what's already in
-                        // force is a no-op and reads as one.
-                        if !selected && option.pours {
-                            bleedHue = Color(hex: option.hex)
-                            bleedPulse += 1
-                        }
                         withAnimation(DS.Motion.standard) { ThemeStore.shared.bleed = option }
                     } label: {
                         // Every colour swatch wears exactly what it applies.
