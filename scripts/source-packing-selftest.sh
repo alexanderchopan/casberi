@@ -56,9 +56,15 @@ grep -q 'columns = SourceRowPacking.columns' "$TRAY" \
 # The card is the whole point (a filled container is SEEN rather than read), and
 # a fill that quietly becomes clear is the feature silently reverting to the
 # 2026-08-06 overline-only tray that prompted this work.
+#
+# 2026-08-11: moved off DS.surfaceWell onto DS.surfaceRaised — a well is read
+# INTO (a chart backing, a media cover), and these cards hold the screen's own
+# primary tappable content, so sitting below the page's own plane inverted the
+# relationship. The invariant this guard protects (a real fill, not clear) is
+# unchanged; only which token supplies it moved.
 grep -q 'UnevenRoundedRectangle' "$TRAY" \
   || { echo "✗ SourcesTray no longer draws a per-card shape — a spanning card cannot round only its outer corners without one"; exit 1; }
-grep -q 'fill(DS.surfaceWell)' "$TRAY" \
+grep -q 'fill(DS.surfaceRaised)' "$TRAY" \
   || { echo "✗ the category card has no fill — the grouping is back to being read rather than seen"; exit 1; }
 
 # A spanning card is drawn per slot and bridged across the row gap by NEGATIVE
