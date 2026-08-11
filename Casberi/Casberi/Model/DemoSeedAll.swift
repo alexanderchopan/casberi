@@ -241,9 +241,11 @@ enum DemoSeedAll {
         // drops the history key with the address (see its `addresses`
         // observer), so the curve needs no separate delete — but a wallet the
         // person watched themselves keeps both.
-        if let index = WalletStore.shared.addresses
-            .firstIndex(where: { $0.address.lowercased() == demoWallet.lowercased() }) {
-            WalletStore.shared.remove(at: IndexSet(integer: index))
+        for wallet in demoWallets {
+            if let index = WalletStore.shared.addresses
+                .firstIndex(where: { $0.address.lowercased() == wallet.address.lowercased() }) {
+                WalletStore.shared.remove(at: IndexSet(integer: index))
+            }
         }
 
         for event in demoMetrics { PostHogState.forget(event) }
@@ -1120,7 +1122,10 @@ enum DemoSeedAll {
             return row(.transaction, "\(verb) \(m.1) \(m.0 ? "from" : "to") \(m.2)",
                        source: "Wallet", ref: "demo:wallet:tx:\(i)", days: m.4, hour: 9 + (i % 12),
                        content: "Base · \(m.2)") { t in
-                t.walletAddress = demoWallet
+                // Spread across the watched wallets (2026-08-11) — see
+                // `walletFor(move:)`. Every row keyed to one wallet made the
+                // face shelf's other two faces open empty rooms.
+                t.walletAddress = walletFor(move: i)
                 t.transferDirection = m.0 ? "received" : "sent"
                 t.transferAmount = m.1
                 t.transferCounterparty = m.2
@@ -1713,6 +1718,34 @@ enum DemoSeedAll {
     /// copy of the literal is how that drifts silently.
     static let demoWallet = "0x1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d"
 
+    /// Every wallet the demo watches, in shelf order. The FIRST is
+    /// `demoWallet` — the one every seeded row, the balance curve, the Safe
+    /// snapshot and the approvals all key on, so it must stay first and must
+    /// stay this address. The other two exist so the face shelf (§356) has a
+    /// choice to offer; `walletFor(move:)` gives each of them a real share of
+    /// the transfers, because a face that opens an empty room is the dead
+    /// control §83 forbids.
+    ///
+    /// Labels are what a person would actually type — the demo banner already
+    /// says none of this is theirs, so the wallets don't have to say it again.
+    static let demoWallets: [(address: String, label: String)] = [
+        (demoWallet, "Everyday"),
+        ("0x7f3e9b2c5a184d6e0f9b3c7a2d5e8f1b4c6a9d20", "Savings"),
+        ("0x4c8d1a7e3b9f2650c8d4a1e7b3f9526048d1a7e3", "Hardware"),
+    ]
+
+    /// Which watched wallet a given transfer belongs to. Most stay on the
+    /// everyday wallet — the shelf should read as one wallet you live in and
+    /// two you keep, not three equal thirds, because the first is what every
+    /// other seeded reading (balance, curve, protocols) describes.
+    static func walletFor(move index: Int) -> String {
+        switch index {
+        case 3, 8:  return demoWallets[1].address   // Sam, Mia — savings
+        case 11:    return demoWallets[2].address   // the cold one, used once
+        default:    return demoWallet
+        }
+    }
+
     /// Three heads compose from stored bridge state rather than corpus rows, so
     /// no amount of seeded things can make them draw: PostHog's metric curve,
     /// x402's seller treemap, and the wallet's balance curve. This plants
@@ -1723,8 +1756,21 @@ enum DemoSeedAll {
         // throttle can never fold them into one point, and the newest sits 5
         // minutes back so a real fetch (there is none on a demo sim) wouldn't
         // append a seam onto the end of it.
+        // THREE watched wallets, not one (2026-08-11). The wallet scope's face
+        // shelf — the avatars under the room strip, §356 — gates on
+        // `wallet.addresses.count > 1`, so a demo watching a single wallet
+        // built the control correctly and gave it nothing to draw: the shelf
+        // never appeared, and the demo looked a generation behind the app.
+        // Not new state, just under-seeded state, which is the harder kind to
+        // notice — nothing is missing, a control is simply below its own floor.
+        //
+        // Three rather than the cap of five: enough that the shelf is a real
+        // choice and the "All" pill means something, few enough that each one
+        // has a believable share of the transfers below.
         if WalletStore.shared.addresses.isEmpty {
-            _ = WalletStore.shared.add(demoWallet, label: "Demo wallet")
+            for wallet in demoWallets {
+                _ = WalletStore.shared.add(wallet.address, label: wallet.label)
+            }
         }
         let curve: [Double] = [11_240, 11_180, 11_610, 11_540, 11_890, 12_050,
                                11_960, 12_310, 12_180, 12_460, 12_400, 12_480]
