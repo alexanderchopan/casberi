@@ -4205,10 +4205,13 @@ enum ProbeHooks {
         // position (2026-08-04, the website's visualization gallery).
         //
         // It is a marketing tool and says so: the wallet half rides
-        // `WalletDemoState` behind the same `viz.demo` flag, which is DEBUG
-        // -only and compiled out of any shipping build, and every thing it
-        // lands carries a `vizdemo:` ref so `-seedVizDemo clear` can take
-        // exactly its own rows back out without touching a real corpus.
+        // `WalletDemoState` behind the `viz.demo` UserDefaults flag, which
+        // stays DEBUG-only (no shipping build can set it) — but the STRUCT
+        // itself is no longer `#if DEBUG` (2026-08-11), because the furnished
+        // demo (`DemoMode.isActive`) reads the same synthetic books in
+        // Release, where it ships. Every thing this hook lands carries a
+        // `vizdemo:` ref so `-seedVizDemo clear` can take exactly its own
+        // rows back out without touching a real corpus.
         //
         // The alternative was mocking these charts in HTML for the website,
         // which is the thing that keeps getting rejected: a recreation drifts

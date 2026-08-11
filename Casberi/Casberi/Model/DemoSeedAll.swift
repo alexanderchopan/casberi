@@ -348,6 +348,7 @@ enum DemoSeedAll {
         var out: [Thing] = []
         out += photos()
         out += obsidian()
+        out += appleNotes()
         out += xArchive()
         out += instagram()
         out += tiktok()
@@ -420,6 +421,22 @@ enum DemoSeedAll {
                 t.topicsAt = .now
                 t.enrichedText = "\(n.0)\n\nWritten in the vault. \(n.1.joined(separator: ", "))."
             }
+        }
+    }
+
+    /// Apple Notes (2026-08-11 — the Notes category's own real gap: seeded
+    /// nowhere, connected nowhere, found by checking every category by hand
+    /// against `BridgeCatalog`). Plain notes, no tags/topics the way Obsidian's
+    /// vault carries — Apple Notes has no such structure to seed honestly.
+    private static func appleNotes() -> [Thing] {
+        let notes: [(String, Double)] = [
+            ("Packing list", 3), ("Wifi passwords", 8), ("Gift ideas", 14),
+            ("Book recs from Sam", 21), ("Standup talking points", 26),
+            ("Recipe — weeknight pasta", 34), ("Car maintenance log", 48),
+        ]
+        return notes.enumerated().map { i, n in
+            row(.note, n.0, source: "Apple Notes", ref: "demo:applenotes:\(i)",
+                days: n.1, hour: 21, content: n.0)
         }
     }
 
@@ -1744,6 +1761,7 @@ enum DemoSeedAll {
     /// name · status line · the one sentence the seat says it can do.
     private static let seatTable: [(String, String, String)] = [
         ("Obsidian", "Synced 4m ago", "Reads the notes in your vault."),
+        ("Apple Notes", "Synced 6m ago", "Reads the notes on your device."),
         ("Files", "Synced 12m ago", "Reads a folder you point it at."),
         ("Dropbox", "Synced 1h ago", "Reads the folder you name."),
         ("X", "Imported 412 posts", "Holds the archive you exported."),

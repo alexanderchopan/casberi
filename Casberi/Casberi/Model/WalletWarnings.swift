@@ -235,18 +235,30 @@ enum WalletWatch {
     @MainActor
     static func liveState(scopeTo scope: String? = nil,
                           context: ModelContext) async -> WalletLiveState {
+        // `-seedVizDemo YES` (ProbeHooks, DEBUG-only trigger) OR the furnished
+        // demo being active (2026-08-11, prd §351 follow-up — RELEASE-reachable,
+        // since `DemoMode` itself ships to TestFlight/App Store) paints the DeFi
+        // cards from synthetic books instead of the chain. It exists because
+        // three of this room's visualizations — lending health, the veAERO melt
+        // bar, the protocol composition strip — can only be photographed (or
+        // furnished) from a wallet that really holds those positions, and both
+        // marketing and the demo need them from a wallet that doesn't. Before
+        // this the check itself was `#if DEBUG`, so a Release build (every
+        // TestFlight/App Store build) compiled the whole branch away and
+        // `DemoMode`'s wallet — which HAS a seeded balance/history via
+        // `-seedWalletHistory`'s pattern — showed an empty "In protocols" strip
+        // and no DeFi tiles, the exact silent gap this rule exists to prevent
+        // (checked and confirmed against `demo-selftest.py`'s own reasoning:
+        // a bridge gaining a capability with no textual signature needs a
+        // human step, and nobody had taken it for this one).
         #if DEBUG
-        // `-seedVizDemo YES` (ProbeHooks) paints the DeFi cards from synthetic
-        // books instead of the chain. It exists because three of this room's
-        // visualizations — lending health, the veAERO melt bar, the protocol
-        // composition strip — can only be photographed from a wallet that
-        // really holds those positions, and marketing needs them from a wallet
-        // that doesn't. DEBUG-only and gated on a flag no shipping build can
-        // set, so a release binary compiles this away entirely.
-        if UserDefaults.standard.bool(forKey: "viz.demo") {
+        let vizDemo = UserDefaults.standard.bool(forKey: "viz.demo")
+        #else
+        let vizDemo = false
+        #endif
+        if vizDemo || DemoMode.isActive {
             return WalletDemoState.state
         }
-        #endif
         let watched = WalletStore.shared.addresses.map(\.address)
         let targets = scope.map { s in watched.filter { sameAddress($0, s) } } ?? watched
         guard !targets.isEmpty else { return WalletLiveState() }
@@ -539,8 +551,10 @@ enum WalletWatch {
 }
 
 
-#if DEBUG
-/// The synthetic wallet books behind `-seedVizDemo` (2026-08-04).
+/// The synthetic wallet books behind `-seedVizDemo` (2026-08-04) AND the
+/// furnished demo (`DemoMode.isActive`, 2026-08-11) — RELEASE-reachable now,
+/// not `#if DEBUG` (see `WalletWatch.liveState`'s own doc for why that gate
+/// was a bug once `DemoMode` needed to reach this, not a decision to reopen).
 ///
 /// Numbers chosen to be plainly demonstrative rather than plausible-as-real:
 /// a healthy Aave position beside a Morpho one drifting toward risk, and two
@@ -576,4 +590,3 @@ enum WalletDemoState {
         return s
     }
 }
-#endif
