@@ -1,0 +1,326 @@
+<meta charset="utf-8">
+<title>Source strip — category chips</title>
+<style>
+  /* Real tokens, DesignTokens.swift
+     page          #000000 / themed white
+     fillFaint     #ffffff0a / #00000008
+     textPrimary   #ffffff / #000000
+     textSecondary #ebebf599 / #3c3c43d6
+     textTertiary  #ebebf57e / #3c3c43bd
+     tint          #0a84ff   attention #ff9f0a
+     Space  s1 4  s2 10  s3 14  s4 18
+     SourceChips: chipSize 56 (48 min), iconSize 46 (40 min), ring 2.5,
+                  door 46 fixed, gap s3 14
+     label12 12/16 medium · subhead13 13/18 */
+
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    background: #0b0b0d;
+    color: #ebebf5cc;
+    padding: 32px 28px 64px;
+    -webkit-font-smoothing: antialiased;
+  }
+  body.light { background: #f2f2f7; color: #3c3c43d6; }
+
+  h1 { font: 700 22px/28px ui-rounded, -apple-system, system-ui; color: #fff; }
+  body.light h1 { color: #000; }
+  .sub { margin-top: 6px; max-width: 92ch; font-size: 13px; opacity: .72; }
+
+  .bar { display: flex; gap: 10px; align-items: center; margin: 18px 0 26px; flex-wrap: wrap; }
+  button {
+    font: 500 13px/1 inherit; color: inherit; cursor: pointer;
+    background: #ffffff14; border: 0; border-radius: 9999px; padding: 9px 15px;
+  }
+  body.light button { background: #00000010; }
+  button.on { background: #0a84ff; color: #fff; }
+
+  .panel { max-width: 760px; margin-bottom: 34px; }
+  .panel > h2 { font: 600 14px/18px inherit; color: #fff; }
+  body.light .panel > h2 { color: #000; }
+  .panel > .note { font-size: 12px; line-height: 17px; opacity: .62; margin: 3px 0 12px; max-width: 84ch; }
+
+  /* ---- the strip stage: a slice of the page under the pinned header ---- */
+  .stage {
+    width: 402px; border-radius: 22px; padding: 14px 0 16px;
+    background: #000; overflow: hidden; position: relative;
+  }
+  body.light .stage { background: #fff; box-shadow: 0 1px 8px #0000001f; }
+  .stage + .stage { margin-top: 10px; }
+  .stage .cap { font-size: 10.5px; opacity: .45; padding: 0 18px 8px; }
+
+  .strip { display: flex; align-items: center; gap: 14px; padding: 0 18px; overflow: hidden; }
+
+  /* fixed doors — unchanged in every option, they are the anchors */
+  .door {
+    flex: 0 0 auto; width: 46px; height: 46px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: #ffffff0f; backdrop-filter: blur(8px);
+  }
+  body.light .door { background: #00000008; }
+  .door.avatar { background: linear-gradient(135deg,#8a6cf0,#e06c8a); font: 600 15px/1 inherit; color: #fff; }
+  .door.grid { font-size: 17px; color: #ebebf599; }
+  body.light .door.grid { color: #3c3c43d6; }
+
+  /* --- circle chips (shipped) --- */
+  .chip {
+    flex: 0 0 auto; width: 46px; height: 46px; border-radius: 50%;
+    display: grid; place-items: center; text-align: center;
+    background: #ffffff0f; color: #fff;
+    font-weight: 500; line-height: 1.05; padding: 0 5px; overflow: hidden;
+  }
+  body.light .chip { background: #00000008; color: #000; }
+  .slot { flex: 0 0 auto; width: 56px; height: 56px; display: grid; place-items: center; position: relative; }
+  .slot.active::after, .slot.broken::after {
+    content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+  }
+  .slot.active::after { border: 2.5px solid #0a84ff; }
+  .slot.broken::after { border: 2.5px dashed #ff9f0a; }
+
+  .slot.min { width: 48px; height: 48px; }
+  .slot.min .chip { width: 40px; height: 40px; }
+
+  /* per-chip autoshrink, mimicking minimumScaleFactor(0.55) on label12 */
+  .fs12 { font-size: 12px; } .fs10 { font-size: 10px; } .fs9 { font-size: 9px; }
+  .fs8 { font-size: 8px; } .fs7 { font-size: 7.2px; }
+
+  .pin { color: #0a84ff; font-size: 19px; }
+
+  /* --- capsule chips (option A) --- */
+  .cap-chip {
+    flex: 0 0 auto; height: 44px; border-radius: 22px;
+    display: flex; align-items: center; gap: 7px; padding: 0 15px;
+    background: #ffffff0f; color: #fff; font: 500 13px/1 inherit;
+    position: relative;
+  }
+  body.light .cap-chip { background: #00000008; color: #000; }
+  .cap-slot { flex: 0 0 auto; padding: 5px 0; position: relative; display: grid; place-items: center; }
+  .cap-slot.active .cap-chip { box-shadow: 0 0 0 2.5px #0a84ff; }
+  .cap-slot.broken .cap-chip { outline: 2.5px dashed #ff9f0a; outline-offset: 2.5px; }
+  .cap-slot.min .cap-chip { height: 36px; border-radius: 18px; font-size: 12px; padding: 0 12px; }
+  .cap-chip.word-only.circle { width: 44px; padding: 0; justify-content: center; border-radius: 50%; }
+
+  /* landing mark: the resolved member's own icon, in the capsule or badged on a circle */
+  .mark {
+    width: 20px; height: 20px; border-radius: 50%;
+    display: grid; place-items: center; font: 700 10px/1 inherit; color: #fff;
+    flex: 0 0 auto;
+  }
+  .badge {
+    position: absolute; right: -1px; bottom: -1px; width: 18px; height: 18px;
+    border-radius: 50%; display: grid; place-items: center;
+    font: 700 9px/1 inherit; color: #fff; box-shadow: 0 0 0 2px #000;
+  }
+  body.light .badge { box-shadow: 0 0 0 2px #fff; }
+
+  .m-gh  { background: #24292f; } body.light .m-gh { background: #24292f; }
+  .m-str { background: #635bff; }
+  .m-kal { background: #00d084; color: #003b24; }
+  .m-bsky{ background: #1185fe; }
+  .m-obs { background: #7c3aed; }
+  .m-wal { background: linear-gradient(135deg,#f7931a,#ffd166); color: #3b2600; }
+  .m-ph  { background: linear-gradient(135deg,#ff375f,#ff9f0a); }
+
+  /* --- switcher capsule (one tier down) --- */
+  .switcher {
+    display: inline-flex; gap: 2px; padding: 4px; border-radius: 999px;
+    background: #ffffff0f; backdrop-filter: blur(8px); margin: 10px 18px 0;
+  }
+  body.light .switcher { background: #00000008; }
+  .scope {
+    display: flex; align-items: center; gap: 5px; padding: 8px 14px;
+    border-radius: 999px; background: #ffffff0a; font: 400 13px/1 inherit; color: #ebebf599;
+    position: relative;
+  }
+  body.light .scope { background: #00000006; color: #3c3c43d6; }
+  .scope.on { background: #0a84ff2e; color: #fff; font-weight: 600; }
+  body.light .scope.on { color: #000; }
+  .scope.needs { outline: 2px dashed #ff9f0a; outline-offset: -2px; }
+  .scope .mark { width: 14px; height: 14px; font-size: 7px; }
+  .scope .dot { width: 6px; height: 6px; border-radius: 50%; background: #ff9f0a; position: absolute; top: 4px; right: 6px; }
+
+  .legend { font-size: 11px; opacity: .55; margin-top: 8px; }
+</style>
+<body>
+
+<h1>Source strip — category chips</h1>
+<p class="sub">
+  The pixels pass prd §351 called for and the ship skipped: every source chip is now a category
+  WORD, but it landed wearing "All"'s glass circle verbatim. Panels below: what shipped, the two
+  cheap corrections, and the capsule treatment that fits a strip whose chips are now words with a
+  hard cap of eleven. Doors, rings, order and the central invariant are untouched in every option.
+</p>
+<div class="bar">
+  <button class="on" onclick="document.body.classList.remove('light');mark(this)">Dark</button>
+  <button onclick="document.body.classList.add('light');mark(this)">Light</button>
+</div>
+
+<div class="panel">
+  <h2>0 · Shipped 2026-08-11 — words in "All"'s circle, per-chip autoshrink</h2>
+  <p class="note">
+    Each word shrinks independently to fit its own 46pt circle (minimumScaleFactor 0.55), so
+    "Life" renders near-full-size beside a "Shopping" at ~7pt — one row, four type sizes, and the
+    minimized fold (second stage) takes the worst case smaller still. The row also lost every
+    brand mark at once: eight identical grey circles where the strip used to be the most colorful
+    thing on screen.
+  </p>
+  <div class="stage"><div class="cap">at rest · active: Wallet · Work needs reconnecting</div>
+    <div class="strip">
+      <div class="door avatar">A</div><div class="door grid">⊞</div>
+      <div class="slot"><div class="chip fs12">All</div></div>
+      <div class="slot"><div class="chip pin">&#9884;</div></div>
+      <div class="slot active"><div class="chip fs10">Wallet</div></div>
+      <div class="slot"><div class="chip fs9">Markets</div></div>
+      <div class="slot broken"><div class="chip fs10">Work</div></div>
+      <div class="slot"><div class="chip fs12">Life</div></div>
+      <div class="slot"><div class="chip fs10">Social</div></div>
+      <div class="slot"><div class="chip fs9">Reading</div></div>
+    </div>
+  </div>
+  <div class="stage"><div class="cap">minimized (scrolled) · 40pt chips</div>
+    <div class="strip">
+      <div class="door avatar">A</div><div class="door grid">⊞</div>
+      <div class="slot min"><div class="chip fs10">All</div></div>
+      <div class="slot min"><div class="chip pin" style="font-size:16px">&#9884;</div></div>
+      <div class="slot min active"><div class="chip fs9">Wallet</div></div>
+      <div class="slot min"><div class="chip fs8">Markets</div></div>
+      <div class="slot min broken"><div class="chip fs9">Work</div></div>
+      <div class="slot min"><div class="chip fs10">Life</div></div>
+      <div class="slot min"><div class="chip fs9">Social</div></div>
+      <div class="slot min"><div class="chip fs8">Reading</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>B · Keep the circles, share ONE type size</h2>
+  <p class="note">
+    The one-line fix if circles stay: compute the scale that fits the longest present category
+    once ("Shopping" bounds it) and set every chip to it. The row reads as one system again.
+    Still small — a word sized by the worst case wears the worst case everywhere — but honest
+    about it.
+  </p>
+  <div class="stage"><div class="cap">every word at the "Shopping" scale</div>
+    <div class="strip">
+      <div class="door avatar">A</div><div class="door grid">⊞</div>
+      <div class="slot"><div class="chip fs9">All</div></div>
+      <div class="slot"><div class="chip pin">&#9884;</div></div>
+      <div class="slot active"><div class="chip fs9">Wallet</div></div>
+      <div class="slot"><div class="chip fs9">Markets</div></div>
+      <div class="slot broken"><div class="chip fs9">Work</div></div>
+      <div class="slot"><div class="chip fs9">Life</div></div>
+      <div class="slot"><div class="chip fs9">Social</div></div>
+      <div class="slot"><div class="chip fs9">Reading</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>A · Capsules — the container words actually fit <span style="opacity:.5;font-weight:400">(recommended)</span></h2>
+  <p class="note">
+    The 2026-07-09 "labels made the row scroll" ruling was against per-source labels — dozens of
+    them. Categories are capped at eleven and most people show five or six, so the objection that
+    created icon-only circles no longer applies to this strip. A 44pt capsule holds every category
+    name at full 13pt with air; the tint ring becomes a capsule stroke, the dashed attention ring
+    survives unchanged, and the doors/"All"/pin keep their circles as the fixed anchors — words in
+    capsules, marks in circles, one grammar each.
+  </p>
+  <div class="stage"><div class="cap">at rest</div>
+    <div class="strip">
+      <div class="door avatar">A</div><div class="door grid">⊞</div>
+      <div class="cap-slot"><div class="cap-chip word-only circle">All</div></div>
+      <div class="cap-slot"><div class="cap-chip word-only circle pin" style="font-size:18px">&#9884;</div></div>
+      <div class="cap-slot active"><div class="cap-chip">Wallet</div></div>
+      <div class="cap-slot"><div class="cap-chip">Markets</div></div>
+      <div class="cap-slot broken"><div class="cap-chip">Work</div></div>
+      <div class="cap-slot"><div class="cap-chip">Life</div></div>
+      <div class="cap-slot"><div class="cap-chip">Social</div></div>
+    </div>
+  </div>
+  <div class="stage"><div class="cap">minimized · 36pt capsules — the word stays legible where the 40pt circle did not</div>
+    <div class="strip">
+      <div class="door avatar">A</div><div class="door grid">⊞</div>
+      <div class="cap-slot min"><div class="cap-chip word-only circle" style="width:36px">All</div></div>
+      <div class="cap-slot min active"><div class="cap-chip">Wallet</div></div>
+      <div class="cap-slot min"><div class="cap-chip">Markets</div></div>
+      <div class="cap-slot min broken"><div class="cap-chip">Work</div></div>
+      <div class="cap-slot min"><div class="cap-chip">Life</div></div>
+      <div class="cap-slot min"><div class="cap-chip">Social</div></div>
+      <div class="cap-slot min"><div class="cap-chip">Reading</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>A+C · Capsule + the landing member's own mark</h2>
+  <p class="note">
+    A category chip opens on its last-visited member and nothing on the chip says which — tapping
+    "Work" lands on GitHub or Stripe depending on invisible state. The resolved member's brand
+    mark inside the capsule answers that before the tap, restores the color and scan-by-recognition
+    the fold deleted, and gives the coin-flip a real change to flip when you move venues within a
+    category. Drawn only when the category has &gt;1 member (a lone member's mark says nothing the
+    word doesn't).
+  </p>
+  <div class="stage"><div class="cap">Wallet last left on the balance room · Work opens on GitHub · Markets on Kalshi</div>
+    <div class="strip">
+      <div class="door avatar">A</div><div class="door grid">⊞</div>
+      <div class="cap-slot"><div class="cap-chip word-only circle">All</div></div>
+      <div class="cap-slot active"><div class="cap-chip"><span class="mark m-wal">W</span>Wallet</div></div>
+      <div class="cap-slot"><div class="cap-chip"><span class="mark m-kal">K</span>Markets</div></div>
+      <div class="cap-slot broken"><div class="cap-chip"><span class="mark m-gh">G</span>Work</div></div>
+      <div class="cap-slot"><div class="cap-chip"><span class="mark m-ph">P</span>Life</div></div>
+      <div class="cap-slot"><div class="cap-chip"><span class="mark m-bsky">B</span>Social</div></div>
+      <div class="cap-slot"><div class="cap-chip">Notes</div></div>
+    </div>
+  </div>
+  <div class="stage"><div class="cap">same idea if circles stay: an 18pt badge, bottom-trailing (busier — shown for comparison)</div>
+    <div class="strip">
+      <div class="door avatar">A</div><div class="door grid">⊞</div>
+      <div class="slot"><div class="chip fs9">All</div></div>
+      <div class="slot active"><div class="chip fs9">Wallet</div><span class="badge m-wal">W</span></div>
+      <div class="slot"><div class="chip fs9">Markets</div><span class="badge m-kal">K</span></div>
+      <div class="slot broken"><div class="chip fs9">Work</div><span class="badge m-gh">G</span></div>
+      <div class="slot"><div class="chip fs9">Life</div><span class="badge m-ph">P</span></div>
+      <div class="slot"><div class="chip fs9">Social</div><span class="badge m-bsky">B</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>D · The switcher finishes what the category ring starts</h2>
+  <p class="note">
+    A dashed ring on "Work" says "some seat behind this needs you" — §351's own text promises the
+    switcher is one tap from naming which, but `CategoryVenueSwitcher` draws no attention state
+    at all today. The broken scope wears the same dashed orange, one tier down, so the drill-down
+    actually resolves. (VoiceOver already names the seats; this is the sighted equivalent.)
+  </p>
+  <div class="stage"><div class="cap">inside Work, landed on GitHub · Stripe's key was revoked</div>
+    <div class="strip">
+      <div class="door avatar">A</div><div class="door grid">⊞</div>
+      <div class="cap-slot"><div class="cap-chip word-only circle">All</div></div>
+      <div class="cap-slot broken active" style="--x:1"><div class="cap-chip">Work</div></div>
+      <div class="cap-slot"><div class="cap-chip">Wallet</div></div>
+      <div class="cap-slot"><div class="cap-chip">Markets</div></div>
+      <div class="cap-slot"><div class="cap-chip">Life</div></div>
+      <div class="cap-slot"><div class="cap-chip">Social</div></div>
+    </div>
+    <div class="switcher">
+      <div class="scope on"><span class="mark m-gh">G</span>GitHub</div>
+      <div class="scope needs"><span class="mark m-str">S</span>Stripe</div>
+      <div class="scope"><span class="mark m-obs">C</span>Cursor</div>
+      <div class="scope"><span class="mark m-kal" style="background:#f5a623;color:#3b2600">T</span>Trello</div>
+    </div>
+    <div class="legend" style="padding:0 18px">dashed = needs reconnecting, same vocabulary both tiers</div>
+  </div>
+</div>
+
+<script>
+  function mark(btn) {
+    for (const b of btn.parentElement.querySelectorAll('button')) b.classList.remove('on');
+    btn.classList.add('on');
+  }
+</script>
+</body>
+</html>
