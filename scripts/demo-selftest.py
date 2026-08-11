@@ -449,6 +449,105 @@ def check_f_shape_coverage(files_text):
         check(f'F · Shape.{shape} has a seeded source among {sources}', present, True)
 
 
+# Check G is the INVERSE of D/E: D/E ask "does what the demo claims have real
+# backing" (catalog -> demo, forward); this asks "does everything the
+# catalog offers have a demo seat" (demo -> catalog, reverse). Neither
+# direction implies the other — D/E alone would happily pass a demo that
+# connects six of ninety-six offers, which is exactly what shipped
+# (2026-08-11, user: "i don't think the demo shows every feed actually
+# connected... look at wallet for example, it only has a few"). Reading the
+# real bridges for every reported gap found ONE more of check D/E's own
+# failure shape: "Gemini" (the Google Takeout chat import) already had real
+# seeded rows in the `chats` array — via `source: c.1`, a variable, so
+# check E's literal-string search never had a hope of seeing it — but no
+# seatTable entry, so the catalog/Settings screen read "not connected" over
+# a room that wasn't empty. Fixed alongside this check, not found by it —
+# a lesson for what this check CAN'T do: it proves a name is accounted for
+# somewhere, never that the accounting is consistent with the rows.
+#
+# Three exemption sets, each a conscious ruling checked against the real
+# bridge source before adding — never a guess, and never a bare "seems
+# unused":
+KNOWN_BYOK_PROVIDER = {
+    # Agent-group BYOK key providers (`Model/AgentAnswer.swift` family) —
+    # "connecting" one only stores a key that powers "Try with your key" on
+    # an ANSWER already composed elsewhere. None lands a `Thing`, so none
+    # has a source, a room, or a chip to seed. ("Gemini" is NOT here — the
+    # catalog's "Gemini" offer is the chat-IMPORT bridge, which does land
+    # rows; Google's Gemini Apps is not itself a BYOK provider in this
+    # catalog.)
+    "Bankr", "Grok", "OpenRouter", "Venice",
+}
+KNOWN_BALANCE_ONLY = {
+    # Merge into the Wallet room's holdings/composition read
+    # (`WalletPortfolio`/`WalletComposition`) — never land a `Thing` with
+    # their own source, so they can never earn their own tray icon
+    # regardless of connection status, in the demo or for a real user.
+    # Verified against each bridge file: `ExchangeBridge.swift` (Coinbase/
+    # Kraken/Binance/Gemini Exchange — balances only, no `Thing(kind:`
+    # anywhere in the file), `EthValidatorWatch.swift` (validator positions,
+    # same shape), and the five wallet-riding DeFi protocols that stamp
+    # `source: "Wallet"` on everything they land (Aave, Aerodrome,
+    # Hyperliquid, Morpho, Safe) plus Uniswap, which appears only as a
+    # `transferCounterparty` string inside a Wallet transaction, never its
+    # own source.
+    "Coinbase", "Kraken", "Binance", "Gemini Exchange", "ETH Validators",
+    "Aave", "Aerodrome", "Hyperliquid", "Morpho", "Safe", "Uniswap",
+}
+KNOWN_CHIPLESS_CAPTURE = {
+    # Rides the generic share-sheet capture path (`Thing`'s own default
+    # source, "You") rather than a distinct bridge — Apple offers no export
+    # or live read for Notes, so there is no ingest file to stamp a
+    # dedicated source at all. `Corpus.chiplessSources` excludes "You" from
+    # ever earning a room or chip by ruling (2026-08-02, "get rid of the you
+    # chip and room"), so this could never be tray-visible even if seeded.
+    "Apple Notes",
+}
+KNOWN_SEARCH_ONLY = {
+    # `Thing.searchOnlySources` — reachable by search/Find, never a room or
+    # a chip, by the SAME ruling as the two above but a different mechanism
+    # (findable-not-browsable rather than no-distinct-source-at-all).
+    "Contacts", "HomeKit",
+}
+
+
+def extract_connectable_catalog_offers(catalog_src):
+    """Every `Offer(name: "…", …, connectable: true, …)` — the offers a real
+    person can actually tap Connect on. `connectable: false` entries (a
+    "Soon" tile with no working setup screen) are excluded on purpose: they
+    have nothing to seed."""
+    clean = strip_comments(catalog_src)
+    pairs = re.findall(
+        r'Offer\(name:\s*"([^"]+)".*?connectable:\s*(true|false)',
+        clean, re.DOTALL)
+    return {name for name, connectable in pairs if connectable == "true"}
+
+
+def check_g_catalog_offers_have_demo_seats(files_text):
+    """Check G — the reverse of D/E. Every CONNECTABLE catalog offer either
+    has a demo seat (a `seatTable` entry, via `KNOWN_CATALOG_ALIAS` where the
+    names differ — the same alias set D already uses, reused rather than
+    duplicated) or is named in one of the three exemption sets above with a
+    checked reason. A catalog offer in neither bucket is a demo gap: a real
+    person could connect it and see their own things; a demo visitor sees
+    nothing, and the "everything already connected" promise is false for
+    that seat."""
+    names, _ = extract_seat_table(files_text["DemoSeedAll"])
+    if names is None:
+        check("G · seatTable found", False, True)
+        return
+    legacy = {"Gmail", "Calendar", "ChatGPT", "Reminders", "Photos",
+              "Claude", "Wallet", "Tokens"}
+    demo_seat_catalog_names = {KNOWN_CATALOG_ALIAS.get(n, n) for n in names} | legacy
+    connectable = extract_connectable_catalog_offers(files_text["BridgeCatalog"])
+    exempt = KNOWN_BYOK_PROVIDER | KNOWN_BALANCE_ONLY | KNOWN_CHIPLESS_CAPTURE | KNOWN_SEARCH_ONLY
+    for offer in sorted(connectable):
+        if offer in exempt:
+            continue
+        check(f'G · catalog offer "{offer}" has a demo seat',
+              offer in demo_seat_catalog_names, True)
+
+
 def run_checks(files_text):
     before = len(failures)
     check_a_release_reachable(files_text)
@@ -457,6 +556,7 @@ def run_checks(files_text):
     check_d_seat_names_are_real(files_text)
     check_e_seat_names_have_rows(files_text)
     check_f_shape_coverage(files_text)
+    check_g_catalog_offers_have_demo_seats(files_text)
     return len(failures) == before
 
 
@@ -544,6 +644,19 @@ def self_test():
         # accidentally break unrelated checks running over the same fixture.
         lambda f: f.__setitem__("DemoSeedAll", f["DemoSeedAll"].replace('"Files"', '"NotFiles"')),
         check_f_shape_coverage, True)
+
+    ok &= verify_fixture(
+        "a connectable catalog offer with no demo seat is caught",
+        # Strip GitLab's seatTable line — a real, non-exempt, connectable
+        # catalog offer with real seeded rows loses its ONLY route into
+        # `demo_seat_catalog_names`, so check G must flag it even though its
+        # rows are still sitting in the file (this check is about the
+        # CATALOG/SETTINGS status, not about rows — check E already covers
+        # rows).
+        lambda f: f.__setitem__("DemoSeedAll", f["DemoSeedAll"].replace(
+            '("GitLab", "Synced 10m ago", "Reads issues and merge requests assigned to you."),\n        ',
+            '', 1)),
+        check_g_catalog_offers_have_demo_seats, True)
 
     # And the clean tree must pass all three, so the fixtures above are
     # proven against a REAL failure, not a checker that always fails.

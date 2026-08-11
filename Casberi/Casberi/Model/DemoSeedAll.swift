@@ -93,7 +93,12 @@ enum DemoSeedAll {
                               // real is connected), only through the DEBUG
                               // `-demoEnter` hook.
                               PostHogWatch.metricRef("signed_up"),
-                              PostHogWatch.metricRef("answer_asked")]
+                              PostHogWatch.metricRef("answer_asked"),
+                              // Railgun rows (2026-08-11) carry the real
+                              // "railgun:shield:"/"railgun:unshield:" prefix
+                              // for the same ref-shape-matching reason as
+                              // Peer/Privacy Pools above.
+                              "railgun:shield:demo", "railgun:unshield:demo"]
 
     // MARK: - Entry point
 
@@ -1074,6 +1079,29 @@ enum DemoSeedAll {
                 t.walletAddress = demoWallet
             }
         }
+        // Railgun ranks by token, read as DATA off `priceValue`/`priceCurrency`
+        // — never parsed back out of the title. Ref must carry the real
+        // `"railgun:shield:"`/`"railgun:unshield:"` prefix (`RailgunRoom
+        // .direction(ref:)`'s exact match) or the move is dropped before
+        // it's even counted, the same `"demo:"`-prefix miss as Peer/Privacy
+        // Pools above.
+        let railgunMoves: [(String, String, String, Double, Double)] = [
+            ("Shielded 0.4000 ETH into Railgun", "shield", "ETH", 0.4000, 6),
+            ("Shielded 500 DAI into Railgun", "shield", "DAI", 500, 14),
+            ("Received 0.1500 ETH from Railgun", "unshield", "ETH", 0.1500, 23),
+        ]
+        out += railgunMoves.enumerated().map { i, r in
+            row(.transaction, r.0, source: "Railgun", ref: "railgun:\(r.1):demo\(i)",
+                days: r.4, hour: 21, content: "Ethereum · zk-SNARK") { t in
+                t.walletAddress = demoWallet
+                t.transferDirection = r.1 == "shield" ? "sent" : "received"
+                t.priceValue = r.3
+                t.priceCurrency = r.2
+                if r.1 == "unshield" {
+                    t.enrichedText = "Railgun can't tell you who sent this — inside the pool the sender is private by design."
+                }
+            }
+        }
         return out
     }
 
@@ -1269,6 +1297,35 @@ enum DemoSeedAll {
                 t.summary = "Card back: check the measurements first."
             }
         }
+        // GitLab's own title shape: `references.full` (group/project#N or
+        // !N) leads, matching `gitlabThing`'s real join. No `content` URL —
+        // the P4 rule (a real host with a fabricated path/id is a sharper
+        // dead door than none), the same choice Trello/Linear/GitHub above
+        // already made.
+        let gitlab: [(String, Mark, Double)] = [
+            ("casberi/casberi#58 · Fix the flat curve on refresh", .doing, 2),
+            ("casberi/casberi!61 · Serialize NLEmbedding inference", .done, 5),
+            ("casberi/casberi#54 · Receipts screen misses runtime hosts", .todo, 11),
+        ]
+        out += gitlab.enumerated().map { i, g in
+            row(.link, g.0, source: "GitLab", ref: "demo:gitlab:\(i)", days: g.2, hour: 13) { t in
+                t.mark = g.1
+            }
+        }
+        // Jira's title shape: the key leads on its own (`"PROJ-123 · summary"`,
+        // legible without a join the way a bare Trello/Linear title isn't).
+        let jira: [(String, Mark, Double, Double?)] = [
+            ("CAS-201 · Draft the launch email", .todo, 3, 5),
+            ("CAS-198 · Review the App Store screenshots", .doing, 6, nil),
+            ("CAS-190 · File the CloudKit schema deploy", .done, 15, nil),
+        ]
+        out += jira.enumerated().map { i, j in
+            row(.reminder, j.0, source: "Jira", ref: "demo:jira:\(i)", days: j.2, hour: 9,
+                tags: ["Casberi"]) { t in
+                t.mark = j.1
+                if let due = j.3 { t.dueAt = at(-due, 17) }
+            }
+        }
         let cursor: [(String, Double)] = [
             ("casberi · seed every room", 1), ("casberi · fix the flat curve", 4),
             ("Failed · casberi · migrate the schema", 9),
@@ -1428,6 +1485,19 @@ enum DemoSeedAll {
                 days: c.2, hour: 14, content: "A saved conversation about \(c.0.lowercased()).") { t in
                 t.messageCount = 6 + (i % 9)
                 t.enrichedText = "The thread settles on a plan for \(c.0.lowercased())."
+            }
+        }
+        // Claude Code's title shape is `ClaudeCodeSession.title(project:
+        // headline:)` — "project · headline", never a join this file invents.
+        let claudeCode: [(String, Int, Double)] = [
+            ("casberi · Fix the demo room-head coverage gaps", 42, 1),
+            ("casberi · Wire the source tray packing self-test", 18, 4),
+            ("casberi · Chase the embedding race on foreground", 61, 12),
+        ]
+        out += claudeCode.enumerated().map { i, c in
+            row(.chat, c.0, source: "Claude Code", ref: "demo:claudecode:\(i)",
+                days: c.2, hour: 20, tags: ["Session", "casberi"]) { t in
+                t.messageCount = c.1
             }
         }
         out += (0..<10).map { i in
@@ -1681,6 +1751,16 @@ enum DemoSeedAll {
         ("Stripe", "Synced 10m ago", "Reads what your money did."),
         ("PostHog", "2 metrics", "Reads the numbers behind what you ship."),
         ("GitHub", "Synced 5m ago", "Reads what you wrote."),
+        ("GitLab", "Synced 10m ago", "Reads issues and merge requests assigned to you."),
+        ("Jira", "Synced 20m ago", "Reads the issues assigned to you."),
+        ("Claude Code", "Synced 1h ago", "Brings in your Claude Code sessions."),
+        // Already had real seeded rows (the `chats` array's Gemini entries)
+        // but no seatTable membership — the app catalog and the feed
+        // disagreed, the exact §215/894481c failure the checks below exist
+        // to catch. Found building the catalog-completeness check
+        // (2026-08-11).
+        ("Gemini", "Synced 30m ago", "Brings in your Gemini chats."),
+        ("Railgun", "Synced 45m ago", "Reads your wallet's shielded moves."),
         ("Linear", "Synced 15m ago", "Reads the work assigned to you."),
         ("Notion", "Synced 25m ago", "Reads your pages."),
         ("Slack", "3 channels", "Reads the channels you name."),

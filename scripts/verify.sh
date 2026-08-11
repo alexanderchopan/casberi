@@ -627,6 +627,12 @@ fi
 #     which is the exact registry-drift class this probe's own header
 #     warns about and would have reported three false "gaps" forever.
 #
+# `railgunHead` (2026-08-11) is the ELEVENTH source head, added by a
+# concurrent session mid-way through this list's own life — added here the
+# same day, the exact discipline the registry-drift finding above argues
+# for: a new `SourceHead` case is a new line here in the SAME commit, not a
+# later "oh, we forgot one."
+#
 # The (name, source) pairs mirror `ProbeHooks.swift`'s `roomInsightProbe`
 # hook and `FeedScreen.sourceHead(_:)`'s switch — change one, change all
 # three (the same acknowledged fragility that hook's own header already
@@ -650,6 +656,7 @@ else
     peerHead          "Peer"
     privacyPoolsHead  "Privacy Pools"
     gnosisPayHead     "Gnosis Pay"
+    railgunHead       "Railgun"
   )
   MISSING_HEADS=()
   for name in "${(k)ROOM_HEADS[@]}"; do
@@ -669,7 +676,7 @@ else
   done
   xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
   if (( ${#MISSING_HEADS[@]} == 0 )); then
-    print -P "%F{green}✓ demo room-head coverage (10/10)%f"
+    print -P "%F{green}✓ demo room-head coverage (${#ROOM_HEADS[@]}/${#ROOM_HEADS[@]})%f"
   else
     fail "demo room head(s) never compose: ${MISSING_HEADS[*]} — see $ROOMHEAD_LOG.<name>"
   fi
