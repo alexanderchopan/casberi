@@ -37,6 +37,36 @@ import SwiftUI
 /// height (~680pt, past the resting cap, plus 46pt chips that truncate a long
 /// name against prd §201).
 ///
+/// **The card RISES, it does not recess (user ruling 2026-08-11).** Its first
+/// cut used `DS.surfaceWell` — the ladder's rung for a nested backing — and the
+/// reading was backwards for what this box is. A well is something you look
+/// INTO (a chart backing, a media cover); these cards hold the primary tappable
+/// content of the screen, so putting them below the plane that content sits on
+/// inverts the relationship. It showed, too: at `#080809` on a `#111113` sheet
+/// over a `#000` page the cards were within 3% of the page and read as holes
+/// punched back through the tray, with twenty saturated marks floating in them
+/// — the container doing the opposite of the job it was added for. They now
+/// take `DS.surfaceRaised` + `DS.raisedShadow`; see those tokens for why the
+/// fill is opaque (the seam) and why the shadow is dark-transparent (the halo).
+///
+/// **Four treatments were compared as rendered pixels, not as argument**
+/// (`prototype/sources-tray-tone-v1.html`): shipping-today, the full flip
+/// (tray to ink, cards to the card plane), the raised card, and a deeper well.
+/// The flip lost on two counts — it inverts the convention every other `DSTray`
+/// in the app follows (`FollowImportSheet`, `StarterPackImportSheet`,
+/// `AgentPanelGrid`, the setup screens all draw containers as wells on a
+/// sheet), and it cannot use `dsInk()`, which forces `.colorScheme(.dark)` and
+/// would paint the tray black in light mode.
+///
+/// **The category name stays `textTertiary` — it is NOT tinted** (asked and
+/// ruled 2026-08-11). Tinting the overline was one of the three treatments
+/// mocked in `sources-tray-structure-v1.html` and the card won INSTEAD of it,
+/// so colouring it now restores the thing the card replaced; and tint means
+/// SELECTION in this tray (the active chip's ring), so eight blue category
+/// names would put selection's colour on eight unselected things. If the names
+/// read weak, the fix is weight or size — never hue (brief §8: colour is
+/// identity, state, or magnitude; decoration is banned).
+///
 /// **The first cut of the card let a group straddle a row end, and it was
 /// wrong.** Inheriting the old cell packing meant a group running past column
 /// five arrived on the next row as a card with no title, one chip in it, cut at
@@ -310,6 +340,20 @@ struct SourcesTray: View {
     /// alternative — one shape per block in an HStack — needs proportional
     /// widths, which SwiftUI has no flex-grow for, and would have cost the
     /// `GeometryReader` this file has avoided since it shipped.
+    ///
+    /// **The shadow rides the WHOLE LAYER, not each piece** — the one place
+    /// this file departs from `dsElevatedSurface`, and the bridging is why.
+    /// A shadow cast per piece is cast from a piece's own silhouette, so every
+    /// interior seam of a wide card would darken the neighbour drawn beside it:
+    /// a line down the middle of the card, in the app whose no-line rule has
+    /// zero exceptions. Grouped, the overlapping opaque pieces composite to one
+    /// continuous silhouette per card and cast one clean outline; two different
+    /// cards in a row are separated by a real gap, so they still shadow apart.
+    ///
+    /// The offscreen rasterization `dsElevatedSurface` warns about is bought
+    /// cheaply here: this layer holds `Color.clear` and flat shapes — no text,
+    /// no icons, no images — and it is transparent in dark (`raisedShadow`), so
+    /// the cost lands only on a light-mode tray that is mostly at rest anyway.
     private func cardLayer(_ row: PackedRow) -> some View {
         let owner = owners(row)
         return HStack(spacing: DS.Space.s2) {
@@ -319,6 +363,8 @@ struct SourcesTray: View {
                     .background { slotFill(owner, column) }
             }
         }
+        .compositingGroup()
+        .shadow(color: DS.raisedShadow, radius: 6, x: 0, y: 1)
     }
 
     @ViewBuilder
@@ -333,7 +379,7 @@ struct SourcesTray: View {
                 bottomTrailingRadius: opensTrailing ? radius : 0,
                 topTrailingRadius: opensTrailing ? radius : 0
             )
-            .fill(DS.surfaceWell)
+            .fill(DS.surfaceRaised)
             .padding(.leading, opensLeading ? 0 : -DS.Space.s2)
             .padding(.trailing, opensTrailing ? 0 : -DS.Space.s2)
         }

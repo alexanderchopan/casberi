@@ -1,0 +1,121 @@
+<meta charset="utf-8">
+<title>Sources tray — C as shipped</title>
+<style>
+  /* AS IMPLEMENTED, 2026-08-11 — read off DesignTokens.swift after the change.
+     surfaceRaised  #1a1a1c / #f8f8f8      (was surfaceWell #080809 / #e9e9ef)
+     raisedShadow   transparent / #0000001f  radius 6, y 1
+     surfaceSheet   #111113 / #ffffff
+     page           #000000 / #ffffff
+     Note the mockup's C used a TRANSLUCENT fillFaint + a 3px shadow. The
+     shipped one is opaque (the bridged-card seam would double a translucent
+     fill into a hairline) and its shadow is dark-transparent (cardShadow is
+     calibrated for the black page; on a #111113 sheet it reads as a stroke). */
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    background: #0b0b0d; color: #ebebf5cc; padding: 30px 28px 60px;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1 { font: 700 22px/28px ui-rounded, -apple-system, system-ui; color: #fff; }
+  .sub { margin: 6px 0 24px; max-width: 92ch; font-size: 13px; opacity: .7; }
+  h3 { font: 600 12px/16px inherit; color: #fff; opacity: .55; margin: 26px 0 12px;
+       text-transform: none; }
+
+  .pair { display: flex; gap: 22px; flex-wrap: wrap; }
+  .panel { width: 402px; }
+  .panel > h2 { font: 600 13px/18px inherit; color: #fff; margin-bottom: 3px; }
+  .panel > .sw { font: 400 10.5px/15px ui-monospace, SFMono-Regular, monospace;
+                 opacity: .45; margin-bottom: 9px; }
+
+  .phone { position: relative; width: 402px; height: 640px;
+           border-radius: 28px; overflow: hidden; background: var(--page); }
+  .behind { position: absolute; inset: 0; padding: 22px 18px; opacity: .3; }
+  .behind i { display: block; height: 56px; border-radius: 10px;
+              background: var(--sheet); margin-bottom: 10px; }
+  .scrim { position: absolute; inset: 0; background: var(--scrim); }
+
+  .tray { position: absolute; left: 0; right: 0; bottom: 0;
+          border-radius: 16px 16px 0 0; padding: 32px 18px;
+          background: var(--sheet); }
+  .grab { position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+          width: 36px; height: 5px; border-radius: 3px; background: var(--grab); }
+  .title { font: 700 22px/28px ui-rounded, -apple-system, system-ui;
+           color: var(--fg); margin-bottom: 18px; }
+
+  .rows { display: flex; flex-direction: column; gap: 10px; }
+  .cardrow { display: flex; gap: 10px; }
+  .card { border-radius: 10px; padding: 8px 0 6px;
+          background: var(--card); box-shadow: var(--lift); }
+  .cat { font: 600 11px/15px -apple-system, system-ui; color: var(--fg3);
+         padding-left: 7px; margin-bottom: 5px; height: 15px; }
+  .chips { display: flex; }
+  .chip { width: 65.2px; display: flex; flex-direction: column;
+          align-items: center; gap: 4px; }
+  .ring { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; }
+  .ring.on { box-shadow: inset 0 0 0 2.5px #0a84ff; }
+  .icon { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+          font: 700 17px/1 ui-rounded, -apple-system, system-ui; color: #fff; }
+  .nm { height: 28px; font: 500 12px/16px -apple-system, system-ui;
+        color: var(--fg2); text-align: center; padding: 0 1px; }
+  .nm.sm { font-size: 10.5px; letter-spacing: -.2px; }
+  .chip.sel .nm { color: var(--fg); font-weight: 600; }
+
+  /* ---- themes ---- */
+  .dark { --page:#000; --sheet:#111113; --fg:#fff; --fg2:#ebebf599; --fg3:#ebebf57e;
+          --grab:#ffffff40; --scrim:#00000059; }
+  .light{ --page:#fff; --sheet:#ffffff; --fg:#000; --fg2:#3c3c43d6; --fg3:#3c3c43bd;
+          --grab:#00000040; --scrim:#00000029; }
+  .light .behind i { box-shadow: 0 1px 3px #0000001f; }
+
+  /* ---- before / after ---- */
+  .dark.was   { --card:#080809; --lift:none; }
+  .dark.now   { --card:#1a1a1c; --lift:none; }          /* raisedShadow is transparent in dark */
+  .light.was  { --card:#e9e9ef; --lift:none; }
+  .light.now  { --card:#f8f8f8; --lift:0 1px 6px #0000001f; }
+</style>
+
+<h1>Sources tray — C, as it now builds</h1>
+<p class="sub">
+  Same corpus and geometry as v1. Left is what shipped, right is what's in the tree now.
+  The dark pair is the one you hadn't seen: the card steps <em>up</em> from the sheet
+  (<code>#111113 → #1a1a1c</code>) instead of down to near-page-black, and carries no shadow —
+  <code>cardShadow</code> is tuned for a card on the <code>#000</code> page and on a <code>#111113</code>
+  sheet it draws a halo that reads as a stroke.
+</p>
+
+<h3>Dark</h3>
+<div class="pair" id="d"></div>
+
+<h3>Light</h3>
+<div class="pair" id="l"></div>
+
+<script>
+const CORPUS = [
+  [{c:"Wallet", a:[["Wallet","W","#627eea",1],["Peer","P","#00c48c"],["Privacy Pools","0x","#7c5cff"],["Gnosis Pay","G","#3e6957"],["Safe","S","#12ff80"]]}],
+  [{c:"Life",   a:[["Photos","◈","#f5a623"],["Calendar","31","#ff3b30"],["Reminders","☰","#ff9500"],["Files","▤","#1f8fff"],["Mail","✉","#0a84ff"]]}],
+  [{c:"Work",   a:[["GitHub","","#2b3137"],["Linear","L","#5e6ad2"],["Stripe","S","#635bff"],["Cursor","C","#3a3a3c"]]}],
+  [{c:"Media",  a:[["Spotify","♫","#1db954"],["Twitch","T","#9146ff"],["YouTube","▶","#ff0000"]]},
+   {c:"Social", a:[["Bluesky","B","#0085ff"],["Farcaster","F","#8a63d2"]]}],
+];
+
+const chip = ([n,g,h,on]) => `<div class="chip${on?" sel":""}">
+  <div class="ring${on?" on":""}"><div class="icon" style="background:${h}">${g}</div></div>
+  <div class="nm${!n.includes(" ")&&n.length>7?" sm":""}">${n}</div></div>`;
+
+const card = b => `<div class="card" style="flex:${b.a.length} 0 0">
+  <div class="cat">${b.c}</div><div class="chips">${b.a.map(chip).join("")}</div></div>`;
+
+const panel = (theme, state, name, sw) => `<section class="panel">
+  <h2>${name}</h2><div class="sw">${sw}</div>
+  <div class="phone ${theme} ${state}">
+    <div class="behind">${"<i></i>".repeat(9)}</div><div class="scrim"></div>
+    <div class="tray"><div class="grab"></div><div class="title">Your sources</div>
+      <div class="rows">${CORPUS.map(r=>`<div class="cardrow">${r.map(card).join("")}</div>`).join("")}</div>
+    </div></div></section>`;
+
+d.innerHTML = panel("dark","was","Was — recessed well","card #080809 · no lift")
+            + panel("dark","now","Now — raised card","card #1a1a1c · no shadow (transparent in dark)");
+l.innerHTML = panel("light","was","Was — recessed well","card #e9e9ef · no lift")
+            + panel("light","now","Now — raised card","card #f8f8f8 · shadow 0 1 6 #0000001f");
+</script>

@@ -116,6 +116,43 @@ enum DS {
     /// Heavy in dark (a `#111` card on `#000` needs it), whisper-light in light.
     static let cardShadow    = Color.adaptive(dark: "#0000008c", light: "#0000001f")
 
+    /// A RAISED grouping container — the mirror of `surfaceWell`, for a box
+    /// drawn ON a sheet whose job is to be SEEN as holding its contents rather
+    /// than to sit behind them (user ruling 2026-08-11, the sources tray's
+    /// category cards; see `SourcesTray.slotFill`).
+    ///
+    /// The two rungs are NOT interchangeable and the choice is about what the
+    /// box is for: a well is a backing you look INTO (a chart, a cover, a media
+    /// frame), so it recedes; this is a container holding the primary tappable
+    /// content of its screen, so it must not sit below the plane that content
+    /// lives on.
+    ///
+    /// **The two themes carry the lift differently, and that is forced rather
+    /// than chosen.** In dark it steps away from `surfaceSheet` toward the
+    /// light and the tone alone does the work. In LIGHT there is no room above
+    /// `#ffffff`, so the fill can only break the plane and the lift itself is
+    /// carried by `raisedShadow` — which is still the ladder's own rule ("tone
+    /// AND a soft ambient shadow"), with the two halves weighted per theme
+    /// instead of split evenly.
+    ///
+    /// **Opaque on purpose, though it is exactly `fillFaint` composited over
+    /// `surfaceSheet`.** A translucent fill DOUBLES wherever two pieces of one
+    /// bridged card overlap, and `SourcesTray` bridges a multi-column card by
+    /// overlapping its slot pieces into the gap between them — so the alpha
+    /// form paints a stripe of doubled density down the middle of every wide
+    /// card. That is a hairline drawn by accident, in the app that has zero
+    /// exceptions to the no-line rule. Reach for `fillFaint` when the fill is
+    /// drawn once; reach for this when it is drawn in pieces.
+    static let surfaceRaised = Color.adaptive(dark: "#1a1a1c", light: "#f8f8f8")
+
+    /// The lift under a `surfaceRaised` container. **Transparent in DARK on
+    /// purpose** — `cardShadow` is calibrated for a card on the BLACK page,
+    /// and that same heavy black halo around a `#1a1a1c` card on a `#111113`
+    /// sheet reads as a stroke drawn around the card rather than as air under
+    /// it, which is the one thing the ladder exists to avoid. In dark the
+    /// tonal step is the whole signal; in light it is the only signal.
+    static let raisedShadow  = Color.adaptive(dark: "#00000000", light: "#0000001f")
+
     // MARK: - Tint (one accent)  — brief §8, principle 2
 
     /// The one tint. Routed through `ThemeStore` so the swap ("pink one line
