@@ -2599,11 +2599,18 @@ struct PostMedia: View {
 }
 
 
-// MARK: - Safari — the reading row (shaped feeds, 2026-07-13)
+// MARK: - Bookmarks — the reading row (shaped feeds, 2026-07-13)
 
 /// A saved link's native anatomy: the page's image leads at reading size when
 /// it has one, the title reads at two lines, and the DOMAIN sits where a note
 /// would put its excerpt — where it's from is what you scan a reading list by.
+///
+/// Written for a "Safari" bridge that never shipped under that name — Safari
+/// and Chrome exports merged into one "Bookmarks" offer on 2026-07-28 (prd
+/// §224), and `FeedScreen`'s `Shape` enum went on mapping `case "Safari"`
+/// for another two weeks while `BookmarksImport` landed real `.link` things
+/// as `source: "Bookmarks"` that fell through to the plain band row instead
+/// of this one. Rewired 2026-08-10.
 struct ReadingRow: View {
     let thing: Thing
 

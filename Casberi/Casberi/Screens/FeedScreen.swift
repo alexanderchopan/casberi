@@ -13,8 +13,8 @@ import Translation
 /// leads with the holdings treemap, Calendar reads as an agenda, Gmail
 /// surfaces what's waiting, Reminders groups by state, chats earn takeaway
 /// cards. Deepened 2026-07-13: notes lead with their text, chats with their
-/// opening line, posts read as author-led cards with media at width, Safari
-/// reads as a reading list; Music and Tokens carry a lede block; the
+/// opening line, posts read as author-led cards with media at width,
+/// Bookmarks reads as a reading list; Music and Tokens carry a lede block; the
 /// new-since divider is per-source; each feed closes with a caught-up line.
 /// "All" renders kind-aware rows; only `.approval` breaks row rhythm
 /// (the consent card). Day groups, pins, swipes, the sheet, and write-confirm
@@ -497,7 +497,7 @@ struct FeedScreen: View {
 
     /// The shape a source takes when its chip is in force.
     private enum Shape {
-        case all, photos, wallet, calendar, gmail, chat, social, reminders, safari, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, x, x402, appStoreConnect, cursor, plain
+        case all, photos, wallet, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, x, x402, appStoreConnect, cursor, plain
         init(source: String) {
             switch source {
             case "All":                 self = .all
@@ -566,7 +566,17 @@ struct FeedScreen: View {
             // to before, drew the outcome and the report away entirely.
             case "Cursor":              self = .cursor
             case "Reminders", "Todoist": self = .reminders
-            case "Safari":              self = .safari
+            // This case was written 2026-07-13 for a "Safari" bridge that
+            // never shipped — Safari and Chrome exports merged into ONE
+            // "Bookmarks" offer on 2026-07-28 (prd §224), and the shape below
+            // was never rewired to the source that actually landed. Found
+            // 2026-08-10: the case had gone fully dead (no bridge ever
+            // stamped `source: "Safari"`) while `BookmarksImport.land` had
+            // been stamping `.link` things as "Bookmarks" since it shipped,
+            // silently falling to `.plain`'s generic band row — exactly the
+            // saved-link reading list this shape (`ReadingRow`/`ReadingLede`)
+            // was built for, wearing no Safari branding of its own.
+            case "Bookmarks":           self = .bookmarks
             // Obsidian joins the notes room — the vault is notes (prd §59).
             // Files LEFT this group on 2026-08-02 (see `.files` above): the
             // excerpt row it shared here draws title + text + time and no
@@ -2125,7 +2135,7 @@ struct FeedScreen: View {
         case .tokens:
             watchlistLedeSection(visible)
             watchlistSection(visible, nextEventID: nextEventID)
-        case .safari:
+        case .bookmarks:
             // A reading list is doors, not reads (2026-07-21) — its lede owns
             // the return-trip guilt: how much is piling up, and the oldest
             // thing still waiting. Rows below stay chronological (coarsened
@@ -4609,7 +4619,7 @@ struct FeedScreen: View {
                 } else {
                     CursorRow(thing: thing)
                 }
-            case .safari: ReadingRow(thing: thing)
+            case .bookmarks: ReadingRow(thing: thing)
             default:
                 // Perishables show their clock everywhere (ruling 2026-07-09):
                 // the next event's countdown and a stream's Live state ride
