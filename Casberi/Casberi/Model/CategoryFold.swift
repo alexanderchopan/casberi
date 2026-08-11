@@ -70,8 +70,16 @@ enum CategoryFold {
 
     static func memberSet(of category: String) -> Set<String> { memberSetCache[category] ?? [] }
 
+    /// `source` here is a THING'S OWN `source` string, not a catalog offer
+    /// name — resolved through `category(forSource:)`, never by testing the
+    /// raw member set directly (the alias bug found live, 2026-08-11 — see
+    /// `fold`'s own doc; this is the SAME bug in a second function, found
+    /// because it fed `MainSurface`'s `categoryVenues[category]`, which is
+    /// what the switcher scrolls-to-center and what `scopes` below filters —
+    /// so "Privacy Pools" was invisible to the Wallet switcher for the exact
+    /// reason it once failed to fold at all).
     static func isMember(_ source: String, of category: String) -> Bool {
-        memberSetCache[category]?.contains(source) ?? false
+        BridgeCatalog.category(forSource: source) == category
     }
 
     /// Is `label` one of the catalog's category names — the strip's own test
@@ -172,7 +180,31 @@ enum CategoryFold {
     /// display (Markets' own reasoning, unchanged: a capsule this short has
     /// not earned learned order, and one that reshuffles between opens reads
     /// as broken).
+    ///
+    /// `present` holds SOURCE strings (what `filter.source` actually takes),
+    /// which is why this sorts `present` itself rather than filtering
+    /// `members(of:)` (catalog offer NAMES) by it — the same alias bug as
+    /// `isMember`/`fold`, a third place it shipped (2026-08-11): "Privacy
+    /// Pools" the source is never equal to "0xBow Privacy Pools" the catalog
+    /// name, so the old `filter` silently dropped every aliased present
+    /// member from the switcher instead of merely mis-ordering it. Each
+    /// present source resolves to its OWN catalog offer's name (falling back
+    /// to itself when the catalog has never heard of it, so an unknown source
+    /// still sorts — to the tail — rather than vanishing) before ranking
+    /// against the category's catalog-order member list.
     static func scopes(category: String, present: Set<String>) -> [String] {
-        members(of: category).filter { present.contains($0) }
+        let order = members(of: category)
+        // Alias-aware membership FIRST (a present source belonging to some
+        // OTHER category must never leak into this switcher), then rank the
+        // survivors by their own catalog offer's position.
+        let filtered = present.filter { BridgeCatalog.category(forSource: $0) == category }
+        func rank(_ source: String) -> Int {
+            let name = BridgeCatalog.offer(forSource: source)?.name ?? source
+            return order.firstIndex(of: name) ?? Int.max
+        }
+        return filtered.sorted {
+            let ra = rank($0), rb = rank($1)
+            return ra != rb ? ra < rb : $0 < $1
+        }
     }
 }

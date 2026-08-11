@@ -304,6 +304,15 @@ check("Markets spans both category groups",
 check("Wallet has its own members",
       CategoryFold.members(of: "Wallet") == ["Wallet", "Peer", "0xBow Vault"])
 check("a non-member is not a member", !CategoryFold.isMember("Photos", of: "Markets"))
+// isMember resolves through the catalog alias, exactly like fold — the
+// second place the shipped bug lived (found live, 2026-08-11: this function
+// feeds `MainSurface`'s `categoryVenues[category]`, so a false-negative here
+// meant "Privacy Pools" was invisible to the switcher even though the fold
+// itself had already been fixed).
+check("isMember resolves an aliased source (short name vs. catalog display name)",
+      CategoryFold.isMember("Vault", of: "Wallet"))
+check("isMember rejects a source aliased into a DIFFERENT category",
+      !CategoryFold.isMember("Vault", of: "Markets"))
 check("a category name is recognized", CategoryFold.isCategory("Markets"))
 check("a category name is recognized (Wallet)", CategoryFold.isCategory("Wallet"))
 check("a plain source is not a category", !CategoryFold.isCategory("Kalshi"))
@@ -390,6 +399,17 @@ check("scopes exclude absent members",
       !CategoryFold.scopes(category: "Markets", present: ["Tokens", "Kalshi"]).contains("OpenSea"))
 check("scopes exclude non-members",
       CategoryFold.scopes(category: "Markets", present: ["Tokens", "Photos"]) == ["Tokens"])
+// The third place the alias bug lived (found live, 2026-08-11): scopes used
+// to filter catalog NAMES by whether the caller's present SET (source
+// strings) contained them — so "Vault" (present) could never match "0xBow
+// Vault" (the catalog name `members(of:)` returns), and the aliased seat
+// silently vanished from the switcher's own scope list, not merely
+// mis-ordered within it.
+check("scopes resolves an aliased present source rather than dropping it",
+      CategoryFold.scopes(category: "Wallet", present: ["Vault", "Peer"]).contains("Vault"))
+check("scopes places an aliased source at its OWN catalog offer's position",
+      CategoryFold.scopes(category: "Wallet", present: ["Vault", "Peer", "Wallet"])
+        == ["Wallet", "Peer", "Vault"])
 
 // --- landing / remember: per-category isolation -----------------------------
 let mKey = "categoryFold.lastVenue.Markets"
@@ -491,7 +511,12 @@ mutate "chipLabel returns the raw source while folded" \
 mutate "members reads only the first group instead of every group the category names" \
   '.filter { category.groups.contains($0.group) }|||.filter { $0.group == category.name }' || mfail=1
 mutate "scopes follows the caller's order instead of catalog order" \
-  'members(of: category).filter { present.contains($0) }|||Array(present)' || mfail=1
+  'return filtered.sorted {
+            let ra = rank($0), rb = rank($1)
+            return ra != rb ? ra < rb : $0 < $1
+        }|||return Array(filtered)' || mfail=1
+mutate "scopes tests the raw member set instead of resolving each present source's own category (THE SHIPPED BUG, a third place)" \
+  'let filtered = present.filter { BridgeCatalog.category(forSource: $0) == category }|||let filtered = present.filter { order.contains($0) }' || mfail=1
 mutate "landing ignores whether the remembered venue is still present" \
   'present.contains(last) { return last }|||!last.isEmpty { return last }' || mfail=1
 mutate "remember accepts a source that belongs to no category" \
