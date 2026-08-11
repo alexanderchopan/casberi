@@ -4745,18 +4745,33 @@ struct FeedScreen: View {
                     // never a faked probability.
                     PredictionRow(thing: thing, pulse: odds)
                 } else {
-                    // The source badge (2026-08-09): only the unscoped All
-                    // room asks for it — `.all` is this same `default` arm's
-                    // OTHER tenant (a single-source room with no shape case
-                    // of its own, e.g. Instagram/TikTok, falls here too as
-                    // `.plain`), where the room itself already says the
-                    // source and a badge would double-tell it.
+                    // The source badge (2026-08-09): a CROSS-SOURCE room asks
+                    // for it, a single-source room doesn't — there the room
+                    // itself already says the source and a badge would
+                    // double-tell it. `.all` is this same `default` arm's
+                    // OTHER tenant (a single-source room with no shape case of
+                    // its own, e.g. Instagram/TikTok, falls here too as
+                    // `.plain`), which is why the test is on the room and not
+                    // on the row.
+                    //
+                    // The pinned room is the second cross-source room and was
+                    // missing from this test (user ruling 2026-08-11: "pinned
+                    // rows definitely need a source badge"). It renders as
+                    // `.plain` — "Pinned" is not a source, so `Shape` has
+                    // nothing to match and every row lands in this arm — so it
+                    // read as a single-source room to the one line that
+                    // decides this, and a pinned note sat next to a pinned
+                    // import row with nothing on either saying where it came
+                    // from. It is in fact the room where the badge matters
+                    // MOST: All is at least chronological, so a row's
+                    // neighbours date it, while this list is ordered by when
+                    // you pinned and its rows can come from anywhere.
                     BandRow(thing: thing,
                             emphasized: thing.id == nextEventID,
                             live: isLive(thing),
                             imageOnly: imageOnly,
                             wideArt: wideArt,
-                            sourceBadge: shape == .all)
+                            sourceBadge: shape == .all || Pinboard.isPinnedRoom(source))
                 }
             }
         }
