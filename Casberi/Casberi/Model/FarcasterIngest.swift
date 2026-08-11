@@ -171,7 +171,10 @@ final class FarcasterStore {
         channels = []
         // The like rolls go with them (2026-08-07) — reconnecting must not
         // find a roll naming who liked a cast the corpus no longer holds.
+        // The fired-moment ledger goes on the same line, so the two can never
+        // disagree about what a reconnect starts from.
         SocialLikers.shared.forget(refPrefix: "fc:")
+        SocialInbound.MomentLedger.forget(refPrefix: "fc:")
     }
 
     /// Adds a username together with an already-known fid — search resolves
@@ -752,7 +755,15 @@ enum FarcasterIngest {
             // whenever they liked it, read from your cast's side. Same
             // restamp, same three guards, so the two can't disagree.
             resurface(cast, reactedAt: liker.when)
-            if (liker.when ?? .now).timeIntervalSinceNow > -SocialInbound.newsWindow {
+            // NEWS ONLY, and ONCE. `newsWindow` is a recency test, not a
+            // memory: on its own it re-fired the same like on every foreground
+            // pass for a day, because the read re-asks about the same post each
+            // time and the like is still inside its 24 hours. The ledger is
+            // what makes it news — see `SocialInbound.MomentLedger`.
+            if (liker.when ?? .now).timeIntervalSinceNow > -SocialInbound.newsWindow,
+               let ref = cast.sourceRef,
+               SocialInbound.MomentLedger.notedFirst(
+                   SocialInbound.MomentLedger.likeID(ref: ref, liker: handle)) {
                 SourceMoments.shared.fire(
                     String(localized: "@\(handle) liked your cast"), source: "Farcaster")
             }

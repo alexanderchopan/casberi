@@ -1360,6 +1360,16 @@ enum ProbeHooks {
                           ISO8601DateFormatter().string(from: roll.when),
                           roll.line ?? "NONE")
                 }
+                // The fired-moment ledger (2026-08-11), the half a roll can't
+                // show: a roll says who liked a post, this says which of those
+                // likes has already RAINED. Nothing else can see it, and a
+                // ledger nothing can see is indistinguishable from one that
+                // isn't being written — which is precisely how the repeat
+                // shipped. An entry here means that toast will not fire again.
+                let fired = SocialInbound.MomentLedger.entries
+                NSLog("likersProbe fired moments: %d (cap %d)",
+                      fired.count, SocialInbound.MomentLedger.cap)
+                for id in fired { NSLog("likerFired| %@", id) }
             }
         },
         // `-socialProbe <Bluesky|Farcaster>` reports what the enrichment

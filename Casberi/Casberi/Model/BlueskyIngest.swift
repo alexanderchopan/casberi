@@ -167,8 +167,10 @@ final class BlueskyStore {
         }
         accounts = []
         feeds = []
-        // The like rolls go with them (2026-08-07) — see the Farcaster twin.
+        // The like rolls and the fired-moment ledger go with them — see the
+        // Farcaster twin.
         SocialLikers.shared.forget(refPrefix: "bsky:")
+        SocialInbound.MomentLedger.forget(refPrefix: "bsky:")
     }
 
     /// Sync's write-back of the AppView's profile facts. One assignment, so
@@ -455,7 +457,15 @@ enum BlueskyIngest {
             if let when, newest.map({ when > $0 }) ?? true { newest = when }
             guard watched.contains(liker) else { continue }
             resurface(post, reactedAt: when)
-            if (when ?? .now).timeIntervalSinceNow > -SocialInbound.newsWindow {
+            // NEWS ONLY, and ONCE — the Farcaster twin's ledger, for the same
+            // reason: `newsWindow` is a recency test and not a memory, so
+            // without this the same like rains again on every foreground pass
+            // for a day. See `SocialInbound.MomentLedger`.
+            if (when ?? .now).timeIntervalSinceNow > -SocialInbound.newsWindow,
+               let ref = post.sourceRef,
+               SocialInbound.MomentLedger.notedFirst(
+                   SocialInbound.MomentLedger.likeID(
+                       ref: ref, liker: BlueskyStore.short(liker))) {
                 SourceMoments.shared.fire(
                     String(localized: "@\(BlueskyStore.short(liker)) liked your post"),
                     source: "Bluesky")

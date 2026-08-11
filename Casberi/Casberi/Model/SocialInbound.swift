@@ -169,6 +169,77 @@ enum SocialInbound {
         }
     }
 
+    /// The inbound moments already ANNOUNCED — the "already fired" record the
+    /// like moment shipped without (2026-08-11).
+    ///
+    /// Every other inbound moment is self-throttling by construction, which is
+    /// exactly why this one's absence went unnoticed: a mention and a crossing
+    /// fire from inside `land`, which runs only for a ref the corpus doesn't
+    /// already hold, and a new follower is diffed against `FollowerLedger`
+    /// before it can fire. A LIKE has neither half. It lands no thing (the
+    /// module doctrine: a count is a property of your post, never a record of
+    /// its own), and it was gated on `newsWindow` alone — which is a RECENCY
+    /// test, not a memory. So every foreground pass re-read the same page of
+    /// likers, found the same like still inside its 24 hours, and rained
+    /// again. Reported as exactly that: "farcaster feed repeats berry rain and
+    /// toast for likes that it's already fired on. if i open the app again,
+    /// it'll do the same ones."
+    ///
+    /// The §306 NOTIFICATION never had this bug — `Notifications.likes` keeps a
+    /// per-post count and refuses to re-arm below it — which is why the repeat
+    /// showed up in the app and nowhere else, and why the fix belongs here
+    /// rather than there.
+    ///
+    /// Capped and ordered newest-first like `FollowerLedger`, for the same
+    /// reason and with the same accepted cost: an entry that falls off the tail
+    /// can be announced a second time. ONE shared ledger rather than one key
+    /// per account, because every entry already leads with the post's own
+    /// `sourceRef` — which carries its network's prefix (`fc:`, `bsky:`) — so a
+    /// disconnect forgets its own by prefix and can never take the other
+    /// network's with it.
+    enum MomentLedger {
+        static let cap = 400
+        private static let key = "social.moments.fired"
+
+        /// The id for "this person liked this post of yours", the one moment
+        /// with no landing to throttle it. Ref FIRST so `forget(refPrefix:)`
+        /// can scope by network.
+        static func likeID(ref: String, liker: String) -> String { "\(ref)|liked:\(liker)" }
+
+        /// True the FIRST time an id is offered, false forever after (or until
+        /// it falls off the tail). RECORDS as it answers, the house shape of
+        /// `SourceMoments.notedNewHigh`/`notedReturn` — a caller that asks has
+        /// already decided to fire.
+        static func notedFirst(_ id: String) -> Bool {
+            var seen = UserDefaults.standard.stringArray(forKey: key) ?? []
+            guard !seen.contains(id) else { return false }
+            seen.insert(id, at: 0)
+            UserDefaults.standard.set(Array(seen.prefix(cap)), forKey: key)
+            return true
+        }
+
+        /// Everything recorded, for a probe to print — a ledger nothing can
+        /// see is indistinguishable from one that isn't being written.
+        static var entries: [String] { UserDefaults.standard.stringArray(forKey: key) ?? [] }
+
+        /// Drops every entry for one network, by its refs' shared prefix.
+        ///
+        /// Called on a full disconnect only, and deliberately NOT when `mine`
+        /// flips off — note the direction is the opposite of `FollowerLedger`'s
+        /// there. Forgetting a follower ledger makes the next pass seed
+        /// SILENTLY; forgetting this one makes the next pass ANNOUNCE. So it
+        /// runs where the posts themselves are going away too (beside
+        /// `SocialLikers.forget`, so the two can never disagree about what a
+        /// reconnect starts from), and one repeated toast after a deliberate
+        /// disconnect-and-reconnect is the honest price of not leaking entries
+        /// for a network that is no longer connected.
+        static func forget(refPrefix: String) {
+            let survivors = entries.filter { !$0.hasPrefix(refPrefix) }
+            guard survivors.count != entries.count else { return }
+            UserDefaults.standard.set(survivors, forKey: key)
+        }
+    }
+
     /// The thing a new follower lands as: a `.link` to their profile, titled
     /// with what happened. Deliberately NOT a new `ThingKind` and NOT a chat
     /// thing — it has no post text and no permalink to any post, and `.link`
