@@ -1984,6 +1984,33 @@ struct FeedScreen: View {
                             thing.authorHandle == repo.name
                         }
                     }
+                case .peer(let room):
+                    PeerRoomCard(room: room) { rail in
+                        // A rail owns many fills, so the honest landing is its
+                        // most recent one, matched on the funding rail §311
+                        // stamps on `authorHandle` (the Cursor repo rule).
+                        openNewest(source: PeerRoomSource.source, in: visible) { thing in
+                            thing.authorHandle == rail.name
+                        }
+                    }
+                case .privacyPools(let room):
+                    PrivacyPoolsRoomCard(room: room) { state in
+                        // Matched on the DEPOSIT ref as well as the tag: an
+                        // alert row about a cleared deposit carries no state
+                        // tag, but a future one might, and landing on the
+                        // announcement instead of the deposit it announces is
+                        // the wrong row by one hop.
+                        openNewest(source: PrivacyPoolsRoomSource.source, in: visible) { thing in
+                            (thing.sourceRef?.hasPrefix(PrivacyPoolsRoom.depositPrefix) ?? false)
+                                && thing.tags.contains(state.rawValue)
+                        }
+                    }
+                case .gnosisPay(let room):
+                    GnosisPayRoomCard(room: room) { currency in
+                        openNewest(source: GnosisPayRoomSource.source, in: visible) { thing in
+                            thing.priceCurrency == currency.code
+                        }
+                    }
                 }
             }
         } else if let anniversary {
@@ -2871,6 +2898,14 @@ struct FeedScreen: View {
         case x402(X402Room)
         case appStoreConnect(ASCRoom)
         case cursor(CursorRoom)
+        // The three WALLET-RIDING seats that own a source room (2026-08-10,
+        // prd §348). The other five — Safe, Aave, Morpho, Hyperliquid,
+        // Aerodrome — land under `source: "Wallet"` and have no room of their
+        // own to head; their readings are the Wallet room's balance card, DeFi
+        // tiles and composition strip, which is where they belong.
+        case peer(PeerRoom)
+        case privacyPools(PrivacyPoolsRoom)
+        case gnosisPay(GnosisPayRoom)
     }
 
     /// Resolve this room's own head, or nil. One `switch` so adding a fourth
@@ -2894,6 +2929,12 @@ struct FeedScreen: View {
             return ASCRoomSource.compose(things: visible).map { .appStoreConnect($0) }
         case CursorRoomSource.source:
             return CursorRoomSource.compose(things: visible).map { .cursor($0) }
+        case PeerRoomSource.source:
+            return PeerRoomSource.compose(things: visible).map { .peer($0) }
+        case PrivacyPoolsRoomSource.source:
+            return PrivacyPoolsRoomSource.compose(things: visible).map { .privacyPools($0) }
+        case GnosisPayRoomSource.source:
+            return GnosisPayRoomSource.compose(things: visible).map { .gnosisPay($0) }
         default:
             return nil
         }
