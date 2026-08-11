@@ -1626,6 +1626,10 @@ struct FeedScreen: View {
                         return nil
                     }()
                     let showsAddHint: Bool = {
+                        // The face rail carries this verb whenever it draws
+                        // (2026-08-11) — two `+`s a thumb-width apart, both
+                        // opening the wallet manager, is one control too many.
+                        if walletRailShows { return false }
                         if let action, case .route = action.run { return true }
                         return false
                     }()
@@ -3909,12 +3913,49 @@ struct FeedScreen: View {
                         walletSwitcherChip(label: addr.label.isEmpty ? addr.short : addr.label,
                                            address: addr.address)
                     }
+                    // "Add another wallet" belongs WITH the wallets (user,
+                    // 2026-08-11). It used to be a bare `+` in the room's
+                    // header capsule beside a status line — which in a room
+                    // that now draws every watched wallet as a face read as an
+                    // orphan: the one control about wallets, sitting on the one
+                    // row that isn't. The header keeps `Manage`, which is its
+                    // real job; the rail takes the verb that acts on it.
+                    walletAddSlot
                 }
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.vertical, DS.Space.s1)
             }
             .scrollIndicators(.hidden)
         }
+    }
+
+    /// Does the face rail draw at all — which is also the test for whether it,
+    /// rather than the room header, carries the add-a-wallet verb.
+    private var walletRailShows: Bool {
+        roomTakesWalletScope && wallet.addresses.count > 1
+    }
+
+    /// The rail's trailing "add another wallet" slot — same circle as "All",
+    /// carrying the `+` the room header used to. Opens the wallet manager,
+    /// which is exactly where the header's own tap went.
+    private var walletAddSlot: some View {
+        Button {
+            DSHaptic.selection()
+            route.pushBridge(BridgeRouter.destination(forID: "wallet"))
+        } label: {
+            VStack(spacing: DS.Space.s1) {
+                Image(systemName: "plus")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(DS.tint)
+                    .frame(width: DS.Face.list, height: DS.Face.list)
+                    .background(Circle().fill(DS.fillFaint))
+                Spacer(minLength: 0)
+            }
+            .frame(width: 66, height: DS.Face.list + DS.Space.s1 + 16, alignment: .top)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("Add a wallet"))
     }
 
     /// One face over its name — `ShapedRows.faceSlot`'s construction, the
@@ -3936,24 +3977,32 @@ struct FeedScreen: View {
             VStack(spacing: DS.Space.s1) {
                 if let address {
                     WalletFace(address: address, size: DS.Face.list, circular: true)
+                    Text(label)
+                        .dsText(.label12)
+                        .fontWeight(isOn ? .semibold : .regular)
+                        .foregroundStyle(isOn ? DS.textPrimary : DS.textSecondary)
+                        .lineLimit(1)
                 } else {
                     // "All" has no identity to wear, and it CANNOT be a pile
-                    // of the faces themselves — at the five-wallet cap
-                    // (§170) an overlapped composite is mush at this size.
-                    // It takes the strip's own "All" treatment instead: a
-                    // word in a circle, which reads the same at any count.
+                    // of the faces themselves — at the five-wallet cap (§170)
+                    // an overlapped composite is mush at this size. It takes
+                    // the strip's own "All" treatment instead: a word in a
+                    // circle, which reads the same at any count.
+                    //
+                    // And it carries NO caption, because the circle already IS
+                    // the word — captioning it prints "All" twice in one slot,
+                    // one above the other (caught on screen, 2026-08-11). The
+                    // slot keeps its full height regardless, or every face
+                    // beside it would sit a caption's-worth higher.
                     Text("All")
                         .dsText(.label11).fontWeight(.semibold)
                         .foregroundStyle(isOn ? DS.textPrimary : DS.textSecondary)
                         .frame(width: DS.Face.list, height: DS.Face.list)
                         .background(Circle().fill(DS.fillFaint))
+                    Spacer(minLength: 0)
                 }
-                Text(label)
-                    .dsText(.label12)
-                    .fontWeight(isOn ? .semibold : .regular)
-                    .foregroundStyle(isOn ? DS.textPrimary : DS.textSecondary)
-                    .lineLimit(1)
             }
+            .frame(height: DS.Face.list + DS.Space.s1 + 16, alignment: .top)
             // A 44pt-wide slot is the touch floor; the extra width is what
             // gives a name room to read rather than truncate at the face.
             .frame(width: 66)

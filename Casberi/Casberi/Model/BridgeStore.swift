@@ -328,7 +328,13 @@ struct BridgeApp: Identifiable, Codable {
               can: ["Brings in your Claude chats.", "Kept findable alongside your things."]),
         // A read bridge for onchain activity (Wallet, on Alchemy). Read-only — it
         // can never trade or move funds; a wallet's swaps/sends/receives just land as things.
-        .init(id: "wallet", name: "Wallet", status: .connected, statusLine: "0x1a2b…4f · 4 this week",
+        // The status line says SYNC, never an address (2026-08-11). It read
+        // "0x1a2b…4f · 4 this week" — a hex nobody watches and a count nothing
+        // computed, which is fake status (§83) in a demo whose whole job is to
+        // show what the app really does. The room draws every watched wallet as
+        // a face directly below this row now, so an address here would be a
+        // truncated duplicate of something the rail already says better.
+        .init(id: "wallet", name: "Wallet", status: .connected, statusLine: "Synced just now",
               can: ["Reads your wallet's activity.", "Read-only — never trades or moves funds."]),
         // Token-watching, powered by public price data (Dexscreener search,
         // GeckoTerminal/Alchemy candles). Read-only — no wallet, no keys, no trading.
