@@ -175,13 +175,18 @@ struct StartHereScreen: View {
             // was only an escape hatch from onboarding — it is now also the
             // main route for someone arriving here from the demo who already
             // knows which app they want, and "instead" framed that person's
-            // deliberate choice as a way out of the real one. The count is the
-            // argument anyway.
+            // deliberate choice as a way out of the real one.
+            //
+            // The COUNT is gone again (user, 2026-08-11): "See all 96 apps" made
+            // the number the argument, and a number is a claim to survey rather
+            // than a destination to go to. This says where the tap lands, in the
+            // app's own noun for that surface (the 2026-07-16 naming ruling: it
+            // is "the catalog", never a store).
             Button {
                 DSHaptic.tap()
                 onStart(.apps)
             } label: {
-                Text("See all \(BridgeCatalog.offers.count) apps")
+                Text("Browse the catalog")
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .frame(maxWidth: .infinity)
