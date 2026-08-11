@@ -246,21 +246,25 @@ final class ShellChrome {
     /// ever be an "Other" cell wearing the generic placeholder mark.
     var sourceOrder: [String] = ["All"]
 
-    /// The market seats that earned a chip this session, in catalog order
-    /// (2026-08-10) — the scopes the folded Markets room's switcher offers.
+    /// Every FOLDED category's present member seats this session, in learned
+    /// order, keyed by category name (prd §351, 2026-08-11 — generalizes what
+    /// was `marketVenues`, a single array only Markets ever filled).
     ///
-    /// Published here rather than recomputed in `FeedScreen` because the answer
-    /// is the STRIP's: "which seats are present" is exactly what
+    /// Published here rather than recomputed in a room because the answer is
+    /// the STRIP's: "which seats are present" is exactly what
     /// `MainSurface.computedChipLabels` walks the corpus and the bridge list to
     /// decide, and it is deliberately frozen for the session (see `chipLabels`).
-    /// A second derivation in the room would pay that cost again per page and
+    /// A second derivation in a room would pay that cost again per page and
     /// could disagree with the strip about which venues exist — which, since the
     /// fold hides the individual chips, would leave a venue with no door at all.
     ///
-    /// Empty means no fold: either fewer than `MarketsRoom.foldFloor` seats are
-    /// present, or none are. The room checks this rather than counting members
-    /// itself, so the switcher can never appear over an unfolded strip.
-    var marketVenues: [String] = []
+    /// A category missing from this dictionary means it isn't folded (no
+    /// members present) — which cannot happen for a real member, since the fold
+    /// is now unconditional the moment ≥1 member is present. `categoryVenues["Markets"]`
+    /// is what `MarketsRoom`'s own switcher screens still read: they are the one
+    /// category with a dedicated switcher UI, so their ≥2-member gate
+    /// (`MarketsRoom.switcherFloor`) reads this exactly as before.
+    var categoryVenues: [String: [String]] = [:]
 
     /// A room switch asked for from INSIDE a room — today only the folded
     /// Markets room's venue switcher (2026-08-10).

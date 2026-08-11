@@ -1541,18 +1541,20 @@ struct FeedScreen: View {
     /// mounts nothing and shapes nothing, it only asks the shell to switch
     /// rooms.
     ///
-    /// Gated on `chrome.marketVenues`, which the strip fills only when the fold
-    /// actually happened, so a single connected market seat keeps its own chip
-    /// and never grows a switcher with one scope in it. The venues arrive in
-    /// LEARNED order (that is what `MarketsRoom.landing` needs); `scopes` puts
-    /// them in catalog order for display, because a capsule of four words is
-    /// not long enough to earn learned order and one that reshuffles between
-    /// opens reads as broken.
+    /// Gated on `chrome.categoryVenues[MarketsRoom.room]`, which the strip
+    /// fills whenever a Markets seat is folded — but the SWITCHER draws only
+    /// at `MarketsRoom.switcherFloor` (≥2 present venues), so a single
+    /// connected market seat still folds to the "Markets" chip (prd §351)
+    /// without growing a switcher with one scope in it. The venues arrive in
+    /// LEARNED order (that is what `CategoryFold.landing` needs); `scopes`
+    /// puts them in catalog order for display, because a capsule of four
+    /// words is not long enough to earn learned order and one that reshuffles
+    /// between opens reads as broken.
     @ViewBuilder private var marketsSwitcher: some View {
-        if chrome.marketVenues.count >= MarketsRoom.foldFloor,
-           MarketsRoom.isMember(source) {
+        let venues = chrome.categoryVenues[MarketsRoom.room] ?? []
+        if venues.count >= MarketsRoom.switcherFloor, MarketsRoom.isMember(source) {
             MarketsVenueSwitcher(
-                venues: MarketsRoom.scopes(present: Set(chrome.marketVenues)),
+                venues: CategoryFold.scopes(category: MarketsRoom.room, present: Set(venues)),
                 active: source) { venue in
                 chrome.sourceRequest = venue
             }

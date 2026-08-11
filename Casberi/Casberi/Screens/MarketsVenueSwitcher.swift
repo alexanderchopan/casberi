@@ -24,7 +24,7 @@ import SwiftUI
 /// survives where it is real: two prediction venues pricing the SAME question
 /// draw each other's bar on the card itself (`PredictionBrowseSection`'s twin).
 struct MarketsVenueSwitcher: View {
-    /// Present market seats, in catalog order (`ShellChrome.marketVenues`).
+    /// Present market seats, in catalog order (`ShellChrome.categoryVenues["Markets"]`).
     let venues: [String]
     /// The seat currently showing — a real source, always.
     let active: String

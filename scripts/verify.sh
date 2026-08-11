@@ -183,17 +183,19 @@ step "Sources-tray packing self-test"
   || fail "the sources-tray packing self-test failed — run scripts/source-packing-selftest.sh"
 print -P "%F{green}✓ source packing self-test%f"
 
-# The Markets fold's ordering and resolution rules (2026-08-10). Mechanical for
-# the reason every rule in this file is: the failures render as a perfectly good
+# Every folded chip's ordering and resolution rules (prd §351, 2026-08-11 —
+# supersedes the Markets-only harness this line used to run, generalizing it
+# to every catalog category, unconditionally folded). Mechanical for the
+# reason every rule in this file is: the failures render as a perfectly good
 # strip. A fold that lands at the TAIL silently moves the one chip whose
 # position you had learned; a `chipLabel` that hands back the raw source lights
-# no chip at all while you stand in the room; and the room LABEL reaching
-# `FeedFilter.source` puts the string "Markets" into every query and deep link,
-# where it matches nothing forever with no error anywhere.
-step "Markets fold self-test"
-"$ROOT/scripts/markets-fold-selftest.sh" >/dev/null \
-  || fail "the Markets fold self-test failed — run scripts/markets-fold-selftest.sh"
-print -P "%F{green}✓ markets fold self-test%f"
+# no chip at all while you stand in the room; and a category LABEL reaching
+# `FeedFilter.source` puts that name into every query and deep link, where it
+# matches nothing forever with no error anywhere.
+step "Category fold self-test"
+"$ROOT/scripts/category-fold-selftest.sh" >/dev/null \
+  || fail "the category fold self-test failed — run scripts/category-fold-selftest.sh"
+print -P "%F{green}✓ category fold self-test%f"
 
 # Pure-logic self-test for the retriever's scoring primitives (prd §318): term
 # rarity, query coverage, phrase adjacency, match-centered snippets. The

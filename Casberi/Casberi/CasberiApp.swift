@@ -274,17 +274,19 @@ struct CasberiApp: App {
                     Button(n <= order.count ? "Switch to \(order[n - 1])" : "Switch to Chip \(n)") {
                         guard n <= order.count else { return }
                         let label = order[n - 1]
-                        // The folded Markets chip is a LABEL, not a source
-                        // (2026-08-10, see `MarketsRoom`) — resolved here the
-                        // same way the strip's own tap resolves it. Written
-                        // raw it would put "Markets" into `FeedFilter.source`,
-                        // where no predicate matches it and the room is empty
-                        // forever, while the chip lights up as if it worked.
-                        // This stays positional against `chipOrder` on purpose:
-                        // ⌘3 must mean the third chip you can SEE.
-                        if MarketsRoom.isRoom(label) {
-                            guard let venue = MarketsRoom.landing(
-                                present: focusedChrome?.marketVenues ?? []) else { return }
+                        // A folded chip is a LABEL, not a source (prd §351,
+                        // generalizing 2026-08-10, see `CategoryFold`) —
+                        // resolved here the same way the strip's own tap
+                        // resolves it. Written raw it would put a category
+                        // name into `FeedFilter.source`, where no predicate
+                        // matches it and the room is empty forever, while the
+                        // chip lights up as if it worked. This stays
+                        // positional against `chipOrder` on purpose: ⌘3 must
+                        // mean the third chip you can SEE.
+                        if CategoryFold.isCategory(label) {
+                            let venues = focusedChrome?.categoryVenues[label] ?? []
+                            guard let venue = CategoryFold.landing(category: label, present: venues)
+                            else { return }
                             focusedScene?.filter.source = venue
                         } else {
                             focusedScene?.filter.source = label

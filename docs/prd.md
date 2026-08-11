@@ -19781,3 +19781,170 @@ has been checked against real settled data. Every new field read is guarded
 the same way the row that stamps it already is (a nil `priceValue`/`priceCurrency`
 just means the reading stays silent, never a guess), so the failure mode is
 "says less than it could", not "says something wrong".
+
+## §351 — The strip becomes a category strip, always, by name not mark (user: "should we do the same for work? for all categories?", then "i want the category chips always", "every source needs a home and it goes with its category", "i don't know what the 'ring' even means, and do we need it", "yes" [to word chips], "do all"; 2026-08-11)
+
+**The ruling, in the user's own four answers.** (1) Category chips are not a
+conditional fold for crowded categories — every source-bearing chip in the
+strip is a CATEGORY chip, unconditionally, including a category with exactly
+one connected member. (2) Every offer's home is its `BridgeCatalog` category,
+no exceptions. (3) The dashed ring is real and stays — see below. (4) Category
+chips are WORDS, not marks. This overturns the icon-only strip (ruling
+2026-07-09/07-10, "labels made the row scroll") for the category case
+specifically — the per-source icon-only rule stands wherever a category still
+resolves to one literal source's own row (a thing's own bridge icon
+elsewhere in the app is untouched).
+
+**Most of the machinery this needs already shipped, for other reasons, in the
+five days before this ruling — this is a generalization pass, not a
+greenfield build.** Worth naming precisely, so the implementation reuses
+rather than re-derives:
+
+- `BridgeCatalog.categories` (prd §322, 2026-08-06) is already the exact
+  taxonomy — Wallet, Work, Life, Agents, Media, Social, Reading, Markets,
+  Shopping, Notes, in the user's own dictated order — and `category(of:)`
+  already maps every offer's `group` into one of them (default "Life," never
+  reached today because every group is accounted for).
+- `category(forSource:)` / `offer(forSource:)` (2026-08-06) already resolve a
+  landed `Thing.source` string to its category through the catalog, exact-
+  then-suffix on a space boundary — the join that already fixed "Privacy
+  Pools" (the source) against "0xBow Privacy Pools" (the seat) for exactly
+  this purpose.
+- `SourcesTray` (the long-press grid, 2026-08-06 through today) already
+  groups every connected source into a category CARD, word-labeled
+  (`nameBand`, `label11` semibold, `textTertiary`, never tinted — tinting is
+  reserved for selection), with a `biggest-first` bin-packer proven against
+  39,237 random corpora. It is the existence proof that word-labeled category
+  grouping reads correctly at this information density; the strip's job is
+  bringing the SAME grouping to the primary tap surface instead of only the
+  long-press one.
+- `ChipMemory` needs no changes at all — it already learns/decays a weight
+  per arbitrary label string, and "Markets" already passes through it as a
+  fold label today. Feeding it category names instead of per-source names for
+  everything is a change in what gets visited, not in the mechanism.
+- `MarketsRoom` is the one working instance of "several catalog members,
+  fold to one chip, land on the last-visited member, switcher to move
+  between them" (venue switcher, `landing`, `chipLabel(for:)`, the
+  `chipOrder`/`sourceOrder` split that keeps `FeedFilter.source` always a
+  real seat and never a label). It is the pattern to generalize, not to
+  special-case forever.
+
+**The ring, explained (point 3).** One ring, two mutually exclusive states,
+already correct in both the strip and the tray: a solid tint ring means "this
+is the active chip" (selection); a DASHED orange ring means "this connection
+needs you" (`BridgeApp.status == .attention`, resolved through
+`offer(forSource:)` so the name-mismatch family — Privacy Pools chief among
+them — actually lights it). It is a real per-connection health signal, not
+decoration, and yes, it is still needed once chips are category-level: a
+category chip's ring must be the OR across every member behind it (any one
+broken seat lights the category), the same generalization `MarketsRoom.chipLabel(for:)`
+already had to make for Kalshi/Polymarket ("a broken Kalshi has no ring
+anywhere" was the exact failure that ruling exists to prevent) — now applied
+to every category rather than just the one.
+
+**Reopens same-day work, worth naming rather than silently overwriting.**
+`SourceChips.swift` shipped Markets its OWN generic glyph
+(`BridgeGlyph.symbol(for: "markets")`) THIS SAME DAY, 2026-08-11, specifically
+because Markets is a synthetic non-catalog label with no brand mark to fall
+back to. This ruling replaces that glyph with the word "Markets" a few hours
+later — not a reversal of the reasoning (a synthetic label still has no
+brand mark; a word sidesteps needing one at all, which is arguably the
+better fix to the same problem), but worth the note so the glyph work isn't
+mistaken for landing wrong rather than landing early.
+
+**One fork this ruling does NOT resolve, and shouldn't be guessed at: what a
+category chip with several members actually shows.** Markets deliberately
+has no "All" scope — the ruling is explicit that a probability, a 24h
+percent and a session percent don't convert, so the chip lands on ONE
+resolved venue and a switcher moves between them. Whether every OTHER
+category should work the same way (Work lands on one resolved source — say,
+GitHub — with a switcher to Stripe/PostHog/Trello/Cursor/App Store Connect)
+or should instead compose an interleaved multi-source feed (more like a
+category-scoped "All") is a real product question, not an implementation
+detail — and the two answers are not free to mix per-category without cost:
+`FeedFilter.source` is a single real seat by the CENTRAL invariant Markets
+was built to protect ("nothing downstream ever sees the category string"),
+so an interleaved reading needs new plumbing Markets specifically avoided
+needing. Recommendation, not yet a ruling: default every category to the
+Markets shape (resolve-to-one-member plus switcher) for consistency and
+because it is the one shape already proven safe against that invariant;
+revisit per-category only if a specific one reads badly once built (Work's
+six-odd members answering unrelated questions is the likeliest candidate to
+feel wrong as a single resolved chip rather than an interleaved feed).
+
+**Wallet is a third shape, not a second instance of Markets — flagged so the
+next pass doesn't force-fit it.** Wallet already IS a room with its own
+content (balance, DeFi tiles) before this ruling touches anything; the ask
+here is that Peer/Privacy Pools/Gnosis Pay/Railgun (each with a catalog seat
+of their own, each auto-connecting by riding a watched wallet) become
+switchable FROM WITHIN that existing room rather than each drawing its own
+strip chip — "room with a partial switcher over some of its own members," a
+shape Markets' "switcher as the whole chip" doesn't cover as-is. Needs its
+own short design pass, not a copy of `MarketsRoom`.
+
+**Deliberately not done in this pass.** No Swift changed. This session has
+unrelated, uncommitted work in flight (`RailgunRoom`/`RailgunRoomSource`/
+`RailgunRoomCard`, the §350 enrichments) that a strip-wide chip refactor has
+no business landing alongside. The strip's chip VISUAL (word pill vs. the
+existing 56pt icon circle) is also a real design change under this project's
+own working mode ("the user rules on design") and hasn't been looked at as
+pixels yet, the way `sources-tray-tone-v1.html`/`sources-tray-structure-v1.html`
+were for the tray. Next steps, in order: mock the strip's word-chip
+treatment as a prototype the way the tray's was; settle the Work-shape
+question above; generalize `MarketsRoom` into a category-keyed mechanism
+(likely retiring the Markets-specific type in favor of a parameterized one);
+design Wallet's partial-switcher shape separately; then extend
+`markets-fold-selftest.sh` into a category-fold harness covering the ring
+OR-across-members case for every category, not just one.
+
+**Shipped the same day (user: "do all and please continue").** The strip half
+landed: `Model/CategoryFold.swift` is the generalized engine described above,
+and `MarketsRoom` is now a thin shim onto it (keeping only the "Markets"
+label constant and `switcherFloor` — the ≥2-present-venues gate its OWN
+switcher screen still needs, a different question from whether the CHIP
+folds, which now has no floor at all). `MainSurface.computedChips()` folds
+EVERY catalog category, not just Markets, in one composed pass
+(`CategoryFold.foldAll`); `SourceChips` renders any folded category chip as a
+word in "All"'s exact glass-circle treatment (Markets' own generic glyph,
+shipped hours earlier the same day, is retired by this same change rather
+than kept as a second synthetic-label style); the dashed "needs reconnecting"
+ring is now an OR across whichever category's members are present
+(`ShellChrome.categoryVenues: [String: [String]]`, replacing the
+single-array `marketVenues` only Markets ever filled). `go(to:)`,
+`step(_:)`'s direction helper, the Mac ⌘1–⌘9 shortcut, and the arrival
+catch-bob/coin-flip key all resolve through the same generic
+`CategoryFold.chipLabel`/`.landing`/`.remember` now, not a Markets-specific
+path. `scripts/markets-fold-selftest.sh` is retired in favor of
+`scripts/category-fold-selftest.sh`, which compiles `CategoryFold.swift`
+whole against a TWO-category stub (the old harness only ever needed one, and
+the property that makes `foldAll` safe — disjoint categories compose in one
+pass — has no way to fail with a single category to fold), pins the
+headline behavior change (a lone present member now folds; the old harness
+pinned the opposite) and mutation-tests nine invariants including a fold
+floor creeping back in. Wired into `verify.sh` in place of the old step.
+
+**What this means in practice, stated plainly:** every connected source's
+chip in the strip is now its catalog category, word-labeled, all the time —
+Wallet included, so Peer/Privacy Pools/Gnosis Pay/Railgun now share the
+"Wallet" chip alongside the Wallet balance room itself, which is the Wallet
+half of the user's original ask landing as a side effect of the general
+mechanism rather than its own pass. Landing resolves to the last-visited (or
+best-ranked) member and writes a real seat to `FeedFilter.source` exactly as
+before — the central invariant is unchanged and re-tested. What did NOT ship:
+a dedicated venue-switcher SCREEN for any category besides Markets (Work,
+Wallet, Social, etc. have no capsule control yet — reaching a specific
+member when the category has more than one requires the Sources Tray,
+exactly as this section's own "one fork not yet resolved" anticipated), and
+Wallet's own room has not been touched at all — moving between
+Peer/Privacy Pools/Gnosis Pay/Railgun/the balance view from INSIDE the
+Wallet room is still the separate "third shape" pass flagged above. The
+strip's word-chip visual was not mocked separately as pixels first, as this
+section originally called for — it reuses "All"'s already-shipped,
+already-approved glass-circle-with-text treatment verbatim rather than
+inventing new pixels, which is a materially lower-risk substitute for a
+mockup but is a deviation from the stated plan worth flagging as such.
+**UNVERIFIED in the simulator** — built and checked via `xcodebuild` plus the
+static self-tests above (`category-fold-selftest.sh`, `swiftdata-liveness-audit.py`,
+`design-motion-audit.py`), per this project's standing instruction to verify
+that way rather than by driving the sim; nobody has looked at the folded word
+chips render on a device or watched the ring/switcher/landing behavior live.

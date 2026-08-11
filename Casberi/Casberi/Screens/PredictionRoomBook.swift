@@ -31,10 +31,13 @@ struct PredictionRoomBook: View {
     @Environment(BridgeStore.self) private var store
     @Environment(ShellChrome.self) private var chrome
 
-    /// Is the strip showing the folded Markets chip? Then the room already
-    /// wears a venue switcher and this one must not (see `body`).
+    /// Is the strip showing the folded Markets chip WITH a real switcher
+    /// behind it (≥2 present venues, `MarketsRoom.switcherFloor`)? Then the
+    /// room already wears one and this one must not (see `body`). The chip
+    /// itself now folds unconditionally (prd §351) — this checks the
+    /// SWITCHER's own floor, a different question.
     private var foldedIntoMarkets: Bool {
-        chrome.marketVenues.count >= MarketsRoom.foldFloor
+        (chrome.categoryVenues[MarketsRoom.room]?.count ?? 0) >= MarketsRoom.switcherFloor
     }
 
     @State private var scope: PredictionVenueScope = .all

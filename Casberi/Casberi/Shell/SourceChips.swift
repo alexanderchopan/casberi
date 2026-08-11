@@ -27,14 +27,16 @@ struct SourceChips: View {
     let active: String
     /// `.horizontal` is the iPhone strip; `.vertical` is the iPad rail.
     var axis: Axis = .horizontal
-    /// The seats behind the folded Markets chip, in learned order (2026-08-10).
+    /// The seats behind every folded category chip, in learned order, keyed by
+    /// category name (prd §351, 2026-08-11 — generalizes what was
+    /// `marketVenues`, a single array Markets alone ever filled).
     ///
     /// Passed in rather than read off `ShellChrome`, because the strip renders
     /// once BEFORE the shell's `onAppear` has published anything — and a folded
     /// chip whose venue list is empty draws as a bare grey circle. The owner
     /// hands over a value with its own fallback (`MainSurface.chipSnapshot`), so
     /// the mark and the labels can never disagree with the chip beside them.
-    var marketVenues: [String] = []
+    var categoryVenues: [String: [String]] = [:]
     /// Folded while the feed scrolls down (2026-07-30, `ShellChrome.minimized`).
     ///
     /// The strip does NOT leave — that ruling stands and is the whole reason
@@ -322,14 +324,16 @@ struct SourceChips: View {
         // The strip and the tray it opens must agree about which seats are in
         // trouble, so this line and that one stay identical.
         let seat = BridgeCatalog.offer(forSource: label)?.name ?? label
-        // The folded Markets chip answers for the seats behind it: with the
-        // members' own circles gone, a broken Kalshi would otherwise have no
-        // ring anywhere in the strip and the connection could sit dead with
-        // nothing on any surface to say so. The DASHED attention ring is
-        // exactly as legible on a folder as on a brand mark, and the room's
-        // switcher is one tap from naming which venue it is.
-        let attentionSeats: Set<String> = MarketsRoom.isRoom(label)
-            ? Set(marketVenues) : [seat]
+        // A folded CATEGORY chip answers for every seat behind it (prd §351,
+        // generalizing the Markets-only reasoning this line used to carry):
+        // with the members' own circles gone, a broken seat would otherwise
+        // have no ring anywhere in the strip and the connection could sit dead
+        // with nothing on any surface to say so. The DASHED attention ring is
+        // exactly as legible on a category word as on a brand mark, and the
+        // Sources Tray (or, for Markets, its own switcher) is one tap from
+        // naming which seat it is.
+        let attentionSeats: Set<String> = CategoryFold.isCategory(label)
+            ? Set(categoryVenues[label] ?? []) : [seat]
         let broken = bridges.bridges.contains {
             attentionSeats.contains($0.name) && $0.status == .attention
         }
@@ -359,7 +363,33 @@ struct SourceChips: View {
                     // The pinned room (2026-08-10) — see `PinnedChipMark`.
                     PinnedChipMark(size: iconSize)
                 default:
-                    BridgeIcon(name: label, size: iconSize, circular: true)
+                    // A category chip is a WORD, not a mark (prd §351,
+                    // 2026-08-11, overturning the icon-only ruling of
+                    // 2026-07-09/07-10 for exactly this case): every
+                    // source-bearing chip is now a category, and a category
+                    // has no brand to wear — Markets' own generic glyph,
+                    // shipped hours earlier the same day, is retired by this
+                    // same change rather than kept as a second synthetic-label
+                    // treatment. Reuses "All"'s exact word-in-circle geometry
+                    // so the whole strip reads as one visual language rather
+                    // than three different chip shapes glued together.
+                    if CategoryFold.isCategory(label) {
+                        Text(label).dsText(.label12)
+                            .foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.55)
+                            .multilineTextAlignment(.center)
+                            .frame(width: iconSize, height: iconSize)
+                            .clipShape(Circle())
+                            .dsGlass(cornerRadius: iconSize / 2)
+                    } else {
+                        // Reachable only for a label the catalog has never
+                        // heard of (an uncategorized source) — every real
+                        // catalog offer resolves to one of the ten categories,
+                        // so this is a defensive fallback, not the common path
+                        // it used to be.
+                        BridgeIcon(name: label, size: iconSize, circular: true)
+                    }
                 }
             }
             .frame(width: iconSize, height: iconSize)
@@ -443,16 +473,18 @@ struct SourceChips: View {
     }
 
     private func chipAccessibilityLabel(_ label: String, broken: Bool) -> String {
-        // The folded chip's own face is a generic glyph (2026-08-11) that
-        // names none of its members, so VoiceOver is the one place left that
-        // still says which venues are behind it — spoken, not drawn.
-        guard MarketsRoom.isRoom(label), !marketVenues.isEmpty else {
+        // A folded chip's own face is its category's word — visible — but for
+        // more than one member VoiceOver is the one place that still says
+        // WHICH seats are behind it, spoken rather than drawn (prd §351,
+        // generalizing what was Markets-only reasoning here).
+        let venues = categoryVenues[label] ?? []
+        guard CategoryFold.isCategory(label), venues.count > 1 else {
             return broken ? String(localized: "\(label), needs reconnecting") : label
         }
-        let venues = ListFormatter.localizedString(byJoining: marketVenues)
+        let joined = ListFormatter.localizedString(byJoining: venues)
         return broken
-            ? String(localized: "Markets: \(venues), needs reconnecting")
-            : String(localized: "Markets: \(venues)")
+            ? String(localized: "\(label): \(joined), needs reconnecting")
+            : String(localized: "\(label): \(joined)")
     }
 }
 
