@@ -662,7 +662,7 @@ struct Composer: View {
 
     /// Builds the ask chips from what the corpus can answer TODAY. Empty
     /// corpus → no chips (the field is the invitation).
-    private func computeSuggestions() {
+    private func computeSuggestions() async {
         #if DEBUG
         // `-askStats "<key>:<n>[,…]|clear"` — seed the decay counters
         // headlessly (see AskMemory; self-guarded to once per launch), so
@@ -922,7 +922,7 @@ struct Composer: View {
         #endif
         // The board (prd §332) — built last, so it can see the away pool the
         // chips above already computed and never pays for a second walk.
-        composition = buildPanel(all: all)
+        composition = await buildPanel(all: all)
         #if DEBUG
         NSLog("[Casberi] composerPerfDEBUG| TOTAL=%dms cards=%d",
               Int(Date.now.timeIntervalSince(composerT0) * 1000), composition.cards.count)
@@ -985,7 +985,7 @@ struct Composer: View {
     /// (kick a task, repaint on arrival) shows a visible frame of empty panel
     /// on every single open.
     @MainActor
-    private func buildPanel(all: [Thing]) -> AgentPanel.Composition {
+    private func buildPanel(all: [Thing]) async -> AgentPanel.Composition {
         // `.live` at this one door — every value below is read off these models
         // and then never touched again (liveness corollary 4).
         let corpus = all.filter(\.isLive)
@@ -1000,10 +1000,28 @@ struct Composer: View {
         }
 
         var cards: [AgentPanel.Card] = []
-        for (source, things) in bySource {
-            guard let card = roomFigure(source: source, things: things) else { continue }
+        // YIELDS between rooms (2026-08-10). This loop composes a figure per
+        // connected room — on a real corpus that is ~40 rooms and measured
+        // ~800ms of the 870ms `computeSuggestions` costs, all of it
+        // uninterrupted main-actor work. The cost is not the bug; the
+        // UNINTERRUPTEDNESS is: nothing can paint and no touch can be handled
+        // for the whole run, so the composer's own loading skeleton — a
+        // SwiftUI opacity animation, driven by the main run loop — freezes
+        // solid at whatever frame it was on. Measured on the sim: a
+        // frame-to-frame pixel diff of EXACTLY 0.00 across the window, i.e.
+        // the screen is not being redrawn at all, which is what the report
+        // "a black screen loads and hangs, then the stuff paints" actually is.
+        //
+        // Yielding every few rooms hands the run loop back often enough to
+        // draw and to stay responsive to touch. It does NOT make the work
+        // faster — the panel still costs what it costs — it makes the wait
+        // animated and interruptible instead of a hang.
+        for (i, entry) in bySource.enumerated() {
+            if i % 5 == 0 { await Task.yield() }
+            guard let card = roomFigure(source: entry.key, things: entry.value) else { continue }
             cards.append(card)
         }
+        await Task.yield()
         if let wallet = walletCurve() { cards.append(wallet) }
         // The money's sankey (§240's flow band), whenever the window holds a
         // band worth drawing — the user's ruling by name: "i want for example
@@ -2396,7 +2414,7 @@ struct Composer: View {
                 // screen, then everything at once" this exists to fix.
                 panelLoading = true
                 await Task.yield()
-                computeSuggestions()
+                await computeSuggestions()
                 panelLoading = false
                 // Kept asks share AskMemory's own decay counters with the
                 // suggestion tiles (ruling 5: "ignored asks decay dim") —
