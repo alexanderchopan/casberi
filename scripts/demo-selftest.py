@@ -49,6 +49,49 @@ against the demo corpus after a rendering change), documented in CLAUDE.md's
 demo entry, not pretended into a mechanical check that would either miss
 real gaps or false-positive on unrelated code.
 
+Check F (2026-08-08) generalizes the SAME rule to `FeedScreen.Shape` — the
+room-rendering taxonomy, one shape per source, chosen the moment a room is
+opened. Asked directly to extend parity checking "to all parts of the app"
+(user, 2026-08-08), this is the next surface with the right shape for a
+STATIC check: unlike the agent panel (Check for that lives in `verify.sh`'s
+simulator tail, because figure selection depends on runtime ranking noise —
+see that check's own header), a source's Shape is a pure function of its
+NAME, decided at compile time by `Shape.init(source:)`. No ranking, no
+simulator, so a real gap can hard-fail here the way D/E do.
+
+Building it found four near-misses before it found the one real thing,
+worth recording because each is the kind of false positive a cruder version
+of this check would have shipped: `.x402` is matched via
+`case X402Ingest.source:`, an INDIRECT reference, not a literal — resolved
+by reading the real constant out of `Model/CircleX402Bridge.swift` rather
+than hardcoding "Circle x402" as a second copy that could drift.
+`.appStoreConnect` is the same indirection one level deeper —
+`case ASCShape.source:` resolves to a constant defined INSIDE a nested
+`enum ASCShape` in `Model/AppStoreConnectBridge.swift`, so the first cut
+of the extraction (which looked for a bare top-level `static let source`)
+missed it and reported zero sources, which check F correctly failed on —
+caught by its own first real run, not by a fixture. `.media` is matched by
+a DYNAMIC PREDICATE (`case _ where MediaShape.isMediaFeed(source)`)
+covering five sources at once — resolved the same way, read out of
+`Model/MediaShape.swift`'s own switch rather than copied. `.all` maps from
+the literal source name `"All"`, which is a PSEUDO-SOURCE (the unfiltered
+aggregate view) that no `Thing` ever carries as its real source — exempted,
+not fixed, because there is nothing to seed.
+
+The one real finding, while building this check: `.safari` mapped from
+`"Safari"`, a bridge that never shipped — `BookmarksImport` had stamped its
+rows `source: "Bookmarks"` since 2026-07-28, so every one of them silently
+fell to `.plain`'s generic band row instead of the reading-list shape built
+for exactly this content. Not a demo gap — the demo seeds real Bookmarks
+rows correctly; the bug was upstream, in the switch itself, naming a source
+nothing ever stamps. Flagged as a separate task rather than fixed inline
+here (out of scope for a demo-parity pass), and fixed same-day by that task:
+`case "Safari"` is now `case "Bookmarks"`, `.safari` is gone from the case
+list, and this check needs no exemption for it. `KNOWN_UNBACKED_SHAPE`
+stays in place, empty, for the next time this class of bug turns up —
+the same `KNOWN_EXEMPT` shape this codebase uses everywhere else, ready
+rather than invented under pressure.
+
 Static and source-only — no build, no simulator, matches the DEMO(2026-08-07)
 addendum to `docs/demo-spec.md`.
 
@@ -76,6 +119,12 @@ DEMO_FILES = {
     # fixtures, since the fixtures exist to break the DEMO side of the sync,
     # not the catalog.
     "BridgeCatalog": CASBERI / "Model/BridgeCatalog.swift",
+    # Read-only references for check F — same reasoning, and same read-only
+    # role: fixtures for F mutate the DEMO side only.
+    "FeedScreen": CASBERI / "Screens/FeedScreen.swift",
+    "MediaShape": CASBERI / "Model/MediaShape.swift",
+    "CircleX402Bridge": CASBERI / "Model/CircleX402Bridge.swift",
+    "AppStoreConnectBridge": CASBERI / "Model/AppStoreConnectBridge.swift",
 }
 
 # `DemoSeedAll.seatTable` names that legitimately have no ENTRY in
@@ -316,6 +365,90 @@ def check_e_seat_names_have_rows(files_text):
               f'"{name}"' in rest, True)
 
 
+# `FeedScreen.Shape` names its own source-name mappings via literal string
+# cases; two others match via an INDIRECT reference or a DYNAMIC predicate,
+# which a plain regex over the switch can't resolve — resolved by reading
+# the real functions they point at instead of hardcoding a second copy.
+# `all` has no bridge to seed at all (a pseudo-source, the unfiltered
+# aggregate view — no `Thing` is ever stamped `source: "All"`).
+SHAPE_NO_SOURCE = {"all"}
+
+# A shape whose real bridge does not exist — see this file's module doc for
+# the `.safari` finding that motivated this dict (found and fixed same-day,
+# so it's empty now). Adding a name here is a conscious, tracked exception,
+# not a silent skip — the `KNOWN_EXEMPT` pattern this codebase uses
+# everywhere else. Don't add an entry to make a red check green without
+# checking, the same way, that the shape's bridge really doesn't exist.
+KNOWN_UNBACKED_SHAPE = set()
+
+
+def extract_shape_sources(feed_src, media_src, x402_src, asc_src):
+    """Every FeedScreen.Shape case, and the source name(s) that resolve to
+    it — literal cases read directly, `.x402`/`.media`/`.appStoreConnect`
+    resolved through the real constants/functions they reference so this
+    can't drift from what the switch actually does."""
+    clean = strip_comments(feed_src)
+    m = re.search(r'private enum Shape \{(.*?)\n    \}', clean, re.DOTALL)
+    if not m:
+        return None
+    body = m.group(1)
+    case_line = re.search(r'case ([\w, ]+)\n', body)
+    all_cases = [c.strip() for c in case_line.group(1).split(",")] if case_line else []
+
+    mappings = re.findall(r'case ([^:]+):\s*self = \.(\w+)', body)
+    shape_sources = {}
+    for sources_raw, shape in mappings:
+        names = re.findall(r'"([^"]+)"', sources_raw)
+        shape_sources.setdefault(shape, []).extend(names)
+
+    # `.x402` — `case X402Ingest.source:`, read the real constant.
+    x402_clean = strip_comments(x402_src)
+    x402_m = re.search(r'static let source\s*=\s*"([^"]+)"', x402_clean)
+    if x402_m:
+        shape_sources.setdefault("x402", []).append(x402_m.group(1))
+
+    # `.media` — `case _ where MediaShape.isMediaFeed(source):`, read the
+    # real predicate's own switch rather than copying its source list.
+    media_clean = strip_comments(media_src)
+    mf_m = re.search(r'static func isMediaFeed.*?\{(.*?)\n    \}', media_clean, re.DOTALL)
+    if mf_m:
+        shape_sources.setdefault("media", []).extend(
+            re.findall(r'"([^"]+)"', mf_m.group(1)))
+
+    # `.appStoreConnect` — `case ASCShape.source:`, read the real constant
+    # (a second indirect reference, same shape as x402's).
+    asc_clean = strip_comments(asc_src)
+    asc_m = re.search(r'enum ASCShape \{.*?static let source\s*=\s*"([^"]+)"', asc_clean, re.DOTALL)
+    if asc_m:
+        shape_sources.setdefault("appStoreConnect", []).append(asc_m.group(1))
+
+    return all_cases, shape_sources
+
+
+def check_f_shape_coverage(files_text):
+    """Check F — every `FeedScreen.Shape` case has at least one mapped
+    source whose name appears as a literal somewhere in `DemoSeedAll.swift`.
+    Unlike the agent panel's figure kinds (checked live, in `verify.sh`'s
+    simulator tail, because figure SELECTION depends on runtime ranking
+    noise), a Shape is a pure function of a source's NAME — no ranking, no
+    simulator, so this can hard-fail the way checks D/E do rather than warn
+    the way the panel check does."""
+    result = extract_shape_sources(
+        files_text["FeedScreen"], files_text["MediaShape"], files_text["CircleX402Bridge"],
+        files_text["AppStoreConnectBridge"])
+    if result is None:
+        check("F · FeedScreen.Shape found", False, True)
+        return
+    all_cases, shape_sources = result
+    demo_clean = strip_comments(files_text["DemoSeedAll"])
+    for shape in all_cases:
+        if shape == "plain" or shape in SHAPE_NO_SOURCE or shape in KNOWN_UNBACKED_SHAPE:
+            continue
+        sources = shape_sources.get(shape, [])
+        present = any(f'"{s}"' in demo_clean for s in sources)
+        check(f'F · Shape.{shape} has a seeded source among {sources}', present, True)
+
+
 def run_checks(files_text):
     before = len(failures)
     check_a_release_reachable(files_text)
@@ -323,6 +456,7 @@ def run_checks(files_text):
     check_c_no_source_collision(files_text)
     check_d_seat_names_are_real(files_text)
     check_e_seat_names_have_rows(files_text)
+    check_f_shape_coverage(files_text)
     return len(failures) == before
 
 
@@ -402,6 +536,15 @@ def self_test():
         )),
         check_e_seat_names_have_rows, True)
 
+    ok &= verify_fixture(
+        "a Shape with no seeded source anywhere is caught",
+        # Strip every literal occurrence of "Files" — .files's only mapped
+        # source — so nothing in the mutated tree can satisfy it. A targeted
+        # string a real title/comment doesn't otherwise need, so this can't
+        # accidentally break unrelated checks running over the same fixture.
+        lambda f: f.__setitem__("DemoSeedAll", f["DemoSeedAll"].replace('"Files"', '"NotFiles"')),
+        check_f_shape_coverage, True)
+
     # And the clean tree must pass all three, so the fixtures above are
     # proven against a REAL failure, not a checker that always fails.
     global SILENT
@@ -435,9 +578,14 @@ def main():
     ok = run_checks(files_text)
     if ok:
         seat_names, _ = extract_seat_table(files_text["DemoSeedAll"])
+        shape_result = extract_shape_sources(
+            files_text["FeedScreen"], files_text["MediaShape"], files_text["CircleX402Bridge"],
+            files_text["AppStoreConnectBridge"])
+        shape_count = len(shape_result[0]) if shape_result else 0
         print(f"✓ demo guard: {len(DEMO_FACING_FUNCS)} functions Release-reachable, "
               "no network verbs, no source collisions, "
-              f"{len(seat_names or [])} catalog seats real and seeded")
+              f"{len(seat_names or [])} catalog seats real and seeded, "
+              f"{shape_count} feed shapes covered")
         sys.exit(0)
     else:
         print(f"✗ demo guard: {len(failures)} check(s) failed")
