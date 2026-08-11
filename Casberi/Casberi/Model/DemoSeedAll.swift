@@ -257,6 +257,7 @@ enum DemoSeedAll {
         ASCState.apps = [:]
         ASCState.standing = [:]
         ASCState.lastRead = nil
+        SafeBridge.clearDemoSnapshot()
 
         // `clear` REMOVES the version stamp, which is right for the dev verb
         // it was written for (`-demoSeed clear`, where the next launch should
@@ -1102,6 +1103,22 @@ enum DemoSeedAll {
                 }
             }
         }
+        // Safe gained its own source (2026-08-11, riding a Safe multisig's
+        // pending-signature queue) — was "Wallet" before that, like Aave/
+        // Morpho still are. Title shape and ref match `SafeBridge.swift`'s
+        // real "N of M signatures collected on … — waiting on others / —
+        // your signature is needed", `"wallet:safe:<chainSeg>:<txHash>"`.
+        let safeTxs: [(String, Bool, Double)] = [
+            ("2 of 3 signatures collected on sending 1,500 USDC to payroll.eth — your signature is needed", true, 2),
+            ("1 of 3 signatures collected on approving Uniswap to spend 2,000 USDC — waiting on others", false, 9),
+        ]
+        out += safeTxs.enumerated().map { i, s in
+            row(.transaction, s.0, source: "Safe", ref: "wallet:safe:eth:demo\(i)",
+                days: s.2, hour: 15) { t in
+                t.walletAddress = demoWallet
+                if s.1 { t.tags = ["Your turn"] }
+            }
+        }
         return out
     }
 
@@ -1684,6 +1701,16 @@ enum DemoSeedAll {
         // 5 · Cloudflare's estate snapshot — see `seedCloudflareEstate`'s own
         // doc for why the two cert rows alone don't reach the runway figure.
         seedCloudflareEstate()
+        // 6 · Safe's room head (2026-08-11) reads `SafeBridge`'s own bridge
+        // state, not the seeded `.transaction` things above (`SafeRoomSource`'s
+        // own doc) — refs match the `wallet:safe:eth:demo0/1` rows in `wallet()`
+        // exactly, so a tap on either ring opens the real seeded thing.
+        SafeBridge.seedDemoSnapshot(safeAddress: demoWallet, pending: [
+            (ref: "wallet:safe:eth:demo0", have: 2, required: 3, yourTurn: true, daysAgo: 2,
+             descriptionText: "a transfer of 1,500 USDC to payroll.eth"),
+            (ref: "wallet:safe:eth:demo1", have: 1, required: 3, yourTurn: false, daysAgo: 9,
+             descriptionText: "an approval for Uniswap to spend 2,000 USDC"),
+        ])
     }
 
     // MARK: - Seats
@@ -1761,6 +1788,7 @@ enum DemoSeedAll {
         // (2026-08-11).
         ("Gemini", "Synced 30m ago", "Brings in your Gemini chats."),
         ("Railgun", "Synced 45m ago", "Reads your wallet's shielded moves."),
+        ("Safe", "Synced 15m ago", "Reads your Safe's pending signatures."),
         ("Linear", "Synced 15m ago", "Reads the work assigned to you."),
         ("Notion", "Synced 25m ago", "Reads your pages."),
         ("Slack", "3 channels", "Reads the channels you name."),

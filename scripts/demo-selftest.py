@@ -125,6 +125,10 @@ DEMO_FILES = {
     "MediaShape": CASBERI / "Model/MediaShape.swift",
     "CircleX402Bridge": CASBERI / "Model/CircleX402Bridge.swift",
     "AppStoreConnectBridge": CASBERI / "Model/AppStoreConnectBridge.swift",
+    # Read-only reference for checks A/H — Safe is the first bridge to own
+    # its demo seed in its own file rather than in DemoSeedAll (2026-08-11),
+    # since `SafeRoomSource` reads only this file's `private` state.
+    "SafeBridge": CASBERI / "Model/SafeBridge.swift",
 }
 
 # `DemoSeedAll.seatTable` names that legitimately have no ENTRY in
@@ -172,6 +176,8 @@ DEMO_FACING_FUNCS = [
     ("DemoSeedAll", "static func seed"),
     ("DemoSeedAll", "static func teardown"),
     ("DemoSeedAll", "static func seedBridgeStateForDemo"),
+    ("SafeBridge", "static func seedDemoSnapshot"),
+    ("SafeBridge", "static func clearDemoSnapshot"),
 ]
 
 # Network verbs that must never appear in the two files the demo's "reaches
@@ -486,13 +492,16 @@ KNOWN_BALANCE_ONLY = {
     # Verified against each bridge file: `ExchangeBridge.swift` (Coinbase/
     # Kraken/Binance/Gemini Exchange — balances only, no `Thing(kind:`
     # anywhere in the file), `EthValidatorWatch.swift` (validator positions,
-    # same shape), and the five wallet-riding DeFi protocols that stamp
+    # same shape), and the wallet-riding DeFi protocols that stamp
     # `source: "Wallet"` on everything they land (Aave, Aerodrome,
-    # Hyperliquid, Morpho, Safe) plus Uniswap, which appears only as a
+    # Hyperliquid, Morpho) plus Uniswap, which appears only as a
     # `transferCounterparty` string inside a Wallet transaction, never its
-    # own source.
+    # own source. ("Safe" is NOT here — it gained its own distinct source
+    # 2026-08-11, mid-session; re-verify a name here against the real
+    # bridge file before trusting an old list, this one already went stale
+    # once.)
     "Coinbase", "Kraken", "Binance", "Gemini Exchange", "ETH Validators",
-    "Aave", "Aerodrome", "Hyperliquid", "Morpho", "Safe", "Uniswap",
+    "Aave", "Aerodrome", "Hyperliquid", "Morpho", "Uniswap",
 }
 KNOWN_CHIPLESS_CAPTURE = {
     # Rides the generic share-sheet capture path (`Thing`'s own default
@@ -548,6 +557,62 @@ def check_g_catalog_offers_have_demo_seats(files_text):
               offer in demo_seat_catalog_names, True)
 
 
+# Check H closes the loop check G's own construction left open. A room-head
+# bridge whose state is `private` (Safe) cannot be seeded from
+# `DemoSeedAll.swift` at all — no `KNOWN_*` exemption in check G can make
+# that honest, because the gap isn't "should this be seeded", it's "CAN this
+# be seeded from outside the file". Found live (2026-08-11): another session
+# added `safeHead` to `verify.sh`'s room-head sweep the same day it added
+# the room head, and the sweep correctly failed — `SafeRoomSource.compose`
+# reads only `detectedKey`/`configSnapshotKey`/`trackingKey`, all `private`
+# to `SafeBridge.swift`. The fix that session landed, independently and in
+# parallel with this one (`SafeBridge.seedDemoSnapshot`/`clearDemoSnapshot`),
+# is the pattern this check makes standing: a bridge that owns `private`
+# room-head state owns seeding it too, in its own file, where private
+# access is free — never a second, unreachable attempt from DemoSeedAll.
+#
+# `STATE_OWNING_BRIDGES` is deliberately NOT "every SourceHead bridge" — only
+# the ones whose state genuinely can't be reached any other way. The other
+# four state-reading heads (App Store Connect, Apple Wallet, PostHog,
+# Cloudflare) work today via a DIFFERENT, also-honest route: their state
+# lives in `internal`/public types (`ASCState`, `AppleWalletBridge.connected`,
+# `PostHogState`, `CloudflareEstateStore`) that `DemoSeedAll.seedBridgeState`
+# already writes directly — no hook needed because nothing is blocking
+# access. `KNOWN_CENTRALIZED_STATE_SEED` names them so a future reader
+# doesn't mistake the absence of a hook there for the same gap Safe had.
+STATE_OWNING_BRIDGES = {
+    # Nothing outside SafeBridge.swift can read or write detectedKey/
+    # configSnapshotKey/trackingKey — verified against the real file (all
+    # three are `private static`).
+    "Safe": "SafeBridge",
+}
+KNOWN_CENTRALIZED_STATE_SEED = {
+    "App Store Connect": "ASCState is internal; DemoSeedAll writes .standing/.apps/.lastRead directly",
+    "Apple Wallet": "AppleWalletBridge.connected is internal; DemoSeedAll sets it directly",
+    "PostHog": "PostHogState is internal; DemoSeedAll writes .replace(metrics) directly",
+    "Cloudflare": "CloudflareEstateStore is internal; DemoSeedAll calls .save(...) directly",
+}
+
+
+def check_h_state_owning_bridges_seed_themselves(files_text):
+    """Check H — every bridge in `STATE_OWNING_BRIDGES` has a
+    `static func seedDemo…` (prefix match, so `seedDemo` and
+    `seedDemoSnapshot` both count — two real names already ship) in its OWN
+    file. A room-head bridge added to this dict with no matching function is
+    the exact gap `safeHead` shipped with until this same day's fix — caught
+    here now, statically, before a simulator ever has to prove it by
+    failing."""
+    for source, file_key in STATE_OWNING_BRIDGES.items():
+        src = files_text.get(file_key)
+        if src is None:
+            check(f'H · {file_key} found for state-owning bridge "{source}"', False, True)
+            continue
+        clean = strip_comments(src)
+        has_hook = re.search(r'static func seedDemo\w*\(', clean) is not None
+        check(f'H · {file_key} ("{source}") has its own seedDemo… function',
+              has_hook, True)
+
+
 def run_checks(files_text):
     before = len(failures)
     check_a_release_reachable(files_text)
@@ -557,6 +622,7 @@ def run_checks(files_text):
     check_e_seat_names_have_rows(files_text)
     check_f_shape_coverage(files_text)
     check_g_catalog_offers_have_demo_seats(files_text)
+    check_h_state_owning_bridges_seed_themselves(files_text)
     return len(failures) == before
 
 
@@ -657,6 +723,17 @@ def self_test():
             '("GitLab", "Synced 10m ago", "Reads issues and merge requests assigned to you."),\n        ',
             '', 1)),
         check_g_catalog_offers_have_demo_seats, True)
+
+    ok &= verify_fixture(
+        "a state-owning bridge with no seedDemo… function is caught",
+        # Rename the real hook so the prefix match can't find it — the
+        # `.replace` targets the function keyword itself, not a comment, so
+        # a fixture hidden behind the exact regex it's testing proves
+        # nothing (this check's own first-run lesson, paid for twice
+        # already by checks D and F).
+        lambda f: f.__setitem__("SafeBridge", f["SafeBridge"].replace(
+            "static func seedDemoSnapshot", "static func plantDemoSnapshot", 1)),
+        check_h_state_owning_bridges_seed_themselves, True)
 
     # And the clean tree must pass all three, so the fixtures above are
     # proven against a REAL failure, not a checker that always fails.

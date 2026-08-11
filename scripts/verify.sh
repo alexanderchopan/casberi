@@ -631,7 +631,9 @@ fi
 # concurrent session mid-way through this list's own life — added here the
 # same day, the exact discipline the registry-drift finding above argues
 # for: a new `SourceHead` case is a new line here in the SAME commit, not a
-# later "oh, we forgot one."
+# later "oh, we forgot one." `safeHead`, the TWELFTH, landed the same day for
+# the identical reason — Safe earning its own source in the same pass that
+# gave it a room head.
 #
 # The (name, source) pairs mirror `ProbeHooks.swift`'s `roomInsightProbe`
 # hook and `FeedScreen.sourceHead(_:)`'s switch — change one, change all
@@ -657,6 +659,7 @@ else
     privacyPoolsHead  "Privacy Pools"
     gnosisPayHead     "Gnosis Pay"
     railgunHead       "Railgun"
+    safeHead          "Safe"
   )
   MISSING_HEADS=()
   for name in "${(k)ROOM_HEADS[@]}"; do
