@@ -19488,3 +19488,81 @@ SUCCEEDED`; the 5-screen sweep completed with no crash. `ThingVoice.rowLabel`
 now speaks "new"/"needs attention" for the same reason the security flags
 already do — a tinted timestamp is a visual-only fact, so a reader who can't
 see color needs the word.
+
+## §348 — A category is a card, and a card is never split (user: "i thinkw e can do better with the source tray, it still looks like just a bunch of icons", then "B looks terrible tho w/ the orphans… i think we need cards for sure", then "is there a way to dynamically hae cards so it's most optimized", 2026-08-10)
+
+The sources tray has grouped by catalog category since §-of-2026-08-06, and the
+grouping was carried by an 11pt tertiary overline. Against twenty saturated
+marks that loses: the structure had to be READ to be seen, so the tray still
+presented as a wall of icons. Three treatments were mocked
+(`prototype/sources-tray-structure-v1.html`) — ink the overline in the tint,
+give each category a filled card, or give each category a whole card in a
+two-up masonry.
+
+**Ruling 1 — the card wins, because a filled container is SEEN rather than
+read.** Inking the overline is a one-line change and moves nothing, but it
+answers a contrast problem with more text, and the tint is this app's
+interactive family, so a blue word above a grid of buttons reads as a button.
+The masonry lost on the currency this tray has always been judged in: ~680pt
+past the resting cap, 46pt chips, and a long name truncating against §201.
+
+**Ruling 2 — cards are placed WHOLE and only the ROWS are packed.** The first
+cut inherited the old cell packing and let a category straddle a row end, so its
+tail arrived as a card with no title holding one chip, cut at the screen edge —
+you had to look up and diagonally back to learn what it was, and five of eight
+categories did it. The user's verdict was blunt and correct ("B looks terrible
+tho w/ the orphans"). Reversing which one gives way makes a continuation, and
+therefore a nameless box, *unrepresentable* — not softened, removed: there is no
+code path that can produce a cut card.
+
+**Ruling 3 — the packing order is BIGGEST FIRST, and this one is measured, not
+reasoned.** Placing whole categories into five-slot rows is bin packing, so the
+offer order decides the row count. Asked directly whether it could be done
+optimally, the honest answer needed evidence, so an exact optimiser (subset DP)
+was written and run against the greedy rules over **39,237 random corpora** (3–12
+categories, up to 45 sources):
+
+- **biggest first: 0 losses — it ties the exact optimum every single time.**
+- catalog order: worse on **7.76%**, by up to **two rows** (236pt — the
+  difference between resting and scrolling).
+
+So the shipped rule is three lines (`sorted(by: count)`, then first fit) and the
+DP was deliberately NOT shipped: it never once won, and it would have cost a
+scrambled category order to run. **The standing lesson is the one this file
+keeps re-earning — build the cheap instrument before the plausible fix.** The
+sophisticated version was not worth writing, and only measuring could say so.
+
+The cost, stated rather than hidden: **group order is size order, not catalog
+order.** Smaller than it sounds — the tray's order was never the STRIP's either
+(the strip is recency-and-taps, the tray was already catalog), so nothing the
+tray teaches gets untaught, and the strip's frozen order still survives inside
+every card. Ties break on catalog position, so a packing is deterministic.
+Connecting a source can re-sort the rows; the shipped tray already moved chips
+on connect, this is just more visible, and it is the price of never scrolling.
+
+On today's twenty sources: **four rows, zero empty cells, 598pt**, inside the
+620pt resting cap, chips still five across on the grid the strip and the catalog
+tiles share. A category with more than five sources takes a full-width card two
+chip rows tall — still one container with one title, so still no orphan.
+
+**Mechanical, because the failure is invisible**
+(`scripts/source-packing-selftest.sh`, in `verify.sh`): a tray packed one row
+worse than it could be renders perfectly, it is just taller. The packer was
+split into `Model/SourceRowPacking.swift` — Foundation-only by design — so the
+harness compiles it WHOLE and unmodified and checks it against the optimiser it
+refuses to ship: 3,965 checks, 10 mutations, plus drift guards tying the view's
+column count, its card fill and its gap-bridging padding to the packer. Its own
+first run earned two lessons this file has recorded before. It found a guard in
+the shipped source that was **unreachable** (an oversized row's member sum
+already exceeds the budget, so the extra `allSatisfy` could never fire) — now
+deleted rather than kept as a branch no test can reach; and two of its mutations
+**did not compile**, which proves nothing, so `mutate` now separates "matched
+nothing", "did not compile" and "compiled and went red", and only the last
+counts as caught.
+
+Verified: `scripts/verify.sh` green end to end (static head, build, 5-screen
+sweep, answer probe); `xcodebuild` BUILD SUCCEEDED. Not eyeballed on device —
+the one thing to judge by eye is the card fill, which is `DS.surfaceWell` (a
+recessed compartment, the token whose documented purpose matches and which is
+far stronger in light mode); `DS.fillFaint` is the raised alternative and a
+one-token swap.

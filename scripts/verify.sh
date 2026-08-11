@@ -172,6 +172,17 @@ step "Circle x402 pure-logic self-test"
   || fail "the x402 logic self-test failed — run scripts/x402-selftest.sh"
 print -P "%F{green}✓ x402 self-test%f"
 
+# The sources tray's row packer (2026-08-10). Mechanical because the failure is
+# INVISIBLE: a tray packed one row worse than it could be renders perfectly, it
+# is just taller — and past the 620pt resting cap "taller" means the picker
+# scrolls, which is the one thing this tray has been redesigned three times to
+# avoid. The harness carries the exact optimiser the app deliberately does NOT
+# ship, and proves the three-line sort still ties it.
+step "Sources-tray packing self-test"
+"$ROOT/scripts/source-packing-selftest.sh" >/dev/null \
+  || fail "the sources-tray packing self-test failed — run scripts/source-packing-selftest.sh"
+print -P "%F{green}✓ source packing self-test%f"
+
 # Pure-logic self-test for the retriever's scoring primitives (prd §318): term
 # rarity, query coverage, phrase adjacency, match-centered snippets. The
 # failure mode here is the one no build or sweep can see — a RANKING being

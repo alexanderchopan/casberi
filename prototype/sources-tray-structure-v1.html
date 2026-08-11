@@ -1,0 +1,492 @@
+<title>Sources tray — three ways to make the categories read</title>
+<style>
+  :root {
+    --ground: #eef1f5; --ground-2: #e3e8ef; --ink: #14171c; --ink-2: #4a5361;
+    --ink-3: #79828f; --hair: #d5dbe4; --mark: #1256a8;
+
+    --page: #000; --sheet: #111113; --t1: #fff; --t2: rgba(235,235,245,0.60);
+    --t3: rgba(235,235,245,0.42); --tint: #1673e6; --tint2: #4a9af5; --attention: #ff9f0a;
+    --card: rgba(255,255,255,0.055); --glass: rgba(28,28,30,0.62); --scrim: rgba(0,0,0,0.50);
+    --s1: 4px; --s2: 10px; --s3: 14px; --s4: 18px; --s6: 24px;
+
+    --serif: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --ground: #0c0e12; --ground-2: #14171d; --ink: #e9ecf1; --ink-2: #a5adba;
+            --ink-3: #737d8b; --hair: #232830; --mark: #6aa9f0; }
+  }
+  :root[data-theme="light"] {
+    --ground: #eef1f5; --ground-2: #e3e8ef; --ink: #14171c; --ink-2: #4a5361;
+    --ink-3: #79828f; --hair: #d5dbe4; --mark: #1256a8;
+  }
+  :root[data-theme="dark"] {
+    --ground: #0c0e12; --ground-2: #14171d; --ink: #e9ecf1; --ink-2: #a5adba;
+    --ink-3: #737d8b; --hair: #232830; --mark: #6aa9f0;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans);
+         font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1420px; margin: 0 auto; padding: 56px 22px 88px; }
+
+  .masthead { max-width: 66ch; display: flex; flex-direction: column; gap: 13px; }
+  .kicker { font-family: var(--mono); font-size: 12px; color: var(--mark); }
+  h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(29px, 5vw, 42px);
+       line-height: 1.12; letter-spacing: -0.015em; margin: 0; text-wrap: balance; }
+  .standfirst { font-size: 17px; color: var(--ink-2); margin: 0; text-wrap: pretty; }
+  .standfirst b { color: var(--ink); font-weight: 600; }
+
+  .stage { margin-top: 52px; display: grid; gap: 48px;
+           grid-template-columns: repeat(auto-fit, minmax(402px, 1fr));
+           justify-items: center; align-items: start; }
+  .col { display: flex; flex-direction: column; gap: 16px; width: min(402px, 100%); }
+  .chead { display: flex; align-items: baseline; gap: 10px; }
+  .chead h3 { font-family: var(--serif); font-size: 23px; font-weight: 600; margin: 0; }
+  .chead .tag { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); }
+  .note { margin: 0; font-size: 14.5px; color: var(--ink-2); text-wrap: pretty; }
+  .note b { color: var(--ink); font-weight: 600; }
+  code { font-family: var(--mono); font-size: 12.5px; color: var(--ink); }
+
+  .spec { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px;
+          font-family: var(--mono); font-size: 12px; color: var(--ink-3);
+          padding-top: 14px; border-top: 1px solid var(--hair); }
+  .spec dd { margin: 0; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .spec dd.good { color: #1f7a4d; }
+  .spec dd.bad { color: #b3462e; }
+  @media (prefers-color-scheme: dark) { .spec dd.good { color: #4fc389; } .spec dd.bad { color: #e2795d; } }
+  :root[data-theme="dark"] .spec dd.good { color: #4fc389; }
+  :root[data-theme="dark"] .spec dd.bad { color: #e2795d; }
+  :root[data-theme="light"] .spec dd.good { color: #1f7a4d; }
+  :root[data-theme="light"] .spec dd.bad { color: #b3462e; }
+
+  /* ---- phone ---- */
+  .holder { width: 100%; overflow: hidden; }
+  .phone { width: 402px; height: 874px; background: var(--page); position: relative;
+           border-radius: 54px; overflow: hidden; display: flex; flex-direction: column;
+           box-shadow: 0 0 0 9px #1b1c20, 0 22px 60px rgba(0,0,0,0.35);
+           transform-origin: top left; font-family: var(--sans); color: var(--t1); }
+  @media (prefers-color-scheme: dark) { .phone { box-shadow: 0 0 0 9px #26282e, 0 22px 60px rgba(0,0,0,0.6); } }
+  .statusbar { position: relative; height: 58px; display: flex; align-items: flex-end;
+               justify-content: space-between; padding: 0 32px 4px; font-size: 15px; font-weight: 600; }
+  .statusbar .right { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--t2); }
+  .strip { position: relative; display: flex; align-items: center; gap: var(--s3);
+           padding: var(--s6) 0 var(--s2) var(--s4); }
+  .door { width: 46px; height: 46px; border-radius: 50%; flex: none; background: var(--glass);
+          display: flex; align-items: center; justify-content: center; }
+  .doorglyph { display: grid; grid-template-columns: repeat(2, 8px); gap: 4px; }
+  .doorglyph span { width: 8px; height: 8px; border-radius: 2.5px; background: #4a9af5; }
+  .stripchips { display: flex; gap: var(--s3); overflow: hidden; flex: 1; padding: 3px 0; }
+  .lede { position: relative; padding: var(--s3) var(--s4); }
+  .ledecard { background: #0e1116; border-radius: 12px; padding: 16px; }
+  .ledecard h4 { margin: 0 0 12px; font-size: 17px; font-weight: 600; color: var(--t2); }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; height: 118px; }
+  .tile { background: #0f1a2c; border-radius: 9px; padding: 11px 12px; }
+  .tile .tt { font-size: 15px; color: var(--t2); }
+  .tile .ts { font-size: 12px; color: var(--t3); }
+  .tilecol { display: grid; grid-template-rows: 1fr 1fr; gap: 8px; }
+  .scrim { position: absolute; inset: 0; background: var(--scrim); z-index: 6; }
+
+  /* ---- tray shell ---- */
+  .tray { position: absolute; left: 0; right: 0; bottom: 0; z-index: 7; background: var(--sheet);
+          border-radius: 16px 16px 0 0; padding: var(--s6) var(--s4) var(--s6);
+          box-shadow: 0 -18px 60px rgba(0,0,0,0.6); display: flex; flex-direction: column; }
+  .grabber { width: 36px; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.25);
+             position: absolute; top: 9px; left: 50%; transform: translateX(-50%); }
+  .tray h2 { font-size: 22px; font-weight: 700; margin: 0 0 var(--s4); letter-spacing: -0.01em; }
+
+  /* ---- shared chip anatomy ---- */
+  .chip { width: 52px; height: 52px; display: flex; align-items: center; justify-content: center;
+          position: relative; border-radius: 50%; }
+  .chip.active { box-shadow: inset 0 0 0 2.5px var(--tint); }
+  .chip.broken::after { content: ""; position: absolute; inset: 0; border-radius: 50%;
+                        border: 2.5px dashed var(--attention); }
+  .icon { width: 44px; height: 44px; border-radius: 50%; overflow: hidden; }
+  .icon svg { width: 44px; height: 44px; display: block; }
+  .name { font-size: 12px; line-height: 1.16; color: var(--t2); height: 28px; text-align: center;
+          padding-top: 1px; overflow: hidden; }
+
+  /* ---- A: shipped packing, blue titles ---- */
+  .rows { display: flex; flex-direction: column; gap: var(--s4); }
+  .prow { display: flex; flex-direction: column; }
+  .band { display: flex; gap: 10px; height: 15px; margin-bottom: 5px; }
+  .band b { width: 65.2px; font-size: 11px; font-weight: 600; color: var(--tint2);
+            line-height: 15px; padding-left: 7px; white-space: nowrap; }
+  .band b.rep { font-weight: 500; color: rgba(74,154,245,0.55); }
+  .cells { display: flex; gap: 10px; }
+  .pcell { width: 65.2px; display: flex; flex-direction: column; align-items: center; gap: var(--s1); }
+
+  /* ---- B: full-bleed wrapping cards ---- */
+  .trayB { padding-left: 0; padding-right: 0; }
+  .trayB h2 { margin-left: var(--s4); margin-right: var(--s4); }
+  .crows { display: flex; flex-direction: column; gap: 12px; }
+  .crow { position: relative; height: 117px; }
+  .gcard { position: absolute; top: 0; height: 117px; background: var(--card); }
+  .gname { position: absolute; top: 9px; font-style: normal; font-size: 11px; font-weight: 600;
+           color: var(--t3); line-height: 15px; z-index: 2; white-space: nowrap; }
+  .pcellB { position: absolute; top: 29px; width: 65.2px; display: flex; flex-direction: column;
+            align-items: center; gap: var(--s1); z-index: 2; }
+
+  /* ---- C: masonry category cards ---- */
+  .mason { display: flex; gap: 12px; align-items: flex-start; }
+  .mcol { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .mcard { background: var(--card); border-radius: 12px; padding: 10px 10px 8px; }
+  .mcard h5 { margin: 0 0 7px 4px; font-size: 12px; font-weight: 600; color: var(--t2); }
+  .mgrid { display: flex; flex-wrap: wrap; gap: 8px 6px; }
+  .mcell { width: 48px; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .chipC { width: 46px; height: 46px; display: flex; align-items: center; justify-content: center;
+           position: relative; border-radius: 50%; }
+  .chipC.broken::after { content: ""; position: absolute; inset: 0; border-radius: 50%;
+                         border: 2.5px dashed var(--attention); }
+  .iconC { width: 40px; height: 40px; border-radius: 50%; overflow: hidden; }
+  .iconC svg { width: 40px; height: 40px; display: block; }
+  .nameC { font-size: 10.5px; line-height: 1.14; color: var(--t2); height: 24px; text-align: center;
+           overflow: hidden; }
+  .clip { overflow: hidden; position: relative; }
+  .clip .fade { position: absolute; left: 0; right: 0; bottom: 0; height: 46px; z-index: 3;
+                background: linear-gradient(180deg, rgba(17,17,19,0), var(--sheet)); }
+
+  .footnote { margin-top: 60px; max-width: 74ch; display: flex; flex-direction: column; gap: 13px;
+              padding-top: 24px; border-top: 1px solid var(--hair); }
+  .footnote h2 { font-family: var(--serif); font-size: 20px; font-weight: 600; margin: 0; }
+  .footnote p { margin: 0; font-size: 14.5px; color: var(--ink-2); }
+  .footnote b { color: var(--ink); font-weight: 600; }
+  @media (max-width: 900px) { .wrap { padding: 34px 16px 60px; } }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="g-wallet" viewBox="0 0 44 44"><rect width="44" height="44" rx="22" fill="#1673e6"/><path d="M11 16.5c0-1.4 1.1-2.5 2.5-2.5h15c1.4 0 2.5 1.1 2.5 2.5v11c0 1.4-1.1 2.5-2.5 2.5h-15A2.5 2.5 0 0 1 11 27.5z" fill="none" stroke="#dbe9fb" stroke-width="2.4"/><circle cx="27.5" cy="22" r="2.6" fill="#dbe9fb"/></symbol>
+  <symbol id="g-mail" viewBox="0 0 44 44"><rect width="44" height="44" rx="22" fill="#2b96f0"/><rect x="10" y="14.5" width="24" height="16" rx="3" fill="none" stroke="#e8f2fd" stroke-width="2.4"/><path d="M11 16.5 22 24l11-7.5" fill="none" stroke="#e8f2fd" stroke-width="2.4" stroke-linejoin="round"/><circle cx="34" cy="12" r="5" fill="#3f9dff" stroke="#111113" stroke-width="2"/></symbol>
+  <symbol id="g-farcaster" viewBox="0 0 44 44"><rect width="44" height="44" rx="22" fill="#855dcd"/><path d="M14 14h16v3.2h-2.2V30h2.6v2.2h-7.2V30h1.6v-5.6h-5.6V30h1.6v2.2h-7.2V30h2.6V17.2H14z" fill="#e6dcf8"/></symbol>
+  <symbol id="g-photos" viewBox="0 0 44 44"><rect width="44" height="44" rx="22" fill="#59b0f0"/><rect x="11" y="13.5" width="22" height="17" rx="3" fill="none" stroke="#eaf5ff" stroke-width="2.3"/><circle cx="17" cy="19" r="2.1" fill="#eaf5ff"/><path d="M12.5 28.5 19 22l4.5 4.5L27 23l5 5.5" fill="none" stroke="#eaf5ff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="g-files" viewBox="0 0 44 44"><rect width="44" height="44" rx="22" fill="#4aa8f0"/><path d="M16.5 28.5a5.2 5.2 0 0 1-.4-10.4 7 7 0 0 1 13.3 1.6 4.4 4.4 0 0 1-.6 8.8z" fill="#eef7ff"/></symbol>
+  <symbol id="g-tokens" viewBox="0 0 44 44"><rect width="44" height="44" rx="22" fill="#101418"/><path d="M12 28.5 19 21l4.5 4.5L31 17" fill="none" stroke="#2fd07a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M25.5 16.5H32V23" fill="none" stroke="#2fd07a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="g-github" viewBox="0 0 44 44"><rect width="44" height="44" rx="22" fill="#fff"/><path d="M22 10a12 12 0 0 0-3.8 23.4c.6.1.8-.26.8-.58v-2.24c-3.1.67-3.8-1.3-3.8-1.3-.5-1.3-1.26-1.65-1.26-1.65-1.03-.7.08-.69.08-.69 1.14.08 1.74 1.17 1.74 1.17 1.01 1.74 2.66 1.24 3.31.95.1-.74.4-1.24.72-1.52-2.48-.28-5.08-1.24-5.08-5.51 0-1.22.44-2.21 1.15-2.99-.12-.28-.5-1.42.11-2.95 0 0 .94-.3 3.08 1.14a10.7 10.7 0 0 1 5.6 0c2.14-1.44 3.08-1.14 3.08-1.14.61 1.53.23 2.67.11 2.95.72.78 1.15 1.77 1.15 2.99 0 4.28-2.6 5.22-5.09 5.5.4.35.76 1.03.76 2.08v3.09c0 .32.2.69.81.57A12 12 0 0 0 22 10" fill="#17191d"/></symbol>
+  <symbol id="g-rss" viewBox="0 0 44 44"><rect width="44" height="44" rx="22" fill="#f26522"/><circle cx="15.5" cy="28.5" r="2.8" fill="#fff"/><path d="M14 20.5a10 10 0 0 1 10 10M14 14a16.5 16.5 0 0 1 16.5 16.5" fill="none" stroke="#fff" stroke-width="3.1" stroke-linecap="round"/></symbol>
+  <symbol id="g-pools" viewBox="0 0 44 44"><rect width="44" height="44" rx="22" fill="#f4f4f5"/><path d="M22 11 30 17.5 27 31l-10 0-3-13.5z" fill="#141416"/><path d="M22 17.5 25.5 20l-1.2 5.5h-4.6L18.5 20z" fill="#f4f4f5"/></symbol>
+  <symbol id="g-music" viewBox="0 0 44 44"><defs><linearGradient id="lgm3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fb5c74"/><stop offset="1" stop-color="#fa233b"/></linearGradient></defs><rect width="44" height="44" rx="22" fill="url(#lgm3)"/><path d="M29 12.5 18.5 15v11.6a3.6 3.6 0 1 0 1.9 3.1V19.6l7-1.6v6a3.6 3.6 0 1 0 1.6 2.9z" fill="#fff"/></symbol>
+  <symbol id="g-stocktwits" viewBox="0 0 44 44"><rect width="44" height="44" rx="22" fill="#1a8cff"/><path d="M25 11 15 24h6l-2 9 10-13h-6z" fill="#fff"/></symbol>
+  <symbol id="g-bluesky" viewBox="0 0 44 44"><rect width="44" height="44" rx="22" fill="#0a7aff"/><path d="M22 21.5c-2-4-6.4-8.5-9-9.2-2.5-.7-3.4.8-3.4 2.6 0 1.5.6 6.3 1 7.2.9 2 3.2 2.5 5.3 2.2-3.4.6-4 2.4-2.4 4.6 3 4.1 5.4-1.4 6-3.1.2-.6.4-1 .5-1 .1 0 .3.4.5 1 .6 1.7 3 7.2 6 3.1 1.6-2.2 1-4-2.4-4.6 2.1.3 4.4-.2 5.3-2.2.4-.9 1-5.7 1-7.2 0-1.8-.9-3.3-3.4-2.6-2.6.7-7 5.2-9 9.2" fill="#fff"/></symbol>
+  <symbol id="g-gecko" viewBox="0 0 44 44"><rect width="44" height="44" rx="22" fill="#26235c"/><path d="M25.5 12c4.2 0 7.5 3.6 7.5 8 0 6.5-6 12.5-11.5 12.5-4.6 0-8.5-3-8.5-7.2 0-5.4 6.6-6.4 8.8-8.9C23.2 14.6 23.6 12 25.5 12" fill="#cdd2f5"/><circle cx="26.5" cy="19" r="2.6" fill="#26235c"/></symbol>
+  <symbol id="g-youtube" viewBox="0 0 44 44"><rect width="44" height="44" rx="22" fill="#ff0000"/><path d="M18 15.5 30.5 22 18 28.5z" fill="#fff"/></symbol>
+  <symbol id="g-kalshi" viewBox="0 0 44 44"><rect width="44" height="44" rx="22" fill="#3ab87d"/><text x="22" y="26" text-anchor="middle" font-family="-apple-system, Helvetica, sans-serif" font-size="10.5" font-weight="700" fill="#fff">Kalshi</text></symbol>
+  <symbol id="g-polymarket" viewBox="0 0 44 44"><rect width="44" height="44" rx="22" fill="#1652f0"/><path d="M14 15.5 30 12v20l-16-3.5z" fill="none" stroke="#fff" stroke-width="2.3" stroke-linejoin="round"/><path d="M14 15.5 30 32M14 28.5 30 12" stroke="#fff" stroke-width="2.3"/></symbol>
+  <symbol id="g-calendar" viewBox="0 0 44 44"><rect width="44" height="44" rx="22" fill="#ff3b30"/><rect x="11.5" y="13.5" width="21" height="18" rx="3" fill="none" stroke="#fff" stroke-width="2.3"/><path d="M11.5 19.5h21" stroke="#fff" stroke-width="2.3"/><circle cx="17" cy="24.5" r="1.6" fill="#fff"/><circle cx="22" cy="24.5" r="1.6" fill="#fff"/><circle cx="27" cy="24.5" r="1.6" fill="#fff"/></symbol>
+  <symbol id="g-reminders" viewBox="0 0 44 44"><rect width="44" height="44" rx="22" fill="#ff9f0a"/><circle cx="15" cy="17.5" r="3.4" fill="none" stroke="#fff" stroke-width="2"/><path d="M13.6 17.6l1 1 1.9-2.1" stroke="#fff" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="15" cy="27" r="3.4" fill="none" stroke="#fff" stroke-width="2"/><path d="M21 15.5h10M21 19.5h7M21 25h10M21 29h7" stroke="#fff" stroke-width="2.1" stroke-linecap="round"/></symbol>
+  <symbol id="g-railgun" viewBox="0 0 44 44"><defs><linearGradient id="lgr3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b9bcc4"/><stop offset=".5" stop-color="#5c6069"/><stop offset="1" stop-color="#e2e4e9"/></linearGradient></defs><rect width="44" height="44" rx="22" fill="url(#lgr3)"/><path d="M15 29 29 15M18 31 32 17M12 27 26 13" stroke="#f4f5f7" stroke-width="1.5" opacity=".85"/></symbol>
+  <symbol id="g-x" viewBox="0 0 44 44"><rect width="44" height="44" rx="22" fill="#000"/><path d="M13 13h5.2l5 6.7 5.6-6.7H31l-7.6 9 8 10.7h-5.2l-5.4-7.2-6 7.2H12l8.1-9.7z" fill="#fff"/></symbol>
+</defs></svg>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="kicker">SourcesTray.swift · structure pass, three treatments</div>
+    <h1>Same twenty sources, three ways to stop it reading as a wall of icons</h1>
+    <p class="standfirst">The shipped tray already groups by catalog category, but its gray 11pt
+    overline is quieter than twenty colored marks — so the grid still reads first and the structure
+    second. Three answers, in rising order of commitment: <b>ink the titles in the tint</b> (change
+    nothing else), <b>put each category on a card that wraps through the screen edge</b> (your
+    full-bleed idea), and <b>give each category its own card that never splits</b>, packed two-up.</p>
+  </header>
+
+  <div class="stage">
+
+    <!-- ================= A: blue titles ================= -->
+    <div class="col">
+      <div class="chead"><h3>A · Ink the titles</h3><span class="tag">geometry untouched</span></div>
+      <div class="holder">
+        <div class="phone">
+          <div class="statusbar"><span>1:09</span><span class="right">◗◗◗ ▮</span></div>
+          <div class="strip">
+            <div class="door" style="background:linear-gradient(135deg,#c0392b,#7b241c)"></div>
+            <div class="door"><div class="doorglyph"><span></span><span></span><span></span><span></span></div></div>
+            <div class="stripchips">
+              <div class="chip active"><div class="icon" style="background:var(--glass);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600">All</div></div>
+              <div class="chip"><div class="icon"><svg><use href="#g-wallet"/></svg></div></div>
+              <div class="chip"><div class="icon"><svg><use href="#g-mail"/></svg></div></div>
+              <div class="chip"><div class="icon"><svg><use href="#g-farcaster"/></svg></div></div>
+            </div>
+          </div>
+          <div class="lede">
+            <div class="ledecard"><h4>Themes</h4>
+              <div class="tiles">
+                <div class="tile"><div class="tt">Contributions</div><div class="ts">479 things</div></div>
+                <div class="tilecol">
+                  <div class="tile"><div class="tt">AAPL</div></div>
+                  <div class="tile"><div class="tt">Trending</div><div class="ts">45 thi…</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="scrim"></div>
+          <div class="tray">
+            <div class="grabber"></div>
+            <h2>Your sources</h2>
+            <div class="rows">
+<div class="prow"><div class="band"><b>Wallet</b><b></b><b></b><b>Social</b><b></b></div><div class="cells"><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-wallet"/></svg></div></div><div class="name">Wallet</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-pools"/></svg></div></div><div class="name">Privacy Pools</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-railgun"/></svg></div></div><div class="name">Railgun</div></div><div class="pcell"><div class="chip broken"><div class="icon"><svg><use href="#g-farcaster"/></svg></div></div><div class="name">Farcaster</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-bluesky"/></svg></div></div><div class="name">Bluesky</div></div></div></div>
+<div class="prow"><div class="band"><b class="rep">Social ·</b><b>Mail</b><b>Media</b><b></b><b>Markets</b></div><div class="cells"><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-x"/></svg></div></div><div class="name">X</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-mail"/></svg></div></div><div class="name">iCloud Mail</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-music"/></svg></div></div><div class="name">Apple Music</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-youtube"/></svg></div></div><div class="name">YouTube</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-tokens"/></svg></div></div><div class="name">Tokens</div></div></div></div>
+<div class="prow"><div class="band"><b class="rep">Markets ·</b><b></b><b></b><b></b><b>Life</b></div><div class="cells"><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-stocktwits"/></svg></div></div><div class="name">Stocktwits</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-gecko"/></svg></div></div><div class="name">GeckoTerminal</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-kalshi"/></svg></div></div><div class="name">Kalshi</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-polymarket"/></svg></div></div><div class="name">Polymarket</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-photos"/></svg></div></div><div class="name">Photos</div></div></div></div>
+<div class="prow"><div class="band"><b class="rep">Life ·</b><b></b><b></b><b>Work</b><b>Reading</b></div><div class="cells"><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-files"/></svg></div></div><div class="name">Files</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-calendar"/></svg></div></div><div class="name">Calendar</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-reminders"/></svg></div></div><div class="name">Reminders</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-github"/></svg></div></div><div class="name">GitHub</div></div><div class="pcell"><div class="chip"><div class="icon"><svg><use href="#g-rss"/></svg></div></div><div class="name">RSS</div></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="note"><b>One line of change: the overline goes from tertiary gray to the tint.</b>
+      A start is semibold tint, a continuation repeat (column one) is the same tint at half strength
+      with its interpunct. The blue now competes with the icons for the first glance, which is the
+      entire point — structure gets a color and color is what the icon wall was winning with.</p>
+      <p class="note"><b>The risk is what blue means elsewhere.</b> In this app the tint is the
+      interactive family — the active chip's ring two inches away is the same hue. A blue word above
+      a grid of buttons can read as a button itself. If that bothers in practice, the half-step is
+      tint for starts and keeping gray repeats.</p>
+      <dl class="spec">
+        <dt>height</dt><dd class="good">566pt — unchanged, no scroll</dd>
+        <dt>code</dt><dd class="good">a foregroundStyle swap, nothing moves</dd>
+        <dt>risk</dt><dd>tint = interactive, everywhere else</dd>
+      </dl>
+    </div>
+
+    <!-- ================= B: full-bleed wrapping cards ================= -->
+    <div class="col">
+      <div class="chead"><h3>B · Cards through the edge</h3><span class="tag">your idea, drawn</span></div>
+      <div class="holder">
+        <div class="phone">
+          <div class="statusbar"><span>1:09</span><span class="right">◗◗◗ ▮</span></div>
+          <div class="strip">
+            <div class="door" style="background:linear-gradient(135deg,#c0392b,#7b241c)"></div>
+            <div class="door"><div class="doorglyph"><span></span><span></span><span></span><span></span></div></div>
+            <div class="stripchips">
+              <div class="chip active"><div class="icon" style="background:var(--glass);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600">All</div></div>
+              <div class="chip"><div class="icon"><svg><use href="#g-wallet"/></svg></div></div>
+              <div class="chip"><div class="icon"><svg><use href="#g-mail"/></svg></div></div>
+              <div class="chip"><div class="icon"><svg><use href="#g-farcaster"/></svg></div></div>
+            </div>
+          </div>
+          <div class="lede">
+            <div class="ledecard"><h4>Themes</h4>
+              <div class="tiles">
+                <div class="tile"><div class="tt">Contributions</div><div class="ts">479 things</div></div>
+                <div class="tilecol">
+                  <div class="tile"><div class="tt">AAPL</div></div>
+                  <div class="tile"><div class="tt">Trending</div><div class="ts">45 thi…</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="scrim"></div>
+          <div class="tray trayB">
+            <div class="grabber"></div>
+            <h2>Your sources</h2>
+            <div class="crows">
+              <!-- row 1: Wallet 0-2 · Social 3-4 → continues -->
+              <div class="crow">
+                <div class="gcard" style="left:14.5px;width:222.6px;border-radius:12px"></div>
+                <div class="gcard" style="left:240.1px;width:161.9px;border-radius:12px 0 0 12px"></div>
+                <i class="gname" style="left:23px">Wallet</i>
+                <i class="gname" style="left:248.6px">Social</i>
+                <div class="pcellB" style="left:18px"><div class="chip"><div class="icon"><svg><use href="#g-wallet"/></svg></div></div><div class="name">Wallet</div></div>
+                <div class="pcellB" style="left:93.2px"><div class="chip"><div class="icon"><svg><use href="#g-pools"/></svg></div></div><div class="name">Privacy Pools</div></div>
+                <div class="pcellB" style="left:168.4px"><div class="chip"><div class="icon"><svg><use href="#g-railgun"/></svg></div></div><div class="name">Railgun</div></div>
+                <div class="pcellB" style="left:243.6px"><div class="chip broken"><div class="icon"><svg><use href="#g-farcaster"/></svg></div></div><div class="name">Farcaster</div></div>
+                <div class="pcellB" style="left:318.8px"><div class="chip"><div class="icon"><svg><use href="#g-bluesky"/></svg></div></div><div class="name">Bluesky</div></div>
+              </div>
+              <!-- row 2: Social cont 0 · Mail 1 · Media 2-3 · Markets 4 → continues -->
+              <div class="crow">
+                <div class="gcard" style="left:0;width:86.7px;border-radius:0 12px 12px 0"></div>
+                <div class="gcard" style="left:89.7px;width:72.2px;border-radius:12px"></div>
+                <div class="gcard" style="left:164.9px;width:147.4px;border-radius:12px"></div>
+                <div class="gcard" style="left:315.3px;width:86.7px;border-radius:12px 0 0 12px"></div>
+                <i class="gname" style="left:98.2px">Mail</i>
+                <i class="gname" style="left:173.4px">Media</i>
+                <i class="gname" style="left:323.8px">Markets</i>
+                <div class="pcellB" style="left:18px"><div class="chip"><div class="icon"><svg><use href="#g-x"/></svg></div></div><div class="name">X</div></div>
+                <div class="pcellB" style="left:93.2px"><div class="chip"><div class="icon"><svg><use href="#g-mail"/></svg></div></div><div class="name">iCloud Mail</div></div>
+                <div class="pcellB" style="left:168.4px"><div class="chip"><div class="icon"><svg><use href="#g-music"/></svg></div></div><div class="name">Apple Music</div></div>
+                <div class="pcellB" style="left:243.6px"><div class="chip"><div class="icon"><svg><use href="#g-youtube"/></svg></div></div><div class="name">YouTube</div></div>
+                <div class="pcellB" style="left:318.8px"><div class="chip"><div class="icon"><svg><use href="#g-tokens"/></svg></div></div><div class="name">Tokens</div></div>
+              </div>
+              <!-- row 3: Markets cont 0-3 · Life 4 → continues -->
+              <div class="crow">
+                <div class="gcard" style="left:0;width:312.3px;border-radius:0 12px 12px 0"></div>
+                <div class="gcard" style="left:315.3px;width:86.7px;border-radius:12px 0 0 12px"></div>
+                <i class="gname" style="left:323.8px">Life</i>
+                <div class="pcellB" style="left:18px"><div class="chip"><div class="icon"><svg><use href="#g-stocktwits"/></svg></div></div><div class="name">Stocktwits</div></div>
+                <div class="pcellB" style="left:93.2px"><div class="chip"><div class="icon"><svg><use href="#g-gecko"/></svg></div></div><div class="name">GeckoTerminal</div></div>
+                <div class="pcellB" style="left:168.4px"><div class="chip"><div class="icon"><svg><use href="#g-kalshi"/></svg></div></div><div class="name">Kalshi</div></div>
+                <div class="pcellB" style="left:243.6px"><div class="chip"><div class="icon"><svg><use href="#g-polymarket"/></svg></div></div><div class="name">Polymarket</div></div>
+                <div class="pcellB" style="left:318.8px"><div class="chip"><div class="icon"><svg><use href="#g-photos"/></svg></div></div><div class="name">Photos</div></div>
+              </div>
+              <!-- row 4: Life cont 0-2 · Work 3 · Reading 4 -->
+              <div class="crow">
+                <div class="gcard" style="left:0;width:237.1px;border-radius:0 12px 12px 0"></div>
+                <div class="gcard" style="left:240.1px;width:72.2px;border-radius:12px"></div>
+                <div class="gcard" style="left:315.3px;width:72.2px;border-radius:12px"></div>
+                <i class="gname" style="left:248.6px">Work</i>
+                <i class="gname" style="left:323.8px">Reading</i>
+                <div class="pcellB" style="left:18px"><div class="chip"><div class="icon"><svg><use href="#g-files"/></svg></div></div><div class="name">Files</div></div>
+                <div class="pcellB" style="left:93.2px"><div class="chip"><div class="icon"><svg><use href="#g-calendar"/></svg></div></div><div class="name">Calendar</div></div>
+                <div class="pcellB" style="left:168.4px"><div class="chip"><div class="icon"><svg><use href="#g-reminders"/></svg></div></div><div class="name">Reminders</div></div>
+                <div class="pcellB" style="left:243.6px"><div class="chip"><div class="icon"><svg><use href="#g-github"/></svg></div></div><div class="name">GitHub</div></div>
+                <div class="pcellB" style="left:318.8px"><div class="chip"><div class="icon"><svg><use href="#g-rss"/></svg></div></div><div class="name">RSS</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="note"><b>Containment instead of typography.</b> Each category is a soft fill behind
+      its own chips. The rule you proposed carries the wrap: <b>a rounded end is a real end, a cut
+      end runs through the screen edge</b> — Social starts rounded in row one, bleeds off the right,
+      re-enters row two from the left, and ends rounded after X. Markets and Life do the same. The
+      name lives inside the card, only at its start; the continuation needs no label because the
+      card itself says "still going".</p>
+      <p class="note"><b>Costs to weigh:</b> nothing else in the app bleeds through an edge, so this
+      is a new pattern to teach; the seams between neighbours in a row are 3pt, thin enough to miss
+      at a glance; and it takes DSTray's side padding away from this one tray. In exchange the
+      grouping is unmissable without a single word of extra ink — and packing, order and row count
+      all stay exactly as shipped.</p>
+      <dl class="spec">
+        <dt>height</dt><dd class="good">~600pt — 4 rows, still under the 620 cap</dd>
+        <dt>signal</dt><dd class="good">fill + wrap; zero reliance on reading</dd>
+        <dt>risk</dt><dd>edge-bleed is new; cut cards can read as clipped</dd>
+      </dl>
+    </div>
+
+    <!-- ================= C: masonry category cards ================= -->
+    <div class="col">
+      <div class="chead"><h3>C · Shelves, never split</h3><span class="tag">two-up masonry</span></div>
+      <div class="holder">
+        <div class="phone">
+          <div class="statusbar"><span>1:09</span><span class="right">◗◗◗ ▮</span></div>
+          <div class="strip">
+            <div class="door" style="background:linear-gradient(135deg,#c0392b,#7b241c)"></div>
+            <div class="door"><div class="doorglyph"><span></span><span></span><span></span><span></span></div></div>
+            <div class="stripchips">
+              <div class="chip active"><div class="icon" style="background:var(--glass);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600">All</div></div>
+              <div class="chip"><div class="icon"><svg><use href="#g-wallet"/></svg></div></div>
+              <div class="chip"><div class="icon"><svg><use href="#g-mail"/></svg></div></div>
+              <div class="chip"><div class="icon"><svg><use href="#g-farcaster"/></svg></div></div>
+            </div>
+          </div>
+          <div class="lede">
+            <div class="ledecard"><h4>Themes</h4>
+              <div class="tiles">
+                <div class="tile"><div class="tt">Contributions</div><div class="ts">479 things</div></div>
+                <div class="tilecol">
+                  <div class="tile"><div class="tt">AAPL</div></div>
+                  <div class="tile"><div class="tt">Trending</div><div class="ts">45 thi…</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="scrim"></div>
+          <div class="tray">
+            <div class="grabber"></div>
+            <h2>Your sources</h2>
+            <div class="clip" style="max-height:506px">
+              <div class="mason">
+                <div class="mcol">
+                  <div class="mcard"><h5>Wallet</h5><div class="mgrid">
+                    <div class="mcell"><div class="chipC"><div class="iconC"><svg><use href="#g-wallet"/></svg></div></div><div class="nameC">Wallet</div></div>
+                    <div class="mcell"><div class="chipC"><div class="iconC"><svg><use href="#g-pools"/></svg></div></div><div class="nameC">Privacy Pools</div></div>
+                    <div class="mcell"><div class="chipC"><div class="iconC"><svg><use href="#g-railgun"/></svg></div></div><div class="nameC">Railgun</div></div>
+                  </div></div>
+                  <div class="mcard"><h5>Mail</h5><div class="mgrid">
+                    <div class="mcell"><div class="chipC"><div class="iconC"><svg><use href="#g-mail"/></svg></div></div><div class="nameC">iCloud Mail</div></div>
+                  </div></div>
+                  <div class="mcard"><h5>Markets</h5><div class="mgrid">
+                    <div class="mcell"><div class="chipC"><div class="iconC"><svg><use href="#g-tokens"/></svg></div></div><div class="nameC">Tokens</div></div>
+                    <div class="mcell"><div class="chipC"><div class="iconC"><svg><use href="#g-stocktwits"/></svg></div></div><div class="nameC">Stocktwits</div></div>
+                    <div class="mcell"><div class="chipC"><div class="iconC"><svg><use href="#g-gecko"/></svg></div></div><div class="nameC">GeckoTerm…</div></div>
+                    <div class="mcell"><div class="chipC"><div class="iconC"><svg><use href="#g-kalshi"/></svg></div></div><div class="nameC">Kalshi</div></div>
+                    <div class="mcell"><div class="chipC"><div class="iconC"><svg><use href="#g-polymarket"/></svg></div></div><div class="nameC">Polymarket</div></div>
+                  </div></div>
+                  <div class="mcard"><h5>Work</h5><div class="mgrid">
+                    <div class="mcell"><div class="chipC"><div class="iconC"><svg><use href="#g-github"/></svg></div></div><div class="nameC">GitHub</div></div>
+                  </div></div>
+                </div>
+                <div class="mcol">
+                  <div class="mcard"><h5>Social</h5><div class="mgrid">
+                    <div class="mcell"><div class="chipC broken"><div class="iconC"><svg><use href="#g-farcaster"/></svg></div></div><div class="nameC">Farcaster</div></div>
+                    <div class="mcell"><div class="chipC"><div class="iconC"><svg><use href="#g-bluesky"/></svg></div></div><div class="nameC">Bluesky</div></div>
+                    <div class="mcell"><div class="chipC"><div class="iconC"><svg><use href="#g-x"/></svg></div></div><div class="nameC">X</div></div>
+                  </div></div>
+                  <div class="mcard"><h5>Media</h5><div class="mgrid">
+                    <div class="mcell"><div class="chipC"><div class="iconC"><svg><use href="#g-music"/></svg></div></div><div class="nameC">Apple Music</div></div>
+                    <div class="mcell"><div class="chipC"><div class="iconC"><svg><use href="#g-youtube"/></svg></div></div><div class="nameC">YouTube</div></div>
+                  </div></div>
+                  <div class="mcard"><h5>Life</h5><div class="mgrid">
+                    <div class="mcell"><div class="chipC"><div class="iconC"><svg><use href="#g-photos"/></svg></div></div><div class="nameC">Photos</div></div>
+                    <div class="mcell"><div class="chipC"><div class="iconC"><svg><use href="#g-files"/></svg></div></div><div class="nameC">Files</div></div>
+                    <div class="mcell"><div class="chipC"><div class="iconC"><svg><use href="#g-calendar"/></svg></div></div><div class="nameC">Calendar</div></div>
+                    <div class="mcell"><div class="chipC"><div class="iconC"><svg><use href="#g-reminders"/></svg></div></div><div class="nameC">Reminders</div></div>
+                  </div></div>
+                  <div class="mcard"><h5>Reading</h5><div class="mgrid">
+                    <div class="mcell"><div class="chipC"><div class="iconC"><svg><use href="#g-rss"/></svg></div></div><div class="nameC">RSS</div></div>
+                  </div></div>
+                </div>
+              </div>
+              <div class="fade"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="note"><b>Real shelves, like the catalog these were connected from.</b> Every category
+      is its own card, whole, never straddling anything — the strongest possible "this is a place,
+      not a pile" read, and it echoes <code>AppsScreen</code>'s shelf language so the tray and the
+      catalog finally rhyme. Two columns is what makes it affordable at all: the never-split rule in
+      a single column measured 816pt back in the v1 mock.</p>
+      <p class="note"><b>And it still doesn't quite pay for itself.</b> Chips drop to 46pt to fit
+      three across a half-width card, catalog order bends (columns balance by height, so Markets
+      sits beside Media), and at twenty sources it lands at ~680pt — past the 620 resting cap, so
+      the tray scrolls, which is the tax the packed grid was built to avoid. This is the prettiest
+      option and the most expensive one.</p>
+      <p class="note"><b>It also breaks a standing rule, visibly.</b> At a 48pt cell a long name
+      can't wrap to two lines and fit — "GeckoTerminal" clips above, which is exactly the truncation
+      prd §201 forbids on tiles. Fixable only by widening the cell (fewer per row, more height) or
+      shortening the names, so treat it as part of C's price rather than a drawing slip.</p>
+      <dl class="spec">
+        <dt>height</dt><dd class="bad">~680pt — past the cap, scrolls at 20 sources</dd>
+        <dt>chips</dt><dd>46pt, three per half-card</dd>
+        <dt>names</dt><dd class="bad">long ones truncate — against §201</dd>
+        <dt>order</dt><dd>catalog order bends to balance columns</dd>
+      </dl>
+    </div>
+
+  </div>
+
+  <section class="footnote">
+    <h2>How to choose</h2>
+    <p><b>The problem is contrast, not information.</b> The shipped tray already says everything
+    these three say; it says it in 11pt tertiary gray against twenty saturated marks, and gray loses.
+    A is the smallest fix to that — give structure a color. B fixes it with shape instead — give
+    structure a surface — and costs nothing in height or order. C fixes it with true containment
+    and pays in height, chip size and order.</p>
+    <p><b>My read: B is the strongest, with A as the no-risk fallback.</b> A card is legible at any
+    glance length where a colored word still has to be read; B keeps all four rows, the 5-across
+    rhythm, strict catalog order and the no-scroll guarantee, which are the four things every
+    earlier round fought for. Its real question is whether the edge-bleed reads as intentional on
+    first sight — that's what this page is for judging. If it doesn't, A ships in an afternoon.
+    C is worth keeping in the drawer for the iPad, where width is free and the masonry could go
+    three-up without scrolling.</p>
+    <p>Icons are simplified stand-ins; a build uses the same <code>BridgeIcon</code> marks. Rings
+    read as on the strip — solid tint is the active source, dashed orange (Farcaster) is a
+    connection that needs you. "All" stays in the strip, not the grid, per the 2026-08-06 ruling.
+    Card fills are a translucent white over the sheet — no hairlines anywhere, per §8.</p>
+  </section>
+
+</div>
+
+<script>
+  function fit() {
+    document.querySelectorAll('.holder').forEach(function (h) {
+      var el = h.querySelector('.phone') || h.querySelector('.panel');
+      var k = Math.min(1, h.clientWidth / 402);
+      el.style.transform = 'scale(' + k + ')';
+      h.style.height = (el.offsetHeight * k) + 'px';
+    });
+  }
+  window.addEventListener('resize', fit);
+  window.addEventListener('load', fit);
+  fit();
+</script>
