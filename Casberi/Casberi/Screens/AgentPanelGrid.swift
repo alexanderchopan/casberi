@@ -1130,23 +1130,58 @@ private struct FlowFigure: View {
         }
     }
 
+    /// A counterparty label that fits a tile (2026-08-10).
+    ///
+    /// These lanes name WHO the money moved between — not your own watched
+    /// wallets. `WalletFlowSource` resolves a name where it can ("Peer",
+    /// "Coinbase", "Uniswap") and falls back to `WalletStore.shortAddress`,
+    /// which is already an abbreviation: `0xd889…8de1`. In this figure the
+    /// label column is 29% of a tile, so that 13-character form was then
+    /// truncated a SECOND time by `lineLimit(1)` into `0xd889…de…` — an
+    /// ellipsis inside an ellipsis, naming nobody (reported on-device).
+    ///
+    /// A real name is left exactly as it is and only ever elided by the
+    /// system. A hex fallback drops to its TAIL alone, which is the half that
+    /// distinguishes one address from another — a head is `0x` plus whatever
+    /// the vanity generator produced, and at this width you can fit one or the
+    /// other, not both. Ambiguity is acceptable here and only here: the tile is
+    /// a glance, and tapping it opens the Wallet room where the band carries
+    /// full addresses.
+    private func laneLabel(_ name: String) -> String {
+        guard name.hasPrefix("0x"), let tail = name.split(separator: "…").last,
+              tail.count <= 8 else { return name }
+        return "…\(tail)"
+    }
+
     private func labels(_ lanes: [AgentPanel.FlowLane], x: CGFloat, width: CGFloat,
                         height: CGFloat, alignment: Alignment) -> some View {
         let slots = max(1, lanes.count)
+        let slotHeight = height / Double(slots)
         return ForEach(Array(lanes.enumerated()), id: \.offset) { i, lane in
             VStack(alignment: alignment == .leading ? .leading : .trailing, spacing: 0) {
-                Text(lane.count > 1 ? "\(lane.name) ×\(lane.count)" : lane.name)
+                Text(lane.count > 1 ? "\(laneLabel(lane.name)) ×\(lane.count)"
+                                    : laneLabel(lane.name))
                     .dsText(.subhead13)
                     .fontWeight(i == 0 ? .semibold : .regular)
                     .foregroundStyle(i == 0 ? DS.textPrimary : DS.textSecondary)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.9)
                 Text(compactUSD(lane.usd))
-                    .dsText(.subhead13)
+                    .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
                     .monospacedDigit()
+                    .lineLimit(1)
             }
-            .frame(width: width, alignment: alignment)
-            .position(x: x + width / 2, y: height * (Double(i) + 0.5) / Double(slots))
+            // BOUNDED to its own slot (2026-08-10). Each block was free to be
+            // as tall as its text wanted while `position` only ever fixed its
+            // CENTRE, so three two-line blocks in a tile-height figure grew
+            // into each other and the name of one lane rendered on top of the
+            // amount of the one above it — the reported "numbers are all
+            // jumbled". A slot-height frame makes the overlap impossible by
+            // construction rather than by choosing type sizes that happen to
+            // fit, which is one Dynamic Type step from breaking again.
+            .frame(width: width, height: slotHeight, alignment: alignment)
+            .position(x: x + width / 2, y: slotHeight * (Double(i) + 0.5))
             .opacity(words)
         }
     }
