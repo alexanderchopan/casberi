@@ -1,0 +1,553 @@
+<title>Notes thing sheets — inventory & three anatomies</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #1673e6; --confirm: #32d74b; --down: #ff5a5f; --attn: #ff9f0a;
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    --serif: "New York", Georgia, "Iowan Old Style", serif;
+    --obs: #7c5cff; --d1: #44b0f0; --jr: #f0a13c; --kn: #f2b544; --vo: #ff6b8a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body { font-family: var(--text); color: var(--ink);
+         background: radial-gradient(900px 420px at 18% -8%, rgba(124,92,255,.10), transparent 62%), var(--page);
+         padding: 48px 28px 90px; }
+  .wrap { max-width: 1300px; margin: 0 auto; }
+  header { max-width: 840px; margin-bottom: 34px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: #a48ef0; margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.4vw,36px); font-weight: 800; letter-spacing: -.02em; line-height: 1.1; margin-bottom: 12px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 72ch; margin-bottom: 10px; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  h2 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin: 56px 0 6px; }
+  h2 .n { color: var(--faint); font-weight: 600; margin-right: 8px; }
+  .sub { font-size: 14px; line-height: 1.6; color: var(--muted); max-width: 80ch; margin-bottom: 22px; }
+  .sub b { color: var(--ink); font-weight: 600; }
+  code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12.5px;
+         background: rgba(255,255,255,.07); padding: 1px 5px; border-radius: 5px; color: #c8d0e0; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-size: 11px; font-weight: 700; color: var(--faint);
+       padding: 0 12px 8px 0; white-space: nowrap; }
+  td { padding: 12px 12px 12px 0; vertical-align: top; color: var(--muted); line-height: 1.5; }
+  tbody tr { border-top: 1px solid rgba(255,255,255,.06); }
+  td b { color: var(--ink); font-weight: 600; }
+  td code { font-size: 11.5px; }
+  .ok  { color: var(--confirm); font-weight: 700; }
+  .bad { color: var(--down); font-weight: 700; }
+  .mid { color: var(--attn); font-weight: 700; }
+  .src { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+
+  .defects { display: grid; grid-template-columns: repeat(auto-fit,minmax(330px,1fr)); gap: 14px; margin-top: 6px; }
+  .def { background: rgba(255,255,255,.035); border-radius: 14px; padding: 15px 16px; }
+  .def h4 { font-size: 13.5px; font-weight: 700; margin-bottom: 6px; display: flex; gap: 8px; align-items: baseline; }
+  .def h4 i { font-style: normal; color: var(--faint); font-size: 11px; font-weight: 700; }
+  .def p { font-size: 12.5px; line-height: 1.55; color: var(--muted); }
+  .def p + p { margin-top: 7px; }
+  .def p b { color: var(--ink); font-weight: 600; }
+  .def.hot { background: rgba(255,90,95,.08); }
+
+  .row { display: flex; flex-wrap: wrap; gap: 34px; align-items: flex-start; }
+  .option { width: 340px; }
+  .otitle { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .odesc { font-size: 12.5px; line-height: 1.55; color: var(--faint); margin-bottom: 14px; min-height: 76px; }
+  .odesc b { color: var(--muted); font-weight: 600; }
+  .phone { width: 340px; border-radius: 46px; padding: 10px; background: #15171c; box-shadow: 0 30px 70px rgba(0,0,0,.55); }
+  .screen { border-radius: 38px; overflow: hidden; padding: 16px 0 20px; min-height: 730px; background: #000; position: relative; }
+  .screen.wash-obs { background: radial-gradient(420px 200px at 50% -6%, rgba(124,92,255,.20), transparent 70%), #000; }
+  .screen.wash-d1  { background: radial-gradient(420px 200px at 50% -6%, rgba(68,176,240,.18), transparent 70%), #000; }
+  .screen.wash-kn  { background: radial-gradient(420px 200px at 50% -6%, rgba(242,181,68,.16), transparent 70%), #000; }
+  .grab { width: 34px; height: 4px; border-radius: 99px; background: rgba(255,255,255,.22); margin: 0 auto 14px; }
+  .pad { padding: 0 16px; }
+
+  .brow { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; }
+  .mark { width: 26px; height: 26px; border-radius: 50%; flex: none; display: flex; align-items: center;
+          justify-content: center; font-size: 12px; font-weight: 800; color: #fff; }
+  .mark.obs { background: var(--obs); }
+  .mark.d1  { background: var(--d1); }
+  .mark.jr  { background: var(--jr); }
+  .mark.kn  { background: #2a2118; color: var(--kn); border: 1px solid rgba(242,181,68,.4); }
+  .mark.vo  { background: var(--vo); }
+  .mark.sm { width: 20px; height: 20px; font-size: 10px; }
+  .who { font-size: 13.5px; font-weight: 600; letter-spacing: -.01em; }
+  .browline { font-size: 11.5px; color: var(--faint); }
+  .ctx { font-size: 10.5px; font-weight: 700; padding: 3px 7px; border-radius: 999px;
+         background: rgba(255,255,255,.08); color: var(--muted); margin-left: auto; flex: none; }
+
+  /* the date hero */
+  .datehero { margin-bottom: 14px; }
+  .datehero b { display: block; font-size: 30px; font-weight: 800; letter-spacing: -.025em; line-height: 1.05; }
+  .datehero s { text-decoration: none; display: block; font-size: 12.5px; color: var(--faint);
+                font-weight: 600; margin-top: 5px; }
+  .entrytitle { font-size: 19px; font-weight: 700; letter-spacing: -.015em; margin-bottom: 10px; line-height: 1.25; }
+
+  /* prose — the fix: primary ink, reading tier, unclamped */
+  .prose { font-size: 16.5px; line-height: 1.52; color: var(--ink); font-weight: 400; }
+  .prose.serif { font-family: var(--serif); font-size: 17px; line-height: 1.55; }
+  .prose p + p { margin-top: 11px; }
+  .prose.old { font-size: 14px; line-height: 1.42; color: var(--muted); }
+  .fade { position: relative; max-height: 190px; overflow: hidden; }
+  .fade:after { content: ""; position: absolute; inset: auto 0 0 0; height: 64px;
+                background: linear-gradient(transparent, #000); }
+  .more { font-size: 12.5px; font-weight: 700; color: #6bb2ff; margin-top: 9px; }
+
+  /* pull quote — the passage */
+  .pull { border-left: 3px solid var(--kn); padding: 2px 0 2px 14px; }
+  .pull p { font-family: var(--serif); font-size: 20px; line-height: 1.42; color: var(--ink); letter-spacing: -.01em; }
+  .booked { display: flex; gap: 11px; align-items: center; margin-top: 16px; }
+  .cover { width: 40px; height: 58px; border-radius: 4px; flex: none;
+           background: linear-gradient(160deg,#3a3550,#6a4f78 60%,#2a2030);
+           box-shadow: 0 6px 16px rgba(0,0,0,.5); }
+  .booked b { display: block; font-size: 14px; font-weight: 700; letter-spacing: -.01em; }
+  .booked s { text-decoration: none; display: block; font-size: 12px; color: var(--faint); margin-top: 3px; }
+
+  /* tags */
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 13px 0 0; }
+  .tag { font-size: 11.5px; font-weight: 600; padding: 4px 9px; border-radius: 999px;
+         background: rgba(255,255,255,.07); color: var(--muted); }
+  .tag.obs { background: rgba(124,92,255,.16); color: #b9a5ff; }
+
+  /* section label + receipt */
+  .sect { font-size: 11px; font-weight: 700; color: var(--faint); margin: 22px 2px 8px;
+          display: flex; align-items: center; }
+  .sect i { font-style: normal; margin-left: auto; font-weight: 600; }
+  .recept { border-radius: 16px; background: rgba(255,255,255,.045); padding: 13px 14px; }
+  .stats { display: flex; gap: 22px; align-items: baseline; }
+  .stat b { font-family: var(--money); font-size: 20px; font-weight: 800; letter-spacing: -.02em;
+            font-variant-numeric: tabular-nums; display: block; }
+  .stat s { text-decoration: none; font-size: 10.5px; color: var(--faint); font-weight: 600; }
+  .prov { font-size: 12.5px; line-height: 1.45; color: var(--muted); margin-top: 12px; }
+  .prov b { color: var(--ink); font-weight: 600; }
+
+  /* graph strip */
+  .graph { display: flex; gap: 8px; }
+  .gcard { flex: 1; border-radius: 13px; background: rgba(255,255,255,.05); padding: 11px 12px; }
+  .gcard b { display: block; font-family: var(--money); font-size: 19px; font-weight: 800; }
+  .gcard s { text-decoration: none; font-size: 10.5px; color: var(--faint); font-weight: 600; }
+  .glist { margin-top: 9px; }
+  .gitem { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-top: 1px solid rgba(255,255,255,.06); }
+  .gitem:first-child { border-top: 0; }
+  .gitem span { font-size: 13px; color: var(--ink); font-weight: 500; }
+  .gitem em { font-style: normal; font-size: 11px; color: var(--faint); margin-left: auto; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--obs); flex: none; }
+
+  /* same-day shelf */
+  .shelf { display: flex; gap: 8px; overflow: hidden; }
+  .scard { width: 92px; flex: none; }
+  .sthumb { height: 68px; border-radius: 11px; background: linear-gradient(150deg,#2b3550,#4b3a63 55%,#7a4a52); }
+  .sthumb.b { background: linear-gradient(150deg,#1f3f36,#2f6e58); }
+  .sthumb.c { background: linear-gradient(150deg,#3a2f22,#6e5330); }
+  .sthumb.d { background: rgba(255,255,255,.06); display:flex; align-items:center; justify-content:center;
+              font-size: 10.5px; color: var(--faint); font-weight: 700; text-align:center; padding: 0 6px; }
+  .scard s { text-decoration: none; display: block; font-size: 10.5px; color: var(--faint); margin-top: 6px; line-height: 1.3; }
+
+  /* more from this book */
+  .hlist .hitem { padding: 11px 0; border-top: 1px solid rgba(255,255,255,.06); }
+  .hlist .hitem:first-child { border-top: 0; }
+  .hlist p { font-family: var(--serif); font-size: 13.5px; line-height: 1.42; color: var(--muted);
+             display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .hlist s { text-decoration: none; font-size: 10.5px; color: var(--faint); font-weight: 600; }
+
+  /* verb dial */
+  .dial { display: flex; gap: 10px; margin-top: 20px; }
+  .disc { flex: 1; border-radius: 15px; background: rgba(255,255,255,.06); padding: 12px 6px;
+          text-align: center; }
+  .disc i { font-style: normal; display: block; font-size: 15px; margin-bottom: 5px; opacity: .9; }
+  .disc s { text-decoration: none; font-size: 10.5px; color: var(--muted); font-weight: 600; }
+  .disc.first { background: rgba(124,92,255,.18); }
+  .disc.first s { color: #c3b0ff; }
+
+  /* voice player */
+  .player { border-radius: 15px; background: rgba(255,255,255,.05); padding: 13px 14px; display: flex;
+            align-items: center; gap: 12px; }
+  .play { width: 36px; height: 36px; border-radius: 50%; background: var(--vo); flex: none;
+          display: flex; align-items: center; justify-content: center; font-size: 13px; color: #fff; }
+  .wave { flex: 1; display: flex; align-items: center; gap: 2px; height: 26px; }
+  .wave i { flex: 1; background: rgba(255,255,255,.28); border-radius: 99px; }
+  .player s { text-decoration: none; font-size: 11.5px; color: var(--faint); font-variant-numeric: tabular-nums; }
+
+  /* before/after spec */
+  .before { border-radius: 16px; background: rgba(255,255,255,.045); padding: 14px; }
+  .specrow { display: flex; font-size: 13px; }
+  .specrow b { width: 78px; flex: none; font-size: 11px; font-weight: 700; color: var(--faint);
+               padding-top: 2px; }
+  .specrow span { color: var(--ink); }
+
+  .note { font-size: 13px; line-height: 1.6; color: var(--muted); max-width: 80ch; margin-top: 16px; }
+  .note b { color: var(--ink); font-weight: 600; }
+  ul.pts { margin-top: 12px; padding-left: 18px; }
+  ul.pts li { font-size: 13.5px; line-height: 1.6; color: var(--muted); margin-bottom: 8px; max-width: 78ch; }
+  ul.pts li b { color: var(--ink); font-weight: 600; }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · thing sheets, category 4</div>
+  <h1>Notes: the sheet you open to read something, that doesn't show you the thing</h1>
+  <p>Wallet became a receipt, social became a post, work became a status. <b>Notes is the category where the sheet's whole job is to show you words</b> — and it is the one that shows the fewest of them.</p>
+  <p>Six sources land here. Every one of them renders its body in <code>textSecondary</code> at <code>callout15</code> — the caption tier — and four of them clamp it at <code>lineLimit(12)</code> with no way to read the rest. The spec table underneath contributes exactly one row: <b>From — written by you</b>.</p>
+</header>
+
+<h2><span class="n">1</span>What actually lands, and what the sheet does with it</h2>
+<p class="sub">Read off the shipped importers, not guessed. <code>ThingContentView</code>'s <code>default:</code> branch draws all of these except Voice.</p>
+
+<table>
+<thead><tr>
+  <th style="width:150px">Source</th><th style="width:172px">Title is…</th><th style="width:190px">The words are…</th>
+  <th>What the sheet draws today</th><th style="width:88px">Verdict</th>
+</tr></thead>
+<tbody>
+<tr>
+  <td><div class="src"><span class="mark obs sm">O</span><b>Obsidian</b></div><code>.note</code></td>
+  <td>The <b>filename</b> — a real name</td>
+  <td><code>content</code> 300-char excerpt<br><code>enrichedText</code> full body ≤8k</td>
+  <td>Full body, but at <code>callout15</code> / <code>textSecondary</code>. Wikilinks + backlinks shelf below. <b>Frontmatter tags stamped and never drawn.</b> Vault path never shown.</td>
+  <td class="mid">Best of six</td>
+</tr>
+<tr>
+  <td><div class="src"><span class="mark d1 sm">1</span><b>Day One</b></div><code>.note</code></td>
+  <td>The entry's <b>own first line</b>, clamped to 80</td>
+  <td><code>content</code> = the full entry</td>
+  <td>First line at <code>heading34</code>, then the same first line again at the top of the gray body. Clamped at 12 lines, no “more”. <b>Export tags stamped, never drawn.</b> Entry photos never imported.</td>
+  <td class="bad">Stutters, truncates</td>
+</tr>
+<tr>
+  <td><div class="src"><span class="mark jr sm">J</span><b>Apple Journal</b></div><code>.note</code></td>
+  <td>Parsed from the filename</td>
+  <td><code>content</code> = stripped HTML body</td>
+  <td>Same: gray, 12 lines, cut. <code>Resources/</code> media never imported. <b>No date anywhere on the sheet</b> beyond “3y ago”.</td>
+  <td class="bad">Truncates</td>
+</tr>
+<tr>
+  <td><div class="src"><span class="mark kn sm">K</span><b>Kindle</b></div><code>.note</code></td>
+  <td><b>The passage itself</b>, clamped to 80 chars + “…”</td>
+  <td><code>content</code> = <b>“Book — Author”</b></td>
+  <td>A truncated quotation at display size as if it were a headline, and the book name as the gray body underneath. Exactly inverted.</td>
+  <td class="bad">Inverted + lossy</td>
+</tr>
+<tr>
+  <td><div class="src"><span class="mark vo sm">V</span><b>Voice</b></div><code>.voice</code></td>
+  <td>First line of the transcript</td>
+  <td><code>content</code> = transcript, <code>audio</code> = bytes</td>
+  <td><code>VoiceContent</code> — player plus transcript. The one source with an anatomy of its own.</td>
+  <td class="ok">Works</td>
+</tr>
+<tr>
+  <td><div class="src"><span class="mark sm" style="background:#3a4150">Y</span><b>Apple Notes → “You”</b></div><code>.note</code></td>
+  <td>The share's title</td>
+  <td><code>content</code> = shared text</td>
+  <td>Generic note. Note the catalog seat is called <b>Apple Notes</b> and the rows land under source <b>You</b> — the sheet never names where it came from.</td>
+  <td class="bad">Loses its origin</td>
+</tr>
+</tbody>
+</table>
+
+<h2><span class="n">2</span>Seven defects, all of them silent</h2>
+<p class="sub">Ordered by what they cost a reader. Nothing here fails a build, an audit or a screen sweep — every one of these renders perfectly.</p>
+
+<div class="defects">
+  <div class="def hot">
+    <h4>Kindle throws the passage away <i>data loss</i></h4>
+    <p><code>title = titleLine(body)</code> cuts at <b>80 characters</b> and appends “…”, and <code>content</code> holds the book name instead. <b>The rest of the highlight is stored nowhere.</b> A long marked paragraph is not hidden — it is gone, and a re-import can't recover it because the ref dedupes on the full body's hash.</p>
+    <p>The metadata line is parsed for <code>Added on</code> and nothing else, so <b>page and location are dropped too</b>.</p>
+  </div>
+  <div class="def hot">
+    <h4>Four sources cut the body at 12 lines <i>unreadable</i></h4>
+    <p>Obsidian got an exception on 2026-08-09; Day One, Apple Journal, Kindle and shared notes never did. So the app will index a 900-word journal entry, answer questions about it, surface it in search — and then <b>refuse to show you more than a dozen lines of it</b>, with no “more” and no scroll.</p>
+  </div>
+  <div class="def">
+    <h4>Prose is set as a caption <i>type</i></h4>
+    <p>Every body here draws at <code>callout15</code> in <code>textSecondary</code>. That is the tier the design system uses for footnotes under a fact. <b>On these six sources the body is not an annotation of the thing — it IS the thing</b>, and it is the quietest text on the screen.</p>
+  </div>
+  <div class="def">
+    <h4>A journal entry has no date <i>identity</i></h4>
+    <p>An entry's date is what it is. The sheet's only clock is the eyebrow's relative age (“3y ago”) — so the one fact that identifies a journal entry, and the only fact every one of these sources carries, is the one it never states.</p>
+  </div>
+  <div class="def">
+    <h4>Day One prints its first line twice <i>stutter</i></h4>
+    <p><code>title(from:)</code> takes the entry's first line; <code>content</code> keeps the whole entry including it. The stutter guard only catches an exact whole-string match, so it fires for a one-line entry (showing <b>nothing but a title</b>) and misses the two-line case entirely.</p>
+  </div>
+  <div class="def">
+    <h4>Tags are stamped and never drawn <i>invisible</i></h4>
+    <p>Obsidian lands frontmatter and inline tags; Day One lands the export's own. The tag filter can reach them, the sheet cannot show them. Nothing on a note sheet renders <code>thing.tags</code> at all.</p>
+  </div>
+  <div class="def">
+    <h4>The spec table's one row <i>the database field</i></h4>
+    <p>On a note, every gate fails but <code>hasFrom</code>. The whole table is <b>From · written by you</b> behind an 80pt label column — the exact shape the wallet and social passes deleted, still standing here.</p>
+  </div>
+</div>
+
+<h2><span class="n">3</span>The proposed shapes — three, and deliberately no fourth</h2>
+<p class="sub">Same rule the social pass used: a shape exists only where the sheet would otherwise draw the wrong noun. The gate is a <b>data test</b> (does this record carry prose, does it carry a date that <i>is</i> the record, does it quote somebody else), never a source list — so a note seat that ships next month is covered for free.</p>
+
+<div class="row">
+
+  <!-- ============ ENTRY ============ -->
+  <div class="option">
+    <div class="otitle">1 · Entry — a dated piece of writing</div>
+    <div class="odesc">Day One, Apple Journal, a shared note, a voice note. <b>The date is the headline</b>, because that is what identifies an entry. Prose at reading tier, full length. The day it belongs to is walkable underneath.</div>
+    <div class="phone"><div class="screen wash-d1">
+      <div class="grab"></div>
+      <div class="pad">
+        <div class="brow">
+          <span class="mark d1">1</span>
+          <div><div class="who">Day One</div><div class="browline">written by you</div></div>
+          <span class="ctx">Journal</span>
+        </div>
+
+        <div class="datehero">
+          <b>Tuesday, 14 May</b>
+          <s>2024 · written at 9:12 in the morning</s>
+        </div>
+
+        <div class="prose serif">
+          <p>Slow morning, long walk. Took the path along the reservoir instead of the road and it added twenty minutes I didn't have, which turned out to be the twenty minutes the day needed.</p>
+          <p>Kept thinking about the panel problem. The reason it looks wrong isn't the spacing, it's that every tile is arguing for the same amount of attention. Something has to be quieter.</p>
+          <p>Cooked properly for the first time in weeks. Small thing.</p>
+        </div>
+
+        <div class="tags">
+          <span class="tag">Walks</span><span class="tag">Design system</span><span class="tag">Focus</span>
+        </div>
+
+        <div class="sect">HOW IT LANDED</div>
+        <div class="recept">
+          <div class="stats">
+            <div class="stat"><b>318</b><s>words</s></div>
+            <div class="stat"><b>2 min</b><s>to read</s></div>
+          </div>
+          <div class="prov">From your <b>Day One export</b>. Imported 3 August.</div>
+        </div>
+
+        <div class="sect">THAT DAY <i>4 things</i></div>
+        <div class="shelf">
+          <div class="scard"><div class="sthumb"></div><s>Photo · 8:40</s></div>
+          <div class="scard"><div class="sthumb b"></div><s>Walk · 6.2 km</s></div>
+          <div class="scard"><div class="sthumb c"></div><s>Photo · 19:05</s></div>
+          <div class="scard"><div class="sthumb d">Kept a<br>link</div><s>17:22</s></div>
+        </div>
+
+        <div class="dial">
+          <div class="disc"><i>◷</i><s>Remind</s></div>
+          <div class="disc"><i>⧉</i><s>Copy</s></div>
+          <div class="disc"><i>文</i><s>Translate</s></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- ============ VAULT NOTE ============ -->
+  <div class="option">
+    <div class="otitle">2 · Vault note — a named thing in a graph</div>
+    <div class="odesc">Obsidian. The title is a real <b>name</b>, not a first line, so it leads. Its tags draw. Its graph — links out and backlinks, both already computed — moves up from a plain list at the bottom into a reading you can act on.</div>
+    <div class="phone"><div class="screen wash-obs">
+      <div class="grab"></div>
+      <div class="pad">
+        <div class="brow">
+          <span class="mark obs">O</span>
+          <div><div class="who">Obsidian</div><div class="browline">in <em style="font-style:normal;color:var(--muted)">Second Brain</em></div></div>
+          <span class="ctx">Note</span>
+        </div>
+
+        <div class="entrytitle" style="font-size:26px;">Legibility and the corpus</div>
+        <div class="tags">
+          <span class="tag obs">#legibility</span><span class="tag obs">#design-system</span><span class="tag obs">#review</span>
+        </div>
+
+        <div class="prose" style="margin-top:14px;">
+          <p>The corpus is legible when you can tell what a thing <em>is</em> before you read it. Everything else — search, ranking, the agent — is downstream of that.</p>
+          <p>Three failure modes keep recurring: the row that shows a field instead of a fact, the card that ranks by recency when nobody asked, and the sheet that repeats the row you tapped to reach it.</p>
+        </div>
+        <div class="more">Read the rest ↓</div>
+
+        <div class="sect">IN THE VAULT</div>
+        <div class="graph">
+          <div class="gcard"><b>3</b><s>links out</s></div>
+          <div class="gcard"><b>5</b><s>notes link here</s></div>
+        </div>
+        <div class="glist">
+          <div class="gitem"><span class="dot"></span><span>Review — what shipped in July</span><em>links here</em></div>
+          <div class="gitem"><span class="dot"></span><span>Legibility notes for the panel</span><em>links here</em></div>
+          <div class="gitem"><span class="dot" style="background:#4a5468"></span><span>The Timeless Way</span><em>linked out</em></div>
+        </div>
+
+        <div class="sect">HOW IT LANDED</div>
+        <div class="recept">
+          <div class="stats">
+            <div class="stat"><b>1,240</b><s>words</s></div>
+            <div class="stat"><b>6 min</b><s>to read</s></div>
+            <div class="stat"><b>4m</b><s>since you edited</s></div>
+          </div>
+          <div class="prov">Read from your vault at <b>Notes/Legibility and the corpus.md</b>. Casberi only ever reads it.</div>
+        </div>
+
+        <div class="dial">
+          <div class="disc first"><i>◨</i><s>Open in Obsidian</s></div>
+          <div class="disc"><i>⧉</i><s>Copy</s></div>
+          <div class="disc"><i>文</i><s>Translate</s></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- ============ PASSAGE ============ -->
+  <div class="option">
+    <div class="otitle">3 · Passage — somebody else's words you marked</div>
+    <div class="odesc">Kindle. <b>The passage is the hero and the book is the identity</b> — today those two are swapped. The other highlights from the same book are already in the corpus and become the shelf that makes one highlight worth opening.</div>
+    <div class="phone"><div class="screen wash-kn">
+      <div class="grab"></div>
+      <div class="pad">
+        <div class="brow">
+          <span class="mark kn">K</span>
+          <div><div class="who">Kindle</div><div class="browline">you marked this</div></div>
+          <span class="ctx">Highlight</span>
+        </div>
+
+        <div class="pull">
+          <p>The beauty of the house is immeasurable; its kindness infinite. I am the beloved child of the house.</p>
+        </div>
+
+        <div class="booked">
+          <div class="cover"></div>
+          <div>
+            <b>Piranesi</b>
+            <s>Susanna Clarke · page 42</s>
+          </div>
+        </div>
+
+        <div class="sect">HOW IT LANDED</div>
+        <div class="recept">
+          <div class="stats">
+            <div class="stat"><b>12</b><s>marked in this book</s></div>
+            <div class="stat"><b>4 Aug</b><s>you marked it</s></div>
+          </div>
+          <div class="prov">From <b>My Clippings.txt</b>, written by your Kindle.</div>
+        </div>
+
+        <div class="sect">MORE FROM THIS BOOK <i>11 others</i></div>
+        <div class="hlist">
+          <div class="hitem">
+            <p>“The kindness of the sea is infinite, and it has no memory of what it takes.”</p>
+            <s>page 88 · marked 11 days ago</s>
+          </div>
+          <div class="hitem">
+            <p>“I realised that the search for the Knowledge has encouraged us to think of the House as if it were a sort of riddle to be unravelled.”</p>
+            <s>page 131 · marked 3 weeks ago</s>
+          </div>
+          <div class="hitem">
+            <p>“In my mind are all the tides, their seasons, their ebbs and their flows.”</p>
+            <s>page 7 · marked 7 weeks ago</s>
+          </div>
+        </div>
+
+        <div class="dial">
+          <div class="disc first"><i>❝</i><s>Copy passage</s></div>
+          <div class="disc"><i>⧉</i><s>Copy with cite</s></div>
+          <div class="disc"><i>文</i><s>Translate</s></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- ============ VOICE VARIANT ============ -->
+  <div class="option">
+    <div class="otitle">Variant · Voice, as an entry</div>
+    <div class="odesc">Voice already has the only working anatomy here. It doesn't need a fourth shape — it is an <b>entry</b> whose body happens to have audio above it. Same date hero, same reading tier, same receipt.</div>
+    <div class="phone"><div class="screen">
+      <div class="grab"></div>
+      <div class="pad">
+        <div class="brow">
+          <span class="mark vo">V</span>
+          <div><div class="who">Voice</div><div class="browline">recorded by you</div></div>
+          <span class="ctx">Note</span>
+        </div>
+
+        <div class="datehero">
+          <b>Thursday, 8 August</b>
+          <s>2026 · recorded at 7:41 in the evening</s>
+        </div>
+
+        <div class="player">
+          <div class="play">▶</div>
+          <div class="wave">
+            <i style="height:30%"></i><i style="height:62%"></i><i style="height:88%"></i><i style="height:45%"></i>
+            <i style="height:70%"></i><i style="height:96%"></i><i style="height:38%"></i><i style="height:74%"></i>
+            <i style="height:52%"></i><i style="height:84%"></i><i style="height:29%"></i><i style="height:66%"></i>
+            <i style="height:91%"></i><i style="height:41%"></i><i style="height:58%"></i><i style="height:33%"></i>
+          </div>
+          <s>0:47</s>
+        </div>
+
+        <div class="prose" style="margin-top:16px;">
+          <p>Hit 140 kilos and it felt clean — no grinding at the bottom. Keep the same warm-up next week, it's the only thing that's changed.</p>
+        </div>
+
+        <div class="sect">HOW IT LANDED</div>
+        <div class="recept">
+          <div class="stats">
+            <div class="stat"><b>0:47</b><s>long</s></div>
+            <div class="stat"><b>31</b><s>words</s></div>
+          </div>
+          <div class="prov">Recorded here, on this iPhone. <b>The audio never left the device.</b></div>
+        </div>
+
+        <div class="sect">THAT DAY <i>2 things</i></div>
+        <div class="shelf">
+          <div class="scard"><div class="sthumb b"></div><s>Workout · 52 min</s></div>
+          <div class="scard"><div class="sthumb"></div><s>Photo · 19:38</s></div>
+        </div>
+
+        <div class="dial">
+          <div class="disc"><i>◷</i><s>Remind</s></div>
+          <div class="disc"><i>⧉</i><s>Copy</s></div>
+          <div class="disc"><i>文</i><s>Translate</s></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+</div>
+
+<h2><span class="n">4</span>What the “How it landed” card replaces</h2>
+<p class="sub">Same move the social pass made: the reception card takes the spec table's <code>From</code> row with it, so the two can never say the same thing twice.</p>
+
+<div class="row" style="gap:24px;align-items:stretch">
+  <div style="width:340px">
+    <div class="otitle" style="margin-bottom:10px;">Today, in full</div>
+    <div class="before">
+      <div class="specrow"><b>From</b><span>written by you</span></div>
+    </div>
+    <p class="note">That is the entire spec table on every note in the corpus. It says less than the eyebrow directly above it, which already names the source.</p>
+  </div>
+  <div style="width:340px">
+    <div class="otitle" style="margin-bottom:10px;">Proposed</div>
+    <div class="recept">
+      <div class="stats">
+        <div class="stat"><b>318</b><s>words</s></div>
+        <div class="stat"><b>2 min</b><s>to read</s></div>
+      </div>
+      <div class="prov">From your <b>Day One export</b>. Imported 3 August.</div>
+    </div>
+    <p class="note">Every number here is <b>derived from the record</b>, never fetched, never stored. The provenance sentence reads the import receipt's own date — the same row §310 already reads for staleness — so <b>no new <code>Thing</code> property, and therefore no CloudKit Production deploy</b>.</p>
+  </div>
+</div>
+
+<h2><span class="n">5</span>What it costs</h2>
+<ul class="pts">
+  <li><b>Already stored, just unread:</b> the full Obsidian body (<code>enrichedText</code>), every source's <code>tags</code>, <code>capturedAt</code> (the date hero), the vault path (<code>sourceRef</code>), the audio bytes, and every wikilink/backlink (<code>NoteLinks</code>, computed at open already). Word count and read time are arithmetic over text we hold. <b>Zero new fields.</b></li>
+  <li><b>“That day” is a query, not a feature:</b> the same-calendar-day fetch the Today brief already performs, scoped to one date. It is the single strongest argument that a journal entry belongs in a corpus rather than in a journal app — and it costs one predicate.</li>
+  <li><b>One importer fix, and it is the only real work:</b> Kindle must land the <b>passage</b> in <code>content</code> and the <b>book</b> where the room can rank it, and parse page/location out of the metadata line it already reads for the date. Book → <code>authorHandle</code> is an existing stored property, which also gives Kindle a “Whose books you mark most” room head for free. Existing rows are lossy and can't be healed in place — a re-import fixes them, and the <code>sourceRef</code> hash is stable across it, so nothing duplicates.</li>
+  <li><b>Deleted, not deprecated:</b> the <code>From</code> row on a note, wherever the reception sentence composes. Two views drawing one fact is how a screen starts contradicting itself.</li>
+  <li><b>Mechanical, for the reason everything here is:</b> <code>NoteSheet.swift</code> Foundation-only, compiled whole by <code>scripts/note-sheet-selftest.sh</code> in <code>verify.sh</code>. Every failure in this category is a silent wrong answer that renders perfectly — a passage classified as a title, a body clamped at twelve lines, a word count over a truncated string — and the simulator can see none of them.</li>
+</ul>
+
+<h2><span class="n">6</span>Deliberately not built</h2>
+<p class="sub">A shape exists only where the sheet would otherwise draw the wrong noun.</p>
+<ul class="pts">
+  <li><b>Day One photos and Apple Journal media.</b> Both exports carry them and neither importer reads them. That is an import gap, not a sheet ruling — landing pixels means <code>ImportMedia</code>, a scoped-folder read and a size budget, which is its own pass.</li>
+  <li><b>Markdown rendering.</b> Obsidian's body is stored as raw markdown and drawn as plain text. Rendering it is a real improvement and a genuinely separate question — it changes what the words <i>are</i>, not what the sheet <i>is</i>, and it needs its own decision about wikilinks, embeds and Dataview blocks that would silently render as garbage.</li>
+  <li><b>Apple Notes' origin.</b> Shared notes land under source <b>You</b> with no record of the app they came from. Fixing that is a share-extension change, and it needs a ruling first: whether “You” means “you wrote it” or “it came in by hand”.</li>
+</ul>
+
+</div>
