@@ -1,0 +1,414 @@
+import SwiftUI
+
+/// THE NOTE SHEET'S THREE ANATOMIES (prd §366, 2026-08-12).
+///
+/// Every view here is FLAT BY LAW — plain stacks, no generic `Widget`/`Row`
+/// mount (the first-frame render-depth lesson, paid three times).
+///
+/// Liveness: each of these stores VALUES, never a `Thing`, except where a
+/// shelf must walk into one — and there the row is a `KeyedThing` re-checked
+/// inside the `ForEach` closure (corollary 3). So corollary 5 has nothing to
+/// guard in this file.
+
+// MARK: - Entry: the date is the identity
+
+/// The hero of a dated piece of writing.
+///
+/// A journal entry's title was cut out of its own first line, so leading with
+/// it printed that line twice and named nothing — while the entry's date, the
+/// one fact that actually identifies it and the only fact every source in this
+/// category carries, appeared nowhere on the sheet at all beyond the eyebrow's
+/// "3y ago".
+///
+/// The day is the headline; the year, the act and the time are the quiet line
+/// under it. The year drops out when it is this one (`NoteSheet.dateline`) —
+/// stating "2026" over something written this morning is the obvious said in
+/// the loudest slot on the screen.
+struct NoteDateline: View {
+    let dateline: NoteSheet.Dateline
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(dateline.headline)
+                .dsText(.heading28)
+                .foregroundStyle(DS.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
+            Text(dateline.detail)
+                .dsText(.label12)
+                .foregroundStyle(DS.textTertiary)
+        }
+        // The day and its clause are one fact; read apart they are a bare
+        // date and a loose fragment.
+        .accessibilityElement(children: .combine)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// MARK: - The body
+
+/// A note's own words, at the tier writing is read in.
+///
+/// Every body in this category drew at `callout15` in `textSecondary` — the
+/// tier the design system uses for a footnote UNDER a fact — and four of six
+/// sources clamped it at twelve lines with no "more" and nothing to scroll.
+/// On these sources the body is not an annotation of the thing, it IS the
+/// thing.
+///
+/// So: `reading20`, primary ink, and **no line limit at all past the fold**.
+/// The clamp is replaced by a real disclosure — a long entry shows its opening
+/// and says how much more there is, which is a promise the twelve-line cut
+/// never made and never kept.
+struct NoteProse: View {
+    let text: String
+    /// `false` for a passage: somebody else's marked sentence is set in the
+    /// same tier but is never long enough to fold, and a "Read more" under a
+    /// quotation would be a control that does nothing.
+    var foldable: Bool = true
+
+    @State private var expanded = false
+
+    /// Past this many characters the body folds. Roughly a screenful at
+    /// `reading20` on a phone: short enough that a fold is rare on an ordinary
+    /// entry, long enough that the fold means something when it happens.
+    private static let foldLength = 900
+
+    private var folds: Bool { foldable && !expanded && text.count > Self.foldLength }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            Text(ProseLinks.rendered(text))
+                .dsText(.reading20)
+                .foregroundStyle(DS.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                // Words are what people copy a phrase out of, and until now
+                // no note body in this app allowed it.
+                .textSelection(.enabled)
+                .lineLimit(folds ? 12 : nil)
+            if folds {
+                Button {
+                    withAnimation(DS.Motion.standard) { expanded = true }
+                } label: {
+                    // Says HOW MUCH more, not just "more" — the whole failure
+                    // this replaces was a silent cut, and a disclosure that
+                    // won't say what it is hiding repeats it politely.
+                    Text("Read the rest — \(NoteSheet.words(in: text).formatted(.number)) words")
+                        .dsText(.callout15)
+                        .foregroundStyle(DS.tint)
+                }
+                .buttonStyle(.plain)
+                .dsHover()
+            }
+        }
+    }
+}
+
+/// The person's own tags, drawn.
+///
+/// Obsidian lands frontmatter and inline tags and Day One lands the export's
+/// own; the filter could reach them and no note sheet rendered `thing.tags` at
+/// all. The app's own kind tag is filtered out at the source layer — putting
+/// "Note" beside "#legibility" would present a machine's label as a choice the
+/// person made.
+///
+/// Not chips-as-controls: these are what the note SAYS it is about. Tapping
+/// one is the tag filter's job and the tag filter is the agent's (§269), so
+/// nothing here is a button and nothing here is dead.
+struct NoteTagRow: View {
+    let tags: [String]
+
+    var body: some View {
+        FlowLayout(spacing: DS.Space.s2) {
+            ForEach(tags, id: \.self) { tag in
+                Text(tag)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textSecondary)
+                    .padding(.horizontal, DS.Space.s2)
+                    .padding(.vertical, 4)
+                    .background(DS.fillFaint,
+                                in: Capsule(style: .continuous))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// MARK: - Passage: somebody else's words
+
+/// A marked passage, and the work it came from.
+///
+/// The record had these two the wrong way round — the (truncated) passage in
+/// the title slot and the book's name as the body — so the sheet drew a
+/// quotation at display size as though it were a headline. The passage is the
+/// hero here and the work is the identity beneath it, which is also the order
+/// a person would write a quotation down in.
+///
+/// The rail is a 2pt shape marking a quoted block, not a divider: the
+/// no-hairlines law is about DIVIDERS, and this divides nothing (the same
+/// reasoning `ReplyingToCard`'s rail already carries).
+struct NotePassageContent: View {
+    let passage: String
+    /// "Piranesi — Susanna Clarke", exactly as the clippings file wrote it.
+    let citation: String
+    /// "page 42" / "location 611-612", or nil on a file we can't read a
+    /// locator out of.
+    let locator: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s4) {
+            HStack(alignment: .top, spacing: DS.Space.s3) {
+                RoundedRectangle(cornerRadius: 1, style: .continuous)
+                    .fill(DS.fillFaint)
+                    .frame(width: 2)
+                NoteProse(text: passage, foldable: false)
+            }
+            HStack(spacing: DS.Space.s3) {
+                KindGlyph(kind: .note, size: DS.Face.list)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(citation)
+                        .dsText(.heading17)
+                        .foregroundStyle(DS.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let locator, !locator.isEmpty {
+                        Text(locator)
+                            .dsText(.label12)
+                            .foregroundStyle(DS.textTertiary)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .accessibilityElement(children: .combine)
+        }
+    }
+}
+
+/// The other passages you marked in the same work.
+///
+/// This is what makes ONE highlight worth opening. A marked sentence out of
+/// context is a fragment; the eleven others from the same book are already in
+/// the corpus, and no Kindle screen will ever show them to you together.
+///
+/// The rows are the passages themselves, not their titles — the title is a
+/// clamp of the same words, and a list of clamped versions of a thing you can
+/// already read is a list of nothing.
+struct NoteSiblingList: View {
+    let rows: [KeyedThing]
+    var onOpen: (Thing) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // `.live` INSIDE the closure (corollary 3): the array this
+            // `ForEach` holds was filtered when the view value was made, which
+            // is before any delete that lands while the sheet is open.
+            ForEach(rows) { row in
+                if let thing = row.live {
+                    Button { onOpen(thing) } label: {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(NoteSheetSource.passage(for: thing))
+                                .dsText(.callout15)
+                                .foregroundStyle(DS.textSecondary)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.leading)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text(sublineText(thing))
+                                .dsText(.label12)
+                                .foregroundStyle(DS.textTertiary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, DS.Space.s2)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .dsHover()
+                }
+            }
+        }
+    }
+
+    /// "page 88 · 11 days ago", or just the age where the file named no page.
+    private func sublineText(_ thing: Thing) -> String {
+        let age = NoteSheet.relative(thing.capturedAt, now: .now)
+        guard let locator = thing.summary?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !locator.isEmpty else { return age }
+        return "\(locator) · \(age)"
+    }
+}
+
+// MARK: - The vault graph
+
+/// How this note sits among the others.
+///
+/// Both halves already existed and both were a plain list at the very bottom
+/// of the sheet, under everything: `NoteLinks` has resolved a vault's own
+/// `[[wikilinks]]` since 2026-07-28 and `ThingLinks` has answered the inverse
+/// since §340. Counted and led with, they are a READING — this note is a hub,
+/// or this note is a leaf — which is a thing you can act on; listed at the
+/// end, they were two more rows.
+///
+/// The two counts stay SEPARATE and are never summed: a note that both links
+/// to and is linked from another would otherwise be counted twice, and the
+/// directions are the whole information (`backlinksSection`'s standing rule).
+struct NoteGraphCounts: View {
+    let linksOut: Int
+    let linkedFrom: Int
+
+    var body: some View {
+        HStack(spacing: DS.Space.s2) {
+            cell(linksOut, String(localized: "links out"))
+            cell(linkedFrom, String(localized: "notes link here"))
+        }
+    }
+
+    private func cell(_ value: Int, _ noun: String) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(value.formatted(.number))
+                .dsText(.heading22)
+                .foregroundStyle(DS.textPrimary)
+                .monospacedDigit()
+            Text(noun)
+                .dsText(.label12)
+                .foregroundStyle(DS.textTertiary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DS.Space.s3)
+        .background(DS.fillFaint,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        .accessibilityElement(children: .combine)
+    }
+}
+
+// MARK: - That day
+
+/// Everything else the corpus holds from the day an entry describes.
+///
+/// The single strongest argument that a journal entry belongs in a corpus
+/// rather than in a journal app: the day you wrote about is a day this app
+/// already holds photographs, movements, captures and money for, and no
+/// journal app can show you any of them. One bounded predicate, not a walk.
+///
+/// A tile shows the thing's own picture where it has one and its kind's glyph
+/// where it doesn't — never a generic placeholder pretending to be an image.
+struct NoteSameDayShelf: View {
+    let rows: [KeyedThing]
+    var onOpen: (Thing) -> Void
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(alignment: .top, spacing: DS.Space.s2) {
+                ForEach(rows) { row in
+                    if let thing = row.live {
+                        tile(thing)
+                    }
+                }
+            }
+            .padding(.horizontal, DS.Space.s4)
+        }
+        // The shelf bleeds to the sheet's edges on purpose — a horizontal run
+        // that stops short of the margin reads as a list that has ended.
+        .padding(.horizontal, -DS.Space.s4)
+    }
+
+    private func tile(_ thing: Thing) -> some View {
+        Button { onOpen(thing) } label: {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                thumb(thing)
+                    .frame(width: 92, height: 68)
+                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card,
+                                                style: .continuous))
+                Text(thing.title)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .frame(width: 92, alignment: .leading)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .dsHover()
+        .accessibilityLabel(Text("\(thing.title), from \(thing.source)"))
+    }
+
+    @ViewBuilder private func thumb(_ thing: Thing) -> some View {
+        if let data = thing.previewImageData, let image = UIImage(data: data) {
+            Image(uiImage: image).resizable().scaledToFill()
+        } else if let url = thing.previewImageURL, !url.isEmpty {
+            RemoteThumb(urlString: url, size: 92, fallback: thing.source)
+        } else {
+            ZStack {
+                Rectangle().fill(DS.fillFaint)
+                KindGlyph(kind: thing.kind, size: 26)
+            }
+        }
+    }
+}
+
+// MARK: - How it landed
+
+/// The block that replaced the spec table on a note sheet (prd §366).
+///
+/// The table's whole contribution to a note was one row reading `From —
+/// written by you`, in its own card, behind an 80pt label column. It said less
+/// than the eyebrow directly above it, which already names the source. This
+/// says where the thing came from in a sentence, and puts beside it the
+/// readings the record already held.
+///
+/// ## The form, and what is deliberately not in it
+///
+/// - **No hue.** Nothing here is a gain or a loss; it is a reading (§292's
+///   ruling, one category over).
+/// - **No glyphs on the numbers.** The noun is written out under each, where
+///   it reads correctly at any Dynamic Type size.
+/// - **No bars, no trend, no delta.** A reading, never news (§223). The
+///   tripwire: the moment this grows a "+120 words since Tuesday" line it has
+///   become the tally the module doctrine bans.
+/// - **A measurement we cannot make has no cell**, and one we can only bound
+///   wears a `+` (`SocialCount`'s "97+" valve). A word count taken over a
+///   clamped body understates a real note by thousands while looking exactly
+///   like a measurement — that is the failure this rule exists for.
+struct NoteReceptionCard: View {
+    let reception: NoteReception
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            if !reception.readings.isEmpty {
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s6) {
+                    ForEach(reception.readings, id: \.noun) { reading in
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(reading.text)
+                                .dsText(.heading22)
+                                .foregroundStyle(DS.textPrimary)
+                                .monospacedDigit()
+                            Text(reading.noun)
+                                .dsText(.label12)
+                                .foregroundStyle(DS.textTertiary)
+                        }
+                        // The number and its noun are one fact; read apart
+                        // they are a bare digit and a loose word.
+                        .accessibilityElement(children: .combine)
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+            if let ceiling = reception.ceiling {
+                Text(ceiling)
+                    .dsText(.callout15)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            // The quiet line last, in the tier the spec table's own labels
+            // used — it is the footnote, not the reading.
+            if let provenance = reception.provenance {
+                Text(provenance)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(DS.Space.s4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DS.fillFaint,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+    }
+}
