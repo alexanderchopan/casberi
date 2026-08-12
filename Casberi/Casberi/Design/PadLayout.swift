@@ -94,6 +94,52 @@ enum PadLayout {
     static let floatingClusterMaxWidth: CGFloat = 420
 }
 
+extension View {
+    /// Reserve the source rail's column (user ruling 2026-08-12: "the rail
+    /// should be preserved and content not go behind it").
+    ///
+    /// **Why a padding and not the safe-area inset that is already there.**
+    /// The rail rides `.safeAreaInset(edge: .leading)` applied to the
+    /// NavigationStack, and that inset NEVER REACHES THE STACK'S CONTENT —
+    /// measured on the Mac renderer 2026-08-12, the feed's own
+    /// `safeAreaInsets.leading` reads **0** at every window width while the
+    /// strip's `.top` inset (applied INSIDE the stack) reads its full 50. This
+    /// is the same fact `MainSurface.topInset` already records for the demo
+    /// banner — "an inset applied further out reserves space the strip simply
+    /// ignores" — met a second time on a second edge, and it is why that band
+    /// pads itself by hand rather than trusting the inset.
+    ///
+    /// So nothing was reserving the rail's 88pt, and what kept it looking
+    /// right was arithmetic that only holds on a wide window: the feed is
+    /// capped at `readingMaxWidth` and CENTRED, so it clears the rail only
+    /// while the space it is centred in exceeds 700 + 2×88 = 876pt. Below
+    /// that the column slides under the chips. The detail pane makes that the
+    /// NORMAL case rather than an edge one, because its own trailing inset
+    /// (applied inside the stack, so it does bind) takes 400–560pt off the
+    /// width being centred in: at the shipped default 1120pt window the feed
+    /// had 694pt and every row title was drawn beneath the rail, its first
+    /// characters cut ("Calendar" → "alendar"). A window had to reach roughly
+    /// 1600pt before the collision stopped.
+    ///
+    /// Applied to the stack's CONTENT — the root pager and each pushed room —
+    /// rather than to `dsAdaptiveContentWidth`, which every screen wears: the
+    /// same setup screens are also presented as `ConnectFormSheet`, and a
+    /// sheet has no rail beside it, so reserving inside that modifier would
+    /// shift every connect form 88pt off its own centre.
+    ///
+    /// What this gives up, stated plainly: rows no longer travel UNDER the
+    /// rail, which was the reason the rail became an inset in the first place
+    /// (2026-08-10 — "the material finally has something to blur"). That
+    /// benefit was never actually being collected, since a capped, centred
+    /// column only reaches the chips at the widths where it also reads as
+    /// broken. The page photo and the crown pour still run the full width
+    /// beneath it — they are painted by a `.background` that ignores the safe
+    /// area — so the glass keeps a real backdrop to sample.
+    func dsRailColumn(_ reserve: Bool) -> some View {
+        padding(.leading, reserve ? PadLayout.railWidth : 0)
+    }
+}
+
 /// The shell's two iPad columns, restated for a layer that sits OUTSIDE
 /// `MainSurface`'s safe-area insets and therefore can't inherit them — today
 /// that is `RootShell`'s floating agent cluster (ruling 6: the bar rides every

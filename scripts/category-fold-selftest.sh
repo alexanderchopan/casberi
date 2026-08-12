@@ -428,16 +428,25 @@ for gf in "$TMP"/*.nc; do
          echo "  recording, or give the shape real glass."; exit 1; }
 done
 
-# --- the top inset must clear the rail (prd §361) ---------------------------
-# `topInset` is a `.safeAreaInset(edge: .top)` applied INSIDE the NavigationStack
-# and the rail is a `.safeAreaInset(edge: .leading)` applied OUTSIDE it, on the
-# stack — so the rail spans the window's full height from the very top and this
-# band is laid out across the full width beneath it. The stack's CONTENT respects
-# the leading safe area; a top inset view does not. Everything in that VStack —
-# the demo banner AND both §357 room controls — therefore drew under the rail's
-# head doors on every regular-width surface. Verified on the real Mac renderer
-# (`-macSnapshot`) before and after, which is the only place it is visible at all:
-# it cannot happen on a phone, where `showsRail` is false.
+# --- the rail's column must be reserved for everything (prd §361/§371) ------
+# §361 gave `topInset` its OWN `.padding(.leading, railWidth)` on the premise
+# that "the stack's CONTENT respects the leading safe area; a top inset view
+# does not". **The first half of that was wrong, and it was measured wrong on
+# 2026-08-12**: the feed's `safeAreaInsets.leading` reads 0 at every window
+# width, so NOTHING respected the rail — the band was simply the one thing
+# paying for it by hand. What hid it is that the feed is capped at
+# `readingMaxWidth` and centred, which clears an 88pt rail only while the space
+# being centred in exceeds 876pt; the detail pane takes 400–560pt off that, so
+# at the shipped default 1120pt Mac window every row title was drawn under the
+# chips with its first characters cut ("Calendar" → "alendar").
+#
+# The reservation moved to the stack's content (`dsRailColumn`), which covers
+# the band, the feed and every pushed room at once. So the guard inverts: the
+# band must NOT pad itself any more (that would inset it twice, putting it
+# 88pt right of the cards it sits above), and the pager and the pushed rooms
+# must both reserve. User ruling 2026-08-12: "the rail should be preserved and
+# content not go behind it."
+#
 # Scoped to `topInset`'s own body (up to `bandContent`, the property it was
 # split into) rather than the whole file — `dsAdaptiveContentWidth()` is the
 # app's general column cap and appears on plenty of screens, so a file-wide grep
@@ -446,10 +455,25 @@ done
 # doc block above the construction still counts toward the window.
 awk '/private var topInset/,/private var bandContent/' "$TMP/main.nc" > "$TMP/topinset.nc"
 grep -qE 'padding\(\.leading, showsRail \? PadLayout\.railWidth' "$TMP/topinset.nc" \
-  || { echo "✗ MainSurface.topInset no longer reserves the rail's column — the demo banner and"; \
-       echo "  both room controls (§357) draw under the rail's head doors on Mac and iPad,"; \
-       echo "  because a top safeAreaInset does not respect the leading one applied outside"; \
-       echo "  the stack (§361). Invisible on iPhone, where showsRail is false."; exit 1; }
+  && { echo "✗ MainSurface.topInset reserves the rail AGAIN, on top of the pager's own"; \
+       echo "  dsRailColumn — the band would be inset twice and sit 88pt right of every"; \
+       echo "  card beneath it. One reservation, at the stack's content (§371)."; exit 1; }
+# Both halves of that one reservation: the pager (so the feed, the band and the
+# pane all sit beside the rail) and the pushed rooms (Apps, Settings and every
+# bridge form are drawn under the rail too — it lives outside the stack
+# precisely so it survives a push).
+(( $(grep -c 'dsRailColumn(showsRail)' "$TMP/main.nc") >= 2 )) \
+  || { echo "✗ MainSurface no longer reserves the rail's column for both the pager and its"; \
+       echo "  pushed rooms — content draws under the chips wherever the window is under"; \
+       echo "  ~876pt of feed column, which on Mac is every size a pane fits in (§371)."; exit 1; }
+# A PADDING, never a safe-area inset — that distinction IS the finding. The
+# rail is already drawn by `.safeAreaInset(edge: .leading)` on the stack and
+# that inset reaches nothing inside it; reserving the column the same way
+# would compile, read as correct, and change no pixel.
+awk '/func dsRailColumn/,/^}/' "Casberi/Casberi/Design/PadLayout.swift" | grep -q 'padding(.leading' \
+  || { echo "✗ dsRailColumn no longer reserves with a padding — a safeAreaInset applied to"; \
+       echo "  the stack does not reach its content (measured: leading reads 0 at every"; \
+       echo "  width), so the column would silently stop being reserved (§371)."; exit 1; }
 # PADDING, never a spacer view. `Color.clear.frame(width:)` leaves the height
 # unbounded, so the spacer grows to the whole window and the top inset swallows
 # the surface — the feed renders NOTHING and the banner floats in the middle of

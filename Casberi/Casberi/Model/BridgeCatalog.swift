@@ -54,7 +54,7 @@ enum BridgeCatalog {
         var added: Date? = nil
 
         /// True for a bridge whose framework is genuinely unavailable under
-        /// Mac Catalyst — HealthKit and HomeKit don't exist there at all
+        /// Mac Catalyst — HealthKit, HomeKit and FinanceKit don't exist there
         /// (compile-time unavailable, not just runtime-unsupported; see
         /// CLAUDE.md's Catalyst notes). An offer a Mac user can never
         /// connect is a dead seat, which the honesty rule (docs/build-brief
@@ -221,7 +221,18 @@ enum BridgeCatalog {
               features: ["The room leads with who you pay most",
                          "Speaks up when a subscription's price rises, or quietly stops",
                          "Disconnect and everything it brought in is deleted"],
-              needsSetup: true, added: day(2026, 8, 6)),
+              // Dead on Mac, and it always was (2026-08-12). FinanceKit is
+              // compiled out of the Catalyst build outright
+              // (`#if canImport(FinanceKit) && !targetEnvironment(macCatalyst)`,
+              // AppleWalletBridge.swift:3) and the Mac profile carries no such
+              // entitlement, so every Mac connect could only ever reach the
+              // `.unavailable` branch — whose sentence reads "This iPhone
+              // can't share financial data… this needs iOS 17.4 or later" in
+              // a macOS window. A tile whose only outcome is a dead control
+              // wearing a false sentence is the honesty rule twice over, and
+              // Health/Strava/HomeKit already set the precedent for a seat
+              // that cannot exist here.
+              needsSetup: true, added: day(2026, 8, 6), unavailableOnMac: true),
         // Wallet group by ruling (user, 2026-07-21): the balances MERGE into
         // the combined portfolio, so an exchange belongs beside the wallets
         // whose total it joins — not in Markets, which is where things you
@@ -633,7 +644,7 @@ enum BridgeCatalog {
               summary: "Day One keeps your journal to itself — the export is the only way out.\n\nBring the JSON here and every entry becomes a findable note, dated as you wrote it, tags kept. Photos stay in the export for now.\n\nRe-imports add only what's new.",
               needsSetup: true),
         Offer(name: "Apple Notes", tagline: "Share notes in",                        group: "Notes",     connectable: true,
-              summary: "Open a note in Notes, tap share, choose Casberi.\n\nApple offers no export or live read for Notes, so they arrive one at a time, as you share them.",
+              summary: "Open a note in Notes, share it, choose Casberi.\n\nApple offers no export or live read for Notes, so they arrive one at a time, as you share them.",
               needsSetup: true),
         Offer(name: "RSS",         tagline: "Any site with a feed",                  group: "Reading",   connectable: true,
               summary: "Follow any site that publishes a feed — new posts land in your feed as links, fetched by \(DS.device) directly. No account, no algorithm in between.",

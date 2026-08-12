@@ -116,7 +116,11 @@ struct FilesScreen: View {
             // Says what LANDS before what's safe — see `SteamScreen` (audit,
             // 2026-07-31). "findable by name" left the same day: the header
             // three rows up is already the offer's "Any folder, findable".
-            DSSlabNote(text: "Any folder Files can reach — often iCloud Drive. The folder is never changed.")
+            // Names no app: there is no Files on Mac (it's Finder), and this
+            // bridge is one screen whose whole subject is a folder picker,
+            // so the sentence says what you can choose rather than which
+            // app would show it to you.
+            DSSlabNote(text: "Any folder you can choose — often iCloud Drive. The folder is never changed.")
         }
         .dsSlabSection()
     }

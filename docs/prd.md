@@ -104,6 +104,7 @@ at all.
 | §162 | Privacy Pools rides the watched wallets — the alert IS the fea | superseded by §207 |
 | §181 | The agent opens on the brief — chips docked, keyboard down | superseded by §336 |
 | §184 | The manager pattern, generalized — roster for people, ledger f | superseded by §185 |
+| §361 | The top band gets the feed's geometry — it pays for the rail's | amended by §371 |
 
 ### Known stale, by hand
 
@@ -22093,3 +22094,84 @@ per-seat honesty grades keep their exact wording (§315's MINTED/SCOPED/CONDUCT
 distinction tracks the strength of a promise and blurring it is §83's fake
 status in the one domain where believing it is expensive). What changed there
 was voice only, never the claim.
+
+## §371 — The rail is preserved and content does not go behind it (user: "how should mac behave when window is made smaller, is this what we want it to look like?", with a screenshot of chips sitting on top of the feed, then "i think the rail should be preserved and content not go behind it", 2026-08-12)
+
+**Amends §361**, whose fix was right and whose stated reason was wrong.
+
+The source rail rides `.safeAreaInset(edge: .leading)` applied to the
+NavigationStack (§350, 2026-08-10) so that it survives into every pushed room.
+§361 then gave `MainSurface.topInset` its own `.padding(.leading, railWidth)`
+on the premise that "the stack's CONTENT respects the leading safe area; a top
+inset view does not."
+
+**Measured on the Mac renderer, 2026-08-12: the feed's own
+`safeAreaInsets.leading` reads 0 at every window width**, while the strip's
+`.top` inset — applied INSIDE the stack — reads its full 50. Nothing respected
+the rail. The band was simply the one thing paying for it by hand, and §361
+read as a complete fix because the band was the only place anybody had looked.
+
+**What hid it for two days is arithmetic.** The feed is capped at
+`readingMaxWidth` (700) and CENTRED, so it clears an 88pt rail only while the
+space it is centred in exceeds 700 + 2×88 = 876pt. That is a coincidence, not a
+reservation — and the detail pane makes it fail in the normal case rather than
+an exotic one, because the pane's own trailing inset (applied inside the stack,
+so it DOES bind) takes 400–560pt off the width being centred in. At the shipped
+default 1120pt window the feed had 694pt: every row title drew under the chips
+with its first characters cut — "Calendar" → "alendar", "Gmail" → "mail",
+"Today" → "y". A window had to reach roughly **1600pt** before the collision
+stopped, which is why this was reported as a resize bug and is not one.
+
+It was never an only-on-Mac bug either. iPad reports regular width in portrait,
+so an iPad mini (744pt) and an 11" (834pt) collide with no pane open at all.
+
+**The ruling (user): the rail is preserved, and content does not go behind it.**
+So the reservation moves to the stack's CONTENT — `dsRailColumn(showsRail)`, a
+plain `.padding(.leading)` — applied to the root pager and to every pushed room.
+`topInset`'s own padding is deleted in the same change, or the band would be
+inset twice and sit 88pt right of the cards below it.
+
+**Three things this deliberately does NOT do.**
+
+1. **Not in `dsAdaptiveContentWidth()`**, the modifier every screen already
+   wears and the obvious home for it. The same setup screens are ALSO presented
+   as `ConnectFormSheet`, and a sheet has no rail beside it — reserving there
+   would shove every connect form 88pt off its own centre. The reservation
+   belongs where the rail actually is, which is the stack.
+2. **Not another `safeAreaInset`.** That is the finding: an inset applied to
+   the stack reaches nothing inside it. Spelling the reservation that way would
+   compile, read as correct in review, and move no pixel.
+3. **Not a wider Mac window floor.** Raising `macMinContentWidth` past the
+   collision band would hide the symptom on Mac and leave every iPad portrait
+   size broken.
+
+**What it gives up, stated plainly.** Rows no longer travel UNDER the rail,
+which was §350's whole reason for making it an inset ("the material finally has
+something to blur"). That benefit was never actually being collected: a capped,
+centred column only reaches the chips at the widths where it also reads as
+broken. The page photo and the crown pour still run the full width beneath the
+rail — they are painted by a `.background` that ignores the safe area — so the
+glass keeps a real backdrop to sample.
+
+**A constant that became true.** `minWidthForPane`'s doc says it was chosen so
+the narrowest configuration with a pane "still leaves the list column ~540pt".
+Before this the column was 632pt and overlapping the rail; now it is 544pt and
+clear. The number finally describes what happens.
+
+**Mechanical (`category-fold-selftest.sh`, mutation-proven both ways):**
+`topInset` must NOT pad itself again, `dsRailColumn(showsRail)` must appear for
+both the pager and the pushed rooms, and `dsRailColumn` must reserve with a
+padding rather than an inset.
+
+**The instrument this needed, and the reason it took a screenshot to find:**
+`-macWindowSize <W>x<H>` (DEBUG, `RootShell`) pins a Mac window's size at
+launch, so `-macSnapshot` can photograph a layout at a chosen width. Every Mac
+layout branch keys off measured width and none of them is visible in a
+screenshot of whatever size the window happened to open at — so before this
+hook a resize bug could be reported and never measured. It lowers
+`sizeRestrictions.minimumSize` first, because `requestGeometryUpdate` CLAMPS to
+the restriction rather than refusing: asking for less than the floor otherwise
+succeeds and silently hands back the floor, and the harness photographs the
+wrong window. It also re-asks after 1.2s, because macOS restores a window's
+remembered frame AFTER scene connection — measured, a launch asking for 1120
+logged `padLayout: width=1120` and then `width=780`.

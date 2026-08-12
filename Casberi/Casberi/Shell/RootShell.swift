@@ -3327,8 +3327,60 @@ struct RootShell: View {
     /// restricted at all.
     private func applyMacWindowChrome(to scene: UIWindowScene) {
         scene.sizeRestrictions?.minimumSize = PadLayout.macMinWindowSize
+        #if DEBUG
+        applyMacWindowSizeOverride(to: scene)
+        #endif
         updateMacWindowTitle()
     }
+
+    #if DEBUG
+    /// `-macWindowSize <W>x<H>` — pin THIS window to a size on launch.
+    ///
+    /// The Mac's layout branches on measured width (`PadLayout.railWidth`,
+    /// `readingMaxWidth`, `minWidthForPane`) and every one of those branches is
+    /// invisible from a screenshot of the size the window happens to open at.
+    /// Until this existed the only way to see a narrow Mac window was to drag
+    /// one by hand, which a headless run cannot do and which produces no record
+    /// — so a resize bug could only ever be reported, never measured. Pairs
+    /// with `-macSnapshot`: one launch per width gives a real before/after.
+    ///
+    /// It lowers `minimumSize` first, deliberately. `requestGeometryUpdate`
+    /// CLAMPS to the restriction rather than refusing, so asking for a width
+    /// below the floor without this returns "success" and silently hands back
+    /// the floor — the harness would then measure the wrong window and report
+    /// the layout as fine. Going below the shipped floor is the whole point of
+    /// a floor test, and this is DEBUG-only, so no shipped window can reach it.
+    private func applyMacWindowSizeOverride(to scene: UIWindowScene) {
+        guard let spec = UserDefaults.standard.string(forKey: "macWindowSize") else { return }
+        let parts = spec.lowercased().split(separator: "x")
+        guard parts.count == 2, let w = Double(parts[0]), let h = Double(parts[1]),
+              w > 200, h > 200 else {
+            NSLog("[Casberi] macWindowSize: unreadable %@ (want WxH, e.g. 620x800)", spec)
+            return
+        }
+        scene.sizeRestrictions?.minimumSize = CGSize(width: min(w, PadLayout.macMinWindowSize.width),
+                                                     height: min(h, PadLayout.macMinWindowSize.height))
+        let frame = CGRect(x: 40, y: 40, width: w, height: h)
+        let ask = { [weak scene] in
+            scene?.requestGeometryUpdate(.Mac(systemFrame: frame)) { error in
+                NSLog("[Casberi] macWindowSize: REFUSED %.0fx%.0f — %@", w, h, error.localizedDescription)
+            }
+        }
+        ask()
+        // …and again after the window has settled. macOS RESTORES a window's
+        // last frame, and that restore lands AFTER scene connection: measured
+        // 2026-08-12, a launch asking for 1120 logged `padLayout: width=1120`
+        // and then `width=780` — the previous run's remembered size — so the
+        // snapshot showed a width nobody had asked for while the log said the
+        // ask succeeded. The second ask is what makes the requested width the
+        // one the harness actually measures.
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(1200))
+            ask()
+        }
+        NSLog("[Casberi] macWindowSize: asked %.0fx%.0f", w, h)
+    }
+    #endif
     #else
     private func applyMacWindowChrome(to scene: UIWindowScene) {}
     #endif

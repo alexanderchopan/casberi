@@ -155,7 +155,12 @@ struct AgentSpendRow: View {
                         .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                Text("Counted on this iPhone. Your bill is \(provider.company)'s — see \(provider.console).")
+                // `DS.device`, not "this iPhone" — this line is a claim about
+                // where the counting happens, and on Mac the literal was
+                // false. The sibling line 44 rows down already said
+                // "there's no on-device model here" correctly, so one file
+                // held both the fixed and the unfixed spelling.
+                Text("Counted on \(DS.device). Your bill is \(provider.company)'s — see \(provider.console).")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }

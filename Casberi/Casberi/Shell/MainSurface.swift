@@ -208,11 +208,19 @@ struct MainSurface: View {
         // here it produced a matching WIDTH with a mismatched EDGE — which reads
         // worse than the overhang it replaced, since the eye tracks the left
         // edge of a stack of cards.
+        //
+        // **The `.padding(.leading, railWidth)` this used to end with is GONE
+        // (2026-08-12).** It was this band paying for the rail on its own,
+        // because nothing else did; the pager now reserves that column for
+        // everything inside it (`dsRailColumn`), and keeping the padding here
+        // as well would inset the band twice and put it 88pt right of the
+        // cards it sits above. The cap and the leading pin stay exactly as
+        // measured above — the band still wears the feed's own geometry, it
+        // just no longer has to reach outside itself to get it.
         bandContent
             .frame(maxWidth: showsRail ? PadLayout.readingMaxWidth : .infinity,
                    alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.leading, showsRail ? PadLayout.railWidth : 0)
     }
 
     /// What the top band actually stacks. Split out of `topInset` only so that
@@ -427,6 +435,37 @@ struct MainSurface: View {
         case "Farcaster": return FarcasterStore.shared.socialAccounts
         case "Bluesky": return BlueskyStore.shared.socialAccounts
         default: return []
+        }
+    }
+
+    /// One pushed room. Split out of the `navigationDestination` closure only
+    /// so that closure can reserve the rail's column around it (see there) —
+    /// the switch itself is unchanged, case for case.
+    @ViewBuilder
+    private func pushedRoom(_ node: HomeRoute.Node) -> some View {
+        switch node {
+        case .apps:
+            AppsScreen()
+                .navigationTransition(.zoom(sourceID: "appsDoor", in: doorNS))
+        case .settings:
+            SettingsScreen()
+                .navigationTransition(.zoom(sourceID: "settingsDoor", in: doorNS))
+        case .bridge(let dest):
+            BridgeDestinationView(destination: dest)
+        case .appDetail(let name):
+            if let offer = BridgeCatalog.offers.first(where: { $0.name == name }) {
+                AppDetailScreen(offer: offer)
+            }
+        case .project(let name):
+            ProjectDetailScreen(projectName: name)
+        case .startHere:
+            // Reached after leaving the demo, so "finishing" is a pop
+            // rather than the end of onboarding — a non-nil node still
+            // means "land there instead", which is how the wallet card
+            // and the catalog link keep working unchanged.
+            StartHereScreen { landing in
+                if let landing { route.present(landing) } else { route.path = [] }
+            }
         }
     }
 
@@ -1566,6 +1605,13 @@ struct MainSurface: View {
                         .frame(width: PadLayout.paneWidth(for: surfaceWidth))
                 }
             }
+            // The rail's column, reserved (user ruling 2026-08-12) — see
+            // `dsRailColumn` for why the `.safeAreaInset` that draws the rail
+            // cannot do this itself. Applied AFTER both insets so the band and
+            // the pane sit inside the reserved region too: the pane keeps its
+            // own width against the window's trailing edge, and `topInset`
+            // stops paying for the rail by hand (see there).
+            .dsRailColumn(showsRail)
             // The themed page behind the chip header too — the header sits
             // OUTSIDE the screens' own dsPageBackground, so in light mode the
             // stack's white UIKit backing showed through here and drew a hard
@@ -1777,30 +1823,15 @@ struct MainSurface: View {
             // genuinely nests under it and the native back chevron always
             // pops exactly one real frame.
             .navigationDestination(for: HomeRoute.Node.self) { node in
-                switch node {
-                case .apps:
-                    AppsScreen()
-                        .navigationTransition(.zoom(sourceID: "appsDoor", in: doorNS))
-                case .settings:
-                    SettingsScreen()
-                        .navigationTransition(.zoom(sourceID: "settingsDoor", in: doorNS))
-                case .bridge(let dest):
-                    BridgeDestinationView(destination: dest)
-                case .appDetail(let name):
-                    if let offer = BridgeCatalog.offers.first(where: { $0.name == name }) {
-                        AppDetailScreen(offer: offer)
-                    }
-                case .project(let name):
-                    ProjectDetailScreen(projectName: name)
-                case .startHere:
-                    // Reached after leaving the demo, so "finishing" is a pop
-                    // rather than the end of onboarding — a non-nil node still
-                    // means "land there instead", which is how the wallet card
-                    // and the catalog link keep working unchanged.
-                    StartHereScreen { landing in
-                        if let landing { route.present(landing) } else { route.path = [] }
-                    }
-                }
+                // Every pushed room reserves the rail too, and it is the same
+                // one line rather than a rule each screen has to remember: the
+                // rail lives OUTSIDE this stack precisely so it survives a
+                // push (see `showsRail`), which means Apps, Settings and every
+                // bridge form are drawn under it exactly as the feed was.
+                // They read as fine on a wide window for the same accidental
+                // reason the feed did — `dsAdaptiveContentWidth` centres them
+                // — and collide at the same widths.
+                pushedRoom(node).dsRailColumn(showsRail)
             }
         }
         // The connect form, raised over wherever the person is (prd §218) —

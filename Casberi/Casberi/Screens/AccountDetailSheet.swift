@@ -116,7 +116,7 @@ struct AccountDetailSheet: View {
             Button("Delete all access", role: .destructive) { deleteAccess() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Every token, key, and mail password held here — connected apps stop syncing and paired clients disconnect. Your things stay.\n\nPhotos and Calendar access is iOS's; revoke those in Settings. No undo.")
+            Text("Every token, key, and mail password held here — connected apps stop syncing and paired clients disconnect. Your things stay.\n\nPhotos and Calendar access is the system's; revoke those in \(DS.settingsAppName). No undo.")
         }
     }
 
@@ -318,7 +318,7 @@ struct AccountDetailSheet: View {
             // that an end-to-end claim requires ADP, and the honest way to
             // keep it is to say what today is.
             if icloudSync {
-                Text("Your iCloud copy is encrypted, but Apple holds the keys. Turn on Advanced Data Protection (Settings › your name › iCloud) and only your devices can read it.")
+                Text("Your iCloud copy is encrypted, but Apple holds the keys. Turn on Advanced Data Protection (\(DS.settingsAppName) › your name › iCloud) and only your devices can read it.")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -633,7 +633,7 @@ struct AccountDetailSheet: View {
                                     set: { notifySettings.quiet.enabled = $0; saveNotify() }))
             // The ceiling, stated rather than hidden. There is no server, so
             // there is no push: the app looks when iOS lets it look.
-            Text("There is no server, so nothing is pushed — it looks while iOS lets it, then tells you what it found. Each one says when the thing happened, not when it reached you.")
+            Text("There is no server, so nothing is pushed — it looks while the system lets it, then tells you what it found. Each one says when the thing happened, not when it reached you.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -643,7 +643,7 @@ struct AccountDetailSheet: View {
     private var notifyStatusLine: String {
         if notifyAuthorized { return "On for this \(DS.device)." }
         return Notifications.hasAsked
-            ? "Turned off in iOS Settings, and only iOS can turn it back on."
+            ? "Turned off in \(DS.settingsAppName), and only \(DS.settingsAppName) can turn it back on."
             : "We'll ask the first time something actually needs you."
     }
 

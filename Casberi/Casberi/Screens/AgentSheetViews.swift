@@ -92,6 +92,11 @@ struct AgentTurnsView: View {
     /// document, not on a scroll to its end.
     private static let collapsed = 6
 
+    /// How wide one voice may get — under the widest phone column, so this
+    /// binds only where the record is wider than a phone (the Mac/iPad detail
+    /// pane, a Mac window's sheet). See `bubble`.
+    private static let bubbleMaxWidth: CGFloat = 460
+
     var body: some View {
         let shown = expanded ? turns : Array(turns.prefix(Self.collapsed))
         let hidden = turns.count - shown.count
@@ -141,6 +146,18 @@ struct AgentTurnsView: View {
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .multilineTextAlignment(.leading)
+                // A bubble is capped, or the two voices stop being two
+                // (Mac parity, 2026-08-12). Alignment is the whole cue here —
+                // "yours tinted and trailing, the agent's faint and leading" —
+                // and a turn long enough to fill the column is aligned to
+                // both edges at once, so the transcript collapses back into
+                // the wall of same-width blocks this view was written to
+                // replace. It never showed on a phone, where 358pt of column
+                // caps every bubble for us; the detail pane is 400–560pt and
+                // the record sheet wider still. `maxWidth` only ever cuts, so
+                // a short turn keeps hugging its own text and no iPhone
+                // layout moves.
+                .frame(maxWidth: Self.bubbleMaxWidth, alignment: .leading)
                 .padding(.horizontal, DS.Space.s3)
                 .padding(.vertical, DS.Space.s2 + 1)
                 .background(mine ? DS.tintDim : DS.fillFaint,

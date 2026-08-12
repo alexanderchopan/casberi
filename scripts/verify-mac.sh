@@ -144,6 +144,35 @@ step "Static audits"
 "$ROOT/scripts/swiftdata-liveness-audit.py" >/dev/null || fail "a Thing is read without a liveness guard — run scripts/swiftdata-liveness-audit.py"
 ok "catalog sync · network reach · infoplist strings · keychain · secret scan · receipts · swiftdata liveness"
 
+# ── 0b. Every logic self-test, DISCOVERED rather than listed (2026-08-12) ───
+# This pass ran ZERO of them until today. The list above is hand-copied from
+# `verify.sh` and had drifted the way a hand-copied list always does — 27
+# self-tests were in the iOS pass and none here, including every sheet anatomy
+# shipped on 2026-08-12 and `wallet-viz-selftest.sh`'s ~700 assertions. Worse,
+# the drift ran both ways: SEVEN harnesses (`address-safety`, `chatimport`,
+# `claudecode`, `cursor-room`, `frontpage`, `keccak256`, `wallet-viz`) were in
+# NEITHER pass, so their guards had no build to fail — `address-safety`'s own
+# commit message that day claimed "a drift guard that fails the build".
+#
+# So this globs instead of enumerating: a self-test added tomorrow is covered
+# the day it lands, and the only way to be uncovered is to not exist. That is
+# the same reasoning `catalog-sync.sh` and `demo-selftest.py` checks D/E were
+# built on — this codebase's own history is that written reminders get
+# forgotten, so coverage has to be mechanical.
+#
+# Every one of these is a `swiftc` harness or a static text check: no network,
+# no simulator, no device. They are slow (each compiles), which is why they run
+# BEFORE the build and after the cheap audits — a broken harness should stop
+# the pass before 3 minutes of xcodebuild, not after.
+step "Logic self-tests (all $(ls "$ROOT"/scripts/*-selftest.sh | wc -l | tr -d ' ') discovered)"
+typeset -a SELFTEST_FAILS
+for _st in "$ROOT"/scripts/*-selftest.sh; do
+  "$_st" >/dev/null 2>&1 || SELFTEST_FAILS+=("$(basename "$_st")")
+done
+(( ${#SELFTEST_FAILS} == 0 )) \
+  || fail "logic self-test failed: ${SELFTEST_FAILS[*]} — run scripts/<name> for the output"
+ok "logic self-tests"
+
 # ── 1. Build ───────────────────────────────────────────────────────────────
 step "Building Casberi (Mac Catalyst, derivedData: $DD)"
 xcodebuild -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \
