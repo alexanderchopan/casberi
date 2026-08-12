@@ -35,9 +35,29 @@ struct DSTray<Content: View>: View {
                 .dsText(.heading22)
                 .foregroundStyle(DS.textPrimary)
             content()
-            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        // Top-aligned by FRAME, not by a trailing `Spacer(minLength: 0)`
+        // (2026-08-11). A Spacer is a view, so the stack's own `spacing` was
+        // inserted BEFORE it as well as before the content — every tray paid
+        // `DS.Space.s4` twice while its caller's height arithmetic counted it
+        // once.
+        //
+        // Reported as clipping in the sources tray: cards with no bottom edge.
+        // `SourcesTray.chromeHeight` is `s6 + title + s4 + s6`, and it snaps
+        // the resting height DOWN to a whole number of cards precisely so a
+        // card is never cut in half — but the sheet was 15pt shorter than that
+        // arithmetic believed, so the last card lost its 6pt of bottom padding
+        // and a slice of its name row. The label survived and the card's
+        // rounded bottom did not, which is why it read as a clipping bug
+        // rather than as a height being wrong.
+        //
+        // Fixed HERE rather than by adding 15pt to the one tray that noticed:
+        // every caller computes its height from the same "pad, title, gap,
+        // content, pad" model this component documents, so the phantom gap was
+        // wrong for all of them and merely invisible in trays with slack. A
+        // deficit clips; slack does not, so this can only turn clipped trays
+        // into correct ones.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(.horizontal, DS.Space.s4)
         // The title clears the grabber — this is the fix for titles crowding
         // the top edge; every tray inherits it.
