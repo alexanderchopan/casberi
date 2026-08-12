@@ -19,14 +19,32 @@ struct ProjectDetailScreen: View {
     /// push down to SQL here. Filtering in Swift after an unscoped fetch — the
     /// original shape — is the correct, safe form; don't reintroduce the
     /// predicate without verifying against a real on-device fetch first.
-    @Query(sort: \Thing.capturedAt, order: .reverse) private var things: [Thing]
+    /// Hydrating ONLY the columns this screen reads (PERF 2026-08-12) — the
+    /// same treatment `MainSurface.chipCorpus` and the All room's query got.
+    /// Without it every write re-materialised the whole corpus WITH its heavy
+    /// inline text (`content`/`enrichedText`/`postText`), none of which this
+    /// screen draws: the header reads tags/source/kind, and a row reads
+    /// title/kind/source/capturedAt. Nothing here faults.
+    ///
+    /// Still UNBOUNDED and still unpredicated, both deliberately. A project is
+    /// defined by a TAG, and a `#Predicate` over the transformable `tags`
+    /// array traps at runtime (see the note above) — while a `fetchLimit`
+    /// would silently drop the older half of a long-running project, which is
+    /// the half this screen exists to show.
+    @Query(ProjectDetailScreen.corpus) private var things: [Thing]
+    private static var corpus: FetchDescriptor<Thing> {
+        var d = FetchDescriptor<Thing>(sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        d.propertiesToFetch = [\.id, \.tags, \.source, \.kind, \.mark, \.title, \.capturedAt]
+        return d
+    }
+    @Environment(\.modelContext) private var modelContext
     @State private var stream = GenStream()
 
     private var members: [Thing] {
         things.filter { $0.tags.contains(projectName) }
     }
-    private var sourceCount: Int { Set(members.map(\.source)).count }
-    private var kindLine: String {
+    private func sourceCount(_ members: [Thing]) -> Int { Set(members.map(\.source)).count }
+    private func kindLine(_ members: [Thing]) -> String {
         let kinds = Array(Set(members.map { $0.kind.typeTag.lowercased() + "s" })).sorted().prefix(3)
         let joined = kinds.joined(separator: ", ")
         return joined.isEmpty ? "" : joined.prefix(1).uppercased() + joined.dropFirst()
@@ -36,20 +54,7 @@ struct ProjectDetailScreen: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 // Header card — paints at once from what the tile knew.
-                VStack(alignment: .leading, spacing: DS.Space.s1) {
-                    Text(projectName)
-                        .dsText(.heading34).foregroundStyle(DS.textPrimary)
-                    Text(kindLine)
-                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                    Text("\(members.count) things · \(sourceCount) apps")
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(DS.Space.s4)
-                .background(ProjectHue.color(for: projectName).opacity(0.5),
-                            in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-                .padding(DS.Space.s4)
-                .mountIn()
+                header
 
                 // The composition paints under the header (record, §5).
                 GenRender(id: "root", els: stream.els)
@@ -79,12 +84,44 @@ struct ProjectDetailScreen: View {
         // RULE: any gen surface presented under a zoom transition must paint.
         .onAppear { stream.paint(compose()) }
         // The corpus changed under it — repaint whole.
-        .onChange(of: things.count) { stream.paint(compose()) }
+        // `Corpus.revision`, not `things.count` (2026-08-12). A project IS a
+        // tag, so the change this screen most needs to notice is a RETAG — and
+        // a retag moves no row count, so this recomposed for arrivals and
+        // deletions and silently ignored something being tagged INTO or OUT OF
+        // the project it is showing. `CorpusSignal` is bumped by exactly those
+        // paths (`ThingSheetView`, `CounterpartyRetitle`, the Organize sweep)
+        // and had no reader until now; this screen is the clearest case for
+        // it in the app.
+        .onChange(of: Corpus.revision(in: modelContext)) { stream.paint(compose()) }
+    }
+
+    /// ONE walk of the corpus, not three (PERF 2026-08-12). `members` is a
+    /// computed property over the whole `@Query`, and this card used to ask
+    /// for it three separate times — `count`, `sourceCount`, `kindLine` — on
+    /// every body evaluation; `compose()` asked for it six more. Bound once
+    /// here, where a `let` is legal, and passed to the two that need it.
+    private var header: some View {
+        let members = self.members
+        return VStack(alignment: .leading, spacing: DS.Space.s1) {
+            Text(projectName)
+                .dsText(.heading34).foregroundStyle(DS.textPrimary)
+            Text(kindLine(members))
+                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+            Text("\(members.count) things · \(sourceCount(members)) apps")
+                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DS.Space.s4)
+        .background(ProjectHue.color(for: projectName).opacity(0.5),
+                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .padding(DS.Space.s4)
+        .mountIn()
     }
 
     /// Authors the project composition locally (server /compose swaps in at M2's
     /// back half). Groups: in motion (todo/doing), saved, recent unmarked.
     private func compose() -> [String] {
+        let members = self.members   // ONE walk; this function read it six times
         guard !members.isEmpty else {
             let name = projectName.replacingOccurrences(of: "\"", with: "")
             return ["root = Stack([ins])",
@@ -101,7 +138,7 @@ struct ProjectDetailScreen: View {
         } else if members.contains(where: { $0.mark == .saved }) {
             insight = "Saved and waiting. Nothing started."
         } else {
-            insight = "\(members.count) things across \(sourceCount) apps."
+            insight = "\(members.count) things across \(sourceCount(members)) apps."
         }
         doc.append("ins = Insight(\"\(insight)\")")
         rootRefs.append("ins")

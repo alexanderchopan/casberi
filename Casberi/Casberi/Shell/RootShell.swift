@@ -1850,7 +1850,6 @@ struct RootShell: View {
                  onCommit: saveDraft, onCommitVoice: saveVoice,
                  answer: answerDocument,
                  answerWithKey: keyedAnswerDocument,
-                 tagCandidates: projectTags,
                  knownSources: { bridges.bridges.map(\.name) },
                  // Fixed 2026-07-20 — this was hardcoded nil, silently
                  // dropping the "meets you where you are" lead chip since
@@ -2112,14 +2111,6 @@ struct RootShell: View {
         #endif
     }
 
-    /// Your real tags — the composer's typed-ask completion, "Show <tag>"
-    /// chips, and navigation matching read these (never a write, prd §178).
-    private func projectTags() -> [String] {
-        let typeTags = Set(ThingKind.allCases.map(\.typeTag))
-        let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
-        return Array(Set(all.flatMap(\.tags)).subtracting(typeTags)).sorted()
-    }
-
     /// The person's OWN tags — every tag minus the built-in kind tags (Link,
     /// Note, …, which every thing wears automatically) — with how many things
     /// carry each, biggest first, the name breaking ties.
@@ -2278,8 +2269,11 @@ struct RootShell: View {
     /// else — or if the model declines — the scoring doc paints unchanged (zero
     /// regression). `onProseDoc` fires only while prose streams; lookups and the
     /// fallback never call it and return one doc to reveal at once.
+    /// `onPartialDoc` is the brief's own early-paint channel — see
+    /// `Composer.answer` for why it is separate from `onProseDoc`.
     private func answerDocument(_ query: String,
-                                onProseDoc: @escaping ([String]) -> Void) async -> [String] {
+                                onProseDoc: @escaping ([String]) -> Void,
+                                onPartialDoc: @escaping ([String]) -> Void = { _ in }) async -> [String] {
         // The named-ask ellipsis reads the PREVIOUS answer's shape, then this
         // call resets it — set back to non-nil only when a named ask answers
         // below (`answerNamedAsk`), so any other kind of answer turns the
@@ -2296,9 +2290,7 @@ struct RootShell: View {
         var cachedAllThings: [Thing]?
         func allThings() -> [Thing] {
             if let cachedAllThings { return cachedAllThings }
-            let fetched = (try? modelContext.fetch(FetchDescriptor<Thing>(
-                sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-            ))) ?? []
+            let fetched = fullCorpus()
             cachedAllThings = fetched
             return fetched
         }
@@ -2360,7 +2352,8 @@ struct RootShell: View {
             // what was shown.
             if let result = await KeptAskComposers.compose("today", things: allThings(),
                                                           context: modelContext,
-                                                          presenting: true) {
+                                                          presenting: true,
+                                                          onPartial: onPartialDoc) {
                 return result.doc
             }
         }
@@ -2519,7 +2512,7 @@ struct RootShell: View {
         // name survives filler-stripping as a leftover content word), and
         // fall through anyway — checking here first just skips that
         // always-failing detour.
-        if let doc = await answerNamedAsk(query, things: allThings(), onProseDoc: onProseDoc) {
+        if let doc = await answerNamedAsk(query, things: allThings(), onProseDoc: onProseDoc, onPartialDoc: onPartialDoc) {
             return doc
         }
         // Follow-up ellipsis (2026-07-22, §176): after a per-source/publisher
@@ -2531,7 +2524,7 @@ struct RootShell: View {
         // never hijacks an ordinary short query.
         if let synth = priorNamedSynth, let entity = ellipsisEntity(query) {
             let rebuilt = (synth ? "synthesize " : "what happened in ") + entity
-            if let doc = await answerNamedAsk(rebuilt, things: allThings(), onProseDoc: onProseDoc) {
+            if let doc = await answerNamedAsk(rebuilt, things: allThings(), onProseDoc: onProseDoc, onPartialDoc: onPartialDoc) {
                 return doc
             }
         }
@@ -2681,16 +2674,56 @@ struct RootShell: View {
     /// (2026-07-22, §176) so the ellipsis follow-up can call it with a rebuilt
     /// query. Records `lastNamedAskSynth` so the NEXT query's "and X?" ellipsis
     /// knows this chain's shape.
-    private func answerNamedAsk(_ query: String, things all: [Thing],
-                                onProseDoc: @escaping ([String]) -> Void) async -> [String]? {
-        guard let (target, wantsSynthesis) = KeptAskComposers.namedAskTarget(query, things: all)
+    ///
+    /// `things` is an `@autoclosure` (PERF 2026-08-11). Two things follow, and
+    /// the second is the whole point:
+    ///
+    ///   • A query that names NO entity — the common case, since this is one
+    ///     of a dozen branches every ask walks — no longer materialises the
+    ///     corpus to find that out. `namedAskTarget` resolves the prefix
+    ///     table, the brief scopes and the catalog categories without it.
+    ///   • A `.category` ask (the Money/Work/Life chips) is composed over a
+    ///     SCOPED fetch instead of the whole corpus. `TodayBrief.compose`
+    ///     immediately filters to exactly those sources anyway, so every row
+    ///     from every other app was fetched, hydrated and thrown away — on a
+    ///     bulk-import corpus that is most of the store, on the main actor,
+    ///     before the chip could paint anything.
+    private func answerNamedAsk(_ query: String, things fetchAll: @autoclosure () -> [Thing],
+                                onProseDoc: @escaping ([String]) -> Void,
+                                onPartialDoc: @escaping ([String]) -> Void) async -> [String]? {
+        var cachedAll: [Thing]?
+        func all() -> [Thing] {
+            if let cachedAll { return cachedAll }
+            let fetched = fetchAll()
+            cachedAll = fetched
+            return fetched
+        }
+        guard let (target, wantsSynthesis) = KeptAskComposers.namedAskTarget(query, things: all())
         else { return nil }
+        // The pool this target composes over. A category scopes its own fetch;
+        // everything else reads the corpus it was handed. MEMOIZED like
+        // `all()` above, and for a reason that only shows on one path: a
+        // `.category` ask that ASKS FOR SYNTHESIS ("summarize my Money") reads
+        // this once for the synthesis window, and if the model declines it
+        // falls through and reads it again for the deterministic recap — two
+        // scoped fetches of up to 20,000 hydrated rows for one question.
+        var cachedPool: [Thing]?
+        func composePool() -> [Thing] {
+            if let cachedPool { return cachedPool }
+            let pool: [Thing]
+            if case .category(let scope) = target { pool = categoryCorpus(scope) } else { pool = all() }
+            cachedPool = pool
+            return pool
+        }
         // Records the shape only when it ACTUALLY answers, so the next query's
         // ellipsis reflects what the person saw — a recognized-but-empty named
         // ask that falls through to another path shouldn't arm "and X?".
         func answered(_ doc: [String]) -> [String] { lastNamedAskSynth = wantsSynthesis; return doc }
         if wantsSynthesis, OnDeviceModel.isAvailable {
-            let pool = target.pool(in: all)
+            // Scoped for a category (see `composePool`); `target.pool` then
+            // narrows it exactly as before — idempotent on an already-scoped
+            // array, so the synthesis window is unchanged.
+            let pool = target.pool(in: composePool())
             let now = Date.now
             var recent = pool.filter { $0.capturedAt >= now.addingTimeInterval(-3 * 86_400) }
             if recent.isEmpty {
@@ -2720,11 +2753,77 @@ struct RootShell: View {
             }
         }
         lastAnswerHits = []
-        guard let doc = await KeptAskComposers.compose(target.keptKind, things: all,
+        // The brief paints its corpus half first (§288 amendment, 2026-08-12)
+        // — see `TodayBrief.compose`'s `onPartial`. Routed through the SAME
+        // `onProseDoc` channel a streaming synthesis uses, because the
+        // composer already repaints on each snapshot and `GenStream.paint`
+        // swaps a whole document; nothing new is needed on the display side.
+        guard let doc = await KeptAskComposers.compose(target.keptKind, things: composePool(),
                                                        context: modelContext,
-                                                       presenting: true)?.doc
+                                                       presenting: true,
+                                                       onPartial: onPartialDoc)?.doc
         else { return nil }
         return answered(doc)
+    }
+
+    /// The whole corpus, newest first — the answer path's unscoped read.
+    ///
+    /// INSTRUMENTED (2026-08-11) rather than guessed at. "Is the ask slow
+    /// because of this fetch or because of the live network reads?" is the
+    /// question this pass opened with, and the two need opposite fixes, so the
+    /// split is measured instead of argued: this line and `TodayBrief`'s own
+    /// `briefPerf|`/`composeTimingDEBUG|` together account for a scoped ask
+    /// end to end, in one tap. DEBUG-only and free in release — the bargain
+    /// `LaunchPerf`'s span markers already make.
+    private func fullCorpus() -> [Thing] {
+        #if DEBUG
+        let t0 = Date.now
+        #endif
+        let rows = (try? modelContext.fetch(FetchDescriptor<Thing>(
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+        ))) ?? []
+        #if DEBUG
+        NSLog("[Casberi] askPerf| fullCorpus=%dms rows=%d",
+              Int(Date.now.timeIntervalSince(t0) * 1000), rows.count)
+        #endif
+        return rows
+    }
+
+    /// Just the rows a BRIEF SCOPE covers (PERF 2026-08-11) — the fetch behind
+    /// the Money/Work/Life chips.
+    ///
+    /// `TodayBrief.compose(category:)` filters to exactly these sources on its
+    /// first Stage-1 line, so handing it the whole corpus meant materialising
+    /// every row of every unrelated app — fully hydrated, on the main actor —
+    /// only to drop them. On a corpus carrying a bulk import that is most of
+    /// the store.
+    ///
+    /// FAILS SAFE, deliberately, and this is why the scoping is worth doing at
+    /// all rather than being a risk: an `IN`-shaped predicate is a shape this
+    /// codebase has been bitten by before (a `$0.tags.contains(…)` predicate
+    /// over a transformable attribute compiles clean and traps at runtime —
+    /// see CLAUDE.md). A captured `Set<String>` tested against a plain `String`
+    /// column is a different, ordinary construct, but the fallback costs one
+    /// line: `try?` swallows a throw and an empty read is treated as no scope
+    /// at all, exactly as `scopedCorpus(for:)` already treats its own. So the
+    /// worst case here is the performance we had yesterday, never a wrong or
+    /// empty answer.
+    private func categoryCorpus(_ scope: String) -> [Thing] {
+        let sources = KeptAskComposers.categorySources(scope)
+        guard !sources.isEmpty else { return fullCorpus() }
+        var descriptor = FetchDescriptor<Thing>(
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+        )
+        descriptor.predicate = #Predicate { sources.contains($0.source) }
+        // The same ceiling `scopedCorpus` uses: high enough that no real scope
+        // is truncated, still a ceiling.
+        descriptor.fetchLimit = 20_000
+        let rows = (try? modelContext.fetch(descriptor)) ?? []
+        #if DEBUG
+        NSLog("[Casberi] categoryCorpus| scope=%@ sources=%d rows=%d",
+              scope, sources.count, rows.count)
+        #endif
+        return rows.isEmpty ? fullCorpus() : rows
     }
 
     /// The entity named by a bare follow-up ("and bbc?", "what about calendar",

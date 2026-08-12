@@ -22,7 +22,11 @@ enum AgentPanelFigures {
     // MARK: - Input
 
     /// One thing, flattened to what these three read.
-    struct Entry: Equatable {
+    /// `Sendable` so the semantic map's projection can run OFF the main actor
+    /// (PERF 2026-08-12): every field is a value type, and `scatter` is the
+    /// one figure here whose cost is real arithmetic rather than a walk — see
+    /// `Composer.crossSourceCards`.
+    struct Entry: Equatable, Sendable {
         var source: String
         var at: Date
         /// The terms already stamped on the thing (`ocrTopics` + tags).
@@ -107,8 +111,15 @@ enum AgentPanelFigures {
     /// A theme must appear in at least `minWeeks` distinct weeks to be a
     /// current: a single burst is an event, and drawing it as a band claims a
     /// trend that isn't there.
+    /// How far back the river reaches. Named rather than inlined so the
+    /// caller that BUILDS the entries can narrow to the same window without
+    /// the two drifting (`Composer.crossSourceCards`, PERF 2026-08-12) — this
+    /// is the widest window any cross-source figure reads, so it is the bound
+    /// on what is worth mapping at all.
+    static let riverWeeks = 10
+
     static func river(_ entries: [Entry], now: Date = .now,
-                      weeks: Int = 10, maxBands: Int = 5,
+                      weeks: Int = riverWeeks, maxBands: Int = 5,
                       minWeeks: Int = 2) -> [AgentPanel.RiverBand] {
         let cal = Calendar.current
         guard let start = cal.date(byAdding: .day, value: -7 * weeks, to: now) else { return [] }

@@ -89,7 +89,7 @@ enum WalletBackgroundRefresh {
     @MainActor
     static func runNotifySweep() async {
         guard let context = SharedStore.live?.mainContext else { return }
-        guard let things = try? context.fetch(FetchDescriptor<Thing>()) else { return }
+        guard let things = sweepCorpus(context) else { return }
         let (plans, photos) = NotifySweep.plans(things: things)
         await Notifications.submit(plans, photos: photos)
         // The whisper is re-scheduled on every sweep so its content is as fresh
@@ -100,6 +100,65 @@ enum WalletBackgroundRefresh {
         // line, which pulls any pending one: nothing to say, nothing fires.
         await Notifications.scheduleWhisper(
             line: DayBrief.whisper(things: things.filter(\.isLive))?.detail)
+    }
+
+    /// Only the rows this sweep could possibly speak about (PERF 2026-08-11).
+    ///
+    /// It used to fetch the WHOLE store, fully hydrated, on the MAIN ACTOR,
+    /// on every foreground — and the sweep runs early in a foreground, so on a
+    /// large corpus that is time spent before anything can be scrolled.
+    /// `scripts/main-thread-profile.sh` put it at 6% of the main thread on a
+    /// 6,000-row corpus, and the cost is linear in corpus size.
+    ///
+    /// Nothing downstream can reach a row outside these two sets, and both
+    /// stay small at any corpus size:
+    ///
+    ///   • The LANDING scan (`NotifySweep.plans`' `fresh`) only ever speaks
+    ///     about what landed inside `NotifySweep.newsWindow` (36h).
+    ///   • `DayBrief.whisper` speaks about what landed inside the AWAY window,
+    ///     which after a long absence reaches further back than 36h — so the
+    ///     floor is whichever of the two goes deeper. Taking the news window
+    ///     alone would silently empty the whisper for exactly the person who
+    ///     had been away longest, which is the one it exists for.
+    ///   • The DEADLINE scan is the one class that fires about an OLD row, so
+    ///     it is fetched by its own predicate rather than by recency. It stays
+    ///     tiny because only a reminder, an event or a dated bridge row
+    ///     carries `dueAt` at all.
+    ///
+    /// FAILS SAFE: a refused predicate falls back to the old whole-store read
+    /// rather than sweeping an empty array, because "fetched nothing" and
+    /// "there is nothing to say" are indistinguishable downstream — this
+    /// decides what reaches someone's lock screen, and quietly notifying
+    /// about nothing is the one outcome worth a slow path to avoid.
+    /// Not `private`: `-notifyProbe` feeds `NotifySweep.plans` through this
+    /// too, so the only exerciser the sweep has (the simulator never runs a
+    /// `BGAppRefreshTask`) reports on the input production actually uses.
+    @MainActor
+    static func sweepCorpus(_ context: ModelContext) -> [Thing]? {
+        let now = Date.now
+        let floor = min(now.addingTimeInterval(-NotifySweep.newsWindow),
+                        DayBrief.windowStart(now: now))
+        let recent = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.capturedAt > floor },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        // DISJOINT from `recent` by construction (`capturedAt <= floor`), which
+        // is what lets the two results simply concatenate below: everything in
+        // `recent` is newer than the floor and everything here is older, and
+        // each is internally sorted, so `recent + dated` is already globally
+        // newest-first. No dedupe set, no merge, no re-sort — and `DayBrief`
+        // needs that order, since `lead` takes `landed.first` as "the newest
+        // thing" and would otherwise name the wrong one.
+        //
+        // `dueAt != nil` and nothing tighter: `NotifyRules.deadlineIsNear`
+        // narrows to its own future window, and expressing that here would
+        // mean unwrapping an optional inside a `#Predicate`.
+        let dated = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.dueAt != nil && $0.capturedAt <= floor },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        guard let recentRows = try? context.fetch(recent),
+              let datedRows = try? context.fetch(dated)
+        else { return try? context.fetch(FetchDescriptor<Thing>()) }
+        return datedRows.isEmpty ? recentRows : recentRows + datedRows
     }
 
     /// One-shot completion + a slot for the work handle, so the expiration

@@ -33,8 +33,13 @@ enum KeptAskComposers {
     /// brief reads it — its ledger (§214) must never record having told you
     /// something it merely composed — so it defaults to false and a new
     /// composer is silent by construction.
+    /// `onPartial` is forwarded to `TodayBrief.compose` and to nothing else —
+    /// the brief is the only kind whose document waits on a network read, so
+    /// it is the only one with a half worth painting early. Every other
+    /// composer is deterministic and returns in one pass.
     static func compose(_ kind: String, things: [Thing], context: ModelContext,
-                        presenting: Bool = false) async -> Result? {
+                        presenting: Bool = false,
+                        onPartial: (([String]) -> Void)? = nil) async -> Result? {
         // `.live` at this ONE door, so every composer below is handed a valid
         // array (crash fix, build 250 — see `TodayBrief.compose`). The caller
         // that matters is `KeptAskStore.refreshDigests`, which awaits this
@@ -47,7 +52,7 @@ enum KeptAskComposers {
         let things = things.live
         if kind == "today" {
             return await TodayBrief.compose(things: things, context: context,
-                                            presenting: presenting)
+                                            presenting: presenting, onPartial: onPartial)
         }
         if kind == "away" { return away(things) }
         if kind == "wallet" { return await wallet(things) }
@@ -78,7 +83,8 @@ enum KeptAskComposers {
             // own header rule (one composer per kind) exists to prevent.
             return await TodayBrief.compose(things: things, context: context,
                                             presenting: presenting,
-                                            category: String(kind.dropFirst("category:".count)))
+                                            category: String(kind.dropFirst("category:".count)),
+                                            onPartial: onPartial)
         }
         if kind.hasPrefix("handle:") {
             return handleRecap(String(kind.dropFirst("handle:".count)), things: things)
@@ -497,13 +503,7 @@ enum KeptAskComposers {
             case .source(let s): return things.filter { $0.source == s }
             case .handle(let h): return things.filter { $0.authorHandle == h }
             case .category(let c):
-                // `c` is a BRIEF SCOPE (Money/Work/Life), not a raw catalog
-                // category — same join `TodayBrief.compose(category:)` uses,
-                // so a kept `category:Money` pill and a live ask can never
-                // disagree about which sources it covers.
-                let sources = Set(BridgeCatalog.offers
-                    .filter { BriefScope.scope(forCatalogCategory: BridgeCatalog.category(of: $0)) == c }
-                    .map(\.name))
+                let sources = KeptAskComposers.categorySources(c)   // hoisted: once, not per row
                 return things.filter { sources.contains($0.source) }
             }
         }
@@ -539,8 +539,37 @@ enum KeptAskComposers {
     /// CATEGORY, both small fixed vocabularies that stay exact-match. Falls
     /// back to the exact bridge/category match otherwise — every phrase that
     /// already worked keeps working.
-    static func namedAskTarget(_ query: String, things: [Thing])
+    ///
+    /// The sources a BRIEF SCOPE (Money/Work/Life) covers. ONE join, so the
+    /// live ask, a kept `category:` pill, `TodayBrief.compose(category:)`'s
+    /// Stage-1 filter and the SCOPED FETCH that feeds them can never disagree
+    /// about what a scope contains — four readers, one definition.
+    /// `nonisolated` because `NamedAskTarget.pool(in:)` is — a nested type in a
+    /// `@MainActor` enum does not inherit that isolation, and this reads only
+    /// the catalog's own static tables.
+    nonisolated static func categorySources(_ scope: String) -> Set<String> {
+        Set(BridgeCatalog.offers
+            .filter { BriefScope.scope(forCatalogCategory: BridgeCatalog.category(of: $0)) == scope }
+            .map(\.name))
+    }
+
+    /// `things` is an `@autoclosure` (PERF 2026-08-11), for the reason
+    /// `AggregateAsk.parse` and `StatusAsk.pulse` already take theirs that
+    /// way: every check that can resolve WITHOUT the corpus runs first — the
+    /// polite-lead strip, the prefix table, the brief-scope names and the
+    /// catalog category names — and only `bestHandle`'s fuzzy match and the
+    /// source lookup need it. So "what's going on with money", which is what
+    /// the scope chips send, now resolves its target without materialising a
+    /// single row. Evaluated at most once here, whatever the caller passes.
+    static func namedAskTarget(_ query: String, things fetchThings: @autoclosure () -> [Thing])
         -> (target: NamedAskTarget, synthesize: Bool)? {
+        var cached: [Thing]?
+        func things() -> [Thing] {
+            if let cached { return cached }
+            let fetched = fetchThings()
+            cached = fetched
+            return fetched
+        }
         var q = query.lowercased().trimmingCharacters(in: .whitespaces)
         // A politeness lead is not part of the ask (2026-08-05). "Can you
         // search my X stuff" is the same question as "search my X", and
@@ -595,7 +624,7 @@ enum KeptAskComposers {
             if let cat = BridgeCatalog.categories.first(where: { $0.name.lowercased() == name })?.name {
                 return (.category(BriefScope.scope(forCatalogCategory: cat)), synth)
             }
-            if let handle = bestHandle(matching: name, things: things) {
+            if let handle = bestHandle(matching: name, things: things()) {
                 return (.handle(handle), synth)
             }
             // `Corpus.earnsRoom` gates it (ruling 2026-08-02): this intent's
@@ -604,7 +633,7 @@ enum KeptAskComposers {
             // permanently landing on All. The only producer of `.source`, so
             // guarding here retires the destination rather than papering over
             // it at the navigation end.
-            if let source = Set(things.map(\.source))
+            if let source = Set(things().map(\.source))
                 .first(where: { $0.lowercased() == name && Corpus.earnsRoom($0) }) {
                 return (.source(source), synth)
             }

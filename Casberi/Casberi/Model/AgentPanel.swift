@@ -105,14 +105,14 @@ enum AgentPanel {
     /// square. The PROJECTION happens upstream (`SemanticProjection`), never
     /// here: this file stays arithmetic, and the projection has to be cached
     /// anyway or the map would reshuffle between opens.
-    struct Dot: Equatable {
+    struct Dot: Equatable, Sendable {
         var x: Double
         var y: Double
         var source: String
     }
 
     /// A named cluster on the semantic map — its centre and its own top term.
-    struct DotCluster: Equatable {
+    struct DotCluster: Equatable, Sendable {
         var label: String
         var x: Double
         var y: Double

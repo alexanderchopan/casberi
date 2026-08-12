@@ -110,14 +110,56 @@ final class KeptAskStore {
         order.contains { changed($0, digest: currentDigests[$0] ?? "") }
     }
 
+    /// When the digests were last recomputed — see `refreshDigests`. In
+    /// memory only: a launch should always compute once, so this must not
+    /// survive one.
+    private var lastDigestRefresh: Date?
+    /// How much corpus the last refresh saw — see the guard in
+    /// `refreshDigests` for why the window alone would be wrong.
+    private var lastDigestCorpusCount = 0
+
+    /// How long a set of digests counts as current. Deliberately short — it
+    /// exists to collapse the burst of calls one foreground makes, not to
+    /// cache a reading for the session.
+    private static let digestWindow: TimeInterval = 12
+
     /// Recomputes every kept kind's digest — the only place a kept ask's
     /// composer runs OUTSIDE the agent itself. Mirrors `HomeInsightStore`'s
     /// own discipline: gated to foreground (RootShell's `scenePhase ==
     /// .active` block), never to a render path, so an expensive kind
     /// (wallet/watchlist, both async) can't turn AgentBar into a per-frame
     /// fetch storm.
-    func refreshDigests(things: [Thing], context: ModelContext) async {
+    ///
+    /// COALESCED since 2026-08-12 (PERF). This composes EVERY kept kind, each
+    /// one a walk of the corpus and some of them network-backed, and it is
+    /// called from three places that routinely fire within a second of each
+    /// other: the foreground pass, its own follow-up, and every composer open.
+    /// `scripts/main-thread-profile.sh` measured `KeptAskComposers.compose` at
+    /// 431 samples on a 12,000-row corpus — main-actor work landing in exactly
+    /// the window where the panel is trying to build and the board to paint.
+    ///
+    /// What it feeds is a 7pt signal dot and a pill's trailing reading. A
+    /// digest recomputed 12 seconds ago is not stale for that, and the window
+    /// is short enough that an arrival still lights the dot on the next open.
+    ///
+    /// `force` is for the paths where freshness is the point rather than a
+    /// nicety — the pull-to-refresh sweep, and any future caller that has just
+    /// changed the corpus on purpose.
+    func refreshDigests(things: [Thing], context: ModelContext, force: Bool = false) async {
         guard !order.isEmpty else { return }
+        // A RICHER corpus always recomputes, whatever the window says, and
+        // that condition is load-bearing rather than caution: the three
+        // callers do not agree on how much corpus they carry. The foreground
+        // pass hands over `insightFetch600` — the newest 600 rows — while the
+        // composer hands the whole store, and several digests are counts over
+        // a window ("56 things from Linear"). Time alone would let the
+        // bounded pass win the race and throttle out the complete one, so a
+        // dot could quietly start counting less than it used to.
+        if !force, let last = lastDigestRefresh,
+           Date.now.timeIntervalSince(last) < Self.digestWindow,
+           things.count <= lastDigestCorpusCount { return }
+        lastDigestRefresh = .now
+        lastDigestCorpusCount = things.count
         var digests: [String: String] = [:]
         var deltas: [String: String] = [:]
         for kind in order {

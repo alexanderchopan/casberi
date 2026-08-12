@@ -194,6 +194,18 @@ enum Corpus {
     static func hasSurfaced(_ things: [Thing]) -> Bool {
         things.contains { !searchOnlySources.contains($0.source) }
     }
+
+    /// How many things exist, without materialising one — a SQL `COUNT`.
+    ///
+    /// One home for an expression that had grown five copies (2026-08-12).
+    /// Two of them are load-bearing beyond tidiness: `FeedScreen` and
+    /// `MainSurface` use this as the CHANGE SIGNAL their `.task(id:)` and
+    /// `onChange(of:)` key on, because the obvious alternative — a bounded
+    /// `@Query`'s `.count` — both materialises the fetch in its getter and,
+    /// past the bound, stops changing at all. See `FeedScreen.corpusRevision`.
+    static func count(in context: ModelContext) -> Int {
+        (try? context.fetchCount(FetchDescriptor<Thing>())) ?? 0
+    }
 }
 
 /// A mark on a thing. Things enter unmarked (`none`); inference proposes through

@@ -461,6 +461,21 @@ struct MainSurface: View {
     /// See `liveChips` and the watcher below for the two fixes.
     private var feedThings: [Thing] { perfAccum("MainSurface.feedThings") { Corpus.surfaced(things) } }
 
+    /// What the two `onChange(of:)` watchers below key on (2026-08-11) — see
+    /// `FeedScreen.corpusRevision` for the full argument; both halves of it
+    /// apply here unchanged.
+    ///
+    /// The part that is specific to this surface: `chipCorpus` is bounded at
+    /// 400, so past that `things.count` was pinned and NEITHER watcher ever
+    /// fired — no arrival bob, no berry rain, no `refreshLiveChips()` on a
+    /// source appearing, no `detail.pruneIfDead()`. Silent, and it reads as
+    /// "delight is a bit random" rather than as a broken trigger.
+    ///
+    /// The watcher still reads `feedThings` INSIDE its closure, where it is
+    /// paid once per arrival rather than once per body pass — the point of
+    /// the split.
+    private var corpusRevision: Corpus.Revision { Corpus.revision(in: modelContext) }
+
     /// The pane's resting companion to the day (2026-08-02): the newest thing
     /// the All feed would show, rendered as the record it IS rather than named
     /// in a row. See `paneRest`.
@@ -1062,7 +1077,7 @@ struct MainSurface: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onChange(of: things.count) { _, _ in detail.pruneIfDead() }
+        .onChange(of: corpusRevision) { _, _ in detail.pruneIfDead() }
     }
 
     /// The pane at rest — the largest single area the app shows when nothing is
@@ -1625,15 +1640,18 @@ struct MainSurface: View {
                 // mount is rendered on the first frame with no re-landing
                 // dance needed.
             }
-            // Watches the RAW query count, not `feedThings.count` (2026-07-31
-            // perf): an `onChange(of:)` value expression is evaluated on every
-            // body pass, so asking it for the filtered count meant a full
-            // corpus walk per pass — half of the 74 measured at launch. The
-            // raw count is an O(1) read of an array already in hand. A
+            // Watches a COUNT, not `feedThings.count` (2026-07-31 perf): an
+            // `onChange(of:)` value expression is evaluated on every body
+            // pass, so asking it for the filtered count meant a full corpus
+            // walk per pass — half of the 74 measured at launch. A
             // search-only source (Contacts) landing moves this count without
             // moving the filtered one; the diff below simply finds nothing
             // fresh and returns, which is the same outcome as never firing.
-            .onChange(of: things.count) { _, _ in
+            //
+            // `corpusRevision`, not `things.count`, since 2026-08-11 — the
+            // raw count was neither free nor able to change past the query's
+            // own 400-row bound. See `corpusRevision`.
+            .onChange(of: corpusRevision) { _, _ in
                 // One walk for the whole watcher — every derivation below
                 // reads this binding rather than asking `feedThings` again.
                 let surfaced = feedThings

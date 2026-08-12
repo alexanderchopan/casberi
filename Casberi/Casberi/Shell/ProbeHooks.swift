@@ -843,7 +843,15 @@ enum ProbeHooks {
         // truncation lesson.
         Hook(key: "notifyProbe") { _, context in
             Task { @MainActor in
-                let things = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
+                // The SAME rows production sweeps, not a fresh whole-store
+                // fetch (2026-08-12). `runNotifySweep` scopes its read to the
+                // news/away window plus the dated rows, so a probe that reads
+                // everything would be exercising an input the sweep never
+                // sees — and this probe is the only exerciser there is, since
+                // the simulator never runs a `BGAppRefreshTask`. A probe that
+                // measures a different thing than the code it reports on is
+                // worse than no probe.
+                let things = WalletBackgroundRefresh.sweepCorpus(context) ?? []
                 let (plans, photos) = NotifySweep.plans(things: things)
                 let s = Notifications.settings
                 NSLog("[Casberi] notify| corpus=%d planned=%d alarms=%@ arrivals=%@ whisper=%@ asked=%@",

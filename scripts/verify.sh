@@ -123,6 +123,17 @@ step "SwiftData liveness audit"
 "$ROOT/scripts/swiftdata-liveness-audit.py" || fail "a Thing is read without a liveness guard — see the output above"
 print -P "%F{green}✓ swiftdata liveness audit%f"
 
+# A BOUNDED `@Query`'s `.count` is not a change signal (2026-08-12). Static,
+# self-tested, no build. It exists because the failure is SILENT and unreachable
+# from here: past the fetch bound the count stops changing, so the watcher keyed
+# on it simply never fires again — which shipped in both `FeedScreen` and
+# `MainSurface` for five days, on corpora larger than any simulator carries.
+# See the script's own header.
+"$ROOT/scripts/query-count-signal-audit.py" --self-test >/dev/null \
+  || fail "the query-count-signal audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/query-count-signal-audit.py" || fail "a bounded @Query's count is used as a change signal — see the output above"
+print -P "%F{green}✓ query-count-signal audit%f"
+
 # Pure-logic self-test for the X work (prd §280). Static, no build, no
 # network: the archive importer was authored against no real X archive, and
 # its failure mode is a silent wrong answer — a misdated like, a file that

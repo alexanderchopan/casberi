@@ -173,8 +173,36 @@ enum TodayBrief {
     /// if a future bridge genuinely needs per-item relevance (a unified inbox
     /// spanning Work and Social), that's a new signal to filter on, not
     /// something to fake here with `things` alone.
+    /// `onPartial` makes the brief PROGRESSIVE (2026-08-12).
+    ///
+    /// The document composes atomically — nothing paints until every live read
+    /// has returned or given up — so `liveReadBudget` was, structurally, the
+    /// chip's latency. That is what made the Money/Work/Life chips feel slow:
+    /// measured on a 12,000-row corpus, the whole corpus half of the brief is
+    /// ready in ~250ms and then sits there while ONE read (`worstDebt`, at
+    /// 1.3–2.6s) finishes deciding whether the lede gets a risk rung.
+    ///
+    /// So the corpus half is emitted first, through this callback, and the
+    /// complete document replaces it when the reads land. `GenStream.paint`
+    /// swaps a whole document, so the second call simply supersedes the first.
+    ///
+    /// It is composed by calling THIS function again with `skipLiveReads`,
+    /// rather than by extracting the module block: two passes through one
+    /// composer cannot drift, and a partial assembled by a second, reduced
+    /// copy of the module chain is exactly the drift this file's own
+    /// "one composer per kind" rule exists to prevent. The second pass costs
+    /// one more walk of the corpus modules (~180ms measured) and overlaps the
+    /// live reads, which are already in flight by the time it runs.
+    ///
+    /// The inner pass takes `presenting: false`, which is load-bearing three
+    /// times over: it skips the model read (the partial must be fast), it
+    /// skips `BriefLedger.record` and `BriefScope.markViewed` (a brief must
+    /// not record having told you something twice), and it passes no
+    /// `onPartial`, so the recursion is exactly one level deep.
     static func compose(things: [Thing], context: ModelContext,
-                        presenting: Bool = false, category: String? = nil) async -> KeptAskComposers.Result? {
+                        presenting: Bool = false, category: String? = nil,
+                        skipLiveReads: Bool = false,
+                        onPartial: (([String]) -> Void)? = nil) async -> KeptAskComposers.Result? {
         #if DEBUG
         let composeT0 = Date.now
         defer { NSLog("[Casberi] composeTimingDEBUG| category=%@ TOTAL=%dms",
@@ -195,9 +223,10 @@ enum TodayBrief {
         // needs no separate check, since a source with no connected bridge
         // can never have landed a `Thing` in the first place.
         if let category {
-            let candidateSources = Set(BridgeCatalog.offers
-                .filter { BriefScope.scope(forCatalogCategory: BridgeCatalog.category(of: $0)) == category }
-                .map(\.name))
+            // One definition of what a scope covers, shared with the kept
+            // pill's own pool and with the SCOPED FETCH that feeds this
+            // (`RootShell.categoryCorpus`) — see `categorySources`.
+            let candidateSources = KeptAskComposers.categorySources(category)
             // A scope with literally nothing ever landed from it is not
             // "quiet since you last checked", it's not connected at all — the
             // spec's own edge case, distinct from "connected but nothing new"
@@ -261,8 +290,8 @@ enum TodayBrief {
         // portfolio read (measured at 6.8s) to build a hero nobody would ever
         // see. The lede doesn't touch holdings either, so the widget line it
         // publishes is unaffected.
-        async let holdingsRead = (presenting && scopedToMoney) ? liveHoldings() : []
-        async let movesRead = scopedToMoney ? liveMoves(context: context) : []
+        async let holdingsRead = (!skipLiveReads && presenting && scopedToMoney) ? liveHoldings() : []
+        async let movesRead = (!skipLiveReads && scopedToMoney) ? liveMoves(context: context) : []
         // Gated on `presenting` (2026-07-25): the risk rung only ever reaches
         // the LEDE, and the digest — the one thing the background path uses —
         // is `DayBrief.detail`, which never carries it. So on the digest
@@ -274,7 +303,17 @@ enum TodayBrief {
         // chain latency there to compute a sentence nobody is looking at is
         // work with no reader. The cost of the gate: `-todayProbe` composes
         // with `presenting: false`, so it can't show the risk rung.
-        async let riskRead = (presenting && scopedToMoney) ? worstDebt() : nil
+        async let riskRead = (!skipLiveReads && presenting && scopedToMoney) ? worstDebt() : nil
+        // The corpus half, painted NOW — see `onPartial`. Placed after the
+        // three `async let`s on purpose: those tasks are already in flight, so
+        // this pass overlaps them rather than delaying them.
+        if let onPartial, presenting, !skipLiveReads {
+            if let draft = await compose(things: things, context: context,
+                                         presenting: false, category: category,
+                                         skipLiveReads: true) {
+                onPartial(draft.doc)
+            }
+        }
         // Where an open's wait actually goes, per read (2026-08-04). DEBUG-only
         // and free in release, the same bargain `LaunchPerf`'s span markers
         // make — kept rather than deleted because "the brief feels slow" is a
@@ -300,7 +339,10 @@ enum TodayBrief {
         // filter) can help.
         //
         // `things` and `landed` were captured BEFORE the three live reads
-        // above, and those reads suspend for up to `liveReadBudget` (8s). The
+        // above, and those reads suspend for up to `liveReadBudget` (5s; it
+        // was 8s when this crash was diagnosed — the exact number moves the
+        // race's width, never its existence, which is why the re-filter below
+        // is the fix and the budget is not). The
         // app's own foreground bridge sweep runs heals that DELETE Things in
         // exactly that window, so on resume this array can hold tombstoned
         // models — and every module below (`ledeLine`, `moneyHero`, `nextTile`,
@@ -1267,7 +1309,39 @@ enum TodayBrief {
     /// new crossing into risk during `WalletIngest.refresh`, and the Wallet
     /// room states health per protocol. This is the convenience surfacing of a
     /// fact that lives in three other places.
-    private static let liveReadBudget: TimeInterval = 8
+    ///
+    /// 8s → 2.5s → 5s, and the round trip is the point (2026-08-11/12).
+    ///
+    /// Eight seconds was a ceiling on a pathological case — an unreachable RPC
+    /// host, where the alternative was minutes — and never a number anyone
+    /// should WAIT. It became the chip's latency because the document composed
+    /// atomically: nothing painted until the slowest concurrent read returned
+    /// or gave up. So it was cut to 2.5s, which bought speed by giving up
+    /// content — the movers tile and the lede's risk rung, whenever a read ran
+    /// long.
+    ///
+    /// `onPartial` removed that trade. The corpus half now paints in ~64ms on
+    /// a 12,000-row corpus (measured) and the complete document replaces it,
+    /// so a live read no longer costs BLANK time — only how late its own
+    /// module arrives on a page already being read. That makes a generous
+    /// budget the right default again, and 2.5s the wrong one: it was
+    /// discarding readings that a slow network would have delivered.
+    ///
+    /// 5s rather than back to 8s: the cost has changed shape, not vanished. A
+    /// module inserting itself eight seconds after you started reading is its
+    /// own kind of wrong, and the measured reads (`risk` at 1.3–1.6s) sit far
+    /// enough under this that only a genuinely bad network reaches it.
+    ///
+    /// Losing the race still costs nothing false: every module here is
+    /// nil-able and degrades by simply not being there, and the risk rung in
+    /// particular is the convenience surfacing of a fact stated three other
+    /// places (above).
+    ///
+    /// What it does NOT change: the loser is not cancelled (see `bounded`), so
+    /// it still runs to completion and warms `WalletDeFi`/`MorphoDeFi`'s 60s
+    /// coalescing caches — a read that misses the budget on the first tap is
+    /// usually free on the second.
+    private static let liveReadBudget: TimeInterval = 5
 
     /// The HOLDINGS read gets a much tighter ceiling than the other two
     /// (2026-08-04, user: "a bit of latency opening the daily brief… like 3

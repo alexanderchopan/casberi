@@ -755,7 +755,56 @@ struct FeedScreen: View {
     /// once per 250ms, so the list settles into place instead of thrashing.
     private var listRevision: Int {
         guard source == "All", filter.tag == "All" else { return things.count }
-        return debouncedAllSnapshot?.count ?? things.count
+        // Never `things.count` here (PERF 2026-08-11) — see `corpusRevision`.
+        // Before the snapshot exists there is nothing on screen to animate
+        // against anyway, so 0 is the honest starting value.
+        return debouncedAllSnapshot?.count ?? 0
+    }
+
+    /// How many things exist, WITHOUT materialising one — the All room's
+    /// change signal (2026-08-11). It replaces `things.count`, which was a
+    /// trap in two directions at once.
+    ///
+    /// COST. `@Query` fetches in its GETTER — the 6,000-row main-thread
+    /// profile puts the CoreData fetch under `FeedScreen.things.getter`
+    /// (`scripts/output/profile-ios-cold-6k.txt`), not under any update hook —
+    /// so every `.count` materialised up to `allRoomFetchLimit` real `Thing`
+    /// objects on the main actor. The body reads that key on EVERY evaluation,
+    /// and a cold foreground fires one per bridge save, ~30 of them. Which is
+    /// the exact cost the debounce below exists to avoid: reading `.count` to
+    /// decide whether to debounce paid the price the debounce was saving.
+    ///
+    /// CORRECTNESS, and this half is the more serious one. `things` is bounded
+    /// at `allRoomFetchLimit` (1,200). On any corpus LARGER than that its
+    /// count is pinned at exactly 1,200 and can never change again — so
+    /// `.task(id: things.count)` never restarted, `debouncedAllSnapshot` was
+    /// populated once and never refreshed, and the All room stopped showing
+    /// new arrivals for the life of the mount. It was masked by `MainSurface`
+    /// carrying `.id(filter.source)`: leaving the room and coming back builds
+    /// a new screen, which paints correctly, so it reads as "the feed only
+    /// updates when I switch chips" rather than as a frozen list. Introduced
+    /// with the fetch bound on 2026-08-06 and invisible to every check here,
+    /// since the bound is only reachable on a corpus that large.
+    ///
+    /// `fetchCount` is a SQL `COUNT` over the whole store: no ceiling, so it
+    /// tracks arrivals at any corpus size, and no model instantiation, so it
+    /// costs a fraction of the read it replaces.
+    ///
+    /// It shares `things.count`'s one blind spot deliberately: an in-place
+    /// heal that changes no row COUNT doesn't repaint until the next arrival —
+    /// the same acceptable lag for a cosmetic fixup that the `.task(id:)`
+    /// below already documents.
+    /// Two terms since 2026-08-12 — see `Corpus.Revision`. The second one
+    /// closes the gap this property's own doc used to concede: an in-place
+    /// heal that changes no row count now repaints instead of waiting for the
+    /// next arrival.
+    ///
+    /// The room guard lives HERE rather than at the `.task(id:)` below, so a
+    /// per-source room doesn't even run the `COUNT` — its own predicated
+    /// query already coordinates it, and it has no snapshot to refresh.
+    private var corpusRevision: Corpus.Revision {
+        guard source == "All", filter.tag == "All" else { return .idle }
+        return Corpus.revision(in: modelContext)
     }
 
     /// Is this room one the wallet scope may narrow (prd §356) — every seat in
@@ -1543,7 +1592,20 @@ struct FeedScreen: View {
             // `hasSurfaced` short-circuits — no full `Corpus.surfaced` alloc
             // just to test emptiness (PERF 2026-07-29), and it was allocated
             // twice here per body eval.
-            let roomHasContent = Corpus.hasSurfaced(things)
+            // A NON-EMPTY debounced snapshot already proves the room has
+            // content, so the query is never touched in the case that matters
+            // (PERF 2026-08-11): `things` materialises its whole bounded fetch
+            // in the getter, and this line ran on every body evaluation.
+            //
+            // Deliberately one-directional — a non-empty snapshot short-
+            // circuits, an empty or absent one still asks `hasSurfaced`. The
+            // snapshot is narrowed by the tag and wallet/person scopes and
+            // `things` is not, so treating an EMPTY snapshot as an empty room
+            // would put "Let's fill this feed" over a room that is merely
+            // filtered. Same answer as before, in every case; the expensive
+            // read just stops happening whenever there is anything to draw.
+            let roomHasContent = (debouncedAllSnapshot.map { !$0.isEmpty } ?? false)
+                || Corpus.hasSurfaced(things)
             if !roomHasContent && !LiveRoomSources.has(source) {
                 Group { emptyState }
                     .listRowBackground(Color.clear)
@@ -1627,7 +1689,15 @@ struct FeedScreen: View {
         // doesn't change count and so won't repaint instantly here — an
         // acceptable lag for a cosmetic fixup, and it repaints on the very
         // next count-changing emission regardless.
-        .task(id: things.count) {
+        // Keyed on `corpusRevision`, not `things.count` (2026-08-11) — see its
+        // doc: the old key both materialised the query on every body pass and,
+        // past the fetch bound, stopped changing at all.
+        // `.idle` for every other room — the body's first line is a guard that
+        // returns for them, and keying it on `things.count` there read a
+        // source-filtered query that, unlike the All room's, carries no
+        // `fetchLimit` at all: a bulk-imported room is thousands of rows,
+        // materialised to key a task that does nothing.
+        .task(id: corpusRevision) {
             guard source == "All", filter.tag == "All" else { return }
             guard debouncedAllSnapshot != nil else {
                 let first = liveVisible()              // first paint: no delay

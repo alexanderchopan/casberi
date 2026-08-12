@@ -43,7 +43,17 @@ struct Composer: View {
     /// grammar). While a synthesis answer streams, it calls `onProseDoc` with
     /// each growing doc so prose renders live; lookups and the non-AI fallback
     /// never call it and just return the doc to reveal at once.
-    var answer: (_ query: String, _ onProseDoc: @escaping ([String]) -> Void) async -> [String] = { _, _ in [] }
+    ///
+    /// `onPartialDoc` is a SECOND channel, and the split is not tidiness
+    /// (2026-08-12). Both paint a document snapshot, but `onProseDoc` also
+    /// means "a model wrote this": it marks the answer a real synthesis, which
+    /// is what offers the Keep-this-text button. The Today brief paints its
+    /// corpus half early too, and it is deterministic and keeps as a standing
+    /// ASK (`keepableAskKind`), so routing it through the prose channel would
+    /// put a second Keep on screen that keeps a different thing.
+    var answer: (_ query: String,
+                 _ onProseDoc: @escaping ([String]) -> Void,
+                 _ onPartialDoc: @escaping ([String]) -> Void) async -> [String] = { _, _, _ in [] }
     /// The BYO-key retry (prd §67): answers the same question with the person's
     /// own agent key, device→API direct. Streams: while the answer is coming
     /// in, `onProseDoc` is called with each growing snapshot so it paints
@@ -56,9 +66,6 @@ struct Composer: View {
     /// shared pointer so choosing a second agent for one question can never
     /// change what the next question runs on.
     var answerWithKey: (_ query: String, _ provider: AgentProvider?, _ onProseDoc: @escaping ([String]) -> Void) async -> Result<KeyedAnswer, AgentAnswerFailure> = { _, _, _ in .failure(.noKey) }
-    /// Your real tags, from the corpus — typed-ask completion, the "Show
-    /// <tag>" chips, and navigation matching read these (never a write).
-    var tagCandidates: () -> [String] = { [] }
     /// The connected sources ("Gmail", "Steam") — navigation asks match them.
     var knownSources: () -> [String] = { [] }
     /// The source the person is looking at right now (a Feed filtered to one
@@ -505,9 +512,11 @@ struct Composer: View {
     /// The away window's real count — the librarian chip rolls up to it
     /// (delight 2026-07-13); set beside the gate that shows the chip.
     @State private var awayLanded = 0
-    /// The tag list, snapshotted once per open — tagCandidates() walks the
-    /// whole store, and computed-per-keystroke it made typing pay a corpus
-    /// fetch per character (review 2026-07-08).
+    /// The tag list, snapshotted once per open — derived from the same corpus
+    /// walk `computeSuggestions()` already pays for, so typing never pays a
+    /// fetch per character (review 2026-07-08; the separate `tagCandidates()`
+    /// closure that used to do its OWN full-corpus fetch here retired
+    /// 2026-08-11, see `corpusScan`).
     @State private var tagPool: [String] = []
     /// The day's own sentence, shown as the rest screen's lead card
     /// (2026-07-31) — snapshotted once per open alongside `tagPool`, off the
@@ -658,7 +667,13 @@ struct Composer: View {
 
     /// Builds the ask chips from what the corpus can answer TODAY. Empty
     /// corpus → no chips (the field is the invitation).
-    private func computeSuggestions() async {
+    /// Returns the corpus it fetched, so the kept-ask digest refresh below can
+    /// reuse it instead of fetching the whole store a second time on the same
+    /// open (PERF 2026-08-11). Safe to hand on by the contract
+    /// `KeptAskComposers.compose` already states in its own header: it filters
+    /// `.live` at that one door, on every call, precisely because
+    /// `refreshDigests` holds one array across a suspension per kind.
+    private func computeSuggestions() async -> [Thing] {
         #if DEBUG
         // `-askStats "<key>:<n>[,…]|clear"` — seed the decay counters
         // headlessly (see AskMemory; self-guarded to once per launch), so
@@ -670,7 +685,6 @@ struct Composer: View {
         AskMemory.seedMadeFromLaunchArgs()
         let composerT0 = Date.now
         #endif
-        tagPool = tagCandidates()   // one corpus walk per open, not per keystroke
         var out: [AskOption] = []
         // One plain fetch, filtered in memory — a #Predicate can't compare
         // the Codable ThingKind enum (it throws at runtime, and try? made
@@ -680,6 +694,31 @@ struct Composer: View {
         NSLog("[Casberi] composerPerfDEBUG| afterFetch=%dms count=%d",
               Int(Date.now.timeIntervalSince(composerT0) * 1000), all.count)
         #endif
+        // ONE walk of the corpus for every counter the chips need (PERF
+        // 2026-08-11). Each counter below used to be its own
+        // `all.filter { … }.count` / `all.contains { … }` / `all.first { … }`
+        // — TEN separate traversals of the whole corpus, on the main actor,
+        // per composer open — plus an ELEVENTH inside `tagCandidates()`,
+        // which was `RootShell.projectTags`: its own unbounded, fully
+        // hydrated `fetch(FetchDescriptor<Thing>())` of the very rows this
+        // line had already fetched. So a composer open materialised the whole
+        // corpus twice and then walked it eleven times.
+        //
+        // Why that costs more than it looks: a `Thing` property read is not a
+        // struct field read. It goes through CoreData's
+        // `_PF_Handler_Public_GetProperty`, which is exactly the frame the
+        // 6,000-row main-thread profile found underneath `things.getter` at
+        // 26.6% (`scripts/output/profile-ios-cold-6k.txt`). The cost is per
+        // (row × property read), so folding eleven walks into one divides
+        // that traffic by eleven. Same numbers, same order, one walk.
+        //
+        // `now` is snapshotted rather than re-read per filter — the old form
+        // called `.now` inside each closure, so the "today", "this week",
+        // "overdue" and "upcoming" windows were each measured from a slightly
+        // different instant. One clock for one open.
+        let standingIn = contextSource()
+        let scan = corpusScan(all, contextSource: standingIn, now: .now)
+        tagPool = scan.tagPool
         // NOTHING about the corpus itself goes under the greeting (user
         // ruling 2026-07-31: "casberi is about insight and management, over
         // tons of stuff, seeing numbers is just annoyance"). Three lines died
@@ -699,13 +738,14 @@ struct Composer: View {
         dayLede = WidgetLede.current() ?? DayBrief.whisper(things: all)?.detail ?? ""
         // One busy-publisher scan per open, shared by the timely chip below
         // and the placeholder examples (both want the same dominant handle).
-        let busy = busyPublisher(in: all)
-        invitationPool = computeInvitationPool(all, busy: busy)
+        // Counted in the single walk above rather than in a pass of its own.
+        let busy = scan.busyPublisher
+        invitationPool = computeInvitationPool(tokenTitle: scan.firstTokenTitle, busy: busy)
         // Context-aware lead (2026-07-12): if you opened the composer while
         // looking at one source's feed, its recap leads the chips — the
         // composer meets you where you are. Only when that source actually has
         // things to synthesize (honesty rule: a chip must answer).
-        if let src = contextSource(), all.contains(where: { $0.source == src }) {
+        if let src = standingIn, scan.sourcesSeen.contains(src) {
             // A source with its own signature ask leads with THAT ask, not the
             // generic recap (user ruling 2026-07-21, prd §149: one ask per
             // subject — standing on the Wallet feed, "What's new in Wallet?"
@@ -720,11 +760,9 @@ struct Composer: View {
                 out.append(AskOption(kind: "watchlist", title: "How's my watchlist?",
                                      glyph: "chart.line.uptrend.xyaxis"))
             } else {
-                let recent = all.filter { $0.source == src
-                    && $0.capturedAt >= Date.now.addingTimeInterval(-3 * 86_400) }.count
                 out.append(AskOption(kind: "context", title: "What's new in \(src)?",
                                      glyph: "app.badge", memoryKey: "context:\(src)",
-                                     signal: sig(recent)))
+                                     signal: sig(scan.contextSourceRecent)))
             }
             // A category sibling (2026-07-20) — only when it's a meaningfully
             // BROADER ask than the single-source lead above (more than one
@@ -734,7 +772,7 @@ struct Composer: View {
                 let cat = BridgeCatalog.category(of: offer)
                 let sourcesInCat = Set(BridgeCatalog.offers
                     .filter { BridgeCatalog.category(of: $0) == cat }.map(\.name))
-                if sourcesInCat.count > 1, all.contains(where: { sourcesInCat.contains($0.source) }) {
+                if sourcesInCat.count > 1, !sourcesInCat.isDisjoint(with: scan.sourcesSeen) {
                     out.append(AskOption(kind: "category", title: "How's my \(cat) stuff?",
                                          glyph: "square.grid.2x2", memoryKey: "category:\(cat)"))
                 }
@@ -760,7 +798,6 @@ struct Composer: View {
                                  glyph: "newspaper", memoryKey: "handle:\(busy.handle)",
                                  signal: sig(busy.count)))
         }
-        let dayStart = Calendar.current.startOfDay(for: .now)
         // The feeds' pulse (2026-07-11): "What's going on?" synthesizes the
         // recent window across every source. Gated on the SAME computation
         // that will answer it — the chip can't drift from the ask it
@@ -786,7 +823,7 @@ struct Composer: View {
             out.insert(AskOption(kind: "away", title: "While I was away?",
                                  glyph: "sparkles", signal: awaySignal), at: 0)
         }
-        let todayCount = all.filter { $0.capturedAt >= dayStart }.count
+        let todayCount = scan.todayCount
         // The "What's going on?" chip RETIRED with §193: that phrase is now the
         // name of the screen the agent opens onto, and a chip offering to fetch
         // the screen you are already looking at is a dead control wearing a
@@ -802,7 +839,7 @@ struct Composer: View {
         // The watchlist chip (2026-07-14): watched tokens are the corpus' one
         // LIVE number — teach that the composer reads them. Gated on the same
         // things TokensAsk answers from, so the chip always answers.
-        if all.contains(where: { $0.source == "Tokens" }),
+        if scan.sourcesSeen.contains("Tokens"),
            !out.contains(where: { $0.kind == "watchlist" }) {
             out.append(AskOption(kind: "watchlist", title: "How's my watchlist?",
                                  glyph: "chart.line.uptrend.xyaxis"))
@@ -822,9 +859,11 @@ struct Composer: View {
         // Top TWO tags now (was one, 2026-07-20) — a chip vocabulary as wide
         // as the corpus means more than one tag gets a one-tap path to kept.
         for tag in tagPool.prefix(2) {
-            let n = all.filter { thing in
-                thing.tags.contains { $0.caseInsensitiveCompare(tag) == .orderedSame }
-            }.count
+            // Case-insensitively, exactly as the old per-tag `filter` did —
+            // `scan.tagCounts` is keyed by the lowercased tag and counts each
+            // thing once per distinct tag, so "Recipes" and "recipes" on one
+            // thing still count as one.
+            let n = scan.tagCounts[tag.lowercased()] ?? 0
             out.append(AskOption(kind: "showtag", title: "Show \(tag)",
                                  glyph: "tag", memoryKey: "showtag:\(tag)",
                                  signal: sig(n)))
@@ -833,8 +872,7 @@ struct Composer: View {
         // own filter (light duplication, same precedent as elsewhere in this
         // function) so the tile can't offer what its composer would call
         // empty.
-        let overdueCount = all.filter { $0.mark != .done && ($0.source == "Reminders" || $0.source == "Todoist")
-            && ($0.dueAt ?? .distantFuture) < .now }.count
+        let overdueCount = scan.overdueCount
         if overdueCount > 0 {
             out.append(AskOption(kind: "overdue", title: "What's overdue?",
                                  glyph: "exclamationmark.circle", signal: sig(overdueCount)))
@@ -842,15 +880,9 @@ struct Composer: View {
         // …and its forward half (2026-07-21). Same duplication precedent, same
         // week horizon `KeptAskComposers.upcoming` uses, so the tile and its
         // composer can never disagree about whether there's anything to say.
-        if let horizon = Calendar.current.date(byAdding: .day, value: 7, to: .now) {
-            let upcomingCount = all.filter { t in
-                guard t.mark != .done, let when = t.dueAt else { return false }
-                return when >= .now && when <= horizon
-            }.count
-            if upcomingCount > 0 {
-                out.append(AskOption(kind: "upcoming", title: "What's coming up?",
-                                     glyph: "clock.badge", signal: sig(upcomingCount)))
-            }
+        if scan.upcomingCount > 0 {
+            out.append(AskOption(kind: "upcoming", title: "What's coming up?",
+                                 glyph: "clock.badge", signal: sig(scan.upcomingCount)))
         }
         // The Noticed chip (2026-07-20) — the board's old "Noticed" card had
         // no home after the board retired (prd §131); this is its one way
@@ -861,10 +893,8 @@ struct Composer: View {
                                  glyph: "sparkle"))
         }
         if !all.isEmpty {
-            let weekAgo = Date.now.addingTimeInterval(-7 * 86_400)
-            let weekCount = all.filter { $0.capturedAt >= weekAgo }.count
             out.append(AskOption(kind: "week", title: "What's this week?",
-                                 glyph: "calendar", signal: sig(weekCount)))
+                                 glyph: "calendar", signal: sig(scan.weekCount)))
         }
         // Already-kept asks lead as their own pills now (docs/agent-brief.md
         // ruling 4/5, `keptAskPills`) — offering one here too would show the
@@ -911,7 +941,7 @@ struct Composer: View {
         // than ranked/decayed/capped like `suggestions` above: the spec
         // frames these as a fixed row of scope pickers under the input, not
         // a suggestion competing for a slot.
-        categoryChips = Self.computeCategoryChips(all: all)
+        categoryChips = Self.computeCategoryChips(sourcesSeen: scan.sourcesSeen)
         #if DEBUG
         NSLog("[Casberi] composerPerfDEBUG| beforeBuildPanel=%dms",
               Int(Date.now.timeIntervalSince(composerT0) * 1000))
@@ -927,6 +957,7 @@ struct Composer: View {
               suggestions.map { $0.memoryKey + ($0.timely ? "*" : "") + ($0.signal ?? "") }
                   .joined(separator: ","))
         #endif
+        return all
     }
 
     /// Every BRIEF SCOPE with at least one thing in the corpus, as chips —
@@ -954,15 +985,17 @@ struct Composer: View {
     /// (`KeptAskComposers.swift`) — so a tap runs through the identical
     /// pipeline a typed ask would, never a shortcut that could answer
     /// differently.
-    private static func computeCategoryChips(all: [Thing]) -> [CategoryChip] {
-        guard !all.isEmpty else { return [] }
-        let present = Set(all.map(\.source))
+    ///
+    /// Takes the source set `corpusScan` already built rather than the corpus
+    /// (PERF 2026-08-12): `Set(all.map(\.source))` was a full-corpus walk plus
+    /// a 12,000-element intermediate, and it is the same set the single scan
+    /// above already has. The scope→sources join is `categorySources`, the one
+    /// definition four readers now share.
+    private static func computeCategoryChips(sourcesSeen present: Set<String>) -> [CategoryChip] {
+        guard !present.isEmpty else { return [] }
         var chips: [CategoryChip] = []
         for scope in BriefScope.scopes {
-            let sources = Set(BridgeCatalog.offers
-                .filter { BriefScope.scope(forCatalogCategory: BridgeCatalog.category(of: $0)) == scope }
-                .map(\.name))
-            guard sources.contains(where: present.contains) else { continue }
+            guard !KeptAskComposers.categorySources(scope).isDisjoint(with: present) else { continue }
             chips.append(CategoryChip(id: scope, title: scope,
                                       query: "How's my \(scope) stuff?"))
         }
@@ -995,6 +1028,25 @@ struct Composer: View {
             bySource[thing.source, default: []].append(thing)
         }
 
+        // STARTED FIRST, awaited last (PERF 2026-08-12). The semantic map is
+        // the one figure whose cost is arithmetic rather than a walk — power
+        // iteration over N × 512 — and `scripts/main-thread-profile.sh` put it
+        // at 521 of `buildPanel`'s 707 samples on a 12,000-row corpus: the
+        // largest single thing the agent's open does, and the only part of it
+        // that never needed the main thread.
+        //
+        // Two changes together, and BOTH are needed. Moving it off the main
+        // actor stops it blocking paint and touch; starting it here, before
+        // the room loop, is what takes it off the critical PATH — awaited
+        // where it was computed, an off-actor task costs exactly the same wall
+        // clock as an inline one, which is what the first cut of this measured
+        // (2837ms → 2932ms, i.e. nothing). Now it overlaps every room figure
+        // below and the open pays whichever half is slower, not their sum.
+        let mapEntries = semanticEntries(corpus)
+        let semanticMap = Task.detached(priority: .userInitiated) {
+            AgentPanelFigures.scatter(mapEntries)
+        }
+
         var cards: [AgentPanel.Card] = []
         // YIELDS between rooms (2026-08-10). This loop composes a figure per
         // connected room — on a real corpus that is ~40 rooms and measured
@@ -1025,7 +1077,7 @@ struct Composer: View {
         // is pure over `[Thing]` and declines an unpriceable or single-sided
         // window itself, so the panel inherits the room's own honesty gates.
         if let flow = walletFlow(corpus: corpus) { cards.append(flow) }
-        cards.append(contentsOf: crossSourceCards(corpus))
+        cards.append(contentsOf: await crossSourceCards(corpus, semanticMap: semanticMap))
         cards.append(contentsOf: roomHeadCards(corpus))
         for social in ["Farcaster", "Bluesky"] {
             if let card = socialChannelCard(corpus, source: social) { cards.append(card) }
@@ -1171,6 +1223,43 @@ struct Composer: View {
                                reading: nil, rising: nil)
     }
 
+    /// The vectors the semantic map projects, read on the main actor because
+    /// `thing.embedding` is a stored property — but found by PREDICATE rather
+    /// than by walking the corpus (PERF 2026-08-12).
+    ///
+    /// `scatterCap`'s note is right that unpacking every vector would blow the
+    /// open's budget, and it capped the unpacking — but the FILTER that fed
+    /// the cap still read `embedding` on every row, and `embedding` is an
+    /// `.externalStorage` attribute: the one column class where touching a row
+    /// is a separate read rather than a field access. So the cap bounded the
+    /// arithmetic and not the I/O, which on a 12,000-row corpus is the larger
+    /// half. Asking SQLite for the newest rows that HAVE one touches exactly
+    /// as many as the map can draw.
+    ///
+    /// Falls back to the old in-memory walk if the predicate is refused, so
+    /// the worst case is the cost we had rather than a missing figure.
+    private func semanticEntries(_ corpus: [Thing]) -> [AgentPanelFigures.Entry] {
+        var embedded = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.embedding != nil },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        // Fetched a little wide: import receipts are dropped below, and they
+        // are the one class that can hold a vector without belonging on a map
+        // of what the person kept.
+        embedded.fetchLimit = Self.scatterCap * 2
+        let rows = (try? modelContext.fetch(embedded))
+            ?? corpus.filter { $0.embedding != nil }.sorted { $0.capturedAt > $1.capturedAt }
+        return rows
+            .filter { $0.isLive && !Corpus.isImportReceipt($0) }
+            .prefix(Self.scatterCap)
+            .compactMap { thing -> AgentPanelFigures.Entry? in
+                guard let packed = thing.embedding,
+                      let vector = EmbeddingIndex.unpack(packed) else { return nil }
+                return AgentPanelFigures.Entry(source: thing.source, at: thing.capturedAt,
+                                               terms: thing.ocrTopics + thing.tags,
+                                               vector: vector)
+            }
+    }
+
     /// The three figures no ROOM can draw (prd §337) — the clock, the weeks,
     /// and meaning. Composed over the whole corpus rather than one room's
     /// slice, which is exactly why `FeedInsight`'s registries can't produce
@@ -1178,10 +1267,39 @@ struct Composer: View {
     ///
     /// Built from one flat pass: `AgentPanelFigures` is Foundation-only over
     /// `Entry`, so nothing here hands a `Thing` across a boundary.
+    ///
+    /// `semanticMap` is handed in already RUNNING (PERF 2026-08-12) — see
+    /// `buildPanel`, which starts it before the room loop so the projection
+    /// overlaps every other figure instead of following them.
     @MainActor
-    private func crossSourceCards(_ corpus: [Thing]) -> [AgentPanel.Card] {
+    private func crossSourceCards(
+        _ corpus: [Thing],
+        semanticMap: Task<(dots: [AgentPanel.Dot], clusters: [AgentPanel.DotCluster]), Never>
+    ) async -> [AgentPanel.Card] {
+        // Only rows either figure can actually reach (PERF 2026-08-12).
+        //
+        // `dial` filters to the last 7 days and `river` to the last 10 weeks,
+        // both with an explicit `entry.at >= start` — so a row older than the
+        // WIDER of the two windows contributes nothing to anything here. It
+        // was still being mapped into an `Entry`, and that map is not free:
+        // `thing.ocrTopics + thing.tags` reads two stored arrays and
+        // allocates a third, per row, and this ran over the whole corpus.
+        // `scripts/main-thread-profile.sh` put `crossSourceCards` at 506 of
+        // `buildPanel`'s 743 samples on a 12,000-row corpus — the single
+        // biggest piece of the agent's open.
+        //
+        // Not an approximation: same rows in, same figures out. The window is
+        // taken from `river`'s own default so the two can't drift — if that
+        // default ever widens, this widens with it.
+        //
+        // No upper bound here on purpose. Both consumers cap themselves at
+        // `now` (a calendar event carries a FUTURE `capturedAt`), so clamping
+        // it twice would just be a second place to get it wrong.
+        let riverStart = Calendar.current.date(byAdding: .day,
+                                               value: -7 * AgentPanelFigures.riverWeeks,
+                                               to: .now) ?? .distantPast
         let entries = corpus
-            .filter { !Corpus.isImportReceipt($0) }
+            .filter { !Corpus.isImportReceipt($0) && $0.capturedAt >= riverStart }
             .map { thing in
                 AgentPanelFigures.Entry(source: thing.source,
                                         at: thing.capturedAt,
@@ -1218,25 +1336,12 @@ struct Composer: View {
         // surface that draws §282's embeddings, which have served retrieval
         // invisibly since the day they shipped.
         //
-        // Built from its OWN pass rather than from `entries` above, and that is
-        // a cost decision, not tidiness: unpacking a vector materialises ~512
-        // Doubles, so decoding the whole corpus to project 150 of them would
-        // spend the open's entire budget on rows the projection then discards.
-        // Newest-first, capped, and only the things that actually carry a
-        // vector — on a device with no embeddings this costs one filter and
-        // the map simply doesn't appear, which is the honest state.
-        let projected = corpus
-            .filter { !Corpus.isImportReceipt($0) && $0.embedding != nil }
-            .sorted { $0.capturedAt > $1.capturedAt }
-            .prefix(Self.scatterCap)
-            .compactMap { thing -> AgentPanelFigures.Entry? in
-                guard let packed = thing.embedding,
-                      let vector = EmbeddingIndex.unpack(packed) else { return nil }
-                return AgentPanelFigures.Entry(source: thing.source, at: thing.capturedAt,
-                                               terms: thing.ocrTopics + thing.tags,
-                                               vector: vector)
-            }
-        let map = AgentPanelFigures.scatter(Array(projected))
+        // Built from its OWN pass rather than from `entries` above — see
+        // `semanticEntries` for how its rows are found, and `buildPanel` for
+        // why the projection is already running by the time we get here. On a
+        // device with no embeddings this yields nothing and the map simply
+        // doesn't appear, which is the honest state.
+        let map = await semanticMap.value
         if !map.dots.isEmpty, !map.clusters.isEmpty {
             out.append(card("cross.scatter", String(localized: "Your things, by meaning"),
                             String(localized: "what sits near what"),
@@ -1518,25 +1623,105 @@ struct Composer: View {
         return nil
     }
 
-    /// The publisher (RSS feed, Substack, watched social account — all in
-    /// `Thing.authorHandle`) that dominated the recent window, when one
-    /// clearly did (2026-07-22). "Recent" is the frozen away window when one
-    /// holds, else the last 24h; "dominated" means ≥5 things AND at least
-    /// double the next-busiest handle, so an ordinarily-chatty feed doesn't
-    /// trip it every day — only a genuine burst. nil otherwise (no chip).
-    private func busyPublisher(in all: [Thing]) -> (handle: String, count: Int)? {
-        let start = AppVisit.away?.lowerBound ?? Date.now.addingTimeInterval(-24 * 3600)
-        var counts: [String: Int] = [:]
-        for t in all where t.capturedAt >= start {
-            guard let raw = t.authorHandle?.trimmingCharacters(in: .whitespaces),
-                  !raw.isEmpty else { continue }
-            counts[raw, default: 0] += 1
+    /// Every corpus-wide counter `computeSuggestions()` needs, gathered in ONE
+    /// walk (PERF 2026-08-11 — see the call site for why eleven walks was the
+    /// composer's open latency). Each field below replaces a `filter`/
+    /// `contains`/`first` that used to traverse the whole corpus on its own.
+    private struct CorpusScan {
+        /// The person's own tags — every tag minus the built-in kind tags —
+        /// sorted, exactly as `RootShell.projectTags` returned them.
+        var tagPool: [String] = []
+        /// Things per tag, keyed by the LOWERCASED tag, each thing counted
+        /// once per distinct tag (matching the old case-insensitive filter).
+        var tagCounts: [String: Int] = [:]
+        /// Every distinct `source` present — answers all three of the old
+        /// `contains(where: { $0.source == … })` scans at once.
+        var sourcesSeen: Set<String> = []
+        var todayCount = 0
+        var weekCount = 0
+        var overdueCount = 0
+        var upcomingCount = 0
+        /// The newest Tokens row's title, for the per-token invitation.
+        var firstTokenTitle: String?
+        /// Things from the caller's `contextSource` in the last three days.
+        var contextSourceRecent = 0
+        /// The publisher (RSS feed, Substack, watched social account — all in
+        /// `Thing.authorHandle`) that dominated the recent window, when one
+        /// clearly did (2026-07-22). "Recent" is the frozen away window when
+        /// one holds, else the last 24h; "dominated" means ≥5 things AND at
+        /// least double the next-busiest handle, so an ordinarily-chatty feed
+        /// doesn't trip it every day — only a genuine burst. nil = no chip.
+        var busyPublisher: (handle: String, count: Int)?
+    }
+
+    /// ONE traversal, every counter. The gates are copied verbatim from the
+    /// filters they replace, so the chips say exactly what they said before.
+    private func corpusScan(_ all: [Thing], contextSource src: String?, now: Date) -> CorpusScan {
+        var scan = CorpusScan()
+        let dayStart = Calendar.current.startOfDay(for: now)
+        let weekAgo = now.addingTimeInterval(-7 * 86_400)
+        let contextRecent = now.addingTimeInterval(-3 * 86_400)
+        let horizon = Calendar.current.date(byAdding: .day, value: 7, to: now)
+        // The busy-publisher window: the frozen away gap, or the last day.
+        let busyStart = AppVisit.away?.lowerBound ?? now.addingTimeInterval(-24 * 3600)
+        var busyCounts: [String: Int] = [:]
+        var rawTags: Set<String> = []
+        var countedHere: Set<String> = []
+
+        for thing in all {
+            let source = thing.source
+            let captured = thing.capturedAt
+            scan.sourcesSeen.insert(source)
+            if captured >= dayStart { scan.todayCount += 1 }
+            if captured >= weekAgo { scan.weekCount += 1 }
+            if let src, source == src, captured >= contextRecent { scan.contextSourceRecent += 1 }
+            if scan.firstTokenTitle == nil, source == "Tokens" {
+                let title = thing.title
+                if !title.isEmpty { scan.firstTokenTitle = title }
+            }
+            if captured >= busyStart,
+               let raw = thing.authorHandle?.trimmingCharacters(in: .whitespaces),
+               !raw.isEmpty {
+                busyCounts[raw, default: 0] += 1
+            }
+            // The two deadline counters share one `mark`/`dueAt` read.
+            if thing.mark != .done {
+                let due = thing.dueAt
+                if source == "Reminders" || source == "Todoist",
+                   (due ?? .distantFuture) < now {
+                    scan.overdueCount += 1
+                }
+                if let horizon, let when = due, when >= now, when <= horizon {
+                    scan.upcomingCount += 1
+                }
+            }
+            // One `tags` read feeds both the vocabulary and the counts.
+            //
+            // `countedHere` is hoisted and cleared rather than built per row:
+            // a thing carries a handful of tags, and allocating a `Set` for
+            // each of 12,000 rows costs more than the dedupe it performs. It
+            // exists at all so "Recipes" and "recipes" on ONE thing still
+            // count that thing once, matching the case-insensitive `filter`
+            // this replaced.
+            countedHere.removeAll(keepingCapacity: true)
+            for tag in thing.tags {
+                rawTags.insert(tag)
+                let lower = tag.lowercased()
+                if countedHere.insert(lower).inserted { scan.tagCounts[lower, default: 0] += 1 }
+            }
         }
-        let sorted = counts.sorted { ($0.value, $1.key) > ($1.value, $0.key) }
-        guard let top = sorted.first, top.value >= 5 else { return nil }
-        let runnerUp = sorted.count > 1 ? sorted[1].value : 0
-        guard top.value >= runnerUp * 2 else { return nil }
-        return (top.key, top.value)
+
+        let typeTags = Set(ThingKind.allCases.map(\.typeTag))
+        scan.tagPool = Array(rawTags.subtracting(typeTags)).sorted()
+
+        // The old `busyPublisher`'s own gates, unchanged: a real leader (5+),
+        // and at least double the runner-up, or it isn't a burst.
+        let sorted = busyCounts.sorted { ($0.value, $1.key) > ($1.value, $0.key) }
+        if let top = sorted.first, top.value >= 5 {
+            let runnerUp = sorted.count > 1 ? sorted[1].value : 0
+            if top.value >= runnerUp * 2 { scan.busyPublisher = (top.key, top.value) }
+        }
+        return scan
     }
 
     /// The cycling placeholder's pool for THIS open — the static invitations
@@ -1545,18 +1730,22 @@ struct Composer: View {
     /// earns "Synthesize my <feed> feed"; a watched token earns a
     /// per-token ask. Honest by construction: every added line names a real
     /// entity the answer path resolves.
-    private func computeInvitationPool(_ all: [Thing],
+    ///
+    /// Takes the newest Tokens row's TITLE rather than the corpus (PERF
+    /// 2026-08-11): the old form did its own `all.first(where:)`, which
+    /// short-circuits for someone who watches tokens and walks every row for
+    /// everyone who doesn't. `CorpusScan` already saw it on the one walk.
+    private func computeInvitationPool(tokenTitle: String?,
                                        busy: (handle: String, count: Int)?) -> [String] {
         var pool = invitations
         if let busy {
             pool.append(String(localized: "Synthesize my \(shortPublisher(busy.handle)) feed"))
         }
-        if let token = all.first(where: { $0.source == "Tokens" }),
-           !token.title.isEmpty {
+        if let tokenTitle {
             // `TokensAsk.symbol(of:)` — the one parser of the "Name · $TICKER"
             // watch-title format (a bare space-split grabs the NAME's first
             // word, so "Wrapped Bitcoin · $WBTC" would read "Wrapped").
-            pool.append(String(localized: "How's \(TokensAsk.symbol(of: token.title)) doing?"))
+            pool.append(String(localized: "How's \(TokensAsk.symbol(of: tokenTitle)) doing?"))
         }
         return pool
     }
@@ -2416,9 +2605,24 @@ struct Composer: View {
                 // the expensive call are back-to-back in the same run-loop
                 // turn and nothing paints in between — the exact "black
                 // screen, then everything at once" this exists to fix.
-                panelLoading = true
+                // The skeleton is for a board that has never been built, not
+                // for one being refreshed (PERF 2026-08-11). `composition` is
+                // `@State` on a view that lives for the whole session, so on
+                // every open after the first it still holds the last board —
+                // and tearing that down to show a skeleton meant the panel's
+                // full rebuild cost (measured 2.3s of a 3.0s open on a
+                // 12,000-row corpus) was paid as BLANK time on every single
+                // open, including the ones a second apart.
+                //
+                // Now: first open skeletons, every later open shows the board
+                // instantly and swaps it when the fresh one lands — the
+                // "kick async, repaint on arrival" shape `HomeInsightStore`
+                // already uses. Honest, because a panel figure is a reading of
+                // a room rather than a live claim, and the refresh always
+                // lands: nothing here can leave a stale board up permanently.
+                panelLoading = composition.isEmpty
                 await Task.yield()
-                await computeSuggestions()
+                let corpus = await computeSuggestions()
                 panelLoading = false
                 // Kept asks share AskMemory's own decay counters with the
                 // suggestion tiles (ruling 5: "ignored asks decay dim") —
@@ -2442,9 +2646,17 @@ struct Composer: View {
                 // simply re-renders whenever `currentDigests` lands, exactly
                 // `HomeInsightStore`'s own "kick async, repaint on arrival"
                 // shape.
-                Task { @MainActor in
-                    let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
-                    await KeptAskStore.shared.refreshDigests(things: all, context: modelContext)
+                //
+                // Reuses the corpus `computeSuggestions()` just fetched rather
+                // than fetching the whole store again (PERF 2026-08-11) — this
+                // was the THIRD full-corpus materialisation of a single
+                // composer open. `.live` at the hand-off, since this array was
+                // read before `buildPanel`'s awaits and a foreground heal can
+                // delete in that window (corollary 6); `compose` re-filters at
+                // its own door for the per-kind suspensions after that.
+                Task { @MainActor [corpus] in
+                    await KeptAskStore.shared.refreshDigests(things: corpus.live,
+                                                             context: modelContext)
                 }
                 // Reset then reveal so the ask chips stagger in on each open.
                 chipsAppeared = false
@@ -3721,6 +3933,17 @@ struct Composer: View {
                     proseStreaming = true
                     answerStream.paint(partialDoc)
                 }
+                // A DOCUMENT snapshot rather than streamed prose — the Today
+                // brief's corpus half, painted while its live reads are still
+                // out. `proseStreaming` so the settle below doesn't
+                // typewriter-reveal a document the person is already reading;
+                // deliberately NOT `currentStreamed`, which would offer the
+                // Keep-this-text button over an answer that keeps as an ask.
+                let paintDocument: ([String]) -> Void = { partialDoc in
+                    guard gen == askGeneration else { return }
+                    proseStreaming = true
+                    answerStream.paint(partialDoc)
+                }
                 let finalDoc: [String]
                 if stayKeyed {
                     // The follow-up stays on the agent that answered last. A
@@ -3741,10 +3964,10 @@ struct Composer: View {
                         // does — and the badge correctly reads "on this
                         // iPhone", because that's who actually answered.
                         keyedCurrent = false
-                        finalDoc = await answer(q, paintPartial)
+                        finalDoc = await answer(q, paintPartial, paintDocument)
                     }
                 } else {
-                    finalDoc = await answer(q, paintPartial)
+                    finalDoc = await answer(q, paintPartial, paintDocument)
                 }
                 // A newer ask (or close) overtook this one — its answer owns
                 // the stream now; this one retires silently.
