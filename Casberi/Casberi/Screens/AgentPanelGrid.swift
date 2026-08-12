@@ -1159,8 +1159,21 @@ private struct FlowFigure: View {
         let slotHeight = height / Double(slots)
         return ForEach(Array(lanes.enumerated()), id: \.offset) { i, lane in
             VStack(alignment: alignment == .leading ? .leading : .trailing, spacing: 0) {
-                Text(lane.count > 1 ? "\(laneLabel(lane.name)) ×\(lane.count)"
-                                    : laneLabel(lane.name))
+                // NO COUNT on the tile (2026-08-11, user: "do you think the
+                // '×2' is actually useful? wouldn't it be easier to read and
+                // more simple w/o that").
+                //
+                // It sat on the NAME line, which is where it did the damage:
+                // "Coinbase ×2" reads as an entity called that, and it spent
+                // the narrowest column on the card — 29% of a tile — on a
+                // third fact while the two the card actually claims (who, how
+                // much) fought for what was left. The Wallet room's own band
+                // already carries it and carries it better: "$2.1K · 2 moves",
+                // on the AMOUNT line, spelled out, where it qualifies the
+                // money rather than the identity. §334's split holds — a tile
+                // is a glance, the room one tap away is where detail lives —
+                // so this is a duplicate paying rent in the worst spot.
+                Text(laneLabel(lane.name))
                     .dsText(.subhead13)
                     .fontWeight(i == 0 ? .semibold : .regular)
                     .foregroundStyle(i == 0 ? DS.textPrimary : DS.textSecondary)
