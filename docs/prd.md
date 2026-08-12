@@ -2,6 +2,9 @@
 
 ## Contents
 
+⚠️ **[Superseded index](#superseded-index) — read this before citing any ruling below.**
+This ledger is append-only, so a dead ruling looks exactly like a live one.
+
 1. [Thesis](#1-thesis)
 
 **Users and goals**
@@ -56,6 +59,82 @@
 **Status**
 
 33. [Open items](#33-open-items)
+
+## Superseded index
+
+**Read this before citing any ruling below.** This ledger is append-only by
+standing rule — a superseded entry stays exactly as written, because the
+reasoning behind a ruling that got reversed is why the next session doesn't
+re-litigate it. The cost of that rule is that an entry cannot tell you it is no
+longer in force. This table is the missing half: if a section is listed here,
+something later changed it, and you must read the later entry too.
+
+It is derived mechanically from the "supersedes / amends / reverses / overturns
+§N" phrases in the entries themselves, and `scripts/prd-index-audit.py` fails the
+build when a new such phrase has no row here. **Absence from this table is not
+proof a ruling still stands** — an entry quietly outgrown rather than explicitly
+overturned leaves no phrase to find, and rulings that supersede by date rather
+than by number ("supersedes the 2026-07-14 rolling window") cannot be tabulated
+at all.
+
+| Ruling | What it said | Changed by |
+|---|---|---|
+| §18 | Feed spec | amended by §64 |
+| §36a | Home cover: an explicit banner outranks the automatic screenshot | amended by §36j, superseded by §36o |
+| §36h | Wallet holdings: one treemap per wallet, leads Feed too, tap-throu | amended by §36n |
+| §36j | Home cover is 2-tier now: a set banner, or black | superseded by §36o |
+| §36m | A pin is a HOME pin | amended by §36n |
+| §56 | Build-29 review: the import batch, hardened | superseded by §59 |
+| §58a | The pin is the control (amendment, 2026-07-11) | superseded by §58i |
+| §58h | Board refinements — OPEN (diagnosed 2026-07-11, for a fresh build) | superseded by §58i |
+| §58i | The bento board | superseded by §58j |
+| §58j | A pin is a mark, not a card | superseded by §58k |
+| §61 | The elevation ladder — depth by tone and shadow, never by line | superseded by §97, reversed by §114 |
+| §72 | A pinned wallet's NFTs ride Home by default | amended by §124 |
+| §78 | Two catalog re-shelvings: GeckoTerminal to Onchain, Pinterest to M | reversed by §114 |
+| §102 | Token surfaces go Big money — the sheet re-ranks, the row gets fat | amended by §105 |
+| §113 | Peer joins the catalog — fills as they settle, riding the Wallet b | superseded by §207 |
+| §121 | Home: rows drag, visuals earn their space, doors sharpen | amended by §130 |
+| §124 | The Wallet feed carries the treemap AND the NFTs | amended by §130 |
+| §126 | The wallet's own balance line — Home row AND Wallet feed | amended by §130 |
+| §131 | The Pinned board is dismantled; the agent's kept asks are the only | amended by §144, reversed by §228 |
+| §146 | More generative UI in the composer answers — five chart types | amended by §160 |
+| §151 | The balance takes the headline; Worth a look drops to a line | amended by §160 |
+| §159 | The crown pour goes permanent, and up to the shell | amended by §204 |
+| §160 | A fake symbol is address poisoning in the asset field | reversed by §212 |
+| §162 | Privacy Pools rides the watched wallets — the alert IS the feature | superseded by §207 |
+| §181 | The agent opens on the brief — chips docked, keyboard down | superseded by §336 |
+| §184 | The manager pattern, generalized — roster for people, ledger for t | superseded by §185 |
+
+### Known stale, by hand
+
+Rulings a later entry replaced **without naming a number**, so the derivation
+above cannot see them. Add a row here whenever you supersede something by date
+or by description rather than by `§N`.
+
+| Ruling | Still narrates | Actually in force |
+|---|---|---|
+| §16 (Shell) | a three-tab bar — Account, Home, Feed | §100 — the tab bar was dropped in `0764ee3` (2026-07-13). One surface: a source-chip header and a FAB |
+| §17 (Home spec) | a Home board of composed tiles | §131 — the board was dismantled 2026-07-20; the app opens on the All feed and the agent's kept asks carry the glance job |
+| §61's elevation example | uses the tab bar to illustrate the ladder | §100 — the ladder itself stands; only the example is dead |
+| the store / onboarding batches | a Connect screen with per-source rows | §96 — the connect screen died 2026-07-16; connecting happens in the catalog |
+
+### Renumbered entries
+
+Six numbers named two unrelated rulings each — concurrent sessions each taking
+"the next free §", neither able to see the other. Fixed 2026-08-11: the bare
+number stayed with whichever meaning the source already cited, and the letter
+marks chronological position within the pair.
+
+| Now | Was | Why it moved |
+|---|---|---|
+| §236b | §236 | collided with the connect-page ruling, which the source cites |
+| §237b | §237 | collided with Peer, the other half of the trade (15 citations) |
+| §238b | §238 | collided with Safe becomes about people; neither was cited |
+| §294a | §294 | collided with the smart-account kind ruling (11 citations) |
+| §340a | §340 | the bare number went to the 2026-08-08 session — see §340 |
+| §340b | §340 | see §340a |
+| §355b | §355 | collided with the category-chip tint ruling |
 
 ## 1. Thesis
 
@@ -10393,7 +10472,8 @@ green. NOT SEEN ON DEVICE — the roster and disc were reasoned against the DS
 tokens per the no-sim working preference; open a real Safe's queue before
 trusting the layout.
 
-## §236 — Density pass: cards get a real surface, one capsule per card (2026-07-29)
+## §236b — Density pass: cards get a real surface, one capsule per card (2026-07-29)  
+*(renumbered 2026-08-11 — collided with §236 (the connect page is a yes/no); that entry keeps the bare number because the code cites it)*
 
 User: "our prediction market feeds are a bit busy... there is little space
 between entries." The room's actual bug, not a spacing tune: every card
@@ -10603,7 +10683,8 @@ trusting, each named at its own call site and each failing SAFE:
    whether `blockTimestamp` is seconds;
 3. the `SignedKeyRequestMetadata` ABI offset.
 
-## §237 — The "couldn't pull the market book" bug was a race, not an outage (2026-07-30)
+## §237b — The "couldn't pull the market book" bug was a race, not an outage (2026-07-30)  
+*(renumbered 2026-08-11 — collided with §237 (Peer, the other half of the trade), which keeps the bare number)*
 
 User reported seeing Kalshi's "couldn't reach the market book" message a
 few times. Measured Kalshi's real API directly (discovery pages, a 12-call
@@ -10794,9 +10875,10 @@ the room shows. Folding the composition into `walletDoc` is the natural next
 goal; it needs the composer to await the same books, which is a real change to
 that path's cost.
 
-## §238 — Four follow-ups: forced refresh, freshness, corpus crossing, curve shape (2026-07-30)
+## §238b — Four follow-ups: forced refresh, freshness, corpus crossing, curve shape (2026-07-30)  
+*(renumbered 2026-08-11 — collided with §238 (Safe becomes about people), which keeps the bare number by document order)*
 
-Four improvements beyond §237's race fix, in priority order.
+Four improvements beyond §237b's race fix, in priority order.
 
 **1. Pull-to-refresh now reaches the book.** The room sits inside
 `FeedScreen`'s one List, whose `.refreshable` already invalidates the
@@ -13622,7 +13704,7 @@ destination, then whether the newest screenshot actually has pixels reachable
 the check a landed count can't make — a Zoom disc is only honest if a picture
 is reachable.
 
-# §276 — Web search and Tor: both assessed, both declined in their general form (user: "could Casberi search Google… would that require a server?", then "adding brave… break any of our other honesty policies?", then "what about adding TOR", then "ya save these / i'm not seeing benefit then of adding brave", 2026-08-02)
+## §276 — Web search and Tor: both assessed, both declined in their general form (user: "could Casberi search Google… would that require a server?", then "adding brave… break any of our other honesty policies?", then "what about adding TOR", then "ya save these / i'm not seeing benefit then of adding brave", 2026-08-02)
 
 Two rulings from one thread, sharing a spine: neither feature needs a server
 (a search/proxy server exists only to hide a SHARED api key, and BYOK removes
@@ -13685,7 +13767,7 @@ serves Privacy Pools users — failing CLOSED (no silent clearnet fallback
 while on, even if that reads as broken), with copy stating the addresses
 themselves still go out.
 
-# §277 — Five privacy passes: the credential tripwire, device-only keys, network receipts, clipboard etiquette, and what sync actually means (user: "what are other privacy things we could add?" then "let's do 3,4,5,6,7", 2026-08-02)
+## §277 — Five privacy passes: the credential tripwire, device-only keys, network receipts, clipboard etiquette, and what sync actually means (user: "what are other privacy things we could add?" then "let's do 3,4,5,6,7", 2026-08-02)
 
 Assessed after §276 declined web search and Tor. The thread behind all five: this
 app's NETWORK story was already strong (no server, BYOK, the §205 registry) and
@@ -15358,7 +15440,8 @@ construction, not observed. Every path fails toward the old behaviour or toward
 silence, and the arithmetic is harnessed — but run both probes against a real
 smart account before trusting a number.
 
-## §294 — Virtuals: the agents' wallets are empty, so there is nothing to follow (user: "Is there anythign we can do wtih Virtuals? https://os.virtuals.io/", then "is there a way to 'watch' virtuals wallets?", then "sort of like 'follow an agent'", 2026-08-03)
+## §294a — Virtuals: the agents' wallets are empty, so there is nothing to follow (user: "Is there anythign we can do wtih Virtuals? https://os.virtuals.io/", then "is there a way to 'watch' virtuals wallets?", then "sort of like 'follow an agent'", 2026-08-03)  
+*(renumbered 2026-08-11 — collided with §294 (your own smart wallet was filed as "Contract"); that entry keeps the bare number because the code cites it 11 times)*
 
 **DECLINED, all four shapes.** Recorded with the numbers because the instinct was
 right and only the measurement kills it — if agent wallets ever start moving,
@@ -19050,7 +19133,8 @@ section was invisible to the build, the harness and all 48 audits, and every
 one was obvious in a screenshot within two seconds of looking. The panel now
 gets looked at before it gets committed.
 
-## §340 — The bar moves to the corner, and the whisper stays in the open (user: "do we really need the search icon, and what if our icon becomes a fab in the right bottom corner? then when you press it the whisper capsule and search icon open", 2026-08-07)
+## §340a — The bar moves to the corner, and the whisper stays in the open (user: "do we really need the search icon, and what if our icon becomes a fab in the right bottom corner? then when you press it the whisper capsule and search icon open", 2026-08-07)  
+*(renumbered 2026-08-11 — §340 collided three ways; the bare number went to the 2026-08-08 ruling the code cites 48 times)*
 
 Three questions in one sentence, and they get three different answers.
 
@@ -19110,7 +19194,8 @@ this size would be two targets too small to aim a 0.45s press at; and the
 out of the corner now, diagonally, which is a better read of "this came from
 there" than the symmetric balloon it used to be.
 
-## §340 — A source name used as a subject is not a room (user: "i posted about a wallet, but when i asked what i read or posted about a wallet it wasnt found. the on device intelligence is just really really poor", 2026-08-07)
+## §340b — A source name used as a subject is not a room (user: "i posted about a wallet, but when i asked what i read or posted about a wallet it wasnt found. the on device intelligence is just really really poor", 2026-08-07)  
+*(renumbered 2026-08-11 — see §340a)*
 
 **The model was not involved.** "What did I post about a wallet" hit §307's
 rule that a source name SCOPES the search — and Wallet is a room. So the query
@@ -20266,7 +20351,8 @@ from under that table sends Voice silently back to the bare circle and the
 "Other" block, which looks exactly like the bug it fixed. All four
 mutation-proven: each was made to fail before being trusted.
 
-## §355 — Faces get a ramp, not a number (user: "shouldn't our avatars all be the same size? why do we have different sizes", then "why not the same size, i don't get it, it would make the app more cohesive", then "ok lets do what you recommend", 2026-08-11)
+## §355b — Faces get a ramp, not a number (user: "shouldn't our avatars all be the same size? why do we have different sizes", then "why not the same size, i don't get it, it would make the app more cohesive", then "ok lets do what you recommend", 2026-08-11)  
+*(renumbered 2026-08-11 — collided with §355 (the category chips lose the logos and gain tint), which keeps the bare number by document order)*
 
 **The ruling: round identity marks draw at one of FOUR named tiers
 (`DS.Face.badge`/`row`/`list`/`shelf` = 20/26/36/56), never at a number typed
@@ -20356,9 +20442,9 @@ stacked controls were three glass capsules of word pills, so they read as one
 confused control. Now **categories are words in circles, rooms are word pills,
 wallets are faces**, and the layer you are operating is legible from its shape.
 `DS.Face.list` (36) rather than `.shelf` (56) even though this *is* a face
-shelf — §355's shelf tier is for IN-CONTENT shelves where the face is the
+shelf — §355b's shelf tier is for IN-CONTENT shelves where the face is the
 content; pinned above a room this is chrome and stays subordinate to it. **A
-gap in §355 worth naming: the ramp has no "pinned chrome" tier.** The rail
+gap in §355b worth naming: the ramp has no "pinned chrome" tier.** The rail
 takes no glass, unlike the pill row above it — the design law already says a
 mark someone recognizes stays opaque, and it stops a third glass bar stacking
 under the other two. Selection is opacity and weight, **never a ring** (§351:
@@ -20399,3 +20485,297 @@ must live on `ShellChrome` and must not return to `@State`; and the filter must
 gate on the room. Verified by `xcodebuild` plus the static audits per the
 standing no-sim instruction — **nobody has watched the rail render, scoped a
 room, or seen the "Wallets" pill on a device.**
+
+## §357 — The room's controls stop travelling with the room (user: "how if at all would you improve the wallet screen transitions or just wallet navigation in general", then "do all", "i think we need the name captions and instead maybe make rail compress", "should they be blue with white text? some other?", "yes do the semi bold"; 2026-08-11)
+
+**The two pinned bars were pinned to the one thing that gets destroyed every
+time they are used.** `MainSurface` renders exactly one
+`FeedScreen(source: filter.source)` carrying `.id(filter.source)` under an
+asymmetric move transition, and BOTH room controls — the folded-category venue
+switcher (§351) and the wallet face rail (§128/§356) — were
+`.safeAreaInset(edge: .top)` modifiers on that screen. So picking a venue tore
+down the switcher that was picked, slid it off one edge, and slid an
+identically-configured new one in from the other. Nothing looked broken, which
+is why it survived two passes that each touched these controls.
+
+**Three costs, and the sharpest one is that a documented behaviour could never
+once have happened.** `CategoryVenueSwitcher` draws its selection as a fill
+riding `matchedGeometryEffect` — "a selection fill traveling on matched
+geometry", in its own header — and its `@Namespace` died with the screen. A
+venue pick is the ONLY event that changes `active`, so the fill had no way to
+travel on any pick: it shipped as two states blinking, separated by a page
+slide, which is exactly what the source chips' 2026-07-14 ruling ("selection is
+an object traveling, not two states blinking") forbids. Its
+`proxy.scrollTo(active, anchor: .center)` re-centre was in the same position —
+written as an animated move, reached only as a fresh `onAppear`. Second, the
+wallet rail replayed five identical faces sliding out and back in to say
+nothing had changed; §356 had already moved the SCOPE to the shell because a
+scope is a property of the category, while the control that sets it stayed a
+property of one room. Third, and generally: chrome pinned so that content can
+travel beneath it was itself travelling, which is the whole argument the
+pinning was chosen for (prd §136).
+
+**Both now mount on `MainSurface.roomControls`, inside `topInset`.** The room
+slides underneath them and the transition animates only what actually changed.
+Two things the move had to preserve and does: they still sit INSIDE the
+`NavigationStack`, so wallet history, the wallet manager and every bridge form
+cover them exactly as before — a scope control floating above a screen it does
+not scope is a dead control — and each stays self-gating
+(`CategoryFold.switcherFloor`, `WalletScopeRail.shows`), so nothing about when
+they appear changed. `direction(from:to:)`'s catalog-order rule stopped being
+theoretical in the same move: the fill really travels now, so a disagreement
+there would put two objects crossing in opposite directions on one screen.
+
+**The rail COMPRESSES; it does not drop its captions (user ruling).** The
+obvious way to hand vertical space back on scroll is to fold the names away and
+leave the faces — and it is wrong here, because a wallet's caption is the only
+thing separating "Main" from "Cold". An identicon is a hash, not a name you can
+read at a glance, so dropping the words leaves a row of coloured circles that
+says LESS the further you scroll, which is backwards: the deeper you are in a
+stream the more you need to know whose row you are reading. What is spare while
+reading is the SIZE of the portrait, not the identity under it. So the face
+steps `DS.Face.list` (36) → `.row` (26) — one rung down §355b's own ramp, not a
+new literal — and the slot height tracks it, so the fold returns real space
+instead of shrinking a circle inside a hole the same size. It rides
+`ShellChrome.minimized`, the fold the chips already use, rather than growing an
+observer of its own; `minimizesChrome` already animates that flip and already
+ignores the inset change its own toggle causes (its settle window), which is
+what makes a fold-sensitive control safe to put in that inset at all.
+
+**The category chips keep tinted words on glass — no blue fill, no white text
+(offered, declined).** Three reasons that are really one. A solid tint fill is
+the loudest statement this design system can make, and five or six of them held
+permanently at the top of every screen makes the one accent (brief §8 principle
+2) stop pointing at anything. It collides twice: the active chip is named by
+the sliding tint RING, which is illegible on a solid tint fill, and one tier
+down the venue switcher already spends a tint FILL to mean "the venue you are
+standing in", so filled category chips would wear the switcher's selected
+costume while meaning something else. And white-on-tint carries no contrast
+guarantee once `ThemeStore` swaps the tint, where the shipped tinted-word-on-
+glass has the documented Increase Contrast step (§355b). **Weight is the lever
+taken instead**: `.label12` is `.medium`, so semibold is one rung, and it
+matches what both controls below the strip already do with a lit word. Applied
+to "All" in the same breath — those two are the strip's only words, and
+weighting one and not the other makes "All" read as inert.
+
+**Measured, not assumed:** `.fontWeight(.semibold)` applied AFTER
+`.dsText(.label12)` was checked before being relied on, since `dsText` sets an
+explicit `.font()` and an outer weight modifier looked like a plausible no-op —
+two shipped controls (the wallet rail, the venue switcher) already depend on
+that combination for their selection weight. Rendered widths: medium 47.0,
+semibold 48.0, font-then-fontWeight 48.0. It works, and those controls are fine.
+
+Two duplications collapsed on the way: `FeedScreen.walletSameAddress` was a
+byte-identical private copy of `WalletWatch.sameAddress` (the rule the scope
+machinery already runs on) and is gone, and `walletRailShows` became
+`WalletScopeRail.shows`, so the feed's "does the rail already carry the add-a-
+wallet verb?" test asks the rail's own predicate rather than a second copy free
+to drift from the control it describes.
+
+Guarded in `category-fold-selftest.sh`: both controls must sit in
+`MainSurface.roomControls`, and `FeedScreen` must carry NO top `safeAreaInset`
+at all — the regression is precisely re-pinning chrome inside the
+`.id(filter.source)` subtree. That negative guard reads a comment-stripped copy,
+because the file documents the move by naming the modifier it must no longer
+have (the Obsidian/Cursor lesson, earned again). Verified by `xcodebuild` plus
+the static audits per the standing no-sim instruction — **nobody has watched
+the fill travel, the rail compress, or the semibold strip on a device.**
+
+## §358 — The strip's word chips get a fill, and the room switcher drops its words (user: "these being white really fade into the background", "they just don't even seem like buttons they seem like they are text inside to read", "they don't look separate", "why not make the active ring white?", "for the rooms why not just use ONLY the icon and not the name with it… they chose these apps so they know the icons"; 2026-08-11)
+
+**Two rulings, both made looking at the rendered screen rather than at code, and
+the first one corrects §355 the same day it shipped.**
+
+**1 · A word chip is a FILLED chip.** §355 made the category words tint on
+`dsGlass`, and on the light theme that glass sits within a few percent of the
+page behind it — so the container did no work and what shipped read as blue
+words lying on the background. The lesson generalises past this control: **a
+tinted word can say "this is a control" only where something already reads as
+one; it cannot manufacture the affordance by itself.** Now `DS.tintDim` (the
+token's own documented job, "tint at rest-chip opacity") with ink text — the
+grammar `CategoryVenueSwitcher` already used one tier down, so this is one
+existing pattern spreading rather than a new one. Spelled ONCE, in
+`wordChipFill`, because "All" and the category capsules have already had to be
+corrected into line with each other twice.
+
+**Selection is the FILL, at full strength with white text.** The user's instinct
+was a white active RING, and it cannot work in both themes: the ring straddles
+the chip's edge, so on the light page half of it lands on near-white and
+vanishes — a cue that exists only in dark mode. What the question was really
+asking for is a stronger active state, and the fill is where to spend it. **A
+solid accent on ONE chip is the accent doing its job; a solid accent on all six
+was the objection that kept them dim in the first place** — which is also the
+answer to the user's original "blue with white text", applied where it is earned
+instead of everywhere. The ring STAYS and is not redundant: it is the only
+active mark the strip's logo chips have, since a brand mark cannot take a tint
+fill without becoming unrecognisable. Both fills ride one
+`matchedGeometryEffect`, so the strong fill TRAVELS between chips exactly as the
+ring does (the 2026-07-14 ruling, applied to the cue now carrying the most
+weight).
+
+**Dark mode was never the broken case, and the two themes are not one problem.**
+`themedTint` is already two colours (`#1366cd` light, `#62a1ee` dark) so the wash
+follows the theme, and `DS.textPrimary` is near-black on light and near-white on
+dark. On dark, `dsGlass` is a LIGHT film over a dark page and already separated;
+the wash only warms it. Light is what this fixes. The glass stays UNDER the wash
+in both — this adds a coat, it does not replace one, so the material still blurs
+what travels beneath the strip.
+
+**2 · The room switcher is MARKS ONLY.** This overturns
+`CategoryVenueSwitcher`'s founding ruling, which paired each mark with its name
+on the theory that a row of marks reproduces the strip's own hunt problem one
+layer down. The reversal is right rather than a coin flip because **the two rows
+are not the same problem**: the STRIP is categories — synthetic groupings with
+no brand of their own, which is exactly why §351 turned them into words — while
+this row is SEATS, every one an app the person went and connected, wearing the
+mark that app is known by. Recognition is already paid for, and the ceiling here
+is ~7 members against the strip's whole catalog.
+
+**The old ruling's one concrete objection was checked and is false today.** It
+claimed "two market seats are literally the same letter in a circle", which was
+the entire evidential basis for the words. Rendered on the sim: all seven Markets
+seats fit ONE row with no scrolling and every mark is distinct — green wordmark
+(Kalshi), blue geometric (Polymarket), blue S (Stocktwits), purple gecko
+(GeckoTerminal), ring (Circle x402), sailboat (OpenSea), green chart (Tokens).
+Whatever pair that sentence described has since been re-marked. **Standing rule:
+a design ruling resting on one concrete claim is only as good as that claim, and
+claims about marks rot as marks get redrawn** — had it still been true, the fix
+would have been that pair's mark, not every word coming back. The Wallet row went
+from ~3.5 visible named pills to 8 marks in the same space.
+
+One control, one call site, so **every folded category gets this at once** —
+Wallet, Markets, Work, Life and the rest. The mark grew 20 → 26pt
+(`DS.Mark.row`) since it is now the chip's whole content. With the words gone the
+`accessibilityLabel` is the ONLY naming left in this control, so
+`category-fold-selftest.sh`'s guard moved from pinning the visible `Text` to
+requiring that label — a harder requirement than before, not a softer one. The
+half of §356's display-label rule that could actually break something (never hand
+a label to `onPick`, or "Wallets" lands in `FeedFilter.source`) is untouched.
+
+VERIFIED on the iPhone 17 Pro sim, both themes, unlike §356/§357 which shipped
+unseen: the filled chips, the solid active fill, the icon-only switcher in the
+Wallet and Markets rooms, and §357's own claims — the wallet face rail survives a
+room change intact (balance room → Gnosis Pay, rail unbroken), the switcher
+re-centres its active mark, and the rail compresses on scroll (face measured
+107px → 77px, a 0.72 ratio against `DS.Face.row / .list` = 0.722).
+
+## §359 — The source header capsule goes, the word chips stop flipping, and the active ring retires where the fill already speaks (user: "remove that header capsule", "should we get rid of all these and user just goes to the app catalogue to manage?", "on the category chips — remove the flipping", "shouldn't All and + be the same size as the avatars?", "why not use liquid glass for the transitions and active states", "we don't even need that active ring b/c the color changes when you are in an active pill. that ring is getting in the way"; 2026-08-11)
+
+**1 · The source header capsule is deleted.** "● Wallet 0x1a2b…4f · 4 this week ·
+Manage" carried a NAME, a STATUS and a MANAGE door, and by this date all three
+were said better elsewhere: the name was the third naming of one room on one
+screen (category chip, switcher mark, then this), status has a better home in the
+strip where a broken seat lights the category chip's dashed ring **whether or not
+you are standing in that room**, and managing a source is the app catalogue's
+whole job, reachable from the fixed catalogue door on every screen. **COMPOSE
+survives, and only because it is a different verb**: Manage opens something
+inside this app, "New event" / "New task" LEAVES for another one — a place the
+catalogue is not a door to. That reduces the row to a single pill in the five
+rooms that have one (Todoist, Gmail, iCloud Mail, Calendar, Reminders); every
+other room now has no row there at all. The "+" add-another hint went with the
+capsule and was NOT rehomed — it opened the same setup screen the catalogue
+opens, and in the one room where adding is frequent the wallet face rail already
+carries it (§357).
+
+**2 · Word chips do not flip.** The coin flip is an IDENTITY moment and identity
+is what a brand MARK has: rotating a logo reads as the mark turning to face you,
+while rotating the word "Markets" is text spinning — the same motion bought much
+cheaper. It also collided with the cue §358 had just made primary, since the
+strong fill travels between word chips, so the arriving chip was flipping while
+the selection slid onto it. **The fix could not be "pass a constant trigger"**:
+`CoinFlipEffect` fires on `onAppear` as well as on change, so a silenced caller
+still flips on every mount — which for a chip in a rebuilding strip is most of
+the flips there were. `coinFlip` took an explicit `enabled:` instead. Found by
+reading the effect rather than watching the screen, where one mount-time flip
+reads as "it still does it sometimes".
+
+**3 · The rail's "All" and "+" were already the right size.** Reported as
+"shouldn't All and + be the same size as the avatars?" — measured off the frame,
+all five circles are **exactly 102px**. What differed was WEIGHT: they wore
+`DS.fillFaint` (3% black on light), so only the glyph read beside faces that are
+saturated edge to edge. They take `DS.tintDim` now. **The lesson is the
+measurement** — a true observation with a false cause, and fixing it by growing
+the frame would have left the rail with two circle sizes to explain forever.
+
+**4 · Liquid glass: what was already there, and what is inert.** The chips have
+always drawn real iOS 26 `glassEffect` with `.interactive()`, so the native press
+response was never missing. The tint moved from a flat capsule stacked under the
+material to the glass's OWN tint (`dsGlass(tint:)`), which is the system's way
+and cost no contrast. **`glassEffectID` was then tried on the active fill and is
+INERT there**: it identifies a view's GLASS for a `GlassEffectContainer` to
+morph, so it does nothing on a plain `Capsule().fill()` — and swapping it in for
+`matchedGeometryEffect` silently DELETED the travel that fill already had.
+**Caught only by recording the transition and stepping frames**: the fill
+crossfaded pale → solid in place while the ring above it kept travelling, which
+in a screenshot is indistinguishable from a working morph. The fill is a real
+glass element now (`glassEffect(.regular.tint(…))` + id, inside
+`DSGlassContainer`) with the opaque capsule still under it, so strength survives.
+
+**The structural finding, which no amount of glass fixes:** the strip
+re-centres the active chip on every change (`proxy.scrollTo(active,
+anchor: .center)`), so the selection barely moves in SCREEN space — the chips
+slide under it instead. Any travelling or morphing selection is therefore subtle
+here BY CONSTRUCTION. Measured: the active fill's centroid moved 274 → 280px
+across a full switch. If a dramatic blob is ever wanted, the thing to change is
+the re-centre, not the material.
+
+**5 · The active RING retires from word chips.** Once §358 gave the active chip a
+solid fill and white text, a ring is a second claim about the same fact — and it
+was in the way, which the recorded transition shows rather than implies: the ring
+travels on its own `matchedGeometryEffect`, so mid-move it is a detached blue
+circle sitting ON TOP of the neighbouring chip, the one element on the strip
+belonging to no chip at all. It STAYS for MARK chips, which is the same reasoning
+applied where it holds — the pinned room and any uncategorized source draw a
+brand mark that cannot take a tint fill without becoming unrecognisable, so
+nothing about them changes colour and removing the ring would leave them with no
+active state at all. The dashed ATTENTION ring is untouched everywhere: it means
+something else.
+
+VERIFIED on the iPhone 17 Pro sim in both themes, including a frame-stepped video
+of the transition — which is the only reason items 4 and 5 are right, since both
+are claims about motion that a screenshot cannot judge.
+
+## §340 — RECONSTRUCTED STUB: the 2026-08-08 session was never written down (recovered from git 2026-08-11)
+
+**This entry is not a ruling. It is a placeholder that exists so 48 citations in
+the source resolve to something true.**
+
+Nine commits landed on 2026-08-08 and **not one of them touched this file.** The
+code they left behind cites `prd §340` forty-eight times, across twenty-eight
+files — and until 2026-08-11 that number resolved to two unrelated 2026-08-07
+design rulings (now §340a, the bar moving to the corner, and §340b, a source name
+used as a subject). So every one of those forty-eight comments pointed at a
+ruling that says nothing about what the comment is explaining. A reader following
+the reference got a confidently wrong answer, which is worse than a dangling one.
+
+What shipped that day, from the commits:
+
+| commit | what landed |
+|---|---|
+| `36e0923` | "What's going on" briefs scoped to an app-catalog category |
+| `24d9e4d` | Category chips get a label and survive the panel |
+| `af336de` | Three scopes instead of ten, a labeled chip row, per-scope depth |
+| `a463d20` | A Jira bridge (Work group) |
+| `477d066` | The Cursor room, chat transcripts, MCP measured live |
+| `743fb58` | Two harnesses left stale by the ThingLinks/agent-panel work |
+| `7c3eb21` | The demo catalog and the real catalog get a mechanical rule |
+| `f5a2274` | A Farcaster starter pack; the social roster ranked by activity |
+
+The largest of these is `477d066`, and it is the one the citations mostly mean:
+the Cursor room head (`CursorRoom`/`CursorRoomSource`/`CursorRowCard`), the
+`linked_things` tool joining `AgentCorpusTools`, `ThingLinks` as the graph the
+tool walks, the chat imports' topic map, `CrossSourceEcho` and `NoteLinks`
+retired into that graph, and `MCPServer`'s listener measured live for the first
+time.
+
+**Why it is a stub and not a ruling.** Reconstructing the reasoning from a diff
+would be inventing product history, and this ledger's whole value is that its
+entries record what was actually decided and why. What is written above is what
+git can prove. The reasoning belongs to whoever ran that session.
+
+**The standing lesson, which does not need reconstruction.** Nine commits shipped
+a day's work with no ledger entry, and nothing noticed for three days — the same
+shape as every other rule in this codebase that decayed until it was made
+mechanical. `scripts/prd-index-audit.py` now fails the build on a `§N` cited from
+source with no heading here, and on two headings sharing a number, which is the
+pair of symptoms this incident presented as.

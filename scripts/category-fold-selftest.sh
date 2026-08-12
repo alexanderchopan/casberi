@@ -94,6 +94,7 @@ strip_comments "$ROOT"     > "$TMP/root.nc"
 strip_comments "$APP"      > "$TMP/app.nc"
 strip_comments "$CHIPS"    > "$TMP/chips.nc"
 strip_comments "$SWITCHER" > "$TMP/switcher.nc"
+strip_comments "$FEED"     > "$TMP/feed.nc"
 
 # --- drift guards -----------------------------------------------------------
 # Wiring the compiled functions cannot prove on their own. A perfect `fold` is
@@ -250,17 +251,28 @@ grep -q 'BridgeCatalog.offer(forSource: venue)' "$TMP/switcher.nc" \
   || { echo "✗ the switcher resolves attention by raw name — the alias family (Privacy Pools"; \
        echo "  against 0xBow Privacy Pools) would silently never light, which is the whole"; \
        echo "  reason the strip and the tray both resolve through the catalog."; exit 1; }
-grep -q 'CategoryVenueSwitcher(' "$FEED" \
-  || { echo "✗ FeedScreen no longer mounts the generic venue switcher — a folded category seat has no way out"; exit 1; }
+# The mount moved from FeedScreen to MainSurface on 2026-08-11 (prd §357):
+# FeedScreen carries `.id(filter.source)` under a move transition, so a
+# switcher mounted THERE is destroyed by the very tap it exists to serve — its
+# matched-geometry selection fill could never once travel, because a venue pick
+# is the only event that changes `active` and the pick killed the namespace.
+grep -q 'CategoryVenueSwitcher(' "$MAIN" \
+  || { echo "✗ MainSurface no longer mounts the generic venue switcher — a folded category seat has no way out"; exit 1; }
 
-# §356: "Wallets" is a DISPLAY label over the seat `"Wallet"`, and the seat is
-# what `FeedFilter.source` takes. The switcher must therefore render
-# `venueLabel(venue)` and hand back the RAW `venue` — passing the label to
-# `onPick` would write "Wallets" into `filter.source`, which matches no landed
-# Thing, no Shape case and no deep link, and empties the room it just opened.
-grep -q 'Text(CategoryFold.venueLabel(venue))' "$TMP/switcher.nc" \
-  || { echo "✗ the venue switcher no longer draws its label through CategoryFold.venueLabel —"; \
-       echo "  the balance room reads \"Wallet\" in the same breath as its own category chip (§356)."; exit 1; }
+# §356's DISPLAY-LABEL rule, kept through §358's icon-only switcher. The visible
+# half of it is gone — the switcher draws marks now, so there is no `Text` to
+# check (user ruling: "for the rooms why not just use ONLY the icon") — but the
+# half that could BREAK something is untouched and still guarded below: the seat
+# is what `FeedFilter.source` takes, so passing a display label to `onPick` would
+# write "Wallets" into the filter, which matches no landed Thing, no Shape case
+# and no deep link, and empties the room it just opened.
+#
+# The switcher must still NAME each venue for anyone who can't read the mark —
+# with the word gone this is the only naming left, so it is a harder requirement
+# than it was, not a softer one.
+grep -q 'accessibilityLabel' "$TMP/switcher.nc" \
+  || { echo "✗ the icon-only venue switcher no longer names its venues to VoiceOver — with the"; \
+       echo "  words gone (§358) this is the ONLY thing naming a seat in this control."; exit 1; }
 grep -qE 'onPick\(venueLabel|onPick\(CategoryFold\.venueLabel' "$TMP/switcher.nc" \
   && { echo "✗ the switcher hands a DISPLAY LABEL back to its caller — \"Wallets\" would land in"; \
        echo "  FeedFilter.source, which no Thing, Shape or deep link answers to (§356)."; exit 1; }
@@ -279,16 +291,33 @@ grep -qE '@State private var selectedWallet' "$FEED" \
 grep -q 'guard roomTakesWalletScope' "$FEED" \
   || { echo "✗ walletScopeAllows no longer gates on the room — a live wallet scope would empty"; \
        echo "  every non-wallet room, since their rows carry no walletAddress (§356)."; exit 1; }
-# PINNED, not a List section — `walletSwitcherBar`'s 2026-07-20 ruling. As a
-# section it scrolls away with the room it names, and its glass blurs nothing.
-grep -qE 'safeAreaInset\(edge: \.top, spacing: 0\) \{ categorySwitcher \}' "$FEED" \
-  || { echo "✗ the category venue switcher is no longer pinned — it would scroll away with the"; \
-       echo "  room it scopes, and its glass would have nothing moving behind it."; exit 1; }
+# PINNED, not a List section — `walletSwitcherBar`'s 2026-07-20 ruling, kept
+# through the §357 move: the switcher and the wallet rail now ride
+# `MainSurface.topInset` (itself the shell's one top `safeAreaInset`), via
+# `roomControls`. As a section either would scroll away with the room it
+# scopes, and its glass would blur nothing.
+grep -q 'roomControls' "$MAIN" \
+  && grep -qE '^\s*categorySwitcher$' "$MAIN" \
+  && grep -qE '^\s*walletScopeRail$' "$MAIN" \
+  || { echo "✗ MainSurface.roomControls no longer carries both room controls — a switcher or"; \
+       echo "  rail mounted anywhere else either scrolls away or (back on FeedScreen) is"; \
+       echo "  destroyed by every venue change, the §357 bug returned."; exit 1; }
+# …and NOT on FeedScreen, which is the regression §357 exists to prevent: any
+# top inset there is inside the `.id(filter.source)` subtree, so it travels
+# with the room and dies on every move it commands. (`walletSwitcherBar` and
+# `categorySwitcher` were both exactly this until 2026-08-11.)
+# Comment-stripped, because the file DOCUMENTS the move by naming the very
+# modifier it must no longer carry — a guard grepping raw source fires on the
+# prose explaining it (the Obsidian/Cursor lesson, earned again here).
+grep -qE 'safeAreaInset\(edge: \.top' "$TMP/feed.nc" \
+  && { echo "✗ FeedScreen grew a top safeAreaInset again — chrome pinned inside the"; \
+       echo "  .id(filter.source) subtree is destroyed and re-slid on every room change,"; \
+       echo "  which is the §357 bug (a switcher torn down by the tap it serves)."; exit 1; }
 # EVERY category, not Markets alone — the whole point of this follow-up
 # (user: "each category should have a switcher"). A gate re-narrowed to
 # `MarketsRoom.isMember(source)` would silently take the switcher away from
 # every other category while this exact grep still finds `CategoryVenueSwitcher(`.
-grep -qE 'let category = BridgeCatalog\.category\(forSource: source\)' "$FEED" \
+grep -qE 'let category = BridgeCatalog\.category\(forSource: filter\.source\)' "$MAIN" \
   || { echo "✗ the switcher no longer resolves ITS OWN category from the room's source —"; \
        echo "  it would still be gated to Markets alone (or one other hardcoded category)."; exit 1; }
 

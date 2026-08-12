@@ -10,11 +10,37 @@ import SwiftUI
 /// matched geometry, brand mark beside each name. Two things differ, both
 /// forced by there being up to seven scopes instead of three.
 ///
-/// **It scrolls, and it names its venues in words.** A row of seven marks is
-/// the strip's own hunt problem reproduced one layer down, and several
-/// catalog marks are the worst possible icons to hunt through on their own
-/// (two market seats are literally the same letter in a circle). The mark
-/// stays as recognition; the word is what you read.
+/// **It scrolls, and its venues are MARKS ONLY — no words (user ruling
+/// 2026-08-11: "for the rooms why not just use ONLY the icon and not the name
+/// with it. it would save space. the user already has the source tray with
+/// names if they want to see it and they chose these apps so they know the
+/// icons").** This overturns the first cut, which paired each mark with its
+/// name on the theory that a row of marks reproduces the strip's own hunt
+/// problem one layer down.
+///
+/// What makes the reversal right rather than a coin flip is that the two rows
+/// are not the same problem. The STRIP is categories — synthetic groupings with
+/// no brand of their own, which is exactly why §351 turned them into words. This
+/// row is SEATS: every one is an app the person went and connected, wearing the
+/// mark that app is known by. Recognition is already paid for, and the ceiling
+/// here is ~7 members where the strip's is the whole catalog.
+///
+/// **The old ruling's one concrete objection was CHECKED, and it is false today**
+/// — it claimed "two market seats are literally the same letter in a circle",
+/// which was the whole evidential basis for keeping the words. Rendered on the
+/// sim (2026-08-11, light theme, Markets room): all seven seats fit one row with
+/// no scrolling and every mark is distinct — a green wordmark (Kalshi), a blue
+/// geometric (Polymarket), a blue S (Stocktwits), a purple gecko
+/// (GeckoTerminal), a ring (Circle x402), a sailboat (OpenSea), a green chart
+/// (Tokens). Whatever pair that sentence described has since been re-marked. Had
+/// it still been true the fix would have been THAT PAIR's mark, not every word
+/// coming back.
+///
+/// The mark is 26pt (`DS.Mark.row`), up from the 20pt badge it wore beside text,
+/// since it is now the chip's entire content; every chip keeps its
+/// `accessibilityLabel` and `dsTooltip` naming the venue, which with the words
+/// gone is the ONLY naming in this control and therefore a harder requirement
+/// than before (guarded in `category-fold-selftest.sh`).
 ///
 /// **It centers the active scope on appear**, the `SourceChips` rule: a
 /// selection you cannot see reads as no selection, and with seven scopes the
@@ -50,14 +76,30 @@ struct CategoryVenueSwitcher: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 2) {
-                    ForEach(venues, id: \.self) { venue in
-                        chip(venue)
+                // The selected mark's fill MORPHS between seats as one piece of
+                // glass (prd §359) — the same treatment the strip's word chips
+                // take one tier up, and the reason it is a container here too:
+                // a `glassEffectID` outside a `GlassEffectContainer` is inert.
+                // Both tiers were hand-rolling the same travel with
+                // `matchedGeometryEffect`; on iOS 26 the substance does it.
+                DSGlassContainer(spacing: 2) {
+                    HStack(spacing: 2) {
+                        ForEach(venues, id: \.self) { venue in
+                            chip(venue)
+                        }
                     }
                 }
                 .padding(4)
             }
             .scrollBounceBehavior(.basedOnSize)
+            // **Clipped to the capsule, or a scrolling mark hangs OUTSIDE the
+            // bar** (user, 2026-08-11: "is this an error how the next icon sits
+            // outside the bar?" — it was). `dsGlass` paints a capsule-shaped
+            // material behind the scroll view but does not bound its CONTENT, so
+            // at the rounded ends a mark scrolled halfway out kept drawing past
+            // the glass onto the page. Invisible until §358 made these marks
+            // icon-only and dense enough that one is nearly always mid-exit.
+            .clipShape(Capsule(style: .continuous))
             .dsGlass(cornerRadius: 999)
             .onAppear { proxy.scrollTo(active, anchor: .center) }
             .onChange(of: active) { _, now in
@@ -104,22 +146,26 @@ struct CategoryVenueSwitcher: View {
             DSHaptic.selection()
             onPick(venue)
         } label: {
-            HStack(spacing: 5) {
-                BridgeIcon(name: venue, size: DS.Face.badge, circular: true)
-                Text(CategoryFold.venueLabel(venue))
-                    .dsText(.subhead13)
-                    .fontWeight(isOn ? .semibold : .regular)
-                    .foregroundStyle(isOn ? DS.textPrimary : DS.textSecondary)
-                    .lineLimit(1)
-            }
-            .padding(.horizontal, DS.Space.s3)
-            .padding(.vertical, DS.Space.s2)
+            // `DS.Face.row`, not `DS.Mark.row` — the same 26, but a CIRCULAR
+            // mark is sized off the face ramp (`face-ramp-audit.py` enforces it,
+            // and caught this the first time it was written the other way).
+            BridgeIcon(name: venue, size: DS.Face.row, circular: true)
+                .padding(DS.Space.s2)
             .background {
                 ZStack {
                     Capsule(style: .continuous).fill(DS.fillFaint)
                     if isOn {
-                        Capsule(style: .continuous).fill(DS.tint.opacity(0.18))
-                            .matchedGeometryEffect(id: "marketsVenueSelection", in: ns)
+                        let fill = Capsule(style: .continuous).fill(DS.tint.opacity(0.18))
+                        // iOS 26's own morph; `matchedGeometryEffect` stays as
+                        // the pre-26 and Reduce Motion path, so this degrades
+                        // rather than disappearing (§359).
+                        if reduceMotion {
+                            fill
+                        } else if #available(iOS 26.0, *) {
+                            fill.glassEffectID("venueActiveFill", in: ns)
+                        } else {
+                            fill.matchedGeometryEffect(id: "marketsVenueSelection", in: ns)
+                        }
                     }
                 }
             }

@@ -1384,119 +1384,43 @@ struct FeedScreen: View {
             }
     }
 
-    /// The capsule's leading mark — a status glyph for every source, except
-    /// Wallet with exactly one watched: that reads as its ENS face instead
-    /// (avatar, or the deterministic identicon while none resolved), the
-    /// same identity the multi-wallet switcher bar already wears above this
-    /// capsule when there's more than one. "Connected" stops being a color
-    /// and becomes a face — the wallet you're watching is a person, and this
-    /// is the one spot the single-wallet feed says whose. Two-plus wallets
-    /// keep the plain status glyph here (the switcher bar carries identity
-    /// then), since the capsule still speaks for the WHOLE source, not one
-    /// wallet in particular.
-    @ViewBuilder
-    private func sourceStatusMark(_ bridge: BridgeApp) -> some View {
-        if bridge.name == "Wallet", wallet.addresses.count == 1, let only = wallet.addresses.first {
-            WalletFace(address: only.address, size: DS.Face.badge, circular: true)
-                .accessibilityLabel(Text("\(bridge.status.spoken). \(wallet.displayName(for: only))"))
-        } else {
-            // A glyph, not a bare dot: the three states were one shape
-            // in three hues (2026-07-21). Sized to the old 6pt dot's
-            // footprint so the header's rhythm is unchanged.
-            Image(systemName: bridge.status.glyph)
-                .dsGlyph(8, weight: .bold)
-                .foregroundStyle(bridge.status == .connected ? DS.confirm
-                                                             : bridge.status.color)
-                .frame(width: 8, height: 8)
-                .accessibilityLabel(Text(bridge.status.spoken))
-        }
-    }
-
-    /// A slim, tappable strip above a single source's shaped feed: the app, its
-    /// live status. Tapping opens the app's control panel through the router —
-    /// the dedicated screen when the bridge has one (Tokens' watchlist,
-    /// Wallet's addresses), the generic detail page otherwise. It rides
-    /// `HomeRoute.pushBridge` — the same channel a Wallet row already
-    /// uses. (2026-07-11:
-    /// this hardcoded `.detail`, so Tokens' Feed header opened a page with
-    /// no way to watch a second token.)
+    /// A source room's COMPOSE action — "New event", "New email", "New task" —
+    /// and the only survivor of the header capsule this replaced (prd §359,
+    /// 2026-08-11, user: "remove that header capsule", answering their own
+    /// "should we get rid of all these and user just go to the app catalogue to
+    /// manage?").
     ///
-    /// A slim capsule now, not a card (2026-07-14, user: the full-width block
-    /// read as a settings panel dropped into the feed). Picked from three
-    /// on-sim mocks — this one echoes the Dynamic-Island-style pill already
-    /// riding the top of the screen instead of introducing a new rectangular
-    /// shape, and it hugs its own content instead of stretching edge to edge.
-    /// The per-row brand icon is gone too (it doubled the same icon in the
-    /// source chip right above) — a status dot carries connection health
-    /// instead.
-    private func sourceHeader(_ bridge: BridgeApp, showAddHint: Bool,
-                              headerCompose: SourceAction? = nil) -> some View {
+    /// **Why the capsule went.** It carried the source's NAME, its status, and a
+    /// Manage door, and by this date all three were said better elsewhere. The
+    /// name was the third naming of the same room on one screen (the category
+    /// chip, the switcher's mark, then this); status has its own home in the
+    /// strip, where a broken seat lights the category chip's dashed attention
+    /// ring (§351) whether or not you are standing in that room; and managing a
+    /// source is the app catalogue's whole job, reachable from the fixed
+    /// catalogue door at the head of the strip on every screen. A capsule that
+    /// repeats two things and duplicates a third is chrome.
+    ///
+    /// **Why compose did NOT go with it.** It is a different verb: Manage opens
+    /// something inside this app, compose LEAVES for another one — a genuinely
+    /// other place the catalogue is not a door to (the 2026-07-14 ruling that
+    /// made it a distinct control beside the capsule rather than folded into
+    /// it). Read-only sources never had one, so most rooms simply have no row
+    /// here at all now.
+    ///
+    /// The "+" add-another hint went with the capsule and is NOT rehomed: it
+    /// opened the same setup screen the catalogue opens, and in the one room
+    /// where adding is a frequent verb the wallet face rail already carries it
+    /// (§357).
+    private func sourceComposeRow(_ action: SourceAction) -> some View {
         HStack(spacing: DS.Space.s2) {
-        Button {
-            DSHaptic.selection()
-            route.pushBridge(BridgeRouter.destination(forID: bridge.id))
-        } label: {
-            HStack(spacing: DS.Space.s2) {
-                sourceStatusMark(bridge)
-                HStack(spacing: 4) {
-                    Text(bridge.name).fontWeight(.semibold).foregroundStyle(DS.textPrimary)
-                    Text(bridge.statusLine)
-                        .foregroundStyle(bridge.status == .connected ? DS.textSecondary : bridge.status.color)
-                }
-                .dsText(.subhead13)
-                .lineLimit(1)
-                // A watch/follow source advertises "there's more in here" — the
-                // add-another action folds into this one capsule (which already
-                // opens the same setup screen) rather than a second stacked row
-                // (user, 2026-07-12). Compose sources keep their own row instead
-                // — that action leaves for another app, a genuinely other place.
-                // A 1×12 rule stood here until 2026-07-30 — the ONLY hairline
-                // left in the app, against a law that takes no exceptions
-                // ("No hairlines — zero exceptions"). Air separates the status
-                // words from the control instead, which is what every other
-                // grouping in this app already uses.
-                Group {
-                if showAddHint {
-                    Image(systemName: "plus")
-                        .accessibilityHidden(true)
-                        .dsGlyph(12)
-                        .foregroundStyle(DS.tint)
-                } else {
-                    // Names the destination (2026-07-15, user: the quiet
-                    // chevron read as pure status, not a control — this
-                    // capsule already says "connected", so tapping it felt
-                    // unclear). "Manage" not "Settings": that word is
-                    // already claimed by the global Settings screen, and
-                    // these panels are add/remove/disconnect surfaces, not
-                    // toggle panes.
-                    Text("Manage")
-                        .dsText(.subhead13).fontWeight(.medium)
-                        .foregroundStyle(DS.tint)
-                }
-                }
-                .padding(.leading, DS.Space.s1)
-            }
-            .padding(.horizontal, DS.Space.s3)
-            .padding(.vertical, DS.Space.s2)
-            .background(DS.surfaceSheet, in: Capsule(style: .continuous))
-            .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        // Compose folds into this row as a trailing pill — "New event" /
-        // "New email" / "New task" — instead of a full-width bar below (user
-        // ruling 2026-07-14). It leaves for another app, so it stays a
-        // distinct control from the capsule; same neutral surface, tint on
-        // the label alone.
-        if let headerCompose {
-            Spacer(minLength: DS.Space.s2)
             Button {
                 DSHaptic.selection()
-                if case .openURL(let url) = headerCompose.run { openExternal(url) }
+                if case .openURL(let url) = action.run { openExternal(url) }
             } label: {
                 HStack(spacing: DS.Space.s1) {
                     Image(systemName: "plus").dsGlyph(13)
                         .accessibilityHidden(true)
-                    Text(LocalizedStringKey(headerCompose.label))
+                    Text(LocalizedStringKey(action.label))
                         .dsText(.subhead13).fontWeight(.medium)
                 }
                 .foregroundStyle(DS.tint)
@@ -1506,12 +1430,12 @@ struct FeedScreen: View {
                 .contentShape(Capsule())
             }
             .buttonStyle(.plain)
-        }
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, DS.Space.s4)
-        // A generous gap above the capsule (2026-07-14, user: s3/12pt read as
-        // still touching the chip row) — the chips are the strip, the capsule
-        // is clearly its own thing below it.
+        // The capsule's own generous top gap (2026-07-14: s3 read as still
+        // touching the chip row), kept — this row sits in the same place under
+        // the same strip.
         .padding(.top, DS.Space.s8)
         .padding(.bottom, DS.Space.s2)
     }
@@ -1544,53 +1468,12 @@ struct FeedScreen: View {
         }
     }
 
-    /// Whichever folded category room this is, its venue switcher (prd §351
-    /// follow-up, 2026-08-11, user: "each category should have a switcher" —
-    /// generalizes what was `marketsSwitcher`, Markets-only since 2026-08-10).
-    /// See `CategoryFold` for why the members of a category share one chip
-    /// and what that makes this control.
-    ///
-    /// **PINNED, not a List section** — `walletSwitcherBar`'s own ruling
-    /// (2026-07-20, prd §136), which applies here with more force than it did
-    /// there. As a section it scrolled away with the content it scopes, and its
-    /// glass had nothing moving behind it; as a `safeAreaInset` bar it floats
-    /// under the shell's chip strip, the room travels beneath it, and the
-    /// material earns its blur. `walletSwitcherBar` scopes ONE room's rows to
-    /// one watched address — a different axis entirely, not this control in
-    /// disguise — so the two stack as separate insets rather than one
-    /// standing down for the other; both can render together now that Wallet
-    /// is a category like any other (Peer/Privacy Pools/Gnosis Pay/Railgun/the
-    /// balance room itself all move through THIS switcher, while
-    /// `walletSwitcherBar` still moves between watched addresses within
-    /// whichever of those rooms you're in).
-    ///
-    /// Each scope is that seat's own room, whole and unchanged — this view
-    /// mounts nothing and shapes nothing, it only asks the shell to switch
-    /// rooms.
-    ///
-    /// Gated on `chrome.categoryVenues[category]`, which the strip fills
-    /// whenever a category is folded — but the SWITCHER draws only at
-    /// `CategoryFold.switcherFloor` (≥2 present venues), so a category with a
-    /// single connected member still folds to its word chip (prd §351)
-    /// without growing a switcher with one scope in it. The venues arrive in
-    /// LEARNED order (that is what `CategoryFold.landing` needs); `scopes`
-    /// puts them in catalog order for display, because a capsule this short
-    /// has not earned learned order and one that reshuffles between opens
-    /// reads as broken.
-    @ViewBuilder private var categorySwitcher: some View {
-        if let category = BridgeCatalog.category(forSource: source) {
-            let venues = chrome.categoryVenues[category] ?? []
-            if venues.count >= CategoryFold.switcherFloor {
-                CategoryVenueSwitcher(
-                    venues: CategoryFold.scopes(category: category, present: Set(venues)),
-                    active: source) { venue in
-                    chrome.sourceRequest = venue
-                }
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.bottom, DS.Space.s2)
-            }
-        }
-    }
+    // The folded-category venue switcher and the wallet face rail used to be
+    // two `.safeAreaInset(edge: .top)` bars declared here. Both moved to
+    // `MainSurface.roomControls` on 2026-08-11 (prd §357) — this screen carries
+    // `.id(filter.source)` under a move transition, so chrome pinned to it was
+    // destroyed and rebuilt on every move it made. See that property for the
+    // three things that silently cost.
 
     private var feedList: some View {
         List {
@@ -1606,35 +1489,15 @@ struct FeedScreen: View {
                 // source chip tap clears it, INCLUDING a re-tap of the source
                 // already showing, which is the one-gesture way out that the
                 // chip used to be (see `MainSurface.go(to:)`).
-                // The door back to the app: when the feed wears one connected
-                // source's shape, its header opens that app's control panel
-                // (Pause/Remove/ask/Reconnect) — the reverse of the detail's
-                // "All in Feed". It lives inside this always-present group so it
-                // inserts reliably on mount (a standalone conditional row won't).
-                if let bridge = activeSourceBridge {
-                    let action = SourceActions.action(forSource: bridge.name)
-                    // Both actions fold into the header row now (user ruling
-                    // 2026-07-14: the full-width compose bar read as an empty
-                    // stretch). Expand (add-another) is a "+" hint inside the
-                    // capsule — same setup screen the capsule already opens.
-                    // Compose is a trailing labeled pill — it leaves for another
-                    // app, a genuinely other place, so it stays a distinct
-                    // control beside the capsule, not folded into it. Read-only
-                    // sources get neither.
-                    let composeAction: SourceAction? = {
-                        if let action, case .openURL = action.run { return action }
-                        return nil
-                    }()
-                    let showsAddHint: Bool = {
-                        // The face rail carries this verb whenever it draws
-                        // (2026-08-11) — two `+`s a thumb-width apart, both
-                        // opening the wallet manager, is one control too many.
-                        if walletRailShows { return false }
-                        if let action, case .route = action.run { return true }
-                        return false
-                    }()
-                    sourceHeader(bridge, showAddHint: showsAddHint,
-                                 headerCompose: composeAction)
+                // The source header CAPSULE is gone (user ruling 2026-08-11,
+                // §359) — managing a source happens in the app catalogue.
+                // What survives is COMPOSE, and only because it is a different
+                // verb: "New event" / "New task" leaves for another app, which
+                // the catalogue is not a door to. See `sourceComposeRow`.
+                if let bridge = activeSourceBridge,
+                   let action = SourceActions.action(forSource: bridge.name),
+                   case .openURL = action.run {
+                    sourceComposeRow(action)
                 }
                 // GitHub's source feed leads with its contribution graph (moved
                 // off Home, 2026-07-18). Gated on the source STRING, not the
@@ -1782,14 +1645,6 @@ struct FeedScreen: View {
             guard abs(chrome.pullTension - clamped) > 0.5 else { return }
             chrome.pullTension = clamped
         }
-        .safeAreaInset(edge: .top, spacing: 0) { walletSwitcherBar }
-        // Whichever folded category room this is, pinned for the same reason
-        // and on the same edge — see `categorySwitcher`. A second inset
-        // rather than a shared one so each stays self-gating; the two CAN
-        // both render now (Wallet is a category like any other), and they
-        // scope different things (which watched address vs. which room), so
-        // stacking is correct rather than a collision to prevent.
-        .safeAreaInset(edge: .top, spacing: 0) { categorySwitcher }
         .dsSoftScrollEdges()
         // Arrival is `isActive`, not `onAppear` (2026-07-16, the pager): a
         // mounted neighbour appears without ever being looked at, so landing
@@ -1817,7 +1672,9 @@ struct FeedScreen: View {
             // returns to All rather than stranding the feed on a gone wallet.
             if let sel = selectedWallet,
                wallet.addresses.count <= 1
-                || !wallet.addresses.contains(where: { walletSameAddress($0.address, sel) }) {
+                || !wallet.addresses.contains(where: {
+                    WalletWatch.sameAddress($0.address, sel)
+                }) {
                 selectedWallet = nil
             }
             if isActive { streamBlock(); loadWalletLive() }
@@ -3871,167 +3728,6 @@ struct FeedScreen: View {
         }
     }
 
-    /// The wallet switcher (prd §128) — an "All" chip then one chip per watched
-    /// wallet, each wearing its `WalletFace` and, when selected, its signature
-    /// tint. Scopes the whole Wallet feed (balance, treemap, NFTs, rows) to one
-    /// wallet; only shown with more than one watched. Fill-only selection (no
-    /// lines, per the design law). Mirrors the Wallet screen's own switcher.
-    ///
-    /// PINNED, not a List section (2026-07-20, prd §136's own rule applied to
-    /// itself): as a section it scrolled away with the content it scopes —
-    /// unreachable exactly when you're deep in the stream wondering whose
-    /// transaction that was — and its glass had nothing moving behind it.
-    /// As a `safeAreaInset` bar it floats under the shell's chip strip, the
-    /// stream travels beneath it, and the material finally earns its blur.
-    /// **A face shelf since §356, and offered in EVERY wallet room** (was
-    /// `source == "Wallet"`, i.e. the balance room alone, which is why leaving
-    /// it silently dropped your scope and why Peer / Privacy Pools / Gnosis
-    /// Pay / Railgun each merged all five watched wallets with no way to
-    /// narrow them). It draws the social roster's own construction —
-    /// `ShapedRows.faceSlot`'s circular face over a name — rather than a row
-    /// of word pills, so the three stacked controls stop being three glass
-    /// capsules of words: categories are words in circles, rooms are word
-    /// pills, wallets are FACES.
-    ///
-    /// `DS.Face.list` (36), not `.shelf` (56), even though this IS a face
-    /// shelf: the ramp's shelf tier is for in-content shelves where the face
-    /// is the content, and pinned above a room the rail is chrome and stays
-    /// subordinate to it. The 44pt slot keeps the touch target legal.
-    ///
-    /// **No glass, unlike the room switcher above it.** The design law already
-    /// says a mark someone recognizes stays opaque — frosting a face only
-    /// muddies the one thing it exists to be — so the faces sit ON the page
-    /// rather than in a capsule of their own, which also stops a third glass
-    /// bar from stacking under the other two.
-    @ViewBuilder
-    private var walletSwitcherBar: some View {
-        if roomTakesWalletScope, wallet.addresses.count > 1 {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 2) {
-                    walletSwitcherChip(label: "All", address: nil)
-                    ForEach(wallet.addresses) { addr in
-                        walletSwitcherChip(label: addr.label.isEmpty ? addr.short : addr.label,
-                                           address: addr.address)
-                    }
-                    // "Add another wallet" belongs WITH the wallets (user,
-                    // 2026-08-11). It used to be a bare `+` in the room's
-                    // header capsule beside a status line — which in a room
-                    // that now draws every watched wallet as a face read as an
-                    // orphan: the one control about wallets, sitting on the one
-                    // row that isn't. The header keeps `Manage`, which is its
-                    // real job; the rail takes the verb that acts on it.
-                    walletAddSlot
-                }
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.vertical, DS.Space.s1)
-            }
-            .scrollIndicators(.hidden)
-        }
-    }
-
-    /// Does the face rail draw at all — which is also the test for whether it,
-    /// rather than the room header, carries the add-a-wallet verb.
-    private var walletRailShows: Bool {
-        roomTakesWalletScope && wallet.addresses.count > 1
-    }
-
-    /// The rail's trailing "add another wallet" slot — same circle as "All",
-    /// carrying the `+` the room header used to. Opens the wallet manager,
-    /// which is exactly where the header's own tap went.
-    private var walletAddSlot: some View {
-        Button {
-            DSHaptic.selection()
-            route.pushBridge(BridgeRouter.destination(forID: "wallet"))
-        } label: {
-            VStack(spacing: DS.Space.s1) {
-                Image(systemName: "plus")
-                    .dsGlyph(13)
-                    .foregroundStyle(DS.tint)
-                    .frame(width: DS.Face.list, height: DS.Face.list)
-                    .background(Circle().fill(DS.fillFaint))
-                Spacer(minLength: 0)
-            }
-            .frame(width: 66, height: DS.Face.list + DS.Space.s1 + 16, alignment: .top)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text("Add a wallet"))
-    }
-
-    /// One face over its name — `ShapedRows.faceSlot`'s construction, the
-    /// grammar the wallet manager's own roster and the social roster already
-    /// share (prd §356).
-    ///
-    /// **Selection is opacity and weight, never a ring** (§351's rule, which
-    /// this control has to respect rather than restate): a tint ring already
-    /// means "the active chip" one tier up in the strip and a dashed orange
-    /// one means "needs reconnecting", so a third ring here would be a third
-    /// meaning for the same mark. The face itself is the identity, so it can
-    /// carry selection by simply being the only one at full strength.
-    private func walletSwitcherChip(label: String, address: String?) -> some View {
-        let isOn = walletChipIsOn(address)
-        return Button {
-            DSHaptic.selection()
-            withAnimation(DS.Motion.standard) { selectedWallet = address }
-        } label: {
-            VStack(spacing: DS.Space.s1) {
-                if let address {
-                    WalletFace(address: address, size: DS.Face.list, circular: true)
-                    Text(label)
-                        .dsText(.label12)
-                        .fontWeight(isOn ? .semibold : .regular)
-                        .foregroundStyle(isOn ? DS.textPrimary : DS.textSecondary)
-                        .lineLimit(1)
-                } else {
-                    // "All" has no identity to wear, and it CANNOT be a pile
-                    // of the faces themselves — at the five-wallet cap (§170)
-                    // an overlapped composite is mush at this size. It takes
-                    // the strip's own "All" treatment instead: a word in a
-                    // circle, which reads the same at any count.
-                    //
-                    // And it carries NO caption, because the circle already IS
-                    // the word — captioning it prints "All" twice in one slot,
-                    // one above the other (caught on screen, 2026-08-11). The
-                    // slot keeps its full height regardless, or every face
-                    // beside it would sit a caption's-worth higher.
-                    Text("All")
-                        .dsText(.label11).fontWeight(.semibold)
-                        .foregroundStyle(isOn ? DS.textPrimary : DS.textSecondary)
-                        .frame(width: DS.Face.list, height: DS.Face.list)
-                        .background(Circle().fill(DS.fillFaint))
-                    Spacer(minLength: 0)
-                }
-            }
-            .frame(height: DS.Face.list + DS.Space.s1 + 16, alignment: .top)
-            // A 44pt-wide slot is the touch floor; the extra width is what
-            // gives a name room to read rather than truncate at the face.
-            .frame(width: 66)
-            .opacity(isOn ? 1 : 0.4)
-            .padding(.vertical, DS.Space.s1)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        // Chips ease at the strip's edges instead of clipping flat — the
-        // source strip's own grammar (SourceChips:370), one tier down
-        // (2026-08-04). Under Reduce Motion only the fade survives.
-        .scrollTransition(.interactive, axis: .horizontal) { content, phase in
-            content
-                .scaleEffect(reduceMotion || phase.isIdentity ? 1 : 0.94)
-                .opacity(phase.isIdentity ? 1 : 0.7)
-        }
-    }
-
-    private func walletChipIsOn(_ address: String?) -> Bool {
-        guard let address else { return selectedWallet == nil }
-        guard let sel = selectedWallet else { return false }
-        return walletSameAddress(sel, address)
-    }
-
-    /// Hex compares case-insensitively (EIP-55 case is a checksum), base58
-    /// exactly (Solana case is identity) — the switcher's address equality.
-    private func walletSameAddress(_ a: String, _ b: String) -> Bool {
-        ENS.isHexAddress(a) ? a.lowercased() == b.lowercased() : a == b
-    }
 
     /// The wallet leads with holdings — real, from Alchemy (WalletIngest),
     /// one treemap per watched address, same doc Home and the Wallet screen

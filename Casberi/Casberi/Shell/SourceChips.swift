@@ -125,6 +125,15 @@ struct SourceChips: View {
     /// The active chip's ink ring glides between chips instead of blinking
     /// (the old tab lozenge's grammar, motion pass 2026-07-11).
     @Namespace private var chipRingNS
+    /// The travelling active fill's namespace — see `travellingFill`. Separate
+    /// from the ring's, because the two are different objects and sharing one
+    /// namespace would make each try to become the other.
+    @Namespace private var fillNS
+    /// The label the finger just touched — cleared by the `active` change it
+    /// causes. See the horizontal strip's `onChange`: a tapped chip is provably
+    /// on screen, so it is the one route that must NOT re-centre, or the
+    /// travelling selection has nowhere to travel.
+    @State private var tapped: String?
     /// The two fixed doors' glass union (2026-08-06) — see `dsGlassDoor`. Owned
     /// here rather than passed in, because the pair only exists in this strip.
     @Namespace private var doorGlassNS
@@ -193,6 +202,34 @@ struct SourceChips: View {
         .frame(maxHeight: .infinity, alignment: .top)
     }
 
+    /// The active word chip's fill — **ONE element, drawn once, that MOVES**
+    /// (prd §359 final, user: "it still doesn't seem like a glass blob", four
+    /// times across three earlier cuts).
+    ///
+    /// **Why the earlier cuts could not have worked, stated plainly so nobody
+    /// rebuilds them.** Every one of them drew the fill INSIDE each chip — as a
+    /// background that appeared in the arriving chip and disappeared from the
+    /// leaving one. Whatever you decorate that with (`matchedGeometryEffect`, a
+    /// `glassEffectID`, a real `glassEffect`), at no instant does a single shape
+    /// span the gap between two chips, so there is nothing for the system to
+    /// stretch and the result is a cross-fade every time. The blob everyone
+    /// pictures — the iOS tab bar, Control Center — is one piece of glass
+    /// CHANGING SIZE, not one handing off to another.
+    ///
+    /// So there is ONE capsule, and it ADOPTS whichever chip currently owns
+    /// `id: active` (`matchedGeometryEffect(isSource: false)`). Moving between
+    /// chips is then a frame interpolation on a single continuous view, which
+    /// SwiftUI animates as travel and `glassEffect` renders as glass that
+    /// genuinely stretches and settles.
+    ///
+    /// Two properties this buys that the per-chip version could not: the fill
+    /// crosses the GAP between chips (a real interval, not a fade), and it
+    /// widens or narrows as it goes, because "Work" and "Markets" are different
+    /// widths — which is the stretch that reads as substance.
+    ///
+    /// It sits in the BACKGROUND of the row, under the chips' own glass and
+    /// under their words, so the arriving label reads white against it and the
+    /// one it leaves returns to ink with nothing to repaint.
     private var horizontalStrip: some View {
         // The scroll strip runs the full width, UNDER the fixed app icon; the
         // leading fade mask dissolves each chip as it reaches the icon, so chips
@@ -205,10 +242,23 @@ struct SourceChips: View {
             // and a filter you can't see reads as no filter at all.
             ScrollViewReader { proxy in
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: Self.chipGap) {
-                        ForEach(labels, id: \.self) { label in
-                            chip(label)
+                    // The active chip's fill is a real glass element that MORPHS
+                    // from the old chip to the new (prd §359, user: "if the
+                    // category chips and the source chips are controls why not
+                    // use liquid glass for the transitions and active states").
+                    // That morph is a property of the CONTAINER — a
+                    // `glassEffectID` outside one is inert — so the row it
+                    // travels along is the container, and it is the row rather
+                    // than the whole strip because the fixed doors are a
+                    // separate glass object that must never blend into a chip
+                    // sliding under them.
+                    DSGlassContainer(spacing: Self.chipGap) {
+                        HStack(spacing: Self.chipGap) {
+                            ForEach(labels, id: \.self) { label in
+                                chip(label)
+                            }
                         }
+
                     }
                     // Clears the fixed app icon at rest; the strip slides left
                     // beneath it — and through the fade — as you scroll.
@@ -218,7 +268,25 @@ struct SourceChips: View {
                 .onAppear {
                     if active != "All" { proxy.scrollTo(active, anchor: .center) }
                 }
+                // **A chip you TAPPED is not re-centred (prd §359, 2026-08-11).**
+                // This used to re-centre on every change, which quietly defeated
+                // the travelling selection above it: the active chip was pulled
+                // to the middle, so the fill never moved in SCREEN space and the
+                // chips slid under it instead — measured at 6px of centroid
+                // travel across a whole switch, which is why the glass morph
+                // "doesn't look like a blob" no matter what material it is made
+                // of. Skipping the scroll for a direct tap gives the morph the
+                // whole distance between two chips to happen in.
+                //
+                // Every OTHER route still re-centres, and that is the rule this
+                // preserves rather than an exception to it: a deep link
+                // (casberi://feed/source/Zerion), a swipe step, or a restored
+                // filter can name a chip past the fold, and a selection you
+                // cannot see reads as no selection at all. A tap is the one case
+                // where the chip is provably already on screen — your finger was
+                // just on it.
                 .onChange(of: active) { _, now in
+                    if tapped == now { tapped = nil; return }
                     withAnimation(DS.Motion.standard) { proxy.scrollTo(now, anchor: .center) }
                 }
             }
@@ -402,15 +470,67 @@ struct SourceChips: View {
     /// shipped blue measures 3.8:1 on the light well — fine for a fill, thin
     /// for a word — and steps to a measured ≥4.5:1 pair under that setting).
     ///
-    /// Uniform across every category chip, active or not. The active chip is
-    /// already named by the sliding tint RING, so tinting only the active word
-    /// would say the same thing twice and leave the rest reading as inert
-    /// labels — the opposite of the point.
+    /// **Selection is the FILL, at full strength with white text** (user,
+    /// 2026-08-11: "why not make the active ring white?"). A white ring was the
+    /// instinct and it cannot work in both themes — the ring straddles the chip's
+    /// edge, so on the light page half of it lands on near-white and vanishes; it
+    /// would be a cue that exists only in dark mode. What the question is really
+    /// asking for is a stronger active state, and the fill is where to spend it:
+    /// a solid accent on ONE chip is the accent doing its job, where a solid
+    /// accent on all six was the objection that kept them dim in the first place.
+    /// This is also the user's original ask ("blue with white text") applied
+    /// where it is earned rather than everywhere.
+    ///
+    /// The ring STAYS, and is not redundant: it is the only active mark the
+    /// strip's logo chips have (a brand mark can't take a tint fill without
+    /// becoming unrecognisable), so removing it would leave a source chip with no
+    /// selected state at all. On a word chip it now reads as an outline around an
+    /// already-obvious fill, which is belt-and-braces rather than a second claim.
+    ///
+    /// Both fills ride ONE `matchedGeometryEffect`, so the strong fill TRAVELS
+    /// from the old chip to the new exactly as the ring does — the 2026-07-14
+    /// ruling ("selection is an object traveling, not two states blinking")
+    /// applied to the cue that now carries the most weight.
+    ///
+    /// **A FILLED chip, not a tinted word on glass (user ruling 2026-08-11:
+    /// "these being white really fade into the background", "they just don't
+    /// even seem like buttons they seem like they are text inside to read",
+    /// "they don't look separate").** The first cut of §355's tint ruling put
+    /// blue words on `dsGlass`, and on the light theme's page that glass is
+    /// within a few percent of the background it sits on — so the container did
+    /// no work and what was left was floating words. Tinting the WORD says
+    /// "this is a control" only if something already reads as a control to
+    /// begin with; it cannot manufacture the affordance on its own.
+    ///
+    /// `DS.tintDim` (tint at 0.16 — the token's own documented job, "tint at
+    /// rest-chip opacity") with INK text, which is the grammar
+    /// `CategoryVenueSwitcher` already uses one tier down, chosen over a solid
+    /// tint with white text for three reasons. A solid fill is the loudest
+    /// statement this system can make and five or six of them held permanently
+    /// at the top of every screen makes the one accent (brief §8 principle 2)
+    /// stop pointing at anything. It would also erase selection: the active
+    /// chip is named by a full-strength tint ring, which is invisible on a
+    /// full-strength tint fill, whereas a 2.5pt solid ring over a 16% wash is
+    /// plainly readable. And white-on-tint carries no contrast guarantee once
+    /// `ThemeStore` swaps the accent, while ink-on-wash holds at every tint.
+    ///
+    /// The two tiers wearing one fill is deliberate rather than a collision:
+    /// they never appear as peers (the strip floats on the page in circles and
+    /// capsules under a ring system; the switcher is pills inside a glass bar),
+    /// and a category chip and the room pill under it are the same spine —
+    /// looking related is correct.
     @ViewBuilder
     private func categoryCapsule(_ label: String) -> some View {
+        let isOn = label == active
         Text(label)
             .dsText(.label12)
-            .foregroundStyle(DS.tint)
+            .fontWeight(.semibold)
+            // `.white`, not `DS.textPrimary`: this sits on the accent, which is
+            // a dark blue in BOTH themes, so the label must not follow the
+            // theme's ink the way the unselected chips' does. The app's existing
+            // tint-filled capsules (`NameAddressPrompt`) already spell it this
+            // way — one convention, not a new one.
+            .foregroundStyle(isOn ? .white : DS.textPrimary)
             .lineLimit(1)
             // Nothing to scale on the phone: the capsule is what gives, so
             // the word keeps its size all the way up the Dynamic Type ramp
@@ -422,7 +542,7 @@ struct SourceChips: View {
             .minimumScaleFactor(axis == .vertical ? 0.6 : 1)
             .padding(.horizontal, capsulePadH)
             .frame(width: axis == .vertical ? Self.railChipWidth : nil, height: iconSize)
-            .dsGlass(cornerRadius: iconSize / 2)
+            .wordChipFill(cornerRadius: iconSize / 2, active: isOn, ns: fillNS)
     }
 
     @ViewBuilder
@@ -433,6 +553,10 @@ struct SourceChips: View {
         // trouble, so this line and that one stay identical.
         let seat = BridgeCatalog.offer(forSource: label)?.name ?? label
         let isCategory = CategoryFold.isCategory(label)
+        /// The chips that are WORDS rather than marks — the categories and
+        /// "All". `wordChipFill` and the flip both key off this, so the two can
+        /// never disagree about which chips are words.
+        let isWord = isCategory || label == "All"
         let venues = categoryVenues[label] ?? []
         // A folded CATEGORY chip answers for every seat behind it (prd §351,
         // generalizing the Markets-only reasoning this line used to carry):
@@ -448,6 +572,9 @@ struct SourceChips: View {
         }
         Button {
             DSHaptic.selection()
+            // Marks this change as finger-initiated so the strip does not
+            // re-centre under it — see the horizontal strip's `onChange`.
+            tapped = label
             withAnimation(DS.Motion.standard) { onTap(label) }
         } label: {
             ZStack {
@@ -467,13 +594,19 @@ struct SourceChips: View {
                     // tint would read as one chip singled out for no reason.
                     // Its circle-not-capsule shape is the documented exception
                     // above; its COLOUR is not one.
+                    // Semibold with the category words, never apart from them —
+                    // see `categoryCapsule`. These two are the strip's only
+                    // words, so a weight on one alone makes the other read as
+                    // an inert label rather than a door.
                     Text("All").dsText(.label12)
-                        .foregroundStyle(DS.tint)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(isActive ? .white : DS.textPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.55)
                         .frame(width: iconSize, height: iconSize)
                         .clipShape(Circle())
-                        .dsGlass(cornerRadius: iconSize / 2)
+                        .wordChipFill(cornerRadius: iconSize / 2,
+                                      active: isActive, ns: fillNS)
                 case Pinboard.room:
                     // The pinned room (2026-08-10) — see `PinnedChipMark`.
                     PinnedChipMark(size: iconSize)
@@ -519,13 +652,21 @@ struct SourceChips: View {
             // the one you're landing on flips in. A first-ever thing from
             // this source flips it too (the bloom's beat, same vocabulary).
             //
-            // The landing mark briefly joined this key (2026-08-11), because
-            // moving between two seats inside a folded category changed what
-            // the chip DREW while `isActive` never moved. With the mark gone
-            // (see `categoryCapsule`) a category chip's face no longer depends
-            // on which member is showing, so there is nothing to flip and the
-            // key is back to what it was.
-            .coinFlip(trigger: "\(isActive)-\(chrome.bloomTicks[label] ?? 0)")
+            // **WORD chips do not flip (user ruling 2026-08-11, §359: "on the
+            // category chips — remove the flipping").** The flip is an IDENTITY
+            // moment and identity is what a brand mark has: rotating a logo
+            // reads as the mark turning to face you, while rotating the word
+            // "Markets" is just text spinning, which is a different and much
+            // cheaper effect wearing the same motion. It also collided with the
+            // cue §358 had just made the primary one — the strong tint fill
+            // TRAVELS between word chips, so the arriving chip was flipping
+            // while the selection was sliding onto it, two animations claiming
+            // the same beat. Applied to "All" as well as the categories,
+            // because those two are the strip's only words and §358's own
+            // finding was that treating one and not the other makes the odd one
+            // out read as inert.
+            .coinFlip(trigger: "\(isActive)-\(chrome.bloomTicks[label] ?? 0)",
+                      enabled: !isWord)
             // The catch bob — a thing landing from this source while the
             // person watches bumps its chip once, the flight's landing
             // generalized to bridge arrivals (delight 2026-07-13).
@@ -547,7 +688,25 @@ struct SourceChips: View {
                 // capsule as a single morphing shape. Two shapes would have
                 // meant the ring swapping form mid-flight, which is the
                 // blinking this ring exists to avoid.
-                if isActive {
+                // **A WORD chip has no active ring (user ruling 2026-08-11,
+                // §359: "we don't even need that active ring b/c the color
+                // changes when you are in an active pill. that ring is getting
+                // in the way sort of").** §358 gave the active word chip a solid
+                // tint fill and white text, and once selection is stated that
+                // loudly a ring is a second claim about the same fact. It was
+                // also actively in the way, which the recorded transition shows
+                // rather than implies: the ring travels on its own
+                // `matchedGeometryEffect`, so mid-move it is a detached blue
+                // circle sitting ON TOP of the neighbouring chip — the one
+                // element on the strip that belongs to no chip at all.
+                //
+                // It stays for MARK chips, and that is the user's own reasoning
+                // applied where it holds: the pinned room and any uncategorized
+                // source draw a brand mark, which cannot take a tint fill
+                // without becoming unrecognisable — nothing about them changes
+                // colour, so removing the ring there would leave them with no
+                // active state whatsoever.
+                if isActive, !isWord {
                     // The active ring is always tint now — the feed sits on the
                     // neutral ink page (user ruling 2026-07-18: full ink), so
                     // there's no source-hue field for a tint ring to melt into.
@@ -570,6 +729,12 @@ struct SourceChips: View {
                 }
             }
             .frame(width: isCategory ? nil : chipSize, height: chipSize)
+            // This chip is the travelling fill's SOURCE frame (prd §359) —
+            // see `travellingFill`. Word chips only: a mark chip cannot take a
+            // tint fill without becoming unrecognisable, so it keeps the ring
+            // instead and is never a landing site.
+            // The active fill lives in this chip's background when this chip
+            // is the active one — see `wordChipFill`.
             // The capture flight lands on "All" — the record that shows every
             // capture in place, the same target the old Feed tab was.
             .background {
@@ -704,5 +869,78 @@ private struct ChipCatchBob: ViewModifier {
                     withAnimation(.spring(response: 0.32, dampingFraction: 0.7)) { bob = false }
                 }
             }
+    }
+}
+
+/// The strip's WORD chips — "All" and every folded category capsule — wear one
+/// fill, spelled once (prd §358, 2026-08-11).
+///
+/// **Why a fill at all.** §355 made these words tint on `dsGlass`, and on the
+/// light theme that glass sits within a few percent of the page behind it, so
+/// the container did no work: what shipped read as blue words lying on the
+/// background rather than controls (user, seeing it rendered — "these being
+/// white really fade into the background", "they just don't even seem like
+/// buttons they seem like they are text inside to read"). A tinted WORD can say
+/// "this is a control" only when something already reads as one; it cannot
+/// manufacture the affordance by itself.
+///
+/// **Why `tintDim` and not a solid tint.** See `SourceChips.categoryCapsule` for
+/// the full argument — briefly: a solid accent on five or six permanent chips
+/// stops the one accent pointing at anything, it would hide the active chip's
+/// full-strength tint ring inside a full-strength tint fill, and white-on-tint
+/// loses its contrast guarantee the moment `ThemeStore` swaps the accent.
+///
+/// **Both themes, and they are NOT the same problem.** `themedTint` is already
+/// two colours — `#1366cd` on light, `#62a1ee` on dark — so `tintDim` is a wash
+/// of the tint that theme actually uses, and ink text is `DS.textPrimary`, which
+/// is near-black on light and near-white on dark. Dark mode was never the broken
+/// case: there `dsGlass` is a LIGHT translucent film over a dark page, so it
+/// already separated, and the wash only warms it. Light mode is what this fixes.
+/// The glass stays under the wash in both, so the material still blurs what
+/// travels beneath the strip — this adds a coat, it does not replace one.
+private struct WordChipFill: ViewModifier {
+    let cornerRadius: CGFloat
+    let active: Bool
+    let ns: Namespace.ID
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// The chip's resting wash is the GLASS's own tint rather than a flat
+    /// capsule stacked under the material, so it refracts with the glass
+    /// instead of sitting behind it as paint. The ACTIVE chip additionally
+    /// carries the one travelling fill.
+    ///
+    /// **ONE shared `matchedGeometryEffect` id on a per-chip background — the
+    /// canonical sliding-indicator pattern, and the thing four fancier cuts
+    /// replaced without ever beating.** `glassEffectID` is inert on a shape with
+    /// no `glassEffect`; a `GlassEffectContainer` has nothing to merge when the
+    /// fill exists in only one chip at a time; and hoisting the fill out to the
+    /// strip and positioning it from an `anchorPreference` teleported, because
+    /// preferences resolve on a later pass than the tap's transaction. Recorded
+    /// at 60fps and frame-stepped each time. This is the version that has a
+    /// single view moving between two branches inside one animation.
+    func body(content: Content) -> some View {
+        content
+            .background {
+                if active {
+                    let fill = Capsule(style: .continuous)
+                        .fill(DS.tint)
+                        .dsGlassBlob()
+                    if reduceMotion {
+                        fill
+                    } else {
+                        fill.matchedGeometryEffect(id: "chipActiveFill", in: ns)
+                    }
+                }
+            }
+            .dsGlass(cornerRadius: cornerRadius, tint: DS.tint)
+    }
+}
+
+extension View {
+    /// One fill for both word chips, so the circle and the capsule can never
+    /// drift apart the way their COLOUR did before §358 (the "All" chip had to
+    /// be corrected into line with the categories twice).
+    func wordChipFill(cornerRadius: CGFloat, active: Bool, ns: Namespace.ID) -> some View {
+        modifier(WordChipFill(cornerRadius: cornerRadius, active: active, ns: ns))
     }
 }

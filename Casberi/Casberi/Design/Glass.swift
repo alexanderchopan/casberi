@@ -337,3 +337,24 @@ private struct DSSoftScrollEdges: ViewModifier {
         }
     }
 }
+
+extension View {
+    /// Real glass on a shape that MOVES — the travelling selection fill in the
+    /// source strip (prd §359).
+    ///
+    /// Separate from `dsGlass` because the two want opposite things from their
+    /// tint. `dsGlass(tint:)` doses a hue onto a resting surface at
+    /// `DSGlassMetrics.tintDose` so the surface stays a surface; this wraps a
+    /// shape that is ALREADY the accent at full strength and only wants the
+    /// material's own lensing and specular edge over it, so it takes no tint of
+    /// its own. Passing the accent through `dsGlass` instead would wash it to
+    /// 20% and lose the one cue that has to be unmistakable.
+    @ViewBuilder
+    func dsGlassBlob() -> some View {
+        if #available(iOS 26.0, *) {
+            self.glassEffect(.regular.interactive(), in: Capsule(style: .continuous))
+        } else {
+            self
+        }
+    }
+}

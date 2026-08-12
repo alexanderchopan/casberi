@@ -64,6 +64,11 @@ struct MainSurface: View {
     // each and injects them, so a second window routes and filters on its own.
     @Environment(FeedFilter.self) private var filter
     @Environment(HomeRoute.self) private var route
+    /// The watch list behind the wallet face rail (prd §357) — this surface now
+    /// draws that rail, so it reads the store directly rather than through the
+    /// feed. Process-wide by nature: which wallets you watch is not a property
+    /// of a window.
+    @Bindable private var wallet = WalletStore.shared
     /// Mirrors `DemoMode.isActive` — the standing demo banner rides this
     /// surface's top inset (see the `.safeAreaInset` below). `@AppStorage`
     /// rather than a plain read so Exit removes it on the spot.
@@ -166,6 +171,111 @@ struct MainSurface: View {
                              ? DS.Space.s2 : DS.Space.s6)
                     .padding(.bottom, DS.Space.s2)
             }
+            // The room's own two controls, BELOW the strip and ABOVE the feed
+            // (prd §357, 2026-08-11). Both were `safeAreaInset`s on `FeedScreen`
+            // until this — see `roomControls` for why that could not work.
+            roomControls
+        }
+    }
+
+    /// The folded-category switcher and the wallet face rail, mounted at the
+    /// SHELL rather than inside the feed (prd §357, 2026-08-11).
+    ///
+    /// **They were pinned to the one thing that gets destroyed on every move
+    /// they make.** Both were `.safeAreaInset(edge: .top)` on `FeedScreen`, and
+    /// this surface renders exactly one `FeedScreen` carrying `.id(filter.source)`
+    /// under an asymmetric move transition (see `surface`) — so picking a venue
+    /// tore down the switcher that was picked, slid it off one edge, and slid an
+    /// identically-configured new one in from the other. Three costs, all
+    /// invisible as bugs because everything still worked:
+    ///
+    ///   • `CategoryVenueSwitcher`'s selection fill rides `matchedGeometryEffect`
+    ///     and its `@Namespace` died with the screen. A venue pick is the ONLY
+    ///     event that changes `active`, so the fill could never once travel —
+    ///     the control documented "a selection fill traveling on matched
+    ///     geometry" and shipped two states blinking, which is precisely what
+    ///     the source chips' own 2026-07-14 ruling forbids. Same for its
+    ///     `proxy.scrollTo(active)` re-centre, which was a fresh `onAppear`
+    ///     every time rather than the animated move it is written as.
+    ///   • The wallet rail replayed five identical faces sliding out and back
+    ///     in to say nothing had changed — §356 moved the SCOPE to the shell
+    ///     because it spans the category, while the control that sets it stayed
+    ///     a property of one room.
+    ///   • Chrome that is pinned so content can travel beneath it was itself
+    ///     travelling. That is the whole argument the pinning was chosen for.
+    ///
+    /// Mounted here they stand still and the room moves under them, which also
+    /// means the transition animates only what actually changed.
+    ///
+    /// **They still vanish into a pushed room, and that is not incidental.**
+    /// This inset is applied INSIDE the `NavigationStack` (unlike `railInset`),
+    /// so wallet history, the wallet manager and every bridge form cover it —
+    /// the behaviour they had for free as feed insets, kept deliberately: a
+    /// scope control above a screen it does not scope is a dead control.
+    ///
+    /// Gating lives with each control (`CategoryFold.switcherFloor`,
+    /// `WalletScopeRail.shows`) rather than being restated here.
+    @ViewBuilder
+    private var roomControls: some View {
+        categorySwitcher
+        walletScopeRail
+    }
+
+    /// Whichever folded category room is showing, its venue switcher (prd §351,
+    /// 2026-08-11; hoisted here by §357). Each scope is that seat's own room,
+    /// whole and unchanged — this mounts nothing and shapes nothing, it only
+    /// asks the surface to switch rooms, through the same `go(to:)` door a chip
+    /// tap and a swipe take.
+    ///
+    /// The venues arrive in LEARNED order (that is what `CategoryFold.landing`
+    /// needs); `scopes` puts them in catalog order for display, because a
+    /// capsule this short has not earned learned order and one that reshuffles
+    /// between opens reads as broken.
+    @ViewBuilder
+    private var categorySwitcher: some View {
+        if let category = BridgeCatalog.category(forSource: filter.source) {
+            let venues = categoryVenues[category] ?? []
+            if venues.count >= CategoryFold.switcherFloor {
+                CategoryVenueSwitcher(
+                    venues: CategoryFold.scopes(category: category, present: Set(venues)),
+                    active: filter.source) { venue in
+                    chrome.sourceRequest = venue
+                }
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.bottom, DS.Space.s2)
+                // On a regular-width surface the horizontal source strip is not
+                // in this inset at all (it is the leading `railInset` there), so
+                // nothing above has reserved the top edge and this takes the air
+                // the strip would otherwise have given it. `showsRail` is the
+                // SOURCE rail, not `WalletScopeRail`.
+                .padding(.top, showsRail && !demoActive ? DS.Space.s2 : 0)
+            }
+        }
+    }
+
+    /// The wallet face rail — see `WalletScopeRail`, which owns the whole of its
+    /// construction and the one predicate saying when it draws.
+    ///
+    /// `compact:` is the shell's existing fold state, so the rail shrinks on the
+    /// same scroll that folds the chips rather than growing an observer of its
+    /// own. `minimizesChrome` already animates that flip and already ignores the
+    /// inset change its own toggle causes (its settle window), which is what
+    /// makes a fold-sensitive control safe to put in this inset at all.
+    @ViewBuilder
+    private var walletScopeRail: some View {
+        if WalletScopeRail.shows(source: filter.source, watched: wallet.addresses.count) {
+            WalletScopeRail(
+                addresses: wallet.addresses,
+                scope: chrome.walletScope,
+                compact: chrome.minimized,
+                // Animated, as it was on the feed: the lit face's opacity and
+                // weight crossfade rather than snapping, and the room's own
+                // re-derivation (rows, balance, treemap) rides the same curve.
+                onPick: { picked in
+                    withAnimation(DS.Motion.standard) { chrome.walletScope = picked }
+                },
+                onAdd: { route.pushBridge(BridgeRouter.destination(forID: "wallet")) })
+            .padding(.top, showsRail && !demoActive ? DS.Space.s2 : 0)
         }
     }
 
@@ -1131,10 +1241,12 @@ struct MainSurface: View {
         // Against a switcher's DISPLAYED order (catalog), not the learned
         // order `categoryVenues` carries — the slide has to agree with the
         // capsule the finger just touched, or the room travels one way while
-        // the selection fill travels the other. Only reachable when `from`
-        // and `to` share one category (prd §351, generalizing what used to be
-        // Markets-only here) — Markets is the only category with a switcher
-        // today, but a future one gets this for free.
+        // the selection fill travels the other. That agreement became visible
+        // rather than theoretical with §357: the fill now really does travel
+        // (its namespace survives the room change), so a disagreement here
+        // would be two objects crossing in opposite directions on one screen.
+        // Reachable for every folded category, not just Markets (prd §351
+        // generalized what had been Markets-only here on 2026-08-10).
         if let category = BridgeCatalog.category(forSource: from),
            category == BridgeCatalog.category(forSource: to) {
             let present = Set(categoryVenues[category] ?? [])
