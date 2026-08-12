@@ -771,7 +771,7 @@ struct ThingSheetView: View {
             Button("Save") { nameCounterparty() }
             Button("Cancel", role: .cancel) { counterpartyTarget = nil }
         } message: {
-            Text("Your name for this address rides every future transfer with it. A blank name clears it.")
+            Text("It rides every future transfer with this address. Blank clears it.")
         }
         // Walking the thread in-app (2026-07-16) — the parent this post
         // answers, or a reply under it. A read: no consent gate, the standing
@@ -1408,7 +1408,7 @@ struct ThingSheetView: View {
             // asserts "Sent", in the app's own voice, and the correction has
             // to land before any explanation of the mechanism.
             if thing.hasSecurityFlag("spam") {
-                warningLine(String(localized: "You didn't send this. A spam token can announce any transfer it likes, including one from your address — it's advertising, not money that moved."))
+                warningLine(String(localized: "You didn't send this. A spam token can announce any transfer it likes — it's advertising, not money that moved."))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

@@ -77,7 +77,7 @@ enum MailProvider: String, CaseIterable, Identifiable {
     /// app password, IMAP and the read-only promise, and never once said what a
     /// mail becomes once it's here.
     var footer: String {
-        "Your recent mail lands in your feed, findable by sender and subject. Casberi reads the inbox over IMAP with this app-specific password — your real password is never shared, and mail is read-only."
+        "Your recent mail lands in your feed, findable by sender and subject. The inbox is read over IMAP with this app-specific password — your real password is never shared, and mail is read-only."
     }
 }
 

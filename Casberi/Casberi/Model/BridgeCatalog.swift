@@ -147,9 +147,9 @@ enum BridgeCatalog {
         Offer(name: "Photos",      tagline: "Screenshots, straight to your feed",            group: "Photos",    connectable: true,
               summary: "The screenshots you take flow into your feed, searchable by what's in them — no album to dig through."),
         Offer(name: "Calendar",    tagline: "Events join your things",               group: "Schedule",  connectable: true,
-              summary: "Your events land alongside everything else — and Casberi can add one when you ask."),
+              summary: "Your events land alongside everything else — and you can add one by asking."),
         Offer(name: "Reminders",   tagline: "Lists stay in reach",                   group: "Schedule",  connectable: true,
-              summary: "Your reminders join your things and stay findable, and Casberi can add one to your list when you ask."),
+              summary: "Your reminders join your things and stay findable — and you can add one by asking."),
         Offer(name: "Wallet",      tagline: "Track any wallet's activity",          group: "Wallet",    connectable: true,
               summary: "Paste a wallet address — 0x…, an ENS name, or a .sol name — and its onchain activity lands in your feed like anything else.\n\nRead-only, public data, no server: watching an address can never trade or move funds.",
               features: [
@@ -227,13 +227,13 @@ enum BridgeCatalog {
         // whose total it joins — not in Markets, which is where things you
         // watch rather than own live.
         Offer(name: "Coinbase",    tagline: "Your exchange balance, in your total",  group: "Wallet",    connectable: true,
-              summary: "Your Coinbase balances join your watched wallets in one combined total and one map.\n\nTakes a view-only key — Casberi checks what it can do before storing it, and refuses anything that can trade or move money.",
+              summary: "Your Coinbase balances join your watched wallets in one combined total and one map.\n\nTakes a view-only key — what it can do is checked before it's stored, and anything that can trade or move money is refused.",
               needsSetup: true, added: day(2026, 7, 21)),
         Offer(name: "Kraken",      tagline: "Your exchange balance, in your total",  group: "Wallet",    connectable: true,
-              summary: "Your Kraken balances join your watched wallets in one combined total and one map.\n\nTakes a query-only key — Casberi checks what it can do before storing it, and refuses anything that can trade, withdraw, or manage withdrawal addresses.",
+              summary: "Your Kraken balances join your watched wallets in one combined total and one map.\n\nTakes a query-only key — what it can do is checked before it's stored, and anything that can trade or withdraw is refused.",
               needsSetup: true, added: day(2026, 7, 21)),
         Offer(name: "Binance",     tagline: "Your exchange balance, in your total",  group: "Wallet",    connectable: true,
-              summary: "Your Binance balances join your watched wallets in one combined total and one map.\n\nTakes a read-only key — Casberi checks what it can do before storing it, and refuses anything that can trade or withdraw.",
+              summary: "Your Binance balances join your watched wallets in one combined total and one map.\n\nTakes a read-only key — what it can do is checked before it's stored, and anything that can trade or withdraw is refused.",
               needsSetup: true, added: day(2026, 7, 27)),
         // "Gemini Exchange", not "Gemini" — the catalog already has an offer
         // named "Gemini" (the Google AI chat importer), an unrelated company
@@ -241,7 +241,7 @@ enum BridgeCatalog {
         // user-facing (this tile, the venue's display name, the website) so
         // the two are never confused for one another.
         Offer(name: "Gemini Exchange", tagline: "Your exchange balance, in your total", group: "Wallet", connectable: true,
-              summary: "Your Gemini balances join your watched wallets in one combined total and one map.\n\nTakes a key with Gemini's Auditor role — Casberi checks what it can do before storing it, and refuses anything that can trade or move funds.",
+              summary: "Your Gemini balances join your watched wallets in one combined total and one map.\n\nTakes a key with Gemini's Auditor role — what it can do is checked before it's stored, and anything that can trade or move funds is refused.",
               needsSetup: true, added: day(2026, 7, 27)),
         // A validator can't be FOUND from a wallet address the way a Solana
         // stake account can (see EthValidatorWatch.swift) — the only free
@@ -261,10 +261,10 @@ enum BridgeCatalog {
               summary: "Your recent @icloud.com mail becomes findable things. Connects over IMAP with an app-specific password from appleid.apple.com — your real password is never shared, and it's read-only.",
               needsSetup: true),
         Offer(name: "ChatGPT",     tagline: "Import your chats, keep them findable", group: "Agent",     connectable: true,
-              summary: "ChatGPT hands you your history as a download and nothing more — there's no live read to connect to.\n\nCasberi makes that file usable: every chat becomes searchable alongside everything else you keep. Re-import any time for what's new.",
+              summary: "ChatGPT hands you your history as a download and nothing more — there's no live read to connect to.\n\nBring that file here and every chat becomes searchable alongside everything else you keep. Re-import any time for what's new.",
               needsSetup: true),
         Offer(name: "Claude",      tagline: "Import your chats, keep them findable", group: "Agent",     connectable: true,
-              summary: "Claude hands you your conversations as a download and nothing more — there's no live read to connect to.\n\nCasberi makes that file usable: every chat becomes searchable alongside everything else you keep. Re-import any time for what's new.",
+              summary: "Claude hands you your conversations as a download and nothing more — there's no live read to connect to.\n\nBring that file here and every chat becomes searchable alongside everything else you keep. Re-import any time for what's new.",
               needsSetup: true),
         Offer(name: "Claude Code", tagline: "Import your sessions, keep them findable", group: "Agent", connectable: true,
               summary: "Claude Code already writes every session to a file on your Mac — there's no account to connect and nothing to request.\n\nPoint at the folder and each session lands whole, filed under the project it ran in, searchable alongside everything else you keep.",
@@ -273,7 +273,7 @@ enum BridgeCatalog {
                          "Re-import later — a session that grew is updated, not duplicated"],
               needsSetup: true, added: day(2026, 8, 8)),
         Offer(name: "Gemini",      tagline: "Import your chats, keep them findable", group: "Agent",     connectable: true,
-              summary: "Gemini lets your history out through Google Takeout and no other way — a download, not a connection.\n\nCasberi makes that file usable: every prompt becomes searchable alongside everything else you keep. Re-import any time for what's new.",
+              summary: "Gemini lets your history out through Google Takeout and no other way — a download, not a connection.\n\nBring that file here and every prompt becomes searchable alongside everything else you keep. Re-import any time for what's new.",
               needsSetup: true),
         Offer(name: "Tokens",      tagline: "Track any token",                       group: "Markets",   connectable: true,
               summary: "Watch any token — paste its address or a link and its live price chart lands in your feed, drawn on \(DS.device). Public price data only; nothing about you leaves the device.",
@@ -313,7 +313,7 @@ enum BridgeCatalog {
         Offer(name: "Peer",        tagline: "Your Peer trades, as they settle",      group: "Wallet",    connectable: true,
               summary: "Peer trades settle onchain into your own wallet. Watch it and each fill lands as it settles — \"Bought 25 USDC with Venmo on Peer\".\n\nNo account, no key, read-only: nothing here ever starts a trade.",
               features: ["Which token, how much, and the payment app that paid for it",
-                         "Peer's design keeps the Venmo or PayPal side off the chain, so Casberi never sees it either",
+                         "Peer's design keeps the Venmo or PayPal side off the chain, so it's never seen here either",
                          "Read from the public chain for the wallets you already watch"],
               needsSetup: true, added: day(2026, 7, 17)),
         // Wallet group, beside Peer/Privacy Pools/Gnosis Pay (2026-07-30): a
@@ -396,7 +396,7 @@ enum BridgeCatalog {
                          "Fetched straight from the public API by \(DS.device)"],
               needsSetup: true),
         Offer(name: "Circle x402", tagline: "The APIs that sell to agents",          group: "Markets",   connectable: true,
-              summary: "The companies selling APIs to AI agents land in your feed — each with what it sells and what a call costs.\n\nFetched straight from Circle's public directory: no account, no key. Read-only — Casberi never pays for a call.",
+              summary: "The companies selling APIs to AI agents land in your feed — each with what it sells and what a call costs.\n\nFetched straight from Circle's public directory: no account, no key. Read-only — nothing here pays for a call.",
               needsSetup: true, added: day(2026, 8, 6)),
         Offer(name: "OpenSea",     tagline: "New NFT drops in your feed",            group: "NFTs",      connectable: true,
               summary: "Watch the chains you care about and their newest NFT collections land in your feed as links — the ones with real artwork, not the empty test contracts. Fetched straight from OpenSea's public API, read-only: nothing here buys, sells, or bids.",
@@ -414,7 +414,7 @@ enum BridgeCatalog {
         // the summary says plainly that the read-only promise is kept by
         // conduct, not by the credential (unlike every other keyed bridge).
         Offer(name: "Privacy",     tagline: "Your card purchases, in reach",         group: "Shopping",  connectable: true,
-              summary: "What you buy with your Privacy.com virtual cards lands in your feed, findable next to everything else.\n\nPrivacy's key can't be scoped read-only. Casberi only reads transactions — it never creates, closes, or funds a card.",
+              summary: "What you buy with your Privacy.com virtual cards lands in your feed, findable next to everything else.\n\nPrivacy's key can't be scoped read-only, so this only ever reads transactions — never creates, closes, or funds a card.",
               features: ["Each purchase with its merchant and amount",
                          "An API key from your Privacy account, kept in \(DS.device)'s Keychain",
                          "Needs a paid Privacy plan"],
@@ -508,17 +508,17 @@ enum BridgeCatalog {
                          "Aggregates only — never an individual's profile"],
               needsSetup: true, added: day(2026, 7, 27)),
         Offer(name: "Slack",       tagline: "Never miss a mention",                  group: "Work",      connectable: true,
-              summary: "Anyone who @-mentions you across Slack lands in your feed, on \(DS.device).\n\nSign in with Slack — no password, no token. Search only: Casberi looks up your mentions and nothing else.",
+              summary: "Anyone who @-mentions you across Slack lands in your feed, on \(DS.device).\n\nSign in with Slack — no password, no token. Search only: your mentions and nothing else.",
               needsSetup: true, added: day(2026, 7, 28)),
         Offer(name: "Trello",      tagline: "The cards you're carrying",             group: "Work",      connectable: true,
-              summary: "The cards assigned to you land in your feed with their board, their due date, and the notes on the back.\n\nCasberi asks Trello for a read-only token: it cannot move a card, comment, or write anything back.",
+              summary: "The cards assigned to you land in your feed with their board, their due date, and the notes on the back.\n\nTrello is asked for a read-only token, so it cannot move a card, comment, or write anything back.",
               features: ["Cards arrive named by the board they came from",
                          "Due dates ride along, so a card can be overdue",
                          "A card you finish elsewhere closes here",
                          "Read-only by construction — never a write"],
               needsSetup: true, added: day(2026, 8, 3)),
         Offer(name: "Jira",        tagline: "The issues assigned to you",            group: "Work",      connectable: true,
-              summary: "The issues assigned to you land in your feed with their project, their status, and when each is due.\n\nJira has no read-only token. Casberi only ever reads — it never transitions, comments on, or edits an issue.",
+              summary: "The issues assigned to you land in your feed with their project, their status, and when each is due.\n\nJira has no read-only token, so this only ever reads — never transitions, comments on, or edits an issue.",
               features: ["Issues arrive named by the project they came from",
                          "Due dates ride along, so an issue can be overdue",
                          "An issue you close elsewhere closes here",
@@ -540,7 +540,7 @@ enum BridgeCatalog {
                          "Cannot resolve an issue, comment, or change a project"],
               needsSetup: true, added: day(2026, 8, 4)),
         Offer(name: "Vercel",      tagline: "What shipped, and what broke",         group: "Work",      connectable: true,
-              summary: "Every production deploy lands as it goes live, and every failed build lands whatever branch it was on.\n\nVercel has no read-only token. Casberi only lists deployments, and never reads your environment variables.",
+              summary: "Every production deploy lands as it goes live, and every failed build lands whatever branch it was on.\n\nVercel has no read-only token, so this only lists deployments — and never reads your environment variables.",
               features: ["Production deploys, with the commit that shipped",
                          "Failed builds, on any branch",
                          "One tap to the live site, or to the build log",
@@ -568,7 +568,7 @@ enum BridgeCatalog {
                          "Read-only — it never installs or publishes"],
               needsSetup: true, added: day(2026, 8, 4)),
         Offer(name: "Cursor",      tagline: "What your coding agents did",          group: "Agent",     connectable: true,
-              summary: "The cloud agents you launch in Cursor land here once they finish.\n\nCursor's key can't be scoped read-only. Casberi only ever lists them.",
+              summary: "The cloud agents you launch in Cursor land here once they finish.\n\nCursor's key can't be scoped read-only, so this only ever lists them.",
               features: ["Finished runs, named by the repo they ran on",
                          "The agent's own account of what it changed",
                          "One tap to the pull request it opened",
@@ -576,7 +576,7 @@ enum BridgeCatalog {
                          "Only ever reads — it can't start an agent"],
               needsSetup: true, added: day(2026, 8, 4)),
         Offer(name: "App Store Connect", tagline: "How your app is doing",           group: "Work",      connectable: true,
-              summary: "What Apple does to your apps lands in your feed: a version rejected or approved, a customer review, a build about to expire.\n\nApple has no read-only role. Casberi only reads — never submits, releases, or replies.",
+              summary: "What Apple does to your apps lands in your feed: a version rejected or approved, a customer review, a build about to expire.\n\nApple has no read-only role, so this only reads — never submits, releases, or replies.",
               features: ["A review verdict lands the moment it changes",
                          "Customer reviews arrive with what people wrote",
                          "A TestFlight build warns you before it expires",
@@ -633,7 +633,7 @@ enum BridgeCatalog {
               summary: "Day One keeps your journal to itself — the export is the only way out.\n\nBring the JSON here and every entry becomes a findable note, dated as you wrote it, tags kept. Photos stay in the export for now.\n\nRe-imports add only what's new.",
               needsSetup: true),
         Offer(name: "Apple Notes", tagline: "Share notes in",                        group: "Notes",     connectable: true,
-              summary: "Share any note straight into Casberi — open it in Notes, tap share, choose Casberi. Apple offers no export or live read for Notes, so they arrive one at a time, as you share them.",
+              summary: "Open a note in Notes, tap share, choose Casberi.\n\nApple offers no export or live read for Notes, so they arrive one at a time, as you share them.",
               needsSetup: true),
         Offer(name: "RSS",         tagline: "Any site with a feed",                  group: "Reading",   connectable: true,
               summary: "Follow any site that publishes a feed — new posts land in your feed as links, fetched by \(DS.device) directly. No account, no algorithm in between.",
@@ -667,7 +667,7 @@ enum BridgeCatalog {
         // honesty rule — the alternative is a seat that reads as full search
         // over your saves and isn't.
         Offer(name: "Instagram",   tagline: "Your posts and saves, findable",        group: "Network",   connectable: true,
-              summary: "Instagram only lets you export your account — a folder you'll never open again. Casberi lets you actually use it.\n\nMeta leaves other people's captions out, so a saved post lands named for who made it.",
+              summary: "Instagram only lets you export your account — a folder you'd never open again. This makes it usable.\n\nMeta leaves other people's captions out, so a saved post lands named for who made it.",
               features: ["Your captions and comments, as searchable text",
                          "Saves and likes, named and openable",
                          "One-time import — re-importing adds only what's new",
@@ -680,7 +680,7 @@ enum BridgeCatalog {
         // "connected" and land nothing. The export is the one door, and the
         // copy names what the export honestly holds.
         Offer(name: "Snapchat",    tagline: "Import your saved chats and memories",  group: "Network",   connectable: true,
-              summary: "Snapchat only lets you export your account — and the pictures inside die after 7 days. Casberi keeps them for good.\n\nOnly saved chats are in there; Snapchat deletes the rest on view.",
+              summary: "Snapchat only lets you export your account — and the pictures inside die after 7 days. Bring it here and they're kept for good.\n\nOnly saved chats are in there; Snapchat deletes the rest on view.",
               features: ["Memories dated as you took them, with their pictures fetched",
                          "Saved conversations, searchable beside everything else",
                          "Re-importing keeps a conversation up to date",
@@ -717,7 +717,7 @@ enum BridgeCatalog {
         // let "your saves" imply them would be selling something it can't
         // deliver. §245's rule, applied to the one absence that matters here.
         Offer(name: "X",           tagline: "Your posts and likes, searchable",     group: "Network",   connectable: true,
-              summary: "X charges per post read now, so the free archive is the whole door. Casberi opens it.\n\nBookmarks aren't in X's archive — they never have been — so those can't come.",
+              summary: "X charges per post read now, so the free archive is the whole door.\n\nBookmarks aren't in X's archive — they never have been — so those can't come.",
               features: ["Your posts and replies, as searchable text",
                          "Your likes, carrying the post's own words",
                          "One-time import — re-importing adds only what's new",
@@ -750,7 +750,7 @@ enum BridgeCatalog {
         // building this at all: a stranger sharing something with you can
         // never make it appear here.
         Offer(name: "Dropbox",     tagline: "Your Dropbox, without the notifications", group: "Storage", connectable: true,
-              summary: "Name a folder and what's inside lands in your feed, synced with Dropbox's own change feed — so deletes arrive too.\n\nRead-only: Casberi can't write to your Dropbox.",
+              summary: "Name a folder and what's inside lands in your feed, synced with Dropbox's own change feed — so deletes arrive too.\n\nRead-only: nothing here writes to your Dropbox.",
               features: ["Never shared links, never \u{201c}shared with me\u{201d} — only the folder you name"],
               needsSetup: true, added: day(2026, 7, 27)),
         Offer(name: "Twitch",      tagline: "Live follows land in your feed",        group: "Watching",  connectable: true,
@@ -783,7 +783,7 @@ enum BridgeCatalog {
         Offer(name: "Contacts",    tagline: "The people you know, findable",         group: "People",    connectable: true,
               summary: "Your contacts become findable people — a name you're looking for turns up with everything it connects to. Search-only: they never crowd your feed.\n\nEverything stays on \(DS.device) — Contacts never touches a server.\n\nRead-only."),
         Offer(name: "HomeKit",     tagline: "Your home's accessories, at a glance",  group: "Home",      connectable: true,
-              summary: "Your HomeKit accessories — locks, doors, sensors — land as things you can find, kept current while the app is open.\n\nSearch-only: they never crowd your feed.\n\nRead-only — Casberi never controls anything.",
+              summary: "Your HomeKit accessories — locks, doors, sensors — land as things you can find, kept current while the app is open.\n\nSearch-only: they never crowd your feed.\n\nRead-only — nothing here controls anything.",
               unavailableOnMac: true),
     ]
 

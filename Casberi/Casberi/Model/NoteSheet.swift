@@ -414,7 +414,7 @@ struct NoteReception: Equatable {
     private static func ceiling(_ i: Input) -> String? {
         guard i.shape == .passage, i.truncatedPassage else { return nil }
         return String(localized:
-            "Stored before Casberi kept whole passages — import My Clippings.txt again for the rest.")
+            "Stored before whole passages were kept — import My Clippings.txt again for the rest.")
     }
 
     // MARK: - Dates

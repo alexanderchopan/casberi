@@ -71,7 +71,7 @@ struct NetworkReceiptsScreen: View {
                 }
             } else {
                 Section {
-                    Text("Nothing yet. As Casberi talks to a service, it shows up here — the host, how many requests, and when the last one was.")
+                    Text("Nothing yet. Every service reached shows up here — the host, how many requests, and when the last one was.")
                         .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                         .listRowBackground(Color.clear)
@@ -87,7 +87,7 @@ struct NetworkReceiptsScreen: View {
                 } header: {
                     Text("Not on the list").dsText(.label12).foregroundStyle(DS.textTertiary)
                 } footer: {
-                    Text("These were reached but aren't declared in \"What this app reaches\". That's a bug in the list, not a hidden service — please report it.")
+                    Text("Reached but not declared in \"What this app reaches\" — a bug in the list, not a hidden service. Please report it.")
                         .dsText(.callout15).foregroundStyle(DS.attention)
                 }
             }
@@ -115,7 +115,7 @@ struct NetworkReceiptsScreen: View {
                     }
                     .dsListCardRow()
                 } footer: {
-                    Text("Receipts are kept on \(DS.device) for seven days and never sync. Forgetting them changes nothing about what Casberi reaches.")
+                    Text("Kept on \(DS.device) for seven days, never synced. Forgetting them changes nothing about what's reached.")
                         .dsText(.callout15).foregroundStyle(DS.textTertiary)
                 }
             }
@@ -141,7 +141,7 @@ struct NetworkReceiptsScreen: View {
     /// everything. These are the request paths that don't ride an
     /// instrumented transport — see `NetworkLedger`'s own doc.
     private var ceiling: String {
-        "Recorded from every connected app's own requests, plus your agent key and saved-link lookups. Some of these hosts are ones you named yourself — a feed, a store, a site you saved — so they're filed under the app that asked for them. Not recorded: pictures loaded into rows as you scroll, and live wallet-app connections, which use their own connections."
+        "Hosts you named yourself — a feed, a store, a saved site — are filed under the app that asked for them. Not recorded: pictures loading as you scroll, and live wallet-app connections."
     }
 
     private func row(_ receipt: Receipt) -> some View {

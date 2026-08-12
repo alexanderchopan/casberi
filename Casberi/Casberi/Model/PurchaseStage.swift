@@ -127,10 +127,21 @@ enum PurchaseStage {
         var state: Badge?
         var seller: Party?
         var rungs: [Rung]
-        /// The sentence that replaces `From — from a store you follow`. Always
-        /// present when a reading composes at all: it is the one thing the old
-        /// row was for, said properly.
-        var provenance: String
+        /// The sentence that replaces `From — from a store you follow`, and
+        /// USUALLY NIL (user ruling, 2026-08-12).
+        ///
+        /// It shipped as always-present, and most of what it said the sheet was
+        /// already saying an inch higher: `watchParty` renders the role
+        /// ("a store you follow", "a feed you follow", "brand") and Privacy's
+        /// rung renders "Your Privacy card", so "Read from the store's own
+        /// catalogue" and "Charged to your Privacy card" were the same fact
+        /// twice. "You scanned this barcode" told someone what their own hand
+        /// had just done. **A sentence survives only when it explains an
+        /// ABSENCE the screen cannot** — no merchant on a Gnosis Pay row, no
+        /// code on a Bitrefill order, a price nobody rechecked — **or a
+        /// notice this app raised rather than the seat.** Everything else is
+        /// nil, and the line simply doesn't draw.
+        var provenance: String?
         /// The word under the dial's first disc — WHERE you land, never "Open"
         /// (§302's Explorer ruling, generalised).
         var destination: String?
@@ -455,7 +466,7 @@ enum PurchaseStage {
             state: Badge(word: word("Running low"), tone: .attention),
             seller: nil,
             rungs: [Rung(key: word("Noticed"), value: stamp(row.capturedAt), dim: true)],
-            provenance: word("Casberi noticed this — it isn't a Bitrefill notification. It fires once per crossing and re-arms when you top up."),
+            provenance: word("Noticed here, not sent by Bitrefill. Fires once per crossing, re-arms when you top up."),
             destination: word("Bitrefill"),
             history: nil,
             nutriScore: nil)
@@ -463,32 +474,31 @@ enum PurchaseStage {
 
     // MARK: - Provenance
 
-    /// The sentence that replaces the spec table's one row.
+    /// The sentence that replaces the spec table's one row — per seat, and
+    /// nil for most of them.
     ///
-    /// Per seat, because the truth is per seat — this is the whole finding
-    /// that started the pass: `from a store you follow` was rendered over a
-    /// deal (which comes from a feed publisher) and over a barcode scan
-    /// (which comes from your own hand).
-    static func provenance(_ row: Row) -> String {
+    /// Per seat because the truth is per seat: `from a store you follow` was
+    /// rendered over a deal (which comes from a feed publisher) and over a
+    /// barcode scan (which comes from your own hand). But the fix for a wrong
+    /// sentence is the right sentence OR NO SENTENCE, and for five of these
+    /// seats it was no sentence — see `Reading.provenance`. What survives
+    /// names something the screen cannot show, never something it already does.
+    static func provenance(_ row: Row) -> String? {
         switch row.source {
-        case "Privacy":
-            return word("Charged to your Privacy card. Privacy publishes no page for a single purchase, so the door below opens your account.")
+        // The gift code is the whole point of the order and is not in this
+        // record — said once, here, or the sheet looks like it lost it.
         case "Bitrefill":
-            return isRefill(row)
-                ? word("Money you added to your Bitrefill balance.")
-                : word("Bought on Bitrefill. The code lives on Bitrefill's own page — Casberi never stores it.")
-        case "Shopify":
-            return word("Read from the store's own catalogue. Nothing was bought and nothing can be — the door opens their page.")
+            return isRefill(row) ? nil : word("The code lives on Bitrefill's own page.")
+        // A deal's price was read when the feed published it and never
+        // rechecked — the one fact that changes what you'd do next.
         case "Deals":
-            return word("A feed you follow posted this. Casberi follows the feed, not the shop, and hasn't checked the price or whether it's still live.")
-        case "Open Food Facts":
-            return word("You scanned this barcode. Nothing was bought and nothing is watched.")
-        case "Apple Wallet":
-            return word("Read from Apple Wallet on this device. Nothing about it left your phone.")
+            return word("The price is the feed's, and may be stale.")
+        // §222: merchant names never reach the chain. A missing seller on a
+        // card purchase reads as a failed lookup unless it is stated.
         case "Gnosis Pay":
-            return word("Settled onchain from your Gnosis Pay account. The chain carries the amount and the moment — never the merchant.")
+            return word("The chain carries the amount, never the merchant.")
         default:
-            return word("A purchase, read from the account you connected.")
+            return nil
         }
     }
 

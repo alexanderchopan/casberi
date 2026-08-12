@@ -132,7 +132,7 @@ struct StocktwitsScreen: View {
             // somebody's bullish call as though we endorsed it is exactly the
             // fake status §83 bans, so the fact moves HERE, onto the note beside
             // the field that starts the watching, rather than being dropped.
-            DSSlabNote(text: "Read-only — nothing here trades or sees a portfolio. Every bullish or bearish take is its author's, never a rating of ours.")
+            DSSlabNote(text: "Read-only — nothing trades or sees a portfolio. Every bullish or bearish take is its author's.")
             }
         }
         .dsSlabSection()

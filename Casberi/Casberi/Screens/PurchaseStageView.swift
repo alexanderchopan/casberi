@@ -97,7 +97,7 @@ struct PurchaseStageView: View {
                             in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
                 .padding(.top, DS.Space.s3)
         }
-        provenanceLine.padding(.top, DS.Space.s4)
+        provenanceLine
     }
 
     // MARK: - Watch
@@ -134,7 +134,7 @@ struct PurchaseStageView: View {
         if !reading.rungs.isEmpty {
             slab(reading.rungs).padding(.top, DS.Space.s4)
         }
-        provenanceLine.padding(.top, DS.Space.s4)
+        provenanceLine
     }
 
     /// The price, and what it fell from.
@@ -199,7 +199,7 @@ struct PurchaseStageView: View {
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text("Nutri-Score \(grade) of A to E"))
-            Text("As Open Food Facts grades it. Casberi doesn't compute this.")
+            Text("Open Food Facts' grade, not ours.")
                 .dsText(.subhead13)
                 .foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -279,12 +279,18 @@ struct PurchaseStageView: View {
                     in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
     }
 
-    private var provenanceLine: some View {
-        Text(verbatim: reading.provenance)
-            .dsText(.subhead13)
-            .foregroundStyle(DS.textSecondary)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
+    @ViewBuilder private var provenanceLine: some View {
+        if let sentence = reading.provenance {
+            Text(verbatim: sentence)
+                .dsText(.subhead13)
+                .foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                // The gap rides the sentence, not the call site: padding an
+                // absent line still pays the VStack's spacing, which is a
+                // stray gap above the dial on every seat that says nothing.
+                .padding(.top, DS.Space.s4)
+        }
     }
 
     /// "The 5th time you've paid Netflix.com — $12.99 every time since March."

@@ -22030,3 +22030,66 @@ corpus) into the currency slot beside the figure; the unit rule is now
 letters-only and length-capped. `-receiptProbe "<title prefix>"` reports the
 composed receipt line by line, because **an absent or plain-looking receipt has
 six causes and only two are bugs**.
+
+## §370 — Verbose copy is a sentence that says what the screen already says (user: "i don't like ones where we say 'casberi…' b/c it's unecessary. i feel like we have too much verboseness in the app", then "i don't even think we need those sentences… they are vague sentences that say things basically 'known' to the user already", 2026-08-12)
+
+Swept the thing sheets, the app product pages, the app setup pages and Settings.
+**2,087 characters of user-facing copy removed**, including **79 uses of the
+app's own name** in its own UI.
+
+**Two rulings, and the second is the one worth keeping.**
+
+**1. The app does not name itself inside itself.** "Casberi asks Kraken what
+this key can do before storing it" is a sentence spoken by a narrator who is
+standing in the room; "what it can do is checked before it's stored" says the
+same fact without one. The name survives in exactly four places, all of them
+cases where it names the app as an entity DISTINCT from the surface you're
+reading: Siri/Shortcuts phrases, Spotlight and `ThingEntity` donations, MCP tool
+descriptions and the clipboard export (an external agent needs the noun), and
+instructions naming the app inside SOMEBODY ELSE'S UI ("name the token Casberi",
+"tap share, then Casberi", "Settings ▸ Privacy ▸ Health ▸ Casberi", "That file
+isn't a Casberi export"). Everywhere else it is a word the reader already knows.
+
+**2. A note earns its place only by naming something the SCREEN CANNOT.** This
+is the sharper finding and it came from the user's second message, not the
+first. `PurchaseStage.provenance` shipped as always-present — one sentence per
+seat, §368's fix for the false `From — from a store you follow` rendered over a
+deal and a barcode scan. The sentences were true. They were also **already on
+the screen**: `watchParty` renders the role a line above ("a store you follow",
+"a feed you follow", "brand") and Privacy's rung renders "Your Privacy card", so
+"Read from the store's own catalogue" and "Charged to your Privacy card" were
+the same fact twice, an inch apart. "You scanned this barcode" told someone what
+their own hand had just done.
+
+So `provenance` is `String?` now and nil for six of nine seats. Three survive,
+each naming an ABSENCE the sheet has no field for: Bitrefill's gift code (it
+lives on their page and is not in this record — without the line the sheet looks
+like it lost it), a Deals price (read when the feed published it and never
+rechecked — the one fact that changes what you'd do next), and Gnosis Pay's
+missing merchant (§222: merchant names never reach the chain, so a blank seller
+reads as a failed lookup unless it is stated). The alarm keeps its sentence for
+the same test — it says the notice was raised HERE and not by Bitrefill, which
+is not visible anywhere else.
+
+**The test, stated so it can be reused:** delete the sentence and ask what
+someone would now get wrong. If the answer is "nothing — it's above/beside/in
+the button", it was never information. If the answer is "they'd think we lost
+the code / that the price is live / that the merchant lookup failed", it stays.
+
+**The gap moves with the sentence.** `provenanceLine.padding(.top, s4)` at the
+call site pays the VStack's spacing even when the line is nil, which is a stray
+gap above the dial on every silent seat — the padding is inside the `if let`.
+
+**Mechanical:** `purchase-stage-selftest` asserts the three silent seats are
+silent and the three speaking seats name their absence, with a new mutation
+(`provenance speaks where the screen already spoke`) that restores a sentence on
+every seat. Its mutation total is DERIVED now, not printed from a literal: an
+11th mutation landed and the hardcoded "10 mutations caught" stayed 10, which is
+the same class of drift this file's audits exist to end.
+
+**Not swept, deliberately:** `canLine`/`summary` keep their length budgets
+(§192 — trimming those deletes true differentiating information), and the
+per-seat honesty grades keep their exact wording (§315's MINTED/SCOPED/CONDUCT
+distinction tracks the strength of a promise and blurring it is §83's fake
+status in the one domain where believing it is expensive). What changed there
+was voice only, never the claim.

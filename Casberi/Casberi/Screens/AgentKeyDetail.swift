@@ -42,7 +42,7 @@ struct AgentModelRow: View {
                         .lineLimit(1).truncationMode(.middle)
                 }
                 if AgentModelStore.chosen(provider) == nil {
-                    Text("Casberi's default for \(provider.agent). Providers retire model names — if answers start failing, pick a current one.")
+                    Text("The default for \(provider.agent). Providers retire model names — if answers start failing, pick a current one.")
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -73,7 +73,7 @@ struct AgentModelRow: View {
                             AgentModelStore.set(nil, for: provider)
                             tick += 1
                         } label: {
-                            Text("Casberi's default (\(provider.defaultModel))")
+                            Text("Default (\(provider.defaultModel))")
                         }
                         ForEach(models) { model in
                             Button {
@@ -199,7 +199,7 @@ struct AgentLibrarianRow: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Let your key organize too")
                             .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                        Text("Names your screenshots from what they say, and reads long imported chats so they can be found. This iPhone has no on-device model to do it free.")
+                        Text("Names your screenshots from what they say, and reads long imported chats so they can be found. There's no on-device model here to do it free.")
                             .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -276,7 +276,7 @@ struct MCPServerRow: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Let agents on this Mac read your things")
                         .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                    Text("Opens a door on this computer only — 127.0.0.1, never the network. An agent needs the key below. Anything it offers to save waits for your approval here.")
+                    Text("A door on this computer only — 127.0.0.1, never the network. An agent needs the key below, and anything it offers to save waits for your approval.")
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -294,7 +294,7 @@ struct MCPServerRow: View {
                 // sentence says which client was checked rather than implying
                 // all of them, and keeps the invitation to report a failure,
                 // because that is still how a specific one gets found.
-                Text("Checked with the standard MCP tools on this Mac. If your client can't connect, that's worth telling us.")
+                Text("Checked with the standard MCP tools on this Mac. If your client can't connect, tell us.")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: DS.Space.s2) {
@@ -323,7 +323,7 @@ struct MCPServerRow: View {
                              style: .tint, glyph: "key.fill")
                     }
                     .buttonStyle(.plain)
-                    Text("Paste it as `Authorization: Bearer …`. Deleting Casberi's access in Privacy mints a new one and disconnects anything paired.")
+                    Text("Paste it as `Authorization: Bearer …`. Deleting access in Privacy mints a new one and disconnects anything paired.")
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }

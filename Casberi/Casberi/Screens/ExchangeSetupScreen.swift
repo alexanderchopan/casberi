@@ -133,7 +133,7 @@ struct ExchangeSetupScreen: View {
                 // capability line, and the doc note at the top of this file
                 // rules that the copy shouldn't be leaning on "Casberi can't
                 // trade" in the first place.
-                DSSlabNote(text: "Casberi asks \(venue.display) what this key can do before storing it, and refuses anything that can move money.")
+                DSSlabNote(text: "\(venue.display) is asked what this key can do before it's stored — anything that can move money is refused.")
             }
         }
         .dsSlabSection()

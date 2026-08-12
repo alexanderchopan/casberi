@@ -134,7 +134,7 @@ struct XArchiveImportScreen: View {
                 // outside the footer — it is the sole explanation of a verb
                 // that costs network, so it stays beside the button rather
                 // than moving to the bottom with the fine print.
-                DSSlabNote(text: "The archive names the post but never who wrote it. This asks X. No rush — unlike the archive, the posts don't expire.")
+                DSSlabNote(text: "The archive names the post but never who wrote it. This asks X. No rush — the posts don't expire.")
             }
         }
         .dsSlabSection()

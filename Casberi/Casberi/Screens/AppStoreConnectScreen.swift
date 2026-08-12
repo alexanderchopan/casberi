@@ -70,7 +70,7 @@ struct AppStoreConnectScreen: View {
                 // here AND the four reads in the checklist below — two lists of
                 // nearly the same thing, twenty words apart. The intro sells,
                 // the checklist bounds.
-                intro: "Add a key and Apple's verdicts, your customer reviews and expiring builds keep arriving. Apple has no read-only role, and Casberi only reads.",
+                intro: "Add a key and Apple's verdicts, your customer reviews and expiring builds keep arriving. Apple has no read-only role, so this only reads.",
                 connected: hasKey,
                 flipTrigger: flipTrigger)
             if hasKey {

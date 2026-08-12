@@ -193,7 +193,7 @@ struct NotesShareScreen: View {
             BridgeSetupHeader(
                 name: "Apple Notes",
                 mode: .onThisDevice,
-                intro: "Apple offers no export and no read API for Notes, so there is nothing to connect. Share a note to Casberi and it lands in your feed, findable like everything else.")
+                intro: "Apple offers no export and no read API for Notes, so there is nothing to connect. Share a note and it lands in your feed, findable like everything else.")
             ImportStepsCard("How notes come in", [
                 "Open a note in Apple Notes.",
                 "Tap share, then Casberi.",

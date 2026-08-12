@@ -454,7 +454,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .privacy:
             // CONDUCT. Privacy's key can issue cards and move money; the
             // promise is what this code does, so it is worded as such.
-            String(localized: "Paste an API key and what you spend on your virtual cards keeps arriving. Privacy's key can't be scoped read-only — Casberi never creates, closes, or funds a card.")
+            String(localized: "Paste an API key and what you spend on your virtual cards keeps arriving. Privacy's key can't be scoped read-only, so nothing here creates, closes, or funds a card.")
         case .oneclaw:
             String(localized: "Paste an agent key and you'll see what it can reach — which vaults, which paths, when each grant expires. No secret's value is ever read.")
         case .posthog:
@@ -464,18 +464,18 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .trello:
             // MINTED — the strongest promise in the catalog, and the only one
             // that is structural rather than a box someone ticked.
-            String(localized: "Authorize once and the cards assigned to you keep arriving with their due dates. Casberi asks Trello for a read-only token, so it has no write permission to give.")
+            String(localized: "Authorize once and the cards assigned to you keep arriving with their due dates. Trello is asked for a read-only token, so it has no write permission to give.")
         case .cloudflare:
             String(localized: "Paste a read-only token and you're told before a certificate, domain or token expires, and when a DNS record changes. No analytics, and nothing about your visitors.")
         case .cursor:
             // CONDUCT, and the weakest grade here: this key could start an
             // agent, which spends money AND writes a branch to a repo.
-            String(localized: "Paste a key and your finished cloud agents keep arriving. Cursor's key can't be scoped read-only, and Casberi only ever lists them.")
+            String(localized: "Paste a key and your finished cloud agents keep arriving. Cursor's key can't be scoped read-only, so this only ever lists them.")
         case .sentry:
             String(localized: "Paste a read-only token and three things arrive: a new issue, a regression, an escalation. Never an event, a stack trace, or anything about the person who hit it.")
         case .vercel:
             // CONDUCT.
-            String(localized: "Paste a token and your deployments keep arriving — what shipped and what broke. Vercel's token can't be scoped read-only, and Casberi never reads your environment variables.")
+            String(localized: "Paste a token and your deployments keep arriving — what shipped and what broke. Vercel's token can't be scoped read-only, and your environment variables are never read.")
         case .pagerduty:
             String(localized: "Paste a read-only key and your incidents keep arriving — what fired, how urgent, and when it was resolved. Nothing here pages anyone, acknowledges, or resolves.")
         case .gitlab:
@@ -484,13 +484,13 @@ enum TokenBridge: String, CaseIterable, Identifiable {
             // CONDUCT, and the weakest grade in the catalog: an App Store
             // Connect key carries a ROLE, and no role is read-only for what
             // this reads — the same key could submit a version.
-            String(localized: "Add a key and Apple's verdicts, your customer reviews and expiring builds keep arriving. Apple has no read-only role, and Casberi only ever reads.")
+            String(localized: "Add a key and Apple's verdicts, your customer reviews and expiring builds keep arriving. Apple has no read-only role, so this only ever reads.")
         case .jira:
             // CONDUCT. A Jira API token carries the same access as the
             // account it's minted for — Atlassian has no read-only token —
             // so the promise, like Privacy's and Cursor's, is what this code
             // does rather than what the token can't.
-            String(localized: "Paste a token and the issues assigned to you keep arriving with their due dates. Jira has no read-only token — Casberi only ever reads.")
+            String(localized: "Paste a token and the issues assigned to you keep arriving with their due dates. Jira has no read-only token, so this only ever reads.")
         }
     }
 
@@ -510,7 +510,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .notion:   "Reads the pages you connect."
         case .linear:   "Reads issues assigned to you."
         case .bitrefill: "Reads your orders, refills, and balance — nothing here ever buys, pays, or spends."
-        case .privacy:  "Reads your card transactions only. Privacy's key can't be scoped read-only. Casberi never creates, closes, or funds a card."
+        case .privacy:  "Reads your card transactions only. Privacy's key can't be scoped read-only, so nothing here creates, closes, or funds a card."
         case .oneclaw:  "Reads which vaults and secret paths the key can reach — names and permissions only. Nothing here ever reads a secret's value, signs, or spends."
         case .posthog:  "Reads the metrics you watch and your project's annotations. The key is scoped read-only — it cannot ship a flag, edit a dashboard, or write anything back."
         case .stripe:   "Reads disputes, payouts, canceled subscriptions, failed payments, and your balance. The restricted key is read-only — it cannot refund, charge, or pay out."
@@ -519,7 +519,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // authorize link is built with `scope=read`, so Trello itself issues a
         // token that has no write permission to give. Every other keyed bridge
         // depends on the person ticking the right box on someone else's page.
-        case .trello:   "Reads the cards assigned to you and when they're due. Casberi asks Trello for a read-only token — it cannot move a card, comment, or write anything back."
+        case .trello:   "Reads the cards assigned to you and when they're due. The token is minted read-only, so it cannot move a card, comment, or write anything back."
         // What is NOT read is worth a clause here. Cloudflare's API is mostly
         // traffic numbers, and someone connecting an infrastructure account has
         // every right to wonder whether their visitors' data is about to land
@@ -532,14 +532,14 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // is the whole promise, so they're listed rather than summarised. If a
         // write is ever added to `CursorFetch`, this line has to change in the
         // same commit.
-        case .cursor:   "Reads the cloud agents you've run — what each was asked to do, what it says it did, and the pull request it opened. Cursor's key can't be scoped read-only. Casberi only lists your agents — it never starts one, follows one up, stops one, or deletes one."
+        case .cursor:   "Reads the cloud agents you've run — what each was asked to do, what it says it did, and the pull request it opened. Cursor's key can't be scoped read-only, so this only lists them: never starts, follows up, stops, or deletes one."
         // What is NOT read is the load-bearing clause. Sentry holds the data
         // your users generated when something broke — anyone connecting it has
         // every right to ask whether that is about to land in a feed. It isn't:
         // this reads the ISSUE list, which is titles and code locations, and
         // never an event, a stack trace, a request body, or a user.
         case .sentry:   "Reads your unresolved issues — the error, the project, and where in your code it happened. Never an event, a stack trace, or anything about the person who hit it. The token is scoped read-only: it cannot resolve an issue, comment, or change a project."
-        case .vercel:   "Reads your deployments — the project, whether each one shipped or broke, and its commit message. Vercel's token can't be scoped read-only. Casberi only lists deployments — it never deploys, promotes, rolls back, cancels, or deletes one. It never reads your environment variables."
+        case .vercel:   "Reads your deployments — the project, whether each one shipped or broke, and its commit message. Vercel's token can't be scoped read-only, so this only lists them: never deploys, promotes, rolls back, cancels, or deletes one, and never reads your environment variables."
         case .pagerduty: "Reads your incidents — what fired, on which service, how urgent, and when it was resolved. A read-only key cannot page anyone, acknowledge, resolve, or reassign."
         case .gitlab:   "Reads the issues and merge requests assigned to you, across every project. The read_api token cannot comment, merge, close, or write anything back."
         // The Cursor sentence, one rung stronger, because the risk is one rung
@@ -550,12 +550,12 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // summarised — and if a write is ever added to `AppStoreConnectBridge`,
         // this line has to change in the same commit
         // (`scripts/appstoreconnect-selftest.sh` fails the build if it isn't).
-        case .appStoreConnect: "Reads your apps' review status, your customer reviews, and your builds. Apple has no read-only role. Casberi only reads — it never submits a version, releases one, removes an app from sale, replies to a review, uploads a build, or changes anything. It never reads your sales, your proceeds, or anything about the people who use your apps."
+        case .appStoreConnect: "Reads your apps' review status, your customer reviews, and your builds. Apple has no read-only role, so this only reads: it never submits, releases, removes an app from sale, replies to a review, or uploads a build — and never touches your sales, proceeds, or anything about the people who use your apps."
         // The Privacy.com/Cursor sentence: a Jira API token carries no scopes
         // and no read-only grade at all, so the promise is kept the same way
         // — by naming the verbs this code doesn't use. If a write is ever
         // added to `jira()`, this line has to change in the same commit.
-        case .jira:      "Reads the issues assigned to you — the project, the status, and when each is due. A Jira token has the same access as your account. Casberi only ever reads — it never transitions, comments on, or edits an issue."
+        case .jira:      "Reads the issues assigned to you — the project, the status, and when each is due. A Jira token has the same access as your account, so this only ever reads: never transitions, comments on, or edits an issue."
         }
     }
 
@@ -577,33 +577,33 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     var emptyReadNote: String? {
         switch self {
         case .trello:
-            String(localized: "Trello answered — no cards are assigned to you. Casberi reads cards you're a member of, so add yourself to one and sync again.")
+            String(localized: "Trello answered — no cards are assigned to you. Only cards you're a member of are read, so add yourself to one and sync again.")
         // Cloudflare earns one for the opposite reason to Trello's: here empty
         // is the GOOD outcome and by far the most common one, and it is exactly
         // as silent as a refused token. Nothing lands until something is close
         // to expiring, so a healthy account reads as a broken connection
         // forever without this sentence.
         case .cloudflare:
-            String(localized: "Cloudflare answered — nothing needs attention. Casberi only lands certificates, domains and tokens that are close to expiring, so an empty read means everything is current.")
+            String(localized: "Cloudflare answered — nothing needs attention. Only certificates, domains and tokens close to expiring land, so an empty read means everything is current.")
         // Cursor earns one for the plainest reason of the three: most people
         // who use Cursor have never launched a CLOUD agent — they use the
         // editor, which this cannot see and does not claim to. So a perfectly
         // good key legitimately reads empty forever, and without this sentence
         // that is indistinguishable from a key Cursor refused.
         case .cursor:
-            String(localized: "Cursor answered — no finished cloud agents yet. Casberi reads the background agents you launch from Cursor's dashboard or editor, not the edits you make yourself, so run one and sync again.")
+            String(localized: "Cursor answered — no finished cloud agents yet. Only the background agents you launch are read, not the edits you make yourself, so run one and sync again.")
         // Cloudflare's case exactly: here empty is the GOOD outcome and the
         // common one, and it is precisely as silent as a refused key. Nothing
         // lands until something fires, so a quiet week reads as a broken
         // connection without this sentence.
         case .pagerduty:
-            String(localized: "PagerDuty answered — nothing is on fire. Casberi only lands incidents as they trigger and resolve, so an empty read means your services are quiet.")
+            String(localized: "PagerDuty answered — nothing is on fire. Incidents land as they trigger and resolve, so an empty read means your services are quiet.")
         // Sentry's empty is ambiguous in the way Trello's is, and the cause is
         // actionable: this reads UNRESOLVED issues only, so an org whose
         // backlog is entirely resolved or archived legitimately lands nothing
         // forever, and so does an org that simply isn't the one you meant.
         case .sentry:
-            String(localized: "Sentry answered — nothing unresolved. Casberi reads open issues only, so an empty read means your backlog is clear. If that's a surprise, check which organization is selected above.")
+            String(localized: "Sentry answered — nothing unresolved. Open issues only, so an empty read means your backlog is clear. If that's a surprise, check which organization is selected above.")
         // Vercel's is a WRONG-SCOPE hint rather than a quiet-is-fine one: a
         // personal token reads your personal account, and someone whose
         // projects live under a team will otherwise see a working connection
@@ -618,12 +618,12 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // today's news. Both are the healthy answer, and both are exactly as
         // silent as a key Apple refused.
         case .appStoreConnect:
-            String(localized: "Apple answered — nothing has changed. Casberi lands what happens to your apps, so a first sync notes where everything stands and stays quiet until a verdict, a review, or a build expiry actually arrives.")
+            String(localized: "Apple answered — nothing has changed. A first sync notes where everything stands, then stays quiet until a verdict, a review, or a build expiry actually arrives.")
         // Trello's exact ambiguity, on a different filter: `jiraJQL` asks for
         // issues assigned to you specifically, so a working token can read a
         // busy site and still land nothing if nothing is assigned to you.
         case .jira:
-            String(localized: "Jira answered — no issues are assigned to you. Casberi reads issues where you're the assignee, so check that against the site and project you meant.")
+            String(localized: "Jira answered — no issues are assigned to you. Only issues where you're the assignee are read, so check that against the site and project you meant.")
         default:
             nil
         }

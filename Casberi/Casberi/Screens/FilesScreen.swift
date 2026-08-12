@@ -116,7 +116,7 @@ struct FilesScreen: View {
             // Says what LANDS before what's safe — see `SteamScreen` (audit,
             // 2026-07-31). "findable by name" left the same day: the header
             // three rows up is already the offer's "Any folder, findable".
-            DSSlabNote(text: "Any folder Files can reach — often iCloud Drive. Read-only: the folder is never changed.")
+            DSSlabNote(text: "Any folder Files can reach — often iCloud Drive. The folder is never changed.")
         }
         .dsSlabSection()
     }

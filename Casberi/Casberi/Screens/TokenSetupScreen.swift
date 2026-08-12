@@ -203,7 +203,7 @@ struct TokenSetupScreen: View {
                             actionLabel: trelloKey == nil
                                 ? String(localized: "NEXT") : String(localized: "REPLACE"),
                             action: saveTrelloKey)
-                DSSlabNote(text: "It names the Power-Up, not you — public by design. The token below is what reads your cards.")
+                DSSlabNote(text: "It names the Power-Up, not you. The token below is what reads your cards.")
             }
         }
         .dsSlabSection()
@@ -248,7 +248,7 @@ struct TokenSetupScreen: View {
                             isArmed: !jiraDomainField.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                                 && !jiraEmailField.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                             action: saveJiraSite)
-                DSSlabNote(text: "Your site, and the email the token below gets minted for — Jira needs both to know whose issues \"assigned to you\" means.")
+                DSSlabNote(text: "Jira needs both to know whose issues \"assigned to you\" means.")
             }
         }
         .dsSlabSection()

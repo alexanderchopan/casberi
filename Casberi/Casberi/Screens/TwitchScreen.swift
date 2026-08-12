@@ -160,7 +160,7 @@ struct TwitchScreen: View {
             }
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Checking who's live…"),
                                  result: result, resultIsError: resultIsError)
-            DSSlabNote(text: "Sign-in happens on Twitch's own page — a short code, no password. Read-only: it can never chat, follow, or subscribe.")
+            DSSlabNote(text: "On Twitch's own page — a short code, no password. It can never chat, follow, or subscribe.")
         }
         .dsSlabSection()
     }

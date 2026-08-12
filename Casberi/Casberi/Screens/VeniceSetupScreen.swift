@@ -61,7 +61,7 @@ struct VeniceSetupScreen: View {
                 AgentActiveStatusRow(provider: .venice)
                 AgentModelRow(provider: .venice)
                 AgentSpendRow(provider: .venice)
-                DSSlabNote(text: "Venice keeps chats on your device by design. The key lives in the Keychain, goes only to Venice, and Venice bills you directly.")
+                DSSlabNote(text: "The key lives in the Keychain, goes only to Venice, and Venice bills you directly.")
             }
         }
         .dsSlabSection()

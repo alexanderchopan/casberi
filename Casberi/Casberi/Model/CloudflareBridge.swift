@@ -242,7 +242,7 @@ enum CloudflareFetch {
         )
         thing.dueAt = expiry
         thing.mark = .todo
-        thing.summary = String(localized: "When it lapses, Casberi stops reading your Cloudflare account and nothing else on this iPhone will know why. Mint a replacement and paste it in.")
+        thing.summary = String(localized: "When it lapses, your Cloudflare account stops being read and nothing else here will know why. Mint a replacement and paste it in.")
         return thing
     }
 

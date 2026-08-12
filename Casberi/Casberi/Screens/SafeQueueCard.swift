@@ -40,7 +40,7 @@ struct SafeQueueCard: View {
             if let door = check.doorURL, let url = URL(string: door) {
                 doorRow(icon: "arrow.up.right", label: "Open in Safe") { openURL(url) }
             }
-            Text("Signatures happen in your Safe app — never in Casberi.")
+            Text("Signatures happen in your Safe app — never here.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
         }
         .padding(DS.Space.s4)

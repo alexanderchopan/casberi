@@ -46,7 +46,7 @@ struct ApprovalPrepareCard: View {
                         copy(json)
                     }
                 }
-                Text("A transaction you sign there — never in Casberi.")
+                Text("A transaction you sign there — never here.")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
             } else {
                 // The closed loop, from reads alone: the person revoked in

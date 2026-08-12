@@ -225,7 +225,7 @@ struct StripeScreen: View {
             // key, a key missing one permission) looking identical to a typo,
             // and the fix for each is different.
             case .testKey:
-                fail(String(localized: "That's a test-mode key — Casberi only holds real money. Mint a live restricted key."))
+                fail(String(localized: "That's a test-mode key — only real money is held here. Mint a live restricted key."))
             case .rejected:
                 fail(String(localized: "Stripe didn't accept that key. Check you copied the whole thing."))
             case .missingScope:

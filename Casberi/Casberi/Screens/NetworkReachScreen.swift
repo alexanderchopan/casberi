@@ -49,7 +49,7 @@ struct NetworkReachScreen: View {
     var body: some View {
         List {
             Section {
-                Text("Casberi has no server. Every request below goes straight from \(DS.device) to the service named.")
+                Text("There is no server. Every request below goes straight from \(DS.device) to the service named.")
                     .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .listRowBackground(Color.clear)
@@ -68,7 +68,7 @@ struct NetworkReachScreen: View {
                 // fake status this app refuses everywhere else — and the more
                 // careful the rest of the screen is, the more it would be
                 // trusted.
-                Text("Going straight also means each service sees your IP address, the same way any app or website does. iCloud Private Relay doesn't change that — it covers Safari browsing, not an app's own requests.")
+                Text("Going straight means each service sees your IP, as any app or website does. iCloud Private Relay covers Safari browsing, not an app's own requests.")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
                     .listRowBackground(Color.clear)
@@ -76,7 +76,7 @@ struct NetworkReachScreen: View {
             }
 
             group(String(localized: "Reaching now"), reachingNow,
-                  footer: String(localized: "The always-on essentials, plus the apps you've connected. Each reaches only its own service."))
+                  footer: String(localized: "The always-on essentials, plus the apps you've connected."))
 
             if !onTap.isEmpty {
                 group(String(localized: "Only when you tap"), onTap, footer: nil)

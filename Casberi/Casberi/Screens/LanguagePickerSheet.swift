@@ -11,7 +11,7 @@ struct LanguagePickerSheet: View {
     var body: some View {
         DSTray(title: "Language", height: 580) {
             VStack(alignment: .leading, spacing: DS.Space.s4) {
-                Text("Casberi only — your device language stays as it is.")
+                Text("This app only — your device language stays as it is.")
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
                 VStack(spacing: DS.Space.s2) {
                     row(endonym: "System", gloss: "Match your device",

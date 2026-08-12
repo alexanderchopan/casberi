@@ -166,7 +166,7 @@ struct BridgeDetailScreen: View {
     @ViewBuilder
     private var photosLimitedRemedy: some View {
         VStack(spacing: DS.Space.s2) {
-            Text("Casberi can only see the photos you picked, so new screenshots don't arrive on their own.")
+            Text("Only the photos you picked are visible, so new screenshots don't arrive on their own.")
                 .dsText(.callout15).foregroundStyle(DS.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Button {

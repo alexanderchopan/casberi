@@ -28,7 +28,7 @@ struct PeerScreen: View {
             BridgeSetupHeader(
                 name: "Peer",
                 mode: .watchedWallets,
-                intro: "Peer has no account here — it reads the wallets you already watch, so buying crypto with Venmo or Cash App lands in your feed on its own. Your Venmo side never touches the chain, so Casberi never sees it.",
+                intro: "Peer has no account here — it reads the wallets you already watch, so buying crypto with Venmo or Cash App lands on its own. Your Venmo side never touches the chain, so it's never seen.",
                 connected: hasWallets)
             connectSection.listRowSeparator(.hidden)
             if hasWallets {

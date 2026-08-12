@@ -116,7 +116,7 @@ struct AgentTurnsView: View {
             // `oneSided` is "no turn in this transcript is the assistant's".
             if let cut, expanded || hidden == 0 {
                 clause(String(localized:
-                    "Stored to here. \(cut) more turns were in the export than Casberi keeps."))
+                    "Stored to here. \(cut) more turns were in the export."))
             }
             if oneSided {
                 clause(String(localized:

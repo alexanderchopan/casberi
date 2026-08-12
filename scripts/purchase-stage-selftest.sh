@@ -157,12 +157,25 @@ let deal = row("Deals", ref: "deals:x", kind: "product",
 let food = row("Open Food Facts", ref: "off:5060403320102", kind: "product",
                title: "Oat drink, barista", tags: ["Food", "Nutri-Score B"],
                seller: "Oatly")
-ok("shopify.prov.store", PurchaseStage.provenance(shopify).contains("catalogue"))
-ok("deals.prov.feed", PurchaseStage.provenance(deal).contains("feed"))
-ok("food.prov.you", PurchaseStage.provenance(food).contains("scanned"))
-ok("three.distinct.sentences",
-   Set([PurchaseStage.provenance(shopify), PurchaseStage.provenance(deal),
-        PurchaseStage.provenance(food)]).count == 3)
+// The user ruling (2026-08-12) that made this optional: the sentence is nil
+// unless it names something the SCREEN CANNOT. `watchParty` already renders
+// the role a line above ("a store you follow" / "a feed you follow" /
+// "brand"), so a sentence repeating it was the same fact twice.
+let bitrefill = row("Bitrefill", ref: "bitrefill:order:9", title: "Amazon gift card — $50",
+                    price: 50, currency: "USD")
+let refillRow = row("Bitrefill", ref: "bitrefill:invoice:9", title: "Added $50 to your balance",
+                    price: 50, currency: "USD")
+let gnosis = row("Gnosis Pay", ref: "gnosispay:spend:7", title: "Card spend — €18.40",
+                 price: 18.40, currency: "EUR")
+ok("shopify.prov.silent", PurchaseStage.provenance(shopify) == nil)
+ok("food.prov.silent", PurchaseStage.provenance(food) == nil)
+ok("privacy.prov.silent", PurchaseStage.provenance(privacy) == nil)
+// The three that survive, each naming an absence the sheet has no field for.
+ok("deals.prov.stale", PurchaseStage.provenance(deal)?.contains("stale") == true)
+ok("bitrefill.prov.code", PurchaseStage.provenance(bitrefill)?.contains("code") == true)
+ok("gnosis.prov.merchant", PurchaseStage.provenance(gnosis)?.contains("merchant") == true)
+// A refill has no code to explain, so it says nothing.
+ok("refill.prov.silent", PurchaseStage.provenance(refillRow) == nil)
 // And the ROLE word, which is why the seller is a pair and not a name.
 eq("shopify.role", PurchaseStage.watchParty(shopify)?.role, "a store you follow")
 eq("deals.role", PurchaseStage.watchParty(deal)?.role, "a feed you follow")
@@ -294,6 +307,7 @@ esac
 # A mutation that fails to COMPILE, or that matches nothing (so it silently
 # tests the shipped file and scores it green), is itself a failure. Both traps
 # are real: `retriever-selftest` and `cursor-selftest` each paid for one.
+typeset -gi MUTATIONS=0
 mutate() {  # $1 = label, $2 = sed program
   local f="$WORK/mut.swift"
   sed "$2" "$SRC" > "$f"
@@ -307,7 +321,7 @@ mutate() {  # $1 = label, $2 = sed program
        exit 1 ;;
     2) print -u2 "purchase-stage-selftest: mutation '$1' did not compile — rewrite it";
        cat "$WORK/err"; exit 1 ;;
-    *) : ;;   # died as it should
+    *) (( MUTATIONS++ )) ;;   # died as it should
   esac
 }
 
@@ -326,11 +340,15 @@ mutate "an unmarked charge defaults to settled" \
 mutate "the merchant is sliced out of the title" \
   's|return merchant.isEmpty ? row.title.trimmingCharacters(in: .whitespaces) : merchant|return String(row.title.split(separator: "·").first ?? "")|'
 
-# One sentence for every seat — the false "from a store you follow" restored.
+# The stale-price warning lost, so a deal's price reads as rechecked.
 # Range-scoped: an unscoped `case "Deals":` also matches `watchParty`'s switch,
 # where deleting it is a syntax error rather than the bug being modelled.
 mutate "provenance loses the seat that made it necessary" \
   '/static func provenance/,/^    }$/ s|case "Deals":||'
+
+# The ruling reverted — a sentence on every seat again, restating the role line.
+mutate "provenance speaks where the screen already spoke" \
+  '/static func provenance/,/^    }$/ s|return nil|return word("Read from the account you connected.")|'
 
 # A grade this app invented rather than read.
 mutate "Nutri-Score accepts any letter" \
@@ -443,4 +461,4 @@ for ref in 'privacy:txn:demo' 'bitrefill:order:demo' 'bitrefill:invoice:demo' \
     || { print -u2 "purchase-stage-selftest: drift — demo exit no longer removes $ref rows"; exit 1; }
 done
 
-print "purchase-stage-selftest: shipped source passes, 10 mutations caught, drift guards clean"
+print "purchase-stage-selftest: shipped source passes, $MUTATIONS mutations caught, drift guards clean"

@@ -90,7 +90,7 @@ struct AppleWalletScreen: View {
             // §220's rule, and numerals here would send the eye hunting for a
             // step 1 that doesn't exist.
             BridgeStepLines(steps: [
-                String(localized: "Read on this \(DS.device). Casberi has no server, so nothing is uploaded or sold."),
+                String(localized: "Read on this \(DS.device). There is no server, so nothing is uploaded or sold."),
                 String(localized: "It can't spend or move money."),
                 String(localized: "Disconnect and everything it brought in is deleted."),
             ], numbered: false)

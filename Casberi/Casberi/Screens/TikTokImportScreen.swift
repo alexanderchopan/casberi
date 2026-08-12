@@ -126,7 +126,7 @@ struct TikTokImportScreen: View {
                     DSHaptic.tap()
                     Task { await runFetch() }
                 }
-                DSSlabNote(text: "Your saves arrive as bare links. This asks TikTok what each one is. No rush — unlike the export, the videos don't expire.")
+                DSSlabNote(text: "Saves arrive as bare links. This asks TikTok what each one is. No rush — the videos don't expire.")
             }
         }
         .dsSlabSection()

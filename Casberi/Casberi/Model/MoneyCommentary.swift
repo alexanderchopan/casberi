@@ -115,9 +115,9 @@ enum MoneyCommentary: Equatable {
               let money = MoneyReceipt.currency(typical, code: currency)
         else { return nil }
         let headline = String(localized: "You usually spend about \(money) at \(name).")
-        var subline = String(localized: "Of the \(values.count) charges Casberi has seen.")
+        var subline = String(localized: "Of the \(values.count) charges seen here.")
         if prior.allSatisfy({ $0 < mine }) {
-            subline = String(localized: "This is your highest of the \(values.count) Casberi has seen.")
+            subline = String(localized: "Your highest of the \(values.count) seen here.")
         }
         return .merchant(headline: headline, subline: subline, values: values)
     }
@@ -130,7 +130,7 @@ enum MoneyCommentary: Equatable {
     /// honest card names the bar and promises the notice.
     static func settling(need: Int) -> MoneyCommentary {
         .note(headline: String(localized: "Still settling."),
-              subline: String(localized: "Casberi will tell you when it reaches \(need) confirmations."))
+              subline: String(localized: "You'll be told when it reaches \(need) confirmations."))
     }
 
     /// The screening ladder — the reason this seat exists, and a status the
@@ -150,7 +150,7 @@ enum MoneyCommentary: Equatable {
                 ? String(localized: "Waiting on screening.")
                 : String(localized: "Waiting on screening, \(days) days in.")
             return .ladder(headline: head,
-                           subline: String(localized: "Casberi checks every sync and will tell you the day it clears."),
+                           subline: String(localized: "Checked every sync — you'll be told the day it clears."),
                            rung: .screening, since: since)
         }
     }
