@@ -2188,6 +2188,18 @@ struct Composer: View {
                     // modules that arrive last are the least important ones
                     // (that's the compose order). It stays put now; scrolling
                     // down through it is the reader's own gesture.
+                    // A keyboard over an answer must always have a way out
+                    // (2026-08-11). The re-focus rule at settle decides whether
+                    // one APPEARS — a typed ask keeps it, a tapped chip no
+                    // longer raises it — but a keyboard raised any other way (a
+                    // typed ask whose answer is longer than the space left, a
+                    // tap on the field before the answer lands) would still sit
+                    // over the document with nothing to dismiss it: this scroll
+                    // view had no dismissal at all, and the composer's only
+                    // tap-to-unfocus is on a different surface. Dragging the
+                    // answer now clears it, which is the gesture a person
+                    // already makes when they are trying to read past it.
+                    .scrollDismissesKeyboard(.interactively)
                     .onChange(of: answerStream.progress) { _, _ in
                         guard !briefInView else { return }
                         withAnimation(DS.Motion.standard) { proxy.scrollTo("bottom", anchor: .bottom) }
@@ -3677,6 +3689,10 @@ struct Composer: View {
             askGeneration += 1
             let gen = askGeneration
             let q = draft
+            // Was the person TYPING when this ask went out? Captured here,
+            // before the field is cleared, because it decides whether the
+            // keyboard comes back at settle (see the re-focus below).
+            let askedByTyping = fieldFocused
             draft = ""              // clear the field so a follow-up is ready
             // No placeholder doc while in flight (fix 2026-07-20): the old
             // `Insight("Thinking…")` painted the answer card's full tintDim
@@ -3802,14 +3818,30 @@ struct Composer: View {
                 if streamed { answerStream.paint(finalDoc) }
                 else if isInstantDoc(finalDoc) { answerStream.paint(finalDoc) }
                 else { answerStream.stream(finalDoc) }
-                // Every answer readies the field for a follow-up — EXCEPT the
-                // brief landing (prd §181), which is a screen to take in, not a
-                // prompt to answer. Popping the keyboard over the brief the
-                // instant the agent opens would bury the very thing the person
-                // opened it to see; they tap the field when they're ready to
-                // ask. `q`, not `currentQuestion`: a newer ask could have
-                // overtaken, but this closure already guarded `gen` above.
-                if !(turns.isEmpty && TodayBrief.matches(q)) {
+                // A TYPED ask readies the field for a follow-up. A TAPPED one
+                // does not (2026-08-11, reported: "i open the agent and click
+                // on what's going on w my money, the keyboard pops up and i
+                // can't see the entire screen or dismiss keyboard").
+                //
+                // This generalizes the carve-out below it rather than adding a
+                // second one. §181 already exempted the brief landing on the
+                // grounds that it is "a screen to take in, not a prompt to
+                // answer" — and that is equally true of every chip ask. The
+                // money/work/life chips each return a document to read, and
+                // popping a keyboard over one buries the answer the tap was
+                // for, having asked the person to dismiss something they never
+                // opened. Someone who was typing has the keyboard up already
+                // and expects to keep it; someone who tapped never asked for
+                // it, which is exactly the difference `askedByTyping` records.
+                //
+                // The escape hatch is separate and unconditional — the answer
+                // scroll view dismisses the keyboard interactively — because a
+                // keyboard with no way out is a trap however it got there, and
+                // this rule can only ever decide whether one APPEARS.
+                //
+                // `q`, not `currentQuestion`: a newer ask could have overtaken,
+                // but this closure already guarded `gen` above.
+                if askedByTyping && !(turns.isEmpty && TodayBrief.matches(q)) {
                     fieldFocused = true
                 }
             }
