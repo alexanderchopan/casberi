@@ -20750,6 +20750,239 @@ VERIFIED on the iPhone 17 Pro sim in both themes, including a frame-stepped vide
 of the transition — which is the only reason items 4 and 5 are right, since both
 are claims about motion that a screenshot cannot judge.
 
+## §360 — The Mac half of the room controls: a pointer that gets an answer, a key that reaches a folded seat, and chrome that stops twitching (user: "how would you improve the design of the mac app based on what we did today with mobile", then "do all"; 2026-08-11)
+
+§357–§359 rebuilt the two room controls for a FINGER and shipped them to Mac from
+the same tree. This is the pointer-and-keyboard half. **Nothing here can fail on a
+phone, and nothing here shows up in a screenshot taken on one** — which is exactly
+how item 1 landed: the wallet rail was written on 2026-08-11 as the one piece of
+shell chrome with neither a hover state nor a tooltip, while every sibling control
+had carried both since 2026-08-01.
+
+**1 · The wallet rail answers a cursor.** `dsHover()` on both its buttons, the
+argument `dsListCardRow`'s own note already makes for the 27 list rows it covers:
+every one of these was designed for a finger, which has no concept of hover, and
+on Mac that reads as a dead app the instant the cursor moves without anything
+responding. **The tooltip is worth more here than anywhere else in the app, and
+carries the FULL address**: the caption is `lineLimit(1)` inside a 66pt slot and an
+unnamed wallet wears `short`, so two wallets sharing a prefix are indistinguishable
+at a glance — the precise failure `dsTooltip` was written for one tier up ("names a
+mark you don't recognize without making you click into the room to find out"). The
+SPOKEN label is deliberately left as the caption: `short` is a summary a person can
+hear, a 42-character hex is not, and `dsTooltip`'s Mac-only gate is what keeps the
+two apart (on a touch surface `help()` becomes an accessibility hint).
+
+**2 · ⌘⇧[ / ⌘⇧] reach a folded seat.** ⌘1–⌘9 has addressed the chip STRIP since
+2026-07-28, and since §351 that strip folds a whole category behind one chip — so
+every market venue and every wallet room had **no key at all**, and the fold had
+quietly made the keyboard less capable than it was. Safari's own adjacent-tab pair,
+resolving its category from wherever the window is standing, so two keys serve every
+fold and disable themselves everywhere else. **Clamped, not wrapping** —
+`ShellChrome.walkStep`'s ruling ("a walk that wrapped would silently jump a reader
+from the newest thing to the oldest"), which holds for rooms too.
+
+**3 · ⌥1–⌥6 pick the wallet.** Positional against the rail exactly as ⌘1–⌘9 is
+against `chipOrder`: ⌥3 must mean the third face you can SEE. `WalletStore.watchLimit
++ 1` items, so the run never grows. **OPTION rather than command** because ⌘1–⌘9 is
+spent, and two runs of the same key meaning different things depending on which room
+you are in is worse than an unfamiliar modifier. The cost is that ⌥+digit types a
+character, which is the whole reason for item 4.
+
+**4 · A shortcut may not outlive the control it drives.** Both new families gate on
+`ShellChrome.shellChromeClear` (nothing raised, nothing pushed) — extracted from
+`canWalk`, whose `walkOrder` requirement is about feed ROWS and is irrelevant to
+changing venue. `MainSurface.roomControls` is mounted INSIDE the NavigationStack
+precisely so a pushed room covers it (§357: "a scope control above a screen it does
+not scope is a dead control"); a key equivalent that kept firing there would reopen
+that hole through the menu bar, where it is even harder to notice. A disabled item's
+key equivalent falls through to the responder chain, so this is also what hands ⌥1
+back to a composer someone is typing in. **Both the venue action and its `.disabled`
+gate come from ONE function returning the destination** rather than two expressions
+that can drift — and the shape that drift takes is an enabled menu item that does
+nothing, the honesty law's first clause broken where nobody looks.
+
+**5 · The wallet rail stops compressing on Mac.** `SourceChips.folds` is `minimized
+&& axis == .horizontal` — the strip **already refuses to fold wherever it is a rail**,
+and the horizontal strip is drawn exactly when `!showsRail`. The wallet rail sits
+directly beneath it and compressed unconditionally, making it the single piece of
+shell chrome that resized on scroll on a regular-width surface: that does not read as
+a system compressing, it reads as one control twitching. Gated on the same predicate
+now. The reason the strip declines is the reason this one should — folding buys back
+vertical space, and a surface wide enough to wear a rail is not short of it. This
+does not touch the phone, where §357's compression ruling stands untouched.
+
+**Two Mac checks that came back NEGATIVE, recorded so they are not re-run.**
+(a) *Catalyst's 77% scaling does not apply to this app.* `TARGETED_DEVICE_FAMILY =
+"1,2,6"` — family 6 is Optimized for Mac, so points are AppKit points at 1:1 and
+§359's glyph ramp needs no Mac-specific tuning. (b) *Today's `dsGlyph` pass is inert
+on Mac by construction*: it scales through `UIFontMetrics`, and macOS publishes no
+Dynamic Type control, so every glyph renders at its base size there. Both were real
+suspicions and both are answered statically — worth more than an inconclusive
+screenshot, and the reason neither needed one.
+
+**MECHANICAL, five guards in `category-fold-selftest.sh`, each mutation-proven.**
+Hover present, tooltip present, `compact:` still gated on `!showsRail`,
+`shellChromeClear` still testing all THREE flags, and at least two menu commands
+still gating on it. The fourth earned the file's own recurring lesson on its first
+run: it originally grepped `ShellChrome.swift` for `shellChromeClear` and passed
+happily against a renamed property, because `canWalk`'s use of it still matched — a
+guard must prove the DEFINITION, not that the word appears. What it protects is
+subtler than deletion (which the compiler catches): dropping `walkInPushedRoom` from
+the expression compiles, reads fine, and silently restores the §357 hole.
+
+## §362 — One rail, two rooms: the social faces become a filter, pinned, at the wallet faces' size (user: "would it be more cohesive if wallet avatars were same size as the social avatars / social avatar rows have an 'all' avatar like wallet does / wallet avatars weren't chrome, they can be scrolled off the screen like social ones", then "if you tap a wallet face the feed changes, if you tap a social face the feed changes… i don't see a difference", then "i want them the same size, and i want social to have an 'all' avatar (which is the default, and shows everyone posts together, but the avatars are there in case a user wants to filter and see just that one person… just like wallets)", then "the app has a lot of superpowers and a lot of stuff, so we need to make it stupid simple and the best way to do that is things being the same"; 2026-08-11)
+
+**The ruling, and why the first answer to it was wrong.** Asked whether the two
+face rows should be made cohesive, the initial reading was that they should NOT:
+the wallet rail is a scope control and the social roster was a navigational head
+card, so the three differences (size 36 vs 56, an "All" slot on one, one pinned
+and one scrolling) each encoded a real behavioural difference. That reading was
+correct about the code and wrong about the product. The user's reply is the whole
+of this section: *"if you tap a wallet face the feed changes, if you tap a social
+face the feed changes… i don't see a difference"* — and the fix is not to explain
+the difference better but to remove it. **The social faces filter now.** Tap one
+and the room narrows to that person; "All" is the default and the exit.
+
+**The principle, stated by the user and worth more than this feature:** *"the app
+has a lot of superpowers and a lot of stuff, so we need to make it stupid simple
+and the best way to do that is things being the same."* Two controls that look
+alike and behave differently cost more than two that look different — the app has
+to be learned twice, and the second lesson contradicts the first. Cohesion here
+is not decoration; it is the mechanism by which a large app stays small to use.
+
+**One type, two adapters** (`Shell/FaceScopeRail.swift`, replacing
+`WalletScopeRail.swift` and `ShapedRows.SocialRosterHero`). The rails were built
+months apart and had drifted; the guarantee that they cannot drift again is that
+there is one of them. `WalletScopeRail` and `SocialScopeRail` are now enums of
+pure adapters — a `shows` predicate, an `items` mapping, and a `matches`
+comparator — with no view code of their own. The comparator is per-adapter and
+deliberately so: hex compares case-insensitively (EIP-55 case is a checksum),
+a handle is a plain string, and getting that wrong empties a room rather than
+failing loudly.
+
+**Rulings inside the ruling:**
+
+1. **Size: 36, not 56.** The social faces came DOWN rather than the wallet faces
+   going up, on §356's reasoning — pinned above a room, a rail is chrome and
+   stays subordinate to the content it scopes. At 56 it read as the room's
+   headline, which is exactly what `SocialRosterHero` was and is not what either
+   of them is now.
+2. **Pinned, not scrolling** — the user's own third question, answered by §136
+   and §357 rather than re-litigated: a filter you are standing in must show you
+   that you are standing in it, and its "All" is the exit, so a rail that scrolls
+   away is a filter with no visible way out. This is the one of the three
+   original questions where the answer moved the OTHER way: the wallet rail
+   didn't become scrollable, the social one became pinned.
+3. **The person's room survives, one tap away.** The first tap used to open
+   `PersonRoomScreen`; it filters now, and the ALREADY-LIT face re-taps into that
+   room — the source strip's own re-tap grammar. It is affordable because the
+   door was never unique: `SocialPostThread` opens an author's room from any post
+   in the feed, so what was lost is a shortcut that duplicated a door on every
+   row.
+4. **No ranking in the rail.** The head card ranked accounts by who had posted
+   most (2026-08-08); the rail uses the store's own order. A head card is read
+   once and may say whatever is most interesting; a pinned control is a PLACE,
+   and position is half the identity of a small circular face — the same call
+   `CategoryFold.scopes` made for the switcher one tier up.
+5. **The head slot stays EMPTY.** `rosterAccounts` survives in
+   `FeedScreen.shapedSections` as a suppression term drawing `EmptyView()`.
+   Deleting the branch would fall the chain through to `FeedHeatmap`'s "Casting
+   activity" density grid — precisely the card §219 removed when the roster was
+   built ("a density grid says nothing a face with a ring doesn't already say
+   better"). The faces still say it, one tier up, permanently. A room that
+   answers a simplification by growing a card back is not simplified.
+6. **The scope dies with the room**, unlike the wallet scope, which spans its
+   whole category by §356. A person belongs to ONE network: a Farcaster handle
+   carried into the Bluesky room matches no row and paints an empty feed with
+   nothing able to explain why. Cleared in `MainSurface`'s
+   `onChange(of: filter.source)` rather than in `go(to:)`, because a swipe and a
+   deep link move the source too, and a scope surviving one of three doors is
+   worse than one surviving none.
+
+**The two halves flow in opposite directions, and that is deliberate.**
+Membership comes from the network's own store (synchronous, complete in the
+first frame of a room change — a rail that is one frame late is a rail that
+BLINKS), while the attention ring is published UP from `FeedScreen` into
+`ShellChrome.freshHandles`, because both its inputs are the feed's: this room's
+frozen last-visit stamp and its boundary-filtered rows. The shell's own corpus
+query deliberately does not fetch `authorHandle`, so asking it there would fault
+the heavy inline columns back in on every body pass — the exact cost that query's
+`propertiesToFetch` exists to avoid. A ring that is one frame late is just late.
+
+**A downgrade caught while wiring it, worth recording as a class.** The rail
+lives on the shell and the destination it wants lives on the feed, so the request
+hops through `ShellChrome.personRequest`. The obvious wiring was `RootShell`,
+which already presents a person for `casberi://person/…` — but it presents
+`SocialProfileCard`, the quick-glance tray, where the roster has always pushed
+the fuller `PersonRoomScreen`. Routing through the nearest available presenter
+would have silently downgraded the one door this whole change had to keep intact.
+**When a hand-off has an obvious existing receiver, check what it actually
+presents, not that it presents something of the right type.**
+
+**This session also re-earned the §-collision lesson mechanically.** This entry
+was written as §359, §359 was already taken by a concurrent session, and
+`prd-index-audit.py` caught it — the same "two sessions each taking the next free
+§" class §340 documents, found this time before it landed rather than three days
+after.
+
+## §361 — The top band gets the feed's geometry (user: "look at this on mac, the overlap", "is the demo rail too wide? b/c it looks like it hangs over the edge", "that's what i meant the demo banner is too wide. lets make it thinner"; 2026-08-11)
+
+One bug with two faces, both on Mac and iPad only, and neither visible from a
+phone. `MainSurface.topInset` is a `.safeAreaInset(edge: .top)` applied INSIDE
+the NavigationStack; the source rail is a `.safeAreaInset(edge: .leading)`
+applied OUTSIDE it, on the stack. **The stack's CONTENT inherits the leading safe
+area and is then capped by `dsAdaptiveContentWidth()`; a top inset view inherits
+neither.** So the band ran under the rail's head doors at one end and past the
+feed column at the other — the demo banner's first word sat behind the avatar
+door, and its "Exit" hung ~100pt beyond the card directly beneath it.
+
+**The banner was the visible casualty, not the only one.** `roomControls` moved
+into this same inset earlier the same day (§357), so the folded-category venue
+switcher and the wallet face rail were mis-columned too — much harder to notice,
+because a control is still perfectly tappable everywhere it is not covered.
+
+**Three cuts, and the two that failed are why this entry is long.**
+
+1 · `.padding(.leading, railWidth + s3)` fixed the OVERLAP and nothing else. A
+cap is not a padding: the band still ran the full remaining width, so the
+right-hand overhang the user was actually pointing at survived untouched.
+
+2 · Reserving the rail with `Color.clear.frame(width: railWidth)` in an `HStack`
+**destroyed the app**. `Color` fills whatever it is offered, and constraining
+only its WIDTH leaves its height unbounded — so the spacer grew to the full
+window, the top inset swallowed the entire surface, the feed rendered NOTHING,
+and the banner floated in the middle of an empty canvas. **It compiled, and it
+passed every static check in `verify.sh`.** One Mac snapshot showed it
+immediately. This is the §357 lesson in a new place: layout defects of this class
+are invisible to everything except a renderer.
+
+3 · Shipped: `.frame(maxWidth: readingMaxWidth, alignment: .leading)` then
+`.frame(maxWidth: .infinity, alignment: .leading)` then
+`.padding(.leading, railWidth)`. The padding sits OUTSIDE the cap on purpose —
+it reduces the width proposed to the cap, so the column sizes within what remains
+after the rail, which is the geometry the feed's content gets from the safe area.
+Inside the cap it would eat 88pt OF the column instead.
+
+**It deliberately does NOT reuse the feed's own `dsAdaptiveContentWidth()`, and
+that reversal is measured.** Sharing the modifier is only worth it when it
+produces agreement; applied here it CENTRES, and the feed's column turns out to
+be left-biased in practice — giving a band of exactly the right width sitting
+43pt to the right of the card below it. That reads worse than the overhang it
+replaced, because the eye tracks the left edge of a stack of cards. Pinned
+leading, the banner's capsule lands within ~6pt of the card's edge (measured off
+the Mac renderer: card at 112pt, capsule at 106pt once `DemoBanner`'s own `s4`
+inset is counted). **The general rule: a shared token beats a local constant only
+when it makes two surfaces agree — check that it does before citing consistency
+as the reason.**
+
+**The rail itself is NOT too wide, which was the other half of the question.**
+Measured: the rail column is 88pt and its widest chip ("Shopping") is 68pt. What
+hung over the edge was the band, every time.
+
+Guarded in `category-fold-selftest.sh`, mutation-proven: the rail's column is
+reserved, the reading cap is present, and `Color.clear.frame(width:)` may never
+come back as the way to reserve it.
+
 ## §340 — RECONSTRUCTED STUB: the 2026-08-08 session was never written down (recovered from git 2026-08-11)
 
 **This entry is not a ruling. It is a placeholder that exists so 48 citations in

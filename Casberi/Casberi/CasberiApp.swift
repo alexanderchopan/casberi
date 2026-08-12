@@ -145,6 +145,56 @@ struct CasberiApp: App {
     /// False when the platform can't open a second window — the New Window
     /// item disables itself rather than sitting there doing nothing.
     @Environment(\.supportsMultipleWindows) private var supportsMultipleWindows
+
+    /// The venue the frontmost window would land on `delta` steps along its
+    /// room switcher, or nil if there is nowhere to go (prd §360, 2026-08-11).
+    ///
+    /// **One function answers both "what does this item do" and "is it live",
+    /// which is why it returns the destination rather than a Bool.** Written as
+    /// two expressions the action and the `.disabled` gate drift, and the shape
+    /// that drift takes is an enabled menu item that does nothing — the honesty
+    /// law's own first clause, broken in the menu bar where nobody looks.
+    ///
+    /// Gated on the switcher actually being ON SCREEN: its own floor
+    /// (`CategoryFold.switcherFloor`, mirroring `MainSurface.categorySwitcher`)
+    /// and `shellChromeClear`, since `roomControls` is mounted inside the
+    /// NavigationStack precisely so a pushed room covers it.
+    ///
+    /// Clamped at both ends rather than wrapping — `ShellChrome.walkStep`'s
+    /// ruling ("a walk that wrapped would silently jump a reader from the newest
+    /// thing to the oldest"), and the same argument holds for rooms: ⌘⇧] off the
+    /// end of Markets should stop, not reappear at the far side.
+    private func venueNeighbour(_ delta: Int) -> String? {
+        guard focusedChrome?.shellChromeClear == true,
+              let source = focusedScene?.filter.source,
+              let category = BridgeCatalog.category(forSource: source),
+              let present = focusedChrome?.categoryVenues[category],
+              present.count >= CategoryFold.switcherFloor else { return nil }
+        // The order the switcher DRAWS, not the learned order it is handed —
+        // ⌘⇧] must mean the mark to the right of the one lit up.
+        let venues = CategoryFold.scopes(category: category, present: Set(present))
+        guard let here = venues.firstIndex(of: source) else { return nil }
+        let next = here + delta
+        guard venues.indices.contains(next) else { return nil }
+        return venues[next]
+    }
+
+    /// The wallet rail's slots in the order it draws them — "All", then each
+    /// watched wallet — or empty when the rail isn't showing (prd §360).
+    ///
+    /// Positional against what is on screen, exactly as ⌘1–⌘9 is against
+    /// `chipOrder`: ⌥3 must mean the third face you can SEE. The watch list is
+    /// process-wide (`WalletStore.shared`, one list for every window) while the
+    /// SCOPE is per-window (`ShellChrome.walletScope`) — so this reads the
+    /// singleton and writes through `focusedChrome`, which is the same split
+    /// `MainSurface` already makes.
+    private var focusedWalletScopes: [WalletStore.WatchedAddress?] {
+        guard focusedChrome?.shellChromeClear == true,
+              let source = focusedScene?.filter.source else { return [] }
+        let watched = WalletStore.shared.addresses
+        guard WalletScopeRail.shows(source: source, watched: watched.count) else { return [] }
+        return [nil] + watched.map { Optional($0) }
+    }
     @Environment(\.openURL) private var openURL
 
     var body: some Scene {
@@ -294,6 +344,62 @@ struct CasberiApp: App {
                     }
                     .keyboardShortcut(KeyEquivalent(Character("\(n)")), modifiers: .command)
                     .disabled(n > order.count)
+                }
+            }
+            // ⌘⇧[ / ⌘⇧] — one room left or right INSIDE a folded category
+            // (prd §360, 2026-08-11). Safari's own adjacent-tab pair, and the
+            // grammar ⌘1–⌘9 above already borrowed: those nine reach the chip
+            // STRIP, which since §351 folds a whole category behind one chip,
+            // so until now the seats behind that chip — every market venue,
+            // every wallet room — had no key at all. The category is resolved
+            // from wherever the window is standing, so the same two keys serve
+            // whichever fold you are in and disable themselves everywhere else.
+            //
+            // Worth doing only NOW: before §357 the switcher was a
+            // `safeAreaInset` on a screen carrying `.id(filter.source)`, so
+            // every venue change destroyed and rebuilt the control. A key that
+            // drives a control which tears itself down on each press is not a
+            // shortcut anyone would keep using.
+            CommandGroup(after: .toolbar) {
+                Button(venueNeighbour(-1).map { "Previous Venue (\($0))" } ?? "Previous Venue") {
+                    if let venue = venueNeighbour(-1) { focusedChrome?.sourceRequest = venue }
+                }
+                .keyboardShortcut("[", modifiers: [.command, .shift])
+                .disabled(venueNeighbour(-1) == nil)
+                Button(venueNeighbour(1).map { "Next Venue (\($0))" } ?? "Next Venue") {
+                    if let venue = venueNeighbour(1) { focusedChrome?.sourceRequest = venue }
+                }
+                .keyboardShortcut("]", modifiers: [.command, .shift])
+                .disabled(venueNeighbour(1) == nil)
+            }
+            // ⌥1–⌥6 — the wallet the room is scoped to (prd §360). "All" is
+            // always ⌥1, then one key per watched wallet in rail order, so the
+            // run is `WalletStore.watchLimit + 1` long and never grows.
+            //
+            // OPTION, not command: ⌘1–⌘9 is spent on the chip strip, and these
+            // two runs must not be the same key doing different things
+            // depending on which room you happen to be in. The cost is that
+            // ⌥ + digit types a character (⌥1 is "¡"), which is exactly why
+            // every item here disables unless the rail is drawn AND
+            // `shellChromeClear` — a disabled item's key equivalent falls
+            // through to the responder chain, so the composer keeps its keys.
+            CommandGroup(after: .toolbar) {
+                ForEach(1...(WalletStore.watchLimit + 1), id: \.self) { n in
+                    let scopes = focusedWalletScopes
+                    let slot = n <= scopes.count ? scopes[n - 1] : nil
+                    Button(n <= scopes.count
+                           ? (slot.map { "Scope to \($0.label.isEmpty ? $0.short : $0.label)" }
+                              ?? "Scope to All Wallets")
+                           : "Scope to Wallet \(n)") {
+                        guard n <= scopes.count else { return }
+                        // Animated, matching the rail's own tap — the lit face
+                        // and the room's re-derivation ride one curve either way.
+                        withAnimation(DS.Motion.standard) {
+                            focusedChrome?.walletScope = scopes[n - 1]?.address
+                        }
+                    }
+                    .keyboardShortcut(KeyEquivalent(Character("\(n)")), modifiers: .option)
+                    .disabled(n > scopes.count)
                 }
             }
             // The keyboard walk (2026-07-31) — the list half of list+detail,

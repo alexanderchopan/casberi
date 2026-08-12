@@ -202,34 +202,32 @@ struct SourceChips: View {
         .frame(maxHeight: .infinity, alignment: .top)
     }
 
-    /// The active word chip's fill — **ONE element, drawn once, that MOVES**
-    /// (prd §359 final, user: "it still doesn't seem like a glass blob", four
-    /// times across three earlier cuts).
+    /// The horizontal strip. **The active word chip's fill is NOT built here —
+    /// it lives in `WordChipFill`, per chip, and that file's own note is the
+    /// authority on why** (prd §359).
     ///
-    /// **Why the earlier cuts could not have worked, stated plainly so nobody
-    /// rebuilds them.** Every one of them drew the fill INSIDE each chip — as a
-    /// background that appeared in the arriving chip and disappeared from the
-    /// leaving one. Whatever you decorate that with (`matchedGeometryEffect`, a
-    /// `glassEffectID`, a real `glassEffect`), at no instant does a single shape
-    /// span the gap between two chips, so there is nothing for the system to
-    /// stretch and the result is a cross-fade every time. The blob everyone
-    /// pictures — the iOS tab bar, Control Center — is one piece of glass
-    /// CHANGING SIZE, not one handing off to another.
+    /// This doc used to describe a different implementation entirely: one
+    /// capsule hoisted to the row, adopting whichever chip owned `id: active`
+    /// via `matchedGeometryEffect(isSource: false)`, on the reasoning that a
+    /// blob must be ONE piece of glass changing size rather than one handing off
+    /// to another. **That cut was built, measured against the per-chip version
+    /// at 60fps, and LOST — it teleported, because positioning the hoisted fill
+    /// from an `anchorPreference` resolves on a later pass than the tap's own
+    /// transaction.** It was reverted; the prose was not (2026-08-11).
     ///
-    /// So there is ONE capsule, and it ADOPTS whichever chip currently owns
-    /// `id: active` (`matchedGeometryEffect(isSource: false)`). Moving between
-    /// chips is then a frame interpolation on a single continuous view, which
-    /// SwiftUI animates as travel and `glassEffect` renders as glass that
-    /// genuinely stretches and settles.
+    /// Corrected rather than deleted because of how it failed, which is the part
+    /// worth keeping: it did not merely go stale, it read as instructions.
+    /// It opened "why the earlier cuts could not have worked, stated plainly so
+    /// nobody rebuilds them" and then described the per-chip background — the
+    /// version that actually ships, right here, and won on measurement. Anyone
+    /// following it would have deleted the working fill as an earlier cut, using
+    /// this file's own words as the warrant. A doc that is merely out of date
+    /// costs a reader a minute; one that confidently forbids the shipped design
+    /// costs the next session the whole afternoon that chose it.
     ///
-    /// Two properties this buys that the per-chip version could not: the fill
-    /// crosses the GAP between chips (a real interval, not a fade), and it
-    /// widens or narrows as it goes, because "Work" and "Markets" are different
-    /// widths — which is the stretch that reads as substance.
-    ///
-    /// It sits in the BACKGROUND of the row, under the chips' own glass and
-    /// under their words, so the arriving label reads white against it and the
-    /// one it leaves returns to ink with nothing to repaint.
+    /// The design argument in it was real and is preserved in `WordChipFill`,
+    /// where it belongs — as a record of what was tried, not a claim about what
+    /// runs.
     private var horizontalStrip: some View {
         // The scroll strip runs the full width, UNDER the fixed app icon; the
         // leading fade mask dissolves each chip as it reaches the icon, so chips
@@ -918,6 +916,20 @@ private struct WordChipFill: ViewModifier {
     /// preferences resolve on a later pass than the tap's transaction. Recorded
     /// at 60fps and frame-stepped each time. This is the version that has a
     /// single view moving between two branches inside one animation.
+    ///
+    /// **The strongest argument AGAINST this version, kept because it is the one
+    /// that will be made again.** A per-chip background means that at no instant
+    /// does a single shape span the gap between two chips — so there is nothing
+    /// for the system to stretch, and the blob everyone pictures (the iOS tab
+    /// bar, Control Center) is one piece of glass CHANGING SIZE rather than one
+    /// handing off to another. It is a good argument. It lost to a measurement:
+    /// the hoisted single capsule it prescribes was built and frame-stepped
+    /// beside this, and teleported for the `anchorPreference` reason above,
+    /// while `matchedGeometryEffect` across two branches of one `if` does
+    /// interpolate the frame and does cross the gap. **The reasoning predicts
+    /// the wrong winner, which is exactly why it is written down here instead of
+    /// being left to sound convincing again in six weeks.** If you rebuild the
+    /// hoisted version, record 60fps and frame-step it before believing it.
     func body(content: Content) -> some View {
         content
             .background {

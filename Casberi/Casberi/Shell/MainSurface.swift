@@ -148,6 +148,77 @@ struct MainSurface: View {
     /// so an incremental build will happily hide it until a TestFlight archive.
     @ViewBuilder
     private var topInset: some View {
+        // **This band wears the FEED's own geometry — the rail's column reserved,
+        // then the same reading cap, centred the same way (prd §361, 2026-08-11,
+        // user: "the demo banner is too wide… lets make it thinner").**
+        //
+        // Both halves are one bug with two faces, and it is worth stating why a
+        // hand-rolled inset could not have fixed either. `topInset` is a
+        // `.safeAreaInset(edge: .top)` applied INSIDE the NavigationStack while
+        // the rail is a `.safeAreaInset(edge: .leading)` applied OUTSIDE it, on
+        // the stack — so the rail spans the window's full height from its very
+        // top, and this band is laid out across the FULL width beneath it. The
+        // stack's CONTENT respects the leading safe area and is then capped by
+        // `dsAdaptiveContentWidth()`; a top inset view inherits neither. So the
+        // band ran under the rail's doors at one end and past the feed column at
+        // the other — the banner's first word sitting behind the avatar, its
+        // "Exit" hanging ~100pt beyond the card below it.
+        //
+        // Reserving the rail with a spacer and applying the FEED'S OWN modifier
+        // to what remains makes the two provably agree, rather than approximately
+        // agree: same cap, same centring, same region, one modifier. A
+        // `.padding(.leading, railWidth)` (the first cut) fixed only the overlap
+        // and left the column mismatch, because the cap is not a padding.
+        //
+        // `dsAdaptiveContentWidth()` is a no-op on compact, and `showsRail` is
+        // false there, so the iPhone keeps its full-width band exactly as before.
+        //
+        // The banner is the visible casualty but not the only one: `roomControls`
+        // moved into this inset today (§357), so the venue switcher and the face
+        // rail were mis-columned too — harder to notice, since a control is still
+        // tappable everywhere it is not covered.
+        //
+        // **The rail's column is reserved with PADDING, not a spacer view, and
+        // that is a measured correction rather than a style preference.** The
+        // first cut put `Color.clear.frame(width: railWidth)` in an `HStack`
+        // beside the band — and `Color` is a shape that fills whatever it is
+        // offered, so constraining only its WIDTH left its height unbounded and
+        // it grew to the full window. The top inset then owned the entire
+        // surface: the feed rendered nothing at all and the banner floated in the
+        // vertical middle of an empty canvas. Caught on the Mac renderer, one
+        // snapshot after the change; it builds and it passes every static check.
+        //
+        // The padding is applied OUTSIDE the cap on purpose. It reduces the width
+        // proposed to `dsAdaptiveContentWidth()`, so the 700pt column centres
+        // within what remains after the rail — which is precisely the geometry
+        // the feed's own content gets from the leading safe area. Inside the cap
+        // it would instead eat 88pt OF the column and shift it off-centre.
+        // **Capped like the feed but pinned LEADING, and that difference is
+        // measured rather than chosen.** `dsAdaptiveContentWidth()` — the
+        // modifier the feed itself wears — caps at `readingMaxWidth` and CENTRES;
+        // applied here it produced a band of exactly the right width sitting
+        // 43pt to the right of the card beneath it, because the feed's column is
+        // left-biased in practice rather than centred. Pinning the band to the
+        // leading edge instead lands its capsule within ~6pt of the card's edge
+        // (measured off the Mac renderer: card at 112pt, banner capsule at 106pt
+        // once `DemoBanner`'s own `s4` inset is counted).
+        //
+        // So this deliberately does NOT reuse the feed's modifier, and says why:
+        // sharing a modifier is only worth it when it produces agreement, and
+        // here it produced a matching WIDTH with a mismatched EDGE — which reads
+        // worse than the overhang it replaced, since the eye tracks the left
+        // edge of a stack of cards.
+        bandContent
+            .frame(maxWidth: showsRail ? PadLayout.readingMaxWidth : .infinity,
+                   alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.leading, showsRail ? PadLayout.railWidth : 0)
+    }
+
+    /// What the top band actually stacks. Split out of `topInset` only so that
+    /// view can reserve the rail's column around it — see there.
+    @ViewBuilder
+    private var bandContent: some View {
         VStack(spacing: 0) {
             if demoActive {
                 DemoBanner()
@@ -215,10 +286,16 @@ struct MainSurface: View {
     ///
     /// Gating lives with each control (`CategoryFold.switcherFloor`,
     /// `WalletScopeRail.shows`) rather than being restated here.
+    /// **One rail, two rooms** (prd §362, 2026-08-11). The social faces were a
+    /// head CARD inside the feed (`SocialRosterHero`) that scrolled away and
+    /// navigated; they are the same pinned filtering rail the wallets wear now.
+    /// They can never both draw — a source is in the Wallet category or it is a
+    /// social room, never both — so the two `if`s are alternatives, not a stack.
     @ViewBuilder
     private var roomControls: some View {
         categorySwitcher
         walletScopeRail
+        socialScopeRail
     }
 
     /// Whichever folded category room is showing, its venue switcher (prd §351,
@@ -261,21 +338,95 @@ struct MainSurface: View {
     /// own. `minimizesChrome` already animates that flip and already ignores the
     /// inset change its own toggle causes (its settle window), which is what
     /// makes a fold-sensitive control safe to put in this inset at all.
+    ///
+    /// **…and `!showsRail`, which is `SourceChips.folds`' own axis gate spelled
+    /// for this control** (2026-08-11). The strip already refuses to fold on a
+    /// regular-width surface — `folds` is `minimized && axis == .horizontal`,
+    /// and the strip is vertical exactly when `showsRail` — so on Mac and iPad
+    /// the chrome above this rail holds still while you scroll. Left
+    /// unqualified the rail was the ONE piece of shell chrome that resized
+    /// there, which does not read as a system compressing; it reads as one
+    /// control twitching. The reason the strip declines is the same reason this
+    /// one should: folding buys back vertical space, and a surface wide enough
+    /// to wear a rail is not short of it.
     @ViewBuilder
     private var walletScopeRail: some View {
         if WalletScopeRail.shows(source: filter.source, watched: wallet.addresses.count) {
-            WalletScopeRail(
-                addresses: wallet.addresses,
+            FaceScopeRail(
+                items: WalletScopeRail.items(wallet.addresses),
                 scope: chrome.walletScope,
-                compact: chrome.minimized,
+                compact: chrome.minimized && !showsRail,
+                matches: WalletScopeRail.matches,
                 // Animated, as it was on the feed: the lit face's opacity and
                 // weight crossfade rather than snapping, and the room's own
                 // re-derivation (rows, balance, treemap) rides the same curve.
                 onPick: { picked in
                     withAnimation(DS.Motion.standard) { chrome.walletScope = picked }
                 },
+                // No re-tap verb: there is no "deeper" a watched address goes
+                // that the room you are already in does not already show.
+                onReTap: nil,
+                addTitle: String(localized: "Add a wallet"),
                 onAdd: { route.pushBridge(BridgeRouter.destination(forID: "wallet")) })
             .padding(.top, showsRail && !demoActive ? DS.Space.s2 : 0)
+        }
+    }
+
+    /// The social face rail — the same control the wallets wear (prd §362,
+    /// 2026-08-11, user ruling: *"the best way to [make it simple] is things
+    /// being the same"*).
+    ///
+    /// Membership comes from the network's OWN store rather than the corpus, so
+    /// the rail is complete on the first frame of a room change; the ring comes
+    /// the other way, published by the feed (`ShellChrome.freshHandles`), because
+    /// only the feed knows this room's last-visit stamp. See that property for
+    /// why the two halves flow in opposite directions.
+    ///
+    /// There is no add slot: following someone is not a thing you do from a rail
+    /// of the people you already follow, and the room's own header already
+    /// carries the door to its account manager. The wallet rail has one because
+    /// the wallet manager is the ONLY door to watching another address.
+    @ViewBuilder
+    private var socialScopeRail: some View {
+        let accounts = socialAccounts
+        if SocialScopeRail.shows(source: filter.source, accounts: accounts.count) {
+            FaceScopeRail(
+                items: SocialScopeRail.items(accounts, source: filter.source,
+                                             fresh: chrome.freshHandles),
+                scope: chrome.personScope,
+                compact: chrome.minimized && !showsRail,
+                matches: SocialScopeRail.matches,
+                onPick: { picked in
+                    withAnimation(DS.Motion.standard) { chrome.personScope = picked }
+                },
+                // Re-tapping the lit face opens that person's own room — the
+                // door the first tap used to be, kept one tap away now that the
+                // first tap filters instead. `RootShell` presents it through the
+                // same sheet `casberi://person/…` opens.
+                onReTap: { item in
+                    chrome.personRequest = SocialProfile(
+                        source: filter.source, handle: item.id,
+                        displayName: item.caption, bio: nil,
+                        avatarURL: {
+                            if case .avatar(let url, _) = item.face { return url }
+                            return nil
+                        }())
+                })
+            .padding(.top, showsRail && !demoActive ? DS.Space.s2 : 0)
+        }
+    }
+
+    /// The watched accounts behind whichever social room is showing.
+    ///
+    /// Read straight off the network's store — no corpus walk, so this costs
+    /// nothing on the body path, which matters because `topInset` is evaluated on
+    /// every body pass and is already this surface's most expensive property
+    /// (see `chipSnapshot`).
+    private var socialAccounts: [SocialAccount] {
+        switch filter.source {
+        case "Farcaster": return FarcasterStore.shared.socialAccounts
+        case "Bluesky": return BlueskyStore.shared.socialAccounts
+        default: return []
         }
     }
 
@@ -1141,6 +1292,15 @@ struct MainSurface: View {
         // dictionary lookup on every source switch and nothing else.
         .onChange(of: filter.source, initial: true) { _, source in
             CategoryFold.remember(source)
+            // A person scope belongs to ONE network, so it dies with the room
+            // (prd §362) — unlike the wallet scope, which spans its category on
+            // purpose. Carried into the next room it would match no row there and
+            // paint an empty feed with nothing able to explain why. Here rather
+            // than in `go(to:)` because a swipe and a deep link move the source
+            // too, and a scope that survives one of the three doors is worse than
+            // one that survives none.
+            chrome.personScope = nil
+            chrome.freshHandles = []
         }
         // A room asking to move to another room — the Markets switcher. See
         // `ShellChrome.sourceRequest` for why it takes this hop instead of

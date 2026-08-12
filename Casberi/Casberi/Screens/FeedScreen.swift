@@ -503,6 +503,17 @@ struct FeedScreen: View {
         UIApplication.shared.open(url)
     }
 
+    /// Is this room's content divided by AUTHOR — the one question the social
+    /// face rail asks (prd §362), answered by the room-shaping taxonomy that
+    /// already owns it rather than by a second list of source names kept in step
+    /// with `Shape` by hand. Internal because `SocialScopeRail` lives in the
+    /// shell and must decide whether to draw before any feed exists; `Shape`
+    /// itself stays private, since nothing outside this file has business
+    /// knowing the other twenty-two cases.
+    static func isSocialRoom(_ source: String) -> Bool {
+        Shape(source: source) == .social
+    }
+
     /// The shape a source takes when its chip is in force.
     private enum Shape {
         case all, photos, wallet, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, x, x402, appStoreConnect, cursor, plain
@@ -685,6 +696,7 @@ struct FeedScreen: View {
                 && (source != "All" || Corpus.showsInAll(thing))
                 && (filter.tag == "All" || thing.tags.contains(filter.tag))
                 && walletScopeAllows(thing)
+                && personScopeAllows(thing)
         }
     }
 
@@ -768,6 +780,19 @@ struct FeedScreen: View {
     private func walletScopeAllows(_ thing: Thing) -> Bool {
         guard roomTakesWalletScope, let scope = selectedWallet else { return true }
         return wallet.scopeMatches(thing.walletAddress, scope: scope)
+    }
+
+    /// The per-person scope (prd §362, 2026-08-11) — the social rail's own
+    /// filter, the exact counterpart of `walletScopeAllows` above, and gated the
+    /// same way for the same reason: on the ROOM, never on the scope's nil-ness.
+    /// The scope is cleared on every source change (`MainSurface`), so this gate
+    /// is belt-and-braces rather than the primary defence — but it is the one
+    /// that holds if a room is entered before that clear lands, and an ungated
+    /// compare against `authorHandle` would empty every non-social room, where
+    /// that field is nil on essentially every row.
+    private func personScopeAllows(_ thing: Thing) -> Bool {
+        guard shape == .social, let scope = chrome.personScope else { return true }
+        return thing.authorHandle == scope
     }
     private var filterLabel: String {
         let tagLabel = filter.tag == "All" ? nil
@@ -1700,6 +1725,18 @@ struct FeedScreen: View {
         .navigationDestination(item: $openPerson) { profile in
             PersonRoomScreen(profile: profile)
         }
+        // …asked for by the shell's face rail now (prd §362), which is where the
+        // faces live since they became a filter. It hands the request down
+        // rather than pushing itself, because THIS screen owns the destination:
+        // routing it through `RootShell` instead would have presented
+        // `SocialProfileCard` — the quick-glance tray — where the roster has
+        // always pushed the fuller `PersonRoomScreen`, a silent downgrade of the
+        // one door this change had to keep intact.
+        .onChange(of: chrome.personRequest) { _, person in
+            guard let person else { return }
+            openPerson = person
+            chrome.personRequest = nil
+        }
         // A raised sheet owns the keyboard (Mac, 2026-07-31 — see
         // `ShellChrome.canWalk`). It matters most where the detail pane
         // ISN'T: a Mac window narrower than `PadLayout.minWidthForPane` opens
@@ -2009,39 +2046,21 @@ struct FeedScreen: View {
         } else if let heatmapLabel {
             calendarHeatmapSection(visible, label: heatmapLabel)
         } else if !rosterAccounts.isEmpty {
-            // Fresh = a post landed after this room's own last-visit stamp
-            // (`newSince`, the same one the new-since divider rides).
-            let freshHandles: Set<String> = newSince.map { since in
-                Set(visible.compactMap { $0.capturedAt > since ? $0.authorHandle : nil })
-            } ?? []
-            // Richer roster (2026-08-08): who's actually been active in this
-            // room, not insertion order — a watched account with nothing
-            // landed shouldn't outrank one leading the feed. Purely derived
-            // from `visible` (the room's own things, already boundary-
-            // filtered live), no new field/request/store — the same
-            // discipline `FeedInsight`'s other readings follow.
-            let postCounts: [String: Int] = visible.reduce(into: [:]) { counts, thing in
-                guard let handle = thing.authorHandle, !handle.isEmpty else { return }
-                counts[handle, default: 0] += 1
-            }
-            // Stable sort (Swift's `sorted` guarantee): ties keep the
-            // account list's own order rather than reshuffling on every
-            // re-render over equal counts.
-            let rankedAccounts = rosterAccounts.sorted { a, b in
-                let ca = postCounts[a.key] ?? 0, cb = postCounts[b.key] ?? 0
-                if ca != cb { return ca > cb }
-                let fa = freshHandles.contains(a.key), fb = freshHandles.contains(b.key)
-                return fa && !fb
-            }
-            insightSection {
-                SocialRosterHero(source: source, accounts: rankedAccounts,
-                                  freshHandles: freshHandles) { account in
-                    DSHaptic.tap()
-                    openPerson = SocialProfile(source: source, handle: account.key,
-                                               displayName: account.title, bio: nil,
-                                               avatarURL: account.avatarURL)
-                }
-            }
+            // NOTHING is drawn here any more (prd §362, 2026-08-11), and the
+            // branch survives on purpose — `rosterAccounts` is now a
+            // SUPPRESSION term, not a card.
+            //
+            // The faces moved out of the room and onto the shell, as the pinned
+            // `FaceScopeRail` the wallets already wore. What they leave behind is
+            // an empty head slot, and the branch is what keeps it empty: delete
+            // it and the chain falls through to `FeedHeatmap`'s "Casting
+            // activity" density grid, which is precisely the card §219 removed
+            // when the roster was built ("a density grid says nothing a face with
+            // a ring doesn't already say better"). The faces still say it — one
+            // tier up, permanently — so the grid has no more claim on this room
+            // than it had yesterday, and a room that answers a ruling by growing
+            // a card back is the opposite of the simplification this was.
+            EmptyView()
         }
         switch shape {
         case .photos:
@@ -2542,6 +2561,29 @@ struct FeedScreen: View {
     /// the shape's entrance, stream its synthesis block. Every one of these is
     /// an ARRIVAL — spending them on a mounted-but-unseen neighbour would hand
     /// the person a page whose moment already happened.
+    /// Who posted here since you last opened this room — the social rail's
+    /// attention ring, handed UP to the shell (prd §362).
+    ///
+    /// It is computed here and not in `MainSurface` because both of its inputs
+    /// are the feed's: `newSince` is this room's own frozen last-visit stamp,
+    /// and `visible` is the room's boundary-filtered rows. The shell's own
+    /// corpus query deliberately does not fetch `authorHandle`, so asking it
+    /// there would fault the heavy columns back in on every body pass — the exact
+    /// cost that query's `propertiesToFetch` exists to avoid.
+    ///
+    /// Written on LANDING only, alongside the crown pour and for the same
+    /// reason: it is a fact about arriving in a room, and recomputing it as rows
+    /// stream in would dissolve the rings one by one while you watched.
+    private func publishFreshHandles() {
+        guard shape == .social, let since = newSince else {
+            chrome.freshHandles = []
+            return
+        }
+        chrome.freshHandles = Set(visible.compactMap {
+            $0.capturedAt > since ? $0.authorHandle : nil
+        })
+    }
+
     private func land() {
         freezeBoundary()
         // Replay the shape's entrance ONLY the first time this page is landed
@@ -2558,6 +2600,7 @@ struct FeedScreen: View {
         }
         streamBlock()
         loadWalletLive()
+        publishFreshHandles()
         // Every landing writes the crown pour's hue (prd §159): the scoped
         // wallet's face tint when you're standing inside one, else nil —
         // Casberi's own blue. Written unconditionally, not just by the Wallet

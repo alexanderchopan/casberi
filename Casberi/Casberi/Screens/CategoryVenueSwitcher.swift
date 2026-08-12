@@ -76,12 +76,17 @@ struct CategoryVenueSwitcher: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
-                // The selected mark's fill MORPHS between seats as one piece of
-                // glass (prd §359) — the same treatment the strip's word chips
-                // take one tier up, and the reason it is a container here too:
-                // a `glassEffectID` outside a `GlassEffectContainer` is inert.
-                // Both tiers were hand-rolling the same travel with
-                // `matchedGeometryEffect`; on iOS 26 the substance does it.
+                // The selected mark's fill TRAVELS between seats on
+                // `matchedGeometryEffect` — see `chip`, and note that this
+                // container no longer has anything to do with it. It was added
+                // to host a `glassEffectID` (which is inert outside a
+                // `GlassEffectContainer`), and §360 removed that decoration
+                // because it was equally inert INSIDE one, on a fill carrying no
+                // `glassEffect` of its own. With no glass children left there is
+                // nothing here to merge; it is kept only as the seam for when
+                // these chips take real glass, and is safe to delete otherwise.
+                // Stated rather than left implying it is load-bearing — this
+                // file's neighbour just cost a session exactly that mistake.
                 DSGlassContainer(spacing: 2) {
                     HStack(spacing: 2) {
                         ForEach(venues, id: \.self) { venue in
@@ -156,15 +161,26 @@ struct CategoryVenueSwitcher: View {
                     Capsule(style: .continuous).fill(DS.fillFaint)
                     if isOn {
                         let fill = Capsule(style: .continuous).fill(DS.tint.opacity(0.18))
-                        // iOS 26's own morph; `matchedGeometryEffect` stays as
-                        // the pre-26 and Reduce Motion path, so this degrades
-                        // rather than disappearing (§359).
+                        // **`matchedGeometryEffect` on EVERY version, including
+                        // 26 (prd §360, 2026-08-11).** This branched to
+                        // `glassEffectID` on iOS 26 and that branch was inert:
+                        // the decoration does nothing on a shape carrying no
+                        // `glassEffect`, and this fill is a flat 18% tint, not a
+                        // blob. So the shipped path had no travel at all while
+                        // the pre-26 fallback did — the selection teleported on
+                        // exactly the OS everyone runs, and looked correct in
+                        // every still frame.
+                        //
+                        // It is the same swap `WordChipFill` made one tier up
+                        // and reverted after frame-stepping at 60fps ("swapping
+                        // `glassEffectID` in for `matchedGeometryEffect`
+                        // silently deleted the travel it replaced"); this
+                        // control was left on the losing side of that finding.
+                        // Reduce Motion keeps the undecorated fill.
                         if reduceMotion {
                             fill
-                        } else if #available(iOS 26.0, *) {
-                            fill.glassEffectID("venueActiveFill", in: ns)
                         } else {
-                            fill.matchedGeometryEffect(id: "marketsVenueSelection", in: ns)
+                            fill.matchedGeometryEffect(id: "venueActiveFill", in: ns)
                         }
                     }
                 }

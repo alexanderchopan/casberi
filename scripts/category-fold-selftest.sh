@@ -65,7 +65,9 @@ ROOT="Casberi/Casberi/Shell/RootShell.swift"
 APP="Casberi/Casberi/CasberiApp.swift"
 BOOK="Casberi/Casberi/Screens/PredictionRoomBook.swift"
 CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
-for f in "$FOLD" "$ROOM" "$MAIN" "$CHIPS" "$FEED" "$SWITCHER" "$BROWSE" "$BOOK" "$CATALOG" "$ROOT" "$APP"; do
+RAIL="Casberi/Casberi/Shell/FaceScopeRail.swift"
+CHROME="Casberi/Casberi/Shell/ShellChrome.swift"
+for f in "$FOLD" "$ROOM" "$MAIN" "$CHIPS" "$FEED" "$SWITCHER" "$BROWSE" "$BOOK" "$CATALOG" "$ROOT" "$APP" "$RAIL" "$CHROME"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -95,6 +97,8 @@ strip_comments "$APP"      > "$TMP/app.nc"
 strip_comments "$CHIPS"    > "$TMP/chips.nc"
 strip_comments "$SWITCHER" > "$TMP/switcher.nc"
 strip_comments "$FEED"     > "$TMP/feed.nc"
+strip_comments "$RAIL"     > "$TMP/rail.nc"
+strip_comments "$CHROME"   > "$TMP/chrome.nc"
 
 # --- drift guards -----------------------------------------------------------
 # Wiring the compiled functions cannot prove on their own. A perfect `fold` is
@@ -313,6 +317,156 @@ grep -qE 'safeAreaInset\(edge: \.top' "$TMP/feed.nc" \
   && { echo "✗ FeedScreen grew a top safeAreaInset again — chrome pinned inside the"; \
        echo "  .id(filter.source) subtree is destroyed and re-slid on every room change,"; \
        echo "  which is the §357 bug (a switcher torn down by the tap it serves)."; exit 1; }
+
+# --- the Mac half of both room controls (prd §360, 2026-08-11) --------------
+# These four are POINTER and KEYBOARD rules. None of them can fail on a phone,
+# none shows up in a screenshot taken on one, and the app is shipped to Mac
+# TestFlight from the same tree — which is exactly how the wallet rail landed
+# (2026-08-11) as the one shell control with no hover state and no tooltip
+# while every sibling had carried both since 2026-08-01.
+
+# A control a cursor can rest on must answer. `dsHover` is folded into
+# `dsListCardRow` for lists; anything that isn't a List row has to say it,
+# which is why this is a per-control check and not a global one.
+grep -q 'dsHover()' "$TMP/rail.nc" \
+  || { echo "✗ the wallet rail has no hover state — on Mac a cursor crossing five faces and"; \
+       echo "  a + gets no response from any of them, which reads as a dead app (the same"; \
+       echo "  argument dsListCardRow's own note makes for the 27 rows it covers)."; exit 1; }
+# The caption is lineLimit(1) in a 66pt slot and an unnamed wallet wears
+# `short` — so two wallets sharing a prefix are indistinguishable, and the
+# tooltip is the ONLY place the full address can appear.
+grep -q 'dsTooltip' "$TMP/rail.nc" \
+  || { echo "✗ the wallet rail names nothing on hover — an unnamed wallet's caption is a"; \
+       echo "  truncated hex in a 66pt slot, so the tooltip is the only thing that can tell"; \
+       echo "  two wallets sharing a prefix apart without clicking one (dsTooltip's own reason)."; exit 1; }
+
+# THE COHESION ITSELF, made mechanical (prd §362, 2026-08-11). The wallet rail
+# and the social rail spent months as two controls that looked alike and behaved
+# differently — 36pt vs 56pt, an "All" slot on one, one pinned as chrome and one
+# scrolling away with the room — because each was built for its own room and
+# nothing held them to each other. The user's ruling is that sameness IS the
+# simplification ("the app has a lot of superpowers… the best way to [make it
+# simple] is things being the same"), so the guarantee is structural: ONE view
+# type, and the per-room parts are pure adapters with no view code to drift.
+#
+# None of this can be caught by a build or a screen sweep — two rails that have
+# diverged again render perfectly, and the cost is only ever paid by somebody
+# learning the app twice.
+grep -q 'struct FaceScopeRail: View' "$TMP/rail.nc" \
+  || { echo "✗ the shared face rail is gone — wallets and people are drawing their own"; \
+       echo "  rows of faces again, which is the exact drift §362 collapsed (36pt vs 56pt,"; \
+       echo "  an All slot on one, one pinned and one scrolling)."; exit 1; }
+for a in WalletScopeRail SocialScopeRail; do
+  grep -qE "enum $a" "$TMP/rail.nc" \
+    || { echo "✗ $a is no longer a pure adapter on the shared rail — if it has grown view"; \
+         echo "  code of its own the two rails can diverge again silently."; exit 1; }
+done
+# Both must be MOUNTED, and mounted together: a rail that is not in `roomControls`
+# is not chrome, and a filter you are standing in that scrolls away is a filter
+# with no visible way out (§136/§357, re-earned for the social rail by §362).
+grep -q 'walletScopeRail' "$TMP/main.nc" && grep -q 'socialScopeRail' "$TMP/main.nc" \
+  || { echo "✗ MainSurface.roomControls no longer carries BOTH face rails — one of them has"; \
+       echo "  gone back to being a card inside FeedScreen, where .id(filter.source) destroys"; \
+       echo "  it on every move it commands (§357) and it scrolls away with the room."; exit 1; }
+# The social scope must die with the room. A handle belongs to ONE network, so a
+# Farcaster handle carried into Bluesky matches no row and paints an empty feed
+# with nothing on screen able to explain why.
+grep -q 'chrome.personScope = nil' "$TMP/main.nc" \
+  || { echo "✗ the person scope is no longer cleared on a source change — carried into"; \
+       echo "  another network's room it matches nothing and the feed renders empty (§362)."; exit 1; }
+# `SourceChips.folds` is `minimized && axis == .horizontal`, i.e. the strip
+# refuses to fold wherever it is a rail. The wallet rail sits directly under it
+# and must decline on the same surface, or it is the single piece of shell
+# chrome that resizes on scroll on Mac — one control twitching, not a system
+# compressing.
+grep -qE 'compact: chrome\.minimized && !showsRail' "$TMP/main.nc" \
+  || { echo "✗ the wallet rail's compression is no longer gated on !showsRail — it would"; \
+       echo "  compress on Mac and iPad, where SourceChips.folds explicitly declines"; \
+       echo "  (folds = minimized && axis == .horizontal). Chrome that resizes alone reads"; \
+       echo "  as a glitch; the surface wide enough to wear a rail is not short of height."; exit 1; }
+# A key equivalent that outlives the control it drives is a dead control nobody
+# can even see to distrust — `roomControls` is mounted INSIDE the
+# NavigationStack precisely so a pushed room covers it (§357).
+# Checked as its DEFINITION, not as the string appearing somewhere: a first cut
+# grepped the file for `shellChromeClear` and passed happily against a renamed
+# property, because `canWalk`'s own use of it still matched. What has to hold is
+# that all THREE flags are still in the expression — dropping `walkInPushedRoom`
+# alone compiles, reads fine, and silently hands the shortcuts back to a pushed
+# room, which is the exact hole §357 closed.
+grep -A2 'var shellChromeClear' "$TMP/chrome.nc" \
+  | grep -q '!walkModalOpen && !walkSheetOpen && !walkInPushedRoom' \
+  || { echo "✗ ShellChrome.shellChromeClear no longer tests all three flags — the room-control"; \
+       echo "  shortcuts would keep driving a switcher and a rail that a pushed room, a raised"; \
+       echo "  agent or an open sheet has covered (§357/§360). It is also canWalk's gate, so"; \
+       echo "  a flag dropped here takes ↑/↓/Return with it."; exit 1; }
+grep -c 'shellChromeClear' "$TMP/app.nc" | grep -qE '^[2-9]|^[0-9]{2}' \
+  || { echo "✗ fewer than two menu commands gate on shellChromeClear — both the venue pair"; \
+       echo "  (⌘⇧[ / ⌘⇧]) and the wallet run (⌥1–⌥6) must, or one of them drives a control"; \
+       echo "  that is not on screen (§360)."; exit 1; }
+
+# --- glassEffectID may never decorate a shape with no glass (prd §360) -------
+# `glassEffectID` is a NO-OP on a view carrying no `glassEffect` — it does not
+# warn, it does not draw differently in a still frame, it simply removes the
+# travel of whatever it replaced. This tree has now paid for that twice in one
+# day: `WordChipFill` swapped it in for `matchedGeometryEffect`, lost the travel,
+# and reverted after frame-stepping at 60fps ("swapping it in silently deleted
+# the travel it replaced" — 0c93a6c); `CategoryVenueSwitcher` was left on the
+# losing side of that same finding, so its selection fill teleported on iOS 26
+# while its own pre-26 fallback animated correctly. A rule that costs a session
+# an afternoon twice is a rule that belongs in a script.
+#
+# Checked per FILE rather than per call — pairing a `glassEffectID` with the
+# shape it decorates means parsing Swift, and a file that reaches for the id
+# without ever applying `glassEffect`/`dsGlassBlob` is the finding either way.
+for gf in "$TMP"/*.nc; do
+  grep -q 'glassEffectID' "$gf" || continue
+  grep -qE 'glassEffect\(|dsGlassBlob\(' "$gf" \
+    || { echo "✗ $(basename "$gf" .nc) uses glassEffectID with no glassEffect anywhere in the file."; \
+         echo "  That decoration is INERT on a shape with no glass — it draws identically in"; \
+         echo "  every still frame and silently deletes the travel it replaced (§360). Use"; \
+         echo "  matchedGeometryEffect, which is what beat it on a frame-stepped 60fps"; \
+         echo "  recording, or give the shape real glass."; exit 1; }
+done
+
+# --- the top inset must clear the rail (prd §361) ---------------------------
+# `topInset` is a `.safeAreaInset(edge: .top)` applied INSIDE the NavigationStack
+# and the rail is a `.safeAreaInset(edge: .leading)` applied OUTSIDE it, on the
+# stack — so the rail spans the window's full height from the very top and this
+# band is laid out across the full width beneath it. The stack's CONTENT respects
+# the leading safe area; a top inset view does not. Everything in that VStack —
+# the demo banner AND both §357 room controls — therefore drew under the rail's
+# head doors on every regular-width surface. Verified on the real Mac renderer
+# (`-macSnapshot`) before and after, which is the only place it is visible at all:
+# it cannot happen on a phone, where `showsRail` is false.
+# Scoped to `topInset`'s own body (up to `bandContent`, the property it was
+# split into) rather than the whole file — `dsAdaptiveContentWidth()` is the
+# app's general column cap and appears on plenty of screens, so a file-wide grep
+# would pass while this band had lost it. A fixed `-A<n>` window does NOT work
+# here: `strip_comments` blanks comment lines rather than deleting them, so the
+# doc block above the construction still counts toward the window.
+awk '/private var topInset/,/private var bandContent/' "$TMP/main.nc" > "$TMP/topinset.nc"
+grep -qE 'padding\(\.leading, showsRail \? PadLayout\.railWidth' "$TMP/topinset.nc" \
+  || { echo "✗ MainSurface.topInset no longer reserves the rail's column — the demo banner and"; \
+       echo "  both room controls (§357) draw under the rail's head doors on Mac and iPad,"; \
+       echo "  because a top safeAreaInset does not respect the leading one applied outside"; \
+       echo "  the stack (§361). Invisible on iPhone, where showsRail is false."; exit 1; }
+# PADDING, never a spacer view. `Color.clear.frame(width:)` leaves the height
+# unbounded, so the spacer grows to the whole window and the top inset swallows
+# the surface — the feed renders NOTHING and the banner floats in the middle of
+# an empty canvas. That cut built cleanly and passed every static check; only the
+# Mac renderer showed it (§361).
+grep -q 'Color.clear.frame(width:' "$TMP/topinset.nc" \
+  && { echo "✗ MainSurface.topInset reserves the rail with a spacer view again — Color fills"; \
+       echo "  what it is offered, and constraining only its width leaves it full-height, so"; \
+       echo "  the inset takes the whole window and the feed disappears (§361)."; exit 1; }
+# The other half of the same bug: without the cap the band runs PAST the feed
+# column it sits above (the banner's "Exit" hung ~100pt beyond the card below
+# it). It must be the feed's OWN modifier, not a hand-rolled width, or the two
+# can agree today and drift apart the next time the column changes.
+grep -q 'PadLayout.readingMaxWidth' "$TMP/topinset.nc" \
+  || { echo "✗ MainSurface.topInset no longer wears the reading cap — the band runs wider than"; \
+       echo "  the column it sits above, so the demo banner and the room controls overhang"; \
+       echo "  every card beneath them on Mac and iPad (§361)."; exit 1; }
 # EVERY category, not Markets alone — the whole point of this follow-up
 # (user: "each category should have a switcher"). A gate re-narrowed to
 # `MarketsRoom.isMember(source)` would silently take the switcher away from

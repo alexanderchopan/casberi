@@ -71,6 +71,46 @@ final class ShellChrome {
     /// wallet is a feed with no rows and no way to explain itself.
     var walletScope: String?
 
+    /// Which watched account a SOCIAL room is scoped to — nil = all of them
+    /// (prd §362, 2026-08-11). The handle as the account's own store spells it
+    /// (`SocialAccount.key`), matched against `Thing.authorHandle`.
+    ///
+    /// **It lives here for the same reason `walletScope` does and clears for the
+    /// opposite one.** Here because `FeedScreen` is destroyed on every room
+    /// change (`.id(filter.source)`), so a scope held in its `@State` cannot
+    /// survive the shell-mounted rail that sets it. Cleared on every source
+    /// change — unlike the wallet scope, which spans its whole category —
+    /// because a person belongs to ONE network: a Farcaster handle carried into
+    /// the Bluesky room matches no row there, and the room would render empty
+    /// with nothing on screen able to explain why. Your wallets are the same
+    /// wallets in every Wallet room; @dwr is not on Bluesky.
+    var personScope: String?
+
+    /// Who has posted in the room you're looking at since you last opened it —
+    /// the face rail's attention ring (prd §362).
+    ///
+    /// Published BY `FeedScreen` and read by the shell, which is the inverse of
+    /// how the rail's membership flows (the shell reads the social stores
+    /// directly). The split is deliberate: membership must be on screen in the
+    /// first frame, so it comes from a synchronous store read, while the ring is
+    /// a fact about the CORPUS measured against this room's own last-visit stamp
+    /// — both of which live in the feed. A ring that is one frame late is a ring
+    /// that is late; a rail that is one frame late is a rail that blinks.
+    var freshHandles: Set<String> = []
+
+    /// A person's own room, asked for from outside the feed (prd §362). Set by
+    /// re-tapping the lit face in the social rail — which lives on the shell,
+    /// while the destination it wants lives on `FeedScreen`.
+    ///
+    /// It takes this hop rather than the rail pushing for itself, and NOT for
+    /// the usual "the shell owns the stack" reason: `RootShell` can already
+    /// present a person, but it presents `SocialProfileCard` — the quick-glance
+    /// tray — where the roster has always pushed the fuller `PersonRoomScreen`.
+    /// Routing through the nearest available presenter would have silently
+    /// downgraded the one door this change had to keep intact, so the request
+    /// goes to the screen that owns the right destination.
+    var personRequest: SocialProfile?
+
     /// The crown pour's hue override (prd §159, 2026-07-21). nil = Casberi's
     /// own tint, the permanent field; the Wallet feed sets a scoped wallet's
     /// face tint here while you stand in that wallet, so the whole crown —
@@ -362,14 +402,32 @@ final class ShellChrome {
     /// than one Bool three views race to set.
     var walkInPushedRoom = false
 
+    /// Nothing is raised over the shell and nothing is pushed on top of it —
+    /// i.e. the shell's own chrome (the strip, the room switcher, the wallet
+    /// rail) is what the person is actually looking at.
+    ///
+    /// Extracted from `canWalk` (2026-08-11) because the room-control shortcuts
+    /// need exactly this and nothing else: `walkOrder` is about feed ROWS, which
+    /// is a real requirement for ↑/↓ and irrelevant to changing venue. Sharing
+    /// the three flags rather than restating them keeps one writer each.
+    ///
+    /// **A shortcut for a control that isn't on screen is a dead control the
+    /// person can't even see to distrust.** `MainSurface.roomControls` mounts
+    /// its two controls INSIDE the NavigationStack precisely so a pushed room
+    /// covers them (§357 — "a scope control above a screen it does not scope is
+    /// a dead control"); a key equivalent that kept working there would reopen
+    /// that hole through the menu bar.
+    var shellChromeClear: Bool {
+        !walkModalOpen && !walkSheetOpen && !walkInPushedRoom
+    }
+
     /// Whether the walk commands are live at all. Mac-only (there is no menu
     /// bar to hold them elsewhere), never over anything raised or pushed, and
     /// never with nothing to walk. This is the single gate — when it is false
     /// the menu items disable, which is what actually hands ↑/↓/Return back to
     /// whatever should have had them.
     var canWalk: Bool {
-        DS.isMac && !walkModalOpen && !walkSheetOpen && !walkInPushedRoom
-            && !walkOrder.isEmpty
+        DS.isMac && shellChromeClear && !walkOrder.isEmpty
     }
 
     /// Move the selection by `delta`, clamped at both ends — a walk that
