@@ -220,6 +220,15 @@ enum VercelFetch {
             tags: [state == .ready ? "Deploy" : "Build failure"],
             sourceRef: "vercel:deploy:\(uid)"
         )
+        // The project as a FIELD, not only as a clause inside the joined title
+        // (2026-08-12). `WorkStage` draws the owning project on the sheet, and
+        // it will only ever draw one it can read off a stored field — slicing
+        // it out of the title on a separator would put half a commit subject
+        // in a row labelled "Project" the first time a commit message
+        // contained one, and a wrong value in a labelled row renders exactly
+        // like a right one. `authorHandle` is the field Cursor has meant
+        // "the repo this ran on" since §303, and it is unused here.
+        thing.authorHandle = project
         // The branch it came off, and who pushed it. Display copy — the Trello
         // card-back rule — because "which branch" is the first question a
         // failed build raises and the title has no room for it.

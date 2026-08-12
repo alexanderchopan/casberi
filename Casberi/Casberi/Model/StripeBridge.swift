@@ -148,6 +148,32 @@ enum StripeMoney {
         guard !code.isEmpty else { return "\(value)" }
         return value.formatted(.currency(code: code))
     }
+
+    /// The same amount as a NUMBER, for `Thing.priceValue` (2026-08-12).
+    ///
+    /// Until now every Stripe amount existed only inside `text`'s output —
+    /// so the money was in the corpus as characters and nothing could add,
+    /// compare or re-format it. Recovering it meant parsing our own
+    /// formatting back, which means inverting the two tables above AND
+    /// recovering an ISO code from a symbol, and "$" is ambiguous across USD,
+    /// CAD, AUD and more. The raw minor units are right here; they just were
+    /// never kept.
+    ///
+    /// `priceValue`/`priceCurrency` are EXISTING fields already in the
+    /// deployed CloudKit schema (`CD_priceValue`, `CD_priceCurrency` — Gnosis
+    /// Pay and Apple Wallet have used them since they shipped), so this is a
+    /// stamp, not a migration: no new property, no Production deploy.
+    ///
+    /// Note this does NOT join Stripe to `Corpus.cardSpendSources` — that
+    /// membership test is `kind == .transaction` AND a source allowlist, and
+    /// every Stripe row is a `.link`. "What did I spend?" cannot start
+    /// counting disputes.
+    static func value(_ minor: Int, currency: String) -> Double? {
+        guard !currency.isEmpty else { return nil }
+        return NSDecimalNumber(
+            decimal: Decimal(minor) / divisor(for: currency.uppercased())
+        ).doubleValue
+    }
 }
 
 // MARK: - The silence alarm
@@ -635,6 +661,25 @@ enum StripeShape {
         /// Worth a berry shower. Money arriving, a dispute won, a payment
         /// recovered — never a dispute opening, and never a cancellation.
         var celebrates = false
+        /// The outcome as a STABLE, never-localized marker (2026-08-12).
+        ///
+        /// `tag` says which KIND of money event this is ("Dispute"), and for
+        /// three of them that is not enough to know how it went — won and
+        /// lost are both "Dispute", a payout that failed and one that paid
+        /// are both "Payout". Until now the direction lived only inside the
+        /// localized title, which is exactly the trap prd §340 documented for
+        /// Cursor: read it back and a device that changed language reports
+        /// every past loss as a win.
+        ///
+        /// So it is landed as a tag, in English, never localized — Cursor's
+        /// `facetTag` precedent — which `WorkStage` reads and which doubles
+        /// as a §308 facet ("stripe disputes lost").
+        var facets: [String] = []
+        /// The amount, in the currency's own minor units, and its ISO code —
+        /// kept so the row can carry a real number (see `StripeMoney.value`).
+        /// Nil for the shapes that name no single amount (churn, silence).
+        var amountMinor: Int?
+        var currency: String?
     }
 
     /// The event's payload object. Every Stripe event nests it identically.
@@ -646,6 +691,15 @@ enum StripeShape {
                               amountKey: String = "amount") -> String {
         StripeMoney.text(StripeFetch.intValue(payload[amountKey]),
                          currency: (payload["currency"] as? String) ?? "")
+    }
+
+    /// The same two numbers `money` formats, kept raw for `Shaped.amountMinor`
+    /// — read from the identical keys so the row's number and its sentence can
+    /// never disagree about which amount they mean.
+    private static func amount(_ payload: [String: Any],
+                               amountKey: String = "amount") -> (Int, String) {
+        (StripeFetch.intValue(payload[amountKey]),
+         (payload["currency"] as? String) ?? "")
     }
 
     /// A deadline in words, month and day — never a bare weekday. The Aerodrome
@@ -669,9 +723,11 @@ enum StripeShape {
             let due = StripeFetch.date(details?["due_by"])
             var title = "Dispute opened · \(money(payload))"
             if let due { title += " — evidence due \(due.formatted(deadlineFormat))" }
+            let (minor, code) = amount(payload)
             return Shaped(title: title,
                           url: StripeAccount.dashboardURL("disputes/\(id)"),
-                          tag: "Dispute", when: when, dueAt: due)
+                          tag: "Dispute", when: when, dueAt: due,
+                          amountMinor: minor, currency: code)
 
         case "charge.dispute.closed":
             // `status` carries the outcome. "won"/"lost" are the two that mean
@@ -684,27 +740,42 @@ enum StripeShape {
             default:     "Dispute closed"
             }
             let url = StripeAccount.dashboardURL("disputes/\(id)")
+            // The direction as a stable marker beside the localized verb —
+            // "withdrawn" and any Stripe-side close get NEITHER, so the sheet
+            // says the neutral "Dispute opened"'s sibling rather than
+            // inventing a win or a loss we were never told about.
+            let outcome = switch status {
+            case "won":  ["Won"]
+            case "lost": ["Lost"]
+            default:     [String]()
+            }
+            let (minor, code) = amount(payload)
             return Shaped(title: "\(verb) · \(money(payload))",
                           url: url,
                           tag: "Dispute", when: when, dueAt: nil,
                           // Enrich-if-found, never required: a dispute closing
                           // is news even if we never saw it open.
-                          resolves: url, celebrates: status == "won")
+                          resolves: url, celebrates: status == "won",
+                          facets: outcome, amountMinor: minor, currency: code)
 
         case "payout.paid":
+            let (minor, code) = amount(payload)
             return Shaped(title: "\(money(payload)) paid out to your bank",
                           url: StripeAccount.dashboardURL("payouts/\(id)"),
-                          tag: "Payout", when: when, dueAt: nil, celebrates: true)
+                          tag: "Payout", when: when, dueAt: nil, celebrates: true,
+                          amountMinor: minor, currency: code)
 
         case "invoice.payment_succeeded":
             // News only as a RECOVERY. Every recurring invoice succeeds, so
             // without `requiresPrior` this is the charge firehose wearing a
             // friendlier name — see `watchedTypes`.
             let url = StripeAccount.dashboardURL("invoices/\(id)")
+            let (minor, code) = amount(payload, amountKey: "amount_paid")
             return Shaped(title: "Payment recovered · \(money(payload, amountKey: "amount_paid"))",
                           url: url,
                           tag: "Dunning", when: when, dueAt: nil,
-                          resolves: url, requiresPrior: true, celebrates: true)
+                          resolves: url, requiresPrior: true, celebrates: true,
+                          facets: ["Recovered"], amountMinor: minor, currency: code)
 
         case "payout.failed":
             // Stripe's own failure sentence when it gives one — it names the
@@ -714,9 +785,11 @@ enum StripeShape {
                 ?? (payload["failure_code"] as? String)
             var title = "Payout failed · \(money(payload))"
             if let reason, !reason.isEmpty { title += " — \(reason)" }
+            let (minor, code) = amount(payload)
             return Shaped(title: title,
                           url: StripeAccount.dashboardURL("payouts/\(id)"),
-                          tag: "Payout", when: when, dueAt: nil)
+                          tag: "Payout", when: when, dueAt: nil,
+                          facets: ["Failed"], amountMinor: minor, currency: code)
 
         case "customer.subscription.deleted":
             // The event object is the subscription, which names its customer
@@ -740,9 +813,11 @@ enum StripeShape {
             let retry = StripeFetch.date(payload["next_payment_attempt"])
             var title = "Payment failed · \(money(payload, amountKey: "amount_due"))"
             if let retry { title += " — retries \(retry.formatted(deadlineFormat))" }
+            let (minor, code) = amount(payload, amountKey: "amount_due")
             return Shaped(title: title,
                           url: StripeAccount.dashboardURL("invoices/\(id)"),
-                          tag: "Dunning", when: when, dueAt: retry)
+                          tag: "Dunning", when: when, dueAt: retry,
+                          amountMinor: minor, currency: code)
 
         default:
             // A type we didn't ask for. Reachable only if Stripe widens what
@@ -868,10 +943,20 @@ enum StripeIngest {
                 content: shaped.url,
                 source: StripeWatch.source,
                 capturedAt: shaped.when,
-                tags: [shaped.tag],
+                tags: [shaped.tag] + shaped.facets,
                 sourceRef: "stripe:event:\(id)"
             )
             thing.dueAt = shaped.dueAt
+            // The amount as a number, not just as characters inside the title
+            // (2026-08-12). Both fields or neither: a value with no currency
+            // is a bare number the sheet would have to guess a symbol for, and
+            // guessing "$" is the §83 fake status in the one domain where
+            // believing it is expensive.
+            if let minor = shaped.amountMinor, let code = shaped.currency,
+               let value = StripeMoney.value(minor, currency: code) {
+                thing.priceValue = value
+                thing.priceCurrency = code.uppercased()
+            }
             landed.append(thing)
             if shaped.celebrates, let ref = thing.sourceRef { celebrating.insert(ref) }
         }

@@ -292,6 +292,10 @@ enum PagerDutyIngest {
                 if let urgency = incident.urgency {
                     thing.summary = String(localized: "\(urgency) urgency")
                 }
+                // The service as a FIELD (2026-08-12) — see `VercelBridge` for
+                // the reasoning; machine-generated incident titles are the
+                // worst case for slicing a name out of a joined string.
+                thing.authorHandle = incident.service
                 context.insert(thing)
                 existing.insert(triggeredRef)
                 SpotlightIndex.index([thing])
@@ -318,6 +322,7 @@ enum PagerDutyIngest {
                 tags: ["Resolved"],
                 sourceRef: resolvedRef
             )
+            thing.authorHandle = incident.service
             context.insert(thing)
             existing.insert(resolvedRef)
             SpotlightIndex.index([thing])

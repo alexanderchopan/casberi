@@ -536,6 +536,12 @@ enum SentryIngest {
         // "KeyError: 'id'" into something you can act on without opening
         // Sentry. Never the retrieval-only `enrichedText`.
         if let culprit = issue.culprit { thing.summary = culprit }
+        // The project as a FIELD (2026-08-12) — see `VercelBridge` for the
+        // reasoning. `WorkStage` only ever draws a project it can read off a
+        // stored field, never one sliced out of the joined title, because an
+        // error message is exactly the kind of string that contains a
+        // separator.
+        thing.authorHandle = issue.project
         return thing
     }
 
