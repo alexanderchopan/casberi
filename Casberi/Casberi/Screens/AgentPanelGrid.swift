@@ -497,11 +497,14 @@ private struct FigureView: View {
     }
 
     /// Tone is STATE, so it keeps its own colours rather than the room's hue —
-    /// the one place identity yields to meaning.
+    /// the one place identity yields to meaning. State means the DS semantic
+    /// tokens, not their dark hexes: this panel is theme-adaptive (no
+    /// `dsInk()`), so it draws on WHITE in light mode, where the pinned dark
+    /// values measure ~2:1 and never pick up the Increase Contrast variant.
     private func tone(_ index: Int) -> Color {
         switch index {
-        case 1:  return Color(hex: "#30d158")
-        case 2:  return Color(hex: "#ff453a")
+        case 1:  return DS.confirm
+        case 2:  return DS.destructive
         default: return hue
         }
     }
@@ -547,7 +550,7 @@ private struct FigureView: View {
         // (§83: a change that rounds to zero has no direction).
         let stroke: Color = {
             guard let rising else { return hue }
-            return rising ? Color(hex: "#30d158") : Color(hex: "#ff453a")
+            return rising ? DS.confirm : DS.destructive
         }()
         return GeometryReader { geo in
             let w = geo.size.width, h = geo.size.height
@@ -1039,9 +1042,15 @@ private struct RunwayFigure: View {
         }
     }
 
+    /// The runway's three rungs are STATE, so they read from the semantic
+    /// tokens. `urgent` was a raw system yellow, which measures ~1.4:1 on the
+    /// light page this panel actually draws on — below the 3:1 bar for a mark
+    /// carrying meaning, and blind to Increase Contrast. `DS.attention` is the
+    /// token for exactly this rung, and red → orange → tint still reads as a
+    /// descending ramp.
     private func colour(_ mark: AgentPanel.RunwayMark) -> Color {
-        if mark.overdue { return Color(hex: "#ff453a") }
-        if mark.urgent  { return Color(hex: "#ffd60a") }
+        if mark.overdue { return DS.destructive }
+        if mark.urgent  { return DS.attention }
         return DS.tint
     }
 }
@@ -1078,10 +1087,13 @@ private struct FlowFigure: View {
             let labelW = w * 0.29
             let spineX = w / 2
             ZStack {
+                // In/out is STATE, so the ribbons take the semantic tokens —
+                // the raw dark hexes never adapted to the light page or to
+                // Increase Contrast.
                 ribbons(spineEdge: spineX - 5, labelEdge: labelW, lanes: shownIn,
-                        height: h, color: Color(hex: "#30d158"), grown: inflow)
+                        height: h, color: DS.confirm, grown: inflow)
                 ribbons(spineEdge: spineX + 5, labelEdge: w - labelW, lanes: shownOut,
-                        height: h, color: Color(hex: "#ff453a"), grown: outflow)
+                        height: h, color: DS.destructive, grown: outflow)
                 Capsule().fill(hue)
                     .frame(width: 4, height: h * 0.84)
                     .scaleEffect(y: spine, anchor: .center)
