@@ -40,12 +40,29 @@ enum CategoryFold {
     /// How many members must be PRESENT before a category's own venue
     /// SWITCHER draws (`CategoryVenueSwitcher`, wired generically in
     /// `FeedScreen.categorySwitcher` — prd §351, "each category should have a
-    /// switcher"). A different question from whether the CHIP folds, which
-    /// has no floor at all: a single member still folds to its category
-    /// word, but a switcher offering one scope is not a control
-    /// (`PredictionVenueSwitcher`'s own rule, inherited from Markets, the
-    /// first category to earn one).
-    static let switcherFloor = 2
+    /// switcher"). A different question from whether the CHIP folds, which has
+    /// no floor at all.
+    ///
+    /// **ONE since 2026-08-11 (user ruling), reversing this file's own
+    /// argument.** It was 2, reasoning that "a switcher offering one scope is
+    /// not a control" — true in isolation, and wrong about the thing that
+    /// actually matters, which is that a room should not change SHAPE based on
+    /// how many apps you happen to have connected to it. Reported from the
+    /// Work category with GitHub as its only seat: "we aren't showing the icon
+    /// source bar, but i think we should so it's the same on every screen —
+    /// it's ok to have a bar with only one icon in it."
+    ///
+    /// So the bar is chrome that says WHICH ROOM YOU ARE IN, not a control
+    /// that only earns its place by offering a choice. At one member it names
+    /// the room and shows you its face; at two it also switches. That is the
+    /// same reading `MainSurface.roomControls` already gave it by mounting it
+    /// on the shell rather than the screen (§357).
+    ///
+    /// `MarketsRoom.switcherFloor` aliases this, so Markets moves with it: a
+    /// single connected exchange now gets the generic switcher and
+    /// `PredictionRoomBook` stands its own down, which is exactly the
+    /// no-switcher-inside-a-switcher rule it already followed at two.
+    static let switcherFloor = 1
 
     /// Every catalog category's members, resolved once — `static let`, not a
     /// computed property, for the same perf reason `MarketsRoom.members` was:
