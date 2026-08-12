@@ -125,7 +125,22 @@ HOSTS=$(
 )
 
 missing=()
-for host in $HOSTS; do
+# `while read` and never `for host in $HOSTS` — in EVERY loop over a captured
+# multi-line string in this file (2026-08-12).
+#
+# The old form depends on the shell splitting an unquoted expansion on
+# whitespace, which bash does and **zsh does not**. Run as `zsh
+# network-reach-audit.sh` — overriding the shebang, which is easy to do and
+# looks harmless — the whole host list became ONE word, nothing ever matched,
+# and the audit reported a FALSE ship-gate failure naming a family that was
+# correctly declared two lines away in the registry.
+#
+# It cost more than an hour, and worse: a bisect "reproduced" the failure at
+# every commit going back before the day's work, because each run repeated the
+# same harness error. That reads exactly like a long-standing regression. This
+# form behaves identically under bash, zsh and sh — checked, all three.
+while read -r host; do
+  [[ -z "$host" ]] && continue
   # In the registry?
   if grep -q "\"$host\"" "$REGISTRY"; then continue; fi
   # On the explicit non-reach denylist?
@@ -135,7 +150,7 @@ for host in $HOSTS; do
   done
   [[ -n "$skip" ]] && continue
   missing+=("$host")
-done
+done <<< "$HOSTS"
 
 if (( ${#missing[@]} > 0 )); then
   echo "network-reach-audit: ✗ ${#missing[@]} host(s) reach out but aren't disclosed."
@@ -181,12 +196,13 @@ declared_hosts=$(grep -oE '"[a-z0-9-]+(\.[a-z0-9-]+)+"' "$REGISTRY" | tr -d '"' 
 tail_disclosed() {
   local tail="$1" bare="${1#.}" h
   local want=$(( $(tr -cd '.' <<< "$bare" | wc -c) + 1 ))
-  for h in $declared_hosts; do
+  while read -r h; do
+    [[ -z "$h" ]] && continue
     [[ "$h" == "$bare" ]] && return 0
     case "$h" in
       *"$tail") [[ $(tr -cd '.' <<< "$h" | wc -c) -eq $want ]] && return 0 ;;
     esac
-  done
+  done <<< "$declared_hosts"
   return 1
 }
 
@@ -219,7 +235,10 @@ alchemy_hosts() {
 if [[ "${1:-}" == "--self-test" ]]; then
   # A check that can't fail proves nothing.
   fails=0
-  declared_hosts="substack.com eth-mainnet.g.alchemy.com query1.finance.yahoo.com"
+  # Newline-separated, like the real extractor above: the loop in
+  # `tail_disclosed` reads LINES, so a space-separated fixture would test
+  # a shape the function never actually sees.
+  declared_hosts=$(printf '%s\n' substack.com eth-mainnet.g.alchemy.com query1.finance.yahoo.com)
   for good in .substack.com .g.alchemy.com .finance.yahoo.com; do
     tail_disclosed "$good" || { echo "self-test ✗ $good should be disclosed"; fails=1; }
   done
@@ -283,9 +302,10 @@ BUILT=$(
 )
 
 undisclosed_tails=()
-for tail in $BUILT; do
+while read -r tail; do
+  [[ -z "$tail" ]] && continue
   tail_disclosed "$tail" || undisclosed_tails+=("$tail")
-done
+done <<< "$BUILT"
 
 if (( ${#undisclosed_tails[@]} > 0 )); then
   echo "network-reach-audit: ✗ ${#undisclosed_tails[@]} host family(ies) built at runtime aren't disclosed."

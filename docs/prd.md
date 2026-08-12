@@ -21350,6 +21350,23 @@ in the one place a reader would believe it instantly. Distance, duration and
 pace are real and already computed at ingest, so the metric band stands without
 it. When splits are read they get their own shape, not a fact row.
 
+**Re-decided 2026-08-12 (user: "you decide on workout pace") — still no, and
+the reason it was nearly a yes was a WRONG FACT of mine.** This entry first
+said splits "come back in the same fetch", which is false: `fetchRecentWorkouts`
+returns `HKWorkout` SUMMARIES over a 90-day window, and a split or heart-rate
+series is a separate `HKQuery` **per workout**. Building it at ingest is
+therefore N extra queries on a path that runs every connect and every
+foreground, plus a stored series — which means a new `Thing` property, which
+means a CloudKit Production deploy for a field that can never afterwards be
+removed. Three costs, for the smallest of the three readings: the metric band
+already states pace, and a curve adds only its VARIATION.
+
+**The shape that would make it right, when it is wanted:** read it LAZILY when
+the sheet opens — one query, for the one workout being looked at — and store
+nothing. No field, no deploy, no ingest cost, and the honesty rail is kept for
+free because the curve exists only where it was really fetched. That is a
+different feature from the one the mock drew, and it is the one worth building.
+
 **Retiring the joined strings.** `content` is what `Retriever.rank` scores and
 Spotlight indexes, so every bridge still writes it and the facts are the
 structured mirror the sheet draws. Un-joining is additive; it deletes no

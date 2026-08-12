@@ -833,6 +833,8 @@
 
 <div class="callout">
   <b>2 · The pace curve is gone</b>, as flagged above. Distance, duration and pace are real; the sparkline was not, and nothing in <code>HealthIngest</code> fetches a split series. The metric band ships without it.
+  <br><br>
+  <b>Re-decided, and a correction:</b> this page earlier said splits "come back in the same fetch". That is <b>wrong</b> — <code>fetchRecentWorkouts</code> returns <code>HKWorkout</code> summaries over 90 days, and a split series is a separate <code>HKQuery</code> <i>per workout</i>. At ingest that is N extra queries on a path that runs every foreground, plus a stored series, plus a CloudKit Production deploy for a field that could never be removed — three costs for the smallest of the three readings. The version worth building reads it <b>lazily on sheet open</b>, one query for the one workout in front of you, storing nothing.
 </div>
 
 <div class="callout">
