@@ -178,6 +178,22 @@ let faces: [Face] = [
     .init(handle: "sam",  initial: "S", top: rgb(0x35B08A), bottom: rgb(0x1E7A5E)),
     .init(handle: "nils", initial: "N", top: rgb(0xE08A46), bottom: rgb(0xB05F22)),
     .init(handle: "uma",  initial: "U", top: rgb(0x8B6BE0), bottom: rgb(0x5C41A8)),
+    // Stocktwits' traders. Three "T"s in three hues rather than three
+    // initials: the handles really are @trader0/1/2, and inventing distinct
+    // names to get prettier monograms would put words on screen the rows
+    // don't say.
+    .init(handle: "trader0", initial: "T", top: rgb(0x3E9BD4), bottom: rgb(0x1F6592)),
+    .init(handle: "trader1", initial: "T", top: rgb(0xD4713E), bottom: rgb(0x92451F)),
+    .init(handle: "trader2", initial: "T", top: rgb(0x59B04A), bottom: rgb(0x2F7523)),
+    // Publication marks. `RSSIngest` stamps the site's own favicon onto
+    // `authorAvatarURL`, so every article row in a real reading room carries
+    // its publisher beside the byline. These are monograms, not anybody's
+    // logo — a stand-in for a favicon, which is what the field holds.
+    .init(handle: "hackernews",  initial: "Y", top: rgb(0xFF7B4D), bottom: rgb(0xD1521F)),
+    .init(handle: "theverge",    initial: "V", top: rgb(0xE0447C), bottom: rgb(0xA31C51)),
+    .init(handle: "techcrunch",  initial: "T", top: rgb(0x3ECf7C), bottom: rgb(0x1B8B4C)),
+    .init(handle: "smallthings", initial: "S", top: rgb(0x6F8BA8), bottom: rgb(0x445A72)),
+    .init(handle: "latencyclub", initial: "L", top: rgb(0xB07BD8), bottom: rgb(0x7448A0)),
 ]
 
 let faceSide: CGFloat = 320

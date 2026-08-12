@@ -345,6 +345,20 @@ enum DemoSeedAll {
     /// them draws the source's brand glyph where the app draws a person.
     private static func avatarArt(_ handle: String) -> String { "sample:avatar-\(handle)" }
 
+    /// A publication's own mark. `RSSIngest` stamps the site's favicon onto
+    /// `authorAvatarURL`, so a real reading room carries the publisher beside
+    /// every byline; without it the demo's rooms showed the article art and
+    /// no source.
+    ///
+    /// Lowercase and drop the spaces, and nothing else — an earlier cut also
+    /// stripped a leading "the", which sent "The Verge" to `-verge` while the
+    /// asset is `-theverge`, so that publisher alone would have resolved to
+    /// nothing. The names here are literals in this file's own tables; a rule
+    /// clever enough to need testing is the wrong rule for that.
+    private static func publisherArt(_ name: String) -> String {
+        avatarArt(name.lowercased().replacingOccurrences(of: " ", with: ""))
+    }
+
     /// The same picture as stored bytes, for the rooms that draw pixels from
     /// the corpus rather than a URL (Photos, Files, Snapchat memories).
     private static func pixels(_ n: Int) -> Data? {
@@ -808,6 +822,7 @@ enum DemoSeedAll {
             row(.link, s.0, source: "Substack", ref: "demo:substack:\(i)", days: s.3, hour: 7) { t in
                 t.postAuthor = s.1
                 t.authorHandle = s.2
+                t.authorAvatarURL = publisherArt(s.2)
                 t.previewImageURL = art(i)
                 t.enrichedText = "\(s.0) — by \(s.1) in \(s.2)."
             }
@@ -825,6 +840,7 @@ enum DemoSeedAll {
             row(.link, r.0, source: "RSS", ref: "demo:rss:\(i)", days: r.3, hour: 6) { t in
                 t.postAuthor = r.1
                 t.authorHandle = r.2
+                t.authorAvatarURL = publisherArt(r.2)
                 t.previewImageURL = art(i)
                 t.enrichedText = "\(r.0) — \(r.2)."
             }
@@ -1027,6 +1043,7 @@ enum DemoSeedAll {
                 content: "nostr:note1demo\(i)") { t in
                 t.postText = "Notes from the relays, part \(i + 1)"
                 t.authorHandle = "you"
+                t.authorAvatarURL = avatarArt("you")
             }
         }
         return out
@@ -1051,6 +1068,7 @@ enum DemoSeedAll {
                 days: m.3, hour: 15, content: "$\(m.1) · \(m.0)",
                 tags: m.2.isEmpty ? [m.1] : [m.1, m.2]) { t in
                 t.authorHandle = "@trader\(i % 3)"
+                t.authorAvatarURL = avatarArt("trader\(i % 3)")
                 t.postText = m.0
             }
         }
