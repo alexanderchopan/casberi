@@ -108,9 +108,34 @@ if [ -n "$SUB_ID" ]; then
 fi
 
 # ── 4 · point the version at the new build ─────────────────────────────────
-curl -fsS -X PATCH -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
-  -d "{\"data\":{\"type\":\"builds\",\"id\":\"$BUILD_ID\"}}" \
-  "$API/appStoreVersions/$VER_ID/relationships/build" >/dev/null
+#
+# RETRIED, because cancelling is not instant (measured 2026-08-12, build 311).
+# The cancel above returns 200 while the version is still leaving
+# WAITING_FOR_REVIEW, and a PATCH issued into that window answers **409
+# Conflict** — which reads as "this version cannot take a new build" when it
+# actually means "ask again in a moment". The version settles to
+# DEVELOPER_REJECTED and the identical call then returns 204.
+#
+# This is the worst place in the script to fail, which is why it retries rather
+# than reporting: the queue position is already forfeited by the line above, so
+# an abort here leaves the version cancelled AND still carrying the old build —
+# the one state that is worse than either doing nothing or finishing.
+for attempt in 1 2 3 4 5 6 7 8 9 10; do
+  CODE="$(curl -s -o /dev/null -w '%{http_code}' -X PATCH \
+    -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
+    -d "{\"data\":{\"type\":\"builds\",\"id\":\"$BUILD_ID\"}}" \
+    "$API/appStoreVersions/$VER_ID/relationships/build")"
+  [ "$CODE" = "204" ] && break
+  if [ "$CODE" != "409" ]; then
+    echo "✗ could not attach build $BUILD (HTTP $CODE)"
+    echo "  the submission IS cancelled — re-run this command once the version"
+    echo "  shows DEVELOPER_REJECTED to finish the swap."
+    exit 1
+  fi
+  [ "$attempt" = "10" ] && { echo "✗ still 409 after 10 tries — see the note above"; exit 1; }
+  echo "  409 — version still transitioning, retrying ($attempt)"
+  sleep 6
+done
 echo "✓ $PLATFORM $VERSION now carries build $BUILD"
 
 # ── 5 · resubmit — the reviewSubmissions pair, NOT appStoreVersionSubmissions ─
