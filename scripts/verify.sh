@@ -415,6 +415,20 @@ step "Wallet-room pure-logic self-test"
   || fail "the wallet-room logic self-test failed — run scripts/wallet-rooms-selftest.sh"
 print -P "%F{green}✓ wallet-room self-test%f"
 
+# Pure-logic self-test for the MONEY RECEIPT — every money thing's sheet hero
+# (prd §369). This pass replaced a labelled spec table with SENTENCES, and a
+# sentence is exactly what nothing else here can check: the build is happy
+# either way, and a screen sweep photographs fluent prose without being able to
+# tell whether it is true. Every failure is a silent wrong answer that renders
+# beautifully — a receive wearing a minus, a PENDING authorization drawn with a
+# torn edge (a claim of finality over an amount that can still change), "mostly
+# them sending you" over a 3–2 split, a mean reported as "usually", a phishing
+# domain promoted into the currency slot beside the figure.
+step "Money-receipt pure-logic self-test"
+"$ROOT/scripts/money-receipt-selftest.sh" >/dev/null \
+  || fail "the money-receipt logic self-test failed — run scripts/money-receipt-selftest.sh"
+print -P "%F{green}✓ money-receipt self-test%f"
+
 # Pure-logic self-test for the agent's open (prd §332). This is the first screen
 # a person sees every day, and every failure in it renders perfectly: a tile
 # printing a tally, a tile drawn from a reading nobody took, a row filed under

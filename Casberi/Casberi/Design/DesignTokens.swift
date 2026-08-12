@@ -426,6 +426,47 @@ enum DS {
         static let hero: CGFloat = 60
     }
 
+    // MARK: - Receipt pour  (prd §369, 2026-08-12)
+
+    /// A money receipt's source identity, as the hue it pours from the top of
+    /// its own paper — `MainSurface.crownPour`'s idiom scoped to a card, so ten
+    /// money sheets read as ten places instead of ten rows.
+    ///
+    /// **It encodes identity and nothing else.** Never gain, loss, size or
+    /// urgency — those stay on the amount's tone and the stamp, which is the
+    /// same division `pourHue` already keeps on a scoped wallet room. And it is
+    /// deliberately below the tint's weight: the pour is a wash the eye reads as
+    /// place, not a fill the eye reads as a control.
+    ///
+    /// `neutral` is a real answer, not a fallback for laziness. Apple Card has
+    /// no brand colour to borrow, and inventing one is exactly the lie
+    /// `AssetMark` refuses one level up when it gives an unknown name a grey
+    /// monogram rather than a hashed hue.
+    ///
+    /// Lives here rather than in the view because §8 is law: components hold
+    /// zero raw hex.
+    static func receiptPour(_ hue: MoneyReceipt.Hue) -> Color {
+        switch hue {
+        case .wallet:  return Color.adaptive(dark: "#7c3aed", light: "#7c3aed")
+        case .bitcoin: return Color.adaptive(dark: "#f7931a", light: "#f7931a")
+        case .shield:  return Color.adaptive(dark: "#8b7bd8", light: "#8b7bd8")
+        case .safe:    return Color.adaptive(dark: "#12ff80", light: "#0a7f45")
+        case .peer:    return Color.adaptive(dark: "#5b8cff", light: "#2f5fd4")
+        case .railgun: return Color.adaptive(dark: "#7c8794", light: "#5b6672")
+        case .card:    return Color.adaptive(dark: "#3e8f70", light: "#2f6f56")
+        case .risk:    return DS.attention
+        case .neutral: return DS.neutralBadge
+        }
+    }
+
+    /// How much of that hue actually lands. Low by design — a pour is a place,
+    /// and a wash that competes with the amount above it has stopped being one.
+    /// Lighter in light theme, where a hue over white reads far hotter than the
+    /// same hue over black.
+    static func receiptPourOpacity(_ scheme: ColorScheme) -> Double {
+        scheme == .dark ? 0.20 : 0.13
+    }
+
     // MARK: - Radii  (brief §8 is law; control/pill fill the gaps §8 omits)
 
     enum Radius {

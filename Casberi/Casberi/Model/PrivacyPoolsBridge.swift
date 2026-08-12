@@ -493,6 +493,15 @@ enum PrivacyPoolsBridge {
                 tags: ["Shielded", "Pending"],
                 sourceRef: ref)
             thing.walletAddress = wallet
+            // The amount as DATA (prd §369, 2026-08-12) — the same
+            // `transferAmount` slot Gnosis Pay and Railgun already fill. Until
+            // this it existed only inside the localized title, so the receipt
+            // could not state a figure without parsing a sentence, which is the
+            // one thing it refuses to do. Only when a pool resolved: `what`
+            // falls back to the word "crypto", and "crypto" is not an amount.
+            // An existing field — no CloudKit deploy — and rows landed before
+            // today simply keep leading with their title.
+            if pool != nil { thing.transferAmount = what }
             // Anonymity-set context (prd §228): how much cover this deposit
             // has, on `enrichedText` (the thing sheet's body + search), never
             // the title — it's context, not a tally-thing. Snapshot at landing;

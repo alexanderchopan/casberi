@@ -410,6 +410,14 @@ enum AppleWalletBridge {
             // searchable, which is the point: after `normalizeMerchant` turns
             // "SQ *BLUE BOTTLE" into "Blue Bottle", searching the string that
             // is actually on your statement must still find the row.
+            // The account as DATA too (prd §369, 2026-08-12), not only inside
+            // the joined `enrichedText` blob below. The receipt's "on Apple
+            // Card, ending 4821" line needs the account name on its own; taking
+            // it back out of that blob would mean splitting a joined string and
+            // guessing which component is which, which is the prose-parsing this
+            // pass exists to stop. `authorHandle` had no other writer for this
+            // source, and it is an existing field — no CloudKit deploy.
+            thing.authorHandle = accountNames[txn.accountID]
             var enriched = accountNames[txn.accountID].map { [$0] } ?? []
             if merchant != raw { enriched.append(raw) }
             if !enriched.isEmpty { thing.enrichedText = enriched.joined(separator: " · ") }

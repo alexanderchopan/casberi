@@ -328,6 +328,22 @@ enum BitcoinBridge {
         "bitcoin.pending.\(address.lowercased())"
     }
 
+    /// Is this landed transfer still on the confirmation watchlist? Read by the
+    /// receipt (prd §369) to decide whether the paper is torn — a transfer that
+    /// can still be reorganized out of the chain is not a finished record.
+    ///
+    /// Matched on the ref's SUFFIX rather than by rebuilding `activityRef`: the
+    /// watchlist stores bare txids, the ref is `bitcoin:<address>:<txid>`, and a
+    /// suffix test survives a change to the ref's own shape. It reports false
+    /// for a transfer with no address or no ref, which is the safe direction —
+    /// an unknown state reads as settled, and the row simply looks the way it
+    /// did before this existed.
+    static func isSettling(address: String?, ref: String?) -> Bool {
+        guard let address, !address.isEmpty, let ref, !ref.isEmpty else { return false }
+        let pending = (UserDefaults.standard.array(forKey: pendingKey(address)) as? [String]) ?? []
+        return pending.contains { !$0.isEmpty && ref.hasSuffix($0) }
+    }
+
     private static func addPending(address: String, txids: [String]) {
         let key = pendingKey(address)
         var known = Set((UserDefaults.standard.array(forKey: key) as? [String]) ?? [])

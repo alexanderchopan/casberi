@@ -1554,6 +1554,13 @@ enum DemoSeedAll {
                 days: p.2, hour: 20, content: "Ethereum · 0xBow",
                 tags: ["Shielded", p.1]) { t in
                 t.walletAddress = demoWallet
+                // The amount as DATA (prd §369) — the receipt states a figure
+                // only from a stamped field, never by parsing the title, so
+                // without this the demo's deposits lead with their title and
+                // the sheet's headline number never draws.
+                t.transferAmount = p.0.hasPrefix("Put ")
+                    ? String(p.0.dropFirst(4)).components(separatedBy: " into ").first
+                    : nil
                 t.enrichedText = "The ETH pool holds about 3,900 accepted deposits."
             }
         }
@@ -1642,6 +1649,21 @@ enum DemoSeedAll {
                 t.priceValue = s.1
                 t.priceCurrency = "USD"
                 t.transferCounterparty = s.0
+                // The account as DATA (prd §369) — the receipt's "on Apple
+                // Card, ending 4821" line reads `authorHandle`, and taking it
+                // back out of the joined `enrichedText` blob below would mean
+                // guessing which component is which.
+                t.authorHandle = "Apple Card, ending 4821"
+                // The receipt's state stamps — and its TEAR, which is flat
+                // while an amount can still change. Without a pending and a
+                // refunded row in the demo, two of the three states this seat
+                // can be in never draw anywhere (the §369 parity rule: a demo
+                // that furnishes only the happy path proves only the happy
+                // path). The newest row is the pending one, so it is the one
+                // an opened demo lands on.
+                if i == 0 { t.tags = ["Card", "Pending"] }
+                else if i == 1 { t.tags = ["Card", "Refund"] }
+                else { t.tags = ["Card"] }
                 t.enrichedText = "\(s.0.uppercased()) #\(4000 + i)"
             }
         }
