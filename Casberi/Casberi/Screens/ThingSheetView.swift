@@ -79,6 +79,13 @@ struct ThingSheetView: View {
     /// section renders only when the check answered.
     @State private var approvalCheck: WalletPrepare.Check?
     @State private var safeCheck: SafeBridge.Check?
+    /// The money receipt (prd §363) and what the app says about it. Held in
+    /// state rather than computed per body evaluation because the commentary
+    /// FETCHES — a merchant board walks that source's rows — and a body can be
+    /// re-evaluated many times per open. Recomputed when `safeCheck` answers,
+    /// since a Safe receipt's stamp and its signer sentence both read it.
+    @State private var moneyReceipt: MoneyReceipt?
+    @State private var moneySays: MoneyCommentary?
     /// The same link, saved earlier from a different source (2026-07-21) —
     /// `CrossSourceEcho` was built for this and briefly wired into a row
     /// anatomy (`ThingRow.swift`) nothing actually rendered, which would
@@ -235,12 +242,11 @@ struct ThingSheetView: View {
                 // amount, two of your own wallets, a trade's two legs, or the
                 // image in a floating frame — and its verbs become the dial.
                 // Everything else keeps the title-led layout.
-                let walletStage = self.walletStage
-                let framedShot = walletStage == nil && thing.kind == .screenshot
-                if let walletStage {
-                    stageView(for: walletStage)
+                let framedShot = moneyReceipt == nil && thing.kind == .screenshot
+                if let moneyReceipt {
+                    MoneyReceiptCard(receipt: moneyReceipt)
                         .padding(.horizontal, DS.Space.s4)
-                        .padding(.top, DS.Space.s6)
+                        .padding(.top, DS.Space.s4)
                         .settleIn(delay: 0.06)
                     // The poisoning flag rides EVERY wallet stage now, not just
                     // Sent/Received — a spoofed-address warning on a Swap or a
@@ -253,13 +259,23 @@ struct ThingSheetView: View {
                             .padding(.top, DS.Space.s3)
                             .settleIn(delay: 0.08)
                     }
+                    // What the app has to say about it — a sentence that has
+                    // already read the evidence under it. nil is the healthy
+                    // answer for most rows (a first transfer, a one-off
+                    // merchant), and then the receipt simply stands alone.
+                    if let moneySays {
+                        MoneyCommentaryCard(commentary: moneySays)
+                            .padding(.horizontal, DS.Space.s4)
+                            .padding(.top, DS.Space.s3)
+                            .settleIn(delay: 0.1)
+                    }
                     VerbDial(thing: thing, verbs: walletVerbs,
                              onVerb: runVerb,
                              // A Moved leg's counterparty IS your own watched
                              // wallet — it already has a name (via the Wallet
                              // screen's rename), so the Name disc would just
                              // offer to relabel it through the wrong flow.
-                             onName: isMoved(walletStage) ? nil : nameCounterpartyAction)
+                             onName: MovedStage(thing) == nil ? nameCounterpartyAction : nil)
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.12)
                     dialResult
@@ -315,7 +331,7 @@ struct ThingSheetView: View {
                 // A social post always shows content — its pictures, what it
                 // quotes, how it landed — and its `content` is a permalink, so
                 // the title-stutter test never applied to it anyway.
-                let contentShown = walletStage == nil && !framedShot
+                let contentShown = moneyReceipt == nil && !framedShot
                     && (isSocialPost || (thing.kind != .event
                     && thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
                         != thing.title.trimmingCharacters(in: .whitespacesAndNewlines)))
@@ -326,7 +342,7 @@ struct ThingSheetView: View {
                 }
                 // The stage already shows the counterparty (with its pencil),
                 // so its spec table drops the Who row instead of repeating it.
-                specTable(contentShown: contentShown, showsWho: walletStage == nil)
+                specTable(contentShown: contentShown, showsWho: moneyReceipt == nil)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s6)
                     .settleIn(delay: 0.18)
@@ -352,7 +368,7 @@ struct ThingSheetView: View {
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s3)
                 }
-                if walletStage == nil && !framedShot {
+                if moneyReceipt == nil && !framedShot {
                     // The disc dial, standardized across every sheet
                     // (2026-07-23) — it was B1-only (the wallet stage, the
                     // framed screenshot) and everything else kept the older
@@ -461,7 +477,12 @@ struct ThingSheetView: View {
             if SafeBridge.applies(to: thing) {
                 Task { safeCheck = await SafeBridge.check(for: thing) }
             }
+            loadReceipt()
         }
+        // A Safe receipt can't be complete until its queue read answers — the
+        // stamp ("Your turn" vs "Pending") and the signer sentence both come
+        // off it — so the receipt recomposes once, when it lands.
+        .onChange(of: safeCheck == nil) { _, _ in loadReceipt() }
         }
         // Ask-before-acting: writes confirm, reads pass.
         .confirmationDialog(
@@ -991,55 +1012,52 @@ struct ThingSheetView: View {
         }
     }
 
-    /// The three shapes a wallet thing's stage can take — Sent/Received earns
-    /// the full party/arrow/signed-amount treatment; Moved and Swapped
-    /// (2026-07-21) each earn their own, since neither is a single signed
-    /// amount between "you" and a counterparty.
-    private enum WalletStageKind {
-        case transfer(TransferStage)
-        case moved(MovedStage)
-        case swapped(SwapStage)
+    /// Compose the money receipt and its commentary, once per open (prd §363).
+    ///
+    /// Synchronous and `@MainActor` throughout, so no `[Thing]` is ever held
+    /// across a suspension (the build-250 corollary); the liveness guards live
+    /// inside `MoneyReceiptSource`, at the boundary where the models are read.
+    private func loadReceipt() {
+        guard thing.isLive else { return }
+        moneyReceipt = MoneyReceiptSource.receipt(for: thing, safe: safeCheck)
+        guard moneyReceipt != nil else { moneySays = nil; return }
+        moneySays = MoneyReceiptSource.commentary(for: thing, in: modelContext,
+                                                  safe: safeCheck)
     }
 
-    /// The ONE decision point every wallet-stage branch reads — first match
-    /// wins, since a thing can only ever satisfy one of the three title
-    /// grammars.
-    private var walletStage: WalletStageKind? {
-        if let t = TransferStage(thing) { return .transfer(t) }
-        if let m = MovedStage(thing) { return .moved(m) }
-        if let s = SwapStage(thing) { return .swapped(s) }
-        return nil
-    }
-
-    private func isMoved(_ stage: WalletStageKind?) -> Bool {
-        if case .moved = stage { return true }
-        return false
-    }
-
-    @ViewBuilder
-    private func stageView(for stage: WalletStageKind) -> some View {
-        switch stage {
-        case .transfer(let t):
-            TransferStageView(thing: thing, stage: t)
-        case .moved(let m):
-            MovedStageView(thing: thing, stage: m)
-        case .swapped(let s):
-            SwapStageView(thing: thing, stage: s)
-        }
-    }
-
-    /// A wallet transfer's dial verbs: Explorer (the block-explorer link, when
-    /// the record carries one) and Copy. Name and Share ride the dial's own
-    /// slots. "Explorer", not "Open" (2026-08-04): the disc's glyph already
-    /// says it opens something — the word's job is to say WHERE you land,
-    /// the same reasoning `dialLabel` applies to every other hand-off.
+    /// A money receipt's dial verbs: the explorer link, when the record carries
+    /// one, and Copy. Name and Share ride the dial's own slots.
+    ///
+    /// The word NAMES WHERE YOU LAND (2026-08-04's "Explorer, not Open" ruling,
+    /// taken one step further): the disc's glyph already says it opens
+    /// something, and "Etherscan" or "mempool" is the differentiator. The name
+    /// comes off the URL's own host — never off the source — because the source
+    /// doesn't decide the explorer (a Wallet row can point at Etherscan,
+    /// Basescan, Gnosisscan or mempool.space), and a wrong destination word on a
+    /// disc that really does open something is a small lie with no symptom.
     private var walletVerbs: [Verb] {
         var out: [Verb] = []
         if let url = Capture.detectURL(in: thing.content) {
-            out.append(Verb(label: "Explorer", icon: "arrow.up.right", action: .openURL(url)))
+            out.append(Verb(label: Self.explorerLabel(url), icon: "arrow.up.right",
+                            action: .openURL(url)))
         }
         out.append(Verb(label: "Copy link", icon: "doc.on.doc", action: .copyText))
         return out
+    }
+
+    /// "Etherscan" from `etherscan.io`, "mempool" from `mempool.space`. Falls
+    /// back to the generic word rather than inventing a name for a host we
+    /// don't recognize — a disc reading "Explorer" is honest everywhere.
+    static func explorerLabel(_ url: URL) -> String {
+        let host = (url.host() ?? "").lowercased()
+            .replacingOccurrences(of: "www.", with: "")
+        let known = ["etherscan.io": "Etherscan", "basescan.org": "Basescan",
+                     "gnosisscan.io": "Gnosisscan", "optimistic.etherscan.io": "Etherscan",
+                     "mempool.space": "mempool", "solscan.io": "Solscan",
+                     "app.0xbow.io": "0xBow", "app.safe.global": "Safe",
+                     "app.morpho.org": "Morpho", "app.hyperliquid.xyz": "Hyperliquid"]
+        if let name = known[host] { return name }
+        return String(localized: "Explorer")
     }
 
     /// A podcast episode's own audio file, as a HAND-OFF (2026-08-06).

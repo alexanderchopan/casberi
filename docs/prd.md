@@ -21027,3 +21027,102 @@ shape as every other rule in this codebase that decayed until it was made
 mechanical. `scripts/prd-index-audit.py` now fails the build on a `§N` cited from
 source with no heading here, and on two headings sharing a number, which is the
 pair of symptoms this incident presented as.
+
+## §363 — The money receipt: every money thing gets a hero, and it speaks in sentences (user: "i'd like to really enrich the design of our wallet thing sheets… i'm thinking like receipts and potentially visualizations", then "i want these to feel like they're in an app not like they're in a database"; 2026-08-12)
+
+**What was there.** Exactly three things earned a hero on the thing sheet, and
+the gate was a source-name string: `kind == .transaction && source == "Wallet"`
+(`ThingStage`'s `TransferStage`/`MovedStage`/`SwapStage`). Every other money
+family fell through `ThingContent`'s `default:` branch, which renders `content`
+as a paragraph of body copy. For ten families `content` is a block-explorer URL,
+so the sheet's body **was** `https://basescan.org/tx/0x2c8b…` set as prose. For
+Apple Wallet and Safe `content` is `""`, so the body was **nothing at all** —
+title, spec table, two discs.
+
+Worse, the gate was a name and not a data test: Railgun and Gnosis Pay already
+stamped `transferDirection` + `transferAmount`, and Apple Wallet stamped those
+plus `transferCounterparty`, `priceValue` and `priceCurrency` — every field the
+ledger layout reads. The app's best money layout existed and was withheld from
+the rows most ready for it.
+
+**The ruling: one receipt, shared by every money thing.** `MoneyReceipt` (pure,
+Foundation-only) composes a subject, a lead, a signed amount, a second reading, a
+sentence, a stamp and a finality from stamped fields alone.
+`MoneyReceiptSource` is the half that touches `Thing`. Sources drawn: Wallet,
+Apple Wallet, Gnosis Pay, ether.fi, Privacy, Peer, Privacy Pools, Railgun, Safe.
+
+**A sentence, not a spec table — and the cost of that, stated.** The first cut
+drew the facts as a labelled slab (an 84pt grey key column reading Into /
+Network / Landed / Receipt) and the user's verdict was that it read as a
+database. A wallet name, a chain and a time were never three facts; they are one
+clause. So the slab is gone and the receipt resolves to `sentence`. **Prose is
+fluent, and a fluent wrong statement is far harder to notice than a wrong number
+in a labelled row** — a label at least tells you what was claimed. Two rules
+hold the line: every clause is assembled from fields stamped at ingest and
+**never parsed back out of a localized title** (guarded mechanically — the
+source half may not call `title.hasPrefix`/`contains`/`range(of:)`), and every
+claim has a shorter form for when the fact behind it is missing.
+
+**The tear carries state.** `ReceiptPaper`'s bottom edge is scalloped when the
+record is final and flat when it isn't — a pending authorization whose amount
+can still change, an unsigned Safe transaction, a deposit still in screening, an
+open position at risk. One glance says whether this is history or something
+live. It is a silhouette, never a line, so the no-hairlines law holds with no
+exception. **It is not decoration**: the design law admits form that carries
+identity, state or magnitude, and this carries state.
+
+**Slot 0 — four species of disc, four grades of knowing.** An identicon for an
+address, a bundled brand mark for a token or known app, a neutral monogram for a
+name we don't bundle (`AssetMark`'s standing rule: no invented artwork, no
+invented hue), and — new — **a recessed VOID for an absence that is by design**.
+A Railgun unshield has no sender because Railgun hides it (§268); a Gnosis Pay
+spend has no merchant because names never reach the chain (§222). Those are not
+gaps, and a monogram there would turn a guarantee into a bug report. The first
+cut of the mockups drew merchants as coloured gradients, which is exactly the
+invented-artwork lie one level up.
+
+**The commentary card inverts the old label-over-chart shape.** "Your history
+with maria.eth" above a bar strip makes the reader do the reading. "You and
+maria.eth have moved ETH five times, mostly them sending you" is the app doing
+its job, with the chart underneath as evidence. Each headline is a CLAIM and
+each is refused when untrue: "mostly" needs a two-thirds split (3–1 qualifies,
+3–2 does not), "the biggest yet" is checked against the rows we hold, "usually"
+is the MEDIAN and names its own window ("of the 12 charges Casberi has seen",
+because a first sync backfills about six days).
+
+**Three visualizations from the design pass were declined, with the reason.**
+Peer's paid-vs-market spread (§237), Privacy Pools' anonymity-set meter (§228)
+and a lending position's health bar all need a number no bridge stamps — each
+lives only inside a sentence, or only in a live protocol read. Drawing them
+would mean parsing prose back into a chart. They render as the bridge's own
+sentence instead, and each becomes drawable the day its bridge stamps the number
+it already computed.
+
+**Three one-line stamps, no new stored property.** Apple Wallet now puts the
+account on `authorHandle` (it was only inside the joined `enrichedText` blob,
+where recovering it means guessing which component is which); Privacy Pools puts
+the deposit amount on `transferAmount`; `BitcoinBridge.isSettling` exposes the
+pending watchlist it already keeps. All three are existing fields — **no
+CloudKit Production deploy.**
+
+**Bitcoin's confirmation count is deliberately absent.** The bridge stores a
+pending SET of txids and no per-transfer count, so "3 of 6" and "about 30
+minutes to go" are facts this app does not have; passing 0 for an unknown would
+print "0 confirmations" over a transfer that may have five. The receipt says
+"Still settling" and names the bar.
+
+**Retired:** `TransferStage` and all three stage VIEWS. `MovedStage` and
+`SwapStage` survive as parsers only — the first tells the Name disc to stand
+down on a self-move, the second gives the rate line two legs to divide.
+
+**Mechanical:** `scripts/money-receipt-selftest.sh` compiles both pure files
+WHOLE and unmodified, ~120 assertions, 13 mutations, 9 drift guards, wired into
+`verify.sh`. It exists because **nothing else in the tree can check a
+sentence**: `xcodebuild` is happy either way and a screen sweep photographs
+fluent prose without being able to tell whether it is true. Writing it found a
+real defect before the first run — `split` would have promoted a spoofed token's
+trailing phishing domain (`4,672 USDT Staked • gitos.org`, measured on this
+corpus) into the currency slot beside the figure; the unit rule is now
+letters-only and length-capped. `-receiptProbe "<title prefix>"` reports the
+composed receipt line by line, because **an absent or plain-looking receipt has
+six causes and only two are bugs**.
