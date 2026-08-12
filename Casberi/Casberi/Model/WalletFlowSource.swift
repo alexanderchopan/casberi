@@ -157,9 +157,20 @@ enum WalletFlowSource {
             }
 
             let address = thing.counterpartyAddress
-            let name = thing.transferCounterparty
-                ?? address.map(WalletStore.shortAddress)
-                ?? String(localized: "Unknown")
+            // A NAME or nothing (user ruling, 2026-08-11: "on the sankey we
+            // don't need to show the addresses"). This used to fall back to
+            // `WalletStore.shortAddress`, which put `0x1a2b…9f0c` on the
+            // ribbon — a string that identifies nobody, costs the widest label
+            // in the band, and reads as data we failed to resolve rather than
+            // as a fact worth drawing.
+            //
+            // Empty, NOT "Unknown": several unnamed counterparties are several
+            // distinct lanes (see `key` below), and stamping the same word on
+            // each would read as one venue drawn several times. The band
+            // renders an unnamed lane by its VALUE alone, which is the part we
+            // actually know. Grouping is untouched — `key` still keys on the
+            // address, so two strangers never merge.
+            let name = thing.transferCounterparty ?? ""
             // Named counterparties group by NAME so one venue behind several
             // router addresses reads as one lane; nameless ones group by
             // address so two unrelated strangers never merge into a single

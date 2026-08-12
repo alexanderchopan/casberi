@@ -276,8 +276,15 @@ struct WalletFlowBand: View {
     }
 
     private func spokenLanes(_ lanes: [WalletFlow.Lane]) -> String {
-        lanes.map { "\($0.name), \(TokenStats.compact($0.usd))" }
-            .joined(separator: "; ")
+        // VoiceOver needs a subject even where the drawing shows only a
+        // number: an empty name would speak as ", $240". It says the one true
+        // thing instead — that we never learned who this was.
+        lanes.map { lane in
+            lane.name.isEmpty
+                ? String(localized: "an unnamed wallet, \(TokenStats.compact(lane.usd))")
+                : "\(lane.name), \(TokenStats.compact(lane.usd))"
+        }
+        .joined(separator: "; ")
     }
 
     private var spineTint: Color {
@@ -367,7 +374,16 @@ struct WalletFlowBand: View {
         // so they stay on the ramp.
         let primary: Color = incoming ? .black.opacity(0.82) : DS.textPrimary
         let secondary: Color = incoming ? .black.opacity(0.60) : DS.textSecondary
-        if twoLine {
+        // An unnamed counterparty draws its VALUE alone (2026-08-11). The name
+        // is empty exactly when all we ever had was an address, and the value
+        // is the part we actually know — so the lane keeps its full label
+        // width for the number rather than spending it on a hex string.
+        if lane.name.isEmpty {
+            Text(valueText(lane))
+                .dsText(.label12).fontWeight(.bold)
+                .foregroundStyle(primary)
+                .lineLimit(1).minimumScaleFactor(0.8)
+        } else if twoLine {
             VStack(alignment: incoming ? .leading : .trailing, spacing: 1) {
                 Text(lane.name)
                     .dsText(.label12).fontWeight(.bold)
