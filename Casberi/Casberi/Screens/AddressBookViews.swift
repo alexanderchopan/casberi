@@ -7,7 +7,7 @@ import UIKit
 /// card behind a tap.
 
 extension AddressBook.Entry {
-    /// "0x9a2E…44b1 · 12 together · Contract" — the address, how much you've
+    /// "…44b1 · 12 together · Contract" — the address, how much you've
     /// dealt with it, and what it turned out to be, when each is known. A
     /// `.wallet` says nothing extra: a wallet is the unmarked case, and
     /// labelling it would put a word on every row that differentiates none.

@@ -1130,28 +1130,19 @@ private struct FlowFigure: View {
         }
     }
 
-    /// A counterparty label that fits a tile (2026-08-10).
-    ///
-    /// These lanes name WHO the money moved between — not your own watched
-    /// wallets. `WalletFlowSource` resolves a name where it can ("Peer",
-    /// "Coinbase", "Uniswap") and falls back to `WalletStore.shortAddress`,
-    /// which is already an abbreviation: `0xd889…8de1`. In this figure the
-    /// label column is 29% of a tile, so that 13-character form was then
-    /// truncated a SECOND time by `lineLimit(1)` into `0xd889…de…` — an
-    /// ellipsis inside an ellipsis, naming nobody (reported on-device).
-    ///
-    /// A real name is left exactly as it is and only ever elided by the
-    /// system. A hex fallback drops to its TAIL alone, which is the half that
-    /// distinguishes one address from another — a head is `0x` plus whatever
-    /// the vanity generator produced, and at this width you can fit one or the
-    /// other, not both. Ambiguity is acceptable here and only here: the tile is
-    /// a glance, and tapping it opens the Wallet room where the band carries
-    /// full addresses.
-    private func laneLabel(_ name: String) -> String {
-        guard name.hasPrefix("0x"), let tail = name.split(separator: "…").last,
-              tail.count <= 8 else { return name }
-        return "…\(tail)"
-    }
+    // NO PRIVATE RE-TRUNCATION HERE (2026-08-12). This carried a `laneLabel`
+    // that cut a hex fallback down to `…8de1` itself, because the shared
+    // `WalletStore.shortAddress` then produced the 13-character `0xd889…8de1`
+    // and this figure's label column is 29% of a tile — so `lineLimit(1)`
+    // elided it a SECOND time into `0xd889…de…`, an ellipsis inside an
+    // ellipsis naming nobody (reported on-device).
+    //
+    // `shortAddress` is tail-only now, so the fix belongs to every surface
+    // instead of this one, and the local copy was worse than redundant: its
+    // guard was `name.hasPrefix("0x")`, which the new form does not satisfy,
+    // so it would have gone on compiling and quietly stopped doing anything.
+    // A `lane.name` is a real name or an already-short address; either way it
+    // is drawn as it is and only ever elided by the system.
 
     private func labels(_ lanes: [AgentPanel.FlowLane], x: CGFloat, width: CGFloat,
                         height: CGFloat, alignment: Alignment) -> some View {
@@ -1173,7 +1164,7 @@ private struct FlowFigure: View {
                 // money rather than the identity. §334's split holds — a tile
                 // is a glance, the room one tap away is where detail lives —
                 // so this is a duplicate paying rent in the worst spot.
-                Text(laneLabel(lane.name))
+                Text(lane.name)
                     .dsText(.subhead13)
                     .fontWeight(i == 0 ? .semibold : .regular)
                     .foregroundStyle(i == 0 ? DS.textPrimary : DS.textSecondary)

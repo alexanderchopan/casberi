@@ -17,15 +17,60 @@ final class WalletStore {
         var label: String
         var address: String
 
-        /// "0x1a2B…4f4f" — the row form.
+        /// "…4f4f" — the row form.
         var short: String { WalletStore.shortAddress(address) }
     }
 
-    /// "0x1a2B…4f4f" — the one address-shortening rule, shared with every
-    /// surface that shows an address it has no label for.
+    /// "…4f4f" — the one address-shortening rule, shared with every surface
+    /// that shows an address it has no label for.
+    ///
+    /// TAIL ONLY (2026-08-12, user ruling: "i want any address that is
+    /// truncated to be in this format only …XXXX i don't want double
+    /// truncation"). It used to be `0x1a2B…4f4f` — cut at BOTH ends, which is
+    /// two truncations spelled as one string, and the head is the half that
+    /// says least: `0x` is every EVM address and what follows it is whatever
+    /// the vanity generator produced. The tail is what distinguishes one
+    /// address from another, so it is the half that is kept.
+    ///
+    /// It is also what stopped the double-truncation cascade. At 13 characters
+    /// the old form did not fit the narrow label columns it was handed, so the
+    /// system elided it a SECOND time into `0xd889…de…` — an ellipsis inside
+    /// an ellipsis, naming nobody (reported on-device; `AgentPanelGrid` carried
+    /// a private re-truncation to undo it, now deleted). Five characters fit
+    /// everywhere, so nothing downstream has to cut this again.
+    ///
+    /// Two consequences worth knowing. `AddressSafety.displayForm` keys on
+    /// this function on purpose — the display form IS the poisoning risk
+    /// surface — so the lookalike check follows automatically and now catches
+    /// a twin that matches on the last four alone, which is exactly what the
+    /// person can see. And the short form is PERSISTED as a placeholder name
+    /// by `WalletStore.add`, so books written before this ruling hold the old
+    /// spelling: use `isAutoName(_:for:)`, never `== shortAddress(…)`.
     static func shortAddress(_ address: String) -> String {
         guard address.count > 12 else { return address }
-        return "\(address.prefix(6))…\(address.suffix(4))"
+        return "…\(address.suffix(4))"
+    }
+
+    /// Is `name` a placeholder this app generated, rather than something the
+    /// person typed?
+    ///
+    /// `add`/`addBulk`/`addToGroup` file a bare address under its own short
+    /// form so every watched wallet is findable in its own book — a display
+    /// fallback, not a name. Three callers need to tell the two apart: the
+    /// book's merge (a real ENS name must beat a placeholder), `Verbs`'
+    /// wallet-place clause, and `CounterpartyRetitle` (which must never push a
+    /// hash into a title). All three compared against `shortAddress` directly
+    /// until the tail-only ruling above, which silently broke every one of
+    /// them for books already on disk: a stored `0x9a2E…44b1` stopped matching
+    /// the new form and started reading as a name the person had chosen. So
+    /// the LEGACY spelling is recognised here too, permanently — the entries
+    /// are in iCloud on people's devices and nothing rewrites them.
+    static func isAutoName(_ name: String, for address: String) -> Bool {
+        guard !name.isEmpty else { return false }
+        if name == shortAddress(address) { return true }
+        // The pre-2026-08-12 head-and-tail form.
+        guard address.count > 12 else { return false }
+        return name == "\(address.prefix(6))…\(address.suffix(4))"
     }
 
     var addresses: [WatchedAddress] {

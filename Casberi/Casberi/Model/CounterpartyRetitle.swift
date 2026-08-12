@@ -7,7 +7,7 @@ import SwiftData
 /// `ThingSheetView`, so it ran for exactly ONE of the app's naming doors — the
 /// pencil on a transfer's counterparty. Naming the same address from the
 /// address card, from the book's omnibox, or by starring it left every landed
-/// title still reading `0x9a2E…44b1`, because a title's counterparty clause is
+/// title still reading `…44b1`, because a title's counterparty clause is
 /// baked at ingest (`WalletIngest.counterpartyNames`) and nothing re-ran it.
 /// Same act, same address, two different outcomes depending on which door you
 /// used — so the rewrite moved here and every door calls it.
@@ -104,14 +104,14 @@ enum CounterpartyRetitle {
     /// What this address is really CALLED, or nil.
     ///
     /// The short form is not a name. `WalletStore.add` and `addBulk` both file
-    /// a bare address under its own `0x9a2E…44b1` so that every watched wallet
+    /// a bare address under its own `…44b1` so that every watched wallet
     /// is findable in its own book — a display fallback, not something the
     /// person typed. Feeding it to a rewrite would push a raw hash into
-    /// history ("Received 1 ETH from 0x9a2E…44b1") and break the ingest rule
+    /// history ("Received 1 ETH from …44b1") and break the ingest rule
     /// that an unnamed address stays unnamed: the title never carries a hash.
     static func realName(for address: String) -> String? {
         guard let name = WalletIngest.knownLabel(for: address) else { return nil }
-        return name == WalletStore.shortAddress(AddressBook.resolvedForm(of: address))
+        return WalletStore.isAutoName(name, for: AddressBook.resolvedForm(of: address))
             ? nil : name
     }
 

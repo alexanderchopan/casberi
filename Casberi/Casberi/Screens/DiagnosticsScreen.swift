@@ -134,7 +134,10 @@ struct DiagnosticsScreen: View {
         }
         for t in pinnedTokens.prefix(2) {
             let route = TokenChart.route(from: t.content)!
-            log("Token: \(t.title) → \(route.chain)/\(String(route.address.prefix(10)))…")
+            // `shortAddress`, not a head slice: this line is on a screen, and
+            // the app has one truncation rule (2026-08-12). A head slice also
+            // hid the half that tells two token contracts apart.
+            log("Token: \(t.title) → \(route.chain)/\(WalletStore.shortAddress(route.address))")
             if let chart = await TokenChart.fetch(chain: route.chain, address: route.address) {
                 log("OK chart: \(chart.closes.count) points, price \(chart.price)")
             } else {

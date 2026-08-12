@@ -756,7 +756,7 @@ enum PlaceWords {
         }
     }
 
-    /// "in your wallet" → "in Main" / "in your wallet 0x1a2B…4f4f" (2026-08-12).
+    /// "in your wallet" → "in Main" / "in your wallet …4f4f" (2026-08-12).
     ///
     /// Every Wallet-riding bridge stamps `Thing.walletAddress` with the watched
     /// address the row belongs to, and a person watching several wallets had no
@@ -769,12 +769,12 @@ enum PlaceWords {
     ///
     /// Two shapes, because a person-given name reads as a place and a hex
     /// doesn't: a named wallet stands alone ("in Main"), an unnamed one keeps
-    /// the noun it needs to make sense of the hex ("in your wallet 0x1a2B…4f4f").
+    /// the noun it needs to make sense of the hex ("in your wallet …4f4f").
     private static func walletPlace(for thing: Thing) -> String {
         guard let stored = thing.walletAddress,
               let name = WalletStore.shared.displayName(forStored: stored)
         else { return "in your wallet" }
-        return name == WalletStore.shortAddress(stored)
+        return WalletStore.isAutoName(name, for: stored)
             ? "in your wallet \(name)"
             : "in \(name)"
     }

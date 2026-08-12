@@ -226,8 +226,9 @@ struct FaceScopeRail: View {
         .dsHover()
         // **The tooltip is the only place the full identity can go.** The caption
         // is `lineLimit(1)` inside a 66pt slot, so an unnamed wallet reads as
-        // `0x1a2B…4f4f` and two sharing a prefix are indistinguishable at a
-        // glance — the exact failure `dsTooltip` was written for one tier up. It
+        // `…4f4f` and two sharing those four characters are indistinguishable
+        // at a glance — the exact failure `dsTooltip` was written for one tier
+        // up, and the trade the one-truncation ruling accepts on purpose. It
         // stays Mac-only for that modifier's own reason: on a touch surface
         // `help()` becomes an accessibility HINT, and VoiceOver would then read a
         // 42-character hex after every wallet's name. The spoken label is left as

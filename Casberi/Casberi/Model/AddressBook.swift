@@ -262,7 +262,7 @@ final class AddressBook {
     private static func merging(_ alias: Entry, into standing: Entry, at address: String) -> Entry {
         var out = standing
         out.address = address
-        if standing.name.isEmpty || standing.name == WalletStore.shortAddress(address) {
+        if standing.name.isEmpty || WalletStore.isAutoName(standing.name, for: address) {
             out.name = alias.name
         }
         out.addedAt = min(standing.addedAt, alias.addedAt)
