@@ -21907,7 +21907,7 @@ that the clock is the normal state rather than the exception it draws for.
   Revoke.cash.
 
 Guarded by `scripts/agent-sheet-selftest.sh` (in `verify.sh`): `AgentSheet.swift`
-compiled WHOLE and unmodified, Foundation-only by design — 64 assertions, 17
+compiled WHOLE and unmodified, Foundation-only by design — 67 assertions, 17
 mutations, 19 drift guards. Its sharpest guard is not an assertion at all: it
 reads the four importers and fails the build if any of them stops writing the
 speaker labels this parser reads, because that break is invisible from inside

@@ -101,9 +101,22 @@ enum OneClawFetch {
         for grant in grants {
             guard let ref = grant.sourceRef else { continue }
             if let fresh = byRef[ref] {
-                if grant.title != fresh.title || grant.dueAt != fresh.dueAt {
+                // The stamped parts heal here too (prd §367), and this pass is
+                // the ONLY thing that will ever reach a grant landed before
+                // they existed: `TokenIngest`'s dedupe drops the incoming row
+                // on the ref, so a re-read cannot re-land one. Without it the
+                // sheet's grant anatomy would reach only grants created from
+                // this build on, which is indistinguishable from it not
+                // working at all.
+                if grant.title != fresh.title || grant.dueAt != fresh.dueAt
+                    || grant.summary != fresh.summary
+                    || grant.authorHandle != fresh.authorHandle
+                    || grant.tags != fresh.tags {
                     grant.title = fresh.title
                     grant.dueAt = fresh.dueAt
+                    grant.summary = fresh.summary
+                    grant.authorHandle = fresh.authorHandle
+                    grant.tags = fresh.tags
                     changed = true
                 }
             } else if complete {
@@ -118,10 +131,31 @@ enum OneClawFetch {
         }
     }
 
+    /// The facet naming what a grant IS (§308). Every OTHER tag on one of
+    /// these rows is a permission the API reported.
+    static let grantTag = "Grant"
+
     /// A grant: "Prod · secrets/anthropic/* · read, rotate" — the vault, the
     /// secret path pattern, and the permissions, all straight off the policy
     /// record. Dated when the grant was created; an expiring grant carries
     /// its deadline in `dueAt`.
+    ///
+    /// **The three parts are ALSO stamped as fields (prd §367).** The title is
+    /// one slot, so they were joined into it and clamped at 80 — and the sheet
+    /// that wants to draw a permission then has to split a display string back
+    /// apart, which is the very thing `WorkStage`'s central rule forbids. The
+    /// join stays (the row is unchanged); the parts now ride fields the sheet
+    /// can read without guessing:
+    ///
+    /// - `summary` — the path pattern, the grant's whole payload, and display
+    ///   copy in the same sense a Trello card's back is.
+    /// - `authorHandle` — the vault, the field `WorkStage` already treats as
+    ///   "the thing this belongs to".
+    /// - `tags` — the facet, then the permissions in the API's OWN words, so a
+    ///   security decision is never restated in ours (and so `Set(tags)` can
+    ///   answer "what can be written?" as an ordinary §308 filter).
+    ///
+    /// All three are existing properties, so **no CloudKit Production deploy**.
     private static func policyThing(_ policy: [String: Any], vaultName: String?) -> Thing? {
         guard let id = policy["id"] as? String,
               let pattern = policy["secret_path_pattern"] as? String else { return nil }
@@ -135,9 +169,12 @@ enum OneClawFetch {
             content: dashboard,
             source: "1Claw",
             capturedAt: IngestSupport.isoDate(policy["created_at"]) ?? .now,
+            tags: [grantTag] + permissions.filter { !$0.isEmpty },
             sourceRef: "1claw:policy:\(id)"
         )
         thing.dueAt = IngestSupport.isoDate(policy["expires_at"])
+        thing.summary = pattern
+        thing.authorHandle = vaultName
         return thing
     }
 

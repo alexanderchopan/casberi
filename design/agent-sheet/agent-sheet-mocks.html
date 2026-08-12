@@ -1,0 +1,782 @@
+<title>Agent thing sheets — inventory & three anatomies</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #1673e6; --confirm: #32d74b; --down: #ff5a5f; --attn: #ff9f0a;
+    --slab: #16181d; --well: #101216;
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", monospace;
+    --gpt: #10a37f; --claude: #d97757; --gem: #4a8cf7; --cc: #d97757; --claw: #7f7ae0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body { font-family: var(--text); color: var(--ink);
+         background: radial-gradient(900px 420px at 18% -8%, rgba(16,163,127,.10), transparent 62%), var(--page);
+         padding: 48px 28px 90px; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1320px; margin: 0 auto; }
+  header { max-width: 860px; margin-bottom: 34px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: #4fd1ab; margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.4vw,36px); font-weight: 800; letter-spacing: -.02em; line-height: 1.1; margin-bottom: 12px; }
+  header p { font-size: 15px; line-height: 1.58; color: var(--muted); max-width: 72ch; margin-bottom: 10px; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  h2 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin: 58px 0 6px; }
+  h2 .n { color: var(--faint); font-weight: 600; margin-right: 8px; }
+  h3 { font-size: 15px; font-weight: 700; margin: 30px 0 4px; letter-spacing: -.01em; }
+  .sub { font-size: 14px; line-height: 1.58; color: var(--muted); max-width: 80ch; margin-bottom: 22px; }
+  .sub b { color: var(--ink); font-weight: 600; }
+  .sub code, td code, li code { font-family: var(--mono); font-size: 12px;
+              background: rgba(255,255,255,.07); padding: 1px 5px; border-radius: 5px; color: #c8d0e0; }
+
+  /* ---- inventory table ---- */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-size: 11px; font-weight: 700; color: var(--faint);
+       padding: 0 14px 8px 0; white-space: nowrap; }
+  td { padding: 12px 14px 12px 0; vertical-align: top; color: var(--muted); line-height: 1.5; }
+  tbody tr { border-top: 1px solid rgba(255,255,255,.06); }
+  td b { color: var(--ink); font-weight: 600; }
+  .ok  { color: var(--confirm); font-weight: 700; white-space: nowrap; }
+  .bad { color: var(--down); font-weight: 700; white-space: nowrap; }
+  .mid { color: var(--attn); font-weight: 700; white-space: nowrap; }
+  .nil { color: var(--faint); font-weight: 700; white-space: nowrap; }
+  .seat { display: flex; align-items: center; gap: 9px; }
+
+  /* ---- findings ---- */
+  .finds { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px,1fr)); gap: 16px; }
+  .find { background: rgba(255,255,255,.035); border-radius: 16px; padding: 16px 17px;
+          border-top: 2px solid var(--down); }
+  .find.mid { border-top-color: var(--attn); }
+  .find.ok  { border-top-color: var(--confirm); }
+  .find h4 { font-size: 13.5px; font-weight: 700; margin-bottom: 7px; letter-spacing: -.01em; color: var(--ink); }
+  .find p { font-size: 12.5px; line-height: 1.55; color: var(--muted); margin-bottom: 8px; }
+  .find p:last-child { margin-bottom: 0; }
+  .find p b { color: var(--ink); font-weight: 600; }
+  .find .src { font-family: var(--mono); font-size: 11px; color: var(--faint); }
+
+  /* ---- phones ---- */
+  .row { display: flex; flex-wrap: wrap; gap: 34px; align-items: flex-start; margin-top: 18px; }
+  .option { width: 344px; }
+  .otitle { font-size: 15px; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+  .tag { font-size: 10px; font-weight: 800; padding: 3px 7px; border-radius: 999px; letter-spacing: .02em; }
+  .tag.today { background: rgba(255,90,95,.16); color: #ff8b8e; }
+  .tag.prop  { background: rgba(50,215,75,.15); color: #6ee38a; }
+  .tag.ship  { background: rgba(22,115,230,.18); color: #7fb4ff; }
+  .odesc { font-size: 12.5px; line-height: 1.55; color: var(--faint); margin-bottom: 14px; min-height: 66px; }
+  .odesc b { color: var(--muted); font-weight: 600; }
+  .phone { width: 344px; border-radius: 46px; padding: 10px; background: #15171c; box-shadow: 0 30px 70px rgba(0,0,0,.55); }
+  .screen { border-radius: 38px; overflow: hidden; padding: 16px 0 20px; min-height: 730px; background: #000; position: relative; }
+  .grab { width: 34px; height: 4px; border-radius: 99px; background: rgba(255,255,255,.22); margin: 0 auto 14px; }
+  .pad { padding: 0 16px; }
+
+  /* eyebrow */
+  .brow { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; }
+  .mark { width: 26px; height: 26px; border-radius: 7px; flex: none; display: flex; align-items: center;
+          justify-content: center; font-size: 12px; font-weight: 800; color: #fff; }
+  .mark.gpt { background: var(--gpt); }
+  .mark.claude { background: var(--claude); }
+  .mark.gem { background: linear-gradient(135deg,#4a8cf7,#9b6ef3); }
+  .mark.cc { background: var(--cc); border-radius: 7px; font-family: var(--mono); font-size: 11px; }
+  .mark.claw { background: var(--claw); }
+  .mark.cur { background: #1c1e24; border: 1px solid rgba(255,255,255,.22); }
+  .mark.sm { width: 20px; height: 20px; border-radius: 6px; font-size: 10px; }
+  .browline { font-size: 11.5px; color: var(--faint); }
+  .browline em { font-style: normal; color: var(--muted); }
+  .kindpill { font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+              background: rgba(255,255,255,.08); color: var(--muted); margin-left: auto; flex: none; }
+
+  /* headline / hero */
+  .ask { font-size: 20px; line-height: 1.34; letter-spacing: -.015em; font-weight: 500; }
+  .ask.sm { font-size: 17px; line-height: 1.42; }
+  .clamped { font-size: 20px; line-height: 1.34; letter-spacing: -.015em; font-weight: 600;
+             display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .metaline { font-size: 12px; color: var(--faint); margin-top: 9px; }
+  .metaline b { color: var(--muted); font-weight: 600; }
+
+  /* today's grey slab (the thing we're replacing) */
+  .slab { font-size: 15px; line-height: 1.45; color: var(--ink); padding: 10px 12px; margin-top: 14px;
+          background: rgba(255,255,255,.05); border-radius: 14px; }
+  .slab + .slab { margin-top: 8px; }
+  .slab.dim { color: var(--muted); }
+
+  /* real turns */
+  .turns { margin-top: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .turn { display: flex; gap: 9px; }
+  .turn .who { font-size: 10.5px; font-weight: 700; color: var(--faint); margin-bottom: 3px;
+               text-transform: none; letter-spacing: 0; }
+  .turn p { font-size: 14px; line-height: 1.46; }
+  .turn.you { justify-content: flex-end; }
+  .turn.you .bub { background: rgba(22,115,230,.20); border-radius: 16px 16px 5px 16px; color: #e8f0fd; }
+  .turn.them .bub { background: rgba(255,255,255,.055); border-radius: 16px 16px 16px 5px; color: var(--ink); }
+  .bub { padding: 9px 12px; max-width: 84%; }
+  .bub.tool { background: rgba(255,255,255,.03); border-radius: 12px; padding: 7px 11px; }
+  .bub.tool p { font-family: var(--mono); font-size: 11.5px; color: var(--faint); }
+  .more { font-size: 12.5px; color: #6bb2ff; font-weight: 600; margin-top: 13px; text-align: center; }
+  .cut { font-size: 11px; color: var(--faint); text-align: center; margin-top: 11px; line-height: 1.45; }
+  .cut b { color: var(--attn); font-weight: 600; }
+
+  /* section labels */
+  .sect { font-size: 11px; font-weight: 700; color: var(--faint); margin: 24px 2px 9px;
+          display: flex; align-items: center; }
+  .sect i { font-style: normal; margin-left: auto; font-weight: 600; }
+
+  /* receipt stub */
+  .stub { background: rgba(255,255,255,.045); border-radius: 16px; padding: 14px; position: relative; }
+  .stub::before { content: ""; position: absolute; left: 12px; right: 12px; top: 0; height: 1px;
+                  background: repeating-linear-gradient(90deg, rgba(255,255,255,.22) 0 4px, transparent 4px 9px); }
+  .kv { display: flex; align-items: baseline; font-size: 12.5px; padding: 5px 0; }
+  .kv b { font-weight: 600; color: var(--faint); font-size: 11.5px; }
+  .kv i { flex: 1; border-bottom: 1px dotted rgba(255,255,255,.13); margin: 0 8px 3px; }
+  .kv em { font-style: normal; font-family: var(--money); font-weight: 700;
+           font-variant-numeric: tabular-nums; color: var(--ink); }
+  .kv em.words { font-family: var(--text); font-weight: 600; }
+  .prov { font-size: 12px; line-height: 1.5; color: var(--muted); margin-top: 11px; }
+  .prov b { color: var(--ink); font-weight: 600; }
+
+  /* counts */
+  .stats { display: flex; gap: 22px; align-items: baseline; }
+  .stat b { font-family: var(--money); font-size: 22px; font-weight: 800; letter-spacing: -.02em;
+            font-variant-numeric: tabular-nums; display: block; }
+  .stat s { text-decoration: none; font-size: 10.5px; color: var(--faint); font-weight: 600; }
+
+  /* status word (the receipt lead) */
+  .status { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+  .status b { font-size: 12.5px; font-weight: 700; letter-spacing: -.005em; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .s-landed b { color: var(--confirm); } .s-landed .dot { background: var(--confirm); }
+  .s-wait b { color: var(--attn); } .s-wait .dot { background: var(--attn); }
+  .s-fail b { color: var(--down); } .s-fail .dot { background: var(--down); }
+
+  /* grant */
+  .path { font-family: var(--mono); font-size: 17px; letter-spacing: -.01em; color: var(--ink);
+          background: rgba(127,122,224,.14); padding: 9px 12px; border-radius: 12px; display: inline-block; }
+  .perms { display: flex; gap: 7px; margin-top: 13px; flex-wrap: wrap; }
+  .perm { font-size: 11.5px; font-weight: 700; padding: 5px 10px; border-radius: 999px;
+          background: rgba(50,215,75,.13); color: #6ee38a; }
+  .perm.off { background: rgba(255,255,255,.05); color: var(--faint); text-decoration: line-through; }
+  .runway { margin-top: 16px; }
+  .runway .bar { height: 8px; border-radius: 99px; background: rgba(255,255,255,.07); overflow: hidden; }
+  .runway .bar i { display: block; height: 100%; border-radius: 99px; background: var(--attn); }
+  .runway .lab { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--faint); margin-top: 7px; }
+  .runway .lab b { color: var(--attn); font-weight: 700; }
+
+  /* dead link card (today) */
+  .linkcard { margin-top: 14px; border-radius: 16px; overflow: hidden; background: rgba(255,255,255,.05); }
+  .linkcard .art { height: 96px; background: linear-gradient(135deg,#22242c,#2c2f3a); display:flex;
+                   align-items:center; justify-content:center; color: var(--faint); font-size: 11.5px; }
+  .linkcard .meta { padding: 11px 12px; }
+  .linkcard .meta b { font-size: 13px; display: block; margin-bottom: 3px; }
+  .linkcard .meta s { text-decoration: none; font-size: 11px; color: var(--faint); }
+
+  /* spec table (today) */
+  .spec { margin-top: 16px; background: rgba(255,255,255,.045); border-radius: 16px; padding: 13px 14px; }
+  .specrow { display: flex; font-size: 13px; padding: 5px 0; }
+  .specrow b { width: 80px; flex: none; color: var(--faint); font-weight: 600; font-size: 12px; }
+  .specrow span { color: var(--ink); }
+
+  /* verbs */
+  .dial { display: flex; gap: 11px; justify-content: center; margin: 24px 0 4px; }
+  .verb { text-align: center; width: 72px; }
+  .disc { width: 52px; height: 52px; border-radius: 50%; background: rgba(255,255,255,.07);
+          display: flex; align-items: center; justify-content: center; margin: 0 auto 6px;
+          font-size: 19px; color: var(--ink); }
+  .disc.tint { background: rgba(22,115,230,.20); color: #7fb4ff; }
+  .verb s { text-decoration: none; font-size: 10.5px; color: var(--faint); font-weight: 600; }
+
+  /* rulings */
+  ol.rul { margin-left: 18px; }
+  ol.rul li { font-size: 13.5px; line-height: 1.62; color: var(--muted); margin-bottom: 13px; padding-left: 4px; }
+  ol.rul li b { color: var(--ink); font-weight: 600; }
+  ul.no { margin-left: 18px; margin-top: 10px; }
+  ul.no li { font-size: 13px; line-height: 1.6; color: var(--muted); margin-bottom: 9px; }
+  ul.no li b { color: var(--ink); font-weight: 600; }
+  .note { font-size: 12.5px; line-height: 1.6; color: var(--faint); margin-top: 14px;
+          border-left: 2px solid rgba(255,255,255,.12); padding-left: 13px; max-width: 82ch; }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · design · 2026-08-12</div>
+  <h1>Agent thing sheets: the conversation is in the record, and the sheet shows one line of it</h1>
+  <p>Same pass as wallet (§302), Work (the receipt, this morning) and social (§363). The Agents category is
+     ten catalog seats; four of them land nothing at all (they are keys, not sources), one was already
+     receipted hours ago, and <b>the four that carry the most text in the whole corpus draw the least of it.</b></p>
+  <p>The finding is the Obsidian one, one room over: an imported chat's <b>entire conversation is stored</b>
+     — speaker-prefixed, up to 8,000 characters — and <b>nothing on any screen drew it</b>. You could ask
+     about a chat and never read it back. Everything below is composed from fields that already exist:
+     <b>no new <code>Thing</code> property, so no CloudKit Production deploy.</b></p>
+  <p><b>Built and shipped as prd §367.</b> A phone marked <span class="tag ship">shipped</span> is what the
+     app draws now; the one marked <span class="tag today">shipped</span> beside it is what it drew this
+     morning.</p>
+</header>
+
+<h2><span class="n">1</span>Inventory — every Agents seat, what it lands, what the sheet does with it</h2>
+<p class="sub">Read off the shipped source, not guessed: <code>ChatGPTImport.swift</code>,
+   <code>ClaudeImport.swift</code>, <code>GeminiImport.swift</code>, <code>ClaudeCodeImport.swift</code>,
+   <code>CursorBridge.swift</code>, <code>OneClawBridge.swift</code>, and the two sheet files.</p>
+
+<table>
+<thead><tr>
+  <th style="width:150px">Seat</th><th style="width:118px">Lands</th><th style="width:70px">Kind</th>
+  <th>What the record actually carries</th><th>What the sheet draws today</th><th style="width:78px">Verdict</th>
+</tr></thead>
+<tbody>
+<tr>
+  <td><div class="seat"><span class="mark gpt sm">◍</span><b>ChatGPT</b></div></td>
+  <td>Exported chats</td><td><code>.chat</code></td>
+  <td><code>content</code> = <b>the opening ask only</b> · <code>enrichedText</code> = the whole transcript,
+      speaker-prefixed, ≤8,000 chars · <code>messageCount</code> = every turn, counted before the clamp</td>
+  <td>Clamped title, then <b>one grey slab holding the opening ask</b>. The transcript and the turn count
+      render nowhere.</td>
+  <td class="bad">worse<br>than the row</td>
+</tr>
+<tr>
+  <td><div class="seat"><span class="mark claude sm">✳</span><b>Claude</b></div></td>
+  <td>Exported chats</td><td><code>.chat</code></td>
+  <td>Identical — one importer, one <code>ChatImportLanding</code> writer. Speakers are
+      <code>You</code> / <code>Claude</code>.</td>
+  <td>Same one slab.</td>
+  <td class="bad">worse<br>than the row</td>
+</tr>
+<tr>
+  <td><div class="seat"><span class="mark gem sm">✦</span><b>Gemini</b></div></td>
+  <td>Takeout prompts</td><td><code>.chat</code></td>
+  <td><b>The ask, whole and unclamped</b> — and genuinely nothing else. Takeout's JSON holds no answer
+      field and no thread structure, so one record is one prompt.</td>
+  <td>Same one slab — which here happens to be <i>almost</i> right, and for the wrong reason.</td>
+  <td class="mid">accidentally<br>close</td>
+</tr>
+<tr>
+  <td><div class="seat"><span class="mark cc sm">&gt;_</span><b>Claude&nbsp;Code</b></div></td>
+  <td>Sessions</td><td><code>.chat</code></td>
+  <td><code>summary</code> (the session's own) · <code>enrichedText</code> ≤16,000 · <code>messageCount</code>
+      (tool turns included) · tags <code>Session</code> + the project · <code>capturedAt</code> = when it started</td>
+  <td>Title, and the summary. <b>A 61-turn session reads exactly like a 3-turn one.</b></td>
+  <td class="mid">half<br>drawn</td>
+</tr>
+<tr>
+  <td><div class="seat"><span class="mark cur sm">◆</span><b>Cursor</b></div></td>
+  <td>Finished cloud runs</td><td><code>.link</code></td>
+  <td><code>authorHandle</code> = <code>org/repo</code> · <code>summary</code> = what the agent says it did ·
+      facet tags <code>Failed</code>/<code>Expired</code>/<code>Cancelled</code>/<code>Agent&nbsp;run</code></td>
+  <td><b>The Work receipt</b> — outcome word and tone off the tags, repo under the headline, summary as
+      display copy, <code>Landed</code> on the slab.</td>
+  <td class="ok">done<br>this&nbsp;morning</td>
+</tr>
+<tr>
+  <td><div class="seat"><span class="mark claw sm">⛓</span><b>1Claw</b></div></td>
+  <td>Vault grants</td><td><code>.link</code></td>
+  <td><code>dueAt</code> = <b>the grant's expiry</b> · title = vault · path pattern · permissions, joined
+      with <code>·</code> and clamped at 80 · <code>content</code> = the 1Claw dashboard URL</td>
+  <td>A link-preview card of the dashboard — <b>the same URL on every grant</b> — and the expiry nowhere:
+      the spec table's <code>Due</code> row is gated on <code>kind == .reminder</code>.</td>
+  <td class="bad">wrong<br>noun</td>
+</tr>
+<tr>
+  <td><div class="seat"><span class="mark claw sm" style="background:#3a3f4d">·</span>Venice · OpenRouter · Grok · Bankr</div></td>
+  <td class="nil">nothing</td><td>—</td>
+  <td>These are keys, not sources. They buy a better <i>answer</i>; they never land a row.</td>
+  <td>No sheet exists to fix.</td>
+  <td class="nil">n/a</td>
+</tr>
+<tr>
+  <td><div class="seat"><span class="mark claw sm" style="background:#3a3f4d">·</span>MCP <code>save_thing</code></div></td>
+  <td>Approval things</td><td><code>.approval</code></td>
+  <td><code>provenance.agent</code> = the calling client · payload on <code>content</code></td>
+  <td><code>CommandCard</code> plus an <code>Agent</code> spec row. Has an anatomy already; left alone.</td>
+  <td class="ok">fine</td>
+</tr>
+</tbody>
+</table>
+
+<h2><span class="n">2</span>What's actually wrong — four findings, each invisible to every check we run</h2>
+<p class="sub">A build succeeds, the screen sweep passes, and the sheet renders perfectly in all four cases.
+   That is the whole reason this needs a mockup and then a harness rather than a patch.</p>
+
+<div class="finds">
+  <div class="find">
+    <h4>1 · The transcript is stored and drawn by nothing</h4>
+    <p><code>ChatBubbles(text: thing.content)</code> — and <code>content</code> is the opening ask.
+       The conversation lives on <code>enrichedText</code>, which is retrieval-only by the 2026-07-15 ruling.</p>
+    <p>This is <b>verbatim the Obsidian defect</b> fixed on 2026-08-09: “the vault bridge read a person's
+       notes, indexed them for search, and showed nobody the note — you could ask about it but never open
+       it and actually read it back.” Same sentence, four seats over.</p>
+    <p class="src">ThingContent.swift:318 · ChatGPTImport.swift:104</p>
+  </div>
+
+  <div class="find">
+    <h4>2 · <code>ChatBubbles</code> draws no bubbles</h4>
+    <p>It splits on <code>\n</code> and puts every line in the <b>same faint slab, same alignment, same
+       weight</b>. The transcript's format is <code>"You: …"</code> / <code>"ChatGPT: …"</code> — the
+       speaker is <i>inside the string</i>.</p>
+    <p>So even handed the real transcript, today's view renders a column of identical grey blocks with the
+       role as literal typing. <b>A conversation's one structural fact — who is talking — would render as
+       punctuation.</b></p>
+    <p class="src">ThingContent.swift:770</p>
+  </div>
+
+  <div class="find">
+    <h4>3 · A 61-turn session reads like a 3-turn one</h4>
+    <p><code>messageCount</code> is stamped by every one of the four importers and is drawn on exactly one
+       screen in the app — a social thread's “rest”. Never on a chat sheet.</p>
+    <p>It is also the only honest way to know the stored transcript was <b>cut</b>: turns counted before
+       the clamp, against turns present in the stored text. No new field needed to say so.</p>
+    <p class="src">ChatGPTImport.swift:275 · SocialPostViews.swift:58</p>
+  </div>
+
+  <div class="find">
+    <h4>4 · 1Claw's expiry is stored and never shown</h4>
+    <p>Grants land <code>kind: .link</code> with <code>dueAt = expires_at</code>. The sheet's <code>Due</code>
+       row requires <code>kind == .reminder</code>. So <b>a grant expiring in six days looks identical to one
+       that never expires</b> — on the surface whose entire job is “what can this agent reach”.</p>
+    <p>And its link card previews the same dashboard URL for every grant in the corpus.
+       <b>A card that is identical on every row is not information</b>, which is the inverse of last night's
+       ruling about a URL you can't tap.</p>
+    <p class="src">OneClawBridge.swift:140 · ThingSheetView.swift:955</p>
+  </div>
+</div>
+
+<h2><span class="n">3</span>The anatomies</h2>
+<p class="sub">Three shapes, and deliberately no fourth — the §363 rule that <b>a shape exists only where the
+   sheet would otherwise draw the wrong noun</b>. A Claude Code session is <i>not</i> a fourth shape: it is a
+   conversation whose project happens to be stamped. Cursor's run is shown last, unmodified, so the family
+   can be read as one system.</p>
+
+<h3>A · Conversation — ChatGPT, Claude, Gemini, Claude Code</h3>
+
+<div class="row">
+
+  <!-- TODAY -->
+  <div class="option">
+    <div class="otitle">Today <span class="tag today">shipped</span></div>
+    <div class="odesc">The clamped title at heading size, then the opening ask repeated in a slab under it.
+      <b>Twelve turns are in the record.</b> One of them is on screen, and it is the one already in the title.</div>
+    <div class="phone"><div class="screen">
+      <div class="grab"></div>
+      <div class="pad">
+        <div class="brow">
+          <span class="mark gpt">◍</span>
+          <div><div class="browline"><em>ChatGPT</em> · Chat</div><div class="browline">5 days ago</div></div>
+          <span class="kindpill">Chat</span>
+        </div>
+        <div class="clamped">SwiftData migration plan</div>
+        <div class="slab dim">How should I structure the SwiftData migration when CloudKit only supports
+          lightweight stages?</div>
+
+        <div class="spec">
+          <div class="specrow"><b>From</b><span>from your session</span></div>
+        </div>
+
+        <div class="dial">
+          <div class="verb"><div class="disc">⧉</div><s>Copy text</s></div>
+          <div class="verb"><div class="disc tint">✻</div><s>Ask</s></div>
+          <div class="verb"><div class="disc">↗</div><s>Open in ChatGPT</s></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- PROPOSED -->
+  <div class="option">
+    <div class="otitle">Shipped <span class="tag ship">conversation</span></div>
+    <div class="odesc"><b>The conversation's own name leads</b> — it is what the export called it and what
+      the row shows; the ask is the first turn, not a second headline. Then the turns, as turns, with the
+      speaker as a <b>label</b> rather than a prefix inside the sentence. Every field here already exists
+      on the row.</div>
+    <div class="phone"><div class="screen">
+      <div class="grab"></div>
+      <div class="pad">
+        <div class="brow">
+          <span class="mark gpt">◍</span>
+          <div><div class="browline"><em>ChatGPT</em> · Chat</div><div class="browline">5 days ago</div></div>
+          <span class="kindpill">Chat</span>
+        </div>
+
+        <div class="ask">SwiftData migration plan</div>
+        <div class="metaline">12 turns · 4 Aug at 09:41</div>
+
+        <div class="turns">
+          <div class="turn you"><div style="text-align:right">
+            <div class="who">You</div>
+            <div class="bub"><p>How should I structure the SwiftData migration when CloudKit only supports
+              lightweight stages?</p></div>
+          </div></div>
+          <div class="turn them"><div>
+            <div class="who">ChatGPT</div>
+            <div class="bub"><p>Lightweight is the only stage CloudKit mirrors, so the question is really
+              whether the change can be expressed as one.<br><br>Renames and type changes can't — and note
+              that a paragraph break inside an answer stays inside it.</p></div>
+          </div></div>
+          <div class="turn you"><div style="text-align:right">
+            <div class="who">You</div>
+            <div class="bub"><p>So a removed property is a new-field-plus-backfill problem, not a migration one?</p></div>
+          </div></div>
+        </div>
+
+        <div class="more">Show all 12 turns</div>
+
+        <div class="sect">The receipt</div>
+        <div class="stub">
+          <div class="stats">
+            <div class="stat"><b>12</b><s>turns</s></div>
+          </div>
+          <div class="prov">From your <b>ChatGPT export</b>.</div>
+        </div>
+
+        <div class="dial">
+          <div class="verb"><div class="disc">⧉</div><s>Copy chat</s></div>
+          <div class="verb"><div class="disc tint">✻</div><s>Ask</s></div>
+          <div class="verb"><div class="disc">↗</div><s>Open in ChatGPT</s></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- CLAMPED / GEMINI HONESTY -->
+  <div class="option">
+    <div class="otitle">The two honesty clauses <span class="tag ship">same shape</span></div>
+    <div class="odesc"><b>Top:</b> a long chat whose stored transcript was cut — turns counted before the
+      clamp vs turns present, so the sheet can say so with no new field. <b>Bottom:</b> Gemini, where the
+      export carries the ask and no answer, and inventing a reply bubble would be the fake status ban in
+      the one place a person would believe it.</div>
+    <div class="phone"><div class="screen">
+      <div class="grab"></div>
+      <div class="pad">
+        <div class="brow">
+          <span class="mark claude">✳</span>
+          <div><div class="browline"><em>Claude</em> · 16 Jul, 21:03</div><div class="browline">84 turns</div></div>
+          <span class="kindpill">Chat</span>
+        </div>
+        <div class="ask sm">Walk me through the liveness corollaries — I keep re-breaking corollary 4.</div>
+        <div class="turns">
+          <div class="turn them"><div><div class="bub"><p>They're one class seen from four distances. 1–2 are
+            about the container, 3 about who hands the model over, 5 about who reads it —</p></div></div></div>
+          <div class="turn you"><div style="text-align:right"><div class="bub"><p>And 6 escapes the view layer entirely.</p></div></div></div>
+        </div>
+        <div class="more">Show 29 more turns</div>
+        <div class="cut">Stored to here. <b>The export ran to 84 turns</b> — Casberi keeps the first 8,000
+          characters of a conversation.</div>
+
+        <div class="sect" style="margin-top:26px">And one export that has no other half</div>
+        <div class="brow" style="margin-top:12px">
+          <span class="mark gem">✦</span>
+          <div><div class="browline"><em>Gemini</em> · 6 Aug</div><div class="browline">Your prompt</div></div>
+        </div>
+        <div class="ask sm">Summarise this paper for someone who knows the field but not this subfield,
+          and flag anything the abstract overstates.</div>
+        <div class="cut" style="text-align:left; margin-top:14px">Google's export carries your prompts.
+          It has no field for Gemini's replies, so Casberi has none to show.</div>
+
+        <div class="dial">
+          <div class="verb"><div class="disc">⧉</div><s>Copy</s></div>
+          <div class="verb"><div class="disc tint">✻</div><s>Ask</s></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<h3>B · The same shape, with a project stamped — Claude Code</h3>
+
+<div class="row">
+  <div class="option">
+    <div class="otitle">Today <span class="tag today">shipped</span></div>
+    <div class="odesc">The title carries the project because <code>ClaudeCodeSession.title</code> joined it in.
+      The summary draws (this seat's one win). <b>Sixty-one turns, sixteen thousand characters of transcript,
+      and a tag naming the repo — none of it on screen.</b></div>
+    <div class="phone"><div class="screen">
+      <div class="grab"></div>
+      <div class="pad">
+        <div class="brow">
+          <span class="mark cc">&gt;_</span>
+          <div><div class="browline"><em>Claude Code</em> · Chat</div><div class="browline">12 days ago</div></div>
+          <span class="kindpill">Chat</span>
+        </div>
+        <div class="clamped">casberi · Chase the embedding race on foreground</div>
+        <div class="slab dim">Found the crash: two threads inside one NLEmbedding. Serialized every compute
+          call through one queue rather than a lock, after measuring a 2.5s main-thread stall.</div>
+        <div class="spec">
+          <div class="specrow"><b>From</b><span>from your session</span></div>
+        </div>
+        <div class="dial">
+          <div class="verb"><div class="disc">⧉</div><s>Copy text</s></div>
+          <div class="verb"><div class="disc tint">✻</div><s>Ask</s></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <div class="option">
+    <div class="otitle">Shipped <span class="tag ship">conversation + project</span></div>
+    <div class="odesc">No new shape. The project moves out of the title into its own rung — the same move
+      <code>WorkStage</code> made this morning, <b>and only because a stored field carries it</b> (the
+      <code>Session</code> tag), never sliced out of a string. <b>Its assistant is labelled "Claude", not
+      "Claude Code"</b> — the one thing about this wire format that is easy to get wrong, and it fails
+      silently.</div>
+    <div class="phone"><div class="screen">
+      <div class="grab"></div>
+      <div class="pad">
+        <div class="brow">
+          <span class="mark cc">&gt;_</span>
+          <div><div class="browline"><em>Claude Code</em> · 31 Jul, 20:14</div><div class="browline">61 turns · 2h 40m</div></div>
+          <span class="kindpill">Session</span>
+        </div>
+        <div class="ask">Chase the embedding race on foreground</div>
+        <div class="metaline">in <b>casberi</b></div>
+
+        <div class="slab" style="margin-top:16px">Found the crash: two threads inside one
+          <code>NLEmbedding</code>. Serialized every compute call through one queue rather than a lock,
+          after measuring a 2.5s main-thread stall.</div>
+
+        <div class="sect">How it went<i>61 turns</i></div>
+        <div class="turns" style="margin-top:0">
+          <div class="turn you"><div style="text-align:right">
+            <div class="who">You</div>
+            <div class="bub"><p>Two crash reports, same offset, faulting thread swapped. What does that mean?</p></div>
+          </div></div>
+          <div class="turn them"><div>
+            <div class="who">Claude</div>
+            <div class="bub"><p>That's a symmetric race — neither side is “the” culprit. Both threads are
+              inside the same model object.</p></div>
+          </div></div>
+        </div>
+        <div class="cut" style="text-align:left">No tool turns, deliberately: the transcript folds tool
+          traffic into the assistant's turns, so a tool bubble would be a distinction the record does not
+          make.</div>
+        <div class="more">Show all 61 turns</div>
+
+        <div class="sect">The receipt</div>
+        <div class="stub">
+          <div class="kv"><b>Project</b><i></i><em class="words">casberi</em></div>
+          <div class="kv"><b>Turns</b><i></i><em>61</em></div>
+          <div class="kv"><b>Started</b><i></i><em class="words">31 Jul, 20:14</em></div>
+          <div class="prov">From your <b>Claude Code history</b>. Sessions grow — re-importing updates this
+            one in place.</div>
+        </div>
+
+        <div class="dial">
+          <div class="verb"><div class="disc">⧉</div><s>Copy chat</s></div>
+          <div class="verb"><div class="disc tint">✻</div><s>Ask</s></div>
+          <div class="verb"><div class="disc">#</div><s>casberi</s></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <div class="option">
+    <div class="otitle">Cursor, for reference <span class="tag ship">shipped today</span></div>
+    <div class="odesc">Unmodified — this is what the Work receipt already does for a Cursor run, and it is the
+      register the three sheets above are being brought into. <b>Nothing here changes;</b> it is in the
+      mockup so the family can be judged as one system rather than three separate fixes.</div>
+    <div class="phone"><div class="screen">
+      <div class="grab"></div>
+      <div class="pad">
+        <div class="brow">
+          <span class="mark cur">◆</span>
+          <div><div class="browline"><em>Cursor</em> · 2 days ago</div><div class="browline">Agent run</div></div>
+          <span class="kindpill">Run</span>
+        </div>
+        <div class="status s-fail"><span class="dot"></span><b>Failed</b></div>
+        <div class="ask">Add the retry to the webhook handler</div>
+        <div class="metaline">in <b>casberi/web</b></div>
+        <div class="slab" style="margin-top:16px">Could not run the test suite — the sandbox has no network
+          access, and three tests reach a staging host.</div>
+        <div class="sect">The receipt</div>
+        <div class="stub">
+          <div class="kv"><b>Landed</b><i></i><em class="words">10 Aug, 22:03</em></div>
+        </div>
+        <div class="dial">
+          <div class="verb"><div class="disc tint">↗</div><s>Open PR</s></div>
+          <div class="verb"><div class="disc">⧉</div><s>Copy</s></div>
+          <div class="verb"><div class="disc">✻</div><s>Ask</s></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<h3>C · Grant — 1Claw</h3>
+
+<div class="row">
+  <div class="option">
+    <div class="otitle">Today <span class="tag today">shipped</span></div>
+    <div class="odesc">A permission rendered as a bookmark. The three facts a grant <i>is</i> — vault, path,
+      verbs — were joined into one string on the way in and clamped at 80. <b>The expiry is on the row and
+      the sheet has no route to it.</b> The card previews the same dashboard as every other grant.</div>
+    <div class="phone"><div class="screen">
+      <div class="grab"></div>
+      <div class="pad">
+        <div class="brow">
+          <span class="mark claw">⛓</span>
+          <div><div class="browline"><em>1Claw</em> · Link</div><div class="browline">11 days ago</div></div>
+          <span class="kindpill">Link</span>
+        </div>
+        <div class="clamped">personal · openai/* · read, list</div>
+        <div class="linkcard">
+          <div class="art">1claw.com</div>
+          <div class="meta"><b>1Claw — the vault for AI agents</b><s>1claw.com</s></div>
+        </div>
+        <div class="spec">
+          <div class="specrow"><b>Site</b><span>1claw.com</span></div>
+          <div class="specrow"><b>From</b><span>saved by you</span></div>
+        </div>
+        <div class="dial">
+          <div class="verb"><div class="disc tint">↗</div><s>Open link</s></div>
+          <div class="verb"><div class="disc">⧉</div><s>Copy</s></div>
+          <div class="verb"><div class="disc">✻</div><s>Ask</s></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <div class="option">
+    <div class="otitle">Shipped <span class="tag ship">grant</span></div>
+    <div class="odesc">The noun is a <b>permission</b>: what can be reached, by which verbs, until when. The
+      expiry gets the runway capsule the App Store Connect and ENS sheets already use — a clock is the one
+      thing a grant has that a bookmark doesn't. <b>Revoke is a hand-off, never a write.</b></div>
+    <div class="phone"><div class="screen">
+      <div class="grab"></div>
+      <div class="pad">
+        <div class="brow">
+          <span class="mark claw">⛓</span>
+          <div><div class="browline"><em>1Claw</em> · vault <em>personal</em></div><div class="browline">Granted 1 Aug</div></div>
+          <span class="kindpill">Grant</span>
+        </div>
+
+        <div class="status s-wait"><span class="dot"></span><b>Expires in 6 days</b></div>
+        <div><span class="path">openai/*</span></div>
+
+        <div class="perms">
+          <span class="perm">read</span>
+          <span class="perm">list</span>
+          <span class="perm off">write</span>
+          <span class="perm off">delete</span>
+        </div>
+
+        <div class="runway">
+          <div class="bar"><i style="width:20%"></i></div>
+          <div class="lab"><span>Granted 1 Aug</span><b>Expires 18 Aug</b></div>
+        </div>
+
+        <div class="sect">The receipt</div>
+        <div class="stub">
+          <div class="kv"><b>Vault</b><i></i><em class="words">personal</em></div>
+          <div class="kv"><b>Reaches</b><i></i><em class="words">openai/*</em></div>
+          <div class="kv"><b>Can</b><i></i><em class="words">read, list</em></div>
+          <div class="kv"><b>Expires</b><i></i><em class="words">18 Aug, 12:00</em></div>
+          <div class="prov">Read from <b>1Claw</b> — names and permissions only. Casberi never reads a
+            secret's value.</div>
+        </div>
+
+        <div class="dial">
+          <div class="verb"><div class="disc tint">↗</div><s>Open 1Claw</s></div>
+          <div class="verb"><div class="disc">⧉</div><s>Copy path</s></div>
+          <div class="verb"><div class="disc">✻</div><s>Ask</s></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <div class="option">
+    <div class="otitle">The one that has no clock <span class="tag ship">same shape</span></div>
+    <div class="odesc">Most grants never expire, and the runway must not appear for them — a bar drawn with a
+      guessed end date is the invented-fact failure this codebase bans. <b>No expiry, no capsule, no status
+      word</b>; the grant simply states what it reaches.</div>
+    <div class="phone"><div class="screen">
+      <div class="grab"></div>
+      <div class="pad">
+        <div class="brow">
+          <span class="mark claw">⛓</span>
+          <div><div class="browline"><em>1Claw</em> · vault <em>work</em></div><div class="browline">Granted 20 Jul</div></div>
+          <span class="kindpill">Grant</span>
+        </div>
+        <div><span class="path">stripe/live/*</span></div>
+        <div class="perms">
+          <span class="perm">read</span>
+          <span class="perm off">list</span>
+          <span class="perm off">write</span>
+          <span class="perm off">delete</span>
+        </div>
+        <div class="sect">The receipt</div>
+        <div class="stub">
+          <div class="kv"><b>Vault</b><i></i><em class="words">work</em></div>
+          <div class="kv"><b>Reaches</b><i></i><em class="words">stripe/live/*</em></div>
+          <div class="kv"><b>Can</b><i></i><em class="words">read</em></div>
+          <div class="kv"><b>Granted</b><i></i><em class="words">20 Jul, 09:12</em></div>
+          <div class="prov">No expiry set. This grant stands until it is revoked in 1Claw.</div>
+        </div>
+        <div class="dial">
+          <div class="verb"><div class="disc tint">↗</div><s>Open 1Claw</s></div>
+          <div class="verb"><div class="disc">⧉</div><s>Copy path</s></div>
+          <div class="verb"><div class="disc">✻</div><s>Ask</s></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<h2><span class="n">4</span>The rulings this rests on</h2>
+<ol class="rul">
+  <li><b>The gate is a data test, never a source list</b> (§363, inherited). “Does this record carry a
+     transcript?”, not “is this ChatGPT, Claude or Gemini?”. The seat that ships next week is covered the day
+     it lands, and a chat import that predates <code>enrichedText</code> falls through to exactly today's
+     behaviour rather than regressing.</li>
+  <li><b>The transcript earns the Obsidian exception, and for the same stated reason.</b>
+     <code>enrichedText</code> stays retrieval-only in general; here it isn't a payoff fact carved out of a
+     discarded read, it is <i>the conversation itself</i>, clamped further out than the row excerpt. That is
+     the second instance of a precedent already written down, not a new rule.</li>
+  <li><b>The role is parsed off the stored prefix, and a line that doesn't carry one is drawn as prose.</b>
+     Speakers are written into the string at import (<code>"You: …"</code>), so a turn is recovered, never
+     inferred. An unparseable transcript renders exactly as it does today — one column of slabs — instead of
+     mis-attributing somebody's words.</li>
+  <li><b>“Cut” is derived from two numbers we already store</b>, never from a new field:
+     <code>messageCount</code> counts turns <i>before</i> the clamp, and the stored text carries what
+     survived it. So the sheet can say “stored to here” truthfully, and stays silent when nothing was cut.
+     No new <code>Thing</code> property anywhere in this pass, and therefore <b>no CloudKit Production
+     deploy</b>.</li>
+  <li><b>Gemini says what its export doesn't have.</b> One turn and no reply is a whole, correct reading of
+     Takeout — so the sheet names that, rather than drawing an empty assistant bubble that reads as a failed
+     load.</li>
+  <li><b>A grant's clock is drawn only when a clock exists.</b> <code>dueAt</code> present → status word,
+     runway, expiry row. Absent → none of the three, and a sentence saying it stands until revoked.</li>
+</ol>
+
+<h3>What this deliberately does not build</h3>
+<ul class="no">
+  <li><b>No fourth shape for Claude Code.</b> A session is a conversation with a project stamped. Giving it
+     its own anatomy would mean two views drawing one fact, which is how a screen starts contradicting
+     itself.</li>
+  <li><b>No turn-level timestamps.</b> Only the session's start is stored; a per-turn clock would have to be
+     invented, and an invented time on a receipt is believed.</li>
+  <li><b>No “model” row.</b> None of the four importers stamps which model answered — ChatGPT's export
+     carries it inconsistently and Takeout not at all — so there is nothing true to put there.</li>
+  <li><b>No agent name on a 1Claw grant.</b> The policy record carries vault, path, permissions and dates;
+     which agent holds the key is resolved at auth and is not on the row. Naming one would be a guess on the
+     screen where a guess is most expensive.</li>
+  <li><b>Nothing writes.</b> Revoke opens 1Claw, the way an approval opens Revoke.cash.</li>
+</ul>
+
+<h3>Shipped, and what guards it</h3>
+<p class="note"><code>AgentSheet.swift</code> is Foundation-only — the shape decision, the turn parser, the
+   clamp derivation and the grant's clock — so <code>scripts/agent-sheet-selftest.sh</code> compiles it
+   <b>whole and unmodified</b>: 67 assertions, 17 mutations, 19 drift guards, wired into
+   <code>verify.sh</code>. Every failure here is a silent wrong answer that renders perfectly, so the
+   harness is the only thing that can see one.</p>
+<p class="note"><b>Its sharpest guard is not an assertion.</b> The speaker labels are a wire format four
+   OTHER files write, so the harness reads <code>ChatGPTImport</code>, <code>ClaudeImport</code>,
+   <code>ClaudeCodeSession</code> and <code>GeminiImport</code> and fails the build if any of them stops
+   writing the labels this parser reads. That break is invisible from inside <code>AgentSheet</code> and
+   silently returns every chat sheet in the app to the one-line rendering this pass exists to end.</p>
+<p class="note"><b>Two things changed between the first draft of this page and the code.</b> The hero is the
+   conversation's own NAME, not the ask — the draft had the ask as the headline <i>and</i> as the opening
+   turn, printing it twice; the ask takes the hero slot only where the title is provably a clamp of it. And
+   the Claude Code panel's tool bubble is gone: the transcript folds tool traffic into the assistant's
+   turns, so drawing one would have been invented structure.</p>
+<p class="note"><b>Demo parity.</b> The demo's chat rows carried one summarising sentence in
+   <code>enrichedText</code>, which parses to zero turns — so the demo would have shown an empty
+   conversation on the very pass built to draw one, indistinguishable from a broken parser. The seeds now
+   carry real transcripts in the importers' own format, and the 1Claw rows carry the bridge's real
+   <code>1claw:policy:</code> ref shape instead of <code>demo:1claw:</code>, which nothing keyed off grants
+   could ever have matched.</p>
+
+</div>

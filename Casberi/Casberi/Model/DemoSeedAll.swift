@@ -145,7 +145,12 @@ enum DemoSeedAll {
                               // exit, and a bare prefix would take every scan
                               // in the corpus with it.
                               "off:5060403320102", "off:8717677332304",
-                              "off:5391520941016"]
+                              "off:5391520941016",
+                              // The demo vault. Scoped to its own FOLDER,
+                              // never the bare "obsidian:" prefix, so exiting
+                              // the demo can never delete a real vault's
+                              // notes — `files:demo/`'s shape, same reason.
+                              "obsidian:demo-vault/"]
 
     // MARK: - Entry point
 
@@ -492,12 +497,33 @@ enum DemoSeedAll {
             ("Legibility notes for the panel", ["Legibility", "Design system"], 55),
             ("Reading list, autumn", ["Reading"], 63),
         ]
+        // REAL `obsidian:` ref shape (2026-08-12). `NoteSheet`'s `.note`
+        // anatomy — the one built for a vault note, where the NAME is the
+        // identity and so leads — is gated on `NoteSheetSource.isNamed`,
+        // which asks `ObsidianLink.relativePath` for the ref's path and
+        // checks its stem against the title. A `demo:obsidian:0` ref fails
+        // that prefix test outright, so every demo vault note degraded to
+        // `.entry` and the anatomy could not be reached at all.
+        //
+        // The exact class CLAUDE.md already records twice (Peer and Privacy
+        // Pools rows wearing `demo:` refs their own room heads could not
+        // match). Scoped to a `demo-vault/` folder rather than the bare
+        // `obsidian:` prefix so demo teardown can never delete a REAL vault
+        // note — the `files:demo/` shape, for the same reason.
         return notes.enumerated().map { i, n in
-            row(.note, n.0, source: "Obsidian", ref: "demo:obsidian:\(i)",
+            row(.note, n.0, source: "Obsidian", ref: "obsidian:demo-vault/\(n.0).md",
                 days: n.2, hour: 20, content: n.0) { t in
                 t.ocrTopics = n.1
                 t.topicsAt = .now
-                t.enrichedText = "\(n.0)\n\nWritten in the vault. \(n.1.joined(separator: ", "))."
+                // A REAL BODY, not a one-line stub (2026-08-12).
+                // `NoteSheetSource.body` prefers `enrichedText`, and the vault
+                // card counts its words — so a stub read "10 words" and,
+                // being under `NoteSheet.readTimeFloor` (100), never showed a
+                // read time at all. The reading built for the longest-form
+                // room in the app could not fire in the demo, which is the
+                // "state below a control's declared floor" drift: nothing
+                // renders wrong, the reading just never appears.
+                t.enrichedText = vaultBody(title: n.0, tags: n.1)
             }
         }
     }
@@ -859,7 +885,15 @@ enum DemoSeedAll {
         ]
         out += kindle.enumerated().map { i, k in
             row(.note, k.1, source: "Kindle", ref: "demo:kindle:\(i)", days: k.2, hour: 22,
-                content: k.0)
+                content: k.0) { t in
+                // The work, on `authorHandle` — where §366's importer stamps
+                // it and where a room can rank it. `NoteSheetSource.citation`
+                // still reads `content` as its legacy fallback, so the
+                // `.passage` shape was reachable either way; stamping it
+                // means the demo shows the era the app WRITES rather than the
+                // older one it tolerates.
+                t.authorHandle = k.0
+            }
         }
         // Substack and RSS lead with the BYLINE (`postAuthor`) when enough
         // items name one, and fall back to the publication (`authorHandle`).
@@ -1096,6 +1130,28 @@ enum DemoSeedAll {
                            avatarURL: avatarArt("mia"))
         default: nil
         }
+    }
+
+    /// A demo vault note's body — long enough that the sheet's word count and
+    /// read-time reading behave the way they do on a real note (over
+    /// `NoteSheet.readTimeFloor`), and written as notes actually are: a claim,
+    /// what it rests on, and what to do next. Wikilinks are deliberately
+    /// present — a vault's neighbours are written in everybody else's text,
+    /// and `[[…]]` is what `ObsidianNote` reads them out of.
+    private static func vaultBody(title: String, tags: [String]) -> String {
+        let neighbours = tags.map { "[[\($0)]]" }.joined(separator: " · ")
+        // Paragraphs are single lines on purpose. A `"""` block with `\`
+        // continuations keeps the TRAILING whitespace of the line before the
+        // backslash, which rendered as gaps in the middle of sentences —
+        // visible only once the note was actually drawn, never in the source.
+        let paragraphs = [
+            "The thing I keep relearning is that a note is only worth keeping if it says what it is FOR. A title that names a topic gives me nothing back six weeks later; a title that names a decision does. So the rule now is one claim per note, in the first line, in words I would say out loud.",
+            "What this rests on: three weeks of writing them the other way, and finding I re-read almost none of it. The ones I did come back to were the ones that had already committed to something — where past me had taken the argument far enough to be wrong in a useful way.",
+            "The failure I want to avoid is the tidy vault nobody reads. Structure is cheap to add and expensive to maintain, and every folder I have made so far has outlived its reason by months. Links do the same work and cost nothing when they turn out to be wrong.",
+            "Next: go back through the last month and rewrite the titles that name a topic instead of a claim. Anything I cannot restate as a claim is a note I did not need.",
+            "Related: \(neighbours)",
+        ]
+        return ([title] + paragraphs).joined(separator: "\n\n")
     }
 
     private static func social() -> [Thing] {
