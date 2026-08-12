@@ -44,13 +44,20 @@ JWT_GEN="$(cd "$(dirname "$0")" && pwd)/asc-jwt.py"
 jwt() { python3 "$JWT_GEN" "$ASC_KEY_ID" "$ASC_ISSUER_ID" "$ASC_KEY_PATH"; }
 jq_() { python3 -c "import sys,json;$1"; }
 
-VERSION="" PLATFORM="IOS" BUILD="" DRY=0
+VERSION="" PLATFORM="IOS" BUILD="" DRY=0 NOSUB=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --version)  VERSION="$2"; shift 2 ;;
     --platform) PLATFORM="$2"; shift 2 ;;
     --build)    BUILD="$2"; shift 2 ;;
     --dry-run)  DRY=1; shift ;;
+    # Swap the build and STOP, leaving the version editable and unsubmitted.
+    # For the case this script otherwise cannot serve: replacing the build on
+    # a version you are not ready to send back yet — new screenshots, changed
+    # copy, anything reviewed alongside the binary. Without it the only way to
+    # get a newer build onto a waiting version is to resubmit with whatever
+    # metadata happens to be attached.
+    --no-submit) NOSUB=1; shift ;;
     *) echo "✗ unknown argument: $1"; exit 1 ;;
   esac
 done
@@ -137,6 +144,14 @@ for attempt in 1 2 3 4 5 6 7 8 9 10; do
   sleep 6
 done
 echo "✓ $PLATFORM $VERSION now carries build $BUILD"
+
+if [ "$NOSUB" = "1" ]; then
+  echo ""
+  echo "— --no-submit: stopping here, the version is NOT back in review —"
+  echo "  It carries build $BUILD and is editable. Finish the metadata, then"
+  echo "  submit from App Store Connect (or re-run this without --no-submit)."
+  exit 0
+fi
 
 # ── 5 · resubmit — the reviewSubmissions pair, NOT appStoreVersionSubmissions ─
 NEW_SUB="$(curl -fsS -X POST -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
