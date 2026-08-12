@@ -271,6 +271,12 @@ enum DemoSeedAll {
         ASCState.lastRead = nil
         SafeBridge.clearDemoSnapshot()
         forgetAddressBook()
+        // The watched social accounts, by HANDLE — never a blanket wipe, since
+        // a dev install watches real people through the same stores.
+        let fcDemo = Set(demoFarcaster.map(\.handle))
+        FarcasterStore.shared.accounts.removeAll { fcDemo.contains($0.username) }
+        let bskyDemo = Set(demoBluesky.map(\.handle))
+        BlueskyStore.shared.accounts.removeAll { bskyDemo.contains($0.handle) }
 
         // `clear` REMOVES the version stamp, which is right for the dev verb
         // it was written for (`-demoSeed clear`, where the next launch should
@@ -453,6 +459,21 @@ enum DemoSeedAll {
         ("Stripe", .wallet), ("Bitrefill", .wallet),
         ("Uniswap", .contract), ("Peer", .contract),
         ("Gnosis Pay", .safe),
+    ]
+
+    /// The watched social accounts the demo seeds, and the rows that name
+    /// them. `mine` is true for "you" alone — it is what the inbound half
+    /// (§239) reads to know whose likes and replies to look for, so marking
+    /// all three would claim three accounts are yours.
+    static let demoFarcaster: [(handle: String, name: String, bio: String)] = [
+        ("you", "You", "Making a small thing carefully."),
+        ("mia", "Mia", "Design, mostly. Occasionally onchain."),
+        ("sam", "Sam", "Building in the open."),
+    ]
+    static let demoBluesky: [(handle: String, name: String, bio: String)] = [
+        ("you", "You", "Making a small thing carefully."),
+        ("uma", "Uma", "Product design. Book club organiser."),
+        ("nils", "Nils", "Woodwork, coffee, and slow software."),
     ]
 
     /// One stable synthetic address per counterparty NAME — same name, same
@@ -957,12 +978,12 @@ enum DemoSeedAll {
         var out: [Thing] = []
         let casts: [(String, String, String, Int, Double)] = [
             ("Shipped the panel today. Every room's figure in one place.", "/design", "you", 32, 1),
-            ("A chart of everything at once is a chart of nothing.", "/design", "you", 21, 3),
+            ("A chart of everything at once is a chart of nothing.", "/design", "mia", 21, 3),
             ("Reading about legibility again.", "/books", "you", 9, 6),
-            ("The best demo is a real one.", "/design", "you", 44, 10),
-            ("Onchain receipts are underrated.", "/base", "you", 12, 14),
+            ("The best demo is a real one.", "/design", "sam", 44, 10),
+            ("Onchain receipts are underrated.", "/base", "mia", 12, 14),
             ("Books that changed how I plan.", "/books", "you", 7, 22),
-            ("Base fees are basically nothing now.", "/base", "you", 15, 30),
+            ("Base fees are basically nothing now.", "/base", "sam", 15, 30),
         ]
         out += casts.enumerated().map { i, c in
             row(.chat, c.0, source: "Farcaster", ref: "demo:fc:\(i)", days: c.4, hour: 13) { t in
@@ -976,11 +997,11 @@ enum DemoSeedAll {
         }
         let posts: [(String, String, Int, Double)] = [
             ("Small software, made carefully.", "you", 18, 2),
-            ("The panel draws only figures. No sentences.", "you", 26, 4),
-            ("Espresso and compilers, the eternal pairing.", "you", 11, 8),
+            ("The panel draws only figures. No sentences.", "uma", 26, 4),
+            ("Espresso and compilers, the eternal pairing.", "nils", 11, 8),
             ("Local-first is just software that respects you.", "you", 33, 12),
-            ("Notes from a quiet week.", "you", 6, 19),
-            ("Reading, mostly.", "you", 4, 27),
+            ("Notes from a quiet week.", "uma", 6, 19),
+            ("Reading, mostly.", "nils", 4, 27),
         ]
         out += posts.enumerated().map { i, p in
             row(.chat, p.0, source: "Bluesky", ref: "demo:bsky:\(i)", days: p.3, hour: 16,
@@ -1907,6 +1928,38 @@ enum DemoSeedAll {
             (ref: "wallet:safe:eth:demo1", have: 1, required: 3, yourTurn: false, daysAgo: 9,
              descriptionText: "an approval for Uniswap to spend 2,000 USDC"),
         ])
+
+        // 8 · The watched social accounts (2026-08-11). The social rooms grew
+        // a face rail (§362, the same control the wallets wear) which gates on
+        // `accounts > 1`, and the SocialRosterHero it replaced was retired in
+        // the same pass — so with no watched accounts seeded those rooms had
+        // the rail's floor unmet AND the head it replaced gone: two features
+        // deep, showing neither. Third instance today of existing state
+        // sitting under a control's minimum (the wallet rail, PostHog's
+        // fourteen days, now this).
+        //
+        // Handles match the authors on the seeded rows, and the cast is the
+        // demo's own — Sam and Mia already move money in the wallet, Nils and
+        // Uma already talk in Slack. One set of people across the whole demo
+        // reads as a life; four disjoint sets read as filler.
+        if FarcasterStore.shared.accounts.isEmpty {
+            FarcasterStore.shared.accounts = demoFarcaster.map {
+                var a = FarcasterStore.Account(username: $0.handle)
+                a.displayName = $0.name
+                a.bio = $0.bio
+                a.mine = $0.handle == "you"
+                return a
+            }
+        }
+        if BlueskyStore.shared.accounts.isEmpty {
+            BlueskyStore.shared.accounts = demoBluesky.map {
+                var a = BlueskyStore.Account(handle: $0.handle)
+                a.displayName = $0.name
+                a.bio = $0.bio
+                a.mine = $0.handle == "you"
+                return a
+            }
+        }
 
         // 7 · The address book — the counterparties the transfers above name,
         // so the wallet's people have faces. See `seedAddressBook`.
