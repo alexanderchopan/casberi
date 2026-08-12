@@ -58,6 +58,17 @@ struct ThingSheetView: View {
     /// also persisted, so it never returns for this address (prd §169).
     @State private var nudgeDeclined = false
 
+    // MARK: - The note anatomies (prd §366)
+
+    /// "How it landed" for a note — words, read time, where it came from.
+    @State private var noteReception: NoteReception?
+    /// The other passages already landed from the same book, and the total
+    /// (which includes this one). Read once on open, never held as a promise.
+    @State private var siblingPassages: [KeyedThing] = []
+    @State private var siblingTotal = 0
+    /// What else the corpus holds from the day this entry describes.
+    @State private var sameDayThings: [KeyedThing] = []
+
     /// The second-encounter naming nudge, when this sheet earns one.
     private var namePrompt: (address: String, count: Int, kind: AddressBook.Kind)? {
         guard !nudgeDeclined else { return nil }
@@ -127,6 +138,19 @@ struct ThingSheetView: View {
     /// earned it. A short record opens `.medium` instead of one card of
     /// content over a screen of black. Both detents stay a drag away.
     @State private var detent: PresentationDetent
+    /// HOW IT LANDED (prd §363, 2026-08-12) — the block that replaced the spec
+    /// table's one social row. Composed on open and again when the live
+    /// engagement read answers, so the numbers are the freshest the app has.
+    @State private var reception: SocialReception?
+    /// This person's posts already in the corpus — the `.person` shape's
+    /// second half, and the thing a profile card structurally cannot know.
+    /// Keyed, not raw (`ThingRowKeying.swift`): a snapshot held in `@State`.
+    @State private var personPosts: [KeyedThing] = []
+    /// How often you've paid this merchant (prd §364). Held in `@State` and
+    /// read once on open rather than computed in `body`: it is a corpus fetch,
+    /// and a computed property here would run it on every graph update the
+    /// sheet takes — which on a live `@Query` is a lot of them.
+    @State private var purchaseRecurrence: PurchaseStageSource.Recurrence?
     /// Stamped at construction, before the zoom-in transition starts — the
     /// clock `dismissWhenSettled` reads to tell a fast tap from a settled one.
     private let presentedAt = Date()
@@ -151,6 +175,9 @@ struct ThingSheetView: View {
             return
         }
         let hasMedia = thing.kind == .screenshot
+            // A folder-picked image opens at the same height as a screenshot
+            // now that it draws in the same frame (prd §365).
+            || FilesIngest.isStoredPicture(thing.sourceRef)
             || !(thing.previewImageURL ?? "").isEmpty
             // Any charted link — token, Kalshi, stock, PostHog metric. This
             // read Token and Stock only, so a KALSHI market has been opening
@@ -236,7 +263,14 @@ struct ThingSheetView: View {
                 // image in a floating frame — and its verbs become the dial.
                 // Everything else keeps the title-led layout.
                 let walletStage = self.walletStage
-                let framedShot = walletStage == nil && thing.kind == .screenshot
+                // The frame is for a thing made of PIXELS, not for one
+                // particular bridge (2026-08-12, prd §365) — a folder-picked
+                // image is the same picture as a screenshot and used to draw
+                // unframed and untappable. `FilesIngest.isStoredPicture` says
+                // why the test is on the ref rather than on the bytes.
+                let framedShot = walletStage == nil
+                    && (thing.kind == .screenshot
+                        || FilesIngest.isStoredPicture(thing.sourceRef))
                 if let walletStage {
                     stageView(for: walletStage)
                         .padding(.horizontal, DS.Space.s4)
@@ -303,6 +337,75 @@ struct ThingSheetView: View {
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.14)
                     dialResult
+                } else if socialShape == .person {
+                    // A PERSON, not a link to one (prd §363). The title slot
+                    // held "@alice started following you" at display size and
+                    // the body held a link preview of their profile page; the
+                    // face and the handle were on the record the whole time.
+                    SocialPersonContent(
+                        handle: thing.authorHandle ?? "",
+                        displayName: nil,
+                        avatarURL: thing.authorAvatarURL,
+                        source: thing.source,
+                        recent: personPosts,
+                        onOpenProfile: {
+                            profileTarget = SocialProfile(
+                                source: thing.source, handle: thing.authorHandle ?? "",
+                                displayName: nil, bio: nil,
+                                avatarURL: thing.authorAvatarURL)
+                        },
+                        onOpenThing: { walkingToNote = KeyedThing($0) })
+                        .padding(.top, DS.Space.s3)
+                        .settleIn(delay: 0.06)
+                } else if let purchaseReading {
+                    // The purchase receipt / watched-product card (prd §364).
+                    // It REPLACES the title block for the same reason the Work
+                    // receipt does: the headline it draws IS the subject, and
+                    // on a receipt that subject is the merchant the title's
+                    // own head was already saying.
+                    PurchaseStageView(thing: thing, reading: purchaseReading,
+                                      recurrence: purchaseRecurrence)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s3)
+                        .settleIn(delay: 0.06)
+                } else if let workReading {
+                    // The Work receipt (2026-08-12) — the §302 ledger's
+                    // grammar one category over. It REPLACES the title block
+                    // rather than sitting above it: the headline it draws IS
+                    // the title, minus the clause the status line is already
+                    // saying, so keeping both would print the row twice.
+                    WorkStageView(thing: thing, reading: workReading,
+                                  detail: WorkStage.statusDetail(
+                                    workRow, clause: workReading.statusWord))
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s3)
+                        .settleIn(delay: 0.06)
+                } else if let agentGrant {
+                    // A PERMISSION, not a bookmark (prd §367). The title slot
+                    // held "personal · openai/* · read, list" — three facts
+                    // joined and clamped at 80 — over a preview card of the
+                    // same dashboard every other grant links to, while the
+                    // expiry sat on `dueAt` with no route to any screen.
+                    AgentGrantView(grant: agentGrant)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s3)
+                        .settleIn(delay: 0.06)
+                } else if let agentConversation {
+                    AgentConversationHead(reading: agentConversation)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s3)
+                        .settleIn(delay: 0.06)
+                } else if let noteShape {
+                    // THE NOTE ANATOMIES (prd §366). Like the Work receipt
+                    // above, these REPLACE the title block rather than sitting
+                    // over it: an entry's title was cut out of its own first
+                    // line, so drawing both printed that line twice, and a
+                    // passage's title is an 80-character clamp of words the
+                    // shape below sets in full.
+                    noteHead(noteShape)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s3)
+                        .settleIn(delay: 0.06)
                 } else {
                     titleBlock
                         .padding(.horizontal, DS.Space.s4)
@@ -315,14 +418,84 @@ struct ThingSheetView: View {
                 // A social post always shows content — its pictures, what it
                 // quotes, how it landed — and its `content` is a permalink, so
                 // the title-stutter test never applied to it anyway.
-                let contentShown = walletStage == nil && !framedShot && !linkOnlyBody
-                    && (isSocialPost || (thing.kind != .event
+                //
+                // `linkOnlyBody` is bypassed for a post (prd §363): an X liked
+                // post really does hold a bare permalink in `content`, and the
+                // content view no longer draws that for a post shape — it
+                // draws the pictures and the quote, which the bare-link test
+                // would take with it.
+                //
+                // A note draws NOTHING here (prd §366) and that is the point:
+                // the generic content view is where a journal entry's prose was
+                // set at `callout15` in `textSecondary` and cut at twelve
+                // lines. `noteHead` above sets the same words at `reading20` in
+                // primary ink with a real disclosure, so leaving this on would
+                // print every entry twice, the second time worse.
+                //
+                // A GRANT draws nothing here (prd §367): its `content` is the
+                // 1Claw dashboard URL — the same string on every grant in the
+                // corpus — so the preview card it drew could not tell anyone
+                // anything about the grant they opened.
+                //
+                // A CONVERSATION always draws, bypassing the title-stutter test
+                // for the reason a post does: what it draws is the transcript,
+                // and the test compares `content` (the opening ask) to the
+                // title.
+                // A PURCHASE or a WATCHED PRODUCT draws nothing here (prd
+                // §364). The card above already leads with the record's own
+                // art at size and states the price from the stored fields, so
+                // leaving this on would re-draw both — and worse, as a
+                // `LinkPreviewCard` re-scraping the page: for a Bitrefill order
+                // with no gift link that page is the account's orders list,
+                // the same URL on every order in the corpus.
+                let contentShown = walletStage == nil && !framedShot
+                    && socialShape != .person && noteShape == nil
+                    && agentShape != .grant && purchaseReading == nil
+                    && (isSocialPost || agentShape == .conversation
+                    || (!linkOnlyBody && thing.kind != .event
                     && thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
                         != thing.title.trimmingCharacters(in: .whitespacesAndNewlines)))
                 if contentShown {
-                    ThingContentView(thing: thing)
+                    ThingContentView(thing: thing, agent: agentConversation)
                         .padding(.top, DS.Space.s3)
                         .settleIn(delay: 0.12)
+                }
+                // What the record knows about this chat, in words — the block
+                // that takes the spec table's `From — from your session` with
+                // it (prd §367).
+                if let agentConversation {
+                    AgentReceiptCard(reading: agentConversation)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s6)
+                        .settleIn(delay: 0.16)
+                }
+                // The voice player, which is the ONE thing the generic content
+                // view drew correctly for this category — kept, because a
+                // recording is not prose and a transcript is not a recording.
+                if noteShape == .entry, thing.kind == .voice {
+                    ThingContentView(thing: thing)
+                        .padding(.top, DS.Space.s3)
+                        .settleIn(delay: 0.1)
+                }
+                // HOW IT LANDED (prd §363) — what the network reported, who
+                // liked it, and one sentence saying how it got here. It stands
+                // where the spec table stood and takes that table's `From` row
+                // with it, so the two can never say the same thing twice.
+                if let reception {
+                    SocialReceptionCard(reception: reception)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s6)
+                        .settleIn(delay: 0.16)
+                }
+                // HOW IT LANDED, for a note (prd §366) — how long it is, how
+                // long it takes to read, and one sentence saying where it came
+                // from. Same position and the same job as the social block
+                // above, and it takes the same `From` row with it.
+                if let noteReception {
+                    NoteReceptionCard(reception: noteReception)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s6)
+                        .settleIn(delay: 0.16)
                 }
                 // The stage already shows the counterparty (with its pencil),
                 // so its spec table drops the Who row instead of repeating it.
@@ -386,6 +559,47 @@ struct ThingSheetView: View {
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s4)
                 }
+                // MORE FROM THIS BOOK (prd §366) — what makes ONE highlight
+                // worth opening. A marked sentence out of context is a
+                // fragment, and the others from the same work were already in
+                // the corpus with nothing to reach them.
+                if !siblingPassages.isEmpty {
+                    VStack(alignment: .leading, spacing: DS.Space.s2) {
+                        Text("More from this book")
+                            .dsText(.label12).foregroundStyle(DS.textTertiary)
+                        NoteSiblingList(rows: siblingPassages) {
+                            walkingToNote = KeyedThing($0)
+                        }
+                    }
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.top, DS.Space.s4)
+                }
+                // THAT DAY (prd §366) — the corpus answering a question the
+                // journal app this entry came from structurally cannot.
+                if !sameDayThings.isEmpty {
+                    VStack(alignment: .leading, spacing: DS.Space.s2) {
+                        Text("That day")
+                            .dsText(.label12).foregroundStyle(DS.textTertiary)
+                            .padding(.horizontal, DS.Space.s4)
+                        NoteSameDayShelf(rows: sameDayThings) {
+                            walkingToNote = KeyedThing($0)
+                        }
+                        .padding(.horizontal, DS.Space.s4)
+                    }
+                    .padding(.top, DS.Space.s4)
+                }
+                // IN THE VAULT (prd §366) — both halves of the graph existed
+                // and both were a plain list at the very bottom of the sheet.
+                // Counted and led with, they are a reading: this note is a hub,
+                // or this note is a leaf. The two counts are never summed — a
+                // note that both links to and is linked from another would be
+                // counted twice, and the directions are the information.
+                if noteShape == .note, !liveLinkedNotes.isEmpty || !pointingAt.isEmpty {
+                    NoteGraphCounts(linksOut: liveLinkedNotes.count,
+                                    linkedFrom: pointingAt.count)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s4)
+                }
                 if !liveLinkedNotes.isEmpty {
                     noteLinksSection
                         .padding(.horizontal, DS.Space.s4)
@@ -433,6 +647,59 @@ struct ThingSheetView: View {
         .onAppear {
             streamRelated()
             Task { replies = await SocialThread.replies(for: thing) }
+            // The note anatomies (prd §366). All of it is synchronous and
+            // scoped: two bounded fetches for a passage, one bounded fetch for
+            // an entry, and nothing at all for a vault note (its graph is
+            // already read below). No request, no new field, no CloudKit
+            // deploy — every number here is arithmetic over what we hold.
+            if let shape = noteShape {
+                if shape == .passage {
+                    let found = NoteSheetSource.siblings(of: thing, context: modelContext)
+                    siblingPassages = found.rows.keyed
+                    siblingTotal = found.total
+                }
+                noteReception = NoteSheetSource.reception(
+                    for: thing, shape: shape,
+                    siblings: shape == .passage ? siblingTotal : nil)
+                // What else the corpus holds from the day this entry
+                // describes — the one reading a journal app can never make.
+                // Only for an entry: a vault note's `capturedAt` is a file
+                // modification time, so "that day" would be the day you last
+                // touched the file, which is a fact about your editor.
+                if shape == .entry {
+                    sameDayThings = NoteSheetSource
+                        .sameDay(as: thing, context: modelContext).keyed
+                }
+            }
+            // HOW IT LANDED (prd §363), in two passes and deliberately so: the
+            // stored snapshot composes in the first frame so the block never
+            // pops in a beat late, and the LIVE read replaces it the moment it
+            // answers. `engagement(for:)` returns nil for every source without
+            // a live counts API (X, Instagram, TikTok, Snapchat), so an
+            // archive costs no request and simply keeps its own numbers —
+            // wearing the date that says so.
+            // How often this merchant has been paid (prd §364) — a corpus read,
+            // so it happens once here rather than in `body`.
+            if purchaseReading?.archetype == .receipt {
+                purchaseRecurrence = PurchaseStageSource.recurrence(
+                    for: thing, context: modelContext)
+            }
+            if let shape = socialShape {
+                reception = SocialSheetSource.reception(
+                    for: thing, shape: shape, live: nil, context: modelContext)
+                Task {
+                    guard let live = await SocialThread.engagement(for: thing),
+                          thing.isLive else { return }
+                    reception = SocialSheetSource.reception(
+                        for: thing, shape: shape, live: live, context: modelContext)
+                }
+                if shape == .person, let handle = thing.authorHandle, !handle.isEmpty {
+                    personPosts = SocialSheetSource
+                        .recentPosts(by: handle, source: thing.source,
+                                     context: modelContext)
+                        .keyed
+                }
+            }
             // The deadline hiding in a screenshot's own OCR text (prd §282).
             // Scoped to the kinds whose text is machine-read and therefore
             // never looked at by a person: a note you typed needs no help
@@ -620,9 +887,11 @@ struct ThingSheetView: View {
     /// The post's own words — the full text when the record carries it, else
     /// the title (posts landed before `postText` existed, until a refresh heals
     /// them). Never a permalink.
+    /// One definition (prd §363) — `SocialSheetSource.words` is what the
+    /// shape decision itself measured, so the sheet can never set as a hero
+    /// something the classifier didn't count as words.
     private var postWords: String {
-        let full = (thing.postText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        return full.isEmpty ? thing.title : full
+        SocialSheetSource.words(for: thing)
     }
 
     /// The post's words with their URLs live (2026-08-02). A post that says
@@ -647,24 +916,14 @@ struct ThingSheetView: View {
         ProseLinks.rendered(words)
     }
 
-    /// The post this one answers — "Replying to @alice", above the words, where
-    /// every client puts it. A tap walks into the parent in-app.
+    /// The post this one answers, above the words, where every client puts it.
+    ///
+    /// A CARD since prd §363, not the label it was: "Replying to @alice" names
+    /// a person and withholds the sentence, so a reply read as a non sequitur
+    /// unless you already remembered the conversation — and the parent's own
+    /// words were on the record the whole time. A tap still walks into it.
     private func replyingToRow(_ parent: SocialCard) -> some View {
-        Button {
-            walkingTo = parent
-        } label: {
-            HStack(spacing: DS.Space.s1) {
-                Image(systemName: "arrowshape.turn.up.left")
-                    .accessibilityHidden(true)
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
-                Text("Replying to @\(SocialThread.shortHandle(parent.handle))")
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
-                Spacer(minLength: 0)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .dsHover()
+        ReplyingToCard(parent: parent, source: thing.source) { walkingTo = parent }
     }
 
     // MARK: - Eyebrow (source icon · kind · age)
@@ -675,22 +934,21 @@ struct ThingSheetView: View {
             // handle, not the network's mark (the hue wash already names the
             // network). The feed rows lead with faces; the sheet should too
             // (2026-07-14). Everything else keeps the source mark + kind tag.
-            if isSocialPost, let avatar = thing.authorAvatarURL, !avatar.isEmpty {
-                // The face is a door to the person (2026-07-16) — tap it and
-                // you can watch them, wherever you met them.
-                Button {
-                    profileTarget = SocialProfile(
-                        source: thing.source, handle: thing.authorHandle ?? "",
-                        displayName: nil, bio: nil, avatarURL: avatar)
-                } label: {
-                    RemoteThumb(urlString: avatar, size: DS.Face.badge, fallback: thing.source, circular: true)
-                        .coinFlip(trigger: thing.id)
-                }
-                .buttonStyle(.plain)
-                .dsHover()
-                // A bare face: the only control here with no word in it.
-                .accessibilityLabel(Text("Open profile"))
-                .dsTooltip(String(localized: "Open profile"))
+            // Every social shape EXCEPT a transcript: a conversation's
+            // `authorHandle` is the thread's own name (Instagram's DM import
+            // stamps the title there), so wearing it as "@Chat with Sarah"
+            // would introduce a conversation as a person. A transcript keeps
+            // the source line it always had.
+            if let shape = socialShape, shape != .transcript,
+               !authorShortHandle.isEmpty {
+                // The face, and whether it is a DOOR (prd §363). It leads with
+                // the person on every social source now, not just the three
+                // with a profile API — an archived tweet introducing itself as
+                // "Note · 3y ago" was the sheet forgetting who wrote it. Where
+                // there is no avatar (an X archive stamps a handle and no
+                // picture) the source's own mark stands in, so the line is
+                // never a naked handle.
+                socialFace
                 // WHY this post is here rides the sentence when there's a
                 // reason worth stating ("@dwr · in /design · 2h ago") — a
                 // liked cast, a channel cast, and your own post used to read
@@ -747,6 +1005,43 @@ struct ThingSheetView: View {
         }
     }
 
+    /// The author's face, a door where a door can lead somewhere (prd §363).
+    ///
+    /// Split out of the eyebrow because it now has four combinations rather
+    /// than one — avatar or mark, door or label — and spelling them inline
+    /// made the eyebrow's own `if` unreadable.
+    @ViewBuilder private var socialFace: some View {
+        if facesAreDoors {
+            // The face is a door to the person (2026-07-16) — tap it and you
+            // can watch them, wherever you met them.
+            Button {
+                profileTarget = SocialProfile(
+                    source: thing.source, handle: thing.authorHandle ?? "",
+                    displayName: nil, bio: nil, avatarURL: thing.authorAvatarURL)
+            } label: {
+                faceMark
+            }
+            .buttonStyle(.plain)
+            .dsHover()
+            // A bare face: the only control here with no word in it.
+            .accessibilityLabel(Text("Open profile"))
+            .dsTooltip(String(localized: "Open profile"))
+        } else {
+            faceMark
+        }
+    }
+
+    @ViewBuilder private var faceMark: some View {
+        if let avatar = thing.authorAvatarURL, !avatar.isEmpty {
+            RemoteThumb(urlString: avatar, size: DS.Face.badge,
+                        fallback: thing.source, circular: true)
+                .coinFlip(trigger: thing.id)
+        } else {
+            BridgeIcon(name: thing.source, size: DS.Face.badge, circular: true)
+                .coinFlip(trigger: thing.id)
+        }
+    }
+
     /// The eyebrow's mark-and-words, shared by the door and the plain-label
     /// branch above so the two can never drift on what the line SAYS — only on
     /// whether it goes anywhere.
@@ -790,12 +1085,75 @@ struct ThingSheetView: View {
         }
     }
 
-    /// A social post with a known author — the eyebrow and thread treatment
-    /// key off this, never a hardcoded source name.
-    private var isSocialPost: Bool {
-        SocialThread.isSocial(thing.source)
-            && !(thing.authorHandle ?? "").isEmpty
+    /// The social anatomy this thing wears, or nil for none (prd §363).
+    ///
+    /// This REPLACED `isSocialPost`, which asked `SocialThread.isSocial` — a
+    /// set of three source names — and so refused the treatment to X,
+    /// Instagram, TikTok and Snapchat, every one of which stamps the same
+    /// fields. `SocialSheet.shape` asks about the RECORD instead.
+    private var socialShape: SocialSheet.Shape? {
+        SocialSheetSource.shape(for: thing)
     }
+
+    /// A thing whose words are the hero. The title slot, the reading measure
+    /// and the content route all key off this.
+    private var isSocialPost: Bool { socialShape == .post }
+
+    // MARK: - The note anatomies (prd §366)
+
+    /// Which of the three note anatomies this thing wears, or nil for none.
+    /// A DATA test — does the record quote somebody else's work, and is its
+    /// title a name the person gave it or a line we cut out of its own body.
+    private var noteShape: NoteSheet.Shape? {
+        NoteSheetSource.shape(for: thing)
+    }
+
+    /// The head each shape leads with, in place of the title block.
+    @ViewBuilder
+    private func noteHead(_ shape: NoteSheet.Shape) -> some View {
+        let tags = NoteSheetSource.tags(for: thing)
+        VStack(alignment: .leading, spacing: DS.Space.s4) {
+            switch shape {
+            case .entry:
+                NoteDateline(dateline: NoteSheet.dateline(
+                    thing.capturedAt, act: NoteSheetSource.act(for: thing), now: .now))
+                // A voice note's words belong to its recording, and
+                // `VoiceContent` below draws the two together — player, real
+                // amplitude envelope, transcript. Setting the transcript here
+                // as well would print it twice and separate it from the audio
+                // it transcribes.
+                if thing.kind != .voice {
+                    NoteProse(text: NoteSheetSource.body(for: thing).text)
+                }
+            case .note:
+                // A vault note's title IS a name the person chose, so unlike
+                // an entry's it leads and is not a repetition of anything.
+                Text(thing.title)
+                    .dsText(.heading28)
+                    .foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+                NoteProse(text: NoteSheetSource.body(for: thing).text)
+            case .passage:
+                NotePassageContent(
+                    passage: NoteSheetSource.passage(for: thing),
+                    citation: NoteSheetSource.citation(for: thing) ?? thing.source,
+                    locator: thing.summary)
+            }
+            if !tags.isEmpty {
+                NoteTagRow(tags: tags)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Whether the face in the eyebrow is a DOOR. Only the three networks with
+    /// a profile lookup behind them: `SocialProfileCard`'s one real verb is
+    /// Watch, and on X or an Instagram export it can never succeed — a control
+    /// that opens a card whose only action is impossible is the dead control
+    /// the honesty law bans (the same reasoning `SocialRepliesSection` already
+    /// applies to a GitHub commenter's avatar).
+    private var facesAreDoors: Bool { SocialThread.isSocial(thing.source) }
 
     /// The author's handle without Bluesky's ".bsky.social" tail — the name
     /// the person knows.
@@ -826,25 +1184,85 @@ struct ThingSheetView: View {
         // would render — a stage's typical wallet transfer now has zero
         // spec rows (From dropped, Who already dropped), and an empty faint
         // card floating under the stage was worse than no card at all.
-        let hasEvent = thing.kind == .event && !thing.content.isEmpty
-        let hasDue = thing.kind == .reminder && thing.dueAt != nil
-        let hasSite = thing.kind == .link && thing.source != "Tokens"
+        // A Work receipt has already said all three of these, better and
+        // higher up (2026-08-12): the deadline as its own strip in words
+        // ("Due Aug 19 · in 7 days" rather than a bare timestamp), the
+        // destination under the dial's first disc, and the project on its own
+        // line. This is the row set the user called "a database field", and on
+        // a Work sheet it was very nearly the whole thing — "Site: vercel.com"
+        // beside "From: in your things".
+        let isWork = workReading != nil
+        // "When" and "Due" retired here 2026-08-12 (prd §365). Both existed
+        // only because the content anatomy was too thin to carry the fact —
+        // and for a calendar event the result was that the sheet printed the
+        // SAME string twice on one screen, once in the schedule card and once
+        // behind an 80pt label column. `MomentStub` now draws the moment from
+        // the real dates (`capturedAt`/`endAt`/`dueAt`), which is strictly more
+        // than either row could say: a range, a duration, a relative distance,
+        // and an overdue deadline that reads as overdue. Same reasoning as
+        // "From" standing down below — the fact isn't lost, it's said better.
+        // A purchase's `content` is the seat's own account page, not a site the
+        // person browsed to — "Site: bitrefill.com" under a gift-card order is
+        // the leaked plumbing the Tokens exclusion beside it was written for,
+        // and the dial's first disc already names where the door goes.
+        // A 1Claw grant's `content` is the dashboard root — the same URL on
+        // every grant in the corpus (prd §367), so "Site: 1claw.xyz" is a row
+        // that is true of the seat and says nothing about the thing. The dial's
+        // Open disc already goes there.
+        let hasSite = !isWork && purchaseReading == nil && agentShape == nil
+            && thing.kind == .link && thing.source != "Tokens"
             && !(contentShown && ThingContentView.showsLinkPreview(thing))
             && Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content)?.host() != nil
+        // What a Work row's slab says instead: when it landed, which is the
+        // one fact the receipt above never states and the one every archetype
+        // has. The project is NOT repeated here — `WorkStageView` draws it
+        // directly under the headline, where it reads as part of the sentence
+        // rather than as a field.
+        let hasLanded = isWork
         let hasEcho = crossSourceEcho != nil
         let hasAgent = thing.provenance.agent != nil
-        let hasFrom = showsWho
+        // "From" stands down where the reception block's own sentence already
+        // says where this came from (prd §363) — and it says it better, in
+        // words rather than behind an 80pt label column. Gated on the block
+        // having actually composed a sentence, never on the shape alone: a
+        // social thing whose reception is nil (nothing honest to say) keeps
+        // the row it always had rather than losing the fact entirely.
+        // …and "From: in your things", the row that says nothing, on every
+        // Work sheet in the app. The eyebrow already names the source.
+        // …and "From: written by you", which was the ENTIRE spec table on
+        // every note in the corpus (prd §366) — one row, behind an 80pt label
+        // column, saying less than the eyebrow directly above it. Same gate as
+        // the social one and for the same reason: the note reception block has
+        // to have actually composed a sentence, or the fact is lost rather
+        // than moved.
+        // …and on every purchase and watched product (prd §364), where the
+        // card above ends on a sentence saying exactly where this came from —
+        // and saying the TRUE one per seat, which this row could not: it read
+        // "from a store you follow" over a deal (which comes from a feed
+        // publisher) and over a barcode scan (which came from your own hand).
+        // …and on an agent sheet (prd §367): a conversation's receipt ends on
+        // "From your ChatGPT export", and a grant's own card says which vault
+        // it is in. "From — from your session" was this table's whole
+        // contribution to a chat, and it is the phrase the user called a
+        // database field.
+        let hasFrom = showsWho && !isWork && purchaseReading == nil
+            && agentShape == nil
+            && reception?.provenance == nil
+            && noteReception?.provenance == nil
         let hasCounterparty = showsWho && thing.source == "Wallet"
             && !(thing.counterpartyAddress ?? "").isEmpty
-        let anyRow = hasEvent || hasDue || hasSite || hasEcho || hasAgent || hasFrom || hasCounterparty
+        let anyRow = hasSite || hasEcho || hasAgent || hasFrom
+            || hasCounterparty || hasLanded
 
         if anyRow {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
-                if hasEvent {
-                    specRow("When", thing.content)
-                }
-                if hasDue, let due = thing.dueAt {
-                    specRow("Due", due.formatted(.dateTime.month(.abbreviated).day().hour().minute()))
+                // When it happened, on a Work receipt. Every archetype has
+                // one and the hero above never states it — a deploy, a
+                // dispute and an agent run are all "a thing that happened at
+                // a time", which is exactly what a receipt is for.
+                if hasLanded {
+                    specRow("Landed", thing.capturedAt.formatted(
+                        .dateTime.month(.abbreviated).day().hour().minute()))
                 }
                 // Tokens' content URL is plumbing (the chart's technical
                 // dependency, not a site the person browsed to) — the native
@@ -1015,6 +1433,75 @@ struct ThingSheetView: View {
             && (thing.summary ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    /// The Work receipt, when this row is one (2026-08-12).
+    ///
+    /// Sibling to `walletStage` and deliberately the same shape: nil means
+    /// "we have nothing better to say than the title", and the sheet renders
+    /// exactly as it did before — which is what lets this land covering some
+    /// Work seats and not others without a flag day.
+    ///
+    /// The whole derivation is `WorkStage`, which is Foundation-only so
+    /// `scripts/work-stage-selftest.sh` can compile it as shipped. Nothing
+    /// about the outcome is decided here.
+    private var workReading: WorkStage.Reading? {
+        guard thing.isLive, walletStage == nil, purchaseReading == nil else { return nil }
+        return WorkStage.reading(workRow)
+    }
+
+    /// The purchase receipt / watched-product card, when this row is one
+    /// (2026-08-12, prd §364).
+    ///
+    /// Sibling to `walletStage` and `workReading`, same contract: nil means
+    /// "we have nothing better to say than the title", and the sheet renders
+    /// exactly as it did before.
+    ///
+    /// It is asked BEFORE `workReading` and that ordering is load-bearing —
+    /// both types read `Thing.tags`, and a shape word one of them owns
+    /// ("Settled", "Deal") must not be read by the other's table. The whole
+    /// derivation is `PurchaseStage`, Foundation-only so
+    /// `scripts/purchase-stage-selftest.sh` can compile it as shipped.
+    private var purchaseReading: PurchaseStage.Reading? {
+        guard thing.isLive, walletStage == nil else { return nil }
+        return PurchaseStageSource.reading(for: thing)
+    }
+
+    /// The agent anatomy, when this row has one (prd §367).
+    ///
+    /// Sibling to `walletStage` and `workReading`, and gated behind BOTH for
+    /// the same reason they are gated behind each other: a row wears one
+    /// anatomy. Cursor is the case that matters — its runs are in the Agents
+    /// category and are drawn by the Work receipt, which is right, and asking
+    /// this first would take that away from them.
+    private var agentShape: AgentSheet.Shape? {
+        guard thing.isLive, walletStage == nil, workReading == nil else { return nil }
+        return AgentSheetSource.shape(for: thing)
+    }
+
+    /// The conversation reading. Computed once per body evaluation and handed
+    /// to the head, the turns and the receipt, so the three can never disagree
+    /// about how many turns there were.
+    private var agentConversation: AgentSheet.Conversation? {
+        guard agentShape == .conversation else { return nil }
+        return AgentSheetSource.conversation(for: thing)
+    }
+
+    private var agentGrant: AgentSheet.Grant? {
+        guard agentShape == .grant else { return nil }
+        return AgentSheetSource.grant(for: thing)
+    }
+
+    /// The primitives `WorkStage` reads. Built once so the reading and the
+    /// clause detail below can't be derived from two different snapshots.
+    private var workRow: WorkStage.Row {
+        WorkStage.Row(source: thing.source,
+                      sourceRef: thing.sourceRef,
+                      title: thing.title,
+                      tags: thing.tags,
+                      mark: thing.mark.rawValue,
+                      projectField: thing.authorHandle,
+                      hasPrice: thing.priceValue != nil && thing.priceCurrency != nil)
+    }
+
     /// The ONE decision point every wallet-stage branch reads — first match
     /// wins, since a thing can only ever satisfy one of the three title
     /// grammars.
@@ -1127,7 +1614,18 @@ struct ThingSheetView: View {
     /// notes — and re-capped at four, so adding one can never turn a sheet into
     /// a menu; the verb that loses is the last derivation ranked, not this one.
     private var sheetVerbs: [Verb] {
-        let derived = VerbDerivation.verbs(for: thing)
+        var derived = VerbDerivation.verbs(for: thing)
+        // WHERE you land, never "Open" — §302's Explorer ruling, generalised
+        // (prd §364). A Bitrefill order and a Privacy purchase both derived
+        // the generic "Open link" from their kind, so the one disc that goes
+        // anywhere named neither the place nor what you would find there.
+        // Only the FIRST verb is renamed, and only when it really is the
+        // record's own link, so a source hand-off derived below keeps its own
+        // word.
+        if let word = purchaseReading?.destination, let first = derived.first,
+           case .openURL = first.action {
+            derived[0] = Verb(label: word, icon: first.icon, action: first.action)
+        }
         guard let episode = episodeVerb else { return derived }
         return Array(([episode] + derived).prefix(4))
     }

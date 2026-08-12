@@ -189,6 +189,20 @@ struct BandRow: View {
         // "… with <method> on Peer" template (`PeerBridge.title(for:story:)`
         // is the only place that string is built, so the parse is exact, not
         // a heuristic). No structured field carries the method separately.
+        // WHO IS SELLING IT (2026-08-12, prd §368) — the store, the deal
+        // publisher, the brand. All three bridges have stamped `authorHandle`
+        // since they shipped and this slot had no case for any of them, so the
+        // fact was in the store, in the index, in the demo seed, and on no
+        // screen: a Shopify row and a Deals row were indistinguishable from
+        // each other and from a bare link.
+        //
+        // It is the same "the row cannot otherwise carry this" reasoning the
+        // RSS case above states. Deliberately NOT extended to Privacy or
+        // Bitrefill, whose merchant leads their own title — naming it here
+        // would print it twice on one row.
+        case "Shopify", "Deals", "Open Food Facts":
+            let name = thing.authorHandle?.trimmingCharacters(in: .whitespaces) ?? ""
+            return name.isEmpty ? nil : name
         case "Peer":
             guard let start = thing.title.range(of: " with "),
                   let end = thing.title.range(of: " on Peer", range: start.upperBound..<thing.title.endIndex)

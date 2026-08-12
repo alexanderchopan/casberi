@@ -268,22 +268,46 @@ enum ShopifyIngest {
                     if let thing = landed[ref], let now = product.priceValue {
                         if let before = thing.priceValue, now < before {
                             // A DROP — re-stamp capturedAt so it rides "while I
-                            // was away", show "was $X" beside today's price, tag it.
+                            // was away", record what it fell FROM, tag it.
+                            //
+                            // The old price used to survive only as
+                            // `" (was €90.00)"` appended to the title (prd
+                            // §368). That put the whole reason the row
+                            // re-surfaced inside `titleLine`'s 80-character
+                            // clamp — the first thing the clamp eats on a long
+                            // product name — and left the sheet nothing to read
+                            // but a localized string it must never parse back
+                            // (§340). It is a record now, on `enrichedText`,
+                            // and the title is left alone.
+                            //
+                            // `capturedAt` is read BEFORE it is re-stamped:
+                            // it is the last moment we saw the old price, which
+                            // is exactly what "was €90.00 until…" claims.
+                            thing.enrichedText = PriceHistory.rewrite(
+                                existing: thing.enrichedText,
+                                with: PriceHistory.compose(
+                                    was: before, now: now, currency: product.currency,
+                                    wasUntil: thing.capturedAt))
                             thing.capturedAt = .now
                             if !thing.tags.contains("Price drop") { thing.tags.append("Price drop") }
-                            let was = PriceFormat.string(before, currency: product.currency).map { " (was \($0))" } ?? ""
-                            thing.title = IngestSupport.titleLine(product.title + was)
+                            thing.title = IngestSupport.titleLine(product.title)
                             thing.priceValue = now
                             thing.priceCurrency = product.currency
-                            thing.embedding = nil          // title changed → re-embed
+                            thing.embedding = nil          // indexed text changed → re-embed
                             touched = true
                         } else if thing.priceValue != now {
                             // Rose or first-seen number — update in place, and
-                            // clear a stale "Price drop" tag now the price recovered.
+                            // clear a stale "Price drop" tag now the price
+                            // recovered. The recorded move goes with the tag:
+                            // a "was €90.00" line under a product that is back
+                            // to €90.00 is a true sentence about a moment that
+                            // has passed, which on a live price reads as the
+                            // current one.
                             thing.priceValue = now
                             thing.priceCurrency = product.currency
                             thing.title = product.title
                             thing.tags.removeAll { $0 == "Price drop" }
+                            thing.enrichedText = PriceHistory.clear(thing.enrichedText)
                             thing.embedding = nil
                             touched = true
                         }

@@ -47,9 +47,14 @@ enum DemoSeedAll {
     /// can seed the SAME refs `rooms()` lands things under, rather than a
     /// second copy that can drift from it (the demo-parity discipline this
     /// file's own header states as a rule).
-    static let tokenSeeds: [(symbol: String, name: String, price: Double, dayOffset: Double)] = [
-        ("ETH", "Ethereum", 3_180, 1), ("SOL", "Solana", 176, 2),
-        ("DEGEN", "Degen", 0.0071, 5),
+    /// `marketCap` is what fills `TokenRow`'s vitals line ("SOL · $83.1B
+    /// cap"); a real Dexscreener read always carries one, so seeding nil left
+    /// every demo row's second line blank (2026-08-12).
+    static let tokenSeeds: [(symbol: String, name: String, price: Double,
+                             marketCap: Double, dayOffset: Double)] = [
+        ("ETH", "Ethereum", 3_180, 383_000_000_000, 1),
+        ("SOL", "Solana", 176, 83_100_000_000, 2),
+        ("DEGEN", "Degen", 0.0071, 71_400_000, 5),
     ]
 
     /// The `sourceRef` namespaces this seeder owns — what `clear` deletes.
@@ -108,7 +113,39 @@ enum DemoSeedAll {
                               // "railgun:shield:"/"railgun:unshield:" prefix
                               // for the same ref-shape-matching reason as
                               // Peer/Privacy Pools above.
-                              "railgun:shield:demo", "railgun:unshield:demo"]
+                              "railgun:shield:demo", "railgun:unshield:demo",
+                              // Stocktwits watches join the REAL namespace —
+                              // `StocktwitsScreen` builds its watchlist by
+                              // filtering on that exact prefix, so a "demo:"
+                              // ref would land rows the setup screen cannot
+                              // see. EXACT refs, never the bare prefix, for
+                              // the PostHog reason above: a real watch on one
+                              // of these three symbols must survive demo exit.
+                              StockWatch.symbolRef("AAPL"),
+                              StockWatch.symbolRef("NVDA"),
+                              StockWatch.symbolRef("TSLA"),
+                              // The purchase seats (2026-08-12, prd §368) carry
+                              // the REAL ref shapes for the Peer/Privacy Pools
+                              // reason exactly: `PurchaseStage.archetype` forks
+                              // on those prefixes, so a "demo:" ref would leave
+                              // every seeded receipt wearing the generic sheet
+                              // and the category would look unbuilt in the one
+                              // place anyone can see it without an account.
+                              // They keep a "demo" SEGMENT, so nothing real can
+                              // collide with them.
+                              "privacy:txn:demo", "bitrefill:order:demo",
+                              "bitrefill:invoice:demo",
+                              // Open Food Facts keys on the barcode itself and
+                              // there is nowhere to put a "demo" segment — the
+                              // ref IS the product's code, and the scanned
+                              // card's own barcode rung reads it back. EXACT
+                              // refs, never a bare "off:" prefix, for the
+                              // PostHog/Stocktwits reason above: a real scan of
+                              // one of these three products must survive demo
+                              // exit, and a bare prefix would take every scan
+                              // in the corpus with it.
+                              "off:5060403320102", "off:8717677332304",
+                              "off:5391520941016"]
 
     // MARK: - Entry point
 
@@ -782,6 +819,17 @@ enum DemoSeedAll {
 
     // MARK: Rooms that lead with a leaderboard
 
+    /// A demo book's cover ref. Nil for a title with no generated spine —
+    /// Kindle's books have none on purpose, since a My Clippings.txt import
+    /// carries no cover and inventing one would show the demo doing something
+    /// the real importer cannot.
+    private static func bookCover(_ bookAndAuthor: String) -> String? {
+        if bookAndAuthor.hasPrefix("Seeing Like a State") { return "sample:cover-state" }
+        if bookAndAuthor.hasPrefix("The Timeless Way") { return "sample:cover-timeless" }
+        if bookAndAuthor.hasPrefix("Thinking in Systems") { return "sample:cover-systems" }
+        return nil
+    }
+
     private static func reading() -> [Thing] {
         var out: [Thing] = []
         // Readwise / Kindle group on "Book — Author" in `content`.
@@ -795,7 +843,12 @@ enum DemoSeedAll {
         ]
         out += highlights.enumerated().map { i, h in
             row(.note, h.1, source: "Readwise", ref: "demo:readwise:\(i)", days: h.2, hour: 8,
-                content: h.0)
+                content: h.0) { t in
+                // The book's cover, which the real bridge stamps from the
+                // book `cover` field (2026-08-12) — keyed off the title so
+                // the two highlights from one book share one spine.
+                t.previewImageURL = bookCover(h.0)
+            }
         }
         let kindle: [(String, String, Double)] = [
             ("Piranesi — Susanna Clarke", "The beauty of the house is immeasurable.", 4),
@@ -891,9 +944,16 @@ enum DemoSeedAll {
             ("Slay the Spire", 1.4, 8), ("Tunic", 0.8, 12),
         ]
         out += steam.enumerated().map { i, g in
-            row(.link, g.0, source: "Steam", ref: "demo:steam:\(i)", days: g.2, hour: 23,
+            // "Played <game>" is the shape `SteamBridge` lands (2026-08-12),
+            // with the game itself on `authorHandle` — the row's trailing
+            // slot, and the join key MediaMoments reads. The demo titled rows
+            // with the bare game name, so the sentence the real room reads as
+            // an ACTIVITY read here as a catalogue entry.
+            row(.link, "Played \(g.0)", source: "Steam", ref: "demo:steam:\(i)",
+                days: g.2, hour: 23,
                 content: "Recently played · \(String(format: "%.1f", g.1))h in the last two weeks") { t in
                 t.previewImageURL = art(i)
+                t.authorHandle = g.0
             }
         }
         return out
@@ -962,10 +1022,27 @@ enum DemoSeedAll {
             ("https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_scroll-driven_animations", 26),
             ("https://developer.apple.com/documentation/swiftdata", 34),
         ]
+        // Raindrop stamps the save's own TYPE and tags, and its excerpt on
+        // `summary` (2026-08-12) — the sheet renders that excerpt, and the
+        // type is what makes a Raindrop room filterable at all. The demo
+        // carried neither, so every save was an untyped, untagged, wordless
+        // link where the real room shows what kind of thing it saved.
+        let raindropTags = [["Article", "Design"], ["Article", "SwiftUI"], ["Document"],
+                            ["Document"], ["Article", "CSS"], ["Article", "SwiftUI"]]
+        let raindropNotes = [
+            "The platform conventions, in one place.",
+            "Declarative views, state and layout.",
+            "Every accepted proposal, with its rationale.",
+            "Building the toolchain from source.",
+            "Animations driven by scroll position rather than time.",
+            "Persistence with the model layer Swift already knows.",
+        ]
         out += raindrop.enumerated().map { i, u in
             row(.link, URL(string: u.0)?.lastPathComponent.replacingOccurrences(of: "-", with: " ").capitalized ?? "Saved link",
                 source: "Raindrop", ref: "demo:raindrop:\(i)", days: u.1, hour: 15,
-                content: u.0)
+                content: u.0, tags: raindropTags[i % raindropTags.count]) { t in
+                t.summary = raindropNotes[i % raindropNotes.count]
+            }
         }
         let bookmarks: [(String, String, Double)] = [
             ("Human Interface Guidelines", "https://developer.apple.com/design", 5),
@@ -996,8 +1073,68 @@ enum DemoSeedAll {
 
     /// `channelName` has been stamped on every cast since §81 and nothing drew
     /// it until the panel did; two channels minimum or the treemap declines.
+    /// The cast a demo cast is replying UNDER, for the handful that reply.
+    /// No `url`/`ref`: `ReplyingToRow` draws the handle and the words, and a
+    /// fabricated `fc:<hash>` would make the sheet offer to walk a thread
+    /// that does not exist (P4 — a door that opens on nothing).
+    private static func castParent(_ i: Int) -> SocialCard? {
+        switch i {
+        case 1: SocialCard(handle: "you",
+                           text: "Shipped the panel today. Every room's figure in one place.",
+                           avatarURL: avatarArt("you"))
+        case 4: SocialCard(handle: "sam", text: "Onchain receipts, but for what exactly?",
+                           avatarURL: avatarArt("sam"))
+        default: nil
+        }
+    }
+
+    /// The cast a demo cast QUOTES. Same no-permalink rule as `castParent`.
+    private static func castQuote(_ i: Int) -> SocialCard? {
+        switch i {
+        case 3: SocialCard(handle: "mia",
+                           text: "Most product demos show a screen nobody has ever had.",
+                           avatarURL: avatarArt("mia"))
+        default: nil
+        }
+    }
+
     private static func social() -> [Thing] {
         var out: [Thing] = []
+        // NEW FOLLOWERS — the `.person` sheet anatomy (prd §363, 2026-08-12).
+        // `SocialSheet.shape` returns `.person` for exactly one condition,
+        // `socialContext == "follow"`, and no demo row carried it — so the
+        // one anatomy whose whole point is that a follower is A PERSON and
+        // not a link to one could not be reached in the demo at all. Landed
+        // by `SocialInbound.landFollower` in the real app (§239).
+        //
+        // The handles are ones the demo already POSTS as, so the sheet's
+        // "their recent posts" section (`SocialSheetSource.recentPosts`) has
+        // something real to find — a person card with an empty shelf under it
+        // is the emptiest possible version of this shape.
+        //
+        // NO profile URL in `content` (P4): these handles are short and
+        // plausible, so a real `bsky.app/profile/uma` would open a stranger's
+        // page. The `.person` branch never reads `content` — it draws from
+        // `authorHandle` and `authorAvatarURL` — so the field costs nothing
+        // to leave empty and a dead door costs the demo its credibility.
+        let followers: [(handle: String, name: String, source: String, days: Double)] = [
+            ("sam", "Sam", "Farcaster", 2),
+            ("uma", "Uma", "Bluesky", 5),
+        ]
+        out += followers.map { f in
+            row(.link, "\(f.name) (@\(f.handle)) started following you",
+                // `demo:` ref, not the real `<source>:follower:<id>` shape:
+                // nothing anywhere PARSES a follower ref (it exists purely
+                // for `SocialInbound`'s dedupe set), so joining that
+                // namespace would buy nothing and cost teardown — only
+                // `refPrefixes` entries are removed on demo exit.
+                source: f.source, ref: "demo:follower:\(f.handle)",
+                days: f.days, hour: 11) { t in
+                t.authorHandle = f.handle
+                t.authorAvatarURL = avatarArt(f.handle)
+                t.socialContext = "follow"
+            }
+        }
         let casts: [(String, String, String, Int, Double)] = [
             ("Shipped the panel today. Every room's figure in one place.", "/design", "you", 32, 1),
             ("A chart of everything at once is a chart of nothing.", "/design", "mia", 21, 3),
@@ -1016,6 +1153,31 @@ enum DemoSeedAll {
                 t.likeCount = c.3
                 t.replyCount = i % 4
                 t.repostCount = i % 3
+                // WHAT A CAST REPLIES TO AND WHAT IT QUOTES (2026-08-12).
+                // `FarcasterIngest` stamps `parent` and `quote` — and
+                // CLAUDE.md's own note on this bridge says nearly every cast
+                // it lands has one or the other, because channel casts,
+                // mentions and likes are mostly replies. The demo had
+                // neither on any row, so `ReplyingToRow` and
+                // `SocialQuoteCard` — two of the room's most distinctive
+                // pieces — never drew once. Sparse rather than on every row:
+                // a column where every entry quotes something reads as
+                // noise, and the point is that the shapes EXIST.
+                if let card = castParent(i) { t.parent = card }
+                if let card = castQuote(i) { t.quote = card }
+                // A cast's own pictures — the bundled photos, since a post
+                // attachment is a photograph, not a generated card. BOTH
+                // paths are exercised on purpose: `PostCard` draws a SINGLE
+                // image from `previewImageURL` (`PostMedia`) and only
+                // switches to `PostImageGrid` at two or more, so seeding one
+                // array of one would have drawn nothing at all — the array
+                // branch requires `count > 1` and the fallback reads a field
+                // that was never set.
+                if i == 0 { t.previewImageURL = art(0) }
+                if i == 5 {
+                    t.previewImageURL = art(1)
+                    t.imageURLs = [art(1), art(2)]
+                }
             }
         }
         let posts: [(String, String, Int, Double)] = [
@@ -1063,6 +1225,30 @@ enum DemoSeedAll {
             ("Watching the 200d", "TSLA", "", 7),
             ("This is the long-term hold", "NVDA", "Bullish", 9),
         ]
+        // The WATCHED TICKERS (2026-08-12). Stocktwits' primary rows are the
+        // watches themselves — `StockWatch.watch` lands one `.link`
+        // thing per symbol, titled `"\(company) · $\(TICKER)"`, and
+        // `StocktwitsScreen` builds its whole watchlist by filtering on that
+        // ref prefix. The demo seeded only the POSTS, so the room was a wall
+        // of chat with nothing being watched, and the setup screen's
+        // watchlist was empty on a "connected" bridge.
+        //
+        // Real refs, spelled through `StockWatch`s own builder — and listed in
+        // `refPrefixes` as EXACT refs rather than the bare
+        // "stocktwits:sym:" prefix, so demo exit can never delete a real
+        // watch (the `PostHogWatch.metricRef` reasoning, same hazard).
+        let tickers: [(company: String, symbol: String, watchedAt: Double, days: Double)] = [
+            ("Apple Inc", "AAPL", 214.60, 6),
+            ("NVIDIA Corp", "NVDA", 118.20, 8),
+            ("Tesla Inc", "TSLA", 246.90, 11),
+        ]
+        out += tickers.map { t in
+            row(.link, "\(t.company) · $\(t.symbol)", source: "Stocktwits",
+                ref: StockWatch.symbolRef(t.symbol), days: t.days, hour: 10,
+                tags: [t.symbol]) { thing in
+                thing.watchPriceUsd = t.watchedAt
+            }
+        }
         out += mood.enumerated().map { i, m in
             row(.chat, m.0, source: "Stocktwits", ref: "demo:stocktwits:\(i)",
                 days: m.3, hour: 15, content: "$\(m.1) · \(m.0)",
@@ -1087,15 +1273,43 @@ enum DemoSeedAll {
         // ever attempted. `TokenPulse.seedDemo` (2026-08-11) is what gives
         // these rows a sparkline/price/chart instead — a synthetic in-memory
         // pulse, never a URL, so it can never trigger a fetch either.
+        // Title format is LOAD-BEARING, not cosmetic (2026-08-12).
+        // `TokenWatch` lands `"\(name) · $\(symbol)"` and `TokensAsk`
+        // .name/.symbol is the format's one parser — it splits on the literal
+        // " · $". The demo's old "Ethereum (ETH)" matched nothing, so
+        // `symbol(of:)` returned the WHOLE title, `TokenRow.vitals` read that
+        // as "no symbol", and every row lost its second line while the first
+        // rendered the ticker inline as "(ETH)". The logo is the same story:
+        // the real bridge stamps `previewImageURL`, and without it the row
+        // and the watchlist roster both fall back to the Tokens source glyph.
         out += tokenSeeds.enumerated().map { i, t in
-            row(.link, "\(t.name) (\(t.symbol))", source: "Tokens", ref: "demo:token:\(i)",
+            row(.link, "\(t.name) · $\(t.symbol)", source: "Tokens", ref: "demo:token:\(i)",
                 days: t.dayOffset, hour: 12) { thing in
                 thing.watchPriceUsd = t.price
+                thing.previewImageURL = "sample:token-\(t.symbol.lowercased())"
             }
         }
-        out += (0..<3).map { i in
-            row(.link, ["Trending on Base", "Trending on Solana", "Trending on Ethereum"][i],
-                source: "GeckoTerminal", ref: "demo:gecko:\(i)", days: Double(1 + i * 3), hour: 14)
+        // GeckoTerminal lands TRENDING TOKENS, not chain summaries (2026-08-12).
+        // The old rows were titled "Trending on Base" / "Trending on Solana",
+        // which is not a shape this bridge has ever produced: `GeckoTrending`
+        // lands one row per token, titled `"\(name) · $\(symbol)"`, tagged
+        // "Trending", carrying the token's logo — so the demo room read as a
+        // list of three chains where the real one is a list of coins. Same
+        // title format as `TokenWatch` (see `tokenSeeds`), so `TokensAsk`'s
+        // one parser splits these too.
+        // Clustered, not one per day: `GeckoTrending` stamps `capturedAt:
+        // .now` on every token in a pass, so a real room shows them together
+        // under one heading. Spread across three days they drew three
+        // one-row day sections separated by empty space.
+        let trending: [(name: String, symbol: String, days: Double)] = [
+            ("Aerodrome", "AERO", 0.2), ("Brett", "BRETT", 0.3), ("Jupiter", "JUP", 0.45),
+        ]
+        out += trending.map { t in
+            row(.link, "\(t.name) · $\(t.symbol)", source: "GeckoTerminal",
+                ref: "demo:gecko:\(t.symbol.lowercased())", days: t.days, hour: 14,
+                tags: ["Trending"]) { thing in
+                thing.previewImageURL = "sample:coin-\(t.symbol.lowercased())"
+            }
         }
         let drops: [(String, Double)] = [
             ("Terraforms by Mathcastles", 2), ("Opepen Edition", 5),
@@ -1106,13 +1320,24 @@ enum DemoSeedAll {
                 t.previewImageURL = art(i)
             }
         }
-        let arrivals: [(String, String, Double)] = [
-            ("Linen apron — natural", "€48", 1), ("Cast iron pan, 26cm", "€72", 3),
-            ("Ceramic mug, set of two", "€34", 6), ("Oak chopping board", "€55", 12),
+        // The price is STRUCTURED here, not just words in `content`
+        // (2026-08-12). `ThingContent.productPrice` reads `priceValue` +
+        // `priceCurrency` and renders the formatted figure as the sheet's
+        // own heading — `ShopifyBridge` stamps both, so a real drop's sheet
+        // leads with a bold "€48.00". The demo carried the price only as
+        // display text, which took that branch's nil path: the sheet fell
+        // through to the small grey fallback line and no product in the
+        // demo ever showed a price the way the app shows one.
+        let arrivals: [(String, String, Double, Double)] = [
+            ("Linen apron — natural", "€48", 1, 48), ("Cast iron pan, 26cm", "€72", 3, 72),
+            ("Ceramic mug, set of two", "€34", 6, 34), ("Oak chopping board", "€55", 12, 55),
         ]
         out += arrivals.enumerated().map { i, a in
             row(.product, a.0, source: "Shopify", ref: "demo:shopify:\(i)", days: a.2, hour: 17,
                 content: a.1) { t in
+                t.priceValue = a.3
+                t.priceCurrency = "EUR"
+                t.authorHandle = "Small Things"
                 // A product STILL, not `art(i)` (2026-08-11). That one hands
                 // back the four bundled sample photos, so every product wore
                 // a stock shot of a person in a luchador mask — reported from
@@ -1126,25 +1351,61 @@ enum DemoSeedAll {
                 t.previewImageURL = productArt(i + 1)
                 t.priceValue = Double(40 + i * 10)
                 t.priceCurrency = "EUR"
+                // ONE of the four has DROPPED (2026-08-12, prd §368). The
+                // watch card's price bar draws the old figure and the
+                // percentage off a recorded move, and `ShopifyIngest` only
+                // ever writes one when a real catalogue read comes back
+                // cheaper — so without a seeded move the demo can never show
+                // the half of that card the feature exists for. Recorded the
+                // way the bridge records it, through `PriceHistory.compose`,
+                // rather than hand-writing the line: a demo that fakes the
+                // format is a demo that keeps passing after the format
+                // changes.
+                if i == 1 {
+                    t.tags = ["Price drop"]
+                    t.enrichedText = PriceHistory.compose(
+                        was: 65, now: 50, currency: "EUR",
+                        wasUntil: at(a.2 + 5, 17))
+                }
             }
         }
-        let deals: [(String, String, Double)] = [
-            ("Anker 737 power bank — 38% off", "$89", 1),
-            ("Kindle Paperwhite — lowest since March", "$109", 2),
-            ("Baratza Encore — refurb", "$99", 4),
-            ("AirPods Pro — $60 off", "$189", 7),
+        let deals: [(String, String, Double, String)] = [
+            ("Anker 737 power bank — 38% off", "$89", 1, "Slickdeals"),
+            ("Kindle Paperwhite — lowest since March", "$109", 2, "Slickdeals"),
+            ("Baratza Encore — refurb", "$99", 4, "DealNews"),
+            ("AirPods Pro — $60 off", "$189", 7, "DealNews"),
         ]
         out += deals.enumerated().map { i, d in
             row(.product, d.0, source: "Deals", ref: "demo:deals:\(i)", days: d.2, hour: 10,
                 content: d.1) { t in
                 t.previewImageURL = productArt(i + 5)
+                // WHO is offering it — `DealsBridge` stamps the publisher
+                // here and the row draws it in its trailing slot, so a deal
+                // without one reads as coming from nowhere.
+                t.authorHandle = d.3
             }
         }
         out += (0..<3).map { i in
+            // A REAL `off:<barcode>` ref and REAL tags (2026-08-12, prd §368).
+            // The grade lived only in `content` prose while the bridge lands it
+            // as a tag, and the ref was `demo:off:<n>` while the bridge keys on
+            // the barcode — so the scanned card's Nutri-Score scale and its
+            // barcode rung, the two things a scan has that nothing else does,
+            // could not draw in the demo. The same shape as the Peer/Privacy
+            // Pools room-head gap: a demo ref that doesn't match the real one
+            // is a feature that silently never renders.
             row(.product, ["Oat drink, barista", "Dark chocolate 70%", "Rye sourdough"][i],
-                source: "Open Food Facts", ref: "demo:off:\(i)",
+                source: "Open Food Facts", ref: "off:\(["5060403320102", "8717677332304", "5391520941016"][i])",
                 days: Double(2 + i * 6), hour: 18,
-                content: "Nutri-Score \(["B", "D", "A"][i]) · scanned")
+                content: "Nutri-Score \(["B", "D", "A"][i]) · scanned",
+                tags: ["Food", "Nutri-Score \(["B", "D", "A"][i])"]) { t in
+                // `OpenFoodFactsBridge` stamps the product photo and the
+                // BRAND (2026-08-12) — a `.product` sheet leads with that
+                // image, so a scanned item with neither rendered as a bare
+                // line of text where the real room shows a picture.
+                t.previewImageURL = productArt(i + 1)
+                t.authorHandle = ["Oatly", "Tony's Chocolonely", "Bread Ahead"][i]
+            }
         }
         // The x402 room's rows; its treemap head reads `X402State` (seeded in
         // `seedBridgeState`), not these.
@@ -1360,17 +1621,63 @@ enum DemoSeedAll {
                 t.walletAddress = demoWallet
             }
         }
-        out += (0..<3).map { i in
-            row(.transaction, ["Netflix.com · $12.99", "Spotify · $10.99", "Figma · $15.00"][i],
-                source: "Privacy", ref: "demo:privacy:\(i)", days: Double(4 + i * 10), hour: 8,
-                content: "Virtual card · approved")
+        // REAL ref shapes, and the fields the receipt reads (2026-08-12, prd
+        // §368). Both seats used `demo:<seat>:<n>`, which matches none of
+        // `PurchaseStage.purchaseRefs` — so every one of these rows fell
+        // straight past the receipt and kept the generic sheet, and the whole
+        // category would have looked unbuilt in the one place anyone can see
+        // it without an account. Same failure as the Peer / Privacy Pools room
+        // heads, which dropped every seeded row for exactly this reason.
+        //
+        // Netflix appears FOUR times on purpose: the recurrence sentence
+        // ("You've paid Netflix.com 4 times · $12.99 every time since…") needs
+        // more than one charge to the same merchant, and an unchanged amount
+        // is the branch that says the most.
+        let card: [(String, Double, Double, Bool)] = [
+            ("Netflix.com", 12.99, 4, true), ("Spotify", 10.99, 14, true),
+            ("Figma", 15.00, 24, false), ("Netflix.com", 12.99, 35, true),
+            ("Netflix.com", 12.99, 66, true), ("Netflix.com", 12.99, 96, true),
+        ]
+        out += card.enumerated().map { i, c in
+            row(.transaction, "\(c.0) · $\(String(format: "%.2f", c.1))",
+                source: "Privacy", ref: "privacy:txn:demo\(i)",
+                days: c.2, hour: 8, content: "https://privacy.com/account",
+                // `Settled` vs `Pending` is the §317 distinction this pass gave
+                // Privacy — the newest charge is deliberately unsettled, since
+                // an authorization that can still change is the state the badge
+                // exists to say and the state a demo would otherwise never show.
+                tags: ["Card", c.3 ? "Settled" : "Pending"]) { t in
+                t.priceValue = c.1
+                t.priceCurrency = "USD"
+                t.transferCounterparty = c.0
+            }
         }
-        out += (0..<3).map { i in
-            row(.transaction, ["Topped up €25 Amazon", "Bought $50 Uber gift card",
-                               "Refilled €100 balance"][i],
-                source: "Bitrefill", ref: "demo:bitrefill:\(i)",
-                days: Double(6 + i * 14), hour: 19, content: "Paid in USDC")
+        // An ORDER and a REFILL, which are two different receipts: one names
+        // the merchant, the other names the rail the money came in on. Both
+        // ride `transferCounterparty` — one field, one meaning ("the other
+        // side of the money"), with the verb telling them apart.
+        let orders: [(String, Double, String, Double)] = [
+            ("Amazon.com", 25, "EUR", 6), ("Uber", 50, "USD", 20),
+        ]
+        out += orders.enumerated().map { i, o in
+            row(.link, "\(o.0) · \(o.2 == "EUR" ? "€" : "$")\(Int(o.1))",
+                source: "Bitrefill", ref: "bitrefill:order:demo\(i)",
+                days: o.3, hour: 19, content: "https://www.bitrefill.com/account/orders",
+                tags: ["Delivered"]) { t in
+                t.priceValue = o.1
+                t.priceCurrency = o.2
+                t.transferCounterparty = o.0
+                t.previewImageURL = productArt(i + 3)
+            }
         }
+        out.append(
+            row(.link, "Balance refill · €100 in bitcoin", source: "Bitrefill",
+                ref: "bitrefill:invoice:demo0", days: 34, hour: 19,
+                content: "https://www.bitrefill.com/account/invoices") { t in
+                t.priceValue = 100
+                t.priceCurrency = "EUR"
+                t.transferCounterparty = "Bitcoin"
+            })
         return out
     }
 
@@ -1628,9 +1935,18 @@ enum DemoSeedAll {
             // short, plausible handle that could belong to a REAL channel,
             // which is worse than an obvious dead link: tapping it could land
             // on a real stranger's stream with no warning it isn't ours.
-            row(.link, ["Live now · building the panel", "Offline · last streamed Tuesday"][i],
+            // Titled the way `TwitchBridge` titles a stream — "<name> live
+            // — <game>", with the streamer on `authorHandle` (2026-08-12).
+            // The old rows led with the STATE ("Live now · …", "Offline ·
+            // …"), which is a shape that bridge never lands: liveness is
+            // carried by `TwitchIngest.liveRefs`, not by the words, and
+            // `DemoSeedAll.seedBridgeState` seeds ref 0 into it so the live
+            // hero can actually draw.
+            row(.link, ["nova live — Software and Game Development",
+                        "kestrel live — Factorio"][i],
                 source: "Twitch", ref: "demo:twitch:\(i)", days: Double(1 + i * 5), hour: 21) { t in
-                t.previewImageURL = art(i)
+                t.previewImageURL = "sample:frame-\(i + 1)"
+                t.authorHandle = ["nova", "kestrel"][i]
             }
         }
         out += (0..<3).map { i in
@@ -1638,12 +1954,33 @@ enum DemoSeedAll {
                 source: "Dropbox", ref: "demo:dropbox:\(i)", days: Double(3 + i * 8), hour: 15,
                 content: "PDF · 840 KB")
         }
-        out += (0..<2).map { i in
-            row(.approval, ["Vault read granted to Claude Desktop",
-                            "Grant expires in 14 days"][i],
-                source: "1Claw", ref: "demo:1claw:\(i)", days: Double(2 + i * 9), hour: 11,
-                content: "Vault · personal") { t in
-                if i == 1 { t.dueAt = at(-14, 12) }
+        // 1Claw grants, wearing what `OneClawFetch.policyThing` really stamps
+        // (2026-08-12, prd §367): the joined title, the parts as fields, and the
+        // ref shape the grant anatomy keys off. The old rows were `.approval`
+        // things titled "Grant expires in 14 days" under `demo:1claw:<i>` —
+        // sentences the bridge has never written, under a ref
+        // `OneClawFetch.isGrantRef` answers false for, so the demo could not
+        // show the grant sheet at all. The §349 lesson (a demo ref that does not
+        // match the bridge's own shape is invisible to every reader keyed off
+        // it), in a fourth place.
+        //
+        // ONE of the two has an expiry, deliberately: most grants have no clock,
+        // and a demo where every grant is expiring teaches the reader that the
+        // clock is the normal state rather than the exception it draws for.
+        let grants: [(vault: String, path: String, perms: [String], expiring: Bool)] = [
+            ("personal", "openai/*", ["read", "list"], true),
+            ("work", "stripe/live/*", ["read"], false),
+        ]
+        out += grants.enumerated().map { i, g in
+            let title = ([g.vault, g.path] + [g.perms.joined(separator: ", ")])
+                .joined(separator: " · ")
+            return row(.link, title, source: "1Claw", ref: "1claw:policy:demo\(i)",
+                       days: Double(2 + i * 9), hour: 11,
+                       content: OneClawFetch.dashboard,
+                       tags: [OneClawFetch.grantTag] + g.perms) { t in
+                t.summary = g.path
+                t.authorHandle = g.vault
+                if g.expiring { t.dueAt = at(-6, 12) }
             }
         }
         return out
@@ -1683,10 +2020,30 @@ enum DemoSeedAll {
             ("Compare these two charts", "Gemini", 30),
         ]
         out += chats.enumerated().map { i, c in
+            // `content` is the OPENING ASK, exactly as all four importers land
+            // it — not a description of the chat. The old seed wrote "A saved
+            // conversation about x", which is a sentence no importer has ever
+            // written and which the sheet would then set as the first thing you
+            // read (2026-08-12, prd §367).
             row(.chat, c.0, source: c.1, ref: "demo:chat:\(c.1.lowercased()):\(i)",
-                days: c.2, hour: 14, content: "A saved conversation about \(c.0.lowercased()).") { t in
-                t.messageCount = 6 + (i % 9)
-                t.enrichedText = "The thread settles on a plan for \(c.0.lowercased())."
+                days: c.2, hour: 14, content: demoAsk(c.0)) { t in
+                let turns = 6 + (i % 9)
+                t.messageCount = turns
+                // A REAL transcript in the importers' own wire format
+                // (`"<Speaker>: <text>"`, newline-joined). The old seed put one
+                // summarising sentence here, which parses to zero turns — so
+                // the demo would have shown an empty conversation on the very
+                // pass that exists to draw one, and `verify.sh` could not have
+                // told that apart from the parser being broken.
+                //
+                // Gemini gets ONE turn and no reply, because that is what
+                // Takeout actually carries (§367's one-sided clause): a demo
+                // that invents a Gemini answer teaches the reader something
+                // untrue about their own export.
+                t.enrichedText = c.1 == "Gemini"
+                    ? "You: \(demoAsk(c.0))"
+                    : demoTranscript(ask: demoAsk(c.0), assistant: c.1,
+                                     subject: c.0.lowercased(), turns: turns)
             }
         }
         // Claude Code's title shape is `ClaudeCodeSession.title(project:
@@ -1697,9 +2054,21 @@ enum DemoSeedAll {
             ("casberi · Chase the embedding race on foreground", 61, 12),
         ]
         out += claudeCode.enumerated().map { i, c in
-            row(.chat, c.0, source: "Claude Code", ref: "demo:claudecode:\(i)",
+            let headline = c.0.components(separatedBy: " · ").last ?? c.0
+            return row(.chat, c.0, source: "Claude Code", ref: "demo:claudecode:\(i)",
                 days: c.2, hour: 20, tags: ["Session", "casberi"]) { t in
                 t.messageCount = c.1
+                // Claude Code's assistant label is "Claude", NOT the seat name
+                // — the one thing about this wire format that is easy to get
+                // wrong, so the demo carries the real spelling rather than a
+                // plausible one (prd §367).
+                t.enrichedText = demoTranscript(ask: headline, assistant: "Claude",
+                                                subject: headline.lowercased(),
+                                                turns: min(c.1, 8))
+                // The session's own summary, which is display copy here the way
+                // a Trello card's back is — `ClaudeCodeSession` stamps it from
+                // the transcript's `summary` line.
+                t.summary = "Landed the fix and left the reasoning in the file."
             }
         }
         out += (0..<10).map { i in
@@ -1717,31 +2086,122 @@ enum DemoSeedAll {
         return out
     }
 
+    /// The opening ask a demo chat landed with — a real question, because
+    /// `content` on all four chat importers is the first user line and the
+    /// sheet reads it as one (prd §367).
+    private static func demoAsk(_ title: String) -> String {
+        "How should I think about \(title.lowercased())?"
+    }
+
+    /// A demo transcript in the importers' OWN wire format — `"<Speaker>: …"`,
+    /// newline-joined, oldest first (prd §367).
+    ///
+    /// Written as the format rather than as prose on purpose: `AgentSheet.turns`
+    /// recovers turns by matching a known speaker at the start of a line, so a
+    /// seed that reads well but is not in this shape parses to nothing and the
+    /// demo shows an empty conversation — which is indistinguishable, from
+    /// outside, from the parser being broken. One turn deliberately runs to two
+    /// paragraphs, so the demo also exercises the rule that a newline inside an
+    /// answer does NOT open a new turn.
+    private static func demoTranscript(ask: String, assistant: String,
+                                       subject: String, turns: Int) -> String {
+        var lines = ["You: \(ask)",
+                     "\(assistant): It helps to separate what's true of \(subject) from what's only "
+                     + "conventional about it.\n\nThe first part is worth writing down; the second is "
+                     + "worth re-deciding every time."]
+        var i = 2
+        while i < turns {
+            lines.append(i % 2 == 0
+                ? "You: And when that trade-off actually bites?"
+                : "\(assistant): Then the cheaper instrument first, and the plausible fix second.")
+            i += 1
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    /// A workout's own numbers, so the demo exercises `MetricBand` and the
+    /// stub's duration (prd §365). Distance is stated only for the workouts
+    /// that covered ground — a strength session has none, and inventing one
+    /// would make the demo prove something the real bridge refuses to do.
+    private static let workoutStats: [(km: Double?, minutes: Int, writer: String)] = [
+        (5.2, 26, "Apple Watch"), (nil, 45, "Apple Watch"), (8.0, 41, "Apple Watch"),
+        (22.0, 58, "Apple Watch"), (nil, 38, "Apple Watch"), (10.4, 53, "Apple Watch"),
+        (1.2, 34, "Apple Watch"),
+    ]
+
+    /// `26:14` from whole minutes — the same shape `HealthIngest.clock` writes.
+    private static func clock(_ minutes: Int) -> String {
+        minutes >= 60 ? String(format: "%d:%02d:00", minutes / 60, minutes % 60)
+                      : String(format: "%d:00", minutes)
+    }
+
+    private static func workoutFacts(_ s: (km: Double?, minutes: Int, writer: String)) -> [String] {
+        var facts: [ThingFact] = []
+        if let km = s.km { facts.append(ThingFact("km", String(format: "%.2f", km), .metric)) }
+        facts.append(ThingFact("Duration", clock(s.minutes), .metric))
+        if let km = s.km, km > 0 {
+            facts.append(ThingFact("Pace / km",
+                                   clock(Int((Double(s.minutes) / km).rounded())), .metric))
+        }
+        facts.append(ThingFact("Written by", s.writer))
+        return facts.map(\.encoded)
+    }
+
     private static func fitness() -> [Thing] {
         var out: [Thing] = []
         out += (0..<14).map { i in
-            row(.event, ["Run · 5.2 km", "Strength · upper", "Run · 8.0 km", "Cycle · 22 km",
-                         "Strength · legs", "Run · 10.4 km", "Swim · 1,200 m"][i % 7],
-                source: "Apple Health", ref: "demo:health:\(i)",
-                days: Double(1 + i * 4), hour: 7, content: "Workout")
+            let stats = workoutStats[i % 7]
+            return row(.event, ["Run · 5.2 km", "Strength · upper", "Run · 8.0 km", "Cycle · 22 km",
+                                "Strength · legs", "Run · 10.4 km", "Swim · 1,200 m"][i % 7],
+                       source: "Apple Health", ref: "demo:health:\(i)",
+                       days: Double(1 + i * 4), hour: 7, content: "Workout") { t in
+                t.facts = workoutFacts(stats)
+                t.endAt = t.capturedAt.addingTimeInterval(Double(stats.minutes) * 60)
+            }
         }
         out += (0..<10).map { i in
-            row(.event, ["Morning run", "Hill repeats", "Long run", "Recovery jog", "Track night"][i % 5],
-                source: "Strava", ref: "demo:strava:\(i)",
-                days: Double(2 + i * 6), hour: 18, content: "Activity")
+            let stats = workoutStats[(i + 2) % 7]
+            return row(.event, ["Morning run", "Hill repeats", "Long run", "Recovery jog", "Track night"][i % 5],
+                       source: "Strava", ref: "demo:strava:\(i)",
+                       days: Double(2 + i * 6), hour: 18, content: "Activity") { t in
+                t.facts = workoutFacts(stats)
+                t.endAt = t.capturedAt.addingTimeInterval(Double(stats.minutes) * 60)
+            }
         }
         return out
     }
 
     private static func schedule() -> [Thing] {
         var out: [Thing] = []
-        let events: [(String, Double, Int)] = [
-            ("Standup", -0.3, 9), ("Design review", -1, 14), ("Dinner with Sam", -1, 19),
-            ("Joiner site visit", -3, 11), ("Book club", -4, 19), ("Flight to Lisbon", -9, 8),
+        // Minutes and a place per event, so the demo exercises the stub's
+        // range, its duration and its `.map` fact (prd §365). Standup carries
+        // no place on purpose — a stub with only a clock is the common case and
+        // must look right too.
+        let events: [(String, Double, Int, Int, String?)] = [
+            ("Standup", -0.3, 9, 15, nil),
+            ("Design review", -1, 14, 60, "Studio, 2nd floor"),
+            ("Dinner with Sam", -1, 19, 120, "Ilica 42, Zagreb"),
+            ("Joiner site visit", -3, 11, 90, "Site — Hoyt Street"),
+            ("Book club", -4, 19, 120, nil),
+            ("Mira's birthday", -6, 0, 0, nil),
+            ("Flight to Lisbon", -9, 8, 195, "Terminal 2"),
         ]
         out += events.enumerated().map { i, e in
             row(.event, e.0, source: "Calendar", ref: "demo:cal:\(i)", days: e.1, hour: e.2,
-                content: "\(e.2):00 · calendar")
+                content: "\(e.2):00 · calendar", tags: ["Work"]) { t in
+                // Minutes of 0 means all-day — the stub must show the words,
+                // never the midnight start EventKit reports for one. Seeded so
+                // the demo covers that branch, which is otherwise invisible
+                // until somebody's own calendar happens to hold a holiday.
+                var facts: [ThingFact] = []
+                if e.3 == 0 {
+                    facts.append(ThingFact("When", "All day", .allDay))
+                } else {
+                    t.endAt = t.capturedAt.addingTimeInterval(Double(e.3) * 60)
+                }
+                if let place = e.4 { facts.append(ThingFact("Where", place, .map)) }
+                t.facts = facts.map(\.encoded)
+            }
         }
         let tasks: [(String, Double)] = [
             ("Order the tiles", -1), ("Send the joinery deposit", -2), ("Book the dentist", 1),
@@ -1756,7 +2216,61 @@ enum DemoSeedAll {
         out += (0..<2).map { i in
             row(.event, ["Intro call — 30 min", "Design pairing — 60 min"][i],
                 source: ["Cal.com", "Calendly"][i], ref: "demo:booking:\(i)",
-                days: Double(-2 - i * 2), hour: 15, content: "Booked by a guest")
+                days: Double(-2 - i * 2), hour: 15, content: "Booked by a guest") { t in
+                t.endAt = t.capturedAt.addingTimeInterval(Double(i == 0 ? 30 : 60) * 60)
+                // A booking's fact is WHO booked it — the thing a calendar
+                // entry doesn't have, and the reason these two are their own
+                // seats rather than more Calendar rows.
+                t.facts = [ThingFact("Booked by", ["Ana Kovač", "Sam Rees"][i]).encoded]
+            }
+        }
+        out += contactsAndHome()
+        return out
+    }
+
+    /// The two Life seats that had NO demo rows at all (prd §365) — which is
+    /// exactly why their sheets could render as grey prose for as long as they
+    /// did: nothing in the demo, and therefore nothing in any screenshot sweep,
+    /// ever opened one.
+    ///
+    /// Both are `Corpus.searchOnlySources`, so these never crowd the feed —
+    /// they turn up when you search, which is the whole contract of those two
+    /// bridges and is worth the demo proving.
+    private static func contactsAndHome() -> [Thing] {
+        var out: [Thing] = []
+        let people: [(String, String, String, String, String)] = [
+            ("Ana Kovač", "Designer", "Studio", "+385 91 234 5678", "ana@studio.com"),
+            ("Sam Rees", "Joiner", "Rees & Sons", "+44 7700 900 118", "sam@reesandsons.co.uk"),
+            ("Mira Novak", "Architect", "Novak Atelier", "+385 98 765 4321", "mira@novakatelier.hr"),
+        ]
+        out += people.enumerated().map { i, p in
+            row(.contact, p.0, source: "Contacts", ref: "demo:contact:\(i)",
+                days: Double(30 + i), content: "\(p.1) · \(p.2) · \(p.4)") { t in
+                t.facts = [
+                    ThingFact("Role", p.1), ThingFact("Company", p.2),
+                    ThingFact("Mobile", p.3, .call), ThingFact("Work", p.4, .mail),
+                ].map(\.encoded)
+            }
+        }
+        // One of each state — a reachable accessory and an unreachable one —
+        // because the whole point of this anatomy is that the two must not
+        // render identically, and a demo with only the happy one proves
+        // nothing.
+        let accessories: [(String, String, String, Bool)] = [
+            ("Front door", "Lock", "Entryway", true),
+            ("Studio heater", "Thermostat", "Studio", true),
+            ("Back gate", "Door", "Garden", false),
+        ]
+        out += accessories.enumerated().map { i, a in
+            row(.accessory, a.0, source: "HomeKit", ref: "demo:homekit:\(i)",
+                days: Double(20 + i),
+                content: "\(a.1) · \(a.2) · \(a.3 ? "Reachable" : "Unreachable")") { t in
+                t.facts = [
+                    ThingFact("Checked just now",
+                              a.3 ? "Reachable" : "Unreachable", .state),
+                    ThingFact("Type", a.1), ThingFact("Room", a.2),
+                ].map(\.encoded)
+            }
         }
         return out
     }
@@ -1764,16 +2278,35 @@ enum DemoSeedAll {
     /// The two prediction rooms are LIVE rooms — they browse a book rather than
     /// sync rows — so a couple of watched markets is all a demo can honestly
     /// carry here.
+    /// `watchPriceUsd` is the odds THE DAY YOU FOLLOWED — the anchor
+    /// `PredictionRow` turns into "You followed at 42%" once a market
+    /// settles (prd §235), and the only number in this room no market site
+    /// can show you. Without it a settled row loses its receipt entirely.
+    /// `marketResolvedYes` is what makes `demo:kalshi:1` a settled market;
+    /// the matching odds live in `PredictionPulse.seedDemo`, which is what
+    /// mounts these rows as `PredictionRow` at all.
     private static func odds() -> [Thing] {
         var out: [Thing] = []
-        out += (0..<2).map { i in
-            row(.link, ["Will the Fed cut in December?",
-                        "Highest temperature in Lisbon this week?"][i],
-                source: "Kalshi", ref: "demo:kalshi:\(i)", days: Double(1 + i * 3), hour: 16)
+        let kalshi: [(title: String, watchedAt: Double, settled: Bool)] = [
+            ("Will the Fed cut rates in December?", 0.66, false),
+            ("Will CPI come in under 3% in July?", 0.42, true),
+        ]
+        out += kalshi.enumerated().map { i, k in
+            row(.link, k.title, source: "Kalshi", ref: "demo:kalshi:\(i)",
+                days: Double(1 + i * 3), hour: 16) { t in
+                t.watchPriceUsd = k.watchedAt
+                if k.settled { t.marketResolvedYes = true }
+            }
         }
-        out += (0..<2).map { i in
-            row(.link, ["Champions League winner", "Will SpaceX launch Starship again in 2026?"][i],
-                source: "Polymarket", ref: "demo:polymarket:\(i)", days: Double(2 + i * 4), hour: 20)
+        let poly: [(title: String, watchedAt: Double)] = [
+            ("Champions League winner", 0.19),
+            ("Will SpaceX launch Starship again in 2026?", 0.61),
+        ]
+        out += poly.enumerated().map { i, p in
+            row(.link, p.title, source: "Polymarket", ref: "demo:polymarket:\(i)",
+                days: Double(2 + i * 4), hour: 20) { t in
+                t.watchPriceUsd = p.watchedAt
+            }
         }
         return out
     }
@@ -1821,6 +2354,11 @@ enum DemoSeedAll {
     /// exactly what each reads — no request, no key, no network.
     @MainActor
     private static func seedBridgeState() {
+        // 0 · The live stream. `FeedScreen.isLive` reads
+        // `TwitchIngest.liveRefs`, so without this the Twitch room's hero
+        // card and float-to-top could never fire — see `TwitchIngest.seedDemo`.
+        TwitchIngest.seedDemo(["demo:twitch:0"])
+
         // 1 · The wallet's balance line. Spaced 4h+ apart so `recordSample`'s
         // throttle can never fold them into one point, and the newest sits 5
         // minutes back so a real fetch (there is none on a demo sim) wouldn't
@@ -2092,6 +2630,11 @@ enum DemoSeedAll {
         ("Todoist", "Synced 18m ago", "Reads your tasks."),
         ("Cal.com", "Synced 2h ago", "Reads what people booked."),
         ("Calendly", "Synced 2h ago", "Reads what people booked."),
+        // The two search-only Life seats (prd §365). Their rows never enter
+        // the feed by design, so the seat is the only place the demo can say
+        // they are connected at all.
+        ("Contacts", "Synced 6m ago", "Reads the people you know."),
+        ("HomeKit", "Live", "Reads your accessories, never controls them."),
         ("Voice", "3 notes", "Transcribes on device."),
     ]
 }

@@ -121,6 +121,13 @@ enum ThingChart {
 struct ThingContentView: View {
     let thing: Thing
 
+    /// The conversation reading, when the sheet decided this row is one (prd
+    /// §367). Passed IN rather than recomputed: parsing a 16,000-character
+    /// transcript twice per body evaluation is waste, and — the reason that
+    /// matters — a head and a body that each derive their own reading are two
+    /// places that can disagree about how many turns a chat had.
+    var agent: AgentSheet.Conversation? = nil
+
     /// True when the `.link` branch below resolves to the LinkPreviewCard,
     /// whose footer already names the host — ThingSheetView's Site row keys
     /// off this exact fact (not a lookalike condition) so the two views
@@ -214,6 +221,23 @@ struct ThingContentView: View {
     }
 
     @ViewBuilder private var kindContent: some View {
+        // A POST is a post whatever kind it landed as (prd §363). X files its
+        // own posts as `.note` and its liked posts as `.link`; Instagram and
+        // TikTok file captions and comments as `.note`. Every one of them used
+        // to fall through to the branches below — the bare-text default and
+        // `LinkPreviewCard` — and so drew either the words a second time under
+        // the clamped title, or a preview card of a page that will not
+        // describe itself. Routed on the RECORD's shape, ahead of the kind
+        // switch, so a source that files a post under some third kind
+        // tomorrow is covered the day it lands.
+        if SocialSheetSource.shape(for: thing) == .post {
+            SocialPostContent(thing: thing)
+        } else {
+            kindSwitch
+        }
+    }
+
+    @ViewBuilder private var kindSwitch: some View {
         switch thing.kind {
         case .screenshot:
             ScreenshotContent(assetID: thing.sourceRef, stored: thing.previewImageData)
@@ -270,6 +294,15 @@ struct ThingContentView: View {
                 StoredArtContent(urlString: art)
             }
         case .product:
+            // NOTE (prd §368): the thing SHEET no longer reaches this branch.
+            // `PurchaseStage` gives every `.product` a watch reading, and
+            // `ThingSheetView` turns `contentShown` off for one — the card
+            // above it already leads with this art at size and states the
+            // price from the stored pair, so drawing here would print both
+            // twice, the second time as a link preview re-scraping the page.
+            // Kept as the fallback it has always been: if `watch` ever learns
+            // to decline a row, this is what that row falls back to.
+            //
             // A product leads with its page preview and photo — the store/deal
             // page in `content`, the product image in `previewImageURL` — the
             // same treatment a link gets, so a product never renders as a bare URL.
@@ -299,14 +332,40 @@ struct ThingContentView: View {
                     .padding(.bottom, DS.Space.s3)
             }
         case .chat:
-            // A post/cast is not a conversation — it's one person's words,
-            // its pictures, what it quotes, and how it landed. Its own read
-            // (2026-07-16); the ChatBubbles path stayed for the imports
-            // (ChatGPT, Claude) whose content really is a transcript. Before
-            // this, a post rendered its `content` as bubbles — and a post's
-            // content is its PERMALINK, so the sheet showed a URL in a bubble.
-            if SocialThread.isSocial(thing.source) {
-                SocialPostContent(thing: thing)
+            // Only a real TRANSCRIPT reaches here now (prd §363) — the imports
+            // (ChatGPT, Claude, Snapchat's saved chats, a DM thread) whose
+            // content genuinely is a conversation. A post-kind `.chat` — a
+            // cast, a skeet, a note — is caught by the shape branch above,
+            // which is where the 2026-07-16 ruling moved to: a post is one
+            // person's words, its pictures and what it quotes, never bubbles
+            // around its own permalink.
+            if let agent {
+                // THE CONVERSATION (prd §367). It was on `enrichedText` the
+                // whole time — speaker-prefixed, up to 8,000 characters — and
+                // this branch drew `content`, which is the opening ask and
+                // nothing else. So the sheet you opened to read a chat showed
+                // one line of it, and that line was already clamped into the
+                // title above.
+                //
+                // The `enrichedText` exception is the Obsidian one, stated
+                // there and true here for the same reason: this is not a
+                // payoff fact carved out of a discarded read, it is the thing
+                // itself, clamped further out than the row excerpt.
+                if !agent.turns.isEmpty {
+                    AgentTurnsView(turns: agent.turns, cut: agent.cut,
+                                   oneSided: agent.oneSided, source: thing.source)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.bottom, DS.Space.s3)
+                } else if !thing.content.isEmpty,
+                          thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
+                            != agent.hero {
+                    // No readable transcript — a chat landed before the
+                    // importers wrote one, or a source whose speaker labels we
+                    // do not know. The ask is what we have, and it is drawn
+                    // once: the hero test is what stops it appearing directly
+                    // under itself on a row whose title IS its ask.
+                    ChatBubbles(text: thing.content)
+                }
             } else if !thing.content.isEmpty {
                 ChatBubbles(text: thing.content)
             }
@@ -320,11 +379,33 @@ struct ThingContentView: View {
             // naming a file whose whole point IS what's in it.
             if let data = thing.previewImageData, let image = UIImage(data: data) {
                 FilePictureContent(image: image)
+                // The name, size and folder BENEATH the picture (prd §365) —
+                // the delivery anatomy. Before this an image file drew its
+                // pixels and nothing else, so the one row in the corpus that
+                // could say where a file came from said nothing; a non-image
+                // file drew this chip alone, repeating the title verbatim
+                // under the title.
+                FileChip(name: thing.title, note: thing.content, compact: true)
             } else {
                 FileChip(name: thing.title, note: thing.content)
             }
         case .event:
-            if !thing.content.isEmpty { ScheduleCard(text: thing.content) }
+            // A moment with a clock (prd §365). A WORKOUT leads with what it
+            // measured and puts the clock beneath — a run is its distance
+            // first — while an event or a booking leads with when it is. Both
+            // are the same stub; only the order differs, because for one of
+            // them the time is the headline and for the other it is context.
+            let metrics = thing.factList.filter { $0.action == .metric }
+            if !metrics.isEmpty { MetricBand(metrics: metrics) }
+            MomentStub(start: thing.capturedAt, end: thing.endAt,
+                       facts: thing.factList.filter { $0.action != .metric })
+        case .contact:
+            // Was `default:` — grey prose (prd §365).
+            PersonCard(name: thing.title, facts: thing.factList)
+        case .accessory:
+            // Was `default:` — grey prose, identical whether the accessory was
+            // reachable or not (prd §365).
+            AccessoryCard(title: thing.title, facts: thing.factList)
         case .mail:
             // Real inbox mail (MailBridge) carries no body — `content` is
             // just "From <sender>" — so its content-area anatomy is the
@@ -337,7 +418,11 @@ struct ThingContentView: View {
             MailContentView(thing: thing)
         case .reminder:
             if let due = thing.dueAt {
-                ReminderDueRow(due: due)
+                // The same stub an event gets (prd §365), keeping the one
+                // thing `ReminderDueRow` did that nothing else did: an overdue
+                // deadline READS as overdue rather than as a date with a red
+                // word after it.
+                MomentStub(start: due, overdue: due < .now, facts: thing.factList)
             } else if !thing.content.isEmpty {
                 // No structured due date (a Todoist task, or a Reminders item
                 // with none set) — the same bare-text fallback every kind
@@ -444,8 +529,10 @@ private struct ScreenshotContent: View {
                                 .accessibilityHidden(true)
                                 .dsGlyph(22, weight: .regular)
                                 .foregroundStyle(DS.textTertiary)
-                            Text("In your photos")
+                            Text(Self.absenceLine())
                                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, DS.Space.s3)
                         }
                     )
             }
@@ -453,6 +540,36 @@ private struct ScreenshotContent: View {
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
         .task { await load() }
+    }
+
+    /// WHY THE PICTURE ISN'T HERE, said accurately (prd §365, F5).
+    ///
+    /// This box used to read **"In your photos"** for all four of its causes —
+    /// access denied, access limited and this shot not among the shared ones,
+    /// the original deleted from the library with no healed copy stored, or a
+    /// demo row with no asset behind it. For the deleted case that sentence is
+    /// simply FALSE: it is not in your photos, and telling somebody to go look
+    /// for it there is worse than saying nothing. The two recoverable causes
+    /// are one tap from fixed and deserve to say so.
+    ///
+    /// The authorization status is the only one of the four this view can tell
+    /// apart cheaply and reliably (the deleted and demo cases are both "the
+    /// grant is fine and there are no pixels"), so the copy splits exactly
+    /// where the knowledge does and claims nothing beyond it.
+    static func absenceLine() -> String {
+        switch PHPhotoLibrary.authorizationStatus(for: .readWrite) {
+        case .denied, .restricted:
+            return String(localized: "Photos access is off — the words below were read before it changed")
+        case .limited:
+            return String(localized: "Photos access is limited and this one isn't shared")
+        case .notDetermined:
+            return String(localized: "Photos hasn't been connected on this device")
+        default:
+            // Authorized, and still nothing: the original is gone from the
+            // library and no copy was stored before it went. Never "in your
+            // photos" — it demonstrably is not.
+            return String(localized: "This picture is no longer in your library")
+        }
     }
 
     private func load() async {
@@ -645,6 +762,23 @@ private struct LinkPreviewCard: View {
     }
 
     private func fetch() async {
+        // The demo's bundled art, and its wall (2026-08-12). Two separate
+        // problems, one branch: a `sample:` ref is a real `URL` with a scheme
+        // `URLSession` can't serve, so it fell through to the scrape below
+        // and the card came back blank — the same miss `StoredArtContent`
+        // already carries its own branch for. And `LPMetadataProvider`
+        // SCRAPES THE PAGE, so opening a demo sheet reached the network,
+        // which `BridgeRefresh`'s demo gate never sees (the per-view fetch
+        // class — see `PredictionDemoBook`). Returning before it also means
+        // the demo can never draw a title read off somebody's live site.
+        #if DEBUG
+        if let stored = storedImageURL, stored.hasPrefix("sample:"),
+           let bundled = UIImage.demoSample(for: stored) {
+            image = await bundled.dsDownsampled(maxSide: 280)
+            return
+        }
+        #endif
+        if DemoMode.isActive { return }
         // Stored art first: it's the record's own media and one cached CDN
         // request away, where LPMetadataProvider re-scrapes the whole page
         // and often comes back with nothing (music.apple.com especially).
@@ -931,22 +1065,50 @@ private struct VoiceContent: View {
 private struct FileChip: View {
     let name: String
     let note: String
+    /// Under a picture (prd §365): the glyph goes, because the pixels above
+    /// have already said what this is far better than a `doc` icon can, and the
+    /// note becomes the quiet line rather than the payload.
+    var compact = false
 
     private var ext: String? {
         let parts = name.split(separator: ".")
         return parts.count > 1 ? parts.last.map { String($0).uppercased() } : nil
     }
 
+    /// The note's first line, unless it is just the name over again.
+    private var metadata: String? {
+        let first = note.split(separator: "\n").first.map(String.init)?
+            .trimmingCharacters(in: .whitespaces) ?? ""
+        guard !first.isEmpty, first != name else { return nil }
+        return first
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(spacing: DS.Space.s3) {
-                Image(systemName: "doc")
-                    .accessibilityHidden(true)
-                    .dsGlyph(17, weight: .medium)
-                    .foregroundStyle(DS.tint)
-                Text(name)
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
+                if !compact {
+                    Image(systemName: "doc")
+                        .accessibilityHidden(true)
+                        .dsGlyph(17, weight: .medium)
+                        .foregroundStyle(DS.tint)
+                }
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(name)
+                        .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                        .lineLimit(1).truncationMode(.middle)
+                    // Under a picture the note is the quiet metadata line
+                    // (size, folder) rather than the payload, so it sits with
+                    // the name instead of below the whole chip.
+                    // Never the name again. Several bridges open a file's
+                    // `content` with its own title (the Files heal writes the
+                    // OCR'd name first), and repeating it here would be the
+                    // exact stutter this chip moved under the picture to stop.
+                    if compact, let metadata {
+                        Text(metadata)
+                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                            .lineLimit(1).truncationMode(.middle)
+                    }
+                }
                 if let ext {
                     Text(ext)
                         .dsText(.label12).foregroundStyle(DS.textSecondary)
@@ -958,7 +1120,7 @@ private struct FileChip: View {
             .padding(DS.Space.s3)
             .background(DS.fillFaint,
                         in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-            if !note.isEmpty {
+            if !compact, !note.isEmpty {
                 Text(ProseLinks.rendered(note))
                     .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                     .lineLimit(3)
@@ -1005,19 +1167,43 @@ private struct MailContentView: View {
     }
 
     @ViewBuilder private var liveBody: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
             if let sender {
-                HStack(spacing: DS.Space.s2) {
-                    SenderInitial(sender: sender, size: 26)
-                    Text(SenderInitial.displayName(of: sender))
-                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
+                HStack(spacing: DS.Space.s3) {
+                    SenderInitial(sender: sender, size: 38)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(SenderInitial.displayName(of: sender))
+                            .dsText(.heading17).foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                        // The address itself, under the display name, when the
+                        // two really differ — the name is what you recognize,
+                        // the address is what tells you it's really them.
+                        if sender != SenderInitial.displayName(of: sender) {
+                            Text(sender)
+                                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                                .lineLimit(1).truncationMode(.middle)
+                        }
+                    }
+                    Spacer(minLength: 0)
                 }
             }
             if !isFromLine, !thing.content.isEmpty {
                 Text(ProseLinks.rendered(thing.content))
                     .dsText(.callout15).foregroundStyle(DS.textPrimary)
                     .lineLimit(10)
+            }
+            // WHY THE SHEET STOPS HERE (prd §365). `MailBridge` stores no body
+            // — `content` is literally "From <sender>" — so this anatomy was a
+            // sender chip on an otherwise blank page, with nothing saying
+            // whether the message was empty or merely absent. It is absent, and
+            // that is a real property of the bridge worth stating once: the
+            // header is here so the mail is findable, and the message is where
+            // it always was. Gated on there being no body, so a demo/sample
+            // mail thing that DOES carry text never claims otherwise.
+            if isFromLine || thing.content.isEmpty {
+                Text("Casberi holds the header, not the message — open it in Mail to read it.")
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(.horizontal, DS.Space.s4)
@@ -1076,27 +1262,387 @@ private struct CommandCard: View {
     }
 }
 
-/// An event's schedule line, stated plainly — the record's own words with a
-/// clock, not a fabricated date block.
-private struct ScheduleCard: View {
-    let text: String
+// MARK: - The stub: a moment with a clock (2026-08-12, prd §365)
+
+/// A moment, drawn as a ticket stub rather than a formatted string in a label
+/// column — an event, a booking, a workout, a reminder.
+///
+/// It replaces `ScheduleCard` (a clock glyph beside `content`, verbatim) and
+/// `ReminderDueRow`, and it also retires the spec table's "When" and "Due"
+/// rows: those existed only because the content anatomy was too thin to carry
+/// the fact, so a calendar event printed its one string twice on one screen.
+///
+/// **Everything here is read from a real Date.** `ScheduleIngest` formatted the
+/// start into `content` at ingest and left the reader nothing to compute from,
+/// which is why the sheet could never say "Thursday" or "in 2 hours". The start
+/// has always been `capturedAt`; the end is `endAt` (new, and the one field
+/// this pass had to add).
+///
+/// NO PERFORATION, despite the stub idea: build brief §8 bans hairlines with
+/// zero exceptions, and a dashed rule is a line. The two halves separate the
+/// way everything else in this app separates — a slightly stronger fill on the
+/// clock band than on the facts below it.
+private struct MomentStub: View {
+    let start: Date
+    /// nil when no end is really known — an all-day event, or a kind that has
+    /// no duration. A range is shown ONLY when this is present; a start plus a
+    /// guessed length would be the §83 fake status.
+    var end: Date?
+    /// A reminder past its due date. Colours the block and replaces the clock
+    /// with the word, because "Overdue" IS the reading — the date beneath it is
+    /// the detail.
+    var overdue = false
+    var facts: [ThingFact] = []
+
+    private var sameDay: Bool {
+        guard let end else { return true }
+        return Calendar.current.isDate(start, inSameDayAs: end)
+    }
+
+    /// "14:00 – 15:00", or just the start when there is no known end. An end on
+    /// another day states its date too rather than implying it finishes an hour
+    /// after it began.
+    /// An all-day event, declared by its own fact rather than inferred from a
+    /// midnight start — see `ThingFact.Action.allDay` for why the signal has to
+    /// be explicit.
+    private var allDay: Bool { facts.contains { $0.action == .allDay } }
+
+    private var clockLine: String {
+        if allDay { return String(localized: "All day") }
+        let from = start.formatted(date: .omitted, time: .shortened)
+        guard let end else { return from }
+        let to = sameDay
+            ? end.formatted(date: .omitted, time: .shortened)
+            : end.formatted(date: .abbreviated, time: .shortened)
+        return "\(from) – \(to)"
+    }
+
+    /// "in 2 hours · 1 hr". The relative half is localized by Foundation; the
+    /// duration half appears only when there is a real end to measure.
+    private var relativeLine: String {
+        let relative = start.formatted(.relative(presentation: .named))
+        guard let end, end > start else { return relative }
+        return "\(relative) · \(Self.duration(from: start, to: end))"
+    }
+
+    /// "45 min" / "1 hr" / "1 hr 30 min". Minutes only under an hour; whole
+    /// hours drop the minutes rather than reading "2 hr 0 min".
+    static func duration(from: Date, to: Date) -> String {
+        let minutes = max(1, Int((to.timeIntervalSince(from) / 60).rounded()))
+        let (h, m) = (minutes / 60, minutes % 60)
+        if h == 0 { return "\(m) min" }
+        return m == 0 ? "\(h) hr" : "\(h) hr \(m) min"
+    }
 
     var body: some View {
-        HStack(spacing: DS.Space.s3) {
-            Image(systemName: "clock")
-                .accessibilityHidden(true)
-                .dsGlyph(15, weight: .medium)
-                .foregroundStyle(DS.tint)
-            Text(text)
-                .dsText(.body17).foregroundStyle(DS.textPrimary)
-                .lineLimit(2)
-            Spacer()
+        VStack(alignment: .leading, spacing: 0) {
+            clockBand
+            // The all-day marker is CONSUMED by the clock band above, so it
+            // never also draws as a row saying the same thing one line down.
+            let rows = facts.filter { $0.action != .allDay }
+            if !rows.isEmpty {
+                FactRows(facts: rows)
+                    .padding(.horizontal, DS.Space.s3)
+                    .padding(.bottom, DS.Space.s2)
+            }
         }
-        .padding(DS.Space.s3)
         .background(DS.fillFaint,
                     in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
+    }
+
+    private var clockBand: some View {
+        HStack(spacing: DS.Space.s3) {
+            dayBlock
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text(overdue ? String(localized: "Overdue") : clockLine)
+                    .dsText(.stat24)
+                    .foregroundStyle(overdue ? DS.destructive : DS.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Text(relativeLine)
+                    .dsText(.subhead13)
+                    .foregroundStyle(overdue ? DS.destructive : DS.textSecondary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(DS.Space.s3)
+    }
+
+    /// The date, as a block you read at a glance. Weekday abbreviated by
+    /// Foundation — NOT uppercased, which §8 bans.
+    private var dayBlock: some View {
+        VStack(spacing: 0) {
+            Text(start.formatted(.dateTime.weekday(.abbreviated)))
+                .dsText(.label11)
+                .foregroundStyle(overdue ? DS.destructive : DS.tint)
+            Text(start.formatted(.dateTime.day()))
+                .dsText(.stat24)
+                .foregroundStyle(overdue ? DS.destructive : DS.textPrimary)
+            Text(start.formatted(.dateTime.month(.abbreviated)))
+                .dsText(.label11)
+                .foregroundStyle(DS.textTertiary)
+        }
+        .frame(width: 56)
+        .padding(.vertical, DS.Space.s2)
+        .background(overdue ? DS.destructive.opacity(0.12) : DS.gray100.opacity(0.6),
+                    in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+    }
+}
+
+// MARK: - Fact rows: the un-joined parts, shared by every Life anatomy
+
+/// The rows a `ThingFact` list draws — a label, its value, and (when the value
+/// really is reachable) a tap that hands it off.
+///
+/// EVERY ACTION IS GATED on `canOpenURL` (prd §275). An unclaimed scheme is
+/// refused asynchronously by LaunchServices and neither `UIApplication.open`'s
+/// completion nor SwiftUI's `openURL` reports the refusal — which is exactly
+/// how "Open in Photos" could be a disc that did nothing, invisibly, for weeks.
+/// `tel:` is claimed on an iPhone and on nothing else, so a phone number on a
+/// Mac or an iPad renders as a fact rather than as a control that swallows the
+/// tap. A fact is never worse for being unactionable; a dead control is.
+///
+/// No dividers between rows: §8 bans hairlines outright, so rows separate by
+/// their own spacing.
+private struct FactRows: View {
+    let facts: [ThingFact]
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            ForEach(facts) { fact in
+                if let url = Self.destination(for: fact),
+                   UIApplication.shared.canOpenURL(url) {
+                    Button { openURL(url) } label: { row(fact, actionable: true) }
+                        .buttonStyle(.plain)
+                        .dsHover()
+                } else {
+                    row(fact, actionable: false)
+                }
+            }
+        }
+    }
+
+    private func row(_ fact: ThingFact, actionable: Bool) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
+            Text(fact.label)
+                .dsText(.label12)
+                .foregroundStyle(DS.textTertiary)
+                .frame(width: 72, alignment: .leading)
+            Text(fact.value)
+                .dsText(.callout15)
+                .foregroundStyle(actionable ? DS.tint : DS.textPrimary)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+            Spacer(minLength: 0)
+            if actionable {
+                Image(systemName: "chevron.right")
+                    .accessibilityHidden(true)
+                    .dsGlyph(11, weight: .semibold)
+                    .foregroundStyle(DS.textTertiary)
+            }
+        }
+        .padding(.vertical, DS.Space.s1)
+        .contentShape(Rectangle())
+    }
+
+    /// Where a fact's tap lands, or nil when it isn't a hand-off.
+    ///
+    /// A phone number is stripped to what a dialler accepts — Contacts stores
+    /// "+385 91 234 5678" for humans and `tel:` wants no spaces — keeping the
+    /// leading `+` and digits and nothing else, so a number that arrives with
+    /// letters in it (a vanity line) yields no URL rather than a wrong one.
+    static func destination(for fact: ThingFact) -> URL? {
+        switch fact.action {
+        case .call:
+            let dialable = fact.value.filter { $0.isNumber || $0 == "+" }
+            guard dialable.count >= 3 else { return nil }
+            return URL(string: "tel:\(dialable)")
+        case .mail:
+            guard fact.value.contains("@") else { return nil }
+            return URL(string: "mailto:\(fact.value)")
+        case .map:
+            guard let q = fact.value.addingPercentEncoding(
+                withAllowedCharacters: .urlQueryAllowed) else { return nil }
+            return URL(string: "https://maps.apple.com/?q=\(q)")
+        case .web:
+            guard let url = URL(string: fact.value),
+                  url.scheme == "https" || url.scheme == "http" else { return nil }
+            return url
+        case .none, .metric, .state, .allDay:
+            return nil
+        }
+    }
+}
+
+/// The numbers a workout actually recorded, side by side — what the run WAS,
+/// where the sheet used to show a calendar clock beside the word "Workout".
+///
+/// Labels are sentence case ("Duration", "Pace / km"), never the ALL-CAPS
+/// eyebrows §8 bans. Units carry their own case ("km" is a unit, not a word).
+private struct MetricBand: View {
+    let metrics: [ThingFact]
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 0) {
+            ForEach(metrics) { metric in
+                VStack(spacing: DS.Space.s1) {
+                    Text(metric.value)
+                        .dsText(.stat24)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    Text(metric.label)
+                        .dsText(.label11)
+                        .foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
+        .padding(.vertical, DS.Space.s3)
+        .padding(.horizontal, DS.Space.s2)
+        .frame(maxWidth: .infinity)
+        .background(DS.fillFaint,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s3)
+    }
+}
+
+// MARK: - The card: something that persists (2026-08-12, prd §365)
+
+/// A person, drawn as an identity rather than a sentence.
+///
+/// `.contact` had NO case in `kindSwitch` at all — it fell to `default:` and
+/// rendered `ContactsIngest.line(for:)`'s output as grey prose
+/// ("Designer · Studio · ana@studio.com"), a database row printed as a sentence
+/// with not one character of it tappable. The facts behind that string are now
+/// kept as parts, so the ways to reach somebody are the things you tap.
+///
+/// Takes values, not the `Thing` — so it stores no model and the build-188
+/// leaf-liveness rule has nothing to catch here (see `ThingRowKeying.swift`).
+/// Its caller is inside `ThingContentView.liveBody`, which is already guarded.
+private struct PersonCard: View {
+    let name: String
+    let facts: [ThingFact]
+
+    /// The role line under the name — the two facts that describe rather than
+    /// dial. Joined here rather than drawn as rows because "Designer" and
+    /// "Studio" are one idea, and two label columns for them is the shape this
+    /// anatomy exists to get away from.
+    private var subtitle: String? {
+        let parts = facts.filter { $0.label == "Role" || $0.label == "Company" }
+            .map(\.value)
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    private var reachable: [ThingFact] {
+        facts.filter { $0.action == .call || $0.action == .mail }
+    }
+
+    private var initials: String {
+        let letters = name.split(separator: " ").prefix(2).compactMap(\.first)
+        return letters.isEmpty ? "?" : String(letters).uppercased()
+    }
+
+    var body: some View {
+        VStack(spacing: DS.Space.s2) {
+            Text(initials)
+                .dsText(.heading22)
+                .foregroundStyle(DS.textPrimary)
+                .frame(width: 76, height: 76)
+                .background(DS.gray100, in: Circle())
+            Text(name)
+                .dsText(.heading22)
+                .foregroundStyle(DS.textPrimary)
+                .multilineTextAlignment(.center)
+            if let subtitle {
+                Text(subtitle)
+                    .dsText(.callout15)
+                    .foregroundStyle(DS.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            if !reachable.isEmpty {
+                FactRows(facts: reachable)
+                    .padding(DS.Space.s3)
+                    .background(DS.fillFaint,
+                                in: RoundedRectangle(cornerRadius: DS.Radius.card,
+                                                     style: .continuous))
+                    .padding(.top, DS.Space.s2)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s3)
+    }
+}
+
+/// A HomeKit accessory — the app's only pure LIVE-STATE row, finally drawn as
+/// one.
+///
+/// `.accessory` had no case either, so a reachable lock and an unreachable one
+/// rendered identically in the same grey prose — and which of the two it is
+/// happens to be the entire reason to open the sheet. The state leads, in its
+/// own tone; everything else is a quiet fact beneath it.
+///
+/// It states what it CAN'T say, too: HomeKit exposes no historical event query
+/// and this bridge reads no per-service characteristics, so "Reachable" is a
+/// claim about the connection, never about whether the door is locked. Saying
+/// so is cheaper than letting somebody infer the stronger reading.
+private struct AccessoryCard: View {
+    let title: String
+    let facts: [ThingFact]
+
+    private var state: ThingFact? { facts.first { $0.action == .state } }
+    private var rest: [ThingFact] { facts.filter { $0.action != .state } }
+    private var reachable: Bool { state?.value == "Reachable" }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            if let state {
+                HStack(spacing: DS.Space.s3) {
+                    Circle()
+                        .fill(reachable ? DS.confirm : DS.destructive)
+                        .frame(width: 10, height: 10)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(state.value)
+                            .dsText(.heading17)
+                            .foregroundStyle(DS.textPrimary)
+                        Text(state.label)
+                            .dsText(.subhead13)
+                            .foregroundStyle(DS.textTertiary)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(DS.Space.s3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background((reachable ? DS.confirm : DS.destructive).opacity(0.12),
+                            in: RoundedRectangle(cornerRadius: DS.Radius.card,
+                                                 style: .continuous))
+            }
+            if !rest.isEmpty {
+                FactRows(facts: rest)
+                    .padding(DS.Space.s3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(DS.fillFaint,
+                                in: RoundedRectangle(cornerRadius: DS.Radius.card,
+                                                     style: .continuous))
+            }
+            // The ceiling, said out loud. Reachability is about the
+            // connection; nothing here reads a lock's bolt.
+            Text("Casberi only reads — the Home app controls it.")
+                .dsText(.subhead13)
+                .foregroundStyle(DS.textTertiary)
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s3)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text("\(title), \(state?.value ?? "")"))
     }
 }
 

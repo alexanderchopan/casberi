@@ -221,6 +221,79 @@ step "Category fold self-test"
   || fail "the category fold self-test failed — run scripts/category-fold-selftest.sh"
 print -P "%F{green}✓ category fold self-test%f"
 
+# What anatomy a social thing sheet wears, and the reading under it (prd §363,
+# 2026-08-12). INVISIBLE, and shipped invisible for months: the gate asked
+# `SocialThread.isSocial` — three source NAMES — so an X post drew its own
+# 80-character clamp in display type, an X like drew a link card over a page
+# that serves no og: tags, and a new follower drew a link preview of a person.
+# Every one of those renders perfectly. So do the failures this guards against
+# now: a save classified as a post sets a URL as somebody's sentence, and a
+# 2019 archive's counts shown with no date read as numbers just measured.
+step "Social sheet self-test"
+"$ROOT/scripts/social-sheet-selftest.sh" >/dev/null \
+  || fail "the social sheet self-test failed — run scripts/social-sheet-selftest.sh"
+print -P "%F{green}✓ social sheet self-test%f"
+
+# What a NOTE thing sheet shows (prd §366, 2026-08-12) — the category whose
+# whole job is to show you words and which showed the fewest of them. Same
+# class again: a word count taken over a clamped body understates a real note
+# by thousands and looks exactly like a measurement; a marked passage
+# classified as an entry puts our clock on somebody else's sentence; a read
+# time on a twelve-word note is the app padding itself out. Nothing in a build
+# or a screen sweep can see any of it. Its drift guards also hold the Kindle
+# data-loss fix in place — the passage on `content`, the work where a room can
+# rank it, and the heal that is the only thing able to give back the words the
+# old importer threw away.
+step "Note sheet self-test"
+"$ROOT/scripts/note-sheet-selftest.sh" >/dev/null \
+  || fail "the note sheet self-test failed — run scripts/note-sheet-selftest.sh"
+print -P "%F{green}✓ note sheet self-test%f"
+
+# What a WORK thing sheet says HAPPENED (prd §364, 2026-08-12). Same class as
+# the social sheet above and the same reason: every failure renders as a
+# perfectly good-looking receipt. A dispute that reads "won" when it was lost,
+# a build that wears green when it broke, a row labelled "Project:" holding
+# half a commit subject — `xcodebuild` is happy with all of them and the
+# screen sweep passes. The sharpest one it guards is §340's: the outcome must
+# come from a stable English tag or a raw state in the ref, NEVER from the
+# localized title, or a device that changed language reports every past
+# failure as a success.
+step "Work sheet self-test"
+"$ROOT/scripts/work-stage-selftest.sh" >/dev/null \
+  || fail "the Work sheet self-test failed — run scripts/work-stage-selftest.sh"
+print -P "%F{green}✓ Work sheet self-test%f"
+
+# What an AGENT thing sheet shows (prd §367, 2026-08-12) — the category holding
+# more text than any other and drawing the least of it. The parse is the sharp
+# part: the speaker labels in a stored transcript are a WIRE FORMAT four
+# importers write, in stable English, and every way of getting it wrong is
+# silent. A renamed label parses nothing and falls back to the one-line
+# rendering this pass exists to end; the seat name used as the speaker name
+# ("Claude Code" for a transcript that says "Claude") does the same; splitting
+# on every newline turns one answer's paragraphs into six messages; and a
+# missing assistant label folds the agent's words into a turn attributed to
+# YOU. It also holds the clamp clause honest in both directions — an 84-turn
+# chat must say what it is missing, and a chat that was never clamped must not
+# claim turns went missing that never existed.
+step "Agent sheet self-test"
+"$ROOT/scripts/agent-sheet-selftest.sh" >/dev/null \
+  || fail "the agent sheet self-test failed — run scripts/agent-sheet-selftest.sh"
+print -P "%F{green}✓ agent sheet self-test%f"
+
+# What a PURCHASE sheet says (prd §368, 2026-08-12) — the shopping category's
+# receipt, and the card behind a product you're only watching. Same class as
+# the two above: an authorization stated as settled, a deal introduced as "a
+# store you follow", a Nutri-Score beside a food this app never graded, a
+# merchant that is really the first half of somebody's product name — every one
+# of them renders as a perfectly good-looking card. The sharpest guard is the
+# fork itself: the obvious "does it carry a price" test dresses Railgun, Peer
+# and Bitcoin transfers as card purchases, so the archetype must come from a
+# `sourceRef` prefix this app wrote.
+step "Purchase sheet self-test"
+"$ROOT/scripts/purchase-stage-selftest.sh" >/dev/null \
+  || fail "the purchase sheet self-test failed — run scripts/purchase-stage-selftest.sh"
+print -P "%F{green}✓ purchase sheet self-test%f"
+
 # Pure-logic self-test for the retriever's scoring primitives (prd §318): term
 # rarity, query coverage, phrase adjacency, match-centered snippets. The
 # failure mode here is the one no build or sweep can see — a RANKING being

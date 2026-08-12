@@ -44,7 +44,43 @@ enum BitrefillFetch {
         // dedupe-and-land loop in `TokenIngest.refresh` inserts it with no
         // extra plumbing. nil on every pass but the rare one that crosses.
         if let alert = await balanceTask { things.append(alert) }
+        await repairLanded(things)
         return things
+    }
+
+    /// Repairs rows already in the corpus from the SAME payload this pass just
+    /// read — the heal-on-the-dedupe-hit pattern, and load bearing for its
+    /// usual reason: `TokenIngest.refresh` drops a `sourceRef` it has already
+    /// seen, so without this only orders landed after 2026-08-12 could name
+    /// what you bought, and the sheet would fall back to the title on the
+    /// older half with nothing to say why. A corpus silently half-covered
+    /// reads as complete.
+    ///
+    /// Its ceiling, stated because it is real: it reaches only the rows this
+    /// pass's own page describes (`limit=50`) — the same page-window ceiling
+    /// every enrichment heal here has.
+    @MainActor
+    private static func repairLanded(_ fresh: [Thing]) {
+        guard let context = SharedStore.live?.mainContext else { return }
+        let stored = IngestSupport.thingsByRef(context, source: "Bitrefill")
+        guard !stored.isEmpty else { return }
+        var changed = false
+        for row in fresh {
+            guard let ref = row.sourceRef, let landed = stored[ref], landed.isLive
+            else { continue }
+            if landed.transferCounterparty != row.transferCounterparty {
+                landed.transferCounterparty = row.transferCounterparty
+                changed = true
+            }
+            // Only the Delivered mark this pass owns — a person's own tags on
+            // a Bitrefill row would be wiped by a blanket assignment, which is
+            // why this adds rather than replaces.
+            if row.tags.contains("Delivered"), !landed.tags.contains("Delivered") {
+                landed.tags.append("Delivered")
+                changed = true
+            }
+        }
+        if changed { context.saveHonestly() }
     }
 
     /// `-bitrefillBalanceProbe`'s door into the private read below — reads
@@ -77,6 +113,21 @@ enum BitrefillFetch {
         )
         thing.previewImageURL = IngestSupport.imageURL(product?["image"] as? String)
         applyAmount(product?["value"], product?["currency"], to: thing)
+        // WHO you bought from, as a field rather than the head of a joined
+        // title (2026-08-12, prd §368). `transferCounterparty` is "the other
+        // side of the money" on every seat that writes it — Apple Wallet's
+        // merchant since §317, Privacy's since this pass — so the purchase
+        // sheet reads one field and can never disagree with itself.
+        //
+        // NOT normalized the way a card descriptor is: this is a catalogue
+        // product name Bitrefill publishes ("Amazon.com", "Steam"), not a
+        // processor's string, so there is no `SQ *` to strip and stripping
+        // would only risk merging two real products.
+        thing.transferCounterparty = name
+        // Delivered, when the order says so — the fact `capturedAt` is already
+        // dated by (`delivered_time` first) and which nothing could read back
+        // out of a date alone.
+        if order["delivered_time"] != nil { thing.tags = ["Delivered"] }
         return thing
     }
 
@@ -95,8 +146,9 @@ enum BitrefillFetch {
                               payment?["currency"]) {
             title += " · \(amount)"
         }
-        if let method = (payment?["method"] as? String).map(methodName) {
-            title += " in \(method)"
+        let rail = (payment?["method"] as? String).map(methodName)
+        if let rail {
+            title += " in \(rail)"
         }
         let thing = Thing(
             kind: .link,
@@ -108,6 +160,12 @@ enum BitrefillFetch {
         )
         applyAmount(payment?["price"] ?? payment?["amount"] ?? payment?["value"],
                     payment?["currency"], to: thing)
+        // A refill has no merchant — you paid nobody. What it HAS is the rail
+        // the money came in on, and that is genuinely the other side of it, so
+        // it takes the same field rather than earning a second one. The verb
+        // is what keeps the two readable apart on the sheet ("Topped up …
+        // paid with Bitcoin" vs "Paid … Netflix.com").
+        thing.transferCounterparty = rail
         return thing
     }
 

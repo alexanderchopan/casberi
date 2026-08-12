@@ -21027,3 +21027,889 @@ shape as every other rule in this codebase that decayed until it was made
 mechanical. `scripts/prd-index-audit.py` now fails the build on a `§N` cited from
 source with no heading here, and on two headings sharing a number, which is the
 pair of symptoms this incident presented as.
+
+## §363 — A social sheet is a post, not a record: the gate that asked the wrong question (user: "we are improving the thing sheets in wallet, basically making them less like a database field and more like a receipt, or more like an actual app. lets pick a category of thing sheets and do the same, start with social", then "ok, do it apply to all"; 2026-08-12)
+
+The wallet sheets had been getting the receipt treatment for a week. Asked to
+do the same for a category, the inventory came back worse than expected — not
+"these sheets are plain" but **four of the seven social sources were opening a
+sheet strictly WORSE than the row you tapped to get there**, and had been for
+months, with nothing able to see it.
+
+One line caused all of it. The sheet's entire social treatment was gated on
+`SocialThread.isSocial` — a set of three source NAMES (Bluesky, Farcaster,
+Nostr) — while X, Instagram, TikTok and Snapchat stamp the same fields. Measured
+from the shipped code, not guessed:
+
+- An **X post** (`.note`) drew `Text(thing.title)`, which is `titleLine`'s
+  80-character clamp, at `heading34`, and then repeated `content` in full at
+  `callout15` underneath. `postText`, `authorHandle`, `likeCount`,
+  `repostCount`, `previewImageData` and a whole thread on `enrichedText` sat
+  unread. The room's own `PostCard` draws five of those six.
+- An **X liked post** (`.link`) drew a `LinkPreviewCard` over an x.com URL —
+  which serves no `og:` tags at all (§280), so the one shape whose words are
+  already in the record rendered as a naked host row.
+- A **new follower** (`.link`) drew a headline sentence and a link preview of a
+  profile page. It is a PERSON, its face and handle were both stamped, and the
+  app has had `SocialProfileCard` since §169.
+- An **Instagram or TikTok save** drew a link card and never named the creator
+  its own face pass had already stamped.
+
+### 1. The ruling: the gate is a DATA test, never a source list
+
+The question the gate asked was "is this Bluesky, Farcaster or Nostr?". The
+question it MEANT was "does this record carry something to read?".
+`SocialSheet.shape` asks only about the record now — a source list has to be
+remembered every time a bridge lands a post, and a data test covers the seat
+that ships next week for free.
+
+Four shapes, and deliberately no fifth (a shape exists only where the sheet
+would otherwise draw the wrong noun): **post**, **person**, **save**,
+**transcript**. The ordering is load-bearing. A follower is a person before it
+is anything else, because that context changes the NOUN rather than the layout.
+A `.chat` then forks on the NETWORK, not on its words — a cast and a saved
+Snapchat thread are the same kind, both carry text, and only thread-capability
+separates them. **That fork is also what preserves today's behaviour for a
+Bluesky post landed before `postText` existed**: no words of its own, still a
+post, and it is every row in an install predating prd 81 — the one case a pure
+words test would have regressed, which is why the mutation for it is in the
+harness.
+
+`SocialSheetSource.hasWords` is the discriminator, and the subtle half is that
+**a bare URL is not words**: every save stores its permalink in `content`, so
+without that test an Instagram save classifies as a post and the sheet sets an
+`https://` string in display type as though it were somebody's sentence. Tested
+on the WHOLE trimmed string, never `contains` — a post that quotes a link
+inside a sentence is prose.
+
+### 2. "How it landed" replaces the spec table's one row
+
+The spec table's whole contribution to a social post was `From — saved by you`,
+in its own card, behind an 80pt label column. It was the only thing on the sheet
+that looked like a form, and it was the sheet's entire answer to "why is this
+here". `SocialReceptionCard` says that in a sentence and puts beside it the two
+readings the record already held:
+
+- **The counts**, with their nouns written out under them rather than led by a
+  heart / arrows / bubble glyph at `label12` — a hairline's worth of ink doing a
+  word's job, and unreadable at large Dynamic Type.
+- **WHO liked it** (§330's roll), which rendered in the feed row and **nowhere in
+  the sheet you opened to find out**.
+
+`SocialEngagementLine` is **deleted, not deprecated** (`BridgeFooterNote`'s
+rule): two views drawing one fact is how a screen starts contradicting itself.
+Its honesty rule came with it — an absent count has no cell, because an absent
+number and a reported zero are different facts, and that is the only reason any
+number on the card can be trusted.
+
+**The staleness clause is the sharpest thing here.** An archive's counts are a
+snapshot frozen the day the export was written; shown bare, a 2019 post's 412
+likes read as a number somebody just measured, which is the §83 fake-status ban
+in the one place a person would believe it instantly. So an archive's readings
+wear "Counts as your X archive recorded them, Aug 2026", read off the import
+receipt's own date (no new `Thing` field, therefore **no CloudKit Production
+deploy** — §310 already reads that row for staleness), and a LIVE post's never
+do, because a clause there would make a true number look doubted. Both
+directions are mutation-tested.
+
+The archive sentence names the file, the act and a real past date: *"From your X
+archive — you liked this on 17 April 2019."* The live one carries the same
+why-phrase the eyebrow wears (`SocialThread.contextPhrase`), one vocabulary, so
+a single screen cannot say why twice and differ. The `From` row stands down only
+where a sentence actually composed — a social thing with nothing honest to say
+keeps the row it always had rather than losing the fact entirely.
+
+### 3. Three smaller corrections, each a fact already in the store
+
+- **The parent is a CARD**, not the label "Replying to @alice" — which names a
+  person and withholds the sentence, so a reply read as a non sequitur unless
+  you already remembered the conversation. `Thing.parent` has carried the words
+  the whole time. The feed row keeps its label: a row must not carry a
+  presentation of its own (the 2026-07-28 half-open-sheet bug).
+- **The rest of a self-thread draws.** §307 gave an X thread's head the whole
+  chain on `enrichedText`, retrieval-only and therefore invisible — the wrong
+  half to hide, since X itself only surfaces a thread from its head and the head
+  is the row you tap. The same exception `enrichedText` already carries for an
+  Obsidian note. **The head is dropped, and the drop is PROVEN, not assumed**:
+  the first part must BE this post's words, or the section does not render —
+  slicing blind repeats the post, and slicing the wrong field prints a
+  stranger's text under somebody's own name.
+- **A post draws a picture the app already holds.** An import has no URL to
+  give; `ImportMedia` stores bytes. The sheet asked only for URLs — §283's
+  failure (pixels stored, never drawn) in a room `PostCard` had already fixed.
+
+### 4. Faces are doors only where a door can lead somewhere
+
+The face now leads the eyebrow on every social source, with the source's own
+mark standing in where no avatar was stamped (an X archive has none) — an
+archived tweet introducing itself as "Note · 3y ago" was the sheet forgetting
+who wrote it. But it is a DOOR only for the three networks with a profile
+lookup behind them: `SocialProfileCard`'s one real verb is Watch, and on an X or
+Instagram export it can never succeed, which is the dead control the honesty law
+bans. Same reasoning `SocialRepliesSection` already applied to a GitHub
+commenter's avatar.
+
+### 5. Mechanical, for the reason everything here is
+
+`scripts/social-sheet-selftest.sh` compiles `SocialSheet.swift` WHOLE and
+unmodified (Foundation-only by design) — 44 assertions, 11 mutations, 15 drift
+guards, in `verify.sh`. Every failure in this file is a silent wrong answer that
+renders perfectly, and the simulator can see none of them. Two things it earned
+on its own first runs:
+
+- The catalog guard's regex **silently dropped Farcaster**, the largest seat in
+  the group. `finditer` returns non-overlapping matches, so a preceding
+  non-Network offer's `name:` opened a span that swallowed the real one — it
+  reported "6 seats, all present" against a group of 7. It splits into offer
+  blocks now. A guard that under-counts its own input is not a guard.
+- Its negative sweep reads a **comment-stripped** copy, because
+  `SocialPostViews.swift` documents at length why `SocialEngagementLine` was
+  deleted — so a guard grepping raw source fires on the prose explaining itself.
+  The Obsidian/Cursor lesson, fourth time.
+
+The one assertion deliberately NOT pinned is the archive date's word order:
+`Date.FormatStyle` renders "17 April 2019" or "April 17, 2019" by the reader's
+locale, and a literal there would make the test a check of the harness's own
+region. The sentence ASSEMBLY is asserted against the same formatted date the
+shipped code would produce.
+
+**Not built, deliberately.** The Snapchat memory and the Farcaster signer grant
+get no shape: a memory is a picture and a grant is a permission notice, and
+neither wants a post's anatomy. The conversation clamp (`content` is 60 lines /
+4KB while `messageCount` holds the real length) is still unstated on a
+transcript — a real gap, and a different ruling than this one, since it is about
+what a transcript OWES rather than what a post IS.
+
+## §364 — A Work sheet is a receipt, not a record (user: "we are improving the thing sheets in wallet, basically makign them less like a database field and more like a receipt, or more like an actual app. lets pick a category of thing sheets and do the same, start with work", then "do all the things you suggest", 2026-08-12)
+
+The §302 ledger's grammar, one category over — and the same finding underneath
+it. Eighteen Work seats land ~45 row shapes and exactly TWO of them (GitHub
+releases, PostHog metrics) had any sheet anatomy of their own. Every other one
+fell through `walletStage == nil` to the generic path: title, a link-preview
+card, and a two-row label/value grid reading **"Site: vercel.com"** and
+**"From: in your things"**. That grid is the database field, and on a Work row
+it was very nearly the whole sheet.
+
+**The material was already there; it had been flattened on the way in.** Each
+bridge composes a sentence and then joins it into ONE string because
+`Thing.title` is one slot — `"Build failed · casberi/web · fix: guard the null
+case"`. That join is also why §303 ruled the outcome must LEAD: `titleLine`
+clamps at 80 and the tail is what the clamp eats. `WorkStage` puts the parts
+back on separate rungs.
+
+**THE CENTRAL RULE, and it is §340's: the outcome is read from a STABLE
+signal, never from the title.** Every `leadClause` in this codebase is
+`String(localized:)`, so the title records the verdict in whatever language the
+device was in WHEN THE ROW LANDED. §340 already ruled on exactly this for
+Cursor — parse it back and "change the language and every past failure silently
+reads as a success", the §83 fake status in its most expensive form. So `tone`
+and `statusWord` read only things that cannot drift: the English facet tags the
+bridges already land (`Build failure`, `Resolved`, `Regression`, `Deprecated`),
+the raw state Apple's own constant leaves inside a ref
+(`asc:version:<id>:REJECTED`), and `mark`. The localized clause gets exactly
+ONE cosmetic job — dropping a duplicate word from the headline when it happens
+to match today's language — and it fails safe: a mismatched prefix leaves the
+title whole, which is mildly redundant and never wrong.
+
+**Keyed on (source, tag), never tag alone.** "Release" means a shipped package
+on npm (landed), a new model on Hugging Face (no verdict at all) and a version
+row on App Store Connect (whose verdict lives in its ref). A tag-only table
+gives all three the same colour and two of them are wrong.
+
+**A project is drawn from a FIELD or not at all.** The value sits in the middle
+of the joined title, and slicing it out on a separator would put half a commit
+subject — or half an error message — into a row labelled "Project" the first
+time one contained a separator, where being wrong renders exactly like being
+right. Cursor has stamped `authorHandle` with `org/repo` since §303; Vercel,
+Sentry and PagerDuty now stamp the same field, and every other seat answers nil
+and draws no project row.
+
+**Three fields the sheet stored and never drew.** `summary` — eight seats carry
+real source-authored body copy (GitHub issue bodies, Linear descriptions,
+Trello card backs, ASC review text, and Cursor's own account of what the agent
+did, which is the entire reason to keep that row) — rendered as a grey caption
+under a link card. `mark` — written by six seats, drawn nowhere, now the state
+pill. `tags` — six seats carry the person's own labels, and the sheet read
+`tags` only to compute the related shelf; they are chips now, with our
+editorial shape marks subtracted so a chip can never repeat the status line in
+a quieter font.
+
+**The deadline strip is always shown and always amber (user ruling).** Offered
+as amber-then-red-inside-48h and corrected: "those don't need to be red tho,
+b/c it's not necessarily an alert for someone that is bad. i think yellow is
+fine." A deadline is a fact about the future, not a verdict on it — a Trello
+card due next month and a dispute due Friday are the same KIND of thing, and
+colouring one as an alarm decides for the person how to feel about their own
+calendar. It says the date AND the distance ("Due Aug 19 · in 7 days"): month
+and day never a bare weekday, the Aerodrome lesson, because "due Wed" reads as
+already-past exactly when it matters most.
+
+**Stripe gets the wallet's hero rung and, at last, a number.** Money moving is
+the module doctrine's standing exception, so it is the one Work face set on
+`price40`. It had none available: every Stripe amount existed only as
+characters inside a formatted title, so nothing could add, compare or
+re-format it. `priceValue`/`priceCurrency` are EXISTING fields already in the
+deployed CloudKit schema (Gnosis Pay and Apple Wallet have used them since they
+shipped), so this is a stamp and **not a Production deploy** — a correction to
+what this session first told the user. Parsing was rejected: it means inverting
+`StripeMoney`'s zero-decimal (JPY/KRW) and three-decimal (BHD/KWD) tables AND
+recovering an ISO code from a symbol, and "$" is ambiguous across USD, CAD and
+AUD. Stripe does not join `Corpus.cardSpendSources` by doing this — that test
+is `kind == .transaction` AND a source allowlist, and every Stripe row is a
+`.link`. The sign follows DIRECTION, not tone: a dispute takes money away
+whether it is opened, won or lost. Rows landed before today keep the words face
+and their title, because the event cursor never re-reads them.
+
+**Guarded mechanically** (`scripts/work-stage-selftest.sh`, in `verify.sh`):
+`WorkStage` is Foundation-only by design so the harness compiles it WHOLE and
+unmodified with no stubs at all — 60+ assertions, 8 mutations, drift guards on
+the three new project stamps, Stripe's facets and price, and on the sheet
+actually drawing it. Two lessons re-earned on its own first runs, both the
+"passes for the wrong reason" shape: a mutation deleting the money row from
+`shapeTags` SURVIVED because every label assertion used Linear's and Vercel's
+tags, and a boundary mutation survived because its fixture was an npm RELEASE
+row, whose clause is "Released" — so a title beginning "Deprecated" was never a
+candidate for the strip it was meant to test. The fixture is an open ticket
+titled "Open …" now, which is the realistic collision.
+
+**Not done, deliberately:** GitHub's eight row shapes keep their existing
+anatomy rather than gaining a ninth branch this pass; Slack and Notion answer
+nil (a mention and a page carry no verdict, and inventing one would be the
+fifth tone this ruling refuses); and the link-preview card still draws for the
+four seats that store an image, while the twelve that never do keep it until
+the imageless case is handled on its own terms.
+
+## §365 — A Life sheet is a stub, a card, a delivery or a frame (user: "we are improving the thing sheets in wallet, basically makign them less like a database field and more like a receipt, or more like an actual app. lets pick a category of thing sheets and do the same, start with life", then "i don't see images in the mocks did you mock one up?", then "ok do all", 2026-08-12)
+
+Life is 14 seats across 7 groups (Photos, Calendar, Reminders, Gmail, iCloud
+Mail, Apple Health, Strava, Cal.com, Calendly, Todoist, Files, Dropbox,
+Contacts, HomeKit) presenting through seven content anatomies, **two of which
+did not exist at all**.
+
+**The one cause under all of it: every Life bridge joined its facts into a
+display string at ingest and threw the parts away.** `ContactsIngest.line(for:)`
+produced `"Designer · Studio · ana@studio.com"`; `HomeKitIngest.line(for:home:)`
+produced `"Lock · Front door · Reachable"`; `ScheduleIngest.eventLine` produced
+`"14:00 · Studio"`. A sheet handed one of those can only reprint it — which is
+exactly why these read as a database row printed as a sentence, with not one
+character of it tappable. `ThingFact` (one additive `[String]`, not a column per
+source) keeps the parts as parts; `endAt` is the single genuinely absent field.
+
+### 1. Four anatomies, split by nature rather than by kind
+
+**The stub** — a moment with a clock (Calendar, Cal.com, Calendly, Apple
+Health, Strava, Reminders, Todoist). Every value read from a real `Date`:
+`capturedAt` has always been the start, `endAt` is new, and the range, the
+duration and the relative distance are computed rather than reprinted. **No
+perforation despite the ticket idea** — §8 bans hairlines with zero exceptions
+and a dashed rule is a line, so the halves separate by fill.
+
+**The card** — something that persists (Contacts, HomeKit). Identity leads;
+the un-joined parts become rows you act on.
+
+**The delivery** — something that arrived (Gmail, iCloud Mail, Files, Dropbox).
+
+**The frame** — pixels (Photos, and now Files/Dropbox images).
+
+### 2. What the spec table loses
+
+"When" and "Due" are deleted. Both existed only because the content anatomy was
+too thin to carry the fact, and for a calendar event the result was that the
+sheet printed **the same string twice on one screen** — once in `ScheduleCard`,
+once behind an 80pt label column. Same reasoning as "From" standing down in
+§363: the fact isn't lost, it's said better.
+
+### 3. Two defects found by grounding the mock, not by reading the code
+
+**F4 — a Files image drew its picture and nothing could open it.** The framed,
+tappable treatment and the **Zoom** verb were both gated on
+`kind == .screenshot`, and `.file` had no verb case at all — so the same bytes,
+in the same field, behaved differently depending on which bridge landed them.
+This is §275's bug (the "Open in Photos" disc that did nothing, invisibly)
+wearing new clothes, except the pixels are already in hand, so there is nothing
+to gate on. `FilesIngest.isStoredPicture` is a **string test on the ref**, and
+that constraint is load-bearing rather than stylistic: `VerbDerivation` runs off
+the main actor and is called per row by the feed's context-menu builder
+(§260), so reading `previewImageData` there would fault an externalStorage blob
+per row.
+
+**F5 — "In your photos" is a claim, and sometimes a false one.** That
+placeholder fired for four causes — denied, limited-and-not-shared, the original
+deleted, a demo row with no asset — and said one sentence for all of them. For
+the deleted case it is simply wrong. The copy now splits exactly where the
+knowledge does (the authorization status is the only one of the four this view
+can tell apart cheaply) and claims nothing past it.
+
+### 4. Two things deliberately NOT built
+
+**A workout's pace curve.** The mock drew one; it does not ship. No split,
+heart-rate series or route is stored on a Health row and this pass makes no
+query for one — a curve drawn from data we never fetched is the §83 fake status
+in the one place a reader would believe it instantly. Distance, duration and
+pace are real and already computed at ingest, so the metric band stands without
+it. When splits are read they get their own shape, not a fact row.
+
+**Retiring the joined strings.** `content` is what `Retriever.rank` scores and
+Spotlight indexes, so every bridge still writes it and the facts are the
+structured mirror the sheet draws. Un-joining is additive; it deletes no
+searchable text.
+
+### 5. Demo parity, which is where two of these bugs could hide
+
+**Contacts and HomeKit had NO demo rows at all** — which is precisely why their
+sheets could render as grey prose for as long as they did: nothing in the demo,
+and therefore nothing in any screenshot sweep, ever opened one. Both are seeded
+now (search-only, so they still never crowd the feed), HomeKit with **one
+reachable accessory and one unreachable**, because the whole point of that
+anatomy is that the two must not render identically and a demo carrying only the
+happy state proves nothing.
+
+**`ContactsIngest` never healed.** It skipped any ref it already had — right
+while a row's whole content was one string built at first sight, and wrong the
+moment there was anything to keep current. Left alone, the un-joined facts would
+have reached only contacts added from today on, in the one corpus where almost
+every row is already there.
+
+## §366 — A note sheet is words: the category whose whole job was to show them, showing the fewest (user: "we are improving the thing sheets in wallet, basically makign them less like a database field and more like a receipt, or more like an actual app. lets pick a category of thing sheets and do the same, start with notes. inventory them and give me a mockup", then "do all"; 2026-08-12)
+
+Wallet became a receipt, social became a post, work became a status. Notes is
+the category where the sheet's entire job is to show you words, and it was the
+one showing the fewest of them. The inventory (`design/notes-sheet/`) was taken
+off the shipped importers rather than the screens, which is why it found a data
+bug rather than a layout one.
+
+### 1. Kindle was destroying the passage at import, and had been for a month
+
+`title = IngestSupport.titleLine(body)` — an 80-character clamp with an
+ellipsis — and `content = "Book — Author"`. **The rest of the highlight was
+stored nowhere**: not on `content`, not on `enrichedText`, not anywhere on the
+row. So the sheet drew a truncated quotation at `heading34` as though it were a
+headline, and the book's name in gray underneath as though it were the body —
+exactly inverted, over a record that had already lost the thing you opened it
+to read. It rendered perfectly, and nothing in a build, an audit or a screen
+sweep could see it.
+
+The record is right way round now: the passage on `content`, the work on
+`authorHandle` (where a room can group and rank by it), the locator — `page 42`
+/ `location 611-612`, parsed out of the metadata line the importer already read
+for its date — on `summary`. The title stays a clamp, because the title is the
+feed row's label and `titleLine` is exactly what a row wants. **No new stored
+property, so no CloudKit Production deploy.**
+
+**The re-import heals, and that is the whole fix.** A highlight already in the
+corpus dedupes OUT of the landing path, so the change alone would have reached
+only files imported from that day on while every existing row stayed truncated
+forever. The pass walks `thingsByRef` rather than a ref set and repairs on the
+dedupe hit (the social-bridge pattern, 2026-07-16) — three comparisons, each
+guarded so an already-correct row costs a comparison and not a write, since
+writing them all would re-date the corpus through SwiftData's change tracking
+and mirror the lot to CloudKit. A repaired row is re-indexed, or it stays
+findable only by its clamped title, which is the state the repair exists to
+end. And the repair is **reported**: "nothing new" and "nothing new, and I gave
+you back 300 passages" are different outcomes, and the second is the only
+reason to run the import again.
+
+The sheet reads BOTH ERAS with no migration — `authorHandle` when the work was
+stamped, `content` when it wasn't — so a corpus imported last month gets the
+right sheet today with no heal pass, no done-flag and no chunked rewrite
+touching rows it shouldn't. What a re-import can restore, only a re-import can
+restore: the words exist in the file and nowhere else.
+
+### 2. Four of six sources cut the body at twelve lines
+
+Obsidian got an `enrichedText` exception on 2026-08-09; Day One, Apple Journal,
+Kindle and shared notes never did. The app would index a 900-word journal
+entry, answer questions about it and surface it in search — then **refuse to
+show you more than a dozen lines of it**, with no "more" and nothing to scroll.
+And every body in the category drew at `callout15` in `textSecondary`, the tier
+the design system uses for a footnote UNDER a fact, when on these sources the
+body is not an annotation of the thing, it IS the thing.
+
+`NoteProse` sets it at `reading20` in primary ink, selectable, with the clamp
+replaced by a real disclosure that **says how much more there is** — the
+failure being replaced was a silent cut, and a "more" that won't say what it is
+hiding repeats it politely.
+
+### 3. The ruling: three shapes, and the gate is a DATA test
+
+Same ruling §363 made one category over, for the same reason: a source list has
+to be remembered every time a seat lands a note, and a data test covers the
+vault that ships next month for free.
+
+**entry** — a dated piece of writing you made. **The DATE is the identity**: an
+entry's title was cut out of its own first line, so leading with it printed
+that line twice and named nothing, while the date — the one fact that
+identifies an entry and the only fact every source here carries — appeared
+nowhere on the sheet at all. **note** — a named thing in a graph, whose title
+is a filename the person chose. **passage** — somebody else's words you marked.
+
+Order is load-bearing. A citation outranks a name (a highlight is somebody
+else's writing however the record is filed, and it is the one shape where a
+date hero would put OUR clock on THEIR sentence); a name outranks the kind (or
+a vault note leads with the modification time of a file, which is a fact about
+your editor). Both are PROVEN rather than guessed: `named` is true only when
+the record carries a file path whose last component IS the title, which is
+exactly how `ObsidianIngest` derives it, so a ref shape that ever changes
+degrades the thing to an entry — a weaker layout, never a wrong claim.
+
+**Voice is not a fourth shape.** It is an entry whose body happens to have
+audio above it, and it already had the only working anatomy in the category;
+it keeps `VoiceContent` and gains the date hero, the tags and the receipt.
+
+### 4. "How it landed" replaces the spec table's one row
+
+On a note every spec-table gate failed but `hasFrom`, so the whole table was
+`From · written by you` behind an 80pt label column — saying less than the
+eyebrow directly above it. `NoteReceptionCard` says where the thing came from
+in a sentence and puts beside it the readings the record already held: how long
+it is, how long it takes to read, how long since you edited a vault note, how
+many passages you have marked in a book.
+
+**The honesty valve is the sharpest thing here.** A word count taken over a
+CLAMPED body — Obsidian's `enrichedText` stops at 8,000 characters, its excerpt
+at 300 — understates a real note by thousands while looking exactly like a
+measurement. So a clamped body reports a FLOOR, `1,240+ words` and `6+ min`,
+`SocialCount`'s "97+" valve in a new category; and the inverse is equally
+guarded, since every count wearing a `+` would make a true measurement look
+like a guess. Both directions are mutation-tested. Read time has a floor of 100
+words (at 220 wpm that is under thirty seconds, and "1 min" on a two-line note
+is the app padding itself out) and can never round to zero.
+
+Three grammars for the sentence, chosen by origin: a **vault** names the path
+(`Read from your vault at Notes/Legibility.md` — "your Obsidian vault" is true
+of every note in it and identifies none of them), a **device** says it was
+recorded here, an **export** names the source and, where one file IS the
+export, the file. The **import clause** fires only when the writing is more
+than a day older than the row: an export brings years of entries in one
+afternoon and the gap is the fact worth stating, but where the two dates agree
+the clause reports both halves of one moment and the receipt is a form again.
+Both directions mutation-tested.
+
+The year on the dateline appears **only when it isn't the current one**, which
+is why `now` is a parameter rather than a read of the clock — a hero that says
+"2026" over something written this morning is the obvious said in the loudest
+slot on the sheet, and a function that reads `Date.now` itself can't be tested
+at a year boundary.
+
+### 5. Three things the record already held and nothing drew
+
+- **Tags.** Obsidian lands frontmatter and inline tags, Day One lands the
+  export's own; the filter could reach them and no note sheet rendered
+  `thing.tags` at all. Drawn now, with the app's own kind tag filtered out —
+  putting "Note" beside "#legibility" presents a machine's label as a choice
+  the person made.
+- **The vault graph.** `NoteLinks` has resolved `[[wikilinks]]` since
+  2026-07-28 and `ThingLinks` has answered the inverse since §340, and both
+  were a plain list at the very bottom of the sheet. Counted and led with they
+  are a READING — this note is a hub, or this note is a leaf. The two counts
+  are never summed: a note that both links to and is linked from another would
+  be counted twice, and the directions are the information.
+- **The other passages from the same book.** What makes ONE highlight worth
+  opening: a marked sentence out of context is a fragment, and the eleven
+  others were already in the corpus with nothing to reach them. The rows are
+  the passages themselves, never their titles — a title here is a clamp of the
+  same words, and a list of clamped versions of a thing you can already read is
+  a list of nothing.
+
+### 6. "That day" — the one reading a journal app cannot make
+
+The day an entry describes is a day this corpus already holds photographs,
+movements, captures and money for. One bounded predicate over a calendar day,
+excluding the entry, its own source (a shelf of the same journal is just the
+room) and every import receipt. It is the single strongest argument that a
+journal entry belongs in a corpus rather than in the app it came from, and it
+costs one fetch.
+
+Deliberately NOT given to a vault note: an Obsidian row's `capturedAt` is the
+file's modification time, so "that day" there would be the day you last touched
+the file — a fact about your editor, not about anything you wrote.
+
+### 7. Mechanical, for the reason everything here is
+
+`scripts/note-sheet-selftest.sh` compiles `NoteSheet.swift` WHOLE and
+unmodified (Foundation-only by design) — 60 assertions, 17 mutations, 24 drift
+guards, in `verify.sh`. Its drift guards also hold the Kindle fix in place: the
+passage on `content`, the work on `authorHandle`, the heal on the dedupe hit,
+the save that fires on a heal-only pass, and the re-index. Its negative sweep
+reads a **comment-stripped** copy, because `KindleImport.swift` documents the
+bug by quoting the line that caused it (the Obsidian/Cursor lesson, fifth
+time).
+
+**One thing it deliberately does NOT claim.** A negative age — a device whose
+clock moved back, a vault file stamped in the future — is defended TWICE, by a
+`max(0, …)` on the seconds and by the `minutes < 1` branch. Both mutations were
+tried and both ran green, because either guard alone suffices. Two overlapping
+guards is a fine thing to have and a bad thing to claim a test for, so the
+assertion documents the intent and the mutation was removed rather than
+reworded into something that passes.
+
+### 8. Not built, deliberately
+
+- **Apple Notes' origin.** The seat is share-sheet instructions and a note
+  shared from Apple Notes lands under source `You` with no record of where it
+  came from. Widening the set to `You` would give every hand-captured note this
+  anatomy — plausibly right, and a different ruling, because it first needs an
+  answer to what `You` means: wrote it, or merely brought it. The name stays in
+  `NoteSheetSource.sources` so the catalog guard keeps covering the seat.
+- **Markdown rendering.** Obsidian's body is stored as raw markdown and drawn
+  as plain text. Rendering it changes what the words ARE rather than what the
+  sheet is, and it needs its own decision about wikilinks, embeds and Dataview
+  blocks, which would otherwise render as garbage.
+- **Day One photos and Apple Journal media.** Both exports carry them and
+  neither importer reads them. An import gap, not a sheet ruling — landing
+  pixels means `ImportMedia`, a scoped-folder read and a size budget.
+- **The Kindle locator outside English.** `parseLocator` keys on "page" and
+  "location" and returns nil on a Kindle set to German, the same shape
+  `parseDate` has always had with "Added on". A missing line is a fact we don't
+  have rather than a wrong one.
+
+## §368 — A shopping sheet is a receipt or a watch, and the fork is not the price (user: "we are improving the thing sheets in wallet, basically makign them less like a database field and more like a receipt, or more like an actual app. lets pick a category of thing sheets and do the same, start with shopping", then "ok do all", 2026-08-12)
+
+Five Shopping seats — Shopify, Deals, Open Food Facts, Bitrefill, Privacy.com —
+land eight row shapes between them, and **not one had a sheet anatomy of its
+own**. Every one fell through to the generic path: a link-preview card and the
+label/value grid the user has now called a database field four categories
+running.
+
+Measured from the shipped bridges, not remembered:
+
+- **Money was either prose nothing could total or a number nothing drew.**
+  Privacy and Bitrefill join the amount into `title` at ingest
+  (`"Netflix.com · $12.99"`). Shopify, Deals and Open Food Facts land a real
+  `priceValue` — and **no feed row in this app draws that field**; its only
+  appearance anywhere was one unlabelled `heading17` line in `ThingContent`'s
+  `.product` branch.
+- **The seller was stamped and rendered nowhere.** All three product bridges
+  write the store / publisher / brand to `authorHandle`. `BandRow.project` has
+  cases for Bluesky, Farcaster, Nostr, Slack, RSS, GitHub, Peer and the wallets,
+  and had none for any Shopping seat — so the fact was in the store, in the
+  Spotlight index, in the demo seed, and on no screen.
+- **`From — from a store you follow`** was the spec table's whole contribution
+  to these sheets, and it is wrong for two of the three sources that got it: a
+  deal comes from a feed publisher, a barcode scan comes from your own hand.
+- **A Bitrefill order without a `gift_url` previewed `bitrefill.com/account/orders`
+  — the same URL on every such order in the corpus** — so N orders wore N
+  identical cards, each scraping a login wall for its title. The Privacy sheet's
+  body was, correctly, *empty*: `bareLinkBody` suppresses a bare permalink and
+  nothing stood behind it.
+- **The Bitrefill low-balance alert printed a URL as its body.** An alarm
+  rendered as a bookmark — and the bridge had computed the high-water mark and
+  the 20% crossing and stored neither.
+
+### 1. Two archetypes, and NOT `ShopStage`
+
+A Privacy card purchase is the same archetype as an Apple Wallet, Gnosis Pay or
+ether.fi spend — which sit in the **Wallet** band. Scoping this to one catalog
+band would have given four card seats two different purchase sheets, so the fork
+is what HAPPENED, never which shelf the seat sits on: `PurchaseStage`, with a
+**receipt** (money left — the amount is the hero), a **watch** (nothing was
+bought — the thing is the hero), and an **alarm**, which is neither and would
+have worn a "Paid" verb under any two-way split.
+
+### 2. The fork is a REF PREFIX, and the obvious data test is wrong
+
+§363 ruled that a gate should be a data test rather than a source list. The
+obvious data test here — *does it carry a price* — was tried first and is
+wrong, **measured against the shipped bridges rather than assumed**: Railgun and
+Peer both stamp `priceValue` with a token AMOUNT and `priceCurrency` with a
+token SYMBOL, and Bitcoin stamps a real USD value on an ordinary transfer. All
+three would have been dressed as card purchases. A transfer is not a purchase
+and no stored field distinguishes them.
+
+So the archetype comes from the `sourceRef` prefix — `privacy:txn:`,
+`bitrefill:order:`, `applewallet:txn:`, `gnosispay:spend:`, `etherficash:spend:`
+— strings **this app wrote**, never localized, the same class of signal
+`WorkStage.ascOutcome` already reads Apple's raw states out of. It is a list of
+ref SHAPES rather than of source names, which is the distinction that matters:
+these answer "what happened" where a source name only answers "which seat", and
+a new card seat is one entry. The four `.product` bridges need no entry at all —
+`.product` is landed by three bridges and nothing else in the app.
+
+### 3. The merchant moves to a field, at the bridge — never a parser
+
+`transferCounterparty` is "the other side of the money" on every seat that
+writes it, and **Apple Wallet has stamped the normalized merchant there since
+§317**. Privacy and Bitrefill now stamp the same field rather than earning a
+second home for one meaning — a sheet reading two fields is a sheet that can
+disagree with itself. Privacy's descriptor goes through
+`AppleWalletRoom.normalizeMerchant` for that function's own reason (`SQ *BLUE
+BOTTLE` and `BLUE BOTTLE` are one merchant filed as two); Bitrefill's does NOT,
+because a catalogue product name is not a processor's string and the failure to
+fear is a strip that MERGES two real merchants, which renders perfectly.
+
+Both bridges REPAIR rows already landed (`repairLanded`, the heal-on-the-dedupe-
+hit pattern) — without it only rows landed after today could name who you paid,
+and a corpus silently half-covered reads as complete. A row that predates the
+field keeps its whole title as the subject: mildly redundant, never wrong.
+
+**Settled vs authorized is the §317 lesson in a second seat.** `centsFor`
+prefers `settled_amount` and falls back to `amount`, so the payload already
+distinguished a final charge from one that can still change — and the
+distinction was collapsed into one number with nothing left to say which. It is
+an English facet tag now (§308/§340). A row with neither tag gets **no badge**,
+never a defaulted "Settled", which would be fake status on the one screen about
+money.
+
+### 4. The price drop stops being a parenthetical
+
+`ShopifyIngest` compared the prices, rewrote the title to `"Cast iron pan, 26cm
+(was €90.00)"`, then overwrote `priceValue`. So the entire reason the row
+re-surfaced survived only inside `titleLine`'s 80-character clamp — the first
+thing that clamp eats on a long product name — and reading it back is precisely
+the §340 bug.
+
+It is a record now, on `enrichedText`: a versioned, locale-free marker line
+(`pricemove/1|EUR|90.0|<epoch>|72.0`) followed by a human sentence. **Only the
+marker line is ever parsed**; the sentence is prose for the retrieval index and
+is genuinely worth indexing. `enrichedText` rather than a new `Thing` property
+was a deliberate choice with a stated cost: a new field is a **CloudKit
+Production deploy** before it can ship (an undeployed field never mirrors,
+silently, forever), and this field already carries three documented exceptions
+to the retrieval-only rule. The cost is one short machine line joining the
+index. `capturedAt` is read BEFORE it is re-stamped, because it is the last
+moment we saw the old price — which is exactly what the record claims.
+
+### 5. Three facts that were already stored and had never been drawn
+
+- **The Nutri-Score**, as the five-step scale it is — read off the tag the
+  bridge lands, **never computed**: this app has no nutrition model, and a grade
+  we derived would be a health claim invented by a bookmarking app. The caption
+  says whose judgement it is.
+- **The barcode**, out of the `off:<code>` ref it was already sitting in.
+- **The seller in the feed row**, so a Shopify row and a Deals row stop being
+  indistinguishable from each other and from a bare link. Deliberately NOT
+  extended to Privacy or Bitrefill, whose merchant leads their own title —
+  naming it in the trailing slot would print it twice on one row.
+
+### 6. The recurrence line counts and compares, and refuses to total
+
+"You've paid Netflix.com 4 times — $12.99 every time since April." **A count and
+a comparison, never a sum.** `Corpus.cardSpendSources` keeps Privacy.com out of
+every money rollup in the app for a measured reason: a return is unmeasured
+there, so a refund lands wearing its positive authorization amount and a total
+would be silently wrong rather than absent. Counting charges and comparing two of
+them is safe under exactly the same uncertainty. Scoped to ONE source, and the
+comparison is refused across currencies — a card that billed in euros and now
+bills in dollars has not "gone up".
+
+### 7. Mechanical, and the demo-parity trap it caught
+
+`scripts/purchase-stage-selftest.sh` compiles `PurchaseStage.swift` WHOLE and
+unmodified (Foundation-only by design) — 60 assertions, 10 mutations, drift
+guards, in `verify.sh`. Its negative sweep reads a **comment-stripped** copy,
+because the source documents this rule by naming the very things it must not do
+("never sliced out of the title") — the Obsidian/Cursor lesson, fifth time.
+
+**Demo parity is a drift guard here, not a hope.** The demo seeded Privacy and
+Bitrefill rows under `demo:privacy:<n>` / `demo:bitrefill:<n>` and Open Food
+Facts under `demo:off:<n>` — refs matching NONE of `purchaseRefs`, so every one
+of those rows would have fallen straight past the receipt and kept the generic
+sheet, and the whole category would have looked unbuilt in the one place anyone
+can see it without an account. **This is the identical failure as the Peer /
+Privacy Pools room heads**, which dropped every seeded row for exactly this
+reason and cost a whole pass to find. The demo now uses real ref shapes, seeds a
+real recorded price drop through `PriceHistory.compose` (never a hand-written
+line — a demo that fakes the format keeps passing after the format changes),
+seeds a genuinely unsettled charge so the badge's most useful state can be seen,
+and repeats one merchant four times so the recurrence sentence has something to
+say.
+
+**Not built, deliberately.** No "is it still available?" check — that means
+fetching a store page on your behalf, and a stale *in stock* is the fake status
+the design law bans. No total across Shopping seats: a Privacy dollar, a
+Bitrefill dollar and a Shopify euro are three different claims. And the
+low-balance alarm still takes its sentence from its own title, because the
+bridge stores neither the high-water mark nor the crossing — the honest fix is a
+field, and the alarm meanwhile says what it always said, in the right anatomy.
+
+## §367 — An agent sheet is a conversation, and the conversation was in the record all along (user: "we are improving the thing sheets in wallet, basically makign them less like a database field and more like a receipt, or more like an actual app. lets pick a category of thing sheets and do the same, start with agents", then "ok do all", 2026-08-12)
+
+The fifth category in the sheet pass, after wallet (§302), social (§363), Work
+(§364), Life (§365), Notes (§366) and Shopping (§368). The inventory came back
+worse than any of them, and for a reason worth stating plainly: **the Agents
+category holds more text than anything else in the corpus, and drew the least of
+it.**
+
+Ten catalog seats. Four land nothing at all — Venice, OpenRouter, Grok and Bankr
+are KEYS, not sources: they buy a better answer and never write a row, so there
+is no sheet of theirs to improve. One, Cursor, was already a receipt: its runs
+are `.link` rows carrying facet tags, and `WorkStage` had drawn them since that
+morning. That leaves five, and four findings, each measured from the shipped
+code rather than guessed.
+
+### 1. The conversation was stored and drawn by nothing
+
+`ChatGPTImport` writes the opening ask to `content` and the WHOLE
+speaker-prefixed transcript to `enrichedText` (≤8,000 characters;
+`ClaudeCodeImport` ≤16,000), and `ThingContent`'s `.chat` branch rendered
+`ChatBubbles(text: thing.content)`. So the sheet you opened to read a
+conversation showed **one line of it — the same line already clamped into the
+title above.**
+
+This is the Obsidian defect verbatim, four seats over. That fix (2026-08-09)
+wrote its own reason down: "the vault bridge read a person's notes, indexed them
+for search, and showed nobody the note — you could ask about it but never open it
+and actually read it back." The same sentence was true of every imported chat in
+the app, and the `enrichedText` exception is granted here on the same stated
+grounds: this is not a payoff fact carved out of an otherwise-discarded read, it
+is **the thing itself**, clamped further out than the row excerpt.
+
+### 2. `ChatBubbles` drew no bubbles
+
+It splits on `\n` and puts every line in the same faint slab, same alignment,
+same weight — while the speaker is written INSIDE the string (`"You: …"`). So
+even handed the real transcript, the old view would have rendered a column of
+identical grey blocks with the role as literal typing: **a conversation's one
+structural fact, who is talking, rendered as punctuation.** And a paragraph break
+inside a long answer would have read as a new message.
+
+`AgentSheet.turns` recovers turns by matching a KNOWN SPEAKER at the start of a
+line, so a newline inside an answer stays inside it.
+
+**The speaker labels are a WIRE FORMAT, not copy, and every way of getting that
+wrong is silent:**
+
+- They are plain unlocalized literals in all four importers (`ChatGPTImport`,
+  `ClaudeImport`, `ClaudeCodeSession`, `GeminiImport`), so a stored transcript is
+  stable English whatever language the device was in when it landed. A
+  `String(localized: "You")` in the parser would stop **every transcript in the
+  corpus** from parsing the moment somebody changed their language — §340's
+  ruling in a second place, and the same reason `WorkStage` derives its outcome
+  from tags rather than from a clause. It is guarded as a negative grep rather
+  than a mutation, because `String(localized:)` in a harness with no bundle
+  resolves to the same string: a lie a runtime test structurally cannot catch.
+- **Claude Code's assistant is labelled "Claude", not "Claude Code".** The seat's
+  name and its speaker's name differ, and assuming they match returns zero turns
+  — which renders as exactly the one-line sheet this pass exists to end. First
+  mutation in the harness.
+- **A source with no known label parses NOTHING, deliberately.** With only "You"
+  splitting, a two-party conversation collapses into one enormous turn attributed
+  to the reader — a stranger's words under your own name, which is §363's failure
+  in its most expensive form. Drawing nothing is the safe answer, and the sheet
+  falls back to exactly its old rendering.
+
+### 3. A 61-turn session read exactly like a 3-turn one
+
+`messageCount` is stamped by all four importers and was drawn on ONE screen in
+the whole app (a social thread's rest). It is now the receipt's headline number
+— and, paired with the parse, it is also how the sheet can say what the clamp
+took **with no new field**: `messageCount` counts turns BEFORE the importer's
+clamp, and the stored text carries what survived it. So "stored to here" is
+derived from two numbers already on the row, and **no `Thing` property was added
+anywhere in this pass — therefore no CloudKit Production deploy.**
+
+Both directions are mutation-tested, and the second matters more than the first:
+a chat that was never clamped must not claim turns went missing that never
+existed, and a count with NO readable transcript says nothing about a clamp at
+all (claiming "84 turns not shown" over a row that simply has no stored body is a
+claim about something that never ran).
+
+### 4. 1Claw's expiry was stored and unreachable
+
+Grants land `kind: .link` with `dueAt = expires_at`, and the spec table's `Due`
+row is gated on `kind == .reminder`. **So a grant expiring in six days looked
+identical to one that never expires** — on the surface whose entire job is "what
+can this agent reach". Its `content` is the 1Claw dashboard root, the same URL on
+every grant in the corpus, so the link-preview card it drew could not have told
+anyone anything about the grant they opened, and the `Site: 1claw.xyz` row below
+it said less. Both stand down.
+
+**The three facts a grant IS are now stamped as fields, not parsed back out of
+the title.** They were joined into `title` at ingest ("personal · openai/* ·
+read, list") and clamped at 80, and a sheet that splits a display string apart to
+draw a permission is doing the very thing `WorkStage`'s central rule forbids. The
+path rides `summary`, the vault rides `authorHandle`, and the permissions ride
+`tags` **in the API's own words**, so a security decision is never restated in
+ours (and `Set(tags)` answers "what can be written?" as an ordinary §308 filter).
+All three are existing properties. `reconcile` heals them, and that pass is the
+only thing that will ever reach a grant landed before they existed —
+`TokenIngest`'s dedupe drops the incoming row on its ref, so a re-read cannot
+re-land one, and without the heal the anatomy would reach only grants created
+from this build on: indistinguishable, from outside, from it not working.
+
+The clock is drawn only where a clock exists — status word, runway and expiry row
+all absent for the grants that never expire, which is most of them. A bar drawn
+against a guessed end date is the invented fact this codebase bans, and the
+runway needs BOTH ends known. The words use **day-boundary arithmetic, not raw
+seconds**: a grant expiring at 09:00 tomorrow is "tomorrow" all of today, and a
+raw read calls that "in 0 days" on the evening when acting on it was still
+possible. That is the mutation whose fixture had to be built specially — ten
+hours across midnight — because at any other time of day the two arithmetics
+agree.
+
+### Two shapes, and deliberately no third
+
+§363's rule: a shape exists only where the sheet would otherwise draw the wrong
+noun. **A Claude Code session is not a third shape** — it is a conversation whose
+project happens to be stamped, and the project comes off its own `Session` tag
+rather than being sliced out of the title. Giving it an anatomy of its own would
+be two views drawing one fact, which is how a screen starts contradicting itself.
+
+The gate is a DATA test (§363's ruling, inherited): a conversation is a `.chat`
+that carries a conversation — turns we could read, or a count an importer
+stamped. That is what keeps Slack messages and Stocktwits posts out, both of
+which are `.chat` and neither of which is a transcript; social is asked FIRST, so
+a Snapchat saved chat and an imported DM thread keep the anatomy they already
+have.
+
+### The hero, and one clamp exception that is proven rather than assumed
+
+The conversation's own NAME leads — it is what the export called it and what the
+row shows. The one exception: where the title is a CLAMP of the ask (every Gemini
+row is `titleLine(ask)`, cut at 80), the ask replaces it, because the two are the
+same string and one of them is whole. There is a length floor on that test, or a
+real conversation name gets replaced by any sentence that happens to start with
+it. And a first turn that IS the hero is dropped — **proven, never sliced
+blind**, `SocialSheet.threadRest`'s rule — or a chat whose title is its own ask
+prints that ask twice, once at display size and once as the opening bubble.
+
+### Gemini says what its export does not have
+
+Takeout's JSON carries the prompt and has **no field anywhere for the reply**, so
+a Gemini row is genuinely one turn. The sheet says that in a sentence rather than
+drawing an empty assistant bubble that reads as a failed load — and the condition
+is derived (`no turn in this transcript is the assistant's`), never a source
+name, so a future export that starts carrying replies needs no code change.
+
+### Demo parity, and the seed that would have proved nothing
+
+The demo's chat rows carried `enrichedText = "The thread settles on a plan for
+x."` — one summarising sentence, which parses to **zero turns**. So the demo
+would have shown an empty conversation on the very pass built to draw one, and
+from outside that is indistinguishable from the parser being broken. The seeds
+now carry real transcripts in the importers' own wire format (one turn running to
+two paragraphs, so the newline rule is exercised), a real opening ask on
+`content`, Claude Code's actual "Claude" label, a Gemini row with one turn and no
+reply, and 1Claw grants under `1claw:policy:` refs wearing the stamped parts —
+the §349 lesson (a demo ref that does not match the bridge's own shape is
+invisible to every reader keyed off it) in a fourth place. One of the two demo
+grants has no expiry, deliberately: a demo where every grant is expiring teaches
+that the clock is the normal state rather than the exception it draws for.
+
+### What this deliberately does not build
+
+- **No tool-turn voice.** Claude Code folds tool traffic into its turns, so a
+  `.tool` case would be a distinction the record does not make. Invented
+  structure is the one thing a transcript view must never add.
+- **No per-turn timestamps.** Only the session's start is stored.
+- **No "model" row.** None of the four importers stamps which model answered.
+- **No greyed-out permissions beside the granted ones.** The API reports the
+  permissions it granted and never the closed set they were drawn from, so a
+  struck-through `delete` would be this app inventing the shape of somebody's
+  security model — §83, on the screen where believing it is most expensive.
+- **No agent name on a grant.** The policy record carries vault, path,
+  permissions and dates; which agent holds the key is resolved at auth.
+- **No import date in the provenance sentence.** Unlike the four bulk-import
+  rooms, no chat importer lands an `ImportReceipt`, so there is no stored date to
+  state. The sheet says when the CONVERSATION happened instead of inventing a
+  second, unknown one.
+- **Nothing writes.** A grant's verb opens 1Claw, the way an approval opens
+  Revoke.cash.
+
+Guarded by `scripts/agent-sheet-selftest.sh` (in `verify.sh`): `AgentSheet.swift`
+compiled WHOLE and unmodified, Foundation-only by design — 64 assertions, 17
+mutations, 19 drift guards. Its sharpest guard is not an assertion at all: it
+reads the four importers and fails the build if any of them stops writing the
+speaker labels this parser reads, because that break is invisible from inside
+this file and silently returns the sheet to the state this section exists to
+describe.

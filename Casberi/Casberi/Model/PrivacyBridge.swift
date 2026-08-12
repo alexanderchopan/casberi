@@ -89,7 +89,50 @@ enum PrivacyFetch {
             sourceRef: "privacy:txn:\(id)"
         )
         applyAmount(cents, to: thing)
+        applyMerchant(name, to: thing)
+        thing.tags = settlementTags(txn)
         return thing
+    }
+
+    /// The merchant as a FIELD, not only as the head of a joined title
+    /// (2026-08-12, prd §368).
+    ///
+    /// It was read here and thrown away: `merchant.descriptor` went into the
+    /// title string and nowhere else, so the sheet could not name who you paid
+    /// without slicing a localized string back apart — the §340 bug this app
+    /// has already paid for twice. `transferCounterparty` is the field Apple
+    /// Wallet has stamped the same fact into since §317; one meaning, one home,
+    /// so a purchase sheet can never disagree with itself about who it was.
+    ///
+    /// Normalized through `AppleWalletRoom.normalizeMerchant` for the reason
+    /// that function exists: a card descriptor is a processor's string, so
+    /// `SQ *BLUE BOTTLE` and `BLUE BOTTLE` are one merchant filed as two, and
+    /// the failure to fear is not a prefix that fails to strip (which reads as
+    /// two shops, visibly) but a strip that MERGES two real merchants, which
+    /// renders perfectly. Privacy descriptors carry exactly the same shapes as
+    /// the bank descriptors that table was measured against.
+    private static func applyMerchant(_ raw: String, to thing: Thing) {
+        let name = AppleWalletRoom.normalizeMerchant(raw)
+            .trimmingCharacters(in: .whitespaces)
+        thing.transferCounterparty = name.isEmpty ? nil : name
+    }
+
+    /// Settled, or still an authorization.
+    ///
+    /// **The §317 lesson in a second seat.** `centsFor` prefers
+    /// `settled_amount` and falls back to `amount`, so the payload already
+    /// distinguishes a final charge from one that can still change — and the
+    /// distinction was collapsed into one number with nothing left to say
+    /// which. A receipt that states an authorization as though it were final
+    /// is claiming a figure it doesn't have.
+    ///
+    /// English facet tags (§308/§340), so the reading survives a language
+    /// change; a row that answers neither gets no badge rather than a
+    /// defaulted "Settled", which would be the fake status this app's design
+    /// law bans on the one screen about money.
+    private static func settlementTags(_ txn: [String: Any]) -> [String] {
+        let settled = (txn["settled_amount"] as? Int).map { $0 > 0 } ?? false
+        return ["Card", settled ? "Settled" : "Pending"]
     }
 
     /// The charge in integer CENTS — the settled amount once Privacy knows it,
@@ -157,6 +200,19 @@ enum PrivacyFetch {
             }
             if landed.priceCurrency != row.priceCurrency {
                 landed.priceCurrency = row.priceCurrency
+                changed = true
+            }
+            // The merchant and the settlement state, for the same reason the
+            // three lines above exist: without this only rows landed after
+            // 2026-08-12 could name who you paid, and a corpus half-covered
+            // reads as complete — the sheet would simply fall back to the
+            // title on the older half and nothing would say why.
+            if landed.transferCounterparty != row.transferCounterparty {
+                landed.transferCounterparty = row.transferCounterparty
+                changed = true
+            }
+            if landed.tags != row.tags {
+                landed.tags = row.tags
                 changed = true
             }
         }

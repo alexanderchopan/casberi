@@ -1,0 +1,597 @@
+<title>Shopping thing sheets — inventory & two anatomies</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #1673e6; --confirm: #32d74b; --down: #ff5a5f; --attn: #ff9f0a;
+    --slab: #16181d; --well: #101216; --card: rgba(28,30,37,.82);
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    --shopify: #5e8e3e; --deals: #e0245e; --bitrefill: #0b4f47;
+    --privacy: #4a4a44; --off: #7cb342;
+    --nsA: #038141; --nsB: #85bb2f; --nsC: #fecb02; --nsD: #ee8100; --nsE: #e63e11;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body { font-family: var(--text); color: var(--ink);
+         background: radial-gradient(900px 420px at 18% -8%, rgba(94,142,62,.11), transparent 62%), var(--page);
+         padding: 48px 28px 90px; }
+  .wrap { max-width: 1300px; margin: 0 auto; }
+  header { max-width: 830px; margin-bottom: 34px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: #9dc271; margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.4vw,36px); font-weight: 800; letter-spacing: -.02em; line-height: 1.1; margin-bottom: 12px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 72ch; margin-bottom: 10px; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  h2 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin: 56px 0 6px; }
+  h2 .n { color: var(--faint); font-weight: 600; margin-right: 8px; }
+  h3 { font-size: 15px; font-weight: 700; margin: 30px 0 8px; }
+  .sub { font-size: 14px; line-height: 1.55; color: var(--muted); max-width: 82ch; margin-bottom: 22px; }
+  .sub b { color: var(--ink); font-weight: 600; }
+  .sub code, td code, li code, p code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12px;
+              background: rgba(255,255,255,.07); padding: 1px 5px; border-radius: 5px; color: #c8d0e0; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { text-align: left; font-size: 11px; font-weight: 700; color: var(--faint);
+       padding: 0 12px 8px 0; white-space: nowrap; }
+  td { padding: 12px 12px 12px 0; vertical-align: top; color: var(--muted); line-height: 1.45; }
+  tbody tr { border-top: 1px solid rgba(255,255,255,.06); }
+  td b { color: var(--ink); font-weight: 600; }
+  .ok  { color: var(--confirm); font-weight: 700; }
+  .bad { color: var(--down); font-weight: 700; }
+  .mid { color: var(--attn); font-weight: 700; }
+
+  .callout { border-radius: 16px; background: rgba(255,255,255,.045); padding: 20px 22px; margin: 26px 0 0;
+             font-size: 13.5px; line-height: 1.6; color: var(--muted); max-width: 100ch; }
+  .callout b { color: var(--ink); }
+  .callout ul { margin: 10px 0 0 18px; }
+  .callout li { margin-bottom: 9px; }
+  .callout li em { font-style: normal; color: #f0c274; }
+
+  /* ---- phones ---- */
+  .row { display: flex; flex-wrap: wrap; gap: 30px; align-items: flex-start; }
+  .option { width: 330px; }
+  .otitle { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .odesc { font-size: 12.5px; line-height: 1.5; color: var(--faint); margin-bottom: 14px; min-height: 76px; }
+  .odesc b { color: var(--muted); font-weight: 600; }
+  .phone { width: 330px; border-radius: 44px; padding: 10px; background: #15171c; box-shadow: 0 30px 70px rgba(0,0,0,.55); }
+  .screen { border-radius: 36px; overflow: hidden; padding: 16px 0 20px; min-height: 690px; background: #000; position: relative; }
+  .grab { width: 34px; height: 4px; border-radius: 99px; background: rgba(255,255,255,.22); margin: 0 auto 14px; }
+  .pad { padding: 0 16px; }
+
+  /* eyebrow */
+  .brow { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; }
+  .mark { width: 26px; height: 26px; border-radius: 50%; flex: none; display: flex; align-items: center;
+          justify-content: center; font-size: 12px; font-weight: 800; color: #fff; }
+  .mark.sh { background: var(--shopify); }
+  .mark.de { background: var(--deals); }
+  .mark.bi { background: var(--bitrefill); }
+  .mark.pr { background: var(--privacy); }
+  .mark.of { background: var(--off); }
+  .mark.sq { border-radius: 8px; }
+  .browline { font-size: 11.5px; color: var(--faint); }
+  .chip { font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+          margin-left: auto; flex: none; background: rgba(255,255,255,.08); color: var(--muted); }
+  .chip.down { background: rgba(50,215,75,.16); color: #6fdc84; }
+  .chip.sale { background: rgba(224,36,94,.18); color: #ff7ba0; }
+  .chip.warn { background: rgba(255,159,10,.16); color: #ffb84d; }
+
+  /* receipt hero */
+  .verb { font-size: 12px; font-weight: 700; color: var(--faint); margin-bottom: 3px; }
+  .amount { font-family: var(--money); font-size: 40px; font-weight: 800; letter-spacing: -.03em;
+            font-variant-numeric: tabular-nums; line-height: 1.05; }
+  .amount.neg { color: var(--ink); }
+  .amount.warn { color: var(--attn); }
+  .subject { font-size: 19px; font-weight: 600; letter-spacing: -.015em; margin-top: 6px; line-height: 1.25; }
+  .subject.big { font-size: 22px; font-weight: 700; }
+
+  /* store / brand line */
+  .storeline { display: flex; align-items: center; gap: 8px; margin-top: 11px; }
+  .storeline .mark { width: 22px; height: 22px; font-size: 10px; }
+  .storeline b { font-size: 13.5px; font-weight: 600; }
+  .storeline s { text-decoration: none; font-size: 11.5px; color: var(--faint); margin-left: auto; }
+
+  /* slab rungs */
+  .slab { border-radius: 16px; background: rgba(255,255,255,.045); padding: 4px 14px; margin-top: 16px; }
+  .rung { display: flex; align-items: baseline; gap: 10px; padding: 11px 0; }
+  .rung + .rung { box-shadow: inset 0 1px 0 rgba(255,255,255,.05); }
+  .rung .k { font-size: 12px; color: var(--faint); font-weight: 600; flex: none; }
+  .rung .v { font-size: 13.5px; color: var(--ink); margin-left: auto; text-align: right;
+             font-variant-numeric: tabular-nums; }
+  .rung .v em { font-style: normal; color: var(--muted); font-weight: 400; }
+  .rung .v.dim { color: var(--muted); }
+
+  /* the price line */
+  .pricebar { display: flex; align-items: baseline; gap: 10px; margin-top: 14px; }
+  .pricebar .now { font-family: var(--money); font-size: 30px; font-weight: 800;
+                   letter-spacing: -.025em; font-variant-numeric: tabular-nums; }
+  .pricebar .was { font-size: 14px; color: var(--faint); text-decoration: line-through; }
+  .pricebar .pct { font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+                   background: rgba(50,215,75,.16); color: #6fdc84; }
+
+  /* product art */
+  .art { height: 190px; border-radius: 16px; margin-top: 14px; position: relative; overflow: hidden;
+         background: linear-gradient(150deg,#3a4a3a,#5d5443 55%,#2e3a44); }
+  .art.pan { background: radial-gradient(circle at 42% 44%, #4a4a4c 0 22%, #2a2a2c 23% 40%, #1a1a1c 41%), #141416; }
+  .art.oat { background: linear-gradient(165deg,#dfe6ce,#b9c79a 60%,#8ba36a); }
+  .art.deal { background: linear-gradient(150deg,#1e2735,#2f3d55 60%,#463b52); }
+  .art.gift { background: linear-gradient(140deg,#22303f,#2c4a4a 55%,#1b3730); }
+  .art i { position: absolute; inset: auto 0 0 0; padding: 24px 12px 10px; font-size: 11px;
+           color: rgba(255,255,255,.62); font-style: normal;
+           background: linear-gradient(transparent, rgba(0,0,0,.55)); }
+
+  /* nutri-score */
+  .ns { display: flex; gap: 4px; margin-top: 14px; }
+  .ns span { flex: 1; height: 34px; border-radius: 9px; display: flex; align-items: center;
+             justify-content: center; font-size: 14px; font-weight: 800; color: rgba(255,255,255,.35);
+             background: rgba(255,255,255,.06); }
+  .ns span.a { background: rgba(3,129,65,.25); }
+  .ns span.b.on { background: var(--nsB); color: #10240a; transform: scale(1.12); box-shadow: 0 6px 18px rgba(133,187,47,.35); }
+  .nscap { font-size: 11.5px; color: var(--faint); margin-top: 9px; }
+
+  /* provenance sentence */
+  .prov { font-size: 12.5px; line-height: 1.5; color: var(--muted); margin-top: 16px; }
+  .prov b { color: var(--ink); font-weight: 600; }
+
+  /* dial */
+  .dial { display: flex; gap: 12px; margin: 20px 0 4px; }
+  .disc { flex: 1; text-align: center; }
+  .disc div { height: 52px; border-radius: 50%; background: rgba(255,255,255,.07);
+              display: flex; align-items: center; justify-content: center; font-size: 19px; }
+  .disc s { text-decoration: none; display: block; font-size: 10.5px; color: var(--faint);
+            margin-top: 6px; font-weight: 600; }
+  .disc.hero div { background: rgba(94,142,62,.28); }
+  .disc.pay div { background: rgba(22,115,230,.22); }
+
+  /* section label */
+  .sect { font-size: 11px; font-weight: 700; color: var(--faint); margin: 22px 2px 8px;
+          display: flex; align-items: center; }
+  .sect i { font-style: normal; margin-left: auto; font-weight: 600; }
+
+  /* history strip */
+  .hist { display: flex; align-items: flex-end; gap: 5px; height: 44px; margin-top: 4px; }
+  .hist i { flex: 1; border-radius: 3px 3px 0 0; background: rgba(255,255,255,.14); }
+  .hist i.on { background: #6fdc84; }
+  .histcap { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--faint); margin-top: 6px; }
+
+  /* recurrence row */
+  .recur { border-radius: 14px; background: rgba(255,255,255,.045); padding: 12px 13px; margin-top: 12px;
+           font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+  .recur b { color: var(--ink); font-weight: 600; }
+
+  /* today panel */
+  .today { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+  .today .bulb { width: 44px; height: 44px; border-radius: 12px; flex: none; display: flex;
+                 align-items: center; justify-content: center; font-size: 18px;
+                 background: rgba(255,159,10,.16); }
+  .today p { font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+  .today p b { color: var(--ink); font-weight: 600; }
+
+  .cont { position: absolute; inset: auto 0 0 0; height: 56px;
+          background: linear-gradient(transparent, #000 78%); pointer-events: none; }
+
+  /* before/after strip */
+  .ba { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 8px; }
+  .ba > div { flex: 1; min-width: 260px; }
+  .ba h4 { font-size: 12px; font-weight: 700; color: var(--faint); margin-bottom: 8px; }
+  .code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12px; line-height: 1.65;
+          background: rgba(255,255,255,.04); border-radius: 12px; padding: 13px 15px; color: #b9c3d6;
+          white-space: pre-wrap; }
+  .code .c { color: var(--faint); }
+  .code .g { color: #6fdc84; }
+  .code .r { color: #ff8f92; }
+
+  ol.moves { margin: 12px 0 0 20px; font-size: 13.5px; line-height: 1.65; color: var(--muted); max-width: 96ch; }
+  ol.moves li { margin-bottom: 12px; }
+  ol.moves li b { color: var(--ink); }
+  ol.moves li em { font-style: normal; color: #f0c274; }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Shopping · thing sheets · 12 Aug 2026</div>
+  <h1>Every shopping sheet keeps its money in a sentence</h1>
+  <p>Five seats — Shopify, Deals, Open Food Facts, Bitrefill, Privacy.com — land <b>eight row shapes</b> between them. Not one has a sheet anatomy of its own. Every one falls through to the generic path: a link-preview card, and the label/value grid the user called a database field.</p>
+  <p>The inventory turned up the same disease the wallet and Work passes found, in its purest form yet. <b>Three bridges stamp a real <code>priceValue</code> and no row in the app draws it. Two bridges join the amount into the title string at ingest, where nothing can total it. All three product bridges stamp the store, the publisher or the brand into <code>authorHandle</code> — and it is rendered nowhere in the app: not in the row, not in the sheet.</b></p>
+</header>
+
+<h2><span class="n">1</span>Inventory — eight shapes, measured from the shipped code</h2>
+<div class="sub">Read from the bridges and from <code>ThingContent.kindSwitch</code> / <code>ThingSheetView.specTable</code>, not from memory. "What the sheet draws" is exactly what renders today.</div>
+
+<table>
+<thead><tr>
+  <th style="width:14%">Row</th><th style="width:9%">Seat</th><th style="width:8%">Kind</th>
+  <th style="width:24%">What the record already holds</th>
+  <th style="width:22%">What the sheet draws today</th>
+  <th style="width:23%">What's wrong</th>
+</tr></thead>
+<tbody>
+
+<tr>
+  <td><b>New drop</b><br>a product appeared</td><td>Shopify</td><td><code>.product</code></td>
+  <td>Title, product URL, <code>previewImageURL</code>, <code>priceValue</code>+<code>priceCurrency</code>, <code>authorHandle</code> = the store, tag <code>Sale</code></td>
+  <td>Link-preview card (140pt banner, an <b>LP-rescraped title</b>, host in tint) → the price as a bare <code>heading17</code> string → spec card: <code>From — from a store you follow</code></td>
+  <td><span class="bad">The store name is stamped and never drawn.</span> The price is an unlabelled number under a scraped duplicate of the headline. The <code>Sale</code> tag renders nowhere.</td>
+</tr>
+
+<tr>
+  <td><b>Price drop</b><br>the row re-surfaces</td><td>Shopify</td><td><code>.product</code></td>
+  <td>Same, plus tag <code>Price drop</code>, <code>capturedAt</code> re-stamped, and the title <b>rewritten</b> to <code>"Cast iron pan, 26cm (was €90.00)"</code></td>
+  <td>Identical to the row above. The drop's only trace is the parenthetical inside the title.</td>
+  <td><span class="bad">The drop is the entire reason this row came back, and it lives inside an 80-character-clamped string.</span> The old price is <em>overwritten</em> — no delta, no percentage, no date it was last seen at the old number.</td>
+</tr>
+
+<tr>
+  <td><b>Deal</b></td><td>Deals</td><td><code>.product</code></td>
+  <td>Title, link, <code>previewImageURL</code>, <code>authorHandle</code> = the publisher (Slickdeals, DealNews), tag <code>Deal</code>. <b>No price</b> — the bridge never parses one.</td>
+  <td>Link-preview card → spec card: <code>From — from a store you follow</code></td>
+  <td><span class="bad">The sentence is false.</span> You follow Slickdeals; you don't follow the shop. The publisher — the one fact that tells you whether to trust the claim — is stamped and undrawn.</td>
+</tr>
+
+<tr>
+  <td><b>Barcode scan</b></td><td>Open&nbsp;Food&nbsp;Facts</td><td><code>.product</code></td>
+  <td>Product name, OFF URL, <code>previewImageURL</code>, <code>authorHandle</code> = the brand, tags <code>Food</code> + <code>Nutri-Score B</code>, ref carries the barcode</td>
+  <td>Link-preview card of <code>openfoodfacts.org</code> → spec card: <code>From — from a store you follow</code></td>
+  <td><span class="bad">The Nutri-Score is the only reason anyone scans a barcode, and it is a tag string nothing renders.</span> You scanned this yourself, standing in a shop — "from a store you follow" is wrong about the one thing it says.</td>
+</tr>
+
+<tr>
+  <td><b>Gift-card order</b></td><td>Bitrefill</td><td><code>.link</code></td>
+  <td>Title <code>"Amazon.com · $50"</code>, <code>previewImageURL</code> = the product artwork, <code>priceValue</code>+currency, <code>capturedAt</code> = <b>delivered</b> time. <code>content</code> = the gift URL <em>if one exists</em>, else <code>bitrefill.com/account/orders</code></td>
+  <td>Link-preview card of whatever <code>content</code> holds.</td>
+  <td><span class="bad">Every order without a gift link previews the same account page.</span> Ten orders, ten identical cards, each scraping a login wall for its title. The merchant and the amount are one joined string.</td>
+</tr>
+
+<tr>
+  <td><b>Balance refill</b></td><td>Bitrefill</td><td><code>.link</code></td>
+  <td>Title <code>"Balance refill · $50 in bitcoin"</code>, <code>priceValue</code>+currency, <code>content</code> = the invoices page</td>
+  <td>Link-preview card of the invoices page.</td>
+  <td>Same identical-card problem. <span class="bad">The payment rail is prose inside a title</span>, and the balance the app <em>already caches</em> (<code>BitrefillBalance.formatted</code>, drawn in the room's lede) is not on the sheet.</td>
+</tr>
+
+<tr>
+  <td><b>Running low</b></td><td>Bitrefill</td><td><code>.reminder</code></td>
+  <td>Title, <code>content</code> = the balance page. <b>No <code>dueAt</code></b> — so the reminder anatomy is skipped. The bridge <em>computed</em> the high-water mark and the 20% crossing and kept neither.</td>
+  <td>Title, then <code>Text(thing.content)</code> — <b>a bare URL printed as the body</b>.</td>
+  <td><span class="bad">An alarm rendered as a bookmark, with a URL where its reason should be.</span> The one shape here that wants you to act is the one with the least on screen.</td>
+</tr>
+
+<tr>
+  <td><b>Card purchase</b></td><td>Privacy</td><td><code>.transaction</code></td>
+  <td>Title <code>"Netflix.com · $12.99"</code>, <code>priceValue</code>+<code>USD</code>. <code>content</code> = <code>privacy.com/account</code>. The bridge read <code>merchant.descriptor</code> and <code>settled_amount</code> vs <code>amount</code> — and joined both away.</td>
+  <td><code>bareLinkBody</code> suppresses the URL, so the body is <b>empty</b>. Verb reads "Open link". Spec card: <code>From — on your card</code>.</td>
+  <td><span class="mid">The suppression is right and it leaves nothing behind it.</span> Merchant, amount, and whether the charge <em>settled or is still an authorization</em> are three facts flattened into one clamped string.</td>
+</tr>
+</tbody>
+</table>
+
+<div class="callout">
+<b>Four diseases, stated once — every one of them is a fact the record already holds.</b>
+<ul>
+<li><b>Money is either prose you can't total or a number you can't see.</b> Bitrefill and Privacy join the amount into the title at ingest. Shopify, Deals and Open Food Facts land a real <code>priceValue</code>, and <em>no feed row in this app draws that field</em> — its only appearance anywhere is one unlabelled <code>heading17</code> line in the <code>.product</code> sheet branch.</li>
+<li><b><code>authorHandle</code> is stamped by all three product bridges and drawn nowhere.</b> <code>BandRow.project</code> has cases for Bluesky, Farcaster, Nostr, Slack, RSS, GitHub, Peer and the wallets — and falls to <code>nil</code> for every Shopping seat. So the store, the publisher and the brand are in the store, in the index, in the demo seed, and on no screen.</li>
+<li><b><code>From — from a store you follow</code> is the spec table's whole contribution, and it is wrong for two of the three sources that get it.</b> A deal comes from a feed publisher; a scan comes from your own hand.</li>
+<li><b>The link-preview card is doing a product photo's job.</b> <code>LPMetadataProvider</code> re-scrapes a page the record already has art <em>and</em> a title for — and for two Bitrefill shapes it scrapes an account page every row shares. <em>The one card that renders is the one card that can be wrong.</em></li>
+</ul>
+</div>
+
+<h2><span class="n">2</span>The ruling — two archetypes, not five</h2>
+<div class="sub">A shopping thing is one of exactly two things, and the fork is <b>did money leave</b>. It is a data test, not a source list — the §363 correction, applied before it can be re-broken: <code>priceValue != nil &amp;&amp; the kind is <code>.transaction</code> or the ref names an order</code>, so a seat that ships next month is covered the day it lands.</div>
+<div class="sub"><b>A receipt</b> (Privacy card purchase, Bitrefill order, Bitrefill refill — and the same anatomy the Wallet card seats already want) leads with the <b>amount</b>: money is the hero rung, the merchant is the subject, the rail is a slab row, the date is the date it happened. <b>A watch card</b> (Shopify product, deal, food scan) leads with the <b>thing</b>: the picture at size, the store named with its own mark, the price with its history beside it, the state as a word.</div>
+
+<h3>The one rule that carries over from Work, unchanged</h3>
+<div class="sub"><b>Never parse the title back.</b> Privacy and Bitrefill both hold the merchant only inside a joined string, and the fix is at the <b>bridge</b>, not at a parser: stamp <code>authorHandle</code> with <code>merchant.descriptor</code> / <code>product.name</code> at ingest, the way the three product bridges already do. §303 and §340 ruled on exactly this — a <code>String(localized:)</code> clause is written in whatever language the device was in when the row landed, so a sheet that splits a title apart silently reads wrong the day someone changes their language. Two of these clauses happen to be plain English literals today; that is luck, not a contract.</div>
+
+<h2><span class="n">3</span>The receipt — three shapes</h2>
+<div class="sub">All three delete the spec table and the link-preview card. Provenance becomes a sentence at the foot, in the app's own voice, saying the true thing for that seat.</div>
+
+<div class="row">
+
+  <!-- ===== A: Privacy card purchase ===== -->
+  <div class="option">
+    <div class="otitle">A · Card purchase</div>
+    <div class="odesc">The merchant becomes the subject, the amount becomes the hero. <b>Settled vs authorized</b> is a real distinction the bridge already reads and throws away — the Apple Wallet cursor lesson (§317) in a second seat. The recurrence line runs on <code>AppleWalletRoom.normalizeMerchant</code>, which already ships.</div>
+    <div class="phone"><div class="screen">
+      <div class="grab"></div>
+      <div class="pad">
+
+        <div class="brow">
+          <div class="mark pr sq">P</div>
+          <div class="browline">Card purchase · 4d ago</div>
+          <div class="chip">Settled</div>
+        </div>
+
+        <div class="verb">Paid</div>
+        <div class="amount">$12.99</div>
+        <div class="subject big">Netflix.com</div>
+
+        <div class="slab">
+          <div class="rung"><span class="k">Card</span><span class="v">Your Privacy card</span></div>
+          <div class="rung"><span class="k">Authorized</span><span class="v dim">8 Aug, 08:14</span></div>
+          <div class="rung"><span class="k">Settled</span><span class="v">$12.99 <em>— unchanged</em></span></div>
+        </div>
+
+        <div class="recur">
+          <b>The 5th time you've paid Netflix.com.</b> $12.99 every time since March — the amount hasn't moved.
+        </div>
+
+        <div class="sect">This merchant <i>5 charges · $64.95</i></div>
+        <div class="hist">
+          <i style="height:60%"></i><i style="height:60%"></i><i style="height:60%"></i>
+          <i style="height:60%"></i><i class="on" style="height:60%"></i>
+        </div>
+        <div class="histcap"><span>Mar</span><span>Aug</span></div>
+
+        <div class="prov"><b>Charged to your Privacy card</b> on 8 August. Privacy publishes no page for a single purchase — the door below opens your account.</div>
+
+        <div class="dial">
+          <div class="disc pay"><div>▤</div><s>Privacy</s></div>
+          <div class="disc"><div>⧉</div><s>Copy</s></div>
+          <div class="disc"><div>?</div><s>Ask</s></div>
+          <div class="disc"><div>↗</div><s>Share</s></div>
+        </div>
+      </div>
+      <div class="cont"></div>
+    </div></div>
+  </div>
+
+  <!-- ===== B: Bitrefill order ===== -->
+  <div class="option">
+    <div class="otitle">B · Gift-card order</div>
+    <div class="odesc">The product artwork is <b>already stored</b> and today is only ever shown as a link-card banner. The two doors are named honestly and differ per row: an order with a <code>gift_url</code> opens <b>the gift itself</b>; one without says so rather than previewing a login wall.</div>
+    <div class="phone"><div class="screen">
+      <div class="grab"></div>
+      <div class="pad">
+
+        <div class="brow">
+          <div class="mark bi sq">B</div>
+          <div class="browline">Gift card · 12d ago</div>
+          <div class="chip">Delivered</div>
+        </div>
+
+        <div class="verb">Bought</div>
+        <div class="amount">$50.00</div>
+        <div class="subject big">Amazon.com</div>
+
+        <div class="art gift"><i>the product artwork the record already stores</i></div>
+
+        <div class="slab">
+          <div class="rung"><span class="k">Paid with</span><span class="v">Your Bitrefill balance</span></div>
+          <div class="rung"><span class="k">Ordered</span><span class="v dim">31 Jul, 21:04</span></div>
+          <div class="rung"><span class="k">Delivered</span><span class="v">31 Jul, 21:06</span></div>
+        </div>
+
+        <div class="prov"><b>Bought on Bitrefill</b> and delivered two minutes later. The code lives on Bitrefill's own gift page — Casberi never stores it.</div>
+
+        <div class="dial">
+          <div class="disc hero"><div>🎁</div><s>Gift card</s></div>
+          <div class="disc"><div>▤</div><s>Orders</s></div>
+          <div class="disc"><div>⧉</div><s>Copy</s></div>
+          <div class="disc"><div>↗</div><s>Share</s></div>
+        </div>
+
+        <div class="sect">On Bitrefill <i>as of 2h ago</i></div>
+        <div class="slab" style="margin-top:0">
+          <div class="rung"><span class="k">Balance</span><span class="v">$23.40</span></div>
+          <div class="rung"><span class="k">This month</span><span class="v dim">3 orders</span></div>
+        </div>
+      </div>
+      <div class="cont"></div>
+    </div></div>
+  </div>
+
+  <!-- ===== C: running low ===== -->
+  <div class="option">
+    <div class="otitle">C · Running low</div>
+    <div class="odesc">The alarm that currently prints a URL as its body. <b>Every number here was computed by the bridge and discarded</b> — the high-water mark, the 20% floor, the crossing. The hero is the amount left, in the attention hue, and the fall is drawn because the fall is the news.</div>
+    <div class="phone"><div class="screen">
+      <div class="grab"></div>
+      <div class="pad">
+
+        <div class="brow">
+          <div class="mark bi sq">B</div>
+          <div class="browline">Alert · 6h ago</div>
+          <div class="chip warn">Running low</div>
+        </div>
+
+        <div class="verb">Left on your balance</div>
+        <div class="amount warn">$4.20</div>
+        <div class="subject">Down from a high of $50.00</div>
+
+        <div class="sect">Your balance</div>
+        <div class="hist">
+          <i style="height:100%"></i><i style="height:86%"></i><i style="height:70%"></i>
+          <i style="height:52%"></i><i style="height:30%"></i><i class="on" style="height:9%; background:#ffb84d"></i>
+        </div>
+        <div class="histcap"><span>Jun</span><span>now — 8% of your high</span></div>
+
+        <div class="today">
+          <div class="bulb">⚡</div>
+          <p><b>Three orders this month</b> took it down. Top up on Bitrefill — Casberi can't add funds for you.</p>
+        </div>
+
+        <div class="prov"><b>Casberi noticed this</b>, it isn't a Bitrefill notification. It fires once per crossing and re-arms when you top up.</div>
+
+        <div class="dial">
+          <div class="disc pay"><div>＋</div><s>Top up</s></div>
+          <div class="disc"><div>▤</div><s>Balance</s></div>
+          <div class="disc"><div>⧉</div><s>Copy</s></div>
+          <div class="disc"><div>↗</div><s>Share</s></div>
+        </div>
+      </div>
+      <div class="cont"></div>
+    </div></div>
+  </div>
+</div>
+
+<h2><span class="n">4</span>The watch card — three shapes</h2>
+<div class="sub">Nothing was bought here, so nothing leads with an amount. The picture leads, the store is named with its own mark for the first time in the app, and the state is a word rather than an undrawn tag.</div>
+
+<div class="row">
+
+  <!-- ===== D: Shopify price drop ===== -->
+  <div class="option">
+    <div class="otitle">D · Price drop</div>
+    <div class="odesc">The drop stops being a parenthetical. <b>Old price, new price, the delta, and the day it moved</b> — the first three are what the bridge compares and then destroys. This is the one shape here that needs a stored field; see §5.</div>
+    <div class="phone"><div class="screen">
+      <div class="grab"></div>
+      <div class="pad">
+
+        <div class="brow">
+          <div class="mark sh sq">S</div>
+          <div class="browline">Product · 2h ago</div>
+          <div class="chip down">Price drop</div>
+        </div>
+
+        <div class="art pan"><i>previewImageURL, at size — not a 140pt link banner</i></div>
+
+        <div class="subject big">Cast iron pan, 26cm</div>
+
+        <div class="storeline">
+          <div class="mark sh sq">S</div>
+          <b>Aesop</b>
+          <s>a store you follow</s>
+        </div>
+
+        <div class="pricebar">
+          <span class="now">€72.00</span>
+          <span class="was">€90.00</span>
+          <span class="pct">−20%</span>
+        </div>
+
+        <div class="slab">
+          <div class="rung"><span class="k">Was</span><span class="v dim">€90.00 until <em>today, 09:12</em></span></div>
+          <div class="rung"><span class="k">First seen</span><span class="v dim">4 Aug, at €90.00</span></div>
+          <div class="rung"><span class="k">Checked</span><span class="v dim">2h ago</span></div>
+        </div>
+
+        <div class="prov"><b>Aesop's own catalogue</b>, read by Casberi. Nothing was bought and nothing can be — the door opens their page.</div>
+
+        <div class="dial">
+          <div class="disc hero"><div>🛍</div><s>Store</s></div>
+          <div class="disc"><div>⧉</div><s>Copy</s></div>
+          <div class="disc"><div>?</div><s>Ask</s></div>
+          <div class="disc"><div>↗</div><s>Share</s></div>
+        </div>
+      </div>
+      <div class="cont"></div>
+    </div></div>
+  </div>
+
+  <!-- ===== E: Deal ===== -->
+  <div class="option">
+    <div class="otitle">E · Deal</div>
+    <div class="odesc">The seat with the least to say, said honestly. No price is parsed, so <b>no price is shown</b> — and the sheet states that plainly instead of leaving a gap that reads like a missing number. The publisher leads, because whether you trust a deal is entirely a question of who posted it.</div>
+    <div class="phone"><div class="screen">
+      <div class="grab"></div>
+      <div class="pad">
+
+        <div class="brow">
+          <div class="mark de sq">D</div>
+          <div class="browline">Deal · 1d ago</div>
+          <div class="chip sale">Deal</div>
+        </div>
+
+        <div class="art deal"><i>previewImageURL — the feed's own art</i></div>
+
+        <div class="subject big">Anker 737 power bank — 38% off</div>
+
+        <div class="storeline">
+          <div class="mark de sq">S</div>
+          <b>Slickdeals</b>
+          <s>a feed you follow</s>
+        </div>
+
+        <div class="slab">
+          <div class="rung"><span class="k">Posted</span><span class="v dim">yesterday, 10:04</span></div>
+          <div class="rung"><span class="k">Price</span><span class="v dim">Not checked <em>— it's in the headline</em></span></div>
+        </div>
+
+        <div class="prov"><b>Slickdeals posted this.</b> Casberi follows the feed, not the shop — it hasn't read the price or checked whether the deal is still live.</div>
+
+        <div class="dial">
+          <div class="disc hero"><div>🛍</div><s>Deal page</s></div>
+          <div class="disc"><div>⧉</div><s>Copy</s></div>
+          <div class="disc"><div>?</div><s>Ask</s></div>
+          <div class="disc"><div>↗</div><s>Share</s></div>
+        </div>
+
+        <div class="sect">Also from Slickdeals</div>
+        <div class="slab" style="margin-top:0">
+          <div class="rung"><span class="k">2d ago</span><span class="v dim">Kindle Paperwhite — lowest since March</span></div>
+        </div>
+      </div>
+      <div class="cont"></div>
+    </div></div>
+  </div>
+
+  <!-- ===== F: Food scan ===== -->
+  <div class="option">
+    <div class="otitle">F · Barcode scan</div>
+    <div class="odesc">The biggest single upgrade in the category, and it costs nothing: <b>the Nutri-Score is already stored</b> as <code>Nutri-Score B</code> and rendered nowhere. Drawn as the five-step scale it actually is, on a stored letter — never computed, never inferred.</div>
+    <div class="phone"><div class="screen">
+      <div class="grab"></div>
+      <div class="pad">
+
+        <div class="brow">
+          <div class="mark of sq">O</div>
+          <div class="browline">Scanned · 4d ago</div>
+          <div class="chip">Food</div>
+        </div>
+
+        <div class="art oat"><i>the product photo Open Food Facts serves</i></div>
+
+        <div class="subject big">Oat drink, barista edition</div>
+
+        <div class="storeline">
+          <div class="mark of sq">O</div>
+          <b>Oatly</b>
+          <s>brand</s>
+        </div>
+
+        <div class="sect">Nutri-Score</div>
+        <div class="ns">
+          <span class="a">A</span><span class="b on">B</span><span>C</span><span>D</span><span>E</span>
+        </div>
+        <div class="nscap">As Open Food Facts grades it. Casberi doesn't compute this and doesn't judge it.</div>
+
+        <div class="slab">
+          <div class="rung"><span class="k">Barcode</span><span class="v dim">5 060403 320102</span></div>
+          <div class="rung"><span class="k">Scanned</span><span class="v dim">8 Aug, 18:42</span></div>
+        </div>
+
+        <div class="prov"><b>You scanned this barcode.</b> Nothing was bought and nothing is watched — it's in your things because you pointed a camera at it.</div>
+
+        <div class="dial">
+          <div class="disc hero"><div>▤</div><s>Full entry</s></div>
+          <div class="disc"><div>⧉</div><s>Copy</s></div>
+          <div class="disc"><div>?</div><s>Ask</s></div>
+          <div class="disc"><div>↗</div><s>Share</s></div>
+        </div>
+      </div>
+      <div class="cont"></div>
+    </div></div>
+  </div>
+</div>
+
+<h2><span class="n">5</span>What it takes</h2>
+<div class="sub">In the order the existing passes did it: fix what the bridge throws away first, then give the sheet something to draw.</div>
+
+<ol class="moves">
+<li><b>Stamp what the bridges already read.</b> <code>PrivacyBridge.txnThing</code> holds <code>merchant.descriptor</code> and joins it into the title; <code>BitrefillBridge.orderThing</code> does the same with <code>product.name</code>. Both write it to <code>authorHandle</code> instead — <em>no new field, no CloudKit deploy</em> — and both heal on the dedupe hit, which Privacy's pass already does for exactly this reason. <b>This is the move that makes the whole category possible without ever parsing a title back.</b></li>
+
+<li><b>Draw <code>authorHandle</code> in the row.</b> <code>BandRow.project</code> gains its Shopping cases — store, publisher, brand. Five lines, and it fixes the feed at the same time as the sheet: right now these rows say nothing at all in their trailing slot.</li>
+
+<li><b><code>ShopStage</code>, Foundation-only, compiled whole by a self-test.</b> The <code>WorkStage</code> / <code>SocialSheet</code> shape: a <code>Reading</code> with <code>archetype</code> (receipt · watch), <code>subject</code>, <code>amount</code>, <code>state</code>, <code>tone</code>, derived from <code>kind</code>, <code>priceValue</code>, <code>sourceRef</code> and the English facet tags — <em>never from the title</em>. Every failure in this file renders as a perfectly good-looking sheet, which is the only reason any of these harnesses exist.</li>
+
+<li><b>The provenance sentence replaces the spec row.</b> <code>From — from a store you follow</code> stands down wherever the sentence composes, exactly as §363 gated it for social. The sentence differs per seat because the truth does: <em>you scanned this</em>, <em>Slickdeals posted this</em>, <em>charged to your Privacy card</em>.</li>
+
+<li><b>The one stored field this needs, and the choice about it.</b> Shopify's old price is <em>overwritten</em> on a drop; only the title's <code>" (was €90.00)"</code> survives it, and parsing that back is the thing rule 1 exists to prevent. Two honest options: <span class="mid">(a)</span> a new optional <code>Thing.previousPrice</code> — clean, and a <b>CloudKit Production deploy</b> before it ships, or it silently fails to mirror; <span class="mid">(b)</span> a price-history line on <code>enrichedText</code>, which already carries three documented exceptions to the retrieval-only rule, costs no deploy, and has the side benefit that "the pan was ninety, now seventy-two" becomes searchable. <em>(b) unless we're deploying schema for something else anyway.</em></li>
+
+<li><b>Two things deliberately not built.</b> A "was it still available?" check would mean Casberi fetching a store page on your behalf, and a stale <em>in stock</em> is the fake status the design law bans. And no total across Shopping seats: a Privacy dollar, a Bitrefill dollar and a Shopify euro are three different claims, and <code>Corpus.cardSpendSources</code> already refuses Privacy for exactly this class of reason.</li>
+</ol>
+
+<div class="callout" style="margin-top:30px">
+<b>The adjacency worth naming before we build.</b> Privacy's card purchase is the same archetype as Apple Wallet, Gnosis Pay and ether.fi spends — which sit in <b>Wallet</b>, not Shopping. If the receipt anatomy here is built as <code>ShopStage</code>, four card seats end up with two different purchase sheets. <em>The fork should be "did money leave", not "which catalog band is it in"</em> — so this should almost certainly be <code>PurchaseStage</code>, serving all four, with the watch card as the Shopping-only half. Worth a ruling before the first line.
+</div>
+
+</div>
