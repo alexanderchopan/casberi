@@ -250,6 +250,96 @@ struct SocialCard: Codable, Hashable, Identifiable {
     var ref: String? = nil
 }
 
+/// One part a bridge read, kept as a part (2026-08-12, prd §365).
+///
+/// It exists because of a pattern the Life sheets made impossible to ignore:
+/// **every Life bridge joined its facts into a display string at ingest and
+/// threw the parts away.** `ContactsIngest.line(for:)` produced
+/// `"Designer · Studio · ana@studio.com"`; `HomeKitIngest.line(for:home:)`
+/// produced `"Lock · Front door · Reachable"`; `ScheduleIngest.eventLine`
+/// produced `"14:00 · Studio"`. A sheet handed one of those can only reprint
+/// it — which is exactly why the thing sheets read like a database row printed
+/// as a sentence, with not one character of it tappable.
+///
+/// Deliberately ONE field rather than a column per source. A `place`, a
+/// `jobTitle`, a `roomName`, a `distanceMeters` and a `reachable` would be five
+/// additive fields today and five more the next time a bridge lands something
+/// structured — and every one of them is a CloudKit Production deploy before it
+/// syncs (see `docs/cloudkit-deploy.md`). The parts share one shape: a short
+/// label, a value, and what tapping it should do.
+///
+/// `action` is what keeps this from being the spec table it replaces. A row
+/// that can only be read is `.none`; a phone number is `.call`; an address is
+/// `.map`. The VIEW decides how to draw a kind, so the bridge never has to know
+/// about `tel:` — and a fact whose action can't be honoured simply renders as a
+/// fact, never as a control that does nothing (the §83 rule).
+///
+/// Encoded as one string per fact so it can ride a `[String]` — the same
+/// additive array shape `tags`/`ocrTopics`/`wikilinks` already use, which
+/// SwiftData infers with no migration stage. The separator is US (U+001F),
+/// which no label, value or action can contain: it is not typeable, does not
+/// survive a copy-paste, and is the standard answer to exactly this. A fact
+/// that fails to decode is DROPPED rather than rendered half-read — a row
+/// saying "Lock" with no label is worse than no row.
+struct ThingFact: Hashable, Identifiable, Sendable {
+    /// What tapping the fact does. `none` is the common case and the default:
+    /// most facts are facts.
+    enum Action: String, Sendable {
+        case none, call, mail, map, web
+        /// A number with a unit — drawn as a metric, never as a label/value
+        /// row. A run's distance, not its location.
+        case metric
+        /// Live state (HomeKit's reachability) — drawn as a pill whose tone is
+        /// the state, never as grey prose. `value` is the state's own word and
+        /// `label` is what was checked.
+        case state
+        /// This moment has no clock: an all-day event.
+        ///
+        /// It is an ACTION rather than a `Thing` column because it is a
+        /// display instruction and nothing else — EventKit reports an all-day
+        /// event's start as midnight, so a reader with only the dates draws
+        /// "00:00" and states a time nobody meant. `endAt` cannot carry the
+        /// signal either: it is deliberately nil for these, since EventKit's
+        /// end is the last instant of the final day and a range of
+        /// "00:00 – 23:59" is the same wrong answer wearing two clocks.
+        ///
+        /// The forward-compat behaviour is the reason this shape is safe: a
+        /// build that predates this case decodes it to `.none` (see
+        /// `init(encoded:)`) and draws it as an ordinary fact row reading
+        /// "When · All day", which is still true.
+        case allDay
+    }
+
+    var id: String { "\(label)\u{1F}\(value)" }
+
+    /// Sentence case, one or two words ("Mobile", "Room", "Pace"). Never
+    /// ALL-CAPS — the design law bans caps eyebrows and this is drawn as one.
+    var label: String
+    var value: String
+    var action: Action = .none
+
+    private static let sep = "\u{1F}"
+
+    var encoded: String { [label, value, action.rawValue].joined(separator: Self.sep) }
+
+    /// nil for anything that isn't exactly three non-empty-labelled parts.
+    /// An unknown action decodes to `.none` rather than dropping the fact —
+    /// a build that predates a new action should still show the words.
+    init?(encoded: String) {
+        let parts = encoded.components(separatedBy: Self.sep)
+        guard parts.count == 3, !parts[0].isEmpty, !parts[1].isEmpty else { return nil }
+        self.label = parts[0]
+        self.value = parts[1]
+        self.action = Action(rawValue: parts[2]) ?? .none
+    }
+
+    init(_ label: String, _ value: String, _ action: Action = .none) {
+        self.label = label
+        self.value = value
+        self.action = action
+    }
+}
+
 /// The one container. Notes, screenshots, chats, events, links — and later
 /// jobs, runs, outputs, skills — all land here as a `Thing` (PRD S1).
 ///
@@ -488,6 +578,43 @@ final class Thing {
     /// (a real structured deadline); other things leave it nil. Optional +
     /// default nil keeps CloudKit mirroring happy.
     var dueAt: Date? = nil
+
+    /// When a moment ENDS (2026-08-12, prd §365) — an event's end, a booking's,
+    /// a workout's. The one fact the Life sheets genuinely did not have.
+    ///
+    /// An event has carried its START as `capturedAt` since `ScheduleIngest`
+    /// shipped, and `dueAt` is documented as a reminder's field, so a duration
+    /// was never computable: the sheet could say "14:00" and nothing else. Not
+    /// a cosmetic gap — "14:00 – 15:00 · 1 hr" is most of what a calendar entry
+    /// IS, and the old `eventLine` string could not carry it because EventKit's
+    /// `endDate` was never read.
+    ///
+    /// Set only from a real end. An all-day event leaves it nil (its end is a
+    /// calendar convention, not a moment, and rendering "00:00" would be a
+    /// confident wrong answer); so does anything whose duration we would have to
+    /// invent. A reader shows a range only when this is present — never a start
+    /// plus a guess. Optional + default nil keeps CloudKit mirroring happy.
+    var endAt: Date? = nil
+
+    /// The parts a bridge read, kept as parts rather than joined into one
+    /// display string (2026-08-12, prd §365) — see `ThingFact` above for the
+    /// whole reasoning, which is the reason this field exists at all.
+    ///
+    /// ORDER IS THE BRIDGE'S and readers must preserve it: a contact's mobile
+    /// before its email is that bridge saying which one you reach for first,
+    /// and re-sorting alphabetically in a view would throw away the only
+    /// ranking anybody has. Empty for every thing whose source has nothing
+    /// structured to say, which is most of the corpus.
+    ///
+    /// An additive array field like `tags`/`ocrTopics` — SwiftData infers it,
+    /// no migration stage (see `ThingSchemaVersioning`).
+    var facts: [String] = []
+
+    /// `facts`, decoded, in the bridge's own order. Undecodable entries are
+    /// dropped (see `ThingFact.init(encoded:)`). Every reader goes through
+    /// this rather than parsing the strings itself, so the encoding has exactly
+    /// one implementation to get wrong.
+    var factList: [ThingFact] { facts.compactMap(ThingFact.init(encoded:)) }
 
     /// When a token approval was actually GRANTED on chain (2026-07-31) — the
     /// fact the Worth-a-look tray states as "Granted Mar 2024", which is what

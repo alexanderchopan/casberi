@@ -331,6 +331,60 @@ enum ScheduleIngest {
         let link = event.url?.absoluteString
         if thing.externalLink != link { thing.externalLink = link }
         addTag(calendarTitle(event), to: thing)
+        // The end, and the location as a fact rather than half of a joined
+        // string (2026-08-12, prd §365). Both were in this same fetch all
+        // along; `endDate` was never read at all and the location was fused to
+        // the start time inside `eventLine`, where the only thing a reader
+        // could do with it was print it.
+        setEnd(thing, endDate(of: event))
+        setFacts(thing, eventFacts(event))
+    }
+
+    /// An event's real end, or nil.
+    ///
+    /// An ALL-DAY event is deliberately nil. EventKit reports its `endDate` as
+    /// the last instant of the final day, so a range would read "00:00 – 23:59"
+    /// and a duration "24 hr" — both technically derived from the payload and
+    /// both saying something nobody means by "all day". `endAt`'s own contract
+    /// is that a reader may show a range only when one is really known.
+    private static func endDate(of event: EKEvent) -> Date? {
+        guard !event.isAllDay, let end = event.endDate, let start = event.startDate,
+              end > start
+        else { return nil }
+        return end
+    }
+
+    /// What an event carries besides its name, its clock and its notes.
+    ///
+    /// Only the location today, and that is not an oversight: attendees are
+    /// their own shape (faces, drawn from `enrichedText`), the calendar is
+    /// already a tag, and the video link is already `externalLink`. A fact is
+    /// for what has no better home.
+    private static func eventFacts(_ event: EKEvent) -> [ThingFact] {
+        var out: [ThingFact] = []
+        // An all-day event has no clock, and its start is midnight — so
+        // without this the stub reads "00:00" and states a time nobody meant.
+        if event.isAllDay { out.append(ThingFact("When", "All day", .allDay)) }
+        guard let place = trimmed(event.location) else { return out }
+        // `.map` and not `.none`: a location on a calendar entry is somewhere
+        // you have to physically get to, and the view can hand it to Maps. A
+        // room name that Maps can't find still renders as a fact — the view
+        // never draws a control it can't honour.
+        out.append(ThingFact("Where", place, .map))
+        return out
+    }
+
+    /// Idempotent, like every other writer here — it runs on every foreground
+    /// for every event, so it must not dirty a row that hasn't changed.
+    private static func setEnd(_ thing: Thing, _ end: Date?) {
+        guard thing.endAt != end else { return }
+        thing.endAt = end
+    }
+
+    private static func setFacts(_ thing: Thing, _ facts: [ThingFact]) {
+        let encoded = facts.map(\.encoded)
+        guard thing.facts != encoded else { return }
+        thing.facts = encoded
     }
 
     /// The two writers that drop the stored vector when the text really moved.

@@ -97,6 +97,12 @@ enum HealthIngest {
                 capturedAt: workout.startDate,
                 sourceRef: ref
             )
+            // The numbers, as numbers (2026-08-12, prd §365). They were
+            // computed right here and then formatted into the title, so a
+            // workout sheet could show a calendar clock and the word "Workout"
+            // while the distance it had just measured was unreachable.
+            thing.endAt = workout.endDate > workout.startDate ? workout.endDate : nil
+            thing.facts = workoutFacts(workout).map(\.encoded)
             context.insert(thing)
             SpotlightIndex.index([thing])
             inserted += 1
@@ -308,6 +314,49 @@ enum HealthIngest {
     private static func detail(for workout: HKWorkout) -> String {
         let minutes = max(1, Int(workout.duration / 60))
         return "\(minutes) min"
+    }
+
+    /// What the workout actually was, as metrics (2026-08-12, prd §365).
+    ///
+    /// Distance, duration and pace and NOTHING ELSE. Heart rate, splits and the
+    /// route are all real HealthKit reads and none of them are made here: they
+    /// need their own queries (this pass has only the `HKWorkout` summary), and
+    /// a curve drawn from data we never fetched is the §83 fake status in the
+    /// one place a reader would believe it instantly. When they are read they
+    /// will be their own shape, not a fact row.
+    ///
+    /// PACE is derived and therefore conditional. It is stated only for a
+    /// workout that really covered ground (the same >100m bar `title(for:)`
+    /// uses, so a treadmill session logged with no distance never reports an
+    /// infinite pace) and only per KILOMETRE — this app has no unit preference
+    /// and inventing one per locale here would make two devices disagree about
+    /// the same run.
+    private static func workoutFacts(_ workout: HKWorkout) -> [ThingFact] {
+        var out: [ThingFact] = []
+        let meters = workout.totalDistance?.doubleValue(for: .meter())
+        if let meters, meters > 100 {
+            out.append(ThingFact("km", String(format: "%.2f", meters / 1000), .metric))
+        }
+        out.append(ThingFact("Duration", clock(workout.duration), .metric))
+        if let meters, meters > 100, workout.duration > 0 {
+            let secondsPerKM = workout.duration / (meters / 1000)
+            out.append(ThingFact("Pace / km", clock(secondsPerKM), .metric))
+        }
+        // Which watch or app wrote it — the provenance a workout has and a
+        // calendar entry doesn't, and the thing that separates a ride you
+        // recorded from one an app inferred.
+        let writer = workout.sourceRevision.source.name
+        if !writer.isEmpty { out.append(ThingFact("Written by", writer)) }
+        return out
+    }
+
+    /// `26:14`, or `1:04:20` once it passes an hour. Not "26 min": a duration
+    /// rounded to whole minutes is fine in a title and useless beside a pace.
+    private static func clock(_ seconds: TimeInterval) -> String {
+        let total = max(0, Int(seconds.rounded()))
+        let (h, m, s) = (total / 3600, (total % 3600) / 60, total % 60)
+        return h > 0 ? String(format: "%d:%02d:%02d", h, m, s)
+                     : String(format: "%d:%02d", m, s)
     }
 
     private static func activityName(_ type: HKWorkoutActivityType) -> String {

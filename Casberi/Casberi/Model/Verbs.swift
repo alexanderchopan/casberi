@@ -205,6 +205,26 @@ enum VerbDerivation {
                let url = URL(string: "photos-redirect://") {
                 out.append(Verb(label: "Open in Photos", icon: "photo", action: .openURL(url)))
             }
+        case .file:
+            // A folder-picked image gets the same Zoom the screenshot above
+            // does (2026-08-12, prd §365). It had NO case here at all, so a
+            // Files/Dropbox picture drew its pixels in the sheet and nothing
+            // in the app could open them — the same bytes as a screenshot,
+            // one bridge over, behaving differently.
+            //
+            // The gate is a string test on the ref, deliberately: this
+            // function runs off the main actor inside GenUI composition and is
+            // called per row by the feed's context-menu builder (prd §260), so
+            // reading `previewImageData` here would fault an externalStorage
+            // blob per row. `FilesIngest.isStoredPicture` says the same thing
+            // the screenshot branch's `sourceRef != nil` says, one level more
+            // precisely — and the viewer falls back to the stored bytes when
+            // the ref names no asset, so an image whose heal hasn't produced a
+            // thumbnail yet opens to the loader rather than to nothing.
+            if FilesIngest.isStoredPicture(thing.sourceRef) {
+                out.append(Verb(label: "Zoom", icon: "arrow.up.left.and.arrow.down.right",
+                                action: .viewImage))
+            }
         case .note:
             // A note's next action: it becomes a reminder (S4 — captures
             // become outcomes). The write confirms; copy follows.

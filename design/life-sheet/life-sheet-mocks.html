@@ -1,0 +1,850 @@
+<title>Life thing sheets — inventory & three anatomies</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #1673e6; --confirm: #32d74b; --down: #ff5a5f; --attn: #ff9f0a;
+    --slab: #16181d; --well: #101216; --card: rgba(28,30,37,.82);
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    --cal: #ff453a; --rem: #ff9f0a; --health: #ff375f; --strava: #fc5200;
+    --mail: #1673e6; --files: #0a84ff; --contacts: #a2845e; --home: #ff9f0a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body { font-family: var(--text); color: var(--ink);
+         background: radial-gradient(900px 420px at 18% -8%, rgba(255,159,10,.09), transparent 62%), var(--page);
+         padding: 48px 28px 90px; }
+  .wrap { max-width: 1280px; margin: 0 auto; }
+  header { max-width: 820px; margin-bottom: 34px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: #e0a24a; margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.4vw,36px); font-weight: 800; letter-spacing: -.02em; line-height: 1.1; margin-bottom: 12px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 70ch; margin-bottom: 10px; }
+  header p b { color: var(--ink); font-weight: 600; }
+  header p code, .sub code, td code, .callout code {
+    font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12.5px;
+    background: rgba(255,255,255,.07); padding: 1px 5px; border-radius: 5px; color: #c8d0e0; }
+
+  h2 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin: 54px 0 6px; }
+  h2 .n { color: var(--faint); font-weight: 600; margin-right: 8px; }
+  .sub { font-size: 14px; line-height: 1.55; color: var(--muted); max-width: 80ch; margin-bottom: 22px; }
+  .sub b { color: var(--ink); font-weight: 600; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-size: 11px; font-weight: 700; color: var(--faint);
+       padding: 0 12px 8px 0; white-space: nowrap; }
+  td { padding: 11px 12px 11px 0; vertical-align: top; color: var(--muted); line-height: 1.45; }
+  tbody tr { border-top: 1px solid rgba(255,255,255,.06); }
+  td b { color: var(--ink); font-weight: 600; }
+  td code { font-size: 11.5px; }
+  .ok  { color: var(--confirm); font-weight: 700; }
+  .bad { color: var(--down); font-weight: 700; }
+  .mid { color: var(--attn); font-weight: 700; }
+
+  .find { border-radius: 14px; background: rgba(255,255,255,.045); padding: 15px 17px; margin-top: 14px; }
+  .find h3 { font-size: 13.5px; font-weight: 700; margin-bottom: 5px; }
+  .find h3 span { color: var(--down); margin-right: 7px; font-weight: 800; }
+  .find p { font-size: 13px; line-height: 1.6; color: var(--muted); max-width: 92ch; }
+  .find p b { color: var(--ink); font-weight: 600; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 34px; align-items: flex-start; }
+  .option { width: 340px; }
+  .otitle { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .odesc { font-size: 12.5px; line-height: 1.5; color: var(--faint); margin-bottom: 14px; min-height: 72px; }
+  .odesc b { color: var(--muted); font-weight: 600; }
+  .phone { width: 340px; border-radius: 46px; padding: 10px; background: #15171c; box-shadow: 0 30px 70px rgba(0,0,0,.55); }
+  .screen { border-radius: 38px; overflow: hidden; padding: 16px 0 20px; min-height: 700px; background: #000; position: relative; }
+  .screen.sh { min-height: 560px; }
+  .grab { width: 34px; height: 4px; border-radius: 99px; background: rgba(255,255,255,.22); margin: 0 auto 14px; }
+  .pad { padding: 0 16px; }
+
+  /* eyebrow */
+  .brow { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; }
+  .mark { width: 26px; height: 26px; border-radius: 7px; flex: none; display: flex; align-items: center;
+          justify-content: center; font-size: 13px; }
+  .mark.cal { background: #fff; color: var(--cal); font-weight: 800; font-size: 11px; }
+  .mark.rem { background: var(--rem); color: #000; }
+  .mark.hl { background: var(--health); color: #fff; }
+  .mark.st { background: var(--strava); color: #fff; }
+  .mark.ml { background: var(--mail); color: #fff; }
+  .mark.fl { background: var(--files); color: #fff; }
+  .mark.ct { background: var(--contacts); color: #fff; }
+  .mark.hk { background: var(--home); color: #000; }
+  .browline { font-size: 11.5px; color: var(--faint); }
+  .browline b { color: var(--muted); font-weight: 600; }
+
+  h4.tt { font-size: 25px; font-weight: 700; letter-spacing: -.02em; line-height: 1.18; margin-bottom: 14px; }
+  h4.tt.sm { font-size: 21px; }
+
+  /* ---- the stub ---- */
+  .stub { border-radius: 18px; background: rgba(255,255,255,.05); overflow: hidden; }
+  .stub .top { display: flex; align-items: center; gap: 14px; padding: 15px 16px 14px; }
+  .daycube { width: 58px; flex: none; text-align: center; border-radius: 12px;
+             background: rgba(255,255,255,.06); padding: 7px 0 8px; }
+  .daycube s { text-decoration: none; display: block; font-size: 10px; font-weight: 700;
+               letter-spacing: .04em; color: var(--cal); text-transform: uppercase; }
+  .daycube b { display: block; font-family: var(--money); font-size: 27px; font-weight: 800;
+               letter-spacing: -.03em; line-height: 1.05; }
+  .daycube i { font-style: normal; display: block; font-size: 10px; color: var(--faint); }
+  .whenblock .big { font-family: var(--money); font-size: 20px; font-weight: 700;
+                    letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .whenblock .rel { font-size: 12px; color: var(--attn); font-weight: 600; margin-top: 2px; }
+  .whenblock .rel.past { color: var(--faint); font-weight: 500; }
+  .perf { height: 1px; margin: 0 14px;
+          background: repeating-linear-gradient(90deg, rgba(255,255,255,.2) 0 4px, transparent 4px 9px); }
+  .stub .rows { padding: 11px 16px 14px; }
+  .srow { display: flex; align-items: center; gap: 10px; padding: 7px 0; font-size: 13.5px; }
+  .srow .g { width: 17px; text-align: center; font-size: 13px; color: var(--faint); flex: none; }
+  .srow .v { color: var(--ink); }
+  .srow .v em { font-style: normal; color: var(--faint); }
+  .srow .chev { margin-left: auto; color: var(--faint); font-size: 12px; }
+
+  .faces { display: flex; align-items: center; gap: 9px; padding: 7px 0 2px; }
+  .stack { display: flex; }
+  .stack .f { width: 25px; height: 25px; border-radius: 50%; margin-right: -7px; border: 1.5px solid #0d0e12;
+              display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; }
+  .f1 { background: linear-gradient(140deg,#e86a6a,#7d6adf); }
+  .f2 { background: linear-gradient(140deg,#5ad1c4,#2f7de0); }
+  .f3 { background: linear-gradient(140deg,#f0b24b,#d9534f); }
+  .f4 { background: linear-gradient(140deg,#8fd36e,#2f9e6e); }
+  .faces span { font-size: 12px; color: var(--muted); }
+  .faces span b { color: var(--ink); font-weight: 600; }
+
+  .join { display: flex; align-items: center; justify-content: center; gap: 8px;
+          margin: 12px 16px 15px; height: 42px; border-radius: 12px;
+          background: var(--tint); color: #fff; font-size: 14.5px; font-weight: 600; }
+  .join.ghost { background: rgba(255,255,255,.08); color: var(--ink); }
+
+  .notes { font-size: 14.5px; line-height: 1.5; color: var(--muted); margin-top: 16px; }
+  .notes b { color: var(--ink); font-weight: 600; }
+
+  /* ---- the card (contact / accessory) ---- */
+  .idcard { display: flex; flex-direction: column; align-items: center; padding: 6px 0 4px; }
+  .bigface { width: 78px; height: 78px; border-radius: 50%; display: flex; align-items: center;
+             justify-content: center; font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 12px; }
+  .idcard .nm { font-size: 24px; font-weight: 700; letter-spacing: -.02em; }
+  .idcard .rl { font-size: 13.5px; color: var(--muted); margin-top: 3px; }
+  .actrow { display: flex; gap: 10px; justify-content: center; margin: 16px 0 4px; }
+  .act { width: 74px; height: 54px; border-radius: 13px; background: rgba(255,255,255,.06);
+         display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
+  .act i { font-style: normal; font-size: 16px; }
+  .act s { text-decoration: none; font-size: 10.5px; color: var(--muted); font-weight: 600; }
+  .fieldlist { margin-top: 18px; border-radius: 16px; background: rgba(255,255,255,.045); overflow: hidden; }
+  .fld { display: flex; align-items: center; padding: 11px 14px; }
+  .fld + .fld { box-shadow: inset 0 1px 0 rgba(255,255,255,.05); }
+  .fld .l { font-size: 11px; font-weight: 700; color: var(--faint); width: 62px; flex: none; }
+  .fld .v { font-size: 14px; color: var(--tint); }
+  .fld .v.plain { color: var(--ink); }
+  .fld .chev { margin-left: auto; color: var(--faint); font-size: 12px; }
+
+  /* live state */
+  .state { display: flex; align-items: center; gap: 10px; border-radius: 16px;
+           background: rgba(50,215,75,.10); padding: 13px 15px; margin-top: 16px; }
+  .state.off { background: rgba(255,90,95,.10); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--confirm); flex: none;
+         box-shadow: 0 0 0 4px rgba(50,215,75,.16); }
+  .dot.red { background: var(--down); box-shadow: 0 0 0 4px rgba(255,90,95,.16); }
+  .state .t b { display: block; font-size: 14.5px; font-weight: 600; }
+  .state .t s { text-decoration: none; font-size: 11.5px; color: var(--faint); }
+
+  /* ---- the delivery ---- */
+  .env { border-radius: 18px; background: rgba(255,255,255,.045); padding: 14px 15px; }
+  .env .from { display: flex; align-items: center; gap: 10px; }
+  .initial { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center;
+             justify-content: center; font-size: 15px; font-weight: 700; color: #fff; flex: none; }
+  .env .from .t b { display: block; font-size: 14.5px; font-weight: 600; }
+  .env .from .t s { text-decoration: none; font-size: 11.5px; color: var(--faint); }
+  .env .to { font-size: 12px; color: var(--faint); margin-top: 11px; padding-top: 11px;
+             box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
+  .env .to b { color: var(--muted); font-weight: 600; }
+
+  .filecard { border-radius: 18px; overflow: hidden; background: rgba(255,255,255,.045); }
+  .filecard .prev { height: 150px; background: linear-gradient(150deg,#243049,#3c3355 55%,#5c3f46);
+                    display: flex; align-items: center; justify-content: center; font-size: 34px; color: rgba(255,255,255,.3); }
+  .filecard .meta { display: flex; align-items: center; gap: 11px; padding: 13px 15px; }
+  .filecard .meta .t b { display: block; font-size: 14.5px; font-weight: 600; }
+  .filecard .meta .t s { text-decoration: none; font-size: 11.5px; color: var(--faint); }
+  .ext { margin-left: auto; font-size: 10.5px; font-weight: 700; color: var(--muted);
+         padding: 3px 8px; border-radius: 99px; background: rgba(255,255,255,.08); }
+
+  /* metric receipt (workout) */
+  .metrics { display: flex; gap: 0; border-radius: 18px; background: rgba(255,255,255,.045); padding: 15px 6px; }
+  .metric { flex: 1; text-align: center; }
+  .metric b { display: block; font-family: var(--money); font-size: 22px; font-weight: 800;
+              letter-spacing: -.025em; font-variant-numeric: tabular-nums; }
+  .metric s { text-decoration: none; font-size: 10px; color: var(--faint); font-weight: 600; }
+  .spark { height: 44px; margin-top: 14px; border-radius: 10px;
+           background: linear-gradient(180deg, rgba(255,55,95,.18), transparent);
+           position: relative; overflow: hidden; }
+  .spark svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+  .sect { font-size: 11px; font-weight: 700; color: var(--faint); margin: 22px 2px 8px;
+          display: flex; align-items: center; }
+  .sect i { font-style: normal; margin-left: auto; font-weight: 600; }
+
+  .dial { display: flex; gap: 12px; justify-content: center; margin: 20px 0 4px; }
+  .disc { text-align: center; }
+  .disc div { width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,.08);
+              display: flex; align-items: center; justify-content: center; font-size: 17px; }
+  .disc s { text-decoration: none; display: block; font-size: 10px; color: var(--faint); margin-top: 5px; }
+
+  /* today's sheet, for contrast */
+  .today { border-radius: 14px; background: rgba(255,255,255,.045); padding: 13px 14px; }
+  .kv { display: flex; align-items: baseline; padding: 5px 0; font-size: 13.5px; }
+  .kv b { font-size: 11px; font-weight: 700; color: var(--faint); width: 80px; flex: none; }
+  .kv span { color: var(--ink); }
+  .oldchip { display: flex; align-items: center; gap: 10px; border-radius: 12px;
+             background: rgba(255,255,255,.045); padding: 11px 12px; font-size: 15px; }
+  .oldchip .g { color: var(--tint); }
+  .bare { font-size: 14.5px; color: var(--muted); line-height: 1.5; }
+
+  .callout { border-radius: 14px; background: rgba(255,255,255,.045); padding: 16px 18px;
+             font-size: 13.5px; line-height: 1.6; color: var(--muted); margin-top: 22px; max-width: 96ch; }
+  .callout b { color: var(--ink); font-weight: 600; }
+  .callout ul { margin: 8px 0 0 18px; } .callout li { margin: 5px 0; }
+  .cont { position: absolute; left: 0; right: 0; bottom: 0; height: 60px;
+          background: linear-gradient(180deg, transparent, #000 72%); }
+
+  /* ---- the frame (pixels) ---- */
+  .frame { border-radius: 16px; overflow: hidden; box-shadow: 0 18px 40px rgba(0,0,0,.55); }
+  .frame.dead { box-shadow: none; }
+  /* a mocked screenshot: a booking confirmation, drawn rather than gradient'd */
+  .shot { background: #f6f7f9; color: #1b1e24; padding: 0 0 16px; }
+  .shot .bar { height: 30px; background: #fff; display: flex; align-items: center;
+               justify-content: center; font-size: 10px; font-weight: 600; color: #8a92a2;
+               box-shadow: inset 0 -1px 0 rgba(0,0,0,.06); }
+  .shot .body { padding: 16px 16px 4px; }
+  .shot .tick { width: 34px; height: 34px; border-radius: 50%; background: #d8f5df;
+                display: flex; align-items: center; justify-content: center; font-size: 17px;
+                color: #1f9d4f; margin-bottom: 11px; }
+  .shot h5 { font-size: 16px; font-weight: 700; letter-spacing: -.01em; margin-bottom: 3px; }
+  .shot .lede { font-size: 11.5px; color: #6b7280; margin-bottom: 14px; }
+  .shot .line { display: flex; padding: 7px 0; font-size: 12px;
+                box-shadow: inset 0 -1px 0 rgba(0,0,0,.05); }
+  .shot .line b { width: 62px; flex: none; color: #8a92a2; font-weight: 600; font-size: 11px; }
+  .shot .line span { font-weight: 600; }
+  /* a mocked photograph: a drawing on paper */
+  .draw { background: #ece7dd; padding: 14px; }
+  .draw svg { width: 100%; height: 128px; display: block; }
+  /* the placeholder the sheet paints with no grant */
+  .placeholder { height: 132px; border-radius: 16px; background: rgba(255,255,255,.045);
+                 display: flex; flex-direction: column; align-items: center; justify-content: center;
+                 gap: 5px; color: var(--faint); font-size: 13px; }
+  .placeholder i { font-style: normal; font-size: 21px; }
+  .taphint { font-size: 11px; color: var(--faint); text-align: center; margin-top: 9px; }
+  .taphint.bad { color: var(--down); }
+
+  .factrow { display: flex; align-items: center; gap: 10px; border-radius: 14px;
+             background: rgba(22,115,230,.12); padding: 12px 14px; margin-top: 16px; }
+  .factrow .g { font-size: 15px; color: #6bb2ff; flex: none; }
+  .factrow .t b { display: block; font-size: 14px; font-weight: 600; }
+  .factrow .t s { text-decoration: none; font-size: 11.5px; color: var(--faint); }
+  .factrow .chev { margin-left: auto; color: var(--faint); font-size: 12px; }
+
+  .capt { font-size: 15px; font-weight: 600; letter-spacing: -.01em; margin-top: 14px; }
+  .topics { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .topics s { text-decoration: none; font-size: 11px; color: var(--muted); font-weight: 600;
+              padding: 4px 9px; border-radius: 999px; background: rgba(255,255,255,.07); }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · design · 2026-08-12</div>
+  <h1>Life thing sheets: what they are today, and three anatomies to replace them</h1>
+  <p>Life is <b>14 seats across 7 groups</b> — Photos, Calendar, Reminders, Gmail, iCloud Mail, Apple Health, Strava, Cal.com, Calendly, Todoist, Files, Dropbox, Contacts, HomeKit — and they present through <b>seven</b> content anatomies, two of which do not exist at all.</p>
+  <p>The pattern underneath is one thing, and it explains the "database field" feeling exactly: <b>every Life bridge joins its facts into a display string at ingest and throws the parts away.</b> <code>"14:00 · Studio"</code>, <code>"Designer · Studio · a@b.com"</code>, <code>"Lock · Front door · Reachable"</code>. The sheet can only reprint what ingest already decided — so it prints it, in an 80pt label column, twice.</p>
+</header>
+
+<h2><span class="n">1</span>Inventory — every Life thing sheet the app can present</h2>
+<div class="sub">Content anatomy is <code>ThingContent.swift</code>'s <code>kindSwitch</code>; the spec table above it is <code>ThingSheetView.specTable</code>.</div>
+
+<table>
+  <thead><tr>
+    <th style="width:120px">Source</th><th style="width:78px">Kind</th>
+    <th style="width:250px">Content anatomy today</th>
+    <th style="width:250px">Facts already in the record</th>
+    <th>Verdict</th>
+  </tr></thead>
+  <tbody>
+    <tr>
+      <td><b>Calendar</b></td><td><code>.event</code></td>
+      <td><b>ScheduleCard</b> — a clock glyph and <code>content</code>, verbatim: <code>"14:00 · Studio"</code></td>
+      <td><code>capturedAt</code> = start · <code>summary</code> = notes (drawn) · <code>enrichedText</code> = attendees (never drawn) · <code>externalLink</code> = video link (<b>no reader</b>) · <code>tags</code> = calendar name</td>
+      <td><span class="bad">worst</span> — the one string is printed twice (card + "When" row) while the join link, the guest list and the end time are unreachable or absent</td>
+    </tr>
+    <tr>
+      <td><b>Cal.com</b> · <b>Calendly</b></td><td><code>.event</code></td>
+      <td>same ScheduleCard</td>
+      <td>meeting URL on <code>externalLink</code>, same dead end</td>
+      <td><span class="bad">bad</span> — a booking is not a calendar entry; the person who booked it is the fact</td>
+    </tr>
+    <tr>
+      <td><b>Apple Health</b> · <b>Strava</b></td><td><code>.event</code></td>
+      <td>ScheduleCard showing the literal word <code>"Workout"</code> / <code>"Activity"</code></td>
+      <td>Distance and duration were computed at ingest, formatted into the <b>title</b> (<code>"Run · 5.2 km"</code>) and discarded</td>
+      <td><span class="bad">worst</span> — a run rendered as a calendar entry, with the clock glyph a calendar owns</td>
+    </tr>
+    <tr>
+      <td><b>Reminders</b> · <b>Todoist</b></td><td><code>.reminder</code></td>
+      <td><b>ReminderDueRow</b> — clock, formatted date, "Overdue" when past</td>
+      <td><code>dueAt</code> (real Date) · <code>tags</code> = list + priority · <code>summary</code> = notes</td>
+      <td><span class="mid">closest</span> — the only Life kind that kept a structured date, and it shows</td>
+    </tr>
+    <tr>
+      <td><b>Gmail</b> · <b>iCloud Mail</b></td><td><code>.mail</code></td>
+      <td><b>MailContentView</b> — initial circle + sender name, and nothing else</td>
+      <td><code>authorHandle</code> = sender. <b>No body is stored</b> — <code>content</code> is literally <code>"From &lt;sender&gt;"</code></td>
+      <td><span class="mid">honest, empty</span> — correct not to invent a body, but the sheet is a chip on a blank page</td>
+    </tr>
+    <tr>
+      <td><b>Files</b> · <b>Dropbox</b></td><td><code>.file</code></td>
+      <td><b>FilePictureContent</b> when bytes exist, else <b>FileChip</b> — doc glyph, the filename, an extension pill</td>
+      <td><code>previewImageData</code> · <code>content</code> = a text preview or a size</td>
+      <td><span class="mid">thin</span> — the chip restates the title verbatim under the title</td>
+    </tr>
+    <tr>
+      <td><b>Photos</b></td><td><code>.screenshot</code></td>
+      <td><b>ScreenshotContent</b> — the picture, with Zoom / Photos discs</td>
+      <td><code>ocrTopics</code>, <code>ocrAt</code>, stored thumbnail</td>
+      <td><span class="ok">already an anatomy</span> — the one Life sheet that leads with its subject. Its <b>placeholder</b> state is undesigned (F5)</td>
+    </tr>
+    <tr>
+      <td><b>Contacts</b></td><td><code>.contact</code></td>
+      <td><b>none.</b> Falls to <code>default:</code> → <code>content</code> as prose: <code>"Designer · Studio · ana@studio.com"</code></td>
+      <td>Job title, org, email, phone — all joined into that one string at ingest by <code>ContactsIngest.line(for:)</code></td>
+      <td><span class="bad">worst</span> — a database row printed as a sentence, and not one character of it is tappable</td>
+    </tr>
+    <tr>
+      <td><b>HomeKit</b></td><td><code>.accessory</code></td>
+      <td><b>none.</b> Same <code>default:</code> branch: <code>"Lock · Front door · Reachable"</code></td>
+      <td>Category, room, reachability — joined by <code>HomeKitIngest.line(for:home:)</code>. This row is <b>live state</b>, refreshed every foreground</td>
+      <td><span class="bad">worst</span> — live state rendered as static grey prose</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="find">
+  <h3><span>F1</span>An event's clock is a string, not a date.</h3>
+  <p><code>ScheduleIngest.eventLine</code> formats <code>startDate</code> at ingest; <code>dueAt</code> is left nil <b>by documented convention</b> (an event carries its start as <code>capturedAt</code>). The <b>end date is never stored anywhere</b>. So the sheet cannot say "Thursday", cannot say "in 2 hours", and cannot draw a duration — it can only reprint <code>"14:00 · Studio"</code>. Which it then does twice: once in ScheduleCard, once as the spec table's "When" row.</p>
+</div>
+<div class="find">
+  <h3><span>F2</span>The join link is stored and no screen reads it.</h3>
+  <p><code>enrich(_:with: EKEvent)</code> writes <code>event.url</code> to <code>externalLink</code> and its own doc says so: "nothing DRAWS this field today". The one reader is <code>episodeVerb</code>, scoped by source to Podcasts and RSS. The single most useful thing about a meeting sheet, ninety seconds before the meeting, is already in the record.</p>
+</div>
+<div class="find">
+  <h3><span>F3</span>Contacts and HomeKit have no anatomy at all.</h3>
+  <p>Neither <code>.contact</code> nor <code>.accessory</code> has a case in <code>kindSwitch</code>. Both land in <code>default:</code>, which renders <code>content</code> as grey prose. HomeKit's row is live state the bridge re-reads every foreground — and it renders identically whether the lock is reachable or not.</p>
+</div>
+
+<h2><span class="n">2</span>Three anatomies</h2>
+<div class="sub">Life splits three ways by <b>nature</b>, not by kind: <b>a moment with a clock</b> (events, bookings, workouts, reminders), <b>something that persists</b> (contacts, accessories), <b>something that arrived</b> (mail, files). One anatomy each covers all thirteen remaining seats.</div>
+
+<div class="row">
+
+  <!-- ============ A ============ -->
+  <div class="option">
+    <div class="otitle">A · The stub — a moment with a clock</div>
+    <div class="odesc">Ticket anatomy. The <b>date block and the time range</b> lead, with the relative distance said out loud. Below the perforation, the facts as <b>rows with their own glyphs</b> — place, calendar, guests — then the join link as a real control. Replaces the "When" spec row entirely.</div>
+    <div class="phone"><div class="screen">
+      <div class="grab"></div>
+      <div class="pad">
+
+        <div class="brow">
+          <div class="mark cal">12</div>
+          <div>
+            <div class="browline"><b>Calendar</b> · Event</div>
+          </div>
+        </div>
+
+        <h4 class="tt">Design review</h4>
+
+        <div class="stub">
+          <div class="top">
+            <div class="daycube"><s>Thu</s><b>14</b><i>Aug</i></div>
+            <div class="whenblock">
+              <div class="big">14:00 – 15:00</div>
+              <div class="rel">in 2 hours · 1 hr</div>
+            </div>
+          </div>
+          <div class="perf"></div>
+          <div class="rows">
+            <div class="srow"><div class="g">◉</div><div class="v">Studio, 2nd floor</div><div class="chev">›</div></div>
+            <div class="srow"><div class="g">▦</div><div class="v">Work <em>calendar</em></div></div>
+            <div class="faces">
+              <div class="stack"><div class="f f1">A</div><div class="f f2">S</div><div class="f f3">M</div></div>
+              <span><b>Ana, Sam</b> and 2 others</span>
+            </div>
+          </div>
+          <div class="join">⌁ &nbsp;Join the call</div>
+        </div>
+
+        <div class="notes">Bring the <b>revised joinery drawings</b> — we're deciding the handle finish and I'd rather not carry it another week.</div>
+
+        <div class="dial">
+          <div class="disc"><div>📅</div><s>Calendar</s></div>
+          <div class="disc"><div>⧉</div><s>Copy</s></div>
+          <div class="disc"><div>↗</div><s>Share</s></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- ============ B ============ -->
+  <div class="option">
+    <div class="otitle">B · The card — something that persists</div>
+    <div class="odesc">Contacts and HomeKit are not records of a moment; they are <b>the thing itself, as it stands right now</b>. Identity leads, then the joined string is <b>un-joined into rows you can act on</b>. HomeKit's reachability becomes a live pill instead of the word "Reachable" in grey prose.</div>
+    <div class="phone"><div class="screen">
+      <div class="grab"></div>
+      <div class="pad">
+
+        <div class="brow">
+          <div class="mark ct">☺</div>
+          <div><div class="browline"><b>Contacts</b> · Person</div></div>
+        </div>
+
+        <div class="idcard">
+          <div class="bigface f1">AK</div>
+          <div class="nm">Ana Kovač</div>
+          <div class="rl">Designer · Studio</div>
+        </div>
+
+        <div class="actrow">
+          <div class="act"><i>✆</i><s>Call</s></div>
+          <div class="act"><i>✉</i><s>Mail</s></div>
+          <div class="act"><i>◌</i><s>Message</s></div>
+        </div>
+
+        <div class="fieldlist">
+          <div class="fld"><div class="l">mobile</div><div class="v">+385 91 234 5678</div><div class="chev">›</div></div>
+          <div class="fld"><div class="l">email</div><div class="v">ana@studio.com</div><div class="chev">›</div></div>
+          <div class="fld"><div class="l">work</div><div class="v plain">Studio</div></div>
+        </div>
+
+        <div class="sect">Things with Ana in them <i>9</i></div>
+        <div class="today" style="padding:0">
+          <div class="fld"><div class="l" style="width:26px">▦</div><div class="v plain" style="font-size:13.5px">Design review · Thu 14:00</div></div>
+          <div class="fld"><div class="l" style="width:26px">✉</div><div class="v plain" style="font-size:13.5px">Re: handle finish</div></div>
+          <div class="fld"><div class="l" style="width:26px">◫</div><div class="v plain" style="font-size:13.5px">joinery-rev3.pdf</div></div>
+        </div>
+
+        <div class="dial">
+          <div class="disc"><div>☺</div><s>Contacts</s></div>
+          <div class="disc"><div>⧉</div><s>Copy</s></div>
+          <div class="disc"><div>↗</div><s>Share</s></div>
+        </div>
+      </div>
+      <div class="cont"></div>
+    </div></div>
+  </div>
+
+  <!-- ============ C ============ -->
+  <div class="option">
+    <div class="otitle">C · The delivery — something that arrived</div>
+    <div class="odesc">Mail and files are <b>envelopes</b>: who sent it, when it got here, what's inside. Mail carries no body and must not pretend to — so the anatomy states the sender properly and then <b>hands off</b>, rather than filling the space. A file leads with its contents, never its filename twice.</div>
+    <div class="phone"><div class="screen sh">
+      <div class="grab"></div>
+      <div class="pad">
+
+        <div class="brow">
+          <div class="mark ml">✉</div>
+          <div><div class="browline"><b>Gmail</b> · Mail · 3h ago</div></div>
+        </div>
+
+        <h4 class="tt sm">Re: handle finish — brushed vs satin</h4>
+
+        <div class="env">
+          <div class="from">
+            <div class="initial f1">A</div>
+            <div class="t">
+              <b>Ana Kovač</b>
+              <s>ana@studio.com</s>
+            </div>
+          </div>
+          <div class="to">Arrived <b>3h ago</b> · Casberi holds the header, not the message. <b>Open in Mail</b> to read it.</div>
+        </div>
+
+        <div class="join ghost" style="margin:14px 0 0">✉ &nbsp;Open in Mail</div>
+
+        <div class="sect">Also here</div>
+        <div class="today" style="padding:0">
+          <div class="fld"><div class="l" style="width:26px">◫</div><div class="v plain" style="font-size:13.5px">joinery-rev3.pdf · Files</div></div>
+          <div class="fld"><div class="l" style="width:26px">▦</div><div class="v plain" style="font-size:13.5px">Design review · Thu 14:00</div></div>
+        </div>
+
+        <div class="dial">
+          <div class="disc"><div>☺</div><s>Ana</s></div>
+          <div class="disc"><div>⧉</div><s>Copy</s></div>
+          <div class="disc"><div>↗</div><s>Share</s></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+</div>
+
+<h2><span class="n">3</span>The fourth anatomy — the frame, for the things made of pixels</h2>
+<div class="sub">Three Life sources land pictures: <b>Photos</b> (screenshots), and <b>Files</b> / <b>Dropbox</b> (a folder of images — the room's own treemap reads their OCR). Photos already has most of this anatomy, which is why it was called out of scope above — but grounding it turned up a defect, and the placeholder state has never been designed at all.</div>
+
+<div class="find">
+  <h3><span>F4</span>A Files image draws its picture and nothing can open it.</h3>
+  <p>The framed, tappable treatment is gated on <code>thing.kind == .screenshot</code> (<code>ThingSheetView.framedShot</code>), and so is the <b>Zoom</b> verb. <code>FilePictureContent</code> is a bare <code>Image</code> — no frame, no tap, no disc. So a screenshot and a folder-picked PNG are the same pixels in the same field and behave differently: one opens full screen, one is a dead picture you can only stare at. This is <b>§275's bug wearing new clothes</b> — the "Open in Photos" disc that did nothing, invisibly — except here the picture is already in hand, so there is nothing to gate on.</p>
+</div>
+
+<div class="row">
+
+  <div class="option">
+    <div class="otitle">Photos · a screenshot <span style="color:var(--faint);font-weight:500">(the frame, today + the fact)</span></div>
+    <div class="odesc">Closest to right in the whole category: the <b>picture is the identity, the title is the caption</b>, the frame floats in the source's wash, and a tap opens it full screen. The addition is <code>ScreenshotFacts</code> — the date the OCR text names, as a row you can hand to Calendar.</div>
+    <div class="phone"><div class="screen sh">
+      <div class="grab"></div>
+      <div class="pad">
+        <div class="brow">
+          <div class="mark" style="background:linear-gradient(135deg,#f9ce34,#ee2a7b 50%,#6228d7);color:#fff">◲</div>
+          <div><div class="browline"><b>Photos</b> · Screenshot · 2d ago</div></div>
+        </div>
+
+        <div class="frame">
+          <div class="shot">
+            <div class="bar">9:41</div>
+            <div class="body">
+              <div class="tick">✓</div>
+              <h5>Appointment confirmed</h5>
+              <div class="lede">Dentalni centar Marković</div>
+              <div class="line"><b>when</b><span>Tue 19 Aug, 09:40</span></div>
+              <div class="line"><b>with</b><span>Dr. Marković</span></div>
+              <div class="line" style="box-shadow:none"><b>where</b><span>Ilica 42, Zagreb</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="taphint">Tap to open full screen</div>
+
+        <div class="capt">Appointment confirmed — Dr. Marković</div>
+
+        <div class="factrow">
+          <div class="g">▦</div>
+          <div class="t"><b>Tue 19 Aug, 09:40</b><s>Copies the words, opens Calendar on that day</s></div>
+          <div class="chev">›</div>
+        </div>
+
+        <div class="topics">
+          <s>Marković</s><s>Ilica</s><s>appointment</s>
+        </div>
+
+        <div class="dial">
+          <div class="disc"><div>⤢</div><s>Zoom</s></div>
+          <div class="disc"><div>◲</div><s>Photos</s></div>
+          <div class="disc"><div>↗</div><s>Share</s></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <div class="option">
+    <div class="otitle">Files · an image <span style="color:var(--faint);font-weight:500">(the same frame — F4's fix)</span></div>
+    <div class="odesc">Identical anatomy, and it should be: the bytes are on the model already (<code>previewImageData</code>), which is <b>stronger</b> than a screenshot's case — no grant, no PHAsset, nothing to fetch. Widening <code>framedShot</code> and the Zoom verb from <code>.screenshot</code> to "the record has pixels" is the whole change.</div>
+    <div class="phone"><div class="screen sh">
+      <div class="grab"></div>
+      <div class="pad">
+        <div class="brow">
+          <div class="mark fl">◫</div>
+          <div><div class="browline"><b>Files</b> · Image · yesterday</div></div>
+        </div>
+
+        <div class="frame">
+          <div class="draw">
+            <svg viewBox="0 0 260 128" xmlns="http://www.w3.org/2000/svg">
+              <g fill="none" stroke="#3d3a33" stroke-width="1.1">
+                <rect x="14" y="18" width="232" height="86"/>
+                <line x1="14" y1="62" x2="246" y2="62"/>
+                <rect x="22" y="26" width="48" height="30"/>
+                <rect x="78" y="26" width="48" height="30"/>
+                <rect x="134" y="26" width="104" height="30"/>
+                <rect x="22" y="70" width="72" height="26"/>
+                <rect x="102" y="70" width="40" height="26"/>
+                <rect x="150" y="70" width="88" height="26"/>
+                <line x1="46" y1="26" x2="46" y2="56" stroke-dasharray="3 3"/>
+                <line x1="102" y1="26" x2="102" y2="56" stroke-dasharray="3 3"/>
+              </g>
+              <g stroke="#8c1d1d" stroke-width="1" fill="none">
+                <line x1="14" y1="112" x2="246" y2="112"/>
+                <line x1="14" y1="108" x2="14" y2="116"/>
+                <line x1="246" y1="108" x2="246" y2="116"/>
+              </g>
+              <text x="122" y="124" font-size="7" fill="#8c1d1d" font-family="monospace">3480</text>
+              <text x="18" y="13" font-size="7" fill="#6b6558" font-family="monospace">ELEVATION A — 1:20</text>
+            </svg>
+          </div>
+        </div>
+        <div class="taphint">Tap to open full screen</div>
+
+        <div class="capt">Kitchen elevation A</div>
+
+        <div class="filecard" style="margin-top:14px">
+          <div class="meta" style="padding:11px 14px">
+            <div class="t"><b>elevation-a.png</b><s>1.1 MB · ~/Studio/Kitchen</s></div>
+            <div class="ext">PNG</div>
+          </div>
+        </div>
+
+        <div class="topics">
+          <s>ELEVATION A</s><s>1:20</s>
+        </div>
+
+        <div class="dial">
+          <div class="disc"><div>⤢</div><s>Zoom</s></div>
+          <div class="disc"><div>◫</div><s>Open</s></div>
+          <div class="disc"><div>↗</div><s>Share</s></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <div class="option">
+    <div class="otitle">Photos · the picture is gone <span style="color:var(--faint);font-weight:500">(the state nobody drew)</span></div>
+    <div class="odesc">Access denied, limited-out, or the original deleted from the library and no healed copy stored. Today this is a grey box reading <b>"In your photos"</b> — which is a <b>claim</b>, and often a false one. The frame should say which of the two it is, because one is fixable in a tap and the other is final.</div>
+    <div class="phone"><div class="screen sh">
+      <div class="grab"></div>
+      <div class="pad">
+        <div class="brow">
+          <div class="mark" style="background:rgba(255,255,255,.1);color:var(--muted)">◲</div>
+          <div><div class="browline"><b>Photos</b> · Screenshot · Jan 2025</div></div>
+        </div>
+
+        <div class="placeholder">
+          <i>◲</i>
+          <div>Casberi can't see this one</div>
+        </div>
+
+        <div class="capt">Appointment confirmed — Dr. Marković</div>
+
+        <div class="state off" style="margin-top:14px">
+          <div class="dot red"></div>
+          <div class="t"><b>Photos access is limited</b><s>The words below were read before access changed</s></div>
+        </div>
+
+        <div class="join ghost" style="margin:14px 0 0">⚙ &nbsp;Open Settings</div>
+
+        <div class="notes" style="font-size:13.5px">Appointment confirmed · Dentalni centar Marković · Tue 19 Aug, 09:40 · Dr. Marković · Ilica 42, Zagreb</div>
+
+        <div class="taphint bad" style="margin-top:14px">No Zoom disc — there is nothing to open</div>
+      </div>
+    </div></div>
+  </div>
+
+</div>
+
+<div class="find">
+  <h3><span>F5</span>"In your photos" is a claim, and sometimes a false one.</h3>
+  <p>The placeholder fires for four different reasons — access denied, access limited and this shot not shared, the original deleted from the library, or a demo row with no asset — and says the same sentence for all of them. When the original is gone the sentence is simply <b>wrong</b>: it is not in your photos. The OCR text is still on the record and still searchable, which is the honest thing to lead with in that state, and the two recoverable causes are one tap from fixed.</p>
+</div>
+
+<h2><span class="n">4</span>The same anatomies, the other Life shapes</h2>
+<div class="sub">Each of these is one of the three above with different rows — not a fourth anatomy. The workout is the strongest argument for the whole pass: it is <b>filed as an event</b> today and draws a calendar clock beside the word "Workout".</div>
+
+<div class="row">
+
+  <div class="option">
+    <div class="otitle">Apple Health · a run <span style="color:var(--faint);font-weight:500">(stub, metric rows)</span></div>
+    <div class="odesc">Same stub, but the middle band is <b>what the run actually was</b>. Distance and duration are computed at ingest today and thrown into the title — this draws them instead.</div>
+    <div class="phone"><div class="screen sh">
+      <div class="grab"></div>
+      <div class="pad">
+        <div class="brow">
+          <div class="mark hl">♥</div>
+          <div><div class="browline"><b>Apple Health</b> · Workout</div></div>
+        </div>
+        <h4 class="tt">Morning run</h4>
+
+        <div class="metrics">
+          <div class="metric"><b>5.2</b><s>KM</s></div>
+          <div class="metric"><b>26:14</b><s>DURATION</s></div>
+          <div class="metric"><b>5:03</b><s>PACE / KM</s></div>
+        </div>
+        <div class="spark">
+          <svg viewBox="0 0 300 44" preserveAspectRatio="none">
+            <polyline points="0,30 30,24 60,27 90,18 120,22 150,14 180,20 210,12 240,17 270,9 300,13"
+                      fill="none" stroke="#ff375f" stroke-width="2" stroke-linejoin="round"/>
+          </svg>
+        </div>
+
+        <div class="stub" style="margin-top:16px">
+          <div class="rows" style="padding:6px 16px 12px">
+            <div class="srow"><div class="g">◷</div><div class="v">Today, 07:12 <em>· 3h ago</em></div></div>
+            <div class="srow"><div class="g">⌂</div><div class="v">Written by <em>Apple Watch</em></div></div>
+          </div>
+        </div>
+
+        <div class="dial">
+          <div class="disc"><div>♥</div><s>Health</s></div>
+          <div class="disc"><div>↗</div><s>Share</s></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <div class="option">
+    <div class="otitle">HomeKit · a lock <span style="color:var(--faint);font-weight:500">(card, live state)</span></div>
+    <div class="odesc">The card, with the identity slot holding an <b>accessory</b> instead of a face and the joined string un-joined. The state pill is the whole point: this row is re-read every foreground, and today that costs the sheet nothing.</div>
+    <div class="phone"><div class="screen sh">
+      <div class="grab"></div>
+      <div class="pad">
+        <div class="brow">
+          <div class="mark hk">⌂</div>
+          <div><div class="browline"><b>HomeKit</b> · Accessory</div></div>
+        </div>
+
+        <div class="idcard">
+          <div class="bigface" style="background:rgba(255,159,10,.16);color:var(--home);font-size:31px">🔒</div>
+          <div class="nm">Front door</div>
+          <div class="rl">Lock · Entryway</div>
+        </div>
+
+        <div class="state">
+          <div class="dot"></div>
+          <div class="t"><b>Reachable</b><s>Checked just now · Home app controls it, Casberi only reads</s></div>
+        </div>
+
+        <div class="fieldlist">
+          <div class="fld"><div class="l">room</div><div class="v plain">Entryway</div></div>
+          <div class="fld"><div class="l">home</div><div class="v plain">Hoyt Street</div></div>
+          <div class="fld"><div class="l">type</div><div class="v plain">Lock</div></div>
+        </div>
+
+        <div class="dial">
+          <div class="disc"><div>⌂</div><s>Home</s></div>
+          <div class="disc"><div>⧉</div><s>Copy</s></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <div class="option">
+    <div class="otitle">Todoist · overdue <span style="color:var(--faint);font-weight:500">(stub, one row)</span></div>
+    <div class="odesc">The closest thing to right today, tightened. The date block carries the <b>overdue tone</b> rather than a red word appended to a formatted date, and the list becomes a row like any other fact.</div>
+    <div class="phone"><div class="screen sh">
+      <div class="grab"></div>
+      <div class="pad">
+        <div class="brow">
+          <div class="mark rem">☑</div>
+          <div><div class="browline"><b>Todoist</b> · Reminder</div></div>
+        </div>
+        <h4 class="tt">Renew the passport</h4>
+
+        <div class="stub">
+          <div class="top">
+            <div class="daycube" style="background:rgba(255,90,95,.12)">
+              <s style="color:var(--down)">Fri</s><b style="color:var(--down)">31</b><i>Jul</i>
+            </div>
+            <div class="whenblock">
+              <div class="big" style="color:var(--down)">Overdue</div>
+              <div class="rel past">12 days ago</div>
+            </div>
+          </div>
+          <div class="perf"></div>
+          <div class="rows">
+            <div class="srow"><div class="g">▤</div><div class="v">Inbox <em>list</em></div></div>
+            <div class="srow"><div class="g">!</div><div class="v">Priority 1</div></div>
+          </div>
+        </div>
+
+        <div class="notes">Photo booth on Ilica, the one that does the biometric crop. Bring the <b>old passport</b> and the residence card.</div>
+
+        <div class="dial">
+          <div class="disc"><div>☑</div><s>Todoist</s></div>
+          <div class="disc"><div>⧉</div><s>Copy</s></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <div class="option">
+    <div class="otitle">Files · a document <span style="color:var(--faint);font-weight:500">(delivery)</span></div>
+    <div class="odesc">The chip's whole content is the filename, which is already the title. The delivery anatomy leads with <b>what's inside</b> — the stored thumbnail where there is one — and files the name, size and folder underneath it.</div>
+    <div class="phone"><div class="screen sh">
+      <div class="grab"></div>
+      <div class="pad">
+        <div class="brow">
+          <div class="mark fl">◫</div>
+          <div><div class="browline"><b>Files</b> · File · yesterday</div></div>
+        </div>
+        <h4 class="tt sm">joinery-rev3.pdf</h4>
+
+        <div class="filecard">
+          <div class="prev">◫</div>
+          <div class="meta">
+            <div class="t"><b>joinery-rev3.pdf</b><s>2.4 MB · ~/Studio/Kitchen</s></div>
+            <div class="ext">PDF</div>
+          </div>
+        </div>
+
+        <div class="notes" style="font-size:13.5px">Elevations at 1:20, handle detail on sheet 4. Rev 3 moves the appliance garage 60mm left.</div>
+
+        <div class="dial">
+          <div class="disc"><div>◫</div><s>Open</s></div>
+          <div class="disc"><div>↗</div><s>Share</s></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+</div>
+
+<h2><span class="n">5</span>What this costs</h2>
+
+<div class="callout">
+  <b>Free — the facts are already in the record, nothing new is stored:</b>
+  <ul>
+    <li>Event <b>start</b> as a real Date — it's <code>capturedAt</code>, which is why the relative line ("in 2 hours") and the day block need no migration.</li>
+    <li>Event <b>notes</b> (<code>summary</code>, already drawn), <b>attendees</b> (<code>enrichedText</code>), <b>calendar name</b> (<code>tags</code>), <b>join link</b> (<code>externalLink</code> — needs a reader, not a field).</li>
+    <li>Reminder <b>due</b>, <b>list</b>, <b>priority</b>, <b>notes</b> — all structured already.</li>
+    <li>Mail <b>sender</b> (<code>authorHandle</code>); file <b>thumbnail</b> (<code>previewImageData</code>).</li>
+  </ul>
+</div>
+
+<div class="callout">
+  <b>Needs the string un-joined at ingest — a bridge change, still no new schema:</b>
+  <ul>
+    <li><b>Contacts:</b> <code>line(for:)</code> joins job title, org, email and phone into <code>content</code>. Un-joining them is what makes the rows tappable — and it is the difference between a card and a sentence.</li>
+    <li><b>HomeKit:</b> <code>line(for:home:)</code> joins category, room and reachability. Reachability is the one the pill needs.</li>
+    <li><b>Health / Strava:</b> distance and duration are computed and formatted into the title. The metric band needs them as numbers.</li>
+    <li><b>Calendar:</b> the <b>location</b> is inside <code>eventLine</code>'s <code>·</code>-joined string.</li>
+  </ul>
+</div>
+
+<div class="callout">
+  <b>Genuinely absent — one field, and the only one:</b>
+  <ul>
+    <li>An event's <b>end date</b> is never stored. Without it the stub can show a start and no duration — <code>"14:00"</code> rather than <code>"14:00 – 15:00 · 1 hr"</code>. Additive optional, no migration (SwiftData infers it), but it <b>is</b> a CloudKit Production deploy before it syncs.</li>
+  </ul>
+  Everything else above ships without touching the schema.</div>
+
+<div class="callout">
+  <b>One thing in the mock that is not grounded, and should not ship as drawn.</b> The run's <b>pace line</b> is decorative — no per-kilometre split, heart-rate series or route is stored on a Health row, and nothing in <code>HealthIngest</code> reads one. Drawing a curve there would be the §83 fake status in the one place a reader would believe it instantly. Either it comes out, or it becomes a real read (<code>HKWorkout</code> hands over splits in the same fetch) — a separate decision, not a rendering one. <b>Distance, duration and pace are real</b> and already computed at ingest; the metric band stands on its own without the curve.</div>
+
+<div class="callout">
+  <b>And one deletion.</b> The spec table's "When" and "Due" rows exist only because the content anatomy was too thin to carry the fact. All three anatomies above absorb them — so those rows come out, the same way "From" already stood down when the reception block started saying it better in words (prd §363).
+</div>
+
+<h2><span class="n">6</span>What shipped — and the four places it differs from this page</h2>
+<div class="sub">Built 2026-08-12 as <b>prd §365</b>. Everything above is in, plus the demo rows that make it visible. Four deliberate departures from these mockups, each worth keeping:</div>
+
+<div class="callout">
+  <b>1 · The perforation is gone.</b> The stub's dashed edge was the strongest part of the ticket metaphor and it cannot ship: build brief §8 bans hairlines with <b>zero exceptions</b>, and a dashed rule is a line. The halves separate the way everything else in this app separates — a slightly stronger fill on the clock band than on the facts below it.
+</div>
+
+<div class="callout">
+  <b>2 · The pace curve is gone</b>, as flagged above. Distance, duration and pace are real; the sparkline was not, and nothing in <code>HealthIngest</code> fetches a split series. The metric band ships without it.
+</div>
+
+<div class="callout">
+  <b>3 · An all-day event needed a signal of its own</b> — found while wiring the stub, invisible in every mockup here. EventKit reports an all-day event's start as <b>midnight</b>, so a stub reading only the dates draws "00:00" and states a time nobody meant; <code>endAt</code> can't rescue it either, because EventKit's end is the last instant of the final day and "00:00 – 23:59" is the same wrong answer wearing two clocks. So all-day is an explicit <code>ThingFact.Action</code>. The forward-compat behaviour is what makes that shape safe: a build predating the case decodes it to <code>.none</code> and draws an ordinary row reading "When · All day", which is still true.
+</div>
+
+<div class="callout">
+  <b>4 · <code>ContactsIngest</code> never healed</b>, which would have made the whole Contacts half a no-op. It skipped any ref it already had — correct while a row's entire content was one string built at first sight, wrong the moment there was anything to keep current. Left alone, the un-joined facts would have reached only contacts added from that day on, in the one corpus where almost every row is already there.
+</div>
+
+<div class="callout">
+  <b>Verified:</b> build green; CloudKit schema audit (60 properties), SwiftData liveness audit, demo self-test (74 seats, 23 feed shapes), design-motion, setup-copy, keychain, receipts-coverage, network-reach, catalog-sync and the pure-logic self-tests all pass. <b>Not run:</b> the simulator sweep — and <code>verify.sh</code> as a whole currently stops at the PRD index audit on <code>§366</code>/<code>§367</code> citations belonging to two other sessions working in this repo at the same time, not to this change.
+</div>
+
+</div>

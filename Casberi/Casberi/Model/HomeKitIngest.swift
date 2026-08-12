@@ -56,14 +56,22 @@ enum HomeKitIngest {
                 let ref = "homekit:accessory:\(accessory.uniqueIdentifier.uuidString)"
                 seen.insert(ref)
                 let line = self.line(for: accessory, home: home)
+                let encoded = self.facts(for: accessory, home: home,
+                                         multiHome: homes.count > 1).map(\.encoded)
                 if let existing = bySourceRef[ref] {
-                    if existing.content != line {
-                        existing.content = line
-                        updated.append(existing)
-                    }
+                    // Either half can move on its own: reachability flips
+                    // without the room changing, and a rename changes the
+                    // sentence without changing the state. `moved` rather than
+                    // an append per half, so a pass that changed both doesn't
+                    // hand the same accessory to Spotlight twice.
+                    var moved = false
+                    if existing.content != line { existing.content = line; moved = true }
+                    if existing.facts != encoded { existing.facts = encoded; moved = true }
+                    if moved { updated.append(existing) }
                 } else {
                     let thing = Thing(kind: .accessory, title: accessory.name,
                                       content: line, source: "HomeKit", sourceRef: ref)
+                    thing.facts = encoded
                     context.insert(thing)
                     landed.append(thing)
                 }
@@ -93,10 +101,42 @@ enum HomeKitIngest {
         return landed.count
     }
 
+    /// What an accessory is and where, un-joined (2026-08-12, prd §365).
+    ///
+    /// REACHABILITY LEADS and is a `.state` fact, not a word in a sentence.
+    /// This row is the only one in the corpus that is pure LIVE STATE — the
+    /// ingest re-reads it on every foreground and reconciles it — and until now
+    /// the sheet rendered a reachable lock and an unreachable one identically,
+    /// in the same grey prose. Which of the two it is happens to be the entire
+    /// reason to open the sheet.
+    ///
+    /// The home's name is included only when there is more than one. For the
+    /// overwhelmingly common single-home setup it is a row that says the same
+    /// thing on every accessory you own.
+    private static func facts(for accessory: HMAccessory, home: HMHome,
+                              multiHome: Bool) -> [ThingFact] {
+        var out: [ThingFact] = [
+            ThingFact("Checked just now",
+                      accessory.isReachable ? "Reachable" : "Unreachable", .state),
+            ThingFact("Type", category(for: accessory)),
+        ]
+        if let room = accessory.room?.name, !room.isEmpty {
+            out.append(ThingFact("Room", room))
+        }
+        if multiHome, !home.name.isEmpty {
+            out.append(ThingFact("Home", home.name))
+        }
+        return out
+    }
+
     /// Room + a plain-English category — reachability instead of a decoded
     /// characteristic value (a lock's actual locked/unlocked state needs
     /// per-service-type reads this app can't verify without a paired
     /// accessory or the HomeKit Accessory Simulator; honest v1 stops here).
+    ///
+    /// Kept beside `facts` above rather than retired by it: this is the string
+    /// `Retriever.rank` scores and Spotlight indexes, so an accessory stays
+    /// findable by its room. The facts are what the sheet draws.
     private static func line(for accessory: HMAccessory, home: HMHome) -> String {
         var parts: [String] = [category(for: accessory)]
         if let room = accessory.room?.name { parts.append(room) }

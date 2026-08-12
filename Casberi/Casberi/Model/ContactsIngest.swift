@@ -67,7 +67,20 @@ enum ContactsIngest {
             let name = [contact.givenName, contact.familyName]
                 .filter { !$0.isEmpty }.joined(separator: " ")
             let display = name.isEmpty ? contact.organizationName : name
-            guard !display.isEmpty, existing[ref] == nil else { continue }
+            guard !display.isEmpty else { continue }
+            // HEAL, then land (2026-08-12, prd §365). This pass used to skip a
+            // ref it already had, which was right while the row's whole content
+            // was one string built at first sight — and wrong the moment there
+            // was anything to keep current. Without it the un-joined facts
+            // would reach only contacts added from today on, and an address
+            // book is the one corpus where almost every row is already here.
+            // The whole book is enumerated every call, so this costs nothing
+            // extra to read; the guards below keep it from dirtying a row that
+            // hasn't changed.
+            if let thing = existing[ref] {
+                heal(thing, with: contact, display: display)
+                continue
+            }
             let thing = Thing(
                 kind: .contact,
                 title: display,
@@ -75,6 +88,7 @@ enum ContactsIngest {
                 source: "Contacts",
                 sourceRef: ref
             )
+            thing.facts = facts(for: contact).map(\.encoded)
             context.insert(thing)
             landed.append(thing)
         }
@@ -90,6 +104,80 @@ enum ContactsIngest {
         if !removedIDs.isEmpty { SpotlightIndex.remove(ids: removedIDs) }
         if !landed.isEmpty || !removedIDs.isEmpty { context.saveHonestly() }
         return landed.count
+    }
+
+    /// Keep an already-landed contact current. Every write is guarded, because
+    /// this runs for every contact in the book on every FOREGROUND
+    /// (`BridgeRefresh` calls `refresh`, not just connect) — an address book of
+    /// 3,000 rows must not mark 3,000 objects dirty to change nothing. A
+    /// dirtied object is a SwiftData save, a CloudKit export and a re-render of
+    /// every view observing it; that guard is the expensive one, and it is why
+    /// this compares before it assigns rather than assigning unconditionally.
+    ///
+    /// WHERE THE COST ACTUALLY IS, for whoever profiles the foreground sweep
+    /// next: this pass is `@MainActor` and rebuilding the two strings per
+    /// contact is real work it did not do before — but `enumerateContacts`
+    /// above already fetches and decodes every contact in the book, with phone
+    /// numbers and emails among its keys, on the same actor, every foreground.
+    /// The enumeration dominates by a wide margin. Making the heal conditional
+    /// would save the smaller half and reintroduce the bug it exists to fix: a
+    /// second phone number added to an existing contact changes neither the
+    /// title nor `line(for:)` (which takes only the FIRST way to reach
+    /// somebody), so there is no cheap token that means "nothing moved".
+    ///
+    /// `content` is refreshed alongside the facts and NOT retired: it is what
+    /// `Retriever.rank` scores, so a contact stays findable by the email
+    /// address in it. The facts are the structured mirror the sheet draws, not
+    /// a replacement for the searchable text.
+    private static func heal(_ thing: Thing, with contact: CNContact, display: String) {
+        if thing.title != display { thing.title = display }
+        let line = line(for: contact)
+        if thing.content != line { thing.content = line }
+        let encoded = facts(for: contact).map(\.encoded)
+        if thing.facts != encoded { thing.facts = encoded }
+    }
+
+    /// The ways to reach somebody, un-joined (2026-08-12, prd §365) — the parts
+    /// `line(for:)` below fuses into one sentence with a `·` between them.
+    ///
+    /// ORDER IS DELIBERATE and `facts`' own contract says a reader must keep
+    /// it: phones before emails, because a phone is the thing you reach for
+    /// when it matters, and Apple's own order within each — a contact's first
+    /// phone is the one they put first.
+    ///
+    /// LABELS ARE THE PERSON'S OWN. `CNLabeledValue` stores them as
+    /// `_$!<Mobile>!$_`, so they go through Apple's localized formatter and
+    /// come back as the word the person actually sees in Contacts, in their own
+    /// language. A contact with no label gets the field's own name rather than
+    /// an empty column — `ThingFact` refuses a labelless fact.
+    ///
+    /// Capped at three of each. A sheet is not the address book, and somebody
+    /// with eleven emails does not want ten rows before the thing under them.
+    private static func facts(for c: CNContact) -> [ThingFact] {
+        var out: [ThingFact] = []
+        if !c.jobTitle.isEmpty { out.append(ThingFact("Role", c.jobTitle)) }
+        if !c.organizationName.isEmpty { out.append(ThingFact("Company", c.organizationName)) }
+        for phone in c.phoneNumbers.prefix(3) {
+            let number = phone.value.stringValue
+            guard !number.isEmpty else { continue }
+            out.append(ThingFact(label(phone.label, fallback: "Phone"), number, .call))
+        }
+        for entry in c.emailAddresses.prefix(3) {
+            let address = entry.value as String
+            guard !address.isEmpty else { continue }
+            out.append(ThingFact(label(entry.label, fallback: "Email"), address, .mail))
+        }
+        return out
+    }
+
+    /// Apple's own word for a label, sentence-cased. Their formatter returns
+    /// "mobile"/"work"; the design law bans caps eyebrows, so this raises only
+    /// the first character and never uppercases the whole thing.
+    private static func label(_ raw: String?, fallback: String) -> String {
+        guard let raw, !raw.isEmpty else { return fallback }
+        let localized = CNLabeledValue<NSString>.localizedString(forLabel: raw)
+        guard !localized.isEmpty else { return fallback }
+        return localized.prefix(1).uppercased() + localized.dropFirst()
     }
 
     /// A one-line subtitle — job/org, then the first way to reach them.

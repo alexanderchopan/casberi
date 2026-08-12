@@ -294,6 +294,33 @@ enum FilesIngest {
         return imageExtensions.contains((rel as NSString).pathExtension.lowercased())
     }
 
+    /// A stored-picture thing from EITHER folder bridge (2026-08-12, prd §365)
+    /// — the gate the thing sheet's framed layout and its Zoom verb read, so a
+    /// folder-picked PNG opens full screen the way a screenshot always has.
+    ///
+    /// It fixes a defect that was invisible from outside: the framed, tappable
+    /// treatment and the Zoom disc were both gated on `kind == .screenshot`,
+    /// so a Files image drew its pixels and nothing could open them — the same
+    /// bytes, in the same field, behaving differently depending on which bridge
+    /// landed them.
+    ///
+    /// STRING TEST ONLY, and that constraint is load-bearing rather than
+    /// stylistic. `VerbDerivation.verbs(for:)` runs off the main actor inside
+    /// GenUI composition and is called per row by the feed's swipe and
+    /// context-menu builders (prd §260); reading `previewImageData` there would
+    /// fault an externalStorage blob per row. `sourceRef` is a plain string
+    /// column, which is exactly why the screenshot side already gates on it.
+    ///
+    /// Dropbox shares the extension table but not the prefix — its refs are
+    /// `dropbox:<path_lower>`, already lowercased by the API.
+    static func isStoredPicture(_ sourceRef: String?) -> Bool {
+        guard let ref = sourceRef else { return false }
+        if isImageRef(ref) { return true }
+        guard ref.hasPrefix("dropbox:") else { return false }
+        let path = String(ref.dropFirst("dropbox:".count))
+        return imageExtensions.contains((path as NSString).pathExtension.lowercased())
+    }
+
     /// A filename the person never typed — a camera/screenshot naming
     /// convention. The retitle heal only ever overwrites a title that still
     /// IS the raw filename and matches one of these (never a name someone in
