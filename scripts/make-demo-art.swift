@@ -1,5 +1,10 @@
 #!/usr/bin/env swift
-// make-demo-product-art.swift — the demo's product stills (2026-08-11).
+// make-demo-art.swift — the demo's own bundled art (2026-08-11).
+//
+// Two families: product stills, and the faces of the demo's cast. Both exist
+// for the same reason — the demo's job is to show what the app REALLY looks
+// like to someone seeing it for the first time, and a room drawing brand
+// glyphs where the real one draws photographs is not that.
 //
 // WHY THIS EXISTS. The demo's Shopify and Deals rows are `.product` things,
 // and `ThingContent`'s `.product` case leads with `previewImageURL` — the
@@ -18,8 +23,9 @@
 // is what a placeholder should look like when the honest alternative is a
 // photograph nobody took. Nothing here claims to be a photo of the product.
 //
-// Usage:  swift scripts/make-demo-product-art.swift
+// Usage:  swift scripts/make-demo-art.swift
 // Writes: Casberi/Casberi/Assets.xcassets/sample-product-N.imageset/art.jpg
+//     and Casberi/Casberi/Assets.xcassets/sample-avatar-<handle>.imageset/art.jpg
 //
 // JPEG, not PNG, and matching the bundled screenshot beside it: a smooth
 // gradient is the worst case for PNG (3.1MB across eight at 900px, all of it
@@ -143,3 +149,82 @@ for (i, p) in products.enumerated() {
     print("sample-product-\(i + 1)  \(p.note)")
 }
 print("wrote \(wrote) product stills")
+
+
+// MARK: - Faces
+//
+// The demo's cast, as profile pictures. Farcaster and Bluesky both hydrate a
+// real `avatarURL` from their APIs, so a real person's social rooms are full
+// of faces — the rail under the room strip is literally called a face rail.
+// Seeded without them, every account and every row fell back to the source's
+// brand glyph: three identical purple Farcaster marks where a real account
+// list shows three different people.
+//
+// A monogram on a coloured ground rather than an invented portrait: it is
+// what a real account without a photo actually looks like, it is obviously
+// not a photograph of a person who doesn't exist, and it stays legible at the
+// 28pt the rail draws it.
+
+struct Face {
+    let handle: String
+    let initial: String
+    let top: NSColor
+    let bottom: NSColor
+}
+
+let faces: [Face] = [
+    .init(handle: "you",  initial: "Y", top: rgb(0x4F7CF7), bottom: rgb(0x2B4FBF)),
+    .init(handle: "mia",  initial: "M", top: rgb(0xE0658F), bottom: rgb(0xA83B67)),
+    .init(handle: "sam",  initial: "S", top: rgb(0x35B08A), bottom: rgb(0x1E7A5E)),
+    .init(handle: "nils", initial: "N", top: rgb(0xE08A46), bottom: rgb(0xB05F22)),
+    .init(handle: "uma",  initial: "U", top: rgb(0x8B6BE0), bottom: rgb(0x5C41A8)),
+]
+
+let faceSide: CGFloat = 320
+var faceCount = 0
+for f in faces {
+    let canvas = NSImage(size: NSSize(width: faceSide, height: faceSide))
+    canvas.lockFocus()
+    NSGradient(starting: f.top, ending: f.bottom)?
+        .draw(in: NSRect(x: 0, y: 0, width: faceSide, height: faceSide), angle: -90)
+
+    let para = NSMutableParagraphStyle()
+    para.alignment = .center
+    let attrs: [NSAttributedString.Key: Any] = [
+        .font: NSFont.systemFont(ofSize: faceSide * 0.44, weight: .semibold),
+        .foregroundColor: NSColor.white.withAlphaComponent(0.92),
+        .paragraphStyle: para,
+    ]
+    let text = f.initial as NSString
+    let size = text.size(withAttributes: attrs)
+    text.draw(in: NSRect(x: 0, y: (faceSide - size.height) / 2,
+                         width: faceSide, height: size.height), withAttributes: attrs)
+    canvas.unlockFocus()
+
+    guard let tiff = canvas.tiffRepresentation,
+          let rep = NSBitmapImageRep(data: tiff),
+          let jpg = rep.representation(using: .jpeg, properties: [.compressionFactor: 0.9]) else {
+        FileHandle.standardError.write("encode failed for \(f.handle)\n".data(using: .utf8)!)
+        continue
+    }
+    let dir = root.appendingPathComponent("sample-avatar-\(f.handle).imageset")
+    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    try? jpg.write(to: dir.appendingPathComponent("art.jpg"))
+    try? """
+    {
+      "images" : [
+        {
+          "filename" : "art.jpg",
+          "idiom" : "universal"
+        }
+      ],
+      "info" : {
+        "author" : "xcode",
+        "version" : 1
+      }
+    }
+    """.write(to: dir.appendingPathComponent("Contents.json"), atomically: true, encoding: .utf8)
+    faceCount += 1
+    print("sample-avatar-\(f.handle)")
+}
+print("wrote \(faceCount) faces")
