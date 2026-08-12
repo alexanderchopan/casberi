@@ -46,6 +46,50 @@ final class PredictionPulse {
         return pulses[ref]
     }
 
+    // MARK: - Demo
+
+    /// The demo's watched markets (2026-08-12). `PredictionRow` is mounted
+    /// ONLY when a pulse exists — its own doc says so — and nothing ever
+    /// seeded one, so all four demo markets fell back to a plain band row: a
+    /// title and a timestamp, no odds, no delta. The exact shape of the
+    /// Tokens gap found the same day, in the room next door, and invisible
+    /// to every check because the ROWS were all present and correct.
+    ///
+    /// One of the four is SETTLED on purpose. The receipt ("You followed at
+    /// 42%") is the payoff of the whole feature (prd §235) and it reports
+    /// attention, never winnings — a first-time opener should see that this
+    /// app closes the loop, which a room of four open markets can't show.
+    func seedDemo() {
+        let seeds: [(ref: String, probability: Double, since: Double?,
+                     resolved: Bool, yesWon: Bool?)] = [
+            ("demo:kalshi:0", 0.72, 0.06, false, nil),
+            ("demo:kalshi:1", 0.61, 0.19, true, true),
+            ("demo:polymarket:0", 0.27, 0.08, false, nil),
+            ("demo:polymarket:1", 0.70, 0.09, false, nil),
+        ]
+        let stamp = Date.now
+        for s in seeds {
+            pulses[s.ref] = Pulse(probability: s.probability, resolved: s.resolved,
+                                  yesWon: s.yesWon, sinceWatched: s.since,
+                                  thin: false, fetchedAt: stamp)
+        }
+    }
+
+    /// Re-seeds when the process restarted with the demo already active —
+    /// `pulses` is in-memory only, so a relaunch empties it and
+    /// `DemoMode.begin`'s one-time call never runs again. Mirrors
+    /// `TokenPulse.reseedDemoIfNeeded`, and is called from the same gate.
+    func reseedDemoIfNeeded() {
+        guard pulses["demo:kalshi:0"] == nil else { return }
+        seedDemo()
+    }
+
+    /// Reverses `seedDemo` — so a real Kalshi/Polymarket watch afterward
+    /// starts from a genuinely empty cache rather than fabricated odds.
+    func teardownDemo(_ refs: [String]) {
+        for ref in refs { pulses.removeValue(forKey: ref) }
+    }
+
     /// Refetches odds for watched markets whose pulse is stale (15 min,
     /// matching TokenPulse's cadence). Exits instantly when nothing is
     /// watched. BridgeRefresh fires this each foreground.

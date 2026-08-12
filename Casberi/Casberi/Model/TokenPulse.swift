@@ -70,7 +70,8 @@ final class TokenPulse {
     /// on which control you looked at. The wiggle stays OFF the two endpoints
     /// for exactly this reason: perturbing them would reopen the same gap by
     /// a smaller amount instead of closing it.
-    func seedDemo(_ tokens: [(ref: String, price: Double, change24h: Double, phase: Double)]) {
+    func seedDemo(_ tokens: [(ref: String, price: Double, change24h: Double,
+                              marketCap: Double?, phase: Double)]) {
         var seeded: [String: Pulse] = [:]
         for t in tokens {
             let start = t.price / (1 + t.change24h)
@@ -80,7 +81,7 @@ final class TokenPulse {
                 return trend * (1 + 0.01 * sin(Double(i) * 0.9 + t.phase))
             }
             seeded[t.ref] = Pulse(closes: closes, change24h: t.change24h, price: t.price,
-                                  marketCap: nil, fdv: nil, fetchedAt: .now)
+                                  marketCap: t.marketCap, fdv: nil, fetchedAt: .now)
         }
         pulses.merge(seeded) { _, new in new }
     }
@@ -88,10 +89,12 @@ final class TokenPulse {
     /// `demoTokens` in one place — `seedDemo` above takes raw tuples (kept
     /// generic/testable), everything else calls through here so the per-token
     /// direction/phase constants are spelled exactly once.
-    private static func demoTokens() -> [(ref: String, price: Double, change24h: Double, phase: Double)] {
+    private static func demoTokens() -> [(ref: String, price: Double, change24h: Double,
+                                          marketCap: Double?, phase: Double)] {
         DemoSeedAll.tokenSeeds.enumerated().map { i, t in
             (ref: "demo:token:\(i)", price: t.price,
-             change24h: [0.023, -0.011, 0.084][i % 3], phase: Double(i) * 2.1)
+             change24h: [0.023, -0.011, 0.084][i % 3], marketCap: t.marketCap,
+             phase: Double(i) * 2.1)
         }
     }
 

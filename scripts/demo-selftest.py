@@ -129,7 +129,41 @@ DEMO_FILES = {
     # its demo seed in its own file rather than in DemoSeedAll (2026-08-11),
     # since `SafeRoomSource` reads only this file's `private` state.
     "SafeBridge": CASBERI / "Model/SafeBridge.swift",
+    # Read-only references for check J — the per-view reads (2026-08-12).
+    "KalshiWatch": CASBERI / "Model/KalshiWatch.swift",
+    "PolymarketBridge": CASBERI / "Model/PolymarketBridge.swift",
+    "ThingContent": CASBERI / "Screens/ThingContent.swift",
 }
+
+# Check J — the reads a VIEW makes on its own, which `BridgeRefresh`'s demo
+# gate structurally cannot see.
+#
+# `DemoMode` gates the foreground sweep and `Notifications.submit`, and for
+# months that read as "THE DEMO REACHES NOTHING". It wasn't true: a
+# `.task(id:)` hanging off a view is not part of any sweep, so opening the
+# Kalshi or Polymarket room went straight out to the exchange, and opening a
+# thing sheet let `LPMetadataProvider` scrape whoever the row linked to.
+#
+# Three costs, and only the first is obvious: the demo made live requests on
+# behalf of somebody who has not decided to keep the app; the content depended
+# on the network, so offline the room drew "couldn't reach the order book" as
+# a first impression; and what came back was whatever the exchange was running
+# that day, which is how the demo ended up showing markets that had closed
+# three months earlier, in warning orange.
+#
+# Each entry is `(file key, function signature fragment)` — a function that a
+# view can reach while the demo is active AND that issues a network verb, so
+# it must decide on `DemoMode` before it does. Adding a per-view read means
+# adding a row here; that is the point. Comment-stripped, because two of these
+# files DOCUMENT the rule by naming the gate in prose (the Obsidian/Cursor
+# lesson), so a guard grepping raw source would pass on the explanation alone.
+DEMO_GATED_READS = [
+    ("KalshiWatch", "static func book("),
+    ("KalshiWatch", "static func categories("),
+    ("PolymarketBridge", "static func search("),
+    ("PolymarketBridge", "static func categories("),
+    ("ThingContent", "private func fetch("),
+]
 
 # `DemoSeedAll.seatTable` names that legitimately have no ENTRY in
 # `BridgeCatalog.offers` at all — a conscious ruling per name, the
@@ -275,6 +309,35 @@ def check_b_reaches_nothing(files_text):
         clean = strip_comments(files_text[file_key])
         hit = next((v for v in NETWORK_VERBS if v in clean), None)
         check(f"B · {file_key} reaches nothing", hit, None)
+
+
+def check_j_per_view_reads_gated(files_text):
+    """Check J — every per-view read decides on `DemoMode` before reaching
+    out. See `DEMO_GATED_READS` for why this can't ride on check B."""
+    for file_key, signature in DEMO_GATED_READS:
+        clean = strip_comments(files_text[file_key])
+        start = clean.find(signature)
+        if start < 0:
+            check(f"J · {file_key} {signature.strip()} found", False, True)
+            continue
+        # Bracket-match the function body so the gate has to be INSIDE it —
+        # a `DemoMode` mention elsewhere in a 600-line bridge is not a gate
+        # on this read, and matching the whole file would pass on a
+        # neighbour's guard (the per-identifier tightening the liveness
+        # audit already learned).
+        brace = clean.find("{", start)
+        depth, end = 0, len(clean)
+        for i in range(brace, len(clean)):
+            if clean[i] == "{":
+                depth += 1
+            elif clean[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    end = i
+                    break
+        body = clean[brace:end]
+        check(f"J · {file_key}.{signature.strip()} gates on DemoMode",
+              "DemoMode" in body, True)
 
 
 def check_c_no_source_collision(files_text):
@@ -695,6 +758,7 @@ def run_checks(files_text):
     before = len(failures)
     check_a_release_reachable(files_text)
     check_b_reaches_nothing(files_text)
+    check_j_per_view_reads_gated(files_text)
     check_c_no_source_collision(files_text)
     check_d_seat_names_are_real(files_text)
     check_e_seat_names_have_rows(files_text)
@@ -750,6 +814,27 @@ def self_test():
         # nothing (caught on this check's own first run).
         lambda f: f.__setitem__("DemoMode", f["DemoMode"] + "\nlet x = URLSession.shared\n"),
         check_b_reaches_nothing, True)
+
+    ok &= verify_fixture(
+        "an ungated per-view read is caught",
+        # Removes the gate from `KalshiWatch.book` the way a refactor would —
+        # the room still compiles, still renders, and quietly reaches the
+        # exchange again. NOT a comment edit: `strip_comments` erases those,
+        # and a fixture hidden behind the defense it tests proves nothing
+        # (check B's own lesson, one check over).
+        lambda f: f.__setitem__("KalshiWatch", f["KalshiWatch"].replace(
+            "if DemoMode.isActive {", "if false {", 1)),
+        check_j_per_view_reads_gated, True)
+
+    ok &= verify_fixture(
+        "a per-view read whose gate moved OUT of the function is caught",
+        # The subtler half: `DemoMode` still appears in the file, just not in
+        # this function's body. A whole-file grep would pass; the
+        # bracket-matched body check is what catches it.
+        lambda f: f.__setitem__("PolymarketBridge", f["PolymarketBridge"].replace(
+            "if DemoMode.isActive {\n            return Array(PredictionDemoBook.polymarket",
+            "if false {\n            return Array(PredictionDemoBook.polymarket", 1)),
+        check_j_per_view_reads_gated, True)
 
     ok &= verify_fixture(
         "a re-seeded source in infra() is caught",
@@ -862,7 +947,7 @@ def main():
             files_text["AppStoreConnectBridge"])
         shape_count = len(shape_result[0]) if shape_result else 0
         print(f"✓ demo guard: {len(DEMO_FACING_FUNCS)} functions Release-reachable, "
-              "no network verbs, no source collisions, "
+              "no network verbs, no ungated per-view reads, no source collisions, "
               f"{len(seat_names or [])} catalog seats real and seeded, "
               f"{shape_count} feed shapes covered")
         sys.exit(0)

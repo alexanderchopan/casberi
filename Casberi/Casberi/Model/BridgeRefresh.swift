@@ -90,6 +90,7 @@ enum BridgeRefresh {
         // wallet address, and it's a no-op once already seeded this process.
         if DemoMode.isActive {
             TokenPulse.shared.reseedDemoIfNeeded()
+            PredictionPulse.shared.reseedDemoIfNeeded()
             return
         }
         if !force, let last = lastSweep, Date.now.timeIntervalSince(last) < minSweepInterval { return }

@@ -186,10 +186,25 @@ enum SocialSheetSource {
         var d = FetchDescriptor<Thing>(
             predicate: #Predicate { $0.source == source && $0.authorHandle == clean },
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
-        d.fetchLimit = limit
+        // Over-fetch, because the filter below runs in Swift: a `#Predicate`
+        // comparing an OPTIONAL `socialContext` against a literal is exactly
+        // the shape that reads fine and behaves surprisingly, and this is a
+        // small bounded fetch either way.
+        d.fetchLimit = limit + 3
+        // A FOLLOW NOTICE IS NOT SOMETHING THEY POSTED (2026-08-12).
+        // `SocialInbound.landFollower` stamps `authorHandle` on the follower
+        // row, so the very row this card is opened FROM came back as one of
+        // "What they post" — the person's own shelf led with "Sam (@sam)
+        // started following you", and at `limit` 3 it pushed a real post off
+        // the end. Not a demo artifact: it reproduces for any followed
+        // account whose posts are also in the corpus.
+        //
         // `.live` at the boundary (corollary 4): this array is handed onward to
         // a view, so the guarantee is made here rather than promised to every
         // reader downstream.
         return ((try? context.fetch(d)) ?? []).live
+            .filter { $0.socialContext != "follow" }
+            .prefix(limit)
+            .map { $0 }
     }
 }

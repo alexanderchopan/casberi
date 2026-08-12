@@ -146,6 +146,22 @@ enum TwitchIngest {
         Set(UserDefaults.standard.stringArray(forKey: liveKey) ?? [])
     }
 
+    /// The demo's live stream (2026-08-12). `FeedScreen.isLive` gates BOTH
+    /// the `LiveStreamHero` card and `liveFirst`'s float-to-top on this set,
+    /// so with it empty the demo's Twitch room could never draw the hero —
+    /// while its own row said "Live now" in the title. The §83 fake-status
+    /// rule inverted: the words claimed a state the chrome couldn't show.
+    ///
+    /// State-owning bridge, so it owns its own seed/forget pair
+    /// (`demo-selftest.py` check H).
+    static func seedDemo(_ refs: [String]) {
+        UserDefaults.standard.set(refs, forKey: liveKey)
+    }
+
+    static func forgetDemo() {
+        UserDefaults.standard.removeObject(forKey: liveKey)
+    }
+
     /// Followed channels that are LIVE right now — each stream lands once
     /// (the ref is the stream id, which changes per broadcast).
     @MainActor

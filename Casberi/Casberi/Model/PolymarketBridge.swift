@@ -84,6 +84,11 @@ enum PolymarketBridge {
     /// labels, case-insensitive — combines with a query the way Kalshi's
     /// does.
     static func search(_ query: String, limit: Int = 8, category: String? = nil) async -> [Resolved] {
+        // Seeded in the demo — see `PredictionDemoBook` and `KalshiWatch.book`.
+        if DemoMode.isActive {
+            return Array(PredictionDemoBook.polymarket(query: query, category: category)
+                            .prefix(limit))
+        }
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         let path: String
         if q.isEmpty {
@@ -138,6 +143,7 @@ enum PolymarketBridge {
     ]
 
     static func categories() async -> [String] {
+        if DemoMode.isActive { return PredictionDemoBook.polymarketCategories() }
         guard let root = await IngestSupport.getJSON(
             "https://gamma-api.polymarket.com/events?active=true&closed=false&order=volume24hr&ascending=false&limit=40")
             as? [[String: Any]]

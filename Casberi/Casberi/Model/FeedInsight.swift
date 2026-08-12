@@ -412,9 +412,17 @@ enum FeedInsight {
     /// The declared mood of the posters on your tickers — Stocktwits stores each
     /// author's own Bullish / Bearish call as a tag. Neutral is the rest. It's
     /// the crowd's stated stance, never a prediction of ours.
+    ///
+    /// POSTS ONLY (2026-08-12). `StockWatch.watch` lands the watch itself as
+    /// a `.link` thing in this same room — the watch IS the thing, no
+    /// separate store — and counting those tallied each watched TICKER as a
+    /// neutral POST: the subtitle over-reported ("11 posts" for 8), and every
+    /// watch dragged the neutral segment up, so a room whose posters were
+    /// evenly split read as mostly undecided. Wrong in the real app for
+    /// anyone with a watchlist, and invisible until the demo grew one.
     private static func stocktwitsMood(_ things: [Thing]) -> Distribution? {
         var bull = 0, bear = 0, neutral = 0
-        for thing in things {
+        for thing in things where thing.kind == .chat {
             if thing.tags.contains("Bullish") { bull += 1 }
             else if thing.tags.contains("Bearish") { bear += 1 }
             else { neutral += 1 }

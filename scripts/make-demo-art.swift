@@ -244,3 +244,209 @@ for f in faces {
     print("sample-avatar-\(f.handle)")
 }
 print("wrote \(faceCount) faces")
+
+
+// MARK: - Coin marks
+//
+// `GeckoTrending` stamps each trending token's own logo onto
+// `previewImageURL`, and `TokenWatch` does the same for a watched one — so a
+// real Markets room is a column of round token faces. The demo's trending
+// rows carried no image at all and fell back to the source glyph, which drew
+// the same green GeckoTerminal mark three times.
+//
+// Monograms, not anybody's logo — the same call the publication marks above
+// make, and for the same reason: the field holds a remote image we have no
+// right to reproduce, so the stand-in should read as a stand-in. The demo's
+// three WATCHED tokens (ETH/SOL/DEGEN) are different: those resolve to the
+// app's own shipped `brand-*` assets, which it already draws elsewhere.
+
+struct Coin {
+    let symbol: String
+    let initial: String
+    let top: NSColor
+    let bottom: NSColor
+}
+
+let coins: [Coin] = [
+    .init(symbol: "aero", initial: "A", top: rgb(0x5B8DEF), bottom: rgb(0x2E5BC0)),
+    .init(symbol: "brett", initial: "B", top: rgb(0x4CC2C0), bottom: rgb(0x1F8A88)),
+    .init(symbol: "jup", initial: "J", top: rgb(0xC97BE8), bottom: rgb(0x8A3FB0)),
+]
+
+let coinSide: CGFloat = 320
+var coinCount = 0
+for c in coins {
+    let canvas = NSImage(size: NSSize(width: coinSide, height: coinSide))
+    canvas.lockFocus()
+    NSGradient(starting: c.top, ending: c.bottom)?
+        .draw(in: NSRect(x: 0, y: 0, width: coinSide, height: coinSide), angle: -90)
+    let style = NSMutableParagraphStyle()
+    style.alignment = .center
+    let attrs: [NSAttributedString.Key: Any] = [
+        .font: NSFont.systemFont(ofSize: coinSide * 0.46, weight: .semibold),
+        .foregroundColor: NSColor.white.withAlphaComponent(0.94),
+        .paragraphStyle: style,
+    ]
+    let text = c.initial as NSString
+    let size = text.size(withAttributes: attrs)
+    text.draw(in: NSRect(x: 0, y: (coinSide - size.height) / 2,
+                         width: coinSide, height: size.height), withAttributes: attrs)
+    canvas.unlockFocus()
+
+    guard let tiff = canvas.tiffRepresentation,
+          let rep = NSBitmapImageRep(data: tiff),
+          let jpg = rep.representation(using: .jpeg, properties: [.compressionFactor: 0.9]) else {
+        FileHandle.standardError.write("encode failed for \(c.symbol)\n".data(using: .utf8)!)
+        continue
+    }
+    let dir = root.appendingPathComponent("sample-coin-\(c.symbol).imageset")
+    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    try? jpg.write(to: dir.appendingPathComponent("art.jpg"))
+    try? """
+    {
+      "images" : [
+        {
+          "filename" : "art.jpg",
+          "idiom" : "universal"
+        }
+      ],
+      "info" : {
+        "author" : "xcode",
+        "version" : 1
+      }
+    }
+    """.write(to: dir.appendingPathComponent("Contents.json"), atomically: true, encoding: .utf8)
+    coinCount += 1
+    print("sample-coin-\(c.symbol)")
+}
+print("wrote \(coinCount) coin marks")
+
+
+// MARK: - Stream frames
+//
+// `TwitchBridge` stamps a FRAME OF THE STREAM onto `previewImageURL`, and the
+// demo's Twitch room leads with `LiveStreamHero` — a full-width card that
+// draws that image behind the stream's title. Pointed at the four bundled
+// sample photos, the hero showed a football stadium under the words
+// "Software and Game Development": the §83 failure in picture form, the same
+// one the product stills above were generated to fix, on the largest image in
+// the room.
+
+let frames: [Still] = [
+    .init(symbols: ["laptopcomputer", "desktopcomputer"], top: rgb(0x2B2350),
+          bottom: rgb(0x171232), ink: rgb(0xB9A9FF), note: "nova — dev stream"),
+    .init(symbols: ["gamecontroller.fill", "gamecontroller"], top: rgb(0x1F3A46),
+          bottom: rgb(0x122630), ink: rgb(0x7FD9E8), note: "kestrel — Factorio"),
+]
+
+let frameW: CGFloat = 640, frameH: CGFloat = 360
+var frameCount = 0
+for (i, f) in frames.enumerated() {
+    let canvas = NSImage(size: NSSize(width: frameW, height: frameH))
+    canvas.lockFocus()
+    NSGradient(starting: f.top, ending: f.bottom)?
+        .draw(in: NSRect(x: 0, y: 0, width: frameW, height: frameH), angle: -90)
+    if let glyph = symbol(f.symbols, size: frameH * 0.34, color: f.ink) {
+        let s = glyph.size
+        glyph.draw(in: NSRect(x: (frameW - s.width) / 2, y: (frameH - s.height) / 2,
+                              width: s.width, height: s.height))
+    }
+    canvas.unlockFocus()
+    guard let tiff = canvas.tiffRepresentation,
+          let rep = NSBitmapImageRep(data: tiff),
+          let jpg = rep.representation(using: .jpeg, properties: [.compressionFactor: 0.86]) else {
+        FileHandle.standardError.write("encode failed for \(f.note)\n".data(using: .utf8)!)
+        continue
+    }
+    let dir = root.appendingPathComponent("sample-frame-\(i + 1).imageset")
+    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    try? jpg.write(to: dir.appendingPathComponent("art.jpg"))
+    try? """
+    {
+      "images" : [
+        {
+          "filename" : "art.jpg",
+          "idiom" : "universal"
+        }
+      ],
+      "info" : {
+        "author" : "xcode",
+        "version" : 1
+      }
+    }
+    """.write(to: dir.appendingPathComponent("Contents.json"), atomically: true, encoding: .utf8)
+    frameCount += 1
+    print("sample-frame-\(i + 1)  \(f.note)")
+}
+print("wrote \(frameCount) stream frames")
+
+
+// MARK: - Book covers
+//
+// A Readwise highlight lands with its BOOK COVER on `previewImageURL` (the
+// `cover` field of the book it came from), so a real reading room is a column
+// of spines. The demo had none, and its rows fell back to the source glyph —
+// six identical marks for three different books.
+//
+// Keyed by BOOK, not by row: the demo quotes each book more than once, and a
+// second cover for the same title would say they were different books.
+// Abstract grounds rather than any real jacket — the same call the coin and
+// publication marks make about art we have no right to reproduce.
+
+struct Cover {
+    let key: String            // matches DemoSeedAll's own cover(for:) key
+    let top: NSColor
+    let bottom: NSColor
+    let ink: NSColor
+    let symbols: [String]
+}
+
+let covers: [Cover] = [
+    .init(key: "state", top: rgb(0xC5502F), bottom: rgb(0x7E2C16),
+          ink: rgb(0xF6E2CE), symbols: ["map.fill", "map"]),
+    .init(key: "timeless", top: rgb(0x2E6B5E), bottom: rgb(0x17403A),
+          ink: rgb(0xDCEFE6), symbols: ["square.grid.3x3.fill", "square.grid.3x3"]),
+    .init(key: "systems", top: rgb(0x36508F), bottom: rgb(0x1C2C57),
+          ink: rgb(0xDDE6FA), symbols: ["arrow.triangle.2.circlepath", "circle.fill"]),
+]
+
+let coverW: CGFloat = 400, coverH: CGFloat = 600
+var coverCount = 0
+for c in covers {
+    let canvas = NSImage(size: NSSize(width: coverW, height: coverH))
+    canvas.lockFocus()
+    NSGradient(starting: c.top, ending: c.bottom)?
+        .draw(in: NSRect(x: 0, y: 0, width: coverW, height: coverH), angle: -90)
+    if let glyph = symbol(c.symbols, size: coverW * 0.36, color: c.ink.withAlphaComponent(0.9)) {
+        let s = glyph.size
+        glyph.draw(in: NSRect(x: (coverW - s.width) / 2, y: (coverH - s.height) / 2,
+                              width: s.width, height: s.height))
+    }
+    canvas.unlockFocus()
+    guard let tiff = canvas.tiffRepresentation,
+          let rep = NSBitmapImageRep(data: tiff),
+          let jpg = rep.representation(using: .jpeg, properties: [.compressionFactor: 0.86]) else {
+        FileHandle.standardError.write("encode failed for \(c.key)\n".data(using: .utf8)!)
+        continue
+    }
+    let dir = root.appendingPathComponent("sample-cover-\(c.key).imageset")
+    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    try? jpg.write(to: dir.appendingPathComponent("art.jpg"))
+    try? """
+    {
+      "images" : [
+        {
+          "filename" : "art.jpg",
+          "idiom" : "universal"
+        }
+      ],
+      "info" : {
+        "author" : "xcode",
+        "version" : 1
+      }
+    }
+    """.write(to: dir.appendingPathComponent("Contents.json"), atomically: true, encoding: .utf8)
+    coverCount += 1
+    print("sample-cover-\(c.key)")
+}
+print("wrote \(coverCount) book covers")

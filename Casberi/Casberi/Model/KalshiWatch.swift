@@ -234,6 +234,13 @@ enum KalshiWatch {
 
     /// `search`, plus the reason an empty result is empty.
     static func book(_ query: String, limit: Int = 8, category: String? = nil) async -> Book {
+        // The demo browses a seeded book (2026-08-12). This is a per-view
+        // `.task(id:)` read, so `BridgeRefresh`'s demo gate never saw it and
+        // the demo reached the exchange — see `PredictionDemoBook`.
+        if DemoMode.isActive {
+            return Book(rows: Array(PredictionDemoBook.kalshi(query: query, category: category)
+                                        .prefix(limit)), outcome: .rows)
+        }
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let cat = category?.lowercased()
         let (events, _) = await cache.get()
@@ -478,6 +485,7 @@ enum KalshiWatch {
     /// category present only in the untouched tail won't appear — an honest
     /// side effect of the same bound the browse list already lives with.
     static func categories() async -> [String] {
+        if DemoMode.isActive { return PredictionDemoBook.kalshiCategories() }
         let (events, _) = await cache.get()
         var counts: [String: Int] = [:]
         for event in events {
