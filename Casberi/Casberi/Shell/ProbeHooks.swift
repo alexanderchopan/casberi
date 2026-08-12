@@ -3112,6 +3112,34 @@ enum ProbeHooks {
                 NSLog("embedRaceProbe: SURVIVED asks=%d embeds=%d lanes=4", asks, embeds)
             }
         },
+        // `-receiptProbe "<title prefix>"` — the money receipt a thing sheet
+        // would draw (prd §363), line by line, plus what the app would say
+        // about it. Keyed on a title prefix for the `-openThing` reason: a UUID
+        // changes every install, a title doesn't.
+        //
+        // One NSLog per line (the `-todayProbe` truncation lesson), and it
+        // exists because a PLAIN-looking receipt has six causes and only two are
+        // bugs — see `MoneyReceiptSource.probeLines`. The `stamped …` line is
+        // the decisive one: a receipt leading with its title rather than a
+        // figure is correct when the bridge stamped no amount, and a defect when
+        // it did.
+        Hook(key: "receiptProbe") { prefix, context in
+            Task { @MainActor in
+                var descriptor = FetchDescriptor<Thing>(
+                    sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+                descriptor.fetchLimit = 500
+                let all = (try? context.fetch(descriptor)) ?? []
+                guard let subject = all.first(where: {
+                    $0.isLive && $0.title.lowercased().hasPrefix(prefix.lowercased())
+                }) else {
+                    NSLog("receiptProbe: no thing whose title starts with %@", prefix)
+                    return
+                }
+                for line in MoneyReceiptSource.probeLines(for: subject, in: context) {
+                    NSLog("[Casberi] %@", line)
+                }
+            }
+        },
         // `-relatedProbe "<title prefix>"` — what the thing sheet would show
         // UNDER a thing: the earlier copy of it (deterministic), then its
         // semantic neighbours. Keyed on a title prefix, not a UUID, for the
