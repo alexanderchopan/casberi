@@ -44,9 +44,22 @@ step "Info.plist strings audit"
 "$ROOT/scripts/infoplist-strings-audit.py" || fail "a purpose string resolves to its own key name — see the output above"
 print -P "%F{green}✓ infoplist strings audit%f"
 
+# Keeps the product ledger navigable (docs/prd.md). Static, no build. Every
+# rule in this repo is cited by `§N` from CLAUDE.md, the audits and ~200 places
+# in the source, and until 2026-08-11 nothing checked that one of them resolved:
+# twenty-two numbers named two unrelated rulings each, two sections shipped as
+# H1, and a whole day of work (nine commits on 2026-08-08) landed with no entry
+# at all while forty-eight comments cited its number. All of it invisible — a
+# wrong `§N` in a comment builds, ships, and answers confidently and wrongly.
+step "PRD index audit"
+"$ROOT/scripts/prd-index-audit.py" --self-test >/dev/null \
+  || fail "the PRD index audit's own self-test failed — the check is broken, not the ledger"
+"$ROOT/scripts/prd-index-audit.py" || fail "the PRD ledger's numbering or citations drifted — see the output above"
+print -P "%F{green}✓ prd index audit%f"
+
 # Keeps the connect pages from regrowing their wall of text (prd §315).
 # Static, no build. It is mechanical for the reason every rule in this file is
-# mechanical: the copy has now been de-walled twice from memory (§218's "one
+# mechanical: the copy has now been de-walled twice from memory (§218b's "one
 # gray sentence", §314's single footer) and grown back both times — by §315
 # Instagram's connect page ran ~145 words before you had done anything, and the
 # fact that mattered most ("this is an import, nothing syncs") was last on the

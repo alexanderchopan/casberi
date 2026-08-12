@@ -364,7 +364,7 @@ struct MorphMatch: ViewModifier {
     }
 }
 
-/// The whisper's title, travelling (2026-07-22, prd §167a) — pairs the
+/// The whisper's title, travelling (2026-07-22, prd §167 item 1) — pairs the
 /// capsule's `Text(title)` with the masthead's own title in `Composer`
 /// (`briefTitleText`), same id, same shared namespace. POSITION only, not
 /// size/frame: the two texts are genuinely different type scales

@@ -1573,7 +1573,7 @@ struct RootShell: View {
                             // typed "how's my day", and a kept pill all reach
                             // the one composer.
                             chrome.askRequest = TodayBrief.title
-                            // The title travels (prd §167a): set BEFORE
+                            // The title travels (prd §167 item 1): set BEFORE
                             // `composerOpen` flips, so the proxy title below
                             // mounts in the SAME `composerOpen`-driven
                             // transaction as the capsule vanishing — the real
@@ -1700,7 +1700,7 @@ struct RootShell: View {
                     agentSurface
                 }
                 .transition(.opacity)
-                // The proxy title (prd §167a) — mounts in this SAME
+                // The proxy title (prd §167 item 1) — mounts in this SAME
                 // transaction as the surface itself appearing, so its
                 // `matchedGeometryEffect` has a live pair to interpolate from
                 // (the whisper capsule's own title, vanishing in the SAME

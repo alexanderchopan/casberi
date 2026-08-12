@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Connect-page copy audit (prd §315, 2026-08-06).
 
-WHY THIS EXISTS. The connect screens have now been de-walled TWICE. §218 ruled
+WHY THIS EXISTS. The connect screens have now been de-walled TWICE. §218b ruled
 "one gray sentence per screen"; by §314 the import screens carried five notes
 totalling ~130 words. §314 gave the family a staged shape and a single footer;
 by §315 that footer was up to a lede plus four bullets plus a detail paragraph,

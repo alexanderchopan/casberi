@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Casberi face-ramp audit — every round identity mark takes a `DS.Face` tier
-(prd §355, 2026-08-11), never a raw number.
+(prd §355b, 2026-08-11), never a raw number.
 
 WHY THIS IS MECHANICAL AND NOT A NOTE IN A DOC. The ramp exists because these
 sizes had drifted to SIXTEEN different literals across FORTY-SEVEN call sites

@@ -1618,7 +1618,7 @@ struct Composer: View {
                             Text(DayBrief.title())
                                 .dsText(.heading22)
                                 .foregroundStyle(DS.textPrimary)
-                                // The capsule's words travel here (prd §167a)
+                                // The capsule's words travel here (prd §167 item 1)
                                 // — the SAME id RootShell's proxy title (and,
                                 // before it, the whisper capsule's own title)
                                 // carry, so when this real masthead mounts it

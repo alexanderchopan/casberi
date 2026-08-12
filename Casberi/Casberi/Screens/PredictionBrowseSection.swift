@@ -824,7 +824,7 @@ struct PredictionBrowseSection: View {
                 }
                 .buttonStyle(.plain)
                 Spacer(minLength: DS.Space.s2)
-                // The one capsule this card gets — §236's rule still holds
+                // The one capsule this card gets — §236b's rule still holds
                 // (a capsule where there is exactly ONE thing to follow), and
                 // the leader is that one thing. The rest of the field follows
                 // from its own expanded row's preview.

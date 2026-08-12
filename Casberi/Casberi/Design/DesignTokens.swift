@@ -331,7 +331,7 @@ enum DS {
         static let iPadWideMaxWidth: CGFloat = PadLayout.wideMaxWidth
     }
 
-    // MARK: - Faces  (round identity marks — prd §355, 2026-08-11)
+    // MARK: - Faces  (round identity marks — prd §355b, 2026-08-11)
 
     /// How big a round identity mark draws: a person's avatar, a wallet's
     /// identicon, or the app icon standing in for one when there is no

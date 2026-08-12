@@ -143,7 +143,7 @@ final class ShellChrome {
     /// the Find door is that nothing runs until the person says what they want.
     var focusDraftOnOpen = false
 
-    /// The whisper's title, mid-flight (2026-07-22, prd §167a) — set the
+    /// The whisper's title, mid-flight (2026-07-22, prd §167 item 1) — set the
     /// instant the capsule is tapped, so a proxy title can mount in
     /// RootShell's OWN composerOpen-driven transaction (the same transaction
     /// that already morphs the bar into the risen surface), rather than

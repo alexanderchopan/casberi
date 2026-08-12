@@ -80,31 +80,30 @@ at all.
 | Ruling | What it said | Changed by |
 |---|---|---|
 | §18 | Feed spec | amended by §64 |
-| §36a | Home cover: an explicit banner outranks the automatic screenshot | amended by §36j, superseded by §36o |
-| §36h | Wallet holdings: one treemap per wallet, leads Feed too, tap-throu | amended by §36n |
+| §36a | Home cover: an explicit banner outranks the automatic screensh | amended by §36j, superseded by §36o |
+| §36h | Wallet holdings: one treemap per wallet, leads Feed too, tap-t | amended by §36n |
 | §36j | Home cover is 2-tier now: a set banner, or black | superseded by §36o |
 | §36m | A pin is a HOME pin | amended by §36n |
-| §56 | Build-29 review: the import batch, hardened | superseded by §59 |
 | §58a | The pin is the control (amendment, 2026-07-11) | superseded by §58i |
-| §58h | Board refinements — OPEN (diagnosed 2026-07-11, for a fresh build) | superseded by §58i |
+| §58h | Board refinements — OPEN (diagnosed 2026-07-11, for a fresh bu | superseded by §58i |
 | §58i | The bento board | superseded by §58j |
 | §58j | A pin is a mark, not a card | superseded by §58k |
 | §61 | The elevation ladder — depth by tone and shadow, never by line | superseded by §97, reversed by §114 |
-| §72 | A pinned wallet's NFTs ride Home by default | amended by §124 |
-| §78 | Two catalog re-shelvings: GeckoTerminal to Onchain, Pinterest to M | reversed by §114 |
-| §102 | Token surfaces go Big money — the sheet re-ranks, the row gets fat | amended by §105 |
-| §113 | Peer joins the catalog — fills as they settle, riding the Wallet b | superseded by §207 |
+| §72 | A pinned wallet's NFTs ride Home by default | amended by §124a |
+| §78 | Two catalog re-shelvings: GeckoTerminal to Onchain, Pinterest  | reversed by §114 |
+| §102 | Token surfaces go Big money — the sheet re-ranks, the row gets | amended by §105 |
+| §113 | Peer joins the catalog — fills as they settle, riding the Wall | superseded by §207 |
 | §121 | Home: rows drag, visuals earn their space, doors sharpen | amended by §130 |
-| §124 | The Wallet feed carries the treemap AND the NFTs | amended by §130 |
+| §124 | Media sources become rows with a thumbnail filmstrip | amended by §130 |
 | §126 | The wallet's own balance line — Home row AND Wallet feed | amended by §130 |
-| §131 | The Pinned board is dismantled; the agent's kept asks are the only | amended by §144, reversed by §228 |
-| §146 | More generative UI in the composer answers — five chart types | amended by §160 |
-| §151 | The balance takes the headline; Worth a look drops to a line | amended by §160 |
+| §131 | The Pinned board is dismantled; the agent's kept asks are the  | amended by §144, reversed by §228a |
+| §146 | More generative UI in the composer answers — five chart types | amended by §160b |
+| §151 | The balance takes the headline; Worth a look drops to a line | amended by §160b |
 | §159 | The crown pour goes permanent, and up to the shell | amended by §204 |
 | §160 | A fake symbol is address poisoning in the asset field | reversed by §212 |
-| §162 | Privacy Pools rides the watched wallets — the alert IS the feature | superseded by §207 |
+| §162 | Privacy Pools rides the watched wallets — the alert IS the fea | superseded by §207 |
 | §181 | The agent opens on the brief — chips docked, keyboard down | superseded by §336 |
-| §184 | The manager pattern, generalized — roster for people, ledger for t | superseded by §185 |
+| §184 | The manager pattern, generalized — roster for people, ledger f | superseded by §185 |
 
 ### Known stale, by hand
 
@@ -808,7 +807,8 @@ and still shows the moment an address is watched, before the chart
 loads. The leading-edge swipe on an address flips the same
 `wallet.pinnedToHome`, so either gesture reaches it.
 
-## 36f. Nav doors: bigger, a sharper breakage signal, and no false tab (2026-07-09)
+## §36ac —Nav doors: bigger, a sharper breakage signal, and no false tab (2026-07-09)  
+*(renumbered 2026-08-11 — collided with §36f (the default cover is black); neither is cited, so document order kept the bare letter)*
 
 Follows the two-tab convergence (§§ under 2026-07-06), fixing its rough
 edges rather than reopening it — Apps stays a door, not a tab.
@@ -829,7 +829,8 @@ edges rather than reopening it — Apps stays a door, not a tab.
   door push moved to a shared `FeedRoute` (mirroring `HomeRoute`) so the
   shell can see it. The Home starter/skeleton preview is untouched.
 
-## 36g. Type: SF Rounded on the display tier only (2026-07-09, user)
+## §36ad —Type: SF Rounded on the display tier only (2026-07-09, user)  
+*(renumbered 2026-08-11 — collided with §36g (what landed today rides the cover as chips); neither is cited)*
 
 The app is all SF Pro (no custom font — the right call for a native,
 familiar, scannable personal app). One refinement: the DISPLAY tier now
@@ -2189,7 +2190,8 @@ Korean. Rulings:
   `%@`/`%lld`). Verified on sim across ja/ko/zh-Hans/es: Feed, Settings,
   Home (generative doc), the switcher, tab bar, and the extension bundles.
 
-## 60. "How it works" — the persistent explainer (user, 2026-07-11)
+## §60b —"How it works" — the persistent explainer (user, 2026-07-11)  
+*(renumbered 2026-08-11 — collided with §60 (Casberi speaks five languages); neither is cited)*
 
 New people need one place to (re)learn the model after the retiring
 coach lines (pin/size/chip) are gone. A "How it works" tile joins the
@@ -3870,7 +3872,8 @@ the chains Toggle section is duplicated across OpenSea/GeckoTerminal and
 the wash/ghost/hairline patterns are per-screen rather than hoisted into
 shared chrome.
 
-## 91. Ask or task — the composer's two exits, named (user, 2026-07-16) — BUILT
+## §91b —Ask or task — the composer's two exits, named (user, 2026-07-16) — BUILT  
+*(renumbered 2026-08-11 — collided with §91 (connect pages redesign); neither is cited)*
 
 §90's "Open in" chips didn't survive first contact: "Open in" is app-plumbing
 language (a user wouldn't guess the TEXT travels), and the person typing
@@ -4028,7 +4031,8 @@ hidden from VoiceOver and the deck advances via a named accessibility
 action ("Next card"); the deck is its own child view owning the drag
 state, so a dragged frame re-renders three cards, not every shelf row.
 
-## 94. The qualifier badges die on the shelf rows (user, 2026-07-16) — BUILT
+## §94b —The qualifier badges die on the shelf rows (user, 2026-07-16) — BUILT  
+*(renumbered 2026-08-11 — collided with §94 (the greeting goes large), which keeps the bare number because the source cites it)*
 
 "'No account' repeatedly under the names of things, or 'one tap' or
 'import' — who cares, it's extra text the user doesn't need to see." The
@@ -4493,7 +4497,8 @@ Bug fixed same day (user: "Farcaster and Bluesky are rendering like tiles not ro
 
 The catalogue door moved OUT of the top-right cluster and INTO the head of the source chip strip (`SourceChips`) — its own `AppsDoor` grid glyph (attention state and store-zoom intact), as the FIXED first chip, ahead of Pinned/All and the source circles. Reasoning (user's): "add a source" belongs WITH your sources, not stranded next to the avatar; the strip already IS "your sources," so the catalogue is its natural head. Fixed outside the scroll so it stays in reach as the active chip re-centers (an action among filters, distinct as the tinted grid vs neutral source circles). The **avatar stays top-right, alone** — the two doors were on different axes (catalogue = grow my sources; avatar = me/settings), and splitting them lets the avatar be the sole, conventional "me" corner. `TopDoors` is the avatar only now. `Shell/SourceChips.swift`, `Shell/TopDoors.swift`, `Shell/MainSurface.swift`.
 
-## 124. The Wallet feed carries the treemap AND the NFTs (user, 2026-07-18)
+## §124a —The Wallet feed carries the treemap AND the NFTs (user, 2026-07-18)  
+*(renumbered 2026-08-11 — collided with §124 (media sources become rows with a thumbnail filmstrip); that entry keeps the bare number because the source cites it)*
 
 Amends §72's Home-only placement for the NFT strip. The Wallet chip's own feed now leads with the holdings treemap (already true) followed by the NFT strip, then the chronological transaction rows. Reasoning (user's): the wallet source's synthesis — what you hold, both fungible and NFT — belongs at the head of the wallet's own feed, not only on a pinned Home card. Scope is the **Wallet source feed only** (`shape == .wallet`), NOT the mixed "All" feed — the treemap/NFTs stay out of All (they aren't `Thing`s; §72's "a treemap cell / NFT strip is a door, not a thing" still holds — nothing lands in the corpus). Both render as gen-UI blocks (`WalletIngest.holdingsChart()` / `nftShelfDocument()` → `Stack` of `TagMap` / `MediaShelf`), painted into two independent `GenStream`s so a slow NFT read never delays the treemap. The feed shows EVERY watched wallet (not pinned-only, matching the treemap here); Home stays pinned-only via `pinnedNFTGroups`. Feed shelves carry no size pin / "Remove from Home" (arg 4 empty) — they're the source's art, not board modules. `Screens/FeedScreen.swift` (`nftBlockSection`, `streamBlock`), `Model/WalletIngest.swift` (`nftShelfDocument`).
 
@@ -5612,7 +5617,8 @@ then set in type.** Symbols were the second one found. NFT collection names,
 ENS-adjacent labels and token NAMES (not just symbols) are the same shape and
 are unchecked today.
 
-## 160. Both boxed — the wallet room's two reads become parcels (user: "i like both boxed", 2026-07-21)
+## §160b —Both boxed — the wallet room's two reads become parcels (user: "i like both boxed", 2026-07-21)  
+*(renumbered 2026-08-11 — collided with §160 (a fake symbol is address poisoning), which keeps the bare number: 34 citations mean the spoofed-symbol rule)*
 
 Ruled from five on-page frames (`design/wallet-look/wallet-cards-mocks.html`,
 redrawn mid-review with the REAL crown context — source chips, wallet switcher
@@ -8830,7 +8836,8 @@ live hero, the decay ramp and the wash have not been seen on screen. Build and w
 feeds (`casberi://feed/source/YouTube`, `/Podcasts`, `/Steam`, `/Pinterest`, `/Twitch`) before
 this is called done.
 
-## 218. Connect stops being a page you read on the way to the page you use (user: "how would you improve our app connect pages? they have useful content but i worry uesr hs to read it before going to a subsequent page to connect, and i also think the pages themselves look too form-y", then "do your recommendations", 2026-07-25)
+## §218b —Connect stops being a page you read on the way to the page you use (user: "how would you improve our app connect pages? they have useful content but i worry uesr hs to read it before going to a subsequent page to connect, and i also think the pages themselves look too form-y", then "do your recommendations", 2026-07-25)  
+*(renumbered 2026-08-11 — collided with §218 (the All feed says what things are), which keeps the bare number: nearly all of its 95 citations mean the screenshot-title honesty rail)*
 
 Two complaints, and they turned out to be one problem seen from two sides.
 
@@ -9151,7 +9158,8 @@ days on the measured wallet), so a cap would silently discard most of a
 person's history the cursor then skips forever. The ~6-day (100k block) first
 -sight backfill window is what bounds the first landing instead.
 
-## 223. The calendar room reads one direction (user: "this calendar display feed with dates and different orders is awkward, can we hide past events?", 2026-07-27)
+## §223a —The calendar room reads one direction (user: "this calendar display feed with dates and different orders is awkward, can we hide past events?", 2026-07-27)  
+*(renumbered 2026-08-11 — collided with §223 (PostHog: a count is not a thing); that entry keeps the bare number, cited 25 times)*
 
 **What was on screen.** The Calendar chip's room ran `agendaGroups`: upcoming
 days ascending, then past days descending, concatenated into one list. On the
@@ -9191,7 +9199,8 @@ Also: `dayLabel` learned "Tomorrow". Only the agenda ever labels a day ahead
 (every other feed drops future-dated rows in `dayGroups`), and a dated weekday
 header for tomorrow read as history sitting at the top of the list.
 
-## 219. Connect raises, Open pushes — §218's split was the wrong axis (user: "i thought we were going to make that second page be a tray or sheet so user didn't feel like there were so many doors. did we decide against that? i don't see the form rising", 2026-07-25)
+## §219b —Connect raises, Open pushes — §218's split was the wrong axis (user: "i thought we were going to make that second page be a tray or sheet so user didn't feel like there were so many doors. did we decide against that? i don't see the form rising", 2026-07-25)  
+*(renumbered 2026-08-11 — collided with §219 (the media feeds stop being squares), which keeps the bare number)*
 
 §218 shipped the sheet and then hid it. It split by screen KIND — one-shot
 FORMS (paste a key, sign in, pick a file) rose, watch-list MANAGERS still
@@ -9557,7 +9566,8 @@ live result, so landing it once is a stale link), session replays, and any
 per-person read. The query endpoint's rate limit is documented as both
 120/hour and 2400/hour — measure before setting a real cadence.
 
-## §227 — Support returns: privacy@casberi.app is now a real channel (2026-07-28)
+## §227b —Support returns: privacy@casberi.app is now a real channel (2026-07-28)  
+*(renumbered 2026-08-11 — collided with §227 (Bitcoin's surprise and delight); neither is cited, so document order kept the bare number)*
 
 Reverses the 2026-07-05 removal (the "Support (Balance/Support precedent)"
 ruling above): that cut stated plainly that Support returns "when a real
@@ -9573,7 +9583,8 @@ shape here is a single tap that does the one real thing it promises.
 Re-using privacy@ rather than minting a new address: one monitored inbox
 beats a second one nobody's forwarded yet.
 
-## §228 — Landing reverts to "always All" (2026-07-28)
+## §228a —Landing reverts to "always All" (2026-07-28)  
+*(renumbered 2026-08-11 — collided with §228 (0xBow Privacy Pools, the rest of the lifecycle); that entry keeps the bare number, cited 20 times)*
 
 Reverses the persisted-landing half of the ruling above §131 (2026-07-21,
 "content-first, wherever you left it") per direct user feedback: a user
@@ -9586,7 +9597,8 @@ this only reverts which chip you land on, not how the strip sorts. Deep
 links, `-openThing`, and other same-launch overrides still work exactly as
 before; only the cross-launch memory is gone.
 
-## §229 — Slack un-parked: mentions of you (2026-07-28)
+## §229a —Slack un-parked: mentions of you (2026-07-28)  
+*(renumbered 2026-08-11 — collided with §229 (project detail's Rename tag retires); that entry keeps the bare number because the source cites it)*
 
 Reverses the 2026-07-08 "PARKED by user" note above (§413 in the ledger,
 Strava + Slack — "need the $5-20/mo OAuth-secret server"): that blocker was
@@ -9618,7 +9630,8 @@ secret — is pasted in. Catalog offer lands in Work beside GitHub/Linear/
 Notion/PostHog (`BridgeCatalog.swift`); website catalog entry added to keep
 `catalog-sync.sh` green.
 
-## §230 — The Apple Notes tile that could never fill (audit fix, 2026-07-28)
+## §230a —The Apple Notes tile that could never fill (audit fix, 2026-07-28)  
+*(renumbered 2026-08-11 — collided with §230 (the screenshots feed leads with an OCR treemap); that entry keeps the bare number)*
 
 `NotesShareScreen` carried a `@Query(filter: #Predicate<Thing> { $0.source
 == "Apple Notes" })` and a comment about "only then is there a tile to pin
@@ -9656,7 +9669,8 @@ fine as a `.note` thing and is still found via search/Spotlight like any
 other capture, it just isn't specially labeled "Apple Notes" (accurate,
 since nothing can tell it apart).
 
-## §231 — Notes group gains surprise & delight (2026-07-28)
+## §231a —Notes group gains surprise & delight (2026-07-28)  
+*(renumbered 2026-08-11 — collided with §231 (deleting a screenshot from Photos removes it from Casberi); that entry keeps the bare number)*
 
 The Notes group (Obsidian, Day One, Apple Journal) had zero entries on the
 delight bus (`SourceMoments`) before this — every other bridge group had
@@ -9713,7 +9727,8 @@ never opens the Day One/Obsidian feed directly. Added as a fifth synthesis
 observation, same rule as everywhere else `OnThisDay` is read: a real
 anniversary match only, never invented, never padded when there isn't one.
 
-## §232 — Slack, two things the first pass got wrong (2026-07-28)
+## §232a —Slack, two things the first pass got wrong (2026-07-28)  
+*(renumbered 2026-08-11 — collided with §232 (the flow band comes to the brief); that entry keeps the bare number)*
 
 Connecting Slack failed on Slack's own authorize page with
 `invalid_team_for_non_distributed_app` — before any callback is minted, so
