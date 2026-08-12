@@ -593,7 +593,19 @@ struct MoneyReceipt: Equatable {
     /// eyebrow and in the explorer the dial opens.
     static func dayPhrase(_ date: Date, now: Date = .now,
                           calendar: Calendar = .current) -> String {
-        if calendar.isDateInToday(date) {
+        // Every branch measures against `now`, including today and yesterday
+        // (2026-08-12). `isDateInToday`/`isDateInYesterday` read the SYSTEM
+        // clock and ignore the `now` this function was handed, so the two
+        // halves of one decision were measured against two different clocks:
+        // "today" came from the real date while the weekday branch below came
+        // from `now`. Production never noticed, because production passes the
+        // real `.now` and the two agree — but the function could not be
+        // tested at all, and its own harness asserted against a fixed clock
+        // it had no way to honour.
+        let days = calendar.dateComponents([.day],
+                                           from: calendar.startOfDay(for: date),
+                                           to: calendar.startOfDay(for: now)).day ?? 0
+        if days == 0 {
             let hour = calendar.component(.hour, from: date)
             switch hour {
             case ..<5:   return String(localized: "overnight")
@@ -602,10 +614,7 @@ struct MoneyReceipt: Equatable {
             default:     return String(localized: "this evening")
             }
         }
-        if calendar.isDateInYesterday(date) { return String(localized: "yesterday") }
-        let days = calendar.dateComponents([.day],
-                                           from: calendar.startOfDay(for: date),
-                                           to: calendar.startOfDay(for: now)).day ?? 0
+        if days == 1 { return String(localized: "yesterday") }
         // Inside a week a weekday is the most useful name; past that it stops
         // being unambiguous and the date is kinder. A FUTURE date (a clock skew,
         // a bridge stamping ahead) falls through to the dated form rather than

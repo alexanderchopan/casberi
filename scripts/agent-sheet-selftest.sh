@@ -91,8 +91,12 @@ guard "a grant shows no link preview" \
   'agentShape != \.grant' "$VIEW"
 # A row wears ONE anatomy. Cursor is in the Agents category and is drawn by the
 # Work receipt — asking this first would take that away from it.
-guard "the agent shape yields to the wallet stage and the Work receipt" \
-  'walletStage == nil, workReading == nil' "$VIEW"
+# `walletStage` was retired in the 2026-08-12 integration merge — §369's money
+# receipt generalized the three wallet title grammars into one anatomy, so the
+# gate is spelled `moneyReceipt` now. The RULE is unchanged and is what this
+# guards: an agent sheet yields to the money anatomy and to the Work receipt.
+guard "the agent shape yields to the money receipt and the Work receipt" \
+  'moneyReceipt == nil, workReading == nil' "$VIEW"
 
 # --- the ingest half --------------------------------------------------------
 # The grant's parts must be STAMPED, or the sheet has to split a display string

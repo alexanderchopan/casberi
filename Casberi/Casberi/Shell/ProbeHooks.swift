@@ -2575,6 +2575,74 @@ enum ProbeHooks {
                       scope, mine.count, pics.count, faces.count, named.count, due.count, ahead.count)
             }
         },
+        // `-sheetShapeProbe YES` — CAN THE DEMO REACH EVERY SHEET ANATOMY?
+        //
+        // Five anatomies decide what a thing sheet IS, each by a DATA test
+        // over the record: `SocialSheet` (post/person/save/transcript),
+        // `NoteSheet` (entry/note/passage), `AgentSheet`
+        // (conversation/grant), `PurchaseStage` (receipt/watch) and
+        // `WorkStage`. A shape no demo row can reach is a feature a
+        // first-time opener cannot see, and nothing else in the tree can
+        // notice: the rows are all present, every static check passes, and
+        // the room renders — the sheet just quietly takes a weaker branch.
+        //
+        // Found by hand four times before this existed, always the same
+        // shape and never by a check: `.person` was unreachable because no
+        // demo row set `socialContext == "follow"`, and `.note` because the
+        // vault's rows wore `demo:obsidian:N` refs while `isNamed` asks
+        // `ObsidianLink.relativePath` for an `obsidian:` one — the identical
+        // ref-shape miss CLAUDE.md already records for Peer, Privacy Pools
+        // and Cloudflare. This is that hand-check, mechanised.
+        //
+        // Counts, never a verdict: the probe reports what the corpus can
+        // reach and `verify.sh` decides what a gap is. A shape legitimately
+        // absent (no watched Trello card, say) is a seeding decision, not a
+        // bug this file can rule on.
+        Hook(key: "sheetShapeProbe") { _, context in
+            let things = ((try? context.fetch(FetchDescriptor<Thing>())) ?? []).live
+            var census: [String: Int] = [:]
+            for thing in things {
+                if let s = SocialSheetSource.shape(for: thing) {
+                    census["social.\(s.rawValue)", default: 0] += 1
+                }
+                if let s = NoteSheetSource.shape(for: thing) {
+                    census["note.\(s.rawValue)", default: 0] += 1
+                }
+                if let s = AgentSheetSource.shape(for: thing) {
+                    census["agent.\(s.rawValue)", default: 0] += 1
+                }
+                if let r = PurchaseStageSource.reading(for: thing) {
+                    census["purchase.\(r.archetype.rawValue)", default: 0] += 1
+                }
+                if !thing.facts.isEmpty {
+                    census["life.facts", default: 0] += 1
+                }
+                // Work's anatomy is keyed by FACE, not by a shape enum — the
+                // face is what changes the layout (prose, code, money, a star
+                // rating), so counting readings alone would report coverage
+                // while three of the four faces went undrawn. `WorkStage.Row`
+                // is built inline in `ThingSheetView`, so this mirrors it —
+                // exactly the drift `verify.sh`'s step has to watch.
+                let workRow = WorkStage.Row(
+                    source: thing.source, sourceRef: thing.sourceRef, title: thing.title,
+                    tags: thing.tags, mark: thing.mark.rawValue,
+                    projectField: thing.authorHandle,
+                    hasPrice: thing.priceValue != nil && thing.priceCurrency != nil)
+                if let reading = WorkStage.reading(workRow) {
+                    census["work.\(reading.face.rawValue)", default: 0] += 1
+                }
+                // The money receipt (§363/§369) — nine sources, one anatomy.
+                if MoneyReceiptSource.receipt(for: thing) != nil {
+                    census["money.receipt", default: 0] += 1
+                }
+            }
+            NSLog("[Casberi] sheetShape| corpus=%d anatomies=%d", things.count, census.count)
+            // One NSLog per line — a joined multi-line message gets truncated
+            // by the log reader (the `-todayProbe` lesson).
+            for (key, n) in census.sorted(by: { $0.key < $1.key }) {
+                NSLog("[Casberi] sheetShape| %@ = %d", key, n)
+            }
+        },
         Hook(key: "corpusDupeProbe") { _, context in
             let refs = ((try? context.fetch(FetchDescriptor<Thing>())) ?? [])
                 .compactMap(\.sourceRef)

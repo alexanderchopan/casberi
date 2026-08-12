@@ -90,8 +90,30 @@ grep -q 'sourceRef: "cursor:agent:' "$CURSOR" \
 # 2026-07-15 ruling and would make it invisible on every screen.
 grep -q 'thing.summary = summary' "$CURSOR" \
   || { echo "✗ the agent's summary no longer lands as display copy"; exit 1; }
-grep -q 'never starts one, follows one up, stops one, or deletes one' "$BRIDGES" \
-  || { echo "✗ canLine no longer names the four verbs — the conduct promise is unstated"; exit 1; }
+# Cursor's read-only claim is CONDUCT, and the weakest grade in the catalog:
+# the key carries no scopes, so the same key that lists agents can start one
+# (spending money AND writing a branch to a repo), follow it up, stop it or
+# delete it. The promise is kept by two things — this file issuing GET alone
+# (guarded above) and the product copy naming the four verbs it does not use.
+#
+# SUBSTANCE, not one exact sentence (2026-08-12). This used to pin the literal
+# string "never starts one, follows one up, stops one, or deletes one", and a
+# copy pass that rewrote the catalog out of the first person kept every one of
+# the four verbs — "so this only lists them: never starts, follows up, stops,
+# or deletes one" — and still failed the build. A guard that pins prose fails
+# on every legitimate edit, and the pressure that creates is to weaken the
+# guard rather than keep the promise. So it asserts the four verbs are named
+# ON CURSOR'S OWN LINE, which is the thing that actually has to stay true.
+CURSOR_COPY=$(grep -F 'case .cursor:' "$BRIDGES" | grep -F 'cloud agents')
+# Stems, so an edit between "starts"/"start"/"starting" still passes; the
+# label is spelled separately so the failure reads as English.
+for pair in 'start:start one' 'follow:follow one up' 'stop:stop one' 'delet:delete one'; do
+  stem="${pair%%:*}"; label="${pair#*:}"
+  printf '%s' "$CURSOR_COPY" | grep -qi "$stem" \
+    || { echo "✗ Cursor's copy no longer says it never ${label} — the conduct promise is unstated"; exit 1; }
+done
+printf '%s' "$CURSOR_COPY" | grep -qi 'never' \
+  || { echo "✗ Cursor's copy names the verbs but no longer denies them"; exit 1; }
 # A finished run is finished forever — this is the one keyed Work bridge with
 # no reconcile pass, and a reconcile appearing means somebody started landing
 # non-terminal runs.

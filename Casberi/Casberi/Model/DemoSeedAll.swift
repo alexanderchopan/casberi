@@ -150,7 +150,14 @@ enum DemoSeedAll {
                               // never the bare "obsidian:" prefix, so exiting
                               // the demo can never delete a real vault's
                               // notes — `files:demo/`'s shape, same reason.
-                              "obsidian:demo-vault/"]
+                              "obsidian:demo-vault/",
+                              // App Store Connect joins the REAL `asc:` shapes
+                              // because `WorkStage.ascOutcome` parses the ref
+                              // itself. EXACT refs, never a bare "asc:" prefix
+                              // — the PostHog/Stocktwits reason: a real
+                              // version, review or build row must survive.
+                              "asc:version:demo1:IN_REVIEW", "asc:review:demo1",
+                              "asc:build:demo285", "asc:buildexpiry:demo274"]
 
     // MARK: - Entry point
 
@@ -1929,39 +1936,83 @@ enum DemoSeedAll {
                 t.authorHandle = "alexanderchopan/casberi"
             }
         }
-        let ops: [(String, String, String, Double)] = [
-            ("Resolved: elevated 5xx on the edge", "Sentry", "12 events", 2),
-            ("New issue: nil unwrap in FeedScreen", "Sentry", "3 events", 6),
-            ("Deployed casberi-site to production", "Vercel", "Ready in 24s", 1),
-            ("Preview ready for pull/412", "Vercel", "Ready in 19s", 3),
-            ("Acknowledged: latency alert", "PagerDuty", "Resolved in 8m", 8),
-            ("casberi.app · 1.2M requests today", "Cloudflare", "Cached 92%", 1),
-            ("Certificate renews in 21 days", "Cloudflare", "casberi.app", 4),
-            ("swift-markdown 0.4.0 published", "npm", "2 dependents", 5),
-            ("httpx 0.28.1 published", "PyPI", "security fix", 7),
+        // `ops` rows carry the tag their bridge stamps (2026-08-12), because
+        // `WorkStage.outcome` is keyed on (source, TAG) and nothing else —
+        // a row whose title says "New issue" and whose tags are empty reads
+        // correctly to a person and produces no reading at all, so the whole
+        // Work anatomy (its outcome word, its tone, its `code` face) never
+        // drew for Sentry. `SentryBridge` stamps exactly one of Issue /
+        // Regression; Vercel, PagerDuty, npm and PyPI have their own.
+        let ops: [(String, String, String, Double, [String])] = [
+            ("Resolved: elevated 5xx on the edge", "Sentry", "12 events", 2, ["Regression"]),
+            ("New issue: nil unwrap in FeedScreen", "Sentry", "3 events", 6, ["Issue"]),
+            ("Deployed casberi-site to production", "Vercel", "Ready in 24s", 1, ["Deploy"]),
+            ("Preview ready for pull/412", "Vercel", "Ready in 19s", 3, ["Deploy"]),
+            ("Acknowledged: latency alert", "PagerDuty", "Resolved in 8m", 8, ["Resolved"]),
+            // Cloudflare's rows are readings, not outcomes — its bridge stamps
+            // no outcome tag and `WorkStage.outcome` has no case for it, so
+            // these two correctly produce no Work reading. Left tagless on
+            // purpose rather than given an invented tag to make a card appear.
+            ("casberi.app · 1.2M requests today", "Cloudflare", "Cached 92%", 1, []),
+            ("Certificate renews in 21 days", "Cloudflare", "casberi.app", 4, []),
+            ("swift-markdown 0.4.0 published", "npm", "2 dependents", 5, ["Release"]),
+            ("httpx 0.28.1 published", "PyPI", "security fix", 7, ["Release"]),
         ]
         out += ops.enumerated().map { i, o in
             row(.link, o.0, source: o.1, ref: "demo:\(o.1.lowercased()):\(i)",
-                days: o.3, hour: 14, content: o.2)
+                days: o.3, hour: 14, content: o.2, tags: o.4)
         }
-        let asc: [(String, Double)] = [
-            ("In review · Casberi 1.4", 1), ("★★★★★ \"Finally, one place for everything\"", 3),
-            ("Build 285 ready to test", 2), ("Build 274 expires in 9 days", 5),
+        // REAL `asc:` ref shapes (2026-08-12). `WorkStage.ascOutcome` reads the
+        // outcome STRAIGHT OUT OF THE REF — `asc:version:<id>:<STATE>` — and
+        // `WorkStage.face` gives the `stars` face only to `asc:review:`. On
+        // `demo:asc:N` refs both tests fail, so App Store Connect produced no
+        // Work reading at all and the star face was unreachable: the whole
+        // point of that seat (where is my build, what did a reviewer say) was
+        // furnished in the feed and dead in the sheet.
+        //
+        // The fourth time this exact class has bitten — Peer, Privacy Pools
+        // and the Obsidian vault were the others. A gate that keys on a ref
+        // shape cannot be satisfied by a row that merely looks right.
+        let asc: [(String, String, Double)] = [
+            ("In review · Casberi 1.4", "asc:version:demo1:IN_REVIEW", 1),
+            ("★★★★★ \"Finally, one place for everything\"", "asc:review:demo1", 3),
+            ("Build 285 ready to test", "asc:build:demo285", 2),
+            ("Build 274 expires in 9 days", "asc:buildexpiry:demo274", 5),
         ]
         out += asc.enumerated().map { i, a in
-            row(.link, a.0, source: "App Store Connect", ref: "demo:asc:\(i)",
-                days: a.1, hour: 10, content: "Casberi · iOS") { t in
+            row(.link, a.0, source: "App Store Connect", ref: a.1,
+                days: a.2, hour: 10, content: "Casberi · iOS") { t in
                 if i == 1 { t.summary = "Everything I save actually turns up when I look for it."
                             t.authorHandle = "grid_walker" }
                 if i == 3 { t.dueAt = at(-9, 12) }
             }
         }
-        let stripe: [(String, Double)] = [
-            ("Payout paid · $4,120.00", 2), ("Dispute opened · $89.00", 4),
-            ("Subscription canceled · Pro monthly", 11),
+        // `.link`, NOT `.transaction`, and priced (2026-08-12). Stripe's rows
+        // are Work rows: `StripeBridge` lands `kind: .link` with a tag and a
+        // `priceValue`/`priceCurrency` pair, and `WorkStage.face` gives a
+        // priced Stripe row the `money` face — the one Work face that inherits
+        // the wallet's hero rung.
+        //
+        // The demo had them as `.transaction`, which is worse than a missing
+        // face: `MoneyReceiptSource.receipt` gates on exactly that kind, so
+        // every demo Stripe row drew a MONEY RECEIPT — an anatomy §369 built
+        // for the nine wallet sources and never for Stripe — while
+        // `ThingSheetView.workReading` stands down whenever a receipt exists.
+        // So the demo showed the wrong anatomy AND suppressed the right one,
+        // and both halves rendered perfectly. Parity runs in both directions:
+        // the demo must not show what the app cannot.
+        let stripe: [(title: String, days: Double, tag: String, amount: Double?)] = [
+            ("Payout paid · $4,120.00", 2, "Payout", 4_120),
+            ("Dispute opened · $89.00", 4, "Dispute", 89),
+            ("Subscription canceled · Pro monthly", 11, "Churn", nil),
         ]
         out += stripe.enumerated().map { i, s in
-            row(.transaction, s.0, source: "Stripe", ref: "demo:stripe:\(i)", days: s.1, hour: 13) { t in
+            row(.link, s.title, source: "Stripe", ref: "demo:stripe:\(i)",
+                days: s.days, hour: 13, tags: [s.tag]) { t in
+                if let amount = s.amount {
+                    t.priceValue = amount
+                    t.priceCurrency = "USD"
+                }
                 // The dispute wears the SAME markers `StripeBridge` stamps on a
                 // real one — `tag: "Dispute"` plus the evidence `dueAt`
                 // (2026-08-10). Without the tag it had a deadline and nothing
@@ -1973,7 +2024,10 @@ enum DemoSeedAll {
                 // but exercises none of the logic keyed off it — and it is why
                 // a demo row should carry a real bridge's markers, not just its
                 // words.
-                if i == 1 { t.dueAt = at(-5, 17); t.tags = ["Dispute"] }
+                // The evidence deadline a real dispute carries — the tag now
+                // rides the row's own `tags:` above, so this sets only the
+                // clock (2026-08-10's reasoning, unchanged).
+                if i == 1 { t.dueAt = at(-5, 17) }
             }
         }
         let hf: [(String, Double)] = [

@@ -828,4 +828,86 @@ else
   fi
 fi
 
+# ── 7. Demo sheet-anatomy coverage (headless, HARD FAIL) ─────────────
+# The THIRD surface of the same 2026-08-08 parity ruling, and the one that
+# covers the sheets rather than the rooms.
+#
+# Seven anatomies decide what a thing sheet IS, each by a DATA test over the
+# record: `SocialSheet` (post/person/save/transcript), `NoteSheet`
+# (entry/note/passage), `AgentSheet` (conversation/grant), `PurchaseStage`
+# (receipt/watch), `WorkStage` (by FACE — words/code/money/stars),
+# `MoneyReceipt`, and §365's structured `facts` behind the Life sheets. A
+# shape no demo row can reach is a feature a first-time opener cannot see,
+# and NOTHING else in the tree notices: the rows are all present, every
+# static check passes, the room renders — the sheet just quietly takes a
+# weaker branch.
+#
+# HARD FAIL for the room-head step's reason: a sheet's anatomy is a pure
+# function of one record, decided the moment it opens. No ranking, no
+# competition, no noise to protect against — an absence is a real gap.
+#
+# It found FIVE on its first real run (2026-08-12), each a different cause:
+#   • `social.person` was 0 — the anatomy built to say a follower is a PERSON
+#     and not a link to one needs `socialContext == "follow"`, and no demo
+#     row set it.
+#   • `note.note` was 0 — the vault's rows wore `demo:obsidian:N` refs while
+#     `NoteSheetSource.isNamed` asks `ObsidianLink.relativePath` for an
+#     `obsidian:` one, so every vault note degraded to `.entry`.
+#   • `work.code`/`work.stars` were 0 — Sentry's rows carried no tag and
+#     `WorkStage.outcome` is keyed on (source, TAG), while App Store
+#     Connect's `demo:asc:N` refs could not satisfy `ascOutcome`, which
+#     parses the outcome out of the ref itself.
+#   • `work.money` was 0 in the WORST way: the demo landed Stripe as
+#     `.transaction` where the bridge lands `.link`, so every row drew a
+#     MONEY RECEIPT (an anatomy §369 built for the nine wallet sources, never
+#     for Stripe) and `workReading` stood down because a receipt existed.
+#     The demo showed the wrong anatomy and suppressed the right one, both
+#     rendering perfectly. Parity runs in BOTH directions.
+#
+# Three of those five are the same underlying class — a gate that keys on a
+# REF SHAPE cannot be satisfied by a row that merely looks right — which is
+# the fourth, fifth and sixth time it has bitten (Peer, Privacy Pools and the
+# Obsidian vault were the others).
+step "Demo sheet-anatomy coverage"
+SHEET_LOG="$OUT/demo-sheet-coverage.log"
+if [[ -z "$POURED" ]]; then
+  print -P "%F{yellow}⚠ demo never finished pouring (see the panel-coverage step above) — skipping sheet-anatomy coverage%f"
+else
+  # Every shape the app can draw. Hand-maintained against the five `Shape`
+  # enums, `WorkStage.Face` and `MoneyReceipt` — the same contract the
+  # room-head map above keeps, and the same rule: add a shape, add a row.
+  EXPECTED_SHAPES=(
+    social.post social.person social.save social.transcript
+    note.entry note.note note.passage
+    agent.conversation agent.grant
+    purchase.receipt purchase.watch
+    work.words work.code work.money work.stars
+    money.receipt life.facts
+  )
+  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  xcrun simctl spawn "$DEVICE" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "sheetShape"' \
+    --style compact > "$SHEET_LOG" 2>/dev/null &
+  SHPID=$!
+  sleep 1
+  xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES -sheetShapeProbe YES >/dev/null 2>&1 || true
+  for i in {1..15}; do
+    sleep 1
+    grep -q "sheetShape| corpus=" "$SHEET_LOG" 2>/dev/null && break
+  done
+  sleep 2
+  kill $SHPID 2>/dev/null || true
+  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  MISSING_SHAPES=()
+  for shape in "${EXPECTED_SHAPES[@]}"; do
+    # `= 0` can't appear (the probe only emits shapes it counted), so the
+    # test is presence of the line at all.
+    grep -q "sheetShape| $shape = " "$SHEET_LOG" 2>/dev/null || MISSING_SHAPES+=("$shape")
+  done
+  if (( ${#MISSING_SHAPES[@]} == 0 )); then
+    print -P "%F{green}✓ demo sheet-anatomy coverage (${#EXPECTED_SHAPES[@]}/${#EXPECTED_SHAPES[@]})%f"
+  else
+    fail "demo sheet anatomies unreachable: ${MISSING_SHAPES[*]} — see $SHEET_LOG"
+  fi
+fi
+
 print -P "%F{green}✓ verify complete → $OUT%f"

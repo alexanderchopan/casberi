@@ -77,8 +77,17 @@ grep -q 'for row in rows { context.delete(row) }' "$BRIDGE" \
 # screen states. Anchor on the one type that could: saveOrder.
 grep -q 'saveOrder' "$BRIDGE" \
   && { echo "✗ AppleWalletBridge calls saveOrder — the read-only promise is a lie"; exit 1; }
-grep -q 'Casberi has no server' "$SCREEN" \
-  || { echo "✗ the setup screen no longer states the no-server promise BEFORE connect"; exit 1; }
+# Apple granted this entitlement against a WRITTEN description of the screen,
+# so the promise is a contract, not copy. SUBSTANCE, not one exact sentence
+# (2026-08-12): a copy pass rewrote it out of the first person ("Casberi has
+# no server" → "There is no server, so nothing is uploaded or sold") and the
+# promise survived intact while the guard failed. Pinning prose fails on every
+# legitimate edit; what has to stay true is that the screen denies a server
+# and denies the data leaving, before anybody taps connect.
+grep -qiE 'no server|there is no server' "$SCREEN" \
+  || { echo "✗ the setup screen no longer denies having a server BEFORE connect"; exit 1; }
+grep -qiE 'nothing is uploaded|never uploaded|not uploaded|never leaves' "$SCREEN" \
+  || { echo "✗ the setup screen no longer says the data is not uploaded"; exit 1; }
 # Anchored on the sentence the screen ACTUALLY carries. It was anchored on
 # `is deleted from Casberi` when this harness shipped — a phrase that was never
 # in the screen, so `verify.sh` was red from the commit that added it and the

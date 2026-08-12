@@ -97,8 +97,26 @@ done
 # …and the positive half: the only transport it may use.
 grep -qE 'IngestSupport\.(getJSON|getJSONStatus)\(' "$ASC" \
   || { echo "✗ AppStoreConnectBridge.swift no longer reads through IngestSupport's GET funnel"; exit 1; }
-grep -q 'never submits a version, releases one, removes an app from sale, replies to a review, uploads a build' "$BRIDGES" \
-  || { echo "✗ canLine no longer names the verbs — the conduct promise is unstated"; exit 1; }
+# An App Store Connect key carries a ROLE, not scopes, and no role is
+# read-only for what this bridge reads: the narrowest that works can also
+# upload a build and submit a version. So the promise is kept by this file
+# issuing GET alone (guarded above) and by the copy naming the verbs it does
+# not use.
+#
+# SUBSTANCE, not one exact sentence (2026-08-12) — the same correction the
+# Cursor guard needed the same day. A copy pass that rewrote the catalog out
+# of the first person re-tensed every verb ("submits a version" → "submits")
+# and kept all five, and still failed the build. A guard that pins prose
+# fails on every legitimate edit, and the pressure that creates is to weaken
+# the guard rather than keep the promise.
+ASC_COPY=$(grep -F 'case .appStoreConnect:' "$BRIDGES" | grep -F 'review status')
+for pair in 'submit:submit a version' 'release:release one' 'remove:remove an app from sale' 'repl:reply to a review' 'upload:upload a build'; do
+  stem="${pair%%:*}"; label="${pair#*:}"
+  printf '%s' "$ASC_COPY" | grep -qi "$stem" \
+    || { echo "✗ App Store Connect's copy no longer says it never ${label} — the conduct promise is unstated"; exit 1; }
+done
+printf '%s' "$ASC_COPY" | grep -qi 'never' \
+  || { echo "✗ App Store Connect's copy names the verbs but no longer denies them"; exit 1; }
 
 # --- drift guards -----------------------------------------------------------
 # Wiring facts the extracted enums can't prove on their own. A perfect

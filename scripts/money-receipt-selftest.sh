@@ -135,8 +135,23 @@ func check(_ ok: Bool, _ what: String) {
 let cal = Calendar(identifier: .gregorian)
 let now = Date(timeIntervalSince1970: 1_754_000_000)   // fixed clock
 
+// Dates relative to the FIXED clock — for the `dayPhrase(_:now:)` units
+// below, which pass that clock in explicitly and so are fully deterministic.
 func at(_ daysAgo: Int, hour: Int = 9) -> Date {
     let day = cal.date(byAdding: .day, value: -daysAgo, to: now)!
+    return cal.date(bySettingHour: hour, minute: 41, second: 0, of: day)!
+}
+
+// Dates relative to the REAL clock — for every fixture that goes through
+// `MoneyReceipt.compose`. `compose` calls `dayPhrase(f.capturedAt)` with its
+// DEFAULT `now`, i.e. the system clock, so a fixture dated off the fixed
+// clock above lands ~a year in the past and every sentence comes out in the
+// dated form. That is what made "no chain read means no 'on <chain>' clause"
+// fail: with no network the sentence is "Received into Main <dayPhrase>." and
+// the dated phrase is itself "on 31 July 2025", so the clause the assertion
+// was looking for appeared without any chain being read.
+func realAt(_ daysAgo: Int, hour: Int = 9) -> Date {
+    let day = cal.date(byAdding: .day, value: -daysAgo, to: Date())!
     return cal.date(bySettingHour: hour, minute: 41, second: 0, of: day)!
 }
 
@@ -195,7 +210,7 @@ do {
 func transfer(_ direction: String, amount: String = "0.9962 ETH",
               usd: Double? = 3480) -> MoneyReceipt.Facts {
     var f = MoneyReceipt.Facts(source: "Wallet", title: "Received 0.9962 ETH from maria.eth")
-    f.capturedAt = at(0)
+    f.capturedAt = realAt(0)
     f.direction = direction
     f.amount = amount
     f.usd = usd
@@ -249,7 +264,7 @@ do {
 
 do {
     var f = MoneyReceipt.Facts(source: "Wallet", title: "Received 0.0412 BTC")
-    f.capturedAt = at(0)
+    f.capturedAt = realAt(0)
     f.direction = "received"
     f.amount = "0.0412 BTC"
     f.venue = "Block 959,701"
@@ -278,7 +293,7 @@ do {
 func card(_ source: String, tags: [String], merchant: String? = "Blue Bottle Coffee")
     -> MoneyReceipt.Facts {
     var f = MoneyReceipt.Facts(source: source, title: "Blue Bottle Coffee · $6.75")
-    f.capturedAt = at(0)
+    f.capturedAt = realAt(0)
     f.counterparty = merchant
     f.priceValue = 6.75
     f.priceCurrency = "USD"
@@ -333,7 +348,7 @@ do {
 
 do {
     var f = MoneyReceipt.Facts(source: "Privacy Pools", title: "Put 0.0700 ETH into Privacy Pools")
-    f.capturedAt = at(6)
+    f.capturedAt = realAt(6)
     f.amount = "0.0700 ETH"
     f.tags = ["Shielded", "Pending"]
     f.walletAddress = "0xmine"
@@ -362,7 +377,7 @@ do {
 
 do {
     var f = MoneyReceipt.Facts(source: "Railgun", title: "Unshielded 1.5 ETH")
-    f.capturedAt = at(1)
+    f.capturedAt = realAt(1)
     f.direction = "received"
     f.amount = "1.5000 ETH"
     f.walletAddress = "0xmine"
@@ -391,7 +406,7 @@ do {
 
 do {
     var f = MoneyReceipt.Facts(source: "Safe", title: "Treasury · a transfer of 12,500 USDC")
-    f.capturedAt = at(0)
+    f.capturedAt = realAt(0)
     f.walletAddress = "0xsafe"
     f.myLabel = "Treasury"
     f.tags = ["Your turn"]
@@ -620,9 +635,17 @@ mutate "a future date is given a weekday" receipt \
   'if days <= 6 {'
 
 # Bitcoin reaching for a market it does not read.
+# Anchored on the LINE AFTER it, not on the sentence itself (2026-08-12).
+# A mutation is by nature an exact source edit, so this used to pin Bitcoin's
+# whole no-fiat sentence — and a copy pass that rewrote it ("Casberi reads the
+# chain here…" → "Read from the chain…") stopped the mutation applying, which
+# `set -e` turned into a silent exit with no ✗ at all. `sentence:
+# bitcoinSentence(f),` is structure rather than prose: it names a function, so
+# it only moves if the composition really moves, and inserting the fiat line
+# above it is the same inversion the old edit made.
 mutate "bitcoin claims a fiat figure" receipt \
-  'secondary: String(localized: "Casberi reads the chain here, not a market — so there'"'"'s no dollar figure to give you."),' \
-  'secondary: worthLine(f.usd),'
+  'sentence: bitcoinSentence(f),' \
+  'secondary: worthLine(f.usd), sentence: bitcoinSentence(f),'
 
 # "Mostly them sending you" over a 3–2 split.
 mutate "the lopsided guard is dropped" says \
