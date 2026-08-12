@@ -1,0 +1,553 @@
+<title>Social thing sheets — inventory & three anatomies</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #1673e6; --confirm: #32d74b; --down: #ff5a5f; --attn: #ff9f0a;
+    --slab: #16181d; --well: #101216; --card: rgba(28,30,37,.82);
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    --bsky: #0a7aff; --fc: #8a63d2; --x: #d9d9d9; --ig: #e1306c; --tt: #25f4ee;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body { font-family: var(--text); color: var(--ink);
+         background: radial-gradient(900px 420px at 18% -8%, rgba(138,99,210,.10), transparent 62%), var(--page);
+         padding: 48px 28px 90px; }
+  .wrap { max-width: 1260px; margin: 0 auto; }
+  header { max-width: 820px; margin-bottom: 34px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: #a184e8; margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.4vw,36px); font-weight: 800; letter-spacing: -.02em; line-height: 1.1; margin-bottom: 12px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 70ch; margin-bottom: 10px; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  h2 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin: 54px 0 6px; }
+  h2 .n { color: var(--faint); font-weight: 600; margin-right: 8px; }
+  .sub { font-size: 14px; line-height: 1.55; color: var(--muted); max-width: 78ch; margin-bottom: 22px; }
+  .sub b { color: var(--ink); font-weight: 600; }
+  .sub code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12.5px;
+              background: rgba(255,255,255,.07); padding: 1px 5px; border-radius: 5px; color: #c8d0e0; }
+
+  /* ---- inventory table ---- */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-size: 11px; font-weight: 700; color: var(--faint);
+       padding: 0 12px 8px 0; white-space: nowrap; }
+  td { padding: 11px 12px 11px 0; vertical-align: top; color: var(--muted); line-height: 1.45; }
+  tbody tr { border-top: 1px solid rgba(255,255,255,.06); }
+  td b { color: var(--ink); font-weight: 600; }
+  td code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11.5px;
+            background: rgba(255,255,255,.06); padding: 1px 5px; border-radius: 5px; color: #9fb0c8; }
+  .ok  { color: var(--confirm); font-weight: 700; }
+  .bad { color: var(--down); font-weight: 700; }
+  .mid { color: var(--attn); font-weight: 700; }
+
+  /* ---- phones ---- */
+  .row { display: flex; flex-wrap: wrap; gap: 34px; align-items: flex-start; }
+  .option { width: 340px; }
+  .otitle { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .odesc { font-size: 12.5px; line-height: 1.5; color: var(--faint); margin-bottom: 14px; min-height: 54px; }
+  .odesc b { color: var(--muted); font-weight: 600; }
+  .phone { width: 340px; border-radius: 46px; padding: 10px; background: #15171c; box-shadow: 0 30px 70px rgba(0,0,0,.55); }
+  .screen { border-radius: 38px; overflow: hidden; padding: 16px 0 20px; min-height: 720px; background: #000; position: relative; }
+  .grab { width: 34px; height: 4px; border-radius: 99px; background: rgba(255,255,255,.22); margin: 0 auto 14px; }
+  .pad { padding: 0 16px; }
+
+  /* eyebrow / provenance */
+  .brow { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
+  .face { width: 30px; height: 30px; border-radius: 50%; flex: none;
+          background: radial-gradient(circle at 32% 30%, #e86a6a, #7d6adf 60%, #3a3160); }
+  .face.b2 { background: radial-gradient(circle at 32% 30%, #5ad1c4, #2f7de0 60%, #1c3b6e); }
+  .face.b3 { background: radial-gradient(circle at 32% 30%, #f0b24b, #d9534f 60%, #6b2230); }
+  .face.b4 { background: radial-gradient(circle at 32% 30%, #8fd36e, #2f9e6e 60%, #17453a); }
+  .face.sm { width: 22px; height: 22px; }
+  .face.lg { width: 44px; height: 44px; }
+  .face.xs { width: 17px; height: 17px; }
+  .mark { width: 26px; height: 26px; border-radius: 50%; flex: none; display: flex; align-items: center;
+          justify-content: center; font-size: 12px; font-weight: 800; }
+  .mark.fc { background: var(--fc); color: #fff; }
+  .mark.bs { background: var(--bsky); color: #fff; }
+  .mark.x  { background: #1a1a1a; color: #fff; border: 1px solid rgba(255,255,255,.2); font-size: 13px; }
+  .mark.ig { background: linear-gradient(135deg,#f9ce34,#ee2a7b 50%,#6228d7); color: #fff; font-size: 11px; }
+  .mark.tt { background: #000; border: 1px solid rgba(255,255,255,.24); color: #25f4ee; font-size: 11px; }
+  .who { font-size: 13.5px; font-weight: 600; letter-spacing: -.01em; }
+  .browline { font-size: 11.5px; color: var(--faint); }
+  .browline em { font-style: normal; color: var(--muted); }
+  .ctx { font-size: 10.5px; font-weight: 700; padding: 3px 7px; border-radius: 999px;
+         background: rgba(138,99,210,.18); color: #b498ec; margin-left: auto; flex: none; }
+  .ctx.bs { background: rgba(10,122,255,.18); color: #6bb2ff; }
+  .ctx.gray { background: rgba(255,255,255,.08); color: var(--muted); }
+
+  /* words */
+  .words { font-size: 21px; line-height: 1.32; letter-spacing: -.015em; font-weight: 500; }
+  .words.sm { font-size: 17px; line-height: 1.42; font-weight: 400; }
+  .words a { color: #6bb2ff; text-decoration: none; }
+  .media { height: 168px; border-radius: 14px; margin-top: 12px;
+           background: linear-gradient(150deg,#2b3550,#4b3a63 55%,#7a4a52); }
+  .media.sq { height: 120px; }
+
+  /* the parent, as a real card */
+  .parent { border-left: 2px solid rgba(255,255,255,.14); padding: 2px 0 2px 11px; margin-bottom: 12px; }
+  .parent .h { display: flex; align-items: center; gap: 7px; margin-bottom: 3px; }
+  .parent .h b { font-size: 12px; font-weight: 600; color: var(--muted); }
+  .parent p { font-size: 12.5px; line-height: 1.42; color: var(--faint);
+              display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .replyto { font-size: 11px; color: var(--faint); margin-bottom: 8px; }
+
+  /* quote card */
+  .quote { border-radius: 13px; background: rgba(255,255,255,.05); padding: 11px; margin-top: 12px; }
+  .quote .h { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+  .quote .h b { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .quote p { font-size: 13px; line-height: 1.42; color: var(--muted); }
+
+  /* reception block */
+  .sect { font-size: 11px; font-weight: 700; color: var(--faint); margin: 22px 2px 8px;
+          display: flex; align-items: center; }
+  .sect i { font-style: normal; margin-left: auto; font-weight: 600; }
+  .recept { border-radius: 16px; background: rgba(255,255,255,.045); padding: 13px 14px; }
+  .stats { display: flex; gap: 20px; align-items: baseline; }
+  .stat b { font-family: var(--money); font-size: 20px; font-weight: 800; letter-spacing: -.02em;
+            font-variant-numeric: tabular-nums; display: block; }
+  .stat s { text-decoration: none; font-size: 10.5px; color: var(--faint); font-weight: 600; }
+  .likers { display: flex; align-items: center; gap: 7px; margin-top: 11px; }
+  .stack { display: flex; }
+  .stack .face { margin-right: -7px; border: 1.5px solid #0b0c10; }
+  .likers span { font-size: 11.5px; color: var(--muted); }
+  .likers span b { color: var(--ink); font-weight: 600; }
+  .barrow { display: flex; gap: 3px; margin-top: 12px; height: 5px; }
+  .barrow i { border-radius: 99px; }
+
+  /* receipt stub variant */
+  .stub { background: rgba(255,255,255,.045); border-radius: 16px; padding: 14px;
+          margin-top: 14px; position: relative; }
+  .stub::before { content: ""; position: absolute; left: 12px; right: 12px; top: 0; height: 1px;
+                  background: repeating-linear-gradient(90deg, rgba(255,255,255,.22) 0 4px, transparent 4px 9px); }
+  .kv { display: flex; align-items: baseline; font-size: 12.5px; padding: 5px 0; }
+  .kv b { font-weight: 600; color: var(--faint); font-size: 11.5px; }
+  .kv i { flex: 1; border-bottom: 1px dotted rgba(255,255,255,.13); margin: 0 7px 3px; }
+  .kv em { font-style: normal; font-family: var(--money); font-weight: 700;
+           font-variant-numeric: tabular-nums; color: var(--ink); }
+
+  /* verbs */
+  .dial { display: flex; gap: 12px; justify-content: center; margin: 22px 0 4px; }
+  .disc { text-align: center; }
+  .disc div { width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,.08);
+              display: flex; align-items: center; justify-content: center; font-size: 17px; }
+  .disc s { text-decoration: none; display: block; font-size: 10px; color: var(--faint); margin-top: 5px; }
+
+  /* replies */
+  .rep { display: flex; gap: 9px; padding: 9px 0; }
+  .rep .t b { display: block; font-size: 11.5px; color: var(--muted); font-weight: 600; }
+  .rep .t p { font-size: 13px; line-height: 1.4; color: var(--ink); margin-top: 1px; }
+  .cont { position: absolute; left: 0; right: 0; bottom: 0; height: 66px;
+          background: linear-gradient(180deg, transparent, #000 72%); }
+
+  .callout { border-radius: 14px; background: rgba(255,255,255,.045); padding: 16px 18px;
+             font-size: 13.5px; line-height: 1.6; color: var(--muted); margin-top: 22px; max-width: 92ch; }
+  .callout b { color: var(--ink); font-weight: 600; }
+  .callout ul { margin: 8px 0 0 18px; } .callout li { margin: 4px 0; }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · design · 2026-08-12</div>
+  <h1>Social thing sheets: what they are today, and three ways to make them a receipt</h1>
+  <p>Same move as the wallet sheets. A social sheet today is a <b>title in display type, a body in secondary type, and a one-row spec table</b> — a database record with the field names left on. Everything a post actually is (who, its pictures, what it quotes, how it landed, who liked it) is either buried below the fold or, for four of the seven sources, not drawn at all.</p>
+  <p>The inventory below is measured from source, not assumed. <b>The headline finding: the sheet's social treatment is gated on <code>SocialThread.isSocial</code>, which is only Bluesky, Farcaster and Nostr</b> — so an X, Instagram, TikTok or Snapchat post opens a sheet strictly <em>worse</em> than the row you tapped to get there.</p>
+</header>
+
+<h2><span class="n">1</span>Inventory — every social thing sheet the app can present</h2>
+<div class="sub">Social category = the catalog's <code>Network</code> group: <b>Bluesky, Farcaster, Nostr, X, Instagram, TikTok, Snapchat</b>. Eleven distinct sheet shapes across them.</div>
+
+<table>
+<thead><tr>
+  <th style="width:15%">Shape</th><th style="width:9%">Source</th><th style="width:7%">Kind</th>
+  <th style="width:30%">What the sheet draws today</th><th style="width:39%">What's in the store and not drawn</th>
+</tr></thead>
+<tbody>
+<tr>
+  <td><b>Live post</b><br>own / channel / mention / recast</td>
+  <td>Bluesky<br>Farcaster<br>Nostr</td><td><code>.chat</code></td>
+  <td><span class="ok">The good one.</span> Face → profile card, <code>@dwr · in /design · 2h</code>, "Replying to @x", full <code>postText</code> at reading type with live links, photos, quote card, engagement line, live replies section.</td>
+  <td><b>Who liked it</b> — <code>SocialLikers.roll().line</code> renders in the room's <code>PostCard</code> and nowhere in the sheet. The engagement line sits <em>under</em> the photos as three mono numbers. Spec table shows one row: <code>From — saved by you</code>.</td>
+</tr>
+<tr>
+  <td><b>Post / reply / thread head</b></td><td>X</td><td><code>.note</code></td>
+  <td><span class="bad">Broken.</span> <code>Text(thing.title)</code> — the <b>80-char clamp</b> — set at <code>heading34</code>. Then <code>content</code> repeated in full at <code>callout15</code> secondary. No face.</td>
+  <td><code>postText</code>, <code>authorHandle</code>, <code>likeCount</code>, <code>repostCount</code>, <code>previewImageData</code> (via <code>ImportMedia</code>), and a whole thread on <code>enrichedText</code> + <code>messageCount</code>. The room's <code>PostCard</code> draws five of those six; the sheet draws none.</td>
+</tr>
+<tr>
+  <td><b>Liked post</b></td><td>X</td><td><code>.link</code></td>
+  <td><span class="bad">Broken.</span> <code>LinkPreviewCard</code> over an x.com URL — which serves no <code>og:</code> tags at all (§280), so it's a naked host row.</td>
+  <td><code>postText</code> holds the real words (stamped by <code>fetchFaces</code>), <code>authorHandle</code> the author. The post is in the record; the sheet shows a link card of a page that won't describe itself.</td>
+</tr>
+<tr>
+  <td><b>Saved / liked video</b></td><td>TikTok</td><td><code>.link</code></td>
+  <td><span class="mid">Half.</span> <code>LinkPreviewCard</code> with the oEmbed cover.</td>
+  <td><code>authorHandle</code> is stamped by the face pass and never shown. No creator line, no play affordance — a video reads like a bookmark.</td>
+</tr>
+<tr>
+  <td><b>Saved / liked post</b></td><td>Instagram</td><td><code>.link</code></td>
+  <td><span class="mid">Half.</span> <code>LinkPreviewCard</code>.</td>
+  <td><code>authorHandle</code> stamped, unused. §245: a save carries a handle and a date and nothing else — the sheet never says that, so an empty card reads as a failure rather than as the export's own ceiling.</td>
+</tr>
+<tr>
+  <td><b>Caption / comment</b></td><td>Instagram<br>TikTok</td><td><code>.note</code></td>
+  <td><span class="bad">Bare.</span> Clamped title at <code>heading34</code>, then the same words again at <code>callout15</code>.</td>
+  <td>These are <em>your own writing</em> — the one social corpus the app can claim outright — rendered as an untitled note.</td>
+</tr>
+<tr>
+  <td><b>New follower</b></td><td>Bluesky<br>Farcaster</td><td><code>.link</code></td>
+  <td><span class="bad">Wrong noun.</span> "@alice started following you" as a headline, then a <code>LinkPreviewCard</code> fetching their profile page.</td>
+  <td><code>authorAvatarURL</code> + <code>authorHandle</code> are both stamped. <b>This is a person, drawn as a link.</b> The app already has <code>SocialProfileCard</code> — face, bio, Watch, "who they follow" — and this sheet can't reach it.</td>
+</tr>
+<tr>
+  <td><b>Signer grant</b><br>"app X can post as you"</td><td>Farcaster</td><td><code>.link</code></td>
+  <td>Title + link to Farcaster's connected-apps page.</td>
+  <td>A permission notice wearing a bookmark's clothes. The wallet's approval sheets got a stage and a prepare card for exactly this shape.</td>
+</tr>
+<tr>
+  <td><b>Saved chat</b></td><td>Snapchat<br>Instagram</td><td><code>.chat</code></td>
+  <td><span class="ok">Fine.</span> <code>ChatBubbles</code> over the transcript.</td>
+  <td><code>messageCount</code> holds the <em>full</em> conversation length while <code>content</code> is clamped at 60 lines / 4KB — the sheet never says it's showing a fragment.</td>
+</tr>
+<tr>
+  <td><b>Memory</b></td><td>Snapchat</td><td><code>.file</code></td>
+  <td><span class="ok">Fine.</span> <code>FilePictureContent</code>, or <code>FileChip</code> when the 7-day link expired.</td>
+  <td>An expired memory says "file" rather than "the export's download window closed" — a fact that changes what you'd do.</td>
+</tr>
+<tr>
+  <td><b>DM conversation</b></td><td>X<br>Instagram</td><td><code>.chat</code></td>
+  <td><span class="ok">Fine.</span> <code>ChatBubbles</code>, one thing per conversation.</td>
+  <td>Same clamp silence as above.</td>
+</tr>
+</tbody>
+</table>
+
+<div class="callout">
+<b>The three things wrong, stated once:</b>
+<ul>
+<li><b>The gate is a source list, not a data test.</b> <code>isSocialPost</code> asks "is this Bluesky, Farcaster or Nostr?" when the question it means is "does this record carry an author and words?" Four sources stamp both and are refused.</li>
+<li><b>The spec table is the database showing through.</b> On a social post it renders exactly one row — <code>From: saved by you</code> — inside its own card, with an 80pt label column. It is the only thing on the sheet that looks like a form.</li>
+<li><b>Reception is an afterthought.</b> Three monospace numbers below the photos. On your own posts the app knows <em>who</em> liked it and shows that in the feed row but not in the sheet you opened to find out.</li>
+</ul>
+</div>
+
+<h2><span class="n">2</span>Three anatomies</h2>
+<div class="sub">All three keep the app's laws: no hairlines, sentence case, one hue per surface, ink ground, the disc dial, no fake status. All three delete the spec table and replace its one honest fact with a sentence. They differ in <b>what the sheet is a receipt <em>of</em></b>.</div>
+
+<div class="row">
+
+  <!-- ============ A ============ -->
+  <div class="option">
+    <div class="otitle">A · The post, then how it landed</div>
+    <div class="odesc">The post renders at <b>client fidelity</b> — face, handle, words, media, quote — then one block answers "how did this land": counts as real numbers with the likers' faces beside them. Provenance is a sentence at the foot.</div>
+    <div class="phone"><div class="screen">
+      <div class="grab"></div>
+      <div class="pad">
+
+        <div class="brow">
+          <div class="face"></div>
+          <div>
+            <div class="who">@dwr</div>
+            <div class="browline">Farcaster · 2h ago</div>
+          </div>
+          <div class="ctx">/design</div>
+        </div>
+
+        <div class="parent">
+          <div class="h"><div class="face sm b2"></div><b>@jessepollak</b></div>
+          <p>the thing nobody says about design systems is that the hard part was never the components</p>
+        </div>
+
+        <div class="words">it's the <a>ruling</a> that says which one wins. we kept a doc. it's 400 sections long and it is the single most valuable file in the repo.</div>
+
+        <div class="media"></div>
+
+        <div class="sect">How it landed</div>
+        <div class="recept">
+          <div class="stats">
+            <div class="stat"><b>128</b><s>likes</s></div>
+            <div class="stat"><b>34</b><s>recasts</s></div>
+            <div class="stat"><b>12</b><s>replies</s></div>
+          </div>
+          <div class="likers">
+            <div class="stack">
+              <div class="face xs b2"></div><div class="face xs b3"></div><div class="face xs b4"></div>
+            </div>
+            <span><b>v, linda</b> and 126 others</span>
+          </div>
+        </div>
+
+        <div class="dial">
+          <div class="disc"><div>💬</div><s>Thread</s></div>
+          <div class="disc"><div>⧉</div><s>Copy</s></div>
+          <div class="disc"><div>文</div><s>Translate</s></div>
+          <div class="disc"><div>↗</div><s>Share</s></div>
+        </div>
+
+        <div class="sect">Replies <i>12+</i></div>
+        <div class="rep"><div class="face sm b3"></div><div class="t"><b>@linda</b><p>the doc is the product tbh</p></div></div>
+        <div class="rep"><div class="face sm b4"></div><div class="t"><b>@v</b><p>what's the oldest ruling still load-bearing</p></div></div>
+      </div>
+      <div class="cont"></div>
+    </div></div>
+  </div>
+
+  <!-- ============ B ============ -->
+  <div class="option">
+    <div class="otitle">B · The receipt stub</div>
+    <div class="odesc">Literal receipt anatomy: the post is the <b>purchase</b>, the stub below it is the <b>record</b> — perforated edge, dotted leaders, right-aligned monospace values. Honest and scannable, but the skeuomorph is a strong claim to make on a post.</div>
+    <div class="phone"><div class="screen">
+      <div class="grab"></div>
+      <div class="pad">
+
+        <div class="brow">
+          <div class="face"></div>
+          <div>
+            <div class="who">@dwr</div>
+            <div class="browline">Farcaster · 2h ago</div>
+          </div>
+          <div class="ctx">/design</div>
+        </div>
+
+        <div class="replyto">↩ Replying to @jessepollak</div>
+
+        <div class="words">it's the ruling that says which one wins. we kept a doc. it's 400 sections long and it is the single most valuable file in the repo.</div>
+
+        <div class="media"></div>
+
+        <div class="stub">
+          <div class="kv"><b>Liked by</b><i></i><em>128</em></div>
+          <div class="kv"><b>Recast</b><i></i><em>34</em></div>
+          <div class="kv"><b>Replies</b><i></i><em>12</em></div>
+          <div class="kv"><b>Posted</b><i></i><em>2h ago</em></div>
+          <div class="kv"><b>Landed</b><i></i><em>you follow @dwr</em></div>
+          <div class="likers" style="margin-top:12px">
+            <div class="stack"><div class="face xs b2"></div><div class="face xs b3"></div><div class="face xs b4"></div></div>
+            <span><b>v, linda</b> and 126 others</span>
+          </div>
+        </div>
+
+        <div class="dial">
+          <div class="disc"><div>💬</div><s>Thread</s></div>
+          <div class="disc"><div>⧉</div><s>Copy</s></div>
+          <div class="disc"><div>文</div><s>Translate</s></div>
+          <div class="disc"><div>↗</div><s>Share</s></div>
+        </div>
+
+        <div class="sect">Replies <i>12+</i></div>
+        <div class="rep"><div class="face sm b3"></div><div class="t"><b>@linda</b><p>the doc is the product tbh</p></div></div>
+      </div>
+      <div class="cont"></div>
+    </div></div>
+  </div>
+
+  <!-- ============ C ============ -->
+  <div class="option">
+    <div class="otitle">C · The conversation</div>
+    <div class="odesc">The post is <b>one node in a thread</b>, not a document. The parent renders as a real card above it, this post sits raised and highlighted, replies run straight on below. Reception rides the post itself, at row weight.</div>
+    <div class="phone"><div class="screen">
+      <div class="grab"></div>
+      <div class="pad">
+        <div class="browline" style="margin-bottom:12px">Farcaster · /design · 2h ago</div>
+
+        <div style="opacity:.62">
+          <div class="brow" style="margin-bottom:6px">
+            <div class="face sm b2"></div>
+            <div><div class="who" style="font-size:12.5px">@jessepollak</div></div>
+          </div>
+          <div class="words sm" style="margin-bottom:16px">the thing nobody says about design systems is that the hard part was never the components</div>
+        </div>
+
+        <div style="background:rgba(255,255,255,.05);border-radius:18px;padding:14px;margin:0 -4px">
+          <div class="brow" style="margin-bottom:8px">
+            <div class="face"></div>
+            <div><div class="who">@dwr</div><div class="browline">2h ago</div></div>
+          </div>
+          <div class="words sm">it's the ruling that says which one wins. we kept a doc. it's 400 sections long and it is the single most valuable file in the repo.</div>
+          <div class="media sq"></div>
+          <div class="likers" style="margin-top:12px">
+            <div class="stack"><div class="face xs b2"></div><div class="face xs b3"></div><div class="face xs b4"></div></div>
+            <span><b>128</b> likes · <b>34</b> recasts</span>
+          </div>
+        </div>
+
+        <div class="dial">
+          <div class="disc"><div>💬</div><s>Thread</s></div>
+          <div class="disc"><div>⧉</div><s>Copy</s></div>
+          <div class="disc"><div>文</div><s>Translate</s></div>
+          <div class="disc"><div>↗</div><s>Share</s></div>
+        </div>
+
+        <div class="sect">12 replies</div>
+        <div class="rep"><div class="face sm b3"></div><div class="t"><b>@linda</b><p>the doc is the product tbh</p></div></div>
+        <div class="rep"><div class="face sm b4"></div><div class="t"><b>@v</b><p>what's the oldest ruling still load-bearing</p></div></div>
+        <div class="rep"><div class="face sm b2"></div><div class="t"><b>@jessepollak</b><p>§8. the design system. never once amended</p></div></div>
+      </div>
+      <div class="cont"></div>
+    </div></div>
+  </div>
+</div>
+
+<div class="callout">
+<b>My recommendation: A, with C's parent card folded in.</b> A is the only one of the three whose anatomy survives contact with the other ten shapes — a liked X post, a new follower and a Snapchat memory all have a "how it landed" and none of them has a thread. C is right about the parent (a card beats the label "Replying to @jessepollak", which tells you a name and withholds the sentence) but it makes the thread the frame, and eight of eleven shapes have no thread to be a node in. <b>B is the honest loser:</b> dotted leaders and a perforation are a claim that the app is joking, and the one place we already ruled receipt anatomy in (the approvals card, §292) took the <em>anatomy</em> and explicitly left the skeuomorph behind.
+</div>
+
+<h2><span class="n">3</span>One anatomy, the other shapes</h2>
+<div class="sub">A's proof: the same three blocks — <b>who + words</b>, <b>how it landed</b>, <b>the dial</b> — applied to the four shapes that draw nothing today. Nothing here needs a new <code>Thing</code> field, so <b>no CloudKit Production deploy</b>.</div>
+
+<div class="row">
+
+  <!-- X archive post -->
+  <div class="option">
+    <div class="otitle">X · a post from the archive</div>
+    <div class="odesc">Today: an 80-char clamp in display type, then the same words again below. <b>Every field this needs is already stamped</b> — the room's <code>PostCard</code> draws them.</div>
+    <div class="phone"><div class="screen">
+      <div class="grab"></div>
+      <div class="pad">
+        <div class="brow">
+          <div class="face b3"></div>
+          <div><div class="who">@you</div><div class="browline">X · 16 Apr 2019</div></div>
+          <div class="ctx gray">Thread</div>
+        </div>
+        <div class="words">spent the afternoon reading every commit message we wrote in 2018 and the honest conclusion is that the ones that explain WHY are the only ones that aged</div>
+        <div class="media"></div>
+
+        <div class="sect">The rest of the thread <i>4 posts</i></div>
+        <div class="recept" style="padding:0;background:none">
+          <div class="rep" style="padding-top:2px"><div class="face sm b3"></div><div class="t"><p>the ones that say what changed are a diff with extra steps. git already has the diff.</p></div></div>
+          <div class="rep"><div class="face sm b3"></div><div class="t"><p>so the rule now: the subject line is the ruling, the body is the reasoning, and the diff can speak for itself.</p></div></div>
+        </div>
+
+        <div class="sect">How it landed</div>
+        <div class="recept">
+          <div class="stats">
+            <div class="stat"><b>412</b><s>likes</s></div>
+            <div class="stat"><b>88</b><s>reposts</s></div>
+          </div>
+          <div class="likers"><span>Counts as your archive recorded them, Aug 2026.</span></div>
+        </div>
+
+        <div class="dial">
+          <div class="disc"><div>⧉</div><s>Copy</s></div>
+          <div class="disc"><div>文</div><s>Translate</s></div>
+          <div class="disc"><div>↗</div><s>Share</s></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- new follower -->
+  <div class="option">
+    <div class="otitle">Bluesky · a new follower</div>
+    <div class="odesc">Today: a headline sentence and a link preview of their profile page. It's a <b>person</b> — and the app already has a person card with a real verb on it.</div>
+    <div class="phone"><div class="screen">
+      <div class="grab"></div>
+      <div class="pad">
+        <div class="browline" style="margin-bottom:14px">Bluesky · 3h ago</div>
+
+        <div style="display:flex;align-items:center;gap:13px;margin-bottom:14px">
+          <div class="face lg b2"></div>
+          <div>
+            <div style="font-size:19px;font-weight:700;letter-spacing:-.02em">Linda Xie</div>
+            <div class="browline">@linda.bsky.social</div>
+          </div>
+        </div>
+        <div class="words sm" style="color:var(--muted)">started following you.</div>
+        <div class="words sm" style="margin-top:10px;color:var(--muted)">investing in crypto things · previously scalar capital · sf</div>
+
+        <div class="sect">What they post</div>
+        <div class="recept" style="padding:0;background:none">
+          <div class="rep" style="padding-top:2px"><div class="face sm b2"></div><div class="t"><b>2d ago</b><p>the best product decisions I've seen all came from someone using the thing daily</p></div></div>
+          <div class="rep"><div class="face sm b2"></div><div class="t"><b>5d ago</b><p>reading week. no meetings. highly recommend</p></div></div>
+        </div>
+
+        <div class="dial">
+          <div class="disc"><div>👁</div><s>Watch</s></div>
+          <div class="disc"><div>👥</div><s>Follows</s></div>
+          <div class="disc"><div>↗</div><s>Open</s></div>
+        </div>
+      </div>
+      <div class="cont"></div>
+    </div></div>
+  </div>
+
+  <!-- TikTok save -->
+  <div class="option">
+    <div class="otitle">TikTok · a video you saved</div>
+    <div class="odesc">Today: a link preview card. The face pass already stamped the creator; the cover is already fetched. <b>The creator leads</b>, and the ceiling is stated rather than left as an empty card.</div>
+    <div class="phone"><div class="screen">
+      <div class="grab"></div>
+      <div class="pad">
+        <div class="brow">
+          <div class="mark tt">♪</div>
+          <div><div class="who">@bakingwithbrian</div><div class="browline">TikTok · saved 12 Jun</div></div>
+          <div class="ctx gray">Saved</div>
+        </div>
+
+        <div class="media" style="height:300px;margin-top:4px;background:linear-gradient(160deg,#3b2f4d,#6b3f52 60%,#c76b4a)"></div>
+
+        <div class="words sm" style="margin-top:12px">no-knead focaccia, 4 ingredients, and the trick is you have to be willing to over-hydrate it</div>
+
+        <div class="sect">How it landed</div>
+        <div class="recept">
+          <div class="likers" style="margin-top:0"><span>From your TikTok export — you saved this on 12 June 2025.</span></div>
+        </div>
+
+        <div class="dial">
+          <div class="disc"><div>▶</div><s>TikTok</s></div>
+          <div class="disc"><div>⧉</div><s>Copy</s></div>
+          <div class="disc"><div>↗</div><s>Share</s></div>
+        </div>
+      </div>
+      <div class="cont"></div>
+    </div></div>
+  </div>
+
+  <!-- Instagram save, the honest ceiling -->
+  <div class="option">
+    <div class="otitle">Instagram · a save with nothing behind it</div>
+    <div class="odesc">The hardest case and the one that proves the anatomy. §245: an IG save is <b>a handle and a date, and that is all the export contains</b>. Today that renders as a broken-looking link card. It should say so.</div>
+    <div class="phone"><div class="screen">
+      <div class="grab"></div>
+      <div class="pad">
+        <div class="brow">
+          <div class="mark ig">◎</div>
+          <div><div class="who">@studioroof</div><div class="browline">Instagram · saved 4 Mar</div></div>
+          <div class="ctx gray">Saved</div>
+        </div>
+
+        <div style="height:220px;border-radius:14px;margin-top:6px;background:rgba(255,255,255,.04);
+                    display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px">
+          <div style="font-size:26px;opacity:.32">◎</div>
+          <div style="font-size:12px;color:var(--faint);max-width:22ch;text-align:center;line-height:1.45">
+            Instagram's export doesn't include the picture or the caption.
+          </div>
+        </div>
+
+        <div class="sect">How it landed</div>
+        <div class="recept">
+          <div class="likers" style="margin-top:0"><span>From your Instagram export — you saved this post by <b>@studioroof</b> on 4 March 2024. The export records the handle and the date; the caption and the image stay on Instagram.</span></div>
+        </div>
+
+        <div class="dial">
+          <div class="disc"><div>◎</div><s>Instagram</s></div>
+          <div class="disc"><div>👤</div><s>Creator</s></div>
+          <div class="disc"><div>↗</div><s>Share</s></div>
+        </div>
+      </div>
+      <div class="cont"></div>
+    </div></div>
+  </div>
+</div>
+
+<div class="callout">
+<b>What "how it landed" is, precisely — so it can't drift into a tally.</b> The module doctrine (§223) bans a count from being a <em>thing</em>; it does not ban a state surface from stating one, which is why the engagement line already exists. The block is a <b>reading of one post</b>, not news, and it renders only facts the record holds:
+<ul>
+<li><b>Live sources</b> — the counts, read live on open (already built: <code>SocialThread.engagement</code>), plus the likers' names and faces on your own posts (already built: <code>SocialLikers.roll</code>, currently drawn only in the feed row).</li>
+<li><b>Archives</b> — the counts <em>as the export recorded them</em>, with the date said out loud. Never a live-looking number over a 2019 post.</li>
+<li><b>Everything else</b> — one sentence naming the provenance, which is what the <code>From</code> spec row was trying to say with a label column and an 80pt gutter.</li>
+<li><b>An absent count has no cell.</b> Unchanged, and the reason the block can be trusted at all.</li>
+</ul>
+</div>
+
+</div>
