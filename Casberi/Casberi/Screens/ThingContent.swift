@@ -644,6 +644,20 @@ private struct StoredArtContent: View {
     }
 
     private func load() async {
+        #if DEBUG
+        // Bundled demo art resolves locally, exactly as the row renderer
+        // already did (`ShapedRows`' own `sample:` branch) — this view only
+        // ever FETCHED, so a `sample:` ref fell through to `URLSession`, came
+        // back nothing, and left the placeholder. That made every demo
+        // `.product` sheet blank, which is the one case this file's own
+        // `.product` comment says the image exists to prevent ("doing the
+        // work of not leaving the sheet blank"). Debug only: nothing ships a
+        // `sample:` url, so a release build cannot reach this.
+        if urlString.hasPrefix("sample:"), let bundled = UIImage.demoSample(for: urlString) {
+            image = await bundled.dsDownsampled(maxSide: 560)
+            return
+        }
+        #endif
         guard let url = URL(string: urlString),
               let (data, _) = try? await URLSession.shared.data(from: url),
               let ui = UIImage(data: data) else { return }
