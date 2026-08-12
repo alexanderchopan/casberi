@@ -133,6 +133,44 @@ enum VerbDerivation {
             if let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) {
                 out.append(Verb(label: "Open in store", icon: "bag", action: .openURL(url)))
             }
+        case .transaction:
+            // The block explorer — the record's own public page (2026-08-12).
+            //
+            // Every onchain seat stores that permalink as the row's `content`,
+            // and until now only the STAGE layout offered it (`walletVerbs` on
+            // a Sent/Received/Moved/Swapped sheet). Every other wallet row — a
+            // mint, a card spend, a DeFi move — printed the 66-character URL
+            // as its body and had no door at all: the one thing you can do
+            // with a transaction was the one thing the sheet didn't offer
+            // (user, 2026-08-12).
+            //
+            // "Explorer", not "Open" — the disc's glyph already says it opens
+            // something; the word's job is to say WHERE you land (the same
+            // ruling `walletVerbs` took on 2026-08-04). It says that word only
+            // when the link really is an explorer, matched against the same
+            // measured prefixes this app WROTE the link from — a
+            // `.transaction` from a seat whose permalink points elsewhere gets
+            // the `.link` kind's honest "Open link" rather than a word naming
+            // a place it doesn't go.
+            //
+            // A token approval is a `.transaction` too, and its permalink is
+            // NOT an explorer — `WalletApprovals` stores the wallet's
+            // Revoke.cash page, the place you go to take the grant back. So it
+            // says that (2026-08-12, user ruling), which is the same
+            // where-you-land rule one step more specific. It names the
+            // DESTINATION, never the outcome: "Revoke" would claim this app
+            // revokes something, and it does not — the sheet's prepare card
+            // (prd §112) reads and previews, and the signature always happens
+            // elsewhere.
+            if let url = Capture.detectURL(in: thing.content) {
+                let isExplorer = WalletIngest.chainName(forContent: thing.content) != nil
+                let host = url.host()?.lowercased() ?? ""
+                let isRevoke = host == "revoke.cash" || host.hasSuffix(".revoke.cash")
+                let label = isRevoke ? "Revoke.cash" : (isExplorer ? "Explorer" : "Open link")
+                out.append(Verb(label: label,
+                                icon: isExplorer || isRevoke ? "arrow.up.right" : "safari",
+                                action: .openURL(url)))
+            }
         case .screenshot:
             // The picture itself, full screen and zoomable, IN the app
             // (2026-08-02 — user: tapping Photos "doesn't go to the Photos app
@@ -690,11 +728,34 @@ enum PlaceWords {
         case .approval:    return "awaiting your call"
         case .job, .run, .output: return "from your machines"
         case .skill:       return "banked by you"
-        case .transaction: return "in your wallet"
+        case .transaction: return walletPlace(for: thing)
         case .contact:     return "in your contacts"
         case .product:     return "from a store you follow"
         case .accessory:   return "in your home"
         default:           return "in your things"
         }
+    }
+
+    /// "in your wallet" → "in Main" / "in your wallet 0x1a2B…4f4f" (2026-08-12).
+    ///
+    /// Every Wallet-riding bridge stamps `Thing.walletAddress` with the watched
+    /// address the row belongs to, and a person watching several wallets had no
+    /// way to tell from the sheet WHICH one a card spend or a DeFi move came
+    /// from — "in your wallet" was true and useless. `displayName(forStored:)`
+    /// carries the ENS/SNS-vs-hex matching (a name-watched wallet lands its
+    /// things stamped with the resolved hex, so a raw compare misses every one)
+    /// and returns nil rather than guessing, so an address that isn't a watched
+    /// wallet — or a row from before this field existed — keeps the plain noun.
+    ///
+    /// Two shapes, because a person-given name reads as a place and a hex
+    /// doesn't: a named wallet stands alone ("in Main"), an unnamed one keeps
+    /// the noun it needs to make sense of the hex ("in your wallet 0x1a2B…4f4f").
+    private static func walletPlace(for thing: Thing) -> String {
+        guard let stored = thing.walletAddress,
+              let name = WalletStore.shared.displayName(forStored: stored)
+        else { return "in your wallet" }
+        return name == WalletStore.shortAddress(stored)
+            ? "in your wallet \(name)"
+            : "in \(name)"
     }
 }

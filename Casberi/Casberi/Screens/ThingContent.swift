@@ -4,6 +4,45 @@ import Photos
 import LinkPresentation
 import AVFoundation
 
+/// Prose with the URLs inside it live (2026-08-12, user ruling).
+///
+/// Until now exactly one body of text in the app had tappable links — a social
+/// post's own words (`ThingSheetView.linkedWords`, which now calls this) — and
+/// every other prose surface printed a URL as inert characters: a vault note's
+/// links, an imported ChatGPT transcript, a release's notes, a feed item's
+/// summary. The rule is the same one that ruling already stated, applied
+/// everywhere prose is drawn instead of in one place.
+///
+/// `Capture` is compiled into the extension targets and can't see the design
+/// tokens, so it attaches `.link` and nothing else; painting the runs is the
+/// app's job. ONE definition, because there are a dozen prose renderers now
+/// and a second copy is how one of them quietly stops matching the rest.
+/// Colour is the whole signal — no underline, which would be a hairline
+/// through running text (design law).
+///
+/// **SHEET ONLY.** A feed row is a read with ONE gesture (ruling 2026-07-16),
+/// so a live link inside a row competes with the tap that opens the thing —
+/// the same half-open trap the sibling-`.sheet` bug was. That is a property of
+/// where this is CALLED, not of this function: `ThingContentView` is presented
+/// by `ThingSheetView` and nowhere else, which is what makes it safe to use
+/// throughout that view. Don't reach for it from a row.
+///
+/// **Never for text a stranger wrote into a security frame.** An approval's
+/// command (`CommandCard`) and a spoofed token's "name" are attacker-authored
+/// — this codebase already carries a real phishing example ("4,672 USDT
+/// Staked • gitos.org") — and making that domain tappable right beside the
+/// warning calling it out would arm the very thing the warning exists for.
+enum ProseLinks {
+    static func rendered(_ text: String) -> AttributedString {
+        var attributed = Capture.linkified(text)
+        // Collect first, then paint: mutating `attributed` inside its own
+        // `runs` iteration walks a collection while it's being rebuilt.
+        let ranges = attributed.runs.compactMap { $0.link == nil ? nil : $0.range }
+        for range in ranges { attributed[range].foregroundColor = DS.tint }
+        return attributed
+    }
+}
+
 /// Which chart a thing LEADS with, decided once (2026-07-27).
 ///
 /// Three places needed this answer — `ThingContentView.kindContent` (what to
@@ -95,6 +134,29 @@ struct ThingContentView: View {
             && Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) != nil
     }
 
+    /// A transaction whose whole body is its explorer permalink — plumbing,
+    /// not prose (2026-08-12, user: "we don't need to show the url if we have
+    /// the button").
+    ///
+    /// The feed already ruled this way: `ExcerptRow.excerpt` refuses a
+    /// bare-URL body with the same test, because a permalink read as 66
+    /// characters of hex is noise wherever it is printed. The SHEET never got
+    /// that rule, so a mint or a card spend rendered its link as its body.
+    /// The `.transaction` kind derives an Explorer disc from that exact same
+    /// `Capture.detectURL` read (`VerbDerivation`), so the door is always
+    /// there when the text goes.
+    ///
+    /// Whitespace anywhere means prose that happens to carry a URL — that
+    /// still shows. Scoped to `.transaction` rather than applied to every
+    /// kind: the kinds whose body is legitimately a bare link (`.link`,
+    /// `.product`) draw it as a preview card, and the ones that have no
+    /// open-verb of their own would be left with no door at all.
+    static func bareLinkBody(_ thing: Thing) -> Bool {
+        guard thing.kind == .transaction else { return false }
+        let body = thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !body.contains(where: \.isWhitespace) && Capture.detectURL(in: body) != nil
+    }
+
     /// A product's stated price, formatted in its own currency — nil (never
     /// a guess) when the record doesn't carry one.
     static func productPrice(_ thing: Thing) -> String? {
@@ -141,7 +203,7 @@ struct ThingContentView: View {
         let dupe = text == thing.title.trimmingCharacters(in: .whitespacesAndNewlines)
             || text == thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
         if !text.isEmpty, !dupe {
-            Text(text)
+            Text(ProseLinks.rendered(text))
                 .dsText(.callout15)
                 .foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -230,7 +292,7 @@ struct ThingContentView: View {
                 // No URL, no art, no price — the sheet used to render nothing
                 // here at all. The record's own words are the honest fallback,
                 // same as every other kind's default case.
-                Text(thing.content)
+                Text(ProseLinks.rendered(thing.content))
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
                     .lineLimit(6)
                     .padding(.horizontal, DS.Space.s4)
@@ -280,7 +342,7 @@ struct ThingContentView: View {
                 // No structured due date (a Todoist task, or a Reminders item
                 // with none set) — the same bare-text fallback every kind
                 // without a dedicated anatomy gets.
-                Text(thing.content)
+                Text(ProseLinks.rendered(thing.content))
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
                     .lineLimit(12)
                     .padding(.horizontal, DS.Space.s4)
@@ -333,14 +395,14 @@ struct ThingContentView: View {
             if thing.source == "Obsidian",
                let body = thing.enrichedText?.trimmingCharacters(in: .whitespacesAndNewlines),
                !body.isEmpty {
-                Text(body)
+                Text(ProseLinks.rendered(body))
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.bottom, DS.Space.s3)
-            } else if !thing.content.isEmpty {
-                Text(thing.content)
+            } else if !thing.content.isEmpty, !Self.bareLinkBody(thing) {
+                Text(ProseLinks.rendered(thing.content))
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
                     .lineLimit(12)
                     .padding(.horizontal, DS.Space.s4)
@@ -701,7 +763,7 @@ private struct ChatBubbles: View {
         let hiddenCount = paragraphs.count - shown.count
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             ForEach(Array(shown.enumerated()), id: \.offset) { _, line in
-                Text(String(line))
+                Text(ProseLinks.rendered(String(line)))
                     .dsText(.callout15).foregroundStyle(DS.textPrimary)
                     .padding(.horizontal, DS.Space.s3)
                     .padding(.vertical, DS.Space.s2)
@@ -778,7 +840,7 @@ private struct VoiceContent: View {
                 Spacer()
             }
             if !transcript.isEmpty {
-                Text(transcript)
+                Text(ProseLinks.rendered(transcript))
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
                     .lineLimit(8)
             }
@@ -897,7 +959,7 @@ private struct FileChip: View {
             .background(DS.fillFaint,
                         in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
             if !note.isEmpty {
-                Text(note)
+                Text(ProseLinks.rendered(note))
                     .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                     .lineLimit(3)
             }
@@ -953,7 +1015,7 @@ private struct MailContentView: View {
                 }
             }
             if !isFromLine, !thing.content.isEmpty {
-                Text(thing.content)
+                Text(ProseLinks.rendered(thing.content))
                     .dsText(.callout15).foregroundStyle(DS.textPrimary)
                     .lineLimit(10)
             }
@@ -1586,7 +1648,7 @@ private struct GitHubReleaseContent: View {
                 LinkPreviewCard(url: url, storedImageURL: thing.previewImageURL)
             }
             if let notes {
-                Text(notes)
+                Text(ProseLinks.rendered(notes))
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
                     .lineLimit(10)
                     .fixedSize(horizontal: false, vertical: true)

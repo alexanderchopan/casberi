@@ -315,7 +315,7 @@ struct ThingSheetView: View {
                 // A social post always shows content — its pictures, what it
                 // quotes, how it landed — and its `content` is a permalink, so
                 // the title-stutter test never applied to it anyway.
-                let contentShown = walletStage == nil && !framedShot
+                let contentShown = walletStage == nil && !framedShot && !linkOnlyBody
                     && (isSocialPost || (thing.kind != .event
                     && thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
                         != thing.title.trimmingCharacters(in: .whitespacesAndNewlines)))
@@ -639,13 +639,12 @@ struct ThingSheetView: View {
     /// through running text. `openURL` comes from the environment, so an inline
     /// link inherits the same "leaving is a verb" wrapper Composer installs for
     /// the agent's Stack that every `.openURL` verb here already gets.
+    ///
+    /// The body moved to `ProseLinks` (2026-08-12) when the same treatment
+    /// reached every other prose surface — one definition, so a post's links
+    /// and a note's links can't drift apart.
     private func linkedWords(_ words: String) -> AttributedString {
-        var attributed = Capture.linkified(words)
-        // Collect first, then paint: mutating `attributed` inside its own
-        // `runs` iteration walks a collection while it's being rebuilt.
-        let linkRanges = attributed.runs.compactMap { $0.link == nil ? nil : $0.range }
-        for range in linkRanges { attributed[range].foregroundColor = DS.tint }
-        return attributed
+        ProseLinks.rendered(words)
     }
 
     /// The post this one answers — "Replying to @alice", above the words, where
@@ -999,6 +998,21 @@ struct ThingSheetView: View {
         case transfer(TransferStage)
         case moved(MovedStage)
         case swapped(SwapStage)
+    }
+
+    /// A transaction whose whole body is the explorer link AND carries nothing
+    /// else to read — the content view would render an empty block, so skip it
+    /// (2026-08-12).
+    ///
+    /// `ThingContentView.bareLinkBody` is the ruling and the one test (the
+    /// `showsLinkPreview` precedent: a shared static so the two views can't
+    /// drift); this adds only the summary check, because a `.summary` is drawn
+    /// BESIDE the body by `ThingContentView` — dropping the whole view for a
+    /// bare URL would take a source's own abstract with it. No wallet-riding
+    /// bridge stamps one today, so this guard is for the day one does.
+    private var linkOnlyBody: Bool {
+        ThingContentView.bareLinkBody(thing)
+            && (thing.summary ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     /// The ONE decision point every wallet-stage branch reads — first match
