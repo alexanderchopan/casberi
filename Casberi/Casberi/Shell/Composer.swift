@@ -521,7 +521,7 @@ struct Composer: View {
     /// see `computeSuggestions()`'s fetch for why. Nil means "never computed
     /// on this launch", which is the one open that pays the full walk;
     /// `composeBoard` refreshes it behind the board on every open after.
-    private var cachedChipFacts: CorpusScan? {
+    private var cachedChipFacts: AgentChipFacts? {
         get { AgentOpenCache.shared.facts }
         nonmutating set { AgentOpenCache.shared.facts = newValue }
     }
@@ -780,7 +780,7 @@ struct Composer: View {
         // The cache, or the one full walk that seeds it. `contextSourceRecent`
         // is the one counter that depends on WHERE you opened the agent from,
         // so it is recomputed per open off the recent rows rather than cached.
-        var scan = cachedChipFacts ?? corpusScan(all, contextSource: standingIn, now: .now)
+        var scan = cachedChipFacts ?? AgentChipFacts.scan(all, contextSource: standingIn, now: .now)
         if cachedChipFacts != nil {
             scan.contextSourceRecent = all.reduce(into: 0) { n, t in
                 if let standingIn, t.source == standingIn,
@@ -1053,7 +1053,7 @@ struct Composer: View {
         // next open then costs no full walk at all. `contextSourceRecent` is
         // left to the open that reads it (it depends on which room you were
         // standing in, which this pass cannot know).
-        cachedChipFacts = corpusScan(corpus, contextSource: nil, now: .now)
+        cachedChipFacts = AgentChipFacts.scan(corpus, contextSource: nil, now: .now)
         composition = await buildPanel(all: corpus)
         #if DEBUG
         NSLog("[Casberi] composerPerfDEBUG| boardReady=+%dms cards=%d",
@@ -1726,106 +1726,6 @@ struct Composer: View {
         return nil
     }
 
-    /// Every corpus-wide counter `computeSuggestions()` needs, gathered in ONE
-    /// walk (PERF 2026-08-11 — see the call site for why eleven walks was the
-    /// composer's open latency). Each field below replaces a `filter`/
-    /// `contains`/`first` that used to traverse the whole corpus on its own.
-    struct CorpusScan {
-        /// The person's own tags — every tag minus the built-in kind tags —
-        /// sorted, exactly as `RootShell.projectTags` returned them.
-        var tagPool: [String] = []
-        /// Things per tag, keyed by the LOWERCASED tag, each thing counted
-        /// once per distinct tag (matching the old case-insensitive filter).
-        var tagCounts: [String: Int] = [:]
-        /// Every distinct `source` present — answers all three of the old
-        /// `contains(where: { $0.source == … })` scans at once.
-        var sourcesSeen: Set<String> = []
-        var todayCount = 0
-        var weekCount = 0
-        var overdueCount = 0
-        var upcomingCount = 0
-        /// The newest Tokens row's title, for the per-token invitation.
-        var firstTokenTitle: String?
-        /// Things from the caller's `contextSource` in the last three days.
-        var contextSourceRecent = 0
-        /// The publisher (RSS feed, Substack, watched social account — all in
-        /// `Thing.authorHandle`) that dominated the recent window, when one
-        /// clearly did (2026-07-22). "Recent" is the frozen away window when
-        /// one holds, else the last 24h; "dominated" means ≥5 things AND at
-        /// least double the next-busiest handle, so an ordinarily-chatty feed
-        /// doesn't trip it every day — only a genuine burst. nil = no chip.
-        var busyPublisher: (handle: String, count: Int)?
-    }
-
-    /// ONE traversal, every counter. The gates are copied verbatim from the
-    /// filters they replace, so the chips say exactly what they said before.
-    private func corpusScan(_ all: [Thing], contextSource src: String?, now: Date) -> CorpusScan {
-        var scan = CorpusScan()
-        let dayStart = Calendar.current.startOfDay(for: now)
-        let weekAgo = now.addingTimeInterval(-7 * 86_400)
-        let contextRecent = now.addingTimeInterval(-3 * 86_400)
-        let horizon = Calendar.current.date(byAdding: .day, value: 7, to: now)
-        // The busy-publisher window: the frozen away gap, or the last day.
-        let busyStart = AppVisit.away?.lowerBound ?? now.addingTimeInterval(-24 * 3600)
-        var busyCounts: [String: Int] = [:]
-        var rawTags: Set<String> = []
-        var countedHere: Set<String> = []
-
-        for thing in all {
-            let source = thing.source
-            let captured = thing.capturedAt
-            scan.sourcesSeen.insert(source)
-            if captured >= dayStart { scan.todayCount += 1 }
-            if captured >= weekAgo { scan.weekCount += 1 }
-            if let src, source == src, captured >= contextRecent { scan.contextSourceRecent += 1 }
-            if scan.firstTokenTitle == nil, source == "Tokens" {
-                let title = thing.title
-                if !title.isEmpty { scan.firstTokenTitle = title }
-            }
-            if captured >= busyStart,
-               let raw = thing.authorHandle?.trimmingCharacters(in: .whitespaces),
-               !raw.isEmpty {
-                busyCounts[raw, default: 0] += 1
-            }
-            // The two deadline counters share one `mark`/`dueAt` read.
-            if thing.mark != .done {
-                let due = thing.dueAt
-                if source == "Reminders" || source == "Todoist",
-                   (due ?? .distantFuture) < now {
-                    scan.overdueCount += 1
-                }
-                if let horizon, let when = due, when >= now, when <= horizon {
-                    scan.upcomingCount += 1
-                }
-            }
-            // One `tags` read feeds both the vocabulary and the counts.
-            //
-            // `countedHere` is hoisted and cleared rather than built per row:
-            // a thing carries a handful of tags, and allocating a `Set` for
-            // each of 12,000 rows costs more than the dedupe it performs. It
-            // exists at all so "Recipes" and "recipes" on ONE thing still
-            // count that thing once, matching the case-insensitive `filter`
-            // this replaced.
-            countedHere.removeAll(keepingCapacity: true)
-            for tag in thing.tags {
-                rawTags.insert(tag)
-                let lower = tag.lowercased()
-                if countedHere.insert(lower).inserted { scan.tagCounts[lower, default: 0] += 1 }
-            }
-        }
-
-        let typeTags = Set(ThingKind.allCases.map(\.typeTag))
-        scan.tagPool = Array(rawTags.subtracting(typeTags)).sorted()
-
-        // The old `busyPublisher`'s own gates, unchanged: a real leader (5+),
-        // and at least double the runner-up, or it isn't a burst.
-        let sorted = busyCounts.sorted { ($0.value, $1.key) > ($1.value, $0.key) }
-        if let top = sorted.first, top.value >= 5 {
-            let runnerUp = sorted.count > 1 ? sorted[1].value : 0
-            if top.value >= runnerUp * 2 { scan.busyPublisher = (top.key, top.value) }
-        }
-        return scan
-    }
 
     /// The cycling placeholder's pool for THIS open — the static invitations
     /// plus real-corpus examples that teach the widened vocabulary by naming

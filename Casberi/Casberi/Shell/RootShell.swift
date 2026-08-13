@@ -1400,6 +1400,13 @@ struct RootShell: View {
                 #endif
               }
             }
+            // The agent's chip counters, computed while nothing is waiting on
+            // them, so the first raise of a launch costs what every later one
+            // does (2026-08-12). Self-delaying and self-skipping — see
+            // `AgentOpenCache.warm`; it deliberately does NOT run inline here,
+            // since a ~761ms walk in the sweep is the launch stall this whole
+            // pass has been removing.
+            AgentOpenCache.shared.warm(context: modelContext)
         }
         // Deferred on EVERY activation since 2026-08-06, not just the first.
         // A return has no launch animation to protect, which is why this block
