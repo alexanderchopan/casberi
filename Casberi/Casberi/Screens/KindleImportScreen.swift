@@ -69,9 +69,19 @@ struct KindleImportScreen: View {
         }
         resultIsError = false
         DSHaptic.success()
+        // The repair is REPORTED, never folded into "already here" (prd §366).
+        // Every highlight imported before §366 kept only its first 80
+        // characters, and this pass is the one thing that can give the rest
+        // back — so a run that landed nothing new and restored three hundred
+        // passages must not read as "nothing happened".
+        let repaired = summary.healed > 0
+            ? String(localized: " · \(summary.healed) restored in full")
+            : ""
         result = summary.imported > 0
-            ? "\(summary.imported) highlights in\(summary.skipped > 0 ? " · \(summary.skipped) already here" : "")"
-            : "Nothing new — all \(summary.skipped) highlights were already here."
+            ? "\(summary.imported) highlights in\(summary.skipped > 0 ? " · \(summary.skipped) already here" : "")\(repaired)"
+            : (summary.healed > 0
+               ? String(localized: "\(summary.healed) highlights restored in full — they'd been stored clipped.")
+               : "Nothing new — all \(summary.skipped) highlights were already here.")
         let proof = summary.imported > 0
             ? String(localized: "\(summary.imported) highlights in")
             : String(localized: "Synced just now")
