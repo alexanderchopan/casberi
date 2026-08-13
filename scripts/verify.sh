@@ -134,6 +134,99 @@ print -P "%F{green}✓ swiftdata liveness audit%f"
 "$ROOT/scripts/query-count-signal-audit.py" || fail "a bounded @Query's count is used as a change signal — see the output above"
 print -P "%F{green}✓ query-count-signal audit%f"
 
+# ── Self-test COMPLETENESS guard (2026-08-12) ───────────────────────
+# The self-tests below are hand-listed, because the comment above each one is
+# the only written record of WHY that harness exists and what silent wrong
+# answer it catches — collapsing them into a glob would run the same checks
+# and throw all of that away. A hand list is fine; a hand list nobody proves
+# COMPLETE is not, and this one had quietly drifted: `address-safety`,
+# `chatimport`, `claudecode`, `cursor-room`, `frontpage`, `keccak256` and
+# `wallet-viz` all existed in `scripts/` and were never run by this pass, so
+# seven harnesses someone wrote to protect seven features had been dead
+# weight — passing or failing, nobody would have known. `verify-mac.sh` ran
+# them the whole time (it globs), so the MAC pass had strictly more logic
+# coverage than the iOS one.
+#
+# So: keep the list, keep the reasons, and make the list provable. This is
+# `catalog-sync.sh`'s own shape — a hand-curated set is allowed, as long as
+# every member resolves and nothing real is missing from it. A new harness
+# fails this pass until it is named below WITH its reason, which is the point:
+# the reason is the part that gets skipped when it isn't enforced.
+step "Self-test completeness"
+typeset -a UNWIRED
+for _st in "$ROOT"/scripts/*-selftest.sh; do
+  grep -q "${_st:t}" "$0" || UNWIRED+=("${_st:t}")
+done
+(( ${#UNWIRED} == 0 )) \
+  || fail "self-test never run by verify.sh: ${UNWIRED[*]} — add it below with a comment saying what it catches"
+print -P "%F{green}✓ self-test completeness ($(ls "$ROOT"/scripts/*-selftest.sh | wc -l | tr -d ' ') wired)%f"
+
+# ── The seven the guard above found unwired (2026-08-12) ────────────
+# Each existed in `scripts/` and had never once run in this pass. Grouped
+# rather than scattered so the gap they came from stays legible.
+
+# Keccak-256 (`Model/Keccak256.swift`), checked against pycryptodome ground
+# truth and EIP-55's four published vectors. A hand-rolled crypto primitive
+# that drifts from a separately-maintained copy of its tests is worse than no
+# primitive: a wrong checksum is a DIFFERENT BUT VALID address, with no crash
+# and no warning — and the wrong wallet/Safe label rides along with it.
+step "Keccak-256 self-test"
+"$ROOT/scripts/keccak256-selftest.sh" >/dev/null \
+  || fail "the Keccak-256 self-test failed — run scripts/keccak256-selftest.sh"
+print -P "%F{green}✓ keccak256 self-test%f"
+
+# Address safety (`Model/AddressSafety.swift`). Both functions are pure and
+# both fail SILENTLY: a checksum check that answers `unavailable` for
+# everything simply never warns, and a lookalike test with a mis-shaped
+# display key finds nothing. Neither has any on-screen symptom — the screen
+# looks exactly as safe as it did before.
+step "Address-safety self-test"
+"$ROOT/scripts/address-safety-selftest.sh" >/dev/null \
+  || fail "the address-safety self-test failed — run scripts/address-safety-selftest.sh"
+print -P "%F{green}✓ address-safety self-test%f"
+
+# Wallet visualizations — the flow band's grouping, the distance-to-liquidation
+# axis, the stable share. Arithmetic behind three cards that render perfectly
+# whatever number is in them (it already caught an unparseable allowance
+# printing "$0", i.e. "reaches nothing" for a grant we had failed to read).
+step "Wallet-visualization self-test"
+"$ROOT/scripts/wallet-viz-selftest.sh" >/dev/null \
+  || fail "the wallet-visualization self-test failed — run scripts/wallet-viz-selftest.sh"
+print -P "%F{green}✓ wallet-viz self-test%f"
+
+# The three chat import rooms (ChatGPT / Claude / Gemini) — the shared flatten
+# and clamp, plus ChatGPT's GRAPH walk, which must recover conversation order
+# rather than dictionary order. A transcript in the wrong order still reads as
+# a transcript.
+step "Chat-import self-test"
+"$ROOT/scripts/chatimport-selftest.sh" >/dev/null \
+  || fail "the chat-import self-test failed — run scripts/chatimport-selftest.sh"
+print -P "%F{green}✓ chat-import self-test%f"
+
+# Claude Code import (`ClaudeCodeSession`, compiled WHOLE — Foundation-only by
+# design, which is why it is a separate type from the SwiftData landing beside
+# it).
+step "Claude Code import self-test"
+"$ROOT/scripts/claudecode-selftest.sh" >/dev/null \
+  || fail "the Claude Code import self-test failed — run scripts/claudecode-selftest.sh"
+print -P "%F{green}✓ claude code self-test%f"
+
+# The Cursor feed-room head (prd §340), compiled WHOLE and unmodified. Its
+# room is the one whose rows are grouped by a field the bridge stamps
+# elsewhere, so a nil head and a correct empty room look identical.
+step "Cursor-room self-test"
+"$ROOT/scripts/cursor-room-selftest.sh" >/dev/null \
+  || fail "the Cursor-room self-test failed — run scripts/cursor-room-selftest.sh"
+print -P "%F{green}✓ cursor-room self-test%f"
+
+# The brief's two-column front page (prd §274) — the chapter parse, the ref
+# segments cut at each opener, and what spans full width. A mis-cut segment
+# lays out cleanly and silently drops or duplicates a chapter's refs.
+step "Front-page self-test"
+"$ROOT/scripts/frontpage-selftest.sh" >/dev/null \
+  || fail "the front-page self-test failed — run scripts/frontpage-selftest.sh"
+print -P "%F{green}✓ front-page self-test%f"
+
 # Pure-logic self-test for the X work (prd §280). Static, no build, no
 # network: the archive importer was authored against no real X archive, and
 # its failure mode is a silent wrong answer — a misdated like, a file that

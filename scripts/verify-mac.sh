@@ -124,25 +124,47 @@ app_pid() { pgrep -f "$DD/Build/Products/Debug-maccatalyst/Casberi.app" | head -
 # Run here too so a Mac-only nightly still certifies the whole tree — these
 # are the checks that were each made mechanical after a real regression
 # shipped (see CLAUDE.md). Cheap enough that duplication beats a gap.
-step "Static audits"
-"$ROOT/scripts/catalog-sync.sh" >/dev/null || fail "catalog surfaces drifted — run scripts/catalog-sync.sh"
-"$ROOT/scripts/network-reach-audit.sh" --self-test >/dev/null \
-  || fail "the network-reach audit's own self-test failed — the check is broken, not the code"
-"$ROOT/scripts/network-reach-audit.sh" >/dev/null || fail "a network host isn't disclosed — run scripts/network-reach-audit.sh"
-"$ROOT/scripts/infoplist-strings-audit.py" --self-test >/dev/null \
-  || fail "the Info.plist strings audit's own self-test failed — the check is broken, not the code"
-"$ROOT/scripts/infoplist-strings-audit.py" >/dev/null || fail "a purpose string resolves to its own key name — run scripts/infoplist-strings-audit.py"
-"$ROOT/scripts/keychain-audit.py" --self-test >/dev/null \
-  || fail "the keychain audit's own self-test failed — the check is broken, not the code"
-"$ROOT/scripts/keychain-audit.py" >/dev/null || fail "a keychain write isn't device-only — run scripts/keychain-audit.py"
-"$ROOT/scripts/receipts-coverage-audit.py" --self-test >/dev/null \
-  || fail "the receipts audit's own self-test failed — the check is broken, not the code"
-"$ROOT/scripts/receipts-coverage-audit.py" >/dev/null || fail "a network call isn't recorded — run scripts/receipts-coverage-audit.py"
-"$ROOT/scripts/secret-scan-selftest.py" >/dev/null || fail "the credential tripwire changed behaviour — run scripts/secret-scan-selftest.py"
-"$ROOT/scripts/swiftdata-liveness-audit.py" --self-test >/dev/null \
-  || fail "the liveness audit's own self-test failed — the check is broken, not the code"
-"$ROOT/scripts/swiftdata-liveness-audit.py" >/dev/null || fail "a Thing is read without a liveness guard — run scripts/swiftdata-liveness-audit.py"
-ok "catalog sync · network reach · infoplist strings · keychain · secret scan · receipts · swiftdata liveness"
+# DISCOVERED rather than listed (2026-08-12), for the reason the self-test
+# block below gives and this block proved by drifting: it hand-listed seven audits
+# while `verify.sh` ran fifteen, so `cloudkit-schema`, `design-motion`,
+# `design-ramp`, `face-ramp`, `localization`, `prd-index`,
+# `query-count-signal`, `setup-copy` and `demo-selftest` had NEVER run on this
+# platform — nine checks a Mac-only nightly silently skipped while printing
+# "static audits ✓". A hand-copied list of the other script's checks is a
+# promise to remember, and this repo's own history is that promises to
+# remember get forgotten; a glob is a guarantee.
+#
+# The naming convention IS the registry: `scripts/*-audit.{py,sh}` is picked up
+# the day it lands. The three that predate the convention are named explicitly
+# below — a new check should be named `*-audit.py` so it needs no line here.
+#
+# Every audit in the tree accepts `--self-test` (verified 2026-08-12, all 13),
+# so it is required of every discovered one rather than being optional: a check
+# that cannot demonstrate it catches anything certifies nothing, which is the
+# rule the audits themselves are written to.
+step "Static audits (all discovered)"
+typeset -a AUDIT_FAILS
+run_audit() {  # run_audit <path> [--self-test-first]
+  local p="$1" name="${1:t}" ; local -a cmd
+  case "$p" in
+    *.py) cmd=(python3 "$p") ;;
+    *)    cmd=("$p") ;;
+  esac
+  "${cmd[@]}" --self-test >/dev/null 2>&1 || { AUDIT_FAILS+=("$name (its OWN self-test — the check is broken, not the code)"); return; }
+  "${cmd[@]}" >/dev/null 2>&1 || AUDIT_FAILS+=("$name")
+}
+for _a in "$ROOT"/scripts/*-audit.py "$ROOT"/scripts/*-audit.sh; do
+  [[ -e "$_a" ]] && run_audit "$_a"
+done
+# Pre-convention names, each a real audit that simply isn't spelled `*-audit`.
+"$ROOT/scripts/catalog-sync.sh" >/dev/null 2>&1 || AUDIT_FAILS+=("catalog-sync.sh")
+python3 "$ROOT/scripts/secret-scan-selftest.py" >/dev/null 2>&1 || AUDIT_FAILS+=("secret-scan-selftest.py")
+python3 "$ROOT/scripts/demo-selftest.py" --self-test >/dev/null 2>&1 \
+  || AUDIT_FAILS+=("demo-selftest.py (its OWN self-test)")
+python3 "$ROOT/scripts/demo-selftest.py" >/dev/null 2>&1 || AUDIT_FAILS+=("demo-selftest.py")
+(( ${#AUDIT_FAILS} == 0 )) \
+  || fail "static audit failed: ${AUDIT_FAILS[*]} — run scripts/<name> for the output"
+ok "static audits ($(ls "$ROOT"/scripts/*-audit.py "$ROOT"/scripts/*-audit.sh | wc -l | tr -d ' ') discovered + 3 named)"
 
 # ── 0b. Every logic self-test, DISCOVERED rather than listed (2026-08-12) ───
 # This pass ran ZERO of them until today. The list above is hand-copied from
