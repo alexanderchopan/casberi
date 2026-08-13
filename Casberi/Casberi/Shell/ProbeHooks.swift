@@ -2598,6 +2598,82 @@ enum ProbeHooks {
         // reach and `verify.sh` decides what a gap is. A shape legitimately
         // absent (no watched Trello card, say) is a seeding decision, not a
         // bug this file can rule on.
+        // `-floorProbe YES` — THE STATE THAT SITS UNDER A CONTROL'S MINIMUM.
+        //
+        // The quietest demo failure there is. A control that gates on a count
+        // (`addresses.count > 1`, `series.count >= 14`, `imageURLs.count > 1`)
+        // does not fail when the demo is under its floor — it simply does not
+        // draw, and every other check passes: the rows are there, the room
+        // renders, the anatomy is right. There is no error to find.
+        //
+        // Four of these were found by eye this week and each took a
+        // screenshot to notice: the wallet face rail (one watched wallet, so
+        // `count > 1` never held), PostHog's card (14 days of series), the
+        // social face rail, and `NoteSheet`'s read-time (100 words, and the
+        // demo's vault notes were ten). A fifth was found the same day by
+        // seeding a ONE-element `imageURLs` — `PostCard` only switches to the
+        // grid at two or more and falls back to a field that was never set,
+        // so it drew nothing at all.
+        //
+        // CURATED, NOT ALL 82. The tree holds 82 `.count >= N` gates and most
+        // are formatting — `parts.count > 1` choosing a separator,
+        // `words.count > 100` choosing a type size — where being under the
+        // floor is the correct answer. Asserting those would demand the demo
+        // satisfy every branch of every layout, which is the lint nobody keeps.
+        // These are the ones where a whole CONTROL disappears.
+        Hook(key: "floorProbe") { _, context in
+            let things = ((try? context.fetch(FetchDescriptor<Thing>())) ?? []).live
+            // (name, what it gates, measured, floor, REQUIRED)
+            //
+            // `required` is the ruling, and it is the point of the registry.
+            // A floor the demo sits under is not automatically a gap: the
+            // address book's filter field appears at nine entries because a
+            // book of eight does not need searching, so a demo of eight is
+            // CORRECT and saying otherwise would be padding the demo to
+            // satisfy a check. The wallet rail is the opposite — the demo
+            // intends three wallets and the rail is a shipped feature, so one
+            // is a bug. `verify.sh` fails on the required ones and prints the
+            // rest, which keeps the decision written down instead of implied
+            // by whether somebody padded a list.
+            var rows: [(String, String, Int, Int, Bool)] = []
+            rows.append(("wallet.addresses", "the wallet face rail + per-row wallet names",
+                         WalletStore.shared.addresses.count, 2, true))
+            rows.append(("farcaster.accounts", "Farcaster's face rail",
+                         FarcasterStore.shared.accounts.count, 2, true))
+            rows.append(("bluesky.accounts", "Bluesky's face rail",
+                         BlueskyStore.shared.accounts.count, 2, true))
+            rows.append(("nostr.accounts", "Nostr's face rail",
+                         NostrStore.shared.accounts.count, 2, true))
+            rows.append(("addressbook.entries", "the address book's filter field",
+                         AddressBook.shared.all.count, 9, false))
+            // A sparkline needs two points to be a line at all. The pulse
+            // cache is IN-MEMORY (prices are perishable), so a probe-only
+            // launch has not necessarily hit the foreground gate that
+            // reseeds it — measuring first would report 0 and blame the seed
+            // for the probe's own timing. Both reseeds are idempotent and
+            // demo-gated.
+            TokenPulse.shared.reseedDemoIfNeeded()
+            PredictionPulse.shared.reseedDemoIfNeeded()
+            let closes = TokenPulse.shared.pulses.values.map(\.closes.count).max() ?? 0
+            rows.append(("token.closes", "the token sparkline", closes, 2, true))
+            let series = PostHogState.all().values.map(\.series.count).max() ?? 0
+            rows.append(("posthog.series", "the PostHog metric card", series, 14, true))
+            // The post image GRID, as opposed to a single image.
+            let images = things.map(\.imageURLs.count).max() ?? 0
+            rows.append(("post.imageURLs", "PostCard's image grid", images, 2, true))
+            // A vault note long enough to earn a read time.
+            let words = things.filter { $0.source == "Obsidian" }
+                .map { ($0.enrichedText ?? "").split(whereSeparator: \.isWhitespace).count }
+                .max() ?? 0
+            rows.append(("vault.words", "NoteSheet's read-time reading", words, 100, true))
+
+            NSLog("[Casberi] floor| %d controls checked", rows.count)
+            for (name, gates, got, need, required) in rows {
+                let verdict = got >= need ? "ok" : (required ? "UNDER" : "under (optional)")
+                NSLog("[Casberi] floor| %@ = %d (need %d) %@ — %@",
+                      name, got, need, verdict, gates)
+            }
+        },
         Hook(key: "sheetShapeProbe") { _, context in
             let things = ((try? context.fetch(FetchDescriptor<Thing>())) ?? []).live
             var census: [String: Int] = [:]

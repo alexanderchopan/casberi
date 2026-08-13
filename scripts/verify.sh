@@ -1068,6 +1068,49 @@ else
   fi
 fi
 
+# ── 6c. Demo floor coverage (headless, WARN — see the note) ──────────
+# The quietest demo failure: state that sits UNDER a control's minimum. A
+# control gated on a count does not fail when the demo is short — it simply
+# does not draw, and every other check passes. Four were found by eye this
+# week, each needing a screenshot to notice.
+#
+# CURATED, not all 82 `.count >= N` gates in the tree — most are formatting
+# (`parts.count > 1` choosing a separator) where being under is correct. The
+# registry lives in `-floorProbe` and marks each entry required or optional,
+# so "the demo need not satisfy this one" is written down rather than implied.
+#
+# WARN, NOT FAIL, AND ONLY FOR NOW: `wallet.addresses` is genuinely under its
+# floor on the shipped demo (1 watched, 3 seeded — the face rail cannot draw),
+# and that is an open bug, not a tuning problem. Flipping this to a hard fail
+# is the right end state and should happen in the same change that fixes it;
+# making main red first would only block whoever is mid-edit.
+step "Demo floor coverage"
+FLOOR_LOG="$OUT/demo-floor-coverage.log"
+if [[ -z "$POURED" ]]; then
+  print -P "%F{yellow}⚠ demo never finished pouring — skipping floor coverage%f"
+else
+  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  xcrun simctl spawn "$DEVICE" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "floor|"' \
+    --style compact > "$FLOOR_LOG" 2>/dev/null &
+  FPID=$!
+  sleep 1
+  xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES -floorProbe YES >/dev/null 2>&1 || true
+  for i in {1..12}; do
+    sleep 1
+    grep -q "controls checked" "$FLOOR_LOG" 2>/dev/null && break
+  done
+  sleep 2
+  kill $FPID 2>/dev/null || true
+  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  UNDER=$(grep -c ") UNDER " "$FLOOR_LOG" 2>/dev/null || echo 0)
+  if [[ "$UNDER" == "0" ]]; then
+    print -P "%F{green}✓ demo floor coverage (every required control clears its floor)%f"
+  else
+    print -P "%F{yellow}⚠ $UNDER required control(s) under their floor:%f"
+    grep -o "floor| .*UNDER.*" "$FLOOR_LOG" | sort -u
+  fi
+fi
+
 # ── 7. Demo sheet-anatomy coverage (headless, HARD FAIL) ─────────────
 # The THIRD surface of the same 2026-08-08 parity ruling, and the one that
 # covers the sheets rather than the rooms.
