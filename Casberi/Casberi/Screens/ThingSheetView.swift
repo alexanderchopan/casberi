@@ -243,7 +243,7 @@ struct ThingSheetView: View {
                                 .dsGlyph(13)
                                 .foregroundStyle(DS.textPrimary)
                                 .frame(width: 30, height: 30)
-                                .background(Circle().fill(.white.opacity(0.08)))
+                                .background(Circle().fill(DS.fillLine))
                         }
                         .buttonStyle(.plain)
                         .dsHover()

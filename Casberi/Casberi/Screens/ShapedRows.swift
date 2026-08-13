@@ -1683,11 +1683,25 @@ struct BundleRow: View {
                 // cards peek from behind the icon, which is what a stack looks
                 // like everywhere else. It is a FILL, never a stroke: nothing in
                 // this app draws a line (design law).
+                // OPAQUE tones, not one translucent fill (2026-08-12). Both
+                // cards were `fillFaint`, and two alpha fills that overlap
+                // DOUBLE where they cross — so the deck painted 3% black over
+                // the light page in its outer sliver and ~6% in the inner one,
+                // a hard-edged step reading as a grey smudge behind the icon
+                // rather than as cards. Reported as "square shadows", and
+                // invisible in dark, where the same fills are 4% white on
+                // black. This is `surfaceRaised`'s own documented lesson —
+                // reach for an opaque tone when a fill is drawn in pieces.
+                //
+                // The two tones also do the work the offsets alone could not:
+                // opaque cards of ONE colour merge into a single sliver, so
+                // the nearer card is the card tone and the farther one is
+                // recessed, which is what depth means.
                 ZStack(alignment: .leading) {
                     ForEach([2, 1], id: \.self) { step in
                         RoundedRectangle(cornerRadius: DS.Radius.appIcon(26),
                                          style: .continuous)
-                            .fill(DS.fillFaint)
+                            .fill(step == 1 ? DS.surfaceSheet : DS.surfaceWell)
                             .frame(width: 26, height: 26)
                             .offset(x: CGFloat(step) * 4)
                             .accessibilityHidden(true)

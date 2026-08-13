@@ -91,7 +91,7 @@ extension View {
                 // A lighter cast over pixels: the shadow exists to separate the
                 // control from a busy page, and over a photo on black ground
                 // there is nothing to separate it from.
-                .shadow(color: .black.opacity(variant == .clear ? 0.22 : 0.4),
+                .shadow(color: variant == .clear ? DS.glassShadowClear : DS.glassShadow,
                         radius: 12, x: 0, y: 8)
         }
     }
@@ -289,7 +289,11 @@ extension View {
         return self
             .background(DS.surfaceSheet, in: shape)
             .clipShape(shape)
-            .shadow(color: .black.opacity(0.55), radius: 16, x: 0, y: 12)
+            // `DS.cardShadow`, not a pinned black: its DARK value is exactly
+            // the 0.55 this used to hardcode, so dark is byte-identical, while
+            // light drops to 0.12 — the pinned value was a dark-page shadow
+            // cast onto a white one, four and a half times too heavy.
+            .shadow(color: DS.cardShadow, radius: 16, x: 0, y: 12)
     }
 }
 

@@ -254,6 +254,20 @@ enum DS {
     static let glassStroke = Color.adaptive(dark: "#ffffff1a", light: "#0000000f")
     static let scrim       = Color.adaptive(dark: "#00000080", light: "#0000004d")
 
+    /// The cast under a floating glass control (composer, FAB, toasts).
+    /// Deliberately lighter than `cardShadow` — glass already separates itself
+    /// by blur and stroke, so it needs a hint of air, not a card's lift.
+    ///
+    /// Both were pinned blacks (0.40 / 0.22) until 2026-08-12, i.e. dark-page
+    /// casts landing on the WHITE page in light mode, where they read as a
+    /// smudge under the one layer that floats over everything. The dark values
+    /// are unchanged; the light pair scales by the same ratio `cardShadow`
+    /// already uses between its own two halves (0.55 → 0.12).
+    static let glassShadow      = Color.adaptive(dark: "#00000066", light: "#00000017")
+    /// The `clear` variant's lighter cast — over a photo there is less to
+    /// separate the control from, so it was always the quieter of the two.
+    static let glassShadowClear = Color.adaptive(dark: "#00000038", light: "#0000000d")
+
     // MARK: - Spacing scale  (CSS --ds-space-*)
 
     // Breathing-room pass (2026-07-25). The app read a bit dense — most visibly
