@@ -82,7 +82,7 @@ struct WalletLiquidityCard: View {
                      subtitle: Self.line(position)) {
                 VStack(alignment: .trailing, spacing: 3) {
                     if let value = position.valueUSD, value > 0 {
-                        Text(TokenStats.compact(value))
+                        Text(WalletValue.money(value))
                             .dsText(.price16).foregroundStyle(DS.textPrimary)
                             .monospacedDigit().lineLimit(1)
                     }
@@ -106,7 +106,7 @@ struct WalletLiquidityCard: View {
     @ViewBuilder
     private func outcomePill(_ position: UniswapLiquidity.Position) -> some View {
         if position.inRange, let fees = position.uncollectedFeeUSD, fees > 0.01 {
-            pill(String(localized: "Earning +\(TokenStats.compact(fees))"), tone: DS.confirm)
+            pill(String(localized: "Earning +\(WalletValue.money(fees))"), tone: DS.confirm)
         } else if position.inRange {
             pill(String(localized: "In range"), tone: DS.textSecondary)
         } else if let days = UniswapLiquidity.daysOutOfRange(
@@ -163,7 +163,7 @@ struct WalletLiquidityCard: View {
     /// uncollected, so a fresh position doesn't wear a "$0 fees" label.
     private static func feesCaption(_ position: UniswapLiquidity.Position) -> String? {
         guard let fees = position.uncollectedFeeUSD, fees > 0.01 else { return nil }
-        return String(localized: "\(TokenStats.compact(fees)) fees")
+        return String(localized: "\(WalletValue.money(fees)) fees")
     }
 
     private static func feeTierLabel(_ hundredthsOfBip: Int) -> String {

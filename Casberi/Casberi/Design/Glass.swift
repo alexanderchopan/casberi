@@ -258,6 +258,80 @@ extension View {
         hoverEffect(effect)
     }
 
+    /// Grow a small control's TAP TARGET to the 44pt floor without growing what
+    /// it DRAWS (2026-08-13, the accessibility sweep).
+    ///
+    /// The distinction is the whole point, and it is what ten shipped controls
+    /// got wrong: a 30pt circle with a 30pt frame is a 30pt target, and the fix
+    /// is not to draw a bigger circle — that would rewrite the visual rhythm of
+    /// every row it sits in. The drawn face keeps its own frame (and its own
+    /// background, which is why this goes AFTER the `.background`, never before)
+    /// and a `minWidth`/`minHeight` floor grows only the box around it, which
+    /// `contentShape` then makes hittable in full.
+    ///
+    /// A `min` frame rather than the padding/negative-padding trick, and that is
+    /// deliberate: the trick keeps the layout byte-identical but relies on
+    /// hit-testing OUTSIDE the layout bounds, which is exactly the kind of thing
+    /// that works until a `.clipped()` appears three levels up and then fails
+    /// silently and invisibly. This costs a few points of space in a handful of
+    /// rows and cannot fail quietly. A control that must be 44pt to be usable
+    /// should occupy 44pt.
+    ///
+    /// `shape` should match what the control looks like, so the corners of a
+    /// circular button don't swallow taps meant for its neighbour.
+    func dsTapTarget<S: Shape>(_ shape: S = Rectangle(),
+                               size: CGFloat = DS.Hit.min) -> some View {
+        modifier(DSTapTarget(shape: shape, size: size))
+    }
+
+    /// A view whose WHOLE FACE is one tap target — a bundle row, a roster slot,
+    /// a project tile, an agent card (2026-08-13, the accessibility sweep).
+    ///
+    /// `contentShape(…)` + `onTapGesture` is a complete control for touch and
+    /// for a pointer and carries NOTHING for VoiceOver: no trait, so it is never
+    /// announced as activatable, and no action, so a double-tap does nothing.
+    /// This states both. `children: .combine` is the right merge here and not a
+    /// shortcut — the whole face does ONE thing, so it should be ONE stop rather
+    /// than four fragments the reader has to reassemble, and any button among
+    /// those children survives as a custom action rather than being lost.
+    ///
+    /// Use `dsCardLead` instead where the container holds ranked rows that must
+    /// stay individually reachable; the two differ on exactly that.
+    func dsTapCard() -> some View {
+        accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isButton)
+    }
+
+    /// The card-level tap, made reachable (2026-08-13, the accessibility sweep).
+    ///
+    /// **The bug this fixes is a dead end, not an inconvenience.** A room head
+    /// puts `contentShape(Rectangle())` + `onTapGesture` on the whole card and
+    /// opens `room.lead` — and neither of those adds a trait or an action, so
+    /// VoiceOver has nothing to announce and nothing to activate. That would be
+    /// merely untidy if the lead were also a row, and it is NOT: every one of
+    /// these cards draws `drawn.dropFirst()` on purpose ("the lead is already in
+    /// the headline, and repeating its name directly underneath is the card
+    /// arguing with itself"). So the card's most important destination — the
+    /// biggest rail, the busiest currency, the segment that needs you — was
+    /// reachable by touch and by pointer and by nothing else.
+    ///
+    /// Applied to the HEADLINE, not the card, and that is the load-bearing part.
+    /// A `Text` is already an accessibility element, so a trait and an action
+    /// attach to something real and VoiceOver activates it on a double-tap.
+    /// Putting them on the card container instead would mean either
+    /// `children: .contain` (traits and actions on a container are not reliably
+    /// surfaced) or `children: .combine` (which flattens the ranked rows below
+    /// into one announcement and costs their individual buttons) — and the
+    /// headline is where the lead is NAMED anyway, so this is also the honest
+    /// place for it. The sighted whole-card gesture is untouched.
+    func dsCardLead(_ hint: Text, perform action: @escaping () -> Void) -> some View {
+        accessibilityAddTraits(.isButton)
+            .accessibilityHint(hint)
+            // `.default` is what a VoiceOver double-tap fires — the same
+            // gesture that would have activated a real Button here.
+            .accessibilityAction(.default, action)
+    }
+
     /// A Mac hover tooltip (2026-08-01). Mac-ONLY on purpose, and the gate is
     /// the whole reason this wrapper exists rather than a bare `.help()`.
     ///
@@ -360,5 +434,19 @@ extension View {
         } else {
             self
         }
+    }
+}
+
+/// The 44pt floor, applied around whatever the control draws. See
+/// `View.dsTapTarget(_:size:)` for why the drawn size and the target size are
+/// two different numbers.
+private struct DSTapTarget<S: Shape>: ViewModifier {
+    let shape: S
+    let size: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .frame(minWidth: size, minHeight: size)
+            .contentShape(shape)
     }
 }

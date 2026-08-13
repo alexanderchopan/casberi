@@ -152,7 +152,7 @@ struct AddressConnectionsCard: View {
             // A wallet whose connected transfers were never priced states
             // nothing, not "$0" — the whole reason `usd` is optional.
             if let usd = column.usd {
-                Text(TokenStats.compact(usd))
+                Text(WalletValue.money(usd))
                     .dsText(.label11)
                     .foregroundStyle(DS.textTertiary)
                     .monospacedDigit()

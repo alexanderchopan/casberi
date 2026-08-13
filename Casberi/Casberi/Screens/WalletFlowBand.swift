@@ -138,7 +138,7 @@ struct WalletFlowBand: View {
     }
 
     private var summary: String {
-        "\(windowLabel) · in \(TokenStats.compact(band.inUSD)) · out \(TokenStats.compact(band.outUSD))"
+        "\(windowLabel) · in \(WalletValue.money(band.inUSD)) · out \(WalletValue.money(band.outUSD))"
     }
 
     /// "Kept +$1.0K" — the one-sentence outcome, the move Cash App would make
@@ -150,11 +150,11 @@ struct WalletFlowBand: View {
         let net = band.netUSD
         if abs(net) >= 1 {
             if net > 0 {
-                Text("Kept +\(TokenStats.compact(net))")
+                Text("Kept +\(WalletValue.money(net))")
                     .dsText(.label12).fontWeight(.bold)
                     .foregroundStyle(DS.confirm)
             } else {
-                Text("Down −\(TokenStats.compact(-net))")
+                Text("Down −\(WalletValue.money(-net))")
                     .dsText(.label12).fontWeight(.bold)
                     .foregroundStyle(DS.textSecondary)
             }
@@ -281,8 +281,8 @@ struct WalletFlowBand: View {
         // thing instead — that we never learned who this was.
         lanes.map { lane in
             lane.name.isEmpty
-                ? String(localized: "an unnamed wallet, \(TokenStats.compact(lane.usd))")
-                : "\(lane.name), \(TokenStats.compact(lane.usd))"
+                ? String(localized: "an unnamed wallet, \(WalletValue.money(lane.usd))")
+                : "\(lane.name), \(WalletValue.money(lane.usd))"
         }
         .joined(separator: "; ")
     }
@@ -395,7 +395,7 @@ struct WalletFlowBand: View {
                     .lineLimit(1).minimumScaleFactor(0.8)
             }
         } else {
-            Text("\(lane.name) · \(TokenStats.compact(lane.usd))")
+            Text("\(lane.name) · \(WalletValue.money(lane.usd))")
                 .dsText(.label12).fontWeight(.bold)
                 .foregroundStyle(primary)
                 .lineLimit(1).minimumScaleFactor(0.75)
@@ -405,7 +405,7 @@ struct WalletFlowBand: View {
     /// "$2.1K · 2 moves" — the count appears only where it explains why one
     /// slab stands for more than one thing.
     private func valueText(_ lane: WalletFlow.Lane) -> String {
-        let money = TokenStats.compact(lane.usd)
+        let money = WalletValue.money(lane.usd)
         guard lane.count > 1 else { return money }
         return "\(money) · \(lane.count) moves"
     }

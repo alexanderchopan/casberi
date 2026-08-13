@@ -330,6 +330,14 @@ struct AccountDetailSheet: View {
             }
             toggleRow("Hide previews", "Blur your things in the app switcher",
                       isOn: Binding(get: { hidePreviews }, set: { hidePreviews = $0; DSHaptic.tap() }))
+            // Its sibling (prd §374): the same threat — somebody reading your
+            // screen — one surface over. Written through `BalancePrivacy` and
+            // not an `@AppStorage` of its own, because every wallet view reads
+            // the same object and a second source of truth for one setting is
+            // how the two quietly disagree.
+            toggleRow("Hide wallet balances", "Show •••• instead of amounts",
+                      isOn: Binding(get: { BalancePrivacy.shared.hidden },
+                                    set: { BalancePrivacy.shared.hidden = $0; DSHaptic.tap() }))
             // The in-motion half (prd §205): what LEAVES this iPhone. The rows
             // above are your copy AT REST (on device / iCloud); this opens the
             // full list of every service the app talks to. Same privacy home,

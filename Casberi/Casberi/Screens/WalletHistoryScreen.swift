@@ -159,7 +159,7 @@ private struct WalletHistoryRow: View {
 
     @ViewBuilder private var liveBody: some View {
         WalletRow(mark: .kind(thing.kind, flagged: thing.isFlagged),
-                  title: thing.title, subtitle: walletLabel, titleWraps: true) {
+                  title: WalletValue.title(thing), subtitle: walletLabel, titleWraps: true) {
             Text(shortTime(thing.capturedAt))
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .monospacedDigit()

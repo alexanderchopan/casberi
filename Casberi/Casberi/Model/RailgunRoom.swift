@@ -195,27 +195,38 @@ struct RailgunRoom: Equatable {
     /// "340.5 USDC shielded" — plain units, not `.formatted(.currency())`:
     /// a token symbol is not an ISO 4217 code. Self-contained (not
     /// `WalletIngest.format`) so this file stays Foundation-only.
-    static func amountText(_ amount: Double, symbol: String) -> String {
-        let formatted = amount.formatted(.number.precision(.fractionLength(0...4)))
-        return "\(formatted) \(symbol)"
+    ///
+    /// `mask` is the §374 hide-balances string, PASSED IN rather than read:
+    /// this file is Foundation-only and compiled WHOLE by
+    /// `scripts/wallet-rooms-selftest.sh`, so it cannot reach `BalancePrivacy`.
+    /// The SYMBOL survives the mask — a hidden row still says which asset
+    /// moved, which is what makes it a row rather than a blank.
+    static func amountText(_ amount: Double, symbol: String, mask: String? = nil) -> String {
+        guard let mask else {
+            let formatted = amount.formatted(.number.precision(.fractionLength(0...4)))
+            return "\(formatted) \(symbol)"
+        }
+        return "\(mask) \(symbol)"
     }
 
     /// The line beside a token: how much moved, in real units when known,
     /// falling back to a bare count — the `PeerRoom.tokenLine` shape.
-    static func tokenLine(_ token: Token) -> String {
+    /// `mask` — see `amountText`. The bare-count fallbacks are unaffected:
+    /// a count of shields is not a balance.
+    static func tokenLine(_ token: Token, mask: String? = nil) -> String {
         if let shielded = token.shieldedAmount, let unshielded = token.unshieldedAmount,
            token.shields > 0, token.unshields > 0 {
-            return String(localized: "\(amountText(shielded, symbol: token.symbol)) shielded · \(amountText(unshielded, symbol: token.symbol)) received")
+            return String(localized: "\(amountText(shielded, symbol: token.symbol, mask: mask)) shielded · \(amountText(unshielded, symbol: token.symbol, mask: mask)) received")
         }
         if token.unshields > 0 {
             if let unshielded = token.unshieldedAmount {
-                return String(localized: "\(amountText(unshielded, symbol: token.symbol)) received")
+                return String(localized: "\(amountText(unshielded, symbol: token.symbol, mask: mask)) received")
             }
             return token.unshields == 1 ? String(localized: "1 received")
                                         : String(localized: "\(token.unshields) received")
         }
         if let shielded = token.shieldedAmount {
-            return String(localized: "\(amountText(shielded, symbol: token.symbol)) shielded")
+            return String(localized: "\(amountText(shielded, symbol: token.symbol, mask: mask)) shielded")
         }
         return token.shields == 1 ? String(localized: "1 shielded")
                                   : String(localized: "\(token.shields) shielded")

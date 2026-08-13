@@ -389,6 +389,28 @@ enum DS {
         static let shelf: CGFloat = 56
     }
 
+    /// The touch-target floor, as a token so a control can't drift under it
+    /// (2026-08-13, the accessibility sweep).
+    ///
+    /// **Why a token and not a remembered number.** The rule was already
+    /// written down in three places — `Face.shelf`'s own comment ("floored by
+    /// the 44pt minimum touch target"), `AgentBar`'s satellite glyph ("the
+    /// TARGET does not [step down] — it stays the full 44pt circle below"), and
+    /// the catalogue door's 2026-07-26 lesson ("a `.frame()` around a small
+    /// symbol leaves everything but its centre falling through") — and ten
+    /// controls shipped under it anyway. Every one of them is INVISIBLE as a
+    /// defect: the glyph draws at exactly the size it was asked to, the button
+    /// works on the first try for anyone who aims well, and the miss lands on
+    /// whoever aims least well. That is the same shape as every other rule in
+    /// this repo that had to become a script.
+    ///
+    /// 44 is Apple's HIG floor, not a taste. Use `dsTapTarget()` rather than
+    /// spelling a frame — it keeps the DRAWN size and grows only the target,
+    /// which is the distinction the sites that regressed all got wrong.
+    enum Hit {
+        static let min: CGFloat = 44
+    }
+
     /// How big an APP's own brand mark draws (`BridgeIcon`) — the catalog
     /// squircle standing for a source, a bridge, a venue. `Face` is the ramp for
     /// a PERSON; this is the ramp for a THING WITH A LOGO, and they are separate

@@ -74,6 +74,18 @@ print -P "%F{green}✓ setup copy audit%f"
 # no build. The failure it catches is invisible at runtime — a key stored with
 # the wrong accessibility works perfectly and also rides an encrypted backup
 # onto another device — so it can only ever be caught mechanically.
+# Keeps the "Hide wallet balances" toggle's promise true (prd §374). A wallet
+# view that calls a raw formatter instead of `WalletValue` renders perfectly
+# and leaks the figure the setting says it hides, while the toggle still sits
+# in Privacy claiming otherwise — invisible at runtime, so mechanical or not at
+# all. Static, no build.
+step "Hide-balances audit"
+python3 "$ROOT/scripts/hide-balances-audit.py" --self-test >/dev/null \
+  || fail "the hide-balances audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/hide-balances-audit.py" \
+  || fail "a wallet view prints a figure outside the §374 gate — see the output above"
+print -P "%F{green}✓ hide-balances audit%f"
+
 step "Keychain policy audit"
 "$ROOT/scripts/keychain-audit.py" --self-test >/dev/null \
   || fail "the keychain audit's own self-test failed — the check is broken, not the code"
@@ -731,6 +743,53 @@ if [[ -z "${SKIP_CATALYST:-}" ]]; then
   rm -f "$CATLOG"
   print -P "%F{green}✓ mac parity (catalyst compiles)%f"
 fi
+
+# Localization COVERAGE (2026-08-13). Distinct from the "Localization audit"
+# above, which catches a translation that EXISTS and became UNREACHABLE. This
+# one catches the opposite and, until it existed, invisible case: a string that
+# never reached the catalog at all, and so ships English in every language.
+#
+# It is here rather than in the static head because it reads the `.stringsdata`
+# the compiler just emitted — the only honest input. A regex over Swift source
+# was tried and reported 57 false positives on a clean tree (a literal `%` is
+# `%%` in the catalog key, a nested string literal ends the match early,
+# `\u{201c}` is not decoded), and a lint that cries wolf gets turned off within
+# a week. Sitting BEFORE the `--build-only` exit means that flag still gets it.
+#
+# BOTH platforms' dirs are passed on purpose: 22 files carry a
+# `#if targetEnvironment(macCatalyst)` branch no iOS build ever compiles, so an
+# iOS-only run cannot see the Mac-only strings — that is exactly how five MCP
+# settings strings stayed untranslated through the 2026-08-13 sweep until a
+# Catalyst pass was added. Under `SKIP_CATALYST=1` the Catalyst dir simply
+# isn't there; the audit skips missing dirs and NAMES what it checked, so a
+# narrower run can never read as a complete one.
+#
+# Why it caught nothing for nine days before it existed: Xcode's IDE syncs a
+# String Catalog on build, `xcodebuild` from the CLI does NOT. Every session
+# here builds from the CLI, so the catalog only advanced when somebody ran
+# `xcstringstool sync` by hand — and on 2026-08-13 it was 767 keys and 248
+# commits behind, with every string of nine days' features English-only.
+step "Localization coverage"
+python3 "$ROOT/scripts/localization-coverage-audit.py" --self-test >/dev/null \
+  || fail "the localization coverage audit's own self-test failed — the check is broken, not the code"
+# The paths are ONE CONFIGURATION'S dir each, never the `Intermediates.noindex`
+# root, and that is a measured fix rather than tidiness: a long-lived
+# derivedData accumulates stringsdata from every configuration ever built into
+# it, and those are never recompiled again. Pointing this at the root of a real
+# `CasberiDD` reported 102 false findings — it held a months-old
+# `Release-iphonesimulator` (157 files) and a stray `Debug-maccatalyst` (477)
+# beside the fresh `Debug-iphonesimulator`, so strings deleted long ago (e.g.
+# `ADD A FEED`, which the design system banned in July 2026) still had live
+# stringsdata. Filtering on "the source file still exists" does NOT fix it: 86
+# of the 102 came from files that are still in the tree and had simply been
+# edited since that configuration was last built. Within a single config dir
+# the data is exact, because an incremental build rewrites the stringsdata of
+# every file it recompiles.
+python3 "$ROOT/scripts/localization-coverage-audit.py" --stringsdata \
+    "$DD/Build/Intermediates.noindex/Casberi.build/Debug-iphonesimulator" \
+    "${CATDD:-$HOME/Library/Developer/CasberiCatalystDD}/Build/Intermediates.noindex/Casberi.build/Debug-maccatalyst" \
+  || fail "a string never reached the catalog, or is missing a shipped translation — see the output above"
+print -P "%F{green}✓ localization coverage%f"
 
 [[ "${1:-}" == "--build-only" ]] && exit 0
 

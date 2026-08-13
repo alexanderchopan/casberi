@@ -95,7 +95,7 @@ struct EthValidatorScreen: View {
             }
             Spacer()
             if let position {
-                Text("\(WalletIngest.format(position.eth)) ETH")
+                Text(WalletValue.token(position.eth, "ETH"))
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
             }
         }
@@ -168,7 +168,7 @@ struct EthValidatorScreen: View {
             }
             positions[index] = position
             resultIsError = false
-            result = String(localized: "Watching validator #\(index) — \(WalletIngest.format(position.eth)) ETH")
+            result = String(localized: "Watching validator #\(index) — \(WalletValue.token(position.eth, "ETH"))")
             indexField = ""
             EthValidatorRead.registerBridge(store: store)
         }

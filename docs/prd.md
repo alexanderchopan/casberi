@@ -22275,3 +22275,87 @@ every wallet on every device that upgraded — §312's `RSSStore.Feed` trap exac
 
 **Not done, deliberately.** Which chains you have dealt with an address on was
 proposed and cut by the user from this pass.
+
+## §374 — Hide wallet balances (user: "should we add a way for a user to 'hide balances'? i think we could make that a toggle in settings / privacy wdyt", then "i think it is fine to put it in privacy settings, we already have similar ones there. as for what to hide, any dollar or token value, basically all the things in wallet. i don't think we need to hide it anywhere else. so the setting is 'hide wallet balances'", 2026-08-13)
+
+A toggle in Privacy beside `privacy.hidePreviews`, off by default, that withholds
+every dollar and token figure across the wallet and nowhere else.
+
+**The threat is a person, not a server.** Nothing about a balance leaves the
+device, so this is not a claim about what the app reaches — it is about what
+someone standing next to you can read. It earns a seat in Privacy anyway
+because `hidePreviews` is already exactly that: the same threat, one surface
+over. Off by default, because a wallet whose figures are hidden by default is a
+wallet nobody can read.
+
+### Three rules, each load-bearing
+
+**It masks at the RENDER boundary and nowhere else.** The two dominant
+formatters (`TokenStats.compact`, `WalletIngest.format`) are also called at
+INGEST — `WalletIngest` bakes `compact` into the persisted treemap doc and
+interpolates `format` into every transfer title — so masking inside them would
+write `••••` into stored data, where it would survive the toggle going back off
+and would sync to every other device. `WalletValue` is the gate; the underlying
+formatters keep their names and their behaviour precisely because ingest still
+needs them unmasked.
+
+**A hidden value reads as HIDDEN, never as zero and never as unknown.** The
+wallet already spends both readings: `WalletApprovalExposure` returns nil for
+"we can't know" and 0 only for a grant that genuinely reaches nothing (§292).
+A mask rendering as "$0" or as a blank would collide with those and turn a
+privacy setting into a false statement about somebody's money. The audit fails
+the build on a mask containing a digit, a currency symbol, or nothing.
+
+**Figures go, SHAPES stay.** A treemap cell keeps its area, a sparkline its
+curve, a share bar its fill. Nobody reads a net worth off an unlabelled shape,
+and blanking them leaves the room empty rather than private. Percentages of a
+whole stay for the same reason — an allocation share and a distance from
+liquidation say proportion, not amount. So does a health factor, which is why
+it is the audit's one exemption: hiding it would remove a warning to protect a
+number it does not carry. Counts stay too (spends, shields, transactions).
+
+### The hard surface: titles baked at ingest
+
+Every history row is `Text(thing.title)` — "Received 0.42 ETH from sam.eth" —
+composed at ingest, so no formatter gate can reach it. The cheap fix is
+replacing the stamped `transferAmount` substring, and it was REJECTED: when the
+stamped string is not a verbatim substring of the title (a localization that
+reorders, a row landed before the field existed) the replacement quietly does
+nothing and the amount stays on screen. **A privacy control whose failure mode
+is "shows it anyway, invisibly" is worse than one that hides too much.**
+
+So `WalletValue.title` re-composes from stamped fields and treats everything it
+cannot build as something to hide, in three cases: a stamped transfer is rebuilt
+keeping direction, asset and counterparty (none of which are balances); a title
+with no digit at all is left exactly as it is; and a title with digits that
+cannot be rebuilt is masked WHOLE. That third case is deliberately coarse — it
+catches swaps, capped approvals, and every transfer landed before these fields
+existed, for which the number exists solely inside the title. That is a real
+cost of the setting, not a bug to be fixed later by parsing.
+
+§363's rule survives intact: facts come from stamped fields and are never parsed
+back out of a localized title. The only thing read out of `transferAmount` is its
+trailing symbol, and that is a field we stamp ourselves in a documented shape.
+
+### The room heads take the mask as a PARAMETER
+
+`GnosisPayRoom` and `RailgunRoom` are Foundation-only and compiled WHOLE and
+unmodified by `scripts/wallet-rooms-selftest.sh` against inert stubs — the only
+proof those numbers are right. So they cannot reach `BalancePrivacy`; the mask
+is passed in, which also lets the harness test both states, as reading a
+singleton never could.
+
+### Mechanical, because the leak is invisible
+
+`scripts/hide-balances-audit.py` (self-tested, in `verify.sh`, and auto-discovered
+by `verify-mac.sh` through the `*-audit.py` convention) fails the build when a
+wallet view calls a raw formatter directly. A view that does renders perfectly
+and ships, leaking the figure while the toggle still sits in Privacy saying it
+doesn't — the same invisible-failure class as `network-reach-audit` and
+`keychain-audit`. Its exemption list is keyed by PATTERN, not by line number: a
+line-keyed entry rots on the next edit and then silently exempts whatever moved
+into that line.
+
+**Not covered, by the user's own ruling:** everything outside the wallet. A
+token price on a chart you watch is public information about a market, not a
+statement about you.

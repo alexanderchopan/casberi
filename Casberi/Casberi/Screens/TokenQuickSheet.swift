@@ -165,7 +165,7 @@ struct TokenQuickSheet: View {
                 WalletSectionLabel(title: String(localized: "Held in"))
                 ForEach(route.holders) { holder in
                     WalletRow(mark: .face(holder.address), title: holder.label) {
-                        WalletRowValue(value: TokenStats.compact(holder.usd))
+                        WalletRowValue(value: WalletValue.money(holder.usd))
                     }
                 }
             }

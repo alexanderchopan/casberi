@@ -211,15 +211,17 @@ struct WalletBalanceHeadline: View {
                     }
                     HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
                         // The app's money voice ($19.9K), not a token price — this is
-                        // a portfolio total, and `TokenStats.compact` is what the
-                        // combined sheet and the wallet row sublines already speak.
+                        // a portfolio total, and `WalletValue.money` is what the
+                        // combined sheet and the wallet row sublines already speak
+                        // (`TokenStats.compact` behind the §374 privacy gate; a
+                        // view never calls that formatter directly).
                         // The digits ROLL between values (a scope switch re-keys the
                         // number, and $20K odometer-rolling to $4.2K says "same
                         // instrument, new reading"). Direction rides the value, so
                         // the roll runs the way the money moved. `price40` is the
                         // sanctioned big-money rung (prd §102), so it scales with
                         // Dynamic Type like everything else.
-                        Text(TokenStats.compact(displayed ?? 0))
+                        Text(WalletValue.money(displayed ?? 0))
                             .dsText(.price48).foregroundStyle(DS.textPrimary)
                             .monospacedDigit()
                             .contentTransition(reduceMotion ? .identity
@@ -422,7 +424,7 @@ struct WalletCompositionStrip: View {
                 if composition.hasDeposited {
                     line(title: String(localized: "Deposited"),
                          places: composition.depositedPlaces,
-                         value: TokenStats.compact(composition.deposited),
+                         value: WalletValue.money(composition.deposited),
                          onOpen: onOpenDeposits)
                 }
                 if composition.hasLocked {
@@ -439,7 +441,7 @@ struct WalletCompositionStrip: View {
                     // opened on purpose isn't an alarm.
                     line(title: String(localized: "Owed"),
                          places: composition.owedPlaces,
-                         value: "−" + TokenStats.compact(composition.owed),
+                         value: "−" + WalletValue.money(composition.owed),
                          onOpen: nil)
                 }
             }
@@ -456,7 +458,7 @@ struct WalletCompositionStrip: View {
     /// (a sum of end dates would be nothing, which is why the tray exists).
     private var lockedValue: String {
         composition.lockedTotals
-            .map { "\(WalletIngest.format($0.amount)) \($0.symbol)" }
+            .map { WalletValue.token($0.amount, $0.symbol) }
             .joined(separator: " · ")
     }
 
@@ -561,7 +563,7 @@ struct WalletDepositsTray: View {
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
                 Spacer(minLength: 0)
-                Text(TokenStats.compact(deposit.usd))
+                Text(WalletValue.money(deposit.usd))
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .monospacedDigit()
                 if total > 0 {
@@ -620,7 +622,7 @@ struct WalletLocksTray: View {
                 // this row's trailing edge, and AERO and HYPE are what the
                 // amount beside it counts.
                 AssetMark(name: lock.symbol, size: 22)
-                Text("\(WalletIngest.format(lock.amount)) \(lock.symbol)")
+                Text(WalletValue.token(lock.amount, lock.symbol))
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .monospacedDigit()
                     .lineLimit(1)
@@ -658,7 +660,11 @@ struct WalletLocksTray: View {
             parts.append(String(localized: "Permanent · never decays"))
         } else if let remaining = lock.remaining, let power = lock.power {
             parts.append(String(localized:
-                "\(WalletIngest.format(power)) votes left · \(Int((remaining * 100).rounded()))%"))
+                // The vote weight is an AMOUNT and is gated; the percentage
+                // beside it is a proportion of this lock's own maximum, which
+                // says how far it has melted and nothing about how much is in
+                // it — §374 hides amounts, not shapes.
+                "\(WalletValue.number(power)) votes left · \(Int((remaining * 100).rounded()))%"))
         }
         if let until = lock.until {
             // Month and day, never a bare weekday — the Aerodrome date-format
@@ -770,7 +776,7 @@ struct WalletFaceChips: View {
             } else {
                 WalletFace(address: entry.id, size: DS.Face.badge, circular: true)
             }
-            Text(TokenStats.compact(entry.value))
+            Text(WalletValue.money(entry.value))
                 .dsText(.label12).fontWeight(.semibold)
                 .foregroundStyle(DS.textPrimary)
                 .monospacedDigit()
@@ -861,7 +867,7 @@ struct WalletLendingCard: View {
                          title: title,
                          subtitle: Self.line(health: health, atRisk: atRisk,
                                              chains: positions.map(\.network))) {
-            WalletRowValue(value: TokenStats.compact(borrowing ? debt : collateral),
+            WalletRowValue(value: WalletValue.money(borrowing ? debt : collateral),
                            caption: borrowing ? String(localized: "borrowed")
                                               : String(localized: "supplied"))
         }
@@ -911,7 +917,7 @@ struct WalletLendingCard: View {
         return WalletRow(mark: .asset("Morpho", tint: atRisk ? DS.attention : DS.tint,
                                       atRisk: atRisk),
                          title: "Morpho", subtitle: subtitle) {
-            WalletRowValue(value: TokenStats.compact(borrowing ? morphoDebt : morphoDeposits),
+            WalletRowValue(value: WalletValue.money(borrowing ? morphoDebt : morphoDeposits),
                            caption: borrowing ? String(localized: "borrowed")
                                               : String(localized: "deposits"))
         }
@@ -1032,7 +1038,7 @@ struct WalletAllocationTray: View {
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
                 Spacer(minLength: 0)
-                Text(TokenStats.compact(position.usd))
+                Text(WalletValue.money(position.usd))
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .monospacedDigit()
                 if portfolio.totalUSD > 0 {
@@ -1050,7 +1056,7 @@ struct WalletAllocationTray: View {
                         Text(holder.label)
                             .dsText(.label12).foregroundStyle(DS.textSecondary)
                             .lineLimit(1)
-                        Text(TokenStats.compact(holder.usd))
+                        Text(WalletValue.money(holder.usd))
                             .dsText(.label12).foregroundStyle(DS.textTertiary)
                             .monospacedDigit()
                     }
@@ -1692,7 +1698,7 @@ struct WalletWorthALookTray: View {
     /// The subline is the row's whole context, in decision order: WHOSE wallet
     /// is exposed, where, and since when.
     private func approvalActionRow(_ thing: Thing) -> some View {
-        actionRow(icon: "key.fill", hot: false, title: thing.title,
+        actionRow(icon: "key.fill", hot: false, title: WalletValue.title(thing),
                   subtitle: Self.subline([whose(stored: thing.walletAddress),
                                           approvalChain(thing),
                                           Self.grantedLine(thing)]),
@@ -1804,7 +1810,7 @@ struct WalletWorthALookTray: View {
             path.append(thing)
         } label: {
             HStack(spacing: DS.Space.s3) {
-                Text(thing.title).dsText(.body17).foregroundStyle(DS.textPrimary)
+                Text(WalletValue.title(thing)).dsText(.body17).foregroundStyle(DS.textPrimary)
                     .lineLimit(1).truncationMode(.tail)
                 Spacer(minLength: DS.Space.s2)
                 Image(systemName: "chevron.right")

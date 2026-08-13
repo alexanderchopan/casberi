@@ -506,7 +506,7 @@ struct WalletScreen: View {
                 Text("\(wallet.addresses.count) of \(WalletStore.watchLimit) watched")
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
                 if let total = watchedTotal {
-                    Text("· \(TokenStats.compact(total))")
+                    Text("· \(WalletValue.money(total))")
                         .dsText(.label12).foregroundStyle(DS.textSecondary)
                         .monospacedDigit()
                 }
@@ -555,7 +555,7 @@ struct WalletScreen: View {
                 // stays silent when the name IS the short address (printing it
                 // twice reads as a stutter).
                 if let usd = walletTotals[AddressBook.key(for: addr.address)], usd > 0 {
-                    Text(TokenStats.compact(usd))
+                    Text(WalletValue.money(usd))
                         .dsText(.label12).foregroundStyle(DS.textSecondary)
                         .monospacedDigit()
                         .lineLimit(1)
@@ -574,6 +574,7 @@ struct WalletScreen: View {
             renameDraft = addr.label
             renamingID = addr.id
         }
+        .dsTapCard()
         .contextMenu {
             Button {
                 DSPasteboard.copySensitive(addr.address)
@@ -628,6 +629,7 @@ struct WalletScreen: View {
             DSHaptic.tap()
             addressFieldFocused = true
         }
+        .dsTapCard()
     }
 
     /// What just happened — the spinner while chains are read, then the
@@ -830,7 +832,7 @@ struct WalletScreen: View {
         if watchedEntries.isEmpty {
             parts.append(String(localized: "none watched"))
         } else if total > 0 {
-            parts.append(String(localized: "\(watchedEntries.count) watched worth \(TokenStats.compact(total))"))
+            parts.append(String(localized: "\(watchedEntries.count) watched worth \(WalletValue.money(total))"))
         } else {
             parts.append(String(localized: "\(watchedEntries.count) watched"))
         }
@@ -1081,7 +1083,7 @@ struct WalletScreen: View {
                 .dsGlyph(17, weight: .medium)
                 .foregroundStyle(watched ? DS.tint : DS.textTertiary)
                 .frame(width: 32, height: 32)
-                .contentShape(Rectangle())
+                .dsTapTarget()
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text(watched ? "Watching \(entry.name), tap to stop"

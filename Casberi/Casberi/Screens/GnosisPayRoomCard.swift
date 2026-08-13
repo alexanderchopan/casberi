@@ -54,11 +54,19 @@ struct GnosisPayRoomCard: View {
                 .dsText(.label12).fontWeight(.semibold)
                 .foregroundStyle(Self.mark)
 
-            Text(GnosisPayRoom.headline(room))
+            Text(GnosisPayRoom.headline(room, mask: BalancePrivacy.shared.hidden ? BalancePrivacy.mask : nil))
                 .dsText(.heading22)
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, DS.Space.s2)
+                // The whole card is a tap target for touch and pointer and
+                // carries nothing for VoiceOver; this states the same verb on
+                // the line that names its destination.
+                .dsCardLead(Text("Opens this currency")) {
+                    guard let lead = room.lead else { return }
+                    DSHaptic.selection()
+                    onOpen(lead)
+                }
 
             Text(GnosisPayRoom.note(room))
                 .dsText(.subhead13)
@@ -173,7 +181,7 @@ struct GnosisPayRoomCard: View {
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     Spacer(minLength: DS.Space.s2)
-                    Text(GnosisPayRoom.currencyLine(currency))
+                    Text(GnosisPayRoom.currencyLine(currency, mask: BalancePrivacy.shared.hidden ? BalancePrivacy.mask : nil))
                         .dsText(.subhead13)
                         .foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
@@ -186,6 +194,6 @@ struct GnosisPayRoomCard: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(Text("\(currency.code), \(GnosisPayRoom.currencyLine(currency))"))
+        .accessibilityLabel(Text("\(currency.code), \(GnosisPayRoom.currencyLine(currency, mask: BalancePrivacy.shared.hidden ? BalancePrivacy.mask : nil))"))
     }
 }

@@ -603,7 +603,10 @@ struct AddressCard: View {
     private var bitcoinVintageLine: some View {
         if BitcoinAddress.isAddress(current.address),
            let sats = BitcoinBridge.cachedBalanceSats(for: current.address), sats > 0 {
-            let amount = BitcoinBridge.formatAmount(sats: sats)
+            // A BTC balance is a balance (prd §374). The vintage beside it is
+            // not — "oldest piece from March 2017" says when, not how much,
+            // and it is the whole point of the line.
+            let amount = BalancePrivacy.shared.value(BitcoinBridge.formatAmount(sats: sats))
             if let since = BitcoinBridge.vintage(for: current.address) {
                 Text("\(amount) · oldest piece from \(since.formatted(.dateTime.month(.wide).year()))")
                     .dsText(.subhead13).foregroundStyle(DS.textSecondary)
@@ -728,7 +731,7 @@ struct AddressCard: View {
                 // printed over unpriceable grants is the "never 0 standing in
                 // for unknown" rule the arithmetic already keeps.
                 if !exposure.priced.isEmpty {
-                    Text(WalletApprovalExposure.money(exposure.total))
+                    Text(WalletValue.exactMoney(exposure.total))
                         .dsText(.heading22).foregroundStyle(DS.textPrimary)
                         .monospacedDigit()
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -744,7 +747,7 @@ struct AddressCard: View {
                         Spacer(minLength: DS.Space.s2)
                         // An unpriceable grant says so rather than showing a
                         // blank, which reads as nothing at stake.
-                        Text(grant.usd.map(WalletApprovalExposure.money)
+                        Text(grant.usd.map(WalletValue.exactMoney)
                              ?? String(localized: "not priced"))
                             .dsText(.subhead13)
                             .foregroundStyle(grant.usd == nil ? DS.textTertiary : DS.textSecondary)
@@ -832,7 +835,7 @@ struct AddressCard: View {
                         HStack(spacing: DS.Space.s3) {
                             KindGlyph(kind: thing.kind, size: 26)
                             VStack(alignment: .leading, spacing: 1) {
-                                Text(thing.title).dsText(.subhead13)
+                                Text(WalletValue.title(thing)).dsText(.subhead13)
                                     .foregroundStyle(DS.textPrimary).lineLimit(1)
                                     // The rename cascade (see `rename(to:)`) —
                                     // each row picks up the new name a beat
@@ -890,7 +893,13 @@ struct AddressCard: View {
         if !summary.netByToken.isEmpty {
             let shown = summary.netByToken.prefix(2).map { token -> String in
                 let sign = token.net < 0 ? "−" : "+"
-                return "\(sign)\(Self.formatAmount(abs(token.net))) \(token.symbol)"
+                // The SIGN survives the mask, the figure doesn't: which way the
+                // relationship ran is not a balance, and dropping it would
+                // leave "net •••• ETH" saying less than the row above already
+                // says (prd §374).
+                return BalancePrivacy.shared.hidden
+                    ? "\(sign)\(BalancePrivacy.mask) \(token.symbol)"
+                    : "\(sign)\(Self.formatAmount(abs(token.net))) \(token.symbol)"
             }
             var netText = "net " + shown.joined(separator: ", ")
             let remaining = summary.netByToken.count - 2
@@ -991,7 +1000,7 @@ struct AddressHistoryScreen: View {
                     HStack(spacing: DS.Space.s3) {
                         KindGlyph(kind: thing.kind, size: 26)
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(thing.title).dsText(.subhead13)
+                            Text(WalletValue.title(thing)).dsText(.subhead13)
                                 .foregroundStyle(DS.textPrimary).lineLimit(1)
                             Text(thing.capturedAt.formatted(.dateTime.month(.abbreviated).day().year()))
                                 .dsText(.label12).foregroundStyle(DS.textTertiary)

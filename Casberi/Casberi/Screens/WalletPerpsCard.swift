@@ -87,7 +87,7 @@ struct WalletPerpsCard: View {
             // showed it would be wrong between reads far more often than it
             // was right, and the subject of this card is whether the position
             // survives — not what it is worth this instant.
-            WalletRowValue(value: TokenStats.compact(position.positionValue),
+            WalletRowValue(value: WalletValue.money(position.positionValue),
                            caption: String(localized: "notional"))
         }
     }

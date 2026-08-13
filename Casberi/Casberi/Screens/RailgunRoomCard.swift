@@ -43,6 +43,13 @@ struct RailgunRoomCard: View {
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, DS.Space.s2)
+                // The lead has no row of its own (see below), so this headline
+                // is the only place its destination can be reached.
+                .dsCardLead(Text("Opens this token")) {
+                    guard let lead = room.lead else { return }
+                    DSHaptic.selection()
+                    onOpen(lead)
+                }
 
             Text(RailgunRoom.note(room))
                 .dsText(.subhead13)
@@ -100,7 +107,7 @@ struct RailgunRoomCard: View {
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     Spacer(minLength: DS.Space.s2)
-                    Text(RailgunRoom.tokenLine(token))
+                    Text(RailgunRoom.tokenLine(token, mask: BalancePrivacy.shared.hidden ? BalancePrivacy.mask : nil))
                         .dsText(.subhead13)
                         .foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
@@ -115,6 +122,6 @@ struct RailgunRoomCard: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(Text("\(token.symbol), \(RailgunRoom.tokenLine(token))"))
+        .accessibilityLabel(Text("\(token.symbol), \(RailgunRoom.tokenLine(token, mask: BalancePrivacy.shared.hidden ? BalancePrivacy.mask : nil))"))
     }
 }

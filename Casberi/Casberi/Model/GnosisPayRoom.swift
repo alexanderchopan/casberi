@@ -401,8 +401,20 @@ struct GnosisPayRoom: Equatable {
     }
 
     /// The line beside a currency row: the money, then how many times.
-    static func currencyLine(_ currency: Currency, locale: Locale = .current) -> String {
-        money(currency.total, code: currency.code, locale: locale)
+    ///
+    /// `mask` is the §374 hide-balances string, PASSED IN rather than read —
+    /// this file is Foundation-only and is compiled WHOLE and unmodified by
+    /// `scripts/wallet-rooms-selftest.sh` against inert stubs, so it cannot
+    /// reach `BalancePrivacy` without breaking the only proof these numbers
+    /// are right. The parameter also lets the harness test both states, which
+    /// reading a singleton would not.
+    ///
+    /// The SPEND COUNT survives the mask on purpose: how many times you used
+    /// the card is not a balance, and it is what is left to say once the
+    /// amount is gone.
+    static func currencyLine(_ currency: Currency, locale: Locale = .current,
+                             mask: String? = nil) -> String {
+        (mask ?? money(currency.total, code: currency.code, locale: locale))
             + " · " + spendsLabel(currency.spends)
     }
 
@@ -412,7 +424,11 @@ struct GnosisPayRoom: Equatable {
     /// There is no trouble rung here, unlike `StripeRoom` and `CursorRoom`: a
     /// card spend cannot go wrong in a way this bridge can see. It settled or
     /// it is not on chain.
-    static func headline(_ room: GnosisPayRoom, locale: Locale = .current) -> String {
+    /// `mask` — see `currencyLine`. The two quiet answers below carry no money
+    /// at all, so they are unaffected by it: "nothing spent" is a fact about
+    /// activity, not an amount, and hiding it would say less than the truth.
+    static func headline(_ room: GnosisPayRoom, locale: Locale = .current,
+                         mask: String? = nil) -> String {
         guard let lead = room.lead else {
             // A quiet window on a room with real history — the honest reading,
             // and the one a list of old rows never states.
@@ -421,12 +437,13 @@ struct GnosisPayRoom: Equatable {
         }
         if room.currencies.count > 1 {
             let others = room.currencies.count - 1
-            let money = money(lead.total, code: lead.code, locale: locale)
+            let money = mask ?? money(lead.total, code: lead.code, locale: locale)
             return others == 1
                 ? String(localized: "\(money) in \(lead.code), plus another currency")
                 : String(localized: "\(money) in \(lead.code), plus \(others) other currencies")
         }
-        return String(localized: "\(money(lead.total, code: lead.code, locale: locale)) on your card in \(windowDays) days")
+        let amount = mask ?? money(lead.total, code: lead.code, locale: locale)
+        return String(localized: "\(amount) on your card in \(windowDays) days")
     }
 
     /// The line under it. Never a restatement: the headline carries the money,

@@ -138,7 +138,7 @@ struct WalletApprovalExposureCard: View {
                         Spacer(minLength: DS.Space.s2)
                         // An unpriceable grant states a dash, never "$0" — the
                         // whole reason it sits outside the total (see the model).
-                        Text(grant.usd.map(WalletApprovalExposure.money) ?? "—")
+                        Text(grant.usd.map(WalletValue.exactMoney) ?? "—")
                             .dsText(.price16)
                             .foregroundStyle(grant.usd == nil ? DS.textTertiary : DS.textPrimary)
                             .monospacedDigit()
