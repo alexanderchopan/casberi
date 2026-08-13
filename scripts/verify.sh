@@ -1135,21 +1135,22 @@ else
   kill -9 $RPID 2>/dev/null || true
   sleep 1
   xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
-  # This capture has now produced THREE different malformed shapes across
-  # three separate runs — an empty extraction (pipefail killing the script
-  # before `fail` ever ran), a literal two-line "0\n0" (failed the exact
-  # string-equality test), and here an EMPTY string ($REACH_LOG apparently
-  # never got created/written this run, so grep found no file, printed
-  # nothing to stdout, and exited non-zero — but `| head -1` still exits 0
-  # on empty input, so the `|| echo 0` fallback never fired and REACHED
-  # became "", which `$(( REACHED + 0 ))` then rejected as a syntax error).
-  # Zero real hosts were reached every single time this was inspected by
-  # hand across all three failures — never a real regression, always the
-  # capture. Stop chaining fallbacks through pipe exit statuses (three
-  # bugs, three different edge cases) and instead just VALIDATE the result
-  # is a clean non-negative integer before trusting it at all.
+  # This capture has now produced FOUR different malformed shapes across
+  # four separate runs, and every single one was this SCRIPT dying, never a
+  # real reach: an empty extraction (pipefail killing the script before
+  # `fail` ever ran), a literal two-line "0\n0" (failed the exact
+  # string-equality test), an empty string ($REACH_LOG apparently never got
+  # created/written that run, so grep found no file and `| head -1`'s own
+  # success swallowed the `|| echo 0` fallback), and — the one that finally
+  # explains all of it — this exact rewrite's own `REACHED=$(grep -c … )`
+  # with NO fallback at all: `grep -c` matching zero times exits 1 like any
+  # other grep, and under this script's own `set -e`, a bare command
+  # substitution assignment inheriting a non-zero exit status kills the
+  # WHOLE SCRIPT right there — before the validation regex below ever runs.
+  # The common case (no reach at all) is the one that was crashing every
+  # time. `|| echo 0` on the substitution itself is not optional here.
   if [[ -f "$REACH_LOG" ]]; then
-    REACHED=$(grep -c "receipt| " "$REACH_LOG" 2>/dev/null)
+    REACHED=$(grep -c "receipt| " "$REACH_LOG" 2>/dev/null || echo 0)
   else
     REACHED=""
   fi
