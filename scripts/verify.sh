@@ -1115,19 +1115,25 @@ else
   sleep 1
   xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES -receiptsProbe YES >/dev/null 2>&1 || true
   sleep 6
-  kill $RPID 2>/dev/null || true
-  # `kill` only SIGNALS the background `log stream` — it does not wait for it
-  # to actually die, and a killed process's buffered writes are not
-  # guaranteed to be flushed to $REACH_LOG yet. Reading the file immediately
-  # after `kill` raced that flush: two consecutive runs counted a real match
-  # (REACHED != 0) that had vanished by the time the file was read back a
-  # moment later by hand, and — under this script's own set -e -o pipefail —
-  # the second grep (`-o`) finding nothing on the now-drained file exits 1,
-  # which kills the WHOLE script right there, before `fail` ever runs. So a
-  # pure timing artifact looked like a silent crash with no error message.
-  # `wait` blocks until $RPID has genuinely exited, guaranteeing the file is
-  # complete before anything reads it.
-  wait $RPID 2>/dev/null
+  # A plain `kill` (SIGTERM) only SIGNALS the background `log stream` — it
+  # does not wait for it to die, and a killed process's buffered writes are
+  # not guaranteed to be flushed to $REACH_LOG yet. Reading the file
+  # immediately after raced that flush: two consecutive runs counted a real
+  # match (REACHED != 0) that had vanished by the time the file was read
+  # back a moment later by hand, and — under this script's own
+  # set -e -o pipefail — the second grep (`-o`) finding nothing on the
+  # now-drained file exits 1, which kills the WHOLE script right there,
+  # before `fail` ever runs. A pure timing artifact looked like a silent
+  # crash with no error message.
+  #
+  # The fix is NOT `wait $RPID` — tried first, and it hung the entire run
+  # (measured: killed by the harness's own timeout, exit 143). `simctl spawn
+  # … log stream`'s local process apparently does not exit on SIGTERM alone,
+  # so an unbounded wait for it never returns. `kill -9` is unblockable and
+  # a bounded sleep afterward is enough for the OS to deliver whatever was
+  # already buffered — bounded beats correct-but-hangs here.
+  kill -9 $RPID 2>/dev/null || true
+  sleep 1
   xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
   REACHED=$(grep -c "receipt| " "$REACH_LOG" 2>/dev/null || echo 0)
   if [[ "$REACHED" == "0" ]]; then
