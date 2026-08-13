@@ -1135,7 +1135,16 @@ else
   kill -9 $RPID 2>/dev/null || true
   sleep 1
   xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
-  REACHED=$(grep -c "receipt| " "$REACH_LOG" 2>/dev/null || echo 0)
+  # `| head -1` and the explicit re-parse as an integer: measured this
+  # produce a literal two-line "0\n0" on a third run (grep -c should be
+  # structurally incapable of emitting two lines for one file — root cause
+  # not pinned down, but the symptom is real and reproducible enough to
+  # guard against directly). A REACHED that isn't cleanly "0" then fails the
+  # exact string-equality check below even though zero hosts were reached
+  # every single time this was inspected by hand — a false failure, not a
+  # missed one. Coercing through arithmetic forces exactly one integer.
+  REACHED=$(grep -c "receipt| " "$REACH_LOG" 2>/dev/null | head -1 || echo 0)
+  REACHED=$(( REACHED + 0 ))
   if [[ "$REACHED" == "0" ]]; then
     print -P "%F{green}✓ demo reaches nothing (4 rooms walked, ledger empty)%f"
   else
