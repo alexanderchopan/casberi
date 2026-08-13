@@ -202,15 +202,16 @@ extension DS {
 
     /// The detail surface's ground (`dsInk()`).
     ///
-    /// §519 made the thing sheet ink-black in BOTH modes — "like a photo
-    /// viewer" — and that held for thirteen months. It is reversed here
+    /// "THE INK SHEET" (prd, 2026-07-07) made the thing sheet ink-black in
+    /// BOTH modes — "like a photo viewer" — and that held. It is reversed here
     /// (2026-08-12, user ruling, on a tester report): a black rectangle
     /// arriving out of a white page does not read as a photo viewer, it reads
     /// as the app losing its place, and the sheet is no longer mostly a photo
     /// — six category anatomies now carry the words that answer "what IS
     /// this?", which is reading, and reading follows the theme.
     ///
-    /// What survives §519 is the IDEA, which was never "black": the detail
+    /// What survives that ruling is the IDEA, which was never "black": the
+    /// detail
     /// surface is the extreme of its theme, not another card floating on the
     /// page. So it stays pure `#000` in dark and becomes pure `#ffffff` in
     /// light — the absolute floor and the absolute ceiling, each one tonal
