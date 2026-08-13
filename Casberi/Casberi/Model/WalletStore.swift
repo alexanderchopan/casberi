@@ -225,6 +225,25 @@ final class WalletStore {
         avatarURLs[address.lowercased()]
     }
 
+    /// The demo's bundled faces for named counterparties (2026-08-12).
+    ///
+    /// `avatarURLs` is `private(set)` and filled only by `loadAvatars()`, an
+    /// ENS resolve — so the demo's own people, who have faces in every social
+    /// room, were identicons in the one room that names them by name. Owned
+    /// here rather than written from `DemoSeedAll` because that is where the
+    /// property lives (`demo-selftest.py` check H).
+    ///
+    /// In-memory like every other entry, so `forgetDemoAvatars` is really only
+    /// needed for a demo exit inside one launch; it is spelled anyway, because
+    /// "it happens to be ephemeral" is how a seed becomes permanent later.
+    func seedDemoAvatars(_ faces: [String: String]) {
+        for (address, ref) in faces { avatarURLs[address.lowercased()] = ref }
+    }
+
+    func forgetDemoAvatars(_ addresses: [String]) {
+        for address in addresses { avatarURLs.removeValue(forKey: address.lowercased()) }
+    }
+
     /// Resolves each watched address's ENS avatar once, filling `avatarURLs`.
     /// Tries the hex first (reverse resolve), then the label when it's an ENS
     /// name (a name resolve carries the avatar even when reverse doesn't).

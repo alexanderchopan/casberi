@@ -221,7 +221,18 @@ struct BandRow: View {
     /// a person. Named once: `artRidesBesideIdentity` unions it with the
     /// publisher-mark sources below, so adding a network can't leave the two
     /// disagreeing about whether that network's rows have an identity leader.
-    static let faceSources: Set<String> = ["Bluesky", "Farcaster"]
+    ///
+    /// NOSTR, STOCKTWITS AND GITHUB JOINED IN 2026-08-12, and their absence
+    /// was the same bug three times: each of those bridges stamps
+    /// `authorAvatarURL` on every row it lands — `NostrIngest` from the
+    /// relay's kind:0 profile, `StocktwitsBridge` from the poster, `GitHubFeeds`
+    /// from the event's own actor — and this set is the ONLY thing that lets
+    /// the leading slot draw it. So three rooms fetched a face, stored it, and
+    /// rendered the app glyph instead, which is the doc note right above:
+    /// "the avatar is never redundant — it's who posted."
+    static let faceSources: Set<String> = [
+        "Bluesky", "Farcaster", "Nostr", "Stocktwits", "GitHub",
+    ]
     /// The sources whose leading slot is a publisher's MARK — a logo, so a
     /// squircle, not a circle.
     static let publisherMarkSources: Set<String> = ["RSS"]

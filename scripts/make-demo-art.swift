@@ -172,19 +172,21 @@ struct Face {
     let bottom: NSColor
 }
 
+// PUBLICATION MARKS ONLY. The demo's PEOPLE moved to
+// `scripts/make-demo-avatars.swift` (2026-08-12) — illustrated faces, because
+// a real social roster is a column of faces and a column of initials is what
+// an empty one looks like. They are listed there and NOT here on purpose: two
+// generators writing the same imageset means whichever ran last wins, and this
+// one would silently put the letters back.
+//
+// These stay monograms because `RSSIngest` stamps a site's FAVICON here — The
+// Verge is a mark, not a person, and giving it a face would say somebody wrote
+// for us.
 let faces: [Face] = [
-    .init(handle: "you",  initial: "Y", top: rgb(0x4F7CF7), bottom: rgb(0x2B4FBF)),
-    .init(handle: "mia",  initial: "M", top: rgb(0xE0658F), bottom: rgb(0xA83B67)),
-    .init(handle: "sam",  initial: "S", top: rgb(0x35B08A), bottom: rgb(0x1E7A5E)),
-    .init(handle: "nils", initial: "N", top: rgb(0xE08A46), bottom: rgb(0xB05F22)),
-    .init(handle: "uma",  initial: "U", top: rgb(0x8B6BE0), bottom: rgb(0x5C41A8)),
     // Stocktwits' traders. Three "T"s in three hues rather than three
     // initials: the handles really are @trader0/1/2, and inventing distinct
     // names to get prettier monograms would put words on screen the rows
     // don't say.
-    .init(handle: "trader0", initial: "T", top: rgb(0x3E9BD4), bottom: rgb(0x1F6592)),
-    .init(handle: "trader1", initial: "T", top: rgb(0xD4713E), bottom: rgb(0x92451F)),
-    .init(handle: "trader2", initial: "T", top: rgb(0x59B04A), bottom: rgb(0x2F7523)),
     // Publication marks. `RSSIngest` stamps the site's own favicon onto
     // `authorAvatarURL`, so every article row in a real reading room carries
     // its publisher beside the byline. These are monograms, not anybody's

@@ -4600,7 +4600,19 @@ struct FeedScreen: View {
             case .notes:  ExcerptRow(thing: thing, lines: 3)
             case .chat:   ExcerptRow(thing: thing, lines: 2)
             case .social:
-                if thing.kind == .link {
+                // A FOLLOWER IS A PERSON, not an article somebody shared
+                // (2026-08-12). `SocialInbound.landFollower` lands a follow as
+                // a `.link`, and the branch below reads every `.link` in this
+                // room as a shared article — so "Sam (@sam) started following
+                // you" drew as a reading-list row, with their face on the
+                // record and the source glyph on screen. The ROW disagreed
+                // with its own SHEET, which `SocialSheet.shape` already sends
+                // to the `.person` anatomy on exactly this test. `BandRow`
+                // leads with the avatar for a `faceSources` row, so the two
+                // now say the same thing.
+                if thing.socialContext == "follow" {
+                    BandRow(thing: thing)
+                } else if thing.kind == .link {
                     // Item 1 (2026-07-27): an article a post shared lands as
                     // its own thing now — it reads like the reading list it
                     // actually is, not a post with no author of its own.

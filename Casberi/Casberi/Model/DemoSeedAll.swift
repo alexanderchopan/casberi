@@ -392,7 +392,14 @@ enum DemoSeedAll {
     /// Both social stores hydrate a real `avatarURL` for every watched
     /// account, and every landed post carries its author's, so a demo without
     /// them draws the source's brand glyph where the app draws a person.
-    private static func avatarArt(_ handle: String) -> String { "sample:avatar-\(handle)" }
+    /// A demo person's face. The leading "@" is stripped because handles are
+    /// stored BOTH ways across the corpus — X's archive keeps the "@" and the
+    /// social bridges don't — and an asset called `sample:avatar-@lindsey`
+    /// resolves to nothing at all, which renders as the source glyph and reads
+    /// exactly like a person who has no picture.
+    private static func avatarArt(_ handle: String) -> String {
+        "sample:avatar-\(handle.hasPrefix("@") ? String(handle.dropFirst()) : handle)"
+    }
 
     /// A publication's own mark. `RSSIngest` stamps the site's favicon onto
     /// `authorAvatarURL`, so a real reading room carries the publisher beside
@@ -560,6 +567,19 @@ enum DemoSeedAll {
         ("mia", "Mia", "Design, mostly. Occasionally onchain."),
         ("sam", "Sam", "Building in the open."),
     ]
+    /// Nostr's watched accounts. Same three people as the rows above — one
+    /// cast across the whole demo reads as a life; a fresh set per room reads
+    /// as filler. The pubkeys are 64 hex characters because that is what the
+    /// field holds; they resolve to nothing, and nothing asks them to.
+    static let demoNostr: [(handle: String, name: String, bio: String, pubkey: String)] = [
+        ("you", "You", "Making a small thing carefully.",
+         String(repeating: "a1b2c3d4", count: 8)),
+        ("uma", "Uma", "Signed, not hosted.",
+         String(repeating: "b2c3d4e5", count: 8)),
+        ("nils", "Nils", "Coffee, compilers, quiet weeks.",
+         String(repeating: "c3d4e5f6", count: 8)),
+    ]
+
     static let demoBluesky: [(handle: String, name: String, bio: String)] = [
         ("you", "You", "Making a small thing carefully."),
         ("uma", "Uma", "Product design. Book club organiser."),
@@ -604,7 +624,26 @@ enum DemoSeedAll {
                                            for: counterpartyAddress(for: party.name),
                                            kind: party.kind)
         }
+        // FACES for the two counterparties who are PEOPLE (2026-08-12). Sam
+        // and Mia have a face in every social room and were identicons in the
+        // one room that calls them by name — the same person, twice, and only
+        // one of them recognizable.
+        //
+        // People only, deliberately. An ENS avatar is a picture somebody set
+        // on their own name, so Coinbase, Stripe and Bitrefill keep their
+        // identicons (a venue is not a face), and Uniswap, Peer and Gnosis Pay
+        // are a contract and two protocols — `AddressKind` already draws those
+        // as machinery, and putting a face on one would say a person is
+        // standing behind an address that nobody stands behind.
+        WalletStore.shared.seedDemoAvatars(
+            Dictionary(uniqueKeysWithValues: demoFacedParties.map {
+                (counterpartyAddress(for: $0), avatarArt($0.lowercased()))
+            }))
     }
+
+    /// The counterparties who are people, and so have a face. Named once so
+    /// the seed and its unwind can never disagree about who they are.
+    static let demoFacedParties = ["Sam", "Mia"]
 
     /// Unwinds `seedAddressBook`, BY ADDRESS — never a blanket wipe, since a
     /// dev install's book holds real people under the same store.
@@ -613,6 +652,7 @@ enum DemoSeedAll {
         for party in demoCounterparties {
             AddressBook.shared.remove(counterpartyAddress(for: party.name))
         }
+        WalletStore.shared.forgetDemoAvatars(demoFacedParties.map(counterpartyAddress(for:)))
     }
 
     /// What the person captured THEMSELVES — the share sheet, a drop, a paste
@@ -666,6 +706,10 @@ enum DemoSeedAll {
                 t.ocrTopics = p.1
                 t.topicsAt = .now
                 t.authorHandle = "you"
+                // `XArchiveImport`'s face pass (`-xFaces`) stamps this, so a
+                // real archive room is a column of faces; without it every
+                // post in the busiest room in the corpus wore the X glyph.
+                t.authorAvatarURL = avatarArt("you")
                 t.likeCount = 40 - i * 4
                 t.replyCount = 6 - i / 2
             }
@@ -682,6 +726,9 @@ enum DemoSeedAll {
                 tags: ["Liked"]) { t in
                 t.postText = l.0
                 t.authorHandle = l.1
+                // The author of the post you liked — `avatarArt` strips the
+                // "@" the archive keeps.
+                t.authorAvatarURL = avatarArt(l.1)
                 t.socialContext = "liked"
             }
         }
@@ -1262,13 +1309,23 @@ enum DemoSeedAll {
                 t.replyCount = i % 3
             }
         }
-        out += (0..<3).map { i in
-            row(.chat, "Notes from the relays, part \(i + 1)", source: "Nostr",
-                ref: "demo:nostr:\(i)", days: Double(3 + i * 9), hour: 20,
+        // Three voices, not one (2026-08-12). Every Nostr row was authored by
+        // "you", so the room read as a private notebook where the other two
+        // social rooms read as networks — and `NostrStore.accounts`, which the
+        // face rail and the roster both walk, was never seeded at all, so the
+        // rail could not draw whatever the rows said.
+        let nostr: [(text: String, handle: String, days: Double)] = [
+            ("Relays are just people who agreed to keep talking.", "you", 3),
+            ("Signed, not hosted. That is the whole idea.", "uma", 12),
+            ("A quiet week on the relays, which is the good kind.", "nils", 21),
+        ]
+        out += nostr.enumerated().map { i, n in
+            row(.chat, n.text, source: "Nostr",
+                ref: "demo:nostr:\(i)", days: n.days, hour: 20,
                 content: "nostr:note1demo\(i)") { t in
-                t.postText = "Notes from the relays, part \(i + 1)"
-                t.authorHandle = "you"
-                t.authorAvatarURL = avatarArt("you")
+                t.postText = n.text
+                t.authorHandle = n.handle
+                t.authorAvatarURL = avatarArt(n.handle)
             }
         }
         return out
@@ -1856,16 +1913,24 @@ enum DemoSeedAll {
                 t.mark = s.1
             }
         }
-        let github: [(String, Double)] = [
-            ("Merged: panel draws only figures (#412)", 1),
-            ("Opened: seed every source on the sim (#414)", 1.5),
-            ("Merged: serialize NLEmbedding inference (#409)", 6),
-            ("Review requested: receipts reach map (#402)", 14),
+        // WHO DID IT, with their face (2026-08-12). `GitHubFeeds` stamps the
+        // event's own actor onto `authorHandle` and their avatar onto
+        // `authorAvatarURL`; the demo stamped neither, so a room whose every
+        // row is somebody's action showed no one performing it. The review
+        // request is a COLLABORATOR's — that is what makes it a request rather
+        // than a note to self.
+        let github: [(String, String, Double)] = [
+            ("Merged: panel draws only figures (#412)", "you", 1),
+            ("Opened: seed every source on the sim (#414)", "you", 1.5),
+            ("Merged: serialize NLEmbedding inference (#409)", "you", 6),
+            ("Review requested: receipts reach map (#402)", "mia", 14),
         ]
         out += github.enumerated().map { i, g in
-            row(.link, g.0, source: "GitHub", ref: "demo:github:\(i)", days: g.1, hour: 15) { t in
+            row(.link, g.0, source: "GitHub", ref: "demo:github:\(i)", days: g.2, hour: 15) { t in
                 t.starCount = 128 + i
                 t.repoLanguage = "Swift"
+                t.authorHandle = g.1
+                t.authorAvatarURL = avatarArt(g.1)
             }
         }
         let slack: [(String, String, Double)] = [
@@ -2655,6 +2720,22 @@ enum DemoSeedAll {
                 a.bio = $0.bio
                 a.avatarURL = avatarArt($0.handle)
                 a.mine = $0.handle == "you"
+                return a
+            }
+        }
+
+        // Nostr's roster, which nothing seeded until 2026-08-12 — the third
+        // social room had rows and no accounts, so its face rail and its
+        // roster were empty while the other two were full. `pubkeyHex` is
+        // filled because an account with an empty one reads as "still
+        // resolving" forever, which is a spinner, not a demo.
+        if NostrStore.shared.accounts.isEmpty {
+            NostrStore.shared.accounts = demoNostr.map {
+                var a = NostrStore.Account(input: $0.handle)
+                a.pubkeyHex = $0.pubkey
+                a.displayName = $0.name
+                a.bio = $0.bio
+                a.avatarURL = avatarArt($0.handle)
                 return a
             }
         }

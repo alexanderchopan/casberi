@@ -31,6 +31,27 @@ struct WalletFace: View {
     var body: some View {
         identicon
             .overlay {
+                // The demo's bundled faces (2026-08-12). An ENS avatar is a
+                // real remote URL, and `AsyncImage` cannot resolve the
+                // `sample:` scheme — so a seeded face fell straight through
+                // to the identicon and the demo's own people were strangers
+                // in the one room that names them. Same branch
+                // `RemoteImageLoader` and `LinkPreviewCard` already carry.
+                #if DEBUG
+                if let ref = WalletStore.shared.avatarURL(for: address),
+                   ref.hasPrefix("sample:"),
+                   let bundled = UIImage.demoSample(for: ref) {
+                    Image(uiImage: bundled).resizable().scaledToFill()
+                } else if let avatarURL {
+                    AsyncImage(url: avatarURL) { phase in
+                        if let image = phase.image {
+                            image.resizable().scaledToFill()
+                                .transition(.opacity.combined(with: .scale(scale: 1.06)))
+                        }
+                    }
+                    .animation(DS.Motion.standard, value: avatarURL)
+                }
+                #else
                 if let avatarURL {
                     AsyncImage(url: avatarURL) { phase in
                         if let image = phase.image {
@@ -46,6 +67,7 @@ struct WalletFace: View {
                     }
                     .animation(DS.Motion.standard, value: avatarURL)
                 }
+                #endif
             }
             .frame(width: size, height: size)
             .clipShape(circular
