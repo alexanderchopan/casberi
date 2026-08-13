@@ -361,6 +361,31 @@ for a in WalletScopeRail SocialScopeRail; do
     || { echo "✗ $a is no longer a pure adapter on the shared rail — if it has grown view"; \
          echo "  code of its own the two rails can diverge again silently."; exit 1; }
 done
+# An UNSCOPED rail may not dim anything (2026-08-13, user: "the avatars on
+# socials that aren't selected but followed are very dim. same for wallet").
+# Both slot builders take their rest weight from `restOpacity`, and that has to
+# be gated on `scope == nil` — the rail's resting state is "All", where nothing
+# is `isOn`, so a flat `isOn ? 1 : <dim>` recedes the ENTIRE roster in the state
+# the control spends nearly all its life in, saying "excluded" over faces that
+# are all included. Checked in both directions: the gate must exist, and no slot
+# may carry a literal opacity ternary of its own again.
+#
+# Invisible to every other check here — it builds, it sweeps, it screenshots,
+# and each still frame looks like a deliberate style.
+grep -qE 'var restOpacity: Double \{ scope == nil \? 1 :' "$TMP/rail.nc" \
+  || { echo "✗ FaceScopeRail.restOpacity is gone or no longer gated on \`scope == nil\` — an"; \
+       echo "  unscoped rail is the DEFAULT state (All), so an ungated dim greys every"; \
+       echo "  followed face and every watched wallet the moment the room opens."; exit 1; }
+grep -cE '\.opacity\(isOn \? 1 : restOpacity\)' "$TMP/rail.nc" | grep -q '^2$' \
+  || { echo "✗ the All slot and the face slot no longer BOTH take their rest weight from"; \
+       echo "  restOpacity — one of them has a literal back, so the two halves of one rail"; \
+       echo "  can fade to different depths."; exit 1; }
+grep -qE '\.opacity\(isOn \? 1 : 0\.[0-9]' "$TMP/rail.nc" \
+  && { echo "✗ a face-rail slot dims to a literal again. 0.4 was the shipped value and 40%"; \
+       echo "  of an avatar is a portrait behind frosting — the same 'a mark someone"; \
+       echo "  recognizes stays opaque' rule that keeps glass off these faces. Recession is"; \
+       echo "  0.7, which is what scrollTransition already fades an edge slot to (one"; \
+       echo "  recessed weight, and the two can no longer compound to 0.28)."; exit 1; }
 # Both must be MOUNTED, and mounted together: a rail that is not in `roomControls`
 # is not chrome, and a filter you are standing in that scrolls away is a filter
 # with no visible way out (§136/§357, re-earned for the social rail by §362).

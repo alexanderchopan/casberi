@@ -114,6 +114,35 @@ struct FaceScopeRail: View {
     /// to the room rather than shrinking a circle inside a hole the same size.
     private var slotHeight: CGFloat { faceSize + DS.Space.s1 + 16 }
 
+    /// How far an out-of-scope slot recedes (user, 2026-08-13: *"the avatars on
+    /// socials that aren't selected but followed are very dim. same for
+    /// wallet"*).
+    ///
+    /// **Nothing recedes while nothing is picked.** The rail's DEFAULT state is
+    /// "All", where no item is `isOn` — so a flat `isOn ? 1 : dim` dimmed the
+    /// entire roster the moment the room opened, which is the state the rail
+    /// spends nearly all of its life in. That says "these are excluded" over a
+    /// row of faces that are all included, in a room the person is looking at
+    /// precisely because they follow every one of them. Recession is only
+    /// meaningful against something raised; with no scope there is nothing to
+    /// recede FROM, so every face sits at full strength and "All" is named by
+    /// its own slot's ink and weight, exactly as before.
+    ///
+    /// **And when a scope IS picked it is 0.7, not 0.4.** The design law's "a
+    /// mark someone recognizes stays opaque" is the same rule that keeps glass
+    /// off these faces two paragraphs up; 40% of an avatar is a portrait behind
+    /// frosting, and 40% of an identicon is a smudge. 0.7 is not a new number —
+    /// it is what `scrollTransition` below already fades an edge slot to, so the
+    /// control has ONE recessed weight rather than two that must be explained
+    /// against each other. It also stops the two compounding: an edge slot in a
+    /// scoped rail was 0.7 × 0.4 = 0.28, which is fainter than any disabled
+    /// control in this app.
+    ///
+    /// Opacity is still doing less work than it looks like it is — the caption's
+    /// weight and ink carry selection alongside it (see `slot`), which is what
+    /// lets the dim end be this gentle without the lit face becoming ambiguous.
+    private var restOpacity: Double { scope == nil ? 1 : 0.7 }
+
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 2) {
@@ -168,7 +197,7 @@ struct FaceScopeRail: View {
                 Spacer(minLength: 0)
             }
             .frame(width: 66, height: slotHeight, alignment: .top)
-            .opacity(isOn ? 1 : 0.4)
+            .opacity(isOn ? 1 : restOpacity)
             .padding(.vertical, DS.Space.s1)
             .contentShape(Rectangle())
         }
@@ -188,6 +217,9 @@ struct FaceScopeRail: View {
     /// being the only one at full strength — which is also what leaves the ring
     /// free to keep saying the one thing it says here (`ringed`: they posted
     /// since you last looked).
+    ///
+    /// "The only one at full strength" is a claim that only makes sense once
+    /// there IS one — see `restOpacity` for why an unscoped rail dims nothing.
     private func slot(_ item: Item) -> some View {
         let isOn = isOn(item.id)
         return Button {
@@ -218,7 +250,7 @@ struct FaceScopeRail: View {
             // A 44pt-wide slot is the touch floor; the extra width is what gives
             // a name room to read rather than truncate at the face.
             .frame(width: 66)
-            .opacity(isOn ? 1 : 0.4)
+            .opacity(isOn ? 1 : restOpacity)
             .padding(.vertical, DS.Space.s1)
             .contentShape(Rectangle())
         }
