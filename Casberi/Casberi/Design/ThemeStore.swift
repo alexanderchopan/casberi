@@ -200,6 +200,29 @@ extension DS {
     }
     static var themedTintDim: Color { themedTint.opacity(0.16) }
 
+    /// The detail surface's ground (`dsInk()`).
+    ///
+    /// §519 made the thing sheet ink-black in BOTH modes — "like a photo
+    /// viewer" — and that held for thirteen months. It is reversed here
+    /// (2026-08-12, user ruling, on a tester report): a black rectangle
+    /// arriving out of a white page does not read as a photo viewer, it reads
+    /// as the app losing its place, and the sheet is no longer mostly a photo
+    /// — six category anatomies now carry the words that answer "what IS
+    /// this?", which is reading, and reading follows the theme.
+    ///
+    /// What survives §519 is the IDEA, which was never "black": the detail
+    /// surface is the extreme of its theme, not another card floating on the
+    /// page. So it stays pure `#000` in dark and becomes pure `#ffffff` in
+    /// light — the absolute floor and the absolute ceiling, each one tonal
+    /// step past the sheet colour its own theme uses for cards. Over a
+    /// background PHOTO it stays black, because that path is already forced
+    /// dark for legibility (§9.3's parked gap) and a white sheet there would
+    /// be the one surface fighting the picture behind it.
+    static var inkGround: Color {
+        ThemeStore.shared.isLight && ThemeStore.shared.backgroundPhoto == nil
+            ? .white : .black
+    }
+
     /// The crown pour's color (prd §204) — one of the five curated `Bleed`s,
     /// Casberi blue by default. Deliberately separate from `themedTint`: this
     /// carries no contrast guarantee (it only ever paints the pour's low-
@@ -338,10 +361,10 @@ extension View {
         )
     }
 
-    /// Pure ink: black in both app themes, forced dark — the stronger
+    /// Pure ink: the extreme of the current theme — the stronger
     /// override for a "detail" surface (`ThingSheetView`, `TokenQuickSheet`,
     /// `SocialPostSheet`, `SocialProfileCard`) or a tray that precedes one
-    /// (`DSTray(ink: true)`), so the two read as one continuous black sheet
+    /// (`DSTray(ink: true)`), so the two read as one continuous sheet
     /// instead of `dsColorScheme()`'s theme-adaptive default showing through
     /// a shade off (2026-07-24, user: "the wallet worth a look details tray
     /// is not ink colored" / "farcaster and bluesky when you tap a face").
@@ -353,10 +376,14 @@ extension View {
     /// needs `.dsInk()` applied again at its own call site (see
     /// `WalletWorthALookTray`'s pushed `ThingSheetView`).
     func dsInk() -> some View {
-        self
-            .background(Color.black.ignoresSafeArea())
-            .presentationBackground(Color.black)
-            .colorScheme(.dark)
+        let ground = DS.inkGround
+        return self
+            .background(ground.ignoresSafeArea())
+            .presentationBackground(ground)
+            // Follows the ground rather than forcing dark, or every adaptive
+            // token in the sheet would resolve to its dark value against a
+            // white page — which is the black-on-black failure, inverted.
+            .colorScheme(ground == .white ? .light : .dark)
     }
 }
 

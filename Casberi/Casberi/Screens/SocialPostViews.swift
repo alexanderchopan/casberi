@@ -14,28 +14,22 @@ import SwiftData
 /// nothing here learns a network's name.
 struct SocialPostContent: View {
     let thing: Thing
-    /// Read LIVE when the sheet opens (`SocialThread.engagement`) — a count is
-    /// only true at the moment it's read. nil until it answers; the STORED
-    /// snapshot stands in meanwhile (below), and where there's neither, the
-    /// line simply isn't there: no spinner, no zeroes standing in for unknowns.
-    @State private var engagement: SocialEngagement?
 
-    /// What the last sync stored. Bluesky's AppView hydrates counts on every
-    /// post view, so they cost nothing at ingest and are already on the record
-    /// when the sheet opens — the line renders in the first frame instead of
-    /// popping in a beat later. Farcaster's node reports no totals, so it
-    /// stores none and the line waits for the live read.
+    /// The counts, the likers and the provenance sentence LEFT this view on
+    /// 2026-08-12 (prd §363) for `SocialReceptionCard`, which the sheet draws
+    /// below the words. Three reasons, and the third is the real one:
     ///
-    /// Stale by construction (it's a snapshot of a moving number), which is
-    /// exactly why the live read replaces it the moment it lands.
-    private var stored: SocialEngagement? {
-        let e = SocialEngagement(
-            likes: thing.likeCount.map { SocialCount(value: $0) },
-            reposts: thing.repostCount.map { SocialCount(value: $0) },
-            replies: thing.replyCount.map { SocialCount(value: $0) })
-        return e.isEmpty ? nil : e
-    }
-
+    /// - they were three glyph-led monospace numbers UNDER the photos, i.e.
+    ///   the least prominent thing on a screen opened to read exactly them;
+    /// - the likers roll (§330) rendered in the feed row and not here at all,
+    ///   so the sheet you opened to find out who liked your post was the one
+    ///   surface that wouldn't say;
+    /// - this view is reached only for a post that HAS a body to draw, and the
+    ///   reception is true of every social shape — a save, a follower, an
+    ///   archived like. Owning it here would have meant three copies.
+    ///
+    /// What is left is what a post's body actually is: its pictures, and the
+    /// post it quotes.
     private var images: [String] {
         // Posts landed before `imageURLs` existed carry only the row's single
         // thumb — show that rather than nothing, until a refresh heals them.
@@ -59,17 +53,14 @@ struct SocialPostContent: View {
             if let quote = thing.quote {
                 SocialQuoteCard(card: quote, source: thing.source)
             }
-            // Live when it lands, the sync's snapshot until then.
-            if let shown = engagement ?? stored {
-                SocialEngagementLine(engagement: shown)
+            if let rest = SocialSheet.threadRest(enriched: thing.enrichedText,
+                                                 words: SocialSheetSource.words(for: thing),
+                                                 count: thing.messageCount) {
+                SocialThreadRest(parts: rest, total: thing.messageCount ?? 0)
             }
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
-        .task {
-            guard thing.isLive else { return }
-            engagement = await SocialThread.engagement(for: thing)
-        }
         }
     }
 
@@ -77,7 +68,20 @@ struct SocialPostContent: View {
     /// post. Several ride a strip that scrolls sideways inside its own lane, so
     /// a four-photo post keeps all four and the page never scrolls horizontally.
     @ViewBuilder private var photos: some View {
-        if images.count == 1 {
+        if images.isEmpty, let data = thing.previewImageData,
+           let stored = UIImage(data: data) {
+            // A picture the app already HOLDS rather than fetches (prd §363,
+            // catching the sheet up with `PostCard`'s own 2026-08-06 fix). An
+            // IMPORT has no URL to give — `ImportMedia` decodes the archive's
+            // file to a thumbnail inside the folder grant, because there is no
+            // second chance at a folder somebody has stopped granting — so an
+            // X post's picture is BYTES, and every branch below asks for a URL.
+            // The §283 failure exactly: pixels stored, never drawn.
+            Image(uiImage: stored)
+                .resizable().scaledToFit()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        } else if images.count == 1 {
             SocialPhoto(urlString: images[0], height: 280)
                 .frame(maxWidth: .infinity, alignment: .leading)
         } else if images.count > 1 {
@@ -90,6 +94,40 @@ struct SocialPostContent: View {
             }
             .scrollIndicators(.hidden)
         }
+    }
+}
+
+/// THE REST OF A SELF-THREAD (prd §363) — the posts that continued the one
+/// you're reading, under it, in reading type.
+///
+/// A quiet card rather than the post's own display tier: these are the same
+/// person still talking, so they are the post's continuation, not four more
+/// posts competing with it. The count is the archive's own
+/// (`Thing.messageCount`) and it counts the WHOLE chain, head included, which
+/// is why the header says "N posts" rather than numbering what's drawn.
+///
+/// Liveness: holds plain strings, sliced off a live model by the caller, so
+/// there is no model here to tombstone.
+struct SocialThreadRest: View {
+    let parts: [String]
+    let total: Int
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            Text("The rest of the thread · \(total) posts")
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
+            ForEach(Array(parts.enumerated()), id: \.offset) { _, part in
+                Text(ProseLinks.rendered(part))
+                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(DS.Space.s4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DS.fillFaint,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
     }
 }
 
@@ -195,39 +233,14 @@ struct SocialQuoteCard: View {
     }
 }
 
-/// How a post landed, in the numbers its own network reports (2026-07-16).
-/// Quiet, glyph-led, monospaced — the "since you starred" line's voice. A count
-/// the network didn't report has no cell: an absent number and a reported zero
-/// are different facts, and the honesty rule needs them to stay different.
-struct SocialEngagementLine: View {
-    let engagement: SocialEngagement
-
-    var body: some View {
-        HStack(spacing: DS.Space.s4) {
-            cell("heart", engagement.likes, "likes")
-            cell("arrow.2.squarepath", engagement.reposts, "reposts")
-            cell("bubble.left", engagement.replies, "replies")
-            Spacer(minLength: 0)
-        }
-    }
-
-    @ViewBuilder private func cell(_ glyph: String, _ count: SocialCount?,
-                                   _ kind: String) -> some View {
-        if let count {
-            HStack(spacing: 5) {
-                Image(systemName: glyph)
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
-                Text(count.text)
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                    .monospacedDigit()
-            }
-            // The glyph is the only thing saying WHICH count this is — silent,
-            // the row reads as three bare numbers in a row.
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text("\(count.text) \(kind)"))
-        }
-    }
-}
+// `SocialEngagementLine` — the glyph-led monospace row of three counts that
+// lived here from 2026-07-16 — was DELETED on 2026-08-12 (prd §363), not
+// deprecated: `SocialReceptionCard` states the same numbers with their nouns
+// written out, above the fold, beside the likers' names. Two views drawing one
+// fact is how a screen starts contradicting itself, and `BridgeFooterNote`'s
+// ruling stands — a replaced component goes, or it comes back under a new
+// name. Its honesty rule came with it: a count the network didn't report has
+// no cell, because an absent number and a reported zero are different facts.
 
 /// A post opened IN-APP (2026-07-16) — the thread walker. Tapping a reply used
 /// to kick you to the browser, which ended the session in Casberi and made the
@@ -312,7 +325,11 @@ struct SocialPostThread: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .scrollIndicators(.hidden)
-        .background(Color.black)
+        // The ink GROUND, not black: this is the pushed destination, whose
+        // `presentationBackground` stopped applying the moment it was pushed,
+        // so it repaints the ground itself — and since 2026-08-12 that ground
+        // follows the theme.
+        .background(DS.inkGround)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $profile) { p in
             SocialProfileCard(profile: p)
