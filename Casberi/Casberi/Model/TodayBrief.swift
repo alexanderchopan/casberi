@@ -214,7 +214,24 @@ enum TodayBrief {
         // it here — a suspension of its own, in which a heal can delete. So
         // `DayBrief.landed` on the next line would read a tombstoned model
         // before this function ever suspends.
+        // Per-module timing (DEBUG only, 2026-08-12). "The Life brief is slow"
+        // is not answerable from the total: this composes a dozen independent
+        // modules over the scope's rows, they differ by orders of magnitude,
+        // and which one dominates depends entirely on WHICH scope — Life spans
+        // 44 sources where Work spans 27. A total says panic; this says where.
+        #if DEBUG
+        var moduleMarks: [(String, Double)] = []
+        var lastMark = Date.now
+        #endif
+        func mark(_ name: String) {
+            #if DEBUG
+            let t = Date.now
+            moduleMarks.append((name, t.timeIntervalSince(lastMark) * 1000))
+            lastMark = t
+            #endif
+        }
         var things = things.live
+        mark("entry.live")
         let now = Date.now
 
         // Stage 1 (deterministic app selection, spec's own term): the
@@ -238,6 +255,7 @@ enum TodayBrief {
                     doc: ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"])
             }
             things = things.filter { candidateSources.contains($0.source) }
+            mark("stage1.scope")
         }
         // The money modules below read LIVE bridge state instead of `things`
         // (holdings, watchlist prices, DeFi risk, resolved markets), so the
@@ -254,6 +272,7 @@ enum TodayBrief {
         let windowStart = category.map { BriefScope.since(category: $0, now: now) }
             ?? DayBrief.windowStart(now: now)
         var landed = DayBrief.landed(things, now: now, since: windowStart)
+        mark("landed")
         // A scoped Money brief measures the move against ITS OWN window
         // (`windowStart` is `BriefScope.since(category: "Money")` there),
         // not the unscoped brief's fixed ~20h floor — the item list below
@@ -268,6 +287,7 @@ enum TodayBrief {
         let ledger = BriefLedger.snapshot()
         let told = BriefLedger.told(ledger, windowStart: windowStart, now: now)
         let weights = ChipMemory.snapshot()
+        mark("ledger")
 
         // The three live reads run CONCURRENTLY (2026-07-25). They were
         // sequential, so each new read added its full latency to the rise;
@@ -361,6 +381,8 @@ enum TodayBrief {
         // land between this line and the reads that follow.
         things = things.live
         landed = landed.live
+        mark("postAwait.live")
+
 
         var ids: [String] = []
         var lines: [String] = []
@@ -374,6 +396,7 @@ enum TodayBrief {
                             ledger: ledger, now: now)
         if !lede.text.isEmpty {
             ids.append("lede")
+            mark("lede")
             lines.append("lede = DayLede(\"\(genSafe(lede.text))\", \"\(genSafe(dateline(now: now)))\", \"\(genSafe(lede.figure))\", \"\(lede.direction)\")")
         }
         // The home/Lock Screen widget carries this SAME sentence (2026-07-25).
@@ -410,6 +433,7 @@ enum TodayBrief {
         let alerts = alertsCard(things, now: now)
         if let alerts {
             ids.append("alerts")
+            mark("alerts")
             lines.append(alerts.line)
         }
 
@@ -417,6 +441,7 @@ enum TodayBrief {
         // visualization and the only read where a number is itself the event.
         if let hero = moneyHero(move: move, holdings: holdings, landed: landed) {
             ids.append("hero")
+            mark("hero")
             lines.append(hero)
         }
 
@@ -444,6 +469,7 @@ enum TodayBrief {
         }
         if !tiles.isEmpty {
             ids.append("pair")
+            mark("pair")
             lines.append("pair = TilePair([\(tiles.joined(separator: ", "))])")
         }
         if let runway {
@@ -451,7 +477,9 @@ enum TodayBrief {
             // so the axis can be a `Runway` and the rows a `Widget`, but they
             // are one reading and neither opens a chapter of its own.
             ids.append("axis")
+            mark("axis")
             ids.append("runway")
+            mark("runway")
             lines += runway
         }
         // A watched market that resolved — an EVENT, so it follows the pair
@@ -459,6 +487,7 @@ enum TodayBrief {
         // news). Silent on every day nothing settled, like every module here.
         if scopedToMoney, let resolved = marketResolvedToday(MarketsAsk.moves(context: context), now: now) {
             ids.append("tmkt")
+            mark("tmkt")
             lines.append(resolved)
         }
         // Where the money MOVED — the flow band (§232), closing the money
@@ -471,6 +500,7 @@ enum TodayBrief {
         // being a per-room view rather than a composer.
         if let flow = flowBand(things) {
             ids.append("flow")
+            mark("flow")
             lines.append(flow)
         }
 
@@ -482,6 +512,7 @@ enum TodayBrief {
         var themeNames: [String] = []
         if let themes = themesMap(things: things, now: now, ledger: ledger, windowStart: windowStart) {
             ids.append("themes")
+            mark("themes")
             lines.append(themes.line)
             themeNames = themes.names
         }
@@ -506,6 +537,7 @@ enum TodayBrief {
         // with enough screenshots filed under a money source cleared it.
         if category != "Money", let sheet = contactSheet(things) {
             ids.append("sheet")
+            mark("sheet")
             lines.append(sheet)
         }
 
@@ -519,6 +551,7 @@ enum TodayBrief {
         // roster is a true reading there too.
         if let faces = faces(things) {
             ids.append("faces")
+            mark("faces")
             lines.append(faces)
         }
 
@@ -588,6 +621,7 @@ enum TodayBrief {
                evidence: dayReadEvidence(landed: landed, notes: notes, topic: topic),
                continuity: dayReadContinuity(ledger)) {
             ids.append("read")
+            mark("read")
             lines.append("read = Insight(\"\(genSafe(read))\")")
         }
         #if DEBUG
@@ -596,6 +630,7 @@ enum TodayBrief {
         #endif
         if !notes.isEmpty {
             ids.append("notes")
+            mark("notes")
             lines.append("notes = DayNotes([\(notes.indices.map { "n\($0)" }.joined(separator: ", "))])")
             for (i, n) in notes.enumerated() {
                 lines.append("n\(i) = DayNote(\"\(n.glyph)\", \"\(genSafe(n.text))\", \"\(n.thingID)\")")
@@ -678,6 +713,11 @@ enum TodayBrief {
         // those look identical. One compact line per compose says which.
         #if DEBUG
         NSLog("[Casberi] briefModules| category=%@ ids=%@", category ?? "nil", ids.joined(separator: ","))
+        NSLog("[Casberi] briefModuleMs| category=%@ %@", category ?? "nil",
+              moduleMarks.filter { $0.1 >= 1 }
+                  .sorted { $0.1 > $1.1 }
+                  .map { "\($0.0)=\(Int($0.1))ms" }
+                  .joined(separator: " "))
         #endif
         return KeptAskComposers.Result(delta: digest, digest: digest,
                                        doc: ["root = Stack([\(ids.joined(separator: ", "))], \"\(chapters.joined(separator: ","))\")"] + lines)
