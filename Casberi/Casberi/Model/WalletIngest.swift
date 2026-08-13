@@ -1534,6 +1534,18 @@ enum WalletIngest {
     private static func holdings(addresses: [String])
         async -> (reached: Bool, group: (cells: [String], total: Double, count: Int,
                                          bySymbol: [String: Double], routes: [String: String])?) {
+        // THE DEMO REACHES NOTHING, at the FUNNEL (2026-08-12). Gating
+        // `ZerionAPI` alone was not enough and the measurement said so: this
+        // path falls back to Alchemy the moment Zerion is unreached, so the
+        // first gate simply moved the request from `api.zerion.io` to
+        // `api.g.alchemy.com`. Both providers pass through
+        // `fetchHeldTokens`, so this is the one place that closes it.
+        //
+        // `(reached: true, group: nil)` — reached, holding nothing — rather
+        // than `(false, nil)`: the false form is `.unreachable`, which paints
+        // "couldn't reach the chain" over a room whose balances come from the
+        // demo's own seeded samples and are perfectly fine.
+        if DemoMode.isActive { return (true, nil) }
         guard let tokens = await fetchHeldTokens(addresses: addresses) else { return (false, nil) }
         var bySymbol: [String: Double] = [:]
         // Each symbol's biggest single position also remembers WHERE it is

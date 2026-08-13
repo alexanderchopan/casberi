@@ -133,6 +133,8 @@ DEMO_FILES = {
     "KalshiWatch": CASBERI / "Model/KalshiWatch.swift",
     "PolymarketBridge": CASBERI / "Model/PolymarketBridge.swift",
     "ThingContent": CASBERI / "Screens/ThingContent.swift",
+    "ZerionAPI": CASBERI / "Model/ZerionAPI.swift",
+    "WalletIngest": CASBERI / "Model/WalletIngest.swift",
 }
 
 # Check J — the reads a VIEW makes on its own, which `BridgeRefresh`'s demo
@@ -163,6 +165,15 @@ DEMO_GATED_READS = [
     ("PolymarketBridge", "static func search("),
     ("PolymarketBridge", "static func categories("),
     ("ThingContent", "private func fetch("),
+    # The wallet's holdings and its transfer history — read from
+    # `WalletWatch.liveState`, a per-view read no sweep gate can see. Added
+    # after the RUNTIME check caught `api.zerion.io` on its first run, which
+    # is the difference between a hand list and a measurement.
+    ("ZerionAPI", "static func holdings("),
+    # The FUNNEL both holdings providers pass through. Gating Zerion alone
+    # moved the request to the Alchemy fallback — measured, not reasoned.
+    ("WalletIngest", "private static func holdings(addresses:"),
+    ("ZerionAPI", "static func transactions("),
 ]
 
 # `DemoSeedAll.seatTable` names that legitimately have no ENTRY in

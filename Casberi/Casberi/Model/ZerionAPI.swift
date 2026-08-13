@@ -77,6 +77,16 @@ enum ZerionAPI {
     /// over base64("<key>:") (Zerion's documented scheme — key as the username,
     /// empty password).
     static func holdings(address: String) async -> [Holding]? {
+        // THE DEMO REACHES NOTHING (2026-08-12). Gated at the network
+        // boundary, not at a caller: holdings are read from `WalletWatch
+        // .liveState` — a per-view read the foreground sweep's demo gate
+        // cannot see — and the wallet room is the one room a demo opens with.
+        // Found by `verify.sh`'s "Demo reaches nothing" step on its FIRST run,
+        // after two earlier reaches of this same class had been found only by
+        // reading. nil is the honest answer here: every caller already handles
+        // an unreached wallet, and the demo's balances come from its own
+        // seeded samples.
+        if DemoMode.isActive { return nil }
         guard isConfigured,
               let auth = "\(key):".data(using: .utf8)?.base64EncodedString(),
               let encoded = address.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)
@@ -314,6 +324,16 @@ enum ZerionAPI {
     /// `filter[chain_ids]` quirk); Solana activity is untouched, still riding
     /// `SolanaActivity`'s Alchemy calls (cheap already — 2 requests/wallet).
     static func transactions(address: String) async -> [Transfer]? {
+        // THE DEMO REACHES NOTHING (2026-08-12). Gated at the network
+        // boundary, not at a caller: holdings are read from `WalletWatch
+        // .liveState` — a per-view read the foreground sweep's demo gate
+        // cannot see — and the wallet room is the one room a demo opens with.
+        // Found by `verify.sh`'s "Demo reaches nothing" step on its FIRST run,
+        // after two earlier reaches of this same class had been found only by
+        // reading. nil is the honest answer here: every caller already handles
+        // an unreached wallet, and the demo's balances come from its own
+        // seeded samples.
+        if DemoMode.isActive { return nil }
         guard isConfigured,
               let auth = "\(key):".data(using: .utf8)?.base64EncodedString(),
               let encoded = address.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)

@@ -607,6 +607,24 @@ python3 "$ROOT/scripts/design-ramp-audit.py" >/dev/null \
   || fail "a glyph is frozen or a brand mark is off the DS.Mark ramp — run python3 scripts/design-ramp-audit.py"
 print -P "%F{green}✓ design-ramp audit%f"
 
+# The VoiceOver and touch-target half of the same system (2026-08-13). The
+# design-ramp and design-motion audits already cover Dynamic Type and Reduce
+# Motion, and `ContrastStore` covers Increase Contrast — what nothing covered
+# was whether a control ANNOUNCES itself and whether it can be HIT. The sweep
+# that produced this found seven room heads whose whole face was
+# `contentShape` + `onTapGesture` (a pair that carries no trait and no action,
+# so VoiceOver never offered them at all — and on four of them the card's lead
+# has no row of its own, so that was the only route to it), ten icon buttons
+# under the 44pt floor in a repo that had already written that rule down three
+# times, and two icon-only buttons with no label. Every one of them renders
+# perfectly, builds clean, and works for whoever is testing it.
+step "Accessibility audit"
+python3 "$ROOT/scripts/accessibility-audit.py" --self-test >/dev/null \
+  || fail "the accessibility audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/accessibility-audit.py" >/dev/null \
+  || fail "a control is unlabelled, untraited or under the 44pt floor — run python3 scripts/accessibility-audit.py"
+print -P "%F{green}✓ accessibility audit%f"
+
 # A localization sweep (2026-08-04) found 194 previously-translated strings
 # had regressed into bare Swift literals — unreachable, rendering English in
 # every language — plus missing InfoPlist/AppShortcuts catalogs and 44
@@ -992,6 +1010,61 @@ else
     print -P "%F{green}✓ demo room-head coverage (${#ROOM_HEADS[@]}/${#ROOM_HEADS[@]})%f"
   else
     fail "demo room head(s) never compose: ${MISSING_HEADS[*]} — see $ROOMHEAD_LOG.<name>"
+  fi
+fi
+
+# ── 6b. THE DEMO REACHES NOTHING, measured (headless, HARD FAIL) ─────
+# The empirical half of `demo-selftest.py`'s check J, and the reason it exists
+# is that J is a HAND LIST. J names five per-view reads somebody thought to
+# look for; this walks the demo and asks the app what it actually reached.
+#
+# Both reaches found on 2026-08-12 were found by READING, not by any check —
+# `PredictionBrowseSection` fetching both exchanges' order books on a
+# `.task(id:)`, and `LinkPreviewCard` scraping a linked page through
+# `LPMetadataProvider`. Neither is in any foreground sweep, so `DemoMode`'s
+# gate could not see them and no static check knew to look. `NetworkLedger`
+# already records every request `IngestSupport`, `AgentAnswer` and `LinkTitle`
+# make, and `-receiptsProbe` prints one `receipt|` line per host — so the
+# question "did the demo reach anything?" has an answer the app can give
+# directly, over whatever the rooms actually do rather than whatever we
+# remembered to grep for.
+#
+# The ledger's own ceiling is stated on its screen and applies here: it does
+# not see images loaded into rows, the two WebSocket paths, or the
+# WalletConnect SDK's own hosts. So a clean run means "nothing the ledger can
+# see", not "nothing at all" — which is still strictly more than a hand list
+# of five entry points can promise.
+step "Demo reaches nothing"
+REACH_LOG="$OUT/demo-reaches-nothing.log"
+if [[ -z "$POURED" ]]; then
+  print -P "%F{yellow}⚠ demo never finished pouring (see the panel-coverage step above) — skipping the reach check%f"
+else
+  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  # Walk the rooms most likely to reach: both prediction books (the per-view
+  # fetch that started this), the token room, and a thing sheet (the page
+  # scrape). Each is a separate launch, because the reach we are hunting is
+  # one a ROOM makes when it opens.
+  for room in Kalshi Polymarket Tokens GeckoTerminal; do
+    xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES \
+      -deeplink "casberi://feed/source/$room" >/dev/null 2>&1 || true
+    sleep 4
+    xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  done
+  xcrun simctl spawn "$DEVICE" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "receipt|"' \
+    --style compact > "$REACH_LOG" 2>/dev/null &
+  RPID=$!
+  sleep 1
+  xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES -receiptsProbe YES >/dev/null 2>&1 || true
+  sleep 6
+  kill $RPID 2>/dev/null || true
+  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  REACHED=$(grep -c "receipt| " "$REACH_LOG" 2>/dev/null || echo 0)
+  if [[ "$REACHED" == "0" ]]; then
+    print -P "%F{green}✓ demo reaches nothing (4 rooms walked, ledger empty)%f"
+  else
+    print -P "%F{red}hosts the demo reached:%f"
+    grep -o "receipt| .*" "$REACH_LOG" | sort -u | head -10
+    fail "the demo reached $REACHED host(s) — see $REACH_LOG"
   fi
 fi
 
