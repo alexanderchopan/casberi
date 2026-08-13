@@ -157,7 +157,12 @@ enum DemoSeedAll {
                               // — the PostHog/Stocktwits reason: a real
                               // version, review or build row must survive.
                               "asc:version:demo1:IN_REVIEW", "asc:review:demo1",
-                              "asc:build:demo285", "asc:buildexpiry:demo274"]
+                              "asc:build:demo285", "asc:buildexpiry:demo274",
+                              // The approval joins the REAL `wallet:approval:`
+                              // namespace because `WalletPrepare.applies`
+                              // parses it. The "demo" segment keeps it clear
+                              // of a real grant (the `peer:demo` shape).
+                              "wallet:approval:demo"]
 
     // MARK: - Entry point
 
@@ -1591,10 +1596,23 @@ enum DemoSeedAll {
             }
         }
         // An approval, so the wallet room's exposure card has something real.
-        out.append(row(.approval, "Uniswap can spend your USDC", source: "Wallet",
-                       ref: "demo:wallet:approval:0", days: 6, hour: 14,
+        // `.transaction` and a REAL `wallet:approval:` ref (2026-08-12).
+        // `WalletApprovals` lands an approval as a `.transaction`, and the
+        // demo landed `.approval` — a kind whose sheet is the agent's CONSENT
+        // surface, Approve and Deny, for a row that in the app is a read-only
+        // record of something that already happened onchain.
+        //
+        // The ref mattered as much: `WalletPrepare.applies` gates the whole
+        // prepare card on `hasPrefix("wallet:approval:")` PLUS a wallet and a
+        // counterparty address, so on `demo:wallet:approval:0` the card — the
+        // live allowance read, the revoke calldata, the fee quote — could
+        // never draw. The seventh instance of a gate keyed on a ref shape
+        // that a `demo:` row cannot satisfy.
+        out.append(row(.transaction, "Uniswap can spend your USDC", source: "Wallet",
+                       ref: "wallet:approval:demo:0", days: 6, hour: 14,
                        content: "https://revoke.cash/address/\(demoWallet)") { t in
             t.walletAddress = demoWallet
+            t.counterpartyAddress = counterpartyAddress(for: "Uniswap")
             t.grantedAt = at(6, 14)
         })
         // Privacy Pools rides the watched wallet; its rail reads the state TAG
@@ -1908,7 +1926,10 @@ enum DemoSeedAll {
             ("CAS-384 Embedding race on foreground", .done, 25),
         ]
         out += issues.enumerated().map { i, s in
-            row(.reminder, s.0, source: "Linear", ref: "demo:linear:\(i)", days: s.2, hour: 10,
+            // `.link`, which is what `TokenBridges` lands for Linear — the
+            // demo's `.reminder` gave it a different sheet and a different row
+            // shape than any real issue ever gets (2026-08-12).
+            row(.link, s.0, source: "Linear", ref: "demo:linear:\(i)", days: s.2, hour: 10,
                 content: "Assigned to you") { t in
                 t.mark = s.1
             }

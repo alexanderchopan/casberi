@@ -134,6 +134,29 @@ print -P "%F{green}✓ swiftdata liveness audit%f"
 "$ROOT/scripts/query-count-signal-audit.py" || fail "a bounded @Query's count is used as a change signal — see the output above"
 print -P "%F{green}✓ query-count-signal audit%f"
 
+# The parity a Catalyst COMPILE cannot see (2026-08-12). Step 1b proves the
+# Mac still BUILDS; this is the half that proves nothing quietly went
+# Mac-shaped-but-broken — a screen no pass ever opens, an entitlement that
+# fails a signed archive weeks later at ship time, a ⌘-digit aimed at a room
+# the strip no longer shows there. All three read a REGISTRY IN THE SOURCE
+# rather than a hand list, so a new screen/capability/shortcut is covered the
+# day it lands and nobody has to remember to flag it.
+step "Mac parity audit"
+python3 "$ROOT/scripts/mac-parity-audit.py" --self-test >/dev/null \
+  || fail "the Mac parity audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/mac-parity-audit.py" || fail "Mac parity drifted — see the output above"
+print -P "%F{green}✓ mac parity audit%f"
+
+# Demo↔bridge parity: does the demo produce the same SHAPE of record the real
+# bridge produces? `demo-selftest.py` checks the demo against itself and the
+# catalog; this asks whether a seeded row could pass for a real one. Its own
+# self-test runs first — a check that cannot fail proves nothing.
+step "Demo parity audit"
+python3 "$ROOT/scripts/demo-parity-audit.py" --self-test >/dev/null \
+  || fail "the demo parity audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/demo-parity-audit.py" || fail "demo parity drifted — see the output above"
+print -P "%F{green}✓ demo parity audit%f"
+
 # ── Self-test COMPLETENESS guard (2026-08-12) ───────────────────────
 # The self-tests below are hand-listed, because the comment above each one is
 # the only written record of WHY that harness exists and what silent wrong
@@ -766,6 +789,10 @@ step "Screen sweep"
 sweep home    "casberi://home"
 sweep feed    "casberi://feed"
 sweep apps    "casberi://account"
+# Settings was swept on the MAC and never here (found by mac-parity-audit.py,
+# 2026-08-12) — the screen carrying the privacy copy, the sync toggle and both
+# delete verbs had no iOS screenshot in any automated pass.
+sweep settings "casberi://settings"
 
 # ── 4. Answer-path probe (headless, logs to console) ────────────────
 step "Answer probe"
