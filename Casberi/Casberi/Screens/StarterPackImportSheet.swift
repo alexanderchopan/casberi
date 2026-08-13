@@ -156,8 +156,10 @@ struct StarterPackImportSheet: View {
                 Image(systemName: "chevron.left")
                     .dsGlyph(15)
                     .foregroundStyle(DS.textSecondary)
+                    .dsTapTarget()
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(Text("Back to the pack list"))
             Text(pack.creatorHandle.isEmpty ? "Bluesky" : "by @\(pack.creatorHandle)")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
         }

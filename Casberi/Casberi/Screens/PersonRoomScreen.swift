@@ -81,6 +81,7 @@ struct PersonRoomScreen: View {
                                              bottom: DS.Space.s1, trailing: DS.Space.s4))
                         .contentShape(Rectangle())
                         .onTapGesture { sheetThing = item.thing }
+                        .dsTapCard()
                 }
             }
 

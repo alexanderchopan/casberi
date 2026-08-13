@@ -849,8 +849,10 @@ struct AppsScreen: View {
                     Image(systemName: "xmark.circle.fill")
                         .dsGlyph(15, weight: .regular)
                         .foregroundStyle(DS.textTertiary)
+                        .dsTapTarget(Circle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(Text("Clear search"))
             }
         }
         .padding(.horizontal, DS.Space.s4)

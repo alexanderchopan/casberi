@@ -610,6 +610,7 @@ private struct GenInsight: View {
             if !id.isEmpty { thingOpen?(id) }
             else if el.str(3) == "feed", let url = URL(string: "casberi://feed") { openURL(url) }
         }
+        .dsTapCard()
     }
 }
 
@@ -2092,6 +2093,7 @@ extension View {
         } else {
             contentShape(Rectangle())
                 .onTapGesture { open?(id) }
+                .dsTapCard()
                 .contextMenu {
                     Button {
                         open?(id)
@@ -2279,6 +2281,7 @@ private struct GenProjectTile: View {
             let name = el.str(1)
             if !name.isEmpty { projectTap?(name) }
         }
+        .dsTapCard()
     }
 }
 
@@ -2631,7 +2634,9 @@ private struct GenTagMap: View {
                             .dsText(.body17)
                             .foregroundStyle(preview ? DS.textTertiary : DS.textPrimary)
                             .lineLimit(1)
-                            .minimumScaleFactor(0.4)
+                            // See the note on the smaller cell below — 0.4
+                            // floored this at ~7pt.
+                            .minimumScaleFactor(0.7)
                             .allowsTightening(true)
                     }
                     Spacer(minLength: 0)
@@ -2651,7 +2656,9 @@ private struct GenTagMap: View {
                         .dsText(.callout15)
                         .foregroundStyle(preview ? DS.textTertiary : DS.textPrimary)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.4)
+                        // See the note on the 4-unit cell above — 0.4 floored
+                        // this at ~6pt.
+                        .minimumScaleFactor(0.7)
                         .allowsTightening(true)
                     if !preview, f.2 >= 2, let value = item.value {
                         Spacer(minLength: 0)
@@ -2676,7 +2683,14 @@ private struct GenTagMap: View {
                     // tried the same day and read as noise.
                     .foregroundStyle(preview ? DS.textTertiary : DS.textPrimary)
                     .lineLimit(item.tag.contains(" ") ? 2 : 1)
-                    .minimumScaleFactor(0.4)
+                    // 0.7, not the 0.4 this carried until 2026-08-13: at 0.4
+                    // an 18pt cell label floors at 7pt, which is under the
+                    // legibility bar at ANY Dynamic Type setting and cancels
+                    // the ramp exactly where someone who raised their text size
+                    // is looking. A long term truncates now instead of
+                    // shrinking to nothing — a name you can read the start of
+                    // beats a name you can read none of.
+                    .minimumScaleFactor(0.7)
                     .allowsTightening(true)
                 // The count fills the tile's empty field with the fact it
                 // already encodes as area (a name floating in a void read

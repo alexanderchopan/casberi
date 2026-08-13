@@ -956,6 +956,7 @@ private struct VoiceContent: View {
                         Image(systemName: playing ? "pause.circle.fill" : "play.circle.fill")
                             .dsGlyph(28, weight: .regular)
                             .foregroundStyle(DS.tint)
+                            .dsTapTarget(Circle())
                     }
                     .buttonStyle(.plain)
                     .dsHover()

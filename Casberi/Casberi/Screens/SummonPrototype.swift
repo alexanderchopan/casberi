@@ -213,6 +213,7 @@ struct SummonPrototype: View {
         .padding(.bottom, DS.Space.s3)
         .contentShape(Capsule())
         .onTapGesture { rise() }
+        .dsTapCard()
     }
 
     private var hasUnseenSignal: Bool {
@@ -467,6 +468,7 @@ private struct AgentSurface: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(DS.textTertiary)
+                        .dsTapTarget(Circle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Clear search")

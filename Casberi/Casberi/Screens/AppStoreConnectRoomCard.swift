@@ -61,6 +61,13 @@ struct AppStoreConnectRoomCard: View {
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, DS.Space.s2)
+                // The lead has no row of its own (see below), so this headline
+                // is the only place its destination can be reached.
+                .dsCardLead(Text("Opens this app")) {
+                    guard let lead = room.lead else { return }
+                    DSHaptic.selection()
+                    onOpen(lead)
+                }
 
             // Only the apps BEYOND the lead get a row — the lead is the
             // headline, and repeating it directly underneath is the card

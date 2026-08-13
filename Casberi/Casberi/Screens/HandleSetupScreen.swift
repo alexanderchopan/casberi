@@ -725,6 +725,7 @@ struct HandleSetupScreen: View {
                                         displayName: account.title, bio: nil,
                                         avatarURL: account.avatarURL)
         }
+        .dsTapCard()
         .contextMenu {
             Button(role: .destructive) {
                 bridge.removeName(account.key, context: modelContext)

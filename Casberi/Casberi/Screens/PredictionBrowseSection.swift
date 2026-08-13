@@ -381,6 +381,7 @@ struct PredictionBrowseSection: View {
                             .foregroundStyle(searching ? .white : DS.textSecondary)
                             .frame(width: 34, height: 30)
                             .background(Capsule().fill(searching ? DS.tint : DS.fillFaint))
+                            .dsTapTarget(Capsule())
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(searching ? "Close search" : "Search markets")
@@ -861,7 +862,7 @@ struct PredictionBrowseSection: View {
                     .foregroundStyle(DS.tint)
                     .frame(width: 30, height: 30)
                     .background(Circle().fill(DS.fillFaint))
-                    .contentShape(Circle())
+                    .dsTapTarget(Circle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Follow \(outcome.name)")

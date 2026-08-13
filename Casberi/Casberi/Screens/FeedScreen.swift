@@ -2717,6 +2717,7 @@ struct FeedScreen: View {
                 DSHaptic.selection()
                 withAnimation(DS.Motion.standard) { filter.source = source }
             }
+            .dsTapCard()
             // A bundle is an ordinary row, never a designed card, so it goes
             // bare on the ink like every list row (lists are air).
             .listRowBackground(runBackground(position, bare: true))
@@ -4260,6 +4261,7 @@ struct FeedScreen: View {
                         .padding(.vertical, DS.Space.s1)
                         .contentShape(Rectangle())
                         .onTapGesture { withAnimation(DS.Motion.standard) { staleExpanded = true } }
+                        .dsTapCard()
                         .listRowBackground(dayCardBackground(positions[slots - 1]))
                         .listRowInsets(.init(top: DS.Space.s2,
                                              leading: DS.Space.s4 + DS.Space.s3,

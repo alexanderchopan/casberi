@@ -85,9 +85,19 @@ struct PhotoViewer: View {
                 .dsGlyph(15)
                 .foregroundStyle(.white)
                 .frame(width: 36, height: 36)
+                // The glass moved INSIDE the label on 2026-08-13 so the target
+                // could grow without the disc growing with it. A `contentShape`
+                // wrapped around the Button would not have worked: it sizes the
+                // container, not the button's own interaction region, so the
+                // frame has to be in the label — and with `dsGlass` still on the
+                // Button, a 44pt label would have drawn a 44pt squircle at
+                // radius 18 instead of this 36pt circle. Same pixels, bigger
+                // target, on the one screen where the only control is a bare
+                // glyph over a full-bleed photograph.
+                .dsGlass(cornerRadius: 18, variant: .clear)
+                .dsTapTarget(Circle())
         }
         .buttonStyle(.plain)
-        .dsGlass(cornerRadius: 18, variant: .clear)
         .dsHover()
         .padding(DS.Space.s4)
         .accessibilityLabel(Text("Close"))

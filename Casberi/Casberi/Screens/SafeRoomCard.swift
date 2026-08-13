@@ -44,6 +44,14 @@ struct SafeRoomCard: View {
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, DS.Space.s2)
+                // The whole card is a tap target for touch and pointer and
+                // carries nothing for VoiceOver; this states the same verb on
+                // the line that names its destination.
+                .dsCardLead(Text("Opens this Safe")) {
+                    guard let lead = room.lead else { return }
+                    DSHaptic.selection()
+                    onOpen(lead)
+                }
 
             // The module warning wears attention orange — the one fact this
             // bridge can state that isn't merely informational (`SafeBridge`'s

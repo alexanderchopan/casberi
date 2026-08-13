@@ -108,5 +108,6 @@ struct PostHogRoomCard: View {
             DSHaptic.tap()
             onOpen(metric.event)
         }
+        .dsTapCard()
     }
 }

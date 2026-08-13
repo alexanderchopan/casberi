@@ -121,6 +121,7 @@ struct AssetRosterAddSlot: View {
             DSHaptic.tap()
             action()
         }
+        .dsTapCard()
     }
 }
 

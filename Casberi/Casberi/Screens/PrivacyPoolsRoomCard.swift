@@ -55,6 +55,14 @@ struct PrivacyPoolsRoomCard: View {
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, DS.Space.s2)
+                // The whole card is a tap target for touch and pointer and
+                // carries nothing for VoiceOver; this states the same verb on
+                // the line that names its destination.
+                .dsCardLead(Text("Opens these deposits")) {
+                    guard let lead = room.lead else { return }
+                    DSHaptic.selection()
+                    onOpen(lead.state)
+                }
 
             Text(PrivacyPoolsRoom.note(room))
                 .dsText(.subhead13)

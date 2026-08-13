@@ -3578,7 +3578,7 @@ struct Composer: View {
                     .dsGlyph(16)
                     .foregroundStyle(DS.textTertiary)
                     .frame(width: 32, height: 36)
-                    .contentShape(Rectangle())
+                    .dsTapTarget()
                     .dsHover()
             }
             .buttonStyle(.plain)
@@ -3594,6 +3594,9 @@ struct Composer: View {
                     .foregroundStyle(isRecording ? DS.destructive : DS.textSecondary)
                     .frame(width: 36, height: 36)
                     .background(DS.fillFaint, in: Circle())
+                    // After the background, so the drawn circle stays 36 and
+                    // only the target grows.
+                    .dsTapTarget(Circle())
                     .dsHover()
             }
             .buttonStyle(.plain)

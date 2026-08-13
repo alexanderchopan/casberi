@@ -123,6 +123,8 @@ struct AgentKeyPicker: View {
             selection = provider
             onSelect()
         }
+        .dsTapCard()
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
         .id(tick)
     }
 }
