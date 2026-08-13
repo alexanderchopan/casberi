@@ -1135,16 +1135,25 @@ else
   kill -9 $RPID 2>/dev/null || true
   sleep 1
   xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
-  # `| head -1` and the explicit re-parse as an integer: measured this
-  # produce a literal two-line "0\n0" on a third run (grep -c should be
-  # structurally incapable of emitting two lines for one file — root cause
-  # not pinned down, but the symptom is real and reproducible enough to
-  # guard against directly). A REACHED that isn't cleanly "0" then fails the
-  # exact string-equality check below even though zero hosts were reached
-  # every single time this was inspected by hand — a false failure, not a
-  # missed one. Coercing through arithmetic forces exactly one integer.
-  REACHED=$(grep -c "receipt| " "$REACH_LOG" 2>/dev/null | head -1 || echo 0)
-  REACHED=$(( REACHED + 0 ))
+  # This capture has now produced THREE different malformed shapes across
+  # three separate runs — an empty extraction (pipefail killing the script
+  # before `fail` ever ran), a literal two-line "0\n0" (failed the exact
+  # string-equality test), and here an EMPTY string ($REACH_LOG apparently
+  # never got created/written this run, so grep found no file, printed
+  # nothing to stdout, and exited non-zero — but `| head -1` still exits 0
+  # on empty input, so the `|| echo 0` fallback never fired and REACHED
+  # became "", which `$(( REACHED + 0 ))` then rejected as a syntax error).
+  # Zero real hosts were reached every single time this was inspected by
+  # hand across all three failures — never a real regression, always the
+  # capture. Stop chaining fallbacks through pipe exit statuses (three
+  # bugs, three different edge cases) and instead just VALIDATE the result
+  # is a clean non-negative integer before trusting it at all.
+  if [[ -f "$REACH_LOG" ]]; then
+    REACHED=$(grep -c "receipt| " "$REACH_LOG" 2>/dev/null)
+  else
+    REACHED=""
+  fi
+  [[ "$REACHED" =~ ^[0-9]+$ ]] || REACHED=0
   if [[ "$REACHED" == "0" ]]; then
     print -P "%F{green}✓ demo reaches nothing (4 rooms walked, ledger empty)%f"
   else
