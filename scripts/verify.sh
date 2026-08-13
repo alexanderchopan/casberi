@@ -1116,13 +1116,27 @@ else
   xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES -receiptsProbe YES >/dev/null 2>&1 || true
   sleep 6
   kill $RPID 2>/dev/null || true
+  # `kill` only SIGNALS the background `log stream` — it does not wait for it
+  # to actually die, and a killed process's buffered writes are not
+  # guaranteed to be flushed to $REACH_LOG yet. Reading the file immediately
+  # after `kill` raced that flush: two consecutive runs counted a real match
+  # (REACHED != 0) that had vanished by the time the file was read back a
+  # moment later by hand, and — under this script's own set -e -o pipefail —
+  # the second grep (`-o`) finding nothing on the now-drained file exits 1,
+  # which kills the WHOLE script right there, before `fail` ever runs. So a
+  # pure timing artifact looked like a silent crash with no error message.
+  # `wait` blocks until $RPID has genuinely exited, guaranteeing the file is
+  # complete before anything reads it.
+  wait $RPID 2>/dev/null
   xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
   REACHED=$(grep -c "receipt| " "$REACH_LOG" 2>/dev/null || echo 0)
   if [[ "$REACHED" == "0" ]]; then
     print -P "%F{green}✓ demo reaches nothing (4 rooms walked, ledger empty)%f"
   else
     print -P "%F{red}hosts the demo reached:%f"
-    grep -o "receipt| .*" "$REACH_LOG" | sort -u | head -10
+    # `|| true`: never let this listing itself be the reason `fail` below is
+    # skipped — the exact failure mode this comment's incident describes.
+    grep -o "receipt| .*" "$REACH_LOG" | sort -u | head -10 || true
     fail "the demo reached $REACHED host(s) — see $REACH_LOG"
   fi
 fi
