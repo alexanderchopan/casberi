@@ -300,7 +300,20 @@ def audit_file(path: pathlib.Path, findings: list[str]) -> None:
         for m in re.finditer(r"\bForEach\(", line):
             arg = foreach_argument(line, m.end() - 1)
             # Which [Thing] identifiers does this ForEach actually mention?
-            mentioned = {n for n in thing_names if re.search(rf"\b{re.escape(n)}\b", arg)}
+            #
+            # `(?<![.\w])` — a MEMBER of something else is a different thing
+            # that merely shares a name (2026-08-12). `\b` alone matched the
+            # `all` in `ForEach(TakeTool.all)` against a local `let all:
+            # [Thing]` declared elsewhere in the same file, and reported a
+            # ForEach over a static array of tool descriptors as an unkeyed
+            # ForEach over models. Short, ordinary names — `all`, `items`,
+            # `rows` — collide this way constantly; the leading-dot guard is
+            # what makes the name mean the local rather than any `X.name`.
+            # `self.` is still the local, so it must keep matching — dropping
+            # it would silently stop catching `ForEach(self.things.filter …)`,
+            # which is the very shape this check exists for.
+            mentioned = {n for n in thing_names
+                         if re.search(rf"(?:(?<![.\w])|(?<=self\.)){re.escape(n)}\b", arg)}
             if not mentioned:
                 continue
             if "keyed" in arg:
@@ -691,6 +704,21 @@ def self_test() -> int:
             "@State private var openThing: Thing?\n"
             "var body: some View { Text(openThing?.isLive == true ? openThing!.title : \"\") }\n",
             None,
+        ),
+        # A member of something ELSE that merely shares a name (2026-08-12).
+        # `ForEach(TakeTool.all)` iterates tool descriptors; the `all` it
+        # matched was an unrelated local `[Thing]` in the same file.
+        "clean-member-sharing-a-name": (
+            "let all: [Thing] = []\n"
+            "var body: some View { ForEach(TakeTool.all) { t in Text(t.label) } }\n",
+            None,
+        ),
+        # …and the other direction, so that guard can't quietly blind the
+        # check: `self.` is the local, and must still be caught.
+        "self-qualified-derived-foreach": (
+            "@Query private var things: [Thing]\n"
+            "var body: some View { ForEach(self.things.filter { $0.mark == .todo }) { t in Text(t.title) } }\n",
+            "derived",
         ),
         "clean-bare-query": ("@Query private var things: [Thing]\n"
                             "var body: some View { ForEach(things) { t in Text(t.title) } }\n", None),

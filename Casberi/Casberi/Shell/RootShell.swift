@@ -969,6 +969,27 @@ struct RootShell: View {
                     composerOpen = true
                 }
             }
+            // `-composerCycles <n>` raises and lowers the agent n times, ~8s
+            // apart. The ONE way to measure what an open actually costs in
+            // practice: `RootShell` renders the composer as
+            // `if composerOpen { … }`, so every raise builds a brand-new
+            // `Composer` and every lower destroys it — which means the FIRST
+            // open a launch makes is the only one `-openComposer` can show,
+            // and it is the atypical one. Everything the open reuses
+            // (`AgentOpenCache`) only pays off from the second onward, so
+            // without this the cache reads as doing nothing at all.
+            let cycles = UserDefaults.standard.integer(forKey: "composerCycles")
+            if cycles > 0 {
+                Task { @MainActor in
+                    for i in 1...cycles {
+                        try? await Task.sleep(for: .seconds(8))
+                        composerOpen = false
+                        try? await Task.sleep(for: .milliseconds(600))
+                        NSLog("[Casberi] composerCycle| raise %d", i)
+                        composerOpen = true
+                    }
+                }
+            }
             // Debug hook: `-linkTitleProbe <url>` exercises the title fetch
             // headlessly — NSLogs what a pasted link would be renamed to.
             if let raw = UserDefaults.standard.string(forKey: "linkTitleProbe"),

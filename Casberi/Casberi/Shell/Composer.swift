@@ -517,6 +517,14 @@ struct Composer: View {
     /// fetch per character (review 2026-07-08; the separate `tagCandidates()`
     /// closure that used to do its OWN full-corpus fetch here retired
     /// 2026-08-11, see `corpusScan`).
+    /// The corpus-wide chip counters, kept across opens (PERF 2026-08-12) —
+    /// see `computeSuggestions()`'s fetch for why. Nil means "never computed
+    /// on this launch", which is the one open that pays the full walk;
+    /// `composeBoard` refreshes it behind the board on every open after.
+    private var cachedChipFacts: CorpusScan? {
+        get { AgentOpenCache.shared.facts }
+        nonmutating set { AgentOpenCache.shared.facts = newValue }
+    }
     @State private var tagPool: [String] = []
     /// The day's own sentence, shown as the rest screen's lead card
     /// (2026-07-31) — snapshotted once per open alongside `tagPool`, off the
@@ -539,7 +547,14 @@ struct Composer: View {
     /// the source chips and `NavigateIntent.source` already drive.
     @Environment(FeedFilter.self) private var filter
 
-    @State private var composition = AgentPanel.Composition()
+    /// Proxied onto `AgentOpenCache` (2026-08-12) rather than held in
+    /// `@State`: `RootShell` destroys this whole view on every lower, so a
+    /// `@State` board was rebuilt from nothing on every raise. Same spelling
+    /// at every call site; only its lifetime changed.
+    private var composition: AgentPanel.Composition {
+        get { AgentOpenCache.shared.board }
+        nonmutating set { AgentOpenCache.shared.board = newValue }
+    }
     /// True from the moment `.task(id: isOpen)` starts computing the panel
     /// until `composition` actually has cards (2026-08-09, measured live:
     /// ~720ms of unbroken synchronous work over a real corpus, entirely on
@@ -688,8 +703,53 @@ struct Composer: View {
         var out: [AskOption] = []
         // One plain fetch, filtered in memory — a #Predicate can't compare
         // the Codable ThingKind enum (it throws at runtime, and try? made
-        // the miss silent).
-        let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
+        // the miss silent), and one over the transformable `tags` array traps.
+        //
+        // THE FULL WALK IS THE OPEN'S WHOLE COST, so it runs at most once per
+        // launch (PERF 2026-08-12). Measured on a 13,412-row corpus: ~761ms
+        // median, against ~90ms for everything else this function does. It is
+        // a single `modelContext.fetch` — one uninterruptible call on the main
+        // actor, with no yield point inside it — so it does not merely delay
+        // the chips, it freezes the agent's rise animation while it runs.
+        // That stutter is what "the agent is laggy opening" actually is.
+        //
+        // What still needs it: the tag vocabulary and per-tag counts behind
+        // the two "Show <tag>" chips. `tags` is a transformable array, so it
+        // can be neither predicated (it traps, see CLAUDE.md) nor counted in
+        // SQL — every other counter here could be a `fetchCount` or a
+        // date-predicated read. Two chips were costing the entire open.
+        //
+        // So the facts are CACHED and refreshed behind the board, which does
+        // its own full fetch off the critical path anyway (`composeBoard`).
+        // The freshness cost is one open: a chip count can be one arrival
+        // stale before the refresh lands — the same trade the debounced feed
+        // and the retained board already make, and a count that is briefly one
+        // behind is a different thing from a count that is wrong.
+        //
+        // NOT projected, and that too is measured rather than assumed:
+        // `propertiesToFetch` is what fixed the feed's and MainSurface's
+        // per-body re-fetches, so narrowing this to the ten columns the chips
+        // read was the obvious move. A/B'd on the same corpus it was
+        // consistently SLOWER — ~1009ms against ~761ms — and it pushed the
+        // board's fetch up with it. The heavy blobs are already
+        // `.externalStorage` and were never in the row; what is left is inline
+        // text SQLite reads either way, and the partial-fault bookkeeping
+        // costs more than it saves. Don't re-add it without re-running that.
+        let all: [Thing]
+        if cachedChipFacts == nil {
+            all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
+        } else {
+            // Only the recent window the day-lede and the away pulse read —
+            // both are windowed by construction, so this is small at any
+            // corpus size. The counters come from the cache below.
+            let floor = min(AppVisit.away?.lowerBound ?? .distantFuture,
+                            Date.now.addingTimeInterval(-7 * 86_400))
+            var recent = FetchDescriptor<Thing>(
+                predicate: #Predicate { $0.capturedAt >= floor },
+                sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+            recent.fetchLimit = 2000
+            all = (try? modelContext.fetch(recent)) ?? []
+        }
         #if DEBUG
         NSLog("[Casberi] composerPerfDEBUG| afterFetch=%dms count=%d",
               Int(Date.now.timeIntervalSince(composerT0) * 1000), all.count)
@@ -717,7 +777,17 @@ struct Composer: View {
         // "overdue" and "upcoming" windows were each measured from a slightly
         // different instant. One clock for one open.
         let standingIn = contextSource()
-        let scan = corpusScan(all, contextSource: standingIn, now: .now)
+        // The cache, or the one full walk that seeds it. `contextSourceRecent`
+        // is the one counter that depends on WHERE you opened the agent from,
+        // so it is recomputed per open off the recent rows rather than cached.
+        var scan = cachedChipFacts ?? corpusScan(all, contextSource: standingIn, now: .now)
+        if cachedChipFacts != nil {
+            scan.contextSourceRecent = all.reduce(into: 0) { n, t in
+                if let standingIn, t.source == standingIn,
+                   t.capturedAt >= Date.now.addingTimeInterval(-3 * 86_400) { n += 1 }
+            }
+        }
+        cachedChipFacts = scan
         tagPool = scan.tagPool
         // NOTHING about the corpus itself goes under the greeting (user
         // ruling 2026-07-31: "casberi is about insight and management, over
@@ -892,7 +962,7 @@ struct Composer: View {
             out.append(AskOption(kind: "noticed", title: "Noticed",
                                  glyph: "sparkle"))
         }
-        if !all.isEmpty {
+        if !scan.sourcesSeen.isEmpty {
             out.append(AskOption(kind: "week", title: "What's this week?",
                                  glyph: "calendar", signal: sig(scan.weekCount)))
         }
@@ -946,18 +1016,51 @@ struct Composer: View {
         NSLog("[Casberi] composerPerfDEBUG| beforeBuildPanel=%dms",
               Int(Date.now.timeIntervalSince(composerT0) * 1000))
         #endif
-        // The board (prd §332) — built last, so it can see the away pool the
-        // chips above already computed and never pays for a second walk.
-        composition = await buildPanel(all: all)
+        // The board does NOT get built here (PERF 2026-08-12). It used to be
+        // the last thing this function did, which meant the ask chips — ~90ms
+        // of work, and the whole reason the agent has anything to show at
+        // once — waited on it, because `chipsAppeared` only flips after this
+        // function returns. Measured on a 12,000-row corpus: chips ready at
+        // 721ms, board at 2,270ms, and the person looked at nothing for the
+        // whole 2.3s. The caller reveals the chips and THEN composes the board
+        // (see the `.task(id: isOpen)` below).
         #if DEBUG
-        NSLog("[Casberi] composerPerfDEBUG| TOTAL=%dms cards=%d",
-              Int(Date.now.timeIntervalSince(composerT0) * 1000), composition.cards.count)
-        AgentPanelProbe.log(composition)
+        NSLog("[Casberi] composerPerfDEBUG| chipsReady=%dms",
+              Int(Date.now.timeIntervalSince(composerT0) * 1000))
         NSLog("[Casberi] askTiles: %@",
               suggestions.map { $0.memoryKey + ($0.timely ? "*" : "") + ($0.signal ?? "") }
                   .joined(separator: ","))
         #endif
         return all
+    }
+
+    /// The board, composed after the chips are already on screen — see
+    /// `computeSuggestions()`'s tail for why the two are no longer one call.
+    ///
+    /// Takes its OWN, unprojected fetch and returns it. The chips read a
+    /// narrow projection now, and the panel's room figures plus every kept-ask
+    /// composer read far more widely than that — handing either of them the
+    /// chip projection would fault a column at a time, per row, which is
+    /// slower than the full fetch it was meant to save. Paying a full fetch
+    /// HERE is free in the way it wasn't before: nothing is waiting on it.
+    @discardableResult
+    private func composeBoard() async -> [Thing] {
+        #if DEBUG
+        let t0 = Date.now
+        #endif
+        let corpus = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
+        // The chip counters ride this fetch rather than buying their own — the
+        // next open then costs no full walk at all. `contextSourceRecent` is
+        // left to the open that reads it (it depends on which room you were
+        // standing in, which this pass cannot know).
+        cachedChipFacts = corpusScan(corpus, contextSource: nil, now: .now)
+        composition = await buildPanel(all: corpus)
+        #if DEBUG
+        NSLog("[Casberi] composerPerfDEBUG| boardReady=+%dms cards=%d",
+              Int(Date.now.timeIntervalSince(t0) * 1000), composition.cards.count)
+        AgentPanelProbe.log(composition)
+        #endif
+        return corpus
     }
 
     /// Every BRIEF SCOPE with at least one thing in the corpus, as chips —
@@ -1627,7 +1730,7 @@ struct Composer: View {
     /// walk (PERF 2026-08-11 — see the call site for why eleven walks was the
     /// composer's open latency). Each field below replaces a `filter`/
     /// `contains`/`first` that used to traverse the whole corpus on its own.
-    private struct CorpusScan {
+    struct CorpusScan {
         /// The person's own tags — every tag minus the built-in kind tags —
         /// sorted, exactly as `RootShell.projectTags` returned them.
         var tagPool: [String] = []
@@ -2622,8 +2725,7 @@ struct Composer: View {
                 // lands: nothing here can leave a stale board up permanently.
                 panelLoading = composition.isEmpty
                 await Task.yield()
-                let corpus = await computeSuggestions()
-                panelLoading = false
+                await computeSuggestions()
                 // Kept asks share AskMemory's own decay counters with the
                 // suggestion tiles (ruling 5: "ignored asks decay dim") —
                 // bumped once per open here, exactly how computeSuggestions()
@@ -2654,14 +2756,31 @@ struct Composer: View {
                 // read before `buildPanel`'s awaits and a foreground heal can
                 // delete in that window (corollary 6); `compose` re-filters at
                 // its own door for the per-kind suspensions after that.
+                // Reset then reveal so the ask chips stagger in on each open.
+                // BEFORE the board, since 2026-08-12 — the chips are ready in
+                // a fraction of the board's time and used to sit behind it.
+                chipsAppeared = false
+                try? await Task.sleep(for: .milliseconds(90))
+                chipsAppeared = true
+                // …and the board fills in behind them. `panelLoading` stays
+                // true across this, so a FIRST open still shows the bento
+                // skeleton in the board's slot rather than a hole; a later
+                // open keeps the previous board up (see `panelLoading`'s
+                // assignment above) and swaps it when this lands.
+                let corpus = await composeBoard()
+                panelLoading = false
+                // The kept pills' signal dots, off the board's own fetch —
+                // this used to be a THIRD full-corpus read, and before that it
+                // sat on the chip path where its per-kind composers (wallet
+                // and watchlist are network-backed) delayed the reveal.
+                // `.live` at the hand-off: the array was read before
+                // `buildPanel`'s awaits and a foreground heal can delete in
+                // that window (corollary 6); `compose` re-filters at its own
+                // door for the per-kind suspensions after that.
                 Task { @MainActor [corpus] in
                     await KeptAskStore.shared.refreshDigests(things: corpus.live,
                                                              context: modelContext)
                 }
-                // Reset then reveal so the ask chips stagger in on each open.
-                chipsAppeared = false
-                try? await Task.sleep(for: .milliseconds(90))
-                chipsAppeared = true
                 // Raised by the bar's magnifier (2026-07-30): the field takes
                 // focus and nothing else happens — no brief, no ask. Cleared
                 // on read so an ordinary later open doesn't inherit it.
