@@ -22175,3 +22175,103 @@ succeeds and silently hands back the floor, and the harness photographs the
 wrong window. It also re-asks after 1.2s, because macOS restores a window's
 remembered frame AFTER scene connection — measured, a launch asking for 1120
 logged `padLayout: width=1120` and then `width=780`.
+
+## §372 — The address book learns what an address can DO (user: "how would you improve our contact address book, the one for wallets i mean", then "do all the things you suggest except the which chains you've dealt on", 2026-08-13)
+
+§266 made the manager a real address manager and §295 let the book read itself.
+What neither did — and what a census found — is that the book could say what you
+and an address had DONE together and never what that address can still DO to you.
+Four other things turned up beside it, two of them defects the book had been
+printing for weeks.
+
+**The gap: standing permissions were on the wrong screen.** §292 ranks live
+approvals by the value each spender can move right now, and landed that on the
+approvals card alone. So the one screen where a person decides whether an address
+is trustworthy — its own card — was the one screen that didn't show the only fact
+with a consequence. The rows were already there and unrecognisable: an approval
+is a `Wallet` thing whose `counterpartyAddress` is the spender, so
+`AddressActivity` has always filed it on that address's card, dressed exactly
+like every transfer beside it.
+
+`WalletApprovalExposure.forSpender` scopes the same reading to one address, and
+the scoping is the interesting half: `WalletApprovals.activeApprovals` filters on
+`walletAddress` — YOUR wallet, the grantor — and this filters on
+`counterpartyAddress`, the grantee. Same rows, opposite end, and confusing the
+two would show an address the approvals it was GIVEN as though it had been given
+them. `Grant` gained `spenderAddress` to make the join possible, carried RAW
+rather than through `AddressBook.key`, because that file is Foundation-only so
+the harness can compile it as shipped and a second folding rule is the drift
+`WalletSafety.isFuzzyMatch` was collapsed to avoid.
+
+Nothing is cached and nothing is persisted: an allowance is live state (§216) and
+a stale "can move $8,924" is §83's fake status in the one place it would be
+believed instantly. The card states four cases and three are absences that must
+not be confused — not read yet, read and nothing live, read and unpriceable,
+read with a figure. The headline is deliberately not
+`WalletApprovalExposure.headline`, which counts spenders: there is one spender
+here and it is the hero at the top of the screen, so that sentence would print
+"1 spender" under its own name.
+
+**Two defects, both visible for weeks.** `WalletStore.add` files a bare address
+under its own short form as a NAME, and `Entry.subline` always led with `short` —
+so an unnamed watched wallet read "…44b1 / …44b1 · 12 together". Asked through
+`isAutoName` rather than an equality test, which is that function's whole reason
+for existing: the tail-only ruling (2026-08-12) means books on disk hold the
+legacy `0x9a2E…44b1` spelling, and `==` would call those a chosen name and keep
+printing both. The subline is optional now, because it can be empty for the first
+time and `Text("")` is a blank row, not a missing one — `summaryLine`'s own rule.
+
+And `AddressBook.search` matched name and address only. §267's entire ruling is
+that the omnibox is where a group becomes findable, and typing a group's name
+into it returned nothing while the chips above it displayed that group. Provenance
+joined for the same reason one rung down: it is already printed on the row, and a
+field you can read and cannot search reads as a broken search.
+
+**A kind was detected once and believed forever.** Both existing re-checks
+(`recheckContractsOnce`, `kindRecheck.7702`) are one-shots — they fire once per
+install and can only correct what was already wrong the day they shipped. The
+transition that makes this wrong is ordinary: an ERC-4337 smart account has a
+counterfactual address that holds funds BEFORE it is deployed, so it reads as an
+EOA, is filed `.wallet`, and stays one for life once its first UserOperation puts
+code there. `Entry.kindCheckedAt` and a 30-day `recheckInterval` bound how long
+the book can be wrong. The unknown half keeps priority and its old behaviour, so
+this adds nothing to the case the sweep was tuned for; `.safe` is never re-asked,
+being the one kind that cannot change. `setKind` stamps even when the answer is
+UNCHANGED, which is what makes the sweep terminate — without it the same eight
+rows are re-read every foreground forever.
+
+**The watch list mirrors now.** §266 named this as deliberate scope: a second
+device received a wallet's NAME but not its WATCH, which reads as a bug — "Mom"
+in the book with no wallet behind her. `AddressBookSync`'s engine is now
+`KeyValueMirror`, generic, with every storage key PASSED IN rather than derived:
+a generic that built key names from a type name would have silently orphaned
+every synced book already in iCloud, the whole population, with nothing failing.
+
+Three rulings the watch list needed that the book did not:
+
+- **The merge key is the address AS WATCHED, not its resolved form.** `add`
+  dedupes on the resolved form, which is right there and wrong here —
+  `resolutions` is a LOCAL cache, so a phone that had resolved `vitalik.eth`
+  keys it `0xd8da…` while an iPad that hadn't keys it `vitalik.eth`, and the
+  merge watches one wallet twice while charging §170's cap for both. A merge key
+  must be a pure function of what is stored. The mirror-image cost (hex on one
+  device, a name on the other) is caught best-effort in `applyMerged`, where the
+  cache IS available.
+- **The cap is grandfathered, never enforced.** Two devices each watching five
+  merge to ten. Nothing is evicted, matching `add`'s own "GRANDFATHERED, never
+  evicted" for installs predating the cap. Choosing five winners would silently
+  discard a wallet the person deliberately watched, on a device they weren't
+  holding, with nothing on screen to say so; the other cost is a few more reads
+  until they prune, and it is visible.
+- **Order is local and does not sync.** It is the person's, and the first
+  address leads the wallet view, so a merge keeps this device's order and
+  appends arrivals. Syncing it would need an ordering CRDT for five rows to
+  prevent something a drag fixes.
+
+`WatchedAddress.updatedAt` is optional and had to be: the list decodes with
+`try?` off one blob and Swift's synthesized `Codable` does not fall back to a
+property's default, so a non-optional addition would have silently UNWATCHED
+every wallet on every device that upgraded — §312's `RSSStore.Feed` trap exactly.
+
+**Not done, deliberately.** Which chains you have dealt with an address on was
+proposed and cut by the user from this pass.

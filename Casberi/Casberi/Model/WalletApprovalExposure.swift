@@ -63,6 +63,18 @@ struct WalletApprovalExposure: Equatable, Sendable {
         /// rather than guess, and a wrong name on a revoke prompt sends you to
         /// revoke the wrong thing.
         let spender: String
+        /// The spender's RAW address — what `spender` is a display of
+        /// (2026-08-13, prd §372). Carried so a grant can be joined to the
+        /// address book, which is what lets someone's own card say what that
+        /// address can move right now.
+        ///
+        /// Raw, and NOT `AddressBook.key`, on purpose: this file is
+        /// Foundation-only so the harness can compile it as shipped (see the
+        /// type doc), and folding an address to its identity form is the
+        /// book's own rule. Callers compare through `AddressBook.key`; keeping
+        /// a second folding rule here is exactly the two-spellings-of-one-rule
+        /// drift `WalletSafety.isFuzzyMatch` was collapsed to avoid.
+        let spenderAddress: String
         /// Whether `spender` is a real name or a short hex — "a contract we
         /// can't name" is itself information.
         let named: Bool

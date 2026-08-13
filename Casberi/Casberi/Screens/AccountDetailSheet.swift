@@ -301,7 +301,13 @@ struct AccountDetailSheet: View {
                           // container, so nothing else starts it). Flipping the
                           // toggle on exchanges immediately rather than waiting
                           // for the next edit to trigger a push.
-                          if $0 { AddressBookSync.shared.syncNow() }
+                          if $0 {
+                              AddressBookSync.shared.syncNow()
+                              // The WATCH list rides it too (prd §372) — before
+                              // that, turning sync on carried your names to a
+                              // second device and not the wallets behind them.
+                              WalletStoreSync.shared.syncNow()
+                          }
                       }))
             if icloudSync, syncHasLiveError, let detail = CloudSyncStatus.lastError {
                 Text(detail)

@@ -513,7 +513,11 @@ func g(_ spender: String, usd: Double?, unlimited: Bool = true,
        forAll: Bool = false, ago: Double? = nil,
        symbol: String = "USDC", cap: Double? = nil) -> WalletApprovalExposure.Grant {
     WalletApprovalExposure.Grant(
-        thingID: UUID(), spender: spender, named: !spender.hasPrefix("0x"),
+        thingID: UUID(), spender: spender,
+        // A distinct raw address per spender name, so a fixture can never
+        // accidentally prove two spenders are one address (prd §365).
+        spenderAddress: "0x" + String(spender.utf8.map { String(format: "%02x", $0) }.joined()),
+        named: !spender.hasPrefix("0x"),
         symbol: symbol, forAll: forAll, unlimited: unlimited, usd: usd,
         capTokens: cap, grantedAt: ago.map { Date(timeIntervalSinceNow: -$0) })
 }

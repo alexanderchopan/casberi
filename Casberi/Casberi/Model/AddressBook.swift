@@ -111,6 +111,26 @@ final class AddressBook {
         /// (`AddressBookSync`). Distinct from `addedAt`, which records when the
         /// address was first named and deliberately never moves.
         var updatedAt: Date? = nil
+        /// When the chain was last ASKED what this address is (2026-08-13,
+        /// prd §372) — distinct from `updatedAt` in both directions: this
+        /// moves when a detection merely RAN, and never when the person edits
+        /// anything.
+        ///
+        /// It exists because a kind was detected once and then believed
+        /// forever. The transition that makes that wrong is ordinary: an
+        /// ERC-4337 smart account has a counterfactual address that holds
+        /// funds BEFORE it is deployed, so it reads as an EOA, gets filed
+        /// `.wallet`, and stays a `.wallet` for life once its first
+        /// UserOperation puts code there. `.contract` has the milder version
+        /// (a `detectSmartAccount` that was transiently unreachable). Both
+        /// were unreachable by the two existing one-shots, which fire once per
+        /// install and can only fix what was already wrong on the day they
+        /// shipped.
+        ///
+        /// nil means never checked, which sorts oldest — the honest reading
+        /// for a book written before this field existed. Optional like every
+        /// other addition here, for the decode reason `groups` documents.
+        var kindCheckedAt: Date? = nil
         var id: String { AddressBook.key(for: address) }
 
         var short: String { WalletStore.shortAddress(address) }
@@ -319,13 +339,36 @@ final class AddressBook {
         return (name?.isEmpty ?? true) ? nil : name
     }
 
-    /// Filtered for the book's search field — matches the name or any part of
-    /// the address, so "mom" and "9a2E" both find the same row.
+    /// Filtered for the book's search field — matches the name, any part of
+    /// the address, any GROUP it's filed under, or its provenance, so "mom",
+    /// "9a2E", "Family" and "Peer" all find rows.
+    ///
+    /// Groups and provenance joined on 2026-08-13, and the group half is the
+    /// one that was actually broken. §267's whole ruling is that the omnibox
+    /// is where a group becomes findable — it is the field the person types
+    /// "Family" into — and it searched two fields, neither of which was the
+    /// group, so it answered "no matches" for a group the chips right above
+    /// it were displaying. The chip filter is a different gesture (narrow to
+    /// a group you can see) and does not stand in for typing its name.
+    ///
+    /// Provenance rides along because it's already printed on the row by
+    /// `subline`: a field the person can read and cannot search reads as a
+    /// broken search, whichever field it is.
+    ///
+    /// Group matching goes through `sameGroup`'s folding rather than a raw
+    /// `contains`, so a search agrees with the book about what one group IS —
+    /// but only for a WHOLE-name match; a partial query still falls back to
+    /// substring, since someone typing "fam" hasn't named a group yet.
     func search(_ query: String) -> [Entry] {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !q.isEmpty else { return all }
-        return all.filter {
-            $0.name.lowercased().contains(q) || $0.address.lowercased().contains(q)
+        return all.filter { entry in
+            if entry.name.lowercased().contains(q) { return true }
+            if entry.address.lowercased().contains(q) { return true }
+            if let provenance = entry.provenance, provenance.lowercased().contains(q) { return true }
+            return entry.groupNames.contains {
+                Self.sameGroup($0, q) || $0.lowercased().contains(q)
+            }
         }
     }
 
@@ -374,10 +417,34 @@ final class AddressBook {
     /// not the person's edit, and every device detects it independently.
     /// Stamping would make a passive detection outrank a real rename made on
     /// another device.
+    /// Stamps `kindCheckedAt` even when the kind is UNCHANGED (2026-08-13),
+    /// which is the whole reason the re-check sweep terminates: it picks the
+    /// staleset entries, and confirming an address is still what it was has to
+    /// count as having asked, or the same eight rows are re-read on every
+    /// foreground for the life of the install.
     func setKind(_ kind: Kind, for address: String) {
         let key = Self.key(for: address)
-        guard var entry = entries[key], entry.kind != kind else { return }
+        guard var entry = entries[key] else { return }
+        guard entry.kind != kind else { markKindChecked(address); return }
         entry.kind = kind
+        entry.kindCheckedAt = .now
+        entries[key] = entry
+    }
+
+    /// Records that the chain was asked and told us nothing new — a read that
+    /// no host answered, or one that confirmed what we already had.
+    ///
+    /// Separate from `setKind` because `AddressKind.detect` has exits that
+    /// resolve no kind at all (every RPC down), and those must still count as
+    /// an attempt for the STALE half of the sweep or an unreachable address
+    /// burns the budget every pass forever. It deliberately does NOT do this
+    /// for an `.unknown` entry: that one has never been resolved, `detectPending`
+    /// re-asks it every pass by design, and stamping it would fold the "never
+    /// answered" case into the "answered, still true" case.
+    func markKindChecked(_ address: String) {
+        let key = Self.key(for: address)
+        guard var entry = entries[key], entry.kind != .unknown else { return }
+        entry.kindCheckedAt = .now
         entries[key] = entry
     }
 

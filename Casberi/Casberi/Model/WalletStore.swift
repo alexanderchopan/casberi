@@ -12,13 +12,35 @@ final class WalletStore {
     private static let key = "wallet.addresses"
 
     struct WatchedAddress: Codable, Identifiable, Equatable {
+        /// LOCAL, and never the merge identity (2026-08-13, prd §372): two
+        /// devices watching the same wallet each minted their own UUID, so
+        /// keying a merge on this would carry one address home as two rows.
+        /// `WalletStore.dedupeKey` is the identity; `applyMerged` keeps the
+        /// local id for an address already here so SwiftUI's own diffing
+        /// doesn't churn every row on every merge.
         var id = UUID()
         /// A name the person gave it ("Main", "Cold") — optional, address shows if empty.
         var label: String
         var address: String
+        /// When this watch was last CHANGED here — the stamp the iCloud merge
+        /// compares (`WalletStoreSync`, 2026-08-13).
+        ///
+        /// Optional, and it has to be: this struct is decoded with `try?` off
+        /// one blob, and Swift's synthesized `Codable` does NOT fall back to a
+        /// property's default for a missing key — so a non-optional addition
+        /// would throw on decode and silently UNWATCH every wallet on every
+        /// device that upgraded. The same trap `AddressBook.Entry.groups`
+        /// documents, and the one §312 hit in `RSSStore.Feed`.
+        ///
+        /// nil reads as `.distantPast`, which is the honest floor for a row
+        /// written before the field existed: whatever the other device has
+        /// that carries a real stamp is newer.
+        var updatedAt: Date? = nil
 
         /// "…4f4f" — the row form.
         var short: String { WalletStore.shortAddress(address) }
+
+        var stamp: Date { updatedAt ?? .distantPast }
     }
 
     /// "…4f4f" — the one address-shortening rule, shared with every surface
@@ -182,8 +204,120 @@ final class WalletStore {
                     SafeBridge.clearCache(address: hex)
                     BitcoinBridge.clearState(address: hex)
                 }
+                // A wallet unwatched HERE has to be remembered as unwatched, or
+                // whichever device still holds it pushes it straight back
+                // (2026-08-13, prd §372). Recorded after the mutation but
+                // before the push below, which is the ordering that matters —
+                // the tombstone has to be in hand when the blob goes up.
+                //
+                // This also runs for a wallet a MERGE dropped, which is correct
+                // and is why it sits in `didSet` rather than at the call sites:
+                // every teardown above is equally owed to a watch that ended on
+                // another device.
+                WalletStoreSync.shared.noteRemoval(Self.mirrorKey(old.address))
             }
+            WalletStoreSync.shared.push()
         }
+    }
+
+    // MARK: - Sync (WalletStoreSync's own two doors, prd §372)
+
+    /// The merge key for one watched wallet — the address AS WATCHED, folded,
+    /// and deliberately NOT put through `resolvedForm`.
+    ///
+    /// `add` keys its `alreadyWatching` check on the RESOLVED form, which is
+    /// right there and wrong here: `resolutions` is a LOCAL cache of ENS/SNS
+    /// lookups this device happens to have made, so the same wallet keys
+    /// differently on two devices depending on which of them has resolved it.
+    /// A phone that had resolved `vitalik.eth` would push it under `0xd8da…`,
+    /// an iPad that hadn't would hold it under `vitalik.eth`, and the merge —
+    /// seeing two keys — would watch one wallet TWICE and charge the §170 cap
+    /// for both. A merge key must be a pure function of what's stored, or it
+    /// isn't an identity.
+    ///
+    /// The cost is the mirror image and it is far milder: watch a wallet by
+    /// hex on one device and by name on the other and they merge as two rows.
+    /// `applyMerged` catches that case where it can, and `add`'s own dedupe is
+    /// untouched on both devices.
+    static func mirrorKey(_ address: String) -> String { dedupeKey(address) }
+
+    /// The watch list keyed for merging — by ADDRESS, never by `WatchedAddress.id`
+    /// (see that property).
+    var syncSnapshot: [String: WatchedAddress] {
+        var out: [String: WatchedAddress] = [:]
+        for entry in addresses { out[Self.mirrorKey(entry.address)] = entry }
+        return out
+    }
+
+    /// Replaces the watch list with a merged one. Only `WalletStoreSync` calls
+    /// this.
+    ///
+    /// ## Order is preserved, because order MEANS something here
+    ///
+    /// Unlike the address book — a set of names the UI sorts however it likes —
+    /// this list is ordered by the person and the first address leads the wallet
+    /// view. So a merge keeps the local order for every address already here and
+    /// appends the ones that arrived, stalest first, which is deterministic
+    /// across devices and never reshuffles what you were looking at.
+    ///
+    /// The local `id` is kept for an address already present, so a merge that
+    /// changes only a label doesn't churn every row's identity in SwiftUI.
+    ///
+    /// ## The cap is GRANDFATHERED, not enforced
+    ///
+    /// Two devices can each watch five different wallets, and their union is
+    /// ten against a limit of five (§170). Nothing is evicted: `add` already
+    /// says "GRANDFATHERED, never evicted" for an install that predates the
+    /// cap, and this is that rule reached by a second road. `canWatchMore`
+    /// keeps returning false, so no NEW watch is accepted until the person
+    /// drops below five themselves.
+    ///
+    /// Choosing five winners instead would silently discard a wallet the person
+    /// deliberately watched, on a device they weren't holding, with nothing on
+    /// screen to say so — the failure this app's honesty rule exists to refuse.
+    /// The cost of the other choice is bounded and visible: a few more reads per
+    /// foreground until they prune.
+    func applyMerged(_ merged: [String: WatchedAddress]) {
+        var standing: [WatchedAddress] = []
+        var taken = Set<String>()
+        for entry in addresses {
+            let key = Self.mirrorKey(entry.address)
+            // Absent from the merge means it was unwatched on another device.
+            guard let winner = merged[key] else { continue }
+            // Keep OUR id, take THEIR fields.
+            standing.append(WatchedAddress(id: entry.id, label: winner.label,
+                                           address: winner.address,
+                                           updatedAt: winner.updatedAt))
+            taken.insert(key)
+        }
+        // The same wallet watched by NAME on one device and by HEX on the
+        // other arrives under a second key — `mirrorKey` cannot fold those
+        // together without a local cache, and deliberately doesn't try (see
+        // its doc). Here, where the resolution cache IS available, an arrival
+        // that resolves onto a wallet already standing is dropped rather than
+        // watched twice. Best-effort by nature: a device that has resolved
+        // neither spelling still ends up with two rows, which is visible and
+        // removable, unlike a silently doubled cap.
+        let standingResolved = Set(standing.map {
+            Self.dedupeKey(resolvedForm(of: $0.address) ?? $0.address)
+        })
+        // Stalest first, then by key so two devices land on the same order for
+        // rows that carry no stamp at all.
+        let arrivals = merged.filter { !taken.contains($0.key) }
+            .sorted { ($0.value.stamp, $0.key) < ($1.value.stamp, $1.key) }
+            .map(\.value)
+            .filter { !standingResolved.contains(
+                Self.dedupeKey(resolvedForm(of: $0.address) ?? $0.address)) }
+        // `standing` is already in the person's own order and is never re-sorted.
+        addresses = standing + arrivals
+    }
+
+    /// Which of two versions of one watch stands, or nil when the standing one
+    /// does — the watch list's half of the merge rule `AddressBook.newer` states
+    /// for the book. Strictly newer wins, so a tie leaves the local row alone.
+    static func newer(_ incoming: WatchedAddress, than standing: WatchedAddress?) -> WatchedAddress? {
+        guard let standing else { return incoming }
+        return incoming.stamp > standing.stamp ? incoming : nil
     }
 
     // MARK: - Value history (2026-07-14)
@@ -505,6 +639,11 @@ final class WalletStore {
         } else {
             addresses = []
         }
+        // The iCloud mirror, one runloop turn later (prd §372) — `attach`
+        // reads `WalletStore.shared`, which does not exist until this
+        // initializer returns. `AddressBook`'s own init does the same for the
+        // same reason.
+        DispatchQueue.main.async { WalletStoreSync.shared.attach() }
     }
 
     /// The form two watched addresses are COMPARED in — never the form one is
@@ -582,7 +721,7 @@ final class WalletStore {
             Self.dedupeKey(resolvedForm(of: $0.address) ?? $0.address) == key
         }) else { return .alreadyWatching }
         guard canWatchMore else { return .limitReached }
-        addresses.append(WatchedAddress(label: label, address: addr))
+        addresses.append(WatchedAddress(label: label, address: addr, updatedAt: .now))
         // A watched wallet is ALWAYS a book entry too (2026-07-24, user: "if
         // you watch one, it should automatically be in your address book").
         // This used to skip an unnamed watch (a raw hex paste with no ENS
@@ -617,6 +756,7 @@ final class WalletStore {
         guard let i = addresses.firstIndex(where: { $0.id == id }) else { return }
         let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
         addresses[i].label = trimmed
+        addresses[i].updatedAt = .now
         // Through to the book (prd §169): renaming a watched wallet renames
         // the ADDRESS, so the name outlives the watch and every surface — feed
         // tags, transfer titles, the switcher — keeps reading one word.

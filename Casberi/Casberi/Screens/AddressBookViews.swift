@@ -20,8 +20,31 @@ extension AddressBook.Entry {
     /// list rather than a list of strings — how much you've actually dealt with
     /// them. It's also the "Most active" sort's evidence: that sort reordered
     /// rows with nothing on screen explaining why, which reads as arbitrary.
+    ///
+    /// The short form is dropped when the ROW'S OWN NAME already is it
+    /// (2026-08-13). `WalletStore.add`/`addBulk`/`addToGroup` file a bare
+    /// address under `shortAddress` so every watched wallet is findable in its
+    /// own book — a display fallback, not a name — and this line then repeated
+    /// it directly underneath, so an unnamed wallet read "…44b1 / …44b1 · 12
+    /// together". Asked through `isAutoName` rather than `name == short`,
+    /// which is that function's whole reason for existing: the tail-only
+    /// ruling (2026-08-12) means books already on disk hold the legacy
+    /// `0x9a2E…44b1` spelling, and an equality test would call those a name
+    /// the person chose and keep printing both.
+    ///
+    /// When dropping it leaves NOTHING — an unnamed address with no history,
+    /// no resolved kind and no provenance — the short form comes back rather
+    /// than the line going empty. That case really has nothing else to say,
+    /// and it is the one shape this fix does not improve: it is the behaviour
+    /// that shipped, not a regression, and it resolves itself the moment the
+    /// address gains a transaction or `AddressKind` answers. Absent would be
+    /// better (`AddressCard.summaryLine`'s "stays absent rather than printing
+    /// an empty line") and needs the caller to handle a nil, which is a change
+    /// in a file another pass is currently rewriting — worth doing, not worth
+    /// entangling this with.
     func subline(activity: Int?) -> String {
-        var parts = [short]
+        var parts: [String] = []
+        if !WalletStore.isAutoName(name, for: address) { parts.append(short) }
         if let activity, activity > 0 {
             parts.append(String(localized: "\(activity) together"))
         }
@@ -33,7 +56,7 @@ extension AddressBook.Entry {
         if let label = kind.label { parts.append(label) }
         else if let script = BitcoinAddress.scriptKind(address) { parts.append(script) }
         if let provenance { parts.append(provenance) }
-        return parts.joined(separator: " · ")
+        return parts.isEmpty ? short : parts.joined(separator: " · ")
     }
 }
 
@@ -437,6 +460,10 @@ struct AddressCard: View {
     /// Bumped when a rename actually rewrote landed titles — the history rows
     /// stagger their cross-fade off it. See `rename(to:)`.
     @State private var renameCascade = 0
+    /// What this address can move right now (prd §372). nil until the read
+    /// answers — the section simply isn't there yet, rather than claiming a
+    /// zero it hasn't earned.
+    @State private var exposure: WalletApprovalExposure?
 
     init(entry: AddressBook.Entry) { self.entry = entry }
 
@@ -474,6 +501,7 @@ struct AddressCard: View {
                     bitcoinVintageLine
 
                     lookalikeWarning
+                    exposureSection
                     groupRow
                     addressRow
                     historySection
@@ -535,6 +563,10 @@ struct AddressCard: View {
                 Text("Files \(current.name) under a new group.")
             }
             .task { await AddressKind.detect(entry.address) }
+            .task {
+                exposure = await WalletApprovalExposure.forSpender(entry.address,
+                                                                   context: modelContext)
+            }
         }
         .presentationBackground(DS.surfaceSheet)
         .dsColorScheme()
@@ -654,6 +686,81 @@ struct AddressCard: View {
             }
             .padding(DS.Space.s3)
             .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
+        }
+    }
+
+    /// WHAT THIS ADDRESS CAN MOVE RIGHT NOW (2026-08-13, prd §372) — the live
+    /// allowances it holds over your tokens, read the moment the card opens.
+    ///
+    /// Placed directly under the lookalike warning and above everything else,
+    /// on the card's own consequence ordering: a lookalike is a danger, this
+    /// is a standing permission, and both outrank what you did together. The
+    /// history section beneath it has always listed these same approval rows
+    /// (an approval is a `Wallet` thing whose counterparty is the spender, so
+    /// `AddressActivity` files it here) dressed identically to every transfer,
+    /// which is exactly why the fact needed lifting out rather than adding.
+    ///
+    /// Four states, and three of them are absences that must not be confused:
+    /// the read hasn't answered (`nil` — no section), it answered and there
+    /// are no live grants (no section: an address that can move nothing is the
+    /// overwhelmingly common case and a green "nothing to worry about" panel
+    /// on every contact is chrome), it answered with grants nobody could price
+    /// (rows and the footnote, no headline — `unpricedNote` already carries
+    /// this), and it answered with a real figure.
+    ///
+    /// §292 owns every number here and none is recomputed: `stateLine`,
+    /// `money`, `unpricedNote` and the priced-first row order all come from
+    /// the shared type, so this card and the approvals card can never state
+    /// the same grant two ways.
+    ///
+    /// The headline is deliberately NOT `WalletApprovalExposure.headline`,
+    /// which counts spenders ("3 spenders can move $8,924") — there is exactly
+    /// one spender here and it is the hero at the top of the screen, so
+    /// counting it would print "1 spender" under its own name.
+    @ViewBuilder
+    private var exposureSection: some View {
+        if let exposure, !exposure.isEmpty {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                Text("What they can move")
+                    .dsText(.label12).foregroundStyle(DS.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                // Only when something could actually be priced. A total of $0
+                // printed over unpriceable grants is the "never 0 standing in
+                // for unknown" rule the arithmetic already keeps.
+                if !exposure.priced.isEmpty {
+                    Text(WalletApprovalExposure.money(exposure.total))
+                        .dsText(.heading22).foregroundStyle(DS.textPrimary)
+                        .monospacedDigit()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text("of your tokens, right now")
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                ForEach(exposure.all) { grant in
+                    HStack(spacing: DS.Space.s3) {
+                        Text(grant.stateLine)
+                            .dsText(.subhead13).foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                        Spacer(minLength: DS.Space.s2)
+                        // An unpriceable grant says so rather than showing a
+                        // blank, which reads as nothing at stake.
+                        Text(grant.usd.map(WalletApprovalExposure.money)
+                             ?? String(localized: "not priced"))
+                            .dsText(.subhead13)
+                            .foregroundStyle(grant.usd == nil ? DS.textTertiary : DS.textSecondary)
+                            .monospacedDigit()
+                    }
+                }
+                if let note = exposure.unpricedNote {
+                    Text(note)
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .padding(DS.Space.s3)
+            .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
+            .settleIn(delay: 0.05)
         }
     }
 

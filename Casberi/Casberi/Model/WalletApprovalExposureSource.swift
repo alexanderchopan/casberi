@@ -58,6 +58,7 @@ extension WalletApprovalExposure {
             func grant(usd: Double?, capTokens: Double?) -> Grant {
                 Grant(thingID: thing.id,
                       spender: name ?? WalletStore.shortAddress(spenderHex),
+                      spenderAddress: spenderHex,
                       named: name != nil,
                       symbol: symbol,
                       forAll: check.forAll,
@@ -92,5 +93,66 @@ extension WalletApprovalExposure {
         // a grant nobody can put a figure on.
         unpriced.sort { ($0.grantedAt ?? .distantFuture) < ($1.grantedAt ?? .distantFuture) }
         return WalletApprovalExposure(priced: priced, unpriced: unpriced)
+    }
+
+    /// What ONE address can move right now — the same reading, scoped to a
+    /// single spender, for that address's own card (2026-08-13, prd §372).
+    ///
+    /// ## Why the book needed this at all
+    ///
+    /// The card has always said what you and an address have DONE together
+    /// ("40 · since Mar 3 · net −0.80 ETH") and never what that address can
+    /// still DO. §292 computed exactly that and landed it on the approvals
+    /// card alone, so the one screen where a person decides whether an address
+    /// is trustworthy was the one screen that didn't show the only fact with a
+    /// consequence. The approval rows were already on the card — an approval
+    /// is a `Wallet` thing whose `counterpartyAddress` is the spender, so
+    /// `AddressActivity` has always filed them here — wearing the same clothes
+    /// as every transfer beside them.
+    ///
+    /// ## The scoping is on the SPENDER, which is the opposite end from
+    /// `WalletApprovals.activeApprovals`
+    ///
+    /// That function filters on `walletAddress` — YOUR wallet, the grantor.
+    /// This one filters on `counterpartyAddress` — the grantee. Same rows,
+    /// opposite end, and confusing the two would show an address the approvals
+    /// it was GIVEN by you as though you had given them to it.
+    ///
+    /// Matched through `AddressBook.key` rather than `lowercased()`, so this
+    /// agrees with the book about what one address IS — `CounterpartyRetitle`'s
+    /// own rule, and the reason a `.eth` name that has been re-keyed still
+    /// finds its grants.
+    ///
+    /// ## Cost
+    ///
+    /// One `WalletPrepare.check` per approval THIS address holds, which is a
+    /// handful, against the room's whole-book pass. Nothing is cached and
+    /// nothing is persisted: an allowance is live state (§216), and a stale
+    /// "can move $8,924" is the fake status §83 bans in the one place it would
+    /// be believed instantly.
+    @MainActor
+    static func forSpender(_ address: String, context: ModelContext)
+        async -> WalletApprovalExposure {
+        let wanted = AddressBook.key(for: address)
+        let all = (try? context.fetch(FetchDescriptor<Thing>(
+            predicate: #Predicate<Thing> { $0.source == "Wallet" }
+        ))) ?? []
+        let candidates = all.live.filter { thing in
+            guard WalletPrepare.applies(to: thing),
+                  let spender = thing.counterpartyAddress, !spender.isEmpty
+            else { return false }
+            return AddressBook.key(for: spender) == wanted
+        }
+        guard !candidates.isEmpty else { return WalletApprovalExposure() }
+        var checked: [(thing: Thing, check: WalletPrepare.Check)] = []
+        for thing in candidates {
+            // Corollary 6: `check` awaits, so a Thing deleted out from under
+            // this loop must not be read on the next turn.
+            guard thing.isLive else { continue }
+            if let check = await WalletPrepare.check(for: thing), check.active {
+                checked.append((thing, check))
+            }
+        }
+        return await from(checked: checked)
     }
 }
