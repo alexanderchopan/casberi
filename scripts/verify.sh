@@ -551,6 +551,53 @@ xcodebuild -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \
   -derivedDataPath "$DD" build -quiet || fail "build failed"
 print -P "%F{green}✓ build%f"
 
+# ── 1b. Mac parity (Catalyst COMPILE only) ──────────────────────────
+# The one platform gap this pass had: everything above builds and runs for
+# iOS alone, so a mobile change that breaks Mac Catalyst sailed through green
+# and was caught only by `verify-mac.sh` — a nightly LaunchAgent that drives a
+# real GUI app, so a closed lid means the night is SKIPPED, not queued — or by
+# a failing archive at ship time. Twenty-two files carry a
+# `#if targetEnvironment(macCatalyst)` branch that no iOS build ever compiles,
+# and the ReownAppKit `platformFilter = ios` in the pbxproj (measured
+# 2026-08-01: without it Catalyst fails on `'NSColor' is not a member type of
+# class 'ReownAppKit.AppKit'`) is one careless project edit from gone, with
+# nothing else asserting it.
+#
+# COMPILE ONLY, and that ceiling is the point — this proves the Mac still
+# BUILDS, never that it still WORKS. Running it is `verify-mac.sh`'s job and
+# none of its plumbing transfers (see its header: `open -n` not `simctl`,
+# `open --stderr` not `log stream`, the app screenshotting itself). This is the
+# cheap half that belongs on every pass; that is the expensive half that
+# belongs on a nightly.
+#
+# Its OWN derivedData, never `$DD`: a shared dir would make the iOS build and
+# this one evict each other's module cache, so each pass would pay a cold
+# build. Warm and separate, this is incremental (measured 2026-08-12: 101s
+# from an EMPTY dir, all SPM dependencies included — that is the worst case,
+# not the per-run cost). `SKIP_CATALYST=1` skips it, the LAUNCH_CYCLES=0
+# escape hatch for a run that is only chasing an iOS-side answer.
+if [[ -z "${SKIP_CATALYST:-}" ]]; then
+  CATDD="$HOME/Library/Developer/CasberiCatalystDD"
+  step "Mac parity (Catalyst compile, derivedData: $CATDD)"
+  CATLOG="$(mktemp -t casberi-catalyst)"
+  # NOT `xcodebuild … | grep error:` the way verify-mac.sh spells it. That
+  # script runs under `set -uo pipefail` and this one under `set -euo
+  # pipefail`, so here a SUCCESSFUL build is what kills the run: grep finds no
+  # `error:`, exits 1, and pipefail hands that to `set -e`. Gate on
+  # xcodebuild's own exit, then print the errors out of the log — which also
+  # keeps the verify-mac.sh 2026-08-01 lesson (an incremental dir keeps
+  # yesterday's bundle, so an exit code is the only honest gate; a bundle
+  # existing proves nothing).
+  if ! xcodebuild -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \
+       -destination 'platform=macOS,variant=Mac Catalyst' \
+       -derivedDataPath "$CATDD" build -quiet >"$CATLOG" 2>&1; then
+    grep -E "error:" "$CATLOG" | head -20 || true
+    fail "Mac Catalyst build failed (errors above, full log: $CATLOG) — the Mac has drifted; iOS is green"
+  fi
+  rm -f "$CATLOG"
+  print -P "%F{green}✓ mac parity (catalyst compiles)%f"
+fi
+
 [[ "${1:-}" == "--build-only" ]] && exit 0
 
 # ── 2. Boot sim + install ──────────────────────────────────────────
