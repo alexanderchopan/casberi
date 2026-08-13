@@ -1501,6 +1501,43 @@ struct WalletWorthALookTray: View {
     /// feed card (`WalletWarningsLine`) without hiding it here — the tray
     /// still shows you what you muted, it just stops shouting about it
     /// elsewhere.
+    /// The one line that says WHY this pile is nothing to do — derived from
+    /// what is actually in it, never a fixed sentence (2026-08-13).
+    ///
+    /// It WAS fixed, and it was wrong for the commonest case: "Fake tokens
+    /// sent to you" describes a junk AIRDROP, which `WalletIngest`'s
+    /// received-side filter drops at ingest and which therefore can never
+    /// appear in this list. What is in it, most of the time, is the opposite
+    /// direction — `"spam"` is `WalletSafety.isFakeOutboundTransfer`, a spam
+    /// contract's own `Transfer(you → attacker)` fiction, so every row beneath
+    /// read "Sent 4,242 USDC" while the line above them said they were sent TO
+    /// you. Reported as a direction bug in the titles; the titles were right
+    /// (they say what the chain claims, which is the thing the flag exists to
+    /// contradict) and this line was the one lying.
+    ///
+    /// The pile is MIXED, so no single direction is safe to assert: a
+    /// poisoning transfer really was received, a spoofed symbol goes either
+    /// way, and an outbound fiction never happened at all. Each case says its
+    /// own true thing, and the mixed case says the only thing true of all
+    /// three — none of them are what they look like. The spam-only wording
+    /// mirrors `WalletWarnings`' "transfers you didn't make" verbatim so the
+    /// feed badge and this tray can never describe the same pile differently.
+    private var awareSubtitle: String {
+        let spam = flagged.contains { $0.hasSecurityFlag("spam") }
+        let poisoning = flagged.contains { $0.hasSecurityFlag("poisoning") }
+        let symbol = flagged.contains { $0.hasSecurityFlag("symbol") }
+        switch (spam, poisoning, symbol) {
+        case (true, false, false):
+            return String(localized: "Transfers you didn't make — nothing to do")
+        case (false, true, false):
+            return String(localized: "Lookalike addresses — nothing to do")
+        case (false, false, true):
+            return String(localized: "Fake token symbols — nothing to do")
+        default:
+            return String(localized: "Not what they look like — nothing to do")
+        }
+    }
+
     private var awareSection: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             Text("Just so you know")
@@ -1524,7 +1561,7 @@ struct WalletWorthALookTray: View {
                             .dsText(.callout15).fontWeight(.medium).foregroundStyle(DS.textPrimary)
                         Text(muted
                              ? String(localized: "Muted — won't badge your feed")
-                             : String(localized: "Fake tokens sent to you — nothing to do"))
+                             : awareSubtitle)
                             .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                             .lineLimit(1)
                     }

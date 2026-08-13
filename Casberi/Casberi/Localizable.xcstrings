@@ -20623,34 +20623,6 @@
         }
       }
     },
-    "Fake tokens sent to you — nothing to do": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Tokens falsos enviados a ti — nada que hacer"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "偽のトークンが送られてきました — 対応不要"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "가짜 토큰이 전송됨 — 조치할 필요 없음"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "有人向你发送了虚假代币 — 无需处理"
-          }
-        }
-      }
-    },
     "Farcaster · 1h ago · replying to you": {
       "localizations": {
         "es": {
