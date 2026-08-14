@@ -10,6 +10,12 @@ DD="$HOME/Library/Developer/CasberiDD"          # NEVER build inside iCloud Driv
 DEVICE="iPhone 17 Pro"
 BUNDLE="com.casberi.app"
 OUT="$ROOT/scripts/output/$(date +%Y%m%d-%H%M%S)"
+# Created HERE, not at the screenshot sweep that used to be its first writer
+# (2026-08-13). Any earlier step that wants to keep a log — the category-fold
+# self-test does — otherwise redirects into a directory that does not exist
+# yet, and under `set -e` the failed redirect fails the step it was meant to
+# make diagnosable.
+mkdir -p "$OUT"
 
 step() { print -P "%F{cyan}▶ $1%f"; }
 fail() { print -P "%F{red}✗ $1%f"; exit 1; }
