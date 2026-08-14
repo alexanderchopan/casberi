@@ -22735,6 +22735,33 @@ feed) is the obvious alternative and needs a screenshot to rule on, not an
 argument. §218's treatment still applies below the fold threshold, which is now
 its whole domain: days with one or two shots.
 
+**RULED 2026-08-14, by exactly the screenshot this paragraph asked for** (user,
+off the first real build: "i really think they should be bigger? i mean you
+can't really see the image … what would it look like if the icons and images
+are the same size as the social icons? wouldn't that make things more
+choesive?"): **every strip tile draws at `Mark.list` (36), faces and pictures
+alike.** The answer was already on the ramp — `Mark.list`'s own doc reads "a
+taller band row … and the size a row's thumbnail already uses, so a mark and a
+picture in the same slot are the same square", which is the user's cohesion
+argument stated as a token — so no new size was invented. ONE size for every
+tile, deliberately without the `rowCircle` optical bump: that compensation
+exists for a circle standing in a MIXED column beside squircles (its own doc's
+rule), and a strip's tiles are a line of their own kind. `stripCap` stays 4
+(4 × 36 + gaps = 156pt of a 393pt row). The 44–58 alternative was declined:
+44 is `Mark.tile`, the rung where a mark IS the item's identity in a catalog
+cell, and a feed row that borrows it stops reading as a row.
+
+**The same screenshot surfaced a §254 seat bug, fixed with it:** the deck's
+peek cards were billed to the LAYOUT (`Mark.row + 8` frame), so every
+pictureless bundle's title started 8pt right of the column every other row
+keeps — reported as "the Wallet entry has an extra space indented and is not
+even with the rest". The seat is now `Mark.row` and the cards OVERHANG into the
+leading gap (a ZStack doesn't clip), so the text column holds everywhere. The
+fan's variable-width seat had the same defect and needed no fix: under this
+entry's own dedupe a bundle's art can hold at most ONE distinct image (two or
+more distinct pictures make the run a strip), so its `+ (count−1)×10` term is
+structurally zero now.
+
 **Generalized the same session, before this entry ever merged** (user: "you
 could do the same thing with music and anything else that has photos too like
 documents") — so the strip's eligibility is no longer two hand-picked families
