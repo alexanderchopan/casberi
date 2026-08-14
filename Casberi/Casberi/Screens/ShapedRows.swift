@@ -96,6 +96,18 @@ struct BandRow: View {
                 || publisherMarkSources.contains(thing.source) else { return false }
         guard let avatar = thing.authorAvatarURL, !avatar.isEmpty else { return false }
         guard let art = thing.previewImageURL, !art.isEmpty else { return false }
+        // A LIVE-STREAM FRAME IS PERISHABLE, and giving Twitch a face
+        // (2026-08-14) is what made that this function's problem: until then
+        // the frame could only ever reach the LEADING slot, where the chain
+        // below refuses it once the stream is over ("never a stale frame
+        // masquerading as a live one"). With a face leading, the frame moves
+        // here — to a slot that had never needed the rule, since a publisher's
+        // article art and a post's photo don't expire. Same source of truth as
+        // `FeedScreen.isLive`: the bridge's own live set, never the row's age.
+        // An ended stream keeps its face and simply shows no picture.
+        if thing.source == "Twitch" {
+            return thing.sourceRef.map { TwitchIngest.liveRefs.contains($0) } ?? false
+        }
         return true
     }
 
@@ -252,7 +264,19 @@ struct BandRow: View {
     /// no avatar and keep the glyph — correctly, since we have no picture of
     /// them and inventing one would be the §83 fake-status rule in the one
     /// place it is easiest to get away with.
-    static let publisherMarkSources: Set<String> = ["RSS", "Hugging Face"]
+    ///
+    /// THE FOUR FEED-FOLLOW ROOMS JOINED 2026-08-14 alongside a bridge change
+    /// (`FeedFollowBridges` now keeps `parsed.iconURL`): a Substack's logo, a
+    /// show's cover art, a subreddit's icon. They are RSS wearing four
+    /// different names — the same parser, the same `<image>`/`<icon>` element
+    /// — and their absence here was the whole reason a reading room drew
+    /// publishers while a Substack room drew four identical orange glyphs.
+    /// YouTube is IN the set but its feed advertises no icon, so its rows keep
+    /// the video thumbnail they already lead with; see `FeedFollowBridges` for
+    /// why the favicon fallback is refused there.
+    static let publisherMarkSources: Set<String> = [
+        "RSS", "Hugging Face", "Substack", "Reddit", "YouTube", "Podcasts",
+    ]
 
     private var identityAvatarURL: String? {
         guard let avatar = thing.authorAvatarURL, !avatar.isEmpty else { return nil }
@@ -606,7 +630,8 @@ struct BandRow: View {
                     RemoteArt(urlString: art,
                               width: MediaShape.rowArtWidth(.still),
                               height: MediaShape.rowArtHeight,
-                              fallback: thing.source)
+                              fallback: thing.source,
+                              perishable: thing.source == "Twitch")
                         // A video's poster says so here too (2026-08-06): this
                         // is the day's one picture promoted TO reading size, so
                         // it is the row in All most likely to be looked at and
@@ -625,7 +650,12 @@ struct BandRow: View {
                     // promised at this size either: a 26pt thumb invites no tap
                     // of its own (the row's tap owns the whole band), so the
                     // affordance this mark exists to correct isn't offered here.
-                    RemoteThumb(urlString: art, size: DS.Mark.row, fallback: thing.source)
+                    // Perishable for Twitch, where this slot holds a live
+                    // frame rather than a fixed picture: the bytes change
+                    // behind the URL, so caching them would pin one moment of
+                    // the stream for the life of the row.
+                    RemoteThumb(urlString: art, size: DS.Mark.row, fallback: thing.source,
+                                perishable: thing.source == "Twitch")
                 }
             }
             VStack(alignment: .trailing, spacing: 1) {

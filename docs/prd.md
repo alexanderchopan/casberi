@@ -23068,3 +23068,106 @@ strings match the shipped source exactly once (the stale-mutation class
 tree. Treat the harness as unproven until a Mac runs it; a mutation that fails
 to compile or survives is expected fallout of writing it blind, and finding one
 does not mean the fold logic is wrong.
+
+## §380 — Every room that knows who, shows who (user: "in the github room, and elsewhere, shouldn't it show the user's avatar?", then "please fix all", 2026-08-14)
+
+The question was about GitHub and the answer was that the RENDER side had been
+right since §377's face work: `ShapedRows.faceSources` has carried "GitHub"
+since 2026-08-12, so the leading slot has been ready to draw a face on every
+row in that room. Five of its six feeds landed no account at all, and one
+filed the avatar in the wrong field. Auditing the rest of the catalog for the
+same shape found seven more rooms.
+
+**The class, stated once:** a bridge that stamps `authorAvatarURL` and a
+registry that lists its source are two halves, and either half alone renders
+as the app glyph. 2026-08-12 fixed three rooms by adding the registry half.
+This fixes eight by adding the other one — plus the two-way audit, which is
+the part worth keeping: for every source, does the bridge stamp a face, and
+does a registry name it.
+
+### 1. GitHub, feed by feed
+
+`involved` (issues/PRs) stamped the author and was the only one. Now
+`stampWho` — one line, since GitHub's account objects are all `login` +
+`avatar_url` — serves all six, each off a payload the feed already had in
+hand, so **no feed costs an extra request**:
+
+- **contributions** — the event's `actor`, which is YOU. The literal reading
+  of the question: your own commits and PRs showed the GitHub glyph.
+- **releases** — the release's `author`. Often a bot (`rustbot`,
+  `github-actions`), which is the honest answer rather than a reason to
+  withhold: it is who published, which is what the slot says.
+- **gists** — the `owner`, again you.
+- **stars** and **following** — the repo owner, which was ALREADY FETCHED and
+  filed as `previewImageURL`, i.e. drawn as the row's picture instead of its
+  identity. Moved, never duplicated: the same URL in both fields draws the
+  same image twice on one row (`artRidesBesideIdentity`), and since those rows
+  have been landing that way since the feeds shipped, `ArtlessBackfill`
+  clears the old field as it stamps the new one.
+- **notifications** — the REPOSITORY's owner, and the one place here where the
+  face is not the person who acted. GitHub's notifications payload names no
+  actor anywhere, so "who mentioned you" is a second request per row on the
+  busiest feed. The owner is in hand and answers a real question. Honest
+  because the title leads with the reason ("Mentioned you · org/repo · …"):
+  the row never claims this account did anything.
+
+### 2. The backfill is the half that makes it visible
+
+Dedupe never revisits a known ref, so a bridge that starts stamping a face
+today reaches only rows landed from today on. For a stars list — the same
+thirty repos for months — that is nearly nothing. `ArtlessBackfill` patches
+the face on the same terms it has patched art since 2026-07-10, with its own
+lazy fetch, so a room fills on the next refresh instead of on the next star.
+
+### 3. Elsewhere, and what each one's answer had to be
+
+- **Twitch** — the streams payload names a channel and carries no picture of
+  it, so the face is one batched `helix/users` read for the whole pass (up to
+  100 ids), never one per channel. **This moved the live frame into a slot
+  that had never needed the perishable rule.** The leading slot has refused a
+  dead frame since 2026-07-21; with a face leading, the frame rides beside the
+  title, where nothing had ever expired — so `artRidesBesideIdentity` now asks
+  the bridge's own live set, and an ended stream keeps its face and shows no
+  picture.
+- **Hugging Face** — a PUBLISHER's mark, not a face: the name on a model row
+  is the lab that published it, and a company's logo in a circle says a person
+  posted it. One small GET per owner (`/api/organizations/<name>/overview`,
+  then `/api/users/…` — a watched name can be either), cached forever per
+  owner, and **only a success is cached** (the `tokenFacts` lesson: caching a
+  miss pins "no mark" for the life of the install). A Daily Paper carries a
+  human author's NAME with no hub account behind it, so those rows keep the
+  glyph — we have no picture of them, and inventing one is §83 in the place
+  it is easiest to get away with.
+- **Substack, Reddit, Podcasts** — RSS wearing three other names: the same
+  parser, the same `<image>`/`<icon>`, and the field simply thrown away. A
+  publication's logo, a show's cover art, a subreddit's icon.
+- **YouTube** — in the registry, but its feed advertises no icon and names no
+  channel avatar anywhere. **RSSIngest's favicon fallback is deliberately
+  refused here**: it resolves to `youtube.com/favicon.ico`, the same logo for
+  every channel — the source glyph with extra steps — and it would take the
+  leading slot from the video's own thumbnail, which is strictly more
+  informative.
+- **Slack** — an INITIAL circle, the mail treatment, and this one is a consent
+  limit rather than a missing field. The bridge holds exactly one user scope,
+  `search:read`, which its setup screen names out loud; a profile picture is
+  `users:read` — a second scope, asked of everyone already connected, to
+  decorate a row. Not worth it. If that scope is ever widened for its own
+  reasons, move "Slack" to `faceSources`.
+- **Shopify, Deals** — deliberately unchanged. Those rows already lead with
+  the PRODUCT's picture, and a store logo would displace the one image that is
+  actually about the thing being sold.
+- **Vercel, Sentry, PagerDuty** — nothing to fix: their `authorHandle` holds a
+  project or a service, not a person, so there is no avatar that exists.
+
+### 4. Demo parity
+
+Twitch's two channels got faces and Hugging Face's owners got marks
+(`make-demo-avatars.swift` / `make-demo-art.swift`), and the hub rows were
+re-titled to the shape that bridge actually lands ("`<owner>/<id>` · Model",
+not "New model · …") with the owner on `authorHandle` — the same correction
+the GitHub rows got on 2026-08-12, in the room next door.
+
+**Built and BUILDS CLEAN (iOS + Catalyst compile, static audits green). Not
+seen on screen, and none of the four bridges here has been exercised against a
+live account from this host** — every read is a GET that returns nil on
+failure, and every unstamped field leaves the row exactly as it renders today.

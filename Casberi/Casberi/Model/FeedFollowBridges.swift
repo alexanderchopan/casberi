@@ -688,6 +688,22 @@ enum FeedFollowIngest {
             // are far broader than any one post, so the other three take the
             // item's own or nothing.
             let showTags = kind == .podcasts ? parsed.categories : []
+            // The feed's OWN mark — a publication's logo, a show's cover art,
+            // a subreddit's icon (2026-08-14). RSS has led its rows with this
+            // since the field existed and these four never stamped it, so four
+            // rooms of somebody-else's-publication rows drew the app glyph
+            // where the reading room draws the publisher.
+            //
+            // ONLY when the feed advertises one — deliberately NOT RSSIngest's
+            // host-favicon fallback, which is right there and wrong here.
+            // YouTube's `videos.xml` advertises no icon and names no channel
+            // avatar anywhere, so the fallback resolves to
+            // `youtube.com/favicon.ico`: the same YouTube logo for every
+            // channel, i.e. the source glyph with extra steps — and it would
+            // take the leading slot from the video's own thumbnail, which is
+            // strictly more informative. A feed with no icon keeps exactly
+            // what it has today.
+            let feedIcon = IngestSupport.imageURL(parsed.iconURL)
             // Newest 15 per feed — the feed is a firehose; the corpus isn't.
             for item in parsed.items.prefix(15) {
                 let stableKey = item.guid.isEmpty ? item.link : item.guid
@@ -710,7 +726,8 @@ enum FeedFollowIngest {
                 }
 
                 if existing.contains(ref) {
-                    backfill.patch(ref, image: item.imageURL)
+                    backfill.patch(ref, image: item.imageURL,
+                                   face: feedIcon, handle: feedName)
                     patchHandle(ref, feedName)
                     if kind == .youtube, let thing = storedThing(ref) {
                         let decoded = IngestSupport.decodeHTMLEntities(item.title)
@@ -773,6 +790,7 @@ enum FeedFollowIngest {
                 // 2026-08-06 added, so a video landed summary-less until then.
                 if !item.summary.isEmpty { thing.summary = item.summary }
                 if !feedName.isEmpty { thing.authorHandle = feedName }
+                thing.authorAvatarURL = feedIcon
                 // Who actually wrote it (`itemAuthor`) — distinct from
                 // `authorHandle`, which is the feed's own identity.
                 if let author = itemAuthor(item.author, feedName: feedName) {

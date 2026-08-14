@@ -871,13 +871,17 @@ enum GitHubFeedFetch {
     }
 
     /// One GitHub thing — source "GitHub", tagged by feed, one-line title.
+    ///
+    /// It took an `image:` until 2026-08-14 and nothing passes one now: the
+    /// only two callers that ever did were `stars` and `following`, handing it
+    /// the repo OWNER's avatar — which is an identity, not the row's own
+    /// picture, and moved to `stampWho`. Nothing else about a GitHub row is a
+    /// picture, so the parameter went with them rather than sitting here as a
+    /// door back to filing a face as art.
     private static func thing(_ kind: ThingKind, title: String, content: String,
-                              ref: String, feed: GitHubFeed, at: Date?,
-                              image: String? = nil) -> Thing {
-        let t = Thing(kind: kind, title: IngestSupport.titleLine(title), content: content,
-                      source: "GitHub", capturedAt: at ?? .now,
-                      tags: [feed.tag], sourceRef: ref)
-        t.previewImageURL = image
-        return t
+                              ref: String, feed: GitHubFeed, at: Date?) -> Thing {
+        Thing(kind: kind, title: IngestSupport.titleLine(title), content: content,
+              source: "GitHub", capturedAt: at ?? .now,
+              tags: [feed.tag], sourceRef: ref)
     }
 }
