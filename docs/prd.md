@@ -22970,6 +22970,24 @@ reading like a check. It is two guards now. (The same pass also caught the
 validator itself reporting "all guards match" over ZERO parsed guards, which is
 the identical bug one level up.)
 
+**Scope ruling (user, 2026-08-14: "or only leave All that way"):** the fold
+family — strips, bundles, provenance weight, the coarse-tail subjects — is the
+ALL room's grammar and stays there. This is §35's own logic carried forward:
+every fold in All is a door whose destination is the unfolded source room, so a
+room that folded too would be a door opening onto another door; and the weight
+axis tiers a MIXED stream, so in a single-provenance room it would not tier but
+dim the whole room uniformly, a bug wearing a rule. Two narrow transfers were
+considered and PARKED, not taken: read-cooling below a source room's own
+"New since" boundary (consistent in principle, but the shaped rooms are
+designed layouts — a half-dimmed photo grid may read as broken, not read — so
+it waits until the 0.68 step has survived a real device), and §379 subjects on
+the rooms' own coarse tails (most rooms already carry a head that answers
+"what is this room about" better than a month subline; in All the subject earns
+its place precisely because All has no single head). Revisit either only off a
+device pass, not from an argument. The one piece that transfers structurally
+already did: the deck seat fix lives in `BundleRow`, which the Wallet room's
+own transfer fold draws through.
+
 **NOT built:** the remaining backlog is unchanged and still waiting on a ruling
 — session seams, the whisper at the divider, month cards as composed tiles,
 unfold-in-place, a date scrubber, adaptive density.
