@@ -42,8 +42,31 @@ enum ContactsIngest {
         defer { running = false }
 
         let store = CNContactStore()
+        // What the enumeration carries (widened 2026-08-14). Every key here is
+        // filled by the SAME walk — the six this started with were not a budget,
+        // they were simply the ones anyone had asked for, so an address book's
+        // addresses, birthdays and websites were being enumerated past.
+        //
+        // `imageDataAvailable` is a Bool and costs nothing; the PIXELS are
+        // deliberately not in this list. Including
+        // `CNContactThumbnailImageDataKey` would load a thumbnail for every
+        // contact in the book on every foreground — this file's own measured
+        // budget is 7.9ms per pass at 3,000 contacts, and image bytes are a
+        // different cost class entirely. The photo rides a bounded second pass
+        // (`healPhotos`) instead, the shape `ScreenshotIngest.heal` already
+        // uses: a little each foreground, self-terminating once the book is
+        // covered.
+        //
+        // `CNContactNoteKey` is absent and will stay absent: since iOS 13 it
+        // needs `com.apple.developer.contacts.notes`, an entitlement Apple
+        // grants by request, and asking for one to read people's private notes
+        // is not a trade this app should make.
         let keys = [CNContactGivenNameKey, CNContactFamilyNameKey, CNContactOrganizationNameKey,
-                    CNContactJobTitleKey, CNContactPhoneNumbersKey, CNContactEmailAddressesKey] as [CNKeyDescriptor]
+                    CNContactJobTitleKey, CNContactPhoneNumbersKey, CNContactEmailAddressesKey,
+                    CNContactPostalAddressesKey, CNContactBirthdayKey, CNContactUrlAddressesKey,
+                    CNContactNicknameKey, CNContactSocialProfilesKey,
+                    CNContactInstantMessageAddressesKey,
+                    CNContactImageDataAvailableKey] as [CNKeyDescriptor]
         let request = CNContactFetchRequest(keysToFetch: keys)
 
         var fetched: [CNContact] = []
@@ -89,6 +112,7 @@ enum ContactsIngest {
                 sourceRef: ref
             )
             thing.facts = facts(for: contact).map(\.encoded)
+            thing.enrichedText = retrievalText(for: contact)
             context.insert(thing)
             landed.append(thing)
         }
@@ -103,8 +127,72 @@ enum ContactsIngest {
         if !landed.isEmpty { SpotlightIndex.index(landed) }
         if !removedIDs.isEmpty { SpotlightIndex.remove(ids: removedIDs) }
         if !landed.isEmpty || !removedIDs.isEmpty { context.saveHonestly() }
+        // The photos, a few at a time, AFTER the rows exist. Its own save, so a
+        // pass that lands nothing new still makes progress on the faces.
+        healPhotos(store: store, contacts: fetched, context: context)
         return landed.count
     }
+
+    /// A contact's own photo, fetched a little at a time (2026-08-14).
+    ///
+    /// Contacts is the one Life bridge whose rows are PEOPLE, and every one of
+    /// them drew a grey circle with initials in it while the real picture sat
+    /// in the address book. The photo is the single most recognizable thing
+    /// about a person and the cheapest possible way to make the sheet feel like
+    /// theirs.
+    ///
+    /// BOUNDED, and that is the whole design. `CNContactThumbnailImageDataKey`
+    /// is deliberately not in the main enumeration's key list — asking for it
+    /// there loads a thumbnail for every contact in the book on every
+    /// foreground, and this file's measured budget is 7.9ms per pass at 3,000
+    /// contacts. So this asks for `photoBatch` contacts per pass, by
+    /// identifier, only for people who HAVE a photo and whose row lacks one. It
+    /// is self-terminating: once the book is covered it fetches nothing at all,
+    /// forever, and the `imageDataAvailable` Bool that decides it rides the
+    /// enumeration for free.
+    ///
+    /// THE THUMBNAIL, never `imageData`. The full image is a camera-resolution
+    /// photograph; the thumbnail is the small square Contacts itself draws.
+    /// This lands in `previewImageData`, which is `.externalStorage` and
+    /// therefore a CloudKit asset per contact — the difference between the two
+    /// is the difference between a few megabytes across a large book and a few
+    /// hundred.
+    @MainActor
+    private static func healPhotos(store: CNContactStore, contacts: [CNContact],
+                                   context: ModelContext) {
+        let things = IngestSupport.thingsByRef(context, source: "Contacts")
+        // `imageDataAvailable` is why this is nearly free on a settled book:
+        // most contacts have no photo, and none of them are ever asked about.
+        let wanted = contacts.lazy
+            .filter(\.imageDataAvailable)
+            .compactMap { contact -> (String, Thing)? in
+                guard let thing = things["contact:\(contact.identifier)"],
+                      thing.previewImageData == nil else { return nil }
+                return (contact.identifier, thing)
+            }
+            .prefix(photoBatch)
+        guard !wanted.isEmpty else { return }
+
+        var patched = 0
+        for (identifier, thing) in wanted {
+            // One contact at a time, by identifier — the only way to ask for
+            // image bytes without asking for the whole book's.
+            guard let full = try? store.unifiedContact(
+                withIdentifier: identifier,
+                keysToFetch: [CNContactThumbnailImageDataKey as CNKeyDescriptor]),
+                  let data = full.thumbnailImageData, !data.isEmpty
+            else { continue }
+            thing.previewImageData = data
+            patched += 1
+        }
+        if patched > 0 { context.saveHonestly() }
+    }
+
+    /// How many photos one foreground pass will fetch. Small on purpose: a
+    /// large book converges over a handful of opens rather than spending one
+    /// of them on image decoding, and each photo is a CloudKit asset to
+    /// export.
+    private static let photoBatch = 25
 
     /// Keep an already-landed contact current. Every write is guarded, because
     /// this runs for every contact in the book on every FOREGROUND
@@ -152,6 +240,61 @@ enum ContactsIngest {
         if thing.content != line { thing.content = line }
         let encoded = facts(for: contact).map(\.encoded)
         if thing.facts != encoded { thing.facts = encoded }
+        // The vector is dropped when the text really moved, for the reason
+        // `ScheduleIngest.setSummary` states: `EmbeddingIndex` composes what it
+        // embeds from the title and `enrichedText`, so a contact that gains a
+        // nickname today would stay unfindable by it forever otherwise.
+        let enriched = retrievalText(for: contact)
+        if thing.enrichedText != enriched {
+            thing.enrichedText = enriched
+            thing.embedding = nil
+        }
+        // A contact who REMOVED their photo loses it here. Cheap — this reads a
+        // Bool the enumeration already carries, never image bytes.
+        if !contact.imageDataAvailable, thing.previewImageData != nil {
+            thing.previewImageData = nil
+        }
+    }
+
+    /// What a contact is findable BY, beyond the name and the first way to
+    /// reach them (2026-08-14). Retrieval-only by the 2026-07-15 ruling —
+    /// nothing draws it — which is exactly right for these: they are search
+    /// terms, not things to look at.
+    ///
+    /// The nickname is the one that answers a question the corpus could not:
+    /// a book that stores "Robert Smith" cannot be searched for "Bob", and
+    /// "Bob" is what you would type. Social and IM handles are the join key
+    /// between an address book and the social rooms — the corpus holds
+    /// `@ana.bsky.social` in both places and, until now, could not tell that
+    /// they were the same person.
+    ///
+    /// The postal address is here rather than in `line(for:)` on purpose:
+    /// `line` is a display sentence that takes only the first way to reach
+    /// somebody, and a street address is a search term, not a way to reach
+    /// anyone. It is drawn as a fact instead.
+    @MainActor
+    private static func retrievalText(for c: CNContact) -> String? {
+        var parts: [String] = []
+        if !c.nickname.isEmpty { parts.append(c.nickname) }
+        for address in c.postalAddresses.prefix(2) {
+            let text = postalText(address.value)
+            if !text.isEmpty { parts.append(text) }
+        }
+        // `service` as well as the handle: "Ana on Telegram" is how somebody
+        // would ask, and the service name is half of that question.
+        for profile in c.socialProfiles.prefix(4) {
+            let handle = profile.value.username
+            guard !handle.isEmpty else { continue }
+            let service = profile.value.service
+            parts.append(service.isEmpty ? handle : "\(service): \(handle)")
+        }
+        for im in c.instantMessageAddresses.prefix(4) {
+            let handle = im.value.username
+            guard !handle.isEmpty else { continue }
+            let service = im.value.service
+            parts.append(service.isEmpty ? handle : "\(service): \(handle)")
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: "\n")
     }
 
     /// The ways to reach somebody, un-joined (2026-08-12, prd §365) — the parts
@@ -185,8 +328,103 @@ enum ContactsIngest {
             guard !address.isEmpty else { continue }
             out.append(ThingFact(label(entry.label, fallback: "Email"), address, .mail))
         }
+        // Below the ways to REACH somebody, the things that are true about
+        // them (2026-08-14). All three ride the same enumeration and were
+        // being walked past.
+        //
+        // The address is `.map` — the calendar's "Where" ruling, and the
+        // stronger case of the two: an event's location is often a room name
+        // Maps can't find, while a contact's address is an address.
+        for address in c.postalAddresses.prefix(2) {
+            let text = postalText(address.value)
+            guard !text.isEmpty else { continue }
+            out.append(ThingFact(label(address.label, fallback: "Address"), text, .map))
+        }
+        // A DATE and not a countdown: the birthday reaching "Coming up" would
+        // be a second row for something the Birthdays calendar already lands
+        // through `ScheduleIngest`, which is why this stays a fact and never
+        // touches `dueAt`.
+        if let birthday = birthdayText(c) {
+            out.append(ThingFact(String(localized: "Birthday"), birthday))
+        }
+        for entry in c.urlAddresses.prefix(2) {
+            let raw = (entry.value as String).trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !raw.isEmpty else { continue }
+            // `.web` refuses anything without an http(s) scheme, so a bare
+            // `ana.example` would render as a dead-looking row. Give it one —
+            // this is a URL field, so a scheme-less value means the person
+            // typed a host, not that they meant a different protocol.
+            let normalized = raw.contains("://") ? raw : "https://\(raw)"
+            out.append(ThingFact(label(entry.label, fallback: "Website"), normalized, .web))
+        }
         return out
     }
+
+    /// A postal address on ONE line — Apple's own formatter, in the reader's
+    /// locale, so a Japanese address is ordered the way Japan orders one.
+    ///
+    /// The formatter is held STATIC, and that is this file's own measured
+    /// lesson rather than a habit: `facts(for:)` runs for every contact on
+    /// every foreground, and allocating a formatter per contact is exactly the
+    /// per-call cost that made `localizedString(forLabel:)` 88% of the heal.
+    ///
+    /// Newlines collapse to commas because `ThingFact` draws two lines at most
+    /// and a four-line address would be silently cut mid-street.
+    @MainActor
+    private static func postalText(_ address: CNPostalAddress) -> String {
+        postalFormatter.string(from: address)
+            .split(separator: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+            .joined(separator: ", ")
+    }
+
+    @MainActor
+    private static let postalFormatter: CNPostalAddressFormatter = {
+        let f = CNPostalAddressFormatter()
+        f.style = .mailingAddress
+        return f
+    }()
+
+    /// A birthday in words, with or without a year.
+    ///
+    /// MOST BIRTHDAYS CARRY NO YEAR — people record the day and skip the
+    /// year — so the yearless form is the common path, not the edge case. It
+    /// gets its own formatter (`MMMMd`), because feeding a fabricated year to
+    /// a normal date style prints that fabrication: "14 March 2000" for a
+    /// person whose age nobody stored is the §83 fake fact, on a date somebody
+    /// might act on.
+    @MainActor
+    private static func birthdayText(_ c: CNContact) -> String? {
+        guard let parts = c.birthday, let month = parts.month, let day = parts.day,
+              (1...12).contains(month), (1...31).contains(day) else { return nil }
+        var comps = DateComponents()
+        comps.month = month
+        comps.day = day
+        // A placeholder year only so `Calendar` can make a Date at all; the
+        // yearless formatter never prints it. A leap day needs a leap year, or
+        // 29 February resolves to 1 March.
+        comps.year = parts.year ?? 2000
+        guard let date = Calendar.current.date(from: comps) else { return nil }
+        return (parts.year == nil ? dayMonthFormatter : fullDateFormatter).string(from: date)
+    }
+
+    @MainActor
+    private static let dayMonthFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = .current
+        f.setLocalizedDateFormatFromTemplate("MMMMd")
+        return f
+    }()
+
+    @MainActor
+    private static let fullDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = .current
+        f.dateStyle = .long
+        f.timeStyle = .none
+        return f
+    }()
 
     /// MEASURED, and the reason this cache exists (2026-08-12).
     ///

@@ -1652,8 +1652,43 @@ struct ThingSheetView: View {
            case .openURL = first.action {
             derived[0] = Verb(label: word, icon: first.icon, action: first.action)
         }
-        guard let episode = episodeVerb else { return derived }
-        return Array(([episode] + derived).prefix(4))
+        let extras = [joinVerb, episodeVerb].compactMap { $0 }
+        guard !extras.isEmpty else { return derived }
+        return Array((extras + derived).prefix(4))
+    }
+
+    /// The one tap a meeting is for (2026-08-14).
+    ///
+    /// `ScheduleIngest` has stored a meeting's URL on `externalLink` since
+    /// 2026-08-06 and said so in its own comment — "stored data waiting on a
+    /// verb" — so an event's only disc was "Open in Calendar", which opens the
+    /// calendar's ROOT, not even the event. The link you actually want at the
+    /// moment the row matters was in the corpus and reachable from nowhere.
+    ///
+    /// Scoped by CONTENT, not by source, and that is the opposite of
+    /// `episodeVerb`'s ruling directly below for a reason: that one had to be
+    /// source-scoped because `externalLink` means something different in every
+    /// bridge that writes it, and "there is a link" is no evidence of what it
+    /// is. Here the gate is `ConferenceLink.isConference` — a fixed allowlist
+    /// of conference hosts — which is a claim about the link itself, so it
+    /// holds for any event that has one: a Calendar meeting, a Cal.com booking,
+    /// an event captured from a page. It is re-asked here rather than trusted
+    /// from the store, so a link written by an older build under looser rules
+    /// can never inherit a "Join" disc.
+    ///
+    /// `canOpenURL` for the §275 reason every verb here carries: an unclaimed
+    /// scheme is refused ASYNCHRONOUSLY and neither `UIApplication.open`'s
+    /// completion nor SwiftUI's `openURL` reports it — https is always claimed,
+    /// so this passes in practice and costs one syscall to be sure.
+    private var joinVerb: Verb? {
+        guard thing.isLive, thing.kind == .event,
+              let raw = thing.externalLink?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !raw.isEmpty,
+              let url = URL(string: raw),
+              ConferenceLink.isConference(url),
+              UIApplication.shared.canOpenURL(url)
+        else { return nil }
+        return Verb(label: "Join", icon: "video", action: .openURL(url))
     }
 
     /// The one verb gate, both layouts: reads pass, writes confirm.

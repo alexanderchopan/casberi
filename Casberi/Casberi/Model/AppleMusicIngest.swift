@@ -234,12 +234,38 @@ enum AppleMusicIngest {
             // YouTube video mentioning an artist you've played here) — no UI
             // reads this for Apple Music, purely a backend field.
             if !artist.isEmpty { thing.authorHandle = artist }
+            thing.facts = songFacts(song).map(\.encoded)
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
         }
         if added > 0 || patched > 0 { context.saveHonestly() }
         return added
+    }
+
+    /// What a track carries besides its name and its artist (2026-08-14).
+    ///
+    /// Both ride the same `MusicRecentlyPlayedRequest` response already in
+    /// hand, so this costs no request. Small, and deliberately so: the album is
+    /// the thing that puts a song in context ("that was off Blue"), the length
+    /// is the one number a track has, and everything past those two — genre,
+    /// release date — is metadata about the catalogue rather than about the
+    /// listening, which is what this bridge records.
+    ///
+    /// PLAY COUNT is the fact worth wanting here and is not available: it lives
+    /// on `MPMediaItem`, the local library, not on MusicKit's `Song`. Naming it
+    /// so nobody goes looking twice.
+    private static func songFacts(_ song: Song) -> [ThingFact] {
+        var out: [ThingFact] = []
+        if let album = song.albumTitle?.trimmingCharacters(in: .whitespaces),
+           !album.isEmpty, album != song.title {
+            out.append(ThingFact("Album", album))
+        }
+        if let seconds = song.duration, seconds >= 1 {
+            let total = Int(seconds.rounded())
+            out.append(ThingFact("Length", String(format: "%d:%02d", total / 60, total % 60)))
+        }
+        return out
     }
 
     /// The Diagnostics probe (2026-07-11: music rows still wore the glyph

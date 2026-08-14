@@ -43,6 +43,12 @@ enum IMAPClient {
         /// (`NIL`), which is normal for a message that starts a thread.
         let messageID: String?
         let inReplyTo: String?
+        /// What came attached, by NAME (2026-08-14) — read out of the same
+        /// raw bytes the body pass already fetched, so it costs no request.
+        /// Empty for a message with no attachments AND for one whose body
+        /// fetch failed; the two are the same from here, which is why nothing
+        /// downstream may phrase an empty list as "no attachments".
+        var attachments: [String] = []
     }
 
     /// `fetch` is distinct from `select` on purpose (2026-08-02): the heal's
@@ -50,6 +56,14 @@ enum IMAPClient {
     /// "select" would point at the wrong command in the one place this is
     /// read — the log line that says why a delete-sync did nothing.
     enum IMAPError: Error { case connect, login, select, fetch, timeout }
+
+    /// RFC 2047 encoded-word decoding, for callers outside the envelope parser
+    /// (2026-08-14). `MailMIME.attachmentNames` needs exactly what a subject
+    /// needs — a filename from a non-English sender arrives encoded the same
+    /// way — and a second copy of an RFC 2047 decoder is one that drifts, then
+    /// gets the next fix late. A forwarder rather than opening `EnvelopeParser`
+    /// up, so the parser stays private and this is the one door.
+    static func decodeHeaderWord(_ s: String) -> String { EnvelopeParser.decodeWord(s) }
 
     /// The raw bytes fetched per message for the body pass — enough for
     /// nearly every real message's readable text (plain or the first HTML
@@ -79,9 +93,14 @@ enum IMAPClient {
         let rawBodies = (try? await conn.fetchBodies(
             uids: parsed.map(\.uid), maxBytes: bodyByteCap)) ?? [:]
         let withBodies = parsed.map { m in
-            Message(uid: m.uid, subject: m.subject, from: m.from, date: m.date,
-                    body: rawBodies[m.uid].flatMap(MailMIME.plainText),
-                    to: m.to, cc: m.cc, messageID: m.messageID, inReplyTo: m.inReplyTo)
+            let raw = rawBodies[m.uid]
+            return Message(uid: m.uid, subject: m.subject, from: m.from, date: m.date,
+                           body: raw.flatMap(MailMIME.plainText),
+                           to: m.to, cc: m.cc, messageID: m.messageID, inReplyTo: m.inReplyTo,
+                           // Same bytes the body was decoded from — no second
+                           // fetch, and no request at all when the body pass
+                           // above already failed.
+                           attachments: raw.map(MailMIME.attachmentNames) ?? [])
         }
         #if DEBUG
         NSLog("IMAP %@: %d fetched, %d parsed, %d bodies", host, lines.count, parsed.count,
@@ -516,7 +535,13 @@ private enum EnvelopeParser {
     /// Words decode to BYTES first and adjacent words merge before the charset
     /// decode — a multi-byte character (an emoji, a curly quote) may straddle
     /// the word boundary, and decoding each word alone shatters it.
-    private static func decodeWord(_ s: String) -> String {
+    ///
+    /// Internal rather than private since 2026-08-14: `MailMIME.attachmentNames`
+    /// needs exactly this — a filename is encoded the same way a subject is, and
+    /// a mail from anywhere but an English-speaking sender routinely carries one.
+    /// SHARED rather than copied, because two RFC 2047 decoders drift and the
+    /// second one is always the one that gets the fix late.
+    static func decodeWord(_ s: String) -> String {
         guard s.contains("=?") else { return s }
         // Whitespace between adjacent encoded-words is not content (RFC 2047 §6.2).
         let joined = s.replacingOccurrences(

@@ -326,9 +326,19 @@ enum ScheduleIngest {
     /// Idempotent — it runs on every foreground for every event, so it must
     /// never append the same tag twice or dirty a row that hasn't changed.
     private static func enrich(_ thing: Thing, with event: EKEvent) {
+        // The join link FIRST, because three later decisions read it: what
+        // `externalLink` holds, whether the location is a place or a duplicate
+        // of the link, and whether `event.url` still needs a row of its own.
+        let join = ConferenceLink.best(url: event.url?.absoluteString,
+                                       location: event.location,
+                                       notes: event.notes)
         setSummary(thing, trimmed(event.notes))
-        setEnriched(thing, attendeeNames(event))
-        let link = event.url?.absoluteString
+        setEnriched(thing, participantText(event))
+        // The join link WINS over `event.url` (2026-08-14). It is the one thing
+        // you want at the moment the row matters, and `event.url` is usually
+        // the invite's web page when it is anything at all. A non-conference
+        // `event.url` is not lost — `eventFacts` gives it its own row below.
+        let link = join ?? event.url?.absoluteString
         if thing.externalLink != link { thing.externalLink = link }
         addTag(calendarTitle(event), to: thing)
         // The end, and the location as a fact rather than half of a joined
@@ -337,7 +347,7 @@ enum ScheduleIngest {
         // the start time inside `eventLine`, where the only thing a reader
         // could do with it was print it.
         setEnd(thing, endDate(of: event))
-        setFacts(thing, eventFacts(event))
+        setFacts(thing, eventFacts(event, join: join))
     }
 
     /// An event's real end, or nil.
@@ -356,22 +366,165 @@ enum ScheduleIngest {
 
     /// What an event carries besides its name, its clock and its notes.
     ///
-    /// Only the location today, and that is not an oversight: attendees are
-    /// their own shape (faces, drawn from `enrichedText`), the calendar is
-    /// already a tag, and the video link is already `externalLink`. A fact is
-    /// for what has no better home.
-    private static func eventFacts(_ event: EKEvent) -> [ThingFact] {
+    /// Ordered by what changes what you'd DO: whether it's still happening,
+    /// whether it has a clock, where, whether you've replied, who called it,
+    /// and only then the standing details. A fact is for what has no better
+    /// home — attendees are their own shape (drawn from `enrichedText`), the
+    /// calendar is already a tag, and the join link is `externalLink`.
+    ///
+    /// `join` is the link already promoted to `externalLink`, passed in so no
+    /// row here can repeat it (the §12 rule against two controls doing one
+    /// thing).
+    private static func eventFacts(_ event: EKEvent, join: String?) -> [ThingFact] {
         var out: [ThingFact] = []
+        // FIRST, and the one addition here that fixes a WRONG row rather than
+        // filling in a missing one: a cancelled meeting is still on the
+        // calendar, so it kept landing as an ordinary upcoming event. Pruning
+        // it would be worse — the cancellation is the news.
+        if let word = statusWord(event.status) {
+            out.append(ThingFact(String(localized: "Status"), word, .state))
+        }
         // An all-day event has no clock, and its start is midnight — so
         // without this the stub reads "00:00" and states a time nobody meant.
         if event.isAllDay { out.append(ThingFact("When", "All day", .allDay)) }
-        guard let place = trimmed(event.location) else { return out }
-        // `.map` and not `.none`: a location on a calendar entry is somewhere
-        // you have to physically get to, and the view can hand it to Maps. A
-        // room name that Maps can't find still renders as a fact — the view
-        // never draws a control it can't honour.
-        out.append(ThingFact("Where", place, .map))
+        if let place = trimmed(event.location) { out.append(whereFact(place, join: join)) }
+        if let word = rsvpWord(event) {
+            out.append(ThingFact(String(localized: "You"), word))
+        }
+        if let organizer = organizerFact(event) { out.append(organizer) }
+        if let shape = recurrence(of: event), let phrase = RecurrencePhrase.text(shape) {
+            out.append(ThingFact(String(localized: "Repeats"), phrase))
+        }
+        if let zone = timeZoneFact(event) { out.append(zone) }
+        if let link = pageFact(event, join: join) { out.append(link) }
         return out
+    }
+
+    /// The location, as a place or as a link.
+    ///
+    /// Google Calendar files a Meet link in the LOCATION field, and until this
+    /// (2026-08-14) every location went to Maps — so that row's tap ran a Maps
+    /// search for `https://meet.google.com/…`, a control that could not be
+    /// honoured and looked exactly like one that could.
+    ///
+    /// A location that IS the promoted join link draws nothing at all: the
+    /// "Join" disc already is it, and the URL as prose says less.
+    private static func whereFact(_ place: String, join: String?) -> ThingFact {
+        guard let url = ConferenceLink.locationURL(place) else {
+            // `.map` and not `.none`: a location on a calendar entry is
+            // somewhere you have to physically get to, and the view can hand it
+            // to Maps. A room name that Maps can't find still renders as a fact
+            // — the view never draws a control it can't honour.
+            return ThingFact("Where", place, .map)
+        }
+        return ThingFact(String(localized: "Link"), url.absoluteString, .web)
+    }
+
+    /// The invite's own web page, when there is one and it isn't the join link
+    /// we already promoted. Without this row a non-conference `event.url` is
+    /// stored on `externalLink` and reachable from nowhere — the state the
+    /// join link itself was in until this pass.
+    private static func pageFact(_ event: EKEvent, join: String?) -> ThingFact? {
+        guard let raw = event.url?.absoluteString, !raw.isEmpty, raw != join,
+              let url = event.url, url.scheme == "https" || url.scheme == "http"
+        else { return nil }
+        return ThingFact(String(localized: "Page"), raw, .web)
+    }
+
+    /// A meeting that isn't simply on. `confirmed` and `none` say nothing —
+    /// the overwhelming majority of events, and a "Status · Confirmed" row on
+    /// every one of them is noise that would train people to stop reading the
+    /// row that matters.
+    ///
+    /// Carried as a FACT rather than a tag on purpose: `setFacts` replaces the
+    /// whole list every pass, so a meeting that is un-cancelled loses the word
+    /// — where `addTag` only ever appends, and a stale "Cancelled" tag would
+    /// outlive the cancellation forever.
+    private static func statusWord(_ status: EKEventStatus) -> String? {
+        switch status {
+        case .canceled:  return String(localized: "Cancelled")
+        case .tentative: return String(localized: "Tentative")
+        case .confirmed, .none: return nil
+        @unknown default: return nil
+        }
+    }
+
+    /// Whether YOU have replied, off your own row in the attendee list.
+    ///
+    /// The one fact here that is about a thing left undone, which is why it
+    /// earns a row on a screen that is otherwise a record. `pending` is the
+    /// point: an invite you never answered is indistinguishable, on every
+    /// other surface, from one you accepted.
+    ///
+    /// Silent unless there is a real invite — an event you made yourself has no
+    /// attendees, and `unknown` means the server didn't say, which is not the
+    /// same as "not replied" and must not be phrased as it.
+    private static func rsvpWord(_ event: EKEvent) -> String? {
+        guard let me = event.attendees?.first(where: \.isCurrentUser) else { return nil }
+        switch me.participantStatus {
+        case .pending:   return String(localized: "Not replied")
+        case .accepted:  return String(localized: "Going")
+        case .declined:  return String(localized: "Declined")
+        case .tentative: return String(localized: "Maybe")
+        case .delegated: return String(localized: "Delegated")
+        case .unknown, .completed, .inProcess: return nil
+        @unknown default: return nil
+        }
+    }
+
+    /// Who called the meeting.
+    ///
+    /// The exception to the attendee rule directly below — a roster goes to
+    /// retrieval because a row full of names is a row you can't read, but ONE
+    /// organizer is a name you want on sight, and it is the fact that tells you
+    /// whether a meeting you don't recognize is worth opening.
+    ///
+    /// Nil when you organized it: "Organizer · you" is a row that says nothing.
+    /// `.mail` only when the value SHOWN is the address, so a named organizer
+    /// renders as a plain fact rather than a mail control the view would have
+    /// to refuse (`FactRows.destination` requires an `@`).
+    private static func organizerFact(_ event: EKEvent) -> ThingFact? {
+        guard let organizer = event.organizer, !organizer.isCurrentUser,
+              let label = participantLabel(organizer, joined: false) else { return nil }
+        return ThingFact(String(localized: "Organizer"), label,
+                         label.contains("@") ? .mail : .none)
+    }
+
+    /// The event's own time zone, but only when it really reads differently
+    /// from here.
+    ///
+    /// Compared by OFFSET at the event's own start, never by identity: a
+    /// calendar set to `Europe/Zagreb` on a phone set to `Europe/Berlin` names
+    /// two zones and means one clock, and a row announcing a difference nobody
+    /// would experience is the kind of true-but-useless fact that makes people
+    /// stop reading facts. All-day events are excluded — they have no clock for
+    /// a zone to shift.
+    private static func timeZoneFact(_ event: EKEvent) -> ThingFact? {
+        guard !event.isAllDay, let zone = event.timeZone, let start = event.startDate,
+              zone.secondsFromGMT(for: start) != TimeZone.current.secondsFromGMT(for: start)
+        else { return nil }
+        let name = zone.localizedName(for: .generic, locale: .current) ?? zone.identifier
+        return ThingFact(String(localized: "Time zone"), name)
+    }
+
+    /// EventKit's recurrence rule as the Foundation-only shape
+    /// `RecurrencePhrase` reads. Only the FIRST rule: several rules on one
+    /// event is exotic, and describing two cadences in one phrase would state
+    /// something neither rule says.
+    private static func recurrence(of event: EKEvent) -> RecurrenceShape? {
+        guard let rule = event.recurrenceRules?.first else { return nil }
+        let cadence: RecurrenceShape.Cadence
+        switch rule.frequency {
+        case .daily:   cadence = .daily
+        case .weekly:  cadence = .weekly
+        case .monthly: cadence = .monthly
+        case .yearly:  cadence = .yearly
+        @unknown default: return nil
+        }
+        return RecurrenceShape(
+            cadence: cadence,
+            interval: rule.interval,
+            weekdays: (rule.daysOfTheWeek ?? []).map { $0.dayOfTheWeek.rawValue })
     }
 
     /// Idempotent, like every other writer here — it runs on every foreground
@@ -421,6 +574,32 @@ enum ScheduleIngest {
         if thing.externalLink != link { thing.externalLink = link }
         addTag(calendarTitle(reminder), to: thing)
         addTag(priorityTag(reminder.priority), to: thing)
+        setFacts(thing, reminderFacts(reminder))
+    }
+
+    /// What a reminder carries that its title and due date don't say
+    /// (2026-08-14). Reminders had no facts at all — `setFacts` was never
+    /// called on this path — so a reminder's own location and its start date
+    /// were fetched and dropped on every pass.
+    ///
+    /// `Starts` is the half of a reminder's clock that had nowhere to live:
+    /// `dueAt` carries the deadline, and a reminder scheduled to BEGIN earlier
+    /// (a task you blocked time for) reads as having no plan at all without it.
+    private static func reminderFacts(_ reminder: EKReminder) -> [ThingFact] {
+        var out: [ThingFact] = []
+        if let start = reminder.startDateComponents?.date,
+           let due = reminder.dueDateComponents?.date, start < due {
+            out.append(ThingFact(String(localized: "Starts"),
+                                 start.formatted(date: .abbreviated, time: .shortened)))
+        }
+        if let place = trimmed(reminder.location) {
+            out.append(whereFact(place, join: nil))
+        }
+        if let raw = reminder.url?.absoluteString, !raw.isEmpty,
+           let url = reminder.url, url.scheme == "https" || url.scheme == "http" {
+            out.append(ThingFact(String(localized: "Link"), raw, .web))
+        }
+        return out
     }
 
     /// The calendar (or list) a row belongs to, as a tag — "Work", "Family",
@@ -451,25 +630,50 @@ enum ScheduleIngest {
     /// COUNTED, never silently dropped.
     private static func attendeeNames(_ event: EKEvent) -> String? {
         guard let attendees = event.attendees, !attendees.isEmpty else { return nil }
-        let names: [String] = attendees.compactMap { participant in
-            let name = trimmed(participant.name)
-            // A participant's `url` is a `mailto:` — read the address off the
-            // string rather than `resourceSpecifier`, which carries the rest
-            // of the URL too and is a legacy accessor.
-            let raw = participant.url.absoluteString
-            let email = raw.lowercased().hasPrefix("mailto:")
-                ? trimmed(String(raw.dropFirst("mailto:".count))) : nil
-            switch (name, email) {
-            case let (name?, email?): return name == email ? name : "\(name) <\(email)>"
-            case let (name?, nil):    return name
-            case let (nil, email?):   return email
-            case (nil, nil):          return nil
-            }
-        }
+        let names = attendees.compactMap { participantLabel($0, joined: true) }
         guard !names.isEmpty else { return nil }
         let shown = names.prefix(attendeeCap).joined(separator: ", ")
         let extra = names.count - min(names.count, attendeeCap)
         return shown + (extra > 0 ? ", and \(extra) more" : "")
+    }
+
+    /// Everyone the event names, for retrieval — the organizer first, then the
+    /// room (2026-08-14).
+    ///
+    /// The organizer was the one participant EventKit hands over that nothing
+    /// read, so "the review Ana called" could not find it while "the review
+    /// with Ana" could. It leads because that is the shape of the question.
+    private static func participantText(_ event: EKEvent) -> String? {
+        var parts: [String] = []
+        if let organizer = event.organizer,
+           let label = participantLabel(organizer, joined: true) {
+            parts.append(String(localized: "Organized by \(label)"))
+        }
+        if let attendees = attendeeNames(event) { parts.append(attendees) }
+        return parts.isEmpty ? nil : parts.joined(separator: "\n")
+    }
+
+    /// One participant in words. `joined` decides which audience it is for:
+    /// retrieval takes BOTH halves, because a name without its address is half
+    /// a search term (the `IMAPClient` recipient rule), while a fact drawn on
+    /// screen takes the name alone when there is one.
+    private static func participantLabel(_ participant: EKParticipant,
+                                         joined: Bool) -> String? {
+        let name = trimmed(participant.name)
+        // A participant's `url` is a `mailto:` — read the address off the
+        // string rather than `resourceSpecifier`, which carries the rest
+        // of the URL too and is a legacy accessor.
+        let raw = participant.url.absoluteString
+        let email = raw.lowercased().hasPrefix("mailto:")
+            ? trimmed(String(raw.dropFirst("mailto:".count))) : nil
+        switch (name, email) {
+        case let (name?, email?):
+            guard joined, name != email else { return name }
+            return "\(name) <\(email)>"
+        case let (name?, nil):    return name
+        case let (nil, email?):   return email
+        case (nil, nil):          return nil
+        }
     }
 
     private static let attendeeCap = 25

@@ -425,6 +425,35 @@ step "Social sheet self-test"
   || fail "the social sheet self-test failed — run scripts/social-sheet-selftest.sh"
 print -P "%F{green}✓ social sheet self-test%f"
 
+# An event's enrichment (`Model/EventDetails.swift`, 2026-08-14) — which link
+# in an invite is the way to JOIN the call, and how a collapsed series says it
+# repeats. UNTESTABLE ANY OTHER WAY: every input is a real invite, and the
+# simulator's calendar cannot be seeded with one (`EKParticipant` is read-only
+# and has no initializer), so no sweep and no launch-arg hook touches a line of
+# it. It carries this pass's only host allowlist applied to text a STRANGER
+# wrote — a join link is dug out of the invite BODY and becomes a one-tap disc
+# — so a `contains` in place of a label-boundary match hands that disc to
+# `zoom.us.attacker.example`. The rest are silent wrong answers that render
+# perfectly: a Teams "Join" opening the settings page, a Meet link filed as a
+# location running a Maps SEARCH for a URL, and "Every Tuesday" on a rule that
+# means every OTHER Tuesday.
+step "Calendar self-test"
+"$ROOT/scripts/calendar-selftest.sh" >/dev/null \
+  || fail "the calendar self-test failed — run scripts/calendar-selftest.sh"
+print -P "%F{green}✓ calendar self-test%f"
+
+# `MailMIME.attachmentNames` (2026-08-14) — the names of what somebody emailed
+# you, read out of bytes THEY wrote. Every header it parses is attacker-
+# controlled, and nothing else in this pass can see a filename read wrongly:
+# a name drawn from `../../etc/passwd`, a `text/plain; name="body.txt"` part
+# reported as a file you were sent, or the inverse — a PDF sent
+# `Content-Disposition: inline`, which is extremely common — silently reporting
+# nothing attached. All three render as a perfectly ordinary row.
+step "MIME self-test"
+"$ROOT/scripts/mailmime-selftest.sh" >/dev/null \
+  || fail "the MIME self-test failed — run scripts/mailmime-selftest.sh"
+print -P "%F{green}✓ MIME self-test%f"
+
 # What a NOTE thing sheet shows (prd §366, 2026-08-12) — the category whose
 # whole job is to show you words and which showed the fewest of them. Same
 # class again: a word count taken over a clamped body understates a real note

@@ -161,6 +161,23 @@ enum MailIngest {
             // `thingsByRef` fetch on every foreground that `heal` already pays
             // hourly, which is a cost this sweep shouldn't take on unasked.
             thing.enrichedText = recipientText(m)
+            // WHAT CAME WITH IT (2026-08-14). `MailMIME` walked every
+            // attachment part to find the readable text and discarded their
+            // names along with their bytes, so "the mail with the contract"
+            // was unanswerable over a corpus that had fetched the contract's
+            // filename. Two destinations, by the same rule the rest of this
+            // row follows: the names are DISPLAY (a fact you can read on the
+            // sheet) and they also join `enrichedText` so a search for
+            // "contract.pdf" reaches the message.
+            //
+            // Never phrased as "no attachments" anywhere: an empty list also
+            // means the body fetch failed, and those are different facts.
+            if !m.attachments.isEmpty {
+                thing.facts = [ThingFact(String(localized: "Attached"),
+                                         m.attachments.joined(separator: ", "))].map(\.encoded)
+                thing.enrichedText = [thing.enrichedText, m.attachments.joined(separator: "\n")]
+                    .compactMap { $0 }.joined(separator: "\n")
+            }
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1

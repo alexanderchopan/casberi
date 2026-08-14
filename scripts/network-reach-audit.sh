@@ -55,6 +55,20 @@ KNOWN_NON_REACH=(
   # `api.pagerduty.com` and `api.vercel.com` are the reads, and both ARE
   # disclosed in NetworkReach.
   pagerduty.com vercel.com
+  # Conference services (`ConferenceLink.hosts`, 2026-08-14). The app never
+  # fetches ONE BYTE from any of these: the list exists to decide whether a
+  # link found in a calendar invite may become a "Join" disc, and the tap opens
+  # it in the person's own browser or their Zoom/Teams/Meet app. So this is the
+  # permalink case in its purest form — a host we recognize precisely so we can
+  # hand it off rather than touch it.
+  #
+  # TRIPWIRE: if anything ever FETCHES one of these — resolving a meeting title,
+  # checking whether a room is live — it stops being a permalink and belongs in
+  # NetworkReach, because that would be this app reaching a third party on the
+  # strength of a link a stranger put in an invite.
+  meet.google.com teams.microsoft.com teams.live.com facetime.apple.com
+  whereby.com chime.aws gotomeeting.com gotomeet.me bluejeans.com
+  join.skype.com around.co riverside.fm
   # An npm package's own page — where a landed release row opens on tap. Never
   # fetched: the read is `registry.npmjs.org`, which IS disclosed. (PyPI's
   # permalink host and its read host are the same `pypi.org`, so it needs no

@@ -342,13 +342,102 @@ enum HealthIngest {
             let secondsPerKM = workout.duration / (meters / 1000)
             out.append(ThingFact("Pace / km", clock(secondsPerKM), .metric))
         }
+        // ENERGY (2026-08-14). The decline above is right about heart rate,
+        // splits and the route — all three need their own HealthKit queries —
+        // and it never covered this one: energy is ON the `HKWorkout` already
+        // in hand, so it cost nothing to read and was simply not read. It is
+        // also the number most people look for on a workout, which is why its
+        // absence beside a distance and a pace read as a bug rather than a
+        // boundary.
+        if let kcal = energyBurned(workout) {
+            out.append(ThingFact("kcal", String(Int(kcal.rounded())), .metric))
+        }
         // Which watch or app wrote it — the provenance a workout has and a
         // calendar entry doesn't, and the thing that separates a ride you
         // recorded from one an app inferred.
         let writer = workout.sourceRevision.source.name
         if !writer.isEmpty { out.append(ThingFact("Written by", writer)) }
+        out.append(contentsOf: conditionFacts(workout))
         return out
     }
+
+    /// Active energy, in kilocalories.
+    ///
+    /// `statistics(for:)` first: iOS 18 deprecated `totalEnergyBurned` in
+    /// favour of it, and the deprecated property returns nil on a workout
+    /// written by a modern source. Both read the object we already hold — this
+    /// is not a second query — so the fallback costs nothing and keeps
+    /// workouts recorded by older apps reporting their energy.
+    private static func energyBurned(_ workout: HKWorkout) -> Double? {
+        let unit = HKUnit.kilocalorie()
+        if let sum = workout.statistics(for: HKQuantityType(.activeEnergyBurned))?
+            .sumQuantity()?.doubleValue(for: unit), sum > 0 {
+            return sum
+        }
+        guard let total = workout.totalEnergyBurned?.doubleValue(for: unit), total > 0
+        else { return nil }
+        return total
+    }
+
+    /// What the workout was LIKE — indoors or out, and the weather if the
+    /// watch recorded it (2026-08-14).
+    ///
+    /// All of this rides `workout.metadata`, a dictionary already on the object
+    /// this pass fetched, and none of it was read. It is the half of a workout
+    /// record that makes it worth keeping a year later: a distance and a pace
+    /// are the same numbers on every run, while "8°C, outdoors" is the run.
+    ///
+    /// Facts, never metrics — the metric band is four big numbers wide already
+    /// (km, duration, pace, kcal) and a fifth would shrink all of them to fit
+    /// something nobody opened the sheet to read.
+    private static func conditionFacts(_ workout: HKWorkout) -> [ThingFact] {
+        var out: [ThingFact] = []
+        let metadata = workout.metadata ?? [:]
+        // Only stated when the key is really present: an indoor flag that
+        // defaults to `false` reports every workout with no flag at all as
+        // outdoors, which for a pool swim is a confident wrong answer.
+        if let indoor = metadata[HKMetadataKeyIndoorWorkout] as? Bool {
+            out.append(ThingFact("Where", indoor ? String(localized: "Indoors")
+                                                 : String(localized: "Outdoors")))
+        }
+        if let temperature = metadata[HKMetadataKeyWeatherTemperature] as? HKQuantity {
+            let celsius = temperature.doubleValue(for: .degreeCelsius())
+            // `MeasurementFormatter` in the reader's own locale, so this reads
+            // °F in the places that use °F. Hardcoding either unit would make
+            // two devices disagree about the same run — the same reasoning
+            // that keeps pace per-kilometre and nothing else.
+            let measurement = Measurement(value: celsius, unit: UnitTemperature.celsius)
+            out.append(ThingFact("Weather", temperatureFormatter.string(from: measurement)))
+        }
+        if let humidity = metadata[HKMetadataKeyWeatherHumidity] as? HKQuantity {
+            let percent = humidity.doubleValue(for: .percent()) * 100
+            out.append(ThingFact("Humidity", "\(Int(percent.rounded()))%"))
+        }
+        if let climb = metadata[HKMetadataKeyElevationAscended] as? HKQuantity {
+            let metres = climb.doubleValue(for: .meter())
+            guard metres >= 1 else { return out }
+            let measurement = Measurement(value: metres, unit: UnitLength.meters)
+            out.append(ThingFact("Climb", lengthFormatter.string(from: measurement)))
+        }
+        return out
+    }
+
+    private static let temperatureFormatter: MeasurementFormatter = {
+        let f = MeasurementFormatter()
+        // `.naturalScale` alone, deliberately NOT `.temperatureWithoutUnit`:
+        // that option prints "8°", and a bare degree sign is the one number on
+        // this card where the missing unit changes the meaning completely.
+        f.unitOptions = .naturalScale
+        f.numberFormatter.maximumFractionDigits = 0
+        return f
+    }()
+
+    private static let lengthFormatter: MeasurementFormatter = {
+        let f = MeasurementFormatter()
+        f.unitOptions = .naturalScale
+        f.numberFormatter.maximumFractionDigits = 0
+        return f
+    }()
 
     /// `26:14`, or `1:04:20` once it passes an hour. Not "26 min": a duration
     /// rounded to whole minutes is fine in a title and useless beside a pace.

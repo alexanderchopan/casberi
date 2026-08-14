@@ -31,6 +31,105 @@ enum MailMIME {
         return cleaned.isEmpty ? nil : cleaned
     }
 
+    /// What came ATTACHED to a message (2026-08-14).
+    ///
+    /// The decoder already walked every one of these parts and threw them away
+    /// — `firstReadablePart`'s own comment says so ("Anything else (an
+    /// attachment, an image) is skipped"). It was skipping the CONTENT, which
+    /// is right; it was also skipping the NAME, which meant "the mail with the
+    /// contract" could not be answered from a corpus that had fetched the
+    /// contract's filename and dropped it.
+    ///
+    /// Names only, never bytes. This app does not store other people's
+    /// attachments, and the whole point of the `BODY.PEEK[]<0.N>` cap is that a
+    /// large one is cut off mid-stream — but a filename lives in the part's
+    /// HEADERS, which arrive before the bytes do, so a truncated fetch still
+    /// yields the name of the attachment it truncated.
+    ///
+    /// Best-effort like everything else here: an empty array on any failure.
+    static func attachmentNames(from raw: Data) -> [String] {
+        guard let (headers, body) = splitHeaderBody(raw) else { return [] }
+        let contentType = headerValue("content-type", in: headers) ?? "text/plain"
+        guard contentType.lowercased().contains("multipart"),
+              let boundary = parameter("boundary", in: contentType) else { return [] }
+        var names: [String] = []
+        collectAttachments(in: body, boundary: boundary, into: &names, depth: 0)
+        // Deduped, order preserved: a `multipart/related` inline image can be
+        // referenced twice, and the same name twice reads as two files.
+        var seen = Set<String>()
+        return names.filter { seen.insert($0.lowercased()).inserted }
+            .prefix(attachmentCap).map { $0 }
+    }
+
+    /// A mail is allowed to say it carries a lot of things; a row is not
+    /// allowed to be a file listing.
+    private static let attachmentCap = 8
+
+    /// Mirrors `firstReadablePart`'s walk, including its recursion into nested
+    /// multiparts — the attachment normally sits in the `mixed` alongside the
+    /// `alternative` that holds the text, so a non-recursive scan finds the
+    /// text every time and the file only sometimes.
+    ///
+    /// `depth` is a fuse, not a feature: `boundary` comes from a header a
+    /// stranger controls, and a part whose boundary equals its parent's makes
+    /// the walk re-enter the same bytes forever.
+    private static func collectAttachments(in data: Data, boundary: String,
+                                           into names: inout [String], depth: Int) {
+        guard depth < 6, names.count < attachmentCap else { return }
+        guard let markerData = "--\(boundary)".data(using: .utf8) else { return }
+        for part in split(data, on: markerData) {
+            guard let (partHeaders, partBody) = splitHeaderBody(part) else { continue }
+            let partType = headerValue("content-type", in: partHeaders) ?? ""
+            if partType.lowercased().contains("multipart"),
+               let nested = parameter("boundary", in: partType), nested != boundary {
+                collectAttachments(in: partBody, boundary: nested, into: &names, depth: depth + 1)
+                continue
+            }
+            guard let name = attachmentName(headers: partHeaders, contentType: partType)
+            else { continue }
+            names.append(name)
+            if names.count >= attachmentCap { return }
+        }
+    }
+
+    /// The part's filename, or nil when the part isn't a file.
+    ///
+    /// Two places carry it and BOTH are checked: `Content-Disposition`'s
+    /// `filename` is the modern spelling, `Content-Type`'s `name` the older one
+    /// that plenty of senders still use alone.
+    ///
+    /// A part is a FILE when it says `attachment`, or when it names a file at
+    /// all while not being readable text. That second clause is what catches
+    /// the sender whose `Content-Disposition` is `inline` for a PDF — common,
+    /// and indistinguishable from an attachment to the person who received it.
+    /// The text/multipart exclusion is what keeps a `text/plain; name="body"`
+    /// from reading as a file you were sent.
+    private static func attachmentName(headers: String, contentType: String) -> String? {
+        let disposition = headerValue("content-disposition", in: headers) ?? ""
+        let lowerType = contentType.lowercased()
+        let raw = parameter("filename", in: disposition) ?? parameter("name", in: contentType)
+        guard let raw, !raw.isEmpty else { return nil }
+        let isAttachment = disposition.lowercased().contains("attachment")
+        let isText = lowerType.contains("text/") || lowerType.contains("multipart")
+        guard isAttachment || !isText else { return nil }
+        // A filename is encoded exactly the way a subject is, so it goes
+        // through the SAME decoder rather than a second copy of one.
+        let decoded = IMAPClient.decodeHeaderWord(raw).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !decoded.isEmpty else { return nil }
+        // A path separator in a filename is a header a stranger wrote reaching
+        // for somewhere it has no business being. Nothing here writes a file,
+        // so this cannot become a path traversal — but the name is DISPLAYED,
+        // and "../../etc/passwd" drawn as an attachment is a lie about what
+        // arrived. Keep the last component and nothing else.
+        let leaf = decoded.split(whereSeparator: { $0 == "/" || $0 == "\\" }).last
+        guard let leaf, !leaf.isEmpty else { return nil }
+        return String(leaf.prefix(nameCap))
+    }
+
+    /// Long enough for any real filename, short enough that a hostile one
+    /// can't push the rest of a row off the screen.
+    private static let nameCap = 120
+
     // MARK: - Structure
 
     private static func splitHeaderBody(_ data: Data) -> (String, Data)? {

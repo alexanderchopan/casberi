@@ -126,6 +126,23 @@ enum HomeKitIngest {
         if multiHome, !home.name.isEmpty {
             out.append(ThingFact("Home", home.name))
         }
+        // What the thing actually IS (2026-08-14). These are plain properties
+        // on `HMAccessory` — no characteristic read, no pairing, none of what
+        // the decline below rules out — and they answer the question a
+        // category can't: "Lock" is every lock you own, "Aqara · A100" is the
+        // one whose app you need and whose battery you are about to buy.
+        //
+        // Model only when it isn't the manufacturer repeated, which some
+        // accessories do report.
+        let maker = (accessory.manufacturer ?? "").trimmingCharacters(in: .whitespaces)
+        let model = (accessory.model ?? "").trimmingCharacters(in: .whitespaces)
+        switch (maker.isEmpty, model.isEmpty) {
+        case (false, false) where maker.caseInsensitiveCompare(model) != .orderedSame:
+            out.append(ThingFact("Made by", "\(maker) · \(model)"))
+        case (false, _): out.append(ThingFact("Made by", maker))
+        case (true, false): out.append(ThingFact("Model", model))
+        case (true, true): break
+        }
         return out
     }
 

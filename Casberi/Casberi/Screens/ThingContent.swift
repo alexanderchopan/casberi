@@ -401,7 +401,8 @@ struct ThingContentView: View {
                        facts: thing.factList.filter { $0.action != .metric })
         case .contact:
             // Was `default:` — grey prose (prd §365).
-            PersonCard(name: thing.title, facts: thing.factList)
+            PersonCard(name: thing.title, facts: thing.factList,
+                       photo: thing.previewImageData)
         case .accessory:
             // Was `default:` — grey prose, identical whether the accessory was
             // reachable or not (prd §365).
@@ -1531,6 +1532,11 @@ private struct MetricBand: View {
 private struct PersonCard: View {
     let name: String
     let facts: [ThingFact]
+    /// The contact's own photo, landed by `ContactsIngest.healPhotos`. nil for
+    /// most people, and for everyone until that bounded pass reaches them —
+    /// the initials circle below is the fallback, not a placeholder to be
+    /// ashamed of.
+    var photo: Data?
 
     /// The role line under the name — the two facts that describe rather than
     /// dial. Joined here rather than drawn as rows because "Designer" and
@@ -1546,6 +1552,23 @@ private struct PersonCard: View {
         facts.filter { $0.action == .call || $0.action == .mail }
     }
 
+    /// Everything that isn't a way to reach them and isn't already the
+    /// subtitle — the address, the birthday, the website (2026-08-14).
+    ///
+    /// This card used to draw `reachable` and NOTHING ELSE, so a fact whose
+    /// action was neither `.call` nor `.mail` was stored and invisible. That
+    /// made the whole widening of the Contacts fetch pointless on its own: an
+    /// address would have landed, been indexed, been searchable, and never once
+    /// appeared on the screen about that person. Written as a leftover rather
+    /// than a second allowlist, so the next fact kind added shows up by default
+    /// instead of silently vanishing.
+    private var standing: [ThingFact] {
+        facts.filter {
+            $0.action != .call && $0.action != .mail
+                && $0.label != "Role" && $0.label != "Company"
+        }
+    }
+
     private var initials: String {
         let letters = name.split(separator: " ").prefix(2).compactMap(\.first)
         return letters.isEmpty ? "?" : String(letters).uppercased()
@@ -1553,11 +1576,23 @@ private struct PersonCard: View {
 
     var body: some View {
         VStack(spacing: DS.Space.s2) {
-            Text(initials)
-                .dsText(.heading22)
-                .foregroundStyle(DS.textPrimary)
-                .frame(width: 76, height: 76)
-                .background(DS.gray100, in: Circle())
+            if let photo, let image = UIImage(data: photo) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    // Pinned BEFORE the clip: a bare resizable image in a stack
+                    // expands the stack to the image's own size (the gotcha
+                    // this codebase has already paid for).
+                    .frame(width: 76, height: 76)
+                    .clipShape(Circle())
+                    .accessibilityLabel(name)
+            } else {
+                Text(initials)
+                    .dsText(.heading22)
+                    .foregroundStyle(DS.textPrimary)
+                    .frame(width: 76, height: 76)
+                    .background(DS.gray100, in: Circle())
+            }
             Text(name)
                 .dsText(.heading22)
                 .foregroundStyle(DS.textPrimary)
@@ -1568,8 +1603,13 @@ private struct PersonCard: View {
                     .foregroundStyle(DS.textSecondary)
                     .multilineTextAlignment(.center)
             }
-            if !reachable.isEmpty {
-                FactRows(facts: reachable)
+            // ONE slab, both groups — the ways to reach them first, because
+            // that is what the sheet is opened for, then what is true about
+            // them. Two slabs would draw a divider by whitespace where §8 bans
+            // one by line.
+            let rows = reachable + standing
+            if !rows.isEmpty {
+                FactRows(facts: rows)
                     .padding(DS.Space.s3)
                     .background(DS.fillFaint,
                                 in: RoundedRectangle(cornerRadius: DS.Radius.card,
