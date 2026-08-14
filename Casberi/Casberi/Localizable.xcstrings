@@ -10369,6 +10369,40 @@
         }
       }
     },
+    "%lld of %lld shown": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld of %2$lld shown"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$lld de %2$lld mostrados"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%2$lld件中%1$lld件を表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%2$lld개 중 %1$lld개 표시"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已显示 %2$lld 项中的 %1$lld 项"
+          }
+        }
+      }
+    },
     "%lld of %lld signatures collected": {
       "localizations": {
         "en": {
@@ -37909,6 +37943,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "最活跃"
+          }
+        }
+      }
+    },
+    "Most new this week: %@": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Más novedades esta semana: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今週の新着が最多: %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이번 주 새 항목 최다: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "本周新增最多：%@"
           }
         }
       }
