@@ -582,11 +582,26 @@ enum VerbDerivation {
         case "gmail":
             return HandOffState.installedSchemes.contains("googlegmail")
                 ? URL(string: "googlegmail://") : nil
-        case "chatgpt":   return URL(string: "chatgpt://")
+        // Gated 2026-08-14, with Calendar and for the same reason — these were
+        // the last three ungated hand-offs, and all three are reachable from
+        // the FURNISHED DEMO (it seeds ChatGPT, Spotify and Apple Music rows),
+        // i.e. from exactly the walk an App Store reviewer takes. `chatgpt`
+        // was already declared in LSApplicationQueriesSchemes but absent from
+        // `candidates`, so it could never have been gated as written; the
+        // other two were declared nowhere at all.
+        case "chatgpt":
+            return HandOffState.installedSchemes.contains("chatgpt")
+                ? URL(string: "chatgpt://") : nil
         // Music apps — the per-track universal link opens the exact song; this
         // is the fallback that still opens the app for a URL-less library play.
-        case "apple music": return URL(string: "music://")
-        case "spotify":     return URL(string: "spotify://")
+        // A fallback that opens nothing is worse than no fallback: the row
+        // keeps its other discs instead.
+        case "apple music":
+            return HandOffState.installedSchemes.contains("music")
+                ? URL(string: "music://") : nil
+        case "spotify":
+            return HandOffState.installedSchemes.contains("spotify")
+                ? URL(string: "spotify://") : nil
         case "safari":    return nil   // links open directly via Open link
         default:          return nil
         }
@@ -644,7 +659,8 @@ enum HandOffState {
     /// being true, and the reviewer's Mac is where it surfaced.
     private static let candidates = ["todoist", "googlegmail", "photos-redirect",
                                      "youtube", "obsidian",
-                                     "calshow", "x-apple-reminderkit"]
+                                     "calshow", "x-apple-reminderkit",
+                                     "chatgpt", "music", "spotify", "mobilenotes"]
 
     #if DEBUG
     /// The same list, for `-photoVerbProbe`'s census. Exposed rather than

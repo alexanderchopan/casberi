@@ -200,23 +200,30 @@ struct NotesShareScreen: View {
                 "It lands in your feed as a note — findable like everything else.",
             ])
             Section {
-                Button {
-                    if let url = URL(string: "mobilenotes://") { openURL(url) }
-                } label: {
-                    HStack(spacing: DS.Space.s3) {
-                        // The list row's own chrome already says this is
-                        // tappable — the chip previews no state, so it's
-                        // neutral (`IconChip`, 2026-08-10, was tint).
-                        IconChip(tone: DS.neutralBadge, size: 28, style: .wash) {
-                            Image(systemName: "arrow.up.right").dsGlyph(15, weight: .regular)
+                // Gated 2026-08-14 (App Store review 2.1(a) on the Mac
+                // build). Nothing claims `mobilenotes` on Mac Catalyst, so
+                // this was a row that did nothing when clicked — the same
+                // defect the review named, on the setup screen for the one
+                // bridge whose whole instruction is "go to Notes".
+                if HandOffState.installedSchemes.contains("mobilenotes") {
+                    Button {
+                        if let url = URL(string: "mobilenotes://") { openURL(url) }
+                    } label: {
+                        HStack(spacing: DS.Space.s3) {
+                            // The list row's own chrome already says this is
+                            // tappable — the chip previews no state, so it's
+                            // neutral (`IconChip`, 2026-08-10, was tint).
+                            IconChip(tone: DS.neutralBadge, size: 28, style: .wash) {
+                                Image(systemName: "arrow.up.right").dsGlyph(15, weight: .regular)
+                            }
+                            Text("Open Notes")
+                                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                            Spacer()
                         }
-                        Text("Open Notes")
-                            .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        Spacer()
                     }
+                    .buttonStyle(.plain)
+                    .dsListCardRow()
                 }
-                .buttonStyle(.plain)
-                .dsListCardRow()
             } footer: {
                 // Where they land is step 3's job ("It lands in your feed as a
                 // note"); this footer only has to say why one at a time

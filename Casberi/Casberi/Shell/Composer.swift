@@ -4027,7 +4027,7 @@ struct Composer: View {
                             // bold grammar as the ask tiles (option A,
                             // 2026-07-16), so the field's exits read as one
                             // design.
-                            ForEach(TakeTool.all) { tool in
+                            ForEach(TakeTool.offered) { tool in
                                 Button { runTake(tool) } label: {
                                     HStack(spacing: DS.Space.s2) {
                                         Image(systemName: tool.glyph)

@@ -89,6 +89,14 @@
 		     truthfully and drop the verb. -->
 		<string>calshow</string>
 		<string>x-apple-reminderkit</string>
+		<!-- The remaining hand-off targets (2026-08-14). `chatgpt` was already
+		     declared but was absent from HandOffState.candidates, so it could
+		     never be gated; `music`, `spotify` and `mobilenotes` were declared
+		     nowhere. All are reachable from the furnished demo, i.e. from the
+		     walk a reviewer takes. -->
+		<string>music</string>
+		<string>spotify</string>
+		<string>mobilenotes</string>
 		<string>metamask</string>
 		<string>rainbow</string>
 		<string>rabby</string>

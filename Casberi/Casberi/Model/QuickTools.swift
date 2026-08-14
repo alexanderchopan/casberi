@@ -25,25 +25,43 @@ struct TakeTool: Identifiable {
     /// Builds the destination URL around the typed text and the date
     /// NSDataDetector found in it (nil when none).
     let makeURL: (String, Date?) -> URL?
+    /// The custom scheme this chip jumps to, when it jumps to one. Nil means
+    /// the destination is universal (`sms:`, `mailto:`, `https:`) and always
+    /// resolves. See `offered` — a chip whose scheme nothing claims is not
+    /// shown at all.
+    var requiresScheme: String? = nil
+
+    /// The chips this device can actually honour (2026-08-14). `TakeTool.all`
+    /// was rendered whole and `runTake` silently returns on a nil URL, so on
+    /// Mac Catalyst — where nothing claims `calshow` or `mobilenotes` — the
+    /// Calendar and Notes chips were controls that did nothing when tapped.
+    /// That is the defect App Store review rejected the Mac build for under
+    /// 2.1(a), in a second place: the composer rather than the thing sheet.
+    static var offered: [TakeTool] {
+        all.filter {
+            guard let scheme = $0.requiresScheme else { return true }
+            return HandOffState.installedSchemes.contains(scheme)
+        }
+    }
 
     static let all: [TakeTool] = [
         TakeTool(id: "reminder", label: "Reminders", glyph: "checklist",
-                 copiesFirst: true) { _, _ in
+                 copiesFirst: true, makeURL: { _, _ in
             URL(string: "x-apple-reminderkit://")
-        },
+        }, requiresScheme: "x-apple-reminderkit"),
         TakeTool(id: "event", label: "Calendar", glyph: "calendar",
-                 copiesFirst: true) { _, date in
+                 copiesFirst: true, makeURL: { _, date in
             // calshow: takes seconds since the reference date — with a
             // detected time the jump lands ON that day, not on today.
             if let date {
                 return URL(string: "calshow:\(Int(date.timeIntervalSinceReferenceDate))")
             }
             return URL(string: "calshow://")
-        },
+        }, requiresScheme: "calshow"),
         TakeTool(id: "note", label: "Notes", glyph: "note.text",
-                 copiesFirst: true) { _, _ in
+                 copiesFirst: true, makeURL: { _, _ in
             URL(string: "mobilenotes://")
-        },
+        }, requiresScheme: "mobilenotes"),
         TakeTool(id: "message", label: "Messages", glyph: "message",
                  copiesFirst: false) { text, _ in
             var parts = URLComponents()
