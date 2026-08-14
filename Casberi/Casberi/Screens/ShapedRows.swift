@@ -1766,9 +1766,9 @@ struct BundleRow: View {
 }
 
 
-/// A folded run drawn as its MEMBERS (prd §377) — screenshots as their
-/// pictures, posts as their authors' faces, side by side in the row's own
-/// leading seat.
+/// A folded run drawn as its MEMBERS (prd §377) — screenshots and file images
+/// as their pictures, posts as their authors' faces, songs as their covers —
+/// side by side in the row's own leading seat.
 ///
 /// `BundleRow`'s fan and this are the same compression with opposite
 /// priorities. The fan OVERLAPS three pictures behind one leader: it says "a
@@ -1799,10 +1799,11 @@ struct StripRow: View {
         HStack(spacing: DS.Space.s3) {
             HStack(spacing: Self.gap) {
                 ForEach(tiles) { tile in
-                    if let face = tile.face {
-                        // A remote identity: no model read at all, so nothing
-                        // here can touch a tombstone.
-                        RemoteThumb(urlString: face, size: DS.Mark.row,
+                    if let remote = tile.remote {
+                        // A remote image (a face, a cover, an article's art):
+                        // no model read at all, so nothing here can touch a
+                        // tombstone.
+                        RemoteThumb(urlString: remote, size: DS.Mark.row,
                                     fallback: source, circular: tile.circular)
                     } else if let thing = tile.item.live {
                         // `.live` INSIDE the closure before the first stored

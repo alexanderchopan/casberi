@@ -1122,9 +1122,10 @@ struct FeedScreen: View {
             /// can show what actually arrived instead of one brand glyph.
             case bundle(source: String, word: String, count: Int, newest: Date, art: [String])
             /// A run folded into its MEMBERS rather than into a sentence about
-            /// them (prd §377): screenshots as their pictures, posts as their
-            /// authors' faces. Same one-row compression as `.bundle`, drawn
-            /// side by side instead of as an overlapped fan.
+            /// them (prd §377): screenshots and file images as their pictures,
+            /// posts as their authors' faces, songs as their covers. Same
+            /// one-row compression as `.bundle`, drawn side by side instead of
+            /// as an overlapped fan.
             case strip(source: String, word: String, count: Int, newest: Date, tiles: [StripTile])
         }
         static func single(_ t: Thing) -> FeedRow {
@@ -1434,13 +1435,19 @@ struct FeedScreen: View {
         let tiles = stripTiles(members)
         if tiles.count >= 2 { return .strip(tiles) }
         guard members.allSatisfy(bundleable) else { return nil }
-        // The bundle's own pictures — the first three members that actually
-        // carry art, in feed order (newest first, since dayThings is).
-        let art = members.compactMap { m -> String? in
-            guard let a = m.previewImageURL, !a.isEmpty else { return nil }
-            return a
-        }.prefix(3)
-        return .bundle(Array(art))
+        // The bundle's own pictures — the first three DISTINCT member images,
+        // in feed order (newest first, since dayThings is). Deduped since
+        // §377's generalization for the same reason strip tiles dedupe: a
+        // one-album run falls back here, and one clean cover under
+        // "Music · 5 songs" says more than the same cover fanned three times.
+        var art: [String] = []
+        var seenArt: Set<String> = []
+        for m in members where art.count < 3 {
+            guard let a = m.previewImageURL, !a.isEmpty,
+                  seenArt.insert(a).inserted else { continue }
+            art.append(a)
+        }
+        return .bundle(art)
     }
 
     /// How many members a strip draws before the count carries the rest.
@@ -1449,24 +1456,42 @@ struct FeedScreen: View {
     /// iPhone. Volume beyond that is what the source's room is for (§35).
     static let stripCap = 4
 
-    /// Whether a thing can be drawn as itself in a strip — the picture-bearing
-    /// and face-bearing rows, i.e. the two families where a sentence about the
-    /// run destroys the only thing that distinguishes its members.
+    /// Whether a thing can be drawn as itself in a strip — any row that
+    /// carries a picture of its own (prd §377, generalized same session: "you
+    /// could do the same thing with music and anything else that has photos
+    /// too like documents"). Three doors, checked cheapest-first, and the
+    /// ORDER is also the tile priority in `stripTiles`:
+    ///
+    /// 1. A FACE (`BandRow.faceSources` + `authorAvatarURL`) — the user's own
+    ///    ruling for posts: the run is drawn as WHO, not as the posts' photos.
+    /// 2. OWN PIXELS — a screenshot always (its kind IS a picture; `PhotoWell`
+    ///    falls back to the PHAsset when the stored bytes haven't healed yet),
+    ///    or stored `previewImageData` (a healed Files/document image).
+    /// 3. REMOTE ART (`previewImageURL`) — an album cover, an article's or
+    ///    episode's art, a drop's image.
+    ///
+    /// Derived, never a source list: a new bridge whose rows carry art gets a
+    /// strip the day it lands, and a strip can never draw a picture the row
+    /// itself doesn't. The `previewImageData` read faults externalStorage
+    /// bytes, so it sits LAST among the model reads and only runs for rows
+    /// with no URL to check first — the same cost `imageOnlyIDs` already pays
+    /// for Files rows via `isWordless`.
     private func stripCandidate(_ t: Thing) -> Bool {
-        t.kind == .screenshot || identityLeader(t) != nil
+        if t.kind == .screenshot { return true }
+        if identityLeader(t) != nil { return true }
+        if let art = t.previewImageURL, !art.isEmpty { return true }
+        return t.previewImageData != nil
     }
 
     /// The FACE a row already leads with, when it leads with one. Derived from
-    /// `BandRow.faceSources` rather than a second hand list, so a source that
-    /// gains a face leader gains a face strip the same day, and a strip can
-    /// never draw an identity the row itself doesn't.
+    /// `BandRow.faceSources` rather than a second hand list.
     ///
-    /// `publisherMarkSources` (RSS) is deliberately NOT a door here, though it
-    /// has an avatar URL and would fit mechanically. Its rows already fold into
-    /// a fan of the ARTICLES' OWN ART, and a story's picture beats the feed's
-    /// logo repeated four times — for RSS the strip would trade a better
-    /// picture for a worse one. The asymmetry is the point: a strip earns its
-    /// place only where it shows MORE than the shape it replaces.
+    /// This is the only door that reads `authorAvatarURL`: RSS's publisher
+    /// mark (`publisherMarkSources`) rides the same field but is NOT a strip
+    /// identity — its runs come through the own-art door instead, so an RSS
+    /// strip shows the ARTICLES' pictures, never the feed's logo repeated
+    /// four times. A strip earns its place only where it shows MORE than the
+    /// shape it replaces.
     private func identityLeader(_ t: Thing) -> (url: String, circular: Bool)? {
         guard let avatar = t.authorAvatarURL, !avatar.isEmpty,
               BandRow.faceSources.contains(t.source) else { return nil }
@@ -1475,22 +1500,31 @@ struct FeedScreen: View {
 
     /// The tiles a run draws, newest first, capped at `stripCap`.
     ///
-    /// Identities DEDUPE and pictures do not, which is the one asymmetry here
-    /// and it is deliberate: five posts from three people is three faces and
-    /// the count says five ("who" and "how many" are different questions, and
-    /// the same avatar three times reads as a bug), while five screenshots are
-    /// five different pictures by construction and collapsing them would hide
-    /// the members the strip exists to show.
+    /// REMOTE images dedupe by URL and stored pixels do not, and the line
+    /// sits exactly there on purpose: five posts from three people is three
+    /// faces, and five songs off one record are ONE cover — the count says
+    /// five either way ("who/what" and "how many" are different questions,
+    /// and the same image repeated reads as a rendering fault, not volume).
+    /// Five screenshots or five scanned pages are five DIFFERENT pictures by
+    /// construction — there is no URL to agree on — and collapsing them would
+    /// hide the members the strip exists to show.
+    ///
+    /// A one-album run therefore dedupes to a single tile, falls under the
+    /// two-tile floor in `fold`, and lands as the sentence with one cover —
+    /// which is the honest rendering of "one record, five songs".
     private func stripTiles(_ members: [Thing]) -> [StripTile] {
         var tiles: [StripTile] = []
-        var seenFace: Set<String> = []
+        var seenRemote: Set<String> = []
         for t in members {
             guard tiles.count < Self.stripCap else { break }
             if let leader = identityLeader(t) {
-                guard seenFace.insert(leader.url).inserted else { continue }
-                tiles.append(StripTile(t, face: leader.url, circular: leader.circular))
-            } else if t.kind == .screenshot {
+                guard seenRemote.insert(leader.url).inserted else { continue }
+                tiles.append(StripTile(t, remote: leader.url, circular: leader.circular))
+            } else if t.kind == .screenshot || t.previewImageData != nil {
                 tiles.append(StripTile(t))
+            } else if let art = t.previewImageURL, !art.isEmpty {
+                guard seenRemote.insert(art).inserted else { continue }
+                tiles.append(StripTile(t, remote: art, circular: false))
             }
         }
         return tiles

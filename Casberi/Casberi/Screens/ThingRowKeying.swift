@@ -62,27 +62,29 @@ struct KeyedThing: Identifiable {
 ///
 /// Identity is captured at construction for exactly `KeyedThing`'s reason —
 /// these tiles ride a `ForEach` inside the row, so diffing must never reach a
-/// model that a heal may have deleted since the row was derived. `face` and
+/// model that a heal may have deleted since the row was derived. `remote` and
 /// `circular` are resolved at construction too, and that is not convenience:
-/// reading `authorAvatarURL` lazily in the tile body would be a stored-property
-/// read on a possibly-dead model, which is the whole class this file exists
-/// for.
+/// reading `authorAvatarURL`/`previewImageURL` lazily in the tile body would
+/// be a stored-property read on a possibly-dead model, which is the whole
+/// class this file exists for.
 struct StripTile: Identifiable {
     let id: String
     let item: KeyedThing
-    /// The identity leader's image URL when the run is drawn as identities (a
-    /// social avatar, a publisher's mark). nil means the tile is the thing's
-    /// OWN picture, which `PhotoWell` reads off the model at render time.
-    let face: String?
-    /// A face is a circle, a publisher's logo a squircle — `RemoteThumb`'s own
-    /// distinction, decided once by the builder so the view never re-derives
-    /// it from a source name.
+    /// The tile's REMOTE image URL when it has one — a social author's face,
+    /// an album cover, an article's art. nil means the tile is the thing's
+    /// own STORED pixels (a screenshot, a healed file image), which
+    /// `PhotoWell` reads off the model at render time behind its own
+    /// liveness guard.
+    let remote: String?
+    /// A face is a circle, everything else the app-icon squircle —
+    /// `RemoteThumb`'s own distinction, decided once by the builder so the
+    /// view never re-derives it from a source name.
     let circular: Bool
 
-    init(_ thing: Thing, face: String? = nil, circular: Bool = false) {
+    init(_ thing: Thing, remote: String? = nil, circular: Bool = false) {
         self.id = thing.id.uuidString
         self.item = KeyedThing(thing)
-        self.face = face
+        self.remote = remote
         self.circular = circular
     }
 }

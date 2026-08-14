@@ -22735,9 +22735,33 @@ feed) is the obvious alternative and needs a screenshot to rule on, not an
 argument. §218's treatment still applies below the fold threshold, which is now
 its whole domain: days with one or two shots.
 
-**NOT done, deliberately:** Files images (their room already has a mixed
-photo-grid shape, §283, and folding them needs the `isImageRef` model call — a
-separate, measurable pass); per-tile taps (above); provenance tiering of the
+**Generalized the same session, before this entry ever merged** (user: "you
+could do the same thing with music and anything else that has photos too like
+documents") — so the strip's eligibility is no longer two hand-picked families
+but a derived rule: **a run strips when its members carry a picture of their
+own.** Three doors in `stripCandidate`, in priority order, and the order is a
+ruling: a FACE first (`BandRow.faceSources` — the user's own call that a post
+run is drawn as WHO, not as the posts' photos), then OWN PIXELS (a screenshot
+always; stored `previewImageData`, which is a healed Files/document image —
+`PhotoWell` reads bytes before ever touching Photos, so no `isImageRef` model
+call was needed after all and the deferral below is retired), then REMOTE ART
+(`previewImageURL` — an album cover, an article's or episode's art, a drop's
+image). Derived means a new bridge whose rows carry art gets a strip the day it
+lands, and a strip can never draw a picture the row itself doesn't. Two
+consequences worth naming: **RSS now strips through the own-art door** — the
+earlier decline in this entry was about the IDENTITY door (a feed's logo four
+times), and it stands; the articles' own pictures side by side is strictly more
+than the fan it replaces. And **remote images dedupe by URL while stored pixels
+never do** — five posts from three people is three faces, five songs off one
+record are ONE cover (which then falls under the two-tile floor and lands as
+the sentence with one cover: the honest rendering of "one record, five
+songs"), while five screenshots or scanned pages are five different pictures by
+construction. The `BundleRow` fan dedupes its art now too, same reasoning. The
+`previewImageData` read faults externalStorage bytes, so it sits last among the
+model reads, behind the URL checks — the cost `imageOnlyIDs` already pays for
+Files rows via `isWordless`.
+
+**NOT done, deliberately:** per-tile taps (above); provenance tiering of the
 whole feed (pitched in the same conversation as the general answer to
 "consumable" — what you did / what concerns you / what arrived, as rendering
 weight with no reorder — and left for the user's ruling rather than taken
