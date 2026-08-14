@@ -229,6 +229,20 @@ step "Wallet-visualization self-test"
   || fail "the wallet-visualization self-test failed — run scripts/wallet-viz-selftest.sh"
 print -P "%F{green}✓ wallet-viz self-test%f"
 
+# The WalletConnect picker's arithmetic (`Model/WalletConnectPlan.swift`, prd
+# §376). The bug it replaces was unreportable, not merely unnoticed: the
+# connect door looped `WalletStore.add` over every shared account and flagged
+# trouble only when EVERY add failed, so the 5-wallet cap ate the overflow in
+# silence — and nobody knows how many accounts their wallet chose to share, so
+# there was no number to notice was wrong. `overflow` is that number, and
+# nothing in the app represented it before this. No simulator can reach the
+# real path (no wallet app claims `wc:` there, so `-wcConnectProbe` can only
+# ever time out), which makes this harness the only proof these numbers hold.
+step "WalletConnect-picker self-test"
+"$ROOT/scripts/wallet-connect-plan-selftest.sh" >/dev/null \
+  || fail "the WalletConnect-picker self-test failed — run scripts/wallet-connect-plan-selftest.sh"
+print -P "%F{green}✓ wallet-connect-plan self-test%f"
+
 # The three chat import rooms (ChatGPT / Claude / Gemini) — the shared flatten
 # and clamp, plus ChatGPT's GRAPH walk, which must recover conversation order
 # rather than dictionary order. A transcript in the wrong order still reads as

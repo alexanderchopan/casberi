@@ -999,6 +999,97 @@ enum SafeBridge {
         return added
     }
 
+    // MARK: - Connect-time discovery (2026-08-13, prd §376)
+
+    /// What `signerSafes` found, with "couldn't look" kept apart from "found
+    /// none" (§85, the rule `FollowImportSheet` quotes: a read that FAILED and
+    /// a read that found nothing are two different facts and never share a
+    /// line). A connect picker that says "you sign on no Safes" because
+    /// api.safe.global was down has stated something it doesn't know.
+    struct SignerLookup {
+        var safes: [WalletConnectPlan.FoundSafe] = []
+        /// False when NO chain answered. A partial read is `true` with
+        /// `truncated` set — some chains answering is still a real finding.
+        var reachable = true
+        /// Set when the budget or the cap cut the walk short, so the caller
+        /// can say so rather than presenting a prefix as the whole list.
+        var truncated = false
+    }
+
+    /// Every Safe that currently names one of `addresses` as an owner —
+    /// BOUNDED, because this runs while somebody is waiting on a sheet.
+    ///
+    /// Three bounds, each measured against a real hazard rather than picked:
+    ///
+    /// (1) **The spam filter is `nonce > 0` PLUS current ownership.**
+    ///     `/owners/{addr}/safes/` answers for any address ever named an
+    ///     owner at deployment, and nothing requires that owner's consent —
+    ///     measured 2026-07-30, vitalik.eth returns 59 on eth alone,
+    ///     overwhelmingly not his. A decoy is free to deploy; one that has
+    ///     actually EXECUTED something cost its deployer real gas. Ownership
+    ///     is then re-confirmed against the Safe's own live owner list, since
+    ///     the reverse index is not the same claim as "is an owner today".
+    ///     This is deliberately WEAKER than `candidates`' filter, which also
+    ///     demands a non-empty pending queue: that is right for a feed (only
+    ///     surface what needs doing) and wrong here, because a Safe you use
+    ///     every week has an empty queue most of the time and is exactly what
+    ///     somebody connecting a wallet wants offered.
+    ///
+    /// (2) **A hard read cap.** The free tier is 2 RPS, so detailing 59
+    ///     candidates is a 30-second sheet. `detailBudget` caps how many
+    ///     Safes are confirmed per connect; the rest are not silently
+    ///     dropped, they set `truncated`.
+    ///
+    /// (3) **A wall-clock budget**, `TodayBrief.liveReadBudget`'s shape: a
+    ///     flaky host must not own a screen the person is standing in front
+    ///     of. Missing the budget contributes nothing and says so.
+    ///
+    /// Solana accounts are skipped — Safe is EVM only, and asking about a
+    /// base58 address is a request that can only ever 404.
+    @MainActor
+    static func signerSafes(for addresses: [String],
+                            budget: Duration = .seconds(8),
+                            detailBudget: Int = 12) async -> SignerLookup {
+        let owners = addresses.filter { ENS.isHexAddress($0) }
+        guard !owners.isEmpty else { return SignerLookup() }
+
+        let deadline = ContinuousClock.now.advanced(by: budget)
+        var out = SignerLookup()
+        var answered = false
+        var details = 0
+        var seen = Set<String>()
+
+        for chain in chains where isChainActive(chain) {
+            for owner in owners {
+                guard ContinuousClock.now < deadline else {
+                    out.truncated = true
+                    out.reachable = answered
+                    return out
+                }
+                guard let owned = await ownerSafes(chain: chain, address: owner) else { continue }
+                answered = true
+                for safeAddress in owned {
+                    guard seen.insert(safeAddress.lowercased()).inserted else { continue }
+                    guard details < detailBudget else { out.truncated = true; continue }
+                    guard ContinuousClock.now < deadline else { out.truncated = true; break }
+                    details += 1
+                    guard let detail = await safeDetail(chain: chain, address: safeAddress),
+                          detail.nonce > 0,
+                          // The reverse index says "was named an owner"; this
+                          // says "is one now". A removed signer must not be
+                          // offered a wallet they can no longer act on.
+                          detail.config.owners.contains(owner.lowercased())
+                    else { continue }
+                    out.safes.append(WalletConnectPlan.FoundSafe(address: safeAddress,
+                                                                owner: owner,
+                                                                chain: chain.seg))
+                }
+            }
+        }
+        out.reachable = answered
+        return out
+    }
+
     /// The discovery moment: the reverse lookup found Safes this person is a
     /// signer on and never watched. Framed as an invitation, never an alarm —
     /// finding something FOR you is good news, and the same fact worded as a

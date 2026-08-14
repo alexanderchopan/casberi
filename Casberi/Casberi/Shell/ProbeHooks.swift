@@ -2395,6 +2395,66 @@ enum ProbeHooks {
                 if let note = e.unpricedNote { NSLog("exposureProbe| note: %@", note) }
             }
         },
+        // `-connectPickerProbe "<addr[,addr]>"` — the connect picker's plan
+        // (2026-08-13, prd §376), over addresses standing in for what a
+        // settled WalletConnect session would have shared, against the REAL
+        // watch list and the REAL Safe reverse-lookup.
+        //
+        // A stand-in rather than a handshake because there is no other way:
+        // no simulator has a wallet app, so `-wcConnectProbe` can only ever
+        // reach `.timedOut` (it says so itself) and the picker that follows a
+        // settle is unreachable on every automated run this project has. The
+        // `SHAPE`/`LIVE` split `-appleWalletProbe` uses for the same reason.
+        //
+        // It exists because the numbers this sheet states are exactly the ones
+        // that were silently wrong before it: `room=` and `overflow=` are the
+        // watch cap's arithmetic, and `overflow` was previously unrepresented
+        // anywhere in the app, which is what let a connect drop accounts
+        // without a word. One NSLog per row (the `-todayProbe` truncation
+        // lesson), each naming the origin and whether it was pre-ticked —
+        // "shared" and "found" are pre-selected differently on purpose, and a
+        // joined dump can't show that held.
+        //
+        // Pair with `-walletAddress` (on earlier launches) to move `room=`.
+        Hook(key: "connectPickerProbe") { spec, _ in
+            let shared = spec.split(separator: ",")
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+            guard !shared.isEmpty else {
+                NSLog("connectPicker| no addresses given")
+                return
+            }
+            Task { @MainActor in
+                let lookup = await SafeBridge.signerSafes(for: shared)
+                let plan = WalletConnectPlan.make(
+                    shared: shared.map { (address: $0,
+                                          namespace: ENS.isHexAddress($0)
+                                              ? WalletConnectBridge.evmNamespace
+                                              : WalletConnectBridge.solanaNamespace) },
+                    safes: lookup.safes,
+                    watched: WalletStore.shared.addresses.map(\.address),
+                    limit: WalletStore.watchLimit)
+                NSLog("connectPicker| shared=%d safes=%d reachable=%@ truncated=%@",
+                      shared.count, lookup.safes.count,
+                      lookup.reachable ? "YES" : "NO",
+                      lookup.truncated ? "YES" : "NO")
+                NSLog("connectPicker| watched=%d limit=%d room=%d pickable=%d overflow=%d ceiling=%d",
+                      WalletStore.shared.addresses.count, WalletStore.watchLimit,
+                      plan.roomLeft, plan.pickable.count, plan.overflow, plan.selectionCeiling)
+                for row in plan.rows {
+                    let origin: String
+                    switch row.origin {
+                    case .shared: origin = "shared"
+                    case .safe(let via, let chain):
+                        origin = "safe(via \(WalletStore.shortAddress(via)) on \(chain))"
+                    }
+                    NSLog("connectPickerRow| %@ | %@ | watching=%@ | ticked=%@",
+                          row.address, origin,
+                          row.alreadyWatching ? "YES" : "NO",
+                          plan.preselected.contains(row.key) ? "YES" : "NO")
+                }
+            }
+        },
         // `-connectionsProbe YES` — the address book's connections card
         // (2026-08-03, prd §295), phase by phase: how many wallets are
         // watched, how many transfers survived each exclusion, the headline,

@@ -22497,3 +22497,130 @@ a genuinely unique read and a TALLY, so at most a room card and never a thing;
 left for a pass that measures a real file first. DMs remain behind
 `ImportOptions.includeMessages`, off by default. And no filter chips for the
 new `Photo` facet: §269's ruling stands, the tag filter is the agent's.
+
+## §376 — Connecting a wallet becomes a choice, not a silent bulk-add (user: "today a user can connect a wallet they want to watch with wallet connect. what else can we do with this feature? i guess it is the same that we do if a user manually enters a wallet address", then "detecting the other addresses in the wallet tho, that could be useful to ask when connecting: do you want to watch these is that possible?", 2026-08-13)
+
+The question was whether the WalletConnect door does anything a typed address
+doesn't, and the honest answer was no — not because the handshake knows less,
+but because it threw away everything it knew except the address string.
+`WalletConnectBridge.connect` read the settled session, extracted
+`[address, namespace]`, tore the session down, and `watchConnected` then called
+`WalletStore.add(address, label: "")` — the same call the paste field makes,
+minus the label.
+
+Three things followed from that, and only the first is cosmetic.
+
+### 1. The richer door produced the poorer entry
+
+A wallet sharing three accounts landed three anonymous `0x…` rows, while typing
+`vitalik.eth` into the field two inches away landed a named one. The session's
+addresses are exactly the addresses most likely to have a primary ENS name, and
+nothing asked.
+
+### 2. It truncated in silence — and the truncation was unreportable
+
+`add` returns `false` on `.limitReached`, and `watchConnected` set its
+`addedAny` flag if ANY add succeeded. So watching three wallets and then
+connecting one that shares four accounts landed two, dropped two, and reported
+success.
+
+This is prd §307/§309's silent-truncation class, with one difference that makes
+it worse: in the import rooms a person can at least suspect the number is wrong
+because they know roughly how much they put in. **Nobody knows how many
+accounts their wallet chose to share.** The wallet's approval screen is the
+wallet's, the count never reaches us in any form the person sees, and the row
+that didn't appear looks identical to an account the wallet declined to share.
+There was no number to notice was wrong, which is why this survived from the
+day the door shipped.
+
+The fix is a number: `WalletConnectPlan.Plan.overflow`, how many of the offered
+addresses cannot be watched however you choose. Nothing in the app represented
+that quantity before. It is stated above the list, never below it, and never
+conditionally on somebody scrolling.
+
+### 3. What the handshake could go on to find was surfaced in the wrong place
+
+`SafeBridge` has done a reverse owner lookup since 2026-07-30 —
+`/owners/{addr}/safes/`, every Safe naming an address as an owner — and told
+you about it through `noteDiscovery`, a `SourceMoments` toast that fires once
+ever and scrolls away. Right fact, wrong moment: the one time a person is
+actively deciding which addresses to watch is the moment they have just
+connected, and that is precisely when this was silent.
+
+### The ruling: a picker, on §87's terms
+
+Connecting now ends in `WalletConnectPickerSheet` rather than a write. It is
+`FollowImportSheet`'s shape deliberately — §87 ruled the follow graph a picker
+and not a mirror, and every word of that reasoning transfers: these are
+addresses, each costs a sync job on every foreground forever and a slot against
+a cap of five.
+
+One divergence from §87, and it is the sheet's whole structure. §87 preselects
+nothing, because a follow graph is 1,800 strangers we went and fetched. Here the
+shared accounts arrive **already chosen** — the person picked them in their own
+wallet's approval screen seconds ago — so re-asking makes them do the same work
+twice. What we went and FOUND is never pre-ticked. That is the line between the
+two sections, and pre-ticking the second would erase it.
+
+Consequences, each deliberate:
+
+- **A row that cannot fit says "No room" instead of offering a checkbox that
+  would do nothing** (§83). A row already watched says "Watching", the
+  `FollowImportSheet` treatment. Both are still SHOWN — hiding them would read
+  as "your wallet didn't share that".
+- **With no room at all the button says "Done", not a permanently inert
+  "Watch 0".**
+- **Names come from reverse ENS, not a text field.** A row lands named when the
+  address published a name and short-form when it didn't; naming the rest stays
+  where naming already lives, on the book row. An inline field per row is a
+  heavier surface for a case the address book already serves.
+- **The Safe lookup is bounded three ways** and each bound answers a measured
+  hazard: `nonce > 0` plus a live owner re-check (the reverse index answers for
+  any address ever *named* an owner, consent not required — measured 2026-07-30,
+  vitalik.eth returns 59 on eth alone, overwhelmingly not his); a hard cap on
+  detail reads (the free tier is 2 RPS, so confirming 59 candidates is a
+  30-second sheet); and a wall-clock budget, `TodayBrief.liveReadBudget`'s
+  shape, because a flaky host must not own a screen someone is standing in
+  front of. This filter is deliberately WEAKER than `candidates`' — that one
+  also demands a non-empty pending queue, which is right for a feed (surface
+  what needs doing) and wrong here, since a Safe you use weekly has an empty
+  queue most of the time and is exactly what should be offered.
+- **"Couldn't look" and "found none" never share a line** (§85). An unreachable
+  Safe read says so; it does not report that you sign on nothing.
+
+### What this deliberately is NOT
+
+No mine/theirs flag on the address book. A session proves control of the keys
+and the reverse lookup proves current ownership, so the app *could* mark these
+rows as yours — and it doesn't, on the user's own reasoning: someone whose book
+is five wallets they all own would switch it on for all five, and a distinction
+every row shares distinguishes nothing. It sounds better than it is.
+
+No wallet-app identity either (`session.peer.metadata` carries the name, icon
+and redirect link, all still discarded). Offered and declined the same way: an
+address-book row reading "Rainbow" is a fact that changes nothing anybody does.
+
+And no new capability requested from the wallet. `methods=0` stands. It looks
+conservative and isn't: `eth_signTypedData_v4` is how Permit2 and Seaport
+authorize a drain, with no transaction involved, so an off-chain signature is
+not the read-adjacent thing it resembles. The one genuine capability that door
+would open is SIWE — Gnosis Pay's merchant names — which §222 ruling 2 already
+refused, by us rather than by them.
+
+### Why it is mechanical
+
+`scripts/wallet-connect-plan-selftest.sh` compiles `WalletConnectPlan.swift`
+whole and unmodified (Foundation-only by design), 54 assertions, 11 mutations.
+It is the ONLY proof these numbers hold: no simulator has a wallet app, so
+nothing claims the `wc:` scheme, `-wcConnectProbe` can only ever reach
+`.timedOut` (it says so itself), and the picker that follows a settle is
+unreachable on every automated run this project can make. `-connectPickerProbe
+"<addr[,addr]>"` is the `SHAPE` half `-appleWalletProbe` established for the
+same reason — real watch list, real Safe lookup, stand-in shared accounts.
+
+The harness's sharpest guard is a negative one, and it needs a comment-stripped
+copy of `WalletScreen.swift` to work: `showConnectPicker`'s own doc comment
+describes the deleted bulk-add loop verbatim so the next reader knows what not
+to write, so a guard grepping raw source fires on the prose explaining the bug
+it guards. That is the Obsidian/Cursor lesson, earned again here on this
+guard's first run.

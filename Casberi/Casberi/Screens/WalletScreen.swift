@@ -33,6 +33,11 @@ private enum BookSort: CaseIterable, Hashable {
 private enum BookSheetRoute: Identifiable {
     case entry(AddressBook.Entry)
     case newGroup
+    /// What a settled WalletConnect session handed over, on its way to the
+    /// picker (2026-08-13, prd §376). Routed through this enum rather than
+    /// hung off the view as a fourth `.sheet` for the reason the property
+    /// below states at length.
+    case connectPicker([WalletConnectBridge.ConnectedAccount])
 
     /// Spelled out rather than computed off the payload, so the two cases can
     /// never collide on an address whose key happens to read like a sentinel.
@@ -40,6 +45,10 @@ private enum BookSheetRoute: Identifiable {
         switch self {
         case .entry(let entry): "entry:\(entry.id)"
         case .newGroup: "newGroup"
+        // Keyed by the addresses themselves: connecting the same wallet twice
+        // is the same sheet, and a fresh identity would re-present it over
+        // itself mid-dismiss.
+        case .connectPicker(let accounts): "connect:" + accounts.map(\.address).joined(separator: ",")
         }
     }
 }
@@ -364,6 +373,10 @@ struct WalletScreen: View {
                 // to go find is a filing cabinet, not a filing gesture.
                 NewGroupSheet { group in
                     withAnimation(DS.Motion.standard) { selectedGroup = group }
+                }
+            case .connectPicker(let accounts):
+                WalletConnectPickerSheet(shared: accounts) { added in
+                    if added > 0 { sync() }
                 }
             }
         }
@@ -1356,7 +1369,7 @@ struct WalletScreen: View {
             switch outcome {
             case .success(.connected(let found)):
                 pairingURI = nil
-                watchConnected(found)
+                showConnectPicker(found)
             case .success(.noWalletApp):
                 // Only reachable now if no manual-pairing handler ran — the
                 // screen always passes one, so this is the belt to that braces.
@@ -1396,28 +1409,27 @@ struct WalletScreen: View {
         }
     }
 
-    /// Watch whatever the settled session handed over. A wallet may share
-    /// several accounts at once; all of them are addresses the person chose
-    /// to give us, so all of them are watched rather than silently taking the
-    /// first.
-    private func watchConnected(_ found: [WalletConnectBridge.ConnectedAccount]) {
-        var addedAny = false
-        for account in found {
-            if let network = account.requiredNetworkID {
-                WalletChainStore.shared.ensureEnabled(network)
-            }
-            if wallet.add(account.address, label: "") { addedAny = true }
-        }
-        guard addedAny else {
+    /// Hand what the settled session shared to the picker (2026-08-13, prd
+    /// §376) — it does NOT watch anything itself.
+    ///
+    /// It used to. It looped `wallet.add` over every shared account and
+    /// reported trouble only when EVERY add failed, which meant the watch cap
+    /// ate the overflow in silence: watching three wallets and connecting one
+    /// sharing four landed two, dropped two, and said nothing. That is the
+    /// silent-truncation class §307/§309 named in the import rooms, and it was
+    /// worse here, because nobody knows how many accounts their wallet chose
+    /// to share — there is no number to notice was wrong.
+    ///
+    /// The sheet also names what it watches (reverse ENS) and offers the Safes
+    /// those addresses currently sign on, both of which this path threw away.
+    private func showConnectPicker(_ found: [WalletConnectBridge.ConnectedAccount]) {
+        guard !found.isEmpty else {
             resultIsError = true
-            result = found.isEmpty
-                ? String(localized: "Your wallet approved but shared no address — paste it instead.")
-                : String(localized: "Already watching that address.")
+            result = String(localized: "Your wallet approved but shared no address — paste it instead.")
             return
         }
         resultIsError = false
-        DSHaptic.success()
-        sync()
+        bookSheet = .connectPicker(found)
     }
 
     private func watch() {
