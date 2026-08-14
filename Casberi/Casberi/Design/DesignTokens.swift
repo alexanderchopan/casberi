@@ -376,6 +376,18 @@ enum DS {
         /// A row's leading identity, sized to its two-line title+meta block.
         /// A face here is never the tap target; the whole row is.
         static let row: CGFloat = 26
+        /// The optical size a full-bleed CIRCLE draws at inside the `row`
+        /// SEAT (2026-08-13, user: the feed's leaders read unevenly sized).
+        /// They were already one frame — the unevenness is optics: a circle
+        /// at 26 covers ~79% of the 26pt squircle beside it, so every avatar
+        /// sat visually lighter than the marks in its own column. Standard
+        /// optical compensation: the circle draws at 28, CENTERED IN a
+        /// `row`-sized frame, so the layout seat — and the row rhythm every
+        /// shaped row shares — is untouched. Use it ONLY where a circle
+        /// stands in a MIXED column beside squircle marks (the feed rows);
+        /// an all-circle line (a venue switcher, a sheet head) has no weight
+        /// mismatch to correct and stays on `row`.
+        static let rowCircle: CGFloat = 28
         /// A list or picker you tap through — bigger than a feed row because
         /// choosing between people is the screen's whole job.
         static let list: CGFloat = 36

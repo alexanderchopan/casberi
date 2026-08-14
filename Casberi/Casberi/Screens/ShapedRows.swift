@@ -454,22 +454,33 @@ struct BandRow: View {
             // live set says the stream is on (honesty at render: the model
             // may still hold a frame a failed or disconnected sync never
             // saw end).
+            // The CIRCLE cases draw at `DS.Face.rowCircle` (28) inside the
+            // 26pt seat — optical compensation, see the token's own doc: a
+            // circle at 26 reads lighter than the squircles sharing this
+            // column. The `.frame` back to the seat is what keeps every
+            // row's layout rhythm identical to the squircle cases.
             Group {
                 switch leader {
                 case .avatar(let avatar):
-                    RemoteThumb(urlString: avatar, size: DS.Face.row, fallback: thing.source,
-                                circular: true)
+                    RemoteThumb(urlString: avatar, size: DS.Face.rowCircle,
+                                fallback: thing.source, circular: true)
+                        .frame(width: DS.Face.row, height: DS.Face.row)
                 case .blockie(let addr):
-                    WalletBlockie(address: addr, size: 26)
+                    WalletBlockie(address: addr, size: DS.Face.rowCircle)
+                        .frame(width: DS.Face.row, height: DS.Face.row)
                 case .initial(let sender):
-                    SenderInitial(sender: sender, size: 26)
+                    SenderInitial(sender: sender, size: DS.Face.rowCircle)
+                        .frame(width: DS.Face.row, height: DS.Face.row)
                 case .publisher(let publisher):
-                    RemoteThumb(urlString: publisher, size: 26, fallback: thing.source)
+                    RemoteThumb(urlString: publisher, size: DS.Mark.row, fallback: thing.source)
                 case .thumb(let image, let perishable, let circular):
-                    RemoteThumb(urlString: image, size: 26, fallback: thing.source,
+                    RemoteThumb(urlString: image,
+                                size: circular ? DS.Face.rowCircle : DS.Mark.row,
+                                fallback: thing.source,
                                 perishable: perishable, circular: circular)
+                        .frame(width: DS.Mark.row, height: DS.Mark.row)
                 case .screenshot, .photoData:
-                    PhotoWell(thing: thing, size: 26)
+                    PhotoWell(thing: thing, size: DS.Mark.row)
                 case .glyph:
                     BridgeIcon(name: thing.source, size: DS.Mark.row)
                 }
@@ -582,7 +593,7 @@ struct BandRow: View {
                     // promised at this size either: a 26pt thumb invites no tap
                     // of its own (the row's tap owns the whole band), so the
                     // affordance this mark exists to correct isn't offered here.
-                    RemoteThumb(urlString: art, size: 26, fallback: thing.source)
+                    RemoteThumb(urlString: art, size: DS.Mark.row, fallback: thing.source)
                 }
             }
             VStack(alignment: .trailing, spacing: 1) {
@@ -1252,7 +1263,7 @@ enum RemoteImageLoader {
 /// frame must not read worse than having no art at all).
 struct RemoteThumb: View {
     let urlString: String
-    var size: CGFloat = 26
+    var size: CGFloat = DS.Mark.row
     /// The bridge whose glyph stands in when the URL turns out dead.
     var fallback: String? = nil
     /// A perishable image (a live-stream frame) changes behind its URL —
@@ -1572,7 +1583,7 @@ struct MusicRow: View {
 /// dark tint of itself, clipped to a circle to match the social avatars.
 struct WalletBlockie: View {
     let address: String
-    var size: CGFloat = 26
+    var size: CGFloat = DS.Face.row
 
     var body: some View {
         let seed = Self.hash(address)
@@ -1616,7 +1627,7 @@ struct WalletBlockie: View {
 /// sender is always the same color. No network, nothing stored.
 struct SenderInitial: View {
     let sender: String
-    var size: CGFloat = 26
+    var size: CGFloat = DS.Face.row
 
     var body: some View {
         let letter = Self.letter(of: sender) ?? "?"
@@ -1710,27 +1721,27 @@ struct BundleRow: View {
                 // recessed, which is what depth means.
                 ZStack(alignment: .leading) {
                     ForEach([2, 1], id: \.self) { step in
-                        RoundedRectangle(cornerRadius: DS.Radius.appIcon(26),
+                        RoundedRectangle(cornerRadius: DS.Radius.appIcon(DS.Mark.row),
                                          style: .continuous)
                             .fill(step == 1 ? DS.surfaceSheet : DS.surfaceWell)
-                            .frame(width: 26, height: 26)
+                            .frame(width: DS.Mark.row, height: DS.Mark.row)
                             .offset(x: CGFloat(step) * 4)
                             .accessibilityHidden(true)
                     }
                     BridgeIcon(name: source, size: DS.Mark.row)
                 }
-                .frame(width: 26 + 8, alignment: .leading)
+                .frame(width: DS.Mark.row + 8, alignment: .leading)
             } else {
                 // The fan: newest on top, each a step behind — the same 26pt
                 // leading seat every band row keeps, grown only by the
                 // overlap, so the row's rhythm holds.
                 ZStack(alignment: .leading) {
                     ForEach(Array(art.enumerated().reversed()), id: \.offset) { i, url in
-                        RemoteThumb(urlString: url, size: 26, fallback: source)
+                        RemoteThumb(urlString: url, size: DS.Mark.row, fallback: source)
                             .offset(x: CGFloat(i) * 10)
                     }
                 }
-                .frame(width: 26 + CGFloat(art.count - 1) * 10, alignment: .leading)
+                .frame(width: DS.Mark.row + CGFloat(art.count - 1) * 10, alignment: .leading)
             }
             VStack(alignment: .leading, spacing: 1) {
                 Text(source)
@@ -2154,8 +2165,13 @@ struct PostCard: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(spacing: DS.Space.s2) {
                 if let avatar = thing.authorAvatarURL, !avatar.isEmpty {
-                    RemoteThumb(urlString: avatar, size: DS.Face.row, fallback: thing.source,
-                                circular: true)
+                    // 28-in-a-26-seat — the optical circle bump BandRow's
+                    // leader documents; this header mixes circle avatars
+                    // with the squircle fallback below, the exact case
+                    // `DS.Face.rowCircle` exists for.
+                    RemoteThumb(urlString: avatar, size: DS.Face.rowCircle,
+                                fallback: thing.source, circular: true)
+                        .frame(width: DS.Face.row, height: DS.Face.row)
                 } else {
                     BridgeIcon(name: thing.source, size: DS.Mark.row)
                 }
@@ -2382,8 +2398,11 @@ struct SocialThreadCard: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(spacing: DS.Space.s2) {
                 if let avatar = head.authorAvatarURL, !avatar.isEmpty {
-                    RemoteThumb(urlString: avatar, size: DS.Face.row, fallback: head.source,
-                                circular: true)
+                    // Same optical circle bump as PostCard's header — one
+                    // slot, two possible shapes, equal visual weight.
+                    RemoteThumb(urlString: avatar, size: DS.Face.rowCircle,
+                                fallback: head.source, circular: true)
+                        .frame(width: DS.Face.row, height: DS.Face.row)
                 } else {
                     BridgeIcon(name: head.source, size: DS.Mark.row)
                 }
