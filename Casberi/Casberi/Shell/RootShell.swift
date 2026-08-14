@@ -513,6 +513,37 @@ struct RootShell: View {
                 // it reads false in a way that means "not measured", not "no
                 // pane" — and the hook would take the sheet on a device that
                 // has one.
+                // `-openThingDelay <s>` re-fetches after a wait instead of
+                // using the mount-time `all` above (2026-08-14). The fetch
+                // above runs BEFORE any async seed lands, so pairing
+                // `-openThing` with `-demoEnter` in ONE launch always logged
+                // "no match" — and on the Mac the usual two-launch answer is
+                // unavailable, because `-storeScratch` keys its directory to
+                // the process id, so the second launch opens an empty store.
+                // Used by scripts/mac-appstore-capture.sh so a source room's
+                // detail pane shows that room's own thing rather than the
+                // newest thing overall. The zero-delay path below is
+                // deliberately left exactly as it was.
+                let openDelay = UserDefaults.standard.double(forKey: "openThingDelay")
+                if openDelay > 0 {
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .seconds(openDelay))
+                        await sceneState.detail.awaitLayout()
+                        let late = (try? modelContext.fetch(FetchDescriptor<Thing>(
+                            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+                        ))) ?? []
+                        guard let hit = late.first(where: { $0.title.hasPrefix(prefix) }),
+                              hit.isLive else {
+                            NSLog("[Casberi] openThing: no match for %@ (after %.1fs)",
+                                  prefix, openDelay)
+                            return
+                        }
+                        let inPane = sceneState.detail.present(hit)
+                        if !inPane { deepLinkThing = hit }
+                        NSLog("[Casberi] openThing: %@ (%@)", hit.title,
+                              inPane ? "pane" : "sheet")
+                    }
+                } else {
                 Task { @MainActor in
                     await sceneState.detail.awaitLayout()
                     guard let match, match.isLive else {
@@ -523,6 +554,7 @@ struct RootShell: View {
                     if !inPane { deepLinkThing = match }
                     NSLog("[Casberi] openThing: %@ (%@)", match.title,
                           inPane ? "pane" : "sheet")
+                }
                 }
             }
             // `-openSettings YES` pushes Settings. Lives HERE, not a screen's

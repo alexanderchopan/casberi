@@ -3569,6 +3569,37 @@ enum ProbeHooks {
                 NSLog("[Casberi] photoVerb: photos-redirect claimed=%@ · inHandOffSet=%@",
                       claimed ? "YES" : "NO",
                       HandOffState.installedSchemes.contains("photos-redirect") ? "YES" : "NO")
+                // The whole census, one line per scheme (2026-08-14). Added
+                // with the Calendar 2.1(a) fix: a gated verb that VANISHES and
+                // a gated verb that never existed look identical from outside,
+                // so the only way to tell "correctly dropped on Mac" from
+                // "accidentally dropped on iOS" is to read what each platform
+                // actually claims. `claimed` is ground truth; `inSet` is what
+                // the verbs are gated on, and a disagreement means the scheme
+                // is missing from LSApplicationQueriesSchemes.
+                // POLLED, not read once: `refresh()` runs off the scenePhase
+                // activation, which lands WELL after the 2s above — measured
+                // on a cold sim launch, where a single read reported every
+                // scheme `inSet=NO` including `photos-redirect`, which is
+                // correctly declared and correctly claimed. A census that
+                // always says NO is a broken instrument, so this waits for
+                // the set to populate and says so if it never does.
+                var populated = false
+                for _ in 0..<20 {
+                    if !HandOffState.installedSchemes.isEmpty { populated = true; break }
+                    try? await Task.sleep(for: .milliseconds(500))
+                }
+                if !populated {
+                    NSLog("[Casberi] handoffScheme| set still EMPTY after 10s — refresh() never ran")
+                }
+                for scheme in HandOffState.probeCandidates {
+                    let ok = URL(string: "\(scheme)://").map {
+                        UIApplication.shared.canOpenURL($0)
+                    } ?? false
+                    NSLog("[Casberi] handoffScheme| %@ claimed=%@ inSet=%@",
+                          scheme, ok ? "YES" : "NO",
+                          HandOffState.installedSchemes.contains(scheme) ? "YES" : "NO")
+                }
                 let shots = (try? context.fetch(FetchDescriptor<Thing>(
                     predicate: #Predicate { $0.source == "Photos" },
                     sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []

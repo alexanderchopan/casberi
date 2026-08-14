@@ -80,6 +80,15 @@
 		<string>photos-redirect</string>
 		<string>youtube</string>
 		<string>obsidian</string>
+		<!-- Calendar / Reminders (2026-08-14). Both ship with iOS, so their
+		     schemes always answer there and both hand-offs were left ungated
+		     for it; Mac Catalyst is where nothing claims them, and App Store
+		     review rejected the Mac build under 2.1(a) for the resulting dead
+		     Calendar button. A scheme absent from this list always reads as
+		     absent, so declaring them here is what lets HandOffState answer
+		     truthfully and drop the verb. -->
+		<string>calshow</string>
+		<string>x-apple-reminderkit</string>
 		<string>metamask</string>
 		<string>rainbow</string>
 		<string>rabby</string>

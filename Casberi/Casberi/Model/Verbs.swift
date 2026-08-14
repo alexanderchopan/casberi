@@ -68,11 +68,26 @@ enum VerbDerivation {
             return [Verb(label: "Approve", icon: "checkmark.circle", action: .approve),
                     Verb(label: "Deny", icon: "xmark.circle", action: .deny)]
         case .event:
-            out.append(thing.source == "Calendar"
-                ? Verb(label: "Open in Calendar", icon: "calendar",
-                       action: .openURL(URL(string: "calshow://")!))
-                : Verb(label: "Send to Calendar", icon: "calendar.badge.plus",
-                       action: .addToCalendar))
+            if thing.source == "Calendar" {
+                // Gated 2026-08-14 (App Store review 2.1(a), Mac build: "your
+                // app does not provide further action after we click on
+                // Calendar button"). `calshow:` is always answerable on iOS
+                // because Calendar ships with it, so this read was true there
+                // and only there; on Mac Catalyst nothing claims the scheme
+                // and the disc did nothing at all. An event ALREADY in
+                // Calendar gets no fallback — "Send to Calendar" would write
+                // a second copy of the event we read from it — so the verb
+                // drops and the row keeps its other discs.
+                if HandOffState.installedSchemes.contains("calshow") {
+                    out.append(Verb(label: "Open in Calendar", icon: "calendar",
+                                    action: .openURL(URL(string: "calshow://")!)))
+                }
+            } else {
+                // Not a hand-off — EventKit writes into the local store, which
+                // works with no Calendar app present. Ungated on purpose.
+                out.append(Verb(label: "Send to Calendar", icon: "calendar.badge.plus",
+                                action: .addToCalendar))
+            }
         case .reminder:
             // A real reminder (Reminders source) is READ-ONLY (ruling
             // 2026-07-25): its done-state mirrors the real list, so we never
@@ -541,8 +556,17 @@ enum VerbDerivation {
     /// Where a source can be opened. Nil = no hand-off; the verb drops.
     private static func sourceURL(_ source: String) -> URL? {
         switch source.lowercased() {
-        case "calendar":  return URL(string: "calshow://")
-        case "reminders": return URL(string: "x-apple-reminderkit://")
+        // Gated like every other hand-off here (2026-08-14, App Store review
+        // 2.1(a) on the Mac build). Both schemes are always answerable on iOS
+        // because Calendar and Reminders ship with it — which is exactly why
+        // these two were the last left ungated — but on Mac Catalyst nothing
+        // answers, so the disc appeared and did nothing at all.
+        case "calendar":
+            return HandOffState.installedSchemes.contains("calshow")
+                ? URL(string: "calshow://") : nil
+        case "reminders":
+            return HandOffState.installedSchemes.contains("x-apple-reminderkit")
+                ? URL(string: "x-apple-reminderkit://") : nil
         // Gated like the screenshot verb above (2026-08-02): an unclaimed
         // scheme opens nothing and reports nothing back, so this hand-off only
         // exists while something answers for it.
@@ -610,8 +634,24 @@ enum HandOffState {
     /// whether the Obsidian app is on this device — a vault synced from a Mac
     /// through iCloud Drive reads identically either way — so the bridge being
     /// connected could never have answered this.
+    /// `calshow` and `x-apple-reminderkit` joined the list 2026-08-14, after
+    /// App Store review rejected the Mac build under 2.1(a): "your app does
+    /// not provide further action after we click on Calendar button". They
+    /// were the last two hand-offs left ungated — every other one here was
+    /// gated the day it was found to be a disc that does nothing, and these
+    /// two were missed because Calendar and Reminders ship with iOS, so the
+    /// scheme is always answerable THERE. Mac Catalyst is where that stops
+    /// being true, and the reviewer's Mac is where it surfaced.
     private static let candidates = ["todoist", "googlegmail", "photos-redirect",
-                                     "youtube", "obsidian"]
+                                     "youtube", "obsidian",
+                                     "calshow", "x-apple-reminderkit"]
+
+    #if DEBUG
+    /// The same list, for `-photoVerbProbe`'s census. Exposed rather than
+    /// duplicated so a scheme added above is covered by the probe the day it
+    /// lands (the registry-drift rule this file's own hooks are held to).
+    static var probeCandidates: [String] { candidates }
+    #endif
 
     @MainActor static func refresh(connected: Set<String>) {
         let schemes = Set(candidates.filter {
