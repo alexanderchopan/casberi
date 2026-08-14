@@ -101,6 +101,9 @@ struct FeedScreen: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(BridgeStore.self) private var bridges
     @Environment(\.modelContext) private var modelContext
+    /// Read by `isQuiet` (prd §378): under increased contrast the feed's rows
+    /// never recede — that setting exists to refuse exactly this.
+    @Environment(\.colorSchemeContrast) private var contrast
     // This window's stack and detail pane (per-window since `SceneState`).
     @Environment(HomeRoute.self) private var route
     @Environment(PadDetailSelection.self) private var detail
@@ -1110,6 +1113,12 @@ struct FeedScreen: View {
         let id: String
         let date: Date
         let kind: Kind
+        /// The ambient tier (prd §378) — a row that arrived on its own rather
+        /// than one you made or one that concerns you. STORED at construction,
+        /// exactly like `id` and `date` and for the same reason: the render
+        /// loop must be able to ask "does this recede?" without a
+        /// stored-property read on a model a heal may since have deleted.
+        let ambient: Bool
         enum Kind {
             /// `KeyedThing`, not a raw `Thing` — so every read of the model
             /// goes through `.thing`/`.live` and the liveness audit's check 3
@@ -1129,19 +1138,22 @@ struct FeedScreen: View {
             case strip(source: String, word: String, count: Int, newest: Date, tiles: [StripTile])
         }
         static func single(_ t: Thing) -> FeedRow {
-            FeedRow(id: t.id.uuidString, date: t.capturedAt, kind: .single(KeyedThing(t)))
+            FeedRow(id: t.id.uuidString, date: t.capturedAt, kind: .single(KeyedThing(t)),
+                    ambient: FeedScreen.tier(t) == .arrived)
         }
         static func bundle(source: String, word: String, count: Int,
-                           newest: Date, art: [String]) -> FeedRow {
+                           newest: Date, art: [String], ambient: Bool) -> FeedRow {
             FeedRow(id: "bundle-\(source)-\(newest.timeIntervalSince1970)", date: newest,
                     kind: .bundle(source: source, word: word, count: count,
-                                  newest: newest, art: art))
+                                  newest: newest, art: art),
+                    ambient: ambient)
         }
         static func strip(source: String, word: String, count: Int,
-                          newest: Date, tiles: [StripTile]) -> FeedRow {
+                          newest: Date, tiles: [StripTile], ambient: Bool) -> FeedRow {
             FeedRow(id: "strip-\(source)-\(newest.timeIntervalSince1970)", date: newest,
                     kind: .strip(source: source, word: word, count: count,
-                                 newest: newest, tiles: tiles))
+                                 newest: newest, tiles: tiles),
+                    ambient: ambient)
         }
     }
 
@@ -1357,19 +1369,52 @@ struct FeedScreen: View {
                 let kinds = Set(members.map(\.kind))
                 let word = kinds.count == 1
                     ? kinds.first!.typeTagPlural.lowercased() : "things"
+                // A fold recedes only if EVERY member would — one transaction
+                // or one clock inside a mixed run keeps the whole row at full
+                // weight, since the row is the only thing standing in for it.
+                let ambient = members.allSatisfy { Self.tier($0) == .arrived }
                 switch decision {
                 case .strip(let tiles):
                     rows.append(.strip(source: t.source, word: word,
                                        count: members.count, newest: t.capturedAt,
-                                       tiles: tiles))
+                                       tiles: tiles, ambient: ambient))
                 case .bundle(let art):
                     rows.append(.bundle(source: t.source, word: word,
                                         count: members.count, newest: t.capturedAt,
-                                        art: art))
+                                        art: art, ambient: ambient))
                 }
             }
             return (label, rows)
         }
+    }
+
+    /// Where a row came from — the ONLY hierarchy the All feed applies
+    /// (prd §378). Provenance, never predicted interest: each tier is a
+    /// one-sentence fact about the row's origin, so the feed can be skimmed
+    /// without anything being ranked, reordered or scored.
+    enum FeedTier {
+        /// A deliberate act of yours — a screenshot, a voice note, anything
+        /// from You. The same "human capture" set `bundleable` has named since
+        /// 2026-07-09; one definition, so the two can't disagree about what a
+        /// deliberate act is.
+        case made
+        /// A row where you are the SUBJECT: consent waiting on you, money
+        /// moving, a clock of yours. Not "important" — a fact about the row.
+        case concerns
+        /// Everything that simply arrived: posts, articles, drops, trending.
+        /// The only tier that recedes.
+        case arrived
+    }
+
+    /// Static so `FeedRow`'s factories can stamp it while the model is still
+    /// valid, and so the rule has exactly one home.
+    static func tier(_ t: Thing) -> FeedTier {
+        if t.kind == .screenshot || t.kind == .voice
+            || t.source == "You" || t.source == "Voice" { return .made }
+        if t.kind == .approval || t.kind == .transaction
+            || t.kind == .event || t.kind == .reminder
+            || t.dueAt != nil || t.isFlagged { return .concerns }
+        return .arrived
     }
 
     /// Which shape a source's same-day run folds into, if it folds at all.
@@ -2725,14 +2770,17 @@ struct FeedScreen: View {
                                           position: positions[i],
                                           imageOnly: imageOnly.contains(thing.id),
                                           wideArt: wideArt.contains(thing.id))
+                                .opacity(isQuiet(row) ? Self.quietRow : 1)
                         }
                     case .bundle(let source, let word, let count, let newest, let art):
                         bundleListRow(source: source, word: word, count: count,
                                       newest: newest, art: art, index: i, position: positions[i])
+                            .opacity(isQuiet(row) ? Self.quietRow : 1)
                     case .strip(let source, let word, let count, let newest, let tiles):
                         stripListRow(source: source, word: word, count: count,
                                      newest: newest, tiles: tiles, index: i,
                                      position: positions[i])
+                            .opacity(isQuiet(row) ? Self.quietRow : 1)
                     }
                 }
             } header: {
@@ -2800,6 +2848,33 @@ struct FeedScreen: View {
 
     /// The boundary line — words only, no drawn rule (the no-hairlines law).
     /// Everything above it arrived since you last left this screen.
+    /// How far a receding row steps back (prd §378). One step, and only one:
+    /// a row is quiet or it isn't, never quieter for two reasons at once
+    /// (see `isQuiet`). Opacity rather than the `done` treatment's colour step
+    /// because this must recede a row WHOLE — its picture and its brand mark
+    /// included — and colour reaches only text; it is also one modifier with
+    /// no layout change, so nothing shifts as the boundary moves.
+    private static let quietRow = 0.68
+
+    /// Whether a row steps back on a skim — ambient, or already read.
+    ///
+    /// The two reasons are OR'd into ONE step deliberately. They answer the
+    /// same practical question ("can I skip this?") and multiplying them would
+    /// double-dim an ambient row below the boundary into unreadability, which
+    /// is how a legibility change becomes a legibility bug. Above the divider
+    /// the tiers do the sorting; below it everything recedes together, which
+    /// is honest — you have read it.
+    ///
+    /// Never applied under increased contrast: dimming is exactly what that
+    /// setting exists to refuse, and the feed's structure must not be the one
+    /// thing it costs you.
+    private func isQuiet(_ row: FeedRow) -> Bool {
+        guard contrast != .increased else { return false }
+        if row.ambient { return true }
+        guard let newSince else { return false }
+        return row.date <= newSince
+    }
+
     private var newSinceDivider: some View {
         // A quiet capsule, not tint-colored prose (which reads as a tappable
         // link). The fill gives the boundary its line without drawing one.
@@ -3977,9 +4052,15 @@ struct FeedScreen: View {
         func flush() {
             guard !run.isEmpty else { return }
             if run.count >= Self.walletFoldMin, let newest = run.first {
+                // Never ambient: these are transactions, which `tier` files as
+                // concerning you by definition. Stated rather than derived
+                // because this fold is the Wallet ROOM's, where §378's weight
+                // axis does not run at all — the flag exists so the payload is
+                // honest if it ever does.
                 rows.append(.bundle(source: "Wallet",
                                     word: String(localized: "transfers"),
-                                    count: run.count, newest: newest.capturedAt, art: []))
+                                    count: run.count, newest: newest.capturedAt, art: [],
+                                    ambient: false))
             } else {
                 rows += run.map(FeedRow.single)
             }

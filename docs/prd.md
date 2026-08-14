@@ -22777,3 +22777,89 @@ class. Three things a diff cannot show and a screenshot could: whether 26pt
 tiles read as members or as specks, whether four tiles plus a name plus a count
 fit the narrowest iPhone without eating the title, and whether a strip and the
 bundle above it read as one family.
+
+## §378 — The All feed gains one hierarchy, and it is provenance (user: "how else would you improve the All feed and make it more digestible while still preserving that it is supposed to be chronological", then "ok make these changes", 2026-08-14)
+
+**A correction first, because one of the ideas pitched in that answer was
+already shipped.** "Close the visit with a caught-up line" was offered as a new
+feature; `caughtUpFooter` has rendered in the All room since 2026-07-13 ("That's
+everything · N things"), gated on the room really being whole (§264). Nothing
+was built for it. Recorded because the wrong version was said out loud, and
+because it is the second time in three passes that reading the feed's own code
+first would have saved a proposal — §254 opens with the same correction about
+day-header counts.
+
+**The diagnosis.** A chronological record can be made consumable in exactly five
+ways: fewer rows, faster rows, knowing where you are, knowing when you're done,
+and moving through time. The feed attacked ONLY the first (bundling, §35; the
+folded tail, §218/§255; strips, §377) and had no answer at all to the third —
+every row was typographically identical, so a screenshot you took, an approval
+waiting on you and the fortieth synced article all weighed the same. Reading the
+feed therefore meant EVALUATING every row yourself, and that evaluation work is
+what "not digestible" actually feels like.
+
+**The ruling: hierarchy by PROVENANCE, never by predicted interest.** §35's "no
+ranking, no algorithmic feed" stands untouched, and this does not bend it —
+nothing is reordered, scored, or predicted. `FeedTier` is three one-sentence
+facts about where a row came from:
+
+- **made** — a deliberate act of yours: a screenshot, a voice note, anything
+  from You. Deliberately the SAME set `bundleable` has called "human capture"
+  since 2026-07-09, so the two can never disagree about what a deliberate act
+  is.
+- **concerns** — you are the SUBJECT: consent waiting on you, money moving, a
+  clock of yours (`.approval`/`.transaction`/`.event`/`.reminder`, anything with
+  a `dueAt`, anything flagged).
+- **arrived** — everything else. The only tier that recedes.
+
+Every assignment is explainable in one sentence, which is the honesty bar a
+ranked feed can never meet: "your own acts always stand; things that merely
+arrived stand back."
+
+**Visit-cooling rides the SAME axis rather than a second one.** A row is quiet
+when it is ambient OR already read (at or below the frozen `newSince`
+boundary) — OR'd into ONE step, never multiplied. Two independent dimming axes
+would double-dim an ambient row below the boundary into unreadability, which is
+how a legibility change becomes a legibility bug. The result reads correctly in
+both halves: above the divider the tiers do the sorting, below it everything
+recedes together, which is honest — you have read it.
+
+**Decisions with reasons:**
+
+- *Opacity, not the `done` treatment's colour step.* `done` recedes text via
+  `DS.textTertiary`, but this must recede a row WHOLE — its picture and brand
+  mark included — and colour reaches only text. One modifier, no layout change,
+  so nothing shifts as the boundary moves. It is a third axis beside size and
+  weight, which §254 was careful about; the justification is that this says
+  "skippable", not "lower in the hierarchy", and the row keeps every glyph at
+  full size.
+- *Never under increased contrast.* `colorSchemeContrast == .increased` turns
+  the whole axis off. That setting exists precisely to refuse dimming, and the
+  feed's structure must not be the thing it costs you.
+- *A fold recedes only if EVERY member would.* One transaction or one clock
+  inside a mixed run keeps the whole row at full weight — the row is the only
+  thing standing in for its members, so it inherits the loudest of them.
+- *Stored on `FeedRow`, not computed at render.* `ambient` is stamped at
+  construction beside `id` and `date`, for that field's own documented reason:
+  the render loop must never make a stored-property read on a model a heal may
+  since have deleted.
+
+**NOT done, and each for a reason rather than an oversight.** *Session seams* on
+heavy days (sub-grouping by morning/afternoon/evening, reusing `sessionLabel`)
+— it touches the grouping chain that feeds bundling, coarsening and the
+derivation memo, and it is not a change to make in a session with no compiler.
+*The whisper at the divider* (`DayBrief`'s one-liner replacing "New since 9:41
+PM") — cheap, but it changes what a boundary CLAIMS, which is a copy ruling.
+*Month cards for the tail*, *unfold-in-place*, a *date scrubber* and *agent-verb
+thinning* — all named to the user as needing a ruling or a separate pass, and
+none taken unasked. *Trailing-slot discipline* — a §252a-shaped audit sweep, not
+a feature.
+
+**VERIFIED BY STATIC AUDITS ONLY — NOT BUILT AND NOT SEEN ON SCREEN**, same
+Linux session as §377 with no Xcode and no Swift toolchain. Liveness,
+accessibility, motion, ramp and localization audits green. Three things a diff
+cannot show and a screenshot could, all of them about the one number here:
+whether 0.68 reads as "skippable" or as "broken" in dark, whether a day that is
+mostly ambient reads as one grey block rather than as structure, and whether the
+step is visible AT ALL against a wallpapered background. That constant is the
+whole ruling's surface area and it is the thing to tune first.
