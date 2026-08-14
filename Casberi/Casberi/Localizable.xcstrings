@@ -4165,6 +4165,136 @@
         }
       }
     },
+    "%@ posts": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ publicaciones"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "投稿%@件"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "게시물 %@개"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 条帖子"
+          }
+        }
+      }
+    },
+    "%@ posts across %lld years": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ posts across %2$lld years"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$@ publicaciones en %2$lld años"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%2$lld年間で投稿%1$@件"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%2$lld년간 게시물 %1$@개"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%2$lld 年间 %1$@ 条帖子"
+          }
+        }
+      }
+    },
+    "%@ posts · mostly %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ posts · mostly %2$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$@ publicaciones · sobre todo %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "投稿%1$@件・主に%2$@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "게시물 %1$@개 · 주로 %2$@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$@ 条帖子 · 主要是 %2$@"
+          }
+        }
+      }
+    },
+    "%@ posts — you wrote in %lld of %lld years": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ posts — you wrote in %2$lld of %3$lld years"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$@ publicaciones — escribiste en %2$lld de %3$lld años"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "投稿%1$@件 — %3$lld年のうち%2$lld年に投稿"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "게시물 %1$@개 — %3$lld년 중 %2$lld년에 작성"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$@ 条帖子 — %3$lld 年中有 %2$lld 年在写"
+          }
+        }
+      }
+    },
     "%@ prices this at %lld%% too — the two agree.": {
       "localizations": {
         "en": {
@@ -10343,6 +10473,34 @@
         }
       }
     },
+    "%lld of these years had no recurring subject.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "En %lld de estos años no hubo un tema recurrente."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "このうち%lld年は繰り返し出てくる話題がありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 중 %lld년은 반복되는 주제가 없습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "其中 %lld 年没有反复出现的主题。"
+          }
+        }
+      }
+    },
     "%lld of your %lld zones weren't read — nothing here speaks for them.": {
       "localizations": {
         "en": {
@@ -13392,6 +13550,40 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "%lld was your loudest year — %@ posts": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld was your loudest year — %2$@ posts"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$lld fue tu año más activo — %2$@ publicaciones"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$lld年が最も投稿の多い年でした — 投稿%2$@件"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$lld년이 가장 활발했습니다 — 게시물 %2$@개"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$lld 年是你发帖最多的一年 — %2$@ 条帖子"
           }
         }
       }
@@ -43144,6 +43336,34 @@
         }
       }
     },
+    "Opens this year's loudest post": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Abre la publicación más destacada de este año"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "この年で最も反響の大きい投稿を開きます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 해에 가장 활발했던 게시물을 엽니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "打开这一年最热门的帖子"
+          }
+        }
+      }
+    },
     "Opens your day": {
       "localizations": {
         "es": {
@@ -44748,6 +44968,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "个人访问令牌"
+          }
+        }
+      }
+    },
+    "Photo": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Foto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "写真"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "사진"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "照片"
           }
         }
       }
@@ -54832,6 +55080,34 @@
         }
       }
     },
+    "Subjects arrive once the room has been read.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Los temas aparecen cuando se ha leído la sala."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "話題はルームが読み込まれると表示されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "주제는 룸을 읽고 나면 나타납니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "读取此房间后会显示主题。"
+          }
+        }
+      }
+    },
     "Subscription canceled": {
       "localizations": {
         "es": {
@@ -56440,6 +56716,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "连接链接已过期 — 请点按“连接”获取新链接。"
+          }
+        }
+      }
+    },
+    "The day": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "El día"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "その日"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "하루"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "当天"
           }
         }
       }
@@ -61401,6 +61705,34 @@
         }
       }
     },
+    "What they're saying": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Lo que dicen"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "みんなの声"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "사람들의 이야기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "大家在说什么"
+          }
+        }
+      }
+    },
     "What you hold": {
       "localizations": {
         "es": {
@@ -62585,6 +62917,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "包装了 %@"
+          }
+        }
+      }
+    },
+    "X": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "X"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "X"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "X"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "X"
           }
         }
       }
