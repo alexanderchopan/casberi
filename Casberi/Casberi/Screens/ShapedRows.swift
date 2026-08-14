@@ -1766,6 +1766,84 @@ struct BundleRow: View {
 }
 
 
+/// A folded run drawn as its MEMBERS (prd §377) — screenshots as their
+/// pictures, posts as their authors' faces, side by side in the row's own
+/// leading seat.
+///
+/// `BundleRow`'s fan and this are the same compression with opposite
+/// priorities. The fan OVERLAPS three pictures behind one leader: it says "a
+/// stack arrived" and keeps the row's rhythm exactly. A strip lays them out,
+/// so each member is a thing you can actually tell apart — which is the point
+/// for the two families where the members ARE the content (a screenshot's
+/// pixels, a post's author) and a sentence about them shows none of it.
+///
+/// Anatomy is `BundleRow`'s, unchanged: leader, then source and time, then the
+/// count and its unit. The band is the one row anatomy (ruling 2026-07-06), so
+/// the tiles grow the leading seat and nothing else — §254 rejected a
+/// full-width banner beneath the title for the same reason.
+struct StripRow: View {
+    let source: String
+    let count: Int
+    /// The kind's plural when the run is uniform ("screenshots"), "things"
+    /// when mixed.
+    let word: String
+    let newest: Date
+    /// Up to `FeedScreen.stripCap` members, newest first.
+    let tiles: [StripTile]
+
+    /// The gap between tiles — the deck's own 4pt step (§254), so a strip and
+    /// a stack read as the same family seen from two angles.
+    private static let gap: CGFloat = 4
+
+    var body: some View {
+        HStack(spacing: DS.Space.s3) {
+            HStack(spacing: Self.gap) {
+                ForEach(tiles) { tile in
+                    if let face = tile.face {
+                        // A remote identity: no model read at all, so nothing
+                        // here can touch a tombstone.
+                        RemoteThumb(urlString: face, size: DS.Mark.row,
+                                    fallback: source, circular: tile.circular)
+                    } else if let thing = tile.item.live {
+                        // `.live` INSIDE the closure before the first stored
+                        // read (corollary 3, build 176 — see `ThingRowKeying`):
+                        // this closure is re-evaluated against the array it
+                        // already holds when a heal's delete lands, ahead of
+                        // any guard `PhotoWell` does for itself.
+                        PhotoWell(thing: thing, size: DS.Mark.row)
+                            .frame(width: DS.Mark.row, height: DS.Mark.row)
+                            .clipShape(RoundedRectangle(
+                                cornerRadius: DS.Radius.appIcon(DS.Mark.row),
+                                style: .continuous))
+                    }
+                }
+            }
+            // The tiles already say "several"; a screen reader gets that from
+            // the count and unit below, in words.
+            .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(source)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                LiveTimeText(date: newest)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .trailing, spacing: 0) {
+                Text("\(count)")
+                    .dsText(.price16)
+                    .foregroundStyle(DS.textPrimary)
+                    .monospacedDigit()
+                Text(word)
+                    .dsText(.label11)
+                    .foregroundStyle(DS.textTertiary)
+            }
+        }
+        .padding(.vertical, DS.Space.s2)
+    }
+}
+
+
 // MARK: - All: kind-aware row (now the band, uniformly)
 
 

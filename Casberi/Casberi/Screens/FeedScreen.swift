@@ -924,7 +924,11 @@ struct FeedScreen: View {
         else { return dayGroups(visible) }
         let recent = visible.filter { $0.capturedAt >= cutoff }
         let older = visible.filter { $0.capturedAt < cutoff }
-        return dayGroups(recent) + coarsenIfSparse(dayGroups(older), rows: bundledRowCount)
+        // Wrapped rather than passed by reference: `bundledRowCount` grew a
+        // defaulted `nextEventID`, and Swift does not apply default arguments
+        // when converting a function to a value.
+        return dayGroups(recent)
+            + coarsenIfSparse(dayGroups(older), rows: { bundledRowCount($0) })
     }
 
     /// The sparseness gate + regroup, shared by the plain day path and the
@@ -952,20 +956,32 @@ struct FeedScreen: View {
 
     /// How many rows a day's things draw once `bundle` has run over them.
     ///
-    /// Mirrors `bundle`'s own rule — a source with `bundleThreshold`+
-    /// bundleable things in the day collapses to ONE row, everything else draws
-    /// itself — without building the rows, because the gate runs BEFORE
-    /// bundling and only needs the count. One pass per day, no allocation
-    /// beyond a small per-source tally.
-    private func bundledRowCount(_ dayThings: [Thing]) -> Int {
-        var bySource: [String: Int] = [:]
-        var loose = 0
+    /// Asks the REAL fold decision (`foldBuckets` + `fold`) rather than
+    /// mirroring it. It used to mirror — a hand-copy of "a source with
+    /// `bundleThreshold`+ bundleable things collapses to one row" — and §255
+    /// is the record of what that costs: the gate measured THINGS while the
+    /// feed drew ROWS, so the tail-coarsening it guards never once fired.
+    /// Two folds (a bundle and a strip, with different eligibility) is exactly
+    /// where a second copy would go quietly wrong again, so there is only one.
+    ///
+    /// `nextEventID` defaults to nil, and that is CORRECT rather than lazy for
+    /// this caller: the clock carve-out below only ever spares a FUTURE event,
+    /// which by construction cannot sit in the coarsened tail this gate is
+    /// deciding about.
+    private func bundledRowCount(_ dayThings: [Thing], nextEventID: UUID? = nil) -> Int {
+        let (bySource, eligible) = foldBuckets(dayThings, nextEventID: nextEventID)
+        var folded: Set<String> = []
+        for (source, members) in bySource where fold(members) != nil { folded.insert(source) }
+        var rows = 0
+        var seen: Set<String> = []
         for t in dayThings {
-            if bundleable(t) { bySource[t.source, default: 0] += 1 } else { loose += 1 }
+            if folded.contains(t.source), eligible.contains(ObjectIdentifier(t)) {
+                if seen.insert(t.source).inserted { rows += 1 }
+            } else {
+                rows += 1
+            }
         }
-        return loose + bySource.values.reduce(0) {
-            $0 + ($1 >= Self.bundleThreshold ? 1 : $1)
-        }
+        return rows
     }
 
     /// Regroup already-ordered (newest-first) things by week, then month —
@@ -1105,6 +1121,11 @@ struct FeedScreen: View {
             /// bundle's own pictures (2026-07-21), so "Shopify · 100 products"
             /// can show what actually arrived instead of one brand glyph.
             case bundle(source: String, word: String, count: Int, newest: Date, art: [String])
+            /// A run folded into its MEMBERS rather than into a sentence about
+            /// them (prd §377): screenshots as their pictures, posts as their
+            /// authors' faces. Same one-row compression as `.bundle`, drawn
+            /// side by side instead of as an overlapped fan.
+            case strip(source: String, word: String, count: Int, newest: Date, tiles: [StripTile])
         }
         static func single(_ t: Thing) -> FeedRow {
             FeedRow(id: t.id.uuidString, date: t.capturedAt, kind: .single(KeyedThing(t)))
@@ -1114,6 +1135,12 @@ struct FeedScreen: View {
             FeedRow(id: "bundle-\(source)-\(newest.timeIntervalSince1970)", date: newest,
                     kind: .bundle(source: source, word: word, count: count,
                                   newest: newest, art: art))
+        }
+        static func strip(source: String, word: String, count: Int,
+                          newest: Date, tiles: [StripTile]) -> FeedRow {
+            FeedRow(id: "strip-\(source)-\(newest.timeIntervalSince1970)", date: newest,
+                    kind: .strip(source: source, word: word, count: count,
+                                 newest: newest, tiles: tiles))
         }
     }
 
@@ -1247,6 +1274,23 @@ struct FeedScreen: View {
         return ids
     }
 
+    /// Whether a thing may collapse into a SENTENCE about its run
+    /// ("Wallet · 14 transactions"). Since §377 this is no longer the same
+    /// question as "may it fold at all" — `stripCandidate` is the other door,
+    /// and the two exemption lists mean different things:
+    ///
+    /// - A screenshot stays out HERE forever. Its content is its pixels, so a
+    ///   sentence is the one shape that destroys it. It folds into a strip
+    ///   instead, which shows the pictures.
+    /// - Voice, approvals and anything from You stay out of BOTH. These are
+    ///   genuinely one-at-a-time deliberate acts at low volume, which is the
+    ///   2026-07-09 reasoning still describing them accurately — unlike the
+    ///   social exemption below, which volume outgrew.
+    ///
+    /// The test that decides a future exemption: a source earns one while its
+    /// rows are BOTH rare and individually distinct. Volume alone retires it
+    /// (Bluesky/Farcaster, 2026-08-09), and if the rows are distinct in a way
+    /// a picture can carry, the answer is a strip rather than an exemption.
     private func bundleable(_ t: Thing) -> Bool {
         t.kind != .screenshot && t.kind != .voice && t.kind != .approval
             && t.source != "You" && t.source != "Voice"
@@ -1273,55 +1317,183 @@ struct FeedScreen: View {
             && t.source != "1Claw"
     }
 
-    /// How many bundleable things from one source in one day collapse into a
-    /// single BundleRow (lowered from 4, 2026-07-12 — smaller same-source runs
-    /// were the real All-feed clutter). Named since 2026-07-31 because
-    /// `bundledRowCount` has to predict this exact rule to gate the coarsening,
-    /// and two copies of a literal 3 is how that prediction goes quietly wrong.
+    /// How many things from one source in one day collapse into a single row
+    /// (lowered from 4, 2026-07-12 — smaller same-source runs were the real
+    /// All-feed clutter). ONE number for both folds since §377: a strip and a
+    /// bundle are the same compression drawn two ways, and a run that is "too
+    /// small to fold" should not depend on which way it would have been drawn.
     static let bundleThreshold = 3
 
-    /// `bundleThreshold`+ bundleable things from one source in one day collapse
-    /// into a BundleRow at the position of their newest member.
-    /// Order is untouched otherwise — compression, not ranking.
+    /// `bundleThreshold`+ foldable things from one source in one day collapse
+    /// into ONE row at the position of their newest member — a `StripRow` when
+    /// the members can be drawn as themselves, a `BundleRow` otherwise (see
+    /// `fold`). Order is untouched either way — compression, not ranking.
     /// Takes the already-computed day groups so the caller derives `dayGroups`
     /// (→`visible`→`feedThings`) ONCE per render and reuses it for the day
     /// totals too, instead of rebuilding the whole chain here a second time.
-    private func bundle(_ days: [(String, [Thing])]) -> [(String, [FeedRow])] {
+    private func bundle(_ days: [(String, [Thing])],
+                        nextEventID: UUID? = nil) -> [(String, [FeedRow])] {
         days.map { label, dayThings in
             // Grouped ONCE per day (perf, 2026-07-28): the old version
             // re-filtered the whole day for every bundled source it found
             // (O(day size²) — a heavy sync day with several bundled sources
             // multiplied its own count against itself). Same membership,
             // built with one pass instead of one pass per source.
-            var bySource: [String: [Thing]] = [:]
-            for t in dayThings where bundleable(t) { bySource[t.source, default: []].append(t) }
-            let bundledSources = Set(bySource.filter { $0.value.count >= Self.bundleThreshold }.keys)
+            let (bySource, eligible) = foldBuckets(dayThings, nextEventID: nextEventID)
+            var folded: [String: Fold] = [:]
+            for (source, members) in bySource {
+                if let decision = fold(members) { folded[source] = decision }
+            }
             var rows: [FeedRow] = []
             var seen: Set<String> = []
             for t in dayThings {
-                if bundleable(t), bundledSources.contains(t.source) {
-                    guard !seen.contains(t.source) else { continue }
-                    seen.insert(t.source)
-                    let members = bySource[t.source] ?? []
-                    let kinds = Set(members.map(\.kind))
-                    let word = kinds.count == 1
-                        ? kinds.first!.typeTagPlural.lowercased() : "things"
-                    // The bundle's own pictures — the first three members
-                    // that actually carry art, in feed order (newest first,
-                    // since dayThings is).
-                    let art = members.compactMap { m -> String? in
-                        guard let a = m.previewImageURL, !a.isEmpty else { return nil }
-                        return a
-                    }.prefix(3)
+                guard let decision = folded[t.source],
+                      eligible.contains(ObjectIdentifier(t)) else {
+                    rows.append(.single(t)); continue
+                }
+                guard seen.insert(t.source).inserted else { continue }
+                let members = bySource[t.source] ?? []
+                let kinds = Set(members.map(\.kind))
+                let word = kinds.count == 1
+                    ? kinds.first!.typeTagPlural.lowercased() : "things"
+                switch decision {
+                case .strip(let tiles):
+                    rows.append(.strip(source: t.source, word: word,
+                                       count: members.count, newest: t.capturedAt,
+                                       tiles: tiles))
+                case .bundle(let art):
                     rows.append(.bundle(source: t.source, word: word,
                                         count: members.count, newest: t.capturedAt,
-                                        art: Array(art)))
-                } else {
-                    rows.append(.single(t))
+                                        art: art))
                 }
             }
             return (label, rows)
         }
+    }
+
+    /// Which shape a source's same-day run folds into, if it folds at all.
+    private enum Fold {
+        /// Drawn as its members — the tiles, already built.
+        case strip([StripTile])
+        /// Drawn as a sentence about them, with up to three member pictures
+        /// fanned behind the leader.
+        case bundle([String])
+    }
+
+    /// The things in a day that are ELIGIBLE to fold, bucketed by source, plus
+    /// their identities so the row loop can ask "was this one folded?" in
+    /// constant time (the O(day²) trap the 2026-07-28 perf pass fixed once
+    /// already — a `contains(where:)` per thing would put it straight back).
+    ///
+    /// Two things are held out, for opposite reasons:
+    ///
+    /// - Anything neither `bundleable` nor a strip candidate. A screenshot is
+    ///   the case worth naming: it is deliberately still NOT `bundleable`, so
+    ///   it can never collapse into "Photos · 4 screenshots" — a sentence that
+    ///   hides the only thing a screenshot has. It folds only into a strip,
+    ///   where its picture survives.
+    /// - Anything carrying a CLOCK (prd §377). §35 ruled that perishables show
+    ///   their countdown "everywhere … not just in their source's shape", and
+    ///   nothing enforced it: a day with three calendar events folded the
+    ///   next-up row away, and a live row can't be floated to the top of its
+    ///   day (2026-07-21) once it has stopped existing as a row. Its siblings
+    ///   still fold; the row with the clock stands out of the fold.
+    private func foldBuckets(_ dayThings: [Thing], nextEventID: UUID?)
+        -> (bySource: [String: [Thing]], eligible: Set<ObjectIdentifier>) {
+        var bySource: [String: [Thing]] = [:]
+        var eligible: Set<ObjectIdentifier> = []
+        for t in dayThings {
+            guard bundleable(t) || stripCandidate(t) else { continue }
+            guard !carriesAClock(t, nextEventID: nextEventID) else { continue }
+            bySource[t.source, default: []].append(t)
+            eligible.insert(ObjectIdentifier(t))
+        }
+        return (bySource, eligible)
+    }
+
+    /// A row whose whole point is a countdown or a live state — never folded.
+    private func carriesAClock(_ t: Thing, nextEventID: UUID?) -> Bool {
+        if let nextEventID, t.id == nextEventID { return true }
+        return isLive(t)
+    }
+
+    /// Strip first, sentence second (prd §377).
+    ///
+    /// The strip wins whenever it can be drawn, because it is strictly more
+    /// informative: the same one row, carrying what arrived instead of a count
+    /// of it. It needs at least TWO tiles to be worth the anatomy — one tile is
+    /// `BundleRow` with a nicer leader, which `BundleRow`'s own fan already is,
+    /// and a lone repeated face reads as a rendering fault rather than as
+    /// volume.
+    ///
+    /// A run that cannot be a strip falls back to the sentence only if EVERY
+    /// member is `bundleable` — otherwise the exemptions (a screenshot, an
+    /// approval, a voice note) would be swallowed by a source's other rows.
+    private func fold(_ members: [Thing]) -> Fold? {
+        guard members.count >= Self.bundleThreshold else { return nil }
+        let tiles = stripTiles(members)
+        if tiles.count >= 2 { return .strip(tiles) }
+        guard members.allSatisfy(bundleable) else { return nil }
+        // The bundle's own pictures — the first three members that actually
+        // carry art, in feed order (newest first, since dayThings is).
+        let art = members.compactMap { m -> String? in
+            guard let a = m.previewImageURL, !a.isEmpty else { return nil }
+            return a
+        }.prefix(3)
+        return .bundle(Array(art))
+    }
+
+    /// How many members a strip draws before the count carries the rest.
+    /// Four, because the tiles sit in the row's own 26pt leading seat beside a
+    /// name and a count: past four they start eating the title on the narrowest
+    /// iPhone. Volume beyond that is what the source's room is for (§35).
+    static let stripCap = 4
+
+    /// Whether a thing can be drawn as itself in a strip — the picture-bearing
+    /// and face-bearing rows, i.e. the two families where a sentence about the
+    /// run destroys the only thing that distinguishes its members.
+    private func stripCandidate(_ t: Thing) -> Bool {
+        t.kind == .screenshot || identityLeader(t) != nil
+    }
+
+    /// The FACE a row already leads with, when it leads with one. Derived from
+    /// `BandRow.faceSources` rather than a second hand list, so a source that
+    /// gains a face leader gains a face strip the same day, and a strip can
+    /// never draw an identity the row itself doesn't.
+    ///
+    /// `publisherMarkSources` (RSS) is deliberately NOT a door here, though it
+    /// has an avatar URL and would fit mechanically. Its rows already fold into
+    /// a fan of the ARTICLES' OWN ART, and a story's picture beats the feed's
+    /// logo repeated four times — for RSS the strip would trade a better
+    /// picture for a worse one. The asymmetry is the point: a strip earns its
+    /// place only where it shows MORE than the shape it replaces.
+    private func identityLeader(_ t: Thing) -> (url: String, circular: Bool)? {
+        guard let avatar = t.authorAvatarURL, !avatar.isEmpty,
+              BandRow.faceSources.contains(t.source) else { return nil }
+        return (avatar, true)
+    }
+
+    /// The tiles a run draws, newest first, capped at `stripCap`.
+    ///
+    /// Identities DEDUPE and pictures do not, which is the one asymmetry here
+    /// and it is deliberate: five posts from three people is three faces and
+    /// the count says five ("who" and "how many" are different questions, and
+    /// the same avatar three times reads as a bug), while five screenshots are
+    /// five different pictures by construction and collapsing them would hide
+    /// the members the strip exists to show.
+    private func stripTiles(_ members: [Thing]) -> [StripTile] {
+        var tiles: [StripTile] = []
+        var seenFace: Set<String> = []
+        for t in members {
+            guard tiles.count < Self.stripCap else { break }
+            if let leader = identityLeader(t) {
+                guard seenFace.insert(leader.url).inserted else { continue }
+                tiles.append(StripTile(t, face: leader.url, circular: leader.circular))
+            } else if t.kind == .screenshot {
+                tiles.append(StripTile(t))
+            }
+        }
+        return tiles
     }
 
     /// The first row at-or-past the last-visit boundary — the "new since"
@@ -2469,7 +2641,14 @@ struct FeedScreen: View {
         if memo.key != key {
             memo.key = key
             memo.days = perfAccum("dayGrouping") { recentDaysThenCoarseTail(visible) }
-            memo.groups = perfAccum("bundle") { bundle(memo.days) }
+            // `nextEventID` rides in so the clock carve-out (prd §377) can
+            // spare the next-up row. Both it and the live set can change
+            // WITHOUT `visible` changing, and this memo keys on the snapshot's
+            // revision (see `derivationKey`), so a newly-live row can stay
+            // folded until the next write. That is a delay, never a
+            // regression: before this carve-out existed those rows folded
+            // unconditionally, so the stale case is exactly the old behaviour.
+            memo.groups = perfAccum("bundle") { bundle(memo.days, nextEventID: nextEventID) }
             memo.imageOnly = perfAccum("imageOnlyIDs") { imageOnlyIDs(memo.days) }
             memo.wideArt = perfAccum("wideArtIDs") { wideArtIDs(memo.groups) }
             memo.coarse = perfAccum("coarseLabels") { coarseLabels(in: memo.days) }
@@ -2516,6 +2695,10 @@ struct FeedScreen: View {
                     case .bundle(let source, let word, let count, let newest, let art):
                         bundleListRow(source: source, word: word, count: count,
                                       newest: newest, art: art, index: i, position: positions[i])
+                    case .strip(let source, let word, let count, let newest, let tiles):
+                        stripListRow(source: source, word: word, count: count,
+                                     newest: newest, tiles: tiles, index: i,
+                                     position: positions[i])
                     }
                 }
             } header: {
@@ -2745,6 +2928,37 @@ struct FeedScreen: View {
             // Feed rhythm (2026-07-13): back to s2 — the s3 airy read made
             // every gap the same size, so days never clustered. Rows sit
             // tight within their day; the day header carries the big gap.
+            .listRowInsets(.init(top: DS.Space.s2,
+                                 leading: DS.Space.s4 + DS.Space.s3,
+                                 bottom: DS.Space.s2,
+                                 trailing: DS.Space.s4 + DS.Space.s3))
+            .listRowSeparator(.hidden)
+    }
+
+    /// A strip in the list — the same row contract as a bundle, drawn as its
+    /// members (prd §377).
+    ///
+    /// ONE gesture, opening the source's own room, exactly like `bundleListRow`
+    /// — the tiles are a picture of what folded, never controls. Two rules say
+    /// so and they agree: a feed row is a read with one gesture (2026-07-16),
+    /// and §35's bundle contract already sends volume to "that source's chip,
+    /// whose shape is where volume is designed to live" — which for screenshots
+    /// IS the photo grid. Per-tile taps were considered and held: a second
+    /// target on a row is also the shape that made five sibling `.sheet`
+    /// modifiers self-dismiss (2026-07-28), and it is not a change worth
+    /// making unseen.
+    private func stripListRow(source: String, word: String, count: Int,
+                              newest: Date, tiles: [StripTile], index: Int,
+                              position: RunPosition = .only) -> some View {
+        StripRow(source: source, count: count, word: word, newest: newest, tiles: tiles)
+            .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
+            .contentShape(Rectangle())
+            .onTapGesture {
+                DSHaptic.selection()
+                withAnimation(DS.Motion.standard) { filter.source = source }
+            }
+            .dsTapCard()
+            .listRowBackground(runBackground(position, bare: true))
             .listRowInsets(.init(top: DS.Space.s2,
                                  leading: DS.Space.s4 + DS.Space.s3,
                                  bottom: DS.Space.s2,

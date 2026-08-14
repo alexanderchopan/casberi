@@ -22624,3 +22624,132 @@ describes the deleted bulk-add loop verbatim so the next reader knows what not
 to write, so a guard grepping raw source fires on the prose explaining the bug
 it guards. That is the Obsidian/Cursor lesson, earned again here on this
 guard's first run.
+
+## §377 — A folded run is drawn as its members, not as a sentence about them (user: "right now it's chronological and we said we were gonna do some groupings, but I'll see something like four screenshots in a row not folded together and I just can't decide. Would it be better if we were aggregating everything on the screen but that's not necessarily great either", then "what about for the other things that are in the feed?", "this is a larger issue of making the feed more consumable", then "even social post, though if there are more than three in a row, we could just show their avatars in a row like we are doing with the photos", 2026-08-14)
+
+**The whole-screen aggregation was declined, by the user's own instinct and by
+two prior rulings.** §35 considered grouping-by-source and rejected it ("it
+breaks the chronological record and reopens the no-ranking rule"), and §254
+declined six cross-source joins. The reason has only got stronger since: every
+source's room now leads with a synthesis head and the agent panel is the
+composed all-rooms view, so an aggregating All feed would be a worse copy of
+surfaces that already exist, and the one screen that answers "what happened, in
+order" would be gone. All stays chronological. What changes is what a FOLD looks
+like.
+
+**The reported defect is a stale exemption, not a missing feature.** Screenshots
+have been un-`bundleable` since 2026-07-09 on the reasoning that a human capture
+is "one deliberate act". Four in a row is what that reads like on screen. The
+same rationale had already been retired once — 2026-08-09 reversed it for
+Bluesky/Farcaster, because at 140 followed accounts "deliberate reads" stopped
+describing reality. Screenshots drifted the same way: the TAKING is deliberate,
+the LANDING is a Photos sweep dropping a browsing session's worth at once.
+
+**But un-exempting them into the existing bundle would have been the wrong
+fix**, and that is the ruling worth keeping. "Photos · 4 screenshots" is a
+sentence that hides the only thing a screenshot has. So the fold got a second
+shape:
+
+- **`BundleRow` (the sentence)** — one leader, a count, up to three member
+  pictures fanned behind it. Right when the members are interchangeable and the
+  count IS the news: 14 wallet transactions, 40 synced articles.
+- **`StripRow` (the members)** — the run's own members side by side in the
+  leading seat, then source, time and count. Right when the members are what
+  distinguishes the run: a screenshot's pixels, a post's author.
+
+**Eligibility is derived, never a new hand list.** A run folds into a strip when
+its members can be drawn as themselves — a screenshot, or a source in
+`BandRow.faceSources`, which is the registry that already decides whose rows
+lead with a face. A source that gains a face leader gains a face strip the same
+day, and a strip can never draw an identity the row itself doesn't.
+
+**Decisions with reasons, so the next pass doesn't re-litigate them:**
+
+- *Strip beats sentence whenever it can be drawn* — same one row, carrying what
+  arrived instead of a count of it.
+- *Two tiles minimum.* One tile is `BundleRow` with a nicer leader, which
+  `BundleRow`'s fan already is; a lone repeated face reads as a rendering fault
+  rather than as volume. So five posts by one person keep the sentence.
+- *Identities dedupe, pictures do not.* Five posts from three people is three
+  faces and a count of five — "who" and "how many" are different questions, and
+  the same avatar three times reads as a bug. Five screenshots are five
+  different pictures by construction, and collapsing them would hide the members
+  the strip exists to show.
+- *RSS is deliberately NOT a strip*, though `publisherMarkSources` would fit
+  mechanically. Its bundle already fans the ARTICLES' OWN ART, and a story's
+  picture beats the feed's logo repeated four times. **A strip earns its place
+  only where it shows MORE than the shape it replaces** — that asymmetry is the
+  rule, not an oversight.
+- *One gesture, opening the source's room* — `bundleListRow`'s exact contract.
+  A feed row is a read with one gesture (2026-07-16), and §35 already sends
+  volume to "that source's chip, whose shape is where volume is designed to
+  live", which for screenshots IS the photo grid. Per-tile taps were considered
+  and HELD: a second target on a row is the shape that made five sibling
+  `.sheet` modifiers self-dismiss (2026-07-28), and it is not a change worth
+  making unseen.
+- *Screenshots stay un-`bundleable` forever.* The exemption list now answers a
+  narrower question ("may this collapse into a SENTENCE") than the fold does,
+  which is why a screenshot can fold and still never be summarised.
+
+**The standing test for a future exemption**, since this is the second time one
+has gone stale: a source earns one while its rows are BOTH rare and individually
+distinct. Volume alone retires it (social, 2026-08-09). And if the rows are
+distinct in a way a picture can carry, the answer is a strip rather than an
+exemption. Voice, approvals and anything from You keep theirs — genuinely
+one-at-a-time acts at low volume, the 2026-07-09 reasoning still describing them
+accurately.
+
+**A clock is never folded away.** §35 ruled that perishables show their
+countdown "everywhere … not just in their source's shape", and nothing enforced
+it: a day with three calendar events folded the next-up row away, and a live row
+cannot be floated to the top of its day (2026-07-21) once it has stopped
+existing as a row. `foldBuckets` holds out the next upcoming event and anything
+live; its siblings still fold. Found while auditing this change, not reported —
+it is a ruling that was written down and never mechanised, which is this
+codebase's most repeated failure shape.
+
+**`bundledRowCount` now ASKS the fold instead of mirroring it.** §255 is the
+record of what a hand-copied prediction costs: the gate measured THINGS while
+the feed drew ROWS, so the tail-coarsening it guards never once fired. Two folds
+with different eligibility is exactly where a second copy would go quietly wrong
+again, so `bundledRowCount` and `bundle` call one `foldBuckets`/`fold` pair. Its
+`nextEventID` defaults to nil and that is correct rather than lazy: the carve-out
+only spares a FUTURE event, which cannot sit in the coarsened tail this gate
+decides about.
+
+**Known and accepted: the memo can hold a stale fold.** `derivationKey` is O(1)
+on the snapshot's revision (§264 perf), so a row going live — or the next event
+passing — does not invalidate it. A newly-live row can stay folded until the next
+write. That is a delay, never a regression: before this carve-out those rows
+folded unconditionally, so the stale case is exactly the old behaviour.
+
+**What this trades, stated plainly because it is the thing to look at.** A run of
+3+ wordless screenshots used to render as three §218 `imageOnly` rows at 104×58
+— real pictures. It now renders as one row of 26pt tiles. That is three rows
+back for a smaller picture, and it is the right trade for the reported complaint
+("four screenshots in a row"), but the tile SIZE is the open question: 26pt is
+`DS.Mark.row`, the seat every row's leader already occupies, chosen because the
+band is the one row anatomy (2026-07-06) and §254 rejected a second one. A
+photo-family tile at 44–58pt (the height `imageOnly` already uses in this same
+feed) is the obvious alternative and needs a screenshot to rule on, not an
+argument. §218's treatment still applies below the fold threshold, which is now
+its whole domain: days with one or two shots.
+
+**NOT done, deliberately:** Files images (their room already has a mixed
+photo-grid shape, §283, and folding them needs the `isImageRef` model call — a
+separate, measurable pass); per-tile taps (above); provenance tiering of the
+whole feed (pitched in the same conversation as the general answer to
+"consumable" — what you did / what concerns you / what arrived, as rendering
+weight with no reorder — and left for the user's ruling rather than taken
+unasked); and adaptive density.
+
+**VERIFIED BY STATIC AUDITS ONLY — NOT BUILT AND NOT SEEN ON SCREEN.** Authored
+in a Linux session with no Xcode and no Swift toolchain, so there is no compile
+of any kind behind this entry, let alone a device pass. All 18 static audits are
+green, including the SwiftData liveness audit with its full self-test — which is
+the one that matters most here, since `StripTile`/`StripRow` put model
+references inside a nested `ForEach`, the exact shape of the corollary-3 crash
+class. Three things a diff cannot show and a screenshot could: whether 26pt
+tiles read as members or as specks, whether four tiles plus a name plus a count
+fit the narrowest iPhone without eating the title, and whether a strip and the
+bundle above it read as one family.
