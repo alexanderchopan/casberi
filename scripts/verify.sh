@@ -359,8 +359,16 @@ print -P "%F{green}✓ source packing self-test%f"
 # `FeedFilter.source` puts that name into every query and deep link, where it
 # matches nothing forever with no error anywhere.
 step "Category fold self-test"
-"$ROOT/scripts/category-fold-selftest.sh" >/dev/null \
-  || fail "the category fold self-test failed — run scripts/category-fold-selftest.sh"
+# Output KEPT, not discarded (2026-08-13). This test has now failed twice
+# inside a full run and passed standalone every time it was re-checked
+# afterwards — including with this exact `>/dev/null` invocation — so the
+# failure is intermittent and load-related, not a defect in the fold logic.
+# Both times the run died having printed nothing but the ✗ line: stdout went
+# to /dev/null and stderr was empty, so two ~20-minute runs were spent
+# learning nothing. Keeping the output makes the next occurrence
+# diagnosable instead of a third mystery.
+"$ROOT/scripts/category-fold-selftest.sh" >"$OUT/category-fold-selftest.log" 2>&1 \
+  || fail "the category fold self-test failed — see $OUT/category-fold-selftest.log (it often passes standalone: scripts/category-fold-selftest.sh)"
 print -P "%F{green}✓ category fold self-test%f"
 
 # What a chip tap is allowed to FETCH (PERF 2026-08-13). Tapping an agent chip
