@@ -2766,11 +2766,23 @@ struct FeedScreen: View {
                         // below is an argument, evaluated here, ahead of any
                         // guard inside the builder.
                         if let thing = item.live {
+                            // The day's promoted anchor NEVER recedes (§378
+                            // amendment, found by auditing §254 × §378): every
+                            // promotable row is ambient by construction —
+                            // `artRidesBesideIdentity` admits only social/RSS
+                            // — so without this exemption the one row §254
+                            // chose as the day's landmark was the one row
+                            // guaranteed quiet. A dimmed landmark is a
+                            // contradiction in terms, and it stays exempt
+                            // below the read boundary too: landmarks are for
+                            // wayfinding, which already-read territory needs
+                            // MORE of, not less.
+                            let anchor = wideArt.contains(thing.id)
                             shapedListRow(thing, index: i, nextEventID: nextEventID,
                                           position: positions[i],
                                           imageOnly: imageOnly.contains(thing.id),
-                                          wideArt: wideArt.contains(thing.id))
-                                .opacity(isQuiet(row) ? Self.quietRow : 1)
+                                          wideArt: anchor)
+                                .opacity(!anchor && isQuiet(row) ? Self.quietRow : 1)
                         }
                     case .bundle(let source, let word, let count, let newest, let art):
                         bundleListRow(source: source, word: word, count: count,

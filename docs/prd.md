@@ -22863,3 +22863,13 @@ whether 0.68 reads as "skippable" or as "broken" in dark, whether a day that is
 mostly ambient reads as one grey block rather than as structure, and whether the
 step is visible AT ALL against a wallpapered background. That constant is the
 whole ruling's surface area and it is the thing to tune first.
+
+**Amended the same session, found by auditing this ruling against §254 rather
+than by a report: the day's promoted anchor never recedes.** Every row
+`wideArtIDs` can promote is ambient by construction — `artRidesBesideIdentity`
+admits only the social and RSS sources — so as first written, the one row §254
+chooses as the day's landmark was the one row guaranteed quiet: promoted to
+85pt and dimmed to 0.68 in the same breath, a contradiction no single-feature
+review could see. The anchor is exempt from BOTH quiet reasons, the read
+boundary included, because a landmark is for wayfinding and already-read
+territory needs more of it, not less.
