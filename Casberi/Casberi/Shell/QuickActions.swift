@@ -24,7 +24,7 @@ import UIKit
 /// Nothing else could have caught it either: `xcodebuild` is happy, the static
 /// audits are static, and no simulator gesture can long-press a Home Screen
 /// icon — so the screen sweep never touched this path and never could. See
-/// prd §377.
+/// prd §377a.
 enum QuickAction {
     /// The one action registered in `AppDelegate`. Spelled once, here, because
     /// a type string that disagrees between the registration and the handler is

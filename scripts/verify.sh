@@ -293,6 +293,21 @@ step "X pure-logic self-test"
   || fail "the X logic self-test failed — run scripts/x-selftest.sh"
 print -P "%F{green}✓ x self-test%f"
 
+# The All feed's fold decisions (prd §377/§378/§379). Every failure it catches
+# is a silent wrong answer on the LANDING SCREEN that renders perfectly: a
+# screenshot run collapsing into a sentence about it, five songs off one record
+# drawn as four identical covers, the next-up calendar event folded away (§35
+# ruled that must never happen and until §377 nothing enforced it), or a
+# transaction receding because the fold was scored on its first member. These
+# rules lived as private methods inside a 5,000-line SwiftUI view until §379
+# pulled them into `Model/FeedFold.swift` for exactly this reason — §255 is the
+# record of what an unprovable fold rule costs (a gate that measured THINGS
+# while the feed drew ROWS, wrong for a month, found by eye).
+step "Feed-fold self-test"
+"$ROOT/scripts/feed-fold-selftest.sh" >/dev/null \
+  || fail "the feed-fold self-test failed — run scripts/feed-fold-selftest.sh"
+print -P "%F{green}✓ feed-fold self-test%f"
+
 # Pure-logic self-test for the Cloudflare DNS change detector (prd §296). Same
 # reasoning as the X harness above: the bridge was authored against Cloudflare's
 # published API reference with no token and no authenticated access, and every

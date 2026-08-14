@@ -136,6 +136,7 @@ marks chronological position within the pair.
 | §340b | §340 | see §340a |
 | §355b | §355 | collided with the category-chip tint ruling |
 | §369 | §363 | the money receipt collided with the social sheet, which opened the §364–§368 category series and keeps the bare number by document order (2026-08-12 integration merge) |
+| §377a | §377 | the quick-action fix collided with the All-feed fold, which cites §377 nine times across five files and opens the §377–§379 series; the quick action cites it once and is the earlier of the pair (2026-08-14 integration merge) |
 
 ## 1. Thesis
 
@@ -22625,7 +22626,7 @@ to write, so a guard grepping raw source fires on the prose explaining the bug
 it guards. That is the Obsidian/Cursor lesson, earned again here on this
 guard's first run.
 
-## §377 — A quick action is registered by the app delegate and DELIVERED to the scene delegate (user: "long press on the app icon for daily brief takes me to the all source feed instead of showing me the daily brief", 2026-08-14)
+## §377a — A quick action is registered by the app delegate and DELIVERED to the scene delegate (user: "long press on the app icon for daily brief takes me to the all source feed instead of showing me the daily brief", 2026-08-14)
 
 The "Daily Brief" Home Screen quick action (§ the 2026-08-03 replacement for
 "New Thing") had never worked. Not intermittently, not on some devices — it
@@ -22691,3 +22692,334 @@ URL and activity continuation on a cold launch — check which delegate the
 current lifecycle actually delivers it to before writing the handler. The
 symptom of getting it wrong is silence, and silence in this app reads as "it
 opened normally".
+## §377 — A folded run is drawn as its members, not as a sentence about them (user: "right now it's chronological and we said we were gonna do some groupings, but I'll see something like four screenshots in a row not folded together and I just can't decide. Would it be better if we were aggregating everything on the screen but that's not necessarily great either", then "what about for the other things that are in the feed?", "this is a larger issue of making the feed more consumable", then "even social post, though if there are more than three in a row, we could just show their avatars in a row like we are doing with the photos", 2026-08-14)
+
+**The whole-screen aggregation was declined, by the user's own instinct and by
+two prior rulings.** §35 considered grouping-by-source and rejected it ("it
+breaks the chronological record and reopens the no-ranking rule"), and §254
+declined six cross-source joins. The reason has only got stronger since: every
+source's room now leads with a synthesis head and the agent panel is the
+composed all-rooms view, so an aggregating All feed would be a worse copy of
+surfaces that already exist, and the one screen that answers "what happened, in
+order" would be gone. All stays chronological. What changes is what a FOLD looks
+like.
+
+**The reported defect is a stale exemption, not a missing feature.** Screenshots
+have been un-`bundleable` since 2026-07-09 on the reasoning that a human capture
+is "one deliberate act". Four in a row is what that reads like on screen. The
+same rationale had already been retired once — 2026-08-09 reversed it for
+Bluesky/Farcaster, because at 140 followed accounts "deliberate reads" stopped
+describing reality. Screenshots drifted the same way: the TAKING is deliberate,
+the LANDING is a Photos sweep dropping a browsing session's worth at once.
+
+**But un-exempting them into the existing bundle would have been the wrong
+fix**, and that is the ruling worth keeping. "Photos · 4 screenshots" is a
+sentence that hides the only thing a screenshot has. So the fold got a second
+shape:
+
+- **`BundleRow` (the sentence)** — one leader, a count, up to three member
+  pictures fanned behind it. Right when the members are interchangeable and the
+  count IS the news: 14 wallet transactions, 40 synced articles.
+- **`StripRow` (the members)** — the run's own members side by side in the
+  leading seat, then source, time and count. Right when the members are what
+  distinguishes the run: a screenshot's pixels, a post's author.
+
+**Eligibility is derived, never a new hand list.** A run folds into a strip when
+its members can be drawn as themselves — a screenshot, or a source in
+`BandRow.faceSources`, which is the registry that already decides whose rows
+lead with a face. A source that gains a face leader gains a face strip the same
+day, and a strip can never draw an identity the row itself doesn't.
+
+**Decisions with reasons, so the next pass doesn't re-litigate them:**
+
+- *Strip beats sentence whenever it can be drawn* — same one row, carrying what
+  arrived instead of a count of it.
+- *Two tiles minimum.* One tile is `BundleRow` with a nicer leader, which
+  `BundleRow`'s fan already is; a lone repeated face reads as a rendering fault
+  rather than as volume. So five posts by one person keep the sentence.
+- *Identities dedupe, pictures do not.* Five posts from three people is three
+  faces and a count of five — "who" and "how many" are different questions, and
+  the same avatar three times reads as a bug. Five screenshots are five
+  different pictures by construction, and collapsing them would hide the members
+  the strip exists to show.
+- *RSS is deliberately NOT a strip*, though `publisherMarkSources` would fit
+  mechanically. Its bundle already fans the ARTICLES' OWN ART, and a story's
+  picture beats the feed's logo repeated four times. **A strip earns its place
+  only where it shows MORE than the shape it replaces** — that asymmetry is the
+  rule, not an oversight.
+- *One gesture, opening the source's room* — `bundleListRow`'s exact contract.
+  A feed row is a read with one gesture (2026-07-16), and §35 already sends
+  volume to "that source's chip, whose shape is where volume is designed to
+  live", which for screenshots IS the photo grid. Per-tile taps were considered
+  and HELD: a second target on a row is the shape that made five sibling
+  `.sheet` modifiers self-dismiss (2026-07-28), and it is not a change worth
+  making unseen.
+- *Screenshots stay un-`bundleable` forever.* The exemption list now answers a
+  narrower question ("may this collapse into a SENTENCE") than the fold does,
+  which is why a screenshot can fold and still never be summarised.
+
+**The standing test for a future exemption**, since this is the second time one
+has gone stale: a source earns one while its rows are BOTH rare and individually
+distinct. Volume alone retires it (social, 2026-08-09). And if the rows are
+distinct in a way a picture can carry, the answer is a strip rather than an
+exemption. Voice, approvals and anything from You keep theirs — genuinely
+one-at-a-time acts at low volume, the 2026-07-09 reasoning still describing them
+accurately.
+
+**A clock is never folded away.** §35 ruled that perishables show their
+countdown "everywhere … not just in their source's shape", and nothing enforced
+it: a day with three calendar events folded the next-up row away, and a live row
+cannot be floated to the top of its day (2026-07-21) once it has stopped
+existing as a row. `foldBuckets` holds out the next upcoming event and anything
+live; its siblings still fold. Found while auditing this change, not reported —
+it is a ruling that was written down and never mechanised, which is this
+codebase's most repeated failure shape.
+
+**`bundledRowCount` now ASKS the fold instead of mirroring it.** §255 is the
+record of what a hand-copied prediction costs: the gate measured THINGS while
+the feed drew ROWS, so the tail-coarsening it guards never once fired. Two folds
+with different eligibility is exactly where a second copy would go quietly wrong
+again, so `bundledRowCount` and `bundle` call one `foldBuckets`/`fold` pair. Its
+`nextEventID` defaults to nil and that is correct rather than lazy: the carve-out
+only spares a FUTURE event, which cannot sit in the coarsened tail this gate
+decides about.
+
+**Known and accepted: the memo can hold a stale fold.** `derivationKey` is O(1)
+on the snapshot's revision (§264 perf), so a row going live — or the next event
+passing — does not invalidate it. A newly-live row can stay folded until the next
+write. That is a delay, never a regression: before this carve-out those rows
+folded unconditionally, so the stale case is exactly the old behaviour.
+
+**What this trades, stated plainly because it is the thing to look at.** A run of
+3+ wordless screenshots used to render as three §218 `imageOnly` rows at 104×58
+— real pictures. It now renders as one row of 26pt tiles. That is three rows
+back for a smaller picture, and it is the right trade for the reported complaint
+("four screenshots in a row"), but the tile SIZE is the open question: 26pt is
+`DS.Mark.row`, the seat every row's leader already occupies, chosen because the
+band is the one row anatomy (2026-07-06) and §254 rejected a second one. A
+photo-family tile at 44–58pt (the height `imageOnly` already uses in this same
+feed) is the obvious alternative and needs a screenshot to rule on, not an
+argument. §218's treatment still applies below the fold threshold, which is now
+its whole domain: days with one or two shots.
+
+**Generalized the same session, before this entry ever merged** (user: "you
+could do the same thing with music and anything else that has photos too like
+documents") — so the strip's eligibility is no longer two hand-picked families
+but a derived rule: **a run strips when its members carry a picture of their
+own.** Three doors in `stripCandidate`, in priority order, and the order is a
+ruling: a FACE first (`BandRow.faceSources` — the user's own call that a post
+run is drawn as WHO, not as the posts' photos), then OWN PIXELS (a screenshot
+always; stored `previewImageData`, which is a healed Files/document image —
+`PhotoWell` reads bytes before ever touching Photos, so no `isImageRef` model
+call was needed after all and the deferral below is retired), then REMOTE ART
+(`previewImageURL` — an album cover, an article's or episode's art, a drop's
+image). Derived means a new bridge whose rows carry art gets a strip the day it
+lands, and a strip can never draw a picture the row itself doesn't. Two
+consequences worth naming: **RSS now strips through the own-art door** — the
+earlier decline in this entry was about the IDENTITY door (a feed's logo four
+times), and it stands; the articles' own pictures side by side is strictly more
+than the fan it replaces. And **remote images dedupe by URL while stored pixels
+never do** — five posts from three people is three faces, five songs off one
+record are ONE cover (which then falls under the two-tile floor and lands as
+the sentence with one cover: the honest rendering of "one record, five
+songs"), while five screenshots or scanned pages are five different pictures by
+construction. The `BundleRow` fan dedupes its art now too, same reasoning. The
+`previewImageData` read faults externalStorage bytes, so it sits last among the
+model reads, behind the URL checks — the cost `imageOnlyIDs` already pays for
+Files rows via `isWordless`.
+
+**NOT done, deliberately:** per-tile taps (above); provenance tiering of the
+whole feed (pitched in the same conversation as the general answer to
+"consumable" — what you did / what concerns you / what arrived, as rendering
+weight with no reorder — and left for the user's ruling rather than taken
+unasked); and adaptive density.
+
+**VERIFIED BY STATIC AUDITS ONLY — NOT BUILT AND NOT SEEN ON SCREEN.** Authored
+in a Linux session with no Xcode and no Swift toolchain, so there is no compile
+of any kind behind this entry, let alone a device pass. All 18 static audits are
+green, including the SwiftData liveness audit with its full self-test — which is
+the one that matters most here, since `StripTile`/`StripRow` put model
+references inside a nested `ForEach`, the exact shape of the corollary-3 crash
+class. Three things a diff cannot show and a screenshot could: whether 26pt
+tiles read as members or as specks, whether four tiles plus a name plus a count
+fit the narrowest iPhone without eating the title, and whether a strip and the
+bundle above it read as one family.
+
+## §378 — The All feed gains one hierarchy, and it is provenance (user: "how else would you improve the All feed and make it more digestible while still preserving that it is supposed to be chronological", then "ok make these changes", 2026-08-14)
+
+**A correction first, because one of the ideas pitched in that answer was
+already shipped.** "Close the visit with a caught-up line" was offered as a new
+feature; `caughtUpFooter` has rendered in the All room since 2026-07-13 ("That's
+everything · N things"), gated on the room really being whole (§264). Nothing
+was built for it. Recorded because the wrong version was said out loud, and
+because it is the second time in three passes that reading the feed's own code
+first would have saved a proposal — §254 opens with the same correction about
+day-header counts.
+
+**The diagnosis.** A chronological record can be made consumable in exactly five
+ways: fewer rows, faster rows, knowing where you are, knowing when you're done,
+and moving through time. The feed attacked ONLY the first (bundling, §35; the
+folded tail, §218/§255; strips, §377) and had no answer at all to the third —
+every row was typographically identical, so a screenshot you took, an approval
+waiting on you and the fortieth synced article all weighed the same. Reading the
+feed therefore meant EVALUATING every row yourself, and that evaluation work is
+what "not digestible" actually feels like.
+
+**The ruling: hierarchy by PROVENANCE, never by predicted interest.** §35's "no
+ranking, no algorithmic feed" stands untouched, and this does not bend it —
+nothing is reordered, scored, or predicted. `FeedTier` is three one-sentence
+facts about where a row came from:
+
+- **made** — a deliberate act of yours: a screenshot, a voice note, anything
+  from You. Deliberately the SAME set `bundleable` has called "human capture"
+  since 2026-07-09, so the two can never disagree about what a deliberate act
+  is.
+- **concerns** — you are the SUBJECT: consent waiting on you, money moving, a
+  clock of yours (`.approval`/`.transaction`/`.event`/`.reminder`, anything with
+  a `dueAt`, anything flagged).
+- **arrived** — everything else. The only tier that recedes.
+
+Every assignment is explainable in one sentence, which is the honesty bar a
+ranked feed can never meet: "your own acts always stand; things that merely
+arrived stand back."
+
+**Visit-cooling rides the SAME axis rather than a second one.** A row is quiet
+when it is ambient OR already read (at or below the frozen `newSince`
+boundary) — OR'd into ONE step, never multiplied. Two independent dimming axes
+would double-dim an ambient row below the boundary into unreadability, which is
+how a legibility change becomes a legibility bug. The result reads correctly in
+both halves: above the divider the tiers do the sorting, below it everything
+recedes together, which is honest — you have read it.
+
+**Decisions with reasons:**
+
+- *Opacity, not the `done` treatment's colour step.* `done` recedes text via
+  `DS.textTertiary`, but this must recede a row WHOLE — its picture and brand
+  mark included — and colour reaches only text. One modifier, no layout change,
+  so nothing shifts as the boundary moves. It is a third axis beside size and
+  weight, which §254 was careful about; the justification is that this says
+  "skippable", not "lower in the hierarchy", and the row keeps every glyph at
+  full size.
+- *Never under increased contrast.* `colorSchemeContrast == .increased` turns
+  the whole axis off. That setting exists precisely to refuse dimming, and the
+  feed's structure must not be the thing it costs you.
+- *A fold recedes only if EVERY member would.* One transaction or one clock
+  inside a mixed run keeps the whole row at full weight — the row is the only
+  thing standing in for its members, so it inherits the loudest of them.
+- *Stored on `FeedRow`, not computed at render.* `ambient` is stamped at
+  construction beside `id` and `date`, for that field's own documented reason:
+  the render loop must never make a stored-property read on a model a heal may
+  since have deleted.
+
+**NOT done, and each for a reason rather than an oversight.** *Session seams* on
+heavy days (sub-grouping by morning/afternoon/evening, reusing `sessionLabel`)
+— it touches the grouping chain that feeds bundling, coarsening and the
+derivation memo, and it is not a change to make in a session with no compiler.
+*The whisper at the divider* (`DayBrief`'s one-liner replacing "New since 9:41
+PM") — cheap, but it changes what a boundary CLAIMS, which is a copy ruling.
+*Month cards for the tail*, *unfold-in-place*, a *date scrubber* and *agent-verb
+thinning* — all named to the user as needing a ruling or a separate pass, and
+none taken unasked. *Trailing-slot discipline* — a §252a-shaped audit sweep, not
+a feature.
+
+**VERIFIED BY STATIC AUDITS ONLY — NOT BUILT AND NOT SEEN ON SCREEN**, same
+Linux session as §377 with no Xcode and no Swift toolchain. Liveness,
+accessibility, motion, ramp and localization audits green. Three things a diff
+cannot show and a screenshot could, all of them about the one number here:
+whether 0.68 reads as "skippable" or as "broken" in dark, whether a day that is
+mostly ambient reads as one grey block rather than as structure, and whether the
+step is visible AT ALL against a wallpapered background. That constant is the
+whole ruling's surface area and it is the thing to tune first.
+
+**Amended the same session, found by auditing this ruling against §254 rather
+than by a report: the day's promoted anchor never recedes.** Every row
+`wideArtIDs` can promote is ambient by construction — `artRidesBesideIdentity`
+admits only the social and RSS sources — so as first written, the one row §254
+chooses as the day's landmark was the one row guaranteed quiet: promoted to
+85pt and dimmed to 0.68 in the same breath, a contradiction no single-feature
+review could see. The anchor is exempt from BOTH quiet reasons, the read
+boundary included, because a landmark is for wayfinding and already-read
+territory needs more of it, not less.
+
+## §379 — The tail says what it was about, and the fold rules become provable (user: "anything else you would do to level up the all feed", then "ok make those changes", 2026-08-14)
+
+Two changes with one thing in common: both came from auditing what had just
+shipped rather than from wanting a new feature.
+
+### 1. A coarse group carries its subject
+
+§218 made the tail SHORT and §254 made it QUIET, and neither made it
+BROWSABLE — "March", "April", "May" are three identical headers, so finding
+last spring still means scrolling into it and reading rows. Each coarse group
+now names what it was mostly about ("March · mostly Tokyo", as a quiet second
+line under the month).
+
+**The rule is `XRoom.subject` CALLED, never re-implemented.** §375 asked exactly
+this question of a YEAR and answered it with a recurrence floor — two mentions
+or a tenth of the group, whichever is larger — that is already compiled whole
+and mutation-proven by `x-selftest.sh`. Asking the same question of a month with
+a second copy of that rule is how the two drift; this is the §255 lesson applied
+before the fact rather than after.
+
+**Terms come from `ocrTopics` ONLY, and tags were considered and declined.**
+Most tags are FACETS (`Post`, `Liked`, `Watchlist`, `Memory` — §308), so a month
+would report its own STRUCTURE as its subject: "mostly Liked" is not what
+anything was about. `ocrTopics` is the deterministic extraction (§313), so every
+subject drawn is a term that literally appears in the things beneath it — the
+§218 grounding rail, one surface over.
+
+**Nil is the normal answer and the header is built for it.** A month of wallet
+transactions and calendar events carries no topic terms at all, and inventing
+one would be the §83 fake status in the one place a person is deciding where to
+look. Scoped to the All room's own renderer (`bundledSections`) rather than
+every coarse group everywhere, which is a smaller blast radius than §254's
+cooling took; widening it is a later pass with a screenshot behind it.
+
+### 2. `Model/FeedFold.swift`, and the harness that proves it
+
+The fold now carries real judgment — strip beats sentence, remote images dedupe
+and stored pixels don't, the two-tile floor, the threshold, the clock carve-out,
+the tier table — and all of it lived as private methods inside a 5,000-line
+SwiftUI view that no harness can compile. So the only thing proving those rules
+were right was that somebody had read them, which is precisely the state §255
+describes: a gate that measured THINGS while the feed drew ROWS, wrong for a
+month, found by eye.
+
+`FeedFold` is Foundation-only and `scripts/feed-fold-selftest.sh` compiles it
+WHOLE and unmodified against an inert `Thing` stub — 45 assertions, **12
+mutations**, 7 drift guards, wired into `verify.sh` (which now fails until a new
+harness is named there WITH its reason, so this one could not have been quietly
+forgotten).
+
+**The seam that makes it possible: a tile is named by INDEX, not by a model.**
+`tileChoices` returns `[TileChoice]` — an index, a remote URL, a shape — so the
+whole decision layer is pure value types and the view maps choices back to
+members. Without that seam the pure logic would drag `StripTile` → `KeyedThing`
+→ `Thing` into the harness and stop being pure at all. The two view-layer
+dependencies are INJECTED for the same reason (`faceSources` from
+`BandRow`, whether a row is live from the bridge), with drift guards asserting
+the app still hands over the real ones — a harness that stubs a value can prove
+the logic and never that the logic is fed correctly.
+
+**Its own validation caught a broken guard before it ever ran**, which is worth
+recording because it is the failure this repo has hit twice already: the guard
+tying the clock carve-out to the live set was written as one pattern spanning
+`carriesAClock(…` and `isLive: isLive(t)`, but that call WRAPS across two lines
+and `grep -E` is line-based — so it matched nothing and certified nothing, while
+reading like a check. It is two guards now. (The same pass also caught the
+validator itself reporting "all guards match" over ZERO parsed guards, which is
+the identical bug one level up.)
+
+**NOT built:** the remaining backlog is unchanged and still waiting on a ruling
+— session seams, the whisper at the divider, month cards as composed tiles,
+unfold-in-place, a date scrubber, adaptive density.
+
+**VERIFIED BY STATIC AUDITS AND A STATIC HARNESS REVIEW ONLY — NOT BUILT, NOT
+RUN, NOT SEEN ON SCREEN.** Same Linux session with no Xcode and no `swiftc`, so
+**`feed-fold-selftest.sh` has never once executed** and its mutations are
+unproven by running: what WAS checked mechanically is that all 12 mutation
+strings match the shipped source exactly once (the stale-mutation class
+`notify-selftest` was bitten by) and that all 7 drift guards match the real
+tree. Treat the harness as unproven until a Mac runs it; a mutation that fails
+to compile or survives is expected fallout of writing it blind, and finding one
+does not mean the fold logic is wrong.

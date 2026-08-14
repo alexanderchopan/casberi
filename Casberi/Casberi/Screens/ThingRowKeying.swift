@@ -57,6 +57,38 @@ struct KeyedThing: Identifiable {
     var live: Thing? { thing.isLive ? thing : nil }
 }
 
+/// One member of a folded same-source run, drawn as ITSELF rather than as a
+/// number in a sentence about it (prd §377).
+///
+/// Identity is captured at construction for exactly `KeyedThing`'s reason —
+/// these tiles ride a `ForEach` inside the row, so diffing must never reach a
+/// model that a heal may have deleted since the row was derived. `remote` and
+/// `circular` are resolved at construction too, and that is not convenience:
+/// reading `authorAvatarURL`/`previewImageURL` lazily in the tile body would
+/// be a stored-property read on a possibly-dead model, which is the whole
+/// class this file exists for.
+struct StripTile: Identifiable {
+    let id: String
+    let item: KeyedThing
+    /// The tile's REMOTE image URL when it has one — a social author's face,
+    /// an album cover, an article's art. nil means the tile is the thing's
+    /// own STORED pixels (a screenshot, a healed file image), which
+    /// `PhotoWell` reads off the model at render time behind its own
+    /// liveness guard.
+    let remote: String?
+    /// A face is a circle, everything else the app-icon squircle —
+    /// `RemoteThumb`'s own distinction, decided once by the builder so the
+    /// view never re-derives it from a source name.
+    let circular: Bool
+
+    init(_ thing: Thing, remote: String? = nil, circular: Bool = false) {
+        self.id = thing.id.uuidString
+        self.item = KeyedThing(thing)
+        self.remote = remote
+        self.circular = circular
+    }
+}
+
 extension Array where Element == Thing {
     /// Value-keyed rows for a `ForEach` over a DERIVED thing array. See
     /// `KeyedThing`.
