@@ -43,18 +43,31 @@ enum ImportCommit {
     ///
     /// Returns false if a save threw — the caller reports that as a failed
     /// import, exactly as it did when there was one save to throw.
+    /// `source` names the archive for the Live Activity (2026-08-14, prd §382)
+    /// — the same string its receipt lands under, so the two agree. nil means
+    /// no activity, which is the right default: a caller that hasn't thought
+    /// about what to call itself on a lock screen shouldn't appear on one.
     @MainActor
     @discardableResult
     static func commit(_ things: [Thing], context: ModelContext,
+                       source: String? = nil,
                        progress: ((Int) -> Void)? = nil) async -> Bool {
         guard !things.isEmpty else { return true }
         var landed = 0
+        if let source { ImportActivityDriver.start(source: source, total: things.count) }
         for start in stride(from: 0, to: things.count, by: chunk) {
             let slice = Array(things[start..<min(start + chunk, things.count)])
             for thing in slice { context.insert(thing) }
             do {
                 try context.save()
             } catch {
+                // The activity ends on the LANDED count, not on the attempted
+                // one — a failed run still committed every chunk before this
+                // one, and those rows are real. Ending silently instead would
+                // leave a lock-screen count frozen forever with no way to tell
+                // that the run is over.
+                if source != nil { await ImportActivityDriver.finish(landed: landed,
+                                                                     total: things.count) }
                 return false
             }
             // Spotlight per chunk rather than one call with fifteen thousand
@@ -64,10 +77,16 @@ enum ImportCommit {
             SpotlightIndex.index(slice)
             landed += slice.count
             progress?(landed)
+            if source != nil {
+                await ImportActivityDriver.advance(landed: landed, total: things.count)
+            }
             // The yield is the entire point. Without it every chunk runs
             // back-to-back inside one turn of the run loop and the batching
             // buys nothing at all.
             await Task.yield()
+        }
+        if source != nil {
+            await ImportActivityDriver.finish(landed: landed, total: things.count)
         }
         return true
     }

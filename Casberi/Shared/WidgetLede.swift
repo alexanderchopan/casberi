@@ -36,6 +36,21 @@ enum WidgetLede {
     static let stampKey = "widget.ledeAt"
     static let themesKey = "widget.themes"
     static let themesStampKey = "widget.themesAt"
+    /// What the hero leads with (2026-08-14, prd §382 amendment) — see
+    /// `WidgetDayLead`. Lives beside the lede because the two travel together
+    /// and are drawn by the same tile.
+    static let leadKey = "widget.dayLead"
+    static let leadStampKey = "widget.dayLeadAt"
+
+    /// The published lead, or nil when the day earned none. Shares the lede's
+    /// freshness window: both describe TODAY, and a lead that outlived the
+    /// sentence above it would put yesterday's mix under today's headline.
+    static func lead(now: Date = .now,
+                     defaults: UserDefaults? = UserDefaults(suiteName: SharedStore.appGroup))
+    -> WidgetDayLead? {
+        WidgetPayload.read(WidgetDayLead.self, key: leadKey, stampKey: leadStampKey,
+                           freshness: freshness, now: now, defaults: defaults)
+    }
 
     /// How long a published lede stays truthful. The brief republishes on
     /// every foreground, so this only matters for an app that hasn't been

@@ -76,6 +76,15 @@ KNOWN_UNSWEPT = {
         "`casberi://thing/latest` needs a seeded corpus the sweep does not "
         "build. `-openThing \"<title prefix>\"` is the sheet's headless door."
     ),
+    "ask": (
+        "`brief`'s reason, twice over (prd §382, 2026-08-14). It opens the "
+        "composer onto a STREAMING answer, so a 4s sweep shot photographs a "
+        "skeleton and certifies it as the screen — and it needs a `?q=` that "
+        "actually retrieves, which the sweep's empty corpus cannot supply "
+        "(bare `casberi://ask` returns early by design). `-answerProbe` / "
+        "`-uiAnswerProbe` are its headless doors, and they read the document "
+        "rather than photograph it."
+    ),
 }
 
 # An iOS entitlement with no Catalyst counterpart, by Apple's own platform

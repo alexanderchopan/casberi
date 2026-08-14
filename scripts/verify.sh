@@ -373,6 +373,22 @@ step "Circle x402 pure-logic self-test"
   || fail "the x402 logic self-test failed — run scripts/x402-selftest.sh"
 print -P "%F{green}✓ x402 self-test%f"
 
+# The contract between the app and its Home Screen (prd §382, 2026-08-14).
+# Mechanical because the widget extension is the ONE surface nothing else in
+# this pass can see: `xcodebuild` compiles it and never runs it, the screen
+# sweep drives the app rather than the Home Screen, and no probe can attach to
+# another process's timeline. Every failure it catches draws a perfectly
+# good-looking tile — a flat wallet curve along the FLOOR (which reads as "went
+# to zero"), a reading from yesterday printed as current, a change that rounds
+# to zero painted green, or a publish that spends the system's reload budget on
+# every foreground. It found that last one on its first run: comparing the
+# serialized BYTES of two identical payloads reports a change every time,
+# because `JSONEncoder` is not byte-stable.
+step "Widget payload self-test"
+"$ROOT/scripts/widget-selftest.sh" >/dev/null \
+  || fail "the widget self-test failed — run scripts/widget-selftest.sh"
+print -P "%F{green}✓ widget self-test%f"
+
 # The sources tray's row packer (2026-08-10). Mechanical because the failure is
 # INVISIBLE: a tray packed one row worse than it could be renders perfectly, it
 # is just taller — and past the 620pt resting cap "taller" means the picker

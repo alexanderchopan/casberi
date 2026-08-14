@@ -189,6 +189,15 @@ extension DSTextStyle {
     static let widgetTreemapTerm12 = DSTextStyle(size: 12, weight: .semibold, tracking: 0, lineHeight: 15, relative: .caption1)
     /// The medium widget's recent-item row title, under the treemap.
     static let widgetRecentTitle12 = DSTextStyle(size: 12, weight: .semibold, tracking: 0, lineHeight: 16, relative: .caption1)
+    /// The LARGE family's headline (2026-08-14) — the brief's sentence gets the
+    /// room the medium tile never had. A rung above `widgetTitle17` rather than
+    /// reusing it, because at large size that reads as a caption of the tile
+    /// rather than as its subject.
+    static let widgetHeadline20 = DSTextStyle(size: 20, weight: .bold, tracking: 0, lineHeight: 25, relative: .title3)
+    /// A widget's own figure — the wallet tile's total. The only place a widget
+    /// prints a number in the largest type on the tile, which is exactly why the
+    /// staleness stamp beside it is not optional (see `WidgetStamp`).
+    static let widgetFigure24  = DSTextStyle(size: 24, weight: .bold, tracking: 0, lineHeight: 28, relative: .title2)
 }
 
 private struct DSTextModifier: ViewModifier {

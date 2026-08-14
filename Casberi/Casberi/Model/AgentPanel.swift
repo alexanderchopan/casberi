@@ -510,14 +510,10 @@ enum AgentPanel {
     ///
     /// A B tier exists because the app watches whoever you point it at, and
     /// "$7258k" is exactly what a missing tier looks like one order up.
-    static func compactUSD(_ usd: Double) -> String {
-        let v = abs(usd)
-        if v >= 1_000_000_000 { return String(format: "$%.1fB", usd / 1_000_000_000) }
-        if v >= 1_000_000     { return String(format: "$%.1fM", usd / 1_000_000) }
-        if v >= 10_000        { return String(format: "$%.0fK", usd / 1_000) }
-        if v >= 1_000         { return String(format: "$%.1fK", usd / 1_000) }
-        return String(format: "$%.0f", usd)
-    }
+    /// Forwards to `MoneyFormat` (2026-08-14). The table moved to `Shared/` when
+    /// the wallet widget started drawing the same figures in another process —
+    /// see that file for why a second copy was not an option.
+    static func compactUSD(_ usd: Double) -> String { MoneyFormat.compactUSD(usd) }
 
     /// Trim a room's subtitle to something that fits under a tile title.
     static func clamp(_ s: String, max n: Int = 34) -> String {

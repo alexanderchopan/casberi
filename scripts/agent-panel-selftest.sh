@@ -30,9 +30,15 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 SRC="Casberi/Casberi/Model/AgentPanel.swift"
+# `compactUSD`'s table moved to Shared/ on 2026-08-14 so the wallet WIDGET,
+# which runs in another process, draws the identical figure — `AgentPanel`
+# forwards to it. Foundation-only, so it compiles beside the file under test
+# with no stub; without it the whole harness stops compiling, which is exactly
+# the coupling being made visible rather than hidden.
+MONEY="Casberi/Shared/MoneyFormat.swift"
 GRID="Casberi/Casberi/Screens/AgentPanelGrid.swift"
 COMPOSER="Casberi/Casberi/Shell/Composer.swift"
-for f in "$SRC" "$GRID" "$COMPOSER"; do
+for f in "$SRC" "$MONEY" "$GRID" "$COMPOSER"; do
   [[ -f "$f" ]] || { print -u2 "missing $f"; exit 1; }
 done
 
@@ -240,7 +246,7 @@ print("agent-panel self-test passed")
 SWIFT
 
 print "AgentPanel self-test — the shipped file, compiled whole"
-xcrun swiftc -O -o "$WORK/run" "$SRC" "$WORK/main.swift" 2>&1 | grep -v "^$" || true
+xcrun swiftc -O -o "$WORK/run" "$SRC" "$MONEY" "$WORK/main.swift" 2>&1 | grep -v "^$" || true
 [[ -x "$WORK/run" ]] || { print -u2 "✗ compile failed"; exit 1; }
 "$WORK/run" || exit 1
 
@@ -258,7 +264,7 @@ if a not in s:
 open(dst, "w").write(s.replace(a, b, 1))
 PY
   if [[ $? -eq 3 ]]; then print "  ✗ $name — anchor missing (harness is stale)"; return 1; fi
-  if xcrun swiftc -O -o "$dir/run" "$dir/AgentPanel.swift" "$WORK/main.swift" >/dev/null 2>&1 \
+  if xcrun swiftc -O -o "$dir/run" "$dir/AgentPanel.swift" "$MONEY" "$WORK/main.swift" >/dev/null 2>&1 \
        && "$dir/run" >/dev/null 2>&1; then
     print "  ✗ $name — SURVIVED"; return 1
   fi

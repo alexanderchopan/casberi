@@ -54,6 +54,12 @@ final class KeptAskStore {
     private func persist() {
         UserDefaults.standard.set(order, forKey: Self.orderKey)
         UserDefaults.standard.set(titles, forKey: Self.titlesKey)
+        // The Home Screen learns immediately (2026-08-14, prd §382). The full
+        // publish runs on foreground, and the sequence this exists for never
+        // crosses one: keep a question, press Home, add the widget. Without it
+        // the picker wouldn't offer what you just kept, and a tile aimed at
+        // something you just removed would keep showing it.
+        WidgetPublish.publishAsks()
     }
 
     /// Cheap synchronous diff — a kept ask's own composer supplies `digest`

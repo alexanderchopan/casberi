@@ -523,7 +523,8 @@ enum ClaudeCodeImport {
         // The heals are already on live models in this context; the new rows
         // go down in chunks that each save and yield (`ImportCommit`), so a
         // large first import doesn't hold the main thread (§310).
-        guard await ImportCommit.commit(landed, context: context, progress: progress) else {
+        guard await ImportCommit.commit(landed, context: context,
+                                        source: "Claude Code", progress: progress) else {
             return Summary(failed: true)
         }
         if summary.healed > 0, (try? context.save()) == nil {

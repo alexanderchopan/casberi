@@ -68,6 +68,15 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SOURCES = [
     ROOT / "Casberi" / "Casberi",
     ROOT / "Casberi" / "Shared",
+    # The widget extension joined 2026-08-14 (prd §382) and had NEVER been in
+    # any audit's scope — not this one, not the motion law, not the liveness
+    # rules. It was one file for a year, so nobody noticed the gap; it is six
+    # now, it draws `Thing`s and money, and its labels already go through
+    # `dsText`. A tile's glyphs must grow with its labels for the same reason a
+    # row's do, and a widget is if anything WORSE to get wrong: it cannot be
+    # scrolled, so a symbol a third the height of the word beside it is the
+    # whole tile.
+    ROOT / "Casberi" / "CasberiWidgets",
 ]
 
 # `.font(.system(size: <literal>))`, optionally with a weight. A non-literal

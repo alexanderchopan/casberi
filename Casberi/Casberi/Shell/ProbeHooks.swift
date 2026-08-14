@@ -872,6 +872,25 @@ enum ProbeHooks {
                 NSLog("[Casberi] posthogRoom| %@", line)
             }
         },
+        // `-widgetProbe YES` — everything the Home Screen would draw this
+        // launch (prd §382).
+        //
+        // Publishes, then reads the payloads back through the SAME readers the
+        // widget extension uses — which is what makes it a test of the ROUND
+        // TRIP rather than of the gather. The encode and the decode are the
+        // one place these two processes can silently disagree (see
+        // `WidgetPayload.encoder`), and a payload that fails to decode is
+        // indistinguishable from one that was never published: every tile
+        // empties at once with nothing in any log to say why.
+        //
+        // It exists because an empty tile has causes that render identically
+        // and only some are bugs — nothing kept, nothing due, no wallet
+        // watched, a reading aged past its own freshness window, or a publish
+        // that never ran. The widget extension cannot be attached to in a
+        // simulator run, so this is the only headless view of it there is.
+        Hook(key: "widgetProbe") { _, context in
+            WidgetPublish.probe(context: context)
+        },
         // `-notifyProbe YES` — what would notify, WITHOUT notifying (prd §306).
         //
         // Runs the real sweep over the real corpus in `dryRun`, so it needs no

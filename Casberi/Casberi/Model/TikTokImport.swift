@@ -203,7 +203,7 @@ enum TikTokImport {
         // happened from this one reconciling row and nothing else. Landed
         // BEFORE the save so the receipt rides the same transaction — a receipt
         // saved separately could survive a failed import.
-        guard await ImportCommit.commit(landed, context: context, progress: progress) else {
+        guard await ImportCommit.commit(landed, context: context, source: source, progress: progress) else {
             summary = Summary(failed: true)
             return
         }

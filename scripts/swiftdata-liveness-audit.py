@@ -99,6 +99,14 @@ SOURCES = [
     # async MODEL code holding a [Thing] across an await. Checks 1–5 are all
     # view-shaped and simply find nothing here; CHECK 6 is the one that bites.
     "Casberi/Casberi/Model",
+    # The widget extension joined 2026-08-14 (prd §382). It has its own
+    # `ModelContext` over the same store and had never been audited — the whole
+    # target was outside every SOURCES list. Nothing here is a finding today,
+    # because the one fetch it makes copies its values out immediately and
+    # hands up plain structs; that is the rule this keeps, rather than a bug it
+    # found. A `Thing` reference carried into a `TimelineEntry` would be a model
+    # held across the entry's whole life in another process's context.
+    "Casberi/CasberiWidgets",
 ]
 
 # Files that legitimately hold Things in @State with no isLive guard. Adding

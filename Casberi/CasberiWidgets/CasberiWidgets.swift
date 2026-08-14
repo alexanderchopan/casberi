@@ -6,16 +6,28 @@ import AppIntents
 import ActivityKit
 #endif
 
-/// The hero widget — one synthesis line on the home screen (P8: awareness
-/// lands; the corpus speaks without being asked). Reads the shared store
-/// through the app group; tapping opens Home via the deep link.
+/// Casberi's tiles (P8: awareness lands; the corpus speaks without being
+/// asked). Every one of them reads the shared store or the app group — none
+/// computes anything, none reaches the network, and none can (see
+/// `WidgetPayload`).
+///
+/// Four widgets since 2026-08-14 (prd §382), where there was one. The hero says
+/// what the day is; the kept-ask tile answers a standing question you chose;
+/// "Needs you" carries the deadlines nothing else on a Home Screen would show;
+/// the wallet draws the line the balance card draws. Plus two Control Center
+/// buttons and two Live Activities.
 @main
 struct CasberiWidgets: WidgetBundle {
     var body: some Widget {
         HeroWidget()
+        KeptAskWidget()
+        NeedsYouWidget()
+        WalletWidget()
         ComposeControl()
+        BriefControl()
         #if !targetEnvironment(macCatalyst)
         VoiceRecordingActivity()
+        ImportActivity()
         #endif
     }
 }
@@ -31,7 +43,7 @@ struct VoiceRecordingActivity: Widget {
             // Lock screen band.
             HStack(spacing: 10) {
                 Image(systemName: "waveform")
-                    .font(.system(size: 20, weight: .medium))
+                    .dsGlyph(20, weight: .medium)
                     .foregroundStyle(.red)
                 Text("Recording")
                     .dsText(.widgetChrome15)
@@ -42,7 +54,7 @@ struct VoiceRecordingActivity: Widget {
                     .monospacedDigit()
                     .frame(maxWidth: 56)
                 Image(systemName: "stop.circle.fill")
-                    .font(.system(size: 24))
+                    .dsGlyph(24)
                     .foregroundStyle(.red)
             }
             .padding(14)
@@ -52,7 +64,7 @@ struct VoiceRecordingActivity: Widget {
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     Image(systemName: "waveform")
-                        .font(.system(size: 22, weight: .medium))
+                        .dsGlyph(22, weight: .medium)
                         .foregroundStyle(.red)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
@@ -111,6 +123,39 @@ struct ComposeControl: ControlWidget {
     }
 }
 
+/// The READING half of the same pair (2026-08-14). Capture had a button
+/// anywhere on the device and the brief — the app's one composed answer to
+/// "what's going on" — could only be reached by opening the app and tapping.
+///
+/// It reuses `"brief.request"`, the flag the Home Screen quick action already
+/// writes and `RootShell.openBriefIfRequested` already reads (§377). One door,
+/// so a second entrance can't drift into a second behaviour — and notably that
+/// door is the one whose delivery half was broken for eleven days, which is
+/// another reason not to invent a third.
+struct OpenBriefIntent: AppIntent {
+    static let title: LocalizedStringResource = "What's going on"
+    static let description = IntentDescription("Opens Casberi's daily brief.")
+    static let openAppWhenRun = true
+
+    func perform() async throws -> some IntentResult {
+        UserDefaults(suiteName: SharedStore.appGroup)?
+            .set(true, forKey: "brief.request")
+        return .result()
+    }
+}
+
+struct BriefControl: ControlWidget {
+    var body: some ControlWidgetConfiguration {
+        StaticControlConfiguration(kind: "casberi.brief") {
+            ControlWidgetButton(action: OpenBriefIntent()) {
+                Label("What's going on", systemImage: "sparkles")
+            }
+        }
+        .displayName("Casberi brief")
+        .description("Opens your day from Control Center.")
+    }
+}
+
 struct HeroEntry: TimelineEntry {
     let date: Date
     let eyebrow: String
@@ -142,17 +187,63 @@ struct HeroEntry: TimelineEntry {
     /// rungs — set by the provider, since only it knows which rung answered.
     var isLede: Bool = false
 
-    /// The month-wide theme cells (2026-08-03), largest first, capped at 3 —
-    /// empty when there's nothing fresh or too few to tile. Only the medium
-    /// family draws them; small/lock-screen stay on the sentence above.
+    /// The month-wide theme cells (2026-08-03), largest first, capped at 3.
+    ///
+    /// DEMOTED to the last fallback (2026-08-14, prd §382 amendment). It held
+    /// this slot unconditionally and was the weakest thing the brief draws —
+    /// three abstract boxes carrying three WORDS, which you must read before
+    /// they tell you anything. `lead` outranks it now; this speaks only on a day
+    /// that earned none of the better leads, which a 30-day clustering still can.
     var themes: [WidgetThemeCell] = []
 
-    /// The most recent thing's title/source, fetched independently of which
+    /// What the day earned as its lead — pictures, money, or the source mix.
+    /// See `WidgetDayLead`.
+    var lead: WidgetDayLead?
+    /// The day's own thumbnails, fetched from the shared store rather than
+    /// published (the extension is already reading it). Empty unless
+    /// `lead?.kind == .pictures`.
+    var shots: [Data] = []
+    /// The wallet line, for the money lead — the SAME one the wallet tile
+    /// draws, so the two can never disagree about the same wallet.
+    var wallet: WidgetWalletLine?
+
+    /// The most recent things, newest first, fetched independently of which
     /// rung answered `title`/`subline` above — the medium widget's treemap
-    /// layout pins this as its own footer row even when the lede answered,
+    /// layout pins the first as its own footer row even when the lede answered,
     /// so it can't just reuse `title` the way the non-lede rungs do.
-    var recentTitle: String = ""
-    var recentSource: String = ""
+    ///
+    /// A LIST since 2026-08-14, where it used to be one title/source pair: the
+    /// large family shows three, and each one opens the thing itself rather
+    /// than dropping you at the feed to go find what you were just looking at.
+    var recents: [WidgetRecentItem] = []
+
+    var recentTitle: String { recents.first?.title ?? "" }
+    var recentSource: String { recents.first?.source ?? "" }
+
+    /// Whether a lead can actually be DRAWN — not merely whether one was
+    /// published. A pictures lead whose thumbnails all failed to load, or a
+    /// money lead whose line aged out of its own freshness window, is a frame
+    /// with nothing in it, and the tile falls through to the older layouts
+    /// instead. The two checks are separate on purpose: the app decides WHICH
+    /// lead the day earned, the widget decides whether it has what that lead
+    /// needs.
+    var hasLead: Bool {
+        switch lead?.kind {
+        case .pictures: return !shots.isEmpty
+        case .money:    return wallet != nil
+        case .sources:  return (lead?.sources.count ?? 0) >= WidgetDayLead.sourceFloor
+        default:        return false
+        }
+    }
+}
+
+/// One landed thing, as a widget row. `id` is the `Thing`'s own UUID string, so
+/// a row can carry a `casberi://thing/<id>` link.
+struct WidgetRecentItem: Identifiable {
+    let id: String
+    let title: String
+    let source: String
+    let capturedAt: Date
 }
 
 struct HeroProvider: TimelineProvider {
@@ -201,9 +292,21 @@ struct HeroProvider: TimelineProvider {
         // Fetched unconditionally now (2026-08-03), not just on the rung-2
         // fallback path: the medium widget's treemap layout pins the newest
         // thing as its own footer row even when rung 1 (the lede) answers
-        // the headline, so both need it in hand at once. Still exactly one
-        // bounded row — the extension's ~30MB budget hasn't moved.
-        let recent = recentThing()
+        // the headline, so both need it in hand at once. Three bounded rows
+        // since 2026-08-14 (the large family lists them) — the extension's
+        // ~30MB budget hasn't moved, and three is still one page of one index.
+        let recents = recentThings(limit: 3)
+        let recent = recents.first
+
+        // What the day earned as its lead (2026-08-14) — decided by the APP,
+        // in `WidgetDayLead.kind`, because the widget computes nothing. The
+        // thumbnails are the one thing fetched rather than published: the
+        // extension is already reading this store, and eight JPEGs written into
+        // UserDefaults on every foreground to save a read it is already making
+        // would be the worse half of both worlds.
+        let lead = WidgetLede.lead(defaults: group)
+        let shots = lead?.kind == .pictures ? todayShots(limit: 8) : []
+        let wallet = lead?.kind == .money ? WidgetWallet.published(defaults: group) : nil
 
         // ── 1. The brief's own sentence ──────────────────────────────
         if let lede = WidgetLede.current(defaults: group) {
@@ -214,8 +317,8 @@ struct HeroProvider: TimelineProvider {
                              subline: "What's going on",
                              hasNew: hasNew(since: lastSeen),
                              isLede: true, themes: themes,
-                             recentTitle: recent?.title ?? "",
-                             recentSource: recent?.source ?? "")
+                             lead: lead, shots: shots, wallet: wallet,
+                             recents: recents)
         }
 
         // ── 2. The most recent thing, as itself ──────────────────────
@@ -226,8 +329,8 @@ struct HeroProvider: TimelineProvider {
                              hasNew: newest.capturedAt.timeIntervalSince1970 > lastSeen
                                      && lastSeen > 0,
                              themes: themes,
-                             recentTitle: newest.title,
-                             recentSource: newest.source)
+                             lead: lead, shots: shots, wallet: wallet,
+                             recents: recents)
         }
 
         // ── 3. Nothing yet ───────────────────────────────────────────
@@ -236,19 +339,52 @@ struct HeroProvider: TimelineProvider {
                          subline: String(localized: "Save one in Casberi"))
     }
 
-    /// One bounded row — the extension's ~30MB budget hasn't got room for
-    /// more (2026-07-21 audit). Shared by both the lede rung (which needs it
-    /// for the medium widget's footer row) and the plain rung-2 fallback.
-    private func recentThing() -> (title: String, source: String, capturedAt: Date)? {
-        guard let container = try? SharedStore.extensionContainer() else { return nil }
+    /// A few bounded rows — the extension's ~30MB budget hasn't got room for
+    /// more (2026-07-21 audit). Shared by the lede rung (which needs the first
+    /// for the medium widget's footer row), the plain rung-2 fallback, and the
+    /// large family's list.
+    ///
+    /// The values are copied out of the models IMMEDIATELY and nothing but
+    /// `WidgetRecentItem`s leave this function. That is the liveness rule the
+    /// app side spends six corollaries on, and it costs nothing to keep here:
+    /// a `Thing` handed up into a `TimelineEntry` would be a model reference
+    /// held across the entry's whole life in another process's context.
+    private func recentThings(limit: Int) -> [WidgetRecentItem] {
+        guard let container = try? SharedStore.extensionContainer() else { return [] }
         let context = ModelContext(container)
         var descriptor = FetchDescriptor<Thing>(
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
         )
-        descriptor.propertiesToFetch = [\.title, \.source, \.capturedAt]
-        descriptor.fetchLimit = 1
-        guard let t = (try? context.fetch(descriptor))?.first else { return nil }
-        return (t.title, t.source, t.capturedAt)
+        descriptor.propertiesToFetch = [\.id, \.title, \.source, \.capturedAt]
+        descriptor.fetchLimit = limit
+        guard let rows = try? context.fetch(descriptor) else { return [] }
+        return rows.map { WidgetRecentItem(id: $0.id.uuidString, title: $0.title,
+                                           source: $0.source, capturedAt: $0.capturedAt) }
+    }
+
+    /// The day's own thumbnails, for the contact-sheet lead.
+    ///
+    /// Bounded TWICE and both bounds matter in a ~30MB extension:
+    /// `previewImageData` is external storage, so each one materializes real
+    /// bytes off disk when it is touched — the loop stops the moment it has
+    /// enough rather than mapping the whole fetch, and the fetch itself scans a
+    /// short window rather than the day. A day with three hundred screenshots
+    /// costs exactly what a day with eight does.
+    private func todayShots(limit: Int) -> [Data] {
+        guard let container = try? SharedStore.extensionContainer() else { return [] }
+        let dayStart = Calendar.current.startOfDay(for: .now)
+        var descriptor = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.capturedAt >= dayStart },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        descriptor.fetchLimit = 24
+        guard let rows = try? ModelContext(container).fetch(descriptor) else { return [] }
+        var out: [Data] = []
+        for row in rows {
+            guard let data = row.previewImageData else { continue }
+            out.append(data)
+            if out.count == limit { break }
+        }
+        return out
     }
 
     /// Whether anything at all landed since the app went to background — one
@@ -279,82 +415,24 @@ struct HeroWidget: Widget {
         // on"); the old "Synthesis" described the tag-cluster line that's gone.
         .configurationDisplayName("What's going on")
         .description("Your day in one line.")
-        .supportedFamilies([.systemSmall, .systemMedium,
+        // Large joined the set 2026-08-14. It is not the medium tile with more
+        // air: it is the only family with room for the sentence AND the themes
+        // AND what actually landed, which is the brief's own shape — so it is
+        // the first widget in this app that answers "what's going on" without
+        // making you choose which half of the answer you wanted.
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge,
                             .accessoryRectangular, .accessoryInline])
     }
 }
 
-/// The widget's own field (2026-08-06). It was a hardcoded `.black`, which is
-/// wrong in two of the three rendering modes the system asks for and was never
-/// looked at again after it shipped.
-///
-/// `.accented` (the lock screen, StandBy) and `.vibrant` (a tinted Home Screen,
-/// and the glass appearances iOS 26 added on top of it) both mean "the system
-/// will provide the backing and re-render your content for legibility over it".
-/// A widget that paints its own opaque slab there fights that treatment and
-/// wins — which is how a tinted Home Screen ends up with one black tile on it.
-/// So those modes get nothing, deliberately, and the system's material shows.
-///
-/// `.fullColor` keeps a dark ground, and gains the app's own crown pour — the
-/// one atmospheric move the shell makes (§159), in the person's own chosen
-/// accent, which the app already writes across the app group. The widget is the
-/// app's face on a Home Screen; wearing the app's signature field costs one
-/// gradient and makes the tile recognizably ours rather than a black rectangle
-/// with text on it.
-///
-/// **UNVERIFIED in `.vibrant`.** Neither the simulator nor any build check can
-/// show a tinted Home Screen, so the `.fullColor` path is the only one that has
-/// been seen. It fails safe: the modes that now get nothing were getting an
-/// opaque slab the system had already told us not to draw, so the worst case is
-/// the system's own backing instead of ours.
-private struct WidgetField: View {
-    @Environment(\.widgetRenderingMode) private var mode
-
-    var body: some View {
-        // Read once, not per gradient stop — three UserDefaults lookups and
-        // three Scanner passes to draw one field is silly in a ~30MB extension.
-        let accent = Self.accent
-        switch mode {
-        case .fullColor:
-            ZStack(alignment: .top) {
-                Color.black
-                // Half the shell's own dose: a widget is a fraction of the
-                // height the crown pour was tuned against, so the same alphas
-                // would read as a wash over the whole tile rather than a field
-                // at the top of one.
-                LinearGradient(stops: [
-                    .init(color: accent.opacity(0.16), location: 0),
-                    .init(color: accent.opacity(0.05), location: 0.5),
-                    .init(color: accent.opacity(0), location: 1),
-                ], startPoint: .top, endPoint: .bottom)
-            }
-        default:
-            // Nothing. See the type's own note — the system owns the backing in
-            // `.accented` and `.vibrant`, and anything painted here overrides it.
-            Color.clear
-        }
-    }
-
-    /// The app accent, carried across the app group (falls back to Casberi
-    /// blue before the app has ever written it).
-    static var accent: Color {
-        let hex = UserDefaults(suiteName: SharedStore.appGroup)?
-            .string(forKey: "theme.tint.hex") ?? "#1673e6"
-        var value: UInt64 = 0
-        Scanner(string: String(hex.dropFirst())).scanHexInt64(&value)
-        return Color(red: Double((value >> 16) & 0xff) / 255,
-                     green: Double((value >> 8) & 0xff) / 255,
-                     blue: Double(value & 0xff) / 255)
-    }
-}
 
 struct HeroWidgetView: View {
     let entry: HeroEntry
     @Environment(\.widgetFamily) private var family
 
     /// The app accent — one definition, shared with the field behind it
-    /// (`WidgetField.accent`), so the dot and the pour can't name two colours.
-    private var accent: Color { WidgetField.accent }
+    /// (`WidgetChrome.accent`), so the dot and the pour can't name two colours.
+    private var accent: Color { WidgetChrome.accent }
 
     var body: some View {
         Group {
@@ -387,6 +465,27 @@ struct HeroWidgetView: View {
                         .lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+            case .systemLarge:
+                LargeHeroBody(entry: entry, accent: accent)
+            case .systemMedium where entry.hasLead:
+                // The day's own lead (2026-08-14) — pictures, money, or the
+                // source mix — above the newest thing. The sentence steps
+                // aside at this size for §248's original reason: there isn't
+                // room for a headline AND a visualization AND a footer row,
+                // and the visualization IS an answer to "what's going on"
+                // rather than a second unrelated fact competing with one.
+                VStack(alignment: .leading, spacing: 8) {
+                    HeroLead(entry: entry, accent: accent)
+                        .frame(height: 96)
+                    RecentItemRow(title: entry.recentTitle, source: entry.recentSource)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .overlay(alignment: .topTrailing) {
+                    if entry.hasNew {
+                        Circle().fill(accent).frame(width: 9, height: 9)
+                            .accessibilityLabel(Text("Something new"))
+                    }
+                }
             case .systemMedium where !entry.themes.isEmpty:
                 // Themes + the newest thing (2026-08-03) — the sentence lede
                 // steps aside here; there isn't room for a headline, a
@@ -445,6 +544,88 @@ struct HeroWidgetView: View {
         // opened — rather than the feed. A headline you can't open is the
         // dead control the honesty rule forbids.
         .widgetURL(URL(string: "casberi://brief"))
+    }
+}
+
+/// The large family (2026-08-14, prd §382) — the brief's own shape on a Home
+/// Screen: the sentence, the month's themes, and what actually landed.
+///
+/// WHY THIS ISN'T THE MEDIUM TILE WITH MORE AIR. The medium family has to
+/// choose: §248's own reasoning put the themes map there INSTEAD of the lede,
+/// because there is no room for a headline, a map and a footer row at that
+/// size. That choice was always a compromise, and the large family is the one
+/// place it doesn't have to be made — so this shows both, in the order the
+/// brief itself ranks them, and then the rows the map is made of.
+///
+/// THREE TAP TARGETS, each landing where it says. The tile's own `widgetURL`
+/// opens the brief; each landed row opens THAT THING (`casberi://thing/<id>`)
+/// rather than dumping you in the feed to find again what you were just
+/// reading; the button opens the composer. A row that showed you something and
+/// then couldn't open it is the dead control the honesty rule forbids, and at
+/// this size there is finally room to make each one real.
+private struct LargeHeroBody: View {
+    let entry: HeroEntry
+    let accent: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(entry.title)
+                .dsText(.widgetHeadline20)
+                .foregroundStyle(.white)
+                .lineLimit(3)
+                .minimumScaleFactor(0.85)
+                .fixedSize(horizontal: false, vertical: true)
+
+            // The day's lead, or the 30-day themes when it earned none.
+            if entry.hasLead {
+                HeroLead(entry: entry, accent: accent, pictureRows: 2)
+                    .frame(height: entry.lead?.kind == .pictures ? 150 : 92)
+            } else if !entry.themes.isEmpty {
+                ThemesTreemap(cells: entry.themes, accent: accent)
+                    .frame(height: 92)
+            }
+
+            if !entry.recents.isEmpty {
+                VStack(alignment: .leading, spacing: 7) {
+                    WidgetLabel(text: String(localized: "Landed"))
+                    // Deliberately not `.keyed`-style liveness gymnastics: these
+                    // are plain value copies made in the provider, never model
+                    // references (see `recentThings`), so there is nothing here
+                    // that can be deleted underneath the view.
+                    ForEach(entry.recents) { item in
+                        Link(destination: URL(string: "casberi://thing/\(item.id)")!) {
+                            RecentItemRow(title: item.title, source: item.source)
+                        }
+                    }
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            Button(intent: OpenComposerIntent()) {
+                HStack(spacing: 5) {
+                    Image(systemName: "plus")
+                        .dsGlyph(11)
+                    Text("Save a thing")
+                        .dsText(.widgetSubline12)
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 11)
+                .padding(.vertical, 6)
+                .background(Color.white.opacity(0.14),
+                            in: Capsule(style: .continuous))
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .overlay(alignment: .topTrailing) {
+            if entry.hasNew {
+                Circle()
+                    .fill(accent)
+                    .frame(width: 9, height: 9)
+                    .accessibilityLabel(Text("Something new"))
+            }
+        }
     }
 }
 

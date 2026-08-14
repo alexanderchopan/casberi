@@ -1426,6 +1426,7 @@ struct RootShell: View {
                     _ = await TodayBrief.compose(things: surfaced, context: modelContext)
                 }
                 LaunchPerf.time("refreshWhisper") { refreshWhisper(things: surfaced) }
+                LaunchPerf.time("widgetPublish") { WidgetPublish.publishAll(context: modelContext) }
                 #else
                 let surfaced = Corpus.surfaced((try? modelContext.fetch(d)) ?? [])
                 HomeInsightStore.shared.refresh(from: surfaced)
@@ -1436,6 +1437,7 @@ struct RootShell: View {
                 // The whisper's compose rides the same corpus walk this
                 // Task already paid for — never its own fetch.
                 refreshWhisper(things: surfaced)
+                WidgetPublish.publishAll(context: modelContext)
                 #endif
               }
             }
@@ -1900,6 +1902,25 @@ struct RootShell: View {
             sceneState.filter.source = "All"
             sceneState.filter.tag = "All"
             chrome.askRequest = TodayBrief.title
+            composerOpen = true
+        // casberi://ask?q=<question> — any ask, by its own words (2026-08-14,
+        // prd §382). Minted by the kept-ask and "Needs you" widgets, whose taps
+        // must land on the answer they were showing rather than at the feed.
+        //
+        // It hands the QUESTION to the same `askRequest` door above, which is
+        // byte-for-byte what tapping the kept pill in the composer does
+        // (`draft = title; commit()`). So a widget can only ever open an answer
+        // the app itself would produce for the same words — there is no second
+        // dispatch to drift, and a kind this build doesn't recognise degrades to
+        // an ordinary free-text ask instead of a dead link.
+        case "ask":
+            guard let q = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                    .queryItems?.first(where: { $0.name == "q" })?.value,
+                  !q.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            else { return }
+            sceneState.filter.source = "All"
+            sceneState.filter.tag = "All"
+            chrome.askRequest = q
             composerOpen = true
         // casberi://person/<Source>/<handle> — the profile card for one person
         // on one network (2026-07-16). In the app it's reached by tapping a

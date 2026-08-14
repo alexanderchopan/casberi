@@ -237,7 +237,7 @@ enum XArchiveImport {
         // The rows first, in chunks that each save and yield (`ImportCommit`),
         // then the receipt — so a run that dies partway leaves real things and
         // no receipt claiming a total it never reached.
-        guard await ImportCommit.commit(landed, context: context, progress: progress) else {
+        guard await ImportCommit.commit(landed, context: context, source: "X", progress: progress) else {
             summary = Summary(failed: true)
             return
         }
