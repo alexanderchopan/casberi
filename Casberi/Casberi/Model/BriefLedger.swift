@@ -46,8 +46,14 @@ enum BriefLedger {
         /// The things that led — a mention card, a reading card. What
         /// novelty suppression checks against.
         var leadIDs: [String] = []
-        /// The holding the lede credited ("ETH did the lifting") — the
-        /// streak's subject.
+        /// The holding the lede credited — the streak's subject.
+        ///
+        /// NO LONGER WRITTEN by a real brief (2026-08-13): the lede's
+        /// attribution clause was cut, so `TodayBrief.Lede.symbol` is always
+        /// empty and `record` never sets this. Kept rather than removed —
+        /// it is a persisted format with a demo seeder and a
+        /// `-briefLedger "symbol=…"` probe, and a seeded entry still
+        /// round-trips through `symbolStreak`.
         var ledeSymbol: String = ""
         /// The theme cells the map drew.
         var themes: [String] = []
@@ -133,6 +139,11 @@ enum BriefLedger {
 
     /// How many consecutive calendar days — today included — this lede symbol
     /// has led. 1 means only today, which is no streak at all.
+    ///
+    /// NO CALLER since 2026-08-13 — the lede sentence it fed ("ETH has done
+    /// the lifting three days running") was cut. Kept beside `themeStreak`,
+    /// which shares the same `streak` walk and is live, so the pair stays
+    /// legible; a seeded ledger still answers it.
     static func symbolStreak(_ entries: [Entry], symbol: String, now: Date = .now,
                              calendar: Calendar = .current) -> Int {
         guard !symbol.isEmpty else { return 0 }

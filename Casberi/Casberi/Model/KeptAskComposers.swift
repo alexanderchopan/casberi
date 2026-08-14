@@ -20,6 +20,36 @@ enum KeptAskComposers {
         let delta: String
         let digest: String
         let doc: [String]
+
+        /// Every composer's document funnels through here, which is the one
+        /// place a DUPLICATE ELEMENT ID can be caught (2026-08-13). `GenParser`
+        /// keys elements in a dictionary and `GenRenderer`'s Stack draws them
+        /// with `ForEach(id: \.self)`, so two lines sharing an id are one
+        /// element referenced twice: the later line wins, the earlier module is
+        /// destroyed with no error anywhere, and its replacement draws twice.
+        /// Shipped in the Today brief exactly that way (`read = Insight` vs
+        /// `read = Widget`), reported as "duplicative sections" and invisible
+        /// to the build, the audits and the screen sweep — every element
+        /// involved renders perfectly, which is what makes it unfindable by
+        /// eye. DEBUG-only and non-fatal on purpose: a wrong-looking document
+        /// is never worth killing the app over, and a composer may legitimately
+        /// re-emit a line while streaming a partial.
+        init(delta: String, digest: String, doc: [String]) {
+            self.delta = delta
+            self.digest = digest
+            self.doc = doc
+            #if DEBUG
+            var seen = Set<String>()
+            for line in doc {
+                let parts = line.split(separator: " ", maxSplits: 2, omittingEmptySubsequences: true)
+                guard parts.count >= 2, parts[1] == "=" else { continue }
+                let id = String(parts[0])
+                if !seen.insert(id).inserted {
+                    NSLog("[Casberi] docDupeID| %@ — one element, drawn where two were meant", id)
+                }
+            }
+            #endif
+        }
     }
 
     /// `things` must arrive newest-first (every existing caller's fetch order).

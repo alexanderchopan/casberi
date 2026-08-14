@@ -1485,6 +1485,22 @@ struct Composer: View {
                             affinity: ChipMemory.weight(for: source),
                             reading: nil, rising: nil)
         }
+        // The per-source heads OUTRANK everything below in the room itself, and
+        // all but one of them are text heroes §334 excludes on purpose. X is
+        // the exception (2026-08-13, prd §375): its head is a FIGURE — the
+        // years of an archive — so leaving it out would make this tile preview
+        // the topic treemap while the room draws a year strip, which is the
+        // exact drift this chain's contract forbids.
+        //
+        // Drawn as bars rather than a pulse: the room's own rows are the top
+        // years ranked, a tile fits four, and a year is a label a person reads.
+        if let room = XRoomSource.compose(things: things), source == XRoomSource.source {
+            return card(XRoom.headline(room), XRoom.note(room),
+                        .bars(XRoom.rows(room).prefix(4).map {
+                            AgentPanel.Bar(label: String($0.year), value: $0.posts,
+                                           detail: $0.posts.formatted())
+                        }))
+        }
         if let map = FeedInsight.topicMap(source: source, things: things) {
             // Four rows, not six: the inventory of small forms is explicit that
             // a six-cell map's last slot is one grid unit wide and its label
@@ -3520,9 +3536,33 @@ struct Composer: View {
     /// practice: exactly the corpus where "what's going on with Work?" is
     /// worth asking. The panel is a visualization; this is a control —
     /// a control shouldn't disappear because a visualization is present.
+    /// The scope chips as actually offered, plus the DAY itself whenever a
+    /// scoped brief is what's on screen (2026-08-13, user: "presumably back to
+    /// the day").
+    ///
+    /// This does not reopen the 2026-08-08 "no Everything chip" ruling, it
+    /// honours its reasoning. That ruling rests on the unscoped brief being
+    /// "the default you get by asking nothing in particular" — true at the
+    /// agent's own root, and false the moment a scope brief is the thing you
+    /// are standing in: from there the day is not the default, it is somewhere
+    /// else, and the two doors that ruling named as sufficient are both gone
+    /// (the whisper capsule lives above the lowered agent, and the kept "today"
+    /// pill only exists for someone who has kept that ask). So the chip appears
+    /// exactly where the row would otherwise be a one-way trip, and nowhere
+    /// else — at the root the row is still the three tight choices it was.
+    private var shownCategoryChips: [CategoryChip] {
+        guard answering, TodayBrief.matchesScoped(currentQuestion) else { return categoryChips }
+        // `TodayBrief.title` is the canonical unscoped question — the same
+        // string the whisper and the kept pill send — so this runs the exact
+        // pipeline those do rather than a shortcut that could answer
+        // differently (the `query` rule the scope chips already follow).
+        return [CategoryChip(id: "day", title: String(localized: "The day"),
+                             query: TodayBrief.title)] + categoryChips
+    }
+
     @ViewBuilder
     private var categoryChipsRow: some View {
-        if restChrome(keepBrief: true), !categoryChips.isEmpty {
+        if restChrome(keepBrief: true), !shownCategoryChips.isEmpty {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 Text("What's going on")
                     .dsText(.subhead13)
@@ -3530,7 +3570,7 @@ struct Composer: View {
                     .padding(.horizontal, DS.Space.s4)
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: DS.Space.s2) {
-                        ForEach(categoryChips) { chip in
+                        ForEach(shownCategoryChips) { chip in
                             Button {
                                 DSHaptic.selection()
                                 draft = chip.query
@@ -3889,7 +3929,29 @@ struct Composer: View {
             // first settles the current LIVE answer into the thread so the Q&A
             // stacks (2026-07-12); the last answer stays live until the next
             // ask or close, so its typewriter reveal never gets cut.
-            if answering {
+            //
+            // EXCEPT brief → brief (2026-08-13, user: "if i click what's going
+            // on in money, once i land, i should still be able to click what's
+            // going on in life or work, and presumably back to the day.
+            // basically all the chips should still be there"). Moving between
+            // scopes is changing which brief you are LOOKING AT, not asking a
+            // follow-up about the one you just read — and the difference is not
+            // cosmetic, because `turns` is what ends the landing: the moment it
+            // grows, `briefLanding` is false forever, every docked chip retires
+            // (§181's own rule) and the scope row that put you here disappears
+            // with them. So the agent opened onto the day, one tap on "Money"
+            // took you to Money, and there was no second tap available — no
+            // Work, no Life, no way back to the day, with nothing on screen
+            // saying why. Replacing the landing keeps `turns` empty, so the
+            // chips stay exactly as they were and the row stays live.
+            //
+            // Deliberately NOT `briefLanding` as the test: that waits on
+            // `answerStream.completed`, so a second scope tapped while the
+            // first is still painting would still stack a half-drawn brief into
+            // the thread. `briefInView` is the same question without the settle
+            // requirement, which is what this needs.
+            let movingBetweenBriefs = briefInView && TodayBrief.matchesAny(draft)
+            if answering, !movingBetweenBriefs {
                 turns.append(ConvoTurn(question: currentQuestion, els: answerStream.els,
                                        keyed: keyedCurrent, searchedWeb: keyedSearchedWeb,
                                        imagesSeen: keyedImagesSeen, toolRounds: keyedToolRounds,

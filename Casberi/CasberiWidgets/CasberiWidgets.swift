@@ -208,8 +208,8 @@ struct HeroProvider: TimelineProvider {
         // ── 1. The brief's own sentence ──────────────────────────────
         if let lede = WidgetLede.current(defaults: group) {
             // No eyebrow above the lede: the sentence is already the whole
-            // headline, and "This week" over "ETH has done the lifting seven
-            // days running" would date a line that isn't about this week.
+            // headline, and "This week" over "One overdue, six more due by
+            // Aug 25" would date a line that isn't about this week.
             return HeroEntry(date: .now, eyebrow: "", title: lede,
                              subline: "What's going on",
                              hasNew: hasNew(since: lastSeen),

@@ -149,10 +149,12 @@ enum OnDeviceModel {
     /// stands alone, exactly as before) and on an honestly thin day (the model
     /// declines with NONE). The money total is deliberately NOT in the evidence,
     /// so the read can't restate the hero's number — the honesty rail holds.
-    static func dayRead(evidence: String, continuity: String?) async -> String? {
+    static func dayRead(evidence: String, continuity: String?,
+                        scope: String? = nil) async -> String? {
         #if canImport(FoundationModels)
         if #available(iOS 26.0, *) {
-            return await FoundationAnswer.dayRead(evidence: evidence, continuity: continuity)
+            return await FoundationAnswer.dayRead(evidence: evidence, continuity: continuity,
+                                                  scope: scope)
         }
         #endif
         return nil
@@ -626,13 +628,23 @@ enum FoundationAnswer {
     /// exclusive main-thread access — running it off the main actor lets the
     /// caller's `await` suspend for real, freeing the main thread so the
     /// skeleton can actually animate while this runs.
-    static func dayRead(evidence: String, continuity: String?) async -> String? {
+    static func dayRead(evidence: String, continuity: String?,
+                        scope: String? = nil) async -> String? {
         guard OnDeviceModel.isAvailable else { return nil }
         let trimmed = evidence.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count >= 20 else { return nil }
+        // A SCOPED brief asks a narrower question, and the paragraph has to
+        // answer that one (2026-08-13). Unscoped it reads the day; under
+        // "What's going on with Money?" it was still writing about the day in
+        // general — seen on the sim, where the Money paragraph came back "You
+        // worked on your watchlist, and this was the first time this week that
+        // you looked at the card and Casberi": true, grounded, and about app
+        // usage rather than about money, on the one screen that had asked.
+        let subject = scope.map { String(localized: "\($0.lowercased()) things") }
+            ?? String(localized: "day")
         let instructions = """
         You write ONE short paragraph — two sentences at most — saying what \
-        someone's day was actually about, from the facts you are given. Speak \
+        someone's \(subject) amounted to, from the facts you are given. Speak \
         TO them as "you"; never write in the first person. Find the THREAD \
         across the facts — a subject, place, person, or project running through \
         more than one of them — and say what it amounted to, not a list. Do NOT \
@@ -643,7 +655,12 @@ enum FoundationAnswer {
         don't add up to anything worth saying, reply with the single word NONE \
         — a truthful NONE beats a forced observation.
         """ + LanguageStore.shared.llmLanguageDirective
-        var prompt = "Today's facts:\n\(trimmed)"
+        var prompt = scope.map { "Today's \($0) facts:\n\(trimmed)" }
+            ?? "Today's facts:\n\(trimmed)"
+        if let scope {
+            prompt += "\n\nStay on \(scope). If the facts are not really about "
+                + "\(scope), reply NONE rather than writing about something else."
+        }
         if let continuity, !continuity.isEmpty {
             prompt += "\n\nEarlier this week your brief kept returning to: \(continuity). "
                 + "Note a continuation ONLY if today's facts genuinely continue it."

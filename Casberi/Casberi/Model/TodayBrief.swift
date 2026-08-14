@@ -52,9 +52,10 @@ import WidgetKit
 /// substrate: a capped record of what each window's brief actually SHOWED —
 /// written only when `presenting` is true, so the background digest refresh
 /// can't make the app claim to have told you something it merely computed.
-/// Four things read it: the lede's streak ("ETH has done the lifting three
-/// days running"), the themes map's continuity subline, the leads' novelty
-/// preference, and the absence note.
+/// Three things read it: the themes map's continuity subline, the leads'
+/// novelty preference, and the absence note. (A fourth — the lede's "ETH has
+/// done the lifting three days running" streak — retired 2026-08-13; see
+/// `walletAttribution`.)
 ///
 /// **The lede is a ladder now, not a wallet special case.** It was
 /// wallet-only, so a day the wallet didn't move opened on a number with no
@@ -387,13 +388,21 @@ enum TodayBrief {
         var ids: [String] = []
         var lines: [String] = []
 
+        // The alerts are computed FIRST and rendered second (2026-08-13). The
+        // lede's deadline rung has to know which deadlines the callout below
+        // already took, or the most urgent item in the scope is the sentence
+        // AND the first alert row — the leads-vs-observations rule, one module
+        // earlier than it used to reach. Nothing about the render order moved:
+        // `ids` still takes `lede` before `alerts`, immediately below.
+        let alerts = alertsCard(things, now: now)
+
         // 1. The lede — the day in ONE sentence, in display type, above
         // everything (user, 2026-07-25: "that line should be above wallet").
         // A ranked ladder since §214: risk, then money, then a person, then a
         // deadline. Nothing is padded to fill the slot — an empty ladder emits
         // no lede and the brief opens on the hero instead.
         let lede = ledeLine(move: move, risk: risk, landed: landed, things: things,
-                            ledger: ledger, now: now)
+                            now: now, alerted: alerts?.ids ?? [])
         if !lede.text.isEmpty {
             ids.append("lede")
             mark("lede")
@@ -430,7 +439,6 @@ enum TodayBrief {
         // "what's new"; a dispute opened on Monday is still what needs you on
         // Thursday, and scoping this to the window would hide exactly the
         // alerts that have been waiting longest.
-        let alerts = alertsCard(things, now: now)
         if let alerts {
             ids.append("alerts")
             mark("alerts")
@@ -457,7 +465,8 @@ enum TodayBrief {
         // time (the leads-vs-observations precedent above: never the same
         // fact told twice). Below the ≥2 floor, `nextTile` alone is the
         // honest degrade — one deadline is a fact, not a runway.
-        let runway = runwayCard(things, excluding: alerts?.ids ?? [])
+        let runway = runwayCard(things, excluding: alerts?.ids ?? [],
+                                statedOverdue: lede.statedDeadlines)
         var tiles: [String] = []
         if let movers = moversTile(moves) {
             tiles.append("tmov")
@@ -563,14 +572,30 @@ enum TodayBrief {
         // card with that specific item in it"). Composing the leads first lets
         // `observations` see what's already being said and drop its own copy.
         // The render order is unchanged: `ids` still appends notes, then leads.
-        let topic = dominantTopic(landed)
+        // WHAT THE LEADS READ (2026-08-13). Normally the window — a lead is
+        // "here is a thing that just arrived, in full". But a SCOPED brief's
+        // window is "since you last checked", so re-opening Money twenty
+        // minutes later gives it nothing at all, and the scope collapses to
+        // charts with not one thing you can open or read. Seen on the sim:
+        // Money, Work and Life each ended on an aggregate, every time.
+        //
+        // So when a scope's window is genuinely empty, the leads fall back to
+        // the scope's newest things regardless of age — the bulk-import
+        // ARCHIVE-RECAP precedent (§307): a room whose window can be
+        // structurally empty is owed its contents rather than a blank. Nothing
+        // claims these are new — every lead row carries its own timestamp, and
+        // `shortTime` prints a DATE past a week rather than "412d" — and the
+        // unscoped brief is untouched, since its window is the day itself and
+        // an empty day should read as an empty day.
+        let leadPool = (category != nil && landed.isEmpty) ? Array(things.prefix(24)) : landed
+        let topic = dominantTopic(leadPool)
         var leadIDs: [String] = []
         var leadLines: [String] = []
         var leadRefs: [String] = []
         // The leads — a thing in full, per shape that landed. Both prefer
         // something this window hasn't already led with, then the sources you
         // actually visit (§214) — see `ranked`.
-        if let mention = mentionCard(landed, told: told, weights: weights) {
+        if let mention = mentionCard(leadPool, told: told, weights: weights) {
             leadRefs.append("men")
             leadLines += mention.lines
             leadIDs.append(mention.id)
@@ -578,12 +603,12 @@ enum TodayBrief {
         // Who's around (2026-08-08) — leads before the reading card: a face
         // is a stronger claim than an article, the same ordering `mention`
         // already gets over `reading` for the identical reason.
-        if let people = peopleRow(landed) {
+        if let people = peopleRow(leadPool) {
             leadRefs.append("people")
             leadLines += people.lines
             leadIDs.append(people.id)
         }
-        if let reading = readingCard(landed, topic: topic, told: told, weights: weights) {
+        if let reading = readingCard(leadPool, topic: topic, told: told, weights: weights) {
             leadRefs.append("read")
             leadLines += reading.lines
             leadIDs.append(reading.id)
@@ -616,13 +641,27 @@ enum TodayBrief {
         NSLog("[Casberi] composeTimingDEBUG| beforeModelRead=%dms",
               Int(Date.now.timeIntervalSince(composeT0) * 1000))
         #endif
+        //
+        // The id is `dayread`, NOT `read` — `readingCard` below already emits
+        // `read = Widget(…)`, and `GenParser.parse` keys elements in a
+        // DICTIONARY, so two lines sharing an id are one element: the later
+        // line wins and every reference to that id draws it. Shipped as
+        // exactly that (user report, 2026-08-13: "the screen shows
+        // duplicative sections"): `ids` carried "read" twice, so the reading
+        // card drew where this paragraph belonged AND again in the leads, and
+        // the model's read of the day — this element's whole reason to
+        // exist — was silently destroyed by a card that renders perfectly.
+        // A duplicate id is also a `ForEach(id: \.self)` collision in
+        // `GenRenderer`'s Stack, so the render is undefined, not merely
+        // doubled. Any new module here takes an id nothing else emits.
         if presenting,
            let read = await OnDeviceModel.dayRead(
-               evidence: dayReadEvidence(landed: landed, notes: notes, topic: topic),
-               continuity: dayReadContinuity(ledger)) {
-            ids.append("read")
-            mark("read")
-            lines.append("read = Insight(\"\(genSafe(read))\")")
+               evidence: dayReadEvidence(landed: leadPool, notes: notes, topic: topic),
+               continuity: dayReadContinuity(ledger),
+               scope: category) {
+            ids.append("dayread")
+            mark("dayread")
+            lines.append("dayread = Insight(\"\(genSafe(read))\")")
         }
         #if DEBUG
         NSLog("[Casberi] composeTimingDEBUG| afterModelRead=%dms",
@@ -675,6 +714,31 @@ enum TodayBrief {
                 delta: "", digest: String(localized: "quiet"),
                 doc: ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"])
         }
+        // LIFE IS PEOPLE-FIRST (2026-08-13, from walking the three scopes on
+        // the sim). Every other ordering decision in this file is about rank —
+        // what is most consequential — and that ladder is right for a day and
+        // for Work, where the consequential thing is a deadline. In Life it
+        // produced a to-do list wearing the word "Life": the lede, the axis and
+        // the "Coming up" card are all deadlines, so four of six modules were
+        // chores, and the two modules that are actually somebody's life — the
+        // pictures they saw and the people around them — sat below the fold
+        // where the demo corpus put them two full screens down.
+        //
+        // A PERMUTATION of what already composed, never a different
+        // composition: same modules, same gates, same lines — only the order
+        // `ids` names them in, which is all the Stack reads. So no module can
+        // appear or disappear here, and every other scope is untouched.
+        if category == "Life" {
+            let people = ["sheet", "faces"].filter { ids.contains($0) }
+            if let deadlines = ids.firstIndex(where: { ["axis", "runway", "pair"].contains($0) }),
+               !people.isEmpty {
+                var reordered = ids.filter { !people.contains($0) }
+                let at = min(reordered.firstIndex(where: { ["axis", "runway", "pair"].contains($0) })
+                             ?? deadlines, reordered.count)
+                reordered.insert(contentsOf: people, at: at)
+                ids = reordered
+            }
+        }
         // The digest IS the whisper's own detail line for the unscoped brief
         // — so the kept pill's trailing signal and the capsule that teases
         // this screen say the same thing, and the changed-dot fires on
@@ -702,7 +766,7 @@ enum TodayBrief {
         // them (a resolved market is money news), and the second lead stays
         // glued to the first. Composed rather than hard-coded in the renderer
         // because only this file knows which of them actually fired.
-        let chapters = ["alerts", "hero", "themes", "read", "notes", leadRefs.first]
+        let chapters = ["alerts", "hero", "themes", "dayread", "notes", leadRefs.first]
             .compactMap { $0 }
             .filter { ids.contains($0) && $0 != ids.first }
         // WHICH MODULES a scope actually composed (2026-08-09). Kept for the
@@ -759,7 +823,7 @@ enum TodayBrief {
         // biggest number going unexplained. Never both: if the lede said it,
         // this doesn't.
         if ledeTookRisk {
-            let attribution = walletAttribution(move, ledger: ledger, now: now).text
+            let attribution = walletAttribution(move).text
             if !attribution.isEmpty {
                 out.append(Note(glyph: "dollarsign.circle", text: attribution))
             }
@@ -1068,9 +1132,35 @@ enum TodayBrief {
         guard !holdings.isEmpty else { return nil }
         let total = holdings.reduce(0) { $0 + $1.totalUSD }
         guard total > 0 else { return nil }
-        // Every watched wallet's cells merged — this is the PORTFOLIO's day,
-        // not the first wallet's (§155's combined read, same principle).
-        let cells = holdings.flatMap(\.cells)
+        // Every watched wallet's holdings merged BY SYMBOL — this is the
+        // PORTFOLIO's day, not the first wallet's (§155's combined read, same
+        // principle).
+        //
+        // It used to concatenate each wallet's own top-5 cells, which drew ETH
+        // twice (seen on the sim, 2026-08-13: "ETH $8K" beside "ETH $3K", with
+        // nothing saying they were different wallets) — a treemap whose whole
+        // claim is "this is what you hold, sized by how much" cannot show one
+        // holding as two rectangles. Summing first and cutting the top 5 after
+        // is also the only way the ranking is true of the portfolio: a token
+        // held in modest amounts across three wallets could out-rank one of
+        // the cells drawn, and never appeared at all.
+        //
+        // `treemapCells` is `WalletIngest`'s own, so the merged map is cut,
+        // weighted, marked and routed by the exact rule a single wallet's
+        // cells already follow — no second formatting to drift. Falls back to
+        // the old concatenation when the groups carry no by-symbol map, which
+        // is what a last-known snapshot from an older build looks like.
+        var merged: [String: Double] = [:]
+        var routes: [String: String] = [:]
+        for group in holdings {
+            for (symbol, usd) in group.bySymbolAll { merged[symbol, default: 0] += usd }
+            for (symbol, route) in group.routeBySymbol where routes[symbol] == nil {
+                routes[symbol] = route
+            }
+        }
+        let cells = merged.isEmpty
+            ? holdings.flatMap(\.cells)
+            : WalletIngest.treemapCells(bySymbol: merged, routes: routes)
         guard !cells.isEmpty else { return nil }
         // The balance SPARKLINE and its delta come from recorded value
         // HISTORY (`combinedValueSamples`) — a separate, honest data source
@@ -1102,7 +1192,17 @@ enum TodayBrief {
         } else if settled.count > 1 {
             subline = String(localized: "\(settled.count) transactions settled")
         } else {
-            subline = String(localized: "Nothing moved today")
+            // "Nothing SETTLED", never "nothing moved" (2026-08-13). This
+            // counts transactions, and the word "moved" made it a claim about
+            // the BALANCE — which the delta pill beside it, the watchlist rows
+            // below it and the day brief's own lede ("Up $269 today. ETH has
+            // done the lifting") can all be contradicting at the same moment,
+            // every one of them correct. Seen on the sim exactly that way. The
+            // flow band further down is literally titled "Where it moved", so
+            // the word was doing double duty on one screen; this line owns
+            // "settled", which is also the word the single-transaction meta
+            // beside it already uses.
+            subline = String(localized: "Nothing settled today")
         }
         // The line's anchor — what span the curve covers, named the way
         // `ValueSpark`'s own subline names it; or, when stale, the honest
@@ -1126,25 +1226,40 @@ enum TodayBrief {
         return "hero = MoneyHero(\"\(genSafe(compactUSD(total)))\", \"\(delta)\", \"\(csv)\", \"\(genSafe(subline))\", [\(cells.prefix(6).joined(separator: ", "))], \"\(genSafe(anchor))\", \"\(genSafe(txTitle))\", \"\(genSafe(txMeta))\", \"\(txID)\", \"\(String(format: "%.2f", total))\", \"\(rollFrom)\")"
     }
 
-    /// "Up $184 today. ETH did the lifting." — the brief's LEDE (`DayLede`),
-    /// the sentence the screen opens with, above the hero.
+    /// "Up $184 today." — the brief's LEDE (`DayLede`), the sentence the screen
+    /// opens with, above the hero.
     ///
-    /// It carries the two facts the number and its pill can't. The MAGNITUDE
-    /// in money, because a percentage hides whether +1.5% is a coffee or a
-    /// month's rent. And WHICH holding did it — the day-scoped attribution
-    /// (§166, `holdingsDeltas(forAddress:since:)`), never the all-time one, so
-    /// the sentence spans exactly what the percentage claims.
+    /// It carries the fact the number and its pill can't: the MAGNITUDE in
+    /// money, because a percentage hides whether +1.5% is a coffee or a month's
+    /// rent. That is the whole sentence.
+    ///
+    /// **The attribution clause is GONE (user ruling, 2026-08-13: "the whole
+    /// 'has done the lifting' and 'took it back' in the headlines is dumb. we
+    /// can just say how much up").** It named the day's biggest mover and, on a
+    /// streak, how many days running — §166's day-scoped attribution plus
+    /// §214's continuity half. Both were true and neither was worth the words:
+    /// the headline's job is the number, the holdings treemap directly beneath
+    /// already shows which position is doing the work, and a stock phrase
+    /// ("did the lifting", "took it back") wrapped around a symbol reads as
+    /// voice rather than as information — the sort of writing that sounds like
+    /// a newsletter and tells you nothing you couldn't see.
+    ///
+    /// Consequences worth knowing rather than rediscovering: the lede no longer
+    /// reads `holdingsDeltas` at all (one local walk saved per compose), and it
+    /// no longer credits a symbol, so `Lede.symbol` stays empty and
+    /// `BriefLedger` records no `ledeSymbol` — `BriefLedger.symbolStreak` now
+    /// has no caller (see its own note). The ledger's field and the
+    /// `-briefLedger "symbol=…"` seed are left in place: they are a persisted
+    /// format with a demo seeder, and nothing is served by churning them for a
+    /// copy change.
     ///
     /// It has now been in three places in one day (2026-07-25): a synthesis
     /// note buried three modules down, then the hero's own subtitle when the
     /// money took the crown, then here — the user's call, and the one the
     /// approved mockup drew. Above the number it reads as the day's headline;
-    /// under it, it read as a caption on a chart. Both halves fail
-    /// independently and silently — no move, no line; no snapshot pair
-    /// covering the window, just the dollar half.
-    private static func walletAttribution(_ move: DayBrief.WalletMove?,
-                                          ledger: [BriefLedger.Entry],
-                                          now: Date) -> Lede {
+    /// under it, it read as a caption on a chart. It fails silently — no move,
+    /// no line.
+    private static func walletAttribution(_ move: DayBrief.WalletMove?) -> Lede {
         guard let move, move.anchorUSD > 0 else { return Lede() }
         let delta = move.usd - move.anchorUSD
         guard abs(delta) >= 1 else { return Lede() }
@@ -1153,29 +1268,10 @@ enum TodayBrief {
         // disagree about what the day's number was.
         let figure = compactUSD(abs(delta))
         let direction = delta > 0 ? "up" : "down"
-        var line = delta > 0
+        let line = delta > 0
             ? String(localized: "Up \(compactUSD(delta)) today.")
             : String(localized: "Down \(compactUSD(abs(delta))) today.")
-        let deltas = WalletStore.shared.holdingsDeltas(forAddress: nil, since: move.since)
-        guard let top = deltas.first, abs(top.delta) >= 1 else {
-            return Lede(text: line, figure: figure, direction: direction)
-        }
-        // The CONTINUITY half (§214): when the same holding has carried the
-        // wallet several days in a row, saying so is strictly more than
-        // naming it once more. Consecutive CALENDAR days, checked in
-        // `BriefLedger.streak` — three opens across a week must never wear
-        // the words "three days running".
-        let run = BriefLedger.symbolStreak(ledger, symbol: top.symbol, now: now)
-        if run >= 3 {
-            line += " " + (top.delta > 0
-                ? String(localized: "\(top.symbol) has done the lifting \(spelled(run)) days running.")
-                : String(localized: "\(top.symbol) has taken it back \(spelled(run)) days running."))
-        } else {
-            line += " " + (top.delta > 0
-                ? String(localized: "\(top.symbol) did the lifting.")
-                : String(localized: "\(top.symbol) took it back."))
-        }
-        return Lede(text: line, symbol: top.symbol, figure: figure, direction: direction)
+        return Lede(text: line, figure: figure, direction: direction)
     }
 
     /// The ladder itself — the rungs in the order they can cost you something.
@@ -1200,7 +1296,7 @@ enum TodayBrief {
     /// uncaptioned. Don't "fix" one to match the other.
     private static func ledeLine(move: DayBrief.WalletMove?, risk: DeFiRisk.Debt?,
                                  landed: [Thing], things: [Thing],
-                                 ledger: [BriefLedger.Entry], now: Date) -> Lede {
+                                 now: Date, alerted: Set<UUID> = []) -> Lede {
         // 1. Something is close to liquidation.
         if let risk {
             let chain = WalletIngest.displayName(forNetwork: risk.network) ?? risk.network
@@ -1209,7 +1305,7 @@ enum TodayBrief {
                         tookRisk: true)
         }
         // 2. The money moved.
-        let money = walletAttribution(move, ledger: ledger, now: now)
+        let money = walletAttribution(move)
         if !money.text.isEmpty { return money }
         // 3. Someone addressed you by name. The mention card below shows the
         // POST; this says who, which is the half a headline is for.
@@ -1217,9 +1313,52 @@ enum TodayBrief {
            let who = mention.authorHandle, !who.isEmpty {
             return Lede(text: String(localized: "\(who) mentioned you."))
         }
-        // 4. A deadline lands today. Deadlines only, never calendar events —
-        // the same scoping `nextTile` holds to (§101's day-planner ruling).
-        if let due = dueToday(things) {
+        // 4. The deadlines — as a SHAPE when the runway will draw one, as the
+        // item itself when it won't (2026-08-13).
+        //
+        // It used to always name the nearest item, which on any scope with a
+        // runway said the same thing three times before you scrolled: the
+        // sentence ("Book dentist is overdue"), the axis label ("2 overdue")
+        // and the card's own first row ("Book dentist · overdue"). One fact,
+        // three tellings, in the first screen — the leads-vs-observations rule
+        // this file already keeps between the observations and the leads.
+        //
+        // The split is the runway's own ≥2 floor, so the two can never
+        // disagree about which shape is on screen: at two or more the runway
+        // draws the items and the lede states what the pile IS, which is the
+        // one thing the list can't say; below it there is no runway, so naming
+        // the single deadline is the only telling there is. `runwayCard` is
+        // told the lede took it (`statedOverdue`) and drops its own "N overdue"
+        // label, since a scale marker restating the headline is the same
+        // duplication one type size down.
+        //
+        // Both rungs read the DEDUPED set, so "Book dentist" (Reminders) and
+        // "Book the dentist" (Todoist) — one errand, two apps — count once.
+        let open = dedupeDeadlines(things.filter {
+            $0.mark != .done && $0.dueAt != nil && !alerted.contains($0.id)
+        })
+        if open.count >= 2 {
+            let overdue = open.filter { ($0.dueAt ?? .distantFuture) < now }.count
+            let ahead = open.count - overdue
+            let far = open.compactMap(\.dueAt).max() ?? now
+            let by = far.formatted(.dateTime.month(.abbreviated).day())
+            // Never "0 overdue" and never "and 0 more": each half is spoken
+            // only when it is a real count, which is also what keeps the
+            // sentence short on the common day when nothing is late.
+            let text: String
+            if overdue > 0 && ahead > 0 {
+                text = String(localized: "\(spelledLow(overdue)) overdue, \(spelledLow(ahead)) more due by \(by).")
+            } else if overdue > 0 {
+                text = String(localized: "\(spelledLow(overdue)) overdue.")
+            } else {
+                text = String(localized: "\(spelledLow(ahead)) due by \(by).")
+            }
+            return Lede(text: text.prefix(1).uppercased() + text.dropFirst(),
+                        statedDeadlines: true)
+        }
+        // Deadlines only, never calendar events — the same scoping `nextTile`
+        // holds to (§101's day-planner ruling).
+        if let due = dueToday(open.isEmpty ? things : open) {
             let name = clamp(due.title, max: 44)
             let stop = name.hasSuffix("…") ? "" : "."
             return Lede(text: (due.dueAt ?? .now) < .now
@@ -1227,6 +1366,52 @@ enum TodayBrief {
                 : String(localized: "\(name) is due today\(stop)"))
         }
         return Lede()
+    }
+
+    /// One errand, one row — the same task tracked in two apps counted once
+    /// (2026-08-13, seen on the sim: "Book dentist" from Reminders and "Book
+    /// the dentist" from Todoist, side by side in Life's "Coming up").
+    ///
+    /// The match is deliberately STRICT: identical titles once articles and
+    /// punctuation are removed, AND due dates within a week of each other. A
+    /// looser rule (fuzzy titles, or no date window) would merge two genuinely
+    /// different things and silently drop a deadline, which is far worse than
+    /// showing one twice — this brief is where someone finds out what is late.
+    /// The survivor is the one due SOONEST, so the earlier clock is never lost.
+    ///
+    /// Ordering is preserved: the caller's sort still decides what leads.
+    private static func dedupeDeadlines(_ things: [Thing]) -> [Thing] {
+        let window: TimeInterval = 7 * 86_400
+        var kept: [Thing] = []
+        for thing in things.sorted(by: { ($0.dueAt ?? .distantFuture) < ($1.dueAt ?? .distantFuture) }) {
+            let key = deadlineKey(thing.title)
+            guard !key.isEmpty else { kept.append(thing); continue }
+            let twin = kept.first {
+                deadlineKey($0.title) == key
+                    && abs(($0.dueAt ?? .distantPast).timeIntervalSince(thing.dueAt ?? .distantFuture)) <= window
+            }
+            if twin == nil { kept.append(thing) }
+        }
+        return kept
+    }
+
+    /// A task title reduced to the words that identify it: lowercased, stripped
+    /// of everything but letters and digits, with the English articles dropped.
+    /// Short enough to be conservative — two titles collide only when they are
+    /// the same words in the same order.
+    private static func deadlineKey(_ title: String) -> String {
+        let words = title.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty && !["the", "a", "an", "my"].contains($0) }
+        return words.joined()
+    }
+
+    /// 1 → "one", through nine, then numerals — `spelled`'s twin for the counts
+    /// that can legitimately be one or two (`spelled` starts at three because
+    /// its own sentence, a multi-day streak, cannot).
+    private static func spelledLow(_ n: Int) -> String {
+        let words = [1: String(localized: "one"), 2: String(localized: "two")]
+        return words[n] ?? spelled(n)
     }
 
     /// The lede's three facts, named rather than positional. `text` and
@@ -1251,6 +1436,11 @@ enum TodayBrief {
         var tookRisk = false
         var figure = ""
         var direction = ""
+        /// The sentence is the deadline AGGREGATE (2026-08-13) — so the runway
+        /// below it drops its own "N overdue" scale label rather than saying it
+        /// twice. Set on that rung alone; every other rung leaves it false and
+        /// the axis labels itself exactly as it always did.
+        var statedDeadlines = false
     }
 
     /// "Thursday, July 31" — the brief's dateline (2026-07-31), the tertiary
@@ -1683,7 +1873,12 @@ enum TodayBrief {
         // Same exclusion the runway takes, and for the same reason — this is
         // the degrade path below the runway's ≥2 floor, so without it a lone
         // dispute would be the alarm AND "Up next" (2026-08-10).
-        let open = things.filter { $0.mark != .done && $0.dueAt != nil && !alerted.contains($0.id) }
+        // Deduped like the runway's own set — this is that card's degrade path,
+        // so "Book dentist" and "Book the dentist" must not become "Up next"
+        // plus "1 more overdue" (2026-08-13).
+        let open = dedupeDeadlines(things.filter {
+            $0.mark != .done && $0.dueAt != nil && !alerted.contains($0.id)
+        })
         let ahead = open.filter { ($0.dueAt ?? .distantPast) >= .now }
             .sorted { ($0.dueAt ?? .now) < ($1.dueAt ?? .now) }
         let overdue = open.filter { ($0.dueAt ?? .distantFuture) < .now }
@@ -1855,8 +2050,11 @@ enum TodayBrief {
     /// rows. The axis draws every deadline it knows about, not just the four
     /// listed: the shape is the point, and truncating it to the visible rows
     /// would understate a pile-up precisely when there is one.
-    private static func runwayCard(_ things: [Thing], excluding alerted: Set<UUID> = []) -> [String]? {
-        let open = things.filter { $0.mark != .done && $0.dueAt != nil && !alerted.contains($0.id) }
+    private static func runwayCard(_ things: [Thing], excluding alerted: Set<UUID> = [],
+                                   statedOverdue: Bool = false) -> [String]? {
+        let open = dedupeDeadlines(things.filter {
+            $0.mark != .done && $0.dueAt != nil && !alerted.contains($0.id)
+        })
         let ranked = open.sorted { ($0.dueAt ?? .distantFuture) < ($1.dueAt ?? .distantFuture) }
         guard ranked.count >= 2 else { return nil }
         let now = Date.now
@@ -1881,8 +2079,13 @@ enum TodayBrief {
             return "\(Int(due.timeIntervalSince1970))|\(genSafe(item.source))"
         }
         let far = (ranked.last?.dueAt ?? now).formatted(.dateTime.month(.abbreviated).day())
+        // The near label names the count ONLY when the lede didn't already
+        // (2026-08-13) — otherwise the axis restates the headline sitting two
+        // inches above it, in the smallest type on the screen, which is the
+        // duplication complaint in miniature. Falls back to the axis's own
+        // origin, which is what the marker actually means.
         let overdue = ranked.filter { ($0.dueAt ?? .distantFuture) < now }.count
-        let near = overdue > 0
+        let near = overdue > 0 && !statedOverdue
             ? String(localized: "\(overdue) overdue")
             : String(localized: "now")
         return ["axis = Runway(\"\", \"\(lanes.joined(separator: ";"))\", \"\(Int(now.timeIntervalSince1970))\", \"\(genSafe(near))\", \"\(genSafe(far))\")"]
@@ -2039,7 +2242,14 @@ enum TodayBrief {
                 : (newest[$0.key]?.capturedAt ?? .distantPast) > (newest[$1.key]?.capturedAt ?? .distantPast)
         }
         guard ranked.count >= 3 else { return nil }
-        let shown = ranked.prefix(6).compactMap { (key, n) -> String? in
+        // FIVE, not six (2026-08-13). The roster's diameters are 64/56/50/44/40
+        // and the card is ~362pt wide inside its padding, so six faces overflow
+        // by a few points — which drew the last person sliced vertically down
+        // the middle with their name cut off, reading as a rendering fault
+        // rather than as "scroll for more" (seen on the sim). Five fit, and the
+        // tail is already counted honestly in the subline below, which is the
+        // §300 folded-tail rule this module was built on.
+        let shown = ranked.prefix(5).compactMap { (key, n) -> String? in
             guard let t = newest[key] else { return nil }
             let display = (t.authorHandle ?? t.postAuthor ?? key)
                 .trimmingCharacters(in: CharacterSet(charactersIn: "@ "))
@@ -2083,7 +2293,14 @@ enum TodayBrief {
             refs.append("p\(i)")
             doc.append("p\(i) = LeadPost(\"\(genSafe(author))\", \"\(genSafe(clamp(words, max: 120)))\", \"\(genSafe(thing.authorAvatarURL ?? ""))\", \"\", \"\(thing.id.uuidString)\")")
         }
-        doc[0] = "people = Widget(\"\(String(localized: "Who's around"))\", \"\", [\(refs.joined(separator: ", "))])"
+        // NOT "Who's around" (user report, 2026-08-13: "duplicative sections").
+        // `faces` above carries that title and answers that question — who is
+        // around, ranked over the whole scope. This module answers a different
+        // one and always did (its own doc comment says so): what the people
+        // who turned up in THIS window actually just said. Two cards under one
+        // title read as the brief repeating itself even though neither
+        // repeats a fact, so the title says which question it answers.
+        doc[0] = "people = Widget(\"\(String(localized: "What they're saying"))\", \"\", [\(refs.joined(separator: ", "))])"
         return (doc, people[0].id.uuidString)
     }
 
@@ -2207,7 +2424,13 @@ enum TodayBrief {
         let s = Date.now.timeIntervalSince(date)
         if s < 3600 { return "\(max(1, Int(s / 60)))m" }
         if s < 86_400 { return "\(Int(s / 3600))h" }
-        return "\(Int(s / 86_400))d"
+        // Past a week, the DATE (2026-08-13). An elapsed count is how you read
+        // something that just happened; "412d" is arithmetic nobody performs,
+        // and it became reachable the moment a scoped brief with an empty
+        // window started leading with the scope's newest thing regardless of
+        // age (see `leadPool`). A date is also checkable against the row.
+        if s < 7 * 86_400 { return "\(Int(s / 86_400))d" }
+        return date.formatted(.dateTime.month(.abbreviated).day())
     }
 
     /// "2h ago" / "3d ago" — the age of a last-known holdings read, matching

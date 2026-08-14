@@ -54,7 +54,7 @@ extension DSTextStyle {
     /// over the hero's `price40` rather than as the day said in words — same
     /// rounded bold face, eight points apart, one visual unit. And
     /// `heading34` is the COVER rung, sized for two-to-four-word statements: a
-    /// real lede ("Up $1,247 today. ETH did the lifting, three days running.")
+    /// real lede ("One overdue, six more due by Aug 25.")
     /// runs three or four lines there and pushes the money hero — the crown by
     /// ruling — clean off the first screen. 28 keeps the crown visible while
     /// putting a full step of air between the sentence and the number.

@@ -3282,6 +3282,35 @@ private struct GenRunway: View {
         return (start, max((hi + pad) - start, 1))
     }
 
+    /// Dot centres, nudged just enough to stay countable (2026-08-13).
+    ///
+    /// Three deadlines in one afternoon land within a few points of each other
+    /// on a fortnight-wide axis and drew as one smear — so the axis said
+    /// "something is happening around now" where the honest reading is "THREE
+    /// things are due around now", and a count is exactly what a pile-up is.
+    /// Each dot is pushed right to clear the previous one by a hair under its
+    /// own diameter, in time order, so a cluster reads as a cluster of a
+    /// KNOWABLE size.
+    ///
+    /// Bounded on purpose: the nudge is at most one dot width per collision and
+    /// never re-orders, so at any scale a reader can actually judge — which
+    /// half of the fortnight, before or after now — the picture is unchanged.
+    /// Beyond that the axis was never claiming point accuracy; it carries no
+    /// tick marks and its two labels are its ends.
+    private func spread(_ dots: [Dot], win: (start: Double, span: Double),
+                        width w: CGFloat) -> [CGFloat] {
+        let gap: CGFloat = 11   // one dot (10) plus a hairline of daylight
+        var out: [CGFloat] = []
+        var last: CGFloat = -.greatestFiniteMagnitude
+        for dot in dots {
+            let raw = CGFloat((dot.at.timeIntervalSince1970 - win.start) / win.span) * w
+            let placed = max(raw, last + gap)
+            out.append(placed)
+            last = placed
+        }
+        return out
+    }
+
     var body: some View {
         let dots = dots
         let now = now
@@ -3297,6 +3326,10 @@ private struct GenRunway: View {
                     GeometryReader { geo in
                         let w = geo.size.width
                         let nowX = CGFloat((now.timeIntervalSince1970 - win.start) / win.span) * w
+                        // Computed ONCE per layout, not per dot: the nudge is
+                        // cumulative, so asking for it inside the ForEach would
+                        // rebuild the whole run for every element.
+                        let xs = spread(dots, win: win, width: w)
                         ZStack(alignment: .topLeading) {
                             Capsule()
                                 .fill(DS.gray100)
@@ -3309,7 +3342,7 @@ private struct GenRunway: View {
                                 .frame(width: 2, height: 18)
                                 .offset(x: nowX - 1, y: 6)
                             ForEach(Array(dots.enumerated()), id: \.offset) { i, dot in
-                                let dx = CGFloat((dot.at.timeIntervalSince1970 - win.start) / win.span) * w
+                                let dx = xs.indices.contains(i) ? xs[i] : 0
                                 // Overdue wears attention, ahead wears the
                                 // neutral ramp — the ONE thing on this axis
                                 // that colour is allowed to say, because
@@ -4110,7 +4143,7 @@ private extension View {
 ///
 /// No surface, by design: it is a sentence on the page, not a card. The whole
 /// point of putting it here rather than under the hero's total is that the
-/// screen opens with WORDS — "Up $1,247 today. ETH did the lifting." — and
+/// screen opens with WORDS — "Up $1,247 today." — and
 /// then hands the number the room to be a number in.
 ///
 /// Three things landed here on 2026-07-31, all of them the same idea — that
