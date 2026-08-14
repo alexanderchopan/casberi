@@ -4044,6 +4044,31 @@ struct FeedScreen: View {
                                              leading: DS.Space.s4 + DS.Space.s3,
                                              bottom: DS.Space.s2,
                                              trailing: DS.Space.s4 + DS.Space.s3))
+                    case .strip(_, let word, let count, let newest, _):
+                        // Drawn like `.bundle` above, and for that case's own
+                        // reason rather than by copying it: the generic
+                        // `stripListRow` opens the source filter, and this room
+                        // IS the Wallet source, so that tap would be a control
+                        // that does nothing. The door is the history screen.
+                        // The tiles are dropped with it — a strip earns its
+                        // picture row by having pictures, and a run of
+                        // transactions has none to show.
+                        Button {
+                            DSHaptic.selection()
+                            route.pushBridge(.walletHistory(scope: selectedWallet))
+                        } label: {
+                            WalletRow(mark: .symbol("arrow.left.arrow.right", tint: DS.tint),
+                                      title: String(localized: "\(count) \(word)"),
+                                      subtitle: Self.foldSubline(newest))
+                        }
+                        .buttonStyle(.plain)
+                        .modifier(RowEntrance(index: i, wave: shapeWave, style: entranceStyle))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(.init(top: DS.Space.s2,
+                                             leading: DS.Space.s4 + DS.Space.s3,
+                                             bottom: DS.Space.s2,
+                                             trailing: DS.Space.s4 + DS.Space.s3))
                     }
                 }
             } header: {
