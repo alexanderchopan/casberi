@@ -136,6 +136,91 @@ enum KeptAskComposers {
         return nil
     }
 
+    // MARK: - What a kind actually reads (PERF 2026-08-13)
+
+    /// The rows a kind's composer really touches — so the ASK path can fetch
+    /// those instead of materialising the whole store.
+    ///
+    /// This exists because `RootShell.answerDocument` opened every kept-ask
+    /// branch with `fullCorpus()`: an unbounded, fully-hydrated fetch of every
+    /// `Thing`, on the main actor, before a single composer ran. That is the
+    /// same class the 2026-08-11 pass fixed for the feed (`allRoomFetchLimit`)
+    /// and the chip strip (`newestPerSource`) and did not reach here — which is
+    /// exactly why opening the agent feels fast (its board fetch was moved off
+    /// the critical path, `composeBoard`) and TAPPING A CHIP does not. Six of
+    /// these kinds read no rows at all and still paid for the whole store.
+    ///
+    /// The scope is DERIVED from the constants the composers themselves filter
+    /// on (`overdueSources`, `moneyFlowSources`, `walletDocSources`), never from
+    /// a hand-copied list beside them — a second list is the drift this
+    /// codebase has been bitten by repeatedly, and here it would be invisible:
+    /// a leg added to `moneyFlow` without its source in the fetch reads as a
+    /// room that quietly stopped counting, with every screen still perfect.
+    /// `scripts/ask-scope-selftest.sh` fails the build if a dispatched kind has
+    /// no case here, or if a composer goes back to filtering on a literal.
+    ///
+    /// A new kind is `.whole` by default, which is the old behaviour: slow,
+    /// never wrong.
+    enum CorpusNeed: Equatable {
+        /// Reads no rows — the composer takes no `things` argument at all.
+        case none
+        /// Reads across everything (counts, tag vocabulary, a brief).
+        case whole
+        /// Only these source rooms.
+        case sources(Set<String>)
+        /// Only rows carrying a deadline.
+        case dated
+        /// Only rows written by one author.
+        case handle(String)
+    }
+
+    static func corpusNeed(for kind: String) -> CorpusNeed {
+        // The six that ignore `things` entirely — every one of them a live
+        // read (wallet protocols, token candles) or a cached line.
+        if ["watchlist", "noticed", "walletdefi", "walletuniswap",
+            "walletgas", "walletsafe"].contains(kind) { return .none }
+        if kind == "wallet" { return .sources(walletDocSources) }
+        if kind == "overdue" { return .sources(overdueSources) }
+        if kind == "upcoming" { return .dated }
+        if kind == "throwback" { return .sources(Corpus.bulkImportSources) }
+        if kind == "moneyflow" { return .sources(moneyFlowSources) }
+        if kind == "spend" { return .sources(Corpus.cardSpendSources) }
+        if kind.hasPrefix("context:") {
+            return .sources([String(kind.dropFirst("context:".count))])
+        }
+        if kind.hasPrefix("category:") {
+            let sources = categorySources(String(kind.dropFirst("category:".count)))
+            return sources.isEmpty ? .whole : .sources(sources)
+        }
+        if kind.hasPrefix("handle:") {
+            return .handle(String(kind.dropFirst("handle:".count)))
+        }
+        // `showtag:` is deliberately `.whole`: `tags` is a transformable
+        // attribute, and a `#Predicate` testing membership on one compiles
+        // clean and TRAPS at runtime inside CoreData (see CLAUDE.md). The
+        // filter stays in Swift over a full fetch.
+        //
+        // `today`, `away` and `search:` span the corpus by definition.
+        return .whole
+    }
+
+    /// The two task bridges `overdue` counts. One definition, read by the
+    /// composer and by `corpusNeed` above.
+    static let overdueSources: Set<String> = ["Reminders", "Todoist"]
+
+    /// `moneyFlow`'s two named legs. Constants rather than literals so the
+    /// union below cannot fall out of step with the filters that use them.
+    static let moneyFlowInboundSource = "Peer"
+    static let moneyFlowShieldedSource = "Privacy Pools"
+
+    /// Every source `moneyFlow` reads — the card seats plus its two named legs.
+    static var moneyFlowSources: Set<String> {
+        Corpus.cardSpendSources.union([moneyFlowInboundSource, moneyFlowShieldedSource])
+    }
+
+    /// The rows `walletDoc` draws its approvals and activity from.
+    static let walletDocSources: Set<String> = ["Wallet", "Peer"]
+
     // MARK: - While I was away
 
     private static func away(_ things: [Thing]) -> Result? {
@@ -194,7 +279,7 @@ enum KeptAskComposers {
     /// fresh wallet degrades to exactly the old line + treemap.
     static func walletDoc(line: String, groups: [WalletIngest.HoldingsGroup],
                           things: [Thing]) -> [String] {
-        let walletThings = things.filter { $0.source == "Wallet" || $0.source == "Peer" }
+        let walletThings = things.filter { walletDocSources.contains($0.source) }
         let allApprovals = walletThings.filter(isApproval)
         let allActivity = walletThings.filter { !isApproval($0) }
         let approvals = Array(allApprovals.prefix(3))
@@ -394,7 +479,7 @@ enum KeptAskComposers {
     /// that private function, consistent with how HomeComposition and
     /// RootShell already each read `Thing` fields independently.
     private static func overdue(_ things: [Thing]) -> Result? {
-        let open = things.filter { $0.mark != .done && ($0.source == "Reminders" || $0.source == "Todoist") }
+        let open = things.filter { $0.mark != .done && overdueSources.contains($0.source) }
         let overdue = open.filter { ($0.dueAt ?? .distantFuture) < .now }
         guard !overdue.isEmpty else {
             return Result(delta: "", digest: "0",
@@ -1044,7 +1129,7 @@ enum KeptAskComposers {
         func rows(_ source: String) -> [Thing] {
             things.filter { $0.source == source && !Corpus.isImportReceipt($0) }
         }
-        let inbound = rows("Peer")
+        let inbound = rows(moneyFlowInboundSource)
         // Every card seat that stores real numbers, Apple Wallet included
         // since 2026-08-06 — before that this leg named the two onchain cards
         // and silently omitted the one most people actually spend on.
@@ -1052,7 +1137,7 @@ enum KeptAskComposers {
             $0.kind == .transaction && Corpus.cardSpendSources.contains($0.source)
                 && !$0.tags.contains("Pending") && !Corpus.isImportReceipt($0)
         }
-        let shielded = rows("Privacy Pools").filter { $0.tags.contains("Shielded") }
+        let shielded = rows(moneyFlowShieldedSource).filter { $0.tags.contains("Shielded") }
 
         var lines: [String] = []
         if !inbound.isEmpty {

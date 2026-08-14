@@ -4251,23 +4251,6 @@ struct Composer: View {
                     inFlight = false
                 }
                 keyAvailable = AgentKey.isConfigured   // one read per settle
-                // One more fetch per settle (not per keystroke) — same
-                // precedent `computeSuggestions()` already sets for a plain
-                // corpus-wide read.
-                let settledThings = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
-                keepableAskKind = recognizeKeptAskKind(q, in: settledThings)
-                // The one related follow-up this answer offers (§177) — nil
-                // for an answer with no natural next step. Skipped on the
-                // honest "nothing matches" fallback: a dead-end answer has no
-                // follow-up worth teaching.
-                nextAsk = docHasFallback(finalDoc) ? nil : nextAsk(for: q, in: settledThings)
-                // Proactive minting (2026-07-20): count each keepable ask
-                // actually made, so a question asked often can upgrade its
-                // quiet Keep pill to a "you ask this a lot" prompt. Counted
-                // ONLY for keepable kinds — the counter's key space IS the
-                // kind space, so an unkeepable ask has nothing to count
-                // toward.
-                if let kind = keepableAskKind { AskMemory.asked(kind) }
                 // The settle haptic is keyed to honesty (delight, 2026-07-21):
                 // real content earns the tick, the "nothing matches" fallback
                 // earns nothing — celebrating a miss would violate the
@@ -4338,6 +4321,44 @@ struct Composer: View {
                 if askedByTyping && !(turns.isEmpty && TodayBrief.matches(q)) {
                     fieldFocused = true
                 }
+                // Everything past here is the VERB ROW's bookkeeping, and it
+                // runs after the answer is on screen (PERF 2026-08-13).
+                //
+                // It opens with an unbounded, fully-hydrated fetch of the whole
+                // store on the main actor, and it used to sit ABOVE the paint —
+                // so on a corpus carrying a bulk import the answer was finished
+                // and simply not yet drawn while this ran. That is the second
+                // half of a chip tap's felt latency; the first half was
+                // `answerDocument`'s own `fullCorpus()`, now scoped per kind
+                // (`RootShell.keptCorpus`). Neither was visible to the nightly
+                // perf pass, which times launch, RSS and answer LATENCY — and
+                // this work lands after the answer is computed, so it never
+                // showed up in that number.
+                //
+                // What it feeds is the Keep pill and the follow-up chip BELOW
+                // the answer, neither of which is what the tap was for. They
+                // arrive a beat later; both were cleared at commit, so the gap
+                // shows nothing rather than something stale.
+                await Task.yield()
+                // Re-guarded, and this is load-bearing rather than caution: the
+                // yield is a real suspension, so a newer ask can begin inside
+                // it — and without this, that newer answer would wear THIS
+                // question's Keep pill and follow-up chip.
+                guard gen == askGeneration else { return }
+                let settledThings = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
+                keepableAskKind = recognizeKeptAskKind(q, in: settledThings)
+                // The one related follow-up this answer offers (§177) — nil
+                // for an answer with no natural next step. Skipped on the
+                // honest "nothing matches" fallback: a dead-end answer has no
+                // follow-up worth teaching.
+                nextAsk = docHasFallback(finalDoc) ? nil : nextAsk(for: q, in: settledThings)
+                // Proactive minting (2026-07-20): count each keepable ask
+                // actually made, so a question asked often can upgrade its
+                // quiet Keep pill to a "you ask this a lot" prompt. Counted
+                // ONLY for keepable kinds — the counter's key space IS the
+                // kind space, so an unkeepable ask has nothing to count
+                // toward.
+                if let kind = keepableAskKind { AskMemory.asked(kind) }
             }
         }
     }

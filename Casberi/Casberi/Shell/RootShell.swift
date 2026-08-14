@@ -2391,6 +2391,12 @@ struct RootShell: View {
         // watchlist, not the feeds.
         if TokensAsk.matches(query) {
             lastAnswerHits = []
+            // The last reading, while the candle fetches are out (PERF
+            // 2026-08-13) — this branch's whole latency is network, so without
+            // it the person watches a breathing berry to be told a number the
+            // app computed on the last foreground. Nil until a pass has
+            // computed one, so it can never invent a figure.
+            if let interim = lastKnownDoc("watchlist") { onPartialDoc(interim) }
             let moves = await TokensAsk.moves(context: modelContext)
             // Watched prediction markets are a watchlist too (2026-07-28) —
             // read from PredictionPulse's existing cache, so this costs no
@@ -2418,6 +2424,13 @@ struct RootShell: View {
         // the feeds' pulse.
         if WalletAsk.matches(query) {
             lastAnswerHits = []
+            // The LOCAL half first (PERF 2026-08-13). The approvals and the
+            // activity below are rows the bridges already landed, so they can
+            // be on screen while the two live reads are still out; only the
+            // headline and the treemap actually wait on the network. Scoped to
+            // the two rooms `walletDoc` reads rather than the whole store.
+            let corpus = keptCorpus(for: "wallet")
+            if let interim = lastKnownDoc("wallet", things: corpus) { onPartialDoc(interim) }
             guard let line = await WalletAsk.answer() else {
                 return proseDoc(String(localized: "Nothing in your wallet yet — watch an address from Apps → Wallet."))
             }
@@ -2425,7 +2438,17 @@ struct RootShell: View {
             // landed approvals + latest activity — shared with the kept-ask
             // composer via `KeptAskComposers.walletDoc` so the two paths agree.
             let groups = await WalletIngest.topHoldingsByWallet()
-            return KeptAskComposers.walletDoc(line: line, groups: groups, things: allThings())
+            // `.live` AFTER the live reads (liveness corollary 6, build 250).
+            // `corpus` is fetched above, before two awaits that can take
+            // seconds, and the app's own foreground sweep deletes rows in
+            // exactly that window — reading a stored property on a tombstoned
+            // `Thing` traps inside SwiftData, with the app possibly not even
+            // in the foreground. The old code fetched HERE, below the awaits,
+            // and got this for free; moving the fetch above them so the local
+            // half can paint early is precisely what makes the guard load-
+            // bearing. One filter at the last await is sufficient because this
+            // is `@MainActor` and nothing below suspends.
+            return KeptAskComposers.walletDoc(line: line, groups: groups, things: corpus.live)
         }
         // "What's coming up?" — the forward deadlines, computed, no model
         // (2026-07-21). This branch is what makes the typed ask agree with the
@@ -2446,7 +2469,8 @@ struct RootShell: View {
         // collide.
         if KeptAskComposers.matchesMoneyFlow(query) {
             lastAnswerHits = []
-            if let result = await KeptAskComposers.compose("moneyflow", things: allThings(),
+            if let result = await KeptAskComposers.compose("moneyflow",
+                                                          things: keptCorpus(for: "moneyflow"),
                                                           context: modelContext) {
                 return result.doc
             }
@@ -2457,7 +2481,8 @@ struct RootShell: View {
         // than a total, so the broader question keeps the broader answer.
         if KeptAskComposers.matchesSpend(query) {
             lastAnswerHits = []
-            if let result = await KeptAskComposers.compose("spend", things: allThings(),
+            if let result = await KeptAskComposers.compose("spend",
+                                                          things: keptCorpus(for: "spend"),
                                                           context: modelContext) {
                 return result.doc
             }
@@ -2468,21 +2493,23 @@ struct RootShell: View {
         if let seat = KeptAskComposers.matchesSeatAsk(query) {
             lastAnswerHits = []
             if let result = await KeptAskComposers.compose("context:" + seat,
-                                                          things: allThings(),
+                                                          things: keptCorpus(for: "context:" + seat),
                                                           context: modelContext) {
                 return result.doc
             }
         }
         if KeptAskComposers.matchesThrowback(query) {
             lastAnswerHits = []
-            if let result = await KeptAskComposers.compose("throwback", things: allThings(),
+            if let result = await KeptAskComposers.compose("throwback",
+                                                          things: keptCorpus(for: "throwback"),
                                                           context: modelContext) {
                 return result.doc
             }
         }
         if KeptAskComposers.matchesUpcoming(query) {
             lastAnswerHits = []
-            if let result = await KeptAskComposers.compose("upcoming", things: allThings(),
+            if let result = await KeptAskComposers.compose("upcoming",
+                                                          things: keptCorpus(for: "upcoming"),
                                                           context: modelContext) {
                 return result.doc
             }
@@ -2837,21 +2864,95 @@ struct RootShell: View {
     /// worst case here is the performance we had yesterday, never a wrong or
     /// empty answer.
     private func categoryCorpus(_ scope: String) -> [Thing] {
-        let sources = KeptAskComposers.categorySources(scope)
-        guard !sources.isEmpty else { return fullCorpus() }
+        keptCorpus(for: "category:" + scope)
+    }
+
+    /// The rows one kept-ask KIND actually needs, fetched scoped (PERF
+    /// 2026-08-13). Generalises `categoryCorpus` above, which was the first
+    /// instance of exactly this and covered only the three brief scopes.
+    ///
+    /// Every kept-ask branch in `answerDocument` used to open with
+    /// `allThings()` — `fullCorpus()`, an unbounded fully-hydrated fetch of the
+    /// entire store on the main actor — and then hand it to a composer that
+    /// filters it down to one or two source rooms on its first line. On a
+    /// corpus carrying a bulk import that is the whole felt cost of tapping a
+    /// chip, and it is why the agent OPENS fast (its board fetch moved off the
+    /// critical path in the 2026-08-11 pass) and a chip tap does not.
+    /// `KeptAskComposers.corpusNeed` declares the scope, derived from the same
+    /// constants the composers filter on.
+    ///
+    /// FAILS SAFE, exactly as the category version it replaces did: a `try?`
+    /// swallows a throw, and an EMPTY scoped read is treated as no scope at all
+    /// and re-fetched whole. So the worst case is the performance we had
+    /// yesterday, never a wrong or an empty answer — which matters because a
+    /// silently-empty scope here would read as "nothing overdue" / "no card
+    /// spending" over a corpus full of both, with every screen still perfect.
+    private func keptCorpus(for kind: String) -> [Thing] {
+        let need = KeptAskComposers.corpusNeed(for: kind)
+        // The ceiling `scopedCorpus` uses: high enough that no real scope is
+        // truncated, still a ceiling.
+        let ceiling = 20_000
         var descriptor = FetchDescriptor<Thing>(
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
         )
-        descriptor.predicate = #Predicate { sources.contains($0.source) }
-        // The same ceiling `scopedCorpus` uses: high enough that no real scope
-        // is truncated, still a ceiling.
-        descriptor.fetchLimit = 20_000
+        descriptor.fetchLimit = ceiling
+        switch need {
+        case .none:
+            // The composer takes no `things` at all — fetching for it was pure
+            // waste. Six kinds, every one of them a live read.
+            #if DEBUG
+            NSLog("[Casberi] keptCorpus| kind=%@ need=none rows=0", kind)
+            #endif
+            return []
+        case .whole:
+            return fullCorpus()
+        case .sources(let sources):
+            guard !sources.isEmpty else { return fullCorpus() }
+            descriptor.predicate = #Predicate { sources.contains($0.source) }
+        case .dated:
+            descriptor.predicate = #Predicate { $0.dueAt != nil }
+        case .handle(let handle):
+            descriptor.predicate = #Predicate { $0.authorHandle == handle }
+        }
         let rows = (try? modelContext.fetch(descriptor)) ?? []
         #if DEBUG
-        NSLog("[Casberi] categoryCorpus| scope=%@ sources=%d rows=%d",
-              scope, sources.count, rows.count)
+        NSLog("[Casberi] keptCorpus| kind=%@ rows=%d", kind, rows.count)
         #endif
         return rows.isEmpty ? fullCorpus() : rows
+    }
+
+    /// What the app ALREADY KNOWS about a kept kind, as a document to paint
+    /// while that kind's own reads are still out (PERF 2026-08-13).
+    ///
+    /// `KeptAskStore.refreshDigests` composes every kept kind on each
+    /// foreground and keeps the one-line reading each composer returned
+    /// (`currentDeltas`). Tapping the chip then threw that away and recomposed
+    /// from scratch — including, for the wallet and the watchlist, live network
+    /// reads — so the person watched a breathing berry for the length of a
+    /// round trip to be told something the app had computed seconds earlier.
+    ///
+    /// This is NOT the placeholder doc the 2026-07-20 fix removed. That one
+    /// painted the word "Thinking…" inside the answer card's full chrome — an
+    /// empty-looking card standing in for content that did not exist. This
+    /// paints the last real reading, the same text the panel tile is showing,
+    /// and the breathing berry remains the whole loading state. §83 holds
+    /// because `currentDeltas` is deliberately never persisted: it is empty at
+    /// launch until a foreground pass fills it, so this can only ever show a
+    /// figure computed during THIS session, never a stale one restored from
+    /// disk. When there is no reading yet, there is no interim — the honest
+    /// answer to "what do we know" is nothing, and today's behaviour stands.
+    private func lastKnownDoc(_ kind: String, things: [Thing] = []) -> [String]? {
+        guard let reading = KeptAskStore.shared.currentDeltas[kind],
+              !reading.isEmpty else { return nil }
+        // The wallet's document is mostly LOCAL — the approvals and the
+        // activity are rows the bridges already landed, and only the headline
+        // and the treemap wait on the network. So its interim is the real
+        // document minus the parts still in flight, which is the same shape
+        // `KeptAskComposers.wallet` already paints when a live read fails.
+        if kind == "wallet" {
+            return KeptAskComposers.walletDoc(line: reading, groups: [], things: things)
+        }
+        return ["root = Stack([ins])", "ins = Insight(\"\(genSafe(reading))\")"]
     }
 
     /// The entity named by a bare follow-up ("and bbc?", "what about calendar",

@@ -363,6 +363,26 @@ step "Category fold self-test"
   || fail "the category fold self-test failed — run scripts/category-fold-selftest.sh"
 print -P "%F{green}✓ category fold self-test%f"
 
+# What a chip tap is allowed to FETCH (PERF 2026-08-13). Tapping an agent chip
+# used to materialise the entire store twice on the main actor — once in
+# `answerDocument` before any composer ran, once in the settle path above the
+# line that paints the answer — which is why opening the agent felt fast (its
+# board fetch moved off the critical path in the 2026-08-11 pass) and tapping a
+# chip did not. The fix scopes the first fetch per KIND, and that trade is only
+# safe while the declared scope keeps matching what the composer actually
+# reads. Every way it can rot is silent: a `.none` kind handed `things` reads an
+# EMPTY corpus and answers "nothing" over a full room; a `moneyFlow` leg added
+# without its source reaching the fetch quietly stops counting; a `showtag:`
+# scope narrowed to a `#Predicate` over the transformable `tags` attribute
+# compiles clean and TRAPS at runtime; and the settle bookkeeping drifting back
+# above the paint restores half the latency with nothing on screen to say so.
+# None of it is visible to the build, the sweep, or the nightly perf pass —
+# which times launch, RSS and answer latency, all of them upstream of this work.
+step "Ask-scope self-test"
+"$ROOT/scripts/ask-scope-selftest.sh" >/dev/null \
+  || fail "the ask-scope self-test failed — run scripts/ask-scope-selftest.sh"
+print -P "%F{green}✓ ask-scope self-test%f"
+
 # What anatomy a social thing sheet wears, and the reading under it (prd §363,
 # 2026-08-12). INVISIBLE, and shipped invisible for months: the gate asked
 # `SocialThread.isSocial` — three source NAMES — so an X post drew its own
