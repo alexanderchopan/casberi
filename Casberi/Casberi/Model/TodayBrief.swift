@@ -209,6 +209,26 @@ enum TodayBrief {
         defer { NSLog("[Casberi] composeTimingDEBUG| category=%@ TOTAL=%dms",
                       category ?? "nil", Int(Date.now.timeIntervalSince(composeT0) * 1000)) }
         #endif
+        // THE DEMO REACHES NOTHING — folded in HERE, at the one place the three
+        // live reads below are gated, rather than as a third condition on each
+        // of them, so a read added later inherits the rule for free.
+        //
+        // `BridgeRefresh.refreshAllConnected` has returned instantly under
+        // `DemoMode.isActive` since the furnished demo shipped, but this
+        // composer is a SECOND door onto the same network: `RootShell` composes
+        // the brief on every foreground, and `liveHoldings` / `worstDebt` walk
+        // the chain RPCs and Morpho directly, bypassing the sweep entirely.
+        // Measured 2026-08-13 by verify.sh's own reach check: a demo session
+        // made 61 requests to six hosts (rpc.mevblocker.io, mainnet.base.org,
+        // mainnet.optimism.io, arb1.arbitrum.io, polygon.api.onfinality.io,
+        // blue-api.morpho.org).
+        //
+        // Not merely a privacy-copy violation. The demo's wallet address is
+        // SEEDED and fake, so a real read answers with nothing and writes a
+        // zero value sample over the seeded curve — the balance-fell-off-a-
+        // cliff failure the demo's own doc calls out. Skipping the reads is
+        // also the honest result here: every module they feed is seeded.
+        let skipLiveReads = skipLiveReads || DemoMode.isActive
         // Filtered on ENTRY as well as after the awaits below (crash fix,
         // build 250). The caller's array can ALREADY be stale: `RootShell`
         // fetches it, then awaits `KeptAskStore.refreshDigests` before handing
